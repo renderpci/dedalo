@@ -104,6 +104,9 @@ abstract class common {
 		// uid. Unique id string
 		public $uid;
 
+		// with_lang_versions
+		public $with_lang_versions;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
@@ -397,14 +400,15 @@ abstract class common {
 				return null;
 			}
 			// area model case
-			if (strpos($model_name, 'area')===0 || $model_name==='menu') {
+			if (strpos($model_name, 'area')===0 || $model_name==='menu' || $model_name==='section_tool') {
 				return null;
 			}
 			// non section model case
 			if ($model_name!=='section') {
 				debug_log(__METHOD__
 					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
-					. " tipo: $tipo - model: $model_name"
+					. " tipo: $tipo " . PHP_EOL
+					. " model: $model_name"
 					, logger::ERROR
 				);
 				return null;
@@ -4112,7 +4116,7 @@ abstract class common {
 			$is_component		= strpos($model, 'component_')===0;
 			$tranducible		= $this->traducible; // string si|no fixed on construct element
 			$properties			= $this->get_properties();
-			$with_lang_versions	= isset($properties->with_lang_versions) ? $properties->with_lang_versions : false;
+			$with_lang_versions	= $this->with_lang_versions;
 
 		// element tools
 			foreach ($user_tools as $tool) {

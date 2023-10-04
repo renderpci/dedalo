@@ -391,7 +391,7 @@ const get_buttons = (self) => {
 
 			// url vars
 				const url_vars = {
-					t				: 'dd100', // THESAURUS_TIPO
+					tipo			: 'dd100', // THESAURUS_TIPO
 					menu			: false,
 					thesaurus_mode	: 'relation'
 				}

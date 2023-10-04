@@ -108,9 +108,10 @@ const get_content_value = (i, current_value, self) => {
 		current_value = current_value || {}
 
 	// short vars
-		const mode	= self.mode
-		const title	= current_value.title || ''
-		const iri	= current_value.iri || ''
+		const mode					= self.mode
+		const title					= current_value.title || ''
+		const iri					= current_value.iri || ''
+		const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -148,7 +149,6 @@ const get_content_value = (i, current_value, self) => {
 						self.keyup_handler(e, i, current_value, self)
 				}//end keyup
 		}// end if(use_title)
-
 
 	// IRI input field
 		// const regex = /^((https?):\/\/)?([w|W]{3}\.)+[a-zA-Z0-9\-\.]{3,}\.[a-zA-Z]{2,}(\.[a-zA-Z]{2,})?$/;
@@ -270,6 +270,34 @@ const get_content_value = (i, current_value, self) => {
 				const current_window	= window.open(url, 'component_iri_opened', 'width=1024,height=720')
 				current_window.focus()
 		})
+
+	// transliterate value
+		if(self.data.transliterate_value) {
+
+			const transliterate_value = self.data.transliterate_value[0] || {}
+
+			const transliterate_value_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'transliterate_value',
+				parent			: content_value
+			})
+			// title
+				const title_text = transliterate_value.title || ''
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'title',
+					inner_html		: title_text,
+					parent			: transliterate_value_container
+				})
+			// IRI
+				const iri_text = transliterate_value.iri || ''
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'iri',
+					inner_html		: iri_text,
+					parent			: transliterate_value_container
+				})
+		}
 
 
 	return content_value

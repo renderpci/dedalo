@@ -125,11 +125,11 @@ class indexation_grid {
 
 				$head_ddo_map = isset($properties->head)
 					? $this->process_ddo_map($properties->head->show->ddo_map, $current_section_tipo)
-					: false;
+					: null;
 
 				$row_ddo_map = isset($properties->row)
 					? $this->process_ddo_map($properties->row->show->ddo_map, $current_section_tipo)
-					: false;
+					: null;
 
 			// get the class_list that will used to render the head and row, it could be set in the preferences of the indexation_list
 				$head_class_list	= $properties->head->class_list ?? null;
@@ -145,48 +145,65 @@ class indexation_grid {
 			$ar_section_rows_count	= [];
 			foreach ($ar_values as $current_section_id => $ar_locators) {
 
-				$ar_head_value = $this->get_grid_value($head_ddo_map, $ar_locators[0]);
-				// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
-				$head_row_count = max($ar_head_value->ar_row_count);
+				$rows_max_count = [];
 
-				$head_grid = new dd_grid_cell_object();
-					$head_grid->set_type('row');
-					$head_grid->set_row_count($head_row_count);
-					$head_grid->set_class_list($head_class_list);
-					$head_grid->set_render_label($head_render_label);
-					$head_grid->set_value($ar_head_value->ar_cells);
+				// head
+					if (isset($head_ddo_map)) {
+						$ar_head_value = $this->get_grid_value($head_ddo_map, $ar_locators[0]);
+						// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
+						$head_row_count = max($ar_head_value->ar_row_count);
 
-				$section_grid_values[] = $head_grid;
+						$head_grid = new dd_grid_cell_object();
+							$head_grid->set_type('row');
+							$head_grid->set_row_count($head_row_count);
+							$head_grid->set_class_list($head_class_list);
+							$head_grid->set_render_label($head_render_label);
+							$head_grid->set_value($ar_head_value->ar_cells);
 
-				// store the head rows to sum up with the total rows
-				$rows_max_count = [$head_row_count];
-				foreach ($ar_locators as $current_locator) {
+						$section_grid_values[] = $head_grid;
 
-					// check tag_id
-						if (!isset($current_locator->tag_id)) {
-							debug_log(__METHOD__
-								. " Ignored locator without tag_id " . PHP_EOL
-								. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
-								, logger::ERROR
-							);
-							continue;
+						// store the head rows to sum up with the total rows
+						$rows_max_count[] = $head_row_count;
+					}
+
+				// rows
+					if (isset($row_ddo_map)) {
+						foreach ($ar_locators as $current_locator) {
+
+							// check tag_id
+								if (!isset($current_locator->tag_id)) {
+									debug_log(__METHOD__
+										. " locator without tag_id " . PHP_EOL
+										. ' locator: ' . json_encode($current_locator, JSON_PRETTY_PRINT)
+										, logger::WARNING
+									);
+									// continue;
+								}
+
+							$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
+							// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
+							$row_count = max($ar_row_value->ar_row_count);
+							// store the result to sum with the head rows
+							$rows_max_count[] = $row_count;
+
+							$row_grid = new dd_grid_cell_object();
+								$row_grid->set_type('row');
+								$row_grid->set_row_count($row_count);
+								$row_grid->set_class_list($row_class_list);
+								$row_grid->set_render_label($row_render_label);
+								$row_grid->set_value($ar_row_value->ar_cells);
+
+							$section_grid_values[] = $row_grid;
 						}
-
-					$ar_row_value = $this->get_grid_value($row_ddo_map, $current_locator);
-					// take the maximum number of rows (the columns can has 1, 2, 55 rows and we need the highest value, 55)
-					$row_count = max($ar_row_value->ar_row_count);
-					// store the result to sum with the head rows
-					$rows_max_count[] = $row_count;
-
-					$row_grid = new dd_grid_cell_object();
-						$row_grid->set_type('row');
-						$row_grid->set_row_count($row_count);
-						$row_grid->set_class_list($row_class_list);
-						$row_grid->set_render_label($row_render_label);
-						$row_grid->set_value($ar_row_value->ar_cells);
-
-					$section_grid_values[] = $row_grid;
-				}
+					}else{
+						debug_log(__METHOD__
+							. " Undefined row_ddo_map" . PHP_EOL
+							. " Configure Ontology properties for current section_tipo " .PHP_EOL
+							. " current_section_tipo: " .$current_section_tipo . PHP_EOL
+							. " Please, configure a indexation_list similar to 'oh6' "
+							, logger::WARNING
+						);
+					}
 
 				// sum the total rows for this locator
 				$ar_section_rows_count[] = array_sum($rows_max_count);

@@ -35,6 +35,7 @@ export const tool_diffusion = function () {
 	this.caller			= null
 
 	this.diffusion_info = null
+	this.skip_publication_state_check
 
 
 	return true
@@ -94,7 +95,10 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 			self.diffusion_info = await self.get_diffusion_info()
 
 		 // fix value
-			self.resolve_levels = self.diffusion_info.resolve_levels || 1
+			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
+
+		// fix skip_publication_state_check value
+			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 0
 
 	} catch (error) {
 		self.error = error
@@ -168,9 +172,10 @@ tool_diffusion.prototype.export = function(options) {
 		const resolve_levels			= options.resolve_levels || self.resolve_levels
 
 	// sort vars
-		const mode						= self.caller.mode
-		const section_tipo				= self.caller.section_tipo
-		const section_id				= self.caller.section_id || null
+		const mode							= self.caller.mode
+		const section_tipo					= self.caller.section_tipo
+		const section_id					= self.caller.section_id || null
+		const skip_publication_state_check	= self.skip_publication_state_check
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -182,11 +187,12 @@ tool_diffusion.prototype.export = function(options) {
 			action	: 'tool_request',
 			source	: source,
 			options : {
-				section_tipo			: section_tipo,
-				section_id				: section_id,
-				mode					: mode,
-				diffusion_element_tipo	: diffusion_element_tipo,
-				resolve_levels			: resolve_levels
+				section_tipo					: section_tipo,
+				section_id						: section_id,
+				mode							: mode,
+				diffusion_element_tipo			: diffusion_element_tipo,
+				resolve_levels					: resolve_levels,
+				skip_publication_state_check	: skip_publication_state_check
 			}
 		}
 

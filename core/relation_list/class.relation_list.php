@@ -15,8 +15,11 @@ class relation_list extends common {
 		public $section_tipo;
 		public $sqo;
 		public $count;
-
+		// diffusion_properties
 		public $diffusion_properties;
+		// diffusion_dato_cache
+		public $diffusion_dato_cache;
+
 
 
 
@@ -53,6 +56,7 @@ class relation_list extends common {
 
 	/**
 	* GET_RELATION_LIST_OBJ
+	* @param array $ar_inverse_references
 	* @return object $json
 	*/
 	public function get_relation_list_obj(array $ar_inverse_references) : object {
@@ -75,18 +79,18 @@ class relation_list extends common {
 
 				//get the id
 				$current_id = new stdClass;
-					$current_id->section_tipo 		= $current_section_tipo;
-					$current_id->section_label 		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+					$current_id->section_tipo		= $current_section_tipo;
+					$current_id->section_label		= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 					$current_id->component_tipo		= 'id';
 					$current_id->component_label	= 'id';
 
 					$ar_context[] = $current_id;
 
 				//get the columns of the @context
-				$ar_model_name_required = array('relation_list');
-				$resolve_virtual 		 = false;
+				$ar_model_name_required	= array('relation_list');
+				$resolve_virtual		= false;
 
-				// Locate relation_list element in current section (virtual ot not)
+				// Locate relation_list element in current section (virtual or not)
 				$ar_children = section::get_ar_children_tipo_by_model_name_in_section($current_section_tipo, $ar_model_name_required, $from_cache=true, $resolve_virtual, $recursive=false, $search_exact=true);
 
 				// If not found children, try resolving real section
@@ -97,20 +101,20 @@ class relation_list extends common {
 
 
 				if( isset($ar_children[0]) ) {
-					$current_children 		= reset($ar_children);
-					$recordObjdd 			= new RecordObj_dd($current_children);
+					$current_children	= reset($ar_children);
+					$recordObjdd		= new RecordObj_dd($current_children);
 					$ar_relation_components[$current_section_tipo] = $recordObjdd->get_relaciones();
 					if(isset($ar_relation_components[$current_section_tipo])){
 						foreach ($ar_relation_components[$current_section_tipo] as $current_relation_component) {
 							foreach ($current_relation_component as $tipo) {
 
 								$current_relation_list = new stdClass;
-									$current_relation_list->section_tipo 	= $current_section_tipo;
-									$current_relation_list->section_label 	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
+									$current_relation_list->section_tipo	= $current_section_tipo;
+									$current_relation_list->section_label	= RecordObj_dd::get_termino_by_tipo($current_section_tipo,DEDALO_APPLICATION_LANG, true);
 									$current_relation_list->component_tipo	= $tipo;
 									$current_relation_list->component_label	= RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true);
 
-									$ar_context[] = $current_relation_list;
+								$ar_context[] = $current_relation_list;
 							}
 						}
 					}
@@ -121,7 +125,10 @@ class relation_list extends common {
 			# 2 get ar_data
 			$ar_components = $ar_relation_components[$current_section_tipo] ?? [];
 			if (empty($ar_components)) {
-				debug_log(__METHOD__." Section without relation_list. Please, define relation_list for section: $current_section_tipo ".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Section without relation_list. Please, define relation_list for section: $current_section_tipo "
+					, logger::WARNING
+				);
 			}
 			$ar_data_result = $this->get_ar_data($current_record, $ar_components);
 			$ar_data 		= array_merge($ar_data, $ar_data_result);
@@ -146,11 +153,16 @@ class relation_list extends common {
 
 		$data = [];
 
-		$section_tipo 	= $current_record->section_tipo;
-		$section_id 	= $current_record->section_id;
+		$section_tipo	= $current_record->section_tipo;
+		$section_id		= $current_record->section_id;
 
 		// section instance
-			$section = section::get_instance($section_id, $section_tipo, $this->mode, $cache=true);
+			$section = section::get_instance(
+				$section_id,
+				$section_tipo,
+				$this->mode,
+				true // cache
+			);
 		// inject dato to section when the dato come from db and set as loaded
 			$datos = $current_record->datos ?? null;
 			if (!is_null($datos)) {
@@ -225,6 +237,13 @@ class relation_list extends common {
 	*/
 	public function get_diffusion_dato() : array {
 
+		// cache
+			static $diffusion_dato_cache;
+			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id;
+			if (isset($diffusion_dato_cache[$cache_key])) {
+				return $diffusion_dato_cache[$cache_key];
+			}
+
 		// Properties of diffusion element that references this component
 		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
@@ -251,19 +270,19 @@ class relation_list extends common {
 			$ar_inverse_references = $this->get_inverse_references($sqo);
 				// sample. Full section dato
 				// {
-			    //     "section_tipo": "numisdata300",
-			    //     "section_id": "1",
-			    //     "datos": {
-			    //         "label": "Catálogo",
-			    //         "relations": [
-			    //             {
-			    //                 "type": "dd675",
-			    //                 "section_id": "1",
-			    //                 "section_tipo": "dd153",
-			    //                 "from_component_tipo": "numisdata304"
-			    //             }, ...
-			    //          ]
-			    //     }
+				//     "section_tipo": "numisdata300",
+				//     "section_id": "1",
+				//     "datos": {
+				//         "label": "Catálogo",
+				//         "relations": [
+				//             {
+				//                 "type": "dd675",
+				//                 "section_id": "1",
+				//                 "section_tipo": "dd153",
+				//                 "from_component_tipo": "numisdata304"
+				//             }, ...
+				//          ]
+				//     }
 				// }
 
 		// clean references as locators that point here (this section_tipo, this section_id)
@@ -336,6 +355,9 @@ class relation_list extends common {
 			$ar_values[] = $value;
 		}//end foreach ($ar_locators as $current_locator)
 
+		// cache
+			$diffusion_dato_cache[$cache_key] = $ar_values;
+
 
 		return $ar_values;
 	}//end get_diffusion_dato
@@ -345,7 +367,7 @@ class relation_list extends common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @see class.diffusion_mysql.php
 	*
@@ -360,18 +382,25 @@ class relation_list extends common {
 
 		$diffusion_value = null;
 
-		# Propiedades of diffusion element that references this component
-		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
-		# 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
-		$diffusion_properties = $this->get_diffusion_properties();
+		// Propiedades of diffusion element that references this component
+		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
+		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
+			$diffusion_properties = $this->get_diffusion_properties();
 
-		$data_to_be_used = isset($diffusion_properties->data_to_be_used)
-			? $diffusion_properties->data_to_be_used
-			: 'dato';
-
-		// overwrite data_to_be_used
+		// data_to_be_used
+			$data_to_be_used = isset($diffusion_properties->data_to_be_used)
+				? $diffusion_properties->data_to_be_used
+				: 'dato';
+			// overwrite data_to_be_used
 			if (isset($diffusion_properties->process_dato_arguments) && isset($diffusion_properties->process_dato_arguments->data_to_be_used)) {
 				$data_to_be_used = $diffusion_properties->process_dato_arguments->data_to_be_used;
+			}
+
+		// cache
+			static $diffusion_value_cache;
+			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$data_to_be_used;
+			if (isset($diffusion_value_cache[$cache_key])) {
+				return $diffusion_value_cache[$cache_key];
 			}
 
 		// sqo
@@ -420,7 +449,7 @@ class relation_list extends common {
 						$custom_locator->set_section_tipo($current_locator->from_section_tipo);
 						$custom_locator->set_section_id($current_locator->from_section_id);
 
-					// Check target is publicable
+					// Check target is publishable
 					$current_is_publicable = diffusion::get_is_publicable($custom_locator);
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
@@ -717,6 +746,9 @@ class relation_list extends common {
 					$diffusion_value = array_unique($diffusion_value, SORT_REGULAR);
 				}
 			}
+
+		// cache
+			$diffusion_value_cache[$cache_key] = $diffusion_value;
 
 
 		return $diffusion_value;

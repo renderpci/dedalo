@@ -251,7 +251,7 @@ const build_automatic_translation = (options) => {
 		// const button_automatic_translation = ui.create_dom_element({
 		// 	element_type	: 'button',
 		// 	class_name		: 'warning button_automatic_translation',
-		// 	inner_html		: self.get_tool_label.automatic_translation || "Automatic translation",
+		// 	inner_html		: self.get_tool_label('automatic_translation') || "Automatic translation",
 		// 	parent			: automatic_translation_container
 		// })
 
