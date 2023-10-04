@@ -46,6 +46,13 @@
 						margin-left: 1rem;
 						margin-right: 1rem;
 						padding: 0.2rem;
+
+						&.skip_publication_state_check_input {
+							margin-right: 0.5rem;
+							width: auto;
+							margin-left: 3rem;
+							vertical-align: text-bottom;
+						}
 					}
 				}
 
@@ -142,6 +149,22 @@
 								padding-top: 0.5rem;
 								display: inline-block;
 								padding-bottom: 0.5rem;
+							}
+
+							>.detail_container {
+								font-weight: 300;
+								padding-top: 1rem;
+								padding-bottom: 1rem;
+								font-size: 0.9rem;
+								line-height: 1.1rem;
+								font-family: monospace;
+
+								.green {
+									color: @color_green_success;
+								}
+								.red {
+									color: @color_danger;
+								}
 							}
 						}
 

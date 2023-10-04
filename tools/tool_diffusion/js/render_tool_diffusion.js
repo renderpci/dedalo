@@ -160,6 +160,29 @@ const get_content_data = async function(self) {
 			default_state 	: 'closed'
 		})
 
+	// skip_publication_state_check
+		const skip_publication_state_check_label = ui.create_dom_element({
+			element_type	: 'label',
+			inner_html		: self.get_tool_label('skip_publication_state_check') || 'Ignore temporarily the publication status when publishing',
+			parent			: resolve_levels_container
+		})
+		const skip_publication_state_check_node = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'checkbox',
+			class_name		: 'skip_publication_state_check_input',
+			name			: 'skip_publication_state_check',
+			value			: 1
+		})
+		skip_publication_state_check_label.prepend(skip_publication_state_check_node)
+		if (self.diffusion_info.skip_publication_state_check===1) {
+			skip_publication_state_check_node.checked = true
+		}
+		skip_publication_state_check_node.addEventListener('change', function(e) {
+			e.preventDefault()
+			// fix self levels value
+			self.skip_publication_state_check = this.checked ? 1 : 0
+		})
+
 	// publication items
 		const publication_items = render_publication_items(self)
 		fragment.appendChild(publication_items)
@@ -229,10 +252,8 @@ export const render_publication_items = function(self) {
 		const current_diffusion_map_length = current_diffusion_map.length
 		for (let i = 0; i < current_diffusion_map_length; i++) {
 
-			const item = current_diffusion_map[i]
-
-			const data_item = ar_data[diffusion_group_key]
-			console.log('data_item:', data_item);
+			const item		= current_diffusion_map[i]
+			const data_item	= ar_data[diffusion_group_key]
 
 			const current_diffusion_element_tipo = item.element_tipo
 
@@ -401,12 +422,48 @@ export const render_publication_items = function(self) {
 								diffusion_element_tipo : current_diffusion_element_tipo
 							})
 							.then(function(api_response){
-								console.log('export api_response:', api_response);
+								if(SHOW_DEBUG===true) {
+									console.log('export api_response:', api_response);
+								}
 
 								response_message.innerHTML = api_response.msg || 'Unknown error'
 								if (api_response.result===false) {
 									response_message.classList.add('error')
 								}
+
+								// update_record_response
+									if (api_response.update_record_response) {
+
+										const detail_container = ui.create_dom_element({
+											element_type	: 'div',
+											class_name		: 'detail_container',
+											parent			: response_message
+										})
+										const update_record_response		= api_response.update_record_response
+										const update_record_response_length	= update_record_response.length
+										for (let i = 0; i < update_record_response_length; i++) {
+
+											const item = update_record_response[i]
+
+											const class_add = item.result===true ? 'green' : 'red'
+											ui.create_dom_element({
+												element_type	: 'div',
+												class_name		: class_add,
+												inner_html		: item.msg,
+												parent			: detail_container
+											})
+										}
+									}
+
+								// time
+									if (api_response.time) {
+										ui.create_dom_element({
+											element_type	: 'div',
+											class_name		: 'detail_container',
+											inner_html		: 'Total secs: ' + api_response.time,
+											parent			: response_message
+										})
+									}
 
 								spinner.remove()
 								publication_button.classList.remove('hide')

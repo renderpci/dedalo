@@ -1609,6 +1609,8 @@ class diffusion_sql extends diffusion  {
 			$max_recursions = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
 				? (int)$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+			// subtract one to cohere key (recursion level and max_recursions)
+			$max_recursions--;
 
 			if ($recursion_level >= $max_recursions) {
 				# Avoid infinite loops like Manolo's item to all references
@@ -1781,7 +1783,7 @@ class diffusion_sql extends diffusion  {
 
 		// response
 			$response->result	 = true;
-			$response->msg		.= "Record updated section_id: '$section_id' and n references: ".count($ar_resolved_static).' in n levels: '.$max_recursions.'';
+			$response->msg		.= "Record updated section_id: $section_id. Number of references: ".count($ar_resolved_static).' in levels: '.($max_recursions + 1);
 
 
 		return $response;
