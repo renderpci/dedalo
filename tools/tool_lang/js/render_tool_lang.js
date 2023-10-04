@@ -116,7 +116,7 @@ const get_content_data_edit = async function(self) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'lang_label source_lang_label',
-					inner_html		: self.get_tool_label.source_lang || 'Source lang',
+					inner_html		: self.get_tool_label('source_lang') || 'Source lang',
 					parent			: top_left
 				})
 
@@ -175,7 +175,7 @@ const get_content_data_edit = async function(self) {
 				ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'lang_label target_lang_label',
-					inner_html		: self.get_tool_label.target_lang || 'Target lang',
+					inner_html		: self.get_tool_label('target_lang') || 'Target lang',
 					parent			: top_right
 				})
 
@@ -286,7 +286,7 @@ const render_propagate_marks_block = function(self) {
 		// new_only_label
 		const new_only_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: self.get_tool_label.new_only || 'New only',
+			inner_html		: self.get_tool_label('new_only') || 'New only',
 			parent			: propagate_marks_container
 		})
 		// input radio button
@@ -303,7 +303,7 @@ const render_propagate_marks_block = function(self) {
 		// all_label
 		const all_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: self.get_tool_label.all || 'Recreate all',
+			inner_html		: self.get_tool_label('all') || 'Recreate all',
 			parent			: propagate_marks_container
 		})
 		// input radio button
@@ -353,14 +353,13 @@ const build_automatic_translation = (self, translator_engine, source_select_lang
 		const automatic_translation_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'automatic_translation_container'
-			//parent		: buttons_container
 		})
 
 	// button
 		const button_automatic_translation = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning button_automatic_translation',
-			inner_html		: self.get_tool_label.automatic_translation || "Automatic translation",
+			inner_html		: self.get_tool_label('automatic_translation') || "Automatic translation",
 			parent			: automatic_translation_container
 		})
 

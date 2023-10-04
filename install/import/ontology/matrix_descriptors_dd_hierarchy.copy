@@ -241,7 +241,6 @@ hierarchy3	Id	termino	lg-eng
 hierarchy4	Active	termino	lg-eng
 hierarchy46	Elenco indicizzazione	termino	lg-ita
 hierarchy46	Listado indexación	termino	lg-spa
-hierarchy47	Búsqueda	termino	lg-spa
 hierarchy47	Recerca	termino	lg-cat
 hierarchy47	Ricerca	termino	lg-ita
 hierarchy47	Search	termino	lg-eng
@@ -310,6 +309,7 @@ hierarchy61	Nota d'abast	termino	lg-cat
 hierarchy61	Nota de alcance	termino	lg-spa
 hierarchy61	Nota di ambito	termino	lg-ita
 hierarchy61	Επεξηγηματικό σημείωμα	termino	lg-ell
+hierarchy47	RECYCLE HIERARCHY	termino	lg-spa
 hierarchy63	Geonames ID	termino	lg-cat
 hierarchy63	Geonames ID	termino	lg-ell
 hierarchy63	Geonames ID	termino	lg-spa

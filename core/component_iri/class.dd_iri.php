@@ -30,6 +30,7 @@ class dd_iri extends stdClass {
 	const DELIMITER = '_';
 
 
+
 	/**
 	* __CONSTRUCT
 	* @param object $data
@@ -53,10 +54,6 @@ class dd_iri extends stdClass {
 
 
 	/**
-	* SET  METHODDS
-	* Verify values and set property to current object
-	*/
-	/**
 	* SET_IRI
 	*/
 	public function set_iri($value) {
@@ -66,21 +63,17 @@ class dd_iri extends stdClass {
 				throw new Exception("Error Processing Request. Invalid iri: $value", 1);
 		}
 		$this->iri = (string)$value;
-	}
+	}//end set_iri
 
 
 
-	/**
-	* SET  METHODDS
-	* Verify values and set property to current object
-	*/
 	/**
 	* SET_TITLE
 	*/
 	public function set_title($value) {
 
 		$this->title = (string)$value;
-	}
+	}//end set_title
 
 
 
@@ -88,7 +81,7 @@ class dd_iri extends stdClass {
 	* SET_IRI_FROM_URL_PARTS
 	* @param object $url_parts
 	*/
-	public function set_iri_from_url_parts($url_parts) {
+	public function set_iri_from_url_parts(object $url_parts) {
 
 		$scheme		= $url_parts->scheme;//mandatory
 		$host		= $url_parts->host;//mandatory
@@ -131,7 +124,7 @@ class dd_iri extends stdClass {
 		}
 
 		$this->iri = $url;
-	}#end set_iri_from_url_parts
+	}//end set_iri_from_url_parts
 
 
 

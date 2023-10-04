@@ -97,7 +97,9 @@ class tool_diffusion extends tool_common {
 			// }
 
 		// skip_publication_state_check
-			$skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
+			$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check'])
+				? (int)$_SESSION['dedalo']['config']['skip_publication_state_check']
+				: 0;
 
 		// result info
 			$result = (object)[
@@ -124,13 +126,24 @@ class tool_diffusion extends tool_common {
 	* @return object $response
 	*/
 	public static function export(object $options) : object {
+		$start_time=start_time();
 
 		// options
-			$mode					= $options->mode ?? 'edit';
-			$section_tipo			= $options->section_tipo ?? null;
-			$section_id				= $options->section_id ?? null;
-			$diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$resolve_levels			= $options->resolve_levels ?? 1;
+			$mode							= $options->mode ?? 'edit';
+			$section_tipo					= $options->section_tipo ?? null;
+			$section_id						= $options->section_id ?? null;
+			$diffusion_element_tipo			= $options->diffusion_element_tipo;
+			$resolve_levels					= $options->resolve_levels ?? 1;
+			$skip_publication_state_check	= $options->skip_publication_state_check ?? null;
+
+		// skip_publication_state_check
+			if (isset($skip_publication_state_check)) {
+				$_SESSION['dedalo']['config']['skip_publication_state_check'] = (int)$skip_publication_state_check;
+				debug_log(__METHOD__
+					. " Set skip_publication_state_check session value: " . json_encode($skip_publication_state_check)
+					, logger::DEBUG
+				);
+			}
 
 		// export_options
 			$export_options = (object)[
@@ -145,6 +158,8 @@ class tool_diffusion extends tool_common {
 				? tool_diffusion::export_list( $export_options ) // list mode (based on session sqo)
 				: tool_diffusion::export_edit( $export_options ); // edit mode only one record
 
+			$response->time = exec_time_unit($start_time, 'sec');
+
 
 		return $response;
 	}//end export
@@ -158,6 +173,7 @@ class tool_diffusion extends tool_common {
 	* @return object $response
 	*/
 	public static function export_edit(object $options) : object {
+
 
 		// response
 			$response = new stdClass();
@@ -195,8 +211,11 @@ class tool_diffusion extends tool_common {
 					[] // array ar_records
 				);
 
-				$response->result	= $export_result->result;
-				$response->msg		= $export_result->msg;
+				$response->result					= $export_result->result;
+				$response->msg						= $export_result->msg;
+				$response->update_record_response	= is_array($export_result->update_record_response)
+					? $export_result->update_record_response
+					: [$export_result->update_record_response];
 
 				// Update schema data always
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
@@ -279,6 +298,7 @@ class tool_diffusion extends tool_common {
 
 				$resolve_references		= true;
 				$n_records_published	= 0;
+				$update_record_response = [];
 				foreach ((array)$rows_data->ar_records as $row) {
 
 					$section_id		= (int)$row->section_id;
@@ -296,8 +316,13 @@ class tool_diffusion extends tool_common {
 							$n_records_published++;
 						}else{
 							$response->msg .= $export_result->msg;
-							debug_log(__METHOD__." export_result ".to_string($export_result), logger::ERROR);
+							debug_log(__METHOD__
+								." export_result ".to_string($export_result)
+								, logger::ERROR
+							);
 						}
+
+						$update_record_response[] = $export_result->update_record_response;
 
 					// diffusion_rdf case
 						if ($diffusion_class_name==='diffusion_rdf') {
@@ -323,6 +348,7 @@ class tool_diffusion extends tool_common {
 							, logger::ERROR
 						);
 					}
+					$response->update_record_response = $update_record_response;
 
 				// Update schema data always
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
@@ -422,7 +448,7 @@ class tool_diffusion extends tool_common {
 					? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
 					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
 
-				$response->msg = sprintf("Published record ID %s successfully (levels: ".$max_recursions.")", $section_id);
+				$response->msg = "Published record ID $section_id successfully. Levels: $max_recursions. ";
 				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
@@ -446,16 +472,10 @@ class tool_diffusion extends tool_common {
 				}
 			}
 
-		// msg. Add specific messages
-			if (isset($update_record_response->msg)) {
-				$update_record_response_msg = array_reduce((array)$update_record_response->msg, function($carry, $item){
-					if (!empty($item)) {
-						return $item;
-					}
-					return $carry;
-				});
-				$response->msg .= ' ' . $update_record_response_msg;
-			}
+		// update_record_response
+			$response->update_record_response = isset($update_record_response)
+				? $update_record_response
+				: null;
 
 		// debug
 			// if(SHOW_DEBUG===true) {
