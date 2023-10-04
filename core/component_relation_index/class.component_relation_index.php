@@ -41,7 +41,11 @@ class component_relation_index extends component_relation_common {
 				$reference_locator->set_section_id($this->section_id);
 
 		// referenced locators. Get calculated inverse locators for all matrix tables
-			$ar_inverse_locators = search_related::get_referenced_locators( $reference_locator );
+			// $ar_inverse_locators = search_related::get_referenced_locators($reference_locator);
+			$ar_inverse_locators = component_relation_index::get_referended_locators_with_cache(
+				$reference_locator,
+				DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
+			);
 
 		// format result like own dato
 			$new_dato = [];
@@ -468,8 +472,10 @@ class component_relation_index extends component_relation_common {
 				$locator->section_tipo	= $section_tipo;
 
 		// referenced_locators
-			$referenced_locators = search_related::get_referenced_locators(
-				$locator
+			// $referenced_locators = search_related::get_referenced_locators($locator);
+			$referenced_locators = component_relation_index::get_referended_locators_with_cache(
+				$locator,
+				DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . $section_tipo // cache_key
 			);
 
 		// references. Add section_id once
@@ -491,6 +497,35 @@ class component_relation_index extends component_relation_common {
 
 		return $references;
 	}//end get_references_to_section
+
+
+
+	/**
+	* GET_REFERENDED_LOCATORS_WITH_CACHE
+	* Get inverse locators using cache
+	* Note that, in publication process, many languages are resolved for every record and the result
+	* for all of them is the same. Use this cache-able function to prevent calculate inverse locators
+	* for every language
+	* @param object $locator
+	* @return array $referenced_locators
+	*/
+	public function get_referended_locators_with_cache(object $locator, string $cache_key) : array {
+
+		// cache
+			static $referended_locators_cache;
+			if (isset($referended_locators_cache[$cache_key])) {
+				return $referended_locators_cache[$cache_key];
+			}
+
+		// referenced_locators from search_related
+			$referenced_locators = search_related::get_referenced_locators($locator);
+
+		// cache
+			$referended_locators_cache[$cache_key] = $referenced_locators;
+
+
+		return $referenced_locators;
+	}//end get_referended_locators_with_cache
 
 
 
