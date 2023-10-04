@@ -237,12 +237,20 @@ class component_security_access extends component_common {
 		// sub_sections has his own components and need to be checked and set with the correct section_tipo
 		$sub_section_children_recursive = [];
 
+		// get the exclude elements defined into ontology to be remove of the datalist
+		$ar_tipo_to_be_exclude = null;
+		$ar_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($section_tipo, $model_name='exclude_elements', $relation_type='children', true);
+		if (isset($ar_exclude_elements[0])) {
+			$exclude_elements_tipo = $ar_exclude_elements[0];
+			$ar_tipo_to_be_exclude = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
+		}
+
 		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, dataframes, etc.)
-		$children_recursive = self::get_children_recursive_security_acces($section_tipo);
+		$children_recursive = self::get_children_recursive_security_acces($section_tipo, $ar_tipo_to_be_exclude);
 		foreach ($children_recursive as $current_child) {
 
 			// sub section case
-			// when a main section has a sub section
+			// when a main section has a sub section (used as dataframe)
 			// get the children of this subsection to be checked in the loop
 			if($current_child->model === 'section'){
 				$sub_section_children_recursive = self::get_children_recursive_security_acces($current_child->tipo);
@@ -291,9 +299,10 @@ class component_security_access extends component_common {
 	* GET_CHILDREN_RECURSIVE_SECURITY_ACCES
 	* Custom recursive children resolve
 	* @param string $tipo
+	* @param array | null $ar_tipo_to_be_exclude
 	* @return array $element_datalist
 	*/
-	private static function get_children_recursive_security_acces(string $tipo) : array {
+	private static function get_children_recursive_security_acces(string $tipo, ?array $ar_tipo_to_be_exclude=null) : array {
 
 		// static cache
 			// static $children_recursive_security_access_data;
@@ -309,7 +318,7 @@ class component_security_access extends component_common {
 			case 'section':
 
 				$section_tipo				= $tipo;
-				$ar_modelo_name_required	= array('section_group','section_tab','button_','relation_list','time_machine_list','component_');
+				$ar_modelo_name_required	= array('section_group','section_tab','tab','button_','relation_list','time_machine_list','component_');
 
 				// real section
 					$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
@@ -363,8 +372,13 @@ class component_security_access extends component_common {
 		$ar_children = $ar_ts_children;
 		foreach($ar_children as $element_tipo) {
 
+			// remove exclude components and elements defined in ontology
+				if(isset($ar_tipo_to_be_exclude) && in_array($element_tipo, $ar_tipo_to_be_exclude)){
+					continue;
+				}
+
 			// remove_exclude_models
-				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
+				$component_model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo, true);
 				if( in_array($component_model, $ar_exclude_model)) {
 					continue ;
 				}
@@ -378,13 +392,13 @@ class component_security_access extends component_common {
 				$item = (object)[
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
-					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true),
+					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo, true),
 					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;
 
-			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_acces($element_tipo) );
+			$ar_elements = array_merge( $ar_elements, self::get_children_recursive_security_acces($element_tipo, $ar_tipo_to_be_exclude) );
 		}
 
 		// STORE CACHE DATA

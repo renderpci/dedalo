@@ -1737,7 +1737,7 @@ class section extends common {
 
 		static $cache_ar_children_tipo;
 		$cache_uid = $section_tipo.'_'.serialize($ar_model_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
-		if ($from_cache===true) {
+		if ($from_cache === true) {
 			if (isset($cache_ar_children_tipo[$cache_uid])) {
 				return $cache_ar_children_tipo[$cache_uid];
 			}
@@ -1746,11 +1746,11 @@ class section extends common {
 			// }
 		}
 
-		$ar_terminos_relacionados_to_exclude = [];
+		$ar_elements_to_be_exclude = [];
 
 		#
 		# RESOLVE_VIRTUAL : Resolve virtual section to real
-		if(true===$resolve_virtual) {
+		if($resolve_virtual === true) {
 
 			# ORIGINAL TIPO : always keeps the original type (current)
 			$original_tipo = $section_tipo;
@@ -1762,40 +1762,39 @@ class section extends common {
 
 				# OVERWRITE CURRENT SECTION TIPO WITH REAL SECTION TIPO
 				$section_tipo = $section_real_tipo;
-
-				# EXCLUDE ELEMENTS
-				if ($ar_tipo_exclude_elements===false) {
-					$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
-						$original_tipo, // string tipo
-						'exclude_elements', // string model_name
-						'children', // string relation_type
-						$search_exact // bool search_exact
-					);
-				}
-				if (!isset($ar_tipo_exclude_elements[0])) {
-					#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
-					// error_log("Warning. exclude_elements of section $original_tipo not found (1)");
-					debug_log(__METHOD__." Warning. exclude_elements of section $original_tipo not found (1) ".to_string(), logger::WARNING);
-				}else{
-
-					$tipo_exclude_elements					= $ar_tipo_exclude_elements[0];
-					$ar_terminos_relacionados_to_exclude	= RecordObj_dd::get_ar_terminos_relacionados(
-						$tipo_exclude_elements,
-						false, // bool cache
-						true // bool simple
-					);
-
-					foreach ($ar_terminos_relacionados_to_exclude as $component_tipo) {
-
-						$model_name = RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-						if($model_name==='section_group') {
-							$ar_recursive_childrens 			 = (array)section::get_ar_recursive_children($component_tipo, $ar_exclude_models);
-							$ar_terminos_relacionados_to_exclude = array_merge($ar_terminos_relacionados_to_exclude, $ar_recursive_childrens);
-						}
-					}//end foreach ($ar_terminos_relacionados_to_exclude as $key => $component_tipo) {
-				}
-
 			}//end if($section_real_tipo!=$original_tipo) {
+
+			# EXCLUDE ELEMENTS
+			if ($ar_tipo_exclude_elements===false) {
+				$ar_tipo_exclude_elements = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$original_tipo, // string tipo
+					'exclude_elements', // string model_name
+					'children', // string relation_type
+					$search_exact // bool search_exact
+				);
+			}
+			if (!isset($ar_tipo_exclude_elements[0])) {
+				#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
+				// error_log("Warning. exclude_elements of section $original_tipo not found (1)");
+				debug_log(__METHOD__." Warning. exclude_elements of section $original_tipo not found (1) ".to_string(), logger::WARNING);
+			}else{
+
+				$tipo_exclude_elements		= $ar_tipo_exclude_elements[0];
+				$ar_elements_to_be_exclude	= RecordObj_dd::get_ar_terminos_relacionados(
+					$tipo_exclude_elements,
+					false, // bool cache
+					true // bool simple
+				);
+
+				foreach ($ar_elements_to_be_exclude as $element_tipo) {
+
+					$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo, true);
+					if($model_name==='section_group' || $model_name === 'section_tab' || $model_name === 'tab') {
+						$ar_recursive_children		= (array)section::get_ar_recursive_children($element_tipo, $ar_exclude_models);
+						$ar_elements_to_be_exclude	= array_merge($ar_elements_to_be_exclude, $ar_recursive_children);
+					}
+				}//end foreach ($ar_elements_to_be_exclude as $key => $element_tipo) {
+			}
 		}//end if($resolve_virtual)
 
 		$tipo						= $section_tipo;
@@ -1806,10 +1805,10 @@ class section extends common {
 		if (count($ar_model_name_required)>1) {
 
 			if (true===$recursive) { // Default is recursive
-				$ar_recursive_childrens = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
+				$ar_recursive_children = (array)section::get_ar_recursive_children($tipo, $ar_exclude_models);
 			}else{
 				$RecordObj_dd			= new RecordObj_dd($tipo);
-				$ar_recursive_childrens = $RecordObj_dd->get_ar_childrens_of_this();
+				$ar_recursive_children	= $RecordObj_dd->get_ar_childrens_of_this();
 			}
 
 		}else{
@@ -1817,28 +1816,29 @@ class section extends common {
 			switch (true) {
 				// Components are searched recursively
 				case (strpos($ar_model_name_required[0], 'component')!==false && $recursive!==false):
-					$ar_recursive_childrens = section::get_ar_recursive_children($tipo, $ar_exclude_models);
+					$ar_recursive_children = section::get_ar_recursive_children($tipo, $ar_exclude_models);
 					break;
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
 					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$ar_recursive_childrens = $RecordObj_dd->get_ar_childrens_of_this();
+					$ar_recursive_children = $RecordObj_dd->get_ar_childrens_of_this();
 					break;
 			}
 		}
 
-		if( empty($ar_recursive_childrens) ) {
-			// throw new Exception(__METHOD__." ar_recursive_childrens is empty! This section don't have: '$model_name_required' ");
-			// debug_log(__METHOD__." ar_recursive_childrens is empty! This section id=$parent don't have: '$model_name_required' ". __METHOD__ );
+		if( empty($ar_recursive_children) ) {
+			// throw new Exception(__METHOD__." ar_recursive_children is empty! This section don't have: '$model_name_required' ");
+			// debug_log(__METHOD__." ar_recursive_children is empty! This section id=$parent don't have: '$model_name_required' ". __METHOD__ );
 			return $section_ar_children_tipo; # return empty array
 		}
 
 		// unset the exclude elements of the virtual section to the original section
-		if($resolve_virtual) {
-			$ar_recursive_childrens = array_diff($ar_recursive_childrens,$ar_terminos_relacionados_to_exclude);
+		if($resolve_virtual === true) {
+			$ar_recursive_children = array_diff($ar_recursive_children, $ar_elements_to_be_exclude);
 		}
+
 		// Loop through the child elements of the current section in the thesaurus
-		foreach($ar_recursive_childrens as $current_terminoID) {
+		foreach($ar_recursive_children as $current_terminoID) {
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_terminoID, true);
 			foreach((array)$ar_model_name_required as $model_name_required) {
@@ -1853,15 +1853,15 @@ class section extends common {
 				}
 
 				// component_filter : If we search for 'component_filter', we will only return the first one, since there may be nested sections
-				if($ar_model_name_required[0]==='component_filter' && count($ar_recursive_childrens)>1) {
+				if($ar_model_name_required[0]==='component_filter' && count($ar_recursive_children)>1) {
 					if(SHOW_DEBUG===true) {
-						// debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_childrens). " " .to_string($ar_model_name_required));
+						// debug_log(__METHOD__." Broken loop for search 'component_filter' in section $section_tipo ".count($ar_recursive_children). " " .to_string($ar_model_name_required));
 						// throw new Exception("Error Processing Request", 1);
 					}
 					continue;
 				}
 			}
-		}//end foreach($ar_recursive_childrens as $current_terminoID)
+		}//end foreach($ar_recursive_children as $current_terminoID)
 
 		// Cache session store
 		$cache_ar_children_tipo[$cache_uid] = $section_ar_children_tipo;
@@ -1874,7 +1874,7 @@ class section extends common {
 
 
 	/**
-	* GET_AR_RECURSIVE_CHILDREN : private alias of RecordObj_dd::get_ar_recursive_childrens
+	* GET_AR_RECURSIVE_CHILDREN : private alias of RecordObj_dd::get_ar_recursive_children
 	* Note the use of $ar_exclude_models to exclude not desired section elements, like auxiliary sections in ich
 	* @param string $tipo
 	* @param array|null $ar_exclude_models = null
