@@ -850,7 +850,7 @@ abstract class diffusion  {
 	* @param object $locator
 	* @return bool $is_publicable
 	*/
-	public static function get_is_publicable($locator) {
+	public static function get_is_publicable(object $locator) : bool {
 
 		$section_tipo	= $locator->section_tipo;
 		$section_id		= $locator->section_id;
@@ -869,7 +869,7 @@ abstract class diffusion  {
 			true, // bool resolve_virtual
 			true, // bool recursive
 			true, // bool search_exact
-			false // array|false ar_tipo_exclude_elements
+			false // array|bool ar_tipo_exclude_elements
 		);
 		// Check list of values cases (returns is_publicable true by default)
 		if (empty($ar_children)) {
@@ -877,7 +877,6 @@ abstract class diffusion  {
 		}
 
 		$component_publication_tipo = reset($ar_children);
-
 
 		$is_publicable = (bool)self::get_component_publication_bool_value($component_publication_tipo, $section_id, $section_tipo);
 
@@ -918,9 +917,12 @@ abstract class diffusion  {
 
 	/**
 	* GET_COMPONENT_PUBLICATION_bool_VALUE
+	* @param string $component_publication_tipo
+	* @param string|int $section_id
+	* @param string $section_tipo
 	* @return bool
 	*/
-	public static function get_component_publication_bool_value( $component_publication_tipo, $section_id, $section_tipo ) {
+	public static function get_component_publication_bool_value(string $component_publication_tipo, string|int $section_id, string $section_tipo) : bool {
 
 		$component_publication = component_common::get_instance(
 			'component_publication',
@@ -932,10 +934,11 @@ abstract class diffusion  {
 			false
 		);
 		$dato = $component_publication->get_dato();
-			#dump($dato, ' dato ++ '.to_string());
 
-		if (isset($dato[0]->section_tipo) && $dato[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO &&
+		if (isset($dato[0]) &&
+			isset($dato[0]->section_tipo) && $dato[0]->section_tipo === DEDALO_SECTION_SI_NO_TIPO &&
 			isset($dato[0]->section_id)   && (int)$dato[0]->section_id === NUMERICAL_MATRIX_VALUE_YES) {
+
 			return true;
 		}
 
@@ -946,10 +949,10 @@ abstract class diffusion  {
 
 	/**
 	* ADD_TO_UPDATE_RECORD_ACTIONS
+	* @param object $request_options
 	* @return bool
 	*/
-	public static function add_to_update_record_actions($request_options) {
-		#dump($request_options, ' request_options ++ '.to_string());
+	public static function add_to_update_record_actions(object $request_options) : bool {
 
 		$added = false;
 
@@ -958,7 +961,7 @@ abstract class diffusion  {
 				$options->component_tipo			= null;
 				$options->section_tipo				= null;
 				$options->section_id				= null;
-				$options->lang						= null;
+				$options->lang						= DEDALO_DATA_LANG;
 				$options->model						= null;
 				$options->diffusion_element_tipo	= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
@@ -1026,7 +1029,11 @@ abstract class diffusion  {
 				break;
 
 			default:
-				debug_log(__METHOD__." Error on add. Ignored not defained model: ".to_string($options->model), logger::ERROR);
+				debug_log(__METHOD__
+					." Error on add. Ignored not defined model" . PHP_EOL
+					." model: " . to_string($options->model)
+					, logger::ERROR
+				);
 				break;
 		}
 

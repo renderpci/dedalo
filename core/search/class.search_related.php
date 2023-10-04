@@ -155,12 +155,17 @@ class search_related extends search {
 			# filter relations array for each records to get only desired coincidences
 
 		// debug
-			$total_records = count($result);
-			debug_log(__METHOD__
-				. " Calculated referenced_locators step 1 (total: $total_records) section_tipo: $reference_locator->section_tipo,  section_id: " . ($reference_locator->section_id ?? '')
-				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
-				, logger::DEBUG
-			);
+			if(SHOW_DEBUG===true) {
+				$total_records	= count($result);
+				$time_ms		= exec_time_unit($start_time, 'ms');
+				debug_log(__METHOD__
+					. " Calculated referenced_locators step 1 (total: $total_records) section_tipo: $reference_locator->section_tipo,  section_id: " . ($reference_locator->section_id ?? '')
+					. ', time: ' . $time_ms .' ms'
+					, logger::DEBUG
+				);
+				// $bt = debug_backtrace();
+				// dump($bt, ' bt ++ '.to_string());
+			}
 
 			// Compare all properties of received locator in each relations locator
 			$ar_properties = array();
