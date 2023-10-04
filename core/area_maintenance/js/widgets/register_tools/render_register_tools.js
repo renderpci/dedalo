@@ -143,14 +143,6 @@ const render_content_data = async function(self) {
 					parent			: tool_item
 				})
 
-				// version
-				ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tool_version',
-					inner_html		: version,
-					parent			: tool_item
-				})
-
 				// installed_version
 				const installed_version_node = ui.create_dom_element({
 					element_type	: 'div',
@@ -161,6 +153,14 @@ const render_content_data = async function(self) {
 				if (installed_version!==version) {
 					installed_version_node.classList.add('warning')
 				}
+
+				// version
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tool_version',
+					inner_html		: version,
+					parent			: tool_item
+				})
 
 				// warning
 				if (!version) {
