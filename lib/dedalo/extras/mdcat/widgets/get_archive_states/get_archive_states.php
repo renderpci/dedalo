@@ -32,7 +32,9 @@
 				});
 
 				$current_component_tipo = $component_source->component_tipo;
-				$current_section_tipo 	= $component_source->section_tipo;
+				$current_section_tipo 	= $component_source->section_tipo === 'self'
+					? $section_tipo 
+					: $component_source->section_tipo;
 
 				#
 				# PORTAL ROWS
