@@ -172,11 +172,14 @@ export function object_to_url_vars(vars_obj) {
 
 	const pairs = []
 	for (const key in vars_obj) {
+		if (key==='t') {
+			console.error('url key "t" is not valid for tipo');
+		}
 		const current_value = vars_obj[key]
 		pairs.push( key+'='+ encodeURIComponent(current_value) )
 	}
 
-	const url_vars = pairs.join("&")
+	const url_vars = pairs.join('&')
 
 	return url_vars
 }//end object_to_url_vars
@@ -471,7 +474,7 @@ export function is_equal(el1, el2) {
 * Unified open window function
 * @param object options
 * {
-* 	url : /dedalo/core/page/?t=oh1,
+* 	url : /dedalo/core/page/?tipo=oh1,
 * 	target : My new window name,
 * 	width : 1280,
 * 	height : 900,

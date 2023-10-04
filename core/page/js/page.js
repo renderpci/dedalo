@@ -223,7 +223,7 @@ page.prototype.init = async function(options) {
 									? source.config.source_section_tipo
 									: source.tipo
 								// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-								// const url = "?t="+ current_tipo + '&m=' + source.mode
+								// const url = "?tipo="+ current_tipo + '&m=' + source.mode
 
 								// url search. Append section_id if exists
 									const url_vars = url_vars_to_object(location.search)

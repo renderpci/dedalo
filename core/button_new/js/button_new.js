@@ -38,7 +38,7 @@ var button_new = new function() {
 				if (response && response.result) {
 					if( Number.isInteger(response.result)===true && response.result > 0 ){
 						// Go to edit record page of created section
-						window.location.href = '?t=' + section_tipo + '&id=' + response.result
+						window.location.href = '?tipo=' + section_tipo + '&id=' + response.result
 					}else{
 						alert("[button_new.New] Error: section_id: " + response.result + " received is not valid")
 						html_page.loading_content( section_wrap_div, 0 );
