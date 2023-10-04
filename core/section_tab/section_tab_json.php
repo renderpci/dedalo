@@ -34,7 +34,21 @@
 					$current_context->children = [];
 					$RecordObj_dd	= new RecordObj_dd($tipo);
 					$children_tipo	= $RecordObj_dd->get_ar_childrens_of_this();
+
+					// get the valid tabs of the section
+					$valid_tabs = section::get_ar_children_tipo_by_model_name_in_section(
+						$section_tipo,
+						['section_tab','tab'],
+						true,
+						true,
+						true,
+						true
+					);
+
 					foreach ($children_tipo as $child_tipo) {
+						if(!in_array($child_tipo, $valid_tabs)){
+							continue;
+						}
 						$current_context->children[] = (object)[
 							'tipo'	=> $child_tipo,
 							'label'	=> RecordObj_dd::get_termino_by_tipo($child_tipo)
