@@ -69,17 +69,18 @@
       }
     },
     "dd201": {
+      "inf": "modified_date [component_date]",
       "dato": {
         "lg-nolan": [
           {
             "start": {
-              "day": 29,
-              "hour": 11,
-              "time": 65020620995,
-              "year": 2022,
-              "month": 12,
-              "minute": 36,
-              "second": 35
+              "day": 4,
+              "hour": 18,
+              "time": 65045269293,
+              "year": 2023,
+              "month": 10,
+              "minute": 21,
+              "second": 33
             }
           }
         ]
@@ -109,7 +110,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
       }
     },
@@ -173,6 +174,51 @@
               "lang": "lg-ell",
               "name": "depth_levels",
               "value": "βαθιά επίπεδα προς επίλυση"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "skip_publication_state_check",
+              "value": "Ignorar temporalmente el estado de publicación al publicar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "skip_publication_state_check",
+              "value": "Ignorar temporalment l'estat de publicació en publicar"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "skip_publication_state_check",
+              "value": ""
+            },
+            {
+              "lang": "lg-ita",
+              "name": "skip_publication_state_check",
+              "value": "Ignorare temporaneamente lo stato di pubblicazione nel pubblicare"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "skip_publication_state_check",
+              "value": "Ignorer temporairement le statut de publication lors de la publication"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "skip_publication_state_check",
+              "value": "Publikationsstatus bei der Veröffentlichung temporär ignorieren "
+            },
+            {
+              "lang": "lg-eng",
+              "name": "skip_publication_state_check",
+              "value": "Ignore temporarily the publication status when publishing"
+            },
+            {
+              "lang": "lg-por",
+              "name": "skip_publication_state_check",
+              "value": ""
+            },
+            {
+              "lang": "lg-ell",
+              "name": "skip_publication_state_check",
+              "value": ""
             }
           ]
         ]
@@ -182,7 +228,7 @@
   "section_id": 12,
   "created_date": "2022-03-01 20:37:27",
   "section_tipo": "dd1340",
-  "modified_date": "2022-12-29 11:36:35",
+  "modified_date": "2023-10-04 18:21:33",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
