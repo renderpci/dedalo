@@ -203,12 +203,13 @@ const get_content_value = (i, current_value, self) => {
 	// button remove. Triggered by wrapper delegated events
 		if(!is_inside_tool && i>0) {
 			// button_remove
-			const remove_node = ui.create_dom_element({
+			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})
-			remove_node.addEventListener('mouseup', function() {
+			button_remove.addEventListener('mouseup', function(e) {
+				e.stopPropagation()
 				remove_handler(input, i, self)
 			})
 		}// end if(mode)
@@ -268,6 +269,12 @@ const get_buttons = (self) => {
 			button_add.addEventListener('click', function(e) {
 				e.stopPropagation()
 
+				// no value case
+					if (!self.data.value || !self.data.value.length) {
+						self.node.content_data[0].querySelector('input').focus()
+						return
+					}
+
 				const key = self.data.value.length
 
 				const changed_data = [Object.freeze({
@@ -280,7 +287,6 @@ const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
 					const input_node = self.node.content_data[key]
 						? self.node.content_data[key].querySelector('input')
 						: null
