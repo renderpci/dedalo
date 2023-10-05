@@ -99,7 +99,7 @@ page.prototype.init = async function(options) {
 			// options
 				const source			= user_navigation_options.source
 				const sqo				= user_navigation_options.sqo || null
-				const event_in_history	= user_navigation_options.event_in_history || false
+				const event_in_history	= user_navigation_options.event_in_history ?? true
 
 			// check_unsaved_data
 				const result = await check_unsaved_data({

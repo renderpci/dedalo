@@ -65,7 +65,7 @@ render_menu.prototype.edit = async function() {
 		}
 
 	// menu_hierarchy. areas/sections hierarchy list
-		// menu tree
+		// menu tree (desktop)
 			const menu_hierarchy = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'menu_hierarchy top_item',
@@ -186,6 +186,7 @@ render_menu.prototype.edit = async function() {
 		const section_label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'section_label top_item inactive',
+			title			: get_label.seccion || 'Section',
 			parent			: fragment
 		})
 		section_label.addEventListener('click', self.section_label_handler)
@@ -194,6 +195,7 @@ render_menu.prototype.edit = async function() {
 		const toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector top_item hide',
+			title			: get_label.inspector || 'Inspector',
 			parent			: fragment
 		})
 		toggle_inspector.addEventListener('click', ui.toggle_inspector)
@@ -357,7 +359,7 @@ const change_lang = async function(e) {
 /**
 * UPDATE_SECTION_LABEL
 * Change the menu section label value
-* Is called from section after rendering ends
+* Is called from section when rendering is finished
 * @param object options
 * {
 *  value : string as 'Oral History',
@@ -371,10 +373,9 @@ render_menu.prototype.update_section_label = function(options) {
 	const self = this
 
 	// options
-		const value		= options.value
+		const value		= options.value || ''
 		const mode		= options.mode
 		const on_click	= options.on_click
-
 
 	// check
 		if (!self.node) {
@@ -391,7 +392,12 @@ render_menu.prototype.update_section_label = function(options) {
 		const toggle_inspector	= self.node.toggle_inspector
 
 	// set click event callback
-		section_label.on_click = on_click
+		if (section_label && typeof on_click==='function') {
+			section_label.addEventListener('click', function(e) {
+				e.stopPropagation()
+				on_click(e)
+			})
+		}
 
 	// clean
 		while (section_label.firstChild) {
