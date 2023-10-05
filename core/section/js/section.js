@@ -319,19 +319,22 @@ section.prototype.init = async function(options) {
 					let n_try = 0
 					const update_menu = () => {
 						// ignore sections inside tool (tool_user_admin case)
-						if (self.caller && self.caller.type==='tool') {
-							return
-						}
-						// menu. Note that menu is set as global var on menu build
-						const retry_timeout = setTimeout(update_menu, 2000);
-						const menu = window.menu
-						if (menu) {
-							clearTimeout(retry_timeout);
-
-							// ignore search presets case
+							if (self.caller && self.caller.type==='tool') {
+								return
+							}
+						// ignore search presets case
 							if (self.tipo==='dd623') {
 								return
 							}
+
+						const retry_timeout = setTimeout(update_menu, 2000);
+						// menu. Note that menu is set as global var on menu build
+						// const menu = window.menu
+						const menu = window.dd_page && window.dd_page.ar_instances
+							? window.dd_page.ar_instances.find(el => el.model==='menu')
+							: null
+						if (menu) {
+							clearTimeout(retry_timeout);
 
 							menu.update_section_label({
 								value		: self.label,

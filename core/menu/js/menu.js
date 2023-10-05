@@ -155,9 +155,6 @@ menu.prototype.build = async function(autoload=true) {
 			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
 
-	// set menu instance as global to be available
-		window.menu = self
-
 	// status update
 		self.status = 'built'
 
