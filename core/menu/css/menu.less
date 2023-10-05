@@ -418,6 +418,7 @@
 			color: #cccccc;
 			border: none;
 			cursor: pointer;
+			font-size: 1.05rem;
 
 			-webkit-appearance: none;
 			-moz-appearance: none;
@@ -481,6 +482,7 @@
 			&.inactive {
 				cursor: default;
 				pointer-events: none;
+				opacity: 0.9;
 			}
 		}
 
@@ -492,11 +494,15 @@
 			background-repeat: no-repeat;
 			background-size: contain;
 			background-position: center;
-			width: 2em;
-			height: 1em;
-			margin-right: 1em;
+			width: 1.4rem;
+			height: 1rem;
+			margin-right: 1rem;
 			margin-left: 0px;
 			cursor: pointer;
+
+			&:active {
+				opacity: 0.4;
+			}
 
 			@media screen and (max-width: @width_break_point_0) { // 1024px
 				display: none;
