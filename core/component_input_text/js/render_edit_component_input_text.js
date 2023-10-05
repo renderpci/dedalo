@@ -129,6 +129,11 @@ export const remove_handler = function(input, key, self) {
 
 	// value
 		const current_value = input.value ? input.value : null
+		if (current_value) {
+			if (!confirm(get_label.sure)) {
+				return
+			}
+		}
 
 	// changed_data
 		const changed_data = [Object.freeze({
