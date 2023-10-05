@@ -506,6 +506,9 @@ page.prototype.build = async function(autoload=false) {
 			document.title =  'V6 ' + tipo + ' ' + label
 		}
 
+	// set page instance as global to be available
+		window.dd_page = self
+
 	// status update
 		self.status = 'built'
 
