@@ -180,7 +180,6 @@ class component_iri extends component_common {
 			$data		= $this->get_dato();
 			if (!empty($data)) {
 				foreach ($data as $current_value) {
-						dump($current_value, ' current_value ++ '.to_string());
 
 					$current_iri	= $current_value->iri ?? '';
 					$current_title	= $current_value->title ?? '';
