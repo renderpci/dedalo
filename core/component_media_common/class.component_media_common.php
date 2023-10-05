@@ -1065,7 +1065,7 @@ class component_media_common extends component_common {
 		// file path
 			$file_path = $this->get_media_filepath($quality);
 			// original could override default path
-			if ($quality==='original') {
+			if ($quality===DEDALO_IMAGE_QUALITY_ORIGINAL) {
 				$raw_path = $this->get_original_file_path($quality);
 				if ($raw_path!==$file_path) {
 					$file_path = $raw_path;

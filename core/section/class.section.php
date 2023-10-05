@@ -1774,9 +1774,10 @@ class section extends common {
 				);
 			}
 			if (!isset($ar_tipo_exclude_elements[0])) {
-				#throw new Exception("Error Processing Request. exclude_elements of section $original_tipo not found. Exclude elements is mandatory (1)", 1);
-				// error_log("Warning. exclude_elements of section $original_tipo not found (1)");
-				debug_log(__METHOD__." Warning. exclude_elements of section $original_tipo not found (1) ".to_string(), logger::WARNING);
+				// debug_log(__METHOD__
+				// 	." Warning. exclude_elements of section $original_tipo not found (1) ".to_string()
+				// 	, logger::WARNING
+				// );
 			}else{
 
 				$tipo_exclude_elements		= $ar_tipo_exclude_elements[0];
