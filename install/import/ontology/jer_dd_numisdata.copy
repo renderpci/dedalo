@@ -954,12 +954,12 @@ numisdata1237	numisdata1232	dd247	no	si	si	3	numisdata	no	\N	\N	\N
 numisdata1238	numisdata1232	dd177	no	si	si	4	numisdata	no	\N	\N	\N
 numisdata1239	numisdata1232	dd183	no	si	si	5	numisdata	no	\N	\N	\N
 numisdata1243	numisdata375	dd6	no	si	si	11	numisdata	no	[{"dd626":"dd22"}]	\N	\N
-numisdata1248	numisdata1243	\N	no	si	si	3	numisdata	\N	[{"dd9":"numisdata1246"}]	\N	\N
 numisdata1247	numisdata1243	dd247	no	si	si	2	numisdata	no	\N	\N	\N
 numisdata1249	numisdata1243	dd177	no	si	si	4	numisdata	no	\N	\N	\N
 numisdata1250	numisdata1243	dd183	no	si	si	5	numisdata	no	\N	\N	\N
 numisdata1234	numisdata1232	dd91	no	si	si	2	numisdata	si	[{"dd9":"numisdata1236"}]	\N	\N
 numisdata1251	numisdata1223	dd57	no	si	si	4	numisdata	no	[{"dd6":"numisdata1243"},{"dd9":"numisdata1246"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%"}}}}	\N
+numisdata1248	numisdata1243	dd91	no	si	si	3	numisdata	si	[{"dd9":"numisdata1246"}]	\N	\N
 numisdata1240	numisdata132	dd11	no	si	si	11	numisdata	no	[{"dd6":"numisdata1232"},{"dd9":"numisdata1236"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "18 / span 3"}}}
 numisdata1231	numisdata132	dd11	no	si	si	10	numisdata	no	[{"dd6":"numisdata1232"},{"dd9":"numisdata1236"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "15 / span 3"}}}
 numisdata1241	numisdata132	dd11	no	si	si	12	numisdata	no	[{"dd6":"numisdata1232"},{"dd9":"numisdata1236"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "15 / span 3"}}}
