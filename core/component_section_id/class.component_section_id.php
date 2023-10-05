@@ -10,6 +10,7 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_DATO
+	* @return int $dato
 	*/
 	public function get_dato() {
 

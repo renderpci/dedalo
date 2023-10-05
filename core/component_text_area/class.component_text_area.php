@@ -21,6 +21,10 @@ class component_text_area extends component_common {
 
 		$dato = parent::get_dato();
 
+		if (!is_null($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
+
 		return $dato;
 	}//end get_dato
 

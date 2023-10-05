@@ -861,9 +861,21 @@ abstract class component_common extends common {
 						. 'section_id: '		. $this->section_id
 						, logger::WARNING
 					);
+					/**
+					* @todo Unify all components behavior when dato format is wrong (fix, save ..)
+						// fix as array
+							// $dato = [$dato];
+							// $this->set_dato($dato);
+							// debug_log(__METHOD__
+							// 	. " Fixed and set bad format dato to array " . PHP_EOL
+							// 	. to_string($dato)
+							// 	, logger::WARNING
+							// );
+					*/
 				}
 			}
 		}
+
 
 		return $dato; // <- The language fallback for the mode list will be directly applied
 	}//end get_dato
