@@ -66,6 +66,8 @@ area_common.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.ar_instances	= []
 
+	self.caller			= options.caller || null
+
 	// dd request
 	self.dd_request		= {
 		show	: null,
