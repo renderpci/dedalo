@@ -65,8 +65,8 @@ class GenericQuadIterator implements \rdfInterface\QuadIteratorInterface {
         }
     }
 
-    public function current(): Quad {
-        return $this->iter->current();
+    public function current(): Quad | null {
+        return $this->iter->valid() ? $this->iter->current() : null;
     }
 
     public function key(): mixed {
