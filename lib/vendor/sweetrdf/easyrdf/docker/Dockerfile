@@ -1,9 +1,9 @@
-FROM php:8.1-cli
+FROM php:8.2-cli
 
 RUN apt-get update && \
     apt-get install -y git graphviz libicu-dev libzip-dev make nano net-tools raptor2-utils wget zip zlib1g-dev
 
-RUN apt-get install -y openjdk-11-jre
+RUN apt-get install -y openjdk-17-jre
 
 RUN docker-php-ext-install intl zip && docker-php-ext-enable intl zip
 
