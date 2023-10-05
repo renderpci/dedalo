@@ -95,7 +95,10 @@ class tool_update_cache extends tool_common {
 					// model
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
 						if (strpos($model, 'component_')===false) {
-							debug_log(__METHOD__." Skipped element '$model' tipo: $current_component_tipo (is not a component) ", logger::DEBUG);
+							debug_log(__METHOD__
+								." Skipped element '$model' tipo: $current_component_tipo (is not a component) "
+								, logger::ERROR
+							);
 							continue;
 						}
 
@@ -111,7 +114,7 @@ class tool_update_cache extends tool_common {
 						);
 
 					// regenerate data
-						$current_component->get_dato(); # !! Important get dato before regenerate
+						$current_component->get_dato(); // !! Important get dato before regenerate
 						$result = $current_component->regenerate_component();
 						if ($result!==true) {
 							debug_log(__METHOD__

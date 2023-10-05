@@ -114,7 +114,7 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// input field
-		const input_email = ui.create_dom_element({
+		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value' + add_class,
@@ -122,114 +122,50 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		// focus event
-			input_email.addEventListener('focus', function() {
+			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
 					ui.component.activate(self)
 				}
 			})
-		// blur event
-			// input_email.addEventListener('blur', function() {
-			// 	// force to save current input if changed (prevents override changed_data
-			// 	// in multiple values cases)
-			// 	if (self.data.changed_data) {
-			// 		// change_value
-			// 		self.change_value({
-			// 			changed_data	: self.data.changed_data,
-			// 			refresh			: false
-			// 		})
-			// 	}
+		// keyup event
+			input.addEventListener('keyup', function(e){
+				keyup_handler(e, i, self)
+			})
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// mousedown event. Capture event propagation
+			// input.addEventListener('mousedown', (e) => {
+			// 	e.stopPropagation()
 			// })
 		// change event
-			input_email.addEventListener('change', fn_change)
+			input.addEventListener('change', fn_change)
 			function fn_change(e) {
-				e.preventDefault();
-
 				// validate
-					const validated = self.verify_email(input_email.value)
-					ui.component.error(!validated, input_email)
-					if (!validated) {
-						return false
-					}
-
-				return
-
-				// save value
-					// set the changed_data for replace it in the instance data
-					// new_value. key is the position in the data array, the value is the new value
-					const new_value = (input_email.value.length>0) ? input_email.value : null
-					// set the changed_data for update the component data and send it to the server for change when save
-					const changed_data = [Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: new_value
-					})]
-					// update the data in the instance previous to save
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
-					// check if the new value is empty or not to remove the mandatory class
-					if(new_value){
-						input_email.classList.remove('mandatory')
-					}else{
-						input_email.classList.add('mandatory')
-					}
+				const validated = self.verify_email(input.value)
+				ui.component.error(!validated, input)
+				if (!validated) {
+					return false
+				}
 			}//end change
-		// keyup event
-			input_email.addEventListener('keyup', fn_keyup)
-			async function fn_keyup(e) {
-
-				// Enter key force to save changes
-					if (e.key==='Enter') {
-						// force to save current input if changed
-						if (self.data.changed_data.length>0) {
-							// change_value
-							self.change_value({
-								changed_data	: self.data.changed_data,
-								refresh			: false
-							})
-						}
-						return false
-					}
-
-				// change data
-					const changed_data_item = Object.freeze({
-						action	: 'update',
-						key		: i,
-						value	: (this.value.length>0) ? this.value : null
-					})
-				// fix instance changed_data
-					self.set_changed_data(changed_data_item)
-			}//end keyup
 
 	// add buttons to the email row
 		if((mode==='edit') && !is_inside_tool) {
 
 			// button_remove
-				const button_remove = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button remove hidden_button',
-					parent			: content_value
-				})
-				button_remove.addEventListener('mouseup', fn_remove)
-				function fn_remove(e) {
-					// force possible input change before remove
-					document.activeElement.blur()
-
-					const changed_data = [Object.freeze({
-						action	: 'remove',
-						key		: i,
-						value	: null
-					})]
-					self.change_value({
-						changed_data	: changed_data,
-						label			: current_value || ' ',
-						refresh			: true
+				if (i>0) {
+					const button_remove = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button remove hidden_button',
+						parent			: content_value
 					})
-					.then(()=>{
+					button_remove.addEventListener('mouseup', function(e) {
+						e.stopPropagation()
+						remove_handler(input, i, self)
 					})
-				}//end fn_remove
+				}
 
 			// button email
 				const button_email = ui.create_dom_element({
@@ -239,7 +175,7 @@ const get_content_value = (i, current_value, self) => {
 				})
 				button_email.addEventListener('mouseup', function(e) {
 					e.stopPropagation()
-					self.send_email(current_value)
+					self.send_email(input.value)
 				})
 		}
 
@@ -291,24 +227,37 @@ export const get_buttons = (self) => {
 			const add_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
+				title			: 'Add new input field',
 				parent			: fragment
 			})
-			add_button.addEventListener('mouseup',function() {
+			add_button.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				// no value case
+					if (!self.data.value || !self.data.value.length) {
+						self.node.content_data[0].querySelector('input').focus()
+						return
+					}
+
+				const key = self.data.value.length
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,//self.data.value.length>0 ? self.data.value.length : 1,
+					key		: key,
 					value	: null
 				})]
 				self.change_value({
 					changed_data	: changed_data,
-					refresh			: false
+					refresh			: true
 				})
 				.then(()=>{
-					const new_input	= get_content_value(changed_data.key, changed_data.value, self)
-					self.node.content_data.appendChild(new_input)
-					const input_value = new_input.querySelector('.input_value')
-					if (input_value) {
-						input_value.focus()
+					const input_node = self.node.content_data[key]
+						? self.node.content_data[key].querySelector('input')
+						: null
+					if (input_node) {
+						input_node.focus()
+					}else{
+						console.warn('Empty input_node:', self.node.content_data, key);
 					}
 				})
 			})
@@ -319,7 +268,9 @@ export const get_buttons = (self) => {
 				class_name		: 'button email_multiple',
 				parent			: fragment
 			})
-			send_multiple_email.addEventListener('mouseup', async function (e) {
+			send_multiple_email.addEventListener('click', async function (e) {
+				e.stopPropagation()
+
 				const ar_emails		= await self.get_ar_emails()
 				const mailto_prefix	= 'mailto:?bcc=';
 				// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
@@ -393,5 +344,90 @@ export const get_buttons = (self) => {
 
 
 
-// @license-end
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+export const keyup_handler = function(e, key, self) {
+	e.preventDefault()
 
+	// tab/shift case catch
+		if (e.key==='Tab' || e.key==='Shift') {
+			return
+		}
+
+	// Enter key force to save changes
+		if (e.key==='Enter') {
+
+			// force to save current input if changed
+				const changed_data = self.data.changed_data || []
+				// change_value (save data)
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+		}else{
+			// change data
+				const changed_data_item = Object.freeze({
+					action	: 'update',
+					key		: key,
+					value	: e.target.value || ''
+				})
+
+			// fix instance changed_data
+				self.set_changed_data(changed_data_item)
+		}
+
+
+	return true
+}//end keyup_handler
+
+
+
+/**
+* REMOVE_HANDLER
+* Handle button remove actions
+* @param DOM  node input
+* @param int key
+* @param object self
+* @return promise response
+*/
+export const remove_handler = function(input, key, self) {
+
+	// force possible input change before remove
+		document.activeElement.blur()
+
+	// value
+		const current_value = input.value ? input.value : null
+		if (current_value) {
+			if (!confirm(get_label.sure)) {
+				return
+			}
+		}
+
+	// changed_data
+		const changed_data = [Object.freeze({
+			action	: 'remove',
+			key		: key,
+			value	: null
+		})]
+
+	// change_value. Returns a promise that is resolved on api response is done
+		const response = self.change_value({
+			changed_data	: changed_data,
+			label			: current_value,
+			refresh			: true
+		})
+
+
+	return response
+}//end remove_handler
+
+
+
+// @license-end
