@@ -4046,7 +4046,6 @@ rsc15	Cession of rights	termino	lg-eng
 rsc16	List	termino	lg-eng
 rsc17	Relation	termino	lg-eng
 rsc19	State	termino	lg-eng
-rsc20	Publication	termino	lg-eng
 rsc21	Code	termino	lg-eng
 rsc22	Previous Code	termino	lg-eng
 rsc23	Title	termino	lg-eng
@@ -4056,7 +4055,6 @@ rsc28	Project	termino	lg-eng
 rsc29	Image	termino	lg-eng
 rsc30	Description	termino	lg-eng
 rsc31	Photo caption	termino	lg-eng
-rsc32	Options file	termino	lg-eng
 rsc34	Filename	termino	lg-eng
 rsc37	Document	termino	lg-eng
 rsc38	Description	termino	lg-eng
@@ -4115,6 +4113,8 @@ rsc36	Description / transcription	termino	lg-eng
 rsc62	Transcribed / described	termino	lg-eng
 rsc95	Job Category / Title	termino	lg-eng
 rsc93	Sex	termino	lg-eng
+rsc20	Publishable	termino	lg-eng
+rsc32	File options	termino	lg-eng
 rsc97	Image rights	termino	lg-eng
 rsc98	Project	termino	lg-eng
 rsc99	Observations	termino	lg-eng
@@ -5116,7 +5116,6 @@ rsc197	Personnes à l'étude	termino	lg-fra
 rsc198	Exclus 	termino	lg-fra
 rsc199	Liste	termino	lg-fra
 rsc2	Ressources Médias	termino	lg-fra
-rsc20	Publication	termino	lg-fra
 rsc200	État 	termino	lg-fra
 rsc201	Recherche	termino	lg-fra
 rsc203	Individus, groupes ou communautés	termino	lg-fra
@@ -6105,3 +6104,106 @@ rsc1128	Genre	termino	lg-fra
 rsc226	RECYCLE RSC	termino	lg-spa
 rsc1129	Listado de indexaciones	termino	lg-spa
 rsc1129	Indexation list	termino	lg-eng
+rsc170	صورة	termino	lg-ara
+rsc5	تعريف	termino	lg-ara
+rsc175	رقم الهوية	termino	lg-ara
+rsc20	قابل للنشر	termino	lg-ara
+rsc21	شفرة	termino	lg-ara
+rsc733	تاريخ القبول	termino	lg-ara
+rsc26	مواعدة	termino	lg-ara
+rsc23	عنوان	termino	lg-ara
+rsc19	ولاية	termino	lg-ara
+rsc24	التصنيف	termino	lg-ara
+rsc25	جمع / أرشيف	termino	lg-ara
+rsc732	جودة	termino	lg-ara
+rsc27	الملاحظات	termino	lg-ara
+rsc28	مشروع	termino	lg-ara
+rsc20	Publiable	termino	lg-fra
+rsc6	صورة	termino	lg-ara
+rsc29	صورة	termino	lg-ara
+rsc30	وصف	termino	lg-ara
+rsc31	صورة توضيحية	termino	lg-ara
+rsc32	خيارات الملف	termino	lg-ara
+rsc33	الدليل	termino	lg-ara
+rsc34	امتداد اسم الملف	termino	lg-ara
+rsc496	مصدر خارجي	termino	lg-ara
+rsc1054	واصفات	termino	lg-ara
+rsc7	سمعي بصري	termino	lg-ara
+rsc35	سمعي بصري	termino	lg-ara
+rsc263	اللغة الأصلية	termino	lg-ara
+rsc244	معلومة	termino	lg-ara
+rsc36	الوصف / النسخ	termino	lg-ara
+rsc860	الفهرسة	termino	lg-ara
+rsc995	ترجمات	termino	lg-ara
+rsc8	وثيقة	termino	lg-ara
+rsc37	وثيقة	termino	lg-ara
+rsc38	وصف	termino	lg-ara
+rsc856	SVG وثيقة	termino	lg-ara
+rsc855	SVG	termino	lg-ara
+rsc857	وصف	termino	lg-ara
+rsc10	يأسر	termino	lg-ara
+rsc47	نسخة مجاملة	termino	lg-ara
+rsc44	تاريخ الالتقاط	termino	lg-ara
+rsc45	مكان الالتقاط	termino	lg-ara
+rsc46	البلدية	termino	lg-ara
+rsc53	ملاحظات الالتقاط	termino	lg-ara
+rsc49	تسمية توضيحية (مرحلة ما قبل الإنتاج)	termino	lg-ara
+rsc52	مصور فوتوغرافي	termino	lg-ara
+rsc50	المحاور	termino	lg-ara
+rsc51	مسجل الكاميرا	termino	lg-ara
+rsc11	البيانات الفنية السمعية والبصرية	termino	lg-ara
+rsc55	إزاحة رمز الوقت	termino	lg-ara
+rsc58	ابعاد متزنة	termino	lg-ara
+rsc57	الجهاز الرئيسي	termino	lg-ara
+rsc54	مدة	termino	lg-ara
+rsc59	لون	termino	lg-ara
+rsc60	الجودة الرئيسية	termino	lg-ara
+rsc56	سلسلة من	termino	lg-ara
+rsc252	معلومات تقنية	termino	lg-ara
+rsc253	التنسيق الأصلي	termino	lg-ara
+rsc303	دعم الأصلي	termino	lg-ara
+rsc258	مساحة اللون	termino	lg-ara
+rsc322	قياس	termino	lg-ara
+rsc321	الارتفاع (ص)	termino	lg-ara
+rsc320	(س) العرض	termino	lg-ara
+rsc257	مسلسل	termino	lg-ara
+rsc398	اسم الملف الأصلي	termino	lg-ara
+rsc12	عملية	termino	lg-ara
+rsc61	المعالجة الرقمية	termino	lg-ara
+rsc48	المقابلات الخاصة بإدارة الجودة	termino	lg-ara
+rsc752	تاريخ	termino	lg-ara
+rsc156	حالة	termino	lg-ara
+rsc80	تصديق	termino	lg-ara
+rsc62	منقول / موصوف	termino	lg-ara
+rsc400	نسخ إدارة الجودة	termino	lg-ara
+rsc753	تاريخ	termino	lg-ara
+rsc431	حالة النسخ	termino	lg-ara
+rsc285	التحقق من صحة النسخ	termino	lg-ara
+rsc63	مفهرسة	termino	lg-ara
+rsc401	فهرسة إدارة الجودة	termino	lg-ara
+rsc754	تاريخ	termino	lg-ara
+rsc437	حالة الفهرسة	termino	lg-ara
+rsc439	التحقق من صحة الفهرسة	termino	lg-ara
+rsc376	مترجم	termino	lg-ara
+rsc402	ترجمة إدارة الجودة	termino	lg-ara
+rsc755	تاريخ	termino	lg-ara
+rsc438	ترجمة الحالة	termino	lg-ara
+rsc493	ترجمة التحقق من الصحة	termino	lg-ara
+rsc13	موقع	termino	lg-ara
+rsc14	الحفاظ على	termino	lg-ara
+rsc15	التنازل عن الحقوق	termino	lg-ara
+rsc16	قائمة	termino	lg-ara
+rsc18	حذف المورد	termino	lg-ara
+rsc17	علاقة	termino	lg-ara
+rsc502	أحدث التغييرات	termino	lg-ara
+rsc1074	جديد	termino	lg-ara
+rsc203	الأفراد والجماعات والمجتمعات	termino	lg-ara
+rsc197	الأشخاص قيد الدراسة	termino	lg-ara
+rsc194	الناس	termino	lg-ara
+rsc167	سمعي بصري	termino	lg-ara
+rsc176	وثيقة	termino	lg-ara
+rsc332	مرجع ببليوغرافي	termino	lg-ara
+rsc205	المنشورات	termino	lg-ara
+rsc204	إدارة	termino	lg-ara
+rsc106	جهات	termino	lg-ara
+rsc420	معالم السيرة الذاتية	termino	lg-ara

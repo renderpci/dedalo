@@ -1335,12 +1335,11 @@ mdcat1655	Identificació	termino	lg-cat
 mdcat1655	Identificación	termino	lg-spa
 mdcat1656	Id	termino	lg-cat
 mdcat1656	Id	termino	lg-spa
+mdcat1660	Persona afectada	termino	lg-cat
 mdcat1658	Fondo	termino	lg-spa
 mdcat1658	Fons	termino	lg-cat
 mdcat1659	Estado	termino	lg-spa
 mdcat1659	Estat	termino	lg-cat
-mdcat1660	Desaparecido	termino	lg-spa
-mdcat1660	Desaparegut	termino	lg-cat
 mdcat1661	Familiares solicitantes	termino	lg-spa
 mdcat1661	Familiars sol·licitants	termino	lg-cat
 mdcat1662	Solicitudes	termino	lg-spa
@@ -8593,7 +8592,6 @@ mdcat1657	Publication	termino	lg-fra
 mdcat1658	Fond 	termino	lg-fra
 mdcat1659	État 	termino	lg-fra
 mdcat166	Publication	termino	lg-fra
-mdcat1660	Disparu	termino	lg-fra
 mdcat1661	Membres de la famille du demandeur	termino	lg-fra
 mdcat1662	Demandes	termino	lg-fra
 mdcat1663	Demandes	termino	lg-fra
@@ -11483,7 +11481,6 @@ mdcat1656	Id	termino	lg-eng
 mdcat1657	Publication	termino	lg-eng
 mdcat1658	Collection	termino	lg-eng
 mdcat1659	State	termino	lg-eng
-mdcat1660	Missing	termino	lg-eng
 mdcat1661	Applicant family members	termino	lg-eng
 mdcat1662	Requests	termino	lg-eng
 mdcat1663	Requests	termino	lg-eng
@@ -14529,3 +14526,17 @@ mdcat1326	Exilé	termino	lg-fra
 mdcat1328	Campos franceses	termino	lg-spa
 mdcat1328	French fields	termino	lg-eng
 mdcat1328	Camps francesos	termino	lg-cat
+mdcat4418	Investigación documental histórica	termino	lg-spa
+mdcat4418	Recerca documental històrica	termino	lg-cat
+mdcat4420	Listado	termino	lg-spa
+mdcat4420	Llistat	termino	lg-cat
+mdcat4420	List	termino	lg-eng
+mdcat1660	Persona afectada	termino	lg-spa
+mdcat1660	Affected person	termino	lg-eng
+mdcat1660	Personne concernée	termino	lg-fra
+mdcat4421	Informació de la persona afectada	termino	lg-cat
+mdcat4421	Información de la persona afectada	termino	lg-spa
+mdcat4421	Information of the affected person	termino	lg-eng
+mdcat4422	Excluidos	termino	lg-spa
+mdcat4418	Historical documentary research	termino	lg-eng
+mdcat4419	Excluidos	termino	lg-spa
