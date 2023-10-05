@@ -89,16 +89,31 @@ view_line_edit_portal.render = async function(self, options) {
 		wrapper.addEventListener('dblclick', function(e) {
 			e.stopPropagation()
 			e.preventDefault()
-			// self.show_interface.read_only = true
+
+			// get the section loaded in page as main section
+			const loaded_section = window.dd_page.ar_instances.find(el => el.model === 'section')
+
+			// check if the component is loaded by main section
+			// if yes, the component is editable by itself
+			// if not, the component is behind a portal and need to be changed to be editable
+			const need_change_mode = (loaded_section
+				&& loaded_section.mode === self.mode
+				&& loaded_section.section_tipo === self.section_tipo)
+				? false // is in the main section and the edit is available
+				: true // in inside a portal and the edit is not available
 
 			const change_mode = 'list'
 
 			const change_view = 'line'
+			
+			// if the test get the component inside the main section do not perform the change mode
+			if(need_change_mode === true){
+				self.change_mode({
+					mode	: change_mode,
+					view	: change_view
+				})
+			}
 
-			self.change_mode({
-				mode	: change_mode,
-				view	: change_view
-			})
 		})
 
 
