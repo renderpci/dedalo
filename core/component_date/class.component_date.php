@@ -128,12 +128,6 @@ class component_date extends component_common {
 
 		$dato = parent::get_dato();
 
-		if(SHOW_DEBUG===true) {
-			if ( !is_null($dato) && !is_array($dato)  ) {
-				#dump( $dato, "WRONG TYPE of dato. tipo: $this->tipo - section_tipo: $this->section_tipo - section_id: $this->parent");
-			}
-		}
-
 		return (array)$dato;
 	}//end get_dato
 
