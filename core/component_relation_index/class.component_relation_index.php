@@ -509,7 +509,7 @@ class component_relation_index extends component_relation_common {
 	* @param object $locator
 	* @return array $referenced_locators
 	*/
-	public function get_referended_locators_with_cache(object $locator, string $cache_key) : array {
+	public static function get_referended_locators_with_cache(object $locator, string $cache_key) : array {
 
 		// cache
 			static $referended_locators_cache;
