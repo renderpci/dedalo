@@ -210,8 +210,7 @@ section.prototype.init = async function(options) {
 				}
 			}//end fn_create_new_section
 
-
-			// duplicate_section_ event
+		// duplicate_section_ event
 			self.events_tokens.push(
 				event_manager.subscribe('duplicate_section_' + self.id, fn_duplicate_section)
 			)
@@ -257,7 +256,6 @@ section.prototype.init = async function(options) {
 					})
 				}
 			}//end fn_duplicate_section
-
 
 		// delete_section_ event. (!) Moved to self button delete in render_section_list
 			self.events_tokens.push(
@@ -347,35 +345,9 @@ section.prototype.init = async function(options) {
 									return
 								}
 
-								// navigate browser from edit to list
-								/* OLD
-									// Note that internal navigation (based on injected browser history) uses the stored local database
-									// saved_rqo if exists. Page real navigation (reload page for instance) uses server side sessions to
-									// preserve offset and order
-
-									// saved_sqo from local_db_data. On section paginate, local_db_data is saved. Recover saved sqo here to
-									// go to list mode in the same position (offset) that the user saw
-										const section_tipo	= self.tipo
-										const sqo_id		= ['section', section_tipo].join('_')
-										const saved_sqo		= await data_manager.get_local_db_data(
-											sqo_id,
-											'sqo'
-										)
-
-									// sqo. Note that we are changing from edit to list mode and current offset it's not applicable
-									// The list offset will be get from server session if exists
-										const sqo = saved_sqo
-											? saved_sqo.value
-											: {
-												filter	: self.rqo.sqo.filter,
-												order	: self.rqo.sqo.order || null
-											 }
-										// always use section request_config_object format instead parsed sqo format
-										sqo.section_tipo = self.request_config_object.sqo.section_tipo
-									*/
 								// saved_sqo
 								// Note that section build method store SQO in local DDBB to preserve user
-								// navigation section filter and pagination. It's recovered here when exists
+								// navigation section filter and pagination. It's recovered here when exists,
 								// to pass values to API server
 								const saved_sqo	= await data_manager.get_local_db_data(
 									self.session_key + '_list',
@@ -403,9 +375,10 @@ section.prototype.init = async function(options) {
 
 								// navigation
 									const user_navigation_rqo = {
-										caller_id	: self.id,
-										source		: source,
-										sqo			: sqo  // new sqo to use in list mode
+										caller_id			: self.id,
+										source				: source,
+										sqo					: sqo,  // new sqo to use in list mode
+										event_in_history	: true // writes browser navigation step to allow back
 									}
 									event_manager.publish('user_navigation', user_navigation_rqo)
 							}//end on_click
