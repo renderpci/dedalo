@@ -97,8 +97,9 @@ class component_filter extends component_relation_common {
 
 
 	/**
-	* GET DATO : Old Format {"7":2,"269":2,"298":2}
-	* @return array $dato
+	* GET DATO
+	* @return array|null $dato
+	* 	Old Format {"7":2,"269":2,"298":2}
 	* @see component_filter_master->get_dato() for maintain unified format of projects
 	*/
 	public function get_dato() {

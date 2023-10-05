@@ -114,6 +114,7 @@ class component_date extends component_common {
 
 	/**
 	* GET_DATO
+	* @return array|null $dato
 	* Dato change to object with year, month, day, hour, minute, second separated in key->value like
 	* [{"start":{
 	*    "year": -500000,
