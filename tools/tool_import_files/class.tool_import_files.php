@@ -72,19 +72,17 @@ class tool_import_files extends tool_common {
 	/**
 	* SET_MEDIA_FILE
 	* Insert in target section, current uploaded file
-	* @param array $media_file
+	* @param object $add_file_options
 	* @param string tipo $target_section_tipo
 	* @param int section_id $current_section_id
 	* @param string tipo $target_component
-	* @param string|null $custom_target_quality
 	* @return bool
 	*/
 	public static function set_media_file(
-		$media_file,
+		object $add_file_options,
 		string $target_section_tipo,
 		int $current_section_id,
-		string $target_component_tipo,
-		?string $custom_target_quality=null
+		string $target_component_tipo
 		) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
@@ -92,30 +90,24 @@ class tool_import_files extends tool_common {
 			case 'component_image':
 
 				// custom_target_quality
-					$custom_target_quality = $custom_target_quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
+					$custom_target_quality = $add_file_options->quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
 
-				// file vars
-					// Path of file like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/'
-					$source_path		= $media_file['dir_path'];
-					// Full path to file located in temporal files uploads like '/Users/my_user/Dedalo/media/media_mupreva/image/temp/files/user_1/1253-2.jpg'
-					$source_full_path	= $media_file['file_path'];
-					// File current extension like 'jpg'
-					$extension			= $media_file['extension'];
-					// File name full like '1253-2.jpg'
-					$file_name_full		= $media_file['file_name_full'];
-					// File name without extension
-					$file_name			= $media_file['file_name'];
-
-				// safe paths check
-					if (strpos($source_path, '../')!==false ||
-						strpos($source_full_path, '../')!==false ||
-						strpos($extension, '../')!==false ||
-						strpos($file_name_full, '../')!==false ||
-						strpos($file_name, '../')!==false
-						) {
-						debug_log(__METHOD__." Error Processing Request. Unauthorized path ".to_string(), logger::ERROR);
-						return false;
-					}
+				// logger activity. Note that this log is here because generic service_upload
+				// is not capable to know if the uploaded file is the last one in a chunked file scenario
+					logger::$obj['activity']->log_message(
+						'UPLOAD COMPLETE',
+						logger::INFO,
+						$target_component_tipo,
+						NULL,
+						[
+							'msg'			=> 'Upload file complete. Processing uploaded file',
+							'file_data'		=> json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+							// 'file_name'	=> $file_data->name,
+							// 'file_size'	=> format_size_units($file_data->size),
+							// 'time_sec'	=> $file_data->time_sec,
+							// 'f_error'	=> $file_data->error || null
+						]
+					);
 
 				// component_image
 					$component = component_common::get_instance(
@@ -127,24 +119,30 @@ class tool_import_files extends tool_common {
 						$target_section_tipo
 					);
 
-				// get_image_id
-					$image_id			= $component->get_id();
-					$additional_path	= $component->get_additional_path();
+				// fix current component target quality (defines the destination directory for the file, like 'original')
+					$component->set_quality($custom_target_quality);
 
-				// original image desired store
-					$original_path		= $component->get_media_path_dir($custom_target_quality);
-					$original_file_path	= $original_path .'/'. $image_id . '.'. strtolower($extension);
+				// add file
+					$add_file = $component->add_file($add_file_options);
+					if ($add_file->result===false) {
+						$response->msg .= $add_file->msg;
+						return $response;
+					}
 
-				// copy the original
-					if (!copy($source_full_path, $original_file_path)) {
-						debug_log(__METHOD__." Error on copy source_full_path to original_file_path ", logger::ERROR);
-						debug_log(__METHOD__." source_full_path ".to_string($source_full_path), logger::ERROR);
-						debug_log(__METHOD__." original_file_path ".to_string($original_file_path), logger::ERROR);
-						return false;
+				// post processing file (add_file returns final renamed file with path info)
+					$process_file = $component->process_uploaded_file($add_file->ready);
+					if ($process_file->result===false) {
+						$response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
+						return $response;
 					}
 
 				// Delete the thumbnail copy
-					$original_file_thumb = $source_path .'/thumbnail/'. $file_name_full;
+					$user_id		= get_user_id();
+					$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
+
+					$thumbnail_name = pathinfo($add_file_options->name, PATHINFO_FILENAME);
+					$original_file_thumb = $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
+
 					if (file_exists($original_file_thumb)) {
 						if(!unlink($original_file_thumb)){
 							debug_log(__METHOD__." Thumb Delete ERROR of: ".to_string($original_file_thumb), logger::ERROR);
@@ -624,12 +622,21 @@ class tool_import_files extends tool_common {
 					}//end if (!empty($file_processor_properties))
 
 				// set_media_file. Move uploaded file to media folder and create default versions
+					$add_file_options = new stdClass();
+						$add_file_options->name			= $current_file_name; // string original file name like 'IMG_3007.jpg'
+						$add_file_options->key_dir		= $key_dir; // string upload caller name like 'oh1_oh1'
+						$add_file_options->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR'; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+						$add_file_options->tmp_name		= $current_file_name; // string like 'phpJIQq4e'
+						$add_file_options->quality		= $custom_target_quality;
+						$add_file_options->source_file	= null;
+						$add_file_options->size			= $file_data['file_size'];
+						$add_file_options->extension	= $file_data['extension'];
+
 					tool_import_files::set_media_file(
-						$file_data,
+						$add_file_options,
 						$target_section_tipo,
 						$target_section_id,
-						$target_component_tipo,
-						$custom_target_quality
+						$target_component_tipo
 					);
 
 				// ar_processed. Add as processed
