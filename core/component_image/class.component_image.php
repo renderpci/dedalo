@@ -1158,9 +1158,9 @@ class component_image extends component_media_common {
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// short vars
-			$original_file_name	= $file_data->original_file_name;	// kike "my photo785.jpg"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
-
+			$original_file_name			= $file_data->original_file_name;	// kike "my photo785.jpg"
+			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
+			$original_normalized_name	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
 		// debug
 			debug_log(__METHOD__
 				. " process_uploaded_file " . PHP_EOL
@@ -1288,13 +1288,19 @@ class component_image extends component_media_common {
 						);
 					}else{
 						// update property files_info
-						$dato[0]->files_info = $files_info;
+						$dato[0]->files_info				= $files_info;
+						$dato[0]->original_file_name		= $original_file_name;
+						$dato[0]->original_normalized_name	= $original_normalized_name;
+						$dato[0]->original_upload_date		= component_date::get_date_now();
 						$save_dato = true;
 					}
 				}else{
 					// create a new dato from scratch
 					$dato_item = (object)[
-						'files_info' => $files_info
+						'files_info'				=> $files_info,
+						'original_file_name'		=> $original_file_name,
+						'original_normalized_name'	=> $original_normalized_name,
+						'original_upload_date'		=> component_date::get_date_now()
 					];
 					$dato = [$dato_item];
 					$save_dato = true;
