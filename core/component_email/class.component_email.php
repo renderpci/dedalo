@@ -22,14 +22,16 @@ class component_email extends component_common {
 
 
 	/**
-	* GET DATO : Format "user@domain.com"
+	* GET DATO
+	* @return array|null $dato
+	* Format ["user@domain.com"]
 	*/
-		// public function get_dato() {
+	public function get_dato() {
 
-		// 	$dato = parent::get_dato();
+		$dato = parent::get_dato();
 
-		// 	return (array)$dato;
-		// }//end get_dato
+		return (array)$dato;
+	}//end get_dato
 
 
 

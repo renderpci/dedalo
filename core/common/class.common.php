@@ -291,6 +291,31 @@ abstract class common {
 
 
 	/**
+	* SET_BL_LOADED_MATRIX_DATA
+	* @param bool $value
+	* @return bool
+	*/
+	public function set_bl_loaded_matrix_data( bool $value ) : bool {
+
+		$this->bl_loaded_matrix_data = $value;
+
+		return true;
+	}//end set_bl_loaded_matrix_data
+
+
+
+	/**
+	* GET_BL_LOADED_MATRIX_DATA
+	* @return bool $value
+	*/
+	public function get_bl_loaded_matrix_data() : bool {
+
+		return $this->bl_loaded_matrix_data;
+	}//end get_bl_loaded_matrix_data
+
+
+
+	/**
 	* LOAD STRUCTURE DATA
 	* Get data once from Ontology (tipo, model, norden, estraducible, etc.)
 	* @return bool

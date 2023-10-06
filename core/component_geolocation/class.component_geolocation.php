@@ -70,6 +70,7 @@ class component_geolocation extends component_common {
 	* @return array|null $dato
 	*/
 	public function get_dato() {
+
 		$dato = parent::get_dato();
 
 		if (!empty($dato) && !is_array($dato)) {

@@ -30,6 +30,7 @@ class component_number extends component_common {
 
 	/**
 	* GET_DATO
+	* @return array|null
 	*/
 	public function get_dato() {
 

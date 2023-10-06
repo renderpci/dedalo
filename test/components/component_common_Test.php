@@ -478,10 +478,12 @@ final class component_common_test extends TestCase {
 				'expected running without errors'
 			);
 
+			$loaded_matrix_data = $component->get_bl_loaded_matrix_data();
+
 			$this->assertTrue(
-				$component->get_bl_loaded_matrix_data()===true,
+				$loaded_matrix_data===true,
 				'expected true from bl_loaded_matrix_data '.$element->model .PHP_EOL
-				. json_encode($component->get_bl_loaded_matrix_data())
+				. json_encode($loaded_matrix_data)
 			);
 
 			if (!in_array($element->model, [

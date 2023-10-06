@@ -1,35 +1,21 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<phpunit
-    backupGlobals="false"
-    backupStaticAttributes="false"
-    colors="true"
-    convertErrorsToExceptions="true"
-    convertNoticesToExceptions="true"
-    convertWarningsToExceptions="true"
-    processIsolation="false"
-    stopOnFailure="false"
-    verbose="true">
-
-    <php>
-      <!--
-        Fix for coverage report causing Seg Fault
-        (see https://bugs.php.net/bug.php?id=53976)
-      -->
-      <ini name="zend.enable_gc" value="0" />
-    </php>
-
-    <testsuites>
-      <testsuite name="EasyRdf Library">
-        <directory suffix="Test.php">test/EasyRdf/</directory>
-      </testsuite>
-      <testsuite name="EasyRdf Examples">
-        <directory suffix="Test.php">test/examples/</directory>
-      </testsuite>
-    </testsuites>
-
-    <filter>
-        <whitelist>
-            <directory>lib</directory>
-        </whitelist>
-    </filter>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" bootstrap="test/bootstrap.php" backupGlobals="false" colors="true" processIsolation="false" stopOnFailure="false" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/10.2/phpunit.xsd" cacheDirectory=".phpunit.cache" backupStaticProperties="false"
+displayDetailsOnTestsThatTriggerDeprecations="true">
+  <coverage/>
+  <testsuites>
+    <testsuite name="EasyRdf Library">
+      <directory suffix="Test.php">tests/EasyRdf/</directory>
+    </testsuite>
+    <testsuite name="EasyRdf Parser">
+      <directory suffix="Test.php">tests/ParserTest/</directory>
+    </testsuite>
+    <testsuite name="EasyRdf Examples">
+      <directory suffix="Test.php">tests/ExampleTest/</directory>
+    </testsuite>
+  </testsuites>
+  <source>
+    <include>
+      <directory>lib</directory>
+    </include>
+  </source>
 </phpunit>

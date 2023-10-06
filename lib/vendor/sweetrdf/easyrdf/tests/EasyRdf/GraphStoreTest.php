@@ -1,0 +1,299 @@
+<?php
+
+namespace Tests\EasyRdf;
+
+/*
+ * EasyRdf
+ *
+ * LICENSE
+ *
+ * Copyright (c) 2009-2014 Nicholas J Humfrey.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. The name of the author 'Nicholas J Humfrey" may be used to endorse or
+ *    promote products derived from this software without specific prior
+ *    written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ * @copyright  Copyright (c) 2021 Konrad Abicht <hi@inspirito.de>
+ * @copyright  Copyright (c) 2009-2014 Nicholas J Humfrey
+ * @license    https://www.opensource.org/licenses/bsd-license.php
+ */
+
+use EasyRdf\Format;
+use EasyRdf\Graph;
+use EasyRdf\GraphStore;
+use EasyRdf\Http;
+use Test\MockClass\Http\MockClient;
+use Test\TestCase;
+
+class GraphStoreTest extends TestCase
+{
+    /** @var GraphStore */
+    private $graphStore;
+    /** @var MockClient */
+    private $client;
+
+    protected function setUp(): void
+    {
+        Http::setDefaultHttpClient(
+            $this->client = new MockClient()
+        );
+        $this->graphStore = new GraphStore('http://localhost:8080/data/');
+
+        // Ensure that the built-in n-triples parser is used
+        Format::registerSerialiser('ntriples', 'EasyRdf\Serialiser\Ntriples');
+    }
+
+    public function testGetUri()
+    {
+        $this->assertSame(
+            'http://localhost:8080/data/',
+            $this->graphStore->getUri()
+        );
+    }
+
+    public function testGetDirect()
+    {
+        $this->client->addMock(
+            'GET',
+            'http://localhost:8080/data/foaf.rdf',
+            readFixture('foaf.json')
+        );
+        $graph = $this->graphStore->get('foaf.rdf');
+        $this->assertClass(Graph::class, $graph);
+        $this->assertSame('http://localhost:8080/data/foaf.rdf', $graph->getUri());
+        $this->assertStringEquals(
+            'Joe Bloggs',
+            $graph->get('http://www.example.com/joe#me', 'foaf:name')
+        );
+    }
+
+    public function testGetIndirect()
+    {
+        $this->client->addMock(
+            'GET',
+            'http://localhost:8080/data/?graph=http%3A%2F%2Ffoo.com%2Fbar.rdf',
+            readFixture('foaf.json')
+        );
+        $graph = $this->graphStore->get('http://foo.com/bar.rdf');
+        $this->assertClass(Graph::class, $graph);
+        $this->assertSame('http://foo.com/bar.rdf', $graph->getUri());
+        $this->assertStringEquals(
+            'Joe Bloggs',
+            $graph->get('http://www.example.com/joe#me', 'foaf:name')
+        );
+    }
+
+    public function testGetDefault()
+    {
+        $this->client->addMock(
+            'GET',
+            'http://localhost:8080/data/?default',
+            readFixture('foaf.json')
+        );
+        $graph = $this->graphStore->getDefault();
+        $this->assertClass(Graph::class, $graph);
+        $this->assertNull($graph->getUri());
+        $this->assertStringEquals(
+            'Joe Bloggs',
+            $graph->get('http://www.example.com/joe#me', 'foaf:name')
+        );
+    }
+
+    public function testDeleteDirect()
+    {
+        $this->client->addMock(
+            'DELETE',
+            'http://localhost:8080/data/foaf.rdf',
+            'OK'
+        );
+        $response = $this->graphStore->delete('foaf.rdf');
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testDeleteIndirect()
+    {
+        $this->client->addMock(
+            'DELETE',
+            'http://localhost:8080/data/?graph=http%3A%2F%2Ffoo.com%2Fbar.rdf',
+            'OK'
+        );
+        $response = $this->graphStore->delete('http://foo.com/bar.rdf');
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testDeleteHttpError()
+    {
+        $this->client->addMock(
+            'DELETE',
+            'http://localhost:8080/data/filenotfound',
+            'Graph not found.',
+            ['status' => 404]
+        );
+        $this->expectException('EasyRdf\Exception');
+        $this->expectExceptionMessage(
+            'HTTP request to delete http://localhost:8080/data/filenotfound failed'
+        );
+        $this->graphStore->delete('filenotfound');
+    }
+
+    public function checkNtriplesRequest($client)
+    {
+        $this->assertSame(
+            "<urn:subject> <urn:predicate> \"object\" .\n",
+            $client->getRawData()
+        );
+        $this->assertSame('application/n-triples', $client->getHeader('Content-Type'));
+
+        return true;
+    }
+
+    public function testInsertDirect()
+    {
+        $graph = new Graph('http://localhost:8080/data/new.rdf');
+        $graph->add('urn:subject', 'urn:predicate', 'object');
+        $this->client->addMock(
+            'POST',
+            'http://localhost:8080/data/new.rdf',
+            'OK',
+            ['callback' => [$this, 'checkNtriplesRequest']]
+        );
+        $response = $this->graphStore->insert($graph);
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testInsertIndirect()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'POST',
+            '/data/?graph=http%3A%2F%2Ffoo.com%2Fbar.rdf',
+            'OK',
+            ['callback' => [$this, 'checkNtriplesRequest']]
+        );
+        $response = $this->graphStore->insert($data, 'http://foo.com/bar.rdf');
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testInsertIntoDefault()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'POST',
+            '/data/?default',
+            'OK',
+            ['callback' => [$this, 'checkNtriplesRequest']]
+        );
+        $response = $this->graphStore->insertIntoDefault($data);
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testInsertHttpError()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'POST',
+            '/data/new.rdf',
+            'Internal Server Error',
+            ['status' => 500]
+        );
+        $this->expectException('EasyRdf\Exception');
+        $this->expectExceptionMessage(
+            'HTTP request for http://localhost:8080/data/new.rdf failed'
+        );
+        $this->graphStore->insert($data, 'new.rdf');
+    }
+
+    public function testReplaceIndirect()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'PUT',
+            '/data/?graph=http%3A%2F%2Ffoo.com%2Fbar.rdf',
+            'OK',
+            ['callback' => [$this, 'checkNtriplesRequest']]
+        );
+        $response = $this->graphStore->replace($data, 'http://foo.com/bar.rdf');
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testReplaceDefault()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'PUT',
+            '/data/?default',
+            'OK',
+            ['callback' => [$this, 'checkNtriplesRequest']]
+        );
+        $response = $this->graphStore->replaceDefault($data);
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function checkJsonRequest($client)
+    {
+        $this->assertSame(
+            '{"urn:subject":{"urn:predicate":[{"type":"literal","value":"object"}]}}',
+            $client->getRawData()
+        );
+        $this->assertSame('application/json', $client->getHeader('Content-Type'));
+
+        return true;
+    }
+
+    public function testReplaceDirectJson()
+    {
+        $graph = new Graph('http://localhost:8080/data/new.rdf');
+        $graph->add('urn:subject', 'urn:predicate', 'object');
+        $this->client->addMock(
+            'PUT',
+            '/data/?graph=http%3A%2F%2Ffoo.com%2Fbar.rdf',
+            'OK',
+            ['callback' => [$this, 'checkJsonRequest']]
+        );
+        $response = $this->graphStore->replace($graph, 'http://foo.com/bar.rdf', 'json');
+        $this->assertSame(200, $response->getStatus());
+    }
+
+    public function testReplaceHttpError()
+    {
+        $data = "<urn:subject> <urn:predicate> \"object\" .\n";
+        $this->client->addMock(
+            'PUT',
+            '/data/existing.rdf',
+            'Internal Server Error',
+            ['status' => 500]
+        );
+        $this->expectException('EasyRdf\Exception');
+        $this->expectExceptionMessage(
+            'HTTP request for http://localhost:8080/data/existing.rdf failed'
+        );
+        $this->graphStore->replace($data, 'existing.rdf');
+    }
+
+    public function testToString()
+    {
+        $this->assertStringEquals(
+            'http://localhost:8080/data/',
+            $this->graphStore
+        );
+    }
+}
