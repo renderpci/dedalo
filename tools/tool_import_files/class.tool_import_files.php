@@ -151,52 +151,6 @@ class tool_import_files extends tool_common {
 							return false;
 						}
 					}
-
-				// extension unify. convert JPG | PSD | TIFF | ... to jpg
-					if (strtolower($extension)!=strtolower(DEDALO_IMAGE_EXTENSION)) {
-						$original_file_path_jpg = $original_path .'/'. $image_id .'.'. DEDALO_IMAGE_EXTENSION;
-						$options = new stdClass();
-							$options->source_file	= $original_file_path;
-							$options->target_file	= $original_file_path_jpg;
-							$options->quality		= 100;
-
-						ImageMagick::convert($options);
-					}
-
-				// convert to default quality
-					// QUALITY_DEFAULT. Generate dedalo default quality version (usually 1.5MB) and thumb image
-					if ($custom_target_quality!==DEDALO_IMAGE_QUALITY_DEFAULT) {
-						$component->convert_quality(
-							$custom_target_quality, // source_quality
-							DEDALO_IMAGE_QUALITY_DEFAULT // target_quality
-						);
-					}
-					// THUMB_DEFAULT. Convert to thumb quality
-					$component->convert_quality(
-						DEDALO_IMAGE_QUALITY_DEFAULT, // source_quality
-						DEDALO_IMAGE_THUMB_DEFAULT // target_quality
-					);
-
-				// generate the svg file
-					$svg_string_node = $component->create_default_svg_string_node(); // return string|null
-					if (empty($svg_string_node)) {
-						debug_log(__METHOD__." File not found on create_default_svg_string_node. Ignored 'create_svg_file' ".to_string(), logger::ERROR);
-					}else{
-						$created_svg_file = $component->create_svg_file($svg_string_node);
-						if ($created_svg_file!==true) {
-							debug_log(__METHOD__." Error creating svg file ".to_string($svg_string_node), logger::ERROR);
-						}
-					}
-
-				// save
-					$value = new stdClass();
-						$value->original_file_name		= $file_name_full;
-						$value->original_upload_date	= component_date::get_date_now();
-					$component->set_dato([$value]);
-					$component->Save();
-
-				// remove original uploaded image after import
-					unlink(	$source_full_path );
 				break;
 
 			default:
