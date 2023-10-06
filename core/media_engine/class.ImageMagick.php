@@ -244,9 +244,20 @@ final class ImageMagick {
 		$profile_out	= $options->profile_out ?? 'sRGB_Profile.icc';
 		$flatten		= $options->flatten ?? true;
 		$density		= $options->density ?? null; // resolution to process the source file, used to render pdf files. density = 150;
-		$strip			= $options->strip ?? false;
+		$strip			= $options->strip ?? true;
 		$antialias		= $options->antialias ?? true;
+		$composite		= $options->composite ?? true;
+		$coalesce		= $options->coalesce ?? true;
 		$resize			= $options->resize ?? null;  // sample: 25% | 1024x756
+
+		$extension				= pathinfo($target_file, PATHINFO_EXTENSION);
+		$ar_opaque_extensions	= ['jpg','jpeg'];
+
+		// check if the original image is opaque or transparent
+		$is_opaque = true;
+		if(!in_array($extension, $ar_opaque_extensions)){
+			$is_opaque = self::is_opaque($source_file);
+		}
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -298,6 +309,14 @@ final class ImageMagick {
 				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
 				: '';
 
+			$middle_flags	.= ($coalesce === true && $is_opaque === false)
+				? " -coalesce "
+				: '';
+
+			$middle_flags	.= ($composite === true && $is_opaque === false && count($ar_valid_layers)>1)
+				? " -composite "
+				: '';
+
 			switch (true) {
 
 				# CMYK to RGB
@@ -323,12 +342,19 @@ final class ImageMagick {
 					# Command middle_flags
 					$middle_flags	.= '-profile "'.$profile_source.'" ';
 					$middle_flags	.= '-profile "'.$profile_file.'" ';
-					$middle_flags	.= '-flatten -strip '; #-negate.
+					$middle_flags	.= ($flatten === true && $is_opaque === true)
+						? " -flatten "
+						: '';
+					$middle_flags	.= ($strip === true)
+						? " -strip "
+						: '';
 					break;
 
 				# RBG TO RBG
 				default:
-					$middle_flags	.= " -flatten ";
+					$middle_flags	.= ($flatten === true && $is_opaque === true)
+						? " -flatten "
+						: '';
 					break;
 			}
 
