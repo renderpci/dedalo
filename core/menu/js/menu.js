@@ -29,6 +29,7 @@ export const menu = function(){
 	this.li_nodes
 	this.ul_nodes
 	this.events_tokens
+	this.caller
 
 	this.ar_instances
 }//end menu
@@ -72,7 +73,7 @@ menu.prototype.init = function(options) {
 	self.context		= options.context
 	self.data			= options.data
 	self.events_tokens	= []
-
+	self.caller			= options.caller || null
 
 	// status update
 		self.status = 'initialized'
