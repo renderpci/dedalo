@@ -492,7 +492,7 @@ common.prototype.refresh = async function(options={}) {
 		const render_level			= options.render_level ?? 'content' // string full|content
 		const destroy				= options.destroy ?? true
 		const refresh_id_base_lang	= options.refresh_id_base_lang ?? false
-		const tmp_api_response 		= options.tmp_api_response ?? null
+		const tmp_api_response		= options.tmp_api_response ?? null
 
 	// loading css add
 		// const nodes_lenght = self.node.length

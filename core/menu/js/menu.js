@@ -171,6 +171,7 @@ menu.prototype.build = async function(autoload=true) {
 * @return void
 */
 menu.prototype.open_ontology = function() {
+
 	const url = DEDALO_CORE_URL + '/ontology'
 	const win = window.open(url, '_blank');
 		  win.focus();
