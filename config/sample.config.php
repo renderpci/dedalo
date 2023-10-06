@@ -357,9 +357,9 @@
 		// image_type. Default: 'jpeg'
 		define('DEDALO_IMAGE_TYPE',					'jpeg');
 		// image_extensions_supported. Array default: ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']
-		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
+		define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic','avif']);
 		// image_alternative_extensions. Array with the optional compression formats extensions
-		define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', ['avif','png']);
+		// define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', ['avif','png']);
 		// image_quality_original. Default: 'original'
 		define('DEDALO_IMAGE_QUALITY_ORIGINAL',		'original');
 		// image_quality_retouched of original. Default: 'modified' ('modificada' in old versions)

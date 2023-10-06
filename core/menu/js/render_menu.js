@@ -183,13 +183,8 @@ render_menu.prototype.edit = async function() {
 		})
 
 	// section label button (go to list)
-		const section_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'section_label top_item inactive',
-			title			: get_label.seccion || 'Section',
-			parent			: fragment
-		})
-		section_label.addEventListener('click', self.section_label_handler)
+		const section_label = render_section_label(self)
+		fragment.appendChild(section_label)
 
 	// inspector button toggle
 		const toggle_inspector = ui.create_dom_element({
@@ -353,6 +348,233 @@ const change_lang = async function(e) {
 
 	return api_response
 }//end change_lang
+
+
+
+/**
+* RENDER_SECTION_LABEL
+* @param object self
+* @return HTMLElement section_label
+*/
+const render_section_label = function(self) {
+
+	const section_label = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'section_label top_item inactive',
+		title			: get_label.seccion || 'Section'
+	})
+	section_label.addEventListener('click', self.section_label_handler)
+
+	/*
+	// label from section instance (into page)
+	const caller			= self.caller
+	const section_context	= caller.context.find(el => el.type==='section' || el.type==='area')
+	const label				= section_context.label || ''
+	const mode				= section_context.mode
+
+	section_label.innerHTML = label
+
+	// event
+		const render_page_token	= event_manager.subscribe('render_page', fn_caller_render)
+		self.events_tokens.push(render_page_token)
+		function fn_caller_render() {
+			// remove subscription to prevent duplicate actions
+			event_manager.unsubscribe(render_page_token)
+
+			// page is full rendered
+
+			const section_instance = caller.ar_instances.find(el => el.type==='section' || el.type==='area')
+			if (section_instance) {
+
+				// list mode
+					if (section_instance.mode!=='edit') {
+						section_label.innerHTML = label + ' 1 ' + mode
+						return
+					}
+
+				const render_section_token = event_manager.subscribe('render_'+section_instance.id, fn_section_render)
+				self.events_tokens.push(render_section_token)
+
+				function fn_section_render(from_event=true) {
+					// remove subscription to prevent duplicate actions
+					// event_manager.unsubscribe(render_section_token)
+
+					if (from_event) {
+						alert("Call fn_section_render after section render");
+					}
+
+					self.update_section_label({
+						value	: label + ' 2 ' + mode,
+						mode	: mode,
+						section	: section_instance
+					})
+				}
+
+				// first render
+				fn_section_render(false)
+			}
+		}
+	*/
+
+	return section_label
+}//end render_section_label
+
+
+
+/**
+* UPDATE_SECTION_LABEL (TEST)
+* Change the menu section label value
+* Is called from section when rendering is finished
+* @param object options
+* {
+*  value : string as 'Oral History',
+*  mode : string as 'edit',
+*  on_click : callback function
+* }
+* @return bool
+*/
+	// render_menu.prototype.update_section_label = function(options) {
+
+	// 	const self = this
+
+	// 	// options
+	// 		const value		= options.value || ''
+	// 		const mode		= options.mode
+	// 		const section	= options.section // section instance pointer
+
+	// 	// check
+	// 		if (!self.node) {
+	// 			console.warn('Error: Invalid menu node.', self);
+	// 			return false
+	// 		}
+	// 		if (!self.node.section_label) {
+	// 			console.warn('Error: Invalid menu node section_label.', self.node.section_label);
+	// 			return false
+	// 		}
+
+	// 	// pointers get
+	// 		const section_label		= self.node.section_label
+	// 		const toggle_inspector	= self.node.toggle_inspector
+
+	// 	// clean
+	// 		while (section_label.firstChild) {
+	// 			section_label.removeChild(section_label.firstChild)
+	// 		}
+	// 		// set value
+	// 		section_label.insertAdjacentHTML('afterbegin', value + ' 3');
+
+	// 	// mode switch
+	// 		if (mode==='edit') {
+
+	// 			// set click event callback
+	// 				if (section_label) {
+	// 					section_label.addEventListener('click', function(e) {
+	// 						e.stopPropagation()
+	// 						// on_click(e)
+	// 						section_navigation(section)
+	// 					})
+	// 				}
+
+	// 			// section_navigation
+	// 				async function section_navigation(section) {
+
+	// 					if (section.mode!=='edit') {
+	// 						console.log('Ignored non edit call to on_click');
+	// 						return
+	// 					}
+
+	// 						/*
+	// 						// saved_sqo
+	// 						// Note that section build method store SQO in local DDBB to preserve user
+	// 						// navigation section filter and pagination. It's recovered here when exists,
+	// 						// to pass values to API server
+	// 						const saved_sqo	= await data_manager.get_local_db_data(
+	// 							section.session_key + '_list',
+	// 							'sqo',
+	// 							true
+	// 						);
+	// 						console.log('saved_sqo:', saved_sqo);
+	// 						const sqo = saved_sqo
+	// 							? saved_sqo.value
+	// 							: {
+	// 								filter	: section.rqo.sqo.filter,
+	// 								order	: section.rqo.sqo.order || null
+	// 							  }
+	// 						section.request_config_object.sqo = sqo
+	// 						section.rqo.sqo = sqo
+	// 						section.mode = 'list'
+
+	// 						console.log('section:', section);
+	// 						console.log('sqo:', sqo);
+	// 						*/
+	// 						section.navigate({
+	// 							action				: null,
+	// 							callback			: null,
+	// 							navigation_history	: true,
+	// 							refresh : false
+	// 						})
+	// 						return
+
+
+	// 					// saved_sqo
+	// 					// Note that section build method store SQO in local DDBB to preserve user
+	// 					// navigation section filter and pagination. It's recovered here when exists,
+	// 					// to pass values to API server
+	// 					const saved_sqo	= await data_manager.get_local_db_data(
+	// 						section.session_key + '_list',
+	// 						'sqo',
+	// 						true
+	// 					);
+	// 					console.log('saved_sqo:', saved_sqo);
+	// 					const sqo = saved_sqo
+	// 						? saved_sqo.value
+	// 						: {
+	// 							filter	: section.rqo.sqo.filter,
+	// 							order	: section.rqo.sqo.order || null
+	// 						  }
+	// 					// always use section request_config_object format instead parsed sqo format
+	// 					sqo.section_tipo = section.request_config_object.sqo.section_tipo
+
+	// 					// source
+	// 						const source = {
+	// 							action			: 'search',
+	// 							model			: section.model, // section
+	// 							tipo			: section.tipo,
+	// 							section_tipo	: section.section_tipo,
+	// 							mode			: 'list',
+	// 							lang			: section.lang
+	// 						 }
+
+	// 					// navigation
+	// 						const user_navigation_rqo = {
+	// 							caller_id			: section.id,
+	// 							source				: source,
+	// 							sqo					: sqo,  // new sqo to use in list mode
+	// 							// event_in_history	: false // writes browser navigation step to allow back
+	// 						}
+	// 						event_manager.publish('user_navigation', user_navigation_rqo)
+	// 						/**/
+	// 				}//end section_navigation
+
+	// 			// toggle inspector view
+	// 				// hide button inspector
+	// 				toggle_inspector.classList.remove('hide')
+	// 				// enable user click
+	// 				section_label.classList.remove('inactive')
+
+	// 		}else{
+
+	// 			// toggle inspector view
+	// 				// hide button inspector
+	// 				toggle_inspector.classList.add('hide')
+	// 				// disable user click
+	// 				section_label.classList.add('inactive')
+
+	// 		}
+
+
+	// 	return true
+	// }//end update_section_label
 
 
 

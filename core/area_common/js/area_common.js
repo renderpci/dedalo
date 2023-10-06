@@ -66,6 +66,8 @@ area_common.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.ar_instances	= []
 
+	self.caller			= options.caller || null
+
 	// dd request
 	self.dd_request		= {
 		show	: null,
@@ -95,15 +97,20 @@ area_common.prototype.init = async function(options) {
 			)
 			function fn_render() {
 				// menu label control
+					let n_try = 0
 					const update_menu = () => {
 						// ignore sections inside tool (tool_user_admin case)
 						if (self.caller && self.caller.type==='tool') {
 							return
 						}
+
+						const retry_timeout = setTimeout(fn_render, 2000);
 						// menu label control
 						// menu. Note that menu is set as global var on menu build
-						const retry_timeout = setTimeout(fn_render, 2000);
-						const menu = window.menu
+						// const menu = window.menu
+						const menu = window.dd_page && window.dd_page.ar_instances
+							? window.dd_page.ar_instances.find(el => el.model==='menu')
+							: null
 						if (menu) {
 							clearTimeout(retry_timeout);
 
@@ -113,10 +120,24 @@ area_common.prototype.init = async function(options) {
 								on_click	: null
 							})
 						}else{
-							console.log('menu is not available. Try in 2 secs');
+
+							if (n_try>3) {
+								clearTimeout(retry_timeout);
+								if(SHOW_DEBUG===true) {
+									console.log('menu is not available. Stop to try');
+								}
+								return
+							}
+							n_try++
+							if(SHOW_DEBUG===true) {
+								console.log('menu is not available. Try in 2 secs');
+							}
 						}//end if (menu)
 					}
-					update_menu()
+					// only for direct page created sections
+					if (self.caller && self.caller.model==='page') {
+						update_menu()
+					}
 			}
 
 	// status update
