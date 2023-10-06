@@ -442,7 +442,7 @@ class component_media_common extends component_common {
 	* ADD_FILE
 	* Receive a file info object from tool upload
 	* and move/rename the file to the proper target
-	* @param object $file_data
+	* @param object $options
 	* {
 	* 	"name": "montaje3.jpg",
 	*	"type": "image/jpeg",
@@ -452,18 +452,18 @@ class component_media_common extends component_common {
 	* }
 	* @return object $response
 	* {
-	* 	"original_file_name" : $name,
-	*	"full_file_name"	 : $full_file_name,
-	*	"full_file_path"	 : $full_file_path
+	* 	"original_file_name" : $name, // montaje3.jpg
+	*	"full_file_name"	 : $full_file_name, // rsc29_rsc170_1.jpg
+	*	"full_file_path"	 : $full_file_path // /media/image/original/0/rsc29_rsc170_1.jpg
 	* }
 	*/
-	public function add_file(object $file_data) : object {
+	public function add_file(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// file_data sample
+		// options sample
 			// {
 			// 	"name": "IMG_3007.jpg",
 			// 	"type": "image/jpeg",
@@ -476,12 +476,12 @@ class component_media_common extends component_common {
 			// }
 
 		// short vars
-			$name			= $file_data->name; // string original file name like 'IMG_3007.jpg'
-			$key_dir		= $file_data->key_dir; // string upload caller name like 'oh1_oh1'
-			$tmp_dir		= $file_data->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
-			$tmp_name		= $file_data->tmp_name; // string like 'phpJIQq4e'
-			$quality 		= $file_data->quality ?? $this->get_quality() ?? $this->get_original_quality();
-			$source_file 	= $file_data->source_file ?? null;
+			$name			= $options->name; // string original file name like 'IMG_3007.jpg'
+			$key_dir		= $options->key_dir; // string upload caller name like 'oh1_oh1'
+			$tmp_dir		= $options->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+			$tmp_name		= $options->tmp_name; // string like 'phpJIQq4e'
+			$quality 		= $options->quality ?? $this->get_quality() ?? $this->get_original_quality();
+			$source_file 	= $options->source_file ?? null;
 
 		// source_file
 			if (!defined($tmp_dir)) {
@@ -696,7 +696,7 @@ class component_media_common extends component_common {
 	* Dummy method. Overwrite it in each component
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data) : object {
+	public function process_uploaded_file(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
