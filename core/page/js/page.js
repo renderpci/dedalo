@@ -747,12 +747,8 @@ export const instantiate_page_element = function(self, source) {
 				instance_options.session_key = url_vars.session_key
 			}
 
-		// caller. Set only when instance model it is section
-		// Useful to prevent update menu section label from modal section
-
-			if (model==='section' || model.indexOf('area')===0) {
-				instance_options.caller = self
-			}
+		// caller. Set element caller. Useful to update menu section label from modal section
+			instance_options.caller = self
 
 	// page_element instance (load file)
 		const instance_promise = get_instance(instance_options)
