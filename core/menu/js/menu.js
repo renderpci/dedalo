@@ -29,6 +29,7 @@ export const menu = function(){
 	this.li_nodes
 	this.ul_nodes
 	this.events_tokens
+	this.caller
 
 	this.ar_instances
 }//end menu
@@ -72,7 +73,7 @@ menu.prototype.init = function(options) {
 	self.context		= options.context
 	self.data			= options.data
 	self.events_tokens	= []
-
+	self.caller			= options.caller || null
 
 	// status update
 		self.status = 'initialized'
@@ -155,9 +156,6 @@ menu.prototype.build = async function(autoload=true) {
 			console.log(`__Time to build ${self.model} [autoload:${autoload}] ms:`, performance.now()-t0);
 		}
 
-	// set menu instance as global to be available
-		window.menu = self
-
 	// status update
 		self.status = 'built'
 
@@ -174,6 +172,7 @@ menu.prototype.build = async function(autoload=true) {
 * @return void
 */
 menu.prototype.open_ontology = function() {
+
 	const url = DEDALO_CORE_URL + '/ontology'
 	const win = window.open(url, '_blank');
 		  win.focus();

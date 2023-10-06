@@ -690,7 +690,7 @@ page.prototype.add_events = function() {
 * 	Could be full context of element return by start API function or an basic source on page navigation
 * @return promise instance_promise
 */
-export const instantiate_page_element = function(self, source) {
+export const instantiate_page_element = async function(self, source) {
 
 	// short vars
 		const tipo				= source.tipo
@@ -747,14 +747,14 @@ export const instantiate_page_element = function(self, source) {
 				instance_options.session_key = url_vars.session_key
 			}
 
-		// caller. Set only when instance model it is section
-		// Useful to prevent update menu section label from modal section
-			if (model==='section') {
-				instance_options.caller = self
-			}
-
 	// page_element instance (load file)
-		const instance_promise = get_instance(instance_options)
+		const instance_promise = await get_instance(instance_options)
+
+	// caller. Set element caller. Useful to update menu section label from modal section
+	// ! Do not overwrite already existing caller (tool case)
+		if (!instance_promise.caller) {
+			instance_promise.caller = self
+		}
 
 
 	return instance_promise
