@@ -396,22 +396,41 @@ class component_image extends component_media_common {
 
 		// original_file check (normalized Dédalo original viewable). If not exist, create it
 			$original_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
-			if ($original_file===false) {
 
-				# source data (default quality is source)
-				$original_image_path = $this->get_media_filepath($original_quality);
+		// source data (default quality is source)
+			$original_image_path = $this->get_media_filepath($original_quality);
 
-				$path = pathinfo($original_image_path);
-				$original_image_extension = $this->get_original_extension(
-					true // bool exclude_converted
-				);
-				$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-				$options = new stdClass();
-					$options->source_file	= $original_image_path_real;
-					$options->target_file	= $original_image_path;
-					$options->quality		= 100;
+			$path = pathinfo($original_image_path);
+			$original_image_extension = $this->get_original_extension(
+				true // bool exclude_converted
+			);
+			$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
 
-				ImageMagick::convert($options);
+			$original_image_real_exists = file_exists($original_image_path_real);
+
+			if ($original_image_real_exists) {
+
+				if ($original_file===false) {
+					$options = new stdClass();
+						$options->source_file	= $original_image_path_real;
+						$options->target_file	= $original_image_path;
+						$options->quality		= 100;
+
+					ImageMagick::convert($options);
+				}
+
+				if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') ){
+
+					foreach (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS as $alternative_extension) {
+
+						$alt_options = new stdClass();
+							$alt_options->source_file	= $original_image_path_real;
+							$alt_options->target_file	= $path['dirname'] . '/' .  $path['filename'] . '.' .$alternative_extension;
+							$alt_options->quality		= 100;
+
+						ImageMagick::convert($alt_options);
+					}
+				}
 			}
 
 		// Image source
@@ -468,6 +487,30 @@ class component_image extends component_media_common {
 				$options->resize = $target_pixels_width.'x'.$target_pixels_height;
 			}
 			ImageMagick::convert($options);
+
+			if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS')){
+
+				$source_path	= pathinfo($source_image);
+				$target_path	= pathinfo($target_image);
+
+				foreach (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS as $alternative_extension) {
+
+					$source_image_file = $source_path['dirname'] . '/' .  $source_path['filename'] . '.' .$alternative_extension;
+					$source_file = file_exists($source_image_file)
+						? $source_image_file // his own extension file of the source quality
+						: ($original_image_real_exists // check the original quality
+							? $original_image_path_real // get original quality
+							: $source_image); // get the default extension file
+
+
+					$alt_options = new stdClass();
+						$alt_options->source_file	= $source_file;
+						$alt_options->target_file	= $target_path['dirname'] . '/' .  $target_path['filename'] . '.' .$alternative_extension;
+						$alt_options->resize		= $target_pixels_width.'x'.$target_pixels_height;
+
+					ImageMagick::convert($alt_options);
+				}
+			}
 
 			// $flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height;
 			// ImageMagick::process($source_image, $target_image, $flags);
@@ -1115,9 +1158,9 @@ class component_image extends component_media_common {
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// short vars
-			$original_file_name	= $file_data->original_file_name;	// kike "my photo785.jpg"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
-
+			$original_file_name			= $file_data->original_file_name;	// kike "my photo785.jpg"
+			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
+			$original_normalized_name	= $file_data->full_file_name;		// like "test175_test65_1.jpg"
 		// debug
 			debug_log(__METHOD__
 				. " process_uploaded_file " . PHP_EOL
@@ -1245,13 +1288,19 @@ class component_image extends component_media_common {
 						);
 					}else{
 						// update property files_info
-						$dato[0]->files_info = $files_info;
+						$dato[0]->files_info				= $files_info;
+						$dato[0]->original_file_name		= $original_file_name;
+						$dato[0]->original_normalized_name	= $original_normalized_name;
+						$dato[0]->original_upload_date		= component_date::get_date_now();
 						$save_dato = true;
 					}
 				}else{
 					// create a new dato from scratch
 					$dato_item = (object)[
-						'files_info' => $files_info
+						'files_info'				=> $files_info,
+						'original_file_name'		=> $original_file_name,
+						'original_normalized_name'	=> $original_normalized_name,
+						'original_upload_date'		=> component_date::get_date_now()
 					];
 					$dato = [$dato_item];
 					$save_dato = true;
