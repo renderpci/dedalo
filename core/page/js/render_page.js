@@ -139,6 +139,7 @@ const get_content_data = async function(self) {
 			// });
 
 		// async mode
+			const render_promises = []
 			const context_length = self.context.length
 			for (let i = 0; i < context_length; i++) {
 
@@ -153,7 +154,7 @@ const get_content_data = async function(self) {
 					}
 
 				// load_item_with_spinner
-					ui.load_item_with_spinner({
+					const render_promise = ui.load_item_with_spinner({
 						container			: content_data,
 						preserve_content	: true,
 						label				: current_context.label || current_context.model,
@@ -184,50 +185,16 @@ const get_content_data = async function(self) {
 							})
 						}
 					})
-				/*
-				// container placeholder until page element is built and rendered
-					const label = current_context.label || current_context.model
-					const container_placeholder = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'container container_placeholder ' + current_context.model,
-						inner_html		: 'Loading '+ label +' ['+ current_context.tipo+']',
-						parent			: content_data
-					})
-					// spinner
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'spinner medium',
-						parent			: container_placeholder
-					})
-
-				// instance
-					const current_instance = await instantiate_page_element(
-						self, // object page instance
-						current_context // object is used as source
-					)
-
-					self.ar_instances.push(current_instance)
-
-					// build (load data)
-					const autoload = true // Note that it's necessary to load data here (in addition to context)
-					current_instance.build(autoload)
-					.then(function(){
-						// render instance
-						current_instance.render()
-						.then(function(node){
-							if (node) {
-								container_placeholder.replaceWith(node);
-							}else{
-								console.log('Error. page element render fails. Element:', current_instance);
-							}
-						})
-					})
-					*/
+					render_promises.push(render_promise)
 			}//end for (let i = 0; i < elements_length; i++)
 
-	// event page rendered (used by menu..)
-		event_manager.publish('render_page', self)
-
+	// render is complete
+		Promise.all(render_promises)
+		.then(function(response){
+			// event publish
+			// event_manager.publish('render_'+self.id, wrapper)
+			event_manager.publish('render_page')
+		})
 
 
 	return content_data
