@@ -7,6 +7,7 @@ $finder = Finder::create()
     ->in(__DIR__ .'/examples')
     ->in(__DIR__ .'/lib')
     ->in(__DIR__ .'/test')
+    ->in(__DIR__ .'/tests')
     ->name('*.php')
 ;
 

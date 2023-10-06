@@ -54,6 +54,14 @@ abstract class RdfNamespace implements \rdfInterface\RdfNamespaceInterface {
     private array $namespaces = [];
 
     public function add(string $iriPrefix, ?string $shortName = null): string {
+        $key = array_search($iriPrefix, $this->namespaces);
+        if ($key !== false) {
+            if (!empty($shortName)) {
+                throw new RdfHelpersException("$iriPrefix already registered as $key");
+            } else {
+                return $key;
+            }
+        }
         if (empty($shortName)) {
             $shortName = 'n' . $this->n;
             $this->n++;

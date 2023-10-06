@@ -105,103 +105,108 @@ export const get_content_value_read = (i, current_value, self) => {
 */
 export const get_ar_raw_data_value = (self) => {
 
-	const value	= self.data.value || []
+	// short vars
+		const data			= self.data || {}
+		const value			= data.value || []
+		const date_mode		= self.get_date_mode()
+		const ar_raw_value	= []
 
-	const date_mode		= self.get_date_mode()
-	const ar_raw_value	= []
-	const inputs_value	= (value.length<1) ? [] : value
-	const value_length	= inputs_value.length
-	for (let i = 0; i < value_length; i++) {
+	// build values
+		const inputs_value	= value
+		const value_length	= inputs_value.length
+		for (let i = 0; i < value_length; i++) {
 
-		const current_value = inputs_value[i]
-		// invalid/empty value case
-		if (!current_value) {
-			console.error('Ignored component_date empty value:', self.tipo, i, inputs_value);
-			console.log('Check this component value:', self);
-			continue;
-		}
+			const current_value = inputs_value[i]
 
-		switch(date_mode) {
+			// invalid/empty value case
+				if (!current_value) {
+					console.log('Ignored component_date empty value:', self.tipo, i, inputs_value);
+					console.log('Check this component value:', self);
+					continue;
+				}
 
-			case 'range':
-				if (current_value.start || current_value.end) {
+			// date_mode variants
+			switch(date_mode) {
 
-					const ar_text_range = []
+				case 'range':
+					if (current_value.start || current_value.end) {
 
-					const input_value_start	= (current_value && current_value.start)
+						const ar_text_range = []
+
+						const input_value_start	= (current_value && current_value.start)
+							? self.date_to_string(current_value.start)
+							: null
+							if (input_value_start) {
+								ar_text_range.push(input_value_start)
+							}
+
+						const input_value_end	= (current_value && current_value.end)
+							? self.date_to_string(current_value.end)
+							: null
+							if (input_value_end) {
+								ar_text_range.push(input_value_end)
+							}
+
+						// const text_range = input_value_start + ' <> '+ input_value_end
+						const text_range = ar_text_range.join(' <> ')
+
+						ar_raw_value.push(text_range)
+					}
+					break;
+
+				case 'period':
+					const ar_period = []
+					const period = (current_value && current_value.period) ? current_value.period : null
+
+					const year	= (period) ? period.year : null
+					const month	= (period) ? period.month : null
+					const day	= (period) ? period.day : null
+
+					const label_year	= (year && year>1) 		? get_label.years : get_label.year
+					const label_month	= (month && month>1) 	? get_label.months : get_label.month
+					const label_day		= (day && day>1) 		? get_label.days : get_label.day
+
+					if(year){
+						const text_year = year + ' ' +label_year
+						ar_period.push(text_year)
+					}
+					if(month){
+						const text_month = month + ' ' +label_month
+						ar_period.push(text_month)
+					}
+					if(day){
+						const text_day = day + ' ' +label_day
+						ar_period.push(text_day)
+					}
+					const text_period = ar_period.join(', ')
+					ar_raw_value.push(text_period)
+					break;
+
+				case 'time':
+					const input_time_value = (current_value)
+						? self.time_to_string(current_value.start)
+						: ''
+					ar_raw_value.push(input_time_value)
+					break;
+
+				case 'date_time':
+					{
+					const input_time_value = (current_value)
+						? self.date_time_to_string(current_value.start)
+						: ''
+					ar_raw_value.push(input_time_value)
+					}
+					break;
+
+				case 'date':
+				default:
+					const input_date_value = (current_value && current_value.start)
 						? self.date_to_string(current_value.start)
-						: null
-						if (input_value_start) {
-							ar_text_range.push(input_value_start)
-						}
-
-					const input_value_end	= (current_value && current_value.end)
-						? self.date_to_string(current_value.end)
-						: null
-						if (input_value_end) {
-							ar_text_range.push(input_value_end)
-						}
-
-					// const text_range = input_value_start + ' <> '+ input_value_end
-					const text_range = ar_text_range.join(' <> ')
-
-					ar_raw_value.push(text_range)
-				}
-				break;
-
-			case 'period':
-				const ar_period = []
-				const period = (current_value && current_value.period) ? current_value.period : null
-
-				const year	= (period) ? period.year : null
-				const month	= (period) ? period.month : null
-				const day	= (period) ? period.day : null
-
-				const label_year	= (year && year>1) 		? get_label.years : get_label.year
-				const label_month	= (month && month>1) 	? get_label.months : get_label.month
-				const label_day		= (day && day>1) 		? get_label.days : get_label.day
-
-				if(year){
-					const text_year = year + ' ' +label_year
-					ar_period.push(text_year)
-				}
-				if(month){
-					const text_month = month + ' ' +label_month
-					ar_period.push(text_month)
-				}
-				if(day){
-					const text_day = day + ' ' +label_day
-					ar_period.push(text_day)
-				}
-				const text_period = ar_period.join(', ')
-				ar_raw_value.push(text_period)
-				break;
-
-			case 'time':
-				const input_time_value = (current_value)
-					? self.time_to_string(current_value.start)
-					: ''
-				ar_raw_value.push(input_time_value)
-				break;
-
-			case 'date_time':
-				{
-				const input_time_value = (current_value)
-					? self.date_time_to_string(current_value.start)
-					: ''
-				ar_raw_value.push(input_time_value)
-				}
-				break;
-
-			case 'date':
-			default:
-				const input_date_value = (current_value && current_value.start)
-					? self.date_to_string(current_value.start)
-					: ''
-				ar_raw_value.push(input_date_value)
-				break;
-		}//end switch
-	}//end for
+						: ''
+					ar_raw_value.push(input_date_value)
+					break;
+			}//end switch
+		}//end for
 
 
 	return ar_raw_value
@@ -247,78 +252,15 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			input.addEventListener('change', fn_change)
 			function fn_change() {
 
-			return change_handler({
-				self		: self,
-				input_value	: input.value,
-				key			: i,
-				input_wrap	: input_wrap,
-				mode		: mode,
-				type		: 'date'
-			})
-
-			// DES (Unified in change_handler function)
-				// // parse value
-				// 	const response = self.parse_string_date(input.value)
-
-				// // invalid value case
-				// 	if(response.error){
-				// 		alert(response.error[0].msg)
-				// 		ui.component.error(true, input_wrap)
-				// 		return false
-				// 	}
-
-				// // error style rest
-				// 	ui.component.error(false, input_wrap)
-
-
-				// if (self.mode==='search') {
-
-				// 	// parsed_value
-				// 		// const parsed_value = (input.value.length>0) ? input.value : null
-				// 		const new_value = (response.result.year)
-				// 			? response.result
-				// 			: ''
-				// 		const parsed_value = {
-				// 			start : new_value
-				// 		}
-
-				// 	// changed_data
-				// 		const changed_data_item = Object.freeze({
-				// 			action	: 'update',
-				// 			key		: i,
-				// 			value	: parsed_value
-				// 		})
-
-				// 	// update the instance data (previous to save)
-				// 		self.update_data_value(changed_data_item)
-				// 	// set data.changed_data. The change_data to the instance
-				// 		// self.data.changed_data = changed_data
-				// 	// publish search. Event to update the DOM elements of the instance
-				// 		event_manager.publish('change_search_element', self)
-
-				// }else{
-
-				// 	const value = self.data.value[i]
-				// 		? JSON.parse(JSON.stringify(self.data.value[i]))
-				// 		: {mode}
-
-				// 	const new_value = (response.result.year)
-				// 		? response.result
-				// 		: ''
-
-				// 	value[mode] = new_value
-
-				// 	const changed_data = [Object.freeze({
-				// 		action	: 'update',
-				// 		key		: i,
-				// 		value	: value
-				// 	})]
-				// 	self.change_value({
-				// 		changed_data	: changed_data,
-				// 		refresh			: false
-				// 	})
-				// }
-		}//end fn_change
+				return change_handler({
+					self		: self,
+					input_value	: input.value,
+					key			: i,
+					input_wrap	: input_wrap,
+					mode		: mode,
+					type		: 'date'
+				})
+			}//end fn_change
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()

@@ -9,7 +9,7 @@ class component_filter_records extends component_common {
 
 	/**
 	* GET DATO
-	* @return array $dato
+	* @return array|null $dato
 	* Sample data:
 	* [
 	*	 {
@@ -23,21 +23,10 @@ class component_filter_records extends component_common {
 	* ]
 	*/
 	public function get_dato() {
+
 		$dato = parent::get_dato();
 
-		/*
-		if (!empty($dato) && !is_array($dato)) {
-			#dump($dato,"dato");
-			trigger_error("Error: ".__CLASS__." dato type is wrong. Array expected and ".gettype($dato)." is received for tipo:$this->tipo, parent:$this->parent");
-			$this->set_dato(array());
-			$this->Save();
-		}
-		*/
-		if ($dato===null) {
-			$dato=array();
-		}
-
-		return (array)$dato;
+		return $dato;
 	}//end get_dato
 
 
