@@ -57,6 +57,7 @@ export const section = function() {
 
 	this.node					= null
 	this.ar_instances			= null
+	this.caller					= null
 
 	this.status					= null
 
