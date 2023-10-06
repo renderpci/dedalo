@@ -500,4 +500,28 @@ final class ImageMagick {
 
 
 
+	/**
+	* is_opaque
+	* Check all layers of the image to determinate if the image is transparent or is opaque
+	* @param string $source_file
+	* @return bool $is_opaque
+	*/
+	public static function is_opaque( string $source_file ) : bool {
+
+		// default the image is opaque
+		$is_opaque = true;
+
+		// get all layers opacity
+			$command	= MAGICK_PATH . 'identify -format "%[opaque]" -quiet '. $source_file;
+			$output		= shell_exec($command);
+
+		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.
+			if (!empty($output)) {
+				$is_opaque = str_contains($output, 'True');
+			}
+
+		return $is_opaque;
+	}//end is_opaque
+
+
 }//end ImageMagick class
