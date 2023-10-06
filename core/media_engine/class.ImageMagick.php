@@ -244,9 +244,20 @@ final class ImageMagick {
 		$profile_out	= $options->profile_out ?? 'sRGB_Profile.icc';
 		$flatten		= $options->flatten ?? true;
 		$density		= $options->density ?? null; // resolution to process the source file, used to render pdf files. density = 150;
-		$strip			= $options->strip ?? false;
+		$strip			= $options->strip ?? true;
 		$antialias		= $options->antialias ?? true;
+		$composite		= $options->composite ?? true;
+		$coalesce		= $options->coalesce ?? true;
 		$resize			= $options->resize ?? null;  // sample: 25% | 1024x756
+
+		$extension				= pathinfo($target_file, PATHINFO_EXTENSION);
+		$ar_opaque_extensions	= ['jpg','jpeg'];
+
+		// check if the original image is opaque or transparent
+		$is_opaque = true;
+		if(!in_array($extension, $ar_opaque_extensions)){
+			$is_opaque = self::is_opaque($source_file);
+		}
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -298,6 +309,14 @@ final class ImageMagick {
 				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
 				: '';
 
+			$middle_flags	.= ($coalesce === true && $is_opaque === false)
+				? " -coalesce "
+				: '';
+
+			$middle_flags	.= ($composite === true && $is_opaque === false && count($ar_valid_layers)>1)
+				? " -composite "
+				: '';
+
 			switch (true) {
 
 				# CMYK to RGB
@@ -323,12 +342,19 @@ final class ImageMagick {
 					# Command middle_flags
 					$middle_flags	.= '-profile "'.$profile_source.'" ';
 					$middle_flags	.= '-profile "'.$profile_file.'" ';
-					$middle_flags	.= '-flatten -strip '; #-negate.
+					$middle_flags	.= ($flatten === true && $is_opaque === true)
+						? " -flatten "
+						: '';
+					$middle_flags	.= ($strip === true)
+						? " -strip "
+						: '';
 					break;
 
 				# RBG TO RBG
 				default:
-					$middle_flags	.= " -flatten ";
+					$middle_flags	.= ($flatten === true && $is_opaque === true)
+						? " -flatten "
+						: '';
 					break;
 			}
 
@@ -498,6 +524,30 @@ final class ImageMagick {
 		return $result;
 	}//end get_media_attributes
 
+
+
+	/**
+	* is_opaque
+	* Check all layers of the image to determinate if the image is transparent or is opaque
+	* @param string $source_file
+	* @return bool $is_opaque
+	*/
+	public static function is_opaque( string $source_file ) : bool {
+
+		// default the image is opaque
+		$is_opaque = true;
+
+		// get all layers opacity
+			$command	= MAGICK_PATH . 'identify -format "%[opaque]" -quiet '. $source_file;
+			$output		= shell_exec($command);
+
+		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.
+			if (!empty($output)) {
+				$is_opaque = str_contains($output, 'True');
+			}
+
+		return $is_opaque;
+	}//end is_opaque
 
 
 }//end ImageMagick class
