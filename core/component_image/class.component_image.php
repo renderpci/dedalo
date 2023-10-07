@@ -1122,6 +1122,19 @@ class component_image extends component_media_common {
 	}//end get_allowed_extensions
 
 
+	/**
+	* GET_ALTERNATIVE_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_alternative_extensions() : array {
+
+		$alternative_extensions = defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS')
+			? DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
+			: null;
+
+		return $alternative_extensions;
+	}//end get_alternative_extensions
+
 
 	/**
 	* GET_ORIGINAL_QUALITY
