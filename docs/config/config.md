@@ -1583,6 +1583,46 @@ Dédalo will use this parameter to identify the file format of the original file
 define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
 ```
 
+### Defining alternative image extensions of image files
+
+./dedalo/config/config.php
+
+DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS `array` *optional*
+
+This parameter defines the standards file types that will use to create versions of the uploaded image files.
+
+Dédalo will use this parameter to create alternative versions of the images uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every image uploaded will be processed in every quality with every format define it.
+
+```php
+define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', ['avif','png']);
+```
+
+Example:
+
+Original file: **my_image.tif**
+
+Default format defined in DEDALO_IMAGE_EXTENSION: **jpg**
+
+Alternatives formats defined in DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS: **\['avif','png'\]**
+
+Result:
+
+In original quality directory:
+> ../media/image/original/rsc29_rsc170_1.tif
+>
+> ../media/image/original/rsc29_rsc170_1.jpg
+>
+> ../media/image/original/rsc29_rsc170_1.avif
+>
+> ../media/image/original/rsc29_rsc170_1.png
+
+In 1.5MB quality directory:
+> ../media/image/1.5MB/rsc29_rsc170_1.jpg
+>
+> ../media/image/1.5MB/rsc29_rsc170_1.avif
+>
+> ../media/image/1.5MB/rsc29_rsc170_1.png
+
 ---
 
 ### Defining image quality for original files
@@ -2636,7 +2676,7 @@ $_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
 
 ./dedalo/config/config.php
 
-DIFFUSION_CUSTOM `string || bool`
+DIFFUSION_CUSTOM `string || bool` *optional*
 
 Optional custom diffusion class file path.
 

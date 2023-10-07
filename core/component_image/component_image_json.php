@@ -30,6 +30,7 @@
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
 					$current_context->features->key_dir					= 'image_'.$this->tipo.'_'.$this->section_tipo;
+					$current_context->features->alternative_extensions	= $this->get_alternative_extensions();
 
 				$context[] = $current_context;
 				break;
