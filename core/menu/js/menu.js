@@ -7,6 +7,7 @@
 // imports
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {quit} from '../../login/js/login.js'
 	import {render_menu} from './render_menu.js'
@@ -62,18 +63,19 @@ menu.prototype.init = function(options) {
 
 	const self = this
 
-	self.tipo			= options.tipo
-	self.model			= options.model
-	self.node			= null
-	self.li_nodes		= []
-	self.ul_nodes		= []
-	self.ar_instances	= []
-	self.mode			= 'edit'
-	self.datum			= options.datum
-	self.context		= options.context
-	self.data			= options.data
-	self.events_tokens	= []
-	self.caller			= options.caller || null
+	self.tipo						= options.tipo
+	self.model						= options.model
+	self.node						= null
+	self.li_nodes					= []
+	self.ul_nodes					= []
+	self.ar_instances				= []
+	self.mode						= 'edit'
+	self.datum						= options.datum
+	self.context					= options.context
+	self.data						= options.data
+	self.events_tokens				= []
+	self.caller						= options.caller || null
+	self.update_section_label_n_try	= 0
 
 	// status update
 		self.status = 'initialized'
@@ -96,55 +98,56 @@ menu.prototype.build = async function(autoload=true) {
 	// status update
 		self.status = 'building'
 
-	if (autoload===true) {
+	// autoload
+		if (autoload===true) {
 
-		const menu_cache_data = await data_manager.get_local_db_data(self.id, 'data')
+			const menu_cache_data = await data_manager.get_local_db_data(self.id, 'data')
 
-		if(menu_cache_data){
+			if(menu_cache_data){
 
-			// set the result to the datum
-				self.datum = menu_cache_data.value
+				// set the result to the datum
+					self.datum = menu_cache_data.value
 
-			// debug
-				// const total = (performance.now()-t0).toFixed(3)
-				// if (total>20) {
-				// 	// console.warn(msg, total, self);
-				// 	console.log("__Time [menu.build] returned menu datum from local_db ", self.id, total);
-				// }
+				// debug
+					// const total = (performance.now()-t0).toFixed(3)
+					// if (total>20) {
+					// 	// console.warn(msg, total, self);
+					// 	console.log("__Time [menu.build] returned menu datum from local_db ", self.id, total);
+					// }
 
-		}else{
+			}else{
 
-			// rqo build
-				// const rqo = {
-				// 	action			: 'get_menu',
-				// 	dd_api			: 'dd_utils_api',
-				// 	source			: create_source(self, null),
-				// 	prevent_lock	: true
-				// }
-				const rqo = {
-					action	: 'read',
-					source	: create_source(self, 'get_data')
-				}
+				// rqo build
+					// const rqo = {
+					// 	action			: 'get_menu',
+					// 	dd_api			: 'dd_utils_api',
+					// 	source			: create_source(self, null),
+					// 	prevent_lock	: true
+					// }
+					const rqo = {
+						action	: 'read',
+						source	: create_source(self, 'get_data')
+					}
 
-			// load data. get context and data
-				const api_response = await data_manager.request({
-					body : rqo
-				})
+				// load data. get context and data
+					const api_response = await data_manager.request({
+						body : rqo
+					})
 
-			// set the result to the datum
-				self.datum = api_response.result
+				// set the result to the datum
+					self.datum = api_response.result
 
-			// cache
-				const menu_cache_data = {
-					id		: self.id,
-					value	: self.datum
-				}
-				data_manager.set_local_db_data(
-					menu_cache_data,
-					'data'
-				)
+				// cache
+					const menu_cache_data = {
+						id		: self.id,
+						value	: self.datum
+					}
+					data_manager.set_local_db_data(
+						menu_cache_data,
+						'data'
+					)
+			}
 		}
-	}
 
 	// set context and data to current instance
 		self.context	= self.datum.context.find(element => element.model===self.model && element.tipo===self.tipo);
@@ -205,25 +208,6 @@ menu.prototype.quit_handler = async function(e) {
 			caller : self
 		})
 }//end quit_handler
-
-
-
-/**
-* SECTION_LABEL_HANDLER
-* Shared function to manage section_label.on_click execution (from edit mode)
-* from regular menu and mobile menu
-* @param object event e
-* @return void
-*/
-menu.prototype.section_label_handler = function(e) {
-	e.stopPropagation()
-	e.preventDefault();
-
-	const section_label = e.target
-	if (typeof section_label.on_click==='function') {
-		section_label.on_click(e)
-	}
-}//end section_label_handler
 
 
 

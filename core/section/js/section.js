@@ -312,43 +312,69 @@ section.prototype.init = async function(options) {
 			}//end fn_toggle_search_panel
 
 		// render_ event
-			self.events_tokens.push(
-				event_manager.subscribe('render_'+self.id, fn_render)
-			)
+			const render_token = event_manager.subscribe('render_'+self.id, fn_render)
+			self.events_tokens.push(render_token)
 			function fn_render() {
+
 				// menu label control
-					let n_try = 0
-					const update_menu = () => {
-						// ignore sections inside tool (tool_user_admin case)
-							if (self.caller && self.caller.type==='tool') {
-								return
+					const update_menu = (menu) => {
+
+						// menu instance check. Get from caller page
+						if (!menu) {
+							if(SHOW_DEBUG===true) {
+								console.log('menu is not available from section.');
 							}
-						// ignore search presets case
-							if (self.tipo==='dd623') {
-								return
-							}
+							return
+						}
 
-						const retry_timeout = setTimeout(update_menu, 2000);
-						// menu. Note that menu is set as global var on menu build
-						// const menu = window.menu
-						const menu = window.dd_page && window.dd_page.ar_instances
-							? window.dd_page.ar_instances.find(el => el.model==='menu')
-							: null
-						if (menu) {
-							clearTimeout(retry_timeout);
+						// update_section_label
+						menu.update_section_label({
+							value					: self.label,
+							mode					: self.mode,
+							section_label_on_click	: section_label_on_click
+						})
+						async function section_label_on_click(e) {
+							e.stopPropagation()
 
-							menu.update_section_label({
-								value		: self.label,
-								mode		: self.mode,
-								on_click	: on_click
-							})
-							async function on_click(e) {
-
+							// non edit mode calls block
 								if (self.mode!=='edit') {
-									console.log('Ignored non edit call to on_click');
+									console.log('Ignored non edit call to section_label_on_click');
 									return
 								}
 
+							// change section mode. Creates a new instance and replace DOM node wrapper
+								self.change_mode({
+									mode : 'list'
+								})
+								.then(function(new_instance){
+
+									// update_section_label value
+										menu.update_section_label({
+											value					: new_instance.label,
+											mode					: new_instance.mode,
+											section_label_on_click	: null
+										})
+
+									// update browser url and navigation history
+										const source	= create_source(new_instance, null)
+										const sqo		= new_instance.request_config_object.sqo
+										const title		= new_instance.id
+										// url search. Append section_id if exists
+										const url_vars = url_vars_to_object({
+											tipo : new_instance.tipo,
+											mode : new_instance.mode
+										})
+										const url = '?' + object_to_url_vars(url_vars)
+										// browser navigation update
+										push_browser_history({
+											source	: source,
+											sqo		: sqo,
+											title	: title,
+											url		: url
+										})
+							})//end section_label_on_click
+
+							/* OLD way (user_navigation event publish)
 								// saved_sqo
 								// Note that section build method store SQO in local DDBB to preserve user
 								// navigation section filter and pagination. It's recovered here when exists,
@@ -382,33 +408,32 @@ section.prototype.init = async function(options) {
 										caller_id			: self.id,
 										source				: source,
 										sqo					: sqo,  // new sqo to use in list mode
-										event_in_history	: true // writes browser navigation step to allow back
+										// event_in_history	: false // writes browser navigation step to allow back
 									}
 									event_manager.publish('user_navigation', user_navigation_rqo)
-							}//end on_click
-						}else{
-
-							if (n_try>3) {
-								clearTimeout(retry_timeout);
-								if(SHOW_DEBUG===true) {
-									console.log('menu is not available. Stop to try');
-								}
-								return
-							}
-							n_try++
-							if(SHOW_DEBUG===true) {
-								console.log('menu is not available. Try in 2 secs');
-							}
-						}//end if (menu)
+								*/
+						}//end section_label_on_click
 					}
-					// only for direct page created sections
+
+				// call only for direct page created sections
 					if (self.caller && self.caller.model==='page') {
-						update_menu()
+						// ignore some section cases
+						if (    self.tipo==='dd623' // search presets case
+							|| (self.caller && self.caller.type==='tool') // inside tool (tool_user_admin case)
+							) {
+							// nothing to do
+						}else{
+							// menu. Get from caller page
+							const menu_instance = self.caller && self.caller.ar_instances
+								? self.caller.ar_instances.find(el => el.model==='menu')
+								: null
+							update_menu( menu_instance )
+						}
 					}
 
 				// search control
 					if (!self.search_container || !self.filter) {
-						console.log('stop event no filter 2:', this);
+						// console.log('stop event no filter 2:', this);
 						return
 					}
 					// open_search_panel. local DDBB table status
@@ -1140,14 +1165,9 @@ section.prototype.navigate = async function(options) {
 * Render a fresh full element node in the new mode
 * Replace every old placed DOM node with the new one
 * @param object options
-* @return bool
+* @return object|null new_instance
 */
 section.prototype.change_mode = async function(options) {
-
-	/*
-		@todo
-		under construction !
-	*/
 
 	const self = this
 
@@ -1162,11 +1182,14 @@ section.prototype.change_mode = async function(options) {
 		const view = options.view ?? null
 
 	// short vars
-		// set
-		const current_context		= self.context
-		const section_lang			= self.section_lang
-		const old_node				= self.node
-		const id_variant			= self.id_variant
+		const current_context	= self.context
+		const section_lang		= self.section_lang
+		const id_variant		= self.id_variant
+		const old_node			= self.node
+		if (!old_node) {
+			console.warn('Not old_node found!!');
+			return null
+		}
 
 	// set the new view to context
 		current_context.view = view
@@ -1193,7 +1216,6 @@ section.prototype.change_mode = async function(options) {
 		})
 
 	// replace the node with the new render
-		// old_node.parentNode.replaceChild(new_node, old_node)
 		old_node.replaceWith(new_node);
 
 	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
@@ -1203,7 +1225,7 @@ section.prototype.change_mode = async function(options) {
 			true // remove_dom
 		)
 
-	return true
+	return new_instance
 }//end change_mode
 
 
