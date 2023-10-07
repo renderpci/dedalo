@@ -688,7 +688,7 @@ page.prototype.add_events = function() {
 * @param object self (instance)
 * @param object source
 * 	Could be full context of element return by start API function or an basic source on page navigation
-* @return promise instance_promise
+* @return object instance
 */
 export const instantiate_page_element = async function(self, source) {
 
@@ -748,16 +748,16 @@ export const instantiate_page_element = async function(self, source) {
 			}
 
 	// page_element instance (load file)
-		const instance_promise = await get_instance(instance_options)
+		const instance = await get_instance(instance_options)
 
 	// caller. Set element caller. Useful to update menu section label from modal section
 	// ! Do not overwrite already existing caller (tool case)
-		if (!instance_promise.caller) {
-			instance_promise.caller = self
+		if (instance && !instance.caller) {
+			instance.caller = self
 		}
 
 
-	return instance_promise
+	return instance
 }//end instantiate_page_element
 
 
