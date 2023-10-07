@@ -419,7 +419,7 @@ class component_image extends component_media_common {
 					ImageMagick::convert($options);
 				}
 
-				if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') ){
+				if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS')){
 
 					foreach (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS as $alternative_extension) {
 
