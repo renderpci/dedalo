@@ -282,7 +282,13 @@ paginator.prototype.paginate = async function(offset) {
 		event_manager.publish('paginator_goto_'+self.id, offset)
 
 	// paginator content data update
-		self.refresh()
+		// Note that caller refresh the paginator too, adding loading class feels more responsive for user
+		// self.refresh()
+		self.node.classList.add('loading')
+		event_manager.subscribe('render_'+self.caller.id, fn_render)
+		function fn_render() {
+			self.node.classList.remove('loading')
+		}
 
 
 	return true

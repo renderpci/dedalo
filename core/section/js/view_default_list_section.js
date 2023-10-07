@@ -59,11 +59,6 @@ view_default_list_section.render = async function(self, options) {
 		const content_data = await get_content_data(self, self.ar_instances)
 		if (render_level==='content') {
 
-			// paginator. Force to refresh paginator
-				if (self.paginator) {
-					self.paginator.refresh()
-				}
-
 			// list_header_node. Remove possible style 'hide' if not empty
 				if (self.ar_instances.length>0) {
 					const wrapper = self.node
