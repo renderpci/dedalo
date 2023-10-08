@@ -334,7 +334,10 @@ section.prototype.init = async function(options) {
 							section_label_on_click	: section_label_on_click
 						})
 						async function section_label_on_click(e) {
-							e.stopPropagation()
+							e.stopPropagation();
+
+							// add loading style
+							[e.target,self.node].map((x) => x.classList.add('loading'));
 
 							// non edit mode calls block
 								if (self.mode!=='edit') {
@@ -372,7 +375,10 @@ section.prototype.init = async function(options) {
 											title	: title,
 											url		: url
 										})
-							})//end section_label_on_click
+
+									// restore section_label style
+										e.target.classList.remove('loading')
+								})//end then
 
 							/* OLD way (user_navigation event publish)
 								// saved_sqo
@@ -1204,7 +1210,8 @@ section.prototype.change_mode = async function(options) {
 			lang			: current_context.lang,
 			section_lang	: section_lang,
 			type			: current_context.type,
-			id_variant		: id_variant
+			id_variant		: id_variant,
+			caller			: self.caller || null
 		})
 
 	// build

@@ -8,7 +8,8 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {clone, get_font_fit_size} from '../../common/js/utils/index.js'
+	import {clone, get_font_fit_size, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 
 
@@ -343,36 +344,118 @@ export const render_column_id = function(options) {
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
-							button_edit.addEventListener('click', function(){
+							button_edit.addEventListener('click', function(e){
+								e.stopPropagation()
 
-								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = clone(self.request_config_object.sqo)
-									// set updated filter
-									sqo.filter = self.rqo.sqo.filter
-									// reset pagination
-									sqo.limit	= 1
-									sqo.offset	= paginated_key
+								/* OLD MODE USING PAGE user_navigation
+									// sqo. Note that sqo will be used as request_config.sqo on navigate
+										const sqo = clone(self.request_config_object.sqo)
+										// set updated filter
+										sqo.filter = self.rqo.sqo.filter
+										// reset pagination
+										sqo.limit	= 1
+										sqo.offset	= paginated_key
 
-								// source
-									const source = {
-										action				: 'search',
-										model				: self.model, // 'section'
-										tipo				: section_tipo,
-										section_tipo		: section_tipo,
-										// section_id		: section_id, // (!) enabling affect local db stored rqo's
-										section_id_selected	: section_id,
-										mode				: 'edit',
-										lang				: self.lang
-									}
+									// source
+										const source = {
+											action				: 'search',
+											model				: self.model, // 'section'
+											tipo				: section_tipo,
+											section_tipo		: section_tipo,
+											// section_id		: section_id, // (!) enabling affect local db stored rqo's
+											section_id_selected	: section_id,
+											mode				: 'edit',
+											lang				: self.lang
+										}
 
-								// user_navigation
-									const user_navigation_rqo = {
-										caller_id	: self.id,
-										source		: source,
-										sqo			: sqo
-									}
-									// page js is observing this event
-									event_manager.publish('user_navigation', user_navigation_rqo)
+									// user_navigation
+										const user_navigation_rqo = {
+											caller_id	: self.id,
+											source		: source,
+											sqo			: sqo
+										}
+										// page js is observing this event
+										event_manager.publish('user_navigation', user_navigation_rqo)
+									*/
+
+								// menu. Get from caller page
+									const menu = self.caller && self.caller.ar_instances
+										? self.caller.ar_instances.find(el => el.model==='menu')
+										: null;
+
+								// add loading style
+									[self.node].map((x) => x.classList.add('loading'));
+
+								// change section mode. Creates a new instance and replace DOM node wrapper
+								self.change_mode({
+										mode : 'edit'
+									})
+									.then(function(new_instance){
+
+										async function section_label_on_click(e) {
+											e.stopPropagation();
+
+											// add loading style
+											[new_instance.node].map((x) => x.classList.add('loading'));
+
+											new_instance.change_mode({
+												mode : 'list'
+											})
+											.then(function(list_instance){
+
+												// update_section_label value
+												menu.update_section_label({
+													value					: list_instance.label,
+													mode					: 'list',
+													section_label_on_click	: null
+												})
+
+												// update browser url and navigation history
+												const source	= create_source(list_instance, null)
+												const sqo		= list_instance.request_config_object.sqo
+												const title		= list_instance.id
+												// url search. Append section_id if exists
+												const url_vars = url_vars_to_object({
+													tipo : list_instance.tipo,
+													mode : list_instance.mode
+												})
+												const url = '?' + object_to_url_vars(url_vars)
+												// browser navigation update
+												push_browser_history({
+													source	: source,
+													sqo		: sqo,
+													title	: title,
+													url		: url
+												})
+											})
+										}
+
+
+										// update_section_label value
+											menu.update_section_label({
+												value					: new_instance.label,
+												mode					: new_instance.mode,
+												section_label_on_click	: section_label_on_click
+											})
+
+										// update browser url and navigation history
+											const source	= create_source(new_instance, null)
+											const sqo		= new_instance.request_config_object.sqo
+											const title		= new_instance.id
+											// url search. Append section_id if exists
+											const url_vars = url_vars_to_object({
+												tipo : new_instance.tipo,
+												mode : new_instance.mode
+											})
+											const url = '?' + object_to_url_vars(url_vars)
+											// browser navigation update
+											push_browser_history({
+												source	: source,
+												sqo		: sqo,
+												title	: title,
+												url		: url
+											})
+									})//end then
 							})
 							button_edit.appendChild(section_id_node)
 
