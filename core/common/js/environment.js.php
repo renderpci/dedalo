@@ -146,6 +146,9 @@ session_write_close();
 				$obj->php_version	= PHP_VERSION;
 				$obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory	= to_string(ini_get('memory_limit'));
+				if ( strpos(DEDALO_HOST, 'localhost')===0 ) {
+					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
+				}
 			}
 
 

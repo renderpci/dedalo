@@ -426,7 +426,7 @@ render_menu.prototype.update_section_label = function(options) {
 	// toggle inspector view
 		if (mode==='edit') {
 			if (typeof section_label_on_click==='function') {
-				new_section_label.addEventListener('click', section_label_on_click)
+				new_section_label.addEventListener('mousedown', section_label_on_click)
 			}
 			// hide button inspector
 			toggle_inspector.classList.remove('no_visible')
