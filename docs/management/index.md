@@ -81,7 +81,7 @@ Previous task is common in multiple scenarios.
     - [Updating code](updates/updating_code.md)
     - [Updating data](updates/updating_data.md)
 
-- Installing new hierarchies
+- [Installing new hierarchies](install_new_hierarchies.md)
 
 - DDBB maintenance
     - Vacuum
