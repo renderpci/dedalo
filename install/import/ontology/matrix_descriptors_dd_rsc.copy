@@ -364,7 +364,6 @@ rsc170	Immagine	termino	lg-ita
 rsc170	εικόνα	termino	lg-ell
 rsc171	Esclude	termino	lg-ita
 rsc171	Exclosos	termino	lg-cat
-rsc171	Exclude	termino	lg-spa
 rsc172	Elenco	termino	lg-ita
 rsc172	Listado	termino	lg-spa
 rsc172	Llistat	termino	lg-cat
@@ -475,12 +474,6 @@ rsc2	Resources Media	termino	lg-eng
 rsc18	Delete resource	termino	lg-eng
 rsc200	Estat	termino	lg-cat
 rsc200	Stato	termino	lg-ita
-rsc201	Búsqueda	termino	lg-spa
-rsc201	Cerca	termino	lg-cat
-rsc201	Ricerca	termino	lg-ita
-rsc202	Búsqueda	termino	lg-spa
-rsc202	Cerca	termino	lg-cat
-rsc202	Ricerca	termino	lg-ita
 rsc1072	Últims canvis	termino	lg-cat
 rsc203	Personas, grupos o comunidades	termino	lg-spa
 rsc203	Persone, gruppi o comunità	termino	lg-ita
@@ -562,6 +555,11 @@ rsc220	Notas	termino	lg-spa
 rsc220	Note	termino	lg-ita
 rsc220	Notes	termino	lg-cat
 rsc220	σημειώσεις	termino	lg-ell
+rsc201	Archivio 3D	termino	lg-ita
+rsc201	Arxiu 3D	termino	lg-cat
+rsc202	Documento 3D	termino	lg-spa
+rsc202	Document 3D	termino	lg-cat
+rsc202	Documento 3D	termino	lg-ita
 rsc221	Resum	termino	lg-cat
 rsc221	Resumen	termino	lg-spa
 rsc221	Riassunto	termino	lg-ita
@@ -849,9 +847,6 @@ rsc301	Codi postal	termino	lg-cat
 rsc301	Codice postale	termino	lg-ita
 rsc301	Código postal	termino	lg-spa
 rsc301	ταχυδρομικού κώδικα	termino	lg-ell
-rsc302	Búsqueda	termino	lg-spa
-rsc302	Cercar	termino	lg-cat
-rsc302	Ricerca	termino	lg-ita
 rsc303	Soporte del original	termino	lg-spa
 rsc303	Suport de l'original	termino	lg-cat
 rsc303	Supporto dell'originale	termino	lg-ita
@@ -931,6 +926,8 @@ rsc32	Αρχείο επιλογές	termino	lg-ell
 rsc320	Ample (X)	termino	lg-cat
 rsc320	Ancho (X)	termino	lg-spa
 rsc320	Largo (X)	termino	lg-ita
+rsc302	Document vectorial	termino	lg-cat
+rsc302	Documento vettoriale	termino	lg-ita
 rsc320	Πλάτος (Χ)	termino	lg-ell
 rsc321	Alt (Y)	termino	lg-cat
 rsc321	Alto (Y)	termino	lg-ita
@@ -2545,7 +2542,6 @@ rsc99	Observacions	termino	lg-cat
 rsc99	Osservazioni	termino	lg-ita
 rsc99	Παρατηρήσεις	termino	lg-ell
 rsc789	Identificació	termino	lg-cat
-rsc202	Recherche	termino	lg-fra
 rsc320	Largeur (X)	termino	lg-fra
 rsc321	Haut (Y)	termino	lg-fra
 rsc1073	indexation	termino	lg-spa
@@ -2643,6 +2639,7 @@ rsc843	Últimos cambios	termino	lg-spa
 rsc1074	Nuevo	termino	lg-spa
 rsc844	Listado	termino	lg-spa
 rsc844	Llistat	termino	lg-cat
+rsc856	Document vectorial	termino	lg-cat
 rsc845	Responsable	termino	lg-spa
 rsc845	Responsable	termino	lg-cat
 rsc846	Idiomas	termino	lg-spa
@@ -2663,18 +2660,16 @@ rsc853	Borrar	termino	lg-spa
 rsc853	Esborrar	termino	lg-cat
 rsc854	Correspondència ISO	termino	lg-cat
 rsc854	Correspondencia ISO	termino	lg-spa
-rsc855	SVG	termino	lg-spa
-rsc856	Documento SVG	termino	lg-spa
-rsc856	Document SVG	termino	lg-cat
-rsc856	Documento SVG	termino	lg-ita
-rsc856	Έγγραφο SVG	termino	lg-ell
 rsc857	Descripción	termino	lg-spa
+rsc856	Διάνυσμα έγγραφο	termino	lg-ell
 rsc857	Περιγραφή	termino	lg-ell
 rsc857	Descripció	termino	lg-cat
 rsc857	Descrizione	termino	lg-ita
 rsc37	Documento PDF	termino	lg-spa
 rsc858	Lista	termino	lg-spa
 rsc859	General	termino	lg-spa
+rsc856	Documento vettoriale	termino	lg-ita
+rsc855	Vectorial	termino	lg-spa
 rsc1074	New	termino	lg-eng
 rsc80	Επικύρωση	termino	lg-ell
 rsc431	Estado TR	termino	lg-spa
@@ -3254,8 +3249,6 @@ rsc199	Liste	termino	lg-deu
 rsc2	Medien Ressourcen	termino	lg-deu
 rsc20	Druckreif	termino	lg-deu
 rsc200	Zustand	termino	lg-deu
-rsc201	Suche	termino	lg-deu
-rsc202	Suche	termino	lg-deu
 rsc203	Personen, Gruppen oder Gemeinschaften	termino	lg-deu
 rsc204	Administration	termino	lg-deu
 rsc205	Publikationen	termino	lg-deu
@@ -3345,11 +3338,11 @@ rsc3	Medien Publikationen	termino	lg-deu
 rsc30	Beschreibung	termino	lg-deu
 rsc300	Postleitzahl	termino	lg-deu
 rsc301	Postleitzahl	termino	lg-deu
-rsc302	Suche	termino	lg-deu
 rsc303	Medium des Originals	termino	lg-deu
 rsc304	Medium des Originals	termino	lg-deu
 rsc305	Identifizierung	termino	lg-deu
 rsc306	Id	termino	lg-deu
+rsc302	Vektor-Dokument	termino	lg-deu
 rsc307	Medium des Originals	termino	lg-deu
 rsc308	Projekt	termino	lg-deu
 rsc309	Neu	termino	lg-deu
@@ -3879,8 +3872,6 @@ rsc851	Liste	termino	lg-deu
 rsc852	Neu	termino	lg-deu
 rsc853	Löschen	termino	lg-deu
 rsc854	Korrosion Avers	termino	lg-deu
-rsc855	SVG	termino	lg-deu
-rsc856	SVG-Dokument	termino	lg-deu
 rsc857	Beschreibung	termino	lg-deu
 rsc858	Liste	termino	lg-deu
 rsc859	Allgemein	termino	lg-deu
@@ -4217,8 +4208,6 @@ rsc197	People under study	termino	lg-eng
 rsc198	Excluded	termino	lg-eng
 rsc199	List	termino	lg-eng
 rsc200	Estate	termino	lg-eng
-rsc201	Search	termino	lg-eng
-rsc202	Search	termino	lg-eng
 rsc203	Individuals, groups and communities	termino	lg-eng
 rsc204	Administation	termino	lg-eng
 rsc205	Publications	termino	lg-eng
@@ -4231,6 +4220,8 @@ rsc216	Project	termino	lg-eng
 rsc211	Series / magazines / collections	termino	lg-eng
 rsc212	Series / magazines / collections	termino	lg-eng
 rsc213	Series / Collections	termino	lg-eng
+rsc201	3D file	termino	lg-eng
+rsc202	3D document	termino	lg-eng
 rsc217	URL	termino	lg-eng
 rsc218	Source	termino	lg-eng
 rsc219	Publisher	termino	lg-eng
@@ -4298,7 +4289,6 @@ rsc298	Id	termino	lg-eng
 rsc299	Publication	termino	lg-eng
 rsc300	Postal code	termino	lg-eng
 rsc301	Postal code	termino	lg-eng
-rsc302	Search	termino	lg-eng
 rsc303	Support of original	termino	lg-eng
 rsc304	Support of the original	termino	lg-eng
 rsc305	Identification	termino	lg-eng
@@ -4346,6 +4336,7 @@ rsc347	Participants or interpreters note	termino	lg-eng
 rsc488	Project	termino	lg-eng
 rsc283	Surname (single/maiden)	termino	lg-eng
 rsc346	Creation / production credit note	termino	lg-eng
+rsc302	Vector document	termino	lg-eng
 rsc349	Personal name	termino	lg-eng
 rsc350	Entity name	termino	lg-eng
 rsc351	Conference name	termino	lg-eng
@@ -4768,11 +4759,10 @@ rsc851	List	termino	lg-eng
 rsc852	New	termino	lg-eng
 rsc853	Delete	termino	lg-eng
 rsc854	ISO match	termino	lg-eng
-rsc855	SVG	termino	lg-eng
-rsc856	SVG document	termino	lg-eng
 rsc857	Description	termino	lg-eng
 rsc858	List	termino	lg-eng
 rsc859	General	termino	lg-eng
+rsc855	Vector	termino	lg-eng
 rsc860	Indexation	termino	lg-eng
 rsc864	Relation list	termino	lg-eng
 rsc865	Relation list	termino	lg-eng
@@ -5117,7 +5107,7 @@ rsc198	Exclus 	termino	lg-fra
 rsc199	Liste	termino	lg-fra
 rsc2	Ressources Médias	termino	lg-fra
 rsc200	État 	termino	lg-fra
-rsc201	Recherche	termino	lg-fra
+rsc201	Fichier 3D	termino	lg-fra
 rsc203	Individus, groupes ou communautés	termino	lg-fra
 rsc204	Administration	termino	lg-fra
 rsc205	Publications	termino	lg-fra
@@ -5212,7 +5202,6 @@ rsc3	Publications Médias	termino	lg-fra
 rsc30	Description	termino	lg-fra
 rsc300	Code postale 	termino	lg-fra
 rsc301	Code postale 	termino	lg-fra
-rsc302	Recherche	termino	lg-fra
 rsc303	Soutien à l'original	termino	lg-fra
 rsc304	Soutien à l'original	termino	lg-fra
 rsc305	Identification	termino	lg-fra
@@ -5739,8 +5728,6 @@ rsc851	Liste	termino	lg-fra
 rsc852	Nouveau	termino	lg-fra
 rsc853	Supprimer	termino	lg-fra
 rsc854	Correspondance ISO	termino	lg-fra
-rsc855	SVG	termino	lg-fra
-rsc856	Document SVG	termino	lg-fra
 rsc857	Description	termino	lg-fra
 rsc858	Liste	termino	lg-fra
 rsc859	Général	termino	lg-fra
@@ -5804,6 +5791,7 @@ rsc918	Typologie	termino	lg-fra
 rsc919	Lat | Y	termino	lg-fra
 rsc92	Municipalité de résidence	termino	lg-fra
 rsc920	Long | X	termino	lg-fra
+rsc855	Vecteur	termino	lg-fra
 rsc931	États de conservation	termino	lg-fra
 rsc932	Identification	termino	lg-fra
 rsc933	Id	termino	lg-fra
@@ -6138,8 +6126,6 @@ rsc995	ترجمات	termino	lg-ara
 rsc8	وثيقة	termino	lg-ara
 rsc37	وثيقة	termino	lg-ara
 rsc38	وصف	termino	lg-ara
-rsc856	SVG وثيقة	termino	lg-ara
-rsc855	SVG	termino	lg-ara
 rsc857	وصف	termino	lg-ara
 rsc10	يأسر	termino	lg-ara
 rsc47	نسخة مجاملة	termino	lg-ara
@@ -6198,6 +6184,8 @@ rsc17	علاقة	termino	lg-ara
 rsc502	أحدث التغييرات	termino	lg-ara
 rsc1074	جديد	termino	lg-ara
 rsc203	الأفراد والجماعات والمجتمعات	termino	lg-ara
+rsc856	وثيقة المتجهات	termino	lg-ara
+rsc855	المتجه	termino	lg-ara
 rsc197	الأشخاص قيد الدراسة	termino	lg-ara
 rsc194	الناس	termino	lg-ara
 rsc167	سمعي بصري	termino	lg-ara
@@ -6207,3 +6195,55 @@ rsc205	المنشورات	termino	lg-ara
 rsc204	إدارة	termino	lg-ara
 rsc106	جهات	termino	lg-ara
 rsc420	معالم السيرة الذاتية	termino	lg-ara
+rsc856	Documento vectorial	termino	lg-spa
+rsc856	Document vecteur	termino	lg-fra
+rsc856	Vector document	termino	lg-eng
+rsc856	Vektor-Dokument	termino	lg-deu
+rsc855	Vectorial	termino	lg-cat
+rsc855	Vektor	termino	lg-deu
+rsc1130	Documento 3D	termino	lg-spa
+rsc1130	Document 3D	termino	lg-cat
+rsc1130	3D-Dokument	termino	lg-deu
+rsc1130	Document 3D	termino	lg-fra
+rsc1130	Documento 3D	termino	lg-ita
+rsc1130	3D document	termino	lg-eng
+rsc1130	وثيقة ثلاثية الأبعاد	termino	lg-ara
+rsc1130	3D έγγραφο	termino	lg-ell
+rsc201	Archivo 3D	termino	lg-spa
+rsc201	αρχείο 3D	termino	lg-ell
+rsc201	3D-Datei	termino	lg-deu
+rsc202	Document 3D	termino	lg-fra
+rsc202	3D-Dokument	termino	lg-deu
+rsc202	3D έγγραφο	termino	lg-ell
+rsc202	وثيقة ثلاثية الأبعاد	termino	lg-ara
+rsc302	Documento vectorial	termino	lg-spa
+rsc302	Document vecteur	termino	lg-fra
+rsc302	Διάνυσμα έγγραφο	termino	lg-ell
+rsc302	وثيقة المتجهات	termino	lg-ara
+rsc1131	Llistado	termino	lg-spa
+rsc1131	Llistat	termino	lg-cat
+rsc1131	List	termino	lg-eng
+rsc1131	Elenco	termino	lg-ita
+rsc1131	λίστα	termino	lg-ell
+rsc1131	Liste	termino	lg-deu
+rsc1131	Liste	termino	lg-fra
+rsc1131	قائمة	termino	lg-ara
+rsc1132	Excluidos	termino	lg-spa
+rsc1132	Esclude	termino	lg-eng
+rsc1132	Exclosos	termino	lg-cat
+rsc1132	Ausgeschlossene	termino	lg-deu
+rsc1132	Exclure	termino	lg-fra
+rsc1133	Listado	termino	lg-spa
+rsc1133	Llistat	termino	lg-cat
+rsc1133	List	termino	lg-eng
+rsc1133	Elenco	termino	lg-ita
+rsc1133	Liste	termino	lg-deu
+rsc1133	λίστα	termino	lg-ell
+rsc1133	Liste	termino	lg-fra
+rsc1133	قائمة	termino	lg-ara
+rsc171	Excluidos	termino	lg-spa
+rsc1134	Excluidos	termino	lg-spa
+rsc1134	Exclosos	termino	lg-cat
+rsc1134	Esclude	termino	lg-ita
+rsc1134	Ausgeschlossene	termino	lg-deu
+rsc1134	Exclure	termino	lg-fra
