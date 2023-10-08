@@ -344,7 +344,7 @@ export const render_column_id = function(options) {
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
-							button_edit.addEventListener('click', function(e){
+							button_edit.addEventListener('mousedown', function(e){
 								e.stopPropagation()
 
 								/* OLD MODE USING PAGE user_navigation
