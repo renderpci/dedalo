@@ -383,20 +383,14 @@ export const render_column_id = function(options) {
 										? self.caller.ar_instances.find(el => el.model==='menu')
 										: null;
 
-								// add loading style
-									[self.node].map((x) => x.classList.add('loading'));
-
 								// change section mode. Creates a new instance and replace DOM node wrapper
-								self.change_mode({
+									self.change_mode({
 										mode : 'edit'
 									})
 									.then(function(new_instance){
 
 										async function section_label_on_click(e) {
 											e.stopPropagation();
-
-											// add loading style
-											[new_instance.node].map((x) => x.classList.add('loading'));
 
 											new_instance.change_mode({
 												mode : 'list'
@@ -428,8 +422,7 @@ export const render_column_id = function(options) {
 													url		: url
 												})
 											})
-										}
-
+										}//end section_label_on_click
 
 										// update_section_label value
 											menu.update_section_label({
