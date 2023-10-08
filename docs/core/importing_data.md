@@ -8,7 +8,7 @@ Dédalo data model has a abstraction layer that use the ontology definitions to 
 
 ??? note "About pain text / non-normalized data"
 
-    Lots of catalogues in museums have a previous cataloging system, sometimes do it by itself in commercial applications as FileMaker, Access, etc. and sometimes this data has not structure and is saved as plain text without normalization. This situation create a lots of data inconsistences that could generate a very difficult situations to resolve. Dédalo can import plain text without any structuring but it is not recommended. If you want import this kind of data, we recommend to do a clean process before import to Dédalo.
+    Lots of catalogues in museums have a previous cataloging system, sometimes do it by itself in commercial applications as FileMaker, Access, etc. and sometimes this data has not structure and is saved as plain text without normalization. This situation create a lots of data inconsistencies that could generate a very difficult situations to resolve. Dédalo can import plain text without any structuring but it is not recommended. If you want import this kind of data, we recommend to do a clean process before import to Dédalo.
 
 ## Format
 
@@ -389,7 +389,7 @@ The table to import
 Will be encoded in csv format as:
 
 ```text
-section_id;rsc86
+section_id;numisdata18
 1;"{""lg-cat"": [""<p>El meu text per <strong>importar</strong></p>"",""<p>Altra dada</p>""]}"
 ```
 
@@ -773,7 +773,7 @@ section_id;tch56
 
 ##### Using other date formats
 
-By default the string date formats use \[-]y/m/d, but its possible to import the date in other formats indicating in the column header the format as second parameter after the tipo, using the '_' as character between them.
+By default the string date formats use \[-]y/m/d, but its possible to import the date in other formats indicating in the column header the format as second parameter after the tipo, using the `_ as character between them.
 
 | section_id | tch56_dmy |
 | ---------- | --------- |
@@ -909,7 +909,7 @@ It's possible remove the `type` and `from_component_tipo` properties because the
     1,4,6
     ```
 
-    To import this data, is necessary specify, in the column head of the component, the section_tipo using the '_' character to between them:
+    To import this data, is necessary specify, in the column head of the component, the section_tipo using the `_ character to between them:
 
     `component_tipo + '_' + section_tipo`
 
@@ -960,18 +960,18 @@ It's possible remove the `type` and `from_component_tipo` properties because the
         !!! warning "Components using with multiple sections"
             This possibility is only available when the component point to 1 section. Multiple sections are not allowed to import in this way.
 
-        In this case the import process will ask to component in the server to get the section_tipo to be used, if the component has multiple sections it will fail to import, to avoid errors and inconsistences.
+        In this case the import process will ask to component in the server to get the section_tipo to be used, if the component has multiple sections it will fail to import, to avoid errors and inconsistencies
 
 ---
 
 ### URI
 
-By default import model use the JSON format of his value, as the component do not use languages the main format to import is the array of dd_iri objects.
+By default import model use the JSON format of his value, if the component does not use languages the main format to import is the array of dd_iri objects.
 
 ```json
 [{
-   "iri" : "https://dedalo.dev",
-   "title": "Dédalo website"
+    "iri" : "https://dedalo.dev",
+    "title": "Dédalo website"
 }]
 ```
 
@@ -986,9 +986,48 @@ The table to import
 Will be encoded in csv format as:
 
 ```text
-section_id;tch56
+section_id;tch442
 1;"[{""iri"":""https://dedalo.dev"",""title"":""Dédalo website""}]
 ```
+
+### Multiple values
+
+To import multiple values in the same component/field, add new object to the array in this way:
+
+```json
+[
+    {
+        "iri" : "https://dedalo.dev",
+        "title": "Dédalo website"
+    },
+    {
+        "iri" : "http://monedaiberica.org",
+        "title": "MIB website"
+    }
+]
+```
+
+#### Languages
+
+The import will marked this data as `lg-nolan` because the component interpreted that the URI has not language by default. But sometimes you will manage multilingual URI's, as wikipedia articles, so in those cases is possible identify the language of the URI in this way:
+
+```json
+{
+    "lg-spa": [{
+        "iri" : "https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"
+    }],
+    "lg-deu": [{
+        "iri" : "https://de.wikipedia.org/wiki/Althispanische_Schriften"
+    }]
+
+}
+```
+
+The table to import
+
+| section_id    | tch442  |
+| ------------  | ------ |
+| 1             | {"lg-spa":\[{"iri":"https://es.wikipedia.org/wiki/Escrituras_paleohispánicas"}\],"lg-deu":\[{"iri":"https://de.wikipedia.org/wiki/Althispanische_Schriften"}\]} |
 
 #### Alternative formats to import URI's
 
@@ -1002,17 +1041,19 @@ section_id;tch56
     | ------------  | ------ |
     | 1             | https://dedalo.dev |
 
-    will be parse as:
+    it will be parse as:
 
     ```json
-    [
-        {"iri":"https://dedalo.dev"}
-    ]
+    [{
+        "iri":"https://dedalo.dev"
+    }]
     ```
 
-1. Array of strings:
+2. Array of strings:
 
-    ```text
+    Used to import multiple URI's into the component / field.
+
+    ```json
     ["https://dedalo.dev","https://dedalo.dev/docs"]
     ```
 
@@ -1028,3 +1069,80 @@ section_id;tch56
         {"iri":"https://dedalo.dev/docs"}
     ]
     ```
+
+3. String with title
+
+    To import the title of the URI use the `, ` separator in this way:
+
+    ```text
+    Dédalo website, https://dedalo.dev
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------ |
+    | 1             | Dédalo website, https://dedalo.dev |
+
+    it will be parse as:
+
+    ```json
+    [{
+        "iri": "https://dedalo.dev",
+        "title": "Dédalo website"
+    }]
+    ```
+
+    !!! tip "Separator format"
+
+        Dédalo interpreted the `, ` separator between data to differentiate two parts, left of the comma is the title and the right of the comma will be the URI, if you are using this separator is important to add the space between comma and the URI, because is possible identify the comma when the URI is clear, sometimes the title or the URI can use this character. To minimized errors ensure that the space is after the comma in the separator.
+
+4. String of multiple values
+
+    To import multiple values of the URI use the ` | ` separator in this way:
+
+    ```text
+    https://dedalo.dev | https://dedalo.dev/docs
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------- |
+    | 1             | https://dedalo.dev \| https://dedalo.dev/docs |
+
+    it will be parse as:
+
+    ```json
+    [
+        {"iri":"https://dedalo.dev"},
+        {"iri":"https://dedalo.dev/docs"}
+    ]
+    ```
+
+    !!! tip "Separator format"
+
+        Dédalo interpreted the ` | ` separator between data to differentiate two or more values. Is possible that some URI's will use this character inside the variables. To minimized errors ensure that the space is before and after of the separator character.
+
+5. String of multiple values with title
+
+    Is possible combine the title separator and the values separator in the same string in this way:
+
+    ```text
+    Dédalo website, https://dedalo.dev | https://dedalo.dev/docs
+    ```
+
+    | section_id    | tch442  |
+    | ------------  | ------- |
+    | 1             |  Dédalo website, https://dedalo.dev \| https://dedalo.dev/docs |
+
+    it will be parse as:
+
+    ```json
+    [
+        {
+            "iri":"https://dedalo.dev",
+            "title": "Dédalo website"
+        },
+        {
+            "iri":"https://dedalo.dev/docs"
+        }
+    ]
+    ```
+

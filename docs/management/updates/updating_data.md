@@ -32,7 +32,7 @@ Not all code updates has implicit a data update. They updates process are indepe
 
     Previous to update data is mantadory to update the ontology and code to the last versions:
 
-    Follow t[his guide](updating_ontology.md) to update ontology
+    Follow [this guide](updating_ontology.md) to update ontology
     Follow [this guide](updating_code.md) to update code
 
 5. Locate "Update data" control panel"
