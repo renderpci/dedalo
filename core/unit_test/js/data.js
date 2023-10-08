@@ -75,13 +75,19 @@
 	}
 
 	export const random_date = function() {
+		let second	= random_number(59) || 0
+		let minute	= random_number(59) || 0
+		let hour	= random_number(23) || 0
 		let day		= random_number(30) || 1
 		let month	= random_number(12) || 1
 		let year	= random_number(2022) || 1
 		const time	= convert_date_to_seconds({
-			day		: day,
+			year	: year,
 			month	: month,
-			year	: year
+			day		: day,
+			hour	: hour,
+			minute	: minute,
+			second	: second
 		}, 'date')
 
 		const value =  {
@@ -89,6 +95,9 @@
 				year	: year,
 				month	: month,
 				day		: day,
+				hour	: hour,
+				minute	: minute,
+				second	: second,
 				time	: time
 			}
 		}
@@ -230,266 +239,456 @@
 
 	export const random_3d_data = function() {
 
-		const file_name = random_string(64) + '_' + random_number(99) + ''
+		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
-		const value = [
+		const value =
 		  {
-		    "lib_data": null,
 		    "files_info": [
 		      {
-		        "quality": "web",
-		        "file_url": `/dedalo/media/3d/web/${file_name}.glb`,
-		        "file_name": `${file_name}.glb`,
-		        "file_path": `/home/www/dedalo/media/av/web/${file_name}.glb`,
-		        "file_size": 22126087,
+		        "quality": "original",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/3d/original/test26_test3_1.glb",
+		        "file_name": "test26_test3_1.glb",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/3d/original/test26_test3_1.glb",
+		        "file_size": 34165976,
 		        "file_time": {
-		          "day": 11,
-		          "hour": 11,
-		          "time": 64992281681,
-		          "year": 2022,
-		          "month": 2,
-		          "minute": 34,
-		          "second": 41,
-		          "timestamp": "2022-02-11 11:34:41"
+		          "day": 8,
+		          "hour": 19,
+		          "time": 65045618879,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 27,
+		          "second": 59,
+		          "timestamp": "2023-10-08 19:27:59"
 		        },
-		        "upload_info": {
-		          "date": {
-		            "day": 11,
-		            "hour": 11,
-		            "time": 64992281681,
-		            "year": 2022,
-		            "month": 2,
-		            "minute": 34,
-		            "second": 41,
-		            "timestamp": "2022-02-11 11:34:41"
-		          },
-		          "user": null,
-		          "file_name": `${file_name}.glb`
-		        }
+		        "file_exist": true
+		      },
+		      {
+		        "quality": "web",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/3d/web/test26_test3_1.glb",
+		        "file_name": "test26_test3_1.glb",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/3d/web/test26_test3_1.glb",
+		        "file_size": 34165976,
+		        "file_time": {
+		          "day": 8,
+		          "hour": 19,
+		          "time": 65045618879,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 27,
+		          "second": 59,
+		          "timestamp": "2023-10-08 19:27:59"
+		        },
+		        "file_exist": true
 		      }
 		    ]
 		  }
-		]
 
-		return value
+		return [value]
 	}
 
 	export const random_av_data = function() {
 
-		const file_name = random_string(64) + '_' + random_number(99) + ''
+		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
-		const value = [
+		const value =
 		  {
-		    "lib_data": null,
-		    "files_info": [
-		      {
-		        "quality": "original",
-		        "file_url": `/dedalo/media/av/original/${file_name}.avi`,
-		        "file_name": `${file_name}.avi`,
-		        "file_path": `/home/www/dedalo/media/av/original/${file_name}.avi`,
-		        "file_size": 22126087,
-		        "file_time": {
-		          "day": 11,
-		          "hour": 11,
-		          "time": 64992281681,
-		          "year": 2022,
-		          "month": 2,
-		          "minute": 34,
-		          "second": 41,
-		          "timestamp": "2022-02-11 11:34:41"
-		        },
-		        "upload_info": {
-		          "date": {
-		            "day": 11,
-		            "hour": 11,
-		            "time": 64992281681,
-		            "year": 2022,
-		            "month": 2,
-		            "minute": 34,
-		            "second": 41,
-		            "timestamp": "2022-02-11 11:34:41"
-		          },
-		          "user": null,
-		          "file_name": `${file_name}.avi`
-		        }
-		      },
-		      {
-		        "quality": "404",
-		        "file_url": `/dedalo/media/av/404/${file_name}.mp4`,
-		        "file_name": `${file_name}.mp4`,
-		        "file_path": `/home/www/dedalo/media/av/404/${file_name}.mp4`,
-		        "file_size": 22126087,
-		        "file_time": {
-		          "day": 11,
-		          "hour": 11,
-		          "time": 64992281681,
-		          "year": 2022,
-		          "month": 2,
-		          "minute": 34,
-		          "second": 41,
-		          "timestamp": "2022-02-11 11:34:41"
-		        }
-		      }
-		    ]
-		  }
-		]
+            "files_info": [
+              {
+                "quality": "original",
+                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/original/test94_test3_1.mp4",
+                "file_name": "test94_test3_1.mp4",
+                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/original/test94_test3_1.mp4",
+                "file_size": 9159390,
+                "file_time": {
+                  "day": 8,
+                  "hour": 19,
+                  "time": 65045620565,
+                  "year": 2023,
+                  "month": 10,
+                  "minute": 56,
+                  "second": 5,
+                  "timestamp": "2023-10-08 19:56:05"
+                },
+                "file_exist": true
+              },
+              {
+                "quality": "1080",
+                "file_url": null,
+                "file_name": null,
+                "file_path": null,
+                "file_size": null,
+                "file_time": null,
+                "file_exist": false
+              },
+              {
+                "quality": "720",
+                "file_url": null,
+                "file_name": null,
+                "file_path": null,
+                "file_size": null,
+                "file_time": null,
+                "file_exist": false
+              },
+              {
+                "quality": "576",
+                "file_url": null,
+                "file_name": null,
+                "file_path": null,
+                "file_size": null,
+                "file_time": null,
+                "file_exist": false
+              },
+              {
+                "quality": "404",
+                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/404/test94_test3_1.mp4",
+                "file_name": "test94_test3_1.mp4",
+                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/404/test94_test3_1.mp4",
+                "file_size": 9144810,
+                "file_time": {
+                  "day": 8,
+                  "hour": 19,
+                  "time": 65045620568,
+                  "year": 2023,
+                  "month": 10,
+                  "minute": 56,
+                  "second": 8,
+                  "timestamp": "2023-10-08 19:56:08"
+                },
+                "file_exist": true
+              },
+              {
+                "quality": "240",
+                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/240/test94_test3_1.mp4",
+                "file_name": "test94_test3_1.mp4",
+                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/240/test94_test3_1.mp4",
+                "file_size": 3753529,
+                "file_time": {
+                  "day": 3,
+                  "hour": 11,
+                  "time": 65034444190,
+                  "year": 2023,
+                  "month": 6,
+                  "minute": 23,
+                  "second": 10,
+                  "timestamp": "2023-06-03 11:23:10"
+                },
+                "file_exist": true
+              },
+              {
+                "quality": "audio",
+                "file_url": null,
+                "file_name": null,
+                "file_path": null,
+                "file_size": null,
+                "file_time": null,
+                "file_exist": false
+              }
+            ]
+          }
 
-		return value
+		return [value]
 	}
 
 	export const random_image_data = function() {
 
-		const file_name = random_string(64) + '_' + random_number(99) + ''
+		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
-		const value = [
+		const value =
 		  {
-		    "lib_data": null,
 		    "files_info": [
 		      {
 		        "quality": "original",
-		        "file_url": `/dedalo/media/image/original/0/${file_name}.jpg`,
-		        "file_name": `${file_name}.jpg`,
-		        "file_path": `/home/www/dedalo/media/image/original/0/${file_name}.jpg`,
-		        "file_size": 14355433,
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/original/0/test99_test3_1.jpg",
+		        "file_name": "test99_test3_1.jpg",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/original/0/test99_test3_1.jpg",
+		        "file_size": 2031,
 		        "file_time": {
-		          "day": 13,
-		          "hour": 11,
-		          "time": 64997809695,
-		          "year": 2022,
-		          "month": 4,
-		          "minute": 8,
-		          "second": 15,
-		          "timestamp": "2022-04-13 11:08:15"
+		          "day": 8,
+		          "hour": 20,
+		          "time": 65045620919,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 1,
+		          "second": 59,
+		          "timestamp": "2023-10-08 20:01:59"
 		        },
-		        "upload_info": {
-		          "date": {
-		            "day": 13,
-		            "hour": 11,
-		            "time": 64997809695,
-		            "year": 2022,
-		            "month": 4,
-		            "minute": 8,
-		            "second": 15,
-		            "timestamp": "2022-04-13 11:08:15"
-		          },
-		          "user": null,
-		          "file_name": `${file_name}_deleted_2022-02-11_1347.jpg`
-		        }
+		        "file_exist": true
+		      },
+		      {
+		        "quality": "modified",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "100MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "50MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "25MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "6MB",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/6MB/0/test99_test3_1.jpg",
+		        "file_name": "test99_test3_1.jpg",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/6MB/0/test99_test3_1.jpg",
+		        "file_size": 276116,
+		        "file_time": {
+		          "day": 8,
+		          "hour": 12,
+		          "time": 65045593073,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 17,
+		          "second": 53,
+		          "timestamp": "2023-10-08 12:17:53"
+		        },
+		        "file_exist": true
+		      },
+		      {
+		        "quality": "3MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "2MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
 		      },
 		      {
 		        "quality": "1.5MB",
-		        "file_url": `/dedalo/media/image/1.5MB/0/${file_name}.jpg`,
-		        "file_name": `${file_name}.jpg`,
-		        "file_path": `/home/www/dedalo/media/image/1.5MB/0/${file_name}.jpg`,
-		        "file_size": 344574,
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/1.5MB/0/test99_test3_1.jpg",
+		        "file_name": "test99_test3_1.jpg",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/1.5MB/0/test99_test3_1.jpg",
+		        "file_size": 2320,
 		        "file_time": {
-		          "day": 13,
-		          "hour": 11,
-		          "time": 64997809699,
-		          "year": 2022,
-		          "month": 4,
-		          "minute": 8,
-		          "second": 19,
-		          "timestamp": "2022-04-13 11:08:19"
-		        }
+		          "day": 8,
+		          "hour": 20,
+		          "time": 65045620919,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 1,
+		          "second": 59,
+		          "timestamp": "2023-10-08 20:01:59"
+		        },
+		        "file_exist": true
+		      },
+		      {
+		        "quality": "<1MB",
+		        "file_url": null,
+		        "file_name": null,
+		        "file_path": null,
+		        "file_size": null,
+		        "file_time": null,
+		        "file_exist": false
+		      },
+		      {
+		        "quality": "thumb",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/thumb/0/test99_test3_1.jpg",
+		        "file_name": "test99_test3_1.jpg",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/thumb/0/test99_test3_1.jpg",
+		        "file_size": 740,
+		        "file_time": {
+		          "day": 8,
+		          "hour": 20,
+		          "time": 65045620920,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 2,
+		          "second": 0,
+		          "timestamp": "2023-10-08 20:02:00"
+		        },
+		        "file_exist": true
 		      }
-		    ]
+		    ],
+		    "original_file_name": "test94_test3_1.jpg",
+		    "original_upload_date": {
+		      "day": 8,
+		      "hour": 20,
+		      "time": 65045620920,
+		      "year": 2023,
+		      "month": 10,
+		      "minute": 2,
+		      "second": 0
+		    },
+		    "original_normalized_name": "test99_test3_1.jpg"
 		  }
-		]
 
-		return value
+
+		return [value]
 	}
 
 	export const random_pdf_data = function() {
 
-		const file_name = random_string(64) + '_' + random_number(99) + ''
+		// const file_name = 'test177_test3_1.pdf' // random_string(64) + '_' + random_number(99) + ''
 
-		const value = [
+		const value =
 		  {
-		    "lib_data": null,
 		    "files_info": [
 		      {
-		        "quality": "web",
-		        "file_url": `/dedalo/media/pdf/web/0/${file_name}.pdf`,
-		        "file_name": `${file_name}.pdf`,
-		        "file_path": `/home/www/dedalo/media/pdf/web/0/${file_name}.pdf`,
-		        "file_size": 255969,
+		        "quality": "original",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/pdf/original/test85_test3_1.pdf",
+		        "file_name": "test85_test3_1.pdf",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/pdf/original/test85_test3_1.pdf",
+		        "file_size": 4288553,
 		        "file_time": {
-		          "day": 25,
-		          "hour": 9,
-		          "time": 64980091880,
-		          "year": 2021,
-		          "month": 9,
-		          "minute": 31,
-		          "second": 20,
-		          "timestamp": "2021-09-25 09:31:20"
+		          "day": 8,
+		          "hour": 20,
+		          "time": 65045621209,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 6,
+		          "second": 49,
+		          "timestamp": "2023-10-08 20:06:49"
 		        },
-		        "upload_info": {
-		          "date": {
-		            "day": 25,
-		            "hour": 9,
-		            "time": 64980091880,
-		            "year": 2021,
-		            "month": 9,
-		            "minute": 31,
-		            "second": 20,
-		            "timestamp": "2021-09-25 09:31:20"
-		          },
-		          "user": null,
-		          "file_name": `${file_name}.pdf`
-		        }
+		        "file_exist": true
+		      },
+		      {
+		        "quality": "web",
+		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/pdf/web/test85_test3_1.pdf",
+		        "file_name": "test85_test3_1.pdf",
+		        "file_path": page_globals.dedalo_root_path + "/media/media_development/pdf/web/test85_test3_1.pdf",
+		        "file_size": 4288553,
+		        "file_time": {
+		          "day": 8,
+		          "hour": 20,
+		          "time": 65045621209,
+		          "year": 2023,
+		          "month": 10,
+		          "minute": 6,
+		          "second": 49,
+		          "timestamp": "2023-10-08 20:06:49"
+		        },
+		        "file_exist": true
 		      }
 		    ]
 		  }
-		]
 
-		return value
+		return [value]
 	}
 
 	export const random_svg_data = function() {
 
-		const file_name = random_string(64) + '_' + random_number(99) + ''
+		const file_name = 'test177_test3_1' //  random_string(64) + '_' + random_number(99) + ''
 
-		const value = [
-		  {
-		    "lib_data": null,
-		    "files_info": [
-		      {
-		        "quality": "web",
-		        "file_url": `/dedalo/media/svg/web/${file_name}.svg`,
-		        "file_name": `${file_name}.svg`,
-		        "file_path": `/home/www/dedalo/media/svg/web/${file_name}.svg`,
-		        "file_size": 1180,
-		        "file_time": {
-		          "day": 19,
-		          "hour": 10,
-		          "time": 65009038764,
-		          "year": 2022,
-		          "month": 8,
-		          "minute": 19,
-		          "second": 24,
-		          "timestamp": "2022-08-19 10:19:24"
-		        },
-		        "upload_info": {
-		          "date": {
-		            "day": 19,
-		            "hour": 10,
-		            "time": 65009038764,
-		            "year": 2022,
-		            "month": 8,
-		            "minute": 19,
-		            "second": 24,
-		            "timestamp": "2022-08-19 10:19:24"
-		          },
-		          "user": null,
-		          "file_name": `${file_name}.svg`
-		        }
+		// des
+			// const file_size = random_number(3000) || 1
+
+			// const date		= random_date().start
+			// const month		= String(date.month).padStart(2, '0');
+			// const day		= String(date.day).padStart(2, '0');
+			// date.timestamp	= `${date.year}-${month}-${day} 01:01:01`
+
+			// const date = {
+	        //     "year": 2023,
+	        //     "month": 6,
+	        //     "day": 2,
+	        //     "hour": 17,
+	        //     "minute": 27,
+	        //     "second": 54,
+	        //     "time": 65034379674,
+	        //     "timestamp": "2023-06-02 17:27:54"
+	        // }
+
+			// const value =
+			// {
+			//   "lib_data": null,
+			//   "files_info": [
+			//     {
+			//       "quality": "original",
+			//       "file_exist": true,
+			//       "file_name": `${file_name}.svg`,
+			//       "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/original/${file_name}.svg`,
+			//       "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/original/${file_name}.svg`,
+			//       "file_size": file_size,
+			//       "file_time": date
+			//     },
+			//     {
+			//       "quality": "web",
+			//       "file_exist": true,
+			//       "file_name": `${file_name}.svg`,
+			//       "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/web/${file_name}.svg`,
+			//       "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/web/${file_name}.svg`,
+			//       "file_size": file_size,
+			//       "file_time": date
+			//     }
+			//   ]
+			// }
+
+		const value = {
+		  "lib_data": null,
+		  "files_info": [
+		    {
+		      "quality": "original",
+		      "file_exist": true,
+		      "file_name": "test177_test3_1.svg",
+		      "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/original/${file_name}.svg`,
+		      "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/original/${file_name}.svg`,
+		      "file_size": 1275,
+		      "file_time": {
+		        "year": 2023,
+		        "month": 6,
+		        "day": 2,
+		        "hour": 17,
+		        "minute": 27,
+		        "second": 54,
+		        "time": 65034379674,
+		        "timestamp": "2023-06-02 17:27:54"
 		      }
-		    ]
-		  }
-		]
+		    },
+		    {
+		      "quality": "web",
+		      "file_exist": true,
+		      "file_name": "test177_test3_1.svg",
+		      "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/web/${file_name}.svg`,
+		      "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/web/${file_name}.svg`,
+		      "file_size": 1275,
+		      "file_time": {
+		        "year": 2023,
+		        "month": 6,
+		        "day": 2,
+		        "hour": 17,
+		        "minute": 27,
+		        "second": 54,
+		        "time": 65034379674,
+		        "timestamp": "2023-06-02 17:27:54"
+		      }
+		    }
+		  ]
+		}
 
-		return value
+		return [value]
 	}
 
 

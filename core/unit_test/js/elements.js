@@ -28,7 +28,9 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_3d_data, // return array
-			new_value_params	: [section_tipo, section_id, 'test26']
+			new_value_params	: [section_tipo, section_id, 'test26'],
+			new_value_action	: 'set_data',
+			// test_save		: false
 		})
 
 	// component_av
@@ -40,7 +42,9 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_av_data, // return array
-			new_value_params	: [section_tipo, section_id, 'test94']
+			new_value_params	: [section_tipo, section_id, 'test94'],
+			new_value_action	: 'set_data',
+			// test_save		: false
 		})
 
 	// button
@@ -152,7 +156,9 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
 			new_value			: fn.random_image_data,
-			new_value_params	: []
+			new_value_params	: [],
+			new_value_action	: 'set_data',
+			// test_save		: false
 		})
 
 	// component_info -widgets- (WORKING HERE)
@@ -235,7 +241,9 @@ import * as fn from './data.js'
 			mode				: mode,
 			lang				: lang,
 			new_value			: fn.random_pdf_data,
-			new_value_params	: []
+			new_value_params	: [],
+			new_value_action	: 'set_data',
+			// test_save		: false
 		})
 
 	// component_portal (basic v5 config)
@@ -394,7 +402,9 @@ import * as fn from './data.js'
 			section_id			: section_id,
 			mode				: mode,
 			lang				: page_globals.dedalo_data_nolan,
-			new_value			: fn.random_svg_data
+			new_value			: fn.random_svg_data,
+			new_value_action	: 'set_data',
+			// test_save		: false
 		})
 
 	// component_text_area
