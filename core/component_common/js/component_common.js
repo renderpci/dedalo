@@ -426,6 +426,11 @@ component_common.prototype.save = async function(new_changed_data) {
 						msg				: get_label.data_was_not_modified_save_canceled || 'The data was not modified. Canceled save'
 					})
 
+				// debug
+					if(SHOW_DEBUG===true) {
+						console.warn(get_label.data_was_not_modified_save_canceled || 'The data was not modified. Canceled save');
+					}
+
 				// page unload event
 					// set_before_unload (bool)
 					set_before_unload(false)
