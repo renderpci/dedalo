@@ -85,9 +85,12 @@ In some cases it will be render as:
 
 When the component is instantiated, the component get his data from his section and only get the value without lang.
 
-### Translatable uris.
+### Translatable URI's
 
-Is possible to define the component as translatable, in those cases, the component will use the translation tools and his behavior will be the same as other translatable components.
+By default component_iri is not translatable, and all data information is marked as 'lg-nolan'. But is possible to define the component as translatable, in those cases, the component will use the translation tools and his behavior will be the same as other translatable components.
+
+!!! info "About translatable URI's"
+    Dédalo does not apply any rule to test if the URI is a translatable URI or not, by default the user will enter URI as no translatable and the translation possibility could be used or not.
 
 ```json
 {
@@ -145,8 +148,6 @@ Used to create or remove the title input text field
 }
 ```
 
-
-
 `fields_separator`
 
 Used to define the character/s to be used between uris. Used to export, and show data inside other components.
@@ -169,7 +170,7 @@ Example:
 
 ```json
 {
-    "fields_separator": " | "
+    "records_separator": " | "
 }
 ```
 
