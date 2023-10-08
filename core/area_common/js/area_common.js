@@ -92,51 +92,36 @@ area_common.prototype.init = async function(options) {
 
 	// events subscription
 		// render_ event
-			self.events_tokens.push(
-				event_manager.subscribe('render_'+self.id, fn_render)
-			)
+			const render_token = event_manager.subscribe('render_'+self.id, fn_render)
+			self.events_tokens.push(render_token)
 			function fn_render() {
+
 				// menu label control
-					let n_try = 0
-					const update_menu = () => {
-						// ignore sections inside tool (tool_user_admin case)
-						if (self.caller && self.caller.type==='tool') {
+					const update_menu = (menu) => {
+
+						// menu instance check. Get from caller page
+						if (!menu) {
+							if(SHOW_DEBUG===true) {
+								console.log('menu is not available from area.');
+							}
 							return
 						}
 
-						const retry_timeout = setTimeout(fn_render, 2000);
-						// menu label control
-						// menu. Note that menu is set as global var on menu build
-						// const menu = window.menu
-						const menu = window.dd_page && window.dd_page.ar_instances
-							? window.dd_page.ar_instances.find(el => el.model==='menu')
-							: null
-						if (menu) {
-							clearTimeout(retry_timeout);
-
-							menu.update_section_label({
-								value		: self.label,
-								mode		: self.mode,
-								on_click	: null
-							})
-						}else{
-
-							if (n_try>3) {
-								clearTimeout(retry_timeout);
-								if(SHOW_DEBUG===true) {
-									console.log('menu is not available. Stop to try');
-								}
-								return
-							}
-							n_try++
-							if(SHOW_DEBUG===true) {
-								console.log('menu is not available. Try in 2 secs');
-							}
-						}//end if (menu)
+						// update_section_label
+						menu.update_section_label({
+							value					: self.label,
+							mode					: self.mode,
+							section_label_on_click	: null
+						})
 					}
-					// only for direct page created sections
+
+				// call only for direct page created sections
 					if (self.caller && self.caller.model==='page') {
-						update_menu()
+						// menu. Get from caller page
+						const menu_instance = self.caller && self.caller.ar_instances
+							? self.caller.ar_instances.find(el => el.model==='menu')
+							: null
+						update_menu( menu_instance )
 					}
 			}
 

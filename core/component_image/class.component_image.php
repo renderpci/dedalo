@@ -419,7 +419,7 @@ class component_image extends component_media_common {
 					ImageMagick::convert($options);
 				}
 
-				if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') ){
+				if(defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS')){
 
 					foreach (DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS as $alternative_extension) {
 
@@ -1124,9 +1124,9 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* @return array $allowed_extensions
+	* @return array|null $allowed_extensions
 	*/
-	public function get_alternative_extensions() : array {
+	public function get_alternative_extensions() : ?array {
 
 		$alternative_extensions = defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS')
 			? DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS
