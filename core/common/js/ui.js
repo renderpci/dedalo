@@ -3025,13 +3025,15 @@ export const ui = {
 	* Render a spinner item while callback function is calculating
 	* When is finished, spinner will be replaced by callback result node
 	* Usually, callback is a async function that builds and render a element
-	* like filter
+	* like filter or section
 	* @param object options
 	* 	{
 	* 		container			: HTMLElement,
-	* 		preserve_content	: bool false
+	* 		preserve_content	: bool false,
+	* 		replace_container 	: bool false
 	* 		label				: string,
-	* 		callback			: function
+	* 		callback			: function,
+	* 		style 				: object
 	* 	}
 	* @return HTMLElement result_node
 	*/
@@ -3040,6 +3042,7 @@ export const ui = {
 		// options
 			const container			= options.container
 			const preserve_content	= options.preserve_content || false
+			const replace_container = options.replace_container || false
 			const label				= options.label || ''
 			const callback			= options.callback
 			const style				= options.style
@@ -3077,7 +3080,12 @@ export const ui = {
 			}
 
 		// replace node
-			await container_placeholder.replaceWith(result_node);
+			if (replace_container===true) {
+				await container.replaceWith(result_node);
+			}else{
+				// default
+				await container_placeholder.replaceWith(result_node);
+			}
 
 
 		return result_node

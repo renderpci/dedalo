@@ -336,9 +336,6 @@ section.prototype.init = async function(options) {
 						async function section_label_on_click(e) {
 							e.stopPropagation();
 
-							// add loading style
-							[e.target,self.node].map((x) => x.classList.add('loading'));
-
 							// non edit mode calls block
 								if (self.mode!=='edit') {
 									console.log('Ignored non edit call to section_label_on_click');
@@ -375,9 +372,6 @@ section.prototype.init = async function(options) {
 											title	: title,
 											url		: url
 										})
-
-									// restore section_label style
-										e.target.classList.remove('loading')
 								})//end then
 
 							/* OLD way (user_navigation event publish)
@@ -1201,7 +1195,7 @@ section.prototype.change_mode = async function(options) {
 		current_context.view = view
 		current_context.mode = mode
 
-	// element. Create the instance options for build it. The instance is reflect of the context and section_id
+	// instance
 		const new_instance = await instances.get_instance({
 			model			: current_context.model,
 			tipo			: current_context.tipo,
@@ -1214,23 +1208,35 @@ section.prototype.change_mode = async function(options) {
 			caller			: self.caller || null
 		})
 
-	// build
-		await new_instance.build(autoload)
+	// load_item_with_spinner
+		ui.load_item_with_spinner({
+			container			: old_node,
+			preserve_content	: false,
+			label				: current_context.label || current_context.model,
+			replace_container	: true,
+			callback			: async () => {
 
-	// render
-		const new_node = await new_instance.render({
-			render_level : 'full'
+				// build (load data)
+				await new_instance.build(autoload)
+
+				// render node
+				const node = await new_instance.render()
+
+				// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
+				self.destroy(
+					true, // delete_self
+					true, // delete_dependencies
+					true // remove_dom
+				)
+
+				return node || ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error',
+					inner_html		: 'Error on render element ' + new_instance.model
+				})
+			}
 		})
 
-	// replace the node with the new render
-		old_node.replaceWith(new_node);
-
-	// destroy self instance (delete_self=true, delete_dependencies=false, remove_dom=false)
-		self.destroy(
-			true, // delete_self
-			true, // delete_dependencies
-			true // remove_dom
-		)
 
 	return new_instance
 }//end change_mode

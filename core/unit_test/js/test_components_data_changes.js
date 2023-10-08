@@ -52,23 +52,42 @@ describe("COMPONENTS DATA CHANGES", async function() {
 							await old_instance.build(true)
 
 						// save
-							const changed_data = [Object.freeze({
-								action	: 'update',
-								key		: 0,
-								value	: new_value
-							})]
+							let changed_data
+							switch (element.new_value_action) {
+								case 'set_data':
+									changed_data = [Object.freeze({
+										action	: 'set_data',
+										value	: new_value
+									})]
+									break;
+
+								case 'update':
+								default:
+									changed_data = [Object.freeze({
+										action	: 'update',
+										key		: 0,
+										value	: new_value
+									})]
+									break;
+							}
+
 							const response = await old_instance.change_value({
 								changed_data	: changed_data,
 								refresh			: false
 							})
-
-							// console.log('--- new_value:', new_value);
-							console.log('--- response.result:', response.result);
+							// console.log('changed_data:', changed_data);
+							// console.log('--- response:', response);
 
 						// api_returned_value
 							const api_returned_value = response.result.data[0] && response.result.data[0].value
-								? response.result.data[0].value[0] // select first value
+								? (element.new_value_action==='set_data' ? response.result.data[0].value : response.result.data[0].value[0])
 								: undefined
+							const component_data_value = old_instance.data.value
+								? (element.new_value_action==='set_data' ? old_instance.data.value : old_instance.data.value[0])
+								: undefined
+
+							console.log('new_value:', new_value);
+							console.log('api_returned_value:', api_returned_value);
 
 							// portal locator cases remove paginated_key
 								if (api_returned_value && api_returned_value.hasOwnProperty('paginated_key')) {
@@ -77,18 +96,16 @@ describe("COMPONENTS DATA CHANGES", async function() {
 								// console.log('new_value:', new_value);
 								// console.log('api_returned_value:', api_returned_value);
 
-							assert.deepEqual( new_value, api_returned_value,
-								`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(api_returned_value)}\n`
-							)
+							if (element.new_value_action!=='set_data') {
 
-						// component_data_value
-							const component_data_value = old_instance.data.value
-								? old_instance.data.value[0]
-								: undefined
+								assert.deepEqual( new_value, api_returned_value,
+									`api_returned_value: Not equal values 1 (new_value, api_returned_value): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(api_returned_value)}\n\n`
+								)
 
-							assert.deepEqual( new_value, component_data_value,
-								`component_data_value: Not equal values 2 (new_value, component_data_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(component_data_value)}\n`
-							)
+								assert.deepEqual( new_value, component_data_value,
+									`component_data_value: Not equal values 2 (new_value, component_data_value): \n\n${JSON.stringify(new_value)} \n\n${JSON.stringify(component_data_value)}\n\n`
+								)
+							}
 
 						// destroy instances
 							await old_instance.destroy()
@@ -141,12 +158,16 @@ describe("COMPONENTS DATA CHANGES", async function() {
 						Array.isArray(new_instance.datum.data),
 						`new_instance.datum.data is NOT as expected type (array): \n ${JSON.stringify(new_instance.datum.data)}, \n ${typeof new_instance.datum.data}\n`
 					)
-					// compare values
-					assert.deepEqual(
-						new_value,
-						read_value,
-						`Not equal values 3 (new_value, read_value): \n ${JSON.stringify(new_value)}, \n ${JSON.stringify(read_value)}\n`
-					)
+
+					if (element.new_value_action!=='set_data') {
+						// compare values
+						assert.deepEqual(
+							new_value,
+							element.new_value_action==='set_data' ? value : read_value,
+							`Not equal values 3 (new_value, read_value): \n ${JSON.stringify(new_value)}, \n\n ${JSON.stringify(read_value)}\n`
+						)
+					}
+
 					// check type of data is object
 					assert.isOk( typeof new_instance.data==='object', `instance.data is NOT as expected type (object): \n ${JSON.stringify(new_instance.data)}, \n ${typeof new_instance.data}\n` )
 					// check type of data value is array

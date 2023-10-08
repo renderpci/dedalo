@@ -761,59 +761,99 @@ class component_3d extends component_media_common {
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// short vars
-			$original_file_name	= $file_data->original_file_name;	// kike "my video785.mp4"
-			$full_file_name		= $file_data->full_file_name;		// like "test175_test65_1.mp4"
-			$full_file_path		= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
+			$original_file_name			= $file_data->original_file_name;	// kike "my video785.mp4"
+			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
+			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.mp4"
+			$original_normalized_name	= $full_file_name;
 
-		// extension
-			$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-			if (empty($file_ext)) {
-				// throw new Exception("Error Processing Request. File extension is unknown", 1);
-				$response->msg .= ' Error Processing Request. File extension is unknown';
-				debug_log(__METHOD__
-					. ' '.$response->msg
-					, logger::ERROR
-				);
-				return $response;
-			}
-		// id (without extension, like 'test81_test65_2')
-			$id = $this->get_id();
-			if (empty($id)) {
-				$response->msg .= ' Error Processing Request. Invalid id';
-				debug_log(__METHOD__
-					. ' '.$response->msg
-					, logger::ERROR
-				);
-				return $response;
-			}
+		// debug
+			debug_log(__METHOD__
+				. " process_uploaded_file " . PHP_EOL
+				. ' original_file_name: ' . $original_file_name .PHP_EOL
+				. ' full_file_path: ' . $full_file_path
+				, logger::WARNING
+			);
 
-		// copy from original to default quality
-			$original_file_path			= $full_file_path;
-			$default_quality			= $this->get_default_quality();
-			$default_quality_file_path	= $this->get_media_filepath($default_quality);
-			if ($original_file_path===$default_quality_file_path) {
-				debug_log(__METHOD__
-					. " File is already in default quality " . PHP_EOL
-					. ' Nothing is moved '
-					, logger::WARNING
-				);
-			}else{
-				if (!copy($original_file_path, $default_quality_file_path)) {
+		try {
+
+			// extension
+				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
+				if (empty($file_ext)) {
+					// throw new Exception("Error Processing Request. File extension is unknown", 1);
+					$response->msg .= ' Error Processing Request. File extension is unknown';
 					debug_log(__METHOD__
-						. " Error on copy original file to default quality file " . PHP_EOL
-						. 'original_file_path: ' .$original_file_path .PHP_EOL
-						. 'default_quality_file_path: ' .$default_quality_file_path
+						. ' '.$response->msg
 						, logger::ERROR
 					);
-					$response->msg = 'Error on copy original file to default quality file';
 					return $response;
 				}
-			}
+			// id (without extension, like 'test81_test65_2')
+				$id = $this->get_id();
+				if (empty($id)) {
+					$response->msg .= ' Error Processing Request. Invalid id';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					return $response;
+				}
 
+			// copy from original to default quality
+				$original_file_path			= $full_file_path;
+				$default_quality			= $this->get_default_quality();
+				$default_quality_file_path	= $this->get_media_filepath($default_quality);
+				if ($original_file_path===$default_quality_file_path) {
+					debug_log(__METHOD__
+						. " File is already in default quality " . PHP_EOL
+						. ' Nothing is moved '
+						, logger::WARNING
+					);
+				}else{
+					if (!copy($original_file_path, $default_quality_file_path)) {
+						debug_log(__METHOD__
+							. " Error on copy original file to default quality file " . PHP_EOL
+							. 'original_file_path: ' .$original_file_path .PHP_EOL
+							. 'default_quality_file_path: ' .$default_quality_file_path
+							, logger::ERROR
+						);
+						$response->msg = 'Error on copy original file to default quality file';
+						return $response;
+					}
+				}
 
-		// response OK
-			$response->result	= true;
-			$response->msg		= 'OK. successful request';
+			// upload info
+				$original_quality = $this->get_original_quality();
+				if ($this->quality===$original_quality) {
+					// update upload file info
+					$dato = $this->get_dato();
+					$key = 0;
+					if (!isset($dato[$key])) {
+						$dato[$key] = new stdClass();
+					}
+					$dato[$key]->original_file_name			= $original_file_name;
+					$dato[$key]->original_normalized_name	= $original_normalized_name;
+					$dato[$key]->original_upload_date		= component_date::get_date_now();
+
+					$this->set_dato($dato);
+				}
+
+			// save component dato.
+				// Note that save action don't change upload info properties,
+				// but force updates every quality file info in property 'files_info'
+				$this->Save();
+
+			// response OK
+				$response->result	= true;
+				$response->msg		= 'OK. successful request';
+
+		} catch (Exception $e) {
+			$msg = 'Exception[process_uploaded_file]: ' .  $e->getMessage() . "\n";
+			debug_log(__METHOD__
+				." $msg "
+				, logger::ERROR
+			);
+			$response->msg .= ' - '.$msg;
+		}
 
 
 		return $response;
