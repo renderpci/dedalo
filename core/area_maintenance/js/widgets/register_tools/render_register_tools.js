@@ -91,6 +91,14 @@ const render_content_data = async function(self) {
 				parent			: tool_item
 			})
 
+			// developer
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'developer',
+				inner_html		: get_label.developer || 'Developer',
+				parent			: tool_item
+			})
+
 			// version
 			ui.create_dom_element({
 				element_type	: 'div',
@@ -123,6 +131,7 @@ const render_content_data = async function(self) {
 
 				const name				= item.name
 				const version			= item.version
+				const developer			= item.developer
 				const installed_version	= item.installed_version
 				const ar_warning		= item.warning
 					? [item.warning]
@@ -140,6 +149,14 @@ const render_content_data = async function(self) {
 					element_type	: 'div',
 					class_name		: 'tool_name',
 					inner_html		: name,
+					parent			: tool_item
+				})
+
+				// developer
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'developer',
+					inner_html		: developer,
 					parent			: tool_item
 				})
 
