@@ -1642,7 +1642,10 @@ export const ui = {
 	/**
 	* INSIDE_TOOL
 	* Check if instance is inside tool
-	* @return bool | string tool name
+	* @param object self
+	* 	Component instance
+	* @return bool|string
+	* 	Tool name is exists
 	*/
 	inside_tool : function(self) {
 
@@ -1674,6 +1677,11 @@ export const ui = {
 		const tools_length	= tools.length
 
 		for (let i = 0; i < tools_length; i++) {
+
+			// avoid self tool inside tool
+			if (self.caller && self.caller.model===tools[i].name) {
+				continue;
+			}
 
 			const tool_node = (self.type==='component')
 				? ui.tool.build_component_tool_button(tools[i], self)
