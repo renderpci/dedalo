@@ -347,7 +347,7 @@ export const render_column_id = function(options) {
 							button_edit.addEventListener('mousedown', function(e){
 								e.stopPropagation()
 
-								/* OLD MODE USING PAGE user_navigation
+								/* MODE USING PAGE user_navigation */
 									// sqo. Note that sqo will be used as request_config.sqo on navigate
 										const sqo = clone(self.request_config_object.sqo)
 										// set updated filter
@@ -376,42 +376,68 @@ export const render_column_id = function(options) {
 										}
 										// page js is observing this event
 										event_manager.publish('user_navigation', user_navigation_rqo)
-									*/
 
-								// menu. Get from caller page
-									const menu = self.caller && self.caller.ar_instances
-										? self.caller.ar_instances.find(el => el.model==='menu')
-										: null;
+								/* MODE USING SECTION change_mode
+									// menu. Get from caller page
+										const menu = self.caller && self.caller.ar_instances
+											? self.caller.ar_instances.find(el => el.model==='menu')
+											: null;
+									// change section mode. Creates a new instance and replace DOM node wrapper
+										self.change_mode({
+											mode : 'edit'
+										})
+										.then(function(new_instance){
 
-								// change section mode. Creates a new instance and replace DOM node wrapper
-									self.change_mode({
-										mode : 'edit'
-									})
-									.then(function(new_instance){
+											async function section_label_on_click(e) {
+												e.stopPropagation();
 
-										async function section_label_on_click(e) {
-											e.stopPropagation();
+												new_instance.change_mode({
+													mode : 'list'
+												})
+												.then(function(list_instance){
 
-											new_instance.change_mode({
-												mode : 'list'
-											})
-											.then(function(list_instance){
+													// update_section_label value
+													menu.update_section_label({
+														value					: list_instance.label,
+														mode					: 'list',
+														section_label_on_click	: null
+													})
 
-												// update_section_label value
+													// update browser url and navigation history
+													const source	= create_source(list_instance, null)
+													const sqo		= list_instance.request_config_object.sqo
+													const title		= list_instance.id
+													// url search. Append section_id if exists
+													const url_vars = url_vars_to_object({
+														tipo : list_instance.tipo,
+														mode : list_instance.mode
+													})
+													const url = '?' + object_to_url_vars(url_vars)
+													// browser navigation update
+													push_browser_history({
+														source	: source,
+														sqo		: sqo,
+														title	: title,
+														url		: url
+													})
+												})
+											}//end section_label_on_click
+
+											// update_section_label value
 												menu.update_section_label({
-													value					: list_instance.label,
-													mode					: 'list',
-													section_label_on_click	: null
+													value					: new_instance.label,
+													mode					: new_instance.mode,
+													section_label_on_click	: section_label_on_click
 												})
 
-												// update browser url and navigation history
-												const source	= create_source(list_instance, null)
-												const sqo		= list_instance.request_config_object.sqo
-												const title		= list_instance.id
+											// update browser url and navigation history
+												const source	= create_source(new_instance, null)
+												const sqo		= new_instance.request_config_object.sqo
+												const title		= new_instance.id
 												// url search. Append section_id if exists
 												const url_vars = url_vars_to_object({
-													tipo : list_instance.tipo,
-													mode : list_instance.mode
+													tipo : new_instance.tipo,
+													mode : new_instance.mode
 												})
 												const url = '?' + object_to_url_vars(url_vars)
 												// browser navigation update
@@ -421,34 +447,8 @@ export const render_column_id = function(options) {
 													title	: title,
 													url		: url
 												})
-											})
-										}//end section_label_on_click
-
-										// update_section_label value
-											menu.update_section_label({
-												value					: new_instance.label,
-												mode					: new_instance.mode,
-												section_label_on_click	: section_label_on_click
-											})
-
-										// update browser url and navigation history
-											const source	= create_source(new_instance, null)
-											const sqo		= new_instance.request_config_object.sqo
-											const title		= new_instance.id
-											// url search. Append section_id if exists
-											const url_vars = url_vars_to_object({
-												tipo : new_instance.tipo,
-												mode : new_instance.mode
-											})
-											const url = '?' + object_to_url_vars(url_vars)
-											// browser navigation update
-											push_browser_history({
-												source	: source,
-												sqo		: sqo,
-												title	: title,
-												url		: url
-											})
-									})//end then
+										})//end then
+										*/
 							})
 							button_edit.appendChild(section_id_node)
 
