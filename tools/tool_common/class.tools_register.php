@@ -54,7 +54,11 @@ class tools_register {
 					$basename = pathinfo($current_dir_tool)['basename'];
 
 				// ignore folders with name different from pattern 'tool_*'
-					if ($basename==='tool_common' || $basename==='tool_dev_template' || $basename==='acc') {
+					if ($basename==='tool_common' || $basename==='acc') {
+						continue;
+					}
+					// tool_dev_template case only for development
+					if ($basename==='tool_dev_template' && SHOW_DEVELOPER!==true) {
 						continue;
 					}
 					if (preg_match('/^tool_\w+$/', $basename, $output_array)!==1) {
@@ -300,9 +304,12 @@ class tools_register {
 
 			// ignore folders with name different from pattern 'tool_*'
 				if (	1!==preg_match('/tools\/tool_*/', $path, $output_array)
-					 || 1===preg_match('/tools\/tool_dev_template/', $path, $output_array)
 					 || 1===preg_match('/tools\/tool_common/', $path, $output_array)
 					) {
+					continue;
+				}
+				// tool_dev_template case only for development
+				if (1===preg_match('/tools\/tool_dev_template/', $path, $output_array) && SHOW_DEVELOPER!==true) {
 					continue;
 				}
 
