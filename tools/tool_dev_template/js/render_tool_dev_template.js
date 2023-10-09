@@ -6,8 +6,9 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-// import ui to create DOM nodes and common html structures as wrappers or content_data compatible with the all Dédalo
+// import ui to create DOM nodes and common HTML structures as wrappers or content_data compatible with the all Dédalo
 	import {ui} from '../../../core/common/js/ui.js'
+	import {pause} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -63,7 +64,16 @@ const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
 
-	// components container
+	// info_container
+		const info_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'info_container',
+			inner_html 		: `This sample tool is only to use as base or reference for create new tools.<br>
+							   To see more complete information about how to create tools see the http://dedalo.dev documentation about tools`,
+			parent 			: fragment
+		})
+
+	// components_container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'components_container',
@@ -81,11 +91,51 @@ const get_content_data = async function(self) {
 			main_component_container.appendChild(component_node)
 		})
 
-	// buttons container
-		ui.create_dom_element({
+	// footer_buttons_container
+		const footer_buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'buttons_container',
-			parent			: components_container
+			class_name		: 'footer_buttons_container',
+			parent			: fragment
+		})
+
+	// test_button
+		const test_button = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			inner_html		: self.get_tool_label('my_first_label') || 'Hello button without label',
+			parent			: footer_buttons_container
+		})
+		test_button.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const msg = "Hello tool button"
+
+			// value_container.innerHTML = JSON.stringify(self.main_element.data.value, null, 2)
+			// alert(msg);
+
+			const node = ui.load_item_with_spinner({
+				container			: value_container,
+				preserve_content	: false,
+				label				: 'Get component value',
+				callback			: async () => {
+
+					await pause(1000) // fake process wait
+
+					const value_node = ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: '',
+						inner_html		: JSON.stringify(self.main_element.data.value, null, 2)
+					})
+					return value_node
+				}
+			})//end ui.load_item_with_spinner
+		})
+
+	// value_container
+		const value_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'value_container',
+			parent			: fragment
 		})
 
 	// content_data

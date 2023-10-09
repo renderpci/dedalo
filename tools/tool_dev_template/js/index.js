@@ -2,7 +2,7 @@
 
 
 /**
-* tool_dev_template
+* TOOL_DEV_TEMPLATE
 *
 * This a sample of Dédalo tool.
 * You can use it as start point to create new tools and maybe, to contribute to the community with your work.
