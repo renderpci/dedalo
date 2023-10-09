@@ -102,6 +102,10 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'datalist' => tools_register::get_tools_files_list()
 				];
+				// verify tipo 'dd1644' Developer added Ontology field 09-10-2023
+				if (empty(RecordObj_dd::get_modelo_name_by_tipo('dd1644',true))) {
+					$item->value->errors[] = 'Your Ontology is outdated. Term \'dd1644\' do not exists';
+				}
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
