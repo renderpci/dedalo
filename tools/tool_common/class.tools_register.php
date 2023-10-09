@@ -14,6 +14,7 @@ class tools_register {
 	static $tipo_tool_label					= 'dd799';
 	static $tipo_ontology					= 'dd1334';
 	static $tipo_version					= 'dd1327';
+	static $tipo_developer					= 'dd1644';
 	static $tipo_dedalo_version_minimal		= 'dd1328';
 	static $section_tools_config_tipo		= 'dd996';
 	static $tipo_affeted_models				= 'dd1330';
@@ -313,6 +314,7 @@ class tools_register {
 					'name'				=> $tool_name,
 					'warning'			=> null,
 					'version'			=> null,
+					'developer'			=> null,
 					'installed_version'	=> null
 				];
 
@@ -342,8 +344,7 @@ class tools_register {
 						$item->warning = '(!) Not registered tool';
 					}
 
-					// version
-					// info object (JSON encoded)
+					// info object (JSON encoded file)
 						$info_object = json_handler::decode( $register_contents );
 						if( !$info_object ) {
 							debug_log(__METHOD__
@@ -351,6 +352,8 @@ class tools_register {
 								, logger::ERROR
 							);
 						}else{
+
+							// version
 							$tipo_version	= self::$tipo_version;
 							if (	isset($info_object->components->{$tipo_version})
 								 && isset($info_object->components->{$tipo_version}->dato)
@@ -358,6 +361,16 @@ class tools_register {
 								 && isset($info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0])
 								) {
 								$item->version = $info_object->components->{$tipo_version}->dato->{'lg-nolan'}[0];
+							}
+
+							// developer
+							$tipo_developer	= self::$tipo_developer;
+							if (	isset($info_object->components->{$tipo_developer})
+								 && isset($info_object->components->{$tipo_developer}->dato)
+								 && isset($info_object->components->{$tipo_developer}->dato->{'lg-nolan'})
+								 && isset($info_object->components->{$tipo_developer}->dato->{'lg-nolan'}[0])
+								) {
+								$item->developer = $info_object->components->{$tipo_developer}->dato->{'lg-nolan'}[0];
 							}
 						}
 
@@ -541,6 +554,29 @@ class tools_register {
 			}
 			$tool_object->description = $value;
 
+		// developer
+			$component_tipo	= 'dd1644';
+			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component		= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_LANG,
+				$section_tipo
+			);
+			$dato	= $component->get_dato_full();
+			$value	= [];
+			if (!empty($dato)) {
+				foreach ($dato as $curent_lang => $current_value) {
+					$value[] = (object)[
+						'lang'	=> $curent_lang,
+						'value'	=> $current_value
+					];
+				}
+			}
+			$tool_object->developer = $value;
+
 		// affected components (models)
 			$component_tipo	= self::$tipo_affeted_models; // 'dd1330';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -620,7 +656,7 @@ class tools_register {
 			$value		= $dato_ref == '1' ? true : false;
 			$tool_object->show_in_component = $value;
 
-		// Always active
+		// always active
 			$component_tipo	= 'dd1601';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component		= component_common::get_instance(
@@ -637,7 +673,6 @@ class tools_register {
 				: null;
 			$value		= $dato_ref=='1' ? true : false;
 			$tool_object->always_active = $value;
-
 
 		// requirement translatable
 			$component_tipo	= 'dd1333';

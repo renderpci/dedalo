@@ -63,6 +63,8 @@ class dd_object extends stdClass {
 		public $description;
 		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
 		public $icon;
+		// developer			: string like 'Dédalo team' // Used by tools
+		public $developer;
 		// show_in_inspector	: bool // Used by tools
 		public $show_in_inspector;
 		// show_in_component	: bool // Used by tools
@@ -984,6 +986,33 @@ class dd_object extends stdClass {
 
 		return $this->icon ?? null;
 	}//end get_icon
+
+
+
+	/**
+	* SET_DEVELOPER
+	* Used by tools
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_developer(?string $value) : bool {
+
+		$this->developer = $value;
+
+		return true;
+	}//end set_developer
+
+
+
+	/**
+	* GET_DEVELOPER
+	* Return property value
+	* @return string|null $this->developer
+	*/
+	public function get_developer() : ?string {
+
+		return $this->developer ?? null;
+	}//end get_developer
 
 
 

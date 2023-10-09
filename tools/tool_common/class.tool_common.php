@@ -110,6 +110,11 @@ class tool_common {
 				return $el->lang===DEDALO_DATA_LANG;
 			})->value ?? reset($tool_object->label)->value;
 
+		// developer
+			$developer = array_find($tool_object->developer, function($el){
+				return $el->lang===DEDALO_DATA_NOLAN;
+			})->value ?? reset($tool_object->developer)->value;
+
 		// description. (text_area) Try match current lang else use the first lang value
 			$description = array_find((array)$tool_object->description, function($el){
 				return $el->lang===DEDALO_DATA_LANG;
@@ -190,6 +195,7 @@ class tool_common {
 			$dd_object = new dd_object((object)[
 				'name'				=> $name,
 				'label'				=> $tool_label,
+				'developer'			=> $developer[0] ?? null,
 				'tipo'				=> $component_tipo,
 				'section_tipo'		=> $tool_object->section_tipo,
 				// 'section_id'		=> $tool_object->section_id,
@@ -240,10 +246,16 @@ class tool_common {
 			// icon
 				$icon = DEDALO_TOOLS_URL . '/' . $tool_object->name . '/img/icon.svg';
 
+			// developer
+				$developer = isset($tool_object->developer[0])
+					? ($tool_object->developer[0]->value[0] ?? null)
+					: null;
+
 			// context
 				$tool_simple_context = new dd_object((object)[
 					'name'				=> $tool_object->name,
 					'label'				=> $tool_label,
+					'developer'			=> $developer,
 					// 'tipo'			=> $component_tipo,
 					'section_tipo'		=> $tool_object->section_tipo,
 					// 'section_id'		=> $tool_object->section_id,
@@ -374,6 +386,7 @@ class tool_common {
 				$section_dato	= $record->datos;
 				$section->set_dato($section_dato);
 
+				// simple tool object 'dd1353'
 				$component_tipo	= 'dd1353';
 				$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 				$component		= component_common::get_instance(
