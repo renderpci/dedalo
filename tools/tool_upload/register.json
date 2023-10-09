@@ -93,34 +93,22 @@
       }
     },
     "dd201": {
+      "inf": "modified_date [component_date]",
       "dato": {
         "lg-nolan": [
           {
             "start": {
-              "day": 19,
-              "hour": 17,
-              "time": 65014419761,
-              "year": 2022,
+              "day": 9,
+              "hour": 14,
+              "time": 65045688768,
+              "year": 2023,
               "month": 10,
-              "minute": 2,
-              "second": 41
+              "minute": 52,
+              "second": 48
             }
           }
         ]
-      },
-      "lg-nolan": [
-        {
-          "start": {
-            "day": 24,
-            "hour": 9,
-            "time": 65028216041,
-            "year": 2023,
-            "month": 3,
-            "minute": 20,
-            "second": 41
-          }
-        }
-      ]
+      }
     },
     "dd612": {
       "dato": {
@@ -146,7 +134,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
       }
     },
@@ -166,9 +154,24 @@
               "top": 0,
               "left": "return screen.width -760",
               "width": 760,
-              "height": 720
+              "height": 708
             }
           }
+        ]
+      }
+    },
+    "dd1372": {
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
         ]
       }
     }
@@ -176,7 +179,7 @@
   "section_id": 3,
   "created_date": "2020-01-09 19:49:57",
   "section_tipo": "dd1340",
-  "modified_date": "2023-03-24 09:20:41",
+  "modified_date": "2023-10-09 14:52:48",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
