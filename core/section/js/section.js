@@ -327,7 +327,7 @@ section.prototype.init = async function(options) {
 							return
 						}
 
-						// update_section_label
+						// update_section_label. Show icon Inspector and activate the link event
 						menu.update_section_label({
 							value					: self.label,
 							mode					: self.mode,
@@ -336,45 +336,7 @@ section.prototype.init = async function(options) {
 						async function section_label_on_click(e) {
 							e.stopPropagation();
 
-							// non edit mode calls block
-								if (self.mode!=='edit') {
-									console.log('Ignored non edit call to section_label_on_click');
-									return
-								}
-
-							// change section mode. Creates a new instance and replace DOM node wrapper
-								self.change_mode({
-									mode : 'list'
-								})
-								.then(function(new_instance){
-
-									// update_section_label value
-										menu.update_section_label({
-											value					: new_instance.label,
-											mode					: new_instance.mode,
-											section_label_on_click	: null
-										})
-
-									// update browser url and navigation history
-										const source	= create_source(new_instance, null)
-										const sqo		= new_instance.request_config_object.sqo
-										const title		= new_instance.id
-										// url search. Append section_id if exists
-										const url_vars = url_vars_to_object({
-											tipo : new_instance.tipo,
-											mode : new_instance.mode
-										})
-										const url = '?' + object_to_url_vars(url_vars)
-										// browser navigation update
-										push_browser_history({
-											source	: source,
-											sqo		: sqo,
-											title	: title,
-											url		: url
-										})
-								})//end then
-
-							/* OLD way (user_navigation event publish)
+							/* MODE USING PAGE user_navigation */
 								// saved_sqo
 								// Note that section build method store SQO in local DDBB to preserve user
 								// navigation section filter and pagination. It's recovered here when exists,
@@ -411,12 +373,45 @@ section.prototype.init = async function(options) {
 										// event_in_history	: false // writes browser navigation step to allow back
 									}
 									event_manager.publish('user_navigation', user_navigation_rqo)
-								*/
+
+							/* MODE USING SECTION change_mode
+								// change section mode. Creates a new instance and replace DOM node wrapper
+									self.change_mode({
+										mode : 'list'
+									})
+									.then(function(new_instance){
+
+										// update_section_label value
+											menu.update_section_label({
+												value					: new_instance.label,
+												mode					: new_instance.mode,
+												section_label_on_click	: null
+											})
+
+										// update browser url and navigation history
+											const source	= create_source(new_instance, null)
+											const sqo		= new_instance.request_config_object.sqo
+											const title		= new_instance.id
+											// url search. Append section_id if exists
+											const url_vars = url_vars_to_object({
+												tipo : new_instance.tipo,
+												mode : new_instance.mode
+											})
+											const url = '?' + object_to_url_vars(url_vars)
+											// browser navigation update
+											push_browser_history({
+												source	: source,
+												sqo		: sqo,
+												title	: title,
+												url		: url
+											})
+									})//end then
+									*/
 						}//end section_label_on_click
-					}
+					}//end update_menu
 
 				// call only for direct page created sections
-					if (self.caller && self.caller.model==='page') {
+					if (self.caller && self.caller.model==='page' && self.mode==='edit') {
 						// ignore some section cases
 						if (    self.tipo==='dd623' // search presets case
 							|| (self.caller && self.caller.type==='tool') // inside tool (tool_user_admin case)
