@@ -1020,6 +1020,7 @@ dd1350	Afecta a tipos:	termino	lg-spa
 dd1351	Id	termino	lg-spa
 dd1352	video	termino	lg-spa
 dd1353	Simple tool object	termino	lg-spa
+dd1362	Implementación	termino	lg-spa
 dd1354	Activo	termino	lg-spa
 dd1355	Campos Personalizados	termino	lg-spa
 dd1355	Camps personalitzats	termino	lg-cat
@@ -1048,7 +1049,6 @@ dd1360	Desactivar totes les columnes	termino	lg-cat
 dd1354	Actif	termino	lg-fra
 dd1360	Απενεργοποιήστε όλες τις στήλες	termino	lg-ell
 dd1361	Section map	termino	lg-spa
-dd1362	Dev info	termino	lg-spa
 dd1363	Error. Valor de tc offset buit	termino	lg-cat
 dd1363	Error. Valor de tc offset vacío	termino	lg-spa
 dd1355	Champs personnalisés	termino	lg-fra
@@ -1095,10 +1095,10 @@ dd1381	Codis QR	termino	lg-cat
 dd1361	Plan de section	termino	lg-fra
 dd1381	Κωδικοί QR	termino	lg-ell
 dd1382	Metadata	termino	lg-cat
-dd1362	Infos sur le développement	termino	lg-fra
 dd1382	Metadata	termino	lg-spa
 dd1383	valor	termino	lg-spa
 dd1363	Erreur. Valeur d'offset tc vide	termino	lg-fra
+dd1362	Mise en œuvre	termino	lg-fra
 dd1385	Llistado	termino	lg-spa
 dd1386	css_mod	termino	lg-spa
 dd1387	abstract	termino	lg-spa
@@ -5818,7 +5818,6 @@ dd1359	Alle Spalten aktivieren	termino	lg-deu
 dd136	Wert aus der Liste	termino	lg-deu
 dd1360	Alle Spalten deaktivieren	termino	lg-deu
 dd1361	Karte der Sektion	termino	lg-deu
-dd1362	Dev Info	termino	lg-deu
 dd1363	Fehler: tc offset Wert ist leer.	termino	lg-deu
 dd137	Private	termino	lg-deu
 dd1372	Labels	termino	lg-deu
@@ -7865,7 +7864,6 @@ dd1358	Format	termino	lg-eng
 dd1359	Activate all columns	termino	lg-eng
 dd1360	Disable all columns	termino	lg-eng
 dd1361	section map	termino	lg-eng
-dd1362	Developer info	termino	lg-eng
 dd1363	Ops.. Empty tc offset value	termino	lg-eng
 dd1372	Labels	termino	lg-eng
 dd1374	Diameter	termino	lg-eng
@@ -8107,7 +8105,7 @@ dd922	Labor Category / Title	termino	lg-eng
 dd947	New Type of association / group	termino	lg-eng
 dd1132	Collection / archive	termino	lg-eng
 dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
-dd1	Dédalo 2023-10-07T15:09:55+02:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-10-09T13:58:40+02:00 Benimamet	termino	lg-spa
 dd1639	Remove filter	termino	lg-eng
 dd1639	Eliminar filtro	termino	lg-spa
 dd1639	Supprimer le filtre	termino	lg-fra
@@ -8182,3 +8180,17 @@ dd792	علاقات	termino	lg-ara
 dd1617	نشاط	termino	lg-ara
 dd718	صفحة	termino	lg-ara
 dd1609	ل	termino	lg-ara
+dd1644	Desarollador	termino	lg-spa
+dd1644	Developer	termino	lg-eng
+dd1644	Desenvolupador	termino	lg-cat
+dd1644	Développeur	termino	lg-fra
+dd1644	Entwickler	termino	lg-deu
+dd1644	Desenvolvedor	termino	lg-por
+dd1644	Garatzailea	termino	lg-eus
+dd1362	Implementierung	termino	lg-deu
+dd1362	Implementation	termino	lg-eng
+dd1362	Implementació	termino	lg-cat
+dd1362	Εκτέλεση	termino	lg-ell
+dd1362	Implementazione	termino	lg-ita
+dd1644	Sviluppatore	termino	lg-ita
+dd1644	Προγραμματιστής	termino	lg-ell
