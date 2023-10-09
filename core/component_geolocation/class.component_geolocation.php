@@ -73,8 +73,15 @@ class component_geolocation extends component_common {
 
 		$dato = parent::get_dato();
 
-		if (!empty($dato) && !is_array($dato)) {
+		if (!is_null($dato) && !is_array($dato)) {
 			$dato = [$dato];
+			$this->set_dato($dato);
+			debug_log(__METHOD__
+				. " Fixed and set bad format dato to array " . PHP_EOL
+				. to_string($dato)
+				, logger::WARNING
+			);
+			$this->Save();
 		}
 
 		return $dato;
@@ -236,6 +243,36 @@ class component_geolocation extends component_common {
 
 		return (string)$result;
 	}//end build_geolocation_tag_string
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-save its data
+	* Note that the first action is always load dato to avoid save empty content
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// Force loads dato always !IMPORTANT
+		$dato = $this->get_dato();
+
+		if (!is_null($dato) && !is_array($dato)) {
+			$this->set_dato([$dato]);
+			debug_log(__METHOD__
+				. " Changed dato format " . PHP_EOL
+				. to_string($dato)
+				, logger::ERROR
+			);
+		}
+
+		// Save component data
+		$this->Save();
+
+
+		return true;
+	}//end regenerate_component
 
 
 
