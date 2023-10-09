@@ -336,6 +336,8 @@ section.prototype.init = async function(options) {
 						async function section_label_on_click(e) {
 							e.stopPropagation();
 
+							if (self.mode!=='edit') return
+
 							/* MODE USING PAGE user_navigation */
 								// saved_sqo
 								// Note that section build method store SQO in local DDBB to preserve user
@@ -411,7 +413,7 @@ section.prototype.init = async function(options) {
 					}//end update_menu
 
 				// call only for direct page created sections
-					if (self.caller && self.caller.model==='page' && self.mode==='edit') {
+					if (self.caller && self.caller.model==='page') {
 						// ignore some section cases
 						if (    self.tipo==='dd623' // search presets case
 							|| (self.caller && self.caller.type==='tool') // inside tool (tool_user_admin case)
