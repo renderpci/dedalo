@@ -4,6 +4,15 @@
 
 
 
+/**
+ * TOOL_DEV_TEMPLATE
+ *
+ * This sample tool is only to use as base or reference for create new tools
+ * To see more complete information about how to create tools see the http://dedalo.dev documentation about tools
+ */
+
+
+
 // import needed modules
 // you can import and use your own modules or any dedalo module of section, components or other tools.
 // by default you will need the tool_common to init, build and render.
@@ -24,7 +33,7 @@
 
 
 /**
-* TOOL_Dev_template
+* TOOL_DEV_TEMPLATE
 * Tool to make interesting things, but nothing in particular
 */
 export const tool_dev_template = function () {
@@ -85,6 +94,8 @@ tool_dev_template.prototype.init = async function(options) {
 
 	try {
 
+		// ! enclose custom tool code inside try catch to allow Dédalo to recover from exceptions or non login scenarios
+
 		// set the self specific vars not defined by the generic init (in tool_common)
 			self.lang	= options.lang // you can call to 'page_globals.dedalo_data_lang' if you want to use the actual configuration of Dédalo
 			self.langs	= page_globals.dedalo_projects_default_langs
@@ -121,11 +132,14 @@ tool_dev_template.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
+
+		// ! enclose custom tool code inside try catch to allow Dédalo to recover from exceptions or non login scenarios
+
 		// when the tool_common load the component you could assign to the tool instance with specific actions.
 		// Like fix main_element for convenience
 		// main_element could be any component that you need to use inside the tool.
 		// use the 'role' property in ddo_map to define and locate the ddo
-			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
+			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
 			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
 	} catch (error) {
@@ -142,9 +156,9 @@ tool_dev_template.prototype.build = async function(autoload=false) {
 /**
 * LOAD_COMPONENT_SAMPLE
 * Sample method to be used to load components calling to API directly
-* this method is not called by this tool, but it could show the way to load_components by you own
-* first, if you don't have the component loaded and you don't have the context
-* second using the context of the main_element when it wad loaded previously manually or by tool_common in the build process
+* this method is not called by this tool, but it could show the way to load_components by you own.
+* The first case, if you don't have the component loaded and you don't have the context
+* The second one, using the context of the main_element when it wad loaded previously manually or by tool_common in the build process
 */
 tool_dev_template.prototype.load_component_sample = async function(options) {
 
@@ -179,7 +193,7 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 	// second when you have the context you could load full component with full datum (context and data)
 		// use the main_elemetn context (clone and edit) and change the properties
 		// it's possible use other needs doing this function generic
-			const options = Object.assign(clone(self.main_element.context),{
+			const load_options = Object.assign(clone(self.main_element.context),{
 				self 		: self, // added tool instance, it will be used to assign the instance built to ar_instaces of the current tool
 				lang		: lang,
 				mode		: 'edit',
@@ -187,7 +201,7 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 			})
 
 		// call generic tool common load_component
-			const component_instance = await load_component(options);
+			const component_instance = await load_component(load_options);
 
 	// optional: It's possible to create the instance by your own instead use the tool_common.load_component()
 	// in this way
