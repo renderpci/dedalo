@@ -69,6 +69,7 @@ const render_content_data = async function(self) {
 	// short vars
 		const value		= self.value || {}
 		const datalist	= value.datalist || []
+		const errors	= value.errors
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -194,14 +195,16 @@ const render_content_data = async function(self) {
 				})
 			}
 
-	// info
-		// const text = `Force to make a full backup now like:<br><div>${backup_path}/<br>${file_name}</div>`
-		// const info = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	inner_html		: text,
-		// 	class_name		: 'info_text',
-		// 	parent			: content_data
-		// })
+	// info errors
+		if (value.errors) {
+			const text = `Errors found. Fix this errors before continue: <br>` + value.errors.join('<br>')
+			ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: text,
+				class_name		: 'info_text error',
+				parent			: content_data
+			})
+		}
 
 	// body_response
 		const body_response = ui.create_dom_element({
