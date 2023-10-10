@@ -226,4 +226,50 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 
 
 
+/**
+* GET_SOME_DATA_FROM_SERVER
+* Call the API to get fake demo data
+* @param DOM element buttons_container (where will be place the message response)
+*
+* @return promise response
+*/
+tool_dev_template.prototype.get_some_data_from_server = async function() {
+
+	const self = this
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'my_custom_static_fake_method')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				component_tipo	: self.main_element.tipo,
+				section_id		: self.main_element.section_id,
+				section_tipo	: self.main_element.section_tipo,
+				config			: self.context.config
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> get_some_data_from_server API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end get_some_data_from_server
+
+
+
 // @license-end

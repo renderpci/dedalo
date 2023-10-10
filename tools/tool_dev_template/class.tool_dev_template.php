@@ -34,16 +34,38 @@ class tool_dev_template extends tool_common {
 			// get all tools config sections
 				$tool_name	= get_called_class();
 				$config		= tool_common::get_config($tool_name);
-			// select current from all tool config matching tool name
-				// $tool_name	= get_called_class(); // tool_lang
-				// $config		= array_find($ar_config, function($el) use($tool_name) {
-				// 	return $el->name===$tool_name;
-				// });
+
+		// JSON file test
+			$file_content = file_get_contents( dirname(__FILE__) . '/sample/sample.json');
+
+		// DDB data
+			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			$component = component_common::get_instance(
+				$model, // string model
+				$component_tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+			$dato = $component->get_dato();
 
 		// awesome tool process...
+			$my_process_result = (object)[
+				'test_value1' => 1,
+				'test_value2' => 2,
+				'test_value3' => (object)[
+					'type'	=> 'object',
+					'value'	=> 'Test object value'
+				],
+				'test_value4'		=> ['array_val_1','array_val_2'],
+				'date'				=> date("Y-m-d H:i:s"),
+				'component_data'	=> $dato,
+				'file_sample_json'	=> json_handler::decode($file_content)
+			];
 
 		// response
-			$response->result	= true;
+			$response->result	= $my_process_result;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 
