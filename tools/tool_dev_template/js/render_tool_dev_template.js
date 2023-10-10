@@ -68,7 +68,7 @@ const get_content_data = async function(self) {
 		const info_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'info_container',
-			inner_html 		: `This sample tool is only to use as base or reference for create new tools.<br>
+			inner_html 		: `This sample tool is only to be used as a basis or reference for creating new tools..<br>
 							   To see more complete information about how to create tools see the http://dedalo.dev documentation about tools`,
 			parent 			: fragment
 		})

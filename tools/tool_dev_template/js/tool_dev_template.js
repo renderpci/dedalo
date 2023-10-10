@@ -7,7 +7,7 @@
 /**
  * TOOL_DEV_TEMPLATE
  *
- * This sample tool is only to use as base or reference for create new tools
+ * This sample tool is only to be used as a basis or reference for creating new tools.
  * To see more complete information about how to create tools see the http://dedalo.dev documentation about tools
  */
 
