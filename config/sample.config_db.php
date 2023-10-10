@@ -49,3 +49,5 @@ define('MYSQL_DEDALO_DATABASE_CONN',	'web_dedalo');
 define('MYSQL_DEDALO_DB_PORT_CONN',		3306);
 // MYSQL_DEDALO_SOCKET_CONN: string|null . Ex. /tmp/mysql.sock if use
 define('MYSQL_DEDALO_SOCKET_CONN',		'/tmp/mysql.sock');
+// MYSQL_DB_BIN_PATH: string '' . Ex. /usr/bin/' . Optional
+define('MYSQL_DB_BIN_PATH', '/usr/bin/');
