@@ -1299,17 +1299,10 @@ class diffusion_mysql extends diffusion_sql  {
 			$pass		= MYSQL_DEDALO_PASSWORD_CONN;
 			$host		= MYSQL_DEDALO_HOSTNAME_CONN;
 			$bin_path	= defined('MYSQL_DB_BIN_PATH') ? MYSQL_DB_BIN_PATH : '';
-			$command	= $bin_path . "mysqldump --user={$user} --password={$pass} --host={$host} {$db_name} --result-file={$target_file} 2>&1";
+			$command	= $bin_path . "mysqldump --user={$user} --password='{$pass}' --host={$host} {$db_name} --result-file={$target_file} 2>&1";
 
 		// execution
 			exec($command, $res);
-
-			debug_log(__METHOD__
-				. " Exec command  " . PHP_EOL
-				. " command: " . $command . PHP_EOL
-				. " result: " . to_string($res)
-				, logger::WARNING
-			);
 
 		// response
 			$response->result		= true;
@@ -1319,6 +1312,15 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->file_size	= $response->file_exists
 				? format_size_units( filesize($target_file) )
 				: 0;
+
+		// debug
+			debug_log(__METHOD__
+				. " Exec command:  " . PHP_EOL
+				. ' ' . $command . PHP_EOL
+				. " result: " . to_string($res) . PHP_EOL
+				. ' response: ' . to_string($response)
+				, logger::WARNING
+			);
 
 
 		return $response;
