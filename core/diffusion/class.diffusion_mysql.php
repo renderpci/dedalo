@@ -27,6 +27,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* GET_CONN
+	* Builds a database connection
 	* @return db resource
 	*/
 	public static function get_conn($database_name) {
@@ -385,7 +386,6 @@ class diffusion_mysql extends diffusion_sql  {
 
 		// 	return $result;
 		// }//end multi
-
 
 
 
@@ -826,9 +826,8 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 
-
 	/**
-	* CONFORM_field_VALUE
+	* CONFORM_FIELD_VALUE
 	* @return mixed
 	*/
 	public static function conform_field_value($field_value, $database_name) {
@@ -999,6 +998,8 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* TABLE_EXITS
 	* Check if target table already exists
+	* @param string $database_name
+	* @param string $table_name
 	* @return bool
 	*/
 	public static function table_exits(string $database_name, string $table_name) : bool {
@@ -1035,8 +1036,8 @@ class diffusion_mysql extends diffusion_sql  {
 	/**
 	* DATABASE_EXITS
 	* Check if target database already exists
-	* @string $database_name
-	* @return $database_exits bool
+	* @param string $database_name
+	* @return bool $database_exits bool
 	*/
 	public static function database_exits(string $database_name) : bool {
 
@@ -1216,15 +1217,15 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 	/**
-	* CREATE_publication_schema_TABLE
+	* CREATE_PUBLICATION_SCHEMA_TABLE
 	* Build MySQL table 'map' with standard options
 	* @return object $response
 	*/
 	private static function create_publication_schema_table( $database_name, $table_name ) {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		// Drop previous existent table
 			$strQuery = "DROP TABLE IF EXISTS `$table_name`;";

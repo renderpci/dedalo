@@ -525,16 +525,16 @@ abstract class diffusion  {
 		$field_value = null;
 
 		// Diffusion element (current column/field)
-			$diffusion_term  = new RecordObj_dd($tipo);
-			$properties 	 = $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
-			#$diffusion_model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$diffusion_term		= new RecordObj_dd($tipo);
+			$properties			= $diffusion_term->get_propiedades(true);	# Format: {"data_to_be_used": "dato"}
+			// $diffusion_model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// Component
-			$ar_related 		= common::get_ar_related_by_model('component_', $tipo, false);
-			$component_tipo 	= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
-			$model_name 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			#$real_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
-			$current_component 	= component_common::get_instance(
+			$ar_related			= common::get_ar_related_by_model('component_', $tipo, false);
+			$component_tipo		= reset($ar_related); //RecordObj_dd::get_ar_terminos_relacionados($tipo, false, true)[0];
+			$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+			#$real_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($component_tipo, 'section', 'parent')[0];
+			$current_component	= component_common::get_instance(
 				$model_name,
 				$component_tipo,
 				$section_id,
@@ -768,9 +768,9 @@ abstract class diffusion  {
 
 		require_once(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
-		$section_id 	= (int)$dato;
-		$lang 			= $options->lang;
-		$subtitles_url 	= subtitles::get_subtitles_url($section_id, $tc_in=null, $tc_out=null, $lang);
+		$section_id		= (int)$dato;
+		$lang			= $options->lang;
+		$subtitles_url	= subtitles::get_subtitles_url($section_id, $tc_in=null, $tc_out=null, $lang);
 
 		return $subtitles_url;
 	}//end map_section_id_to_subtitles_url
@@ -891,7 +891,7 @@ abstract class diffusion  {
 	/**
 	* GET_COMPONENT_PUBLICATION_TIPO
 	* @param array $ar_fields_tipo
-	* @return string | bool false
+	* @return string|bool $component_publication_tipo
 	*/
 	public static function get_component_publication_tipo($ar_fields_tipo) {
 
@@ -916,7 +916,7 @@ abstract class diffusion  {
 
 
 	/**
-	* GET_COMPONENT_PUBLICATION_bool_VALUE
+	* GET_COMPONENT_PUBLICATION_BOOL_VALUE
 	* @param string $component_publication_tipo
 	* @param string|int $section_id
 	* @param string $section_tipo
@@ -1049,13 +1049,12 @@ abstract class diffusion  {
 	* @param int $section_id
 	* @return object $response
 	*/
-	public static function delete_record($section_tipo, $section_id) {
+	public static function delete_record($section_tipo, $section_id) : object {
 
 		$response = new stdClass();
 			$response->result		= false;
 			$response->msg			= __METHOD__ . ' Warning. Nothing is deleted for '.$section_tipo.'-'.$section_id;
 			$response->ar_deleted	= [];
-
 
 		$ar_diffusion_element = self::get_ar_diffusion_map_elements();
 		foreach ($ar_diffusion_element as $diffusion_element) {
@@ -1241,8 +1240,8 @@ abstract class diffusion  {
 			// user
 				if (isset($save_first)) {
 
-					$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
-					$component 		= component_common::get_instance(
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_user_tipo,true);
+					$component	= component_common::get_instance(
 						$model_name,
 						$publication_first_user_tipo,
 						$section_id,
@@ -1265,8 +1264,8 @@ abstract class diffusion  {
 
 		// last . publication last. save updated date always
 			// date
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
-				$component 		= component_common::get_instance(
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
+				$component	= component_common::get_instance(
 					$model_name,
 					$publication_last_tipo,
 					$section_id,
@@ -1281,8 +1280,8 @@ abstract class diffusion  {
 				$component->Save();
 
 			// user
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
-				$component 		= component_common::get_instance(
+				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_user_tipo,true);
+				$component	= component_common::get_instance(
 					$model_name,
 					$publication_last_user_tipo,
 					$section_id,
@@ -1303,7 +1302,10 @@ abstract class diffusion  {
 				$component->Save();
 
 		// debug
-			debug_log(__METHOD__." Updated publication date in section: $section_tipo, $section_id ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." Updated publication date in section: $section_tipo, $section_id "
+				, logger::DEBUG
+			);
 
 
 		return true;
@@ -1313,7 +1315,8 @@ abstract class diffusion  {
 
 	/**
 	* GET_PUBLICATION_UNIX_TIMESTAMP
-	* @return
+	* @return int $publication_ux_tm
+	* 	Like 1660338149
 	*/
 	public static function get_publication_unix_timestamp() {
 		static $publication_ux_tm;
