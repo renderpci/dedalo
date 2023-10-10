@@ -32,6 +32,7 @@ define('POSTPROCESSING_IMAGE_SCRIPT', '');
 define('DEDALO_SUPERUSER', '');
 define('DEDALO_EXTRAS_PATH', '');
 define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', '');
+define('MYSQL_DB_BIN_PATH', '');
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 function logger(){};
