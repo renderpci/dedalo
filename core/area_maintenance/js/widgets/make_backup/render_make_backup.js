@@ -71,6 +71,7 @@ const get_content_data = async function(self) {
 		const dedalo_db_management	= value.dedalo_db_management
 		const backup_path			= value.backup_path
 		const file_name				= value.file_name
+		const mysql_db				= value.mysql_db
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -115,6 +116,24 @@ const get_content_data = async function(self) {
 				options	: null
 			}
 		})
+
+	// form backup MySQL DDBB
+		console.log('mysql_db:', mysql_db);
+		if (mysql_db && mysql_db[0] && mysql_db[0].db_name) {
+
+			// form init
+			self.caller.init_form({
+				submit_label	: 'Backup MySQL DDBB: ' + mysql_db.map(el => el.db_name).join(', '),
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: content_data,
+				body_response	: body_response,
+				trigger : {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'make_mysql_backup',
+					options	: null
+				}
+			})
+		}
 
 	// add at end body_response
 		content_data.appendChild(body_response)

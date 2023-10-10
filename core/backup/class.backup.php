@@ -1999,4 +1999,40 @@ abstract class backup {
 
 
 
+	/**
+	* MAKE_MYSQL_BACKUP
+	* @return object $response
+	*/
+	public static function make_mysql_backup() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= '';
+
+		// databases
+			$ar_database_name = [];
+			$api_publication_code = defined('API_WEB_USER_CODE_MULTIPLE')
+				? API_WEB_USER_CODE_MULTIPLE
+				: [];
+			foreach ($api_publication_code as $value) {
+				if (!empty($value['db_name'])) {
+					$ar_database_name[] = $value['db_name'];
+				}
+			}
+
+			$response->result = [];
+			foreach ($ar_database_name as $database_name) {
+
+				$backup = diffusion_mysql::backup_database($database_name);
+
+				$response->result[] = $backup;
+			}
+			$response->msg = 'Backup done for databases: ' . implode(', ', $ar_database_name);
+
+
+		return $response;
+	}//end make_mysql_backup
+
+
+
 }//end class backup

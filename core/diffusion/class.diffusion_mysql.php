@@ -1259,4 +1259,70 @@ class diffusion_mysql extends diffusion_sql  {
 
 
 
+	/**
+	* BACKUP_DATABASE
+	* @param string $db_name
+	* @return object response
+	*/
+	public static function backup_database(string $db_name) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// target_file
+			$folder_path = DEDALO_BACKUP_PATH . '/mysql';
+			if( !is_dir($folder_path) ) {
+				if(!mkdir($folder_path, 0750, true)) {
+
+					$response->msg		= 'Error on create MySQL backups directory. Permission denied';
+					$response->errors	= true;
+					debug_log(__METHOD__
+						."  ".$response->msg . PHP_EOL
+						.' folder_path: ' .$folder_path . PHP_EOL
+						.' create_dir_permissions: ' . to_string(0750)
+						, logger::ERROR
+					);
+					return $response;
+				}
+				debug_log(__METHOD__
+					." CREATED DIR: $folder_path  "
+					, logger::WARNING
+				);
+			}
+			$file_name		= date("Y-m-d_His") .'_'. $db_name .'_'. get_user_id() .'.sql';
+			$target_file	= $folder_path .'/'. $file_name;
+
+		// command
+			$user		= MYSQL_DEDALO_USERNAME_CONN;
+			$pass		= MYSQL_DEDALO_PASSWORD_CONN;
+			$host		= MYSQL_DEDALO_HOSTNAME_CONN;
+			$bin_path	= defined('MYSQL_DB_BIN_PATH') ? MYSQL_DB_BIN_PATH : '';
+			$command	= $bin_path . "mysqldump --user={$user} --password={$pass} --host={$host} {$db_name} --result-file={$target_file} 2>&1";
+
+		// execution
+			exec($command, $res);
+
+			debug_log(__METHOD__
+				. " Exec command  " . PHP_EOL
+				. " command: " . $command . PHP_EOL
+				. " result: " . to_string($res)
+				, logger::WARNING
+			);
+
+		// response
+			$response->result		= true;
+			$response->msg			= 'Backup done ' . $db_name;
+			$response->exec_result	= $res;
+			$response->file_exists	= file_exists($target_file);
+			$response->file_size	= $response->file_exists
+				? format_size_units( filesize($target_file) )
+				: 0;
+
+
+		return $response;
+	}//end backup_database
+
+
+
 }//end class diffusion_mysql
