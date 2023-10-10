@@ -36,6 +36,29 @@ final class dd_area_maintenance_api {
 
 
 	/**
+	* MAKE_MYSQL_BACKUP
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function make_mysql_backup(object $rqo) : object {
+
+		// session_write_close();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+		$response->result	= backup::make_mysql_backup();
+		$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end make_mysql_backup
+
+
+
+	/**
 	* REGENERATE_RELATIONS
 	* @param object $rqo
 	* @return object $response
