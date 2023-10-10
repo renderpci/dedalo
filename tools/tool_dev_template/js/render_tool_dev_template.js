@@ -98,33 +98,58 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-	// test_button
+	// test_button 1
 		const test_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary',
-			inner_html		: self.get_tool_label('my_first_label') || 'Hello button without label',
+			inner_html		: self.get_tool_label('my_first_label') || 'Hello button without label 1',
 			parent			: footer_buttons_container
 		})
 		test_button.addEventListener('click', function(e) {
 			e.stopPropagation()
 
-			const msg = "Hello tool button"
-
-			// value_container.innerHTML = JSON.stringify(self.main_element.data.value, null, 2)
-			// alert(msg);
-
 			const node = ui.load_item_with_spinner({
 				container			: value_container,
 				preserve_content	: false,
-				label				: 'Get component value',
+				label				: 'component local value',
 				callback			: async () => {
 
-					await pause(1000) // fake process wait
+					await pause(700) // fake process wait
 
 					const value_node = ui.create_dom_element({
 						element_type	: 'pre',
 						class_name		: '',
 						inner_html		: JSON.stringify(self.main_element.data.value, null, 2)
+					})
+					return value_node
+				}
+			})//end ui.load_item_with_spinner
+		})
+
+	// test_button 2
+		const test_button2 = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			inner_html		: self.get_tool_label('my_second_label') || 'Hello button without label 2',
+			parent			: footer_buttons_container
+		})
+		test_button2.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const node = ui.load_item_with_spinner({
+				container			: value_container,
+				preserve_content	: false,
+				label				: 'value from server',
+				callback			: async () => {
+
+					await pause(500) // fake process wait
+
+					const response = await self.get_some_data_from_server()
+
+					const value_node = ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: '',
+						inner_html		: JSON.stringify(response.result, null, 2)
 					})
 					return value_node
 				}
@@ -137,6 +162,8 @@ const get_content_data = async function(self) {
 			class_name		: 'value_container',
 			parent			: fragment
 		})
+
+
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
