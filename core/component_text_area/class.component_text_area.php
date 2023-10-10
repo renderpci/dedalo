@@ -48,7 +48,7 @@ class component_text_area extends component_common {
 			if (is_string($dato)) { // Tool Time machine case, dato is string
 
 				// check the dato for determinate the original format and if the $dato is correct.
-				$dato_trim				= trim($dato);
+				$dato_trim				= !empty($dato) ? trim($dato) : $dato;
 				$dato_first_character	= substr($dato_trim, 0, 1);
 				$dato_last_character	= substr($dato_trim, -1);
 
@@ -108,7 +108,9 @@ class component_text_area extends component_common {
 			return true;
 		}
 
-		$value = trim($value);
+		$value = is_string($value)
+			? trim($value)
+			: $value;
 
 		if(empty($value)){
 			return true;
@@ -251,7 +253,9 @@ class component_text_area extends component_common {
 		if ($index==='all') {
 			$ar = array();
 			foreach ((array)$dato as $value) {
-				$value = trim($value);
+				$value = is_string($value)
+					? trim($value)
+					: null;
 				if (!empty($value)) {
 					$ar[] = TR::add_tag_img_on_the_fly($value);
 				}
@@ -299,7 +303,9 @@ class component_text_area extends component_common {
 
 			$value = '';
 			foreach ($dato as $current_value) {
-				$current_value = trim($current_value);
+				$current_value = is_string($current_value)
+					? trim($current_value)
+					: null;
 				if (!empty($current_value)) {
 					$value = TR::add_tag_img_on_the_fly($current_value);
 				}
@@ -1875,7 +1881,9 @@ class component_text_area extends component_common {
 		// data
 			$tag_id			= $ar_data['tag_id'];
 			$state			= $ar_data['state'];
-			$label			= trim($ar_data['label']);
+			$label			= !empty($ar_data['label'])
+				? trim($ar_data['label'])
+				: '';
 			$locator		= $ar_data['data'];
 
 		// short vars
@@ -2557,7 +2565,9 @@ class component_text_area extends component_common {
 					$dato = $dato_unchanged;
 
 					// trim_dato
-					$trim_dato = trim($dato);
+					$trim_dato = is_string($dato)
+						? trim($dato)
+						: $dato;
 
 					// related tipo process (component_image, component_geolocation)
 						if (!empty($trim_dato)) {
