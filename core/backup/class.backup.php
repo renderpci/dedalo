@@ -1948,7 +1948,7 @@ abstract class backup {
 
 	/**
 	* WRITE_LANG_FILE
-	* Calculated labels for given lang and write a js file with the result
+	* Calculated labels for given lang and write a JS file with the result
 	* @param string $lang
 	* @return bool
 	* 	false if write error occurred, true if all is file is written successfully
