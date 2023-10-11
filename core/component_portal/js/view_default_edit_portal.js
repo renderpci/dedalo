@@ -19,6 +19,7 @@
 	} from './render_edit_component_portal.js'
 
 
+
 /**
 * VIEW_DEFAULT_EDIT_PORTAL
 * Manage the components logic and appearance in client side
@@ -172,8 +173,6 @@ const get_content_data = async function(self, ar_section_record) {
 						// 	}
 						// })
 
-
-
 					// section_record NODE
 						// const row_container = ui.create_dom_element({
 						// 	element_type	: 'div',
@@ -183,6 +182,7 @@ const get_content_data = async function(self, ar_section_record) {
 						const section_record_node = await section_record.render()
 						// set the pointer
 						content_data[i] = section_record_node
+
 					// button_remove
 						// if (self.permissions>1) {
 						// 	const column = ui.create_dom_element({
@@ -234,8 +234,8 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @param object options
+* Adds control columns to the columns_map that will processed by section_recods
+* @param object self
 * @return array columns_map
 */
 const rebuild_columns_map = async function(self) {

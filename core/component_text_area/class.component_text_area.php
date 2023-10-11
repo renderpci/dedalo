@@ -2903,7 +2903,7 @@ class component_text_area extends component_common {
 
 				$value = null;
 
-				if(!empty($current_value)) {
+				if(is_string($current_value)) {
 					// delete all Dédalo tags
 						$string_value = TR::deleteMarks($current_value);
 

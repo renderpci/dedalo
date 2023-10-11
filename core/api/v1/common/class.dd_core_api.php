@@ -1187,7 +1187,7 @@ final class dd_core_api {
 									$component->pagination->total	= $total;
 									$component->pagination->offset	= $offset;
 									if(SHOW_DEBUG===true) {
-										dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
+										// dump($component->pagination, ' ))))) component->pagination ++ pages: '.to_string($pages));
 									}
 								break;
 
