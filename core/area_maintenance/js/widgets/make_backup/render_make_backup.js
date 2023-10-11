@@ -118,7 +118,6 @@ const get_content_data = async function(self) {
 		})
 
 	// form backup MySQL DDBB
-		console.log('mysql_db:', mysql_db);
 		if (mysql_db && mysql_db[0] && mysql_db[0].db_name) {
 
 			// form init

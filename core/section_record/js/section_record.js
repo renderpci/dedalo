@@ -314,7 +314,7 @@ section_record.prototype.get_ar_instances_edit = async function() {
 * GET_AR_COLUMNS_INSTANCES_LIST (USED IN LIST MODE. TIME MACHINE TOO)
 * @return array ar_instances
 */
-section_record.prototype.get_ar_columns_instances_list = async function(){
+section_record.prototype.get_ar_columns_instances_list = async function() {
 
 	const self = this
 
@@ -374,10 +374,10 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 						const section_tipo = (current_ddo.is_dataframe)
 							? current_ddo.section_tipo
 							: self.section_tipo
-						// if the ddo has column_id (normally all component has it, you can see it in common.js get_columns() method)
+						// if the ddo has column_id (normally all component have it, you can see it in common.js get_columns() method)
 						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
-							// check if the column of the component is already loaded, if exists don't load it.
+							// check if the column of the component is already loaded, if exists, don't load it.
 								const exists = ar_column_ddo.find(item => item.tipo === current_ddo.tipo)
 								if(exists) {
 									continue
@@ -543,8 +543,9 @@ section_record.prototype.get_ar_columns_instances_list = async function(){
 * 	Could be an ddo or and full context from datum
 * @param string section_tipo
 * @param string|int section_id
-* @param string|int|null matrix_id
-* @return object component_data
+* @param string|int|null matrix_id = null
+*
+* @return object|null component_data
 * 	If no component data is found, a special component data for empty cases is created
 */
 section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
@@ -556,7 +557,7 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 			return null;
 		}
 
-	// component_data
+	// component_data. Find in datum: tipo, section_tipo, section_id
 		const component_data = self.datum.data.find(function(el) {
 			if (el.tipo===ddo.tipo && // match tipo
 				parseInt(el.section_id)===parseInt(section_id) && // match section_id
