@@ -1219,7 +1219,7 @@ class diffusion_rdf extends diffusion {
 	* it's stored in the Publication services section (dd1010) in the component_json
 	* @param object $configuration_entity
 	* @param string|int|null $section_id = null
-	* @return string $result
+	* @return string|null $result
 	*/
 	public function resolve_configuration(object $configuration_entity, $section_id=null) : ?string {
 

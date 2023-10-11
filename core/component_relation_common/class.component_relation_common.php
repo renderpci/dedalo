@@ -640,8 +640,8 @@ class component_relation_common extends component_common {
 	/**
 	* SET_DATO
 	* Set raw dato overwrite existing dato.
-	* Usually, dato is built element by element, adding one locator to existing dato, but some times we need
-	* insert complete array of locators at once. Use this method in this cases
+	* Usually, dato is built element by element, adding one locator to existing dato, but sometimes we need
+	* to insert complete array of locators at once. Use this method in this cases
 	*/
 	public function set_dato($dato) : bool {
 
@@ -693,11 +693,15 @@ class component_relation_common extends component_common {
 						debug_log(__METHOD__
 							. $msg . PHP_EOL
 							. ' type: ' . gettype($current_locator) . PHP_EOL
-							.' locator: ' . json_encode($current_locator)
+							. ' locator: ' . json_encode($current_locator)
 							, logger::ERROR
 						);
-						dump($current_locator, '$current_locator ++ '.to_string());
+						dump($current_locator, '$current_locator ++ dato: '.to_string($dato));
 						// throw new Exception("Error Processing Request. Look server log for details", 1);
+						if(SHOW_DEBUG===true) {
+							$bt = debug_backtrace();
+							dump($bt, ' bt ++ '.to_string());
+						}
 						continue;
 					}
 
