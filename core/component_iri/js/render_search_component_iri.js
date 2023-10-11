@@ -58,7 +58,9 @@ render_search_component_iri.prototype.search = async function(options) {
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
