@@ -237,13 +237,6 @@ class relation_list extends common {
 	*/
 	public function get_diffusion_dato() : array {
 
-		// cache
-			static $diffusion_dato_cache;
-			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id;
-			if (isset($diffusion_dato_cache[$cache_key])) {
-				return $diffusion_dato_cache[$cache_key];
-			}
-
 		// Properties of diffusion element that references this component
 		// (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)
 		// 	  This is useful to change the 'data_to_be_used' param of target component (indirectly)
@@ -251,6 +244,17 @@ class relation_list extends common {
 		$process_dato_arguments	= isset($diffusion_properties->process_dato_arguments)
 			? $diffusion_properties->process_dato_arguments
 			: null;
+
+		$process_dato_arguments_key = !empty($process_dato_arguments)
+			? json_encode($process_dato_arguments)
+			: '';
+
+		// cache
+			static $diffusion_dato_cache;
+			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$process_dato_arguments_key;
+			if (isset($diffusion_dato_cache[$cache_key])) {
+				return $diffusion_dato_cache[$cache_key];
+			}
 
 		// sqo . COmmon used to get inverse locators
 			$sqo = (object)[
@@ -396,9 +400,13 @@ class relation_list extends common {
 				$data_to_be_used = $diffusion_properties->process_dato_arguments->data_to_be_used;
 			}
 
+		$diffusion_properties_key = !empty($diffusion_properties)
+			? json_encode($diffusion_properties)
+			: '';
+
 		// cache
 			static $diffusion_value_cache;
-			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$data_to_be_used;
+			$cache_key = $this->tipo.'_'.$this->section_tipo.'_'.$this->section_id.'_'.$data_to_be_used.'_'.$diffusion_properties_key;
 			if (isset($diffusion_value_cache[$cache_key])) {
 				return $diffusion_value_cache[$cache_key];
 			}
