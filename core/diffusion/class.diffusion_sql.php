@@ -1091,10 +1091,8 @@ class diffusion_sql extends diffusion  {
 
 				if(is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method)){
 
-					$get_dato_method = $properties->get_field_value->get_dato_method;
-						#dump($get_dato_method, ' get_dato_method ++ '.to_string());
-					$dato = $current_component->{$get_dato_method}();
-						#dump($dato, ' dato ++ '.to_string($model_name).' - '.$get_dato_method);
+					$get_dato_method	= $properties->get_field_value->get_dato_method;
+					$dato				= $current_component->{$get_dato_method}();
 				}else{
 					$dato = ($model_name==='relation_list')
 						? $current_component->get_diffusion_dato() // use 'properties->process_dato_arguments' to filter by section or component
@@ -1163,6 +1161,7 @@ class diffusion_sql extends diffusion  {
 						$function_name = $properties->process_dato;
 						$ar_field_data['field_value'] = call_user_func($function_name, $options, $dato);
 						break;
+
 					// DS resolution with v6 model
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='ds'):
 						if(isset($properties->v6)){
@@ -1200,6 +1199,7 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 						break;
+
 					// NEED TO BE FIXED
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='dataframe'):
 						foreach ((array)$dato as $current_locator) {
@@ -1219,10 +1219,10 @@ class diffusion_sql extends diffusion  {
 							? $properties->option_obj
 							: null;
 
-						# Set unified diffusion value
+						// Set unified diffusion value
 						$ar_field_data['field_value'] =	$current_component->get_diffusion_value($options->lang, $option_obj);
-							#dump($ar_field_data['field_value'], '1 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
-						# Fallback to main lang
+							// dump($ar_field_data['field_value'], '1 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
+						// Fallback to main lang
 						if (empty($ar_field_data['field_value'])) {
 							$main_lang = common::get_main_lang($current_component->get_section_tipo(), $current_component->get_parent());
 								#dump($main_lang, ' main_lang ++ $options->lang: '.to_string($options->lang) ." - section_tipo: ".$current_component->get_section_tipo());
@@ -1230,7 +1230,7 @@ class diffusion_sql extends diffusion  {
 							$ar_field_data['field_value'] =	$current_component->get_diffusion_value($main_lang, $option_obj);
 								#dump($ar_field_data['field_value'], '2 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 
-							# Fallback to ALL langs ... last try
+							// Fallback to ALL langs ... last try
 							if (empty($ar_field_data['field_value'])) {
 								foreach (common::get_ar_all_langs() as $current_t_lang) {
 								 	$current_component->set_lang($current_t_lang);
@@ -1241,10 +1241,10 @@ class diffusion_sql extends diffusion  {
 						}
 						#debug_log(__METHOD__." ar_field_datafield_value ".$current_component->get_tipo().' '.to_string( $ar_field_data['field_value'] ), 'DEBUG');
 						break;
-				}//switch (true) {
+				}//switch (true)
 				break;
 
-		}//end switch ($options->typology) {
+		}//end switch ($options->typology)
 
 
 		return (array)$ar_field_data;
