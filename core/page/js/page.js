@@ -746,6 +746,9 @@ export const instantiate_page_element = async function(self, source) {
 			if (url_vars.session_key) {
 				instance_options.session_key = url_vars.session_key
 			}
+			if (url_vars.session_save) {
+				instance_options.session_save = JSON.parse(url_vars.session_save)
+			}
 
 	// page_element instance (load file)
 		const instance = await get_instance(instance_options)
