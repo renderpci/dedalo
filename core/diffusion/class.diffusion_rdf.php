@@ -501,8 +501,11 @@ class diffusion_rdf extends diffusion {
 
 							$uri_finded = null;
 							foreach ($ar_values as $current_uri) {
-								foreach($current_uri->value as $uri){
-									$find = strripos($uri->iri, $uri_data);
+								foreach($current_uri->value as $uri) {
+									$current_uri_data = is_string($uri_data)
+										? $uri_data
+										: '';
+									$find = strripos($uri->iri, $current_uri_data);
 									if($find !== false){
 										$uri_finded = $uri->iri;
 										break 2;
@@ -1230,6 +1233,16 @@ class diffusion_rdf extends diffusion {
 			$title			= $configuration_entity->title;
 			$component_tipo	= $configuration_entity->component_tipo; // component_iri dd1014
 			$id				= $configuration_entity->id; // catalog_filter
+
+			// check entity_locator
+				$entity_locator = $this->entity_locator ?? null;
+				if (empty($entity_locator) || empty($entity_locator->section_tipo) || empty($entity_locator->section_id)) {
+					debug_log(__METHOD__
+						." Empty entity_locator! null is returned"
+						, logger::WARNING
+					);
+					return null;
+				}
 
 			if($section_tipo===DEDALO_SERVICES_SECTION_TIPO) {
 
