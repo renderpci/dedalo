@@ -111,9 +111,12 @@ class tool_common {
 			})->value ?? reset($tool_object->label)->value;
 
 		// developer
-			$developer = array_find($tool_object->developer, function($el){
+			$developer_data = array_find($tool_object->developer, function($el){
 				return $el->lang===DEDALO_DATA_NOLAN;
-			})->value ?? reset($tool_object->developer)->value;
+			});
+			$developer = !empty($developer_data)
+				? $developer_data->value
+				: [];
 
 		// description. (text_area) Try match current lang else use the first lang value
 			$description = array_find((array)$tool_object->description, function($el){
