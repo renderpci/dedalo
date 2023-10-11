@@ -222,7 +222,7 @@ export const ui = {
 						if(SHOW_DEBUG===true) {
 							if (e.metaKey && e.altKey) {
 								e.preventDefault()
-								console.log('/// refreshing instance:', instance);
+								console.log('/// refreshing instance (build_autoload=true, render_level=content):', instance);
 								instance.refresh({
 									build_autoload : true,
 									render_level : 'content'
