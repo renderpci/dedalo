@@ -1438,6 +1438,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 			section_tipo	: section_tipo,
 			id				: section_id,
 			mode			: 'edit',
+			session_save	: false, // prevent to overwrite current section session
 			menu			: false
 		})
 
