@@ -379,7 +379,7 @@ const render_drag_node = function(options) {
 * RENDER_COLUMN_COMPONENT_INFO
 * Render node for use in edit
 * @param object options
-* @return DocumentFragment
+* @return DocumentFragment|null
 */
 export const render_column_component_info = function(options) {
 
@@ -398,14 +398,18 @@ export const render_column_component_info = function(options) {
 		)
 		if (component_info) {
 
-			const info_value = component_info.value.join(', ')
+			const info_value = component_info.value && component_info.value.length
+				? component_info.value.join(', ')
+				: null
 
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'ddinfo_value',
-				inner_html		: info_value,
-				parent			: fragment
-			})
+			if (info_value) {
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'ddinfo_value',
+					inner_html		: info_value,
+					parent			: fragment
+				})
+			}
 		}
 
 	return fragment

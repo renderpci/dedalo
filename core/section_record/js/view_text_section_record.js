@@ -26,7 +26,7 @@ export const view_text_section_record = function() {
 * Render as text nodes
 * @param object self
 * @param object options
-* @return DocumentFragment
+* @return HTMLElement wrapper
 */
 view_text_section_record.render = async function(self, options) {
 
@@ -167,6 +167,19 @@ view_text_section_record.render = async function(self, options) {
 
 			// columns separator (between components inside the same column)
 				if(ar_nodes_length > 0 && i < columns_map_length-1 && columns_map[i+1].id!=='remove' && columns_map[i+1].id!=='section_id') {
+
+					// ddinfo case. Check i f is empty the content
+						if (columns_map[i+1].id==='ddinfo') {
+							const content_node = columns_map[i+1].callback({
+								section_tipo	: self.section_tipo,
+								section_id		: self.section_id,
+								caller			: self.caller
+							})
+							if (!content_node.textContent || !content_node.textContent.length) {
+								continue; // skip empty ddinfo
+							}
+						}
+
 					const fields_separator		= self.context.fields_separator || ', '
 					const node_fields_separator = ui.create_dom_element({
 						element_type	: 'span',
