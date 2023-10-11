@@ -26,6 +26,8 @@ export const view_text_list_portal = function() {
 /**
 * RENDER
 * Render node as text view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_text_list_portal.render = async function(self, options) {
@@ -41,14 +43,14 @@ view_text_list_portal.render = async function(self, options) {
 
 	// return text_node
 
-	// column component_info
-	if (self.add_component_info===true) {
-		self.columns_map.push({
-			id			: 'ddinfo',
-			label		: 'Info',
-			callback	: render_column_component_info
-		})
-	}
+	// ddinfo. column component_info
+		if (self.add_component_info===true) {
+			self.columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info',
+				callback	: render_column_component_info
+			})
+		}
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -69,8 +71,6 @@ view_text_list_portal.render = async function(self, options) {
 
 	// add all nodes
 		const ar_section_record_length = ar_section_record.length
-
-
 		for (let i = 0; i < ar_section_record_length; i++) {
 
 			// child

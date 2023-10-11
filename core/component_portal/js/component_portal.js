@@ -674,6 +674,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				break;
 		}
 
+
 	// status update
 		self.status = 'built'
 
