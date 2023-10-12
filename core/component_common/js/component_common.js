@@ -716,7 +716,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 			// remove the component old data in the datum (from down to top array items)
 				for (let i = new_context_length - 1; i >= 0; i--) {
 
-					const context_item			= new_context[i]
+					const context_item		= new_context[i]
 					const context_element	= self.datum.context.find(el =>
 						el.tipo===context_item.tipo &&
 						el.section_tipo===context_item.section_tipo &&
