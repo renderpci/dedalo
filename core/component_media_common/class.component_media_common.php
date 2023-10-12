@@ -28,6 +28,8 @@ class component_media_common extends component_common {
 		public $id;
 		// string extension. like 'mp4'
 		public $extension;
+		// external_source
+		public $external_source;
 
 
 
@@ -88,10 +90,10 @@ class component_media_common extends component_common {
 				// id. Set and fix current id
 					$this->id = $this->get_id();
 
-				// initial_media_path set
+				// initial_media_path set like 'my_custom_name'
 					$this->initial_media_path = $this->get_initial_media_path();
 
-				// additional_path : Set and fix current additional image path
+				// additional_path : Set and fix current additional path like '/0'
 					$this->additional_path = $this->get_additional_path();
 			}
 	}//end __construct
@@ -343,7 +345,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' json config.
+	* Calculate item additional path from 'properties' json config.
 	* Used by component_image, component_pdf
 	* @return string|null $additional_path
 	*/
@@ -363,7 +365,12 @@ class component_media_common extends component_common {
 			$section_id				= $this->get_section_id();
 			$section_tipo			= $this->get_section_tipo();
 
-		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
+		// section_id
+			if (empty($section_id)) {
+				return null;
+			}
+
+		if ( !is_null($additional_path_tipo) ) {
 
 			$component_tipo	= $additional_path_tipo;
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -393,24 +400,15 @@ class component_media_common extends component_common {
 				$additional_path = $valor;
 		}
 
-		if(empty($valor) && isset($properties->max_items_folder)) {
+		// fallback max_items_folder from properties
+			if( empty($additional_path) && isset($properties->max_items_folder) ) {
 
-			// max_items_folder defined case
-				$max_items_folder	= (int)$properties->max_items_folder;
+				$max_items_folder	= (int)$properties->max_items_folder; // normally 1000
 				$int_section_id		= (int)$section_id;
 
-			// add
-				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
-
-			// // update component dato. Final dato must be an array to saved into component_input_text
-			// 	$final_dato = array( $additional_path );
-			// 	$component->set_dato( $final_dato );
-
-			// // save if mode is edit
-			// 	if ($this->mode==='edit') {
-			// 		$component->Save();
-			// 	}
-		}
+				// add
+					$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+			}
 
 
 		// fix value
@@ -521,9 +519,10 @@ class component_media_common extends component_common {
 
 		// debug
 			debug_log(__METHOD__
-				." media_common.add_file Target file (full_file_path): "
-				.to_string($full_file_path)
-				, logger::DEBUG
+				." media_common.add_file Target file: " . PHP_EOL
+				.' folder_path: ' . to_string($folder_path) . PHP_EOL
+				.' full_file_path: ' . to_string($full_file_path)
+				, logger::WARNING
 			);
 
 		// validate extension
@@ -755,6 +754,8 @@ class component_media_common extends component_common {
 			foreach ($ar_quality as $quality) {
 
 				$quality_file_info = $this->get_quality_file_info($quality);
+
+				// file_exist check
 				if ($include_empty===false && $quality_file_info->file_exist===false) {
 					// skip quality without file
 					continue;
@@ -791,6 +792,7 @@ class component_media_common extends component_common {
 
 			return $item;
 		}, $files_info);
+
 
 		return $datalist;
 	}//end get_datalist
@@ -1319,20 +1321,28 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_MEDIA_PATH_dir
-	* 	Get the absolute path to the media in current quality as:
+	* GET_MEDIA_PATH_DIR
+	* Get the absolute path to the media in current quality as:
 	* 	'/user/myuser/httpddocs/dedalo/media/pdf/web'
 	* @param string $quality
 	* @return string $media_path
-	* 	Absolute media path
 	*/
 	public function get_media_path_dir(string $quality) : string {
 
-		$initial_media_path	= $this->initial_media_path ?? '';
-		$additional_path	= $this->additional_path ?? '';
-		$folder				= $this->get_folder(); // like '/svg'
-		$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
-		$media_path			= DEDALO_MEDIA_PATH . $base_path;
+		if(isset($this->external_source)) {
+
+			$external_parts		= pathinfo($this->external_source);
+			$media_path			= $external_parts['dirname'];
+
+		}else{
+
+			$initial_media_path	= $this->initial_media_path ?? '';
+			$additional_path	= $this->additional_path ?? '';
+			$folder				= $this->get_folder(); // like '/svg'
+			$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
+			$media_path			= DEDALO_MEDIA_PATH . $base_path;
+		}
+
 
 		return $media_path;
 	}//end get_media_path_dir

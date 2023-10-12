@@ -12,7 +12,8 @@ final class dd_component_3d_api {
 
 	/**
 	* MOVE_FILE_TO_DIR
-	* Creates a fragment from given av file with TC in:out
+	* Move a file from one location to another
+	* Usually used to move posterframe image
 	*
 	* @param object $rqo
 	* 	Sample:
@@ -72,13 +73,33 @@ final class dd_component_3d_api {
 			$source_file_path	= $tmp_dir . '/' . $file_data->tmp_name;
 			$target_file_path	= $component->get_media_path_dir($target_dir). '/' . $file_data->name;
 
-			debug_log(__METHOD__
-				. " Moving file from  " . PHP_EOL
-				. ' - ' . $source_file_path .PHP_EOL
-				. ' - to' .PHP_EOL
-				. ' - ' . $target_file_path
-				, logger::DEBUG
-			);
+			// debug info
+				debug_log(__METHOD__
+					. " Moving file from  " . PHP_EOL
+					. ' - ' . $source_file_path .PHP_EOL
+					. ' - to' .PHP_EOL
+					. ' - ' . $target_file_path
+					, logger::DEBUG
+				);
+
+			// target directory check
+				$target_dir = dirname($target_file_path);
+				if (!is_dir($target_dir)) {
+					if(!mkdir($target_dir, 0750, true)) {
+						debug_log(__METHOD__
+							.' Error creating directory: ' . PHP_EOL
+							.' target_dir: ' . $target_dir
+							, logger::ERROR
+						);
+						$response->msg .= ' Error creating directory';
+						debug_log(__METHOD__
+							. ' '.$response->msg
+							, logger::ERROR
+						);
+						return $response;
+					}
+				}
+
 			$result = rename($source_file_path, $target_file_path);
 			if ($result===false) {
 				debug_log(__METHOD__
@@ -89,6 +110,13 @@ final class dd_component_3d_api {
 					. ' rqo: ' . to_string($rqo)
 					, logger::ERROR
 				);
+
+				$response->msg .= ' Error creating directory';
+				debug_log(__METHOD__
+					. ' '.$response->msg
+					, logger::ERROR
+				);
+				return $response;
 			}
 
 

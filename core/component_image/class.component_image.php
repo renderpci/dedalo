@@ -14,7 +14,7 @@ class component_image extends component_media_common {
 		// id . file name formatted as 'tipo'-'order_id' like dd732-1
 		public $image_url;
 		// external_source
-		public $external_source;
+		// public $external_source;
 		// Default image dimensions (as showed in section edit)
 		public $width	= 539;
 		public $height	= 404;
@@ -41,6 +41,7 @@ class component_image extends component_media_common {
 
 	/**
 	* SAVE
+	* Manages specific svg file creation and exec parent Save
 	* @return int|null $result
 	* 	section_id
 	*/
@@ -1862,41 +1863,6 @@ class component_image extends component_media_common {
 
 		return $media_attributes;
 	}//end get_media_attributes
-
-
-
-	/**
-	* GET_MEDIA_PATH_DIR
-	* Calculates the file base path based on the given quality
-	* @param string $quality
-	* @return string $media_path
-	*/
-	public function get_media_path_dir(string $quality) : string {
-
-		if (empty($quality)) {
-			debug_log(__METHOD__
-				. " quality is empty !!! " .PHP_EOL
-				. "tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id"
-				, logger::ERROR
-			);
-		}
-
-		if($this->external_source) {
-
-			$external_parts = pathinfo($this->external_source);
-			$media_path		= $external_parts['dirname'];
-
-		}else{
-
-			$initial_media_path	= $this->initial_media_path ?? '';
-			$additional_path	= $this->additional_path ?? '';
-
-			$media_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
-		}
-
-
-		return $media_path;
-	}//end get_media_path_dir
 
 
 

@@ -87,7 +87,7 @@ export const get_content_data = function(self) {
 			image.addEventListener('load', set_bg_color, false)
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, this)
+				// ui.set_background_image(this, this)
 			}
 			image.addEventListener('error', () => {
 				console.log('Image load error:', image);

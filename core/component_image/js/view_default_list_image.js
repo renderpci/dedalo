@@ -68,7 +68,7 @@ view_default_list_image.render = function(self, options) {
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
-			ui.set_background_image(this, wrapper)
+			// ui.set_background_image(this, wrapper)
 			image.classList.remove('hidden')
 		}
 

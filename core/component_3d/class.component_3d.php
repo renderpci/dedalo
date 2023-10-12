@@ -5,11 +5,13 @@
 */
 class component_3d extends component_media_common {
 
-	# Overwrite __construct var lang passed in this component
-	#protected $lang = DEDALO_DATA_LANG;
 
-	// file name formatted as 'tipo'-'order_id' like dd732-1
-	public $url;
+
+	/**
+	* CLASS VARS
+	*/
+		// url. File name formatted as 'tipo'-'order_id' like dd732-1
+		public $url;
 
 
 
@@ -107,21 +109,24 @@ class component_3d extends component_media_common {
 
 	/**
 	* GET_URL
+	* Get file url for current quality
+	*
 	* @param string|null $quality = null
-	* @return string $url
+	* @return string|null $url
 	*/
-	public function get_url( ?string $quality=null ) : string {
+	public function get_url(?string $quality=null) : ?string {
 
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
+		// quality fallback to default
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
 
-		$id		= $this->get_id();
-		$path	= DEDALO_MEDIA_URL . DEDALO_3D_FOLDER .'/'. $quality . '/';
-		$name	= $id .'.'. $this->get_extension();
+		// item id like rsc201_rsc202_9.glb
+			$id = $this->get_id();
 
-		// file URL
-		$url = $path . $name;
+		// url
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+
 
 		return $url;
 	}//end get_url
@@ -150,7 +155,11 @@ class component_3d extends component_media_common {
 	public function get_posterframe_path() : string {
 
 		$file_name			= $this->get_posterframe_file_name();
-		$posterframe_path	= DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER .'/posterframe/'. $file_name;
+		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
+		$additional_path	= $this->additional_path;
+
+		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
+
 
 		return $posterframe_path;
 	}//end get_posterframe_path
@@ -164,16 +173,18 @@ class component_3d extends component_media_common {
 	* @param bool $avoid_cache = false
 	* @return string $posterframe_url
 	*/
-	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
+	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$id			= $this->get_id();
-		$file_name	= $this->get_posterframe_file_name();
+		$id					= $this->get_id();
+		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
+		$file_name			= $this->get_posterframe_file_name();
+		$additional_path	= $this->additional_path;
 
-		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_3D_FOLDER .'/posterframe/'. $file_name;
+		$posterframe_url = DEDALO_MEDIA_URL . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
 		// FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . '/posterframe/' . $file_name;
+			$file = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -196,8 +207,9 @@ class component_3d extends component_media_common {
 	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Returns the full path of the original file if exists
-	* Si se sube un archivo de extensión distinta a DEDALO_IMAGE_EXTENSION, se convierte a DEDALO_IMAGE_EXTENSION. Los archivos originales
-	* se guardan renombrados pero conservando la terminación. Se usa esta función para localizarlos comprobando si hay mas de uno.
+	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
+	* The original files files are saved renamed but keeping the ending. This function is used to locate them by checking
+	* if there is more than one.
 	* @param string $quality
 	* @return string|null $result
 	*/
@@ -283,142 +295,6 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_VIDEO SIZE
-	* @return string
-	*/
-	public function get_video_size(string $quality=null, string $filename=null) : ?string {
-
-		if (empty($filename)) {
-
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
-
-			$id	= $this->get_id();
-			$filename	= DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER. '/' . $quality . '/'. $id .'.'. $this->get_extension();
-		}
-
-		if ( !file_exists( $filename )) {
-			return false ;
-		}
-		$size = 0;
-		if(is_dir($filename)){
-			//minimum size of the initial vob (512KB)
-			$vob_filesize = 512*1000;
-
-			if(is_dir($filename.'/VIDEO_TS')){
-
-				$handle = opendir($filename.'/VIDEO_TS');
-					 while (false !== ($file = readdir($handle))) {
-						$extension = pathinfo($file,PATHINFO_EXTENSION);
-						if($extension === 'VOB' && filesize($filename.'/VIDEO_TS/'.$file) > $vob_filesize){
-							#dump($file,'$file: '.filesize($filename.'/VIDEO_TS/'.$file));
-
-							//reset the size of the vob (for the end files of the video)
-							$vob_filesize = 0;
-							$size += filesize($filename.'/VIDEO_TS/'.$file);
-						}
-					 }
-				}
-		}else{
-			try {
-				$size		= @filesize($filename) ;
-				if(!$size)	throw new Exception('Unknown size!') ;
-			} catch (Exception $e) {
-				#echo '',  $e->getMessage(), "\n";
-				#trigger_error( __METHOD__ . " " . $e->getMessage() , E_USER_NOTICE) ;
-				return null;
-			}
-		}
-
-
-		$size_kb = round($size / 1024) ;
-
-		if($size_kb <= 1024) return $size_kb . ' KB' ;
-
-		return round($size_kb / 1024) . ' MB' ;
-	}//end get_video_size
-
-
-
-	/**
-	* GET_DURATION
-	* Get file av duration from file metadata reading attributes
-	* Note that this calculation, read fiscally the file and this is slow (about 200 ms)
-	* @return float $duration
-	*/
-	public function get_duration( ?string $quality=null ) : float {
-
-		$duration = 0;
-
-		// DES
-			// // short vars
-			// 	$section_tipo	= $this->get_section_tipo();
-			// 	$section_id		= $this->get_section_id();
-
-			// // check valid
-			// 	if ($section_tipo!==DEDALO_SECTION_RESOURCES_AV_TIPO) {
-			// 		debug_log(__METHOD__." Inconsistent resolution from section different from expected: ".DEDALO_SECTION_RESOURCES_AV_TIPO.to_string(), logger::ERROR);
-			// 	}
-
-			// # Input text av_duration
-			// # NOTE : This component store seconds as time code like 00:09:52 . When you call to obtain stored duration
-			// # 		 you need convert stored data to seconds (and vice-versa for save)
-			// $av_duration_model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO,true);
-			// $component = component_common::get_instance(
-			// 	$av_duration_model, // string expected: 'component_input_text',
-			// 	DEDALO_COMPONENT_RESOURCES_AV_DURATION_TIPO, // string expected 'rsc54'
-			// 	$section_id,
-			// 	'list',
-			// 	DEDALO_DATA_NOLAN,
-			// 	$section_tipo
-			// );
-			// $tc = $component->get_dato();
-
-		// current quality
-			$quality = $quality ?? $this->get_quality();
-
-		// read file
-			$path				= $this->get_media_filepath($quality);
-			$media_attributes	= $this->get_media_attributes($path);
-			// expected result sample:
-				// {
-				// 	"format": {
-				// 		"filename": "/../dedalo/media/av/404/rsc35_rsc167_1.mp4",
-				// 		"nb_streams": 3,
-				// 		"nb_programs": 0,
-				// 		"format_name": "mov,mp4,m4a,3gp,3g2,mj2",
-				// 		"format_long_name": "QuickTime / MOV",
-				// 		"start_time": "0.000000",
-				// 		"duration": "172.339000",
-				// 		"size": "22126087",
-				// 		"bit_rate": "1027095",
-				// 		"probe_score": 100,
-				// 		"tags": {
-				// 			"major_brand": "isom",
-				// 			"minor_version": "512",
-				// 			"compatible_brands": "isomiso2avc1mp41",
-				// 			"encoder": "Lavf59.16.100"
-				// 		}
-				// 	}
-				// }
-			if (isset($media_attributes->format->duration) && !empty($media_attributes->format->duration)) {
-
-				$duration = $media_attributes->format->duration;
-
-				// Save data to component as time code
-					// $tc[0] = OptimizeTC::seg2tc($duration);
-					// $component->set_dato($tc);
-					// $component->Save();
-			}
-
-
-		return $duration;
-	}//end get_duration
-
-
-
-	/**
 	* GET_SOURCE_QUALITY_TO_BUILD (! moved to media_common)
 	* Iterate array DEDALO_3D_AR_QUALITY (Order by quality big to small)
 	* @return string|null $current_quality
@@ -489,8 +365,11 @@ class component_3d extends component_media_common {
 				$media_path = $this->get_posterframe_path();
 				if (file_exists($media_path)) {
 
+					$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
+					$additional_path	= $this->additional_path;
+
 					// delete dir
-						$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER .'/posterframe/deleted';
+						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
 						if( !is_dir($folder_path_del) ) {
 							$create_dir = mkdir($folder_path_del, 0777,true);
 							if(!$create_dir) {
@@ -636,87 +515,6 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* MOVE_ZIP_FILE
-	* Used to move zip files like compressed DVD
-	* @return object $response
-	*/
-		// public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
-
-		// 	$response = new stdClass();
-		// 		$response->result 	= false;
-		// 		$response->msg 		= 'Error. Request failed ['.__METHOD__.']';
-
-		// 	$zip = new ZipArchive;
-		// 	$res = $zip->open($tmp_name);
-		// 	if ($res!==true) {
-		// 		$response->msg .= "Error on open zip file ! Code: ".to_string($res);
-		// 		return $response;
-		// 	}
-
-		// 	// Create the directories
-		// 	if( !is_dir($folder_path.'/'.$file_name) ) {
-		// 		$ar_folders = [
-		// 			$folder_path .'/'. $file_name,
-		// 			$folder_path .'/'. $file_name . '/VIDEO_TS/',
-		// 			$folder_path .'/'. $file_name . '/AUDIO_TS/'
-		// 		];
-		// 		foreach ($ar_folders as $current_folder) {
-		// 			if(!mkdir($current_folder, 0777)) {
-		// 				$response->msg .= "Error on read or create directory for \"$file_name\" folder. Permission denied ! ($current_folder)";
-		// 				return $response;
-		// 			}
-		// 		}
-		// 	}
-
-		// 	// See al .zip files for located the VIDEO_TS and AUDIO_TS folders
-		// 	for ($i=0; $i < $zip->numFiles; $i++) {
-
-		// 		$current_filename = $zip->getNameIndex($i);
-
-		// 		if(strpos($current_filename,'VIDEO_TS')!==false){
-
-		// 			$current_fileinfo = pathinfo($current_filename);
-		// 			# Don't copy the original VIDEO_TS in the zip file
-		// 			if ($current_fileinfo['basename']==='VIDEO_TS') {
-		// 				continue;
-		// 			}
-		// 			# Copy al files of the VIDEO_TS zip file into the VIDEO_TS destination file
-		// 			$src 	= $tmp_name.'#'.$current_filename;
-		// 			$target = $folder_path.'/'.$file_name.'/VIDEO_TS/'.$current_fileinfo['basename'];
-		// 			if(!copy('zip://'.$src, $target)) {
-		// 				$response->msg .= "Error on copy zip file: $src";
-		// 				return $response;
-		// 			}
-
-		// 		}else if(strpos($current_filename,'AUDIO_TS')!==false){
-		// 			$current_fileinfo = pathinfo($current_filename);
-		// 			# Don't copy the original AUDIO_TS in the zip file
-		// 			if ($current_fileinfo['basename'] === 'AUDIO_TS') {
-		// 				continue;
-		// 			}
-		// 			// Copy al files of the VIDEO_TS zip file into the AUDIO_TS destination file
-		// 			$src 	= $tmp_name.'#'.$current_filename;
-		// 			$target = $folder_path.'/'.$file_name.'/AUDIO_TS/'.$current_fileinfo['basename'];
-		// 			if(!copy('zip://'.$src, $target)) {
-		// 				$response->msg .= "Error on copy zip file: $src";
-		// 				return $response;
-		// 			}
-		// 		}
-		// 	}//end for ($i=0; $i < $zip->numFiles; $i++)
-
-		// 	$zip->close();
-
-		// 	// all is ok
-		// 	$response->result 	= true;
-		// 	$response->msg 		= 'Ok. Request done ['.__METHOD__.']';
-
-
-		// 	return $response;
-		// }//end move_zip_file
-
-
-
-	/**
 	* GET_PREVIEW_URL
 	* Return posterframe url
 	* @return string $preview_url
@@ -787,6 +585,7 @@ class component_3d extends component_media_common {
 					);
 					return $response;
 				}
+
 			// id (without extension, like 'test81_test65_2')
 				$id = $this->get_id();
 				if (empty($id)) {
@@ -809,11 +608,29 @@ class component_3d extends component_media_common {
 						, logger::WARNING
 					);
 				}else{
+					// target directory check
+					$target_dir = dirname($default_quality_file_path);
+					if (!is_dir($target_dir)) {
+						if(!mkdir($target_dir, 0750, true)) {
+							debug_log(__METHOD__
+								.' Error creating directory: ' . PHP_EOL
+								.' target_dir: ' . $target_dir
+								, logger::ERROR
+							);
+							$response->msg .= ' Error creating directory';
+							debug_log(__METHOD__
+								. ' '.$response->msg
+								, logger::ERROR
+							);
+							return $response;
+						}
+					}
+					// copy file from original quality to default quality
 					if (!copy($original_file_path, $default_quality_file_path)) {
 						debug_log(__METHOD__
 							. " Error on copy original file to default quality file " . PHP_EOL
-							. 'original_file_path: ' .$original_file_path .PHP_EOL
-							. 'default_quality_file_path: ' .$default_quality_file_path
+							. ' original_file_path: ' .$original_file_path .PHP_EOL
+							. ' default_quality_file_path: ' .$default_quality_file_path
 							, logger::ERROR
 						);
 						$response->msg = 'Error on copy original file to default quality file';
@@ -1035,19 +852,18 @@ class component_3d extends component_media_common {
 
 	/**
 	* CREATE_POSTERFRAME
-	* TODO: ya veremos
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
 	* @param float $current_time
 	* 	A double-precision floating-point value indicating the current playback time in seconds.
 	* 	From HML5 video element command 'currentTime'
-	* @param string | null $quality
-	* @param array | string $ar_target
+	* @param string|null $quality
+	* @param array|string $ar_target
 	* 	Optional array value with forced target destination path and file name
 	* @return string $command_response
 	* 	FFMPEG terminal command response
 	*/
-	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
+	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL
@@ -1076,8 +892,11 @@ class component_3d extends component_media_common {
 	*/
 	public function delete_posterframe() : bool {
 
-		$name	= $this->get_name();
-		$file	= DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+		$name				= $this->get_name();
+		$folder				= $this->get_folder();
+		$additional_path	= $this->additional_path;
+
+		$file	= DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 
 		// check file already exists
 			if(!file_exists($file)) {
@@ -1142,9 +961,9 @@ class component_3d extends component_media_common {
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		// short vars
-			$update_version	= implode('.', $options->update_version);
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
+			$update_version		= implode('.', $options->update_version);
+			$dato_unchanged		= $options->dato_unchanged;
+			$reference_id		= $options->reference_id;
 
 		switch ($update_version) {
 
@@ -1179,20 +998,20 @@ class component_3d extends component_media_common {
 					// get existing files data
 						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
-						$additional_path	= $component->get_additional_path();
-						$initial_media_path	= $component->get_initial_media_path();
+						$folder				= $component->get_folder(); // like DEDALO_3D_FOLDER
+						$additional_path	= $component->additional_path;
 						$original_extension	= $component->get_original_extension(
 							false // bool exclude_converted
 						) ?? $component->get_extension();
 
-						$base_path	= DEDALO_3D_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+						$base_path	= $folder . '/' . $source_quality . $additional_path;
 						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
-								$base_path		= DEDALO_3D_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+								$base_path		= $folder . '/' . $source_quality . $additional_path;
 								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
