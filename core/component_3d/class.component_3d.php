@@ -158,7 +158,7 @@ class component_3d extends component_media_common {
 				$quality = $this->get_quality();
 			}
 
-		// item id like rsc201_rsc202_9.glb
+		// item id like 'rsc201_rsc202_9'
 			$id = $this->get_id();
 
 		// url
@@ -331,8 +331,12 @@ class component_3d extends component_media_common {
 
 		// file do not exists case
 			$target_dir = $this->get_target_dir($quality);
-			if(!file_exists($target_dir)) {
-				return $result;
+			if( !file_exists($target_dir) ) {
+				debug_log(__METHOD__.
+					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
+					logger::ERROR
+				);
+				return null;
 			}
 
 		// ar_originals
@@ -390,7 +394,6 @@ class component_3d extends component_media_common {
 				. to_string($ar_originals)
 				, logger::ERROR
 			);
-
 			if(SHOW_DEBUG===true) {
 				dump($ar_originals, "ar_originals ".to_string($ar_originals));
 			}
@@ -432,9 +435,12 @@ class component_3d extends component_media_common {
 					// delete dir
 						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
 						if( !is_dir($folder_path_del) ) {
-							$create_dir = mkdir($folder_path_del, 0777,true);
+							$create_dir = mkdir($folder_path_del, 0775, true);
 							if(!$create_dir) {
-								trigger_error("Error on read or create directory \"deleted\". Permission denied");
+								debug_log(__METHOD__
+									." Error on read or create directory \"deleted\". Permission denied ".to_string($folder_path_del)
+									, logger::ERROR
+								);
 								return false;
 							}
 						}
@@ -443,8 +449,8 @@ class component_3d extends component_media_common {
 						$date = date("Y-m-d_Hi");
 
 					// move/rename file
-						$reelID				= $this->get_id();
-						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+						$id					= $this->get_id();
+						$media_path_moved	= $folder_path_del . "/$id" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
 							debug_log(__METHOD__
 								. " Error on move files (posterframe) to folder \"deleted\" . Permission denied . The files are not deleted " . PHP_EOL
@@ -455,7 +461,10 @@ class component_3d extends component_media_common {
 							return false;
 						}
 
-					debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+					debug_log(__METHOD__
+						." Moved file \n$media_path to \n$media_path_moved "
+						, logger::DEBUG
+					);
 				}
 			}//end if ($remove_posterframe===true)
 
