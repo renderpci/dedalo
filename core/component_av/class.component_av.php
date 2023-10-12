@@ -110,22 +110,59 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined av qualities in Dédalo config
+	* @return array $ar_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_quality = DEDALO_AV_AR_QUALITY;
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_AV_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_AV_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_AV_FOLDER;
+	}//end get_folder
+
+
+
+	/**
 	* GET_URL
 	* @param string|null $quality = null
 	* @return string $url
 	*/
-	public function get_url( ?string $quality=null ) : string {
+	public function get_url(?string $quality=null) : string {
 
 		if(empty($quality)) {
 			$quality = $this->get_quality();
 		}
 
-		$id		= $this->get_id();
-		$path	= DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/'. $quality . '/';
-		$name	= $id .'.'. $this->get_extension();
+		// item id like 'rsc201_rsc202_9'
+			$id	= $this->get_id();
 
-		// file URL
-		$url = $path . $name;
+		// url
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+
 
 		return $url;
 	}//end get_url
@@ -154,7 +191,11 @@ class component_av extends component_media_common {
 	public function get_posterframe_path() : string {
 
 		$file_name			= $this->get_posterframe_file_name();
-		$posterframe_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
+		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
+		$additional_path	= $this->additional_path;
+
+		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe/'. $additional_path .'/'. $file_name;
+
 
 		return $posterframe_path;
 	}//end get_posterframe_path
@@ -170,14 +211,15 @@ class component_av extends component_media_common {
 	*/
 	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$id			= $this->get_id();
-		$file_name	= $this->get_posterframe_file_name();
+		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
+		$file_name			= $this->get_posterframe_file_name();
+		$additional_path	= $this->additional_path;
 
-		$posterframe_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER .'/posterframe/'. $file_name;
+		$posterframe_url = DEDALO_MEDIA_URL . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
 		// FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $file_name;
+			$file = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -204,7 +246,9 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_path( string $lang=DEDALO_DATA_LANG ) : string  {
 
-		$subtitles_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		$folder = $this->get_folder(); // like DEDALO_AV_FOLDER
+
+		$subtitles_path = DEDALO_MEDIA_PATH . $folder . DEDALO_SUBTITLES_FOLDER.'/'. $this->get_id().'_'.$lang.'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 
 		return $subtitles_path;
 	}//end get_subtitles_path
@@ -218,7 +262,9 @@ class component_av extends component_media_common {
 	*/
 	public function get_subtitles_url( string $lang=DEDALO_DATA_LANG ) : string {
 
-		$subtitles_url = DEDALO_MEDIA_URL . DEDALO_AV_FOLDER . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
+		$folder = $this->get_folder(); // like DEDALO_AV_FOLDER
+
+		$subtitles_url = DEDALO_MEDIA_URL . $folder . DEDALO_SUBTITLES_FOLDER. '/'. $this->get_id().'_'.$lang .'.'.DEDALO_AV_SUBTITLES_EXTENSION;
 
 		return $subtitles_url;
 	}//end get_subtitles_url
@@ -441,58 +487,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_SOURCE_QUALITY_TO_BUILD (! moved to media_common)
-	* Iterate array DEDALO_AV_AR_QUALITY (Order by quality big to small)
-	* @param string $target_quality
-	* @return string|null $current_quality
-	*/
-		// public function get_source_quality_to_build(string $target_quality) : ?string {
-
-		// 	$ar_quality			= $this->get_ar_quality();
-		// 	$original_quality	= $this->get_original_quality();
-		// 	foreach($ar_quality as $current_quality) {
-
-		// 		if($target_quality===$original_quality) continue;
-
-		// 		// Current file
-		// 		$filename		= $this->get_media_filepath($current_quality);
-		// 		$file_exists	= empty($filename)
-		// 			? false
-		// 			: file_exists($filename);
-
-		// 		if ($current_quality!==$target_quality && $file_exists) {
-		// 			return $current_quality;
-		// 		}
-		// 	}//end foreach($ar_quality as $quality)
-
-
-		// 	return null;
-		// }//end get_source_quality_to_build
-
-
-
-	/**
-	* GET_AR_ALL_FILES_BY_QUALITY
-	* @param array $ar_quality optional
-	* @return array $ar_all_files_by_quality
-	*/
-		// public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
-
-		// 	if (empty($ar_quality)) {
-		// 		$ar_quality = DEDALO_AV_AR_QUALITY;
-		// 	}
-
-		// 	$ar_all_files_by_quality = [];
-		// 	foreach ($ar_quality as $current_quality) {
-		// 		$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
-		// 	}
-
-		// 	return $ar_all_files_by_quality;
-		// }//end get_ar_all_files_by_quality
-
-
-
-	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
 	* Is triggered wen section that contains media elements is deleted
@@ -545,8 +539,11 @@ class component_av extends component_media_common {
 				$media_path = $this->get_posterframe_path();
 				if (file_exists($media_path)) {
 
+					$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
+					$additional_path	= $this->additional_path;
+
 					// delete dir
-						$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/posterframe/deleted';
+						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
 						if( !is_dir($folder_path_del) ) {
 							$create_dir = mkdir($folder_path_del, 0775, true);
 							if(!$create_dir) {
@@ -562,8 +559,8 @@ class component_av extends component_media_common {
 						$date = date("Y-m-d_Hi");
 
 					// move/rename file
-						$reelID				= $this->get_id();
-						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+						$id					= $this->get_id();
+						$media_path_moved	= $folder_path_del . "/$id" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
 							debug_log(__METHOD__
 								. " Error on move files (posterframe) to folder \"deleted\" . Permission denied . The files are not deleted " . PHP_EOL
@@ -597,30 +594,7 @@ class component_av extends component_media_common {
 	public function restore_component_media_files() : bool {
 
 		// AV restore
-			// $ar_quality = $this->get_ar_quality();;
-			// foreach ($ar_quality as $current_quality) {
-
-			// 	$media_path		= $this->get_video_path($current_quality);
-			// 	$media_path		= pathinfo($media_path, PATHINFO_DIRNAME).'/deleted';
-			// 	$id				= $this->get_id();
-			// 	$file_pattern	= $media_path .'/'. $id .'_*.'. $this->get_extension();
-			// 	$ar_files		= glob($file_pattern);
-			// 	if (empty($ar_files)) {
-			// 		debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1) ".to_string($id), logger::WARNING);
-			// 		continue; // Skip
-			// 	}
-			// 	natsort($ar_files);	// sort the files from newest to oldest
-			// 	$last_file_path	= end($ar_files);
-			// 	$new_file_path	= $this->get_video_path($current_quality);
-			// 	if( !rename($last_file_path, $new_file_path) ) {
-			// 		// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-			// 		debug_log(__METHOD__." Error on move files to restore folder. Permission denied . Nothing was restored (2) ".to_string($new_file_path), logger::ERROR);
-			// 	}
-
-			// 	debug_log(__METHOD__." Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
-			// }//end foreach ($ar_quality as $current_quality)
 			parent::restore_component_media_files();
-
 
 		// posterframe restore
 			$posterframe_path	= $this->get_posterframe_path();
@@ -681,9 +655,7 @@ class component_av extends component_media_common {
 	*/
 	public function get_original_quality() : string {
 
-		$original_quality = defined('DEDALO_AV_QUALITY_ORIGINAL')
-			? DEDALO_AV_QUALITY_ORIGINAL
-			: DEDALO_AV_QUALITY_DEFAULT;
+		$original_quality = DEDALO_AV_QUALITY_ORIGINAL;
 
 		return $original_quality;
 	}//end get_original_quality
@@ -1084,43 +1056,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_AR_QUALITY
-	* Get the list of defined av qualities in Dédalo config
-	* @return array $ar_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_quality = DEDALO_AV_AR_QUALITY;
-
-		return $ar_quality;
-	}//end get_ar_quality
-
-
-
-	/**
-	* GET_EXTENSION
-	* @return string DEDALO_AV_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_AV_EXTENSION;
-	}//end get_extension
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_AV_FOLDER;
-	}//end get_folder
-
-
-
-	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_av->remove_component_media_files
@@ -1443,8 +1378,11 @@ class component_av extends component_media_common {
 	*/
 	public function delete_posterframe() : bool {
 
-		$name	= $this->get_id();
-		$file	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe/' . $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+		$folder					= $this->get_folder(); // like DEDALO_AV_FOLDER
+		$additional_path		= $this->additional_path;
+		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
+
+		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
 
 		// check file already exists
 			if(!file_exists($file)) {
@@ -1541,20 +1479,21 @@ class component_av extends component_media_common {
 					// get existing files data
 						$file_name			= $component->get_id();
 						$source_quality		= $component->get_original_quality();
+						$folder				= $component->get_folder(); // like DEDALO_AV_FOLDER
 						$additional_path	= $component->get_additional_path();
 						$initial_media_path	= $component->get_initial_media_path();
 						$original_extension	= $component->get_original_extension(
 							false // bool exclude_converted
 						) ?? $component->get_extension();
 
-						$base_path	= DEDALO_AV_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+						$base_path	= $folder  . $initial_media_path . '/' . $source_quality . $additional_path;
 						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
-								$base_path		= DEDALO_AV_FOLDER  . $initial_media_path . '/' . $source_quality . $additional_path;
+								$base_path		= $folder  . $initial_media_path . '/' . $source_quality . $additional_path;
 								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
