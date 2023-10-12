@@ -2788,7 +2788,7 @@ export const ui = {
 				// round RGB values
 					function correction(value) {
 
-						const factor = 1.016
+						const factor = 1 // 1.016
 
 						const result = (value>127)
 							? Math.floor(value * factor)

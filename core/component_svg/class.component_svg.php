@@ -81,7 +81,7 @@ class component_svg extends component_media_common {
 	* @return string|null $image_url
 	*	Return relative o absolute url. Default false (relative)
 	*/
-	public function get_url(?string $quality=null, bool $test_file=true, bool $absolute=false, bool $default_add=true) : ?string {
+	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=true) : ?string {
 
 		// quality fallback to default
 			if(empty($quality)) {
@@ -160,9 +160,7 @@ class component_svg extends component_media_common {
 	*/
 	public function get_original_quality() : string {
 
-		$original_quality = defined('DEDALO_SVG_QUALITY_ORIGINAL')
-			? DEDALO_SVG_QUALITY_ORIGINAL
-			: DEDALO_SVG_QUALITY_DEFAULT;
+		$original_quality = DEDALO_SVG_QUALITY_ORIGINAL;
 
 		return $original_quality;
 	}//end get_original_quality
@@ -177,7 +175,7 @@ class component_svg extends component_media_common {
 
 		$preview_url = $this->get_url(
 			null,  // string|null quality
-			true, // bool test_file
+			false, // bool test_file
 			false, // bool absolute
 			false // bool default_add
 		);
@@ -200,7 +198,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
+	* 	Get element directory from config
 	* @return string
 	*/
 	public function get_folder() : string {
@@ -285,16 +283,36 @@ class component_svg extends component_media_common {
 						, logger::WARNING
 					);
 				}else{
-					if (!copy($original_file_path, $default_quality_file_path)) {
-						debug_log(__METHOD__
-							. " Error on copy original file to default quality file " . PHP_EOL
-							. 'original_file_path: ' .$original_file_path .PHP_EOL
-							. 'default_quality_file_path: ' .$default_quality_file_path
-							, logger::ERROR
-						);
-						$response->msg = 'Error on copy original file to default quality file';
-						return $response;
-					}
+
+					// target directory check
+						$target_dir = dirname($default_quality_file_path);
+						if (!is_dir($target_dir)) {
+							if(!mkdir($target_dir, 0750, true)) {
+								debug_log(__METHOD__
+									.' Error creating directory: ' . PHP_EOL
+									.' target_dir: ' . $target_dir
+									, logger::ERROR
+								);
+								$response->msg .= ' Error creating directory';
+								debug_log(__METHOD__
+									. ' '.$response->msg
+									, logger::ERROR
+								);
+								return $response;
+							}
+						}
+
+					// copy file
+						if (!copy($original_file_path, $default_quality_file_path)) {
+							debug_log(__METHOD__
+								. " Error on copy original file to default quality file " . PHP_EOL
+								. 'original_file_path: ' .$original_file_path .PHP_EOL
+								. 'default_quality_file_path: ' .$default_quality_file_path
+								, logger::ERROR
+							);
+							$response->msg = 'Error on copy original file to default quality file';
+							return $response;
+						}
 				}
 
 			// upload info
@@ -388,8 +406,8 @@ class component_svg extends component_media_common {
 					// get existing files data
 						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
-						$additional_path	= $component->get_additional_path();
-						$initial_media_path	= $component->get_initial_media_path();
+						$additional_path	= $component->additional_path;
+						$initial_media_path	= $component->initial_media_path;
 						$original_extension	= $component->get_original_extension(
 							false // bool exclude_converted
 						) ?? $component->get_extension(); // 'svg' fallback is expected

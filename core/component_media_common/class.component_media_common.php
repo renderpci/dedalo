@@ -365,7 +365,12 @@ class component_media_common extends component_common {
 			$section_id				= $this->get_section_id();
 			$section_tipo			= $this->get_section_tipo();
 
-		if ( !is_null($additional_path_tipo) && !empty($section_id) ) {
+		// section_id
+			if (empty($section_id)) {
+				return null;
+			}
+
+		if ( !is_null($additional_path_tipo) ) {
 
 			$component_tipo	= $additional_path_tipo;
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -395,13 +400,11 @@ class component_media_common extends component_common {
 				$additional_path = $valor;
 		}
 
-		// fallback max_items_folder
-			if( empty($additional_path) && !empty($section_id) ) {
+		// fallback max_items_folder from properties
+			if( empty($additional_path) && isset($properties->max_items_folder) ) {
 
-				$max_items_folder = isset($properties->max_items_folder)
-					? (int)$properties->max_items_folder
-					: 1000;
-				$int_section_id	= (int)$section_id;
+				$max_items_folder	= (int)$properties->max_items_folder; // normally 1000
+				$int_section_id		= (int)$section_id;
 
 				// add
 					$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
