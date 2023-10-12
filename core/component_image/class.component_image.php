@@ -14,7 +14,7 @@ class component_image extends component_media_common {
 		// id . file name formatted as 'tipo'-'order_id' like dd732-1
 		public $image_url;
 		// external_source
-		public $external_source;
+		// public $external_source;
 		// Default image dimensions (as showed in section edit)
 		public $width	= 539;
 		public $height	= 404;
@@ -41,6 +41,7 @@ class component_image extends component_media_common {
 
 	/**
 	* SAVE
+	* Manages specific svg file creation and exec parent Save
 	* @return int|null $result
 	* 	section_id
 	*/

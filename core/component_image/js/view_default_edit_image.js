@@ -336,7 +336,7 @@ const render_image_node = function(self, file_info, content_value) {
 
 			if (self.permissions>1) {
 				// upload tool is open on click
-				content_value.addEventListener('mouseup', function(e) {
+				content_value.addEventListener('click', function(e) {
 					e.stopPropagation();
 					// tool_upload. Get the tool context to be opened
 					const tool_upload = self.tools.find(el => el.model==='tool_upload')
@@ -346,6 +346,7 @@ const render_image_node = function(self, file_info, content_value) {
 						caller			: self
 					})
 				})
+				content_value.classList.add('clickable')
 			}
 		}
 		// set pointer

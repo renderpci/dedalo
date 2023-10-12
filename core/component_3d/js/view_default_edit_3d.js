@@ -131,7 +131,7 @@ const get_content_value = (i, current_value, self) => {
 	// init viewer when content_value node is in in browser viewport
 	when_in_viewport(content_value, async function(){
 
-		if(file_info){
+		if(file_info) {
 			// posterframe image
 				const posterframe_url = data.posterframe_url || page_globals.fallback_image
 				content_value.posterframe = ui.create_dom_element({
@@ -175,6 +175,21 @@ const get_content_value = (i, current_value, self) => {
 				}, 1)
 			});
 		}else{
+
+			// add fallback image
+				const posterframe_url = page_globals.fallback_image
+				content_value.posterframe = ui.create_dom_element({
+					element_type	: 'img',
+					class_name		: 'posterframe',
+					parent			: content_value
+				})
+				// image background color
+				content_value.posterframe.addEventListener('load', set_bg_color, false)
+				function set_bg_color() {
+					this.removeEventListener('load', set_bg_color, false)
+					ui.set_background_image(this, content_value)
+				}
+				content_value.posterframe.src = posterframe_url
 
 			content_value.classList.add('link')
 			content_value.addEventListener('mouseup', function(e) {
