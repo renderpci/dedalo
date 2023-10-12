@@ -1866,41 +1866,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_MEDIA_PATH_DIR
-	* Calculates the file base path based on the given quality
-	* @param string $quality
-	* @return string $media_path
-	*/
-	public function get_media_path_dir(string $quality) : string {
-
-		if (empty($quality)) {
-			debug_log(__METHOD__
-				. " quality is empty !!! " .PHP_EOL
-				. "tipo: $this->tipo, section_tipo: $this->section_tipo, section_id: $this->section_id"
-				, logger::ERROR
-			);
-		}
-
-		if($this->external_source) {
-
-			$external_parts = pathinfo($this->external_source);
-			$media_path		= $external_parts['dirname'];
-
-		}else{
-
-			$initial_media_path	= $this->initial_media_path ?? '';
-			$additional_path	= $this->additional_path ?? '';
-
-			$media_path = DEDALO_MEDIA_PATH . DEDALO_IMAGE_FOLDER . $initial_media_path . '/' . $quality . $additional_path;
-		}
-
-
-		return $media_path;
-	}//end get_media_path_dir
-
-
-
-	/**
 	* GET_IMAGE_DIMENSIONS
 	* Calculate image size in pixels using PHP exif_read_data
 	* File used to read data will be the quality received version,
