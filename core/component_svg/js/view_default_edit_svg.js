@@ -139,11 +139,11 @@ const get_content_value = function(i, value, self) {
 				parent			: content_value
 			})
 			// image background color
-			// image_node.addEventListener('load', set_bg_color, false)
-			// function set_bg_color() {
-			// 	this.removeEventListener('load', set_bg_color, false)
-			// 	ui.set_background_image(this, content_value)
-			// }
+			image_node.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				ui.set_background_image(this, content_value)
+			}
 			image_node.src = image_url
 			// click
 			image_node.addEventListener('click', function(e) {
