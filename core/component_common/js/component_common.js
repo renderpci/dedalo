@@ -713,17 +713,19 @@ component_common.prototype.update_datum = async function(new_datum) {
 			const new_context_length = new_context.length
 
 		// datum (global shared with section)
-			// remove the component old data in the datum (from down to top array items)
+			// adds new elements to the datum if they do not already exist
+			// Note that since 12-10-2023, the mode is taken into account here
 				for (let i = new_context_length - 1; i >= 0; i--) {
 
-					const context_item			= new_context[i]
-					const context_element	= self.datum.context.find(el =>
+					const context_item	= new_context[i]
+					const found_item	= self.datum.context.find(el =>
 						el.tipo===context_item.tipo &&
 						el.section_tipo===context_item.section_tipo &&
-						el.lang===context_item.lang
+						el.mode===context_item.mode && // @important Added 12-10-2023 because component_relation_parent/children visualization fails on add terms
+ 						el.lang===context_item.lang
 					)
 
-					if (!context_element) {
+					if (!found_item) {
 						// add new context item
 						self.datum.context.push(context_item)
 					}
