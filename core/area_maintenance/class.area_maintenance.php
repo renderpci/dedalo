@@ -32,6 +32,37 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* ITEM_MAKE_BACKUP
+	* @return object $item
+	*/
+	public function item_make_backup() {
+
+		// short vars
+			$mysql_db			= (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
+			$mysql_backup_files	= backup::get_mysql_backup_files(); // MariaDB/MySQL files
+			$backup_files		= backup::get_backup_files(); // postgresql files
+			$max_files			= 10;
+
+		// item
+			$item = new stdClass();
+				$item->id		= 'make_backup';
+				$item->typo		= 'widget';
+				$item->label	= label::get_label('make_backup') ?? 'Make backup';
+				$item->value	= (object)[
+					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
+					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
+					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup',
+					'backup_files'			=> array_slice($backup_files, 0, $max_files), // first 10 items
+					'mysql_db'				=> $mysql_db, // first 10 items
+					'mysql_backup_files'	=> array_slice($mysql_backup_files, 0, $max_files) // first 10 items
+				];
+
+		return $item;
+	}//end item_make_backup
+
+
+
+	/**
 	* GET_AR_WIDGETS
 	* @return array $data_items
 	*	Array of widgets object
@@ -44,17 +75,8 @@ class area_maintenance extends area_common {
 
 
 		// make_backup *
-			$item = new stdClass();
-				$item->id		= 'make_backup';
-				$item->typo		= 'widget';
-				$item->label	= label::get_label('make_backup') ?? 'Make backup';
-				$item->value	= (object)[
-					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
-					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
-					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup',
-					'mysql_db' 				=> (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null)
-				];
-			$widget = $this->widget_factory($item);
+			$item	= $this->item_make_backup();
+			$widget	= $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
 
