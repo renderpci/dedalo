@@ -28,6 +28,8 @@ class component_media_common extends component_common {
 		public $id;
 		// string extension. like 'mp4'
 		public $extension;
+		// external_source
+		public $external_source;
 
 
 
@@ -343,7 +345,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_ADDITIONAL_PATH
-	* Calculate image additional path from 'properties' json config.
+	* Calculate item additional path from 'properties' json config.
 	* Used by component_image, component_pdf
 	* @return string|null $additional_path
 	*/
@@ -1319,20 +1321,28 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_MEDIA_PATH_dir
-	* 	Get the absolute path to the media in current quality as:
+	* GET_MEDIA_PATH_DIR
+	* Get the absolute path to the media in current quality as:
 	* 	'/user/myuser/httpddocs/dedalo/media/pdf/web'
 	* @param string $quality
 	* @return string $media_path
-	* 	Absolute media path
 	*/
 	public function get_media_path_dir(string $quality) : string {
 
-		$initial_media_path	= $this->initial_media_path ?? '';
-		$additional_path	= $this->additional_path ?? '';
-		$folder				= $this->get_folder(); // like '/svg'
-		$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
-		$media_path			= DEDALO_MEDIA_PATH . $base_path;
+		if(isset($this->external_source)) {
+
+			$external_parts		= pathinfo($this->external_source);
+			$media_path			= $external_parts['dirname'];
+
+		}else{
+
+			$initial_media_path	= $this->initial_media_path ?? '';
+			$additional_path	= $this->additional_path ?? '';
+			$folder				= $this->get_folder(); // like '/svg'
+			$base_path			= $folder . $initial_media_path . '/' . $quality . $additional_path;
+			$media_path			= DEDALO_MEDIA_PATH . $base_path;
+		}
+
 
 		return $media_path;
 	}//end get_media_path_dir
