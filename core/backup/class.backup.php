@@ -2035,4 +2035,86 @@ abstract class backup {
 
 
 
+	/**
+	* GET_MYSQL_BACKUP_FILES
+	* Read mysql backup directory and get all SQL files name
+	* @return array $ar_files
+	*/
+	public static function get_mysql_backup_files() : array {
+
+		$folder_path = DEDALO_BACKUP_PATH . '/mysql';
+
+		// bk_files read backup directory
+		$ar_bk_files = (array)glob($folder_path . '/*');
+		// sort by name descendant
+		$ar_bk_files = array_reverse($ar_bk_files);
+
+		$ar_files = [];
+		foreach ($ar_bk_files as $current_file) {
+
+			$path_info = pathinfo($current_file);
+			if ($path_info['extension']!=='sql') {
+				// ignore it
+				continue;
+			}
+
+			$name	= $path_info['basename'];
+			$size	= filesize($current_file);
+
+			$item = (object)[
+				'name' => $name,
+				'size' => format_size_units($size)
+			];
+
+
+			$ar_files[] = $item;
+		}
+
+
+		return $ar_files;
+	}//end get_mysql_backup_files
+
+
+
+	/**
+	* GET_BACKUP_FILES
+	* Read Dédalo PostgreSQL backup directory and get all files name
+	* @return array $ar_files
+	*/
+	public static function get_backup_files() : array {
+
+		$folder_path = DEDALO_BACKUP_PATH . '/db';
+
+		// bk_files read backup directory
+		$ar_bk_files = (array)glob($folder_path . '/*');
+		// sort by name descendant
+		$ar_bk_files = array_reverse($ar_bk_files);
+
+		$ar_files = [];
+		foreach ($ar_bk_files as $current_file) {
+
+			$path_info = pathinfo($current_file);
+			if ($path_info['extension']!=='backup') {
+				// ignore it
+				continue;
+			}
+
+			$name	= $path_info['basename'];
+			$size	= filesize($current_file);
+
+			$item = (object)[
+				'name' => $name,
+				'size' => format_size_units($size)
+			];
+
+
+			$ar_files[] = $item;
+		}
+
+
+		return $ar_files;
+	}//end get_backup_files
+
+
+
 }//end class backup

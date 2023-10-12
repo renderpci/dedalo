@@ -72,6 +72,8 @@ const get_content_data = async function(self) {
 		const backup_path			= value.backup_path
 		const file_name				= value.file_name
 		const mysql_db				= value.mysql_db
+		const backup_files			= value.backup_files
+		const mysql_backup_files	= value.mysql_backup_files
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -117,6 +119,27 @@ const get_content_data = async function(self) {
 			}
 		})
 
+	// backup_files
+		if (backup_files && backup_files.length>0) {
+
+			const backup_toggle = ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: get_label.show_last_files || 'Show last files',
+				class_name		: 'backup_toggle_button unselectable',
+				parent			: content_data
+			})
+			backup_toggle.addEventListener('click', function(e) {
+				backup_files_container.classList.toggle('hide')
+			})
+
+			const backup_files_container = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'backup_files_container hide',
+				inner_html		: JSON.stringify(backup_files, null, 2),
+				parent			: content_data
+			})
+		}
+
 	// form backup MySQL DDBB
 		if (mysql_db && mysql_db[0] && mysql_db[0].db_name) {
 
@@ -132,7 +155,29 @@ const get_content_data = async function(self) {
 					options	: null
 				}
 			})
+
+			// mysql_backup_files
+			if (mysql_backup_files && mysql_backup_files.length>0) {
+
+				const mysql_backup_toggle = ui.create_dom_element({
+					element_type	: 'div',
+					inner_html		: get_label.show_last_files || 'Show last files',
+					class_name		: 'backup_toggle_button unselectable',
+					parent			: content_data
+				})
+				mysql_backup_toggle.addEventListener('click', function(e) {
+					mysql_backup_files_container.classList.toggle('hide')
+				})
+
+				const mysql_backup_files_container = ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'mysql_backup_files_container hide',
+					inner_html		: JSON.stringify(mysql_backup_files, null, 2),
+					parent			: content_data
+				})
+			}
 		}
+
 
 	// add at end body_response
 		content_data.appendChild(body_response)
