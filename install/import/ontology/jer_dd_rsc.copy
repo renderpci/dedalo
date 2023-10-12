@@ -116,7 +116,7 @@ rsc112	rsc295	dd58	no	si	si	6	rsc	no	[{"dd9":"rsc116"},{"dd635":"rsc120"}]		\N
 rsc173	rsc167	dd181	no	si	si	3	rsc	no	[{"dd722":"rsc35"},{"dd10":"rsc36"}]		\N
 rsc59	rsc11	dd11	no	si	si	5	rsc	no	[{"dd6":"dd985"},{"dd9":"dd987"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 rsc321	rsc252	dd43	no	si	si	6	rsc	no	\N	{"type":{"float":2},"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
-rsc201	rsc1130	dd1741	no	si	si	1	rsc	no	null	{"css":{".wrap_component":{"display":"none"}}}	\N
+rsc201	rsc1130	dd1741	no	si	si	1	rsc	no	null	{"css":{".wrap_component":{"display":"none"}}}	{"max_items_folder": 1000}
 rsc136	rsc3	dd1058	no	si	no	10	rsc	no	\N	\N	{"disable": true}
 rsc249	rsc677	dd11	no	si	si	1	rsc	no	[{"dd6":"dd292"},{"dd9":"dd296"}]	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc147	rsc677	dd9	no	si	si	2	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
