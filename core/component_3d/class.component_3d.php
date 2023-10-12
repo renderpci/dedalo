@@ -156,7 +156,7 @@ class component_3d extends component_media_common {
 
 		$file_name			= $this->get_posterframe_file_name();
 		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
-		$additional_path	= $this->get_additional_path();
+		$additional_path	= $this->additional_path;
 
 		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
@@ -178,7 +178,7 @@ class component_3d extends component_media_common {
 		$id					= $this->get_id();
 		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
 		$file_name			= $this->get_posterframe_file_name();
-		$additional_path	= $this->get_additional_path();
+		$additional_path	= $this->additional_path;
 
 		$posterframe_url = DEDALO_MEDIA_URL . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
@@ -366,7 +366,7 @@ class component_3d extends component_media_common {
 				if (file_exists($media_path)) {
 
 					$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
-					$additional_path	= $this->get_additional_path();
+					$additional_path	= $this->additional_path;
 
 					// delete dir
 						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
@@ -894,7 +894,7 @@ class component_3d extends component_media_common {
 
 		$name				= $this->get_name();
 		$folder				= $this->get_folder();
-		$additional_path	= $this->get_additional_path();
+		$additional_path	= $this->additional_path;
 
 		$file	= DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 
@@ -999,7 +999,7 @@ class component_3d extends component_media_common {
 						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
 						$folder				= $component->get_folder(); // like DEDALO_3D_FOLDER
-						$additional_path	= $component->get_additional_path();
+						$additional_path	= $component->additional_path;
 						$original_extension	= $component->get_original_extension(
 							false // bool exclude_converted
 						) ?? $component->get_extension();
