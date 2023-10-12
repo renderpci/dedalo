@@ -90,10 +90,10 @@ class component_media_common extends component_common {
 				// id. Set and fix current id
 					$this->id = $this->get_id();
 
-				// initial_media_path set
+				// initial_media_path set like 'my_custom_name'
 					$this->initial_media_path = $this->get_initial_media_path();
 
-				// additional_path : Set and fix current additional image path
+				// additional_path : Set and fix current additional path like '/0'
 					$this->additional_path = $this->get_additional_path();
 			}
 	}//end __construct
@@ -395,24 +395,17 @@ class component_media_common extends component_common {
 				$additional_path = $valor;
 		}
 
-		if(empty($valor) && isset($properties->max_items_folder)) {
+		// fallback max_items_folder
+			if( empty($additional_path) && !empty($section_id) ) {
 
-			// max_items_folder defined case
-				$max_items_folder	= (int)$properties->max_items_folder;
-				$int_section_id		= (int)$section_id;
+				$max_items_folder = isset($properties->max_items_folder)
+					? (int)$properties->max_items_folder
+					: 1000;
+				$int_section_id	= (int)$section_id;
 
-			// add
-				$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
-
-			// // update component dato. Final dato must be an array to saved into component_input_text
-			// 	$final_dato = array( $additional_path );
-			// 	$component->set_dato( $final_dato );
-
-			// // save if mode is edit
-			// 	if ($this->mode==='edit') {
-			// 		$component->Save();
-			// 	}
-		}
+				// add
+					$additional_path = '/'.$max_items_folder*(floor($int_section_id / $max_items_folder));
+			}
 
 
 		// fix value
@@ -523,9 +516,10 @@ class component_media_common extends component_common {
 
 		// debug
 			debug_log(__METHOD__
-				." media_common.add_file Target file (full_file_path): "
-				.to_string($full_file_path)
-				, logger::DEBUG
+				." media_common.add_file Target file: " . PHP_EOL
+				.' folder_path: ' . to_string($folder_path) . PHP_EOL
+				.' full_file_path: ' . to_string($full_file_path)
+				, logger::WARNING
 			);
 
 		// validate extension
@@ -757,6 +751,8 @@ class component_media_common extends component_common {
 			foreach ($ar_quality as $quality) {
 
 				$quality_file_info = $this->get_quality_file_info($quality);
+
+				// file_exist check
 				if ($include_empty===false && $quality_file_info->file_exist===false) {
 					// skip quality without file
 					continue;
@@ -793,6 +789,7 @@ class component_media_common extends component_common {
 
 			return $item;
 		}, $files_info);
+
 
 		return $datalist;
 	}//end get_datalist
