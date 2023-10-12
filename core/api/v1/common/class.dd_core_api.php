@@ -1673,6 +1673,11 @@ final class dd_core_api {
 					$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
 				}
 
+				// add order from session if not defined (and session yes)
+				if ( !isset($sqo->order) && isset($sqo_session) && isset($sqo_session->order) ) {
+					$sqo->order = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->order;
+				}
+
 			}else{
 
 				// non received case
