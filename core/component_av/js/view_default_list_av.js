@@ -64,11 +64,11 @@ view_default_list_av.render = async function(self, options) {
 		// ui.component.add_image_fallback(image)
 
 		// image background color
-			image.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, this)
-			}
+			// image.addEventListener('load', set_bg_color, false)
+			// function set_bg_color() {
+			// 	this.removeEventListener('load', set_bg_color, false)
+			// 	ui.set_background_image(this, this)
+			// }
 			image.addEventListener('error', () => {
 				if ( image.src !== page_globals.fallback_image) {
 					image.src = page_globals.fallback_image

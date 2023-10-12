@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -128,6 +129,33 @@ const get_content_value = function(i, value, self) {
 				parent			: content_value
 			})
 			image.setAttribute('tabindex', 0)
+		}else{
+
+			// image fallback
+			const image_url = page_globals.fallback_image
+			const image_node = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'image svg_element fallback_image clickable',
+				parent			: content_value
+			})
+			// image background color
+			// image_node.addEventListener('load', set_bg_color, false)
+			// function set_bg_color() {
+			// 	this.removeEventListener('load', set_bg_color, false)
+			// 	ui.set_background_image(this, content_value)
+			// }
+			image_node.src = image_url
+			// click
+			image_node.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				const tool_upload = self.tools.find(el => el.model==='tool_upload')
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			})
 		}
 
 

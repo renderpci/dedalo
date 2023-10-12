@@ -66,7 +66,7 @@ view_viewer_image.render = function(self, options) {
 				// }
 				resize_window_to_image_size(image)
 				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, wrapper)
+				// ui.set_background_image(this, wrapper)
 				image.classList.remove('hidden')
 				image.classList.add('fit')
 

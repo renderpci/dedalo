@@ -2714,7 +2714,7 @@ export const ui = {
 
 		// Deactivate, it's not useful repeat the first pixel of image.
 		// to discus
-		return false
+		// return false
 
 		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
 		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
