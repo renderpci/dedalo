@@ -552,6 +552,83 @@ final class Ffmpeg {
 
 
 	/**
+	* GET_ASPECT_RATIO
+	* @param string $source_file
+	* @param string $quality
+	* @return string $ratio
+	* 	Like '16x9'
+	*/
+	public function get_aspect_ratio(string $source_file, string $quality) {
+
+		// get streams
+		$media_streams = Ffmpeg::get_media_streams( $source_file );
+		if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->display_aspect_ratio)) {
+
+			// data from media_streams definition
+
+			$aspect_ratio = $media_streams->streams[0]->display_aspect_ratio;
+			$beats	= explode(':', $aspect_ratio);
+
+			$aspect	= implode('x', $beats);
+
+		}else{
+
+			// data from size calculation
+
+			if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->width) && !empty($media_streams->streams[0]->height)) {
+
+				// from streams
+					$width	= (int)$media_streams->streams[0]->width;
+					$height	= (int)$media_streams->streams[0]->height;
+
+			}else{
+
+				// retrieves info from reading the header
+					$media_header = Ffmpeg::get_media_streams($source_file);
+
+				// size
+					$width_default	= 720;
+					$height_default	= 404;
+
+					$width = isset($media_header[$quality]['width'])
+						? (int)$media_header[$quality]['width']
+						: $width_default;
+
+
+					if(isset($media_header[$quality]['height']))
+					$height = isset($media_header[$quality]['height'])
+						? (int)$media_header[$quality]['height']
+						: $height_default;
+			}
+
+			// aspect_ratio
+				$aspect_ratio = 0;
+				if($width>0 && $height>0)
+				$aspect_ratio = round( ($width / $height), 2);
+
+				switch($aspect_ratio) {
+
+					case '1.33'	: $aspect = '4x3';	break;
+					case '1.34'	: $aspect = '4x3';	break;
+
+					case '1.77'	: $aspect = '16x9';	break;
+					case '1.78'	: $aspect = '16x9';	break;
+
+					case '1.66'	: $aspect = '5x3';	break;
+					case '1.50'	: $aspect = '3x2';	break;
+					case '1.25'	: $aspect = '5x4';	break;
+
+					default		: $aspect = '16x9';
+				}
+		}
+
+
+		return $aspect; // default 16x9
+	}//end get_aspect_ratio
+
+
+
+	/**
 	* CREATE POSTERFRAME
 	* @param $AVObj
 	*	AVObj Object
