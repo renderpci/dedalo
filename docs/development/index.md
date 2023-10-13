@@ -107,7 +107,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
     To avoid conflicts and confusion, functions always declare `self` to get reference to main object.
 
-    ```js
+    ``` js
     component_text_area.prototype.init = async function(options) {
 
         const self = this
@@ -116,7 +116,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
     `self` will use in other code parts to get, set, expand, etc, the main object. And it is used instead the this to avoid confusion.
 
-    ```js
+    ``` js
     const get_content_data = function(options) {
 
         const self = options.self
@@ -128,9 +128,9 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
     }
     ```
 
-3. ES modules imports
+3. ES modules
 
-   Dédalo use a native ES modules imports only. RequireJS, commonJS modules, or other import models are not supported.
+    Dédalo use a native ES modules imports only. RequireJS, commonJS modules, or other import models are not supported.
 
     1. Import paths
 
