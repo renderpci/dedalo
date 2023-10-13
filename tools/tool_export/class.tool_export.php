@@ -169,9 +169,9 @@ class tool_export extends tool_common {
 		// full unique columns for create the head
 			$ar_columns_obj	= [];
 
-		foreach ($records as $current_locator) {
+		foreach ($records as $row) {
 
-			$ar_row_value = $this->get_grid_value($ar_ddo_map, $current_locator);
+			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
 
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
 			$row_count = max($ar_row_value->ar_row_count);
@@ -303,7 +303,6 @@ class tool_export extends tool_common {
 				return $this->ar_records;
 			}
 
-
 		// search_options
 		$section_tipo	= $this->section_tipo;
 		$model			= $this->model; // section tipo like section
@@ -317,7 +316,10 @@ class tool_export extends tool_common {
 				// sqo
 				$sqo = $this->sqo;
 				if(empty($sqo)){
-					debug_log(__METHOD__." section without sqo defined, please review the caller: $section_tipo ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." section without sqo defined, please review the caller: $section_tipo"
+						, logger::ERROR
+					);
 				}
 
 	 			// sections
@@ -335,15 +337,21 @@ class tool_export extends tool_common {
 	* GET_GRID_VALUE
 	* Builds ddgrid value object
 	* @param array $ar_ddo
-	* @param object $locator
+	* @param locator $locator
 	*
 	* @return object $value
 	*/
-	protected function get_grid_value(array $ar_ddo, object $locator) : object {
+	protected function get_grid_value(array $ar_ddo, object $row) : object {
 
 		$ar_cells		= [];
 		$ar_row_count	= [];
 		$ar_columns_obj	= [];
+
+		$locator = new locator();
+			$locator->set_section_tipo($row->section_tipo);
+			$locator->set_section_id($row->section_id);
+
+		$relations = $row->datos->relations ?? [];
 
 		foreach ($ar_ddo as $current_ddo) {
 			// children_ddo. get only the ddo that are children of the section top_tipo
@@ -408,7 +416,7 @@ class tool_export extends tool_common {
 					$current_component->request_config = [$request_config];
 
 					// inject the locator as dato for the component
-						$component_dato = array_filter($locator->datos->relations, function($el) use($ddo, $current_component){
+						$component_dato = array_filter($relations, function($el) use($ddo, $current_component){
 							if (!isset($el->from_component_tipo)) {
 								debug_log(__METHOD__
 									. " Error. Ignored WRONG locator without from_component_tipo ". PHP_EOL
