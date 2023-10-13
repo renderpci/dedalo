@@ -49,7 +49,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
         The constructor is error-prone if arguments are added or removed. Use a literal instead.
 
-        ``` js title="wrong"
+        ``` js title="wrong!"
         const a1 = new Array(1, 8, 'cookies');
         const a2 = new Array(22, 5);
         const a3 = new Array(17);
@@ -95,38 +95,44 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
 2. Functions and inheritance
 
-    Dédalo use a native javascript inheritance based in prototypes. ES6 introduce a `Class` word to generate inheritance, but this is not a new inheritance model, it is only a specific prototype model.
+    1. Prototypes instead classes
 
-    !!! note "About inheritance of JavaScript"
+        Dédalo use a native javascript inheritance based in prototypes. ES6 introduce a `Class` word to generate inheritance, but this is not a new inheritance model, it is only a specific prototype model.
 
-        [In NDN you can read](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_classes): JavaScript is a prototype-based language — an object's behaviors are specified by its own properties and its prototype's properties. [...] In JavaScript, classes are mainly an abstraction over the existing prototypical inheritance mechanism — all patterns are convertible to prototype-based inheritance. Classes themselves are normal JavaScript values as well, and have their own prototype chains.
+        !!! note "About inheritance of JavaScript"
 
-        See [Mozilla documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain) for more information
+            [In NDN you can read](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Using_classes): JavaScript is a prototype-based language — an object's behaviors are specified by its own properties and its prototype's properties. [...] In JavaScript, classes are mainly an abstraction over the existing prototypical inheritance mechanism — all patterns are convertible to prototype-based inheritance. Classes themselves are normal JavaScript values as well, and have their own prototype chains.
 
-    1. Use `self` instead `this`
+            See [Mozilla documentation](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Inheritance_and_the_prototype_chain) for more information
 
-    To avoid conflicts and confusion, functions always declare `self` to get reference to main object.
+    2. Use `self` instead `this`
 
-    ``` js
-    component_text_area.prototype.init = async function(options) {
+        To avoid conflicts and confusion, functions always declare `self` to get reference to main object.
 
-        const self = this
-    }
-    ```
+        ``` js
+        component_text_area.prototype.init = async function(options) {
 
-    `self` will use in other code parts to get, set, expand, etc, the main object. And it is used instead the this to avoid confusion.
+            const self = this
+        }
+        ```
 
-    ``` js
-    const get_content_data = function(options) {
+        `self` will use in other code parts to get, set, expand, etc, the main object. And it is used instead the this to avoid confusion.
 
-        const self = options.self
+        ``` js
+        const get_content_data = function(options) {
 
-        const data  = self.data || {}
-        const value = data.value || []
+            const self = options.self
 
-        const save_promise = await component_common.prototype.save.call(this, data);
-    }
-    ```
+            const data  = self.data || {}
+            const value = data.value || []
+
+            const save_promise = await component_common.prototype.save.call(this, data);
+        }
+        ```
+
+    3. Anonymous functions in events
+
+        Anonymous functions are avoided inside events. The function could be overlap by other anonymous functions creating an unclear situation.
 
 3. ES modules
 
@@ -149,7 +155,7 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
 
         The `.js` file extension is not optional in import paths and must always be included.
 
-        ``` js title="wrong"
+        ``` js title="wrong!"
         import '../directory/file';
         ```
 
