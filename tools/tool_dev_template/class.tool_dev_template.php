@@ -35,9 +35,6 @@ class tool_dev_template extends tool_common {
 				$tool_name	= get_called_class();
 				$config		= tool_common::get_config($tool_name);
 
-		// JSON file test
-			$file_content = file_get_contents( dirname(__FILE__) . '/sample/sample.json');
-
 		// DDB data
 			$model = RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$component = component_common::get_instance(
@@ -60,8 +57,7 @@ class tool_dev_template extends tool_common {
 				],
 				'test_value4'		=> ['array_val_1','array_val_2'],
 				'date'				=> date("Y-m-d H:i:s"),
-				'component_data'	=> $dato,
-				'file_sample_json'	=> json_handler::decode($file_content)
+				'component_data'	=> $dato
 			];
 
 		// response
