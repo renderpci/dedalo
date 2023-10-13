@@ -1545,10 +1545,6 @@ final class component_common_test extends TestCase {
 
 
 
-
-
-
-
 	/**
 	* TEST_GET_COMPONENT_JSON
 	* @return void

@@ -143,6 +143,82 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
+
+		return $ar_image_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* GET_DEFAULT_QUALITY
+	* @return string $default_quality
+	*/
+	public function get_default_quality() : string {
+
+		$default_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
+
+		return $default_quality;
+	}//end get_default_quality
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return string $original_quality
+	*/
+	public function get_original_quality() : string {
+
+		$original_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_IMAGE_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_IMAGE_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_IMAGE_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_IMAGE_FOLDER;
+	}//end get_folder
+
+
+
+	/**
 	* GET_URL
 	* Get image url for current quality
 	*
@@ -267,19 +343,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_DEFAULT_QUALITY
-	* @return string $default_quality
-	*/
-	public function get_default_quality() : string {
-
-		$default_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
-
-		return $default_quality;
-	}//end get_default_quality
-
-
-
-	/**
 	* GET_THUMB_QUALITY
 	* @return string $thumb_quality
 	*/
@@ -289,20 +352,6 @@ class component_image extends component_media_common {
 
 		return $thumb_quality;
 	}//end get_thumb_quality
-
-
-
-	/**
-	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_image_quality = DEDALO_IMAGE_AR_QUALITY;
-
-		return $ar_image_quality;
-	}//end get_ar_quality
 
 
 
@@ -326,24 +375,6 @@ class component_image extends component_media_common {
 
 		return $target_filename;
 	}//end get_target_filename
-
-
-
-	/**
-	* GET_TARGET_DIR
-	* @param string|null $quality
-	* @return string $target_dir
-	*/
-		// public function get_target_dir(?string $quality) : string {
-
-		// 	if(empty($quality)) {
-		// 		$quality = $this->get_quality();
-		// 	}
-
-		// 	$target_dir = $this->get_media_path_dir($quality);
-
-		// 	return $target_dir;
-		// }//end get_target_dir
 
 
 
@@ -1112,18 +1143,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_IMAGE_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-	/**
 	* GET_ALTERNATIVE_EXTENSIONS
 	* @return array|null $allowed_extensions
 	*/
@@ -1135,20 +1154,6 @@ class component_image extends component_media_common {
 
 		return $alternative_extensions;
 	}//end get_alternative_extensions
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = defined('DEDALO_IMAGE_QUALITY_ORIGINAL')
-			? DEDALO_IMAGE_QUALITY_ORIGINAL
-			: DEDALO_IMAGE_QUALITY_DEFAULT;
-
-		return $original_quality;
-	}//end get_original_quality
 
 
 
@@ -1825,29 +1830,6 @@ class component_image extends component_media_common {
 
 		return $response;
 	}//end build_version
-
-
-
-	/**
-	* GET_EXTENSION
-	* @return string DEDALO_IMAGE_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_IMAGE_EXTENSION;
-	}//end get_extension
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_IMAGE_FOLDER;
-	}//end get_folder
 
 
 
