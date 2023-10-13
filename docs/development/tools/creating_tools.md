@@ -21,13 +21,13 @@ Every tool has his own directory named correctly and it will has:
 ├── tool_numisdata_import
     ├── class.tool_numisdata_import.php
     ├── css
-    │   └── tool_numisdata_import.css
+    │   └── tool_numisdata_import.css
     ├── img
-    │   └── icon.svg
+    │   └── icon.svg
     ├── js
-    │   ├── index.js
-    │   ├── render_tool_numisdata_import.js
-    │   └── tool_numisdata_import.js
+    │   ├── index.js
+    │   ├── render_tool_numisdata_import.js
+    │   └── tool_numisdata_import.js
     └── register.json
 ```
 
@@ -72,9 +72,9 @@ All examples use the fictitious name of : `tool_numisdata_import`
 
 2. JavaScript files
 
-   The main file will use the full name of the tool as:
+    The main file will use the full name of the tool as:
 
-   > tool_numisdata_import.js
+    > tool_numisdata_import.js
 
     Render files will add the prefix `render` to the tool name as:
 
@@ -82,7 +82,7 @@ All examples use the fictitious name of : `tool_numisdata_import`
 
     Is possible to define other render files or views naming it between render word and the tool name as:
 
-     > render_list_tool_numisdata_import.js
+    > render_list_tool_numisdata_import.js
 
 3. CSS files
 
