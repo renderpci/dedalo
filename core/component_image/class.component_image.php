@@ -793,9 +793,9 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_THUMB_URL
-	* @return string $image_thumb_url
+	* @return string|null $image_thumb_url
 	*/
-	public function get_thumb_url() : string {
+	public function get_thumb_url() : ?string {
 
 		# target data (target quality is thumb)
 		$image_thumb_url = $this->get_url(

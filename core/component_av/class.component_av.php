@@ -275,6 +275,18 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		return $this->get_posterframe_url();
+	}//end get_thumb_url
+
+
+
+	/**
 	* GET_SUBTITLES_PATH
 	* @param string $lang = DEDALO_DATA_LANG
 	* @return string $subtitles_path
