@@ -244,7 +244,7 @@ class component_av extends component_media_common {
 	* @param bool $avoid_cache = false
 	* @return string $posterframe_url
 	*/
-	public function get_posterframe_url(bool $test_file=true, bool $absolute=false, bool $avoid_cache=false) : string {
+	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : string {
 
 		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
 		$file_name			= $this->get_posterframe_file_name();
@@ -271,6 +271,18 @@ class component_av extends component_media_common {
 
 		return $posterframe_url;
 	}//end get_posterframe_url
+
+
+
+	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		return $this->get_posterframe_url();
+	}//end get_thumb_url
 
 
 
