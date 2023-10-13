@@ -253,6 +253,7 @@ const get_table_columns = function(self, current_data) {
 						)
 						break;
 					case 'av':
+					case '3d':
 						column_nodes.push(
 							render_av_column(current_data)
 						)

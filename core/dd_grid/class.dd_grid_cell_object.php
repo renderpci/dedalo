@@ -421,8 +421,8 @@ class dd_grid_cell_object {
 
 		}else{
 
-			// case columns
-			
+			// columns case
+
 			$ar_column_values	= (array)$dd_grid->value;
 			$ar_fallback_values	= (array)$dd_grid->fallback_value;
 
