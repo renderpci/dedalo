@@ -171,6 +171,7 @@ class component_media_common extends component_common {
 		// current_url. get from dato
 			$dato = $this->get_dato();
 			if(isset($dato)){
+
 				$element_quality = ($this->mode==='edit')
 					? $this->get_default_quality()
 					: $this->get_thumb_quality();
@@ -189,7 +190,9 @@ class component_media_common extends component_common {
 			$label = $this->get_label();
 
 		// class_list
-			$class_list = $ddo->class_list ?? null;
+			$class_list = isset($ddo)
+				? ($ddo->class_list ?? null)
+				: null;
 
 		// value
 			$grid_cell_object = new dd_grid_cell_object();

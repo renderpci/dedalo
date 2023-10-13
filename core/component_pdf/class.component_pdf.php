@@ -103,7 +103,7 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_GRID_VALUE
+	* GET_GRID_VALUE (USE MEDIA_COMMON->get_grid_value INSTEAD !)
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
@@ -112,54 +112,54 @@ class component_pdf extends component_media_common {
 	*
 	* @return dd_grid_cell_object $grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+		// public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
-		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$column_obj = isset($this->column_obj)
-				? $this->column_obj
-				: (object)[
-					'id' => $this->section_tipo.'_'.$this->tipo
-				  ];
+		// 	// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
+		// 		$column_obj = isset($this->column_obj)
+		// 			? $this->column_obj
+		// 			: (object)[
+		// 				'id' => $this->section_tipo.'_'.$this->tipo
+		// 			  ];
 
-		// current_url. get from dato
-			$dato = $this->get_dato();
-			if(isset($dato)){
-				$element_quality = ($this->mode==='edit')
-					? $this->get_default_quality()
-					: $this->get_thumb_quality();
+		// 	// current_url. get from dato
+		// 		$dato = $this->get_dato();
+		// 		if(isset($dato)){
+		// 			$element_quality = ($this->mode==='edit')
+		// 				? $this->get_default_quality()
+		// 				: $this->get_thumb_quality();
 
-				$current_url = $this->get_url(
-					$element_quality, // string quality
-					false, // bool test_file
-					true,  // bool absolute
-					false // bool default_add
-				);
-			}else{
-				$current_url = '';
-			}
+		// 			$current_url = $this->get_url(
+		// 				$element_quality, // string quality
+		// 				false, // bool test_file
+		// 				true,  // bool absolute
+		// 				false // bool default_add
+		// 			);
+		// 		}else{
+		// 			$current_url = '';
+		// 		}
 
-		// label
-			$label = $this->get_label();
+		// 	// label
+		// 		$label = $this->get_label();
 
-		// class_list
-			$class_list = isset($ddo)
-				? ($ddo->class_list ?? null)
-				: null;
+		// 	// class_list
+		// 		$class_list = isset($ddo)
+		// 			? ($ddo->class_list ?? null)
+		// 			: null;
 
-		// value
-			$grid_cell_object = new dd_grid_cell_object();
-				$grid_cell_object->set_type('column');
-				$grid_cell_object->set_label($label);
-				$grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$grid_cell_object->set_cell_type('text');
-				if(isset($class_list)){
-					$grid_cell_object->set_class_list($class_list);
-				}
-				$grid_cell_object->set_value([$current_url]);
+		// 	// value
+		// 		$grid_cell_object = new dd_grid_cell_object();
+		// 			$grid_cell_object->set_type('column');
+		// 			$grid_cell_object->set_label($label);
+		// 			$grid_cell_object->set_ar_columns_obj([$column_obj]);
+		// 			$grid_cell_object->set_cell_type('text');
+		// 			if(isset($class_list)){
+		// 				$grid_cell_object->set_class_list($class_list);
+		// 			}
+		// 			$grid_cell_object->set_value([$current_url]);
 
 
-		return $grid_cell_object;
-	}//end get_grid_value
+		// 	return $grid_cell_object;
+		// }//end get_grid_value
 
 
 

@@ -110,22 +110,31 @@ class component_av extends component_media_common {
 					'id' => $this->section_tipo.'_'.$this->tipo
 				  ];
 
-		// dato
-			$this->get_dato();
-
 		// quality
 			$quality = $this->get_default_quality();
 
+		// dato
+			$dato = $this->get_dato();
+			if(isset($dato)){
+
+				$current_url = ($this->mode==='edit')
+					? $this->get_url($quality)
+					: $this->get_posterframe_url();
+
+			}else{
+				$current_url = '';
+			}
+
 		// data item
-			$item  = new stdClass();
-				$item->posterframe_url = $this->get_posterframe_url(
-					true, // bool test_file
-					false, // bool absolute
-					false // bool avoid_cache
-				);
-				$item->url = $this->quality_file_exist( $quality )
-					? $this->get_url()
-					: null;
+			// $item  = new stdClass();
+			// 	$item->posterframe_url = $this->get_posterframe_url(
+			// 		true, // bool test_file
+			// 		false, // bool absolute
+			// 		false // bool avoid_cache
+			// 	);
+			// 	$item->url = $this->quality_file_exist( $quality )
+			// 		? $this->get_url()
+			// 		: null;
 
 		// label
 			$label = $this->get_label();
@@ -135,8 +144,8 @@ class component_av extends component_media_common {
 				$grid_cell_object->set_type('column');
 				$grid_cell_object->set_label($label);
 				$grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$grid_cell_object->set_cell_type('av');
-				$grid_cell_object->set_value([$item]);
+				$grid_cell_object->set_cell_type('img');
+				$grid_cell_object->set_value([$current_url]);
 
 
 		return $grid_cell_object;
