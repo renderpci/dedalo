@@ -30,6 +30,30 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* GET_DEFAULT_QUALITY
+	* @return string DEDALO_3D_QUALITY_DEFAULT
+	*/
+	public function get_default_quality() : string {
+
+		return DEDALO_3D_QUALITY_DEFAULT;
+	}//end get_default_quality
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return string $original_quality
+	*/
+	public function get_original_quality() : string {
+
+		$original_quality = DEDALO_3D_QUALITY_ORIGINAL;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_3D_EXTENSION from config
 	*/
@@ -37,6 +61,19 @@ class component_3d extends component_media_common {
 
 		return $this->extension ?? DEDALO_3D_EXTENSION;
 	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_3D_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
 
 
 
@@ -130,17 +167,6 @@ class component_3d extends component_media_common {
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_DEFAULT_QUALITY
-	* @return string DEDALO_3D_QUALITY_DEFAULT
-	*/
-	public function get_default_quality() : string {
-
-		return DEDALO_3D_QUALITY_DEFAULT;
-	}//end get_default_quality
 
 
 
@@ -286,7 +312,7 @@ class component_3d extends component_media_common {
 		$additional_path		= $this->additional_path;
 		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
 
-		$file	= DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
+		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
 
 		// check file already exists
 			if(!file_exists($file)) {
@@ -334,7 +360,7 @@ class component_3d extends component_media_common {
 			if( !file_exists($target_dir) ) {
 				debug_log(__METHOD__.
 					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-					logger::ERROR
+					logger::WARNING
 				);
 				return null;
 			}
@@ -523,32 +549,6 @@ class component_3d extends component_media_common {
 
 		return true;
 	}//end restore_component_media_files
-
-
-
-	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_3D_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = DEDALO_3D_QUALITY_ORIGINAL;
-
-		return $original_quality;
-	}//end get_original_quality
 
 
 

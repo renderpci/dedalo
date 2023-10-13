@@ -16,6 +16,82 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined av qualities in Dédalo config
+	* @return array $ar_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_quality = DEDALO_AV_AR_QUALITY;
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* GET_DEFAULT_QUALITY
+	* @return string $default_quality
+	*/
+	public function get_default_quality() : string {
+
+		$default_quality = DEDALO_AV_QUALITY_DEFAULT;
+
+		return $default_quality;
+	}//end get_default_quality
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return string $original_quality
+	*/
+	public function get_original_quality() : string {
+
+		$original_quality = DEDALO_AV_QUALITY_ORIGINAL;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_AV_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_AV_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_AV_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_AV_FOLDER;
+	}//end get_folder
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
@@ -93,56 +169,6 @@ class component_av extends component_media_common {
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_DEFAULT_QUALITY
-	* @return string $default_quality
-	*/
-	public function get_default_quality() : string {
-
-		$default_quality = DEDALO_AV_QUALITY_DEFAULT;
-
-		return $default_quality;
-	}//end get_default_quality
-
-
-
-	/**
-	* GET_AR_QUALITY
-	* Get the list of defined av qualities in Dédalo config
-	* @return array $ar_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_quality = DEDALO_AV_AR_QUALITY;
-
-		return $ar_quality;
-	}//end get_ar_quality
-
-
-
-	/**
-	* GET_EXTENSION
-	* @return string DEDALO_AV_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_AV_EXTENSION;
-	}//end get_extension
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_AV_FOLDER;
-	}//end get_folder
 
 
 
@@ -295,7 +321,7 @@ class component_av extends component_media_common {
 			if( !file_exists($target_dir) ) {
 				debug_log(__METHOD__.
 					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-					logger::ERROR
+					logger::WARNING
 				);
 				return null;
 			}
@@ -637,32 +663,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_AV_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = DEDALO_AV_QUALITY_ORIGINAL;
-
-		return $original_quality;
-	}//end get_original_quality
-
-
-
-	/**
 	* MOVE_ZIP_FILE
 	* Used to move zip files like compressed DVD
 	* @param string $tmp_name
@@ -876,6 +876,7 @@ class component_av extends component_media_common {
 						// $quality_default_target_file = $quality_default_AVObj->get_media_filepath();
 						$default_quality				= $this->get_default_quality();
 						$quality_default_target_file	= $this->get_media_filepath($default_quality);
+
 						// if ( !file_exists($quality_default_target_file) ) {
 							$source_file = $full_file_path; // actually full original path and name
 							if ( !file_exists($source_file) ) {
@@ -1000,6 +1001,7 @@ class component_av extends component_media_common {
 				if ($this->quality===$original_quality) {
 					// update upload file info
 					$dato = $this->get_dato();
+
 					$key = 0;
 					if (!isset($dato[$key])) {
 						$dato[$key] = new stdClass();
@@ -1331,7 +1333,7 @@ class component_av extends component_media_common {
 					'parent'	=> $this->section_id,
 					'top_id'	=> TOP_ID ?? null,
 					'top_tipo'	=> TOP_TIPO ?? null,
-					'id'	=> $id,
+					'id'		=> $id,
 					'quality'	=> $quality
 				]
 			);

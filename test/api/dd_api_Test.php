@@ -888,6 +888,10 @@ final class dd_api_Test extends TestCase {
 			// dump($_ENV['DEDALO_LAST_ERROR'], ' DEDALO_ERRORS ++ '.to_string());
 			// dump($response, ' response ++ '.to_string());
 
+		if (!empty($_ENV['DEDALO_LAST_ERROR'])) {
+			dump($_ENV['DEDALO_LAST_ERROR'], ' $_ENV[DEDALO_LAST_ERROR] ++ '.to_string());
+		}
+
 		// expected running without errors
 		$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
 

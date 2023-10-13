@@ -15,6 +15,20 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_quality = DEDALO_SVG_AR_QUALITY;
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
 	* GET_DEFAULT_QUALITY
 	* @return string
 	*/
@@ -26,16 +40,39 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
+	* GET_ORIGINAL_QUALITY
+	* @return $original_quality
 	*/
-	public function get_ar_quality() : array {
+	public function get_original_quality() : string {
 
-		$ar_quality = DEDALO_SVG_AR_QUALITY;
+		$original_quality = DEDALO_SVG_QUALITY_ORIGINAL;
 
-		return $ar_quality;
-	}//end get_ar_quality
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_SVG_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_SVG_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_SVG_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
 
 
 
@@ -92,10 +129,13 @@ class component_svg extends component_media_common {
 			$image_id = $this->get_id();
 
 		// url
-			$additional_path	= $this->get_additional_path();
+			$additional_path	= $this->additional_path;
 			$initial_media_path	= $this->get_initial_media_path();
-			$file_name			= $image_id .'.'. DEDALO_SVG_EXTENSION;
-			$image_url			= DEDALO_MEDIA_URL . DEDALO_SVG_FOLDER . $initial_media_path . '/' . $quality . $additional_path . '/' . $file_name;
+			$folder				= $this->get_folder(); // like DEDALO_SVG_FOLDER
+			$extension			= $this->get_extension();
+			$file_name			= $image_id .'.'. $extension;
+
+			$image_url = DEDALO_MEDIA_URL . $folder . $initial_media_path . '/' . $quality . $additional_path . '/' . $file_name;
 
 		// File exists test : If not, show '0' dedalo image logo
 			if($test_file===true) {
@@ -142,32 +182,6 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_SVG_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = DEDALO_SVG_QUALITY_ORIGINAL;
-
-		return $original_quality;
-	}//end get_original_quality
-
-
-
-	/**
 	* GET_PREVIEW_URL
 	* @return string $url
 	*/
@@ -182,17 +196,6 @@ class component_svg extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
-
-
-
-	/**
-	* GET_EXTENSION
-	* @return string DEDALO_SVG_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_SVG_EXTENSION;
-	}//end get_extension
 
 
 
@@ -405,6 +408,7 @@ class component_svg extends component_media_common {
 
 					// get existing files data
 						$file_name			= $component->get_name();
+						$folder				= $component->get_folder();
 						$source_quality		= $component->get_original_quality();
 						$additional_path	= $component->additional_path;
 						$initial_media_path	= $component->initial_media_path;
@@ -412,14 +416,14 @@ class component_svg extends component_media_common {
 							false // bool exclude_converted
 						) ?? $component->get_extension(); // 'svg' fallback is expected
 
-						$base_path	= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
+						$base_path	= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
 						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
-								$base_path		= DEDALO_SVG_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
+								$base_path		= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
 								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
@@ -506,61 +510,6 @@ class component_svg extends component_media_common {
 
 		return $response;
 	}//end update_dato_version
-
-
-
-	/**
-	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
-	* @see tool_time_machine::recover_section_from_time_machine
-	* @return bool
-	*/
-		// public function restore_component_media_files() : bool {
-
-		// 	// element restore
-		// 	$ar_quality	= $this->get_ar_quality();
-		// 	$extension	= $this->get_extension();
-		// 	foreach ($ar_quality as $current_quality) {
-
-		// 		// media_path
-		// 		$media_path	= $this->get_media_path_dir($current_quality) . '/deleted';
-		// 		$id			= $this->get_id();
-
-		// 		$file_pattern	= $media_path .'/'. $id .'_*.'. $extension;
-		// 		$ar_files		= glob($file_pattern);
-		// 		if (empty($ar_files)) {
-		// 			debug_log(__METHOD__
-		// 				." No files to restore were found for id:$id. Nothing was restored (1) "
-		// 				, logger::WARNING
-		// 			);
-		// 			continue; // Skip
-		// 		}
-
-		// 		natsort($ar_files);	# sort the files from newest to oldest
-		// 		$last_file_path	= end($ar_files);
-		// 		$new_file_path	= $this->get_media_filepath($current_quality);
-
-		// 		// move file
-		// 		if( !rename($last_file_path, $new_file_path) ) {
-		// 			debug_log(__METHOD__
-		// 				. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
-		// 				. 'last_file_path: '. $last_file_path . PHP_EOL
-		// 				. 'new_file_path: '. $new_file_path
-		// 				, logger::ERROR
-		// 			);
-		// 			// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-		// 		}
-
-		// 		debug_log(__METHOD__
-		// 			." Moved file $last_file_path to $new_file_path "
-		// 			, logger::WARNING
-		// 		);
-		// 	}//end foreach
-
-
-		// 	return true;
-		// }//end restore_component_media_files
 
 
 

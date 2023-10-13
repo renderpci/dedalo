@@ -1310,7 +1310,12 @@ class component_media_common extends component_common {
 				// ! more than one file are found
 				if(SHOW_DEBUG===true) {
 					dump($ar_originals, "ar_originals ".to_string($ar_originals));
-					trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+					// trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
+					debug_log(__METHOD__
+						. " ERROR (DEBUG ONLY): Current quality have more than one file.  " . PHP_EOL
+						. ' ar_originals: ' . to_string($ar_originals)
+						, logger::ERROR
+					);
 				}
 			}
 
@@ -1350,7 +1355,7 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_MEDIA_url_DIR
+	* GET_MEDIA_URL_DIR
 	* 	Creates the relative URL path in current quality as
 	* 	'/dedalo/media/pd/standard'
 	* @param string $quality
