@@ -398,6 +398,18 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		return $this->get_pdf_thumb(false, false);
+	}//end get_thumb_url
+
+
+
+	/**
 	* CREATE_IMAGE
 	*
 	* Once the full path is specified, the command is working as desired.

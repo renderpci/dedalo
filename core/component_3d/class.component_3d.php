@@ -276,6 +276,18 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		return $this->get_posterframe_url();
+	}//end get_thumb_url
+
+
+
+	/**
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
