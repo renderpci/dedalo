@@ -16,6 +16,80 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined av qualities in Dédalo config
+	* @return array $ar_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_quality = DEDALO_3D_AR_QUALITY;
+
+		return $ar_quality;
+	}//end get_ar_quality
+
+
+
+	/**
+	* GET_DEFAULT_QUALITY
+	* @return string DEDALO_3D_QUALITY_DEFAULT
+	*/
+	public function get_default_quality() : string {
+
+		return DEDALO_3D_QUALITY_DEFAULT;
+	}//end get_default_quality
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return string $original_quality
+	*/
+	public function get_original_quality() : string {
+
+		$original_quality = DEDALO_3D_QUALITY_ORIGINAL;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_3D_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_3D_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_3D_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_3D_FOLDER;
+	}//end get_folder
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
@@ -34,22 +108,31 @@ class component_3d extends component_media_common {
 					'id' => $this->section_tipo.'_'.$this->tipo
 				  ];
 
-		// dato
-			$this->get_dato();
-
 		// quality
 			$quality = $this->get_default_quality();
 
+		// dato. get from dato
+			$dato = $this->get_dato();
+			if(isset($dato)){
+
+				$current_url = ($this->mode==='edit')
+					? $this->get_url($quality)
+					: $this->get_posterframe_url();
+
+			}else{
+				$current_url = '';
+			}
+
 		// data item
-			$item  = new stdClass();
-				$item->posterframe_url = $this->get_posterframe_url(
-					true, // bool test_file
-					false, // bool absolute
-					false // bool avoid_cache
-				);
-				$item->url = $this->quality_file_exist( $quality )
-					? $this->get_url()
-					: null;
+			// $item  = new stdClass();
+			// 	$item->posterframe_url = $this->get_posterframe_url(
+			// 		false, // bool test_file
+			// 		false, // bool absolute
+			// 		false // bool avoid_cache
+			// 	);
+			// 	$item->url = $this->quality_file_exist( $quality )
+			// 		? $this->get_url()
+			// 		: null;
 
 		// label
 			$label = $this->get_label();
@@ -59,8 +142,8 @@ class component_3d extends component_media_common {
 				$grid_cell_object->set_type('column');
 				$grid_cell_object->set_label($label);
 				$grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$grid_cell_object->set_cell_type('3d');
-				$grid_cell_object->set_value([$item]);
+				$grid_cell_object->set_cell_type('img');
+				$grid_cell_object->set_value([$current_url]);
 
 
 		return $grid_cell_object;
@@ -88,22 +171,11 @@ class component_3d extends component_media_common {
 
 		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
 
-		$valor_export = $av_file_path .",".$posterframe_file_path;
+		$valor_export = $av_file_path .','. $posterframe_file_path;
 
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_DEFAULT_QUALITY
-	* @return string DEDALO_3D_QUALITY_DEFAULT
-	*/
-	public function get_default_quality() : string {
-
-		return DEDALO_3D_QUALITY_DEFAULT;
-	}//end get_default_quality
 
 
 
@@ -114,14 +186,14 @@ class component_3d extends component_media_common {
 	* @param string|null $quality = null
 	* @return string|null $url
 	*/
-	public function get_url(?string $quality=null) : ?string {
+	public function get_url(?string $quality=null) : string {
 
 		// quality fallback to default
 			if(empty($quality)) {
 				$quality = $this->get_quality();
 			}
 
-		// item id like rsc201_rsc202_9.glb
+		// item id like 'rsc201_rsc202_9'
 			$id = $this->get_id();
 
 		// url
@@ -175,7 +247,6 @@ class component_3d extends component_media_common {
 	*/
 	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : string {
 
-		$id					= $this->get_id();
 		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
 		$file_name			= $this->get_posterframe_file_name();
 		$additional_path	= $this->additional_path;
@@ -205,6 +276,76 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* CREATE_POSTERFRAME
+	* Creates a image 'posterframe' from the default quality of current video file
+	*
+	* @param float $current_time
+	* 	A double-precision floating-point value indicating the current playback time in seconds.
+	* 	From HML5 video element command 'currentTime'
+	* @param string|null $quality
+	* @param array|string $ar_target
+	* 	Optional array value with forced target destination path and file name
+	* @return string $command_response
+	* 	FFMPEG terminal command response
+	*/
+	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) {
+
+		debug_log(__METHOD__
+			. " Sorry. This method is not implemented yet " . PHP_EOL
+			, logger::ERROR
+		);
+
+		// $reelID		= $this->get_id();
+		// $quality	= $target_quality ?? $this->get_quality_default();
+
+		// # AVObj
+		// $AVObj = new AVObj($reelID, $quality);
+
+		// # Ffmpeg
+		// $Ffmpeg				= new Ffmpeg();
+		// $command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
+
+		// return $command_response;
+	}//end create_posterframe
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* 	Remove the file 'posterframe' from the disk
+	* @return bool
+	*/
+	public function delete_posterframe() : bool {
+
+		$folder					= $this->get_folder();
+		$additional_path		= $this->additional_path;
+		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
+
+		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
+
+		// check file already exists
+			if(!file_exists($file)) {
+				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
+				return false;
+			}
+
+		 // delete file
+			if(!unlink($file)) {
+				debug_log(__METHOD__
+					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
+					. ' file: ' . $file
+					, logger::ERROR
+				);
+				return false;
+			}
+
+
+		return true;
+	}//end delete_posterframe
+
+
+
+	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Returns the full path of the original file if exists
 	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
@@ -225,8 +366,12 @@ class component_3d extends component_media_common {
 
 		// file do not exists case
 			$target_dir = $this->get_target_dir($quality);
-			if(!file_exists($target_dir)) {
-				return $result;
+			if( !file_exists($target_dir) ) {
+				debug_log(__METHOD__.
+					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
+					logger::WARNING
+				);
+				return null;
 			}
 
 		// ar_originals
@@ -279,9 +424,13 @@ class component_3d extends component_media_common {
 			$result = $target_dir.'/'.$ar_originals[0];
 		}else{
 			// Error. More than one original found
+			debug_log(__METHOD__
+				. " ERROR (DEBUG ONLY): Current quality have more than one file " . PHP_EOL
+				. to_string($ar_originals)
+				, logger::ERROR
+			);
 			if(SHOW_DEBUG===true) {
 				dump($ar_originals, "ar_originals ".to_string($ar_originals));
-				trigger_error("ERROR (DEBUG ONLY): Current quality have more than one file. ".to_string($ar_originals));
 			}
 		}
 
@@ -295,69 +444,19 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_SOURCE_QUALITY_TO_BUILD (! moved to media_common)
-	* Iterate array DEDALO_3D_AR_QUALITY (Order by quality big to small)
-	* @return string|null $current_quality
-	*/
-		// public function get_source_quality_to_build(string $target_quality) : ?string {
-
-		// 	$ar_quality			= $this->get_ar_quality();
-		// 	$original_quality	= $this->get_original_quality();
-		// 	foreach($ar_quality as $current_quality) {
-
-		// 		if($target_quality===$original_quality) {
-		// 			continue;
-		// 		}
-
-		// 		# Current file
-		// 		$filename		= $this->get_original_file_path($current_quality);
-		// 		$file_exists	= empty($filename)
-		// 			? false
-		// 			: file_exists($filename);
-
-		// 		if ($current_quality!==$target_quality && $file_exists) {
-		// 			return $current_quality;
-		// 		}
-		// 	}//end foreach($ar_quality as $quality)
-
-
-		// 	return null;
-		// }//end get_source_quality_to_build
-
-
-
-	/**
-	* GET_AR_ALL_FILES_BY_QUALITY
-	* @param array $ar_quality optional
-	* @return array $ar_all_files_by_quality
-	*/
-		// public function get_ar_all_files_by_quality( array $ar_quality=null ) : array {
-
-		// 	if (empty($ar_quality)) {
-		// 		$ar_quality = DEDALO_3D_AR_QUALITY;
-		// 	}
-
-		// 	$ar_all_files_by_quality=array();
-		// 	foreach ($ar_quality as $current_quality) {
-		// 		$ar_all_files_by_quality[$current_quality] = $this->get_original_file_path($current_quality);
-		// 	}
-
-		// 	return (array)$ar_all_files_by_quality;
-		// }//end get_ar_all_files_by_quality
-
-
-
-	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
 	* Is triggered wen section that contains media elements is deleted
 	* @see section:remove_section_media_files
+	*
+	* @param array $ar_quality=[]
+	* @param bool $remove_posterframe=true
+	* @return bool
 	*/
 	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
 
 		// files remove
 			parent::remove_component_media_files($ar_quality);
-
 
 		// posterframe remove (default is true)
 			if ($remove_posterframe===true) {
@@ -371,9 +470,12 @@ class component_3d extends component_media_common {
 					// delete dir
 						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
 						if( !is_dir($folder_path_del) ) {
-							$create_dir = mkdir($folder_path_del, 0777,true);
+							$create_dir = mkdir($folder_path_del, 0775, true);
 							if(!$create_dir) {
-								trigger_error("Error on read or create directory \"deleted\". Permission denied");
+								debug_log(__METHOD__
+									." Error on read or create directory \"deleted\". Permission denied ".to_string($folder_path_del)
+									, logger::ERROR
+								);
 								return false;
 							}
 						}
@@ -382,8 +484,8 @@ class component_3d extends component_media_common {
 						$date = date("Y-m-d_Hi");
 
 					// move/rename file
-						$reelID				= $this->get_id();
-						$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
+						$id					= $this->get_id();
+						$media_path_moved	= $folder_path_del . "/$id" . '_deleted_' . $date . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
 						if( !rename($media_path, $media_path_moved) ) {
 							debug_log(__METHOD__
 								. " Error on move files (posterframe) to folder \"deleted\" . Permission denied . The files are not deleted " . PHP_EOL
@@ -394,7 +496,10 @@ class component_3d extends component_media_common {
 							return false;
 						}
 
-					debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
+					debug_log(__METHOD__
+						." Moved file \n$media_path to \n$media_path_moved "
+						, logger::DEBUG
+					);
 				}
 			}//end if ($remove_posterframe===true)
 
@@ -409,42 +514,12 @@ class component_3d extends component_media_common {
 	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
+	* @return bool
 	*/
 	public function restore_component_media_files() : bool {
 
 		// AV restore
-			// $ar_quality = DEDALO_3D_AR_QUALITY;
-			// foreach ($ar_quality as $current_quality) {
-
-			// 	# media_path
-			// 	$media_path = $this->get_video_path($current_quality);
-			// 	$media_path = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-			// 	$id 	= $this->get_id();
-			// 	if(SHOW_DEBUG===true) {
-			// 		#dump($media_path, "media_path current_quality:$current_quality - get_id:$id");	#continue;
-			// 	}
-			// 	$file_pattern 	= $media_path .'/'. $id .'_*.'. $this->get_extension();
-			// 	$ar_files 		= glob($file_pattern);
-			// 	if(SHOW_DEBUG===true) {
-			// 		#dump($ar_files, ' ar_files');#continue;
-			// 	}
-			// 	if (empty($ar_files)) {
-			// 		debug_log(__METHOD__." No files to restore were found for id:$id. Nothing was restored (1)");
-			// 		continue; // Skip
-			// 	}
-			// 	natsort($ar_files);	# sort the files from newest to oldest
-			// 	$last_file_path = end($ar_files);
-			// 	$new_file_path 	= $this->get_video_path($current_quality);
-			// 	if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-
-			// 	if(SHOW_DEBUG===true) {
-			// 		$msg=__METHOD__." Moved file \n$last_file_path to \n$new_file_path";
-			// 		debug_log($msg);
-			// 		#dump($msg, ' msg');
-			// 	}
-			// }#end foreach ($ar_quality as $current_quality)
 			parent::restore_component_media_files();
-
 
 		// Posterframe restore
 			$posterframe_path	= $this->get_posterframe_path();
@@ -483,34 +558,6 @@ class component_3d extends component_media_common {
 
 		return true;
 	}//end restore_component_media_files
-
-
-
-	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_3D_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = defined('DEDALO_3D_QUALITY_ORIGINAL')
-			? DEDALO_3D_QUALITY_ORIGINAL
-			: DEDALO_3D_QUALITY_DEFAULT;
-
-		return $original_quality;
-	}//end get_original_quality
 
 
 
@@ -559,9 +606,9 @@ class component_3d extends component_media_common {
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// short vars
-			$original_file_name			= $file_data->original_file_name;	// kike "my video785.mp4"
-			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
-			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.mp4"
+			$original_file_name			= $file_data->original_file_name;	// like "my file85.glb"
+			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/3d/web/test175_test65_1.glb"
+			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.glb"
 			$original_normalized_name	= $full_file_name;
 
 		// debug
@@ -679,47 +726,10 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_AR_QUALITY
-	* Get the list of defined av qualities in Dédalo config
-	* @return array $ar_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_quality = DEDALO_3D_AR_QUALITY;
-
-		return $ar_quality;
-	}//end get_ar_quality
-
-
-
-	/**
-	* GET_EXTENSION
-	* @return string DEDALO_3D_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_3D_EXTENSION;
-	}//end get_extension
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_3D_FOLDER;
-	}//end get_folder
-
-
-
-	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_3d->remove_component_media_files
-	*
+	* @param string $quality
 	* @return object $response
 	*/
 	public function delete_file(string $quality) : object {
@@ -847,76 +857,6 @@ class component_3d extends component_media_common {
 
 		return $response;
 	}//end delete_file
-
-
-
-	/**
-	* CREATE_POSTERFRAME
-	* Creates a image 'posterframe' from the default quality of current video file
-	*
-	* @param float $current_time
-	* 	A double-precision floating-point value indicating the current playback time in seconds.
-	* 	From HML5 video element command 'currentTime'
-	* @param string|null $quality
-	* @param array|string $ar_target
-	* 	Optional array value with forced target destination path and file name
-	* @return string $command_response
-	* 	FFMPEG terminal command response
-	*/
-	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) {
-
-		debug_log(__METHOD__
-			. " Sorry. This method is not implemented yet " . PHP_EOL
-			, logger::ERROR
-		);
-
-		// $reelID		= $this->get_id();
-		// $quality	= $target_quality ?? $this->get_quality_default();
-
-		// # AVObj
-		// $AVObj = new AVObj($reelID, $quality);
-
-		// # Ffmpeg
-		// $Ffmpeg				= new Ffmpeg();
-		// $command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
-
-		// return $command_response;
-	}//end create_posterframe
-
-
-
-	/**
-	* DELETE_POSTERFRAME
-	* 	Remove the file 'posterframe' from the disk
-	* @return bool
-	*/
-	public function delete_posterframe() : bool {
-
-		$name				= $this->get_name();
-		$folder				= $this->get_folder();
-		$additional_path	= $this->additional_path;
-
-		$file	= DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $name . '.' . DEDALO_AV_POSTERFRAME_EXTENSION;
-
-		// check file already exists
-			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
-				return false;
-			}
-
-		 // delete file
-			if(!unlink($file)) {
-				debug_log(__METHOD__
-					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
-					. ' file: ' . $file
-					, logger::ERROR
-				);
-				return false;
-			}
-
-
-		return true;
-	}//end delete_posterframe
 
 
 

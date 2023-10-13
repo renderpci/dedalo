@@ -11,32 +11,25 @@ class tool_posterframe extends tool_common {
 
 	/**
 	* CREATE_POSTERFRAME
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function create_posterframe(object $request_options) : object {
+	public static function create_posterframe(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_id	= null;
-				$options->section_tipo	= null;
-				$options->current_time	= 0;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
-			$tipo			= $options->tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
-			// current_time is a double-precision floating-point value indicating the current playback time in seconds.
-			$current_time	= $options->current_time;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id	?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			// current_time is a double-precision floating-point value indicating
+			// the current playback time in seconds.
+			$current_time	= $options->current_time ?? 0;
 
 		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -46,11 +39,13 @@ class tool_posterframe extends tool_common {
 				$section_tipo
 			);
 
+		// result boolean
 			$result = $component->create_posterframe($current_time);
 
 		// response
 			$response->result	= $result;
 			$response->msg		= 'Request done ['.__FUNCTION__.']';
+
 
 		return $response;
 	}//end create_posterframe
@@ -59,29 +54,22 @@ class tool_posterframe extends tool_common {
 
 	/**
 	* DELETE_POSTERFRAME
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function delete_posterframe(object $request_options) : object {
+	public static function delete_posterframe(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_id	= null;
-				$options->section_tipo	= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$tipo			= $options->tipo;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;
 
 		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			$component	= component_common::get_instance(
 				$model,
 				$tipo,
@@ -91,11 +79,13 @@ class tool_posterframe extends tool_common {
 				$section_tipo
 			);
 
+		// result boolean
 			$result = $component->delete_posterframe();
 
 		// response
 			$response->result	= $result;
 			$response->msg		= 'Request done ['.__FUNCTION__.']';
+
 
 		return $response;
 	}//end delete_posterframe
@@ -111,22 +101,24 @@ class tool_posterframe extends tool_common {
 	*/
 	public static function create_identifying_image(object $options) : object {
 
-		// options
-			$tipo			= $options->tipo ?? null;
-			$section_tipo	= $options->section_tipo ?? null;
-			$section_id		= $options->section_id	?? null;
-			$item_value		= $options->item_value	?? null;
-			$current_time	= $options->current_time ?? null;
-
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.'] ';
 
-		// component_portal
-		// Create a new section and attach it to the target portal
-			$component_portal_model	= RecordObj_dd::get_modelo_name_by_tipo($item_value->component_portal, true);
-			$component_portal		= component_common::get_instance(
+		// options
+			$tipo			= $options->tipo ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$item_value		= $options->item_value ?? null;
+			$current_time	= $options->current_time ?? null;
+
+		// component_portal. Create a new section and attach it to the target portal
+			$component_portal_model	= RecordObj_dd::get_modelo_name_by_tipo(
+				$item_value->component_portal,
+				true
+			);
+			$component_portal = component_common::get_instance(
 				$component_portal_model,
 				$item_value->component_portal,
 				$item_value->section_id,
@@ -134,12 +126,15 @@ class tool_posterframe extends tool_common {
 				DEDALO_DATA_NOLAN,
 				$item_value->section_tipo
 			);
+
 			// portal_section_target_tipo
 				$ar_portal_section_target_tipo = $component_portal->get_ar_target_section_tipo(); // First only
 				if (empty($ar_portal_section_target_tipo)) {
-					$msg = ' Error. portal_section_target_tipo not found !';
-					$response->msg .= $msg;
-					trigger_error($msg);
+					$response->msg .= ' Error. portal_section_target_tipo not found !';
+					debug_log(__METHOD__
+						. ' ' . $response->msg
+						, logger::ERROR
+					);
 					return $response;
 				}
 				$portal_section_target_tipo = reset($ar_portal_section_target_tipo);
@@ -149,28 +144,34 @@ class tool_posterframe extends tool_common {
 					'target_section_tipo' => $portal_section_target_tipo
 				]);
 				if ($new_element_response->result===false) {
-					$msg = ' Error. Unable to create portal record !';
-					trigger_error($msg);
-					$response->msg .= ' Error. Unable to create portal record';
+					$response->msg .= ' Error. Unable to create portal record !';
+					debug_log(__METHOD__
+						. ' ' . $response->msg . PHP_EOL
+						. ' portal_section_target_tipo: ' . to_string($portal_section_target_tipo)
+						, logger::ERROR
+					);
 					return $response;
 				}
-				// save portal if all is all ok
+				// save portal if all is all OK
 				$component_portal->Save();
-
-				$new_section_id		= $new_element_response->section_id;
-				// $added_locator	= $new_element_response->added_locator;
+				// check locator section id is valid
+				$new_section_id	= $new_element_response->section_id;
 				// check valid new_section_id
 				if( (int)$new_section_id<1 ) {
 					$response->msg .= ' Error. Unable to create portal record';
-					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						. ' ' . $response->msg
+						, logger::ERROR
+					);
 					return $response;
 				}
 
-
-		// component_image
-		// Gets the proper path and filename where to save the posterframe file
-			$component_image_model	= RecordObj_dd::get_modelo_name_by_tipo($item_value->component_image, true);
-			$component_image		= component_common::get_instance(
+		// component_image. Gets the proper path and filename where to save the posterframe file
+			$component_image_model = RecordObj_dd::get_modelo_name_by_tipo(
+				$item_value->component_image,
+				true
+			);
+			$component_image = component_common::get_instance(
 				$component_image_model,
 				$item_value->component_image,
 				$new_section_id,
@@ -182,15 +183,13 @@ class tool_posterframe extends tool_common {
 				$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 			// image from video. custom_ar_target
-				$target_path        = $component_image->get_media_path_dir(DEDALO_IMAGE_QUALITY_ORIGINAL);
-				$target_file		= $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
-				$custom_ar_target	= [
-					'target_path'	=> $target_path, // Absolute path to image dir
-					'target_file'	=> $target_file  // Absolute final path of file (included target_path)
-				];
+				// $target_path		= $component_image->get_media_path_dir(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				// $target_file		= $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
+				// $custom_ar_target	= [
+				// 	$target_file  // Absolute final path of file (included target_path)
+				// ];
 
-		// component_av
-		// Generates the posterframe with name and target from component image values
+		// component_av. Needed to get av file paths
 			$component_av_model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$component_av		= component_common::get_instance(
 				$component_av_model,
@@ -200,36 +199,61 @@ class tool_posterframe extends tool_common {
 				DEDALO_DATA_NOLAN,
 				$section_tipo
 			);
+
+		// short vars
 			// posterframe file create. returns result boolean value
-				$target_quality	= $component_av->get_quality_default();
-				$result			= $component_av->create_posterframe(
-					$current_time,
-					$target_quality,
-					$custom_ar_target
+			$quality = $component_av->get_quality_original();
+			// src_file. av file full path
+			$src_file = $component_av->get_media_filepath($quality);
+			if (!file_exists($src_file)) {
+				// try with default quality
+				$quality	= $component_av->get_quality_default();
+				$src_file	= $component_av->get_media_filepath($quality);
+			}
+			if (!file_exists($src_file)) {
+				$response->msg .=  ' Error on get av file. File do not exist in original or default quality';
+				debug_log(__METHOD__
+					. ' ' . $response->msg . PHP_EOL
+					. ' src_file: ' . $src_file
+					, logger::ERROR
 				);
+				return $response;
+			}
+			// posterframe_path. Target to generate posterframe
+			// We send the posterframe to the final component_image path as the tool upload would do
+			$posterframe_path = $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
-		// original to default quality image conversion
-			// $source_quality = DEDALO_IMAGE_QUALITY_ORIGINAL;
-			// $target_quality = DEDALO_IMAGE_QUALITY_DEFAULT;
-			// $component_image->convert_quality( $source_quality, $target_quality );
-			// $component_image->Save(); // Force update list value
-			$process_response = $component_image->process_uploaded_file((object)[
-				'original_file_name'	=> $component_av->get_posterframe_file_name(), // like rsc35_rsc167_1.jpg
-				'full_file_path'		=> $component_av->get_posterframe_path()
+		// ffmpeg create_posterframe
+			$Ffmpeg = new Ffmpeg();
+			$Ffmpeg->create_posterframe((object)[
+				'timecode'			=> $current_time,
+				'src_file'			=> $src_file, // av file
+				'quality'			=> $quality,
+				'posterframe_path'	=> $posterframe_path // full target file path
 			]);
+
+		// component_image process_uploaded_file
+			// original file name from posterframe path like rsc35_rsc167_1.jpg
+			$original_file_name	= pathinfo($posterframe_path)['basename'];
+			$full_file_path		= $posterframe_path; // full path to file
+			$full_file_name		= $original_file_name; // same as original_file_name
+			// process create default and thumb files and save component files info
+			$process_response = $component_image->process_uploaded_file((object)[
+				'original_file_name'	=> $original_file_name, // like rsc35_rsc167_1.jpg
+				'full_file_path'		=> $full_file_path,
+				'full_file_name'		=> $full_file_name
+			]);
+
+		// response
 			if ($process_response->result===false) {
-
 				// response error on process posterframe file
-				$response->result	= $result;
+				$response->result	= false;
 				$response->msg		= 'Error on process posterframe file ['.__FUNCTION__.']';
-
 			}else{
-
 				// response OK
-				$response->result	= $result;
+				$response->result	= true;
 				$response->msg		= 'Request done ['.__FUNCTION__.']';
 			}
-
 
 
 		return $response;

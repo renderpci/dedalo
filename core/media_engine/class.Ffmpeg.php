@@ -552,106 +552,141 @@ final class Ffmpeg {
 
 
 	/**
-	* CREATE POSTERFRAME
-	* @param $AVObj
-	*	AVObj Object
-	* @param $timecode
-	*	Float number timecode like 102.369217 (from JavaScript media engine tc control)
-	*	Is formatted here to ffmpeg as 102.369
-	* @param $ar_target
-	*	array|bool default false
-	*
-	* @return mixed $posterFrame_command_exc
-	*	Terminal command response
+	* GET_ASPECT_RATIO
+	* @param string $source_file
+	* @param string $quality
+	* @return string $ratio
+	* 	Like '16x9'
 	*/
-	public function create_posterframe(AVObj $AVObj, $timecode, ?array $ar_target=null) {
+	public function get_aspect_ratio(string $source_file, string $quality) {
 
-		# SRC VIDEO FILE
-			$src_file = $AVObj->get_media_path_abs() . $AVObj->get_name() . '.' . $AVObj->get_extension();
+		// get streams
+		$media_streams = Ffmpeg::get_media_streams( $source_file );
+		if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->display_aspect_ratio)) {
+
+			// data from media_streams definition
+
+			$aspect_ratio = $media_streams->streams[0]->display_aspect_ratio;
+			$beats	= explode(':', $aspect_ratio);
+
+			$aspect	= implode('x', $beats);
+
+		}else{
+
+			// data from size calculation
+
+			if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->width) && !empty($media_streams->streams[0]->height)) {
+
+				// from streams
+					$width	= (int)$media_streams->streams[0]->width;
+					$height	= (int)$media_streams->streams[0]->height;
+
+			}else{
+
+				// retrieves info from reading the header
+					$media_header = Ffmpeg::get_media_streams($source_file);
+
+				// size
+					$width_default	= 720;
+					$height_default	= 404;
+
+					$width = isset($media_header[$quality]['width'])
+						? (int)$media_header[$quality]['width']
+						: $width_default;
+
+
+					if(isset($media_header[$quality]['height']))
+					$height = isset($media_header[$quality]['height'])
+						? (int)$media_header[$quality]['height']
+						: $height_default;
+			}
+
+			// aspect_ratio
+				$aspect_ratio = 0;
+				if($width>0 && $height>0)
+				$aspect_ratio = round( ($width / $height), 2);
+
+				switch($aspect_ratio) {
+
+					case '1.33'	: $aspect = '4x3';	break;
+					case '1.34'	: $aspect = '4x3';	break;
+
+					case '1.77'	: $aspect = '16x9';	break;
+					case '1.78'	: $aspect = '16x9';	break;
+
+					case '1.66'	: $aspect = '5x3';	break;
+					case '1.50'	: $aspect = '3x2';	break;
+					case '1.25'	: $aspect = '5x4';	break;
+
+					default		: $aspect = '16x9';
+				}
+		}
+
+
+		return $aspect; // default 16x9
+	}//end get_aspect_ratio
+
+
+
+	/**
+	* CREATE POSTERFRAME
+	* @param object $options
+	* {
+	* 	timecode : float|string like 102.369217 or 10:00:00,
+	* 	src_file : string full path to source av file,
+	* 	quality : string current quality used like 'original'
+	* 	posterframe_path : string full path to target image file
+	* }
+	*
+	* @return bool
+	*/
+	// public function create_posterframe(AVObj $AVObj, $timecode, ?array $ar_target=null) {
+	public function create_posterframe(object $options) : bool {
+
+		// options
+			$timecode			= $options->timecode;
+			$src_file			= $options->src_file;
+			$quality			= $options->quality;
+			$posterframe_path	= $options->posterframe_path;
 
 		// aspect_ratio_cmd
-			$aspect_ratio = strtolower($AVObj->get_aspect_ratio());
-			if($aspect_ratio==='4x3') {
-				// $aspect_ratio = '-vf scale=540:404:force_original_aspect_ratio';
-				$aspect_ratio = '540x404';
-			}else{
-				$aspect_ratio = '720x404';
-			}
+			$raw_aspect_ratio	= $this->get_aspect_ratio($src_file, $quality);
+			$aspect_ratio		= strtolower($raw_aspect_ratio)==='4x3'
+				? '540x404'
+				: '720x404'; // default for 16x9
 			$aspect_ratio_cmd = '-s ' . $aspect_ratio;
 
-		// src_file. If the default does not exist, we look for another from higher to lower
-			if(!file_exists($src_file)) {
-				$src_file = $this->get_master_media_file($AVObj);
-			}
-			if (!$src_file) {
-				debug_log(__METHOD__
-					." Error: src_file not found src_file 2. " .PHP_EOL
-					.' src_file: ' . $src_file
-					, logger::ERROR
-				);
-				return false;
-			}
+		// timecode
+		// We convert the received value to floating number and
+		// we round the value to 3 decimal places to pass it to ffmpeg tipo '40.100'
+			$timecode = number_format((float)$timecode, 3, '.', '');
 
-		// target_file. image jpg target file
-			if (!empty($ar_target)) {
-				# Forced case. Paths ar received directly (identifying image for example)
-				$target_path	= $ar_target['target_path'];  // Absolute path to image dir
-				$target_file	= $ar_target['target_file'];  // Absolute final path of file (included target_path)
-			}else{
-				# Default case . Paths are extracted from PosterFrameObj
-				$PosterFrameObj	= new PosterFrameObj($reelID = $AVObj->get_name(), $tc=NULL);
-				$target_path	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/posterframe';
-				$target_file	= $target_path .'/'. $AVObj->get_name() .'.' . $PosterFrameObj->get_extension();
-			}
-
-		// posterframe dir exists
-			if( !is_dir($target_path) ) {
-				$create_dir = mkdir($target_path, 0775);
+		// posterframe directory exists check
+			$target_dir = dirname($posterframe_path);
+			if( !is_dir($target_dir) ) {
+				$create_dir = mkdir($target_dir, 0775, true);
 				if(!$create_dir) {
 					debug_log(__METHOD__
-						. " Error on read or create directory for \"posterframe\" folder. Permission denied ! " . PHP_EOL
-						. ' target_path: '. $target_path
-						, logger::DEBUG
-					);
-					return false;
-				}
-				# image zero 0.jpg from dedalo images to posterframe images
-				if(!file_exists("{$target_path}/0.jpg")) {
-					$image_zero = DEDALO_ROOT_PATH ."/images/0.jpg";
-					if(file_exists($image_zero)) {
-						copy($image_zero, "{$target_path}/0.".DEDALO_AV_POSTERFRAME_EXTENSION);
-					}
-				}
-			}
-
-		// tmp dir set permissions 0777
-			$wantedPerms = 1777;
-			$actualPerms = fileperms($target_path);
-			if($actualPerms < $wantedPerms) {
-				$chmod = chmod($target_path, $wantedPerms);
-				if(!$chmod) {
-					debug_log(__METHOD__
-						. " Error Processing Request. Sorry. Error on set valid permissions to directory for \"posterframe\". " . PHP_EOL
-						. ' target_path: ' . $target_path
+						.' Error creating directory: ' . PHP_EOL
+						.' target_dir: ' . $target_dir
 						, logger::ERROR
 					);
 					return false;
 				}
 			}
 
-		# COMMANDS SHELL
-
-		# FFMPEG timecode
-		# Convertivos el valor recibido a número flotante y
-		# redondeamos a 3 decimales el valor para pasarloa ffmpeg tipo '40.100'
-		$timecode = number_format((float)$timecode, 3, '.', '');
-
-		# paso 1 sólo video
-		#$command	= DEDALO_AV_FFMPEG_PATH . " -itsoffset -$timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $target_file > /dev/null  ";
-		$command	= DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $target_file ";
-
-		# EXEC COMMAND
-		$posterFrame_command_exc = exec_::exec_command($command);
+		// commands shell
+			// command (use video track only)
+			$command = DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_path";
+			// exec command (return boolean)
+			$posterFrame_command_exc = exec_::exec_command($command);
+			// debug
+			$level = $posterFrame_command_exc===false ? logger::ERROR : logger::WARNING;
+			debug_log(__METHOD__
+				. " Create posterframe command execution response: " . PHP_EOL
+				. ' ' . to_string($posterFrame_command_exc)
+				, $level
+			);
 
 
 		return $posterFrame_command_exc;
