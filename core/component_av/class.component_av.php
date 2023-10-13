@@ -887,12 +887,32 @@ class component_av extends component_media_common {
 									, logger::ERROR
 								);
 							}else{
+
+								// target directory check
+								$target_dir = dirname($quality_default_target_file);
+								if (!is_dir($target_dir)) {
+									if(!mkdir($target_dir, 0750, true)) {
+										debug_log(__METHOD__
+											.' Error creating directory: ' . PHP_EOL
+											.' target_dir: ' . $target_dir
+											, logger::ERROR
+										);
+										$response->msg .= ' Error creating directory';
+										debug_log(__METHOD__
+											. ' '.$response->msg
+											, logger::ERROR
+										);
+										return $response;
+									}
+								}
+
 								// convert with ffmpeg
 								Ffmpeg::convert_to_dedalo_av(
 									$source_file, // string source_file
 									$quality_default_target_file // string target_file
 								);
 							}
+
 						// }else{
 						// 	debug_log(__METHOD__
 						// 		." WARNING: Ignored conversion to default quality (".DEDALO_AV_QUALITY_DEFAULT."). File already exists"
@@ -901,19 +921,8 @@ class component_av extends component_media_common {
 						// }//end if (!file_exists($target_file)) {
 					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
 
-
-				// posterframe. Create posterframe of current video if not exists
-					$posterframe_path = $this->get_posterframe_path();
-					// if( !file_exists($posterframe_path) ) {
-						$timecode	= '00:00:10';
-						$Ffmpeg		= new Ffmpeg();
-						$Ffmpeg->create_posterframe($AVObj, $timecode);
-					// }else{
-					// 	debug_log(__METHOD__
-					// 		." WARNING: Ignored creation of posterframe. File already exists"
-					// 		, logger::WARNING
-					// 	);
-					// }
+				// posterframe. Create posterframe of current video
+					$this->create_posterframe('00:00:10');
 
 				// conform headers
 					# Apply qt-faststart to optimize file headers position
@@ -1347,26 +1356,28 @@ class component_av extends component_media_common {
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
-	* @param float $current_time
+	* @param string|float $current_time
 	* 	A double-precision floating-point value indicating the current playback time in seconds.
 	* 	From HML5 video element command 'currentTime'
-	* @param string | null $quality
-	* @param array | string $ar_target
-	* 	Optional array value with forced target destination path and file name
-	* @return string $command_response
+	* @param string|null $quality
+	* 	Optional string like 'original'. if not defined, default is used
+	* @return bool $command_response
 	* 	FFMPEG terminal command response
 	*/
-	public function create_posterframe($current_time, $target_quality=null, $ar_target=null) {
+	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
 
-		$reelID		= $this->get_id();
-		$quality	= $target_quality ?? $this->get_quality_default();
+		$quality			= $target_quality ?? $this->get_quality_default();
+		$src_file			= $this->get_media_filepath($quality);
+		$posterframe_path	= $this->get_posterframe_path();
 
-		# AVObj
-		$AVObj = new AVObj($reelID, $quality);
+		$Ffmpeg	= new Ffmpeg();
+		$command_response = $Ffmpeg->create_posterframe((object)[
+			'timecode'			=> $current_time, // like '00:00:10',
+			'src_file'			=> $src_file,
+			'quality'			=> $quality,
+			'posterframe_path'	=> $posterframe_path
+		]);
 
-		# Ffmpeg
-		$Ffmpeg				= new Ffmpeg();
-		$command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
 
 		return $command_response;
 	}//end create_posterframe
