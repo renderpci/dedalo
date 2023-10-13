@@ -45,6 +45,8 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointers
+		wrapper.content_data = content_data
 
 	// main_element_container
 		const main_element_container = ui.create_dom_element({
@@ -143,6 +145,7 @@ const get_content_data = async function(self) {
 
 /**
 * GET_BUTTONS
+* Render buttons bellow the av player
 * @param object instance self
 * @return HTMLElement buttons_wrapper
 */
@@ -165,11 +168,14 @@ const get_buttons = function(self) {
 				parent			: identifying_image_block
 			})
 			button_create_identifying_image.addEventListener('click', async function(){
-				identifying_image_block.classList.add('loading')
+				self.node.content_data.classList.add('loading')
 				const item_value	= JSON.parse(identifying_image_selector.value)
 				const current_time	= self.main_element.video.currentTime
-				await self.create_identifying_image(item_value, current_time)
-				identifying_image_block.classList.remove('loading')
+				await self.create_identifying_image(
+					item_value,
+					current_time
+				)
+				self.node.content_data.classList.remove('loading')
 			})
 
 		// identifying_image_selector
@@ -211,15 +217,17 @@ const get_buttons = function(self) {
 				parent			: manage_posterframe_block
 			})
 			button_create_posterframe.addEventListener('click', async function(){
-				image_posterframe.classList.add('loading')
+				self.node.content_data.classList.add('loading')
 				const current_time = self.main_element.video.currentTime
-				await self.create_posterframe(current_time)
+				await self.create_posterframe(
+					current_time
+				)
 				if (self.main_element.data.posterframe_url===page_globals.fallback_image) {
 					// initial no posterframe case
 					await self.main_element.refresh()
 				}
 				image_posterframe.src = self.main_element.data.posterframe_url + '?' + Math.random()
-				image_posterframe.classList.remove('loading')
+				self.node.content_data.classList.remove('loading')
 			})
 
 		// button_delete_posterframe
@@ -230,12 +238,12 @@ const get_buttons = function(self) {
 				parent			: manage_posterframe_block
 			})
 			button_delete_posterframe.addEventListener('click', async function(){
-				image_posterframe.classList.add('loading')
+				self.node.content_data.classList.add('loading')
 				const deleted = await self.delete_posterframe()
 				image_posterframe.src = deleted===true
 					? page_globals.fallback_image
 					: self.main_element.data.posterframe_url + '?' + Math.random()
-				image_posterframe.classList.remove('loading')
+				self.node.content_data.classList.remove('loading')
 			})
 
 		// image_posterframe

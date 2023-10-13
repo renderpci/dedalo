@@ -16,6 +16,20 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_AR_QUALITY
+	* Get the list of defined image qualities in Dédalo config
+	* @return array $ar_image_quality
+	*/
+	public function get_ar_quality() : array {
+
+		$ar_image_quality = DEDALO_PDF_AR_QUALITY;
+
+		return $ar_image_quality;
+	}//end get_ar_quality
+
+
+
+	/**
 	* GET_DEFAULT_QUALITY
 	* @return string $default_quality
 	* Defined in config file
@@ -24,6 +38,55 @@ class component_pdf extends component_media_common {
 
 		return DEDALO_PDF_QUALITY_DEFAULT;
 	}//end get_default_quality
+
+
+
+	/**
+	* GET_ORIGINAL_QUALITY
+	* @return string $original_quality
+	*/
+	public function get_original_quality() : string {
+
+		$original_quality = DEDALO_PDF_QUALITY_ORIGINAL;
+
+		return $original_quality;
+	}//end get_original_quality
+
+
+
+	/**
+	* GET_EXTENSION
+	* @return string DEDALO_PDF_EXTENSION from config
+	*/
+	public function get_extension() : string {
+
+		return $this->extension ?? DEDALO_PDF_EXTENSION;
+	}//end get_extension
+
+
+
+	/**
+	* GET_ALLOWED_EXTENSIONS
+	* @return array $allowed_extensions
+	*/
+	public function get_allowed_extensions() : array {
+
+		$allowed_extensions = DEDALO_PDF_EXTENSIONS_SUPPORTED;
+
+		return $allowed_extensions;
+	}//end get_allowed_extensions
+
+
+
+	/**
+	* GET_FOLDER
+	* 	Get element dir from config
+	* @return string
+	*/
+	public function get_folder() : string {
+
+		return $this->folder ?? DEDALO_PDF_FOLDER;
+	}//end get_folder
 
 
 
@@ -40,21 +103,7 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_AR_QUALITY
-	* Get the list of defined image qualities in Dédalo config
-	* @return array $ar_image_quality
-	*/
-	public function get_ar_quality() : array {
-
-		$ar_image_quality = DEDALO_PDF_AR_QUALITY;
-
-		return $ar_image_quality;
-	}//end get_ar_quality
-
-
-
-	/**
-	* GET_GRID_VALUE
+	* GET_GRID_VALUE (USE MEDIA_COMMON->get_grid_value INSTEAD !)
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
 	* Some the text components can set the value with the dato directly
@@ -63,54 +112,54 @@ class component_pdf extends component_media_common {
 	*
 	* @return dd_grid_cell_object $grid_cell_object
 	*/
-	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+		// public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
-		// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
-			$column_obj = isset($this->column_obj)
-				? $this->column_obj
-				: (object)[
-					'id' => $this->section_tipo.'_'.$this->tipo
-				  ];
+		// 	// column_obj. Set the separator if the ddo has a specific separator, it will be used instead the component default separator
+		// 		$column_obj = isset($this->column_obj)
+		// 			? $this->column_obj
+		// 			: (object)[
+		// 				'id' => $this->section_tipo.'_'.$this->tipo
+		// 			  ];
 
-		// current_url. get from dato
-			$dato = $this->get_dato();
-			if(isset($dato)){
-				$element_quality = ($this->mode==='edit')
-					? $this->get_default_quality()
-					: $this->get_thumb_quality();
+		// 	// current_url. get from dato
+		// 		$dato = $this->get_dato();
+		// 		if(isset($dato)){
+		// 			$element_quality = ($this->mode==='edit')
+		// 				? $this->get_default_quality()
+		// 				: $this->get_thumb_quality();
 
-				$current_url = $this->get_url(
-					$element_quality, // string quality
-					false, // bool test_file
-					true,  // bool absolute
-					false // bool default_add
-				);
-			}else{
-				$current_url = '';
-			}
+		// 			$current_url = $this->get_url(
+		// 				$element_quality, // string quality
+		// 				false, // bool test_file
+		// 				true,  // bool absolute
+		// 				false // bool default_add
+		// 			);
+		// 		}else{
+		// 			$current_url = '';
+		// 		}
 
-		// label
-			$label = $this->get_label();
+		// 	// label
+		// 		$label = $this->get_label();
 
-		// class_list
-			$class_list = isset($ddo)
-				? ($ddo->class_list ?? null)
-				: null;
+		// 	// class_list
+		// 		$class_list = isset($ddo)
+		// 			? ($ddo->class_list ?? null)
+		// 			: null;
 
-		// value
-			$grid_cell_object = new dd_grid_cell_object();
-				$grid_cell_object->set_type('column');
-				$grid_cell_object->set_label($label);
-				$grid_cell_object->set_ar_columns_obj([$column_obj]);
-				$grid_cell_object->set_cell_type('text');
-				if(isset($class_list)){
-					$grid_cell_object->set_class_list($class_list);
-				}
-				$grid_cell_object->set_value([$current_url]);
+		// 	// value
+		// 		$grid_cell_object = new dd_grid_cell_object();
+		// 			$grid_cell_object->set_type('column');
+		// 			$grid_cell_object->set_label($label);
+		// 			$grid_cell_object->set_ar_columns_obj([$column_obj]);
+		// 			$grid_cell_object->set_cell_type('text');
+		// 			if(isset($class_list)){
+		// 				$grid_cell_object->set_class_list($class_list);
+		// 			}
+		// 			$grid_cell_object->set_value([$current_url]);
 
 
-		return $grid_cell_object;
-	}//end get_grid_value
+		// 	return $grid_cell_object;
+		// }//end get_grid_value
 
 
 
@@ -288,12 +337,14 @@ class component_pdf extends component_media_common {
 			$url = null;
 
 		// thumb_path
-			$file_name  = $this->get_id();
-			$target_file = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$file_name	= $this->get_id();
+			$folder		= $this->get_folder();
+
+			$target_file = DEDALO_MEDIA_PATH . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 		// thumb already exists case
 			if (!$force_create && file_exists($target_file)) {
-				$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+				$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 				# ABSOLUTE (Default false)
 				if ($absolute) {
 					$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
@@ -332,7 +383,7 @@ class component_pdf extends component_media_common {
 					if ($result!==false) {
 
 						// url. All is OK
-						$url = DEDALO_MEDIA_URL . DEDALO_PDF_FOLDER . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+						$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
 
 						// absolute (Default false). Prepend protocol and host
 						if ($absolute===true) {
@@ -351,7 +402,7 @@ class component_pdf extends component_media_common {
 	*
 	* Once the full path is specified, the command is working as desired.
 	* @param object $options
-	* @return string|false $path
+	* @return string|bool $result
 	*/
 	public function create_image(?object $options=null) : string|bool {
 
@@ -359,9 +410,11 @@ class component_pdf extends component_media_common {
 			$page		= $options->page ?? 0;
 			$quality	= $options->quality ?? $this->get_original_quality();
 
-		// pdf path
-			$file_name		= $this->get_id();
-			$target_file	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+		// PDF path
+			$file_name	= $this->get_id();
+			$folder		= $this->get_folder();
+
+			$target_file	= DEDALO_MEDIA_PATH . $folder . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
 
 		// generate from PDF
 			$source_file	= $this->get_media_filepath($quality);
@@ -422,34 +475,6 @@ class component_pdf extends component_media_common {
 
 		return $related_component_text_area_tipo;
 	}//end get_related_component_text_area_tipo
-
-
-
-	/**
-	* GET_ALLOWED_EXTENSIONS
-	* @return array $allowed_extensions
-	*/
-	public function get_allowed_extensions() : array {
-
-		$allowed_extensions = DEDALO_PDF_EXTENSIONS_SUPPORTED;
-
-		return $allowed_extensions;
-	}//end get_allowed_extensions
-
-
-
-	/**
-	* GET_ORIGINAL_QUALITY
-	* @return string $original_quality
-	*/
-	public function get_original_quality() : string {
-
-		$original_quality = defined('DEDALO_PDF_QUALITY_ORIGINAL')
-			? DEDALO_PDF_QUALITY_ORIGINAL
-			: DEDALO_PDF_QUALITY_DEFAULT;
-
-		return $original_quality;
-	}//end get_original_quality
 
 
 
@@ -764,7 +789,6 @@ class component_pdf extends component_media_common {
 
 
 
-
 	/**
 	*  VALID_UTF8
 	* utf8 encoding validation developed based on Wikipedia entry at:
@@ -842,29 +866,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_EXTENSION
-	* @return string DEDALO_PDF_EXTENSION from config
-	*/
-	public function get_extension() : string {
-
-		return $this->extension ?? DEDALO_PDF_EXTENSION;
-	}//end get_extension
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element dir from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_PDF_FOLDER;
-	}//end get_folder
-
-
-
-	/**
 	* UPDATE_DATO_VERSION
 	* @param object $request_options
 	* @return object $response
@@ -915,20 +916,21 @@ class component_pdf extends component_media_common {
 					// get existing files data
 						$file_name			= $component->get_name();
 						$source_quality		= $component->get_original_quality();
-						$additional_path	= $component->get_additional_path();
+						$folder				= $component->get_folder(); // like DEDALO_PDF_FOLDER
+						$additional_path	= $component->additional_path;
 						$initial_media_path	= $component->get_initial_media_path();
 						$original_extension	= $component->get_original_extension(
 							false // bool exclude_converted
 						) ?? $component->get_extension(); // 'pdf' fallback is expected
 
-						$base_path	= DEDALO_PDF_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_name . '.' . $original_extension;
+						$base_path	= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
+						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
 
 						// no original file found. Use default quality file
 							if(!file_exists($file)) {
 								// use default quality as original
 								$source_quality	= $component->get_default_quality();
-								$base_path		= DEDALO_PDF_FOLDER . $initial_media_path . '/' . $source_quality . $additional_path;
+								$base_path		= $folder . $initial_media_path . '/' . $source_quality . $additional_path;
 								$file			= DEDALO_MEDIA_PATH   . $base_path . '/' . $file_name . '.' . $component->get_extension();
 							}
 							// try again
