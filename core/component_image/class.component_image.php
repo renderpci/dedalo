@@ -47,7 +47,7 @@ class component_image extends component_media_common {
 	*/
 	public function Save() : ?int {
 
-		$dato = $this->dato;
+		$dato = $this->get_dato();
 
 		// create_svg_file from dato item temporal container
 		if (!empty($dato)) {
@@ -2042,7 +2042,7 @@ class component_image extends component_media_common {
 	public function regenerate_component() : bool {
 
 		// files check
-			// create default quality file if not exists
+			// create default quality file if not already exists
 				$default_quality		= $this->get_default_quality();
 				$image_default_filepath	= $this->get_media_filepath( $default_quality );
 				if (!file_exists($image_default_filepath)) {

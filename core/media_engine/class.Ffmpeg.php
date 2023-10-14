@@ -622,6 +622,12 @@ final class Ffmpeg {
 				}
 		}
 
+		debug_log(__METHOD__
+			. " aspect result: " . PHP_EOL
+			. ' aspect: ' . to_string($aspect)
+			, logger::DEBUG
+		);
+
 
 		return $aspect; // default 16x9
 	}//end get_aspect_ratio
@@ -1110,8 +1116,8 @@ final class Ffmpeg {
 	*/
 	public static function get_audio_codec() : string {
 
-		#
-		# FFMPEG AUDIO CODEC TEST
+
+		// FFMPEG AUDIO CODEC TEST
 		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
 		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
 			// Version >=3 with libfdk-aac installed
@@ -1123,7 +1129,13 @@ final class Ffmpeg {
 			// Default native ffmpeg >= 3
 			$acodec = 'aac';
 		}
-		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
+
+		// debug
+			debug_log(__METHOD__
+				." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info)
+				, logger::DEBUG
+			);
+
 
 		return $acodec;
 	}//end get_audio_codec
