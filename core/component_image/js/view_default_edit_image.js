@@ -106,9 +106,10 @@ const get_content_data = function(self) {
 const get_content_value = function(i, value, self) {
 
 	// short vars
-		const quality	= self.quality || self.context.features.quality
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
+		const data			= self.data || {}
+		const datalist		= data.datalist || []
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -298,37 +299,28 @@ const render_image_node = function(self, file_info, content_value) {
 		}
 
 	// image. (!) Only to get background color and apply to li node
-		// const bg_reference_image_url = url || page_globals.fallback_image
-		// if (bg_reference_image_url) {
-		// 	const image = ui.create_dom_element({
-		// 		element_type	: 'img',
-		// 		class_name 		: 'hide'
-		// 	})
-		// 	// image background color
-		// 	image.addEventListener('load', set_bg_color, false)
-		// 	function set_bg_color() {
-		// 		this.removeEventListener('load', set_bg_color, false)
-		// 		ui.set_background_image(this, content_value)
-		// 		image.classList.remove('hide')
-		// 	}
-		// 	// image.addEventListener('error', function(){
-		// 	// 	console.warn('Error on load image:', bg_reference_image_url, image);
-		// 	// }, false)
-		// 	image.src = bg_reference_image_url
-		// }
-
-	// object_node <object type="image/svg+xml" data="image.svg"></object>
-		const object_node = ui.create_dom_element({
-			element_type	: 'object',
-			class_name		: 'image'
+		const bg_reference_image_url = url // || page_globals.fallback_image
+		const image = ui.create_dom_element({
+			element_type	: 'img',
+			class_name 		: 'hide'
 		})
-		object_node.type = "image/svg+xml"
+		// image background color
+			image.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				// ui.set_background_image(this, content_value)
+				image.classList.remove('hide')
+			}
+		// error
+			image.addEventListener('error', function(){
+				// console.warn('Error on load image:', bg_reference_image_url, image);
+				svg_fallback(object_node)
+			}, false)
+		image.src = bg_reference_image_url
 
-		if (data.base_svg_url) {
-			// svg file already exists
-			object_node.data = data.base_svg_url // + '?t=' + (new Date()).getTime()
 
-		}else{
+	// fallback to default svg file
+		function svg_fallback(object_node) {
 			// fallback to default svg file
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
 			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
@@ -349,8 +341,25 @@ const render_image_node = function(self, file_info, content_value) {
 				content_value.classList.add('clickable')
 			}
 		}
+
+	// object_node <object type="image/svg+xml" data="image.svg"></object>
+		const object_node = ui.create_dom_element({
+			element_type	: 'object',
+			class_name		: 'image'
+		})
+		object_node.type = "image/svg+xml"
 		// set pointer
 		self.object_node = object_node
+		// set data or fallback
+		if (data.base_svg_url) {
+			// svg file already exists
+			object_node.data = data.base_svg_url // + '?t=' + (new Date()).getTime()
+
+		}else{
+			// fallback to default svg file
+			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
+			svg_fallback(object_node)
+		}
 
 		// auto-change url the first time
 		object_node.onload = async function() {

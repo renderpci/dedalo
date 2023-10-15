@@ -585,20 +585,31 @@ final class Ffmpeg {
 
 				// retrieves info from reading the header
 					$media_header = Ffmpeg::get_media_streams($source_file);
+					debug_log(__METHOD__
+						. " media_header from get_media_streams result: " . PHP_EOL
+						. ' type: ' . gettype($media_header) . PHP_EOL
+						. ' value: ' . to_string($media_header)
+						, logger::DEBUG
+					);
 
 				// size
 					$width_default	= 720;
 					$height_default	= 404;
 
-					$width = isset($media_header[$quality]['width'])
-						? (int)$media_header[$quality]['width']
+					$width = isset($media_header->{$quality}) && isset($media_header->{$quality}['width'])
+						? (int)$media_header->{$quality}['width']
 						: $width_default;
 
-
-					if(isset($media_header[$quality]['height']))
-					$height = isset($media_header[$quality]['height'])
-						? (int)$media_header[$quality]['height']
+					$height = isset($media_header->{$quality}) && isset($media_header->{$quality}['height'])
+						? (int)$media_header->{$quality}['height']
 						: $height_default;
+
+					debug_log(__METHOD__
+						. " width/height result: " . PHP_EOL
+						. ' width: ' . to_string($width). PHP_EOL
+						. ' height: ' . to_string($height)
+						, logger::DEBUG
+					);
 			}
 
 			// aspect_ratio
@@ -621,6 +632,12 @@ final class Ffmpeg {
 					default		: $aspect = '16x9';
 				}
 		}
+
+		debug_log(__METHOD__
+			. " aspect result: " . PHP_EOL
+			. ' aspect: ' . to_string($aspect)
+			, logger::DEBUG
+		);
 
 
 		return $aspect; // default 16x9
@@ -1110,8 +1127,8 @@ final class Ffmpeg {
 	*/
 	public static function get_audio_codec() : string {
 
-		#
-		# FFMPEG AUDIO CODEC TEST
+
+		// FFMPEG AUDIO CODEC TEST
 		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
 		if (strpos($ffmpeg_info, '--enable-libfdk-aac')!==false) {
 			// Version >=3 with libfdk-aac installed
@@ -1123,7 +1140,13 @@ final class Ffmpeg {
 			// Default native ffmpeg >= 3
 			$acodec = 'aac';
 		}
-		debug_log(__METHOD__." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info), logger::DEBUG);
+
+		// debug
+			debug_log(__METHOD__
+				." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info)
+				, logger::DEBUG
+			);
+
 
 		return $acodec;
 	}//end get_audio_codec

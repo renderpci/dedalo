@@ -694,6 +694,20 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_ALTERNATIVE_EXTENSIONS
+	* 	Overwrite in each component like component_image do
+	* @return array|null $alternative_extensions
+	*/
+	public function get_alternative_extensions() : ?array {
+
+		$alternative_extensions = null;
+
+		return $alternative_extensions;
+	}//end get_alternative_extensions
+
+
+
+	/**
 	* PROCESS_UPLOADED_FILE
 	* Dummy method. Overwrite it in each component
 	* @return object $response
@@ -745,27 +759,34 @@ class component_media_common extends component_common {
 	* GET_FILES_INFO
 	* Get file info for every quality
 	* Used as 'datalist' in component data API response
-	* @param bool $include_empty = true
+	* @param bool $include_empty = false
 	* @return array $files_info
 	*/
-	public function get_files_info( bool $include_empty = true ) : array {
+	public function get_files_info( bool $include_empty=false ) : array {
 
 		$ar_quality = $this->get_ar_quality();
+
+		$extensions = (defined('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS') && is_array(DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS))
+			? array_merge([$this->get_extension()], DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)
+			: [$this->get_extension()];
 
 		// files check
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
-				$quality_file_info = $this->get_quality_file_info($quality);
+				foreach ($extensions as $extension) {
 
-				// file_exist check
-				if ($include_empty===false && $quality_file_info->file_exist===false) {
-					// skip quality without file
-					continue;
+					$quality_file_info = $this->get_quality_file_info($quality, $extension);
+
+					// file_exist check
+					if ($include_empty===false && $quality_file_info->file_exist===false) {
+						// skip quality without file
+						continue;
+					}
+
+					// add
+					$files_info[] = $quality_file_info;
 				}
-
-				// add
-				$files_info[] = $quality_file_info;
 			}//end foreach ($ar_quality as $quality)
 
 
@@ -780,21 +801,78 @@ class component_media_common extends component_common {
 	*/
 	public function get_datalist() {
 
-		$files_info = $this->get_files_info(
-			true // bool include_empty
-		);
+		// files_info from files
+			// $files_info = $this->get_files_info(
+			// 	true // bool include_empty
+			// );
 
-		$datalist = array_map(function($el){
-			$item = (object)[
-				'quality'		=> $el->quality,
-				'file_exist'	=> $el->file_exist,
-				'file_url'		=> $el->file_url,
-				'file_size'		=> $el->file_size,
-				'external'		=> $el->external ?? false
-			];
+		// from component DDBB data
+			$dato = $this->get_dato();
+			$files_info = isset($dato[0]) && isset($dato[0]->files_info)
+				? $dato[0]->files_info
+				: [];
 
-			return $item;
-		}, $files_info);
+		// get_ar_quality
+			$datalist = [];
+			$ar_quality = $this->get_ar_quality();
+			foreach ($ar_quality as $quality) {
+
+				$el = array_find($files_info, function($e) use($quality) {
+					return $e->quality===$quality;
+				});
+				if ($el!==null) {
+
+					$external = $el->external ?? false;
+					$file_url = $external===true
+						? $el->file_path
+						: (isset($el->file_exist) && $el->file_exist===true
+							? DEDALO_MEDIA_URL . $el->file_path
+							: null);
+
+					$item = (object)[
+						'quality'		=> $quality,
+						'file_exist'	=> $el->file_exist ?? false,
+						'file_path'		=> $el->file_path,
+						'file_url'		=> $file_url,
+						'file_size'		=> $el->file_size,
+						'external'		=> $external
+					];
+
+				}else{
+
+					$item = (object)[
+						'quality'		=> $quality,
+						'file_exist'	=> false,
+						'file_path'		=> null,
+						'file_url'		=> null,
+						'file_size'		=> null,
+						'external'		=> false
+					];
+				}
+
+				$datalist[] = $item;
+			}
+
+		// $datalist = array_map(function($el){
+
+		// 	$external = $el->external ?? false;
+		// 	$file_url = $external===true
+		// 		? $el->file_path
+		// 		: (isset($el->file_exist) && $el->file_exist===true
+		// 			? DEDALO_MEDIA_URL . $el->file_path
+		// 			: null);
+
+		// 	$item = (object)[
+		// 		'quality'		=> $el->quality,
+		// 		'file_exist'	=> $el->file_exist ?? false,
+		// 		'file_path'		=> $el->file_path,
+		// 		'file_url'		=> $file_url,
+		// 		'file_size'		=> $el->file_size,
+		// 		'external'		=> $external
+		// 	];
+
+		// 	return $item;
+		// }, $files_info);
 
 
 		return $datalist;
@@ -902,41 +980,51 @@ class component_media_common extends component_common {
 				$ar_quality = $this->get_ar_quality();
 			}
 
+		// ar_extensions
+			$extension				= $this->get_extension();
+			$alternative_extensions	= $this->get_alternative_extensions();
+			$ar_extensions			= !empty($alternative_extensions)
+				? array_merge([$extension], $alternative_extensions)
+				: [$extension];
+
 		// files remove
 			foreach ($ar_quality as $current_quality) {
-
-				// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
-					$media_path = $this->get_media_filepath($current_quality);
-					if (!file_exists($media_path)) continue; # Skip
 
 				// delete directory
 					$folder_path_del = $this->get_target_dir($current_quality) . '/deleted';
 					if( !is_dir($folder_path_del) ) {
-						if( !mkdir($folder_path_del, 0777,true) ) {
+						if( !mkdir($folder_path_del, 0750, true) ) {
 							debug_log(__METHOD__
 								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
 								. ' folder_path_del: ' . $folder_path_del
 								, logger::ERROR
 							);
-							return false;
+							continue;
 						}
 					}
 
-				// move/rename file
-					$file_name			= $this->get_name();
-					$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $this->get_extension();
-					if( !rename($media_path, $media_path_moved) ) {
-						trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
-						return false;
-					}
+				foreach ($ar_extensions as $current_extension) {
 
-				debug_log(__METHOD__
-					." Moved file". PHP_EOL
-					. ' media_path: ' . $media_path . PHP_EOL
-					. ' media_path_moved: ' . $media_path_moved
-					, logger::WARNING
-				);
-			}//end foreach
+					// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
+						$media_path = $this->get_media_filepath($current_quality, $current_extension);
+						if (!file_exists($media_path)) continue; // Skip
+
+					// move/rename file
+						$file_name			= $this->get_name();
+						$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $current_extension;
+						if( !rename($media_path, $media_path_moved) ) {
+							trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+							return false;
+						}
+
+					debug_log(__METHOD__
+						." Moved file". PHP_EOL
+						. ' media_path: ' . $media_path . PHP_EOL
+						. ' media_path_moved: ' . $media_path_moved
+						, logger::WARNING
+					);
+				}//end foreach ($ar_extensions as $current_extension)
+			}//end foreach ($ar_quality as $current_quality)
 
 
 		return true;
@@ -1047,20 +1135,23 @@ class component_media_common extends component_common {
 	* @param string $quality
 	* @return object $dato_item
 	*/
-	public function get_quality_file_info( string $quality ) : object {
+	public function get_quality_file_info(string $quality, string $extension=null) : object {
 
 		// external source (link to image outside Dédalo media)
 			$external_source = $this->get_external_source();
 			if(!empty($external_source)){
 
+				$extension = pathinfo($external_source)['extension'];
+
 				$dato_item = (object)[
 					'quality'		=> $quality,
 					'file_exist'	=> true,
 					'file_name'		=> null,
-					'file_path'		=> null,
-					'file_url'		=> $external_source,
+					'file_path'		=> $external_source,
+					// 'file_url'		=> $external_source,
 					'file_size'		=> null,
 					'file_time'		=> null,
+					'extension'		=> $extension,
 					'external'		=> true
 				];
 				return $dato_item;
@@ -1068,14 +1159,14 @@ class component_media_common extends component_common {
 
 
 		// file path
-			$file_path = $this->get_media_filepath($quality);
+			$file_path = $this->get_media_filepath($quality, $extension);
 			// original could override default path
-			if ($quality===DEDALO_IMAGE_QUALITY_ORIGINAL) {
-				$raw_path = $this->get_original_file_path($quality);
-				if ($raw_path!==$file_path) {
-					$file_path = $raw_path;
-				}
-			}
+				// if ($quality===DEDALO_IMAGE_QUALITY_ORIGINAL) {
+				// 	$raw_path = $this->get_original_file_path($quality);
+				// 	if ($raw_path!==$file_path) {
+				// 		$file_path = $raw_path;
+				// 	}
+				// }
 
 		// file_exist
 			$file_exist	= !empty($file_path)
@@ -1090,9 +1181,10 @@ class component_media_common extends component_common {
 					'file_exist'	=> false,
 					'file_name'		=> null,
 					'file_path'		=> null,
-					'file_url'		=> null,
+					// 'file_url'		=> null,
 					'file_size'		=> null,
-					'file_time'		=> null
+					'file_time'		=> null,
+					'extension'		=> null
 				];
 				return $dato_item;
 			}
@@ -1101,20 +1193,20 @@ class component_media_common extends component_common {
 			$file_name = basename($file_path);
 
 		// file_url
-			$file_url = $this->get_url(
-				$quality, // string quality
-				true, // bool test_file
-				false, // bool absolute
-				true // bool default_add
-			);
-			if ($quality==='original') {
-				// replace default extension for the real file extension
-				$path_parts	= pathinfo($file_path);
-				$url_parts	= pathinfo($file_url);
-				if($url_parts['extension']!==$path_parts['extension']) {
-					$file_url = $url_parts['dirname'].'/'.$url_parts['filename'].'.'.$path_parts['extension'];
-				}
-			}
+			// $file_url = $this->get_url(
+			// 	$quality, // string quality
+			// 	true, // bool test_file
+			// 	false, // bool absolute
+			// 	true // bool default_add
+			// );
+			// if ($quality==='original') {
+			// 	// replace default extension for the real file extension
+			// 	$path_parts	= pathinfo($file_path);
+			// 	$url_parts	= pathinfo($file_url);
+			// 	if($url_parts['extension']!==$path_parts['extension']) {
+			// 		$file_url = $url_parts['dirname'].'/'.$url_parts['filename'].'.'.$path_parts['extension'];
+			// 	}
+			// }
 
 		// file_size
 			$file_size = (function() use($file_path) {
@@ -1136,20 +1228,25 @@ class component_media_common extends component_common {
 			$file_time_dd->time			= dd_date::convert_date_to_seconds($file_time_dd);
 			$file_time_dd->timestamp	= $file_time;
 
-
 		// media_attributes
 			// $media_attributes = $this->get_media_attributes($file_path);
 
+		// file_exists
+			$file_exist = file_exists($file_path);
+
+		// file_path relative
+			$file_path_relative = str_replace(DEDALO_MEDIA_PATH, '', $file_path);
+
 		// add quality file info
 			$dato_item = (object)[
-				'quality'				=> $quality,
-				'file_exist'			=> true,
-				'file_name'				=> $file_name,
-				'file_path'				=> $file_path,
-				'file_url'				=> $file_url,
-				'file_size'				=> $file_size,
-				'file_time'				=> $file_time_dd
-				// 'media_attributes'	=> $media_attributes
+				'quality'		=> $quality,
+				'file_exist'	=> $file_exist,
+				'file_name'		=> $file_name,
+				'file_path'		=> $file_path_relative,
+				// 'file_url'		=> $file_url,
+				'file_size'		=> $file_size,
+				'file_time'		=> $file_time_dd,
+				'extension'		=> $extension
 			];
 
 
@@ -1403,19 +1500,43 @@ class component_media_common extends component_common {
 	*/
 	public function regenerate_component() : bool {
 
-		// get files info
-			$files_info	= $this->get_files_info(
-				false // bool include_empty. Prevent to store empty quality files
-			);
+		// files_info. Updates component dato files info values iterating available files
+		// This action updates the component data ($this->data) but does not save it
+		// Note that this method is called again on save, but this is intentional
+			$this->update_component_dato_files_info();
 
-		// create a new dato from scratch
-			$dato_item = (object)[
-				'files_info' => $files_info
-			];
-			$dato = [$dato_item];
+		// target_filename (use example: component_image rsc29)
+		// When original_file_name is not defined, we look in the properties definition for
+			$dato = $this->get_dato();
+			if (!isset($dato[0]->original_file_name)) {
+				$properties = $this->get_properties();
+				if (isset($properties->target_filename)) {
+					$tipo  = $properties->target_filename;
+					$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					$component = component_common::get_instance(
+						$model, // string model
+						$tipo, // string tipo
+						$this->section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$this->section_tipo // string section_tipo
+					);
+					$filename_dato = $component->get_dato();
 
-		// replace existing dato
-			$this->set_dato($dato);
+					// original_file_name
+					if(!empty($filename_dato[0])) {
+						$dato[0]->original_file_name = $filename_dato[0];
+
+						// original_normalized_name
+						if (!isset($dato[0]->original_normalized_name)) {
+							$dato[0]->original_normalized_name = $this->get_id() .'.'. pathinfo($filename_dato[0])['extension'];
+						}
+					}
+
+					// replace existing dato
+					$this->set_dato($dato);
+				}
+			}
 
 		// save
 			$this->Save();
@@ -1429,16 +1550,27 @@ class component_media_common extends component_common {
 	/**
 	* GET_MEDIA_FILEPATH
 	* Get full file path in local media
+	* @param string|null $quality = null
+	* 	Like 'original'
+	* @param string $extension = null
+	* 	Like 'avif'
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/dedalo/media/images/dd152-1.jpg'
 	*/
-	public function get_media_filepath(?string $quality=null) : string {
+	public function get_media_filepath(?string $quality=null, string $extension=null) : string {
 
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
+		// quality fallback
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
 
-		$path = $this->get_media_path_dir($quality) .'/'. $this->get_name() . '.' . $this->get_extension();
+		// extension fallback
+			if(empty($extension)) {
+				$extension = $this->get_extension();
+			}
+
+		$path = $this->get_media_path_dir($quality) .'/'. $this->get_name() . '.' . $extension;
+
 
 		return	$path;
 	}//end get_media_filepath
@@ -1646,23 +1778,28 @@ class component_media_common extends component_common {
 	/**
 	* UPDATE_COMPONENT_DATO_FILES_INFO
 	* Get component files info reading current media and
-	* updates the component dato. It doesn't save!
+	* updates the component dato. Does not save!
 	* @return bool
 	*/
 	protected function update_component_dato_files_info() {
 
 		// get files info
-			$files_info	= [];
-			$ar_quality = $this->get_ar_quality();
-			foreach ($ar_quality as $current_quality) {
-				// if ($current_quality==='thumb') continue;
-				// read file if exists to get file_info
-				$file_info = $this->get_quality_file_info($current_quality);
-				// add non empty quality files data
-				if (!empty($file_info)) {
-					$files_info[] = $file_info;
-				}
-			}
+			// $files_info	= [];
+			// $ar_quality = $this->get_ar_quality();
+			// foreach ($ar_quality as $current_quality) {
+			// 	// if ($current_quality==='thumb') continue;
+			// 	// read file if exists to get file_info
+			// 	$file_info = $this->get_quality_file_info($current_quality);
+			// 	// add non empty quality files data
+			// 	if (!empty($file_info) ) { // && $file_info->file_exist===true
+			// 		$files_info[] = $file_info;
+			// 	}
+			// }
+
+		// get files info
+			$files_info	= $this->get_files_info(
+				false // bool include_empty. Prevent to store empty quality files
+			);
 
 		// save component dato
 			$dato = $this->get_dato();
@@ -1678,10 +1815,12 @@ class component_media_common extends component_common {
 					return false;
 
 				}else{
-					// update property files_info
+
+					// replace files info values
 					$dato[0]->files_info = $files_info;
 				}
 			}else{
+
 				// create a new dato from scratch
 				$dato_item = (object)[
 					'files_info' => $files_info

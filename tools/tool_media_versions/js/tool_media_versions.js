@@ -105,8 +105,16 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 		// fix important vars
 			self.ar_quality	= self.caller.context.features.ar_quality
-			// self.files_info	= self.caller.data.datalist
-			self.files_info	= self.main_element.data.datalist
+			// datalist. main component dato
+			self.datalist	= self.main_element.data.datalist
+			// files_info_safe. filtered by allowed extension
+			self.files_info_safe = self.main_element.data.value[0] && self.main_element.data.value[0].files_info
+				? self.main_element.data.value[0].files_info.filter(el => el.extension===self.main_element.context.features.extension)
+				: []
+			// files_info_safe. filtered by allowed extension
+			self.files_info_alternative = self.main_element.data.value[0] && self.main_element.data.value[0].files_info
+				? self.main_element.data.value[0].files_info.filter(el => el.extension!==self.main_element.context.features.extension)
+				: []
 
 	} catch (error) {
 		self.error = error
