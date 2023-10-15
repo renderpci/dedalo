@@ -325,4 +325,62 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 
 
+
+/**
+* CHECK_SERVER_TRANSCRIBER_STATUS
+* Call the API to check the transcribe server status
+* using a online service like babel or Google and check if server has done
+* (!) Tool transcription config transcriber must to be exists in register_tools section
+*
+* @para string transcriber (name like 'babel' must to be defined in tool config)
+* @param string source_lang (like 'lg-eng')
+*
+* @return promise response
+*/
+tool_transcription.prototype.check_server_transcriber_status = async function(options) {
+
+	const self = this
+
+	const transcriber_engine	= options.transcriber_engine
+	const pid					= options.pid
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'check_server_transcriber_status')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				media_ddo : {
+					component_tipo		: self.media_component.tipo,
+					section_id			: self.media_component.section_id,
+					section_tipo		: self.media_component.section_tipo
+				},
+				transcriber_engine	: transcriber_engine,
+				config				: self.context.config,
+				pid 				: pid
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> check_server_transcriber_status API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end check_server_transcriber_status
+
+
+
 // @license-end
