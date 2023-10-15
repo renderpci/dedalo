@@ -80,7 +80,7 @@ class babel_transcriber {
 
 
 	/**
-	* CHECK_TRANSCRIPTION
+	* EXEC_BACKGROUND_CHECK_TRANSCRIPTION
 	* launch execution in background of sh file to check status of Babel server process
 	* Use common process_runner to launch background process in /core/base
 	* the check will be independent of the current thread.
@@ -88,7 +88,7 @@ class babel_transcriber {
 	* @param int $pid
 	* @return object $response
 	*/
-	public function check_transcription($pid) : object {
+	public function exec_background_check_transcription($pid) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -122,7 +122,7 @@ class babel_transcriber {
 			];
 			$data = [
 				'class_name'	=> 'babel_transcriber',
-				'method_name'	=> 'check_transcriber_status',
+				'method_name'	=> 'check_background_transcriber_status',
 				'file'			=> __FILE__,
 				'params'		=> $params
 			];
@@ -144,7 +144,7 @@ class babel_transcriber {
 
 		// debug
 			debug_log(__METHOD__.
-				" ------> COMMAND CHECK_TRANSCRIPTION: $process_file --------------------------------------------------------:"
+				" ------> COMMAND exec_background_check_transcription: $process_file --------------------------------------------------------:"
 				.PHP_EOL.PHP_EOL. $command .PHP_EOL,
 				logger::DEBUG
 			);
@@ -158,11 +158,11 @@ class babel_transcriber {
 
 
 		return $response;
-	}//end check_transcription
+	}//end exec_background_check_transcription
 
 
 	/**
-	* CHECK_TRANSCRIBER_STATUS
+	* CHECK_background_TRANSCRIBER_STATUS
 	* Ask to babel server if the process is working or was finished
 	* If Babel is working try to call every X seconds doing a recursion by itself
 	* Babel send 3 status
@@ -173,34 +173,40 @@ class babel_transcriber {
 	* 	Returns last line on success or false on failure.
 	* @return void
 	*/
-	public static function check_transcriber_status(object $options) : void {
+	public static function check_background_transcriber_status(object $options) : void {
 
 		// options
 			$transcription_ddo	= $options->transcription_ddo;
-			// http query vars
-			$fields = [
-				'key'				=> $options->key,
-				'url'				=> $options->url,
-				'lang'				=> $options->lang,
-				'av_url'			=> $options->av_url,
-				'engine'			=> $options->engine,
-				'method_name'		=> 'check_status',
-				'user_id'			=> $options->user_id,
-				'entity_name'		=> $options->entity_name,
-				'pid'				=> $options->pid
-			];
+		// 	// http query vars
+		// 	$fields = [
+		// 		'key'				=> $options->key,
+		// 		'url'				=> $options->url,
+		// 		'lang'				=> $options->lang,
+		// 		'av_url'			=> $options->av_url,
+		// 		'engine'			=> $options->engine,
+		// 		'method_name'		=> 'check_status',
+		// 		'user_id'			=> $options->user_id,
+		// 		'entity_name'		=> $options->entity_name,
+		// 		'pid'				=> $options->pid
+		// 	];
 
-		// curl request (core functions)
-			$request_response = curl_request((object)[
-				'url'			=> $options->url,
-				'postfields'	=> $fields,
-				'header'		=> false
-			]);
-			$response	= json_decode($request_response->result);
-			$result		= $response->result;
+		// // curl request (core functions)
+		// 	$request_response = curl_request((object)[
+		// 		'url'			=> $options->url,
+		// 		'postfields'	=> $fields,
+		// 		'header'		=> false
+		// 	]);
+		// 	$response	= json_decode($request_response->result);
+		// 	$result		= $response->result;
+
+		// set delete_result to true, babel will check in status=3 if the call is from server or client
+		// only server call can delete the final data
+		$options->delete_result = true;
+
+		$result = babel_transcriber::check_transcriber_status($options);
 
 		// debug
-			debug_log(__METHOD__." babel: ----> result ".PHP_EOL.to_string($response), logger::DEBUG);
+			debug_log(__METHOD__." babel: check_background_transcriber_status ----> result ".PHP_EOL.to_string($result), logger::DEBUG);
 
 		// status switch
 			switch ($result->status) {
@@ -213,7 +219,7 @@ class babel_transcriber {
 					// processing try later
 					$seconds = 4;
 					sleep($seconds);
-					babel_transcriber::check_transcriber_status($options);
+					babel_transcriber::check_background_transcriber_status($options);
 					break;
 
 				case 3:
