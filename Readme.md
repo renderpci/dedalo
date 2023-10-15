@@ -1,22 +1,21 @@
 <img height="400" src="https://dedalo.dev/tpl/assets/img/logos/logo_dedalo.svg" alt="Dédalo logo" />
 
-**ATENTION! The `v6` is in release candidate state. Do NOT use it in production.**
 
 #### V6 transition state
 
 | ontology | state | use | interface | tools | comments |
 | --- | --- | --- | --- | --- | --- |
 | dd | production | 100% | 100% | 100% |All definitions are ready |
-| rsc | production | 95% | 95% | 100% | Common definitions are ready, conservation will need more work; [rsc684](https://dedalo.dev/ontology/rsc684), consultation to archives [rsc996](https://dedalo.dev/ontology/rsc996)|
+| rsc | production | 100% | 100% | 100% | All definitions are ready|
 | hierarchy | production | 100% | 100% | 100% | All definitions are ready |
 | ww | production | 100% | 100% | 100% | All definitions are ready |
 | oh | production | 100% | 100% | 100% | All definitions are ready |
-| numisdata | rc | 90% | 95% | 100% | All components are ready but need more testing, all tools ready. |
+| numisdata | production | 100% | 100% | 100% |  All definitions are ready |
 | isad | production | 100% | 100% | 100% | All definitions are ready |
-| ich | rc | 90% | 100% | 90%  | All definitions in ich1 are done, state components need to be rebuilt |
+| ich | production | 100% | 100% | 100%  | All definitions are ready |
 | dmm | alpha | 0% | 0% | 0% |  |
 | mdcat | alpha | 0% | 0% |0%  |  |
-| tch | alpha | 50% | 25% |25%  |  |
+| tch | alpha | 50% | 50% |60%  |  |
 
 ## 1. What is Dédalo?
 
