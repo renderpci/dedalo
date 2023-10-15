@@ -717,9 +717,9 @@ const render_automatic_transcription = function (options){
 		})
 
 		button_automatic_transcription.addEventListener('click', () => {
-
-			transcripton_container.classList.add('loading')
-
+			if(button_automatic_transcription.active=== false){
+				return
+			}
 			self.automatic_transcription({
 					transcriber_engine	: self.transcriber_engine_select.value,
 					transcriber_quality	: self.transcriber_engine_quality  && self.transcriber_engine_quality.value
@@ -728,10 +728,22 @@ const render_automatic_transcription = function (options){
 					source_lang			: source_select_lang
 			})
 			.then((response)=>{
-				transcripton_container.classList.remove('loading')
 				// user messages
 				const msg_type = (response.result===false) ? 'error' : 'ok'
 				ui.show_message(automatic_transcription_container, response.msg, msg_type)
+
+				if(response.result!==false){
+
+					const pid = response.result.pid
+
+					// set the server pid to the local database
+					data_manager.set_local_db_data({
+						id	: server_process_id,
+						pid	: pid
+					}, 'status')
+
+					check_current_server_status()
+				}
 			})
 		})
 
@@ -805,6 +817,15 @@ const render_automatic_transcription = function (options){
 			})
 		}// end if(transcriber_quality)
 
+	// server_status
+
+		const server_status_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'server_status_container',
+			parent 			: automatic_transcription_container
+		})
+
+		check_current_server_status()
 
 	return automatic_transcription_container
 }//end render_automatic_transcription
