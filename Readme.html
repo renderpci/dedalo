@@ -179,7 +179,7 @@ entities, sections, components, and tags. In other words, it can locate archives
 <ul>
 <li>PHP 8.1+</li>
 <li>Apache 2.4.6+</li>
-<li>Postgres 14.2+</li>
+<li>Postgres 14.9+</li>
 <li>MySQL 5.6+ (NOT REQUIRED unless you want use Dédalo for publication).</li>
 </ul>
 
@@ -209,7 +209,7 @@ entities, sections, components, and tags. In other words, it can locate archives
 <!-- *To be installed directly in the OS (Ubuntu, Debian, MacOs X, etc.).* -->
 
 <ul>
-<li>FFmpeg 4.0+</li>
+<li>FFmpeg 5.0+</li>
 <li>FFprobe 2.6.1+ (part of FFmpeg)</li>
 <li>qtfaststart 1.0 (<code>qt-faststart</code> executable. Usually of FFmpeg, but not always! Be careful!)</li>
 <li>ImageMagick 6.9+</li>
@@ -230,7 +230,7 @@ entities, sections, components, and tags. In other words, it can locate archives
 
 <h3 id="5.3.manualinstallation">5.3. Manual installation</h3>
 
-<p>Then, install Dédalo manually (provisional installation instructions for V6 beta):</p>
+<p>Then, install Dédalo manually [following this instruction(https://dedalo.dev/docs/install/#installation)], the process to install is:</p>
 
 <ol>
 <li>Download Dédalo and place it under the httpdocs directory of the web server.</li>
@@ -249,13 +249,16 @@ entities, sections, components, and tags. In other words, it can locate archives
 <li>Create Users and Projects as you need.</li>
 </ol>
 
-<p><strong>Note:</strong> the beta state does not have cache control. Hence, we recommend opening the web browser console and deleting the browser cache during the beta period.</p>
+<p>!!! warning &#8220;Updating a Beta or RC version to final version&#8221;
+If you are using Dédalo v6 beta or Release Candidate, you will need to refresh the cache control.
+Opening the web browser console and deleting the browser cache and browser indexed_DB to update it with final definitions.</p>
 
 <h2 id="6.update">6. Update</h2>
 
 <p><em>Please read the &#8220;Updates.md&#8221; file for specific notes, procedures, etc, of the versions.</em></p>
 
-<p>Dédalo has three main updates procedures:</p>
+<p>You can follow the instruction to <a href="https://dedalo.dev/docs/management/updates/">update here</a>.
+In a nutshell, Dédalo has three main updates procedures:</p>
 
 <ol>
 <li><p>Update the code files (php, js, css, html, etc.)</p>
@@ -338,9 +341,9 @@ entities, sections, components, and tags. In other words, it can locate archives
 <p>The backend of Dédalo is tested in:</p>
 
 <ul>
-<li>Ubuntu Server 20.04+</li>
-<li>Debian 9.0+</li>
-<li>MacOs X 11.0+</li>
+<li>Ubuntu Server 22.04 LTS or 20.04 LTS</li>
+<li>Debian 11.0+</li>
+<li>MacOs X 12.0+</li>
 <li>CentOS, Fedora and RedHat situation. We are no longer testing Dédalo in RedHat/CenOS/Fedora model since the CentOS project focus was shifted. The main OS to test Dédalo will be Ubuntu. RedHat/CentOS/Fedora will become part of the &#8220;all other Linux that we do not test&#8221; category.</li>
 </ul>
 
@@ -372,12 +375,12 @@ entities, sections, components, and tags. In other words, it can locate archives
 <tbody>
 <tr>
 	<td> Chrome </td>
-	<td> 106+ </td>
+	<td> 115+ </td>
 	<td> YES - recommended </td>
 </tr>
 <tr>
 	<td> Chrome </td>
-	<td> 100 to 105 </td>
+	<td> 100 to 114 </td>
 	<td> Deprecated (Please update as soon as possible) </td>
 </tr>
 <tr>
@@ -402,12 +405,12 @@ entities, sections, components, and tags. In other words, it can locate archives
 </tr>
 <tr>
 	<td> Firefox </td>
-	<td> 105+ </td>
+	<td> 115+ </td>
 	<td> YES </td>
 </tr>
 <tr>
 	<td> Firefox </td>
-	<td> 100 to 104 </td>
+	<td> 100 to 114 </td>
 	<td> Deprecated (Please update as soon as possible) </td>
 </tr>
 <tr>
@@ -416,18 +419,13 @@ entities, sections, components, and tags. In other words, it can locate archives
 	<td> NO </td>
 </tr>
 <tr>
-	<td> Firefox </td>
-	<td> 0&#8211;40 </td>
-	<td> NO </td>
-</tr>
-<tr>
 	<td> EDGE </td>
-	<td> 106+ </td>
+	<td> 115+ </td>
 	<td> YES </td>
 </tr>
 <tr>
 	<td> EDGE </td>
-	<td> 100 to 105 </td>
+	<td> 100 to 114 </td>
 	<td> Deprecated (Please update as soon as possible) </td>
 </tr>
 <tr>
