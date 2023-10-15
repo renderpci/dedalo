@@ -340,7 +340,7 @@ const get_content_data_edit = async function(self) {
 					: false
 
 				if (transcriber_engine) {
-					const automatic_transcription_node = build_automatic_transcription({
+					const automatic_transcription_node = render_automatic_transcription({
 						self					: self,
 						source_select_lang		: self.transcription_component.lang,
 						transcripton_container	: component_text_area_node
@@ -613,10 +613,9 @@ const render_activity_info = async function(self) {
 
 
 /**
-* BUILD_AUTOMATIC_TRANSCRIPTION
+* RENDER_AUTOMATIC_TRANSCRIPTION
 */
-const build_automatic_transcription = (options) => {
-
+const render_automatic_transcription = function (options){
 
 	const self						= options.self
 	const source_select_lang		= options.source_select_lang
@@ -735,7 +734,7 @@ const build_automatic_transcription = (options) => {
 
 
 	return automatic_transcription_container
-}//end build_automatic_transcription
+}//end render_automatic_transcription
 
 
 
