@@ -229,6 +229,51 @@ class babel_transcriber {
 					debug_log(__METHOD__." Error. status not valid: ".to_string($result->status), logger::ERROR);
 					break;
 			}
+	}//end check_background_transcriber_status
+
+
+
+	/**
+	* CHECK_TRANSCRIBER_STATUS
+	* Ask to babel server if the process is working or was finished
+	* If Babel is working try to call every X seconds doing a recursion by itself
+	* Babel send 3 status
+	* 	1 - the pid and the file do not exist and nothing can do
+	* 	2 - the pid is active, the process is working, try call later
+	* 	3 - the pid is not active but the file with the result exist, process is done so call to process the result with process_file()
+	* @param object $options
+	* 	Returns last line on success or false on failure.
+	* @return void
+	*/
+	public static function check_transcriber_status(object $options) : object {
+
+			// http query vars
+			$fields = [
+				'key'				=> $options->key,
+				'url'				=> $options->url,
+				'lang'				=> $options->lang ?? null,
+				'av_url'			=> $options->av_url,
+				'engine'			=> $options->engine,
+				'method_name'		=> 'check_status',
+				'user_id'			=> $options->user_id,
+				'entity_name'		=> $options->entity_name,
+				'pid'				=> $options->pid,
+				'delete_result'		=> $options->delete_result
+			];
+
+		// curl request (core functions)
+			$request_response = curl_request((object)[
+				'url'			=> $options->url,
+				'postfields'	=> $fields,
+				'header'		=> false
+			]);
+			$response	= json_decode($request_response->result);
+			$result		= $response->result;
+
+		// debug
+			debug_log(__METHOD__." babel: check_transcriber_status ----> result ".PHP_EOL.to_string($response), logger::DEBUG);
+
+		return $result;
 	}//end check_transcriber_status
 
 
