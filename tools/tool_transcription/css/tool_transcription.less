@@ -300,6 +300,7 @@
 					align-items: center;
 					justify-content: center;
 					padding: 0.5rem;
+					flex-wrap: wrap;
 
 					>.btn_subtitles {
 						width: 12rem;
@@ -330,6 +331,35 @@
 							border-color: darken(@color_bg_tool, 10%);
 							color: #ffffff;
 						}
+						&.disable{
+							opacity: 25%;
+						}
+					}
+
+					>.server_status_container{
+						width: 100%;
+						text-align: center;
+						font-size: 1.5rem;
+						font-weight: 200;
+
+						&.processing{
+							color: #13bb87;
+							font-weight: 400;
+							animation: 1s blink ease infinite;
+							animation-direction: alternate;
+						}
+
+						@keyframes blink {
+
+							from{
+								opacity: 1;
+								}
+							to {
+								opacity: 0;
+							}
+						}
+
+
 					}
 				}//end .subtitles
 			}
