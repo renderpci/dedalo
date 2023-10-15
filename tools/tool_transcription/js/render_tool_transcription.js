@@ -621,6 +621,79 @@ const render_automatic_transcription = function (options){
 	const source_select_lang		= options.source_select_lang
 	const transcripton_container	= options.transcripton_container
 
+	const server_process_id = 'transcriber_process_'+self.media_component.section_tipo+'_'+self.media_component.section_id
+
+	const server_status = {}
+
+	// Status server cases:
+	// 1 - the pid and the file do not exist and nothing can do
+	// 2 - the pid is active, the process is working, try call later
+	// 3 - the pid is not active but the file with the result exist, process is done so call to process the result with process_file()
+	const check_current_server_status = async function(){
+
+		const server_process = await data_manager.get_local_db_data(
+			server_process_id,
+			'status'
+		)
+		if(!server_process){
+			return null;
+		}
+
+		const pid = server_process.pid
+
+		const response = await self.check_server_transcriber_status({
+			transcriber_engine	: self.transcriber_engine_select.value,
+			pid : pid
+		})
+
+		const status = response.result.status
+			? response.result.status
+			: null
+
+		switch (status) {
+			case 1:
+				// any process is active, transcriber pid is obsolete, delete it
+				data_manager.delete_local_db_data(
+					server_process_id,
+					'status'
+				)
+				server_status_container.innerHTML = self.get_tool_label('inactive') || 'Inactive'
+				server_status_container.classList.remove('processing');
+				button_automatic_transcription.classList.remove('disable');
+				break;
+
+			case 2:
+				// Processing, the transcriber server is working
+				setTimeout(function(){
+					check_current_server_status()
+				}, 4000)
+
+				server_status_container.innerHTML = self.get_tool_label('processing') || 'Processing'
+				server_status_container.classList.add('processing');
+				button_automatic_transcription.classList.add('disable');
+				button_automatic_transcription.active = false
+
+				break;
+
+			case 3:
+			default:
+				// finished, the transcriber pid is finished, delete it and reload the component
+				data_manager.delete_local_db_data(
+					server_process_id,
+					'status'
+				)
+				server_status_container.innerHTML = self.get_tool_label('finished') || 'Process done'
+				server_status_container.classList.remove('processing');
+				button_automatic_transcription.classList.remove('disable');
+
+				setTimeout(function(){
+					self.transcription_component.refresh()
+				}, 4000)
+
+				break;
+		}
+	}
+
 	const transcriber_engine = (self.context.config)
 		? self.context.config.transcriber_engine.value
 		: false
