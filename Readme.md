@@ -69,7 +69,7 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 - PHP 8.1+
 - Apache 2.4.6+
-- Postgres 14.2+
+- Postgres 14.9+
 - MySQL 5.6+ (NOT REQUIRED unless you want use Dédalo for publication).
 
 ### 4.2. Libraries required for Dédalo
@@ -94,7 +94,7 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 ### 4.3. Libraries required for the OS
 <!-- *To be installed directly in the OS (Ubuntu, Debian, MacOs X, etc.).* -->
 
-- FFmpeg 4.0+
+- FFmpeg 5.0+
 - FFprobe 2.6.1+ (part of FFmpeg)
 - qtfaststart 1.0 (`qt-faststart` executable. Usually of FFmpeg, but not always! Be careful!)
 - ImageMagick 6.9+
@@ -114,7 +114,7 @@ Then, you can follow the steps in the V5 installation video (similar for V6):
 
 ### 5.3. Manual installation
 
-Then, install Dédalo manually (provisional installation instructions for V6 beta):
+Then, install Dédalo manually [following this instruction(https://dedalo.dev/docs/install/#installation)], the process to install is:
 
 1. Download Dédalo and place it under the httpdocs directory of the web server.
 2. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
@@ -131,13 +131,16 @@ Then, install Dédalo manually (provisional installation instructions for V6 bet
 13. Log out and log in with the admin user.
 14. Create Users and Projects as you need.
 
-**Note:** the beta state does not have cache control. Hence, we recommend opening the web browser console and deleting the browser cache during the beta period.
+!!! warning "Updating a Beta or RC version to final version"
+    If you are using Dédalo v6 beta or Release Candidate, you will need to refresh the cache control.
+    Opening the web browser console and deleting the browser cache and browser indexed_DB to update it with final definitions.
 
 ## 6. Update
 
 *Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
 
-Dédalo has three main updates procedures:
+You can follow the instruction to [update here](https://dedalo.dev/docs/management/updates/).
+In a nutshell, Dédalo has three main updates procedures:
 
 1. Update the code files (php, js, css, html, etc.)
     - Create a backup of all files.
@@ -195,9 +198,9 @@ Dédalo has three main updates procedures:
 
 The backend of Dédalo is tested in:
 
-- Ubuntu Server 20.04+
-- Debian 9.0+
-- MacOs X 11.0+
+- Ubuntu Server 22.04 LTS or 20.04 LTS
+- Debian 11.0+
+- MacOs X 12.0+
 - CentOS, Fedora and RedHat situation. We are no longer testing Dédalo in RedHat/CenOS/Fedora model since the CentOS project focus was shifted. The main OS to test Dédalo will be Ubuntu. RedHat/CentOS/Fedora will become part of the "all other Linux that we do not test" category.
 
 [CentOS blog](https://blog.centos.org/2020/12/future-is-centos-stream/?utm_source=rss&utm_medium=rss&utm_campaign=future-is-centos-stream)
@@ -212,17 +215,16 @@ Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safa
 
 | Browser | Version | Compatible with Dédalo |
 | --- | --- | --- |
-| Chrome | 106+ | YES - recommended |
-| Chrome | 100 to 105 | Deprecated (Please update as soon as possible) |
+| Chrome | 115+ | YES - recommended |
+| Chrome | 100 to 114 | Deprecated (Please update as soon as possible) |
 | Chrome | 0 to 100 | NO |
 | Safari | 16.4+ | YES |
 | Safari | 16.3 | Deprecated (Please update as soon as possible) |
 | Safari | 0 to 15 | NO |
-| Firefox | 105+ | YES |
-| Firefox | 100 to 104 | Deprecated (Please update as soon as possible) |
+| Firefox | 115+ | YES |
+| Firefox | 100 to 114 | Deprecated (Please update as soon as possible) |
 | Firefox | 0-99 | NO |
-| Firefox | 0-40 | NO |
-| EDGE | 106+ | YES |
-| EDGE |  100 to 105 | Deprecated (Please update as soon as possible) |
+| EDGE | 115+ | YES |
+| EDGE |  100 to 114 | Deprecated (Please update as soon as possible) |
 | EDGE |  0 to 100 | NO |
 | IExplorer | All  | NO |
