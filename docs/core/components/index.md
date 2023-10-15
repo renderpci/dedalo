@@ -26,7 +26,7 @@ The nomenclature of files follow this paths:
 
     Render: `render_yyy_component_xxx_.js`
 
-    View: `render_zzz_yyy_component_xxx_.js`
+    View: `zzz_yyy_component_xxx_.js`
 
     CSS client files are stored inside a `/css` directory.
 
@@ -37,6 +37,32 @@ The nomenclature of files follow this paths:
 - xxx = specific name, (input_text | text_area | image | etc. )
 - yyy = mode, (edit | list | search)
 - zzz = view (default | line | mini | text | mosaic | etc.)
+
+Example of component_input_text
+
+``` shell
+component_input_text
+    ├── class.component_input_text.php
+    ├── component_input_text_json.php
+    ├── css
+    │   ├── component_input_text.less
+    │   ├── view_default_input_text.less
+    │   ├── view_line_input_text.less
+    │   ├── view_mini_input_text.css
+    │   └── view_mini_input_text.less
+    └── js
+        ├── component_input_text.js
+        ├── events_subscription.js
+        ├── render_edit_component_input_text.js
+        ├── render_list_component_input_text.js
+        ├── render_search_component_input_text.js
+        ├── view_default_edit_input_text.js
+        ├── view_default_list_input_text.js
+        ├── view_ip_list_input_text.js
+        ├── view_line_edit_input_text.js
+        ├── view_mini_input_text.js
+        └── view_text_input_text.js
+```
 
 ## Typologies of components
 
@@ -200,7 +226,9 @@ const component = get_instance({
 ```
 
 !!! info "JavaScript instantiation"
+
     The `instances.js` class is a ES6 module and it can be include in this way:
+
     ```javascript
     import {get_instance} from '../../common/js/instances.js'
     ```
@@ -211,7 +239,7 @@ Components manage his own data, but their are not connected directly to the data
 
 ## Translatable property
 
-Dédalo is a multi-language system, all information could be translatable in multiple languages. Components are translatable by default, but some components are not translatable as component_number.
+Daedalus is a multilingual system, all information can be translatable in several languages. Components are translatable by default, but some components may be non-translatable such as component_number, non-translatable components have to define this property specifically as `false`.
 
 ### Translatable components
 
@@ -487,12 +515,12 @@ In client context, permissions are set and checked in every API call, they contr
 
 Permission is set as int with the level of the access to the component instance.
 
-permission | level
---|---
-0 | no access
-1 | read only
-2 | read and write
-3 | read, write and admin
+| permission | level |
+| --- |--- |
+| 0 | no access |
+| 1 | read only |
+| 2 | read and write |
+| 3 | read, write and admin |
 
 ## tools
 
@@ -502,7 +530,7 @@ Defines with tools can be used in the component instance. Tools add some functio
 
 Components can be configured to be observable by other components or observe other components.
 
-Dédalo use two different configurations to create the observer/observable spaces. The server context and the client context. The main difference is that, in server context, observable/observer configuration is related to data changes, in client context can be configured to do other tasks as activate it, perform calculations, change his own data, etc. 
+Dédalo use two different configurations to create the observer/observable spaces. The server context and the client context. The main difference is that, in server context, observable/observer configuration is related to data changes, in client context can be configured to do other tasks as activate it, perform calculations, change his own data, etc.
 
 ### Server context
 
