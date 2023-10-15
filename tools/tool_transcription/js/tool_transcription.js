@@ -68,9 +68,9 @@ tool_transcription.prototype.init = async function(options) {
 
 		// set the self specific vars not defined by the generic init (in tool_common)
 			self.langs			= page_globals.dedalo_projects_default_langs
-			self.source_lang	= self.caller && self.caller.lang
-				? self.caller.lang
-				: null
+			// self.source_lang	= self.caller && self.caller.lang
+			// 	? self.caller.lang
+			// 	: null
 			self.target_lang	= null
 
 		// target transcriber. When user changes it, a local DB var is stored as 'transcriber_engine_select' in table 'status'
@@ -123,6 +123,22 @@ tool_transcription.prototype.build = async function(autoload=false) {
 					continue;
 				}
 				self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
+
+				if(role === 'transcription_component'){
+					// force change lang if related_component_lang is defined (original lang)
+					if (self.transcription_component.context.options && self.transcription_component.context.options.related_component_lang) {
+						if (self.transcription_component.lang !== self.transcription_component.context.options.related_component_lang) {
+							self.transcription_component.lang = self.transcription_component.context.options.related_component_lang
+							// set source land
+							self.source_lang = self.transcription_component.lang
+							// build again to force download data
+							await self.transcription_component.build(true)
+							if(SHOW_DEBUG===true) {
+								console.log('Changed transcription_component lang to related_component_lang:', self.transcription_component.lang);
+							}
+						}
+					}
+				}
 			}
 
 		// relation_list. Load relation_list from API
