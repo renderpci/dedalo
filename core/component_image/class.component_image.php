@@ -47,7 +47,7 @@ class component_image extends component_media_common {
 	*/
 	public function Save() : ?int {
 
-		$dato = $this->dato;
+		$dato = $this->get_dato();
 
 		// create_svg_file from dato item temporal container
 		if (!empty($dato)) {
@@ -882,92 +882,92 @@ class component_image extends component_media_common {
 
 
 	/**
-	* REMOVE_COMPONENT_MEDIA_FILES
+	* REMOVE_COMPONENT_MEDIA_FILES (! Moved to media common)
 	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
 	* Is triggered when section that contain media elements is deleted
 	* @see section:remove_section_media_files
 	* @param array $ar_quality = []
 	* @return bool
 	*/
-	public function remove_component_media_files(array $ar_quality=[]) : bool {
+		// public function remove_component_media_files(array $ar_quality=[]) : bool {
 
-		$date = date("Y-m-d_Hi");
+		// 	$date = date("Y-m-d_Hi");
 
-		// ar_quality
-			if (empty($ar_quality)) {
-				$ar_quality = $this->get_ar_quality();
-			}
+		// 	// ar_quality
+		// 		if (empty($ar_quality)) {
+		// 			$ar_quality = $this->get_ar_quality();
+		// 		}
 
-		// files remove
-			foreach ($ar_quality as $current_quality) {
+		// 	// files remove
+		// 		foreach ($ar_quality as $current_quality) {
 
-				// media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
-					$media_path = $this->get_media_filepath($current_quality);
-					if (!file_exists($media_path)) {
-						continue; // Skip
-					}
+		// 			// media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
+		// 				$media_path = $this->get_media_filepath($current_quality);
+		// 				if (!file_exists($media_path)) {
+		// 					continue; // Skip
+		// 				}
 
-				// delete dir
-					$folder_path_del = $this->get_target_dir($current_quality)  . '/deleted';
-					if( !is_dir($folder_path_del) ) {
-						if( !mkdir($folder_path_del, 0775, true) ) {
-							debug_log(__METHOD__
-								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
-								. ' folder_path_del: ' . $folder_path_del
-								, logger::ERROR
-							);
-							return false;
-						}
-					}
+		// 			// delete dir
+		// 				$folder_path_del = $this->get_target_dir($current_quality)  . '/deleted';
+		// 				if( !is_dir($folder_path_del) ) {
+		// 					if( !mkdir($folder_path_del, 0775, true) ) {
+		// 						debug_log(__METHOD__
+		// 							. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
+		// 							. ' folder_path_del: ' . $folder_path_del
+		// 							, logger::ERROR
+		// 						);
+		// 						return false;
+		// 					}
+		// 				}
 
-				// move/rename file
-					$image_name			= $this->get_name();
-					$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
-					if( !rename($media_path, $media_path_moved) ) {
-						debug_log(__METHOD__
-							. " Error on read or  move files to folder \"deleted\" [1]. Permission denied . The files are not deleted " . PHP_EOL
-							. ' media_path: ' . $media_path . PHP_EOL
-							. ' media_path_moved: ' . $media_path_moved
-							, logger::ERROR
-						);
-						return false;
-					}
+		// 			// move/rename file
+		// 				$image_name			= $this->get_name();
+		// 				$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
+		// 				if( !rename($media_path, $media_path_moved) ) {
+		// 					debug_log(__METHOD__
+		// 						. " Error on read or  move files to folder \"deleted\" [1]. Permission denied . The files are not deleted " . PHP_EOL
+		// 						. ' media_path: ' . $media_path . PHP_EOL
+		// 						. ' media_path_moved: ' . $media_path_moved
+		// 						, logger::ERROR
+		// 					);
+		// 					return false;
+		// 				}
 
-					debug_log(__METHOD__
-						." >>> Moved file $media_path to $media_path_moved " . PHP_EOL
-						.' media_path: ' . $media_path . PHP_EOL
-						.' media_path_moved: ' . $media_path_moved
-						, logger::DEBUG
-					);
+		// 				debug_log(__METHOD__
+		// 					." >>> Moved file $media_path to $media_path_moved " . PHP_EOL
+		// 					.' media_path: ' . $media_path . PHP_EOL
+		// 					.' media_path_moved: ' . $media_path_moved
+		// 					, logger::DEBUG
+		// 				);
 
-				// Move original files too (PNG,TIF,Etc.)
-				// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
-					$original_extension	= $this->get_original_extension(
-						true // bool exclude_converted
-					);
-					$path_parts				= pathinfo($media_path);
-					$original_file			= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-					$original_file_moved	= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-					if (file_exists($original_file)) {
-						if( !rename($original_file, $original_file_moved) ) {
-							debug_log(__METHOD__
-								. " Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted " . PHP_EOL
-								. ' original_file: ' . $original_file . PHP_EOL
-								. ' original_file_moved: ' . $original_file_moved
-								, logger::DEBUG
-							);
-							return false;
-						}
-					}
-			}//end foreach
+		// 			// Move original files too (PNG,TIF,Etc.)
+		// 			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
+		// 				$original_extension	= $this->get_original_extension(
+		// 					true // bool exclude_converted
+		// 				);
+		// 				$path_parts				= pathinfo($media_path);
+		// 				$original_file			= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
+		// 				$original_file_moved	= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
+		// 				if (file_exists($original_file)) {
+		// 					if( !rename($original_file, $original_file_moved) ) {
+		// 						debug_log(__METHOD__
+		// 							. " Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted " . PHP_EOL
+		// 							. ' original_file: ' . $original_file . PHP_EOL
+		// 							. ' original_file_moved: ' . $original_file_moved
+		// 							, logger::DEBUG
+		// 						);
+		// 						return false;
+		// 					}
+		// 				}
+		// 		}//end foreach
 
-		#
-		# Original image remove
-		# remove additional source images like 'original_image.tif'
-		# WORK IN PROGRESS !!
+		// 	#
+		// 	# Original image remove
+		// 	# remove additional source images like 'original_image.tif'
+		// 	# WORK IN PROGRESS !!
 
-		return true;
-	}//end remove_component_media_files
+		// 	return true;
+		// }//end remove_component_media_files
 
 
 
@@ -1144,7 +1144,7 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* @return array|null $allowed_extensions
+	* @return array|null $alternative_extensions
 	*/
 	public function get_alternative_extensions() : ?array {
 
@@ -2042,7 +2042,7 @@ class component_image extends component_media_common {
 	public function regenerate_component() : bool {
 
 		// files check
-			// create default quality file if not exists
+			// create default quality file if not already exists
 				$default_quality		= $this->get_default_quality();
 				$image_default_filepath	= $this->get_media_filepath( $default_quality );
 				if (!file_exists($image_default_filepath)) {
@@ -2065,43 +2065,11 @@ class component_image extends component_media_common {
 					}
 				}
 
-		// get files info
-			$files_info	= $this->get_files_info(
-				false // bool include_empty. Prevent to store empty quality files
-			);
-
-		// lib_data add
-			$current_dato = $this->get_dato();
-			if (empty($current_dato)) {
-
-				// create a new dato from scratch
-				$dato_item = (object)[
-					'files_info' => $files_info
-				];
-				$dato_item->lib_data = null;
-				$new_dato = [$dato_item];
-
-			}else{
-
-				$new_dato = [];
-				foreach ($current_dato as $current_value) {
-					// create a new dato from scratch
-					$dato_item = (object)[
-						'files_info' => $files_info
-					];
-					$dato_item->lib_data = $current_value->lib_data ?? null;
-					$new_dato[] = $dato_item;
-				}
-			}
-
-		// replace existing dato
-			$this->set_dato($new_dato);
-
-		// save
-			$this->Save();
+		// common regenerate_component exec after specific actions (this action saves at the end)
+			$result = parent::regenerate_component();
 
 
-		return true;
+		return $result;
 	}//end regenerate_component
 
 

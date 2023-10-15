@@ -74,7 +74,6 @@
 					? $this->get_url(false)
 					: null;
 			// datalist. Files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
-				// $item->datalist = $this->get_files_info();
 				$item->datalist = $this->get_datalist();
 
 		// player mode case. Send the media header when the component are working as player

@@ -131,7 +131,7 @@ const render_versions_grid = function(self) {
 		versions_container.appendChild( get_line_file_open(ar_quality, self) )
 
 	// line_file_extension
-		versions_container.appendChild( get_line_file_extension(ar_quality, self) )
+		// versions_container.appendChild( get_line_file_extension(ar_quality, self) )
 
 	// line_file_size
 		versions_container.appendChild( get_line_file_size(ar_quality, self) )
@@ -141,6 +141,11 @@ const render_versions_grid = function(self) {
 
 	// line_file_download
 		versions_container.appendChild( get_line_file_download(ar_quality, self) )
+
+	// line_alternative_extensions
+		if(self.main_element.context.features.alternative_extensions) {
+			versions_container.appendChild( get_line_alternative_extensions(ar_quality, self) )
+		}
 
 	// line_file_delete
 		versions_container.appendChild( get_line_file_delete(ar_quality, self) )
@@ -217,13 +222,6 @@ const get_line_labels = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				// const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
@@ -270,11 +268,7 @@ const get_line_file_exists = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -340,7 +334,7 @@ const get_line_file_open = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -401,7 +395,7 @@ const get_line_file_extension = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -455,11 +449,7 @@ const get_line_file_size = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -485,6 +475,86 @@ const get_line_file_size = function(ar_quality, self) {
 
 	return fragment
 }//end get_line_file_size
+
+
+
+/**
+* GET_LINE_ALTERNATIVE_EXTENSIONS
+* @param array ar_quality
+* @param object self
+* @return HTMLElement fragment
+*/
+const get_line_alternative_extensions = function(ar_quality, self) {
+
+	// DocumentFragment
+ 		const fragment = new DocumentFragment()
+
+ 	// main label
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: get_label.alternative_extensions || 'Alt. extensions',
+			parent			: fragment
+		})
+
+	// short vars
+		const value_files_info				= self.files_info_alternative
+		const extension						= self.main_element.context.features.extension
+		const alternative_extensions		= self.main_element.context.features.alternative_extensions
+		const alternative_extensions_length	= alternative_extensions.length
+
+	const ar_quality_length = ar_quality.length
+	for (let i = 0; i < ar_quality_length; i++) {
+
+		const quality = ar_quality[i]
+
+		const file_info_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
+			parent			: fragment
+		})
+
+		// info columns
+		for (let j = 0; j < alternative_extensions_length; j++) {
+
+			const alternative_extension = alternative_extensions[j]
+
+			// files_info
+			const file_info = value_files_info.find(el => el.quality===quality && el.extension===alternative_extension)
+			if (file_info) {
+
+					const cell_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'cell_node',
+						parent			: file_info_container
+					})
+
+					const button_download = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button download',
+						parent			: cell_node
+					})
+					button_download.addEventListener('click', function(e) {
+						e.stopPropagation();
+						const file_url = DEDALO_MEDIA_URL + file_info.file_path
+						open_window({
+							url : file_url
+						})
+					})
+
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'file_info_extension',
+						inner_html		: file_info.extension,
+						parent			: cell_node
+					})
+			}
+		}
+	}//end for (let i = 0; i < ar_quality_length; i++)
+
+
+	return fragment
+}//end get_line_alternative_extensions
 
 
 
@@ -515,10 +585,6 @@ const get_line_file_upload = function(ar_quality, self) {
 
 			// file_info
 				// const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -589,6 +655,9 @@ const get_line_file_download = function(ar_quality, self) {
 			parent			: fragment
 		})
 
+	// short vars
+		const extension = self.main_element.context.features.extension
+
 	// info columns
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
@@ -596,7 +665,7 @@ const get_line_file_download = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
@@ -607,10 +676,16 @@ const get_line_file_download = function(ar_quality, self) {
 
 			if (file_info.file_exist===true) {
 
+				const cell_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell_node',
+					parent			: file_info_node
+				})
+
 				const button_file_download = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button download',
-					parent			: file_info_node
+					parent			: cell_node
 				})
 				button_file_download.addEventListener('click', function(e){
 					e.stopPropagation()
@@ -622,6 +697,13 @@ const get_line_file_download = function(ar_quality, self) {
 						url			: url,
 						file_name	: file_name
 					})
+				})
+
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'file_info_extension',
+					inner_html		: extension,
+					parent			: cell_node
 				})
 			}
 		}//end if (file_info.file_exist===true)
@@ -658,11 +740,7 @@ const get_line_file_delete = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -763,7 +841,8 @@ const get_line_build_version = function(ar_quality, self) {
 								setTimeout(async function(){
 									const files_info = await self.get_files_info()
 									const found = files_info.find(el => el.quality===quality)
-									if (found && found.file_url) {
+
+									if (found && found.file_exist===true) {
 										// processing_label.remove()
 										// button_build_version.classList.remove('hide')
 										self.main_element_quality = quality
@@ -833,7 +912,7 @@ const get_line_conform_headers = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
@@ -895,11 +974,7 @@ const get_line_rotate = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.files_info.find(el => el.quality===quality)
-
-				// 'file_exist'
-				// 'file_size'
-				// 'url'
+				const file_info = self.datalist.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -948,6 +1023,7 @@ const get_line_rotate = function(ar_quality, self) {
 
 	return fragment
 }//end get_line_rotate
+
 
 
 // @license-end
