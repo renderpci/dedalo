@@ -585,20 +585,31 @@ final class Ffmpeg {
 
 				// retrieves info from reading the header
 					$media_header = Ffmpeg::get_media_streams($source_file);
+					debug_log(__METHOD__
+						. " media_header from get_media_streams result: " . PHP_EOL
+						. ' type: ' . gettype($media_header) . PHP_EOL
+						. ' value: ' . to_string($media_header)
+						, logger::DEBUG
+					);
 
 				// size
 					$width_default	= 720;
 					$height_default	= 404;
 
-					$width = isset($media_header[$quality]['width'])
-						? (int)$media_header[$quality]['width']
+					$width = isset($media_header->{$quality}) && isset($media_header->{$quality}['width'])
+						? (int)$media_header->{$quality}['width']
 						: $width_default;
 
-
-					if(isset($media_header[$quality]['height']))
-					$height = isset($media_header[$quality]['height'])
-						? (int)$media_header[$quality]['height']
+					$height = isset($media_header->{$quality}) && isset($media_header->{$quality}['height'])
+						? (int)$media_header->{$quality}['height']
 						: $height_default;
+
+					debug_log(__METHOD__
+						. " width/height result: " . PHP_EOL
+						. ' width: ' . to_string($width). PHP_EOL
+						. ' height: ' . to_string($height)
+						, logger::DEBUG
+					);
 			}
 
 			// aspect_ratio
