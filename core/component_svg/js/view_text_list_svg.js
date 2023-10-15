@@ -32,7 +32,7 @@ view_text_list_svg.render = function(self, options) {
 		const datalist = self.data.datalist || []
 
 	// url
-		const quality		= 'standard'
+		const quality		= self.quality || self.context.features.quality
 		const url_object	= datalist.find(item => item.quality===quality)
 		const url			= url_object
 			? url_object.file_url + '?t=' + (new Date()).getTime()
