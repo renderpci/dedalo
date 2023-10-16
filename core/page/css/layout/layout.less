@@ -1480,6 +1480,29 @@
 		// resize: vertical;
 		// overflow: hidden;
 
+	// shared quality_selector
+	.quality_selector {
+		position: absolute;
+		top: 0rem;
+		right: 1rem;
+		margin: 0px;
+		padding: 0px;
+		padding-left: 0.33rem;
+		height: 1.25rem;
+		max-width: 5rem;
+		font-size: 0.9rem;
+		border: 0px;
+		outline: none;
+		border-radius: 4px;
+
+		z-index: 1;
+		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+
+		.fullscreen& {
+			width: auto !important;
+		}
+	}
+
 	.media_content_data {
 		// Note that height is always the media min height (392px)
 		// (!) Do not use max o min height here to prevent to affect canvas reference size
