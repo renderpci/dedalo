@@ -59,50 +59,54 @@ view_column_list_3d.render = async function(self, options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
 		const quality	= self.quality || self.context.features.quality
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
 
-	// url
-		const posterframe_url	= data.posterframe_url || page_globals.fallback_image
-		const url				= posterframe_url // (!posterframe_url || posterframe_url.length===0) ? DEDALO_LIB_URL + "/themes/default/0.jpg" : posterframe_url
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// add posterframe
-		if(file_info) {
-			// image
-			const image = ui.create_dom_element({
-				element_type	: 'img',
-				class_name		: 'link',
-				parent			: content_data
-			})
-			// image.loading = 'lazy'
-			// image.setAttribute('crossOrigin', 'Anonymous');
-			// ui.component.add_image_fallback(image)
+	// url
+		const url = data.posterframe_url
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
-			// image background color
+		const file_info	= files_info.find(item => item.quality===quality)
+
+	// image
+		const image = ui.create_dom_element({
+			element_type	: 'img',
+			class_name		: 'link',
+			parent			: content_data
+		})
+		// image.loading = 'lazy'
+		// image.setAttribute('crossOrigin', 'Anonymous');
+		// ui.component.add_image_fallback(image)
+
+		// load event . image background color
 			image.addEventListener('load', set_bg_color, false)
 			function set_bg_color() {
 				this.removeEventListener('load', set_bg_color, false)
 				// ui.set_background_image(this, this)
 			}
+		// error event
 			image.addEventListener('error', () => {
-				console.log('Image load error:', image);
+				if (image.src!==page_globals.fallback_image) {
+					image.src = page_globals.fallback_image
+				}
 			}, false)
 
-			// set image src
-			image.src = url
-		}
+		// set image src
+		image.src = url
 
 	// open viewer
 		content_data.addEventListener('mouseup', fn_mouseup)
 		function fn_mouseup(e) {
 			e.stopPropagation();
 
-			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
+			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 			// else open the player to show the image
 			if(!file_info) {
 

@@ -108,14 +108,14 @@ const get_content_data_edit = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
-	// media url from data.datalist based on selected context quality
-		const quality	= self.quality || self.context.features.quality
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-		const video_url	= file_info && file_info.file_exist===true
-			? file_info.file_url
-			: null
+	// media url from files_info based on selected context quality
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
+		const data			= self.data || {}
+		const files_info	= current_value && current_value.files_info
+			? current_value.files_info
+			: []
+		const file_info		= files_info.find(el => el.quality===quality)
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -124,11 +124,10 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// posterframe
-		const posterframe_url	= self.data.posterframe_url + '?t=' + (new Date()).getTime()
+		const posterframe_url	= data.posterframe_url + '?t=' + (new Date()).getTime()
 		const posterframe		= ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'posterframe',
-
 			parent			: content_value
 		})
 		posterframe.addEventListener('error', function(e) {
@@ -151,6 +150,9 @@ const get_content_value = (i, current_value, self) => {
 		}
 
 	// video
+		const video_url	= file_info && file_info.file_exist===true
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: null
 		if (video_url) {
 
 			const video = build_video_node(
@@ -285,12 +287,16 @@ const build_video_node = (posterframe_url) => {
 const get_quality_selector = (content_value, self) => {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const quality	= self.quality || self.context.features.quality
-		const video		= content_value.video
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0] && value[0].files_info
+			? value[0].files_info
+			: []
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
+		const video			= content_value.video
 
-		const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment()
 
 	// create the quality selector
 		const quality_selector = ui.create_dom_element({
@@ -299,26 +305,25 @@ const get_quality_selector = (content_value, self) => {
 			parent			: fragment
 		})
 		quality_selector.addEventListener('change', (e) =>{
-			const src = e.target.value
-			// self.video.src = src
-			video.src = src
+			video.src = e.target.value
 			// event_manager.publish('image_quality_change_'+self.id, img_src)
 			if(SHOW_DEBUG===true) {
-				console.log("src:", src);
+				console.log("quality_selector set video.src:", video.src);
 			}
 		})
 
-		const quality_list		= datalist.filter(el => el.file_exist===true)
+		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
+
+			const file_info = quality_list[i]
+
 			// create the node with the all qualities sent by server
-			const value = (typeof quality_list[i].file_url==='undefined')
-				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
-				: quality_list[i].file_url
+			const url = DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: value,
+				value			: url,
 				text_node		: quality_list[i].quality,
 				parent			: quality_selector
 			})

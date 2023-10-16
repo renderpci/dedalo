@@ -3818,12 +3818,9 @@ abstract class component_common extends common {
 	* Unified value list output
 	* By default, list value is equivalent to dato. Override in other cases.
 	* Note that empty array or string are returned as null
-	* A param '$options' is added only to allow future granular control of the output
-	* @param object $options = null
-	* 	Optional way to modify result. Avoid using it if it is not essential
 	* @return array|null $list_value
 	*/
-	public function get_list_value(object $options=null) : ?array {
+	public function get_list_value() : ?array {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -3831,12 +3828,7 @@ abstract class component_common extends common {
 		}
 
 		$list_value = $dato;
-		// foreach ($dato as $item) {
 
-		// 	$list_value[] = !is_scalar($item)
-		// 		? (!empty($item) ? json_encode($item) : $item) // array, object, resource, null
-		// 		: $item; //  int, float, string, bool
-		// }
 
 		return $list_value;
 	}//end get_list_value

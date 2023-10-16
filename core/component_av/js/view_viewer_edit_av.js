@@ -27,7 +27,7 @@ export const view_viewer_edit_av = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node to be used by service autocomplete
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -35,7 +35,12 @@ export const view_viewer_edit_av = function() {
 view_viewer_edit_av.render = async function(self, options) {
 
 	// short vars
-		const datalist = self.data.datalist || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0]
+			? (value[0].files_info || [])
+			: []
+		const extension		= self.context.features.extension
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -43,12 +48,12 @@ view_viewer_edit_av.render = async function(self, options) {
 			class_name		: 'wrapper_component component_av view_viewer'
 		})
 
-	// url
-		const quality		= page_globals.dedalo_av_quality_default // '404'
-		const url_object	= datalist.filter(item => item.quality===quality)[0]
-		const url			= (typeof url_object==='undefined')
-			? page_globals.fallback_image
-			: url_object.file_url + '?t=' + (new Date()).getTime()
+	// url to download
+		const quality	= page_globals.dedalo_av_quality_default // '404'
+		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension)
+		const url		= file_info
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// wrapper background color from posterframe image
 		const posterframe_url = self.data.posterframe_url
@@ -97,11 +102,11 @@ view_viewer_edit_av.render = async function(self, options) {
 			e.stopPropagation()
 
 			// get the original quality for download
-			const original = datalist.find(item => item.quality==='original')
+			const original = files_info.find(item => item.quality==='original')
 
 			// check if the original file exist else get the url of the default image
-			const download_url	= (original.file_exist)
-				? original.file_url // original image
+			const download_url = original && original.file_exist
+				? DEDALO_MEDIA_URL + original.file_path + '?t=' + (new Date()).getTime()
 				: url // default image
 
 			// get the name of the original file uploaded (user filename)
