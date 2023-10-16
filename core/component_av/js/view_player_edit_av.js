@@ -73,22 +73,24 @@ export const get_content_data_player = function(options) {
 	const fragment = new DocumentFragment()
 
 	// short vars
-		const context	= self.context || {}
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const quality	= self.quality || context.features.quality
+		const context		= self.context || {}
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0]
+			? (value[0].files_info || [])
+			: []
+		const quality		= self.quality || context.features.quality
+		const extension		= self.context.features.extension
 
 	// url
 		// posterframe
 			const posterframe_url = data.posterframe_url + '?t=' + (new Date()).getTime()
+
 		// media
-			// const video_url = self.data.video_url
-			const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-			const video_url	= file_info
-				? file_info.file_url
-				: datalist.find(el => el.file_exist===true)
-					?  datalist.find(el => el.file_exist===true).file_url
-					: null
+			const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true && el.extension===extension)
+			const video_url	= file_info && file_info.file_path
+				? DEDALO_MEDIA_URL + file_info.file_path
+				: null
 
 	// player
 		if (video_url) {

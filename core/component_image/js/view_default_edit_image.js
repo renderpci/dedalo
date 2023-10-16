@@ -106,10 +106,13 @@ const get_content_data = function(self) {
 const get_content_value = function(i, value, self) {
 
 	// short vars
-		const quality		= self.quality || self.context.features.quality
-		const extension		= self.context.features.extension
-		const data			= self.data || {}
-		const datalist		= data.datalist || []
+		const quality			= self.quality || self.context.features.quality
+		const extension			= self.context.features.extension
+		const data				= self.data || {}
+		const files_info		= value && value.files_info
+			? value.files_info
+			: []
+		const external_source	= data.external_source
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -117,17 +120,16 @@ const get_content_value = function(i, value, self) {
 			class_name		: 'content_value media_content_value'
 		})
 
-	// file_info
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-
-
-	// render the image when the source is external, image from URI
-		if(file_info && file_info.external){
-			const image_external_node = render_image_external(file_info.file_url)
+	// external_source case. render the image when the source is external, image from URI
+		if(external_source && external_source.length){
+			const image_external_node = render_image_external(external_source)
 			content_value.appendChild(image_external_node)
 
 			return content_value
 		}
+
+	// file_info
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 
 	// render image node
 		const image_node = render_image_node(self, file_info, content_value)
@@ -277,26 +279,16 @@ const render_image_external = function(file_url) {
 const render_image_node = function(self, file_info, content_value) {
 
 	// short vars
-		const quality	= self.quality || self.context.features.quality
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const quality			= self.quality || self.context.features.quality
+		const data				= self.data || {}
+		const external_source	= data.external_source
 
 	// render de image in Dédalo media
-		let url = file_info && file_info.file_url
-			? file_info.file_url + '?t=' + (new Date()).getTime()
-			: null
-
-		// fallback to default (when not already in default)
-		if (!url && quality!==self.context.features.default_quality) {
-			const file_info_dq	= datalist.find(el => el.quality===self.context.features.default_quality && el.file_exist===true)
-			url = file_info_dq
-				? file_info_dq.file_url + '?t=' + (new Date()).getTime()
-				: null
-			if (url) {
-				// change the quality
-				self.quality = self.context.features.default_quality
-			}
-		}
+		const url = external_source
+			? external_source
+			: file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
 
 	// image. (!) Only to get background color and apply to li node
 		const bg_reference_image_url = url // || page_globals.fallback_image

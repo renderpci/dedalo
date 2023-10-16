@@ -50,45 +50,32 @@
 
 				case 'list':
 				case 'tm':
+					// value. list_value is a reduced files list info
 					$value = $this->get_list_value();
 
+					// data item
+					$item = $this->get_data_item($value);
+
 					// external source (link to image outside Dédalo media)
-						$external_source = $this->get_external_source();
-
-					// datalist
-						// files_info. For fast list we add directly the default image
-						$thumb_data_item = new stdClass();
-							$thumb_data_item->file_url		= (!empty($external_source))
-								? $external_source
-								: $this->get_url(DEDALO_IMAGE_THUMB_DEFAULT);
-							$thumb_data_item->quality		= DEDALO_IMAGE_THUMB_DEFAULT;
-							$thumb_data_item->external		= (!empty($external_source));
-
-						$default_data_item = new stdClass();
-							$default_data_item->file_url	= (!empty($external_source))
-								? $external_source
-								: $this->get_url(DEDALO_IMAGE_QUALITY_DEFAULT);
-							$default_data_item->quality		= DEDALO_IMAGE_QUALITY_DEFAULT;
-							$default_data_item->external	= (!empty($external_source));
-
-						$datalist = [$thumb_data_item, $default_data_item ];
+					$item->external_source = $this->get_external_source();
 					break;
 
 				case 'edit':
 				default:
+					// value. full files list info
 					$value = $this->get_dato();
 
-					// datalist. Get the url of all defined quality
-						$datalist = $this->get_datalist();
+					// data item
+					$item = $this->get_data_item($value);
+
+					// external source (link to image outside Dédalo media)
+					$item->external_source = $this->get_external_source();
+
+					// base_svg_url
+					$item->base_svg_url = $this->get_base_svg_url(true);
 					break;
 			}
 
-		// data item
-			$item = $this->get_data_item($value);
-			// base_svg_url
-			$item->base_svg_url = $this->get_base_svg_url(true);
-			// item datalist
-			$item->datalist = $datalist;
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

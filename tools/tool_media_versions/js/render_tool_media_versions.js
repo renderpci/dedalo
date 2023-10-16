@@ -125,7 +125,7 @@ const render_versions_grid = function(self) {
 		versions_container.appendChild( get_line_labels(ar_quality, self) )
 
 	// line_file_exists
-		versions_container.appendChild( get_line_file_exists(ar_quality, self) )
+		versions_container.appendChild( get_line_file(ar_quality, self) )
 
 	// line_file_open
 		versions_container.appendChild( get_line_file_open(ar_quality, self) )
@@ -243,12 +243,12 @@ const get_line_labels = function(ar_quality, self) {
 
 
 /**
-* GET_LINE_FILE_EXISTS
+* GET_LINE_FILE
 * @param array ar_quality
 * @param object self
 * @return HTMLElement fragment
 */
-const get_line_file_exists = function(ar_quality, self) {
+const get_line_file = function(ar_quality, self) {
 
 	// DocumentFragment
  		const fragment = new DocumentFragment()
@@ -267,23 +267,25 @@ const get_line_file_exists = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
-				if (file_info.file_url) {
+			// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+			if (file_info && file_info.file_exist===true) {
+				if (file_info.file_path) {
 					const button_file_av = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button media',
 						parent			: file_info_node
 					})
-					button_file_av.addEventListener('click', async function() {
+					button_file_av.addEventListener('click', async function(e) {
+						e.stopPropagation()
+
 						self.node.classList.add('loading')
 						// change component av quality and refresh
 						self.main_element.quality = quality
@@ -291,7 +293,7 @@ const get_line_file_exists = function(ar_quality, self) {
 						self.node.classList.remove('loading')
 					})
 				}else{
-					// const extension = file_info.file_url.split(".").pop();
+					// const extension = file_info.file_path.split(".").pop();
 					ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: '',
@@ -299,12 +301,12 @@ const get_line_file_exists = function(ar_quality, self) {
 						parent			: file_info_node
 					})
 				}
-			}//end if (file_info.file_url) {
+			}//end if (file_info.file_path) {
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
-}//end get_line_file_exists
+}//end get_line_file
 
 
 
@@ -333,19 +335,19 @@ const get_line_file_open = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
+			// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+			if (file_info && file_info.file_exist===true) {
 
 				// file_url
-				const file_url = file_info.file_url
+				const file_url = DEDALO_MEDIA_URL + file_info.file_path
 
 				// icon file
 				const link = ui.create_dom_element({
@@ -394,18 +396,20 @@ const get_line_file_extension = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
+			// file_info
+			const file_info = (quality==='original' && self.file_info_normalized_name)
+				? self.file_info_normalized_name
+				: self.files_info_safe.find(el => el.quality===quality)
 
-				const extension = file_info.file_url.split('.').pop();
+			if (file_info && file_info.file_exist===true) {
+
+				const extension = file_info.file_path.split('.').pop();
 
 				// icon file
 				ui.create_dom_element({
@@ -415,7 +419,7 @@ const get_line_file_extension = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 			}
-		}
+		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
@@ -449,7 +453,9 @@ const get_line_file_size = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
+				const file_info = (quality==='original' && self.file_info_normalized_name)
+					? self.file_info_normalized_name
+					: self.files_info_safe.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -457,7 +463,7 @@ const get_line_file_size = function(ar_quality, self) {
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
+			if (file_info && file_info.file_exist===true) {
 
 				// size
 				const size = bytes_format(file_info.file_size)
@@ -470,7 +476,7 @@ const get_line_file_size = function(ar_quality, self) {
 					parent			: file_info_node
 				})
 			}
-		}
+		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
@@ -655,9 +661,6 @@ const get_line_file_download = function(ar_quality, self) {
 			parent			: fragment
 		})
 
-	// short vars
-		const extension = self.main_element.context.features.extension
-
 	// info columns
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
@@ -665,7 +668,14 @@ const get_line_file_download = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
+				const file_info = (quality==='original' && self.file_info_normalized_name)
+					? self.file_info_normalized_name
+					: self.files_info_safe.find(el => el.quality===quality)
+
+			// extension
+				const extension	= file_info && file_info.file_path
+					? file_info.file_path.split('.').pop()
+					: null;
 
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
@@ -674,7 +684,7 @@ const get_line_file_download = function(ar_quality, self) {
 					parent			: fragment
 				})
 
-			if (file_info.file_exist===true) {
+			if (file_info && file_info.file_exist===true) {
 
 				const cell_node = ui.create_dom_element({
 					element_type	: 'div',
@@ -690,7 +700,7 @@ const get_line_file_download = function(ar_quality, self) {
 				button_file_download.addEventListener('click', function(e){
 					e.stopPropagation()
 
-					const url		= file_info.file_url;
+					const url		= DEDALO_MEDIA_URL + file_info.file_path
 					const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
 					download_file({
@@ -739,16 +749,16 @@ const get_line_file_delete = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
+			// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+			if (file_info && file_info.file_exist===true) {
 
 				const button_file_download = ui.create_dom_element({
 					element_type	: 'span',
@@ -911,9 +921,6 @@ const get_line_conform_headers = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
 					element_type	: 'div',
@@ -921,7 +928,11 @@ const get_line_conform_headers = function(ar_quality, self) {
 					parent			: fragment
 				})
 
-			if (quality!=='original' && file_info.file_exist===true) {
+
+			// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+			if (file_info && quality!=='original' && file_info.file_exist===true) {
 
 				const button_build_version = ui.create_dom_element({
 					element_type	: 'span',
@@ -973,16 +984,16 @@ const get_line_rotate = function(ar_quality, self) {
 
 			const quality = ar_quality[i]
 
-			// file_info
-				const file_info = self.datalist.find(el => el.quality===quality)
-
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
 				parent			: fragment
 			})
 
-			if (file_info.file_exist===true) {
+			// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+			if (file_info && file_info.file_exist===true) {
 
 				// left rotate
 				const button_rotate_left = ui.create_dom_element({

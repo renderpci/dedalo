@@ -111,7 +111,14 @@ const get_content_data_edit = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
-	const data = self.data || {}
+	// short vars
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
+		const data			= self.data || {}
+		const files_info	= current_value && current_value.files_info
+			? current_value.files_info
+			: []
+		const external_source = data.external_source
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -119,36 +126,42 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value media_content_value'
 		})
 
-	// get file quality
-		const quality	= self.quality || self.context.features.quality
-		const datalist	= self.data.datalist
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+	const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 
-		const file_url	= file_info
-			? file_info.file_url
-			: null
+		if(file_info) {
+			// posterframe image
+			const posterframe_url = data.posterframe_url
+				? data.posterframe_url + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
+			content_value.posterframe = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe loading',
+				parent			: content_value
+			})
+			// image background color
+			content_value.posterframe.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				if (content_value.posterframe.src!==page_globals.fallback_image) {
+					ui.set_background_image(this, content_value)
+				}
+			}
+			// set src url
+			content_value.posterframe.src = posterframe_url
+		}
 
 	// init viewer when content_value node is in in browser viewport
 	when_in_viewport(content_value, async function(){
 
-		if(file_info) {
-			// posterframe image
-				const posterframe_url = data.posterframe_url || page_globals.fallback_image
-				content_value.posterframe = ui.create_dom_element({
-					element_type	: 'img',
-					class_name		: 'posterframe',
-					parent			: content_value
-				})
-				// image background color
-				content_value.posterframe.addEventListener('load', set_bg_color, false)
-				function set_bg_color() {
-					this.removeEventListener('load', set_bg_color, false)
-					ui.set_background_image(this, content_value)
-				}
-				content_value.posterframe.src = posterframe_url + '?t=' + (new Date()).getTime()
-		}
+		// url
+		const file_url = external_source
+			? external_source
+			: file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: null
 
 		if(file_url) {
+
 			// viewer_3d
 			const viewer_3d = await viewer.init({
 				cache : false
@@ -187,7 +200,9 @@ const get_content_value = (i, current_value, self) => {
 				content_value.posterframe.addEventListener('load', set_bg_color, false)
 				function set_bg_color() {
 					this.removeEventListener('load', set_bg_color, false)
-					ui.set_background_image(this, content_value)
+					// if (content_value.posterframe.src!==page_globals.fallback_image) {
+						// ui.set_background_image(this, content_value)
+					// }
 				}
 				content_value.posterframe.src = posterframe_url
 
@@ -203,7 +218,6 @@ const get_content_value = (i, current_value, self) => {
 					})
 			})
 		}
-
 	});//end when_in_viewport
 
 
@@ -313,9 +327,13 @@ const get_content_value_read = (i, current_value, self) => {
 const get_quality_selector = (content_value, self) => {
 
 	// short vars
-		const data		= self.data
-		const quality	= self.quality || self.context.features.quality
-		const video		= content_value.video
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0] && value[0].files_info
+			? value[0].files_info
+			: []
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
 
 	// fragment
 		const fragment = new DocumentFragment()
@@ -333,17 +351,18 @@ const get_quality_selector = (content_value, self) => {
 			// event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const quality_list		= data.datalist.filter(el => el.file_exist===true)
+		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
+
+			const file_info = quality_list[i]
+
 			// create the node with the all qualities sent by server
-			const value = (typeof quality_list[i].file_url==='undefined')
-				? '' // DEDALO_CORE_URL + "/themes/default/0.jpg"
-				: quality_list[i].file_url
+			const url = DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: value,
+				value			: url,
 				text_node		: quality_list[i].quality,
 				parent			: quality_selector
 			})

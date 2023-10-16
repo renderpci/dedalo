@@ -103,18 +103,37 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 					self.main_element.context.features.quality = self.main_element_quality
 				}
 
-		// fix important vars
-			self.ar_quality	= self.caller.context.features.ar_quality
-			// datalist. main component dato
-			self.datalist	= self.main_element.data.datalist
+		// main_element. fix important vars about
+			const data	= self.main_element.data || {}
+			const value	= data.value || []
+
+			// ar_quality
+				self.ar_quality	= self.caller.context.features.ar_quality
+
 			// files_info_safe. filtered by allowed extension
-			self.files_info_safe = self.main_element.data.value[0] && self.main_element.data.value[0].files_info
-				? self.main_element.data.value[0].files_info.filter(el => el.extension===self.main_element.context.features.extension)
-				: []
-			// files_info_safe. filtered by allowed extension
-			self.files_info_alternative = self.main_element.data.value[0] && self.main_element.data.value[0].files_info
-				? self.main_element.data.value[0].files_info.filter(el => el.extension!==self.main_element.context.features.extension)
-				: []
+				self.files_info_safe = value[0] && value[0].files_info
+					? value[0].files_info.filter(el => el.extension===self.main_element.context.features.extension)
+					: []
+
+			// files_info_alternative. filtered by alternative extension
+				self.files_info_alternative = value[0] && value[0].files_info
+					? value[0].files_info.filter(el => el.extension!==self.main_element.context.features.extension)
+					: []
+
+			// files_info_original
+				self.files_info_original = value[0] && value[0].files_info
+					? value[0].files_info.filter(el => el.quality==='original')
+					: []
+
+			// self.file_info_normalized_name
+				const original_normalized_name = value[0] && value[0].original_normalized_name
+					? value[0].original_normalized_name
+					: null
+				self.file_info_normalized_name = original_normalized_name
+					? value[0] && value[0].files_info
+						? value[0].files_info.find(el => el.file_name===original_normalized_name)
+						: null
+					: null
 
 	} catch (error) {
 		self.error = error
