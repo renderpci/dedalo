@@ -68,7 +68,7 @@
 			// add useful properties
 			// posterframe_url
 				$item->posterframe_url	= $this->get_posterframe_url(
-					($mode==='edit'), // bool test_file
+					false, // ($mode==='edit'), // bool test_file
 					false, // bool absolute
 					false // avoid_cache
 				);
