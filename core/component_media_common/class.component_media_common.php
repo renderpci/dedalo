@@ -1885,11 +1885,17 @@ class component_media_common extends component_common {
 				}
 			}else{
 
-				// create a new dato from scratch
-				$dato_item = (object)[
-					'files_info' => $files_info
-				];
-				$dato = [$dato_item];
+				if (empty($files_info) && empty($dato)) {
+
+					$dato = null;
+
+				}else{
+					// create a new dato from scratch
+					$dato_item = (object)[
+						'files_info' => $files_info
+					];
+					$dato = [$dato_item];
+				}
 			}
 
 		// updates dato

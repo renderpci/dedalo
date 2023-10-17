@@ -1573,9 +1573,31 @@ class component_image extends component_media_common {
 			$section_tipo	= $options->section_tipo ?? null;
 			$context		= $options->context ?? 'update_component_dato';
 
-
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
+
+			case '6.0.1':
+				// component instance
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
+					$component	= component_common::get_instance(
+						$model,
+						$options->tipo,
+						$options->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$options->section_tipo,
+						false
+					);
+
+				// run update cache (this action updates files info and saves)
+					$component->regenerate_component();
+					$new_dato = $component->get_dato();
+
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_dato;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+				break;
 
 			case '6.0.0':
 				$is_old_dato = (
