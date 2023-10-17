@@ -212,7 +212,7 @@ class area_maintenance extends area_common {
 
 			$item = new stdClass();
 				$item->id		= 'update_data_version';
-				$item->class	= empty($update_version) ? 'success width_100' : 'width_100';
+				$item->class	= empty($update_version) ? 'success width_100' : 'danger width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('update').' '.label::get_label('data');
