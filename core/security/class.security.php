@@ -107,7 +107,7 @@ class security {
 				}
 			}
 
-		// permissions_table
+		// permissions_table, get the value of the user profile (component_security_access)
 			$permissions_table = security::get_permissions_table();
 
 		// permissions_table find
@@ -118,10 +118,10 @@ class security {
 		// permissions
 			$permissions = $found->value ?? 0;
 
-		// access to list of values
+		// access to list of values: public (matrix_list) and private (matrix_dd)
 			if ($permissions===0) {
 				$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
-				if ($matrix_table==='matrix_list') {
+				if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
 					$permissions = 1;
 				}
 			}
