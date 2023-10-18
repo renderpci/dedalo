@@ -24,13 +24,21 @@ export const view_viewer_image = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node to be used by service autocomplete or any list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_viewer_image.render = function(self, options) {
 
 	// short vars
-		const datalist = self.data.datalist || []
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0]
+			? (value[0].files_info || [])
+			: []
+		const external_source	= data.external_source
+		const extension			= self.context.features.extension
 
 	// wrapper
 		// const wrapper = ui.component.build_wrapper_mini(self)
@@ -39,11 +47,13 @@ view_viewer_image.render = function(self, options) {
 			  wrapper.classList.add('view_viewer')
 
 	// url
-		const quality		= page_globals.dedalo_image_quality_default // '1.5MB'
-		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object && url_object.file_url
-			? url_object.file_url + '?t=' + (new Date()).getTime()
-			: page_globals.fallback_image
+		const quality	= page_globals.dedalo_image_quality_default // '1.5MB'
+		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension)
+		const url		= external_source
+			? external_source
+			: file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
 
 	// image
 		const image = ui.create_dom_element({
@@ -74,6 +84,13 @@ view_viewer_image.render = function(self, options) {
 				download_image_button.classList.remove('hidden')
 			}
 
+		// error event
+			image.addEventListener('error', function(){
+				if (image.src!==page_globals.fallback_image) {
+					image.src = page_globals.fallback_image
+				}
+			}, false)
+
 		// set url
 			image.src = url
 
@@ -88,10 +105,11 @@ view_viewer_image.render = function(self, options) {
 			e.stopPropagation()
 
 			// get the original quality for download
-			const original = self.data.datalist.find(item => item.quality==='original')
+			const original = files_info.find(el => el.quality==='original' && el.extension===extension)
+
 			// check if the original file exist else get the url of the default image
 			const download_url	= (original.file_exist)
-				? original.file_url // original image
+				? DEDALO_MEDIA_URL + original.file_path + '?t=' + (new Date()).getTime() // original image
 				: url // default image
 
 			// get the name of the original file uploaded (user filename)

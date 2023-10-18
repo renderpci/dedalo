@@ -58,34 +58,37 @@ view_default_list_svg.render = function(self, options) {
 */
 export const get_content_data = function(self) {
 
-	// value
-		const data	= self.data || {}
-		const value	= data.value || []
-
 	// short vars
-		const datalist	= self.data.datalist || []
-		const quality	= self.quality || self.context.features.quality
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const quality			= self.quality || self.context.features.quality
+		const external_source	= data.external_source
+
+		console.log('self:', self);
+		console.log('files_info:', quality, files_info);
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// svg elements
-		const value_length = value.length
-		for (let i = 0; i < value_length; i++) {
+	// svg element
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 
-			const files_info	= value[i].files_info || []
-			const file_info		= files_info.find(el => el.quality===quality && el.file_exist===true)
-			if (file_info) {
+		// url
+			const url = external_source
+				? external_source
+				: file_info
+					? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+					: page_globals.fallback_image
 
-				const datalist_item = datalist.find(el => el.quality===file_info.quality)
+		// image
+			ui.create_dom_element({
+				element_type	: 'img',
+				src				: url,
+				parent			: content_data
+			})
 
-				// image
-				ui.create_dom_element({
-					element_type	: 'img',
-					src				: datalist_item.file_url,
-					parent			: content_data
-				})
-			}
+		if (file_info) {
 
 			// open viewer on click
 				content_data.addEventListener('mouseup', fn_mouseup)
@@ -104,10 +107,7 @@ export const get_content_data = function(self) {
 					const current_window	= window.open(url, 'threeD_viewer', 'width=1024,height=720')
 					current_window.focus()
 				}//end fn_mouseup
-		}//end for (let i = 0; i < value_length; i++)
-
-	// empty case
-		if (value_length===0) {
+		}else{
 
 			// open tool upload on click
 				content_data.addEventListener('mouseup', fn_open_tool)

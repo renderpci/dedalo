@@ -23,7 +23,7 @@ export const view_mini_pdf = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node to be used by service autocomplete
 * @return HTMLElement wrapper
 */
 view_mini_pdf.render = async function(self, options) {
@@ -32,9 +32,9 @@ view_mini_pdf.render = async function(self, options) {
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// image append to wrapper
-		const url = DEDALO_CORE_URL + "/themes/default/pdf_icon.png"
+		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 		ui.create_dom_element({
-			element_type	: "img",
+			element_type	: 'img',
 			src				: url,
 			parent			: wrapper
 		})

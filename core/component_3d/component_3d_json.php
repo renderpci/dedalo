@@ -32,6 +32,8 @@
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
 					$current_context->features->key_dir					= '3d';
+					$current_context->features->alternative_extensions	= $this->get_alternative_extensions();
+					$current_context->features->extension				= $this->get_extension();
 
 				$context[] = $current_context;
 
@@ -61,20 +63,16 @@
 
 		// item
 			$item = $this->get_data_item($value);
-			// add useful properties
+
 			// posterframe_url
-				$item->posterframe_url = $this->get_posterframe_url(
-					false, // test_file
-					false, // absolute
-					false // avoid_cache
-				);
+			// @todo: include posterframe_url as thumb quality info value
+				$item->posterframe_url = $this->get_thumb_url();
+
 			// model_url. Default quality video URL (usually from 404)
-				$default_quality = $this->get_default_quality();
-				$item->model_url = $this->quality_file_exist($default_quality)
-					? $this->get_url(false)
-					: null;
-			// datalist. Files info datalist. Used for tools to know available quality versions and characteristics (size, URL, etc.)
-				$item->datalist = $this->get_datalist();
+				// $default_quality = $this->get_default_quality();
+				// $item->model_url = $this->quality_file_exist($default_quality)
+				// 	? $this->get_url(false)
+				// 	: null;
 
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='edit') {

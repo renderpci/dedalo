@@ -32,6 +32,8 @@
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
 					$current_context->features->key_dir					= 'svg';
+					$current_context->features->alternative_extensions	= $this->get_alternative_extensions();
+					$current_context->features->extension				= $this->get_extension();
 
 				$context[] = $current_context;
 				break;
@@ -45,42 +47,22 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		// // Available image files
-		// 	$value = [];
-
-		// $test_file = true;
-
-		// $svg_item = new stdClass();
-		// 	$svg_item->url = $this->get_url(false, $test_file, false, true); // $quality=false, $test_file=true, $absolute=false, $default_add=true
-		// 	$svg_item->quality = DEDALO_SVG_QUALITY_DEFAULT;
 		// value
 			switch ($mode) {
 
 				case 'list':
 				case 'tm':
 					$value = $this->get_list_value();
-
-					// datalist
-						// files_info. For fast list we add directly the default image
-						$data_item = new stdClass();
-							$data_item->file_url	= $this->get_url(DEDALO_SVG_QUALITY_DEFAULT, false, false, false);
-							$data_item->quality		= DEDALO_SVG_QUALITY_DEFAULT;
-						$datalist = [$data_item];
 					break;
 
 				case 'edit':
 				default:
 					$value = $this->get_dato();
-
-					// datalist. get the quality url of the available image files
-						$datalist = $this->get_datalist();
 					break;
 			}
 
 		// data item
 			$item = $this->get_data_item($value);
-			// item datalist
-			$item->datalist = $datalist;
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

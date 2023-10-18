@@ -68,9 +68,13 @@ render_edit_component_image.prototype.edit = async function(options) {
 export const get_quality_selector = (self) => {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
-		const quality	= self.quality || self.context.features.quality
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0] && value[0].files_info
+			? value[0].files_info
+			: []
+		const quality		= self.quality || self.context.features.quality
+		const extension		= self.context.features.extension
 
 	const fragment = new DocumentFragment()
 
@@ -85,17 +89,20 @@ export const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const quality_list		= datalist.filter(el => el.file_exist===true)
+		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
+
+			const file_info = quality_list[i]
+
 			// create the node with the all qualities sent by server
-			const value = (typeof quality_list[i].file_url==='undefined')
-				? page_globals.fallback_image
-				: quality_list[i].file_url + '?t=' + (new Date()).getTime()
+			const url = file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: null
 
 			const select_option = ui.create_dom_element({
 				element_type	: 'option',
-				value			: value,
+				value			: url,
 				text_node		: quality_list[i].quality,
 				parent			: quality_selector
 			})

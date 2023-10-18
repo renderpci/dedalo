@@ -31,8 +31,10 @@ export const view_default_list_image = function() {
 view_default_list_image.render = function(self, options) {
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const external_source	= data.external_source
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
@@ -41,12 +43,13 @@ view_default_list_image.render = function(self, options) {
 		wrapper.classList.add('media','media_wrapper')
 
 	// url
-		// const value		= data.value
-		const quality		= page_globals.dedalo_image_thumb_default // '1.5MB'
-		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= (typeof url_object==='undefined')
-			? page_globals.fallback_image
-			: url_object.file_url + '?t=' + (new Date()).getTime()
+		const quality	= page_globals.dedalo_image_thumb_default // '1.5MB'
+		const file_info	= files_info.find(item => item.quality===quality)
+		const url		= external_source
+			? external_source
+			: file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
 
 	// image
 		const image = ui.create_dom_element({
@@ -57,20 +60,21 @@ view_default_list_image.render = function(self, options) {
 		image.draggable	= false
 		image.loading	= 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
-		if(self.caller && self.caller.caller && self.caller.caller.mode==='edit') {
-			ui.component.add_image_fallback(image, load_error)
-			function load_error() {
-				url_object.file_exist = false
-			}
-		}
 
-	// image background color
+	// load event
 		image.addEventListener('load', set_bg_color, false)
 		function set_bg_color() {
 			this.removeEventListener('load', set_bg_color, false)
 			// ui.set_background_image(this, wrapper)
 			image.classList.remove('hidden')
 		}
+
+	// error event
+		image.addEventListener('error', function(){
+			if (image.src!==page_globals.fallback_image) {
+				image.src = page_globals.fallback_image
+			}
+		}, false)
 
 	// set source url
 		image.src = url
@@ -79,10 +83,10 @@ view_default_list_image.render = function(self, options) {
 		image.addEventListener('mouseup', function (e) {
 			e.stopPropagation();
 
-			// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so
+			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so
 			// it could be used, else open the player to show the image
-			const file_does_not_exist = data.datalist.find(item => item.file_exist === false)
-			if(file_does_not_exist){
+			const file_exist = files_info.find(item => item.file_exist===true)
+			if(!file_exist){
 
 				// get the upload tool to be fired
 					const tool_upload = self.tools.find(el => el.model === 'tool_upload')

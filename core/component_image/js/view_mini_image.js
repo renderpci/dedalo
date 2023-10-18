@@ -23,23 +23,28 @@ export const view_mini_image = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node to be used by service autocomplete or any list
 * @return HTMLElement wrapper
 */
 view_mini_image.render = function(self, options) {
 
 	// short vars
-		const datalist = self.data.datalist || []
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const external_source	= data.external_source
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
 	// url
-		const quality		= 'thumb'
-		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object
-			? url_object.file_url + '?t=' + (new Date()).getTime()
-			: page_globals.fallback_image
+		const quality	= page_globals.dedalo_image_thumb_default // '1.5MB'
+		const file_info	= files_info.find(item => item.quality===quality)
+		const url		= external_source
+			? external_source
+			: file_info
+				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
 
 	// image
 		const image = ui.create_dom_element({

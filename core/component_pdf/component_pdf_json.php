@@ -31,6 +31,8 @@
 					$current_context->features->default_quality			= $this->get_default_quality();
 					$current_context->features->quality					= $this->get_quality(); // current instance quality
 					$current_context->features->key_dir					= 'pdf';
+					$current_context->features->alternative_extensions	= $this->get_alternative_extensions();
+					$current_context->features->extension				= $this->get_extension();
 
 				$context[] = $current_context;
 				break;
@@ -50,29 +52,16 @@
 				case 'list':
 				case 'tm':
 					$value = $this->get_list_value();
-					// datalist. files_info. For fast list we add directly the default image
-					$data_item = new stdClass();
-						$data_item->url = $this->get_pdf_url(
-							DEDALO_PDF_QUALITY_DEFAULT, // string quality
-							true, // bool test_file
-							false, // bool absolute
-							false // bool default_add
-						);
-						$data_item->quality	= DEDALO_PDF_QUALITY_DEFAULT;
-					$datalist = [$data_item];
 					break;
 
 				default:
 				case 'edit':
-					$value		= $this->get_dato();
-					$datalist	= $this->get_datalist();
+					$value = $this->get_dato();
 					break;
 			}
 
 		// data item
 			$item = $this->get_data_item($value);
-			// item datalist
-			$item->datalist = $datalist;
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

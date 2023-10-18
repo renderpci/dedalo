@@ -6,15 +6,45 @@ global $updates;
 $updates = new stdClass();
 
 
-// provisional updates TO DO
-// $v=601; #####################################################################################
 
-	// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
-	// $updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-	// 	DROP TABLE IF EXISTS \"matrix_dataframe\" CASCADE;
-	// ");
+$v=601; #####################################################################################
+$updates->$v = new stdClass();
 
-/// UPDATE 6 PROVISIONAL WITH THE PARTIAL UPDATES THAT WILL BE REQUIRED
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 1;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 0;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '
+			WARNING!
+			<br>Before run this update, make sure that your Ontology is updated to the latest version!
+		';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// Delete the matrix_dataframe table, now the dataframe use the standard tables, matrix_dd, matrix.
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			DROP TABLE IF EXISTS \"matrix_dataframe\" CASCADE;
+		");
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_3d',
+			'component_av',
+			'component_image',
+			'component_pdf',
+			'component_svg'
+		];	// Force convert from string to array
+
+
 
 $v=600; #####################################################################################
 $updates->$v = new stdClass();

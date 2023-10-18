@@ -34,8 +34,10 @@ view_default_list_av.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// short vars
-		const data		= self.data || {}
-		const datalist	= data.datalist || []
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const external_source	= data.external_source
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
@@ -50,8 +52,9 @@ view_default_list_av.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// url
-		const posterframe_url	= data.posterframe_url || page_globals.fallback_image
-		const url				= posterframe_url + '?t=' + (new Date()).getTime()
+		const posterframe_url = data.posterframe_url
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// image
 		const image = ui.create_dom_element({
@@ -63,29 +66,30 @@ view_default_list_av.render = async function(self, options) {
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		// ui.component.add_image_fallback(image)
 
-		// image background color
+		// load event
 			// image.addEventListener('load', set_bg_color, false)
 			// function set_bg_color() {
 			// 	this.removeEventListener('load', set_bg_color, false)
 			// 	ui.set_background_image(this, this)
 			// }
+
+		// error event
 			image.addEventListener('error', () => {
 				if ( image.src !== page_globals.fallback_image) {
 					image.src = page_globals.fallback_image
 					return
 				}
-				console.log('Image load error:', image);
 			}, false)
 
-			// set image src
-			image.src = url
+		// set image src
+		image.src = posterframe_url
 
 		// open viewer
 			image.addEventListener('mouseup', function (e) {
 				e.stopPropagation();
 
-				const file_exist = datalist.find(item => item.file_exist === true)
-				// if the datalist doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
+				const file_exist = files_info.find(item => item.file_exist===true)
+				// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
 				// else open the player to show the image
 				if(!file_exist) {
 
