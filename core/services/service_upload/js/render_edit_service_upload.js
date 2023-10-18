@@ -346,7 +346,7 @@ export const render_filedrag = function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: '',
-			text_content	: 'Select or drop a file it here',
+			inner_html		: `Select or drop a file here <span class="note">[${self.allowed_extensions.join(',')}]</span>`,
 			parent			: filedrag
 		})
 

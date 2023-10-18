@@ -16,8 +16,9 @@
 	import {service_ckeditor} from '../../../core/services/service_ckeditor/js/service_ckeditor.js'
 
 
+
 /**
-* TOOL_transcription
+* TOOL_TRANSCRIPTION
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_subtitles = function () {
@@ -36,9 +37,9 @@ export const tool_subtitles = function () {
 	this.caller						= null 	// component text_area with the original transcription
 	this.transcription_component	= null 	// alias of the caller text_area
 	this.media_component			= null 	// component av that will be transcribed (it could be the caller)
-	this.subtitles_component		= null 	// component json where we are working into the tool
+	this.subtitles_component		= null 	// component JSON where we are working into the tool
 	this.ar_value 					= [] 	// model of the subtitles data to be sync by the render when the users will do changes
-	this.relation_list				= null 	// datum of relation_list (to obtaim list of top_section_tipo/id)
+	this.relation_list				= null 	// datum of relation_list (to obtain list of top_section_tipo/id)
 
 
 	this.text_editor	= [] // array. current active text_editor (service_ckeditor) for current node
@@ -49,6 +50,7 @@ export const tool_subtitles = function () {
 
 	return true
 }//end page
+
 
 
 /**
@@ -121,6 +123,7 @@ tool_subtitles.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
 
 
 /**
@@ -215,7 +218,6 @@ const proces_ar_data = function(self) {
 
 
 
-
 /**
 * GET_USER_TOOLS
 * Get the tools that user has access
@@ -267,21 +269,6 @@ tool_subtitles.prototype.save_value = function() {
 
 
 }//end save_value
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

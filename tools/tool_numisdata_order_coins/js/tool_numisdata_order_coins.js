@@ -47,7 +47,7 @@ export const tool_numisdata_order_coins = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_numisdata_order_coins.prototype.render	= tool_common.prototype.render
+	tool_numisdata_order_coins.prototype.render		= tool_common.prototype.render
 	tool_numisdata_order_coins.prototype.destroy	= common.prototype.destroy
 	tool_numisdata_order_coins.prototype.refresh	= common.prototype.refresh
 	tool_numisdata_order_coins.prototype.edit		= render_tool_numisdata_order_coins.prototype.edit

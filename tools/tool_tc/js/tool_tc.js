@@ -46,7 +46,7 @@ export const tool_tc = function () {
 // prototypes assign
 	tool_tc.prototype.render	= tool_common.prototype.render
 	tool_tc.prototype.destroy	= common.prototype.destroy
-	tool_tc.prototype.refrsh	= common.prototype.refrsh
+	tool_tc.prototype.refresh	= common.prototype.refresh
 	tool_tc.prototype.edit		= render_tool_tc.prototype.edit
 
 
