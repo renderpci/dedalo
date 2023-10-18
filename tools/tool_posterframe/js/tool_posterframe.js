@@ -48,11 +48,8 @@ export const tool_posterframe = function () {
 // prototypes assign
 	// render : using common render entry point
 	tool_posterframe.prototype.render	= tool_common.prototype.render
-	// destroy							: using common destroy method
 	tool_posterframe.prototype.destroy	= common.prototype.destroy
-	// refresh							: using common refresh method
 	tool_posterframe.prototype.refresh	= common.prototype.refresh
-	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_posterframe.prototype.edit		= render_tool_posterframe.prototype.edit
 
 
