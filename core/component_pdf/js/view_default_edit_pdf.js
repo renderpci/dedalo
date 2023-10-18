@@ -106,16 +106,16 @@ export const get_content_data_edit = function(self) {
 * @param object current_value
 * 	Object value as
 * {
-    "original_file_name": "rsc209_rsc205_524_lg-spa.pdf",
-    "original_upload_date": {
-      "day": 21,
-      "hour": 13,
-      "time": 65009224561,
-      "year": 2022,
-      "month": 8,
-      "minute": 56,
-      "second": 1
-    }
+	"original_file_name": "rsc209_rsc205_524_lg-spa.pdf",
+	"original_upload_date": {
+	  "day": 21,
+	  "hour": 13,
+	  "time": 65009224561,
+	  "year": 2022,
+	  "month": 8,
+	  "minute": 56,
+	  "second": 1
+	}
   }
 * @param object self
 * @return HTMLElement content_value
@@ -124,10 +124,16 @@ const get_content_value = function(i, current_value, self) {
 
 	// short vars
 		const quality		= self.quality || self.context.features.quality
-		const datalist		= self.data.datalist || []
 		const offset_value	= current_value && current_value.lib_data && current_value.lib_data.offset!=='undefined' && current_value.lib_data.offset!==null
 			? current_value.lib_data.offset
 			: 1
+		const data			= self.data || {}
+		const value			= data.value || []
+		const files_info	= value[0]
+			? (value[0].files_info || [])
+			: []
+		const external_source	= data.external_source
+		const extension			= self.context.features.extension
 
 	// content_value node
 		const content_value = ui.create_dom_element({
@@ -136,9 +142,9 @@ const get_content_value = function(i, current_value, self) {
 		})
 
 	// pdf_url
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true && el.extension===extension)
 		const pdf_url	= file_info
-			? file_info.file_url
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 			: null
 		// no PDF file url available case
 		if (!pdf_url) {

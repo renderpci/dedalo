@@ -23,7 +23,8 @@ export const view_mini_list_av = function() {
 
 /**
 * RENDER
-* Render node to be used by service autocomplete or any datalist
+* Render node to be used in this view
+* @param object self
 * @return HTMLElement wrapper
 */
 view_mini_list_av.render = async function(self) {
@@ -36,7 +37,8 @@ view_mini_list_av.render = async function(self) {
 
 	// url
 		const posterframe_url	= data.posterframe_url
-		const url				= posterframe_url + '?t=' + (new Date()).getTime()
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// image
 		const image = ui.create_dom_element({
@@ -48,7 +50,7 @@ view_mini_list_av.render = async function(self) {
 				image.src = page_globals.fallback_image
 			}
 		})
-		image.src = url
+		image.src = posterframe_url
 
 
 	return wrapper

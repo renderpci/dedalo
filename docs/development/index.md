@@ -172,3 +172,47 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         import {common} from '../../common/js/common.js';
         import {push_browser_history} from '../../common/js/common.js';
         ```
+
+
+## GIT commit style
+
+Using Conventional Commits v1.0 https://www.conventionalcommits.org/en/v1.0.0/  
+
+Use the imperative verb form to ensure that possible verbs used in commits, such as "fixed" or "updated", are written in the correct verb tense.  
+Apply the formula: “If applied, my commit will…”   
+example: “If applied, my commit will (INSERT COMMIT MESSAGE TEXT)”
+
+The prefixes to be used in the commits are as follows:
+
+
+### `feat`: Short for "feature," this prefix is used when introducing a new feature or functionality to the codebase.
+    For example:
+    feat: Add user authentication feature
+
+### `chore`: This prefix is used for commits related to maintenance tasks, build processes, or other non-user-facing changes. It typically includes tasks that don't directly impact the functionality but are necessary for the project's development and maintenance. 
+    For example:
+    chore: Update dependencies
+
+### `fix`: Used when addressing a bug or issue in the codebase. This prefix indicates that the commit contains a fix for a problem.
+    For example:
+    fix: Correct calculation in revenue calculation
+    
+### `docs`: Used when making changes to documentation, including comments in the code, README files, or any other documentation associated with the project. 
+    For example:
+    docs: Update API documentation
+    
+### `style`: This prefix is used for code style changes, such as formatting, indentation, and whitespace adjustments. It's important to separate style changes from functional changes for better clarity.
+    For example:
+    style: Format code according to style guide
+    
+### `refactor`: Used when making changes to the codebase that do not introduce new features or fix issues but involve restructuring or optimizing existing code.
+    For example:
+    refactor: Reorganize folder structure
+    
+### `test`: Used when adding or modifying tests for the codebase, including unit tests, integration tests, and other forms of testing.
+    For example:
+    test: Add unit tests for user authentication
+    
+### `perf`: Short for "performance," this prefix is used when making changes aimed at improving the performance of the codebase.
+    For example:
+    perf: Optimize database queries for faster response times

@@ -2031,6 +2031,24 @@ function is_empty_dato(mixed $dato) : bool {
 
 
 /**
+* GET_FILE_EXTENSION
+* @param string $name
+* @return string $extension
+*/
+function get_file_extension(string $name, bool $lowercase=true) : string {
+
+	$extension = pathinfo($name)['extension'];
+
+	if ($lowercase===true) {
+		return strtolower($extension);
+	}
+
+	return $extension;
+}//end get_file_extension
+
+
+
+/**
 * MANAGE_CACHE_OVERLOAD
 * @return array
 */

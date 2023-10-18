@@ -104,8 +104,13 @@ export const get_content_data = function(self) {
 const get_content_value = function(i, value, self) {
 
 	// short vars
-		const datalist	= self.data.datalist || []
-		const quality	= self.quality || self.context.features.quality
+		const quality			= self.quality || self.context.features.quality
+		const extension			= self.context.features.extension
+		const data				= self.data || {}
+		const files_info		= value && value.files_info
+			? value.files_info
+			: []
+		const external_source	= data.external_source
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -113,19 +118,19 @@ const get_content_value = function(i, value, self) {
 			class_name		: 'content_value media_content_value'
 		})
 
-	// media url from data.datalist based on selected context quality
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+	// media url from files_info based on selected context quality
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 		const url		= file_info
-			? file_info.file_url
-			: null
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// svg item
-		if (url) {
+		if (file_info) {
 			// image
 			const image = ui.create_dom_element({
 				element_type	: 'img',
 				class_name		: 'image svg_element',
-				src				: url + '?t=' + (new Date()).getTime(),
+				src				: url,
 				parent			: content_value
 			})
 			image.setAttribute('tabindex', 0)
@@ -138,13 +143,15 @@ const get_content_value = function(i, value, self) {
 				class_name		: 'image svg_element fallback_image clickable',
 				parent			: content_value
 			})
-			// image background color
-			image_node.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				ui.set_background_image(this, content_value)
-			}
+			// load event . image background color
+				// image_node.addEventListener('load', set_bg_color, false)
+				// function set_bg_color() {
+				// 	this.removeEventListener('load', set_bg_color, false)
+				// 	ui.set_background_image(this, content_value)
+				// }
+
 			image_node.src = image_url
+
 			// click
 			image_node.addEventListener('click', function(e) {
 				e.stopPropagation()
@@ -171,8 +178,13 @@ const get_content_value = function(i, value, self) {
 const get_content_value_read = function(i, value, self) {
 
 	// short vars
-		const datalist	= self.data.datalist || []
-		const quality	= self.quality || self.context.features.quality
+		const quality			= self.quality || self.context.features.quality
+		const extension			= self.context.features.extension
+		const data				= self.data || {}
+		const files_info		= value && value.files_info
+			? value.files_info
+			: []
+		const external_source	= data.external_source
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -180,11 +192,11 @@ const get_content_value_read = function(i, value, self) {
 			class_name		: 'content_value media_content_value read_only'
 		})
 
-	// media url from data.datalist based on selected context quality
-		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
+	// media url from files_info based on selected context quality
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 		const url		= file_info
-			? file_info.file_url
-			: null
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// svg item
 		if (url) {

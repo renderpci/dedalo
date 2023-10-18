@@ -29,13 +29,16 @@ export const view_text_list_svg = function() {
 view_text_list_svg.render = function(self, options) {
 
 	// short vars
-		const datalist = self.data.datalist || []
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const external_source	= data.external_source
 
 	// url
-		const quality		= self.quality || self.context.features.quality
-		const url_object	= datalist.find(item => item.quality===quality)
-		const url			= url_object
-			? url_object.file_url + '?t=' + (new Date()).getTime()
+		const quality	= self.quality || self.context.features.quality
+		const file_info	= files_info.find(item => item.quality===quality)
+		const url		= file_info
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 
 	// image
