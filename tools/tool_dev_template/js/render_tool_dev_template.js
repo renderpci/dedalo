@@ -9,7 +9,9 @@
 // import ui to create DOM nodes and common HTML structures as wrappers or content_data compatible with the all Dédalo
 	import {ui} from '../../../core/common/js/ui.js'
 	import {pause} from '../../../core/common/js/utils/index.js'
-
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import * as instances from '../../../core/common/js/instances.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 /**
@@ -156,14 +158,180 @@ const get_content_data = async function(self) {
 			})//end ui.load_item_with_spinner
 		})
 
+
+	// test_button3 upload_file (generic)
+		const test_button3 = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			inner_html		: self.get_tool_label('upload_file') || 'Upload generic file',
+			parent			: footer_buttons_container
+		})
+		test_button3.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const node = ui.load_item_with_spinner({
+				container			: value_container,
+				preserve_content	: false,
+				label				: 'service upload',
+				callback			: async () => {
+
+					await pause(300) // fake process wait
+
+					const service_upload = await instances.get_instance({
+						id_variant			: 'generic_upload_file', // prevent id collisions
+						model				: 'service_upload',
+						allowed_extensions	: ['zip','kml'],
+						mode				: 'edit',
+						caller				: self
+					})
+					await service_upload.build()
+					const service_upload_node = await service_upload.render()
+
+					// event upload_file_done_
+					event_manager.subscribe('upload_file_done_' + self.id, fn_upload_done)
+					async function fn_upload_done(response) {
+						// handle the result
+						await self.file_upload_handler(response)
+						// remove service
+						await service_upload.destroy(true, true, true)
+						// add info
+						value_container.innerHTML = 'File "'+response.file_data.name+'" uploaded successfully. Processing file.. please wait'
+					}
+
+					return service_upload_node
+				}
+			})//end ui.load_item_with_spinner
+		})
+
+	// test_button4 upload_file (image)
+		const test_button4 = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'primary',
+			inner_html		: self.get_tool_label('upload_image_file') || 'Update image file',
+			parent			: footer_buttons_container
+		})
+		test_button4.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const node = ui.load_item_with_spinner({
+				container			: value_container,
+				preserve_content	: false,
+				label				: 'service upload',
+				callback			: async () => {
+
+					console.log('self:', self);
+
+					await pause(300) // fake process wait
+
+					const section_resources_image_tipo	 = DD_TIPOS.DEDALO_SECTION_RESOURCES_IMAGE_TIPO // 'rsc170';
+					const component_resources_image_tipo = DD_TIPOS.DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO // 'rsc29';
+
+					// data_manager. create
+					const rqo = {
+						action	: 'create',
+						source	: {
+							section_tipo : section_resources_image_tipo
+						}
+					}
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					if (api_response.result && api_response.result>0) {
+
+						const section_id = api_response.result
+
+						// resource component used as tool_upload caller
+						// It is necessary because he knows the proper tool context
+							const component_image = await instances.get_instance({
+								model			: 'component_image',
+								tipo			: component_resources_image_tipo,
+								section_tipo	: section_resources_image_tipo,
+								section_id		: section_id,
+								mode			: 'edit',
+								caller			: self
+							})
+							await component_image.build(true);
+
+						// tool context. Get the upload tool context to be fired
+							const tool_upload = component_image.tools.find(el => el.model === 'tool_upload')
+
+						// open_tool, it will be the interface to upload data in new window.
+							const tool = await open_tool({
+								tool_context	: tool_upload,
+								open_as			: 'modal',
+								caller			: component_image
+							})
+
+						// event process_uploaded_file_done_
+							event_manager.subscribe('process_uploaded_file_done_' + tool.id, fn_upload_done)
+							async function fn_upload_done(api_response) {
+
+								// close modal. This action also destroys the tool
+									if (tool.node && tool.node.modal) {
+										tool.node.modal.close()
+									}
+
+								// add info
+									value_container.innerHTML = 'File uploaded and processed successfully.'
+
+								// available files
+									// build component again to force read DDBB updated data
+									await component_image.build(true);
+									const data	= component_image.data || {}
+									const value	= data.value || []
+									const files_info = value[0]
+										? value[0].files_info
+										: null
+
+									if (files_info) {
+										// display available files list
+										// (!) Note that if your config.php file definition contains
+										// the constant 'DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', other formats
+										// than default JPG will be available to use (like PNG, AVIF ...)
+										// @see DOCU https://dedalo.dev/docs/config/config/#defining-alternative-image-extensions-of-image-files
+										ui.create_dom_element({
+											element_type	: 'pre',
+											class_name		: '',
+											inner_html		: JSON.stringify(files_info, null, 2),
+											parent			: value_container
+										})
+
+										// preview all available images
+											const files_info_length = files_info.length
+											for (let k = 0; k < files_info_length; k++) {
+												const url = DEDALO_MEDIA_URL + files_info[k].file_path
+												ui.create_dom_element({
+													element_type	: 'img',
+													src				: url,
+													title			: files_info[k].extension + ' ' + files_info[k].quality,
+													parent			: value_container
+												})
+												ui.create_dom_element({
+													element_type	: 'pre',
+													class_name		: '',
+													inner_html		: JSON.stringify(files_info[k], null, 2),
+													parent			: value_container
+												})
+											}
+									}else{
+										console.error('Failed to read files info from component data:', data);
+									}
+							}
+					}
+
+					return null
+				}
+			})//end ui.load_item_with_spinner
+		})
+
+
+
 	// value_container
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value_container',
 			parent			: fragment
 		})
-
-
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
