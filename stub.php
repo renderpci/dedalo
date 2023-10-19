@@ -36,3 +36,4 @@ define('MYSQL_DB_BIN_PATH', '');
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 function logger(){};
+function custom_postprocessing_image(){};

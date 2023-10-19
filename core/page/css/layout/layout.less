@@ -433,7 +433,8 @@
 		&.list {
 
 			// wrapper
-			&.component_image, &.component_av, &.component_svg {
+			// &.component_image, &.component_av, &.component_svg {
+			&.media_wrapper {
 				display: inline-block;
 				padding: 0px;
 				// background-color: #ffffff;
@@ -465,6 +466,10 @@
 					left: 50%;
 					transform: translate(-50%);
 					*/
+					cursor: pointer;
+					&:active {
+						opacity: 0.33;
+					}
 				}
 			}
 		}//end &.list

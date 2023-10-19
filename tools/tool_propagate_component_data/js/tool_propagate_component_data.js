@@ -51,11 +51,8 @@ export const tool_propagate_component_data = function () {
 // prototypes assign
 	// render : using common render entry point
 	tool_propagate_component_data.prototype.render	= tool_common.prototype.render
-	// destroy							: using common destroy method
 	tool_propagate_component_data.prototype.destroy	= common.prototype.destroy
-	// refresh							: using common refresh method
 	tool_propagate_component_data.prototype.refresh	= common.prototype.refresh
-	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_propagate_component_data.prototype.edit	= render_tool_propagate_component_data.prototype.edit
 
 
@@ -232,6 +229,7 @@ tool_propagate_component_data.prototype.on_close_actions = async function(open_a
 
 	return true
 }//end on_close_actions
+
 
 
 // @license-end

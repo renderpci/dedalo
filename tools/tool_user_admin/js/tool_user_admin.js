@@ -43,11 +43,8 @@ export const tool_user_admin = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	// render : using common render entry point
-	tool_user_admin.prototype.render			= common.prototype.render
-	// destroy : using common destroy method
+	tool_user_admin.prototype.render			= tool_common.prototype.render
 	tool_user_admin.prototype.destroy			= common.prototype.destroy
-	// refresh : using common refresh method
 	tool_user_admin.prototype.refresh			= common.prototype.refresh
 	// others
 	tool_user_admin.prototype.build_rqo_show	= common.prototype.build_rqo_show

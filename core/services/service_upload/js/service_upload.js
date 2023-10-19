@@ -65,6 +65,11 @@ service_upload.prototype.init = async function(options) {
 		self.allowed_extensions	= options.allowed_extensions || []
 		self.key_dir			= options.key_dir || null
 
+	// check
+		if (!self.caller) {
+			console.error('Caller is mandatory for service_upload:', self);
+		}
+
 	// events
 		self.events_tokens.push(
 			event_manager.subscribe('upload_file_status_'+self.id, fn_update_file_status)
