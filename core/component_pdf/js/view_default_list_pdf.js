@@ -47,12 +47,12 @@ view_default_list_pdf.render = async function(self, options) {
 		// url
 		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension && el.file_exist===true) //
 		const url = file_info
-			? DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
+			? DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
 			: page_globals.fallback_image // page_globals.fallback_image
 
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'icon_pdf',
+			class_name		: (url.indexOf('file-pdf')!==-1 ? 'icon_pdf' : ''),
 			src				: url,
 			parent			: wrapper
 		})
