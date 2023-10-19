@@ -1112,9 +1112,15 @@ final class Ffmpeg {
 	* @return object|null $output
 	*/
 	public static function get_media_streams( string $source_file ) : ?object {
+		$start_time=start_time();
 
 		$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
 		$output  = json_decode( shell_exec($command) );
+
+		debug_log(__METHOD__
+			. ' media_streams calculation  exec time: '.exec_time_unit($start_time).' ms'
+			, logger::DEBUG
+		);
 
 		return $output;
 	}//end get_media_streams
