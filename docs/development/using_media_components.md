@@ -69,7 +69,7 @@ Let's go!
             component_tipo  : component_image_tipo
         }]
 
-        // To create the new image instance with the result data of uploaded process and build it. 
+        // To create the new image instance with the result data of uploaded process and build it.
         const component_image = await get_instance({
             model           : 'component_image',
             mode            : 'edit',
@@ -117,11 +117,11 @@ Let's go!
 
     // Get the quality of the image, it could be default_quality, but maybe original_quality would be better here... ???
     // Maybe is possible add a quality selector to be decided by user.
-    const file_info_default_quality = component_image.data.datalist.find(el => el.quality===component_image.context.features.default_quality && el.file_exist===true)
+    const file_info_default_quality = component_image.data.value[0]?.files_info.find(el => el.quality===component_image.context.features.default_quality && el.file_exist===true)
 
     // so the url of the image to use will be: (don't forget to check if the uri exist!)
     const url = file_info_default_quality
-        ? file_info_default_quality.file_url
+        ? DEDALO_MEDIA_URL + file_info_default_quality.file_path
         : null
 
     ```
