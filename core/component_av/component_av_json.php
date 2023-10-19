@@ -69,7 +69,7 @@
 			$item = $this->get_data_item($value);
 
 			// posterframe_url
-			// @todo: include posterframe_url as thumb quality info value
+			// @todo: include posterframe_url as thumb quality info value in files_info
 				$item->posterframe_url = $this->get_thumb_url();
 
 			// default quality video URL (usually from 404)
@@ -90,6 +90,12 @@
 						'lang_name'		=> lang::get_name_from_code(DEDALO_DATA_LANG),
 						'lang'			=> lang::get_alpha2_from_code(DEDALO_DATA_LANG)
 					];
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						// quality add
+						$item->debug_quality = $quality;
+					}
 			}
 
 		$data[] = $item;
