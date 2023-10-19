@@ -159,12 +159,16 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 			data_manager.request({
 				body : rqo
 			})
-			.then(function(response){
+			.then(function(api_response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> process_uploaded_file API response:",'DEBUG', response);
+					dd_console("-> process_uploaded_file API api_response:",'DEBUG', api_response);
 				}
 
-				resolve(response)
+				// events
+					event_manager.publish('process_uploaded_file_done_' + self.id, api_response)
+
+
+				resolve(api_response)
 			})
 		})
 }//end process_uploaded_file
