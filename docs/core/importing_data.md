@@ -6,7 +6,7 @@ To import data is an important part of Dédalo projects. Dédalo is a high struc
 
 Dédalo data model has a abstraction layer that use the ontology definitions to create components (as fields) and sections (as tables).
 
-??? note "About pain text / non-normalized data"
+??? note "About plain text / non-normalized data"
 
     Lots of catalogues in museums have a previous cataloging system, sometimes do it by itself in commercial applications as FileMaker, Access, etc. and sometimes this data has not structure and is saved as plain text without normalization. This situation create a lots of data inconsistencies that could generate a very difficult situations to resolve. Dédalo can import plain text without any structuring but it is not recommended. If you want import this kind of data, we recommend to do a clean process before import to Dédalo.
 
