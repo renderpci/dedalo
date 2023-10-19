@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -148,6 +149,29 @@ const get_content_value = function(i, current_value, self) {
 			: null
 		// no PDF file url available case
 		if (!pdf_url) {
+
+			const url = page_globals.fallback_image // page_globals.fallback_image
+
+			const image = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: '',
+				src				: url,
+				parent			: content_value
+			})
+			// open viewer
+			image.addEventListener('mouseup', function (e) {
+				e.stopPropagation();
+
+				// get the upload tool to be fired
+					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload,
+						caller			: self
+					})
+			})
+
 			return content_value
 		}
 
