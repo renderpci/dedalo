@@ -49,7 +49,7 @@ export const tool_import_rdf = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_import_rdf.prototype.render	= common.prototype.render
+	tool_import_rdf.prototype.render	= tool_common.prototype.render
 	tool_import_rdf.prototype.destroy	= common.prototype.destroy
 	tool_import_rdf.prototype.refresh	= common.prototype.refresh
 	tool_import_rdf.prototype.edit		= render_tool_import_rdf.prototype.edit
@@ -145,6 +145,7 @@ tool_import_rdf.prototype.get_rdf_data = async function(ontology_tipo, ar_values
 			})
 		})
 }//end get_rdf_data
+
 
 
 // @license-end

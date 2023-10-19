@@ -70,4 +70,64 @@ class tool_dev_template extends tool_common {
 
 
 
+	/**
+	* HANDLE_UPLOAD_FILE
+	* Sample of handle uploaded file with service_upload
+	* @see https://dedalo.dev/docs/development/services/service_upload/
+	* @param object $request_options
+	* sample:
+	* {
+	    "component_tipo": "hierarchy31",
+	    "section_id": "1",
+	    "section_tipo": "es1",
+	    "config": null,
+	    "file_data": {
+	        "name": "myfile.zip",
+	        "type": "application/octet-stream",
+	        "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
+	        "key_dir": "component_geolocation",
+	        "tmp_name": "myfile.zip",
+	        "error": 0,
+	        "size": 277998,
+	        "time_sec": "0.003",
+	        "extension": "zip",
+	        "thumbnail_url": "/dedalo/media/upload/service_upload/tmp/1/component_geolocation/thumbnail/myfile.jpg",
+	        "chunked": true,
+	        "total_chunks": "1",
+	        "chunk_index": "0"
+	    }
+	}
+	* @return object $response
+	*/
+	public static function handle_upload_file(object $options) : object {
+
+		// options
+			$file_data = $options->file_data;
+
+		// @see PHP error log here
+			dump($options, ' options ++ '.to_string());
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+
+		// move file
+    		// re-build the real path based on file data
+    		// like: '/dedalo/media/upload/service_upload/tmp/' + '1' + '/' + 'component_geolocation'
+   			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. get_user_id() . '/' . $file_data->key_dir .'/'. $file_data->tmp_name;
+
+   		// @see PHP error log here
+   			dump($tmp_dir, ' tmp_dir ++ '.to_string());
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+
+		return (object)$response;
+	}//end handle_upload_file
+
+
+
 }//end class tool_dev_template

@@ -60,11 +60,8 @@ export const tool_dev_template = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	// render : using common render entry point, use the tool_common render to prepare the tool to be rendered, it will call to specific render defined in render_tool_dev_template
 	tool_dev_template.prototype.render		= tool_common.prototype.render
-	// destroy: using common destroy method
 	tool_dev_template.prototype.destroy		= common.prototype.destroy
-	// refresh: using common refresh method
 	tool_dev_template.prototype.refresh		= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_dev_template.prototype.edit		= render_tool_dev_template.prototype.edit
@@ -269,6 +266,57 @@ tool_dev_template.prototype.get_some_data_from_server = async function() {
 			})
 		})
 }//end get_some_data_from_server
+
+
+
+/**
+* FILE_UPLOAD_HANDLER
+* Call the API to get fake demo data
+* @param DOM element buttons_container (where will be place the message response)
+*
+* @return promise response
+*/
+tool_dev_template.prototype.file_upload_handler = async function(options) {
+
+	const self = this
+
+	console.log('file_upload_handler options:', options);
+
+	const file_data = options.file_data
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'handle_upload_file')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				component_tipo	: self.main_element.tipo,
+				section_id		: self.main_element.section_id,
+				section_tipo	: self.main_element.section_tipo,
+				config			: self.context.config,
+				file_data		: file_data
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> file_upload_handler API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end file_upload_handler
 
 
 

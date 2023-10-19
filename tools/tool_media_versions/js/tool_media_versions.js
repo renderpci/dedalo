@@ -48,13 +48,9 @@ export const tool_media_versions = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	// render : using common render entry point
 	tool_media_versions.prototype.render	= tool_common.prototype.render
-	// destroy : using common destroy method
 	tool_media_versions.prototype.destroy	= common.prototype.destroy
-	// refresh: using common refresh method
 	tool_media_versions.prototype.refresh	= common.prototype.refresh
-	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_media_versions.prototype.edit		= render_tool_media_versions.prototype.edit
 
 
@@ -444,4 +440,3 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
 
 // @license-end
-

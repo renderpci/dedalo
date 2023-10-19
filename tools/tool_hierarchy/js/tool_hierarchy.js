@@ -51,11 +51,8 @@ export const tool_hierarchy = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	// render : using common render entry point, use the tool_common render to prepare the tool to be rendered, it will call to specific render defined in render_tool_hierarchy
 	tool_hierarchy.prototype.render		= tool_common.prototype.render
-	// destroy: using common destroy method
 	tool_hierarchy.prototype.destroy	= common.prototype.destroy
-	// refresh: using common refresh method
 	tool_hierarchy.prototype.refresh	= common.prototype.refresh
 	// render mode edit (default). Set the tool custom manager to build the DOM nodes view
 	tool_hierarchy.prototype.edit		= render_tool_hierarchy.prototype.edit

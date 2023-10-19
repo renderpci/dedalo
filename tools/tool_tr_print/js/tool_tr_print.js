@@ -17,7 +17,7 @@
 
 
 /**
-* TOOL_transcription
+* TOOL_TRANSCRIPTION
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_tr_print = function () {

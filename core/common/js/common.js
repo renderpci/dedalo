@@ -373,7 +373,12 @@ common.prototype.render = async function (options={}) {
 				render_mode		: render_mode
 			}, options)
 
-		const node = await self[current_render_mode](render_options)
+		// render function handler check
+			if (typeof self[current_render_mode]!=='function') {
+				console.warn('Invalid function call:', current_render_mode);
+			}
+
+		const node =  await self[current_render_mode](render_options)
 
 	// result_node render based in render_level
 		const result_node = await (async () => {
