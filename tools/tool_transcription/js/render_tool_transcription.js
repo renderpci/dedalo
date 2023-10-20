@@ -80,6 +80,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -366,9 +367,12 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_RELATED_LIST
-* This is used to build a select element to allow user select the top_section_tipo and top_section_id of current indexation
+* This is used to build a select element to allow user select the top_section_tipo
+* and top_section_id of current indexation
+* @param object self
+* @return DocumentFragment
 */
-const render_related_list = function(self){
+const render_related_list = function(self) {
 
 	const datum		= self.relation_list
 	const context	= datum.context
@@ -446,7 +450,7 @@ const render_related_list = function(self){
 * RENDER_TANSCRIPTION_OPTIONS
 * This is used to build a optional buttons inside the header
 * @param object self
-* @return HTMLElement fragment
+* @return DocumentFragment
 */
 const render_tanscription_options = async function(self) {
 
@@ -545,7 +549,7 @@ const render_tanscription_options = async function(self) {
 * the components are defined in ontology as tool_config->name_of_the_tool->ddo_map
 * @param object self
 * 	instance of current tool
-* @return HTMLElement fragment
+* @return DocumentFragment
 */
 const render_process_status = async function(self) {
 
@@ -553,7 +557,7 @@ const render_process_status = async function(self) {
 
 	// status_user_component
 		if (self.status_user_component) {
-			self.status_user_component.context.view	= 'mini'
+			self.status_user_component.context.view = 'mini'
 			self.status_user_component.is_inside_tool = true
 			self.status_user_component.show_interface.save_animation = false
 			const status_user_node = await self.status_user_component.render()
@@ -614,8 +618,10 @@ const render_activity_info = async function(self) {
 
 /**
 * RENDER_AUTOMATIC_TRANSCRIPTION
+* @param object options
+* @return HTMLElement automatic_transcription_container
 */
-const render_automatic_transcription = function (options){
+const render_automatic_transcription = function (options) {
 
 	const self						= options.self
 	const source_select_lang		= options.source_select_lang
@@ -826,6 +832,7 @@ const render_automatic_transcription = function (options){
 		})
 
 		check_current_server_status()
+
 
 	return automatic_transcription_container
 }//end render_automatic_transcription

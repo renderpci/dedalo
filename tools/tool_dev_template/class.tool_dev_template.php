@@ -77,26 +77,26 @@ class tool_dev_template extends tool_common {
 	* @param object $request_options
 	* sample:
 	* {
-	    "component_tipo": "hierarchy31",
-	    "section_id": "1",
-	    "section_tipo": "es1",
-	    "config": null,
-	    "file_data": {
-	        "name": "myfile.zip",
-	        "type": "application/octet-stream",
-	        "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
-	        "key_dir": "component_geolocation",
-	        "tmp_name": "myfile.zip",
-	        "error": 0,
-	        "size": 277998,
-	        "time_sec": "0.003",
-	        "extension": "zip",
-	        "thumbnail_url": "/dedalo/media/upload/service_upload/tmp/1/component_geolocation/thumbnail/myfile.jpg",
-	        "chunked": true,
-	        "total_chunks": "1",
-	        "chunk_index": "0"
-	    }
-	}
+	*    "component_tipo": "hierarchy31",
+	*    "section_id": "1",
+	*    "section_tipo": "es1",
+	*    "config": null,
+	*    "file_data": {
+	*        "name": "myfile.zip",
+	*        "type": "application/octet-stream",
+	*        "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
+	*        "key_dir": "component_geolocation",
+	*        "tmp_name": "myfile.zip",
+	*        "error": 0,
+	*        "size": 277998,
+	*        "time_sec": "0.003",
+	*        "extension": "zip",
+	*        "thumbnail_url": "/dedalo/media/upload/service_upload/tmp/1/component_geolocation/thumbnail/myfile.jpg",
+	*        "chunked": true,
+	*        "total_chunks": "1",
+	*        "chunk_index": "0"
+	*    }
+	* }
 	* @return object $response
 	*/
 	public static function handle_upload_file(object $options) : object {
