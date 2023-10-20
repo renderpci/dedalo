@@ -848,30 +848,34 @@ const get_line_build_version = function(ar_quality, self) {
 					switch (self.main_element.model) {
 						case 'component_av':
 							async function check_file() {
-								setTimeout(async function(){
-									const files_info = await self.get_files_info()
-									const found = files_info.find(el => el.quality===quality)
 
-									if (found && found.file_exist===true) {
-										// processing_label.remove()
-										// button_build_version.classList.remove('hide')
-										self.main_element_quality = quality
+								if (self.timer) {
+									clearTimeout(self.timer);
+								}
 
-										// force save component to update dato files_info
-										// Note that action 'force_save' do not need more
-										// properties, is only to allow API exec component save transparently
-											self.main_element.save([{
-												action : 'force_save'
-											}])
+								const files_info	= await self.get_files_info()
+								const found			= files_info.find(el => el.quality===quality)
+								if (found && found.file_exist===true) {
+									// processing_label.remove()
+									// button_build_version.classList.remove('hide')
+									self.main_element_quality = quality
 
-										self.refresh({
-											build_autoload : false
-										})
-									}else{
-										// check again after 5 sec
+									// force save component to update dato files_info
+									// Note that action 'force_save' do not save data really and do not need more
+									// properties, is only to allow API exec component save transparently
+										await self.main_element.save([{
+											action : 'force_save'
+										}])
+
+									self.refresh({
+										build_autoload : false
+									})
+								}else{
+									// check again after 5 sec
+									self.timer = setTimeout(async function(){
 										check_file()
-									}
-								}, 1000)
+									}, 2000)
+								}
 							}
 							check_file()
 							break;

@@ -55,38 +55,135 @@ final class Ffmpeg {
 	/**
 	* GET_SETTING_NAME_FROM_QUALITY
 	* Setting name from quality
+	* @param string $file_path
+	* @param string $quality
 	*
 	* @return string $setting
+	* 	like: '404_pal_16x9'
 	*/
-	public function get_setting_name_from_quality(AVObj $AVObj, string $quality) : string {
+	public static function get_setting_name(string $file_path, string $quality) : string {
 
-		# CREATE A NEW AVOBJ AS MASTER MEDIA
-		$master_media_file_obj = $this->get_master_media_file_obj($AVObj);
+		$beats = [$quality];
 
-		# MEDIA STANDARD (PAL/NTSC)
-		$media_standard	= strtolower( $master_media_file_obj->get_media_standard() );
+		// media standard identification (pal|ntsc)
+			$media_standard = $quality!=='audio'
+				? Ffmpeg::get_media_standard($file_path)
+				: null;
+			if (!empty($media_standard)) {
+				$beats[] = $media_standard;
+			}
 
-		if($media_standard) {
-			$media_standard = '_' . $media_standard ;
-		}else{
-			$media_standard = '';
-		}
-		if($quality==='audio') $media_standard = '';
+		// aspect_ratio
+			$aspect_ratio = $quality!=='audio'
+				? Ffmpeg::get_aspect_ratio($file_path)
+				: null;
+			if (!empty($aspect_ratio)) {
+				$beats[] = $aspect_ratio;
+			}
 
-		# ASPECT RATIO (16X9/4X3)
-		$aspect_ratio = strtolower($master_media_file_obj->get_aspect_ratio());
-		if($aspect_ratio == '4x3' || $aspect_ratio == '16x9') {
-			$aspect_ratio = '_' . $aspect_ratio ;
-		}else{
-			$aspect_ratio = '';
-		}
+		$setting = implode('_', $beats);
 
-		if($quality==='audio') $aspect_ratio = '';
-
-		$setting = $quality . $media_standard . $aspect_ratio ;
 
 		return $setting;
 	}//end get_setting_name_from_quality
+
+
+
+	/**
+	* GET_MEDIA_STANDARD
+	*  (PAL / NTSC)
+	* Resolve media standard name calculating fps from current file video header
+	* @see Ffmpeg::get_setting_name_from_quality
+	* @param string $file_path
+	* @return string $standard
+	* 	like 'ntsc' or 'pal'
+	*/
+	public static function get_media_standard(string $file_path) : string {
+
+		// media_streams
+			$media_streams	= Ffmpeg::get_media_streams($file_path);
+			// media_streams sample result:
+			// {
+			// 	"streams": [
+			// 		{
+			// 			"index": 0,
+			// 			"codec_name": "h264",
+			// 			"codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+			// 			"profile": "High",
+			// 			"codec_type": "video",
+			//			"avg_frame_rate": "30000/1001",
+			// 			...
+			// 		},
+			// 		{
+			// 			"index": 1,
+			// 			"codec_name": "aac",
+			// 			"codec_long_name": "AAC (Advanced Audio Coding)",
+			// 			"profile": "LC",
+			// 			"codec_type": "audio",
+			// 			"codec_tag_string": "mp4a",
+			// 			...
+			// 		}
+			// 	]
+			// }
+
+		// streams
+			$streams = is_object($media_streams)
+				? ($media_streams->streams ?? [])
+				: [];
+
+		// video stream locate
+			if (!empty($streams)) {
+
+				$video_stream = Ffmpeg::find_video_stream($streams);
+
+			}else{
+				debug_log(__METHOD__
+					. " Empty streams from file " . PHP_EOL
+					. ' file_path: ' . $file_path  . PHP_EOL
+					. ' media_streams: ' . to_string($media_streams)
+					, logger::ERROR
+				);
+			}
+
+		// fps standard name
+			$fps = 25; // default
+			$ref = isset($video_stream) && isset($video_stream->avg_frame_rate)
+				? $video_stream->avg_frame_rate
+				: (isset($video_stream) && isset($video_stream->r_frame_rate)
+					? $video_stream->r_frame_rate
+					: null);
+			if (!empty($ref)) {
+				// sample: '30000/1001'
+				$beats = explode('/', $ref);
+				if (isset($beats[0]) && isset($beats[1])) {
+					$ratio	= intval($beats[0]) / intval($beats[1]);
+					$fps	= intval($ratio);
+				}
+			}
+			switch (true) {
+				case ($fps>=29):
+					$standard = 'ntsc';
+					break;
+
+				case ($fps==25):
+				default:
+					$standard = 'pal';
+					break;
+			}
+
+		// debug
+			debug_log(__METHOD__
+				. " Resolved media standard from file " . PHP_EOL
+				. ' video standard: ' . $standard  . PHP_EOL
+				. ' fps: ' . $fps  . PHP_EOL
+				. ' file_path: ' . $file_path  . PHP_EOL
+				. ' video_stream: ' . (isset($video_stream) ? to_string($video_stream) : null)
+				, logger::DEBUG
+			);
+
+
+		return $standard;
+	}//end get_media_standard
 
 
 
@@ -100,7 +197,7 @@ final class Ffmpeg {
 			return $setting;
 		}
 
-		$ar_quality = self::$ar_supported_qualitys;
+		$ar_quality = Ffmpeg::$ar_supported_qualitys;
 		foreach($ar_quality as $quality) {
 
 			$pos = stripos($setting, $quality);
@@ -205,27 +302,34 @@ final class Ffmpeg {
 
 
 	/**
-	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
-	* @param $AVObj
-	*	AVObj object
-	* @param $setting
-	*	ffmpeg_settings to apply like '404_pal_16x9' (in folder /media_engine/class/ffmpeg_settings)
-	*
+	* BUILD_AV_ALTERNATE_COMMAND
+	* Creates alternative video or audio version with received settings
+	* @param object $options
+	* {
+	* 	setting_name : string,
+	* 	source_file_path : string,
+	* 	target_file_path : string
+	* }
 	* @return object $response
 	*/
-	public function create_av_alternate(AVObj $AVObj, string $setting) : object {
+	public static function build_av_alternate_command(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-		// load ar_settings
-			$this->ar_settings = $this->get_ar_settings();
+		// options
+			$setting_name		= $options->setting_name;
+			$source_file_path	= $options->source_file_path;
+			$target_file_path	= $options->target_file_path;
 
-		// verify setting exists
-			if( !in_array($setting, $this->ar_settings) ) {
-				// die("Error: setting: '$setting' not exits! (create_av_alternate). Please contact with your admin to create");
-				$response->msg .= " Error: setting: '$setting' do not exits! (create_av_alternate). Please contact with your admin to create";
+		// load ar_settings
+			$Ffmpeg			= new Ffmpeg();
+			$ar_settings	= $Ffmpeg->get_ar_settings();
+			// verify setting exists
+			if( !in_array($setting_name, $ar_settings) ) {
+				// die("Error: setting: '$setting_name' not exits! (build_av_alternate_command). Please contact with your admin to create");
+				$response->msg .= " Error: setting: '$setting_name' do not exits! (build_av_alternate_command). Please contact with your admin to create";
 				debug_log(__METHOD__.
 					" $response->msg"
 					, logger::ERROR
@@ -234,82 +338,40 @@ final class Ffmpeg {
 			}
 
 		// import vars from settings file
-			require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting .'.php');
-
-		 // sample vars
+			require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting_name .'.php');
+		 	// sample vars:
 			// $vb				= '960k';			# video rate kbs
 			// $s				= '720x404';		# scale
 			// $g				= 75;				# keyframes interval (gob)
 			// $vcodec			= 'libx264';		# default libx264
-
 			// $progresivo		= "-vf yadif";		# desentrelazar
-			// $gamma_y		= "0.97";			# correccion de luminancia
-			// $gamma_u		= "1.01";			# correccion de B-y
-			// $gamma_v		= "0.98";			# correccion de R-y
+			// $gamma_y			= "0.97";			# correccion de luminancia
+			// $gamma_u			= "1.01";			# correccion de B-y
+			// $gamma_v			= "0.98";			# correccion de R-y
 			// $gammma			= "-vf lutyuv=\"u=gammaval($gamma_u):v=gammaval($gamma_v):y=gammaval($gamma_y)\""; # corrección de gamma
 			// $force			= 'mp4';			# default mp4
-
 			// $ar				= 44100;			# audio sample rate (22050)
 			// $ab				= '64k';			# adio rate kbs
 			// $ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
 			// $acodec			= 'libvo_aacenc';	# default libvo_aacenc
+			// $target_path		= "404";			# like '404'
 
-			// $target_path	= "404";			# like '404'
-
-		// target_path string
-			$target_path = strval($target_path);	# definido en los settings (usualmente es la calidad sin el sufijo de sistema, como '1080' para 1080_pal)
-
-		// create final target path
-			$pre_target_path	= $AVObj->get_media_path_abs();
-			$pre_target_path	= substr($pre_target_path,0,-1);	# remove last /
-			$ar_pre_target_path	= explode('/',$pre_target_path);	# explode by /
-			$result				= array_pop($ar_pre_target_path); 	# remove last element of array (the quality folder)
-			$final_target_path	= implode('/',$ar_pre_target_path).'/'. $target_path ;
-
-
-		// quality dir exists
-			if( !is_dir($final_target_path) ) {
-				try{
-					$create_dir = @mkdir($final_target_path, 0777);
-				}catch(Exception $e) {
-					$response->msg .= " Exception Error on create directory";
+		// target_path_dir from target_file_path
+			$target_path_dir = pathinfo($target_file_path)['dirname'];
+			if( !is_dir($target_path_dir) ) {
+				if( !mkdir($target_path_dir, 0750, true) ) {
+					$response->msg .= " Error on read or create directory for \"$setting_name\". Permission denied !";
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
-						. 'exception message: ' . $e->getMessage()
-						, logger::ERROR
-					);
-					return $response;
-				}
-				if(!$create_dir) {
-					$response->msg .= " Error on read or create directory for \"$setting\". Permission denied !";
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. 'final_target_path: ' .$final_target_path
+						. 'final_target_path: ' .$target_path_dir
 						, logger::ERROR
 					);
 					return $response;
 				}
 			}
-			// dir set permissions 0777
-				$wantedPerms = 0777;
-				$actualPerms = fileperms($final_target_path);
-				if($actualPerms < $wantedPerms) {
-					$chmod = chmod($final_target_path, $wantedPerms);
-					if(!$chmod) {
-						$response->msg .= "Error on set valid permissions to directory";
-						debug_log(__METHOD__
-							. " $response->msg " . PHP_EOL
-							. 'setting: ' .to_string($setting) . PHP_EOL
-							. 'final_target_path: ' .$final_target_path
-							, logger::ERROR
-						);
-						return $response;
-					}
-				}
 
 		// source file
-			$src_file = $this->get_master_media_file($AVObj);
-
+			$src_file = $source_file_path;
 
 		// If the source file is a directory (DVD folder), change the source file to the .VOB into the DVD folder and set the concat of the .vobs
 			if(is_dir($src_file)){
@@ -319,8 +381,8 @@ final class Ffmpeg {
 					$response->msg .= " Error: is necessary the DVD structure (VIDEO_TS)";
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
-						. 'setting: ' .to_string($setting) . PHP_EOL
-						. 'final_target_path: ' .$final_target_path
+						. 'setting: ' .to_string($setting_name) . PHP_EOL
+						. 'final_target_path: ' .$target_path_dir
 						, logger::ERROR
 					);
 					return $response;
@@ -349,32 +411,29 @@ final class Ffmpeg {
 					$response->msg .= " Error: is necessary the DVD structure (.VOB files)";
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
-						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'setting: ' .to_string($setting_name) . PHP_EOL
 						. 'src_file: ' .$src_file .PHP_EOL
 						. 'vob_files: ' .to_string($vob_files)
 						, logger::ERROR
 					);
 					return $response;
 				}
-			}// end if source file is directory
+			}//end if source file is directory
 
-
-		# SOME UTIL VARS
-			$target_file	= $final_target_path . '/' .$AVObj->get_name() . '.' . DEDALO_AV_EXTENSION;
-			$tmp_folder		= implode('/',$ar_pre_target_path) .'/tmp' ;
+		// some useful variables
+			$target_file	= $target_file_path;
+			$tmp_folder		= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . '/tmp';
 			$tmp_file_base	= $tmp_folder . '/tmp_' . time();
-			$tmp_file		= $tmp_file_base .'_' . $AVObj->get_name() . '.' . DEDALO_AV_EXTENSION;
-			$log_file		= $tmp_file_base .'_' . $AVObj->get_name() . '_log';
+			$tmp_file		= $tmp_file_base .'_'. pathinfo($target_file)['basename'];
+			$log_file		= $tmp_file_base .'_'. pathinfo($target_file)['filename'] . '_log';
 
-
-			# tmp dir exists
+			// tmp_folder directory exists
 			if( !is_dir($tmp_folder) ) {
-				$create_dir = mkdir($tmp_folder, 0777);
-				if(!$create_dir) {
+				if( !mkdir($tmp_folder, 0750, true) ) {
 					$response->msg .= " Error on read or create directory for \"tmp\" folder. Permission denied !";
 					debug_log(__METHOD__
 						. " $response->msg " . PHP_EOL
-						. 'setting: ' .to_string($setting) . PHP_EOL
+						. 'setting: ' .to_string($setting_name) . PHP_EOL
 						. 'tmp_folder: ' .$tmp_folder
 						, logger::ERROR
 					);
@@ -382,37 +441,19 @@ final class Ffmpeg {
 				}
 			}
 
-			# tmp dir set permissions 0777
-			$wantedPerms = 0777;
-			$actualPerms = fileperms($tmp_folder);
-			if($actualPerms < $wantedPerms) {
-				$chmod = chmod($tmp_folder, $wantedPerms);
-				if(!$chmod) {
-					// die(" Sorry. Error on set valid permissions to directory for \"tmp\".  ") ;
-					$response->msg .= " Error on set valid permissions to directory for \"tmp\" ";
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. 'setting: ' .to_string($setting) . PHP_EOL
-						. 'tmp_folder: '.$tmp_folder . PHP_EOL
-						. 'chmod: ' . to_string($chmod)
-						, logger::ERROR
-					);
-					return $response;
-				}
-			}
+		// sh_file
+			// $target_quality	= $this->get_quality_from_setting($setting_name);
+			// $sh_file			= $tmp_folder .'/'. $target_quality .'_'. $AVObj->get_name() . '.sh';
+			$sh_file			= $tmp_folder .'/'. pathinfo($target_file)['filename'] . '.sh';
 
-		# target quality
-			$target_quality	= $this->get_quality_from_setting($setting);
-			$prgfile		= $tmp_folder .'/' . $target_quality .'_'. $AVObj->get_name() . '.sh';
-
-
-		#
-		# FFPROBE GET STREAMS INFO
-			$media_streams		= self::get_media_streams( $src_file );
+		// ffprobe get streams info
+			$media_streams		= Ffmpeg::get_media_streams( $src_file );
 			$source_with_video	= false;
 			$source_with_audio	= false;
-			$streams			= $media_streams->streams ?? [];
-			foreach ( $streams as $stream_obj) {
+			$streams			= is_object($media_streams)
+				? ($media_streams->streams ?? [])
+				: [];
+			foreach ($streams as $stream_obj) {
 				$codec_type = $stream_obj->codec_type;
 				if ($codec_type==='audio') {
 					$source_with_audio = true;
@@ -421,15 +462,16 @@ final class Ffmpeg {
 				}
 			}
 
-		#
-		# FFMPEG AUDIO CODEC TEST
-		$acodec = self::get_audio_codec();
+		// ffmpeg audio codec test
+			$acodec = Ffmpeg::get_audio_codec();
 
+		// ffmpeg paths
+			$ffmpeg_path	= DEDALO_AV_FFMPEG_PATH;
+			$faststart_path	= DEDALO_AV_FASTSTART_PATH;
 
-		# COMMANDS SHELL
-		$command	 = '';
-
-		if($setting==='audio') {
+		// shell command
+		$command = '';
+		if($setting_name==='audio') {
 
 			switch (true) {
 				case ($source_with_audio===false):
@@ -437,7 +479,6 @@ final class Ffmpeg {
 					# SOURCE NOT CONTAINS ANY AUDIO TRACK
 					$response->msg .= 'Source does not contains audio';
 					return $response;
-					break;
 
 				default:
 					#
@@ -448,11 +489,11 @@ final class Ffmpeg {
 					# convert format always
 					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
 					# fast-start
-					#$command	.= "&& ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";
+					#$command	.= "&& ".$faststart_path." $tmp_file $target_file ";
 					# delete media temp
 					#$command	.= "&& rm -f $tmp_file ";
 					# delete self sh file
-					$command	.= "&& rm -f " . $prgfile;
+					$command	.= "&& rm -f " . $sh_file;
 					break;
 			}
 		}else{
@@ -462,7 +503,7 @@ final class Ffmpeg {
 				case ($source_with_video===false):
 					#
 					# CASE ORIGINAL HAVE ONLY AUDIO
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command .= "nice -n 19 $ffmpeg_path -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
 					break;
 
 				default:
@@ -474,44 +515,45 @@ final class Ffmpeg {
 					$s				= '720x404';		# scale
 					$g				= 75;				# keyframes interval (gob)
 					$vcodec			= 'libx264';		# default libx264
-
 					$progresivo		= "-vf yadif";		# desentrelazar
 					$gamma_y		= "0.97";			# correccion de luminancia
 					$gamma_u		= "1.01";			# correccion de B-y
 					$gamma_v		= "0.98";			# correccion de R-y
 					$gammma			= "-vf lutyuv=\"u=gammaval($gamma_u):v=gammaval($gamma_v):y=gammaval($gamma_y)\""; # corrección de gamma
 					$force			= 'mp4';			# default mp4
-
 					$ar				= 44100;			# audio sample rate (22050)
 					$ab				= '64k';			# adio rate kbs
 					$ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
 					$acodec			= 'libvo_aacenc';	# default libvo_aacenc
-
 					$target_path 	= "404";			# like '404'
 					*/
 					# paso 1 sólo video
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
+					$ar_cmn = [];
+
+					$ar_cmn[] = "nice -n 19 $ffmpeg_path -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
 
 					# paso 2 video
-					$command	.= "&& nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";
+					$ar_cmn[] = "&& nice -n 19 $ffmpeg_path -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";
 
 					# paso 2 audio
-					$command	.= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";
+					$ar_cmn[] = "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";
 
 					# fast-start
-					$command	.= "&& nice -n 19 ".DEDALO_AV_FASTSTART_PATH." $tmp_file $target_file ";
+					$ar_cmn[] = "&& nice -n 19 $faststart_path $tmp_file $target_file ";
 
 					# delete media temp
-					$command	.= "&& rm -f $tmp_file ";
+					$ar_cmn[] = "&& rm -f $tmp_file ";
 
 					# delete log temps (all generated logs files)
-					$command	.= "&& rm -f $log_file* ";
+					$ar_cmn[] = "&& rm -f $log_file* ";
 
 					# delete self sh file
-					$command	.= "&& rm -f " . $prgfile;
+					$ar_cmn[] = "&& rm -f " . $sh_file;
+
+					$command = implode($ar_cmn);
 					break;
 			}
-		}//end if($setting=='audio') {
+		}//end if($setting_name=='audio') {
 
 
 		// debug
@@ -520,17 +562,14 @@ final class Ffmpeg {
 				.' command: ' . $command
 				, logger::DEBUG
 			);
-		#$av_alternate_command_exc = exec_::exec_command($command);
 
 		// SH FILE
-			$fp = fopen($prgfile, "w");
+			$fp = fopen($sh_file, "w");
 			fwrite($fp, "#!/bin/bash\n");
 			fwrite($fp, "$command\n");
 			fclose($fp);
 			// check the file and permissions
-			if(file_exists($prgfile)) {
-				chmod($prgfile, 0755);
-			}else{
+			if(!file_exists($sh_file)) {
 				// throw new Exception("Error Processing Media. Script file do not exists or is not accessible", 1);
 				debug_log(__METHOD__
 					. " Error Processing Media. Script file do not exists or is not accessible " . PHP_EOL
@@ -543,101 +582,181 @@ final class Ffmpeg {
 			$response->result	= true;
 			$response->msg		= 'OK. Request done';
 			$response->command	= $command;
-			$response->prgfile	= $prgfile;
+			$response->sh_file	= $sh_file;
 
 
 		return $response;
-	}//end create_av_alternate
+	}//end build_av_alternate_command
+
+
+
+	/**
+	* FIND_VIDEO_STREAM
+	* Locates the right stream (track) from the whole
+	* file streams list (usually video and audio tracks)
+	* @param array $media_streams
+	* @return object|null $video_stream
+	*/
+	public static function find_video_stream(array $media_streams) : ?object {
+
+		// search by codec_type
+			$video_stream = array_find($media_streams, function($el){
+				return isset($el->codec_type) && $el->codec_type==='video';
+			});
+
+		// search by codec_name
+			if (empty($video_stream)) {
+				$video_stream = array_find($media_streams, function($el){
+					return (isset($el->codec_name) && strpos($el->codec_name, 'h26')===0)
+						|| isset($el->width);
+				});
+			}
+
+		// debug
+			if (empty($video_stream)) {
+				debug_log(__METHOD__
+					. " WARNING: Unable to find video stream from media_streams list " . PHP_EOL
+					. ' media_streams: ' . to_string($media_streams)
+					, logger::WARNING
+				);
+			}
+
+
+		return $video_stream;
+	}//end find_video_stream
 
 
 
 	/**
 	* GET_ASPECT_RATIO
 	* @param string $source_file
-	* @param string $quality
-	* @return string $ratio
+	* @return string $aspect
 	* 	Like '16x9'
 	*/
-	public function get_aspect_ratio(string $source_file, string $quality) {
+	public static function get_aspect_ratio(string $source_file) : string {
 
-		// get streams
-		$media_streams = Ffmpeg::get_media_streams( $source_file );
-		if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->display_aspect_ratio)) {
+		// default value
+			$aspect = '16x9';
 
-			// data from media_streams definition
+		// media_streams. get streams
+			$media_streams = Ffmpeg::get_media_streams($source_file);
+			// media_streams sample result:
+			// {
+			// 	"streams": [
+			// 		{
+			// 			"index": 0,
+			// 			"codec_name": "h264",
+			// 			"codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+			// 			"profile": "High",
+			// 			"codec_type": "video",
+			//			"avg_frame_rate": "30000/1001",
+			// 			...
+			// 		},
+			// 		{
+			// 			"index": 1,
+			// 			"codec_name": "aac",
+			// 			"codec_long_name": "AAC (Advanced Audio Coding)",
+			// 			"profile": "LC",
+			// 			"codec_type": "audio",
+			// 			"codec_tag_string": "mp4a",
+			// 			...
+			// 		}
+			// 	]
+			// }
+			$video_stream = isset($media_streams->streams)
+				? Ffmpeg::find_video_stream($media_streams->streams)
+				: null;
 
-			$aspect_ratio = $media_streams->streams[0]->display_aspect_ratio;
-			$beats	= explode(':', $aspect_ratio);
+		// reference dimensions
+			$width	= 0;
+			$height	= 0;
 
-			$aspect	= implode('x', $beats);
+		if (!empty($video_stream)) {
 
-		}else{
+			if (!empty($video_stream->display_aspect_ratio) && isset($video_stream->display_aspect_ratio)) {
 
-			// data from size calculation
+				// data from media_streams definition
 
-			if (isset($media_streams->streams[0]) && !empty($media_streams->streams[0]->width) && !empty($media_streams->streams[0]->height)) {
+					$aspect_ratio = $video_stream->display_aspect_ratio;
 
-				// from streams
-					$width	= (int)$media_streams->streams[0]->width;
-					$height	= (int)$media_streams->streams[0]->height;
+					$beats	= explode(':', $aspect_ratio);
+					// $aspect	= implode('x', $beats);
 
-			}else{
+					$width	= $beats[0];
+					$height	= $beats[1];
 
-				// retrieves info from reading the header
-					$media_header = Ffmpeg::get_media_streams($source_file);
+				// debug
 					debug_log(__METHOD__
-						. " media_header from get_media_streams result: " . PHP_EOL
-						. ' type: ' . gettype($media_header) . PHP_EOL
-						. ' value: ' . to_string($media_header)
+						. " getting aspect_ratio from video_stream->display_aspect_ratio: " . PHP_EOL
+						. ' aspect_ratio: ' . to_string($aspect_ratio)
 						, logger::DEBUG
 					);
+
+			}else{
 
 				// size
 					$width_default	= 720;
 					$height_default	= 404;
 
-					$width = isset($media_header->{$quality}) && isset($media_header->{$quality}['width'])
-						? (int)$media_header->{$quality}['width']
+					$width = isset($video_stream->width)
+						? (int)$video_stream->width
 						: $width_default;
 
-					$height = isset($media_header->{$quality}) && isset($media_header->{$quality}['height'])
-						? (int)$media_header->{$quality}['height']
+					$height = isset($video_stream->height)
+						? (int)$video_stream->height
 						: $height_default;
 
+				// debug
 					debug_log(__METHOD__
-						. " width/height result: " . PHP_EOL
-						. ' width: ' . to_string($width). PHP_EOL
+						. " getting aspect_ratio from width/height: " . PHP_EOL
+						. ' width: ' . to_string($width) . PHP_EOL
 						. ' height: ' . to_string($height)
 						, logger::DEBUG
 					);
 			}
 
-			// aspect_ratio
-				$aspect_ratio = 0;
-				if($width>0 && $height>0)
-				$aspect_ratio = round( ($width / $height), 2);
+		// aspect_ratio
+			$aspect_ratio = ($width>0 && $height>0)
+				? round(($width / $height), 2)
+				: 0;
+			$aspect_ratio_str = strval($aspect_ratio);
+			switch($aspect_ratio_str) {
 
-				switch($aspect_ratio) {
+				case '1.33'	:
+				case '1.34'	:
+					$aspect = '4x3';
+					break;
 
-					case '1.33'	: $aspect = '4x3';	break;
-					case '1.34'	: $aspect = '4x3';	break;
+				case '1.77'	:
+				case '1.78'	:
+					$aspect = '16x9';
+					break;
 
-					case '1.77'	: $aspect = '16x9';	break;
-					case '1.78'	: $aspect = '16x9';	break;
+				case '1.66' :
+					$aspect = '5x3';
+					break;
 
-					case '1.66'	: $aspect = '5x3';	break;
-					case '1.50'	: $aspect = '3x2';	break;
-					case '1.25'	: $aspect = '5x4';	break;
+				case '1.50'	:
+					$aspect = '3x2';
+					break;
 
-					default		: $aspect = '16x9';
-				}
-		}
+				case '1.25'	:
+					$aspect = '5x4';
+					break;
 
-		debug_log(__METHOD__
-			. " aspect result: " . PHP_EOL
-			. ' aspect: ' . to_string($aspect)
-			, logger::DEBUG
-		);
+				default	:
+					$aspect = '16x9';
+			}
+		}//end if (!empty($video_stream))
+
+		// debug
+			debug_log(__METHOD__
+				. " getting aspect_ratio : " . PHP_EOL
+				. ' width: ' . to_string($width) . PHP_EOL
+				. ' height: ' . to_string($height) . PHP_EOL
+				. ' aspect: ' . to_string($aspect)
+				, logger::DEBUG
+			);
 
 
 		return $aspect; // default 16x9
@@ -667,7 +786,7 @@ final class Ffmpeg {
 			$posterframe_path	= $options->posterframe_path;
 
 		// aspect_ratio_cmd
-			$raw_aspect_ratio	= $this->get_aspect_ratio($src_file, $quality);
+			$raw_aspect_ratio	= Ffmpeg::get_aspect_ratio($src_file, $quality);
 			$aspect_ratio		= strtolower($raw_aspect_ratio)==='4x3'
 				? '540x404'
 				: '720x404'; // default for 16x9
@@ -821,7 +940,7 @@ final class Ffmpeg {
 					. to_string($fragments_dir_path)
 					, logger::WARNING
 				);
-				if(!mkdir($fragments_dir_path, 0755)) {
+				if(!mkdir($fragments_dir_path, 0755, true)) {
 					$response->msg .= " Error trying to create fragments_dir ";
 					debug_log(__METHOD__
 						." $response->msg " .PHP_EOL
@@ -909,64 +1028,54 @@ final class Ffmpeg {
 
 	/**
 	* CONFORM_HEADER
-	* @return string|null
+	* @param string $source_file_path
+	*  like: '/../dedalo/media/av/404/0/test94_test3_334.mp4'
+	* @return string|null $result
 	*/
-	public function conform_header(AVObj $AVObj) : ?string {
+	public static function conform_header(string $source_file_path) : ?string {
 
 		$result = null;
 
-		$ffmpeg_installed_path 			= DEDALO_AV_FFMPEG_PATH;
-		$qt_faststart_installed_path 	= DEDALO_AV_FASTSTART_PATH;
+		// short vars
+			$ffmpeg_bin_path	= DEDALO_AV_FFMPEG_PATH;
+			$faststart_bin_path	= DEDALO_AV_FASTSTART_PATH;
+			// source_dir_path. Like /../dedalo/media/av/404/0
+			$source_dir_path	= dirname($source_file_path);
+			$path_info			= pathinfo($source_file_path);
+			// file_path_temp. Like /../dedalo/media/av/404/0/test94_test3_334_temp.mp4
+			$file_path_temp	= $source_dir_path .'/'. $path_info['filename'] .'_temp.'. $path_info['extension'];
+			// file_path_untouched. Like /../dedalo/media/av/404/0/test94_test3_334_untouched.mp4
+			$file_path_untouched = $source_dir_path .'/'. $path_info['filename'] .'_untouched.'. $path_info['extension'];
+			// target_file_path. Like /../dedalo/media/av/404/0/test94_test3_334.mp4
+			$target_file_path = $source_file_path; // to the same location than the source (moved previously)
 
-		//$AVObj->get_media_path_abs()	.
-		$file_path 			= $AVObj->get_name() . '.' . $AVObj->get_extension();	//$AVObj->get_local_full_path();
-		$file_path_temp 	= $AVObj->get_name() . '_temp.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
-		$file_path_original = $AVObj->get_name() . '_untouched.' . $AVObj->get_extension();;	//str_replace('.mp4', '_.mp4', $file_path);
+		// command
+			$sentences = [];
 
-		$source_file_path = $AVObj->get_local_full_path();
+			// Copy file
+			$sentences[] = "$ffmpeg_bin_path -i $source_file_path -c:v copy -c:a copy $file_path_temp"; # && rm -f $file_path && mv $file_path_temp $file_path # -y
 
-		$path_parts 	  = pathinfo($source_file_path);
-		$target_file_path = $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$path_parts['extension'];
+			// Rename original to preserve the original file untouched
+			$sentences[] = "mv $source_file_path $file_path_untouched";
 
-		$command  = '';
+			// faststart (build final file)
+			$sentences[] = "$faststart_bin_path $file_path_temp $target_file_path";
 
-		$command .= "cd ".$AVObj->get_media_path_abs()." ";
+			// Remove temp file
+			$sentences[] = "rm -f $file_path_temp";
 
-		# Copy file
-		$command .= "&& $ffmpeg_installed_path -i $file_path -c:v copy -c:a copy $file_path_temp ";	# && rm -f $file_path && mv $file_path_temp $file_path # -y
+			$command = implode(' && ', $sentences);
 
-		# Rename original to preserve the original file untouched
-		$command .= "&& mv $file_path $file_path_original ";
-
-		# Rename new file as source
-		#$command .= "&& mv $file_path_temp $file_path ";
-
-		# faststart (build final file)
-		$command .= "&& $qt_faststart_installed_path $file_path_temp $target_file_path ";
-
-		# Remove temp file
-		$command .= "&& rm -f $file_path_temp ";
-
-
-		try {
-
+		// exec
 			$result = shell_exec( $command );
 
-		} catch (Exception $e) {
-			echo 'Caught exception: ',  $e->getMessage(), "\n";
-			if(SHOW_DEBUG===true) {
-				dump($e->getMessage(), " EXCEPTION ".to_string());
-			}
-		}
-
-		#$conform_header_command_exc = Exec::exec_command($command);
-
-		if(SHOW_DEBUG===true) {
-			debug_log(__METHOD__." Exec command conform headers:".PHP_EOL.
-				" sudo -u _www $command .".to_string($result),
-				logger::DEBUG
+		// debug
+			debug_log(__METHOD__." Exec command conform headers:" . PHP_EOL
+				.' command: ' . $command . PHP_EOL
+				.' result: ' . to_string($result)
+				, logger::DEBUG
 			);
-		}
+
 
 		return $result;
 	}//end conform_header
@@ -977,7 +1086,7 @@ final class Ffmpeg {
 	* CONVERT_AUDIO
 	* Transform audio file to default codec
 	* @param object $options
-	* @return string|false|null $result
+	* @return string|null $result
 	* 	A string containing the output from the executed command, false if the pipe cannot be established
 	* 	or null if an error occurs or the command produces no output.
 	*/
@@ -1001,7 +1110,7 @@ final class Ffmpeg {
 			// ffmpeg -i input.wav -strict experimental -c:a aac -b:a 240k output.m4a
 
 			// ffmpeg audio codec test
-			$acodec = self::get_audio_codec();
+			$acodec = Ffmpeg::get_audio_codec();
 
 			// convert file
 			$command .= "$ffmpeg_installed_path -i $uploaded_file_path -acodec $acodec -ar 44100 -ab 240k -ac 2 $output_file_path ";
@@ -1040,7 +1149,7 @@ final class Ffmpeg {
 
 		#
 		# FFMPEG AUDIO CODEC TEST
-		$acodec = self::get_audio_codec();
+		$acodec = Ffmpeg::get_audio_codec();
 
 		$path_parts			= pathinfo($target_file);
 		$temp_target_file	= $path_parts['dirname'] .'/'. $path_parts['filename'] .'_temp.' . $path_parts['extension'];
@@ -1114,13 +1223,26 @@ final class Ffmpeg {
 	public static function get_media_streams( string $source_file ) : ?object {
 		$start_time=start_time();
 
-		$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
-		$output  = json_decode( shell_exec($command) );
+		// cache
+			static $media_streams_cache;
+			$key = $source_file;
+			if (isset($media_streams_cache[$key])) {
+				return $media_streams_cache[$key];
+			}
 
-		debug_log(__METHOD__
-			. ' media_streams calculation  exec time: '.exec_time_unit($start_time).' ms'
-			, logger::DEBUG
-		);
+		// exec command
+			$command = DEDALO_AV_FFPROBE_PATH . ' -v quiet -show_streams -print_format json ' . $source_file . ' 2>&1';
+			$output  = json_decode( shell_exec($command) );
+
+		// cache
+			$media_streams_cache[$key] = $output;
+
+		// debug
+			debug_log(__METHOD__
+				. ' media_streams calculation  exec time: '.exec_time_unit($start_time).' ms'
+				, logger::DEBUG
+			);
+
 
 		return $output;
 	}//end get_media_streams
@@ -1132,7 +1254,6 @@ final class Ffmpeg {
 	* @return string $acodec
 	*/
 	public static function get_audio_codec() : string {
-
 
 		// FFMPEG AUDIO CODEC TEST
 		$ffmpeg_info = shell_exec(DEDALO_AV_FFMPEG_PATH .' -buildconf');
@@ -1149,7 +1270,9 @@ final class Ffmpeg {
 
 		// debug
 			debug_log(__METHOD__
-				." Using audio codec $acodec from ffmpeginfo : ".to_string($ffmpeg_info)
+				." Using audio codec from ffmpeginfo" . PHP_EOL
+				.' acodec: ' .$acodec . PHP_EOL
+				// .' ffmpeg_info: ' . to_string($ffmpeg_info)
 				, logger::DEBUG
 			);
 

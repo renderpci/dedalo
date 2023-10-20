@@ -34,6 +34,7 @@ export const tool_media_versions = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
+	this.timer			= null
 
 	this.main_element_quality = null
 
@@ -49,7 +50,6 @@ export const tool_media_versions = function () {
 */
 // prototypes assign
 	tool_media_versions.prototype.render	= tool_common.prototype.render
-	tool_media_versions.prototype.destroy	= common.prototype.destroy
 	tool_media_versions.prototype.refresh	= common.prototype.refresh
 	tool_media_versions.prototype.edit		= render_tool_media_versions.prototype.edit
 
@@ -139,6 +139,36 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
+
+
+
+/**
+* DESTROY
+* Alias of common.destroy
+* @param bool delete_self = true
+* 	On true, Delete self instance events, paginator, services, inspector, filter and instance
+* @param bool delete_dependencies = false
+* 	On true, Call to destroy all associated instances (ar_instances)
+* @param bool remove_dom = false
+* 	On true, removes the instance DOM node
+* @return promise
+* 	Resolve object result
+*/
+tool_media_versions.prototype.destroy = async function(delete_self=true, delete_dependencies=false, remove_dom=false) {
+
+	const self = this
+
+	// clear timeout
+		if (self.timer) {
+			clearTimeout(self.timer);
+		}
+
+	// call the generic common tool destroy
+		const common_destroy = await common.prototype.destroy.call(this, delete_self, delete_dependencies, remove_dom);
+
+
+	return common_destroy
+}//end destroy
 
 
 
