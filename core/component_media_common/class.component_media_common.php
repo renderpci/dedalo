@@ -658,7 +658,6 @@ class component_media_common extends component_common {
 
 			$current_possible_file = $folder_path .'/'. $file_name .'.'. $current_extension;
 			if(file_exists($current_possible_file)) {
-					//dump($current_possible_file, ' current_possible_file'.to_string());
 				$file_to_move_renamed = $folder_path . '/deleted/'. $file_name . '_deleted_'. $dateMovement . '.' . $current_extension ;
 				rename($current_possible_file, $file_to_move_renamed);
 			}
@@ -757,7 +756,7 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_FILES_INFO
-	* Get file info for every quality
+	* Get file info for every quality from disk
 	* Included alternative_extensions files and original from original_normalized_name
 	* @param bool $include_empty = false
 	* @return array $files_info
@@ -791,20 +790,36 @@ class component_media_common extends component_common {
 			}//end foreach ($ar_quality as $quality)
 
 		// original add like 'rsc29_rsc170_770.psd'
-			$dato = $this->dato;
+			$dato = $this->get_dato();
 			if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
-				$file_extension = get_file_extension($dato[0]->original_normalized_name);
-				if ($file_extension!==$this->get_extension()) {
-					$original_quality	= $this->get_original_quality();
-					$original_file_path	= $this->get_media_path_dir($original_quality) . '/'. $dato[0]->original_normalized_name;
+
+				$original_quality	= $this->get_original_quality();
+				$file_extension		= get_file_extension($dato[0]->original_normalized_name);
+
+				// original file like 'memoria_oral_presentacion.mov'
+					$original_file_path	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
 					if (file_exists($original_file_path)) {
-
+						// file_info
 						$quality_file_info = $this->get_quality_file_info($original_quality, $file_extension);
-
 						// add
 						$files_info[] = $quality_file_info;
 					}
-				}
+
+				// original converted file like 'memoria_oral_presentacion.mp4'
+					$default_extension	= $this->get_extension();
+					if ($file_extension!==$default_extension) {
+
+						$file_name = pathinfo($dato[0]->original_normalized_name)['filename'];
+
+						// look for original converted to normalized
+						$original_file_path	= $this->get_media_path_dir($original_quality) .'/'. $file_name .'.'. $default_extension;
+						if (file_exists($original_file_path)) {
+							// file_info
+							$quality_file_info = $this->get_quality_file_info($original_quality, $default_extension);
+							// add
+							$files_info[] = $quality_file_info;
+						}
+					}
 			}
 
 

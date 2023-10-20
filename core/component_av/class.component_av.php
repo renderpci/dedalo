@@ -579,7 +579,6 @@ class component_av extends component_media_common {
 				// 	debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
 				// }//end foreach ($ar_quality as $current_quality)
 
-
 		// posterframe remove (default is true)
 			if ($remove_posterframe===true) {
 
@@ -852,8 +851,6 @@ class component_av extends component_media_common {
 			// quality default in upload is 'original' (!)
 				$quality = $this->get_quality();
 
-			$AVObj = new AVObj($id, $quality);
-
 			// audio case
 			if ($quality==='audio') {
 
@@ -893,8 +890,6 @@ class component_av extends component_media_common {
 						);
 
 						// If default quality file do not exists, generate default quality version now
-						// $quality_default_AVObj 		 = new AVObj($id, DEDALO_AV_QUALITY_DEFAULT);
-						// $quality_default_target_file = $quality_default_AVObj->get_media_filepath();
 						$default_quality				= $this->get_default_quality();
 						$quality_default_target_file	= $this->get_media_filepath($default_quality);
 
@@ -944,11 +939,6 @@ class component_av extends component_media_common {
 
 				// posterframe. Create posterframe of current video
 					$this->create_posterframe('00:00:10');
-
-				// conform headers
-					# Apply qt-faststart to optimize file headers position
-					#$Ffmpeg = new Ffmpeg();
-					#$Ffmpeg->conform_header($AVObj);
 			}//end if ($quality=='audio') {
 
 
@@ -1243,17 +1233,33 @@ class component_av extends component_media_common {
 				return $response;
 			}
 
-		// AVObj
-			$AVObj = new AVObj($id, $source_quality);
-
-		// Ffmpeg
-			$Ffmpeg					= new Ffmpeg();
-			$setting_name			= $Ffmpeg->get_setting_name_from_quality($AVObj, $quality);
-			$av_alternate_response	= $Ffmpeg->create_av_alternate($AVObj, $setting_name);
-
+		// build_av_alternate_command. Creates the command and the sh file to run
+			$source_file_path		= $this->get_original_file_path($source_quality);
+			if (!file_exists($source_file_path)) {
+				debug_log(__METHOD__
+					. " original file do not exists. Falling back to default quality " . PHP_EOL
+					. ' original_file_path: ' . $source_file_path
+					, logger::ERROR
+				);
+				// fallback to default quality
+				$source_quality		= $this->get_default_quality(); // overwrite
+				$source_file_path	= $this->get_media_filepath($source_quality); // overwrite
+			}
+			if (!file_exists($source_file_path)) {
+				$response->msg .= ' Invalid source_file_path';
+				return $response;
+			}
+			$setting_name			= Ffmpeg::get_setting_name($source_file_path, $quality);
+			$target_file_path		= $this->get_media_filepath($quality);
+			$av_alternate_response	= Ffmpeg::build_av_alternate_command((object)[
+				'setting_name'		=> $setting_name,
+				'source_file_path'	=> $source_file_path,
+				'target_file_path'	=> $target_file_path
+			]);
+			// check false case
 			if (isset($av_alternate_response->result) && $av_alternate_response->result===false) {
 				debug_log(__METHOD__
-					. " Error on Ffmpeg->create_av_alternate " . PHP_EOL
+					. " Error on Ffmpeg->build_av_alternate_command " . PHP_EOL
 					. ' setting_name: ' .$setting_name
 					. ' av_alternate_response: ' . to_string($av_alternate_response)
 					, logger::ERROR
@@ -1262,6 +1268,7 @@ class component_av extends component_media_common {
 				return $response;
 			}
 
+		// run sh_file
 			if($async==false){
 
 				// exec command and wait
@@ -1278,8 +1285,8 @@ class component_av extends component_media_common {
 			}else{
 
 				// launch a background process
-				$prgfile	= $av_alternate_response->prgfile;
-				$PID		= exec_::exec_sh_file($prgfile);
+				$sh_file	= $av_alternate_response->sh_file;
+				$PID		= exec_::exec_sh_file($sh_file);
 
 				debug_log(__METHOD__
 					. " Building av file in background " . PHP_EOL
@@ -1337,14 +1344,13 @@ class component_av extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// short vars
-			$id = $this->get_id();
-
-		// AVObj
-			$AVObj = new AVObj($id, $quality);
+			$id					= $this->get_id();
+			$source_file_path	= $this->get_media_filepath($quality);
 
 		// Ffmpeg
-			$Ffmpeg				= new Ffmpeg();
-			$command_response	= $Ffmpeg->conform_header($AVObj);
+			$command_response	= Ffmpeg::conform_header(
+				$source_file_path
+			);
 
 		// response
 			$response->result			= true;
