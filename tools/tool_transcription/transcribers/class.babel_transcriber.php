@@ -1,6 +1,6 @@
 <?php
 /*
-* CLASS BABEL
+* CLASS BABEL_TRANSCRIBER
 *
 *
 */
@@ -161,6 +161,7 @@ class babel_transcriber {
 	}//end exec_background_check_transcription
 
 
+
 	/**
 	* CHECK_background_TRANSCRIBER_STATUS
 	* Ask to babel server if the process is working or was finished
@@ -249,11 +250,11 @@ class babel_transcriber {
 	* 	3 - the pid is not active but the file with the result exist, process is done so call to process the result with process_file()
 	* @param object $options
 	* 	Returns last line on success or false on failure.
-	* @return void
+	* @return object
 	*/
 	public static function check_transcriber_status(object $options) : object {
 
-			// http query vars
+			// HTTP query vars
 			$fields = [
 				'key'				=> $options->key,
 				'url'				=> $options->url,
@@ -368,4 +369,4 @@ class babel_transcriber {
 
 
 
-}//end class babel
+}//end class babel_transcriber

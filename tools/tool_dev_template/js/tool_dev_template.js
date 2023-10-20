@@ -112,7 +112,7 @@ tool_dev_template.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
-* @param bool autoload
+* @param bool autoload = false
 * @return bool common_build
 */
 tool_dev_template.prototype.build = async function(autoload=false) {
@@ -188,10 +188,10 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 			self.main_element.context = api_response.result.context
 
 	// second when you have the context you could load full component with full datum (context and data)
-		// use the main_elemetn context (clone and edit) and change the properties
+		// use the main_element context (clone and edit) and change the properties
 		// it's possible use other needs doing this function generic
 			const load_options = Object.assign(clone(self.main_element.context),{
-				self 		: self, // added tool instance, it will be used to assign the instance built to ar_instaces of the current tool
+				self 		: self, // added tool instance, it will be used to assign the instance built to ar_instances of the current tool
 				lang		: lang,
 				mode		: 'edit',
 				section_id	: self.main_element.section_id

@@ -16,7 +16,7 @@
 
 
 /**
-* TOOL_transcription
+* TOOL_TRANSCRIPTION
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_transcription = function () {
@@ -56,6 +56,8 @@ export const tool_transcription = function () {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 */
 tool_transcription.prototype.init = async function(options) {
 
@@ -96,6 +98,8 @@ tool_transcription.prototype.init = async function(options) {
 
 /**
 * BUILD
+* @param bool autoload = false
+* @return bool common_build
 */
 tool_transcription.prototype.build = async function(autoload=false) {
 
@@ -212,8 +216,10 @@ tool_transcription.prototype.load_relation_list = async function() {
 /**
 * GET_USER_TOOLS
 * Get the tools that user has access
-* @param array ar_requested_tools | ['tool_time_machine']
-* @return Promise with array of the tool_simple_context of the tools requested if the user has access to it.
+* @param array ar_requested_tools
+* 	Sample: ['tool_time_machine']
+* @return promise
+* 	Promise with array of the tool_simple_context of the tools requested if the user has access to it.
 */
 tool_transcription.prototype.get_user_tools = async function(ar_requested_tools) {
 
@@ -281,20 +287,23 @@ tool_transcription.prototype.build_subtitles = async function() {
 * Call the API to transcribe the audiovisual component with the source lang
 * using a online service like babel or Google transcribe and save the resulting value
 * (!) Tool transcription config transcriber must to be exists in register_tools section
-*
-* @para string transcriber (name like 'babel' must to be defined in tool config)
-* @param string source_lang (like 'lg-eng')
-*
+* @param object options
+* {
+* 	transcriber_engine : string,
+* 	transcriber_quality : string
+* }
 * @return promise response
 */
 tool_transcription.prototype.automatic_transcription = async function(options) {
 
 	const self = this
 
-	const transcriber_engine	= options.transcriber_engine
-	const transcriber_quality 	= options.transcriber_quality
-	const source_lang			= self.transcription_component.lang
+	// options
+		const transcriber_engine	= options.transcriber_engine
+		const transcriber_quality 	= options.transcriber_quality
 
+	// source lang
+		const source_lang = self.transcription_component.lang
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -341,24 +350,26 @@ tool_transcription.prototype.automatic_transcription = async function(options) {
 
 
 
-
 /**
 * CHECK_SERVER_TRANSCRIBER_STATUS
 * Call the API to check the transcribe server status
 * using a online service like babel or Google and check if server has done
 * (!) Tool transcription config transcriber must to be exists in register_tools section
 *
-* @para string transcriber (name like 'babel' must to be defined in tool config)
-* @param string source_lang (like 'lg-eng')
-*
+* @param object options
+* {
+* 	transcriber_engine : string,
+* 	pid : string|int
+* }
 * @return promise response
 */
 tool_transcription.prototype.check_server_transcriber_status = async function(options) {
 
 	const self = this
 
-	const transcriber_engine	= options.transcriber_engine
-	const pid					= options.pid
+	// options
+		const transcriber_engine	= options.transcriber_engine
+		const pid					= options.pid
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
