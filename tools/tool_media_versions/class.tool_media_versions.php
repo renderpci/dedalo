@@ -182,13 +182,15 @@ class tool_media_versions extends tool_common {
 			$degrees		= $options->degrees;
 
 		// component
-			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component	= component_common::get_instance($model,
-														 $tipo,
-														 $section_id,
-														 'list',
-														 DEDALO_DATA_NOLAN,
-														 $section_tipo);
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
 
 			$command_result = $component->rotate($degrees, $quality);
 
