@@ -200,44 +200,44 @@ class AVObj extends MediaObj {
 
 
 	/**
-	* GET MEDIA STANDARD (PAL / NTSC)
+	* GET MEDIA STANDARD (PAL / NTSC) (! MOVED TO STATIC FUNCTION IN FFMPEG)
 	* Calculate fps from current quality file header
 	* @see Ffmpeg::get_setting_name_from_quality
 	* @return string $standard like 'ntsc' or 'pal'
 	*/
-	public function get_media_standard() : string {
+		// public function get_media_standard() : string {
 
-		# RECUPERA INFO A PARTIR DE LA LECTURA DE LA CABECERA
-		$quality = $this->get_quality();
+		// 	# RECUPERA INFO A PARTIR DE LA LECTURA DE LA CABECERA
+		// 	$quality = $this->get_quality();
 
-		# Try read file header
-		try {
-			$ar_data = $this->get_ar_movie_header_info();
-		} catch (Exception $e) {
-			error_log("get_ar_movie_header_info error on read header (quality.$quality)");
-		}
+		// 	# Try read file header
+		// 	try {
+		// 		$ar_data = $this->get_ar_movie_header_info();
+		// 	} catch (Exception $e) {
+		// 		error_log("get_ar_movie_header_info error on read header (quality.$quality)");
+		// 	}
 
-		$fps = 25; # default
-		if(isset($ar_data[$quality]['fps'])) {
-			$fps = $ar_data[$quality]['fps'];
-		}
+		// 	$fps = 25; # default
+		// 	if(isset($ar_data[$quality]['fps'])) {
+		// 		$fps = $ar_data[$quality]['fps'];
+		// 	}
 
-		switch (true) {
-			case ($fps>=29):
-				$standard = 'ntsc';
-				break;
+		// 	switch (true) {
+		// 		case ($fps>=29):
+		// 			$standard = 'ntsc';
+		// 			break;
 
-			case ($fps==25):
-				$standard = 'pal';
-				break;
+		// 		case ($fps==25):
+		// 			$standard = 'pal';
+		// 			break;
 
-			default:
-				$standard = 'pal'; # default
-				break;
-		}
+		// 		default:
+		// 			$standard = 'pal'; # default
+		// 			break;
+		// 	}
 
-		return (string)$standard;
-	}//end get_media_standard
+		// 	return (string)$standard;
+		// }//end get_media_standard
 
 
 

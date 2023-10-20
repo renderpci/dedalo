@@ -65,9 +65,6 @@ export const get_content_data = function(self) {
 		const quality			= self.quality || self.context.features.quality
 		const external_source	= data.external_source
 
-		console.log('self:', self);
-		console.log('files_info:', quality, files_info);
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
