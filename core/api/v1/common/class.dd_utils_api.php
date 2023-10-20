@@ -1343,8 +1343,21 @@ final class dd_utils_api {
 			// audio/video
 			'mp3'	=> 'audio/mpeg',
 			'mp4'	=> 'video/mp4',
+			'mp4v'	=> 'video/mp4',
+			'mpg4'	=> 'video/mp4',
 			'qt'	=> 'video/quicktime',
 			'mov'	=> 'video/quicktime',
+			'm2v'	=> 'video/mpeg',
+			'mpa'	=> 'video/mpeg',
+			'mpe'	=> 'video/mpeg',
+			'mpeg'	=> 'video/mpeg',
+			'mpg'	=> 'video/mpeg',
+			'ogv'	=> 'video/ogg',
+			'mkv'	=> 'video/x-matroska',
+			'avi'	=> 'video/x-msvideo',
+			'm4v'	=> 'video/x-m4v',
+			'jpgv'	=> 'video/jpeg',
+			'webm'	=> 'video/webm',
 
 			// 3d
 			'glb'	=> 'model/gltf-binary',
