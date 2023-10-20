@@ -152,3 +152,6 @@ docs_site
 
 #count data
 /.VSCodeCounter/*
+
+# main read me auto-generated file
+Readme.html
