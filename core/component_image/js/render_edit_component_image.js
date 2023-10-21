@@ -89,11 +89,19 @@ export const get_quality_selector = (self) => {
 			event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
-		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)
+		const quality_list	= files_info.filter(el => el.file_exist===true && el.extension===extension)
+
+		const ar_resolved = []
 		const quality_list_len	= quality_list.length
 		for (let i = 0; i < quality_list_len; i++) {
 
 			const file_info = quality_list[i]
+			if (ar_resolved.find(el => el===file_info.quality)) {
+				if(SHOW_DEBUG===true) {
+					console.log('Skip quality already resolved:', file_info.quality, ar_resolved);
+				}
+				continue
+			}
 
 			// create the node with the all qualities sent by server
 			const url = file_info
@@ -108,6 +116,8 @@ export const get_quality_selector = (self) => {
 			})
 			//set the default quality_list to config variable dedalo_image_quality_default
 			select_option.selected = quality_list[i].quality===quality ? true : false
+
+			ar_resolved.push(file_info.quality)
 		}
 
 
