@@ -400,8 +400,13 @@ const render_image_node = function(self, file_info, content_value) {
 				})
 
 				// update t var from image URL
-				const beats		= img_src.split('?')
-				const new_url	= beats[0] + '?t=' + (new Date()).getTime()
+				const beats	= img_src.split('?')
+
+				// force to refresh image from svg
+				await fetch(beats[0], { cache: 'reload' })
+
+				// new_url
+				const new_url = beats[0] + '?t=' + (new Date()).getTime()
 
 				// set the new source to the image node into the svg
 				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', new_url)
