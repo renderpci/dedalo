@@ -344,8 +344,9 @@ const render_image_node = function(self, file_info, content_value) {
 		self.object_node = object_node
 		// set data or fallback
 		if (data.base_svg_url) {
+
 			// svg file already exists
-			object_node.data = data.base_svg_url // + '?t=' + (new Date()).getTime()
+			object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
 
 		}else{
 			// fallback to default svg file
@@ -398,8 +399,12 @@ const render_image_node = function(self, file_info, content_value) {
 					content_value.classList.remove('loading')
 				})
 
+				// update t var from image URL
+				const beats		= img_src.split('?')
+				const new_url	= beats[0] + '?t=' + (new Date()).getTime()
+
 				// set the new source to the image node into the svg
-				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', img_src)
+				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', new_url)
 			}
 
 			return true
