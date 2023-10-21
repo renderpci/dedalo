@@ -1603,11 +1603,11 @@ class component_media_common extends component_common {
 					$filename_dato = $component->get_dato();
 
 					// original_file_name
-					if(!empty($filename_dato[0])) {
+					if(!empty($filename_dato[0]) && is_object($filename_dato[0])) {
 						$dato[0]->original_file_name = $filename_dato[0];
 
 						// original_normalized_name
-						if (!isset($dato[0]->original_normalized_name)) {
+						if (!isset($dato[0]->original_normalized_name) && is_object($filename_dato[0])) {
 							$dato[0]->original_normalized_name = $this->get_id() .'.'. pathinfo($filename_dato[0])['extension'];
 						}
 					}
