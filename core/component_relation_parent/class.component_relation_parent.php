@@ -157,7 +157,7 @@ class component_relation_parent extends component_relation_common {
 	public function set_dato($dato) : bool {
 
 		// format check
-			if (is_string($dato)) { # Tool Time machine case, dato is string
+			if (is_string($dato)) { // Tool Time machine case, dato is string
 				$dato = json_decode($dato);
 			}
 			if (is_object($dato)) {
@@ -210,7 +210,7 @@ class component_relation_parent extends component_relation_common {
 							if (!$result) {
 								debug_log(__METHOD__
 									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result)
+									. 'result: ' . to_string($result) . PHP_EOL
 									. 'locator: ' . to_string($locator)
 									, logger::ERROR
 								);
@@ -251,7 +251,7 @@ class component_relation_parent extends component_relation_common {
 							if (!$result) {
 								debug_log(__METHOD__
 									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result)
+									. 'result: ' . to_string($result) . PHP_EOL
 									. 'locator: ' . to_string($locator)
 									, logger::ERROR
 								);
