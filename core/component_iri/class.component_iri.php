@@ -679,7 +679,7 @@ class component_iri extends component_common {
 
 								if(is_object($iri_object)){
 
-									if(isset($iri_object->iri)){
+									if(!empty($iri_object->iri)){
 
 										$result = $has_protocol($iri_object->iri);
 										if($result===false){
@@ -705,7 +705,7 @@ class component_iri extends component_common {
 
 										$data_iri->iri = $iri_object->iri;
 									}
-									if(isset($iri_object->title)){
+									if(!empty($iri_object->title)){
 										$data_iri->title = $iri_object->title;
 									}
 								}else if(is_string($iri_object)){
