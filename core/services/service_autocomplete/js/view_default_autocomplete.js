@@ -684,7 +684,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 	// items
 		for (let i = 0; i < filter_items.length; i++) {
-			const chekbox_node = render_option_chekbox(self, filter_items[i])
+			const chekbox_node = render_option_checkbox(self, filter_items[i])
 			filter_node.appendChild(chekbox_node)
 		}
 
@@ -695,17 +695,17 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 
 /**
-* RENDER_OPTION_CHEKBOX
+* RENDER_OPTION_CHECKBOX
 *
 * @param object self
 * @param object datalist_item
 * @return HTMLElement li
 */
-const render_option_chekbox = function(self, datalist_item) {
+const render_option_checkbox = function(self, datalist_item) {
 
-	const label		= datalist_item.label
-	const value		= datalist_item.value
 	const id		= datalist_item.id
+	const value		= datalist_item.value
+	const label		= datalist_item.label || value
 	const change	= datalist_item.change
 
 	// li container
@@ -805,7 +805,7 @@ const render_option_chekbox = function(self, datalist_item) {
 
 
 	return li
-}//end render_option_chekbox
+}//end render_option_checkbox
 
 
 
