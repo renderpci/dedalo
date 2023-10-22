@@ -3,7 +3,7 @@
 
 $vb				= '1280k';			# video rate kbs
 $s				= '1024x576';		# scale
-$g				= 90;				# keyframes interval (gob)	
+$g				= 30;				# keyframes interval (gob)
 $vcodec			= 'libx264';		# default libx264
 
 $progresivo		= "-vf yadif";		# desentrelazar
