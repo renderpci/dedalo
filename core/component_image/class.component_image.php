@@ -183,8 +183,67 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_MODIFIED_QUALITY
+	* @return string $modified_quality
+	*/
+	public function get_modified_quality() : string {
+
+		$modified_quality = DEDALO_IMAGE_QUALITY_RETOUCHED;
+
+		return $modified_quality;
+	}//end get_modified_quality
+
+
+
+	/**
+	* GET_ORIGINAL_UPLOADED_FILE
+	* From component dato
+	* @return string|null $original_quality
+	*/
+	public function get_original_uploaded_file() : ?string {
+
+		$original_uploaded_file = null;
+
+		$dato = $this->get_dato();
+		if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
+
+			$original_quality	= $this->get_original_quality();
+
+			// original file like 'memoria_oral_presentacion.mov'
+			$original_uploaded_file	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
+		}
+
+		return $original_uploaded_file;
+	}//end get_original_uploaded_file
+
+
+	/**
+	* GET_MODIFIED_UPLOADED_FILE
+	* From component dato
+	* @return string|null $modified_quality
+	*/
+	public function get_modified_uploaded_file() : ?string {
+
+		$modified_uploaded_file = null;
+
+		$dato = $this->get_dato();
+		if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
+
+			$modified_quality	= $this->get_modified_quality();
+
+			// original file like 'memoria_oral_presentacion.mov'
+			$modified_uploaded_file	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
+		}
+
+		return $modified_uploaded_file;
+	}//end get_modified_uploaded_file
+
+
+
+	/**
 	* GET_EXTENSION
-	* @return string DEDALO_IMAGE_EXTENSION from config
+	* @return string $this->extension
+	* 	Normally DEDALO_IMAGE_EXTENSION from config
 	*/
 	public function get_extension() : string {
 
