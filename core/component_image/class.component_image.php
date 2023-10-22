@@ -1259,7 +1259,6 @@ class component_image extends component_media_common {
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.jpg"
 			$original_normalized_name	= $full_file_name;
 
-
 		// upload info. Update dato information about original or modified quality
 			$original_quality = $this->get_original_quality();
 			if ($this->quality===$original_quality) {
