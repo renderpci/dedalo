@@ -1113,30 +1113,31 @@ class component_media_common extends component_common {
 						}
 					}
 
-				foreach ($ar_extensions as $current_extension) {
+				// files by ar_extensions
+					foreach ($ar_extensions as $current_extension) {
 
-					// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
-						$media_path = $this->get_media_filepath($current_quality, $current_extension);
-						if (!file_exists($media_path)) {
-								dump($media_path, ' SKIP media_path ++ '.to_string());
-							continue; // Skip
-						}
+						// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
+							$media_path = $this->get_media_filepath($current_quality, $current_extension);
+							if (!file_exists($media_path)) {
+									dump($media_path, ' SKIP media_path ++ '.to_string());
+								continue; // Skip
+							}
 
-					// move/rename file
-						$file_name			= $this->get_name();
-						$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $current_extension;
-						if( !rename($media_path, $media_path_moved) ) {
-							trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
-							return false;
-						}
+						// move/rename file
+							$file_name			= $this->get_name();
+							$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $current_extension;
+							if( !rename($media_path, $media_path_moved) ) {
+								trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+								return false;
+							}
 
-					debug_log(__METHOD__
-						. ' Moved file'. PHP_EOL
-						. ' media_path: ' . $media_path . PHP_EOL
-						. ' media_path_moved: ' . $media_path_moved
-						, logger::WARNING
-					);
-				}//end foreach ($ar_extensions as $current_extension)
+						debug_log(__METHOD__
+							. ' Moved file'. PHP_EOL
+							. ' media_path: ' . $media_path . PHP_EOL
+							. ' media_path_moved: ' . $media_path_moved
+							, logger::WARNING
+						);
+					}//end foreach ($ar_extensions as $current_extension)
 			}//end foreach ($ar_quality as $current_quality)
 
 
