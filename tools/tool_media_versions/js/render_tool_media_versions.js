@@ -663,7 +663,14 @@ const get_line_file_download = function(ar_quality, self) {
 
 	// custom_files_info. Include non original and files_info_alternative quality
 		const raw_custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
-		const custom_files_info		= [...new Set(raw_custom_files_info)];
+		// remove duplicates
+		const object_files_info = {}
+		const raw_custom_files_info_length = raw_custom_files_info.length
+		for (let i = 0; i < raw_custom_files_info_length; i++) {
+			const el = raw_custom_files_info[i]
+			object_files_info[el.quality +'_'+ el.extension] = el
+		}
+		const custom_files_info = Object.values(object_files_info)
 
 	// info columns
 		const ar_quality_length = ar_quality.length
@@ -695,8 +702,6 @@ const get_line_file_download = function(ar_quality, self) {
 					const extension	= file_info && file_info.file_path
 						? file_info.file_path.split('.').pop()
 						: null;
-
-
 
 				// download button
 					if (file_info && file_info.file_exist===true) {
