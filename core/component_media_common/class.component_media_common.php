@@ -626,7 +626,7 @@ class component_media_common extends component_common {
 	* @param $folder_path string
 	* @return object $response
 	*/
-	protected function rename_old_files(string $file_name, string $folder_path) : object {
+	public function rename_old_files(string $file_name, string $folder_path) : object {
 
 		// response
 			$response = new stdClass();
@@ -789,7 +789,7 @@ class component_media_common extends component_common {
 				}
 			}//end foreach ($ar_quality as $quality)
 
-		// original add like 'rsc29_rsc170_770.psd'
+		// original add like 'rsc29_rsc170_770.tif'
 			$dato = $this->get_dato();
 			if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
 
@@ -806,6 +806,7 @@ class component_media_common extends component_common {
 					}
 			}
 
+		// modified add like 'rsc29_rsc170_770.psd'
 			if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
 
 				$modified_quality	= $this->get_modified_quality();

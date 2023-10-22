@@ -446,6 +446,8 @@ const get_line_file_size = function(ar_quality, self) {
 			parent			: fragment
 		})
 
+	const custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
+
 	// info columns
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
@@ -453,9 +455,7 @@ const get_line_file_size = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-				const file_info = (quality==='original' && self.file_info_normalized_name)
-					? self.file_info_normalized_name
-					: self.files_info_safe.find(el => el.quality===quality)
+			const file_info = custom_files_info.find(el => el.quality===quality)
 
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
@@ -686,7 +686,6 @@ const get_line_file_download = function(ar_quality, self) {
 				})
 
 			const files_info = custom_files_info.filter(el => el.quality===quality)
-			console.log('files_info:', files_info);
 
 			const files_info_length = files_info.length
 			for (let k = 0; k < files_info_length; k++) {
