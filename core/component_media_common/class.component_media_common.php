@@ -1001,6 +1001,22 @@ class component_media_common extends component_common {
 		);
 		if ($result===true) {
 
+			// update dato on delete original
+				$original_quality	= $this->get_original_quality();
+				$modified_quality	= $this->get_modified_quality();
+				if ($quality===$original_quality || $quality===$modified_quality) {
+					$dato = $this->get_dato();
+					if (isset($dato[0]) && is_object($dato[0])) {
+						foreach ($dato[0] as $name => $current_value) {
+							if (strpos($name, 'original_')===0 || strpos($name, 'modified_')===0) {
+								if (isset($dato[0]->{$name})) {
+									unset($dato[0]->{$name});
+								}
+							}
+						}
+					}
+				}
+
 			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 				logger::$obj['activity']->log_message(
 					'DELETE FILE',
@@ -1054,6 +1070,9 @@ class component_media_common extends component_common {
 				? array_merge([$extension], $alternative_extensions)
 				: [$extension];
 
+		// dato
+			$dato = $this->get_dato();
+
 		// files remove
 			foreach ($ar_quality as $current_quality) {
 
@@ -1072,12 +1091,27 @@ class component_media_common extends component_common {
 
 				// original case. If defined 'original_normalized_name', add extension to list to delete
 					if ($current_quality==='original') {
-						$dato						= $this->get_dato();
 						$original_normalized_name	= isset($dato[0]) && isset($dato[0]->original_normalized_name)
 							? $dato[0]->original_normalized_name
 							: null;
 						if (isset($original_normalized_name)) {
-							$ar_extensions[] = get_file_extension($original_normalized_name);
+							$original_normalized_extension = get_file_extension($original_normalized_name);
+							if(!in_array($original_normalized_extension, $ar_extensions)) {
+								$ar_extensions[] = $original_normalized_extension;
+							}
+						}
+					}
+
+				// modified case. If defined 'modified_normalized_name', add extension to list to delete
+					if ($current_quality==='modified') {
+						$modified_normalized_name	= isset($dato[0]) && isset($dato[0]->modified_normalized_name)
+							? $dato[0]->modified_normalized_name
+							: null;
+						if (isset($modified_normalized_name)) {
+							$modified_normalized_extension = get_file_extension($modified_normalized_name);
+							if(!in_array($modified_normalized_extension, $ar_extensions)) {
+								$ar_extensions[] = $modified_normalized_extension;
+							}
 						}
 					}
 
@@ -1085,7 +1119,10 @@ class component_media_common extends component_common {
 
 					// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
 						$media_path = $this->get_media_filepath($current_quality, $current_extension);
-						if (!file_exists($media_path)) continue; // Skip
+						if (!file_exists($media_path)) {
+								dump($media_path, ' SKIP media_path ++ '.to_string());
+							continue; // Skip
+						}
 
 					// move/rename file
 						$file_name			= $this->get_name();
