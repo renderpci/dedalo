@@ -1383,6 +1383,8 @@ final class dd_utils_api {
 			'odt'	=> 'application/vnd.oasis.opendocument.text',
 			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
 
+			'pages'	=> 'application/pages',
+
 			// 3d @see https://github.com/KhronosGroup/glTF/blob/main/specification/1.0/README.md#mimetypes
 			'glb'	=> 'application/octet-stream',
 			'gltf'	=> 'model/gltf+json',
