@@ -514,6 +514,11 @@ class component_pdf extends component_media_common {
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
 	*	Data from trigger upload file
+	* {
+	* 	original_file_name : string like 'Homogenous categories.doc',
+	* 	full_file_name : string like 'rsc37_rsc176_18.doc',
+	* 	full_file_path : string like '/../dedalo/media/pdf/original/0/rsc37_rsc176_18.doc'
+	* }
 	* @return object $response
 	*/
 	public function process_uploaded_file(object $file_data) : object {
@@ -540,82 +545,90 @@ class component_pdf extends component_media_common {
 		try {
 
 			// copy original to default quality (in the future, a quality conversion script will be placed here)
-				$default_quality		= $this->get_default_quality();
-				$default_quality_path	= $this->get_media_path_dir($default_quality);
-				// check directory exists before copy
-				if (!is_dir($default_quality_path)) {
-					if(!mkdir($default_quality_path, 0750, true)) {
-						debug_log(__METHOD__
-							.' Error. Unable to create default_quality_path directory' . PHP_EOL
-							.' default_quality_path: ' .$default_quality_path
+				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
+				$default_extension	= $this->get_extension(); // normally .pdf
+				if ($file_extension!==$default_extension) {
+					// file is NOT pdf, probably a .doc or similar . Don't copy the file
+				}else{
+					// copying file pdf (original) to pdf (web)
+					$default_quality		= $this->get_default_quality();
+					$default_quality_path	= $this->get_media_path_dir($default_quality);
+					// check directory exists before copy
+					if (!is_dir($default_quality_path)) {
+						if(!mkdir($default_quality_path, 0750, true)) {
+							debug_log(__METHOD__
+								.' Error. Unable to create default_quality_path directory' . PHP_EOL
+								.' default_quality_path: ' .$default_quality_path
+								, logger::ERROR
+							);
+							$response->msg .= ' : Unable to create default_quality_path directory';
+							return $response;
+						}
+					}
+					$target_file_path		= $default_quality_path . '/' . $full_file_name;
+					$copy_result			= copy(
+						$full_file_path, // from original quality directory
+						$target_file_path // to default quality directory
+					);
+					if ($copy_result===false) {
+						debug_log(__METHOD__ . PHP_EOL
+							. " Error: Unable to copy pdf file : " . PHP_EOL
+							. ' Source path: ' . $full_file_path . PHP_EOL
+							. ' Target path: ' . $target_file_path
 							, logger::ERROR
 						);
-						$response->msg .= ' : Unable to create default_quality_path directory';
-						return $response;
+					}else{
+						debug_log(__METHOD__ . PHP_EOL
+							. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
+							. ' Source path: ' . $full_file_path . PHP_EOL
+							. ' Target path: ' . $target_file_path
+							, logger::DEBUG
+						);
 					}
-				}
-				$target_file_path		= $default_quality_path . '/' . $full_file_name;
-				$copy_result			= copy(
-					$full_file_path, // from original quality directory
-					$target_file_path // to default quality directory
-				);
-				if ($copy_result===false) {
-					debug_log(__METHOD__ . PHP_EOL
-						. " Error: Unable to copy pdf file : " . PHP_EOL
-						. ' Source path: ' . $full_file_path . PHP_EOL
-						. ' Target path: ' . $target_file_path
-						, logger::ERROR
-					);
-				}else{
-					debug_log(__METHOD__ . PHP_EOL
-						. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
-						. ' Source path: ' . $full_file_path . PHP_EOL
-						. ' Target path: ' . $target_file_path
-						, logger::DEBUG
-					);
-				}
 
-			// thumb : Create pdf_thumb image
-				$thumb_url = $this->get_pdf_thumb(
-					true // bool force_create
-				);
+					// thumb : Create pdf_thumb image
+						$thumb_url = $this->get_pdf_thumb(
+							true // bool force_create
+						);
 
-			// transcription to text automatic
-				$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-				if (!empty($ar_related_component_text_area_tipo)) {
+					// transcription to text automatic
+						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
+						if (!empty($ar_related_component_text_area_tipo)) {
 
-					$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-					$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-					$quality							= $this->get_default_quality();
-					$target_pdf_path					= $this->get_media_filepath($quality);
+							$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+							$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+							$quality							= $this->get_default_quality();
+							$target_pdf_path					= $this->get_media_filepath($quality);
 
-					try {
-						$options = new stdClass();
-							$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
-							$options->first_page	= (int)$first_page;		# number of first page. default is 1
-						$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
-							#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
-							// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
+							try {
+								$options = new stdClass();
+									$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
+									$options->first_page	= (int)$first_page;		# number of first page. default is 1
+								$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
+									#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
+									// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
 
-						if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
+								if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
 
-							$component_text_area = component_common::get_instance(
-								$related_component_text_area_model,
-								$related_component_text_area_tipo,
-								$this->section_id,
-								'edit',
-								DEDALO_DATA_LANG,
-								$this->section_tipo,
-								false
-							);
-							$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
-							$component_text_area->Save();
-						}
+									$component_text_area = component_common::get_instance(
+										$related_component_text_area_model,
+										$related_component_text_area_tipo,
+										$this->section_id,
+										'edit',
+										DEDALO_DATA_LANG,
+										$this->section_tipo,
+										false
+									);
+									$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
+									$component_text_area->Save();
+								}
 
-					} catch (Exception $e) {
-						debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
-					}
-				}//end if (!empty($related_component_text_area_tipo)) {
+							} catch (Exception $e) {
+								debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
+							}
+						}//end if (!empty($related_component_text_area_tipo))
+				}//end if ($file_extension!==$default_extension)
+
 
 
 			// target_filename. Save original file name in a component_input_text if defined
@@ -637,18 +650,6 @@ class component_pdf extends component_media_common {
 					$component_target_filename->set_dato( $original_file_name );
 					$component_target_filename->Save();
 				}
-
-			// add data with the file uploaded
-				// if ($quality===DEDALO_PDF_QUALITY_DEFAULT) {
-				// 	$dato			= $this->get_dato();
-				// 	$value			= empty($dato) ? new stdClass() : reset($dato);
-				// 	$media_value	= $this->build_media_value((object)[
-				// 		'value'		=> $value,
-				// 		'file_name'	=> $original_file_name
-				// 	]);
-				// 	$this->set_dato([$media_value]);
-				// 	$this->Save();
-				// }
 
 			// upload info
 				$original_quality = $this->get_original_quality();
