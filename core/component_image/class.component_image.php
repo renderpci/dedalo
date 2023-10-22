@@ -1905,6 +1905,22 @@ class component_image extends component_media_common {
 		}
 
 
+		// svg file. Create file again
+			$default_quality = $this->get_default_quality();
+			if ($quality===$default_quality) {
+				$svg_file_path = $this->get_svg_file_path();
+				if (file_exists($svg_file_path)) {
+					unlink($svg_file_path);
+				}
+				// If default quality file exists, svg_string_node will be generated, else null
+				$svg_string_node = $this->create_default_svg_string_node();
+				if (!empty($svg_string_node)) {
+					// create the svg default file
+					$this->create_svg_file($svg_string_node);
+				}
+			}
+
+
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
@@ -1935,6 +1951,39 @@ class component_image extends component_media_common {
 
 		return $response;
 	}//end build_version
+
+
+
+	/**
+	* REMOVE_COMPONENT_MEDIA_FILES
+	* Alias of component_medai_common method with some additions
+	* @param array $ar_quality = []
+	* @return bool
+	*/
+	public function remove_component_media_files(array $ar_quality=[]) : bool {
+
+		$result = parent::remove_component_media_files($ar_quality);
+
+		// delete svg file when quality is default_quality
+			$default_quality = $this->get_default_quality();
+			if (in_array($default_quality, $ar_quality)) {
+				$svg_file = $this->get_svg_file_path();
+				if (file_exists($svg_file)) {
+					// delete existing file
+					if (!unlink($svg_file)) {
+						debug_log(__METHOD__
+							. " Error on delete SVG file " . PHP_EOL
+							. ' svg_file: ' . $svg_file
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+			}
+
+
+		return $result;
+	}//end remove_component_media_files
 
 
 

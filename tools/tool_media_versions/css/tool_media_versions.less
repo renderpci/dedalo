@@ -11,45 +11,25 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_media_versions {
 
-		// av component container
-		.main_component_container {
-			// background-color: @color_grey_medium;
-			height: calc(404px + 3rem);
-			min-width: 720px;
-			width: 720px;
-			display: block;
-			margin-left: auto;
-			margin-right: auto;
-
-			@media screen and (max-width: @width_break_point_1) {
-				min-width: unset;
-				height: unset;
-			}
-
-			.wrapper_component.component_av {
-				// height: 404px;
-
-				.content_data {
-					justify-content: center;
-				}
-
-				video {
-					max-height: 404px;
-				}
-			}
-		}
-
-
 		// content_data
 		>.content_data {
 			display: flex;
 			flex-wrap: wrap;
 			justify-content: center;
+			padding-bottom: 0px;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
 
 			>.main_element_container {
 				width: 100%;
+
+				.wrapper_component { // .component_pdf
+					>.content_data {
+						>.content_value {
+							height: var(--media_min_height);
+						}
+					}
+				}
 			}
 
 
@@ -57,8 +37,8 @@
 			>.versions_container {
 				// background-color: #a8b9e2;
 				display: grid;
-				margin: 1rem;
-				margin-top: 1.5rem;
+				margin: 0px;
+				margin-top: 1rem;
 				color: #aaa;
 				background-color: #fafafa;
 				width: 100%;
@@ -80,6 +60,10 @@
 
 				.file_info {
 					text-align: center;
+					display: flex;
+					flex-wrap: wrap;
+					justify-content: center;
+					align-content: flex-start;
 
 					span {
 						color: #525252;
@@ -102,16 +86,20 @@
 					}
 
 					.cell_node {
-						margin-bottom: 0.33rem;
+						// margin-bottom: 0.33rem;
+						line-height: 1.5rem;
+						width: 100%;
 
 						.file_info_extension {
 							padding-left: 0.33rem;
+							min-width: 2rem;
+							display: inline-block;
+							text-align: left;
 						}
 					}
 				}
 
 			}
-
 
 		}//end content_data
 	}//end wrapper_tool
