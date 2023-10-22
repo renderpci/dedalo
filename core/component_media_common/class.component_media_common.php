@@ -1009,10 +1009,8 @@ class component_media_common extends component_common {
 					$dato = $this->get_dato();
 					if (isset($dato[0]) && is_object($dato[0])) {
 						foreach ($dato[0] as $name => $current_value) {
-							if (strpos($name, 'original_')===0 || strpos($name, 'modified_')===0) {
-								if (isset($dato[0]->{$name})) {
-									unset($dato[0]->{$name});
-								}
+							if (strpos($name, $quality.'_')===0 && isset($dato[0]->{$name})) {
+								unset($dato[0]->{$name});
 							}
 						}
 					}
