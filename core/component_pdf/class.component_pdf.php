@@ -534,6 +534,22 @@ class component_pdf extends component_media_common {
 			$first_page					= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 			$original_normalized_name	= $full_file_name;
 
+		// upload info
+			$original_quality = $this->get_original_quality();
+			if ($this->quality===$original_quality) {
+				// update upload file info
+				$dato = $this->get_dato();
+				$key = 0;
+				if (!isset($dato[$key])) {
+					$dato[$key] = new stdClass();
+				}
+				$dato[$key]->original_file_name			= $original_file_name;
+				$dato[$key]->original_normalized_name	= $original_normalized_name;
+				$dato[$key]->original_upload_date		= component_date::get_date_now();
+
+				$this->set_dato($dato);
+			}
+
 		// debug
 			debug_log(__METHOD__
 				. " process_uploaded_file " . PHP_EOL
@@ -565,8 +581,8 @@ class component_pdf extends component_media_common {
 							return $response;
 						}
 					}
-					$target_file_path		= $default_quality_path . '/' . $full_file_name;
-					$copy_result			= copy(
+					$target_file_path	= $default_quality_path . '/' . $full_file_name;
+					$copy_result		= copy(
 						$full_file_path, // from original quality directory
 						$target_file_path // to default quality directory
 					);
@@ -629,8 +645,6 @@ class component_pdf extends component_media_common {
 						}//end if (!empty($related_component_text_area_tipo))
 				}//end if ($file_extension!==$default_extension)
 
-
-
 			// target_filename. Save original file name in a component_input_text if defined
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
@@ -651,22 +665,6 @@ class component_pdf extends component_media_common {
 					$component_target_filename->Save();
 				}
 
-			// upload info
-				$original_quality = $this->get_original_quality();
-				if ($this->quality===$original_quality) {
-					// update upload file info
-					$dato = $this->get_dato();
-					$key = 0;
-					if (!isset($dato[$key])) {
-						$dato[$key] = new stdClass();
-					}
-					$dato[$key]->original_file_name			= $original_file_name;
-					$dato[$key]->original_normalized_name	= $original_normalized_name;
-					$dato[$key]->original_upload_date		= component_date::get_date_now();
-
-					$this->set_dato($dato);
-				}
-
 			// save component dato
 				// Note that save action don't change upload info properties,
 				// but force updates every quality file info in property 'files_info
@@ -685,6 +683,47 @@ class component_pdf extends component_media_common {
 
 		return $response;
 	}//end process_uploaded_file
+
+
+
+	/**
+	* RENAME_OLD_FILES
+	* @param $file_name string as 'test175_test65_3'
+	* @param $folder_path string
+	* @return object $response
+	*/
+	public function rename_old_files(string $file_name, string $folder_path) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+
+		// quality original check
+			$quality			= $this->get_quality();
+			$original_quality	= $this->get_original_quality();
+			if ($quality!==$original_quality) {
+				// only moves non original files. Originals are preserved across uploads
+				return parent::rename_old_files($file_name, $folder_path);
+			}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done ['.__METHOD__.']';
+
+
+		return $response;
+	}//end rename_old_files
+
+
+
+	/**
+	* GET_ALTERNATIVE_EXTENSIONS
+	* @return array
+	*/
+	public function get_alternative_extensions() : array {
+
+		return DEDALO_PDF_EXTENSIONS_SUPPORTED;
+	}//end get_alternative_extensions
 
 
 
