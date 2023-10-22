@@ -11,35 +11,6 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_media_versions {
 
-		// av component container
-		.main_component_container {
-			// background-color: @color_grey_medium;
-			height: calc(404px + 3rem);
-			min-width: 720px;
-			width: 720px;
-			display: block;
-			margin-left: auto;
-			margin-right: auto;
-
-			@media screen and (max-width: @width_break_point_1) {
-				min-width: unset;
-				height: unset;
-			}
-
-			.wrapper_component.component_av {
-				// height: 404px;
-
-				.content_data {
-					justify-content: center;
-				}
-
-				video {
-					max-height: 404px;
-				}
-			}
-		}
-
-
 		// content_data
 		>.content_data {
 			display: flex;
@@ -111,7 +82,6 @@
 				}
 
 			}
-
 
 		}//end content_data
 	}//end wrapper_tool
