@@ -804,21 +804,20 @@ class component_media_common extends component_common {
 						// add
 						$files_info[] = $quality_file_info;
 					}
+			}
 
-				// original converted file like 'memoria_oral_presentacion.mp4'
-					$default_extension	= $this->get_extension();
-					if ($file_extension!==$default_extension) {
+			if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
 
-						$file_name = pathinfo($dato[0]->original_normalized_name)['filename'];
+				$modified_quality	= $this->get_modified_quality();
+				$file_extension		= get_file_extension($dato[0]->modified_normalized_name);
 
-						// look for original converted to normalized
-						$original_file_path	= $this->get_media_path_dir($original_quality) .'/'. $file_name .'.'. $default_extension;
-						if (file_exists($original_file_path)) {
-							// file_info
-							$quality_file_info = $this->get_quality_file_info($original_quality, $default_extension);
-							// add
-							$files_info[] = $quality_file_info;
-						}
+				// original file like 'memoria_oral_presentacion.mov'
+					$modified_file_path	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
+					if (file_exists($modified_file_path)) {
+						// file_info
+						$quality_file_info = $this->get_quality_file_info($modified_quality, $file_extension);
+						// add
+						$files_info[] = $quality_file_info;
 					}
 			}
 
