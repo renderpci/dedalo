@@ -392,7 +392,7 @@
 		// pdf_extension normally 'pdf'
 		define('DEDALO_PDF_EXTENSION',				'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
-		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	['pdf']);
+		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	['pdf','doc','pages','odt','ods','rtf','ppt','pages']);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
 		# pdf_type. Default: 'pdf'
