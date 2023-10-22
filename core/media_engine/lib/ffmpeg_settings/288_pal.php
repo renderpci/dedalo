@@ -1,8 +1,8 @@
 <?php
 # FFMPEG SETTING 288_pal
 
-$b				= '224k';			# video rate kbs
-$maxrate		= '256k';			# max video rate kbs
+$b				= '256k';			# video rate kbs
+$maxrate		= '384k';			# max video rate kbs
 $s				= '360x202';		# scale
 $g				= 25;				# keyframes interval (gob)	
 $vcodec			= 'libx264';		# default libx264

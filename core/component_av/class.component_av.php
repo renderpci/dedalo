@@ -922,11 +922,16 @@ class component_av extends component_media_common {
 									}
 								}
 
-								// convert with ffmpeg
-								Ffmpeg::convert_to_dedalo_av(
-									$source_file, // string source_file
-									$quality_default_target_file // string target_file
-								);
+								$setting_name			= Ffmpeg::get_setting_name($source_file, DEDALO_AV_QUALITY_DEFAULT);
+								$target_file_path		= $this->get_media_filepath(DEDALO_AV_QUALITY_DEFAULT);
+								$av_alternate_response	= Ffmpeg::build_av_alternate_command((object)[
+									'setting_name'		=> $setting_name,
+									'source_file_path'	=> $source_file,
+									'target_file_path'	=> $target_file_path
+								]);
+
+								// execute the command to convert with ffmpeg
+								exec("$av_alternate_response->command  > /dev/null &");
 							}
 
 						// }else{

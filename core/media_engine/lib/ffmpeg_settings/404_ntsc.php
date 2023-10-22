@@ -1,9 +1,9 @@
 <?php
 # FFMPEG SETTING 404_pal
 
-$vb				= '960k';			# video rate kbs
+$vb				= '1280k';			# video rate kbs
 $s				= '720x404';		# scale
-$g				= 90;				# keyframes interval (gob)	
+$g				= 30;				# keyframes interval (gob)
 $vcodec			= 'libx264';		# default libx264
 
 $progresivo		= "-vf yadif";		# desentrelazar
