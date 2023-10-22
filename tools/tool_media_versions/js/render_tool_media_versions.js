@@ -143,9 +143,9 @@ const render_versions_grid = function(self) {
 		versions_container.appendChild( get_line_file_download(ar_quality, self) )
 
 	// line_alternative_extensions
-		if(self.main_element.context.features.alternative_extensions) {
-			versions_container.appendChild( get_line_alternative_extensions(ar_quality, self) )
-		}
+		// if(self.main_element.context.features.alternative_extensions) {
+		// 	versions_container.appendChild( get_line_alternative_extensions(ar_quality, self) )
+		// }
 
 	// line_file_delete
 		versions_container.appendChild( get_line_file_delete(ar_quality, self) )
@@ -661,21 +661,15 @@ const get_line_file_download = function(ar_quality, self) {
 			parent			: fragment
 		})
 
+	// custom_files_info. Include non original and files_info_alternative quality
+		const raw_custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
+		const custom_files_info		= [...new Set(raw_custom_files_info)];
+
 	// info columns
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
 
 			const quality = ar_quality[i]
-
-			// file_info
-				const file_info = (quality==='original' && self.file_info_normalized_name)
-					? self.file_info_normalized_name
-					: self.files_info_safe.find(el => el.quality===quality)
-
-			// extension
-				const extension	= file_info && file_info.file_path
-					? file_info.file_path.split('.').pop()
-					: null;
 
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
@@ -684,38 +678,60 @@ const get_line_file_download = function(ar_quality, self) {
 					parent			: fragment
 				})
 
-			if (file_info && file_info.file_exist===true) {
+			const files_info = custom_files_info.filter(el => el.quality===quality)
+			console.log('files_info:', files_info);
 
-				const cell_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'cell_node',
-					parent			: file_info_node
-				})
+			const files_info_length = files_info.length
+			for (let k = 0; k < files_info_length; k++) {
 
-				const button_file_download = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button download',
-					parent			: cell_node
-				})
-				button_file_download.addEventListener('click', function(e){
-					e.stopPropagation()
+				const file_info = files_info[k]
 
-					const url		= DEDALO_MEDIA_URL + file_info.file_path
-					const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
+				// file_info
+					// const file_info = (quality==='original' && self.file_info_normalized_name)
+					// 	? self.file_info_normalized_name
+					// 	: self.files_info_safe.find(el => el.quality===quality)
 
-					download_file({
-						url			: url,
-						file_name	: file_name
-					})
-				})
+				// extension
+					const extension	= file_info && file_info.file_path
+						? file_info.file_path.split('.').pop()
+						: null;
 
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'file_info_extension',
-					inner_html		: extension,
-					parent			: cell_node
-				})
-			}
+
+
+				// download button
+					if (file_info && file_info.file_exist===true) {
+
+						const cell_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'cell_node',
+							parent			: file_info_node
+						})
+
+						const button_file_download = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button download',
+							parent			: cell_node
+						})
+						button_file_download.addEventListener('click', function(e){
+							e.stopPropagation()
+
+							const url		= DEDALO_MEDIA_URL + file_info.file_path
+							const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
+
+							download_file({
+								url			: url,
+								file_name	: file_name
+							})
+						})
+
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'file_info_extension',
+							inner_html		: extension,
+							parent			: cell_node
+						})
+					}
+			}//end for (let k = 0; k < files_info_length; k++)
 		}//end if (file_info.file_exist===true)
 
 
@@ -743,6 +759,9 @@ const get_line_file_delete = function(ar_quality, self) {
 			parent			: fragment
 		})
 
+	// custom_files_info. Include non original and original quality
+		const custom_files_info = self.files_info_safe.concat(self.files_info_original)
+
 	// info columns
 		const ar_quality_length = ar_quality.length
 		for (let i = 0; i < ar_quality_length; i++) {
@@ -756,27 +775,30 @@ const get_line_file_delete = function(ar_quality, self) {
 			})
 
 			// file_info
-			const file_info = self.files_info_safe.find(el => el.quality===quality)
+				const file_info = custom_files_info.find(el => el.quality===quality)
+				// const file_info = (quality==='original' && self.file_info_normalized_name)
+				// 	? self.file_info_normalized_name
+				// 	: custom_files_info.find(el => el.quality===quality)
 
-			if (file_info && file_info.file_exist===true) {
+				if (file_info && file_info.file_exist===true) {
 
-				const button_file_download = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button delete',
-					parent			: file_info_node
-				})
-				button_file_download.addEventListener('click', async function(){
-					self.node.classList.add('loading')
-					// exec delete_file
-					const response = await self.delete_file(quality)
-					if (response===true) {
-						// self.main_element_quality = quality
-						self.refresh()
-					}
-					self.node.classList.remove('loading')
-				})
-			}
-		}
+					const button_file_download = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button delete',
+						parent			: file_info_node
+					})
+					button_file_download.addEventListener('click', async function(){
+						self.node.classList.add('loading')
+						// exec delete_file
+						const response = await self.delete_file(quality)
+						if (response===true) {
+							// self.main_element_quality = quality
+							self.refresh()
+						}
+						self.node.classList.remove('loading')
+					})
+				}
+		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
