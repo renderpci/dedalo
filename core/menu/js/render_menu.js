@@ -295,6 +295,14 @@ const render_debug_info_bar = (self) => {
 			parent			: debug_info_bar
 		})
 
+	// dedalo_entity
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'dedalo_entity',
+			text_content	: page_globals.dedalo_entity,
+			parent			: debug_info_bar
+		})
+
 	// ip_server
 		ui.create_dom_element({
 			element_type	: 'div',
