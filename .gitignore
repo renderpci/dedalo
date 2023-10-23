@@ -83,6 +83,7 @@ composer.phar
 
 # Ignore paths that contain generated content.
 /media
+/media_*
 media_test
 core/backup/backups
 core/backup/backups/*
