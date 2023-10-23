@@ -179,8 +179,8 @@ class tool_import_rdf extends tool_common {
 			}
 		}
 
-		$section_tipo = reset($current_section_tipo);
-		$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
+		$section_tipo		= reset($current_section_tipo);
+		$section_tipo_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
 		//main section
 			$field = new stdClass();
 				$field->tipo 				= $section_tipo;
