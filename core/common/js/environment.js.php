@@ -79,8 +79,9 @@ session_write_close();
 			$obj->user_id							= $user_id;
 			$obj->username							= $username;
 			$obj->full_username						= $full_username;
-			// version
+			// entity
 			$obj->dedalo_entity						= DEDALO_ENTITY;
+			$obj->dedalo_entity_id					= DEDALO_ENTITY_ID;
 			// version
 			$obj->dedalo_version					= DEDALO_VERSION;
 			// build
