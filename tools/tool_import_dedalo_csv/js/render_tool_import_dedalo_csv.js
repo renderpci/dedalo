@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_import_dedalo_csv */
+/*global get_tool_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, tool_import_dedalo_csv */
 /*eslint no-undef: "error"*/
 
 
@@ -135,7 +135,7 @@ const get_content_data = async function(self) {
 		const import_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'warning import_button csv',
-			inner_html		: get_label.import || 'Import',
+			inner_html		: self.get_tool_label('import') || 'Import',
 			parent			: submit_container
 		})
 		import_button.addEventListener('click', fn_import)
@@ -145,7 +145,7 @@ const get_content_data = async function(self) {
 			// selected files
 				const selected_files = self.csv_files_list.filter(el => el.checked===true)
 				if (selected_files.length<1) {
-					alert( get_label.select_a_file || 'Select a file');
+					alert( self.get_tool_label('select_a_file') || 'Select a file');
 					return
 				}
 
@@ -193,8 +193,8 @@ const get_content_data = async function(self) {
 							// response_msg. OK/Error message
 								const message_class	= current_rensponse.result ? 'success' : 'danger'
 								const message_label	= current_rensponse.result
-									? get_label.ok || 'OK'
-									: get_label.error || 'Error'
+									? self.get_tool_label('ok') || 'OK'
+									: self.get_tool_label('error') || 'Error'
 								const response_msg = ui.create_dom_element({
 									element_type	: 'div',
 									class_name		: 'response_msg alert ' + message_class,
@@ -254,7 +254,7 @@ const get_content_data = async function(self) {
 										const created_label = ui.create_dom_element({
 											element_type	: 'div',
 											class_name 		: 'label',
-											inner_html		: get_label.failed || 'Failed' + ':',
+											inner_html		: self.get_tool_label('failed') || 'Failed' + ':',
 											parent			: header
 										})
 										const failed_rows_len = failed_rows.length
@@ -291,7 +291,7 @@ const get_content_data = async function(self) {
 											const created_label = ui.create_dom_element({
 												element_type	: 'div',
 												class_name		: 'label',
-												inner_html		: get_label.created || 'Created' + ':',
+												inner_html		: self.get_tool_label('created') || 'Created' + ':',
 												parent			: header
 											})
 
@@ -299,7 +299,7 @@ const get_content_data = async function(self) {
 											const copy_to_find_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning copy_button copy',
-												inner_html		: get_label.copy_to_find || 'Copy as comma separated',
+												inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
 												parent			: header
 											})
 											copy_to_find_button.addEventListener( 'click', (e) => {
@@ -318,7 +318,7 @@ const get_content_data = async function(self) {
 											const copy_as_column_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning copy_button copy',
-												inner_html		: get_label.copy_as_column || 'Copy as column',
+												inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
 												parent			: header
 											})
 											copy_as_column_button.addEventListener( 'click', (e) => {
@@ -357,7 +357,7 @@ const get_content_data = async function(self) {
 											const updated_label = ui.create_dom_element({
 												element_type	: 'div',
 												class_name		: 'label',
-												inner_html		: get_label.updated || 'Updated' + ':',
+												inner_html		: self.get_tool_label('updated') || 'Updated' + ':',
 												parent			: header
 											})
 
@@ -365,38 +365,56 @@ const get_content_data = async function(self) {
 											const copy_to_find_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning copy_button copy',
-												inner_html		: get_label.copy_to_find || 'Copy as comma separated',
+												inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
 												parent			: header
 											})
 											copy_to_find_button.addEventListener( 'click', () => {
 												e.stopPropagation()
 
-												navigator.clipboard.writeText(current_rensponse.updated_rows.join(','))
-												.then(() => {
-													alert('Text copied to clipboard');
-												})
-												.catch(err => {
-													alert('Error in copying text: ', err);
-												});
+												const clipboard_data = current_rensponse.updated_rows.join(',')
+												if(!navigator.clipboard){
+													const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+													alert(insecure_label);
+												}else{
+
+													navigator.clipboard.writeText(clipboard_data)
+													.then(() => {
+														const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+														alert(text_copied);
+													})
+													.catch(err => {
+														const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+														alert(error_coping_text, err);
+													});
+												}
+
+
 											})
 
 										// copy_as_column_button
 											const copy_as_column_button = ui.create_dom_element({
 												element_type	: 'button',
 												class_name		: 'warning copy_button copy',
-												inner_html		: get_label.copy_as_column || 'Copy as column',
+												inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
 												parent			: header
 											})
 											copy_as_column_button.addEventListener( 'click', () => {
 												e.stopPropagation()
-
-												navigator.clipboard.writeText(current_rensponse.updated_rows.join('\n'))
+												if(!navigator.clipboard){
+													const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
+													alert(insecure_label);
+												}else{
+													const clipboard_data = current_rensponse.updated_rows.join('\n')
+													navigator.clipboard.writeText(clipboard_data)
 													.then(() => {
-														alert('Text copied to clipboard');
+														const text_copied = self.get_tool_label('text_copied') || 'Text copied to clipboard'
+														alert(text_copied);
 													})
 													.catch(err => {
-														alert('Error in copying text: ', err);
+														const error_coping_text = self.get_tool_label('error_coping_text') || 'Error in copying text: '
+														alert(error_coping_text, err);
 													});
+												}
 											})
 
 										// updated_rows
@@ -560,7 +578,7 @@ const render_file_info = function(self, item) {
 			icon_delete.addEventListener('click', function(e){
 				e.stopPropagation()
 
-				if(confirm(get_label.sure || 'Sure?')) {
+				if(confirm(self.get_tool_label('sure') || 'Sure?')) {
 					// remove file
 					self.remove_file(item)
 					.then(function(){
@@ -591,7 +609,7 @@ const render_file_info = function(self, item) {
 		const button_preview = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button_preview info',
-			inner_html		: get_label.preview || 'Preview',
+			inner_html		: self.get_tool_label('preview') || 'Preview',
 			parent			: fragment
 		})
 		button_preview.addEventListener('click', function(){
