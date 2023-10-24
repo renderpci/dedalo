@@ -1,147 +1,665 @@
 {
-    "label": "Desarrollo de herramientas",
-    "relations": [
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd200"
-        },
-        {
-            "type": "dd675",
-            "section_id": "1",
-            "section_tipo": "dd153",
-            "from_component_tipo": "dd1337"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1333"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1332"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1331"
-        },
-        {
-            "type": "dd151",
-            "section_id": "1",
-            "section_tipo": "dd64",
-            "from_component_tipo": "dd1354"
-        },
-        {
-            "type": "dd151",
-            "section_id": "2",
-            "section_tipo": "dd1342",
-            "from_component_tipo": "dd1330"
-        },
-        {
-            "type": "dd151",
-            "section_id": "-1",
-            "section_tipo": "dd128",
-            "from_component_tipo": "dd197"
-        }
-    ],
-    "components": {
-        "dd199": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 23,
-                            "hour": 18,
-                            "time": 64926383408,
-                            "year": 2020,
-                            "month": 1,
-                            "minute": 30,
-                            "second": 8
-                        }
-                    }
-                ]
-            }
-        },
-        "dd201": {
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "start": {
-                            "day": 7,
-                            "hour": 13,
-                            "time": 64999976516,
-                            "year": 2022,
-                            "month": 5,
-                            "minute": 1,
-                            "second": 56
-                        }
-                    }
-                ]
-            }
-        },
-        "dd612": {
-            "dato": {
-                "lg-eng": [
-                    "Tool to import previously exported Dédalo CSV files as Dédalo raw format."
-                ]
-            }
-        },
-        "dd799": {
-            "inf": "Etiqueta [component_input_text]",
-            "dato": {
-                "lg-eng": [
-                    "Import"
-                ]
-            }
-        },
-        "dd1326": {
-            "inf": "Nombre de la herramienta [component_input_text]",
-            "dato": {
-                "lg-nolan": [
-                    "tool_import_dedalo_csv"
-                ]
-            }
-        },
-        "dd1327": {
-            "inf": "Versión [component_input_text]",
-            "dato": {
-                "lg-nolan": [
-                    "2.0.0"
-                ]
-            }
-        },
-        "dd1328": {
-            "inf": "Versión Dédalo mínima [component_input_text]",
-            "dato": {
-                "lg-nolan": [
-                    "6.0.0"
-                ]
-            }
-        },
-        "dd1335": {
-            "inf": "Propiedades [component_json]",
-            "dato": {
-                "lg-nolan": [
-                    {
-                        "open_as": "window",
-                        "windowFeatures": null
-                    }
-                ]
-            }
-        }
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
     },
-    "section_id": 6,
-    "created_date": "2020-01-23 18:30:08",
-    "section_tipo": "dd1340",
-    "modified_date": "2022-05-07 13:01:56",
-    "diffusion_info": null,
-    "created_by_userID": -1,
-    "section_real_tipo": "dd1324",
-    "modified_by_userID": -1
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 23,
+              "hour": 18,
+              "time": 64926383408,
+              "year": 2020,
+              "month": 1,
+              "minute": 30,
+              "second": 8
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "modified_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 24,
+              "hour": 11,
+              "time": 65046973941,
+              "year": 2023,
+              "month": 10,
+              "minute": 52,
+              "second": 21
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "dato": {
+        "lg-eng": [
+          "Tool to import previously exported Dédalo CSV files as Dédalo raw format."
+        ],
+        "lg-spa": [
+          "<p>Herramienta para importar archivos CSV de Dédalo previamente exportados como formato RAW de Dédalo.</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "dato": {
+        "lg-eng": [
+          "Import"
+        ]
+      }
+    },
+    "dd1326": {
+      "dato": {
+        "lg-nolan": [
+          "tool_import_dedalo_csv"
+        ]
+      }
+    },
+    "dd1327": {
+      "dato": {
+        "lg-nolan": [
+          "2.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "dato": {
+        "lg-nolan": [
+          "6.0.0"
+        ]
+      }
+    },
+    "dd1335": {
+      "dato": {
+        "lg-nolan": [
+          {
+            "open_as": "window",
+            "windowFeatures": null
+          }
+        ]
+      }
+    },
+    "dd1350": {
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "name": "import"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "import",
+              "value": "Importar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "import",
+              "value": "Importar"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "import",
+              "value": ""
+            },
+            {
+              "lang": "lg-eus",
+              "name": "import",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "import",
+              "value": "Import"
+            },
+            {
+              "lang": "lg-por",
+              "name": "import",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "import",
+              "value": "Importation"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "import",
+              "value": "Importieren"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "select_a_file",
+              "value": "Select a file"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "select_a_file",
+              "value": "Wählen Sie eine Datei"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "select_a_file",
+              "value": "Sélectionner un fichier"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "select_a_file",
+              "value": "Seleccione un archivo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "select_a_file",
+              "value": "Seleccioneu un fitxer"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "select_a_file",
+              "value": ""
+            },
+            {
+              "lang": "lg-ell",
+              "name": "select_a_file",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-eus",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-por",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-ara",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-ell",
+              "name": "ok",
+              "value": ""
+            },
+            {
+              "lang": "lg-deu",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "error",
+              "value": "Error"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "error",
+              "value": "Error"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "error",
+              "value": "Fehler"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "error",
+              "value": "Error"
+            },
+            {
+              "lang": "lg-por",
+              "name": "error",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "error",
+              "value": "Erreur"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "error",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "failed",
+              "value": "Fallido"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "failed",
+              "value": "Failed"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "failed",
+              "value": "Gescheitert"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "failed",
+              "value": "Échec"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "failed",
+              "value": ""
+            },
+            {
+              "lang": "lg-cat",
+              "name": "failed",
+              "value": "Fallit"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "failed",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "created",
+              "value": "Created"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "created",
+              "value": "Creat"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "created",
+              "value": "Creado"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "created",
+              "value": "Erstellt"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "created",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "created",
+              "value": "Créée"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "created",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "copy_to_find",
+              "value": "Copy as comma separated"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "copy_to_find",
+              "value": "Copier sous forme de virgules séparées"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "copy_to_find",
+              "value": "Kopieren als Komma getrennt"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "copy_to_find",
+              "value": ""
+            },
+            {
+              "lang": "lg-cat",
+              "name": "copy_to_find",
+              "value": "Copia separats per comes"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "copy_to_find",
+              "value": "Copiar separados por comas"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "copy_as_column",
+              "value": "Copy as column"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "copy_as_column",
+              "value": "Copiar como columna"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "copy_as_column",
+              "value": "Kopieren als Spalte"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "copy_as_column",
+              "value": "Copier en colonne"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "copy_as_column",
+              "value": ""
+            },
+            {
+              "lang": "lg-cat",
+              "name": "copy_as_column",
+              "value": "Copia com a columna"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "copy_to_find",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "updated",
+              "value": "Updated"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "updated",
+              "value": "Aktualisiert"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "updated",
+              "value": "Actualisé"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "updated",
+              "value": "Actualizados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "updated",
+              "value": "Actualitzats"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "updated",
+              "value": ""
+            },
+            {
+              "lang": "lg-eus",
+              "name": "updated",
+              "value": ""
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "copy_as_column",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "insecure_context",
+              "value": "Contexto inseguro, utilizar sólo en https"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "insecure_context",
+              "value": "Insecure context, used only in https"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "insecure_context",
+              "value": "Unsicherer Kontext, wird nur in https verwendet"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "insecure_context",
+              "value": "Contexte non sécurisé, utilisé uniquement en https"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "insecure_context",
+              "value": "Context insegur, utilitzar només a https"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "insecure_context",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "text_copied",
+              "value": "Text copied to clipboard"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "text_copied",
+              "value": "Texto copiado en el portapapeles"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "text_copied",
+              "value": "In die Zwischenablage kopierter Text"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "text_copied",
+              "value": "Texte copié dans le presse-papiers"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "text_copied",
+              "value": "Text copiat al portapapers"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "text_copied",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "error_coping_text",
+              "value": "Error al copiar texto:"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "error_coping_text",
+              "value": "Error in copying text: "
+            },
+            {
+              "lang": "lg-fra",
+              "name": "error_coping_text",
+              "value": "Erreur de copie du texte :"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "error_coping_text",
+              "value": "Fehler beim Kopieren von Text:"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "error_coping_text",
+              "value": "Error en copiar text:"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "error_coping_text",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "sure",
+              "value": "¿Seguro?"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "sure",
+              "value": "Segur?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "sure",
+              "value": "Sure?"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "sure",
+              "value": "C'est sûr ?"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "sure",
+              "value": "Sicher?"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "error_coping_text",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "preview",
+              "value": "Preview"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "preview",
+              "value": "Vorschau"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "preview",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "preview",
+              "value": "Avant-première"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "preview",
+              "value": ""
+            },
+            {
+              "lang": "lg-spa",
+              "name": "preview",
+              "value": "Previsualizar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "preview",
+              "value": "Previsualitzar"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "preview",
+              "value": ""
+            }
+          ]
+        ]
+      }
+    }
+  },
+  "section_id": 6,
+  "created_date": "2020-01-23 18:30:08",
+  "section_tipo": "dd1340",
+  "modified_date": "2023-10-24 11:52:21",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd1324",
+  "modified_by_userID": -1
 }
