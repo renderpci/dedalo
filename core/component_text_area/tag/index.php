@@ -195,6 +195,7 @@ $text = strip_tags($text, '');
 			break;
 
 		default:
+			error_log("Error: Need type ..! <br>$text");
 			die("Need type ..! <br>$text");
 			break;
 	}
