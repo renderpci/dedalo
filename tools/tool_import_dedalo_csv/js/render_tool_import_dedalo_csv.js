@@ -150,13 +150,17 @@ const get_content_data = async function(self) {
 				}
 
 			// loading
-				const loading_items = [content_data, api_response_container]
+				const loading_items = (SHOW_DEBUG === true)
+					? [content_data, api_response_container]
+					: [content_data]
+					
 				loading_items.map((el)=>{
 					el.classList.add('loading')
 					if (el.classList.contains('hide')) {
 						el.classList.remove('hide')
 					}
 				})
+
 
 			// array of file names
 				const files = selected_files.map(el => {
@@ -236,6 +240,7 @@ const get_content_data = async function(self) {
 									class_name		: 'result_info_container',
 									parent			: result_container
 								})
+
 
 
 							if(current_rensponse.result) {
@@ -468,6 +473,7 @@ const get_content_data = async function(self) {
 			class_name		: 'api_response_container hide',
 			parent			: fragment
 		})
+
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
