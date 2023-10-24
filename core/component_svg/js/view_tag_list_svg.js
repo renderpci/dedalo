@@ -49,7 +49,7 @@ view_tag_list_svg.render = function(self, options) {
 			// media url from files_info based on selected context quality
 				const file_info	= files_info.find(el => el.quality===quality)
 				const url		= file_info
-					? fDEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+					? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 					: page_globals.fallback_image
 
 			// convert the data_tag to string to be used it in html
