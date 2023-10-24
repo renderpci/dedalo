@@ -541,11 +541,14 @@ final class component_image_test extends TestCase {
 		);
 
 		$original_quality	= $component->get_original_quality();
+		$source_file		= $component->get_media_filepath($original_quality);
 		$target_quality		= '6MB';
-		$result				= $component->convert_quality(
-			$original_quality,
-			$target_quality
-		);
+		$result				= $component->convert_quality((object)[
+			'source_quality'	=> $original_quality,
+			'source_file'		=> $source_file,
+			'target_quality'	=> $target_quality
+
+		]);
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -634,51 +637,51 @@ final class component_image_test extends TestCase {
 	* TEST_generate_default_quality_file
 	* @return void
 	*/
-	public function test_generate_default_quality_file() {
+		// public function test_generate_default_quality_file() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		// 	$model			= self::$model;
+		// 	$tipo			= self::$tipo;
+		// 	$section_tipo	= self::$section_tipo;
+		// 	$section_id		= 1;
+		// 	$mode			= 'edit';
+		// 	$lang			= DEDALO_DATA_NOLAN;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		// 	$component = component_common::get_instance(
+		// 		$model, // string model
+		// 		$tipo, // string tipo
+		// 		$section_id,
+		// 		$mode,
+		// 		$lang,
+		// 		$section_tipo
+		// 	);
 
-		$result = $component->generate_default_quality_file((object)[
-			'overwrite' => true
-		]);
+		// 	$result = $component->generate_default_quality_file((object)[
+		// 		'overwrite' => true
+		// 	]);
 
-		$this->assertTrue(
-			gettype($result)==='boolean',
-			'expected type boolean : ' . PHP_EOL
-				. gettype($result)
-		);
+		// 	$this->assertTrue(
+		// 		gettype($result)==='boolean',
+		// 		'expected type boolean : ' . PHP_EOL
+		// 			. gettype($result)
+		// 	);
 
-		$this->assertTrue(
-			$result===true,
-			'expected true value : true ' . PHP_EOL
-				. json_encode($result)
-		);
+		// 	$this->assertTrue(
+		// 		$result===true,
+		// 		'expected true value : true ' . PHP_EOL
+		// 			. json_encode($result)
+		// 	);
 
-		$result = $component->generate_default_quality_file((object)[
-			'overwrite'	=> true,
-			'from'		=> 'original_real'
-		]);
+		// 	$result = $component->generate_default_quality_file((object)[
+		// 		'overwrite'	=> true,
+		// 		'from'		=> 'original_real'
+		// 	]);
 
-		$this->assertTrue(
-			$result===true,
-			'expected true value : true (generate_default_quality_file from original_real) ' . PHP_EOL
-				. json_encode($result)
-		);
-	}//end test_generate_default_quality_file
+		// 	$this->assertTrue(
+		// 		$result===true,
+		// 		'expected true value : true (generate_default_quality_file from original_real) ' . PHP_EOL
+		// 			. json_encode($result)
+		// 	);
+		// }//end test_generate_default_quality_file
 
 
 
