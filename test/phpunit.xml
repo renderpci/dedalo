@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/|version|/phpunit.xsd"
+         bootstrap="../test/bootstrap.php">
+    <testsuites>
+        <testsuite name="unit">
+            <directory>../test</directory>
+        </testsuite>
+
+        <testsuite name="integration">
+            <directory>../tools</directory>
+        </testsuite>
+    </testsuites>
+</phpunit>
