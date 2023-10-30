@@ -28,7 +28,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->error	= null;
 
 		// short vars
-			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+			$dir = tool_import_dedalo_csv::get_files_path();
 
 		// read_files
 			$files_list	= tool_common::read_files(
@@ -191,7 +191,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$file_name = $options->file_name ?? null;
 
 		// short vars
-			$dir		= DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH; // fixed dir from config
+			$dir		= tool_import_dedalo_csv::get_files_path();
 			$file_name	= $file_name;
 
 		// remove file is exists
@@ -245,7 +245,7 @@ class tool_import_dedalo_csv extends tool_common {
 			$time_machine_save	= $options->time_machine_save ?? null;
 
 		// short vars
-			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+			$dir = tool_import_dedalo_csv::get_files_path();
 
 		// import each file
 			$import_response=[];
@@ -1604,10 +1604,11 @@ class tool_import_dedalo_csv extends tool_common {
 			}
 
 		// target_file
-			$target_file = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH . '/' . $name;
+			$dir			= tool_import_dedalo_csv::get_files_path();
+			$target_file	= $dir . '/' . $name;
 
 		// check target directory
-			$dir = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH;
+			$dir = tool_import_dedalo_csv::get_files_path();
 			if (!is_dir($dir)) {
 				if(!mkdir($dir, 0775,true)) {
 					$response->msg .= " Error on read or create default directory. Permission denied ";
@@ -1652,6 +1653,19 @@ class tool_import_dedalo_csv extends tool_common {
 
 		return $response;
 	}//end process_uploaded_file
+
+
+
+	/**
+	* GET_FILES_PATH
+	* @return string $files_path
+	*/
+	public static function get_files_path() {
+
+		$files_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH .'/'. get_user_id();
+
+		return $files_path;
+	}//end get_files_path
 
 
 
