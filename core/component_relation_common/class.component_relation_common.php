@@ -869,6 +869,7 @@ class component_relation_common extends component_common {
 	/**
 	* ADD_LOCATOR_TO_DATO
 	* Add one locator to current 'dato'. Verify is exists to avoid duplicates
+	* @param object $locator
 	* @return bool
 	*/
 	public function add_locator_to_dato( object $locator ) : bool {
@@ -879,7 +880,11 @@ class component_relation_common extends component_common {
 			if(SHOW_DEBUG===true) {
 				throw new Exception("Error Processing Request. var 'locator' not contains property 'type' ", 1);
 			}
-			debug_log(__METHOD__." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") ".to_string($locator), logger::ERROR);
+			debug_log(__METHOD__
+				." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") " . PHP_EOL
+				.' locator: ' . to_string($locator)
+				, logger::ERROR
+			);
 			return false;
 		}
 
@@ -887,10 +892,10 @@ class component_relation_common extends component_common {
 		$dato 	  		= $this->get_dato();
 		$added 			= false;
 
-		# maintain array index after unset value. ! Important for encode json as array later (if keys are not correlatives, undesired object is created)
+		// maintain array index after unset value. ! Important for encode JSON as array later (if keys are not correlatives, undesired object is created)
 		$dato = array_values($dato);
 
-		# Test if already exists
+		// Test if already exists
 		/*
 		$ar_properties=array('section_id','section_tipo','type');
 		if (isset($locator->from_component_tipo)) 	$ar_properties[] = 'from_component_tipo';
@@ -903,15 +908,19 @@ class component_relation_common extends component_common {
 		$object_exists = locator::in_array_locator( $locator, $dato );
 		if ($object_exists===false) {
 
-			# Add to dato
+			// Add to dato
 			array_push($dato, $locator);
 
 			$added = true;
 		}else{
-			debug_log(__METHOD__." Ignored add locator action: locator ".json_encode($locator)." already exists. Tested properties: ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." Ignored add locator action because already exists. Tested properties: " . PHP_EOL
+				.' locator: ' . json_encode($locator)
+				, logger::ERROR
+			);
 		}
 
-		# Updates current dato
+		// Updates current dato
 		if ($added===true) {
 			$this->set_dato( $dato );
 		}

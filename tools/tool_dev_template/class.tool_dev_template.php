@@ -1,7 +1,5 @@
 <?php
-
-
-
+declare(strict_types=1);
 /**
 * CLASS TOOL_DEV_TEMPLATE
 * This tool is intended to be used as a base build for new tools. Do not use as a production tool.
@@ -62,6 +60,7 @@ class tool_dev_template extends tool_common {
 
 		// response
 			$response->result	= $my_process_result;
+			$response->error	= null;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 

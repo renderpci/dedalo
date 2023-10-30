@@ -1120,7 +1120,7 @@ class component_media_common extends component_common {
 						// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
 							$media_path = $this->get_media_filepath($current_quality, $current_extension);
 							if (!file_exists($media_path)) {
-									dump($media_path, ' SKIP media_path ++ '.to_string());
+								// dump($media_path, ' SKIP media_path ++ '.to_string());
 								continue; // Skip
 							}
 

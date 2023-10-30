@@ -117,7 +117,10 @@ class component_relation_children extends component_relation_common {
 		}
 
 		if (!isset($locator->from_component_tipo)) {
-			debug_log(__METHOD__." ERROR. ignored action. Property \"from_component_tipo\" is mandatory ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." ERROR. ignored action. Property \"from_component_tipo\" is mandatory "
+				, logger::ERROR
+			);
 			return false;
 		}
 
