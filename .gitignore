@@ -38,6 +38,7 @@ des
 * copy.*
 test
 !/test
+*.cache
 
 
 # install/import/hierarchy
