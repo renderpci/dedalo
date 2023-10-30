@@ -1,12 +1,9 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
-
-
-
+declare(strict_types=1);
 /**
 * CLASS TOOL_IMPORT_DEDALO_CSV
-* This tool is intended to be used as a base build for new tools. Do not use as a production tool.
+* Tool to import data into Dédalo.
+* Often used to import CSV files previously exported from Dédalo tool_export in raw format.
 *
 */
 class tool_import_dedalo_csv extends tool_common {

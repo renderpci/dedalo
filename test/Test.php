@@ -3,10 +3,8 @@ declare(strict_types=1);
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
 
-
-
 // require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(__FILE__)) . '/config/config.php';
+	// require_once dirname(dirname(__FILE__)) . '/config/config.php';
 	// require_once dirname(__FILE__) . '/login/login_Test.php';
 
 // check is development server. if not, throw to prevent malicious access
@@ -56,6 +54,7 @@ final class OutputTest extends TestCase {
 		// 		);
 		// 	}
 		// }//end test_logout_users
+
 
 
 }//end OutputTest
