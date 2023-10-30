@@ -547,8 +547,11 @@
 	if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
 		// nothing to do
 	}else{
-		$path = DB_BIN_PATH . 'psql';
-		$psql = trim(shell_exec('command -v '. $path));
+		$path	= DB_BIN_PATH . 'psql';
+		$res	= shell_exec('command -v '. $path);
+		$psql	= is_string($res)
+			? trim($res)
+			: $res;
 		if (empty($psql)) {
 
 			$init_response->msg[]	= 'Error: psql not found at: '.$path . PHP_EOL . ' Review your PostgreSQL installation or your db config file';
