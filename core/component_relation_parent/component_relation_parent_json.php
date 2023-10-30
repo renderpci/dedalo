@@ -44,11 +44,18 @@
 
 
 	// context
-		$this->context	= $this->get_structure_context(
+		$this->context = $this->get_structure_context(
 			$permissions,
 			true // bool add_request_config
 		);
-		$context[]		= $this->context;
+
+		// properties : show_interface set as false to prevent + button creation in client
+			$properties = $this->context->properties ?? new stdClass();
+			$properties->show_interface = $properties->show_interface ?? new stdClass();
+			$properties->show_interface->button_add = false;
+			$this->context->properties = $properties;
+
+		$context[] = $this->context;
 
 	if($permissions>0){
 
