@@ -69,8 +69,8 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 - PHP 8.1+
 - Apache 2.4.6+
-- Postgres 14.9+
-- MySQL 5.6+ (NOT REQUIRED unless you want use Dédalo for publication).
+- PostgreSQL 14.9+
+- MySQL 5.6+ (NOT MANDATORY, only for publication).
 
 ### 4.2. Libraries required for Dédalo
 
