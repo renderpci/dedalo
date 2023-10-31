@@ -50,6 +50,13 @@
 			$permissions,
 			true // bool add_request_config
 		);
+
+		// properties : show_interface set as false to prevent + button creation in client
+			$properties = $this->context->properties ?? new stdClass();
+			$properties->show_interface = $properties->show_interface ?? new stdClass();
+			$properties->show_interface->button_add = false;
+			$this->context->properties = $properties;
+
 		$context[] = $this->context;
 
 
