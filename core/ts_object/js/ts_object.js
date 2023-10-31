@@ -1995,6 +1995,7 @@ export const ts_object = new function() {
 
 	/**
 	* GET_LINK_CHILDREN_FROM_WRAP
+	* Find link_children node from current given wrapper
 	* @param HTMLElement wrap
 	* @return HTMLElement|null link_children
 	*/
@@ -2009,7 +2010,12 @@ export const ts_object = new function() {
 				return link_children
 			}
 
-		const child_one		= wrap.childNodes
+		// base_wrapper. If wrapper is a root hierarchy_node, search inside next thesaurus_node
+			const base_wrapper = (wrap.dataset.node_type && wrap.dataset.node_type==='hierarchy_node')
+				? wrap.firstChild.firstChild
+				: wrap
+
+		const child_one		= base_wrapper.childNodes
 		const child_one_len	= child_one.length
 		for (let i = child_one_len - 1; i >= 0; i--) {
 
@@ -2019,6 +2025,7 @@ export const ts_object = new function() {
 				const child_two_len	= child_two.length
 				for (let j = 0; j < child_two_len; j++) {
 					if(child_two[j].dataset.type && child_two[j].dataset.type==="link_children") {
+						// matched : fix value
 						link_children = child_two[j]
 						break;
 					}
@@ -2026,11 +2033,14 @@ export const ts_object = new function() {
 				break;
 			}
 		}
+
+
 		if (link_children===null) {
 			if(SHOW_DEBUG===true) {
 				console.warn("[ts_object.get_link_children_from_wrap] Error on locate link_children from wrap: ",wrap);
 			}
 		}
+
 
 		return link_children;
 	}//end get_link_children_from_wrap
