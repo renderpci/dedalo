@@ -158,9 +158,11 @@ final class dd_ts_api {
 			$new_section	= section::get_instance(null, $target_section_tipo);
 			$new_section_id	= $new_section->Save();
 			if (empty($new_section_id)) {
-				#debug_log(__METHOD__." Error on create new section from parent. Stopped add_child process !".to_string(), logger::ERROR);
 				$response->msg = 'Error on create new section from parent. Stopped add_child process !';
-				debug_log(__METHOD__." $response->msg ", logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -169,7 +171,12 @@ final class dd_ts_api {
 
 		// set new section component 'is_descriptor' value
 			if (!isset($section_map->thesaurus->is_descriptor)) {
-				debug_log(__METHOD__." Invalid section_map 'is_descriptor' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
+				debug_log(__METHOD__.
+					" Invalid section_map 'is_descriptor' property from section:" . PHP_EOL
+					.' target_section_tipo: ' . $target_section_tipo . PHP_EOL
+					.' section_map: ' . to_string($section_map)
+					, logger::DEBUG
+				);
 			}else{
 				if ($section_map->thesaurus->is_descriptor!==false) {
 					$component_tipo	= $section_map->thesaurus->is_descriptor;
@@ -183,13 +190,24 @@ final class dd_ts_api {
 						$target_section_tipo
 					);
 					$component->get_dato();
-					debug_log(__METHOD__." Saved default dato to 'is_descriptor' component ($component_tipo : $model) on section_id: ".to_string($new_section_id), logger::DEBUG);
+					debug_log(__METHOD__
+						." Saved default dato to 'is_descriptor' " . PHP_EOL
+						.' component_tipo: ' . $component_tipo . PHP_EOL
+						.' model: ' . $model . PHP_EOL
+						.' section_id: ' . to_string($new_section_id)
+						, logger::DEBUG
+					);
 				}
 			}
 
 		// is_indexable default value set
 			if (!isset($section_map->thesaurus->is_indexable)) {
-				debug_log(__METHOD__." Invalid section_map 'is_indexable' property from section $target_section_tipo ".to_string($section_map), logger::DEBUG);
+				debug_log(__METHOD__
+					." Invalid section_map 'is_indexable' property from section." . PHP_EOL
+					.' target_section_tipo: ' . $target_section_tipo . PHP_EOL
+					.' section_map: ' . to_string($section_map)
+					, logger::DEBUG
+				);
 			}else{
 				if ($section_map->thesaurus->is_indexable!==false) {
 					$component_tipo	= $section_map->thesaurus->is_indexable;
@@ -203,7 +221,13 @@ final class dd_ts_api {
 						$target_section_tipo
 					);
 					$component->get_dato();
-					debug_log(__METHOD__." Saved default dato to 'is_indexable' component ($component_tipo : $model) on section_id: ".to_string($new_section_id), logger::DEBUG);
+					debug_log(__METHOD__
+						." Saved default dato to 'is_indexable' " . PHP_EOL
+						.' component_tipo: ' . $component_tipo . PHP_EOL
+						.' model: ' . $model . PHP_EOL
+						.' section_id: ' . to_string($new_section_id)
+						, logger::DEBUG
+					);
 				}
 			}
 
@@ -211,7 +235,10 @@ final class dd_ts_api {
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			if ($model_name!=='component_relation_children') {
 				$response->msg = 'Error on create new section from parent. Invalid model: '.$model_name.'. Expected: "component_relation_children" ';
-				debug_log(__METHOD__." $response->msg ", logger::ERROR);
+				debug_log(__METHOD__.
+					" $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 			$mode							= 'edit';
@@ -229,12 +256,12 @@ final class dd_ts_api {
 			$added = (bool)$component_relation_children->make_me_your_child( $target_section_tipo, $new_section_id );
 			if ($added===true) {
 
-				# Save relation children data
+				// Save relation children data
 				$component_relation_children->Save();
 
-				# All is ok. Result is new created section section_id
+				// All is OK. Result is new created section section_id
 				$response->result	= (int)$new_section_id;
-				$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+				$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 				// debug
 					if(SHOW_DEBUG===true) {
@@ -403,9 +430,16 @@ final class dd_ts_api {
 				$dato = $component_relation_children->get_dato();
 
 				if (!empty($dato)) {
-					debug_log(__METHOD__." Stopped delete term from thesaurus. Current term have children".to_string($dato), logger::DEBUG);
+					debug_log(__METHOD__
+						." Stopped delete term from thesaurus. Current term have children". PHP_EOL
+						.' dato: ' . to_string($dato)
+						, logger::DEBUG
+					);
 					$response->msg = 'Trigger Error: ('.__FUNCTION__.') ' . "Stopped delete term from thesaurus. Current term have children ".to_string($dato);
-					debug_log(__METHOD__." $response->msg ".to_string(), logger::WARNING);
+					debug_log(__METHOD__
+						." $response->msg "
+						, logger::WARNING
+					);
 					return (object)$response;
 				}
 			}
@@ -419,11 +453,14 @@ final class dd_ts_api {
 
 		// response OK
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				debug_log(__METHOD__." Removed section from thesaurus: section_id:$section_id, section_tipo:$section_tipo ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Removed section from thesaurus: section_id:$section_id, section_tipo:$section_tipo "
+					, logger::DEBUG
+				);
 				$debug = new stdClass();
 					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
 				$debug->relation_response = $relation_response;
@@ -484,7 +521,13 @@ final class dd_ts_api {
 			$filter = array($locator);
 			$relation_response = component_relation_common::remove_parent_references($section_tipo, $section_id, $filter);
 			if ($relation_response->result===true) {
-				debug_log(__METHOD__." Removed me as children from old parent  ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Removed me as children from old parent " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' section_id: ' . $section_id . PHP_EOL
+					.' filter: ' . to_string($filter)
+					, logger::DEBUG
+				);
 			}
 
 		// Add me as children of new parent
@@ -505,7 +548,10 @@ final class dd_ts_api {
 
 				$component_relation_children->Save();
 
-				debug_log(__METHOD__." Added dropped element as children of target wrap ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Added dropped element as children of target wrap "
+					, logger::DEBUG
+				);
 
 				# All is ok. Result is new created section section_id
 				$response->result	= true;
@@ -636,7 +682,7 @@ final class dd_ts_api {
 
 		// response OK
 			$response->result	= $result;
-			$response->msg		= 'Ok. Request done ['.__FUNCTION__.']';
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
 
 		// debug
 			if(SHOW_DEBUG===true) {
