@@ -1149,6 +1149,12 @@ class diffusion_sql extends diffusion  {
 										$ar_id[] = $current_locator->section_id;
 									}
 									$dato = $ar_id;
+								}else{
+									// fallback trans-liter-able data for component with_lang_versions
+									if (empty($dato) && $current_component->with_lang_versions===true) {
+										$current_component->set_lang(DEDALO_DATA_NOLAN);
+										$dato = $current_component->get_dato();
+									}
 								}
 								$ar_field_data['field_value'] = $dato;
 								break;
