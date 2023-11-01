@@ -724,7 +724,7 @@ final class dd_utils_api {
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
 					if( !is_dir($tmp_dir) ) {
-						if(!mkdir($tmp_dir, 0700, true)) {
+						if(!mkdir($tmp_dir, 0750, true)) {
 							$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
 							debug_log(__METHOD__
 								. " $response->msg" .PHP_EOL
