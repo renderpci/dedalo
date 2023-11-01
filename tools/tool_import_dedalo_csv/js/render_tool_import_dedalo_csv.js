@@ -846,6 +846,7 @@ const render_columns_mapper = async function(self, item) {
 					class_name		: 'target_container',
 					parent			: line
 				})
+				// components list selector
 				const target_select = ui.create_dom_element({
 					element_type	: 'select',
 					class_name		: 'column_select',
@@ -919,12 +920,13 @@ const render_columns_mapper = async function(self, item) {
 					// delete decimal property
 						delete ar_columns_map[i].decimal
 
-					if(model === 'component_number'){
-						render_decimal_selector({
-							i			: i,
-							container	: mapped_to_options_container
-						})
-					}
+					// if the component selected is a component_number, add the decimal selector
+						if(model === 'component_number'){
+							render_decimal_selector({
+								i			: i,
+								container	: mapped_to_options_container
+							})
+						}
 				})
 
 				const mapped_to_options_container = ui.create_dom_element({
@@ -933,6 +935,7 @@ const render_columns_mapper = async function(self, item) {
 					parent			: target_container
 				})
 
+				// if the component selected is a component_number, add the decimal selector
 				if(ar_columns_map[i].model === 'component_number'){
 					render_decimal_selector({
 						i			: i,
@@ -973,7 +976,7 @@ const render_columns_mapper = async function(self, item) {
 			header.classList.add('up')
 		}
 
-
+	// render the decimal node selector
 		function render_decimal_selector(options){
 
 			const i			= options.i
