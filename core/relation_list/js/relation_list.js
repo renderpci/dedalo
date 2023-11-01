@@ -81,14 +81,18 @@
 	}
 */
 
+
+
 // import
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_relation_list} from './render_relation_list.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 
+
+
 /**
-*  RELATION_LIST
+* RELATION_LIST
 *
 */
 export const relation_list = function() {
@@ -135,6 +139,7 @@ export const relation_list = function() {
 
 /**
 * INIT
+* @param object options
 * @return bool true
 */
 relation_list.prototype.init = function(options) {
@@ -163,6 +168,7 @@ relation_list.prototype.init = function(options) {
 
 /**
 * BUILD
+* @param bool autoload = true
 * @return bool true
 */
 relation_list.prototype.build = async function(autoload=true){
