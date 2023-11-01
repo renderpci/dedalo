@@ -49,6 +49,8 @@ class section extends common {
 		// tm_context. Array
 		public $tm_context;
 
+		// time machine save control
+		public $save_tm = true;
 
 
 		/**
@@ -868,6 +870,7 @@ class section extends common {
 				$options->time_machine_lang			= false;
 				$options->time_machine_tipo			= false;
 				$options->time_machine_section_id	= (int)$this->section_id; // always
+				$options->save_tm					= $this->save_tm;
 				$options->previous_component_dato	= null; // only when save from component
 
 			// save_options overwrite defaults
@@ -1114,10 +1117,11 @@ class section extends common {
 						unset($time_machine_data->components); 	// Remove unnecessary empty 'components' object
 						unset($time_machine_data->relations); 	// Remove unnecessary empty 'relations' object
 					$save_options = new stdClass();
-						$save_options->time_machine_data = $time_machine_data;
-						$save_options->time_machine_lang = DEDALO_DATA_NOLAN;	// Always nolan for section
-						$save_options->time_machine_tipo = $tipo;
-						$save_options->new_record		 = true;
+						$save_options->time_machine_data	= $time_machine_data;
+						$save_options->time_machine_lang	= DEDALO_DATA_NOLAN;	// Always nolan for section
+						$save_options->time_machine_tipo	= $tipo;
+						$save_options->new_record			= true;
+						$save_options->save_tm				= $this->save_tm;
 
 				// Save JSON_RecordObj
 					$JSON_RecordObj_matrix = isset($this->JSON_RecordObj_matrix)

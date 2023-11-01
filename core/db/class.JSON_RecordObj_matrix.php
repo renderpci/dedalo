@@ -261,8 +261,15 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		# Every record saved in matrix is saved as copy in 'matrix_time_machine' except logger and TM recover section
 		# if(RecordObj_time_machine::$save_time_machine_version===true && $this->matrix_table!=='matrix_activity') { DEDALO_ACTIVITY_SECTION_TIPO
 		if($this->matrix_table!=='matrix_activity') {
-			# Exec time machine save and set returned id
-			$this->time_machine_last_id = $this->save_time_machine( $save_options );
+
+			$save_tm = isset($save_options->save_tm)
+				? $save_options->save_tm
+				: true;
+
+			if($save_tm === true){
+				# Exec time machine save and set returned id
+				$this->time_machine_last_id = $this->save_time_machine( $save_options );
+			}
 		}
 
 		// (!) MOVED AFTER TIME_MACHINE SAVE (12-11-2022) TO ALLOW SAVE UNSAVED COMPONENT VALUES (OLD IMPORTS..)
