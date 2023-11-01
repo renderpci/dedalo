@@ -452,4 +452,71 @@ class component_number extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// object | array case
+			// Check if is a JSON string. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and it's not necessary processed
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				$response->result	= $dato_from_json;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// string case (all data become as string)
+			if(empty($import_value) && $import_value !== '0'){
+
+				$response->result	= null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// convert value
+			$value = $this->string_to_number($import_value);
+
+			if($value === null){
+
+				// log JSON conversion error
+				debug_log(__METHOD__
+					."import value is not numeric: ".PHP_EOL
+					."value: ".$import_value.PHP_EOL
+					."decimal: ".$this->decimal
+					, logger::ERROR
+				);
+
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
+			}
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
+
+
 }//end class component_number
