@@ -741,7 +741,7 @@ class diffusion_section_stats extends diffusion {
 				if ($add_what_data===true) {
 					// what totals
 						$what_totals = array_filter($totals, function($item){
-							return $item->type==='what';
+							return isset($item->type) && $item->type==='what';
 						});
 					// add data
 						foreach ($what_totals as $item) {
