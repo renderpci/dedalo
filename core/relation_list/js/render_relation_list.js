@@ -7,6 +7,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 
 
 
@@ -23,6 +24,7 @@ export const render_relation_list = function() {
 /**
 * EDIT
 * Render node for use in edit
+* @param options = {render_level:'full'}
 * @return HTMLElement wrapper
 */
 render_relation_list.prototype.edit = async function(options={render_level:'full'}) {
@@ -47,6 +49,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 	// add the paginator to the wrapper
 		parse_paginator_html(self, wrapper)
 
+
 	return wrapper
 }//end edit
 
@@ -54,6 +57,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
@@ -65,6 +69,7 @@ const get_content_data = function(self) {
 	// Render the data html
 		parse_html(self.datum, content_data)
 
+
 	return content_data
 }//end get_content_data
 
@@ -73,10 +78,16 @@ const get_content_data = function(self) {
 /**
 * PARSE_HTML
 * process the JSON received
+* @param object datum
+* @param HTMLElement content_data_node
+* @return bool
 */
-const parse_html = function(datum, content_data_node){
+const parse_html = function(datum, content_data_node) {
 
-	if(!datum) return false
+	// empty datum case
+		if(!datum) {
+			return false
+		}
 
 	// get the context and the data information of the JSON received
 		const context		= datum.context;
@@ -102,6 +113,7 @@ const parse_html = function(datum, content_data_node){
 		content_data_node.appendChild(node)
 	})
 
+
 	return true
 }//end parse_html
 
@@ -110,8 +122,14 @@ const parse_html = function(datum, content_data_node){
 /**
 * BUILD_GRID_HTML
 * build the relation list html with the section selected
+* @param object context
+* @param array columns
+* @param array data
+* @param array count_data
+* @param object CSS_style_sheet
+* @return DocumentFragment
 */
-const build_grid_html = function(context, columns, data, count_data, CSS_style_sheet){
+const build_grid_html = function(context, columns, data, count_data, CSS_style_sheet) {
 
 	const fragment = new DocumentFragment()
 
@@ -189,7 +207,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 					parent						: grid
 				})
 				data_row_header.addEventListener('click', ()=>{
-					edit_relation(self, current_data)
+					edit_relation(current_data)
 				})
 
 				//the id information
@@ -220,31 +238,33 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 /**
 * PARSE_PAGINATOR_HTML
 * build the paginator html
+* @param object self
+* @param HTMLElement wrapper
+* @return void
 */
-const parse_paginator_html = async function(self, wrapper){
+const parse_paginator_html = async function(self, wrapper) {
 
-
-	//set the total_records_count into the options object
+	// set the total_records_count into the options object
 		const total_records_count = await self.total
 
-	//get the global container
+	// get the global container
 		// const relation_list_wrap = this.relation_list_wrap;
 
-	//get the current limit and offset of the list
+	// get the current limit and offset of the list
 		const current_offset	= self.offset;
 		const current_limit		= self.limit
 		// const current_total	= parseInt(options.total_records_count)
 
-	//calculate the current page (offset + limit)/limit and the last page that paginator can show with the current configuration
+	// calculate the current page (offset + limit)/limit and the last page that paginator can show with the current configuration
 		const current_page	= (current_offset + current_limit)/current_limit
 		const final_page	= Math.floor(total_records_count/current_limit) + 1
 
 	// create a paginator content
-		const paginator  = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'relation_list_paginator',
-				text_node		: get_label['total']+ ': ' + total_records_count
-			})
+		const paginator = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_paginator',
+			text_node		: get_label['total']+ ': ' + total_records_count
+		})
 	//insert the paginator in the first position in the global container, the paginator need to be the first, at top of the list
 		wrapper.insertBefore(paginator, wrapper.firstChild);
 
@@ -256,14 +276,14 @@ const parse_paginator_html = async function(self, wrapper){
 		})
 
 	// create a paginator current record
-		const currrent_record	= ui.create_dom_element({
+		const currrent_record = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'relation_list_paginator_current',
-			parent			: paginator_buttons,
-			text_node		: get_label['page']+ ': ' +current_page
+			text_node		: get_label['page']+ ': ' +current_page,
+			parent			: paginator_buttons
 		})
 
-	//check if current page is the first of the final page to change the css of the buttons (switch on or off)
+	// check if current page is the first of the final page to change the css of the buttons (switch on or off)
 		const css_previous_offset = (current_offset == 0)
 			? 'relation_list_paginator_offset_off'
 			: ''
@@ -271,26 +291,24 @@ const parse_paginator_html = async function(self, wrapper){
 			? 'relation_list_paginator_offset_off'
 			: ''
 
-		// const event_previous	= [{'type':'click','name':'relation_list.previous_records'}];
 	// create a paginator previous button
 		const previous_button	= ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button relation_list_paginator_previous ' + css_previous_offset,
 			parent			: paginator_buttons
 		})
-	// create the event to go to the previous record
+		// create the event to go to the previous record
 		previous_button.addEventListener('click', ()=>{
 			previous_records(self)
 		})
 
-		// const event_next	= [{'type':'click','name':'relation_list.next_records'}];
 	// create a paginator next button
 		const next_button	= ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button relation_list_paginator_next ' + css_netx_offset,
 			parent			: paginator_buttons
 		})
-	// create the event to go to the next record
+		// create the event to go to the next record
 		next_button.addEventListener('click', ()=>{
 			next_records(self)
 		})
@@ -301,12 +319,14 @@ const parse_paginator_html = async function(self, wrapper){
 /**
 * PREVIOUS_RECORDS
 * build the previous button in the paginator
+* @param object self
+* @return void
 */
-const previous_records = function(self){
+const previous_records = function(self) {
 
-	//get the paginator and get the offset, limit and total of records found
+	// get the paginator and get the offset, limit and total of records found
 	// if the paginator is NOT in the first page the button can navigate to the previous page
-	if( self.offset >= 1){
+	if( self.offset >= 1) {
 		self.offset = self.offset - self.limit
 		event_manager.publish('relation_list_paginator', self)
 	}
@@ -317,8 +337,10 @@ const previous_records = function(self){
 /**
 * NEXT_RECORDS
 * build the next button in the paginator
+* @param object self
+* @return void
 */
-const next_records = function(self){
+const next_records = function(self) {
 
 	//get the paginator and get the offset, limit and total of records found
 		const current_offset	= self.offset
@@ -341,42 +363,36 @@ const next_records = function(self){
 /**
 * EDIT_RELATION
 * Open the relation section selected by the user in the list
+* @param object current_data
+* @return bool
 */
-const edit_relation = function(self, current_data){
+const edit_relation = function(current_data) {
 
 	//get the locator of the related section
 	const section_id	= current_data.section_id
 	const section_tipo	= current_data.section_tipo
 
 	if (typeof section_id=="undefined") {
-		return console.error("[relation_list.edit_relation] Error on find section_id", self.section_id);
+		console.error("[relation_list.edit_relation] Error on find section_id", current_data);
+		return false
 	}
 	if (typeof section_tipo=="undefined") {
-		return console.error("[relation_list.edit_relation] Error on find section_tipo", self.section_tipo);
+		console.error("[relation_list.edit_relation] Error on find section_tipo", current_data);
+		return false
 	}
-	// create the navigation rqo, it will use to open the relation with the row reference
-	const user_navigation_rqo = {
-		caller_id	: self.id,
-		source		: {
-			action			: 'search',
-			model			: 'section',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			mode			: 'edit',
-			lang			: self.lang
-		},
-		sqo : {
-			section_tipo		: [{tipo : section_tipo}],
-			limit				: 1,
-			offset				: 0,
-			filter_by_locators	: [{
-				section_tipo : section_tipo,
-				section_id : section_id
-			}]
-		}
-	}
-	// launch event 'user_navigation' that page is watching
-	event_manager.publish('user_navigation', user_navigation_rqo)
+
+	// open a new window
+		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+			tipo	: section_tipo,
+			id		: section_id,
+			mode	: 'edit',
+			menu	: false
+		})
+		const new_window = open_window({
+			url		: url,
+			name	: 'section_view'
+		})
+
 
 	return true
 }//end edit_relation
