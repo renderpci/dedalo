@@ -8,6 +8,7 @@
 * example multiple : [6.12,88]
 * Default type : float
 * Default precision: 2
+* Default decimal separator: . used as $decimal public variable
 * Properties can define the type and precision as "type":"float", "precision":4
 * Notes: Data storage format does not support internationalization for numbers the float point is always . and does not use thousand separator
 * but is possible format it in render->view to accommodate to specific formats as Spanish format 1.234,56 from data 1234.56
@@ -15,6 +16,7 @@
 class component_number extends component_common {
 
 
+	public $decimal = '.';
 
 	/**
 	* __CONSTRUCT
