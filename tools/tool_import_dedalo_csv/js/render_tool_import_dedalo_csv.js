@@ -839,11 +839,19 @@ const render_columns_mapper = async function(self, item) {
 				})
 
 			// target component list selector
+
+				// container
+				const target_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_container',
+					parent			: line
+				})
+				// components list selector
 				const target_select = ui.create_dom_element({
 					element_type	: 'select',
 					class_name		: 'column_select',
 					inner_html		: column_name,
-					parent			: line
+					parent			: target_container
 				})
 				// empty option
 				ui.create_dom_element({
@@ -900,10 +908,40 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
+					const model = e.target.options[e.target.selectedIndex].model
 					ar_columns_map[i].checked	= checkbox_file_selection.checked
 					ar_columns_map[i].map_to	= e.target.value
-					ar_columns_map[i].model		= e.target.options[e.target.selectedIndex].model
+					ar_columns_map[i].model		= model
+
+					// empty container
+						while (mapped_to_options_container.firstChild) {
+							mapped_to_options_container.removeChild(mapped_to_options_container.firstChild);
+						}
+					// delete decimal property
+						delete ar_columns_map[i].decimal
+
+					// if the component selected is a component_number, add the decimal selector
+						if(model === 'component_number'){
+							render_decimal_selector({
+								i			: i,
+								container	: mapped_to_options_container
+							})
+						}
 				})
+
+				const mapped_to_options_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'mapped_to_options_container',
+					parent			: target_container
+				})
+
+				// if the component selected is a component_number, add the decimal selector
+				if(ar_columns_map[i].model === 'component_number'){
+					render_decimal_selector({
+						i			: i,
+						container	: mapped_to_options_container
+					})
+				}
 
 			// sample_data (search non empty values)
 				let sample_data = ''
@@ -936,6 +974,50 @@ const render_columns_mapper = async function(self, item) {
 		}
 		function expose() {
 			header.classList.add('up')
+		}
+
+	// render the decimal node selector
+		function render_decimal_selector(options){
+
+			const i			= options.i
+			const container	= options.container
+
+			const column_name	= self.get_tool_label('decimal') || 'Decimal'
+			const point_name	= self.get_tool_label('point_name') || 'Point'
+			const comma_name	= self.get_tool_label('comma_name') || 'Comma'
+
+			const decimal_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'decimal_label',
+				inner_html 		: column_name,
+				parent			: container
+			})
+
+			const decimal_select = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'decimal_select',
+				parent			: container
+			})
+			// empty option
+			const point_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: '.',
+				inner_html 		: point_name + ': .',
+				parent			: decimal_select
+			})
+			point_option.checked = true
+
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: ',',
+				inner_html 		: comma_name + ': ,',
+				parent			: decimal_select
+			})
+			ar_columns_map[i].decimal	= decimal_select.value
+
+			decimal_select.addEventListener('change', function(e) {
+				ar_columns_map[i].decimal	= decimal_select.value
+			})
 		}
 
 

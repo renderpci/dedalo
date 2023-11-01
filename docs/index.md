@@ -30,6 +30,7 @@ Dédalo is a Free and Open Source software develop abstract objects with a ontol
     3. [Configuration Dédalo Publication API](./diffusion/publication_api/server_config_api.md)
     4. [Publication API](./diffusion/publication_api/publication_api.md)
 
-7. Development
+7. [Development](./development/index.md)
 
-    1. [Using a media components to be integrated into 3party code](./development/using_media_components.md)
+    1. [Creating tools](./development/tools/creating_tools.md)
+    2. [Using a media components to be integrated into 3party code](./development/using_media_components.md)
