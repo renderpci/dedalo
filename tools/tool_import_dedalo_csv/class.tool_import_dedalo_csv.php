@@ -917,13 +917,7 @@ class tool_import_dedalo_csv extends tool_common {
 							// Note that this process can be very long if there are many inverse locators in this section
 							// To optimize save process in scripts of importation, you can disable this option if is not really necessary
 							$component->update_diffusion_info_propagate_changes = false;
-							// SAVE_TO_DATABASE
-							// Set component to save data but tells section that don save updated section to DDBB for now
-							// No component time machine data will be saved when section saves later
-							// (based on checkbox value 'Save time machine history on import')
-							$component->save_to_database = ((bool)$time_machine_save===true)
-								? true
-								: false;
+
 
 						// conform imported value with every component rules.
 							$conform_import_data_response = $component->conform_import_data($value, $component_tipo);
