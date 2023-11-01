@@ -907,10 +907,38 @@ const render_columns_mapper = async function(self, item) {
 					}
 
 					// update ar_columns_map object
+					const model = e.target.options[e.target.selectedIndex].model
 					ar_columns_map[i].checked	= checkbox_file_selection.checked
 					ar_columns_map[i].map_to	= e.target.value
-					ar_columns_map[i].model		= e.target.options[e.target.selectedIndex].model
+					ar_columns_map[i].model		= model
+
+					// empty container
+						while (mapped_to_options_container.firstChild) {
+							mapped_to_options_container.removeChild(mapped_to_options_container.firstChild);
+						}
+					// delete decimal property
+						delete ar_columns_map[i].decimal
+
+					if(model === 'component_number'){
+						render_decimal_selector({
+							i			: i,
+							container	: mapped_to_options_container
+						})
+					}
 				})
+
+				const mapped_to_options_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'mapped_to_options_container',
+					parent			: target_container
+				})
+
+				if(ar_columns_map[i].model === 'component_number'){
+					render_decimal_selector({
+						i			: i,
+						container	: mapped_to_options_container
+					})
+				}
 
 			// sample_data (search non empty values)
 				let sample_data = ''
