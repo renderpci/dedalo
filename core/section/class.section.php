@@ -338,7 +338,7 @@ class section extends common {
 			// dataframe case, the section doesn't has his own data in DDBB
 			if (   $this->source==='caller_section'
 				&& !empty($this->caller_dataframe)
-				&& strpos($this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
+				&& strpos((string)$this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
 				) {
 
 				// create the section of the caller
