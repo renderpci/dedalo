@@ -7,6 +7,7 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 
 
 
@@ -341,42 +342,36 @@ const next_records = function(self){
 /**
 * EDIT_RELATION
 * Open the relation section selected by the user in the list
+* @param object current_data
+* @return bool
 */
-const edit_relation = function(self, current_data){
+const edit_relation = function(current_data) {
 
 	//get the locator of the related section
 	const section_id	= current_data.section_id
 	const section_tipo	= current_data.section_tipo
 
 	if (typeof section_id=="undefined") {
-		return console.error("[relation_list.edit_relation] Error on find section_id", self.section_id);
+		console.error("[relation_list.edit_relation] Error on find section_id", current_data);
+		return false
 	}
 	if (typeof section_tipo=="undefined") {
-		return console.error("[relation_list.edit_relation] Error on find section_tipo", self.section_tipo);
+		console.error("[relation_list.edit_relation] Error on find section_tipo", current_data);
+		return false
 	}
-	// create the navigation rqo, it will use to open the relation with the row reference
-	const user_navigation_rqo = {
-		caller_id	: self.id,
-		source		: {
-			action			: 'search',
-			model			: 'section',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			mode			: 'edit',
-			lang			: self.lang
-		},
-		sqo : {
-			section_tipo		: [{tipo : section_tipo}],
-			limit				: 1,
-			offset				: 0,
-			filter_by_locators	: [{
-				section_tipo : section_tipo,
-				section_id : section_id
-			}]
-		}
-	}
-	// launch event 'user_navigation' that page is watching
-	event_manager.publish('user_navigation', user_navigation_rqo)
+
+	// open a new window
+		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+			tipo	: section_tipo,
+			id		: section_id,
+			mode	: 'edit',
+			menu	: false
+		})
+		const new_window = open_window({
+			url		: url,
+			name	: 'section_view'
+		})
+
 
 	return true
 }//end edit_relation
