@@ -1099,7 +1099,6 @@ class component_relation_common extends component_common {
 		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
 			$this->propagate_to_observers();
 
-
 		return (int)$section_id;
 	}//end Save
 
