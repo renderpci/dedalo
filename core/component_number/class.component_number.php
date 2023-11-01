@@ -178,6 +178,48 @@ class component_number extends component_common {
 
 
 
+	/*
+	*
+	* STRING_TO_NUMBER
+	* Format the dato into the standard format or the properties format of the current instance of the component
+	*/
+	public function string_to_number( string $string_value ) : int | float | null {
+
+		$properties	= $this->get_properties();
+		$type 		= !empty($properties->type)
+			? $properties->type
+			: 'float';
+		$decimal	= $this->decimal;
+
+		if($decimal===','){
+			$string_value = str_replace('.', '', (string)$string_value);
+			$string_value = str_replace(',', '.', (string)$string_value);
+		}else{
+			$string_value = str_replace(',', '', (string)$string_value);
+		}
+
+		$clean_string_value = preg_replace('/[^.,0-9]/', '', $string_value);
+
+		if($clean_string_value===''){
+			return null;
+		}
+
+		switch ($type ) {
+			case 'int':
+				$number = intval($clean_string_value);
+				break;
+
+			case 'float':
+			default:
+				$number = floatval($clean_string_value);
+				break;
+		}
+
+		return $number;
+	}//end string_to_number
+
+
+
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @return object $query_object
