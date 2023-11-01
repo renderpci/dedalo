@@ -1069,12 +1069,6 @@ class tool_import_dedalo_csv extends tool_common {
 					$updated_rows[] = $section_id;
 				}
 
-			// save. row save . Save edited by components section once per row
-			// note that if $component->save_to_database = false, this action save
-			// whole section and components value, but not generates time_machine record
-			// for every component (based on checkbox value 'Save time machine history on import')
-				$section->Save();
-
 			// Forces collection of any existing garbage cycles
 				$counter++;
 				if ($counter===100) {
