@@ -839,11 +839,18 @@ const render_columns_mapper = async function(self, item) {
 				})
 
 			// target component list selector
+
+				// container
+				const target_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'target_container',
+					parent			: line
+				})
 				const target_select = ui.create_dom_element({
 					element_type	: 'select',
 					class_name		: 'column_select',
 					inner_html		: column_name,
-					parent			: line
+					parent			: target_container
 				})
 				// empty option
 				ui.create_dom_element({
