@@ -1059,8 +1059,20 @@ class tool_import_dedalo_csv extends tool_common {
 										!property_exists($conformed_value, 'dato')) {
 										// Element without dato. Only the dataframe is saved
 									}else{
-										// Always set dato
-										$component->set_dato( $conformed_value );
+
+										// Removed direct call
+										// unified with API calls with changed_data_item object
+											// $component->set_dato( $conformed_value );
+											// $component->observable_dato = ($component->model === 'component_relation_related')
+											// 	? $component->get_dato_with_references()
+											// 	: $conformed_value;
+
+										// added changed data object to set data and observable data
+										$changed_data_item = new stdClass();
+											$changed_data_item->action = 'set_data';
+											$changed_data_item->value = $conformed_value;
+
+										$component->update_data_value($changed_data_item);
 									}
 
 								// Save of course
