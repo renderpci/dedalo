@@ -855,6 +855,7 @@ class tool_import_dedalo_csv extends tool_common {
 						// 	"column_name": "dd197",
 						// 	"checked": true,
 						// 	"map_to": "dd197"
+						// 	"decimal": "."
 						// }
 
 					// excluded columns
@@ -903,6 +904,10 @@ class tool_import_dedalo_csv extends tool_common {
 							$section_tipo,
 							// false // cache
 						);
+
+						if($model_name==='component_number' && isset($column_map->decimal)){
+							$component->decimal = $column_map->decimal;
+						}
 
 						// with_lang_versions
 							$with_lang_versions	= $component->with_lang_versions;
