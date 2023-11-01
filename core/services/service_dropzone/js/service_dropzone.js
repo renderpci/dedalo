@@ -116,8 +116,8 @@ service_dropzone.prototype.build = async function(autoload=false) {
 /**
 * GET_SYSTEM_INFO
 * Call API to obtain useful system info
-* @return object response
-* 	API response
+* @return promise
+*  object response - API response
 */
 const get_system_info = async function() {
 
