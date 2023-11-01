@@ -496,6 +496,8 @@ function get_last_modification_date(string $path, array $allowedExtensions=null,
 /**
 * GET_LAST_MODIFIED_FILE
 * @param string $path
+* @param array $allowed_extensions
+* @param function|null $fn_validate = null
 * @return string|null $last_modified_file
 */
 function get_last_modified_file(string $path, array $allowed_extensions, $fn_validate=null) : ?string {
@@ -503,9 +505,9 @@ function get_last_modified_file(string $path, array $allowed_extensions, $fn_val
 	// path validate
 		if (!is_dir($path)) {
 			debug_log(__METHOD__
-				. " Invalid directory. null is returned " . PHP_EOL
+				. " Ignored invalid directory. null is returned " . PHP_EOL
 				. ' path: ' . to_string($path)
-				, logger::ERROR
+				, logger::WARNING
 			);
 			return null;
 		}
