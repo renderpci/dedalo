@@ -412,8 +412,10 @@ function to_string(mixed $var=null) : string {
 		}else if ( is_string( current($var) ) || is_numeric( current($var) ) ) {
 			if (is_associative($var)) {
 				return json_encode($var, JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
-			}else{
+			}else if (is_array($var)) {
 				return implode('|', $var);
+			}else{
+				dump($var, ' var to_string )))))))))))) ++ '.to_string());
 			}
 		}else if( is_object(current($var)) ) {
 			foreach ($var as $obj) {
