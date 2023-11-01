@@ -178,17 +178,23 @@ class component_number extends component_common {
 
 
 
-	/*
-	*
+	/**
 	* STRING_TO_NUMBER
-	* Format the dato into the standard format or the properties format of the current instance of the component
+	* Parse a string as number
+	* Used to import data from other systems
+	* @param string $string_value
+	* @return number or null $number
 	*/
 	public function string_to_number( string $string_value ) : int | float | null {
 
+		// get the properties of the component, to assign the specific type defined.
+		// by default component_number use float numbers but in some case it can be set to int
 		$properties	= $this->get_properties();
 		$type 		= !empty($properties->type)
 			? $properties->type
 			: 'float';
+		// decimal defines if the string use point '.' or comma ',' as decimal separator
+		// users can define it into the tool_import_csv or other tools interfaces
 		$decimal	= $this->decimal;
 
 		if($decimal===','){
@@ -198,12 +204,18 @@ class component_number extends component_common {
 			$string_value = str_replace(',', '', (string)$string_value);
 		}
 
+		// TODO
+		// exception to scientific notation: 9 x 2^10
+		// this will be set new type and component_number behavior
+
+		// if the string has a letter or other characters, remove it.
 		$clean_string_value = preg_replace('/[^.,0-9]/', '', $string_value);
 
 		if($clean_string_value===''){
 			return null;
 		}
 
+		// parse it into number
 		switch ($type ) {
 			case 'int':
 				$number = intval($clean_string_value);
@@ -455,6 +467,14 @@ class component_number extends component_common {
 	/**
 	* CONFORM_IMPORT_DATA
 	* @param string $import_value
+	* import data format options:
+	* 1 a stringify version of number data, array of numbers:
+	* 	'"[9.76, 10, 0.22]"'
+	* 2 a flat string number:
+	* 	5.87
+	* 	optional the number can had a comma as decimal separator as Spanish or French use
+	* 	5,87
+	* 	in these cases the user need to define it into the tool import interface as it will set as $decimal variable
 	* @param string $column_name
 	* @return object $response
 	*/
@@ -492,6 +512,7 @@ class component_number extends component_common {
 		// convert value
 			$value = $this->string_to_number($import_value);
 
+		// if the value cannot be converted to number show error with the value.
 			if($value === null){
 
 				// log JSON conversion error
