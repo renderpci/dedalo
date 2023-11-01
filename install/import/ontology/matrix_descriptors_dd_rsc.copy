@@ -1190,10 +1190,6 @@ rsc382	Elenco	termino	lg-ita
 rsc382	Listado	termino	lg-spa
 rsc382	Llistat	termino	lg-cat
 rsc382	λίστα	termino	lg-ell
-rsc383	Orden DES	termino	lg-cat
-rsc383	Orden DES	termino	lg-spa
-rsc383	Ordine DES	termino	lg-ita
-rsc383	Σειρά DES	termino	lg-ell
 rsc384	Número de sèrie / revista / col·lecció	termino	lg-cat
 rsc384	Número de serie/ revista/ colección	termino	lg-spa
 rsc384	Numero di serie / rivista / raccolta	termino	lg-ita
@@ -1268,6 +1264,7 @@ rsc400	Supervisor/a tranc¡scripció	termino	lg-cat
 rsc400	Supervisor/a transcripción	termino	lg-spa
 rsc400	Supervisore/a trascrizione	termino	lg-ita
 rsc400	μεταγραφή ποιότητας	termino	lg-ell
+rsc383	typology	termino	lg-spa
 rsc401	Supervisor/a indexación	termino	lg-spa
 rsc401	Supervisore/a indicizzazione	termino	lg-ita
 rsc399	Publicable	termino	lg-cat
@@ -1566,10 +1563,6 @@ rsc489	Elenco	termino	lg-ita
 rsc489	Listado	termino	lg-spa
 rsc489	Llistat	termino	lg-cat
 rsc489	Λίστα	termino	lg-ell
-rsc49	Captada (preproducció)	termino	lg-cat
-rsc49	Captada (preproducción)	termino	lg-spa
-rsc49	Catturata (preproduzione)	termino	lg-ita
-rsc49	Λεζάντες (προπαραγωγής)	termino	lg-ell
 rsc490	Nombre documento	termino	lg-cat
 rsc490	Numero documento	termino	lg-ita
 rsc490	Número documento	termino	lg-spa
@@ -1637,6 +1630,9 @@ rsc505	Relaciones	termino	lg-spa
 rsc505	Relations	termino	lg-cat
 rsc505	Relazioni	termino	lg-ita
 rsc506	Darrers canvis	termino	lg-cat
+rsc49	Preproducció	termino	lg-cat
+rsc49	Preproduzione	termino	lg-ita
+rsc49	προπαραγωγής	termino	lg-ell
 rsc506	Ultime modifiche	termino	lg-ita
 rsc506	Últimos cambios	termino	lg-spa
 rsc506	Τελευταίες αλλαγές	termino	lg-ell
@@ -3425,7 +3421,6 @@ rsc38	Beschreibung	termino	lg-deu
 rsc380	Beschreibung	termino	lg-deu
 rsc381	Projekt	termino	lg-deu
 rsc382	Liste	termino	lg-deu
-rsc383	DES-Ordnung	termino	lg-deu
 rsc384	Serien- / Zeitschriften- / Sammelbandnummer	termino	lg-deu
 rsc385	DOI	termino	lg-deu
 rsc386	Sammlungscode	termino	lg-deu
@@ -3520,7 +3515,6 @@ rsc486	Neu	termino	lg-deu
 rsc487	Löschen	termino	lg-deu
 rsc488	Projekt	termino	lg-deu
 rsc489	Liste	termino	lg-deu
-rsc49	Erfasst (Prepoduction)	termino	lg-deu
 rsc490	Dokumentnummer	termino	lg-deu
 rsc491	Neu	termino	lg-deu
 rsc492	Projekt	termino	lg-deu
@@ -4056,7 +4050,6 @@ rsc45	Place of capture	termino	lg-eng
 rsc46	Municipality	termino	lg-eng
 rsc47	Courtesy copy	termino	lg-eng
 rsc48	Quality management interviewing	termino	lg-eng
-rsc49	Caption (preproduction)	termino	lg-eng
 rsc50	Interviewer	termino	lg-eng
 rsc52	Photographer	termino	lg-eng
 rsc53	Observations of the capture	termino	lg-eng
@@ -4106,6 +4099,7 @@ rsc95	Job Category / Title	termino	lg-eng
 rsc93	Sex	termino	lg-eng
 rsc20	Publishable	termino	lg-eng
 rsc32	File options	termino	lg-eng
+rsc49	Preproduction	termino	lg-eng
 rsc97	Image rights	termino	lg-eng
 rsc98	Project	termino	lg-eng
 rsc99	Observations	termino	lg-eng
@@ -4368,7 +4362,6 @@ rsc379	Title	termino	lg-eng
 rsc380	Description	termino	lg-eng
 rsc381	Project	termino	lg-eng
 rsc382	List	termino	lg-eng
-rsc383	Order DES	termino	lg-eng
 rsc385	DOI	termino	lg-eng
 rsc386	Collection code	termino	lg-eng
 rsc387	Descriptors	termino	lg-eng
@@ -5286,7 +5279,6 @@ rsc38	Description	termino	lg-fra
 rsc380	Description	termino	lg-fra
 rsc381	Projet	termino	lg-fra
 rsc382	Liste	termino	lg-fra
-rsc383	Ordre DES	termino	lg-fra
 rsc384	Numéro de série/ de magazine/ de collection	termino	lg-fra
 rsc385	DOI	termino	lg-fra
 rsc386	Code de collection	termino	lg-fra
@@ -5384,7 +5376,6 @@ rsc486	Nouveau	termino	lg-fra
 rsc487	Supprimer	termino	lg-fra
 rsc488	Projet	termino	lg-fra
 rsc489	Liste	termino	lg-fra
-rsc49	Capturé (pré-production)	termino	lg-fra
 rsc490	Numéro du document	termino	lg-fra
 rsc491	Nouveau	termino	lg-fra
 rsc492	Projet	termino	lg-fra
@@ -6133,7 +6124,6 @@ rsc44	تاريخ الالتقاط	termino	lg-ara
 rsc45	مكان الالتقاط	termino	lg-ara
 rsc46	البلدية	termino	lg-ara
 rsc53	ملاحظات الالتقاط	termino	lg-ara
-rsc49	تسمية توضيحية (مرحلة ما قبل الإنتاج)	termino	lg-ara
 rsc52	مصور فوتوغرافي	termino	lg-ara
 rsc50	المحاور	termino	lg-ara
 rsc51	مسجل الكاميرا	termino	lg-ara
@@ -6186,6 +6176,7 @@ rsc1074	جديد	termino	lg-ara
 rsc203	الأفراد والجماعات والمجتمعات	termino	lg-ara
 rsc856	وثيقة المتجهات	termino	lg-ara
 rsc855	المتجه	termino	lg-ara
+rsc49	تسمية توضيحية	termino	lg-ara
 rsc197	الأشخاص قيد الدراسة	termino	lg-ara
 rsc194	الناس	termino	lg-ara
 rsc167	سمعي بصري	termino	lg-ara
@@ -6253,3 +6244,38 @@ rsc1135	Figura	termino	lg-cat
 rsc1135	Abbildung	termino	lg-deu
 rsc1135	Figura	termino	lg-ita
 rsc1135	Chiffre	termino	lg-fra
+rsc49	Preproducción	termino	lg-spa
+rsc49	Prepoduction	termino	lg-deu
+rsc49	Pré-production	termino	lg-fra
+rsc1136	Edición	termino	lg-spa
+rsc1137	Supervisor/a edición	termino	lg-spa
+rsc1138	Fecha	termino	lg-spa
+rsc1139	Estado	termino	lg-spa
+rsc1140	Validación	termino	lg-spa
+rsc1136	Edition	termino	lg-eng
+rsc1136	Édition	termino	lg-fra
+rsc1136	Edició	termino	lg-cat
+rsc1136	Edizione	termino	lg-ita
+rsc1136	Ausgabe	termino	lg-deu
+rsc1137	Supervisor/in Ausgabe	termino	lg-deu
+rsc1137	Supervisor/a edició	termino	lg-cat
+rsc1137	Editing Supervisor	termino	lg-eng
+rsc1137	Supervisore edizione	termino	lg-ita
+rsc1137	Superviseur de l'édition	termino	lg-fra
+rsc1138	Data	termino	lg-cat
+rsc1138	Datum	termino	lg-deu
+rsc1138	Date	termino	lg-eng
+rsc1138	تاريخ	termino	lg-ara
+rsc1138	Date	termino	lg-fra
+rsc1139	Statut	termino	lg-fra
+rsc1139	Condizione	termino	lg-ita
+rsc1139	Estat	termino	lg-cat
+rsc1139	Status	termino	lg-eng
+rsc1139	Zustand	termino	lg-deu
+rsc1140	Validació	termino	lg-cat
+rsc1140	Validation	termino	lg-fra
+rsc1140	Convalida	termino	lg-ita
+rsc1140	Validierung	termino	lg-deu
+rsc1140	Validation	termino	lg-eng
+rsc1140	تصديق	termino	lg-ara
+rsc1141	typology_data	termino	lg-spa
