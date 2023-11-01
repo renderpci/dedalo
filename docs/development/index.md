@@ -173,46 +173,112 @@ Dédalo use snake case for the name of methods, classes, variables, or any other
         import {push_browser_history} from '../../common/js/common.js';
         ```
 
-
 ## GIT commit style
 
-Using Conventional Commits v1.0 https://www.conventionalcommits.org/en/v1.0.0/  
+Since v6 Dédalo follows the conventional method [Commits v1.0](https://www.conventionalcommits.org/en/v1.0.0/) for commits.
 
 Use the imperative verb form to ensure that possible verbs used in commits, such as "fixed" or "updated", are written in the correct verb tense.  
-Apply the formula: “If applied, my commit will…”   
+Apply the formula: “If applied, my commit will…”
 example: “If applied, my commit will (INSERT COMMIT MESSAGE TEXT)”
 
 The prefixes to be used in the commits are as follows:
 
+### build
 
-### `feat`: Short for "feature," this prefix is used when introducing a new feature or functionality to the codebase.
-    For example:
-    feat: Add user authentication feature
+The commit alters the build system or external dependencies of the product (adding, removing, or upgrading dependencies).
 
-### `chore`: This prefix is used for commits related to maintenance tasks, build processes, or other non-user-facing changes. It typically includes tasks that don't directly impact the functionality but are necessary for the project's development and maintenance. 
-    For example:
-    chore: Update dependencies
+### change
 
-### `fix`: Used when addressing a bug or issue in the codebase. This prefix indicates that the commit contains a fix for a problem.
-    For example:
-    fix: Correct calculation in revenue calculation
-    
-### `docs`: Used when making changes to documentation, including comments in the code, README files, or any other documentation associated with the project. 
-    For example:
-    docs: Update API documentation
-    
-### `style`: This prefix is used for code style changes, such as formatting, indentation, and whitespace adjustments. It's important to separate style changes from functional changes for better clarity.
-    For example:
-    style: Format code according to style guide
-    
-### `refactor`: Used when making changes to the codebase that do not introduce new features or fix issues but involve restructuring or optimizing existing code.
-    For example:
-    refactor: Reorganize folder structure
-    
-### `test`: Used when adding or modifying tests for the codebase, including unit tests, integration tests, and other forms of testing.
-    For example:
-    test: Add unit tests for user authentication
-    
-### `perf`: Short for "performance," this prefix is used when making changes aimed at improving the performance of the codebase.
-    For example:
-    perf: Optimize database queries for faster response times
+The commit changes the implementation of an existing feature.
+
+### chore
+
+The commit includes a technical or preventative maintenance task that is necessary for managing the product or the repository, but it is not tied to any specific feature or user story. For example, releasing the product can be considered a chore. Regenerating generated code that must be included in the repository could be a chore.
+
+`chore:` This prefix is used for commits related to maintenance tasks, build processes, or other non-user-facing changes. It typically includes tasks that don't directly impact the functionality but are necessary for the project's development and maintenance.
+
+For example:
+> chore: Update dependencies
+
+### ci
+
+The commit makes changes to continuous integration or continuous delivery scripts or configuration files.
+
+### deprecate
+
+The commit deprecates existing functionality, but does not remove it from the product. For example, sometimes older public APIs may get deprecated because newer, more efficient APIs are available. Removing the APIs could break existing integrations so the APIs may be marked as deprecated in order to encourage the integration developers to migrate to the newer APIs while also giving them time before removing older functionality.
+
+### docs
+
+The commit adds, updates, or revises documentation that is stored in the repository.
+
+`docs:` Used when making changes to documentation, including comments in the code, README files, or any other documentation associated with the project.
+
+For example:
+>docs: Update API documentation
+
+### feat
+
+The commit implements a new feature for the application.
+
+`feat:` used as short for "feature," this prefix is used when introducing a new feature or functionality to the codebase.
+
+For example:
+> feat: Add user authentication feature
+
+### fix
+
+The commit fixes a defect in the application.
+
+`fix:` Used when addressing a bug or issue in the codebase. This prefix indicates that the commit contains a fix for a problem.
+
+For example:
+>fix: Correct calculation in revenue calculation
+
+### perf
+
+The commit improves the performance of algorithms or general execution time of the product, but does not fundamentally change an existing feature.
+
+`perf:` Short for "performance," this prefix is used when making changes aimed at improving the performance of the codebase.
+
+For example:
+>perf: Optimize database queries for faster response times
+
+### refactor
+
+The commit refactors existing code in the product, but does not alter or change existing behavior in the product.
+
+`refactor:` Used when making changes to the codebase that do not introduce new features or fix issues but involve restructuring or optimizing existing code.
+
+For example:
+>refactor: Reorganize folder structure
+
+### remove
+
+The commit removes a feature from the product. Typically features are deprecated first for a period of time before being removed. Removing a feature from the product may be considered a breaking change that will require a major version number increment.
+
+### revert
+
+The commit reverts one or more commits that were previously included in the product, but were accidentally merged or serious issues were discovered that required their removal from the main branch.
+
+### security
+
+The commit improves the security of the product or resolves a security issue that has been reported.
+
+### style
+
+The commit updates or reformats the style of the source code, but does not otherwise change the product implementation.
+
+`style:` This prefix is used for code style changes, such as formatting, indentation, and whitespace adjustments. It's important to separate style changes from functional changes for better clarity.
+
+For example:
+>style: Format code according to style guide
+
+### test
+
+The commit enhances, adds to, revised, or otherwise changes the suite of automated tests for the product.
+
+`test:` Used when adding or modifying tests for the codebase, including unit tests, integration tests, and other forms of testing.
+
+For example:
+>test: Add unit tests for user authentication

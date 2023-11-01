@@ -8,6 +8,7 @@
 * example multiple : [6.12,88]
 * Default type : float
 * Default precision: 2
+* Default decimal separator: . used as $decimal public variable
 * Properties can define the type and precision as "type":"float", "precision":4
 * Notes: Data storage format does not support internationalization for numbers the float point is always . and does not use thousand separator
 * but is possible format it in render->view to accommodate to specific formats as Spanish format 1.234,56 from data 1234.56
@@ -15,6 +16,7 @@
 class component_number extends component_common {
 
 
+	public $decimal = '.';
 
 	/**
 	* __CONSTRUCT
@@ -173,6 +175,60 @@ class component_number extends component_common {
 
 		return (string)$string_value;
 	}//end number_to_string
+
+
+
+	/**
+	* STRING_TO_NUMBER
+	* Parse a string as number
+	* Used to import data from other systems
+	* @param string $string_value
+	* @return number or null $number
+	*/
+	public function string_to_number( string $string_value ) : int | float | null {
+
+		// get the properties of the component, to assign the specific type defined.
+		// by default component_number use float numbers but in some case it can be set to int
+		$properties	= $this->get_properties();
+		$type 		= !empty($properties->type)
+			? $properties->type
+			: 'float';
+		// decimal defines if the string use point '.' or comma ',' as decimal separator
+		// users can define it into the tool_import_csv or other tools interfaces
+		$decimal	= $this->decimal;
+
+		if($decimal===','){
+			$string_value = str_replace('.', '', (string)$string_value);
+			$string_value = str_replace(',', '.', (string)$string_value);
+		}else{
+			$string_value = str_replace(',', '', (string)$string_value);
+		}
+
+		// TODO
+		// exception to scientific notation: 9 x 2^10
+		// this will be set new type and component_number behavior
+
+		// if the string has a letter or other characters, remove it.
+		$clean_string_value = preg_replace('/[^.,0-9]/', '', $string_value);
+
+		if($clean_string_value===''){
+			return null;
+		}
+
+		// parse it into number
+		switch ($type ) {
+			case 'int':
+				$number = intval($clean_string_value);
+				break;
+
+			case 'float':
+			default:
+				$number = floatval($clean_string_value);
+				break;
+		}
+
+		return $number;
+	}//end string_to_number
 
 
 
@@ -406,6 +462,82 @@ class component_number extends component_common {
 		return $response;
 	}//end update_dato_version
 
+
+
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* import data format options:
+	* 1 a stringify version of number data, array of numbers:
+	* 	'"[9.76, 10, 0.22]"'
+	* 2 a flat string number:
+	* 	5.87
+	* 	optional the number can had a comma as decimal separator as Spanish or French use
+	* 	5,87
+	* 	in these cases the user need to define it into the tool import interface as it will set as $decimal variable
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// object | array case
+			// Check if is a JSON string. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and it's not necessary processed
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				$response->result	= $dato_from_json;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// string case (all data become as string)
+			if(empty($import_value) && $import_value !== '0'){
+
+				$response->result	= null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// convert value
+			$value = $this->string_to_number($import_value);
+
+		// if the value cannot be converted to number show error with the value.
+			if($value === null){
+
+				// log JSON conversion error
+				debug_log(__METHOD__
+					."import value is not numeric: ".PHP_EOL
+					."value: ".$import_value.PHP_EOL
+					."decimal: ".$this->decimal
+					, logger::ERROR
+				);
+
+				$failed = new stdClass();
+					$failed->section_id		= $this->section_id;
+					$failed->data			= stripslashes( $import_value );
+					$failed->component_tipo	= $this->get_tipo();
+					$failed->msg			= 'IGNORED: malformed data '. to_string($import_value);
+				$response->errors[] = $failed;
+
+				return $response;
+			}
+
+		$response->result	= $value;
+		$response->msg		= 'OK';
+
+		return $response;
+	}//end conform_import_data
 
 
 }//end class component_number
