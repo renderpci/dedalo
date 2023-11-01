@@ -939,6 +939,50 @@ const render_columns_mapper = async function(self, item) {
 		}
 
 
+		function render_decimal_selector(options){
+
+			const i			= options.i
+			const container	= options.container
+
+			const column_name	= self.get_tool_label('decimal') || 'Decimal'
+			const point_name	= self.get_tool_label('point_name') || 'Point'
+			const comma_name	= self.get_tool_label('comma_name') || 'Comma'
+
+			const decimal_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'decimal_label',
+				inner_html 		: column_name,
+				parent			: container
+			})
+
+			const decimal_select = ui.create_dom_element({
+				element_type	: 'select',
+				class_name		: 'decimal_select',
+				parent			: container
+			})
+			// empty option
+			const point_option = ui.create_dom_element({
+				element_type	: 'option',
+				value			: '.',
+				inner_html 		: point_name + ': .',
+				parent			: decimal_select
+			})
+			point_option.checked = true
+
+			ui.create_dom_element({
+				element_type	: 'option',
+				value			: ',',
+				inner_html 		: comma_name + ': ,',
+				parent			: decimal_select
+			})
+			ar_columns_map[i].decimal	= decimal_select.value
+
+			decimal_select.addEventListener('change', function(e) {
+				ar_columns_map[i].decimal	= decimal_select.value
+			})
+		}
+
+
 	return fragment
 }//end render_columns_mapper
 
