@@ -843,6 +843,15 @@ class tool_import_dedalo_csv extends tool_common {
 				);
 				$create_record = $section->forced_create_record();
 
+			// SAVE_TIME_MACHINE
+				// Set section to save data for time machine
+				// No component time machine data will be saved when section saves later
+				// (based on checkbox value 'Save time machine history on import')
+				$section->save_tm = ((bool)$time_machine_save===true)
+					? true
+					: false;
+
+
 			// Iterate fields/columns
 				foreach ($columns as $key => $value) {
 
