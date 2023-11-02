@@ -223,15 +223,13 @@ final class ImageMagick {
 
 
 	/**
-	* CREATE ALTERNATE VIDEO OR AUDIO VERSION WITH RECEIVED SETTINGS
-	* @param string $source_file
-	* @param string $target_file
-	* @param string $flags = ''
-	*
+	* CONVERT
+	* Creates alternate video or audio version with received settings
+	* @param object $options
 	* @return string|bool $result
 	*	Terminal command response
 	*/
-	public static function convert( object $options) : string|bool {
+	public static function convert(object $options) : string|bool {
 
 		$source_file	= $options->source_file; // file to be processed, mandatory.
 		$ar_layers		= $options->ar_layers ?? null; // in image is the layer of the image, by default all (false), in pdf is the number of page/s, by default all (false).
@@ -290,7 +288,9 @@ final class ImageMagick {
 			$ar_valid_layers = $ar_layers;
 		}
 
-		$source_file_with_layers = '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
+		$source_file_with_layers = empty($ar_valid_layers)
+			? '"'. $source_file . '"'
+			: '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
 
 		// begin flags : Command flags before source file.
 			$begin_flags = '';

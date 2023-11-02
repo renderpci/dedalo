@@ -714,12 +714,16 @@ class login extends common {
 
 		// backup all
 			if( DEDALO_BACKUP_ON_LOGIN ) {
-				# Close script session
-				session_write_close();
-				$backup_secuence_response	= backup::init_backup_secuence($user_id, $username, false);
-				$backup_info				= $backup_secuence_response->msg;
+
+				$make_backup_response = backup::make_backup((object)[
+					'user_id'					=> $user_id,
+					'username'					=> $username,
+					'skip_backup_time_range'	=> false
+				]);
+				$backup_info = $make_backup_response->msg;
+
 			}else{
-				$backup_info				= 'Deactivated "on login backup" for this domain';
+				$backup_info = 'Deactivated "on login backup" for this domain';
 			}
 
 		// remove lock_components elements

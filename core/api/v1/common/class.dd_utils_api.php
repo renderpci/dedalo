@@ -724,7 +724,7 @@ final class dd_utils_api {
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
 					if( !is_dir($tmp_dir) ) {
-						if(!mkdir($tmp_dir, 0700, true)) {
+						if(!mkdir($tmp_dir, 0750, true)) {
 							$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
 							debug_log(__METHOD__
 								. " $response->msg" .PHP_EOL
@@ -1395,50 +1395,56 @@ final class dd_utils_api {
 	}//end get_known_mime_types
 
 
+
 	/**
 	* CREATE_THUMBNAIL
 	* @param object $options
-	* @return sting | null, url of the thumbnail file
+	* @return string $thumbnail_url
 	*/
-	private static function create_thumbnail(object $options) : ?string {
+	private static function create_thumbnail(object $options) : string {
 
-		$tmp_dir		= $options->tmp_dir;
-		$name			= $options->name;
-		$target_path	= $options->target_path;
-		$key_dir		= $options->key_dir;
-		$user_id		= $options->user_id;
+		// options
+			$tmp_dir		= $options->tmp_dir;
+			$name			= $options->name;
+			$target_path	= $options->target_path;
+			$key_dir		= $options->key_dir;
+			$user_id		= $options->user_id;
 
-		$file_type		= mime_content_type($target_path);
+		// thumbnail_file
+			$pathinfo		= pathinfo($name);
+			$filename		= $pathinfo['filename'];
+			$thumbnail_file	= $tmp_dir . '/thumbnail/' . $filename . '.jpg';
 
-		$pathinfo	= pathinfo($name);
-		$filename = $pathinfo['filename'];
-		$thumbnail_file	= $tmp_dir. '/thumbnail/' . $filename . '.jpg';
-		switch ($file_type) {
-			case 'application/pdf':
-				$thumb_pdf_options = new stdClass();
-					$thumb_pdf_options->source_file	= $target_path;
-					$thumb_pdf_options->ar_layers	= [0];
-					$thumb_pdf_options->target_file	= $thumbnail_file;
-					$thumb_pdf_options->density		= 150;
-					$thumb_pdf_options->antialias	= true;
-					$thumb_pdf_options->quality		= 75;
-					$thumb_pdf_options->resize		= '12.5%';
+		// convert based on type
+			$file_type = mime_content_type($target_path);
+			switch ($file_type) {
 
-				ImageMagick::convert($thumb_pdf_options);
-				break;
+				case 'application/pdf':
+					$thumb_pdf_options = new stdClass();
+						$thumb_pdf_options->source_file	= $target_path;
+						$thumb_pdf_options->ar_layers	= [0];
+						$thumb_pdf_options->target_file	= $thumbnail_file;
+						$thumb_pdf_options->density		= 150;
+						$thumb_pdf_options->antialias	= true;
+						$thumb_pdf_options->quality		= 75;
+						$thumb_pdf_options->resize		= '12.5%';
+					ImageMagick::convert($thumb_pdf_options);
+					break;
 
-		 	case 'image/jpeg':
-		 	default:
-		 	$thumb_image_options = new stdClass();
-				$thumb_image_options->source_file = $target_path;
-				$thumb_image_options->target_file = $thumbnail_file;
-				$thumb_image_options->thumbnail = true;
+				case 'image/jpeg':
+				default:
+					ImageMagick::convert((object)[
+						'source_file'	=> $target_path,
+						'target_file'	=> $thumbnail_file,
+						'thumbnail'		=> true
+					]);
+						dump($target_path, ' )))))))) source_file ++ '.to_string());
+						dump($thumbnail_file, ' )))))))) target_file thumbnail_file ++ '.to_string());
+					break;
+			}
 
-				ImageMagick::convert($thumb_image_options);
-				break;
-		 }
+		$thumbnail_url = DEDALO_UPLOAD_TMP_URL .'/'. $user_id .'/'. $key_dir .'/thumbnail/'. $filename . '.jpg';
 
-		$thumbnail_url = DEDALO_UPLOAD_TMP_URL.'/'. $user_id . '/' . $key_dir . '/thumbnail/' . $filename . '.jpg';
 
 		return $thumbnail_url;
 	}//end create_thumbnail

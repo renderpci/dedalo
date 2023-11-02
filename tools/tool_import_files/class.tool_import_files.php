@@ -125,23 +125,25 @@ class tool_import_files extends tool_common {
 				// add file
 					$add_file = $component->add_file($add_file_options);
 					if ($add_file->result===false) {
-						$response->msg .= $add_file->msg;
-						return $response;
+						// $response->msg .= $add_file->msg;
+						// return $response;
+						return false;
 					}
 
 				// post processing file (add_file returns final renamed file with path info)
 					$process_file = $component->process_uploaded_file($add_file->ready);
 					if ($process_file->result===false) {
-						$response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
-						return $response;
+						// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
+						// return $response;
+						return false;
 					}
 
 				// Delete the thumbnail copy
 					$user_id		= get_user_id();
 					$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
 
-					$thumbnail_name = pathinfo($add_file_options->name, PATHINFO_FILENAME);
-					$original_file_thumb = $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
+					$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
+					$original_file_thumb	= $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
 
 					if (file_exists($original_file_thumb)) {
 						if(!unlink($original_file_thumb)){
@@ -528,7 +530,7 @@ class tool_import_files extends tool_common {
 							? $section_id
 							: $target_section_id;
 
-						$component	= component_common::get_instance(
+						$component = component_common::get_instance(
 							$model,
 							$ddo->tipo,
 							$destination_section_id,

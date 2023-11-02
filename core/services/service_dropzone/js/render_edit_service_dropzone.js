@@ -27,6 +27,7 @@ export const render_edit_service_dropzone = function() {
 /**
 * EDIT
 * Render node for use like button
+* @param object options
 * @return HTMLElement wrapper
 */
 render_edit_service_dropzone.prototype.edit = async function (options) {
@@ -59,6 +60,7 @@ render_edit_service_dropzone.prototype.edit = async function (options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 export const get_content_data = async function(self) {
@@ -93,12 +95,12 @@ export const get_content_data = async function(self) {
 /**
 * RENDER_INFO
 * @param object self
-* @return HTMLElement info
+* @return HTMLElement info_container
 */
 export const render_info = function(self) {
 
-	// container info
-		const info = ui.create_dom_element({
+	// info_container
+		const info_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_container '
 		})
@@ -107,12 +109,12 @@ export const render_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Caller',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: self.caller.model,
-			parent			: info
+			parent			: info_container
 		})
 
 	// target quality
@@ -123,12 +125,12 @@ export const render_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: 'Target quality',
-				parent			: info
+				parent			: info_container
 			})
 			ui.create_dom_element({
 				element_type	: 'div',
 				inner_html		: target_quality,
-				parent			: info
+				parent			: info_container
 			})
 		}
 
@@ -136,12 +138,12 @@ export const render_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Allowed extensions',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: self.allowed_extensions.join(", "),
-			parent			: info
+			parent			: info_container
 		})
 
 	// max file size upload file size
@@ -149,20 +151,20 @@ export const render_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Max file size',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: (max_mb < 100) ? 'warning' : '',
 			inner_html		: max_mb.toLocaleString() + ' MB',
-			parent			: info
+			parent			: info_container
 		})
 
 	// DEDALO_UPLOAD_SERVICE_CHUNK_FILES
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Chunk files size',
-			parent			: info
+			parent			: info_container
 		})
 		const chunk_text = self.upload_service_chunk_files
 			? self.upload_service_chunk_files + ' MB'
@@ -170,43 +172,43 @@ export const render_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: chunk_text,
-			parent			: info
+			parent			: info_container
 		})
 
 	// sys_get_temp_dir
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'System temp dir',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: self.sys_get_temp_dir,
-			parent			: info
+			parent			: info_container
 		})
 
 	// upload_tmp_dir
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'User upload tmp dir',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: self.upload_tmp_dir,
-			parent			: info
+			parent			: info_container
 		})
 
 	// upload_tmp_perms
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'User upload tmp perms',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: self.upload_tmp_perms,
-			parent			: info
+			parent			: info_container
 		})
 
 	// session_cache_expire
@@ -216,16 +218,16 @@ export const render_info = function(self) {
 		ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: 'Session cache expire',
-			parent			: info
+			parent			: info_container
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html	 	: session_cache_expire + ' [' + self.session_cache_expire.toLocaleString() + ' minutes]',
-			parent 			: info
+			parent 			: info_container
 		})
 
 
-	return info
+	return info_container
 }//end render_info
 
 
@@ -382,6 +384,7 @@ const render_template = async function(self) {
 				const preview_image = ui.create_dom_element({
 					element_type	: 'img',
 					dataset			: {dzThumbnail : ''},
+					class_name		: '_preview_image',
 					parent			: preview_wrapp
 				})
 				// preview_image.dataset.dzThumbnail = ''
@@ -556,16 +559,19 @@ const render_template = async function(self) {
 				key_dir : self.key_dir
 			},
 			renameFile			: function (file) {
-				const files = self.caller.files_data;
-				const { name } = file;
-				if (files.some(file => file.name === name)) {
 
-					const last_dot = name.lastIndexOf('.');
-					// const base_name = name.slice((name.lastIndexOf('.') - 1 >>> 0) + 2);
+				const files		= self.caller.files_data;
+				const { name }	= file; // equivalent to const name = file.name;
+
+				if (files.some(el => el.name === name)) {
+
+					const last_dot			= name.lastIndexOf('.');
+					// const base_name		= name.slice((name.lastIndexOf('.') - 1 >>> 0) + 2);
 					const file_name			= name.substring(0, last_dot);
 					const file_extension	= name.substring(last_dot + 1);
+					const renamed			= file_name + ' ('+ files.length +').' + file_extension;
 
-					return file_name + ' ('+ files.length +').' + file_extension;
+					return renamed
 				}
 
 				return name;

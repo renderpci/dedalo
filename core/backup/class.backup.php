@@ -26,14 +26,17 @@ abstract class backup {
 	* @param bool $skip_backup_time_range = false
 	* @return object $response
 	*/
-	public static function init_backup_secuence(int $user_id, string $username, bool $skip_backup_time_range=false) : object {
+	public static function init_backup_secuence(object $options) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed '.__METHOD__;
+		// options
+			$user_id				= (int)$options->user_id; // int
+			$username				= (string)$options->username; // string
+			$skip_backup_time_range	= $options->skip_backup_time_range ?? false; // bool
 
-		// Force to unlock browser session
-			// session_write_close();
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
@@ -1543,25 +1546,78 @@ abstract class backup {
 
 	/**
 	* MAKE_BACKUP
+	* Exec method init_backup_secuence in an isolated thread
+	* @param object $options = new stdClass()
 	* @return object $response
 	*/
-	public static function make_backup() : object {
+	public static function make_backup(object $options=new stdClass()) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= '';
+		// options
+			$user_id				= $options->user_id ?? $_SESSION['dedalo']['auth']['user_id'];
+			$username				= $options->username ?? $_SESSION['dedalo']['auth']['username'];
+			$skip_backup_time_range	= $options->skip_backup_time_range ?? true;
 
-		$user_id	= $_SESSION['dedalo']['auth']['user_id'];
-		$username	= $_SESSION['dedalo']['auth']['username'];
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-		$response = backup::init_backup_secuence(
-			$user_id,
-			$username,
-			true // bool skip_backup_time_range
-		);
-		#debug_log(__METHOD__."  backup_info: $response->msg ".to_string(), logger::DEBUG);
+		// process_runner way
+			// process_file
+				$process_file = DEDALO_CORE_PATH.'/base/process_runner.php';
 
-		return (object)$response;
+			// server_vars
+				// sh_data
+				$sh_data = [
+					'server' => [
+						'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
+						'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
+						'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
+					],
+					'session_id'	=> session_id(),
+					'user_id'		=> $user_id
+				];
+
+				// params. additional data (options)
+				$params = (object)[
+					'user_id'					=> $user_id,
+					'username'					=> $username,
+					'skip_backup_time_range'	=> $skip_backup_time_range
+				];
+				$data = [
+					'class_name'	=> 'backup',
+					'method_name'	=> 'init_backup_secuence',
+					'params'		=> $params
+				];
+				foreach ($data as $key => $value) {
+					$sh_data[$key] = $value;
+				}
+
+				// server_vars JSON encoded
+				$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+
+			// command
+				$php_command = PHP_BIN_PATH ." $process_file '$server_vars'";
+
+			// final command
+				$command = 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!';
+
+			// debug
+				debug_log(__METHOD__.
+					" ------> COMMAND backup_sequence_with_options: $process_file --------------------------------------------------------:"
+					.PHP_EOL.PHP_EOL. $command .PHP_EOL,
+					logger::DEBUG
+				);
+
+			// exec command
+				$PID = exec($command);
+
+
+		$response->result	= $PID;
+		$response->msg		= 'Making backup in background. PID: ' .to_string($PID);
+
+
+		return $response;
 	}//end make_backup
 
 

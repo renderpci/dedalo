@@ -87,8 +87,10 @@
 			    .publication_items_grid {
 					background-color: #f7f6f6;
 					display: grid;
-					align-content: space-between;
 					grid-template-rows: 2rem 2rem 2rem 2rem 2rem 1fr 2rem auto;
+					gap: 0.66rem;
+					align-content: space-between;
+					// align-items: center;
 					width: fit-content;
 					grid-template-columns: auto 1fr;
 					border-radius: 0.5rem;
@@ -100,8 +102,9 @@
 					margin-bottom: 0.75rem;
 
 					.label, .value {
-						padding: 1rem;
-						padding-bottom: 0px;
+						// padding: 0.5rem;
+						// padding-bottom: 0px;
+						line-height: 1.7rem;
 					}
 
 					.label {
@@ -126,6 +129,48 @@
 						}
 					}
 
+					// .fields_grid {
+					// 	display: grid;
+					// 	grid-template-columns: 1fr 2fr;
+					// }
+
+					.fields_grid_value.label {
+						// border-left: 1px solid @base_color;
+						margin-left: 1rem;
+
+						// &:first {
+						// 	margin-top: 2rem;
+						// 	background-color: #fae600;
+						// }
+					}
+
+					.fields_grid_value.link {
+						cursor: pointer;
+						&:hover {
+							color: darken(@base_color, 50%);
+							font-weight: 400;
+						}
+						&:active {
+							opacity: 0.4;
+						}
+					}
+
+					.value.link {
+						// width: 50%;
+						// background-color: antiquewhite;
+						&:after {
+							right: unset;
+							padding-left: 3.5rem;
+							top: 0.75rem;
+						}
+					}
+
+					.fields_grid_value_obs {
+						line-height: 0.5rem;
+						padding-left: 1.25rem;
+						font-size: 80%;
+						color: #acacac;
+					}
 
 					.container_bottom {
 						position: relative;
