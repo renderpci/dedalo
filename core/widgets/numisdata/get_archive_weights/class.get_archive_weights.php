@@ -64,6 +64,18 @@ class get_archive_weights extends widget_common {
 			$section_tipo_used 		= $component_used->section_tipo;
 
 
+			$component_duplicated = array_reduce($input, function ($carry, $item){
+
+				if ($item->type==='duplicated') {
+					return $item;
+				}
+				return $carry;
+			});
+
+			$component_tipo_duplicated 	= $component_duplicated->component_tipo;
+			$section_tipo_duplicated 	= $component_duplicated->section_tipo;
+
+
 			$component_data_weights = array_reduce($input, function ($carry, $item){
 
 				if ($item->type==='data_weights') {
@@ -108,6 +120,22 @@ class get_archive_weights extends widget_common {
 					$used_dato = $used->get_dato();
 
 					if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
+
+
+					$duplicated_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_duplicated,true); // Expected portal
+					$duplicated				= component_common::get_instance(
+						$duplicated_modelo_name,
+						$component_tipo_duplicated,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
+
+					$duplicated_dato = $duplicated->get_dato();
+
+					if (!empty($duplicated_dato) && $duplicated_dato[0]->section_id==='2') continue;
+
 
 					//weights
 					$data_weights_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
