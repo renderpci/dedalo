@@ -39,7 +39,14 @@ class component_number extends component_common {
 		$dato = parent::get_dato();
 
 		$format_dato = [];
+		$count = is_array($dato)
+			? count($dato)
+			: 0;
+
 		foreach ((array)$dato as $key => $value) {
+			if($count === 1 && $value === null){
+				continue;
+			}
 			$format_dato[] = $this->set_format_form_type($value);
 		}
 
