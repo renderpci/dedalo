@@ -7,6 +7,7 @@
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {object_to_url_vars} from '../../../core/common/js/utils/index.js'
 
 
 
@@ -335,18 +336,94 @@ export const render_publication_items = function(self) {
 				})
 
 			// fields
+
 				const fields_label = ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: get_label.fields || 'Fields',
 					class_name		: 'label',
 					parent			: publication_items_grid
 				})
-				const fields_value = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: data_item.fields.join(', '),
-					class_name		: 'value light',
-					parent			: publication_items_grid
-				})
+				if (data_item.table_fields_info && data_item.table_fields_info.length>0) {
+					const fields_value = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value link icon_arrow',
+						inner_html		: get_label.show || 'Show',
+						parent			: publication_items_grid
+					})
+					fields_value.addEventListener('click', function(e) {
+						ar_fields_nodes.map(el => {
+							el.classList.toggle('hide')
+						})
+						this.classList.toggle('up')
+					})
+
+					// table_fields_info
+					const ar_fields_nodes = []
+					const table_fields_info_length = data_item.table_fields_info.length
+					for (let i = 0; i < table_fields_info_length; i++) {
+
+						const item = data_item.table_fields_info[i]
+
+						// field (MySQL target)
+						const field_node = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: item.label,
+							class_name		: 'fields_grid_value label hide',
+							parent			: publication_items_grid
+						})
+						ar_fields_nodes.push(field_node)
+
+						// related (Dédalo source)
+						const related_item = ui.create_dom_element({
+							element_type	: 'div',
+							inner_html		: item.related_label,
+							class_name		: 'fields_grid_value label link hide',
+							title			: item.related_tipo + ' - ' + item.related_model,
+							parent			: publication_items_grid
+						})
+						ar_fields_nodes.push(related_item)
+						related_item.addEventListener('click', function(e) {
+							e.stopPropagation()
+							const tipo			= item.related_tipo
+							const url_vars		= {
+								modo			: 'tesauro_edit',
+								terminoID		: item.related_tipo,
+								terminoIDlist	: item.related_tipo,
+							}
+							const url			= DEDALO_CORE_URL + '/ontology/dd_list.php?' + object_to_url_vars(url_vars)
+							const window_width	= 1001
+							const screen_width	= window.screen.width
+							const screen_height	= window.screen.height
+							window.docu_window	= window.open(
+								url,
+								'docu_window',
+								`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
+							)
+						})
+
+						const model_node = ui.create_dom_element({
+							element_type	: 'span',
+							inner_html		: item.model,
+							class_name		: 'fields_grid_value_obs label light hide',
+							parent			: publication_items_grid
+						})
+						ar_fields_nodes.push(model_node)
+						const related_info_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'fields_grid_value_obs label light hide',
+							inner_html		: item.related_tipo + ' | ' + item.related_model,
+							parent			: publication_items_grid
+						})
+						ar_fields_nodes.push(related_info_node)
+					}
+				}else{
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'value',
+						inner_html		: 'not used',
+						parent			: publication_items_grid
+					})
+				}
 
 			// connection_status
 				const connection_status_label = ui.create_dom_element({
