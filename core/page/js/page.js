@@ -229,6 +229,9 @@ page.prototype.init = async function(options) {
 									const url_vars = url_vars_to_object(location.search)
 										  url_vars.tipo = current_tipo
 										  url_vars.mode = source.mode
+									if(source.mode==='list' && url_vars.id){
+										delete url_vars.id
+									}
 									const url = '?' + object_to_url_vars(url_vars)
 
 							// browser navigation update
