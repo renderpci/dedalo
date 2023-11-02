@@ -126,8 +126,42 @@ export const render_column_id = function(options) {
 			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
+
+		// Prevent to show the context menu
+		// open new window with the content
+		// if user has alt pressed, open new tab
+		button_edit.addEventListener("contextmenu", (e) => {
+			e.preventDefault();
+
+			// if alt is pressed open new tab instead new window
+			const features = e.altKey===true
+				? 'new_tab'
+				: null
+
+			// open a new window
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+				tipo			: section_tipo,
+				section_tipo	: section_tipo,
+				id				: section_id,
+				mode			: 'edit',
+				session_save	: false, // prevent to overwrite current section session
+				menu			: true
+			})
+
+			const new_window = open_window({
+				url			: url,
+				name		: 'record_view_' + section_id,
+				features	: features
+			})
+		});
 		button_edit.addEventListener('click', function(e){
 			e.stopPropagation()
+
+			// if the user click with right mouse button stop
+				if (e.which == 3 || e.altKey===true) {
+					return
+				}
+
 
 			// user_navigation event
 				// const user_navigation_rqo = {

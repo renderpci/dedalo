@@ -93,7 +93,7 @@ const get_content_data_edit = async function(self) {
 				path 	: '../../../tools/tool_numisdata_order_coins/js/view_coins_mosaic_portal.js'
 			}
 		)
-
+		self.coins.show_interface.button_external = false
 		const coins_node = await self.coins.render()
 		left_container.appendChild(coins_node)
 
@@ -318,6 +318,8 @@ const get_ordered_coins = async function(self){
 
 	await self.ordered_coins.destroy(false, true, true) // instance=false, delete_dependencies=true, remove_dom=true
 	await self.ordered_coins.build(true)
+	self.ordered_coins.show_interface.button_add = true
+	self.ordered_coins.show_interface.show_autocomplete = false
 	const ordered_coins_node = await self.ordered_coins.render()
 	coins_container.appendChild(ordered_coins_node)
 
