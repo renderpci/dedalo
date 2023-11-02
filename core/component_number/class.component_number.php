@@ -122,10 +122,10 @@ class component_number extends component_common {
 	* SET_FORMAT_FORM_TYPE
 	* Format the dato into the standard format or the properties format of the current instance of the component
 	*/
-	public function set_format_form_type( $dato_value ) {
+	public function set_format_form_type( $dato_value ) : int | float | null {
 
 		if($dato_value===null || empty($dato_value)){
-			return $dato_value;
+			return null;
 		}
 
 		$properties = $this->get_properties();
