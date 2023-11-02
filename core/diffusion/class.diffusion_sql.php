@@ -1104,6 +1104,7 @@ class diffusion_sql extends diffusion  {
 				# switch cases
 				switch (true) {
 					case (is_object($properties) && property_exists($properties, 'data_to_be_used') && $properties->data_to_be_used==='dato'):
+
 						# VALOR (Unresolved data)
 						switch ($diffusion_model_name) {
 							case 'field_enum':
@@ -1230,18 +1231,23 @@ class diffusion_sql extends diffusion  {
 							// dump($ar_field_data['field_value'], '1 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 						// Fallback to main lang
 						if (empty($ar_field_data['field_value'])) {
-							$main_lang = common::get_main_lang($current_component->get_section_tipo(), $current_component->get_parent());
+							$main_lang = common::get_main_lang($current_component->get_section_tipo(), $current_component->get_section_id());
 								#dump($main_lang, ' main_lang ++ $options->lang: '.to_string($options->lang) ." - section_tipo: ".$current_component->get_section_tipo());
 							$current_component->set_lang($main_lang);
 							$ar_field_data['field_value'] =	$current_component->get_diffusion_value($main_lang, $option_obj);
-								#dump($ar_field_data['field_value'], '2 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
+								// dump($ar_field_data['field_value'], '2 $ar_field_data[field_value] ++ '.$current_component->get_tipo().' '.$current_component->get_lang());
 
 							// Fallback to ALL langs ... last try
 							if (empty($ar_field_data['field_value'])) {
-								foreach (common::get_ar_all_langs() as $current_t_lang) {
+								$ar_all_langs = common::get_ar_all_langs();
+								array_push($ar_all_langs, DEDALO_DATA_NOLAN);
+								foreach ($ar_all_langs as $current_t_lang) {
 								 	$current_component->set_lang($current_t_lang);
-									$ar_field_data['field_value'] =	$current_component->get_diffusion_value($current_t_lang, $option_obj);
-									if (!empty($ar_field_data['field_value'])) break;
+									$current_diffusion_value_try = $current_component->get_diffusion_value($current_t_lang, $option_obj);
+									if (!empty($current_diffusion_value_try)) {
+										$ar_field_data['field_value'] = $current_diffusion_value_try;
+										break;
+									}
 								 }
 							}
 						}
