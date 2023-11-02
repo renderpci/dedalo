@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 4,
-              "hour": 18,
-              "time": 65045269293,
+              "day": 2,
+              "hour": 17,
+              "time": 65047772925,
               "year": 2023,
-              "month": 10,
-              "minute": 21,
-              "second": 33
+              "month": 11,
+              "minute": 48,
+              "second": 45
             }
           }
         ]
@@ -110,7 +110,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -203,7 +203,7 @@
             {
               "lang": "lg-deu",
               "name": "skip_publication_state_check",
-              "value": "Publikationsstatus bei der Veröffentlichung temporär ignorieren "
+              "value": "Publikationsstatus bei der Veröffentlichung temporär ignorieren"
             },
             {
               "lang": "lg-eng",
@@ -223,12 +223,20 @@
           ]
         ]
       }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
     }
   },
   "section_id": 12,
   "created_date": "2022-03-01 20:37:27",
   "section_tipo": "dd1340",
-  "modified_date": "2023-10-04 18:21:33",
+  "modified_date": "2023-11-02 17:48:45",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

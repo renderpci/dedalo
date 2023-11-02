@@ -1109,7 +1109,6 @@ dd139	Filtro	termino	lg-ita
 dd1384	Proyecto	termino	lg-spa
 dd135	Observations	termino	lg-eng
 dd139	Filtro	termino	lg-spa
-dd1390	programación de la web	termino	lg-spa
 dd1391	General	termino	lg-spa
 dd1392	Relaciones	termino	lg-spa
 dd1610	JSON-Ontologie importieren	termino	lg-deu
@@ -1148,7 +1147,6 @@ dd1389	Nœud. CSS	termino	lg-fra
 dd1405	Listado	termino	lg-spa
 dd1406	Imágenes	termino	lg-spa
 dd139	Filtre 	termino	lg-fra
-dd1390	programmation web	termino	lg-fra
 dd1407	Vídeo	termino	lg-spa
 dd1391	Général	termino	lg-fra
 dd1408	PDF	termino	lg-spa
@@ -1218,6 +1216,7 @@ dd1449	Id	termino	lg-spa
 dd145	Adesso	termino	lg-ita
 dd145	Ahora	termino	lg-spa
 dd145	Ara	termino	lg-cat
+dd1390	Programmation web	termino	lg-fra
 dd145	τώρα	termino	lg-ell
 dd1450	toponimo	termino	lg-spa
 dd1451	resolución	termino	lg-spa
@@ -1850,7 +1849,6 @@ dd259	εισάγετε	termino	lg-ell
 dd26	Progetto	termino	lg-ita
 dd26	Projecte	termino	lg-cat
 dd1537	Activité de l'utilisateur	termino	lg-fra
-dd26	proyecto	termino	lg-spa
 dd26	σχέδιο	termino	lg-ell
 dd261	Creare turni di visite	termino	lg-ita
 dd261	Generar turnos de visitas	termino	lg-spa
@@ -2747,7 +2745,6 @@ dd480	άνθρωποι	termino	lg-ell
 dd481	matrix_notes	termino	lg-spa
 dd482	Búsqueda	termino	lg-spa
 dd482	Ricerca	termino	lg-ita
-dd482	Seearch	termino	lg-eng
 dd482	έρευνα	termino	lg-ell
 dd172	Quoi	termino	lg-fra
 dd483	buit	termino	lg-cat
@@ -6890,7 +6887,6 @@ dd20	Layout templates	termino	lg-eng
 dd23	Layout	termino	lg-eng
 dd24	Children	termino	lg-eng
 dd25	List	termino	lg-eng
-dd26	Proyect	termino	lg-eng
 dd27	New	termino	lg-eng
 dd32	Layout	termino	lg-eng
 dd33	Layout	termino	lg-eng
@@ -6985,6 +6981,7 @@ dd1053	Code	termino	lg-fra
 dd1054	Id	termino	lg-fra
 dd1055	Publication	termino	lg-fra
 dd123	View / download PDF	termino	lg-eng
+dd26	Project	termino	lg-eng
 dd184	Calendar	termino	lg-eng
 dd185	Process	termino	lg-eng
 dd186	Filter	termino	lg-eng
@@ -7068,7 +7065,6 @@ dd294	Project	termino	lg-eng
 dd295	Llist	termino	lg-eng
 dd296	Type of standard number	termino	lg-eng
 dd297	New tipology	termino	lg-eng
-dd298	New tiplology	termino	lg-eng
 dd300	Identification	termino	lg-eng
 dd301	Project	termino	lg-eng
 dd304	Entity tipology	termino	lg-eng
@@ -7094,6 +7090,7 @@ dd327	Subtitles	termino	lg-eng
 dd328	New fluid page	termino	lg-eng
 dd329	Administration tool	termino	lg-eng
 dd330	Id	termino	lg-eng
+dd298	New typology	termino	lg-eng
 dd332	Auto-rewind	termino	lg-eng
 dd333	Insert tag	termino	lg-eng
 dd334	Options	termino	lg-eng
@@ -7277,7 +7274,6 @@ dd552	No records found	termino	lg-eng
 dd553	Synchronizing information with the latest version	termino	lg-eng
 dd554	Multi-language	termino	lg-eng
 dd555	dataframes	termino	lg-eng
-dd558	Uncertinity	termino	lg-eng
 dd559	Temporal frame	termino	lg-eng
 dd560	Spatial frame	termino	lg-eng
 dd562	Dataframe active	termino	lg-eng
@@ -7564,7 +7560,6 @@ dd907	Project	termino	lg-eng
 dd908	New	termino	lg-eng
 dd909	Delete	termino	lg-eng
 dd835	yes/no/restricted	termino	lg-eng
-dd911	CSS clases	termino	lg-eng
 dd912	Identification	termino	lg-eng
 dd913	Project	termino	lg-eng
 dd914	Value	termino	lg-eng
@@ -7599,7 +7594,6 @@ dd951	Project	termino	lg-eng
 dd952	Data types list	termino	lg-eng
 dd953	New	termino	lg-eng
 dd954	Delete	termino	lg-eng
-dd955	Deprecation data	termino	lg-eng
 dd957	Original format AV	termino	lg-eng
 dd958	List value	termino	lg-eng
 dd959	Original format AV	termino	lg-eng
@@ -7676,6 +7670,8 @@ dd928	Delete Labor Category / Title	termino	lg-eng
 dd942	Type of association / group	termino	lg-eng
 dd943	Type of association / group	termino	lg-eng
 dd944	Type of association / group	termino	lg-eng
+dd955	Deprecation date	termino	lg-eng
+dd911	CSS classes	termino	lg-eng
 dd1037	Service type	termino	lg-eng
 dd1038	List	termino	lg-eng
 dd1039	New	termino	lg-eng
@@ -7790,6 +7786,7 @@ dd1135	Collection / archive	termino	lg-eng
 dd1196	New Collection / archive	termino	lg-eng
 dd1241	Relation list	termino	lg-eng
 dd1243	Id	termino	lg-eng
+dd1404	Identifying image	termino	lg-eng
 dd1245	List	termino	lg-eng
 dd1246	mode	termino	lg-eng
 dd1247	View	termino	lg-eng
@@ -7876,7 +7873,6 @@ dd1383	Value	termino	lg-eng
 dd1384	Project	termino	lg-eng
 dd1385	List	termino	lg-eng
 dd1389	Node css class	termino	lg-eng
-dd1390	web programing	termino	lg-eng
 dd1391	General	termino	lg-eng
 dd1392	Relations	termino	lg-eng
 dd1393	Page URI path	termino	lg-eng
@@ -7890,7 +7886,6 @@ dd1400	Project	termino	lg-eng
 dd1401	Page heading title	termino	lg-eng
 dd1402	Abstract	termino	lg-eng
 dd1403	Body	termino	lg-eng
-dd1404	Identify image	termino	lg-eng
 dd1405	List	termino	lg-eng
 dd1406	Images	termino	lg-eng
 dd1407	Video	termino	lg-eng
@@ -7904,6 +7899,7 @@ dd1414	Thesaurus list	termino	lg-eng
 dd1415	New	termino	lg-eng
 dd1416	Delete	termino	lg-eng
 dd1244	Layout map (request config) presets	termino	lg-eng
+dd1390	Web programming	termino	lg-eng
 dd1430	Block rendered	termino	lg-eng
 dd1434	Link	termino	lg-eng
 dd1436	Web renderers	termino	lg-eng
@@ -7956,7 +7952,6 @@ dd1713	Map	termino	lg-eng
 dd1714	Image	termino	lg-eng
 dd1715	Code	termino	lg-eng
 dd1716	Title	termino	lg-eng
-dd1718	Acces and permissions	termino	lg-eng
 dd1725	User profile	termino	lg-eng
 dd1726	Apply	termino	lg-eng
 dd1727	Print preview	termino	lg-eng
@@ -7970,6 +7965,7 @@ dd1740	File Path	termino	lg-eng
 dd1744	Please, index from a section of inventory (eg. Oral History) and not from a resource	termino	lg-eng
 dd1745	Name	termino	lg-eng
 dd1746	process	termino	lg-eng
+dd1718	Access and permissions	termino	lg-eng
 dd1504	Is model	termino	lg-eng
 dd1505	External URI	termino	lg-eng
 dd1507	Export hierarchies	termino	lg-eng
@@ -8105,7 +8101,7 @@ dd922	Labor Category / Title	termino	lg-eng
 dd947	New Type of association / group	termino	lg-eng
 dd1132	Collection / archive	termino	lg-eng
 dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
-dd1	Dédalo 2023-10-12T19:36:55+02:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-10-30T19:06:52+01:00 Benimamet	termino	lg-spa
 dd1639	Remove filter	termino	lg-eng
 dd1639	Eliminar filtro	termino	lg-spa
 dd1639	Supprimer le filtre	termino	lg-fra
@@ -8194,3 +8190,7 @@ dd1362	Εκτέλεση	termino	lg-ell
 dd1362	Implementazione	termino	lg-ita
 dd1644	Sviluppatore	termino	lg-ita
 dd1644	Προγραμματιστής	termino	lg-ell
+dd558	Uncertainty	termino	lg-eng
+dd482	Search	termino	lg-eng
+dd26	Proyecto	termino	lg-spa
+dd1390	Programación de la web	termino	lg-spa

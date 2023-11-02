@@ -1328,11 +1328,21 @@ abstract class component_common extends common {
 		// clone the original data to not touch the original in the observable save process
 			$original_data =  $this->get_observable_dato();
 			if(!empty($original_data)){
-				foreach ($original_data as $data) {
-					$copy_data = is_object($data)
-						? clone $data
-						: $data;
-					$observable_dato[] = $copy_data;
+				if (is_array($original_data)) {
+					foreach ($original_data as $data) {
+						$copy_data = is_object($data)
+							? clone $data
+							: $data;
+						$observable_dato[] = $copy_data;
+					}
+				}else{
+					debug_log(__METHOD__
+						. " original data was expected as type array, but another is received " . PHP_EOL
+						. " !! This value will not added to observable_dato " . PHP_EOL
+						. ' type: ' . gettype($original_data) . PHP_EOL
+						. ' original_data: ' . to_string($original_data)
+						, logger::ERROR
+					);
 				}
 			}
 
