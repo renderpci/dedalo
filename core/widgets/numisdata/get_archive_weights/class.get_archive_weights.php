@@ -36,22 +36,21 @@ class get_archive_weights extends widget_common {
 
 			#
 			# PORTAL ROWS
-
 				$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // Expected portal
-				$component_portal = component_common::get_instance($model_name,
-																   $current_component_tipo,
-																   $section_id,
-																   'list',
-																   DEDALO_DATA_NOLAN,
-																   $current_section_tipo);
+				$component_portal = component_common::get_instance(
+					$model_name,
+					$current_component_tipo,
+					$section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$current_section_tipo
+				);
 
 				$component_dato = $component_portal->get_dato();
 
 				if (empty($component_dato)) {
 					return [];
 				}
-
-
 
 			$component_used = array_reduce($input, function ($carry, $item){
 
@@ -63,6 +62,18 @@ class get_archive_weights extends widget_common {
 
 			$component_tipo_used 	= $component_used->component_tipo;
 			$section_tipo_used 		= $component_used->section_tipo;
+
+
+			$component_duplicated = array_reduce($input, function ($carry, $item){
+
+				if ($item->type==='duplicated') {
+					return $item;
+				}
+				return $carry;
+			});
+
+			$component_tipo_duplicated 	= $component_duplicated->component_tipo;
+			$section_tipo_duplicated 	= $component_duplicated->section_tipo;
 
 
 			$component_data_weights = array_reduce($input, function ($carry, $item){
@@ -97,26 +108,45 @@ class get_archive_weights extends widget_common {
 					$section_tipo 	= $current_locator->section_tipo;
 
 					$used_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_used,true); // Expected portal
-					$used 				= component_common::get_instance($used_model_name,
-																   $component_tipo_used,
-																   $section_id,
-																   'list',
-																   DEDALO_DATA_NOLAN,
-																   $section_tipo);
+					$used 				= component_common::get_instance(
+						$used_model_name,
+						$component_tipo_used,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 
 					$used_dato = $used->get_dato();
 
-					#if ($used_dato[0]->section_id==='2') continue;
 					if (empty($used_dato) || $used_dato[0]->section_id==='2') continue;
+
+
+					$duplicated_modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_duplicated,true); // Expected portal
+					$duplicated				= component_common::get_instance(
+						$duplicated_modelo_name,
+						$component_tipo_duplicated,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
+
+					$duplicated_dato = $duplicated->get_dato();
+
+					if (!empty($duplicated_dato) && $duplicated_dato[0]->section_id==='2') continue;
+
 
 					//weights
 					$data_weights_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_weights,true); // Expected portal
-					$data_weights				= component_common::get_instance($data_weights_model_name,
-																   $component_tipo_data_weights,
-																   $section_id,
-																   'list',
-																   DEDALO_DATA_NOLAN,
-																   $section_tipo);
+					$data_weights				= component_common::get_instance(
+						$data_weights_model_name,
+						$component_tipo_data_weights,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 
 					$data_weights_dato 	= $data_weights->get_dato();
 
@@ -126,12 +156,14 @@ class get_archive_weights extends widget_common {
 
 					//diameter
 					$data_diameter_model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo_data_diameter,true); // Expected portal
-					$data_diameter				= component_common::get_instance($data_diameter_model_name,
-																   $component_tipo_data_diameter,
-																   $section_id,
-																   'list',
-																   DEDALO_DATA_NOLAN,
-																   $section_tipo);
+					$data_diameter				= component_common::get_instance(
+						$data_diameter_model_name,
+						$component_tipo_data_diameter,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
 
 					$data_diameter_dato = $data_diameter->get_dato();
 
@@ -148,7 +180,7 @@ class get_archive_weights extends widget_common {
 				}else{
 					debug_log(__METHOD__." Empty weights. Sum ignored in widget get_archive_weights ".to_string(), logger::DEBUG);
 				}
-	
+
 				if (!empty($diameter)) {
 					$media_diameter				= round((array_sum($diameter) / count($diameter)),2);
 					$total_elements_diameter 	= count($diameter);

@@ -8,7 +8,13 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {clone, get_font_fit_size, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {
+		clone,
+		get_font_fit_size,
+		url_vars_to_object,
+		object_to_url_vars,
+		open_window
+	} from '../../common/js/utils/index.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 
@@ -344,8 +350,41 @@ export const render_column_id = function(options) {
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
+
+							// Prevent to show the context menu
+							// open new window with the content
+							// if user has alt pressed, open new tab
+							button_edit.addEventListener("contextmenu", (e) => {
+								e.preventDefault();
+
+								// if alt is pressed open new tab instead new window
+								const features = e.altKey===true
+									? 'new_tab'
+									: null
+
+								// open a new window
+								const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+									tipo			: section_tipo,
+									section_tipo	: section_tipo,
+									id				: section_id,
+									mode			: 'edit',
+									session_save	: false, // prevent to overwrite current section session
+									menu			: true
+								})
+
+								const new_window = open_window({
+									url			: url,
+									name		: 'record_view_' + section_id,
+									features	: features
+								})
+							});
 							button_edit.addEventListener('mousedown', function(e){
 								e.stopPropagation()
+
+								// if the user click with right mouse button stop
+								if (e.which == 3 || e.altKey===true) {
+									return
+								}
 
 								/* MODE USING PAGE user_navigation */
 									// sqo. Note that sqo will be used as request_config.sqo on navigate
