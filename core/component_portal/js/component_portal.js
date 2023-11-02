@@ -1445,7 +1445,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 		const new_window = open_window({
 			url		: url,
-			name	: 'record_view'
+			name	: 'record_view_'+section_tipo+'_'+section_id
 		})
 		new_window.addEventListener('blur', fn_widow_blur)
 		function fn_widow_blur() {
