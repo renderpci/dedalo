@@ -335,6 +335,22 @@ const render_template = async function(self) {
 					dataset			: {dzUploadprogress : ''},
 					parent			: global_progress
 				})
+				//initial state
+				global_progress_bar.style.width = '0%';
+
+			// total bytes
+				const global_total_bytes = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'progress-global_total_bytes',
+					value			: '',
+					parent			: global_progress
+				})
+				const global_total_bytes_sent = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'progress-global_total_bytes_sent',
+					value			: '',
+					parent			: global_progress
+				})
 
 	// grid template used for rows
 		const previews_container = ui.create_dom_element({
@@ -602,6 +618,7 @@ const render_template = async function(self) {
 				previewElement	: file.previewElement,
 				size			: file.size
 			})
+
 		});
 
 	// event removedfile
@@ -640,10 +657,19 @@ const render_template = async function(self) {
 			}
 		});
 
+
 	// event totaluploadprogress. Update the total progress bar
-		current_dropzone.on('totaluploadprogress', function(progress) {
-			// document.querySelector('#total-progress .progress-bar').style.width = progress + '%';
+		current_dropzone.on('totaluploadprogress', function(progress, totalBytes, totalBytesSend) {
+			const finished_files = current_dropzone.getFilesWithStatus(Dropzone.SUCCESS);
+
+			finished_files.forEach(file => {
+				totalBytes		+= file.size;
+				totalBytesSend	+= file.size;
+				progress = totalBytesSend / totalBytes * 100.0;
+			});
+
 			global_progress_bar.style.width = progress + '%';
+			global_total_bytes_sent.textContent = Math.floor(totalBytesSend / 1024 / 1024 );
 		});
 
 	// event sending
@@ -653,6 +679,13 @@ const render_template = async function(self) {
 			global_progress.style.opacity = '1';
 			// And disable the start button
 			file.previewElement.querySelector('.start').setAttribute('disabled', 'disabled');
+
+			let total = 0
+			self.caller.files_data.forEach(file => {
+				total += file.size
+			});
+			const total_bytes = Math.floor(total / 1024 / 1024 );
+			global_total_bytes.textContent = total_bytes + 'MB'
 		});
 
 	// event queuecomplete. Hide the total progress bar when nothing's uploading anymore
