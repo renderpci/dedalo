@@ -109,6 +109,132 @@ class exec_ {
 
 
 	/**
+	* EXEC_SH_FILE_ISOLATED
+	* @param string $file
+	* @return int|null $PID
+	*/
+	public static function exec_sh_file_isolated(object $options) : ?int {
+
+		// options
+			// string process_file. File to manage the data process
+			// Sample: DEDALO_CORE_PATH . '/backup/backup_sequence.php'
+			$process_file	= $options->process_file;
+			// object data. sh data to add as JSON like user_id, etc.
+			$data			= $options->data ?? [];
+			// wait until process ends
+			$wait			= $options->wait ?? false;
+
+		// sh_data
+			$sh_data = [
+				'server' => [
+					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'] ?? 'localhost',
+					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'] ?? '',
+					'SERVER_NAME'	=> $_SERVER['SERVER_NAME'] ?? 'development'
+				]
+			];
+			foreach ($data as $key => $value) {
+				$sh_data[$key] = $value;
+			}
+
+		// server_vars
+			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
+
+		// output
+			$output	= '';
+
+		// wait
+			if ($wait!==true) {
+				// $output	.= '& ';
+				// $output	.= '> /dev/null & echo $!';
+				$output	.= '> /dev/null';
+			}
+
+		// command
+			$command = PHP_BIN_PATH ." $process_file '$server_vars' $output & echo $!";
+
+		// debug
+			debug_log(__METHOD__
+				." ------> COMMAND EXEC_SH_FILE_ISOLATED ------------------------------------------------:" . PHP_EOL
+				.'process_file: ' .$process_file . PHP_EOL
+				.'wait: ' . to_string($wait) . PHP_EOL
+				.'COMMAND: ' . PHP_EOL
+				. $command   . PHP_EOL
+				." -------------------------------------------------------------------------------------------"
+				, logger::DEBUG
+			);
+
+		// exec command
+			$exec_response = exec($command, $exec_output);
+
+		// response check. Could be empty
+			if ( empty($exec_response) ) {
+				debug_log(__METHOD__
+					.' Warning processing file. response is empty: ' . PHP_EOL
+					.' process_file: ' .$process_file . PHP_EOL
+					, logger::WARNING
+				);
+			}
+
+		// PID. Output returns the PID as ["3647"]
+			$PID = isset($exec_output[0])
+				? (int)$exec_output[0]
+				: null;
+
+		// debug
+			debug_log(__METHOD__
+				. ' Exec results: ' . PHP_EOL
+				. " exec_response: " . to_string($exec_response) . PHP_EOL
+				. " exec_output: " . to_string($exec_output) . PHP_EOL
+				. " PID: " . to_string($PID)
+				, logger::DEBUG
+			);
+
+
+		return $PID;
+
+		/*
+		$PID = null;
+
+		try {
+
+			// exec command from sh file
+				$response = exec("sh $file > /dev/null & echo $!", $output);
+
+			// response check. Could be empty
+				if ( empty($response) ) {
+					debug_log(__METHOD__
+						. " Warning processing media file. response is empty: " . PHP_EOL
+						. ' file: ' . $file
+						, logger::WARNING
+					);
+					// throw new Exception("Error Processing media file", 1);
+				}
+
+			// PID. Output returns the PID as ["3647"]
+				$PID = isset($output[0])
+					? (int)$output[0]
+					: null;
+
+			return $PID;
+
+		}catch(Exception $e){
+
+			debug_log(__METHOD__
+				. " Exception: " . PHP_EOL
+				. ' Exception message: ' . $e->getMessage()
+				, logger::ERROR
+			);
+
+			// return ('Exception: '. $e->getMessage(). "\n");
+		}
+
+		return $PID;
+		*/
+	}//end exec_sh_file_isolated
+
+
+
+	/**
 	* GETCOMMANDPATH
 	*/
 	private static function getCommandPath(string $command='') {
