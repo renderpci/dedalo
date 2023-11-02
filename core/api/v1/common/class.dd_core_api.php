@@ -1668,14 +1668,22 @@ final class dd_core_api {
 				// received case
 
 				$sqo = clone $rqo->sqo;
-				// add filter from session if not defined (and session yes)
-				if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
-					$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
-				}
 
-				// add order from session if not defined (and session yes)
-				if ( !isset($sqo->order) && isset($sqo_session) && isset($sqo_session->order) ) {
-					$sqo->order = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->order;
+				// Session search
+				// Two scenarios: in the main window, in secondary window
+				// if the session_save is false, the user is outside the main window, the search will be exactly the client send
+				// if the session_save is true, the user is inside the main window
+				// to maintain the filter and order, get it from session when the client doesn't send it
+				if($session_save===true){
+					// add filter from session if not defined (and session yes)
+					if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
+						$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
+					}
+
+					// add order from session if not defined (and session yes)
+					if ( !isset($sqo->order) && isset($sqo_session) && isset($sqo_session->order) ) {
+						$sqo->order = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->order;
+					}
 				}
 
 			}else{
