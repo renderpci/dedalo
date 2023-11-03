@@ -64,16 +64,23 @@ class get_archive_weights extends widget_common {
 			$section_tipo_used 		= $component_used->section_tipo;
 
 
-			$component_duplicated = array_reduce($input, function ($carry, $item){
-
-				if ($item->type==='duplicated') {
-					return $item;
+			// type duplicated
+				$component_duplicated = array_reduce($input, function ($carry, $item){
+					if ($item->type==='duplicated') {
+						return $item;
+					}
+					return $carry;
+				});
+				if (empty($component_duplicated)) {
+					debug_log(__METHOD__
+						. " !!!!!!!!!!!!!!! Skipped component_duplicated (type == duplicated) not found in input " . PHP_EOL
+						. ' input: ' . to_string($input)
+						, logger::ERROR
+					);
+					continue;
 				}
-				return $carry;
-			});
-
-			$component_tipo_duplicated 	= $component_duplicated->component_tipo;
-			$section_tipo_duplicated 	= $component_duplicated->section_tipo;
+				$component_tipo_duplicated	= $component_duplicated->component_tipo;
+				// $section_tipo_duplicated	= $component_duplicated->section_tipo;
 
 
 			$component_data_weights = array_reduce($input, function ($carry, $item){
