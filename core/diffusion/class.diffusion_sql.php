@@ -1007,25 +1007,25 @@ class diffusion_sql extends diffusion  {
 	* @param object stdClass $request_options
 	* @return array $ar_field_data
 	*/
-	public static function build_data_field(stdClass $request_options) {
+	public static function build_data_field(stdClass $request_options) : array {
 
-		# Defaults
-		$ar_field_data=array();
-		$ar_field_data['field_name']  = '';
-		$ar_field_data['field_value'] = '';
+		// Defaults
+			$ar_field_data					= [];
+			$ar_field_data['field_name']	= '';
+			$ar_field_data['field_value']	= '';
 
-		$options = new stdClass();
-			$options->typology					= null;
-			$options->value						= null;
-			$options->tipo						= null;
-			$options->parent					= null;
-			$options->lang						= null;
-			$options->section_tipo				= null;
-			$options->caler_id					= null;
-			$options->properties				= null;
-			$options->diffusion_element_tipo	= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
+		// options
+			$options = new stdClass();
+				$options->typology					= null;
+				$options->value						= null;
+				$options->tipo						= null;
+				$options->parent					= null;
+				$options->lang						= null;
+				$options->section_tipo				= null;
+				$options->caler_id					= null;
+				$options->properties				= null;
+				$options->diffusion_element_tipo	= null;
+				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 		# FIXED FIELDS
 		switch ($options->typology) {
@@ -1099,6 +1099,7 @@ class diffusion_sql extends diffusion  {
 						: $current_component->get_dato();
 				}
 
+				// diffusion_model_name. like 'field_text'
 				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
 
 				# switch cases
@@ -1267,7 +1268,7 @@ class diffusion_sql extends diffusion  {
 	/**
 	* GET_AR_DIFFUSION_MAP
 	* Get and set ar_diffusion_map of current domain ($this->domain)
-	* @param array $options
+	* @param array $options = []
 	* @return array $this->ar_diffusion_map
 	*/
 	public function get_ar_diffusion_map_sql($options=[]) : array {
@@ -2508,10 +2509,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* GET_DIFFUSION_DATABASE_NAME_FROM_TABLE
-	* @param string $$diffusion_table_tipo
-	* @return string $diffusion_database_name | null
+	* @param string $diffusion_table_tipo
+	* @return string|null $diffusion_database_name
 	*/
-	public static function get_diffusion_database_name_from_table($diffusion_table_tipo) {
+	public static function get_diffusion_database_name_from_table(string $diffusion_table_tipo) : ?string {
 
 		$diffusion_database_name = null;
 
@@ -2546,9 +2547,10 @@ class diffusion_sql extends diffusion  {
 	/**
 	* GET_DIFFUSION_ELEMENT_FROM_ELEMENT_TIPO
 	* Select from ar_diffusion_map_elements the current request element by tipo
-	* @return object $diffusion_element | bool false
+	* @param string $diffusion_element_tipo
+	* @return object|bool $diffusion_element
 	*/
-	public static function get_diffusion_element_from_element_tipo($diffusion_element_tipo) {
+	public static function get_diffusion_element_from_element_tipo(string $diffusion_element_tipo) {
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 		if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
@@ -2566,7 +2568,7 @@ class diffusion_sql extends diffusion  {
 	* @param string $diffusion_domain_name . Like 'aup'
 	* @return object $diffusion_element_tables
 	*/
-	public static function get_diffusion_element_tables_map($diffusion_element_tipo) {
+	public static function get_diffusion_element_tables_map(string $diffusion_element_tipo) {
 
 		static $ar_diffusion_element_tables_map;
 
@@ -2776,9 +2778,10 @@ class diffusion_sql extends diffusion  {
 	/**
 	* GET_DIFFUSION_TABLE_BY_SECTION
 	* @param string $section_tipo
-	* @return string $diffusion_section (tipo like dd1525) or bool false
+	* @return string|bool $diffusion_section
+	*  (tipo like dd1525) or bool false
 	*/
-	public static function get_diffusion_table_by_section($section_tipo) {
+	public static function get_diffusion_table_by_section(string $section_tipo) {
 
 		$ar_diffusion_map_elements = self::get_ar_diffusion_map_elements();
 			#dump($ar_diffusion_map_elements, ' ar_diffusion_map_elements ++ '.to_string($section_tipo));
@@ -2802,7 +2805,7 @@ class diffusion_sql extends diffusion  {
 	* GET_THESAURUS_DATA
 	* @return object $thesaurus_data
 	*/
-	public function get_thesaurus_data() {
+	public function get_thesaurus_data() : object {
 
 		$thesaurus_data = new stdClass();
 
@@ -2844,6 +2847,8 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* DIFFUSION_COMPLETE_DUMP
+	* @param string $diffusion_element_tipo
+	* @param bool $resolve_references = true
 	* @return object $response
 	*/
 	public function diffusion_complete_dump( $diffusion_element_tipo, $resolve_references=true ) {
@@ -2924,7 +2929,7 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* SAVE_TABLE_SCHEMA
-	* schema_obj is table properties json data
+	* schema_obj is table properties JSON data
 	* @param string $database_name
 	* @param object $schema_obj
 	* @return object $response
