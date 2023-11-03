@@ -911,11 +911,12 @@ abstract class common {
 	*/
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
-		static $ar_related_by_model_data;
-		$uid = $model_name.'_'.$tipo;
-		if (isset($ar_related_by_model_data[$uid])) {
-			return $ar_related_by_model_data[$uid];
-		}
+		// cache
+			static $ar_related_by_model_data;
+			$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
+			if (isset($ar_related_by_model_data[$uid])) {
+				return $ar_related_by_model_data[$uid];
+			}
 
 		$RecordObj_dd	= new RecordObj_dd($tipo);
 		$relaciones		= $RecordObj_dd->get_relaciones();
@@ -939,7 +940,9 @@ abstract class common {
 			}
 		}
 
-		$ar_related_by_model_data[$uid] = $ar_related_by_model;
+		// cache
+			$ar_related_by_model_data[$uid] = $ar_related_by_model;
+
 
 		return $ar_related_by_model;
 	}//end get_ar_related_by_model
