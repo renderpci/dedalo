@@ -1064,8 +1064,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_TERMINOS_RELACIONADOS
 	* @param string $terminoID
-	* @param bool $cache
-	* @param bool $simple
+	* @param bool $cache = false
+	* @param bool $simple = false
 	* @return array $ar_relaciones
 	* JSON_VERSION
 	* En modo 'simple' devuelve sólo un array de 'terminoID'
