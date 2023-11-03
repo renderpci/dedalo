@@ -336,7 +336,6 @@ export const render_publication_items = function(self) {
 				})
 
 			// fields
-
 				const fields_label = ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: get_label.fields || 'Fields',
@@ -384,11 +383,13 @@ export const render_publication_items = function(self) {
 						ar_fields_nodes.push(related_item)
 						related_item.addEventListener('click', function(e) {
 							e.stopPropagation()
-							const tipo			= item.related_tipo
 							const url_vars		= {
 								modo			: 'tesauro_edit',
-								terminoID		: item.related_tipo,
-								terminoIDlist	: item.related_tipo,
+								terminoID		: item.tipo,
+								terminoIDlist	: item.tipo,
+								n				: 1,
+								total			: 'form',
+								max				: 1
 							}
 							const url			= DEDALO_CORE_URL + '/ontology/dd_list.php?' + object_to_url_vars(url_vars)
 							const window_width	= 1001
@@ -400,18 +401,17 @@ export const render_publication_items = function(self) {
 								`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
 							)
 						})
-
 						const model_node = ui.create_dom_element({
 							element_type	: 'span',
-							inner_html		: item.model,
 							class_name		: 'fields_grid_value_obs label light hide',
+							inner_html		: item.model + ' | ' + item.tipo,
 							parent			: publication_items_grid
 						})
 						ar_fields_nodes.push(model_node)
 						const related_info_node = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'fields_grid_value_obs label light hide',
-							inner_html		: item.related_tipo + ' | ' + item.related_model,
+							inner_html		: item.related_model + ' | ' + item.related_tipo,
 							parent			: publication_items_grid
 						})
 						ar_fields_nodes.push(related_info_node)
