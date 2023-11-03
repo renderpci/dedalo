@@ -63,17 +63,18 @@
       }
     },
     "dd201": {
+      "inf": "modified_date [component_date]",
       "dato": {
         "lg-nolan": [
           {
             "start": {
-              "day": 14,
-              "hour": 11,
-              "time": 65005932000,
-              "year": 2022,
-              "month": 7,
-              "minute": 20,
-              "second": 0
+              "day": 2,
+              "hour": 19,
+              "time": 65047779766,
+              "year": 2023,
+              "month": 11,
+              "minute": 42,
+              "second": 46
             }
           }
         ]
@@ -88,8 +89,29 @@
     },
     "dd799": {
       "dato": {
+        "lg-cat": [
+          "Eina d'indexació"
+        ],
+        "lg-deu": [
+          "Indexierungswerkzeug"
+        ],
+        "lg-ell": [
+          "Εργαλείο ευρετηρίασης"
+        ],
         "lg-eng": [
-          "Tool Indexation"
+          "Indexing tool"
+        ],
+        "lg-fra": [
+          "Outil d'indexation"
+        ],
+        "lg-ita": [
+          "Strumento di indicizzazione"
+        ],
+        "lg-por": [
+          "Ferramenta de indexação"
+        ],
+        "lg-spa": [
+          "Herramienta de indexación"
         ]
       }
     },
@@ -103,7 +125,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
       }
     },
@@ -115,7 +137,6 @@
       }
     },
     "dd1335": {
-      "inf": "Propiedades [component_json]",
       "dato": {
         "lg-nolan": [
           {
@@ -241,12 +262,20 @@
           ]
         ]
       }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
     }
   },
   "section_id": 5,
   "created_date": "2020-01-23 18:29:29",
   "section_tipo": "dd1340",
-  "modified_date": "2022-07-14 11:20:00",
+  "modified_date": "2023-11-02 19:42:46",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
