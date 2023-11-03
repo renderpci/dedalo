@@ -1284,6 +1284,9 @@ const render_datalist = async function(self, result) {
 									datalist.removeChild(datalist.firstChild)
 								}
 
+							// clean the input value
+								self.search_input.value = '';
+
 							// hide service
 								self.hide()
 
@@ -1302,6 +1305,9 @@ const render_datalist = async function(self, result) {
 						while (datalist.firstChild) {
 							datalist.removeChild(datalist.firstChild)
 						}
+						
+					// clean the input value
+						self.search_input.value = '';
 
 					// hide service
 						self.hide()
