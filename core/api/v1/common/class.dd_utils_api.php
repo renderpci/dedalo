@@ -1392,7 +1392,6 @@ final class dd_utils_api {
 
 			// geojson
 			'geojson'	=> 'application/geo+json',
-			'geojson'	=> 'application/geo+json',
 			'kml'		=> 'application/vnd.google-earth.kml+xml',
 			'kmz'		=>  'application/vnd.google-earth.kmz'
 		);
