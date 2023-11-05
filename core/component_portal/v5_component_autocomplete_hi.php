@@ -100,7 +100,7 @@
 
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' - ';
-		// fields_separator
+			// fields_separator
 			// $fields_separator   = $this->get_fields_separator();
 			switch (true) {
 				case isset($option_obj->divisor):
@@ -120,7 +120,7 @@
 
 		// records_separator_default
 			$records_separator_default = ', ';
-		// records_separator
+			// records_separator
 			// $records_separator   = $this->get_records_separator();
 			switch (true) {
 				case isset($option_obj->records_separator):
