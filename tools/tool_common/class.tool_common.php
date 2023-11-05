@@ -235,6 +235,9 @@ class tool_common {
 				$tool_label = array_find($tool_object->label, function($el){
 					return $el->lang===DEDALO_DATA_LANG;
 				})->value ?? reset($tool_object->label)->value;
+				if (empty($tool_label)) {
+					$tool_label = $tool_object->name ?? 'Unknown';
+				}
 
 			// description. (text_area) Try match current lang else use the first lang value
 				// $description = array_find((array)$tool_object->description, function($el){
