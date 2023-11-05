@@ -126,6 +126,7 @@ paginator.prototype.build = async function() {
 		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
 
 	// offset fix
+		self.offset				= offset;
 		self.offset_first		= 0;
 		self.offset_prev		= (offset>limit) ? offset - limit : 0
 		self.offset_next		= offset + limit
