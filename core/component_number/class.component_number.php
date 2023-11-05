@@ -540,7 +540,7 @@ class component_number extends component_common {
 				return $response;
 			}
 
-		$response->result	= $value;
+		$response->result	= [$value];
 		$response->msg		= 'OK';
 
 		return $response;
