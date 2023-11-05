@@ -66,7 +66,8 @@ class tool_propagate_component_data extends tool_common {
 				$response->msg .= ' section session sqo is not found!';
 				return $response;
 			}
-			$sqo			= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+			$original_sqo 	= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+			$sqo 			= clone($original_sqo);
 			$sqo->limit		= 0;
 			$sqo->offset	= 0;
 
