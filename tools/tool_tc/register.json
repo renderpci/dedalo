@@ -69,39 +69,27 @@
       }
     },
     "dd201": {
+      "inf": "modified_date [component_date]",
       "dato": {
         "lg-nolan": [
           {
             "start": {
-              "day": 15,
-              "hour": 12,
-              "time": 65022094510,
+              "day": 3,
+              "hour": 13,
+              "time": 65047844976,
               "year": 2023,
-              "month": 1,
-              "minute": 55,
-              "second": 10
+              "month": 11,
+              "minute": 49,
+              "second": 36
             }
           }
         ]
-      },
-      "lg-nolan": [
-        {
-          "start": {
-            "day": 18,
-            "hour": 12,
-            "time": 65033064917,
-            "year": 2023,
-            "month": 5,
-            "minute": 15,
-            "second": 17
-          }
-        }
-      ]
+      }
     },
     "dd612": {
       "dato": {
         "lg-eng": [
-          "<span style=\"font-weight: 400;\" data-mce-style=\"font-weight: 400;\">Manage offset timecode of transcriptions tags by adding or subtracting seconds</span>"
+          "<p>Manages offset timecode of transcriptions tags by adding or subtracting seconds</p>"
         ],
         "lg-spa": [
           "Herramienta para gestionar los códigos de tiempo de una transcripción."
@@ -110,8 +98,26 @@
     },
     "dd799": {
       "dato": {
+        "lg-cat": [
+          "Codis de temps"
+        ],
+        "lg-deu": [
+          "Zeitcodes"
+        ],
+        "lg-ell": [
+          "Κωδικοί ώρας"
+        ],
         "lg-eng": [
           "Time codes"
+        ],
+        "lg-fra": [
+          "Codes de temps"
+        ],
+        "lg-ita": [
+          "Codici di tempo"
+        ],
+        "lg-por": [
+          "Códigos de tempo"
         ],
         "lg-spa": [
           "Códigos de tiempo"
@@ -137,6 +143,18 @@
         "lg-nolan": [
           "6.0.0"
         ]
+      }
+    },
+    "dd1334": {
+      "inf": "Ontologia [component_json]",
+      "dato": {
+        "lg-nolan": null
+      }
+    },
+    "dd1335": {
+      "inf": "Propiedades [component_json]",
+      "dato": {
+        "lg-nolan": null
       }
     },
     "dd1350": {
@@ -224,12 +242,20 @@
           ]
         ]
       }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
     }
   },
   "section_id": 13,
   "created_date": "2020-01-23 18:30:39",
   "section_tipo": "dd1340",
-  "modified_date": "2023-05-18 12:15:17",
+  "modified_date": "2023-11-03 13:49:36",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

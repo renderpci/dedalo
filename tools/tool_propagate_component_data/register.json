@@ -39,7 +39,193 @@
     },
     {
       "type": "dd151",
-      "section_id": "3",
+      "section_id": "10",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "11",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "12",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "14",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "15",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "16",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "17",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "18",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "19",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "20",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "22",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "24",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "25",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "26",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "28",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "29",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "31",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "32",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "33",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "34",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "35",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "36",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "37",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "38",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "39",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "40",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "41",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "43",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "47",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "48",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "49",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "51",
       "section_tipo": "dd1342",
       "from_component_tipo": "dd1330"
     },
@@ -74,13 +260,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 7,
-              "hour": 21,
-              "time": 65042862091,
+              "day": 3,
+              "hour": 13,
+              "time": 65047844699,
               "year": 2023,
-              "month": 9,
-              "minute": 41,
-              "second": 31
+              "month": 11,
+              "minute": 44,
+              "second": 59
             }
           }
         ]
@@ -88,15 +274,45 @@
     },
     "dd612": {
       "dato": {
+        "lg-cat": [
+          "<p>Propaga les dades dels components al mateix component entre els registres</p>"
+        ],
+        "lg-deu": [
+          "<p>Übertragen Sie Komponentendaten über Datensätze hinweg an dieselbe Komponente</p>"
+        ],
+        "lg-ell": [
+          "<p>Διαδώστε δεδομένα συστατικού στο ίδιο στοιχείο σε εγγραφές</p>"
+        ],
         "lg-eng": [
-          "Propagate component data to same component across records"
+          "<p>Propagates the component data to same component across records of the current section</p>"
+        ],
+        "lg-ita": [
+          "<p>Propaga i dati dei componenti allo stesso componente tra i record</p>"
+        ],
+        "lg-spa": [
+          "<p>Propaga datos de componentes al mismo componente a través de registros de la misma sección</p>"
         ]
       }
     },
     "dd799": {
       "dato": {
+        "lg-cat": [
+          "Propaga les dades dels components"
+        ],
+        "lg-deu": [
+          "Komponentendaten propagieren"
+        ],
+        "lg-ell": [
+          "Διάδοση δεδομένων στοιχείων"
+        ],
         "lg-eng": [
           "Propagate component data"
+        ],
+        "lg-ita": [
+          "Propaga i dati dei componenti"
+        ],
+        "lg-spa": [
+          "Propaga datos de componentes"
         ]
       }
     },
@@ -110,7 +326,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.0"
+          "2.0.1"
         ]
       }
     },
@@ -173,107 +389,82 @@
             {
               "lang": "lg-spa",
               "name": "content_will_be_added_removed",
-              "value": "Se añadirá o eliminará el contenido del campo: {0} en los {1} registros actuales"
+              "value": "Se añadirá o eliminará el contenido del componente en los {0} registros actuales"
             },
             {
               "lang": "lg-eng",
               "name": "content_will_be_added_removed",
-              "value": "The content will be added or removed from the field: {0} s in the {1} current records"
+              "value": "The content of the component in the current {0} records will be added or removed"
             },
             {
               "lang": "lg-ell",
               "name": "content_will_be_added_removed",
-              "value": "Το περιεχόμενο θα προστεθεί ή θα καταργηθεί από το πεδίο:{0} s στις τρέχουσες εγγραφές {1}"
+              "value": "Το περιεχόμενο του στοιχείου στις τρέχουσες εγγραφές {0} θα προστεθεί ή θα αφαιρεθεί"
             },
             {
-              "lang": "lg-cat",
-              "name": "content_will_be_added_removed",
-              "value": "S'afegirà o s’eliminarà el contingut al camp: {0} en els {1} registres actuals"
+              "lang": "lg-eng",
+              "name": "will_replaced_all_records",
+              "value": "All records will be replaced"
             },
             {
-              "lang": "lg-ita",
-              "name": "content_will_be_added_removed",
-              "value": "Il contenuto verrà aggiunto o rimosso dal campo: {0} nei {1} registri attuali"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "content_will_be_added_removed",
-              "value": "Le contenu du champ : {0} sera ajouté ou supprimé dans les {1} enregistrements actuels."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "content_will_be_added_removed",
-              "value": "Wird ergänzt oder gelöscht: Inhalt des Feldes {0} in den {1} aktuellen Einträgen"
+              "lang": "lg-por",
+              "name": "will_replaced_all_records",
+              "value": ""
             },
             {
               "lang": "lg-spa",
-              "name": "updated_records",
-              "value": "Registros actualizados"
+              "name": "will_replaced_all_records",
+              "value": "Se reemplazaran todos los registros"
             },
             {
               "lang": "lg-cat",
-              "name": "updated_records",
-              "value": "Registres actulitzats"
+              "name": "will_replaced_all_records",
+              "value": "Tots els registres seran substituïts"
             },
             {
               "lang": "lg-vlca",
-              "name": "updated_records",
+              "name": "will_replaced_all_records",
               "value": ""
             },
             {
               "lang": "lg-eus",
-              "name": "updated_records",
+              "name": "will_replaced_all_records",
               "value": ""
             },
             {
-              "lang": "lg-eng",
-              "name": "updated_records",
-              "value": "Updated records"
+              "lang": "lg-fra",
+              "name": "will_replaced_all_records",
+              "value": ""
             },
             {
               "lang": "lg-ita",
-              "name": "updated_records",
-              "value": "Registri aggiornati"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "updated_records",
-              "value": "επικαιροποιημένα αρχεία"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "updated_records",
-              "value": "Aktualisierte Einträge"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "updated_records",
-              "value": "Enregistrements mis à jour"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "tool_do_add",
-              "value": "Inhalt hinzufügen"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "tool_do_add",
-              "value": "Ajouter du contenu"
+              "name": "will_replaced_all_records",
+              "value": "Tutti i record verranno sostituiti"
             },
             {
               "lang": "lg-ara",
-              "name": "content_will_be_added_removed",
+              "name": "will_replaced_all_records",
               "value": ""
             },
             {
-              "lang": "lg-fra",
-              "name": "tool_do_delete",
-              "value": "Éliminer le contenu"
+              "lang": "lg-ell",
+              "name": "will_replaced_all_records",
+              "value": "Όλες οι εγγραφές θα αντικατασταθούν"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "will_replaced_all_records",
+              "value": "Alle Datensätze werden ersetzt"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "tool_do_add",
+              "value": "Fügen Sie den Inhalt hinzu"
             },
             {
               "lang": "lg-deu",
               "name": "tool_do_delete",
-              "value": "Inhalt löschen"
+              "value": "Löschen Sie den Inhalt"
             },
             {
               "lang": "lg-ita",
@@ -281,246 +472,39 @@
               "value": "Elimina il contenuto"
             },
             {
-              "lang": "lg-spa",
-              "name": "all_records",
-              "value": "Todos"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "all_records",
-              "value": "Tots"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "all_records",
-              "value": ""
-            },
-            {
               "lang": "lg-ita",
-              "name": "all_records",
-              "value": "Tutti"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "all_records",
-              "value": "όλα"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "all_records",
-              "value": "Tous"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "all_records",
-              "value": "Alle"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "all_records",
-              "value": "All"
-            },
-            {
-              "lang": "lg-por",
-              "name": "all_records",
-              "value": ""
-            },
-            {
-              "lang": "lg-spa",
-              "name": "empty_value",
-              "value": "Vacío"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "empty_value",
-              "value": "Buit"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "empty_value",
-              "value": ""
-            },
-            {
-              "lang": "lg-eus",
-              "name": "empty_value",
-              "value": ""
-            },
-            {
-              "lang": "lg-eng",
-              "name": "empty_value",
-              "value": "Blank"
-            },
-            {
-              "lang": "lg-por",
-              "name": "empty_value",
-              "value": ""
-            },
-            {
-              "lang": "lg-fra",
-              "name": "empty_value",
-              "value": "Vide"
+              "name": "content_will_be_added_removed",
+              "value": "Il contenuto del componente nei {0} record correnti verrà aggiunto o rimosso"
             },
             {
               "lang": "lg-ara",
-              "name": "empty_value",
-              "value": ""
-            },
-            {
-              "lang": "lg-ell",
-              "name": "empty_value",
-              "value": "κενό"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "empty_value",
-              "value": "Leer"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "empty_value",
-              "value": "Vuoto"
-            },
-            {
-              "lang": "lg-por",
               "name": "content_will_be_added_removed",
               "value": ""
             },
             {
-              "lang": "lg-ara",
-              "name": "all_records",
-              "value": ""
-            },
-            {
-              "lang": "lg-spa",
-              "name": "successfully",
-              "value": "¡Hecho!"
+              "lang": "lg-deu",
+              "name": "content_will_be_added_removed",
+              "value": "Der Inhalt der Komponente in den aktuellen {0} Datensätzen wird hinzugefügt oder entfernt"
             },
             {
               "lang": "lg-cat",
-              "name": "successfully",
-              "value": "Fet!"
+              "name": "content_will_be_added_removed",
+              "value": "El contingut del component als registres {0} actuals s'afegirà o s'eliminarà"
             },
             {
-              "lang": "lg-eng",
-              "name": "successfully",
-              "value": "Successfully"
-            },
-            {
-              "lang": "lg-por",
-              "name": "successfully",
-              "value": ""
-            },
-            {
-              "lang": "lg-fra",
-              "name": "successfully",
-              "value": "Fait"
-            },
-            {
-              "lang": "lg-ara",
-              "name": "successfully",
-              "value": ""
-            },
-            {
-              "lang": "lg-ell",
-              "name": "successfully",
-              "value": "έκανε"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "successfully",
-              "value": "Gemacht"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "successfully",
-              "value": "Fatto"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "do_replace",
-              "value": "Reemplazar contenidos"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "do_replace",
-              "value": "Remplacer les contenus "
-            },
-            {
-              "lang": "lg-cat",
-              "name": "do_replace",
-              "value": "Reemplaçar continguts"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "do_replace",
-              "value": "Inhalte ersetzen"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "do_replace",
-              "value": "Sostituire contenuti"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "do_replace",
-              "value": "αντικαταστήσει περιεχόμενο"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "do_replace",
-              "value": "Replace values"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "will_replaced_all_records",
-              "value": "¡Todos los registros serán reemplazados!"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "will_replaced_all_records",
-              "value": "All records will be replaced!"
-            },
-            {
-              "lang": "lg-por",
-              "name": "will_replaced_all_records",
-              "value": ""
-            },
-            {
-              "lang": "lg-ell",
-              "name": "will_replaced_all_records",
-              "value": "Όλες οι εγγραφές θα αντικατασταθούν!"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "will_replaced_all_records",
-              "value": "Tutti i record verranno sostituiti!"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "will_replaced_all_records",
-              "value": "Alle Datensätze werden ersetzt!"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "will_replaced_all_records",
-              "value": "Tous les enregistrements seront remplacés!"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "will_replaced_all_records",
-              "value": "Tots els registres seran substituïts!"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "will_replaced_all_records",
-              "value": ""
-            },
-            {
-              "lang": "lg-ara",
-              "name": "will_replaced_all_records",
+              "lang": "lg-eus",
+              "name": "content_will_be_added_removed",
               "value": ""
             }
           ]
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
         ]
       }
     }
@@ -528,7 +512,7 @@
   "section_id": 11,
   "created_date": "2022-02-28 16:55:15",
   "section_tipo": "dd1340",
-  "modified_date": "2023-09-07 21:41:31",
+  "modified_date": "2023-11-03 13:44:59",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

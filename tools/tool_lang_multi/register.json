@@ -69,39 +69,27 @@
       }
     },
     "dd201": {
+      "inf": "modified_date [component_date]",
       "dato": {
         "lg-nolan": [
           {
             "start": {
-              "day": 24,
-              "hour": 14,
-              "time": 64929135408,
-              "year": 2020,
-              "month": 2,
-              "minute": 56,
-              "second": 48
+              "day": 3,
+              "hour": 13,
+              "time": 65047844081,
+              "year": 2023,
+              "month": 11,
+              "minute": 34,
+              "second": 41
             }
           }
         ]
-      },
-      "lg-nolan": [
-        {
-          "start": {
-            "day": 21,
-            "hour": 21,
-            "time": 65028000196,
-            "year": 2023,
-            "month": 3,
-            "minute": 23,
-            "second": 16
-          }
-        }
-      ]
+      }
     },
     "dd612": {
       "dato": {
         "lg-eng": [
-          "Tool for translate the content to any other language configured."
+          "<p>Tool to translate the content to any other configured language.</p>"
         ]
       }
     },
@@ -136,10 +124,28 @@
         ]
       }
     },
+    "dd1334": {
+      "dato": {
+        "lg-nolan": []
+      }
+    },
+    "dd1353": {
+      "dato": {
+        "lg-nolan": []
+      }
+    },
     "dd1362": {
       "dato": {
         "lg-nolan": [
           "For automatic translation, constant 'DEDALO_TRANSLATOR_ENGINE' with all translators must be defined in Dédalo /config/tools/config_tool_lang.json file like:<br><br>define('DEDALO_TRANSLATOR_ENGINE',&nbsp; '[<br>{<br>&nbsp; name\": \"babel\",<br>&nbsp; \"label\": \"Babel\",<br>&nbsp; \"uri\": \"https://babel.render.es/babel_engine/\",<br>&nbsp; \"key\": \"9Fre!ksadas132aPlsdiugJKAH\"<br>}<br>]');"
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
         ]
       }
     }
@@ -147,7 +153,7 @@
   "section_id": 4,
   "created_date": "2020-02-17 18:04:18",
   "section_tipo": "dd1340",
-  "modified_date": "2023-03-21 21:23:16",
+  "modified_date": "2023-11-03 13:34:41",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

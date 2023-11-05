@@ -1388,8 +1388,14 @@ final class dd_utils_api {
 			// 3d @see https://github.com/KhronosGroup/glTF/blob/main/specification/1.0/README.md#mimetypes
 			'glb'	=> 'application/octet-stream',
 			'gltf'	=> 'model/gltf+json',
-			'glsl'	=> 'text/plain'
+			'glsl'	=> 'text/plain',
+
+			// geojson
+			'geojson'	=> 'application/geo+json',
+			'kml'		=> 'application/vnd.google-earth.kml+xml',
+			'kmz'		=>  'application/vnd.google-earth.kmz'
 		);
+
 
 		return $mime_types;
 	}//end get_known_mime_types
