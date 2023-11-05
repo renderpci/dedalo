@@ -246,31 +246,37 @@ class component_iri extends component_common {
 		$dato = $this->get_dato();
 
 		if ($index==='all') {
-			$valor = null;
+
 			$ar_val = [];
-			foreach ($dato as $value) {
+			if (is_array($dato)) {
+				foreach ($dato as $value) {
 
-				$ar_line = [];
+					$ar_line = [];
 
-				if (!empty($value->title)) {
-					$ar_line[] = $value->title;
-				}
-				if (!empty($value->iri)) {
-					$ar_line[] = $value->iri;
-				}
+					if (!empty($value->title)) {
+						$ar_line[] = $value->title;
+					}
+					if (!empty($value->iri)) {
+						$ar_line[] = $value->iri;
+					}
 
-				if (!empty($ar_line)) {
+					if (!empty($ar_line)) {
 
-					$ar_val[] = implode(' | ', $ar_line);
+						$ar_val[] = implode(' | ', $ar_line);
+					}
 				}
 			}
 
-			$valor = !empty($ar_val) ? implode(', ', $ar_val) : null;
+			$valor = !empty($ar_val)
+				? implode(', ', $ar_val)
+				: null;
 
 		}else{
 
 			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
+			$valor = isset($dato[$index])
+				? $dato[$index]
+				: null;
 		}
 
 
