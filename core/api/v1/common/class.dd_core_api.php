@@ -1684,6 +1684,16 @@ final class dd_core_api {
 					if ( !isset($sqo->order) && isset($sqo_session) && isset($sqo_session->order) ) {
 						$sqo->order = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->order;
 					}
+
+					// add limit from session if not defined (and session yes)
+					if ( !isset($sqo->limit) && isset($sqo_session) && isset($sqo_session->limit) ) {
+						$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
+					}
+
+					// add offset from session if not defined (and session yes)
+					if ( !isset($sqo->offset) && isset($sqo_session) && isset($sqo_session->offset) ) {
+						$sqo->offset = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->offset;
+					}
 				}
 
 			}else{

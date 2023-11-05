@@ -1539,7 +1539,7 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 		if (sqo.offset===undefined) {
 			sqo.offset = (sqo_config && sqo_config.offset!==undefined)
 				? sqo_config.offset
-				: 0;
+				: null;
 		}
 
 		// (!) somebody use this ? (count don't need this anymore..)

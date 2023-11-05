@@ -632,6 +632,13 @@ section.prototype.build = async function(autoload=false) {
 					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.limit) {
 						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
 					}
+					// Updated self.rqo.sqo.offset. Try sqo and show.sqo_config
+					if (request_config_item.sqo && request_config_item.sqo.offset) {
+						self.rqo.sqo.offset = request_config_item.sqo.offset
+					}else
+					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.offset) {
+						self.rqo.sqo.offset = request_config_item.show.sqo_config.offset
+					}
 				}
 
 			// count rows
