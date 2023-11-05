@@ -617,7 +617,7 @@ class section extends common {
 	*	    }
 	*	}
 	*/
-	public function set_component_direct_dato( object $component_obj ) : object {
+	public function set_component_direct_dato( object $component_obj ) : object | null {
 
 		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
@@ -676,7 +676,33 @@ class section extends common {
 
 		// dato_unchanged : We update the data in the current language
 			$component_dato = $component_obj->get_dato_unchanged(); ## IMPORTANT !!!!! (NO usar get_dato() aquí ya que puede cambiar el tipo fijo establecido por set_dato)
+
+		// unset when data null
+			if($component_dato===null || empty($component_dato)){
+
+				// unset current language
+				unset($component_global_dato->dato->{$component_lang});
+
+				// check all languages, if any other languages has null data remove it.
+				foreach ($component_global_dato->dato as $current_lang => $value) {
+					if($value===null){
+						unset($component_global_dato->dato->{$current_lang});
+					}
+				}
+				// check data object, if do not has any property, remove the global object.
+				$component_global_dato_count = count(get_object_vars($component_global_dato->dato));
+
+				if($component_global_dato_count === 0){
+					unset($dato->components->{$component_tipo});
+
+					// update section with full data object
+					$this->set_dato($dato);
+
+					return null;
+				}
+			}else{
 				$component_global_dato->dato->{$component_lang} = $component_dato;
+			}
 
 		// replace component portion of global object :  we update the entire component in the global object
 			if (!isset($dato->components->{$component_tipo})) {
