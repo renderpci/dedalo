@@ -1681,7 +1681,7 @@ class diffusion_sql extends diffusion  {
 									. 'current_component_tipo: ' .to_string($current_component_tipo)
 									, logger::WARNING
 								);
-								continue;
+								// continue; // (!) commented 06-11-2023 because MIB Catalog numisdata665 needs to follow external portal numisdata965 Orderer coins
 							}
 
 						// debug_log(__METHOD__." Solving recursive resolve_references on level '$recursion_level' tipo: '$current_component_tipo' model: '$model_name' label: '".RecordObj_dd::get_termino_by_tipo($current_component_tipo)."' ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ", logger::DEBUG);

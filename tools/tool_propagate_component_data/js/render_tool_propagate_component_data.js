@@ -9,8 +9,8 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	// import {get_tool_label} from '../../tool_common/js/tool_common.js'
 	// import {pause} from '../../../core/common/js/utils/util.js'
-
 	import {is_filter_empty} from '../../../core/search/js/search.js'
+
 
 
 /**
@@ -290,6 +290,7 @@ const get_content_data = async function(self) {
 }//end get_content_data
 
 
+
 /**
 * CREATE_RESPONSE
 * Render a response node
@@ -321,9 +322,10 @@ const create_response = function(self, response_text, response, action) {
 	const updated_records_node = ui.create_dom_element({
 		element_type	: 'div',
 		class_name		: 'updated_records',
-		inner_html		:  count_label+ ": " +count + ' ('+action+')',
-		parent 			: response_node
+		inner_html		: count_label+ ": " +count + ' ('+action+')',
+		parent			: response_node
 	})
+
 
 	return response_node
 }// end create_response

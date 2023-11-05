@@ -691,7 +691,9 @@ class diffusion_rdf extends diffusion {
 									foreach ($ar_ddo_to_join as $current_ddo_to_join) {
 										$search			= '${'.$current_ddo_to_join->id.'}';
 										$replace_value	= $current_ddo_to_join->value;
-										$text_format	= str_replace($search, $replace_value, $text_format);
+										$text_format	= !empty($text_format)
+											? str_replace($search, $replace_value, $text_format)
+											: $text_format;
 									}
 									// create the ddo
 									$procesed_ddo = new stdClass();
@@ -713,7 +715,9 @@ class diffusion_rdf extends diffusion {
 											foreach ($ar_ddo_to_join as $current_ddo_to_join) {
 												$search			= '${'.$current_ddo_to_join->id.'}';
 												$replace_value	= $current_ddo_to_join->value ?? ' ';
-												$sentence		= str_replace($search, $replace_value, $sentence);
+												$sentence		= !empty($sentence)
+													? str_replace($search, $replace_value, $sentence)
+													: $sentence;
 											}
 											$ar_parts	= explode(' ? ', $sentence);
 											$ar_parts2	= explode(' : ', $ar_parts[1]);
