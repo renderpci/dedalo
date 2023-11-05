@@ -77,20 +77,23 @@ class component_text_area extends component_common {
 				}
 			}
 
+		$count = is_array($dato)
+			? count($dato)
+			: 0;
+
 		$safe_dato = array();
 		foreach ((array)$dato as $value) {
-			if($this->is_empty($value)){
-				$safe_dato[] = null;
+			if($this->is_empty($value) && $count === 1 ){
+				$safe_dato = null;
 			}else{
 				$safe_dato[] = (!is_string($value))
 					? to_string($value)
 					: $value;
-				}
+			}
 		}
 		$dato = $safe_dato;
 
-
-		return parent::set_dato( (array)$dato );
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
