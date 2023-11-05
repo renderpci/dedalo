@@ -59,7 +59,7 @@ class component_number extends component_common {
 	* SET_DATO
 	* @return bool
 	*/
-	public function set_dato($dato) : bool {
+	public function set_dato( $dato ) : bool {
 
 		$safe_dato = array();
 		foreach ((array)$dato as  $value) {
