@@ -60,12 +60,8 @@ final class component_text_area_test extends TestCase {
 		$dato = $component->get_dato();
 
 		$this->assertTrue(
-			gettype($dato)==='array',
-			'expected type is array, but received is: ' . gettype($dato)
-		);
-		$this->assertTrue(
-			gettype($dato[0])==='NULL',
-			'expected type is NULL, but received is: ' . gettype($dato[0])
+			gettype($dato)==='NULL',
+			'expected type is null, but received is: ' . gettype($dato)
 		);
 	}//end test_set_dato
 
