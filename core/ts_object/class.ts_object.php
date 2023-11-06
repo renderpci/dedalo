@@ -193,24 +193,24 @@ class ts_object {
 
 
 	/**
-	* GET_CHILDREN_DATA
+	* GET_CHILD_DATA
 	* @return object $children_data
 	*/
-	public function get_children_data() : object {
+	public function get_child_data() : object {
 
 		// Global object
-		$children_data = new stdClass();
-			$children_data->section_tipo				= $this->section_tipo;
-			$children_data->section_id					= $this->section_id;
-			$children_data->mode						= 'edit';	//'list_thesaurus';
-			$children_data->lang						= DEDALO_DATA_LANG;
-			$children_data->is_descriptor				= true;
-			$children_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
-			$children_data->permissions_button_new		= $this->get_permissions_element('button_new');
-			$children_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
-			$children_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
-			$children_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
-			$children_data->ar_elements					= [];
+		$child_data = new stdClass();
+			$child_data->section_tipo				= $this->section_tipo;
+			$child_data->section_id					= $this->section_id;
+			$child_data->mode						= 'edit';	//'list_thesaurus';
+			$child_data->lang						= DEDALO_DATA_LANG;
+			$child_data->is_descriptor				= true;
+			$child_data->is_indexable				= (bool)self::is_indexable($this->section_tipo, $this->section_id);
+			$child_data->permissions_button_new		= $this->get_permissions_element('button_new');
+			$child_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
+			$child_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
+			$child_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
+			$child_data->ar_elements					= [];
 
 		// model
 			$model = $this->options->model ?? null; // options are fixed on construct the class
@@ -236,7 +236,7 @@ class ts_object {
 				}
 
 			// No descriptors do not have children. Avoid calculate children
-				if ($children_data->is_descriptor===false && $render_vars->type==='link_children') {
+				if ($child_data->is_descriptor===false && $render_vars->type==='link_children') {
 					continue;
 				}
 
@@ -326,13 +326,13 @@ class ts_object {
 
 							// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
 								if($render_vars->icon==='ND') {
-									#debug_log(__METHOD__." children_data->ar_elements ".to_string($children_data->ar_elements), logger::DEBUG);
+									#debug_log(__METHOD__." children_data->ar_elements ".to_string($child_data->ar_elements), logger::DEBUG);
 									#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);
 									if (isset($dato[0])
 										&& isset($dato[0]->section_id)
 										&& (int)$dato[0]->section_id===2) {
-										ts_object::set_term_as_nd($children_data->ar_elements);
-										$children_data->is_descriptor = false;
+										ts_object::set_term_as_nd($child_data->ar_elements);
+										$child_data->is_descriptor = false;
 									}
 									continue 3;
 								}
@@ -369,7 +369,7 @@ class ts_object {
 									$nd_element->tipo	= $element_tipo;
 									$nd_element->value	= 'ND';
 
-								$children_data->ar_elements[] = $nd_element;
+								$child_data->ar_elements[] = $nd_element;
 							}
 							break;
 
@@ -385,20 +385,20 @@ class ts_object {
 				}//end foreach ($ar_element_tipo as $element_tipo)
 
 			# Add
-			$children_data->ar_elements[] = $element_obj;
+			$child_data->ar_elements[] = $element_obj;
 		}//end foreach ($ar_elements as $k_element_tipo => $current_object)
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				// $total = round( (start_time()-$start_time), 3 );
 				#debug_log(__METHOD__." Total ($n): ".exec_time_unit($start_time,'ms')." ms - ratio(total/n): " . ($total/$n), logger::DEBUG);
-				// $children_data->total_time = $total;
-				// error_log('********************* get_children_data total:'. exec_time_unit($start_time,'ms'));
+				// $child_data->total_time = $total;
+				// error_log('********************* get_child_data total:'. exec_time_unit($start_time,'ms'));
 			}
 
 
-		return $children_data;
-	}//end get_children_data
+		return $child_data;
+	}//end get_child_data
 
 
 
