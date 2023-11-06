@@ -81,12 +81,12 @@ final class dd_ts_api {
 				$section_id		= $locator->section_id;
 				$section_tipo	= $locator->section_tipo;
 
-				$ts_object			= new ts_object( $section_id, $section_tipo, $options );
-				$children_object	= $ts_object->get_children_data();
+				$ts_object		= new ts_object( $section_id, $section_tipo, $options );
+				$child_object	= $ts_object->get_child_data();
 
 				# Add only descriptors
-				#if ($children_object->is_descriptor===true) {
-					$children_data[] = $children_object;
+				#if ($child_object->is_descriptor===true) {
+					$children_data[] = $child_object;
 				#}
 			}
 

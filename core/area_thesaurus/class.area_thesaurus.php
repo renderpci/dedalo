@@ -688,10 +688,10 @@ class area_thesaurus extends area_common {
 			$current_section_tipo	= $ar_parts[0];
 			$current_section_id		= $ar_parts[1];
 			$ts_object				= new ts_object($current_section_id, $current_section_tipo);
-			$children_data			= $ts_object->get_children_data();
+			$child_data				= $ts_object->get_child_data();
 
 			# Add to array
-			$ar_mix[$key] = $children_data;
+			$ar_mix[$key] = $child_data;
 
 			# Add children in container heritage
 			if (!empty($ar_values)) {
