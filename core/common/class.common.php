@@ -2623,7 +2623,7 @@ abstract class common {
 
 		// fix ddo_map (dd_core_api static var)
 			$dedalo_request_config = array_find($request_config, function($el){
-				return $el->api_engine==='dedalo';
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
 			if (!empty($dedalo_request_config)) {
 
