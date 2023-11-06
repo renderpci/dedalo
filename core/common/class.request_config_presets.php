@@ -188,7 +188,8 @@ class request_config_presets {
 						$safe_request_config = [];
 						foreach ($preset_value as $current_item) {
 							$request_config_object	= new request_config_object($current_item);
-							$safe_request_config[]	= $request_config_object;
+							// do double cast [(object)(array)] here to avoid cache incomplete class issues on session save
+							$safe_request_config[]	= (object)(array)$request_config_object;
 						}
 
 					$result = $safe_request_config;
