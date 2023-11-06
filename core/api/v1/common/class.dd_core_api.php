@@ -1070,6 +1070,17 @@ final class dd_core_api {
 			$changed_data		= $data->changed_data ?? null;
 			$caller_dataframe	= $source->caller_dataframe ?? null;
 
+		// activity section check
+			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+				$response->msg = 'Error. Illegal save to activity';
+				debug_log(__METHOD__
+					. " $response->msg "
+					, logger::ERROR
+				);
+
+				return $response;
+			}
+
 		// switch by the element context type (component, section)
 		switch ($type) {
 			case 'component':

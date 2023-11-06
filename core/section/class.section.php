@@ -1001,6 +1001,14 @@ class section extends common {
 			################################################################################
 			# UPDATE RECORD : Update current matrix section record triggered by one component
 
+			if ($tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+				debug_log(__METHOD__
+					. " Error. Illegal try to update activity section record ($this->section_id)"
+					, logger::ERROR
+				);
+				return null;
+			}
+
 			if ($this->save_modified===false) {
 
 				// section dato only. Do not change existing modified_section_data
