@@ -681,30 +681,41 @@ class section extends common {
 			if($component_dato===null || empty($component_dato)){
 
 				// unset current language
-				unset($component_global_dato->dato->{$component_lang});
+				if (isset($component_global_dato->dato->{$component_lang})) {
+					unset($component_global_dato->dato->{$component_lang});
+				}
 
-				// check all languages, if any other languages has null data remove it.
-				foreach ($component_global_dato->dato as $current_lang => $value) {
-					if($value===null){
-						unset($component_global_dato->dato->{$current_lang});
+				// check all languages, if any other languages has null data, remove it.
+				if (!empty($component_global_dato->dato)) {
+					foreach ($component_global_dato->dato as $current_lang => $current_value) {
+						if($current_value===null){
+							unset($component_global_dato->dato->{$current_lang});
+						}
 					}
 				}
-				// check data object, if do not has any property, remove the global object.
-				$component_global_dato_count = count(get_object_vars($component_global_dato->dato));
 
+				// check data object, if do not has any property, remove the global object.
+				$component_global_dato_count = isset($component_global_dato->dato)
+					? count(get_object_vars($component_global_dato->dato))
+					: 0;
 				if($component_global_dato_count === 0){
+
+					// remove whole component dato definition
 					unset($dato->components->{$component_tipo});
 
 					// update section with full data object
 					$this->set_dato($dato);
 
+					// stop here
 					return null;
 				}
 			}else{
+
+				// update component dato current lang value
 				$component_global_dato->dato->{$component_lang} = $component_dato;
 			}
 
-		// replace component portion of global object :  we update the entire component in the global object
+		// replace component portion of global object :  we update the entire component in the section global object
 			if (!isset($dato->components->{$component_tipo})) {
 				if (!isset($dato->components)) {
 					$dato->components = new stdClass();
