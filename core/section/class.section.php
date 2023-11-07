@@ -458,8 +458,8 @@ class section extends common {
 				$component_dato = $all_component_data->dato->{$lang};
 			}else{
 				// fallback to default lang
-				$lang_default = DEDALO_DATA_LANG_DEFAULT;
-				$component_dato = ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
+				$lang_default	= DEDALO_DATA_LANG_DEFAULT;
+				$component_dato	= ($lang!==$lang_default && !empty($all_component_data->dato->{$lang_default}))
 					? $all_component_data->dato->{$lang_default}
 					: null;
 			}
@@ -1730,13 +1730,13 @@ class section extends common {
 
 		$section_real_tipo = section::get_section_real_tipo_static( $this->tipo );
 		if ($section_real_tipo!==$this->tipo) {
-			# Fix section_real_tipo
-			$this->section_real_tipo = $section_real_tipo;
-			$this->section_virtual 	 = true;
+			// Fix section_real_tipo
+			$this->section_real_tipo	= $section_real_tipo;
+			$this->section_virtual		= true;
 		}else{
-			# Fix section_real_tipo
-			$this->section_real_tipo = $section_real_tipo;
-			$this->section_virtual 	 = false;
+			// Fix section_real_tipo
+			$this->section_real_tipo	= $section_real_tipo;
+			$this->section_virtual		= false;
 		}
 
 		return $section_real_tipo;
@@ -1878,7 +1878,7 @@ class section extends common {
 				// Others (section_xx, buttons, etc.) are in the first level
 				default:
 					$RecordObj_dd			= new RecordObj_dd($tipo);
-					$ar_recursive_children = $RecordObj_dd->get_ar_childrens_of_this();
+					$ar_recursive_children	= $RecordObj_dd->get_ar_childrens_of_this();
 					break;
 			}
 		}
@@ -2827,8 +2827,8 @@ class section extends common {
 		$inverse_locators = $this->get_inverse_references();
 		foreach($inverse_locators as $locator) {
 
-			$current_section_tipo = $locator->from_section_tipo;
-			$current_section_id   = $locator->from_section_id;
+			$current_section_tipo	= $locator->from_section_tipo;
+			$current_section_id		= $locator->from_section_id;
 
 			$section = section::get_instance(
 				$current_section_id,
@@ -2911,9 +2911,9 @@ class section extends common {
 		$inverse_locators = $this->get_inverse_references();
 		foreach ((array)$inverse_locators as $current_locator) {
 
-			$component_tipo = $current_locator->from_component_tipo;
-			$section_tipo 	= $current_locator->from_section_tipo;
-			$section_id 	= $current_locator->from_section_id;
+			$component_tipo	= $current_locator->from_component_tipo;
+			$section_tipo	= $current_locator->from_section_tipo;
+			$section_id		= $current_locator->from_section_id;
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo( $component_tipo, true );
 			#if ($model_name!=='component_portal' && $model_name!=='component_autocomplete' && $model_name!=='component_relation_children') {
@@ -3387,9 +3387,9 @@ class section extends common {
 
 		$ar_tipos = array(
 			array('name'=>'created_by_user', 'tipo'=>'dd200', 'model'=>'component_select'),
-			array('name'=>'created_date', 	 'tipo'=>'dd199', 'model'=>'component_date'),
+			array('name'=>'created_date',	 'tipo'=>'dd199', 'model'=>'component_date'),
 			array('name'=>'modified_by_user','tipo'=>DEDALO_SECTION_INFO_MODIFIED_BY_USER, 'model'=>'component_select'), 	// 'dd197'
-			array('name'=>'modified_date', 	 'tipo'=>DEDALO_SECTION_INFO_MODIFIED_DATE, 'model'=>'component_date') 			// 'dd201'
+			array('name'=>'modified_date',	 'tipo'=>DEDALO_SECTION_INFO_MODIFIED_DATE, 'model'=>'component_date') 			// 'dd201'
 		);
 
 		return $ar_tipos;
@@ -3444,9 +3444,9 @@ class section extends common {
 				$user_locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
 		// Current date
-			$base_date  = component_date::get_date_now();
-			$dd_date  	= new dd_date($base_date);
-			$time 		= dd_date::convert_date_to_seconds($dd_date);
+			$base_date	= component_date::get_date_now();
+			$dd_date	= new dd_date($base_date);
+			$time		= dd_date::convert_date_to_seconds($dd_date);
 			$dd_date->set_time($time);
 			$date_now 	= new stdClass();
 				$date_now->start = $dd_date;
@@ -3913,7 +3913,7 @@ class section extends common {
 								// component
 									$component_tipo	= ($source_model==='section')
 										? $ddo->tipo // get from ddo
-										: $tipo; 	 // get from db record dato ($db_record->tipo)
+										: $tipo;	 // get from db record dato ($db_record->tipo)
 									$component_model	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true); // $ddo->model;
 									$is_relation		= in_array($component_model, $components_with_relations);
 									$lang				= $is_relation===true
@@ -4125,7 +4125,7 @@ class section extends common {
 			$section_tipo	= $this->tipo;
 			$section_id		= $this->section_id;
 			$lang			= $component->get_lang();
-			$component_tipo = $component->get_tipo();
+			$component_tipo	= $component->get_tipo();
 
 		// ontology sync. Synchronize this section values with equivalents in table 'matrix_descriptors_dd'. Only master server
 			if (// defined('STRUCTURE_IS_MASTER') && STRUCTURE_IS_MASTER===true &&
