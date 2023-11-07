@@ -822,7 +822,9 @@ abstract class diffusion  {
 			$component = $options->component;
 
 		// Dimensions from default quality
-			$image_dimensions = $component->get_image_dimensions(DEDALO_IMAGE_QUALITY_DEFAULT);
+			$default_quality	= $component->get_default_quality();
+			$path				= $component->get_media_filepath($default_quality);
+			$image_dimensions	= $component->get_image_dimensions($path);
 			if (empty($image_dimensions)) {
 				return null;
 			}
