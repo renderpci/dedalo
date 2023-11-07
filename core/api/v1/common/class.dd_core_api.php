@@ -823,14 +823,19 @@ final class dd_core_api {
 			}
 			$caller_dataframe = $ddo_source->caller_dataframe ?? null;
 
+		// options
+			$options = $rqo->options ?? null;
+
 		// permissions
 			if($delete_mode==='delete_dataframe'){
 				$permissions = common::get_permissions($caller_dataframe->section_tipo, $section_tipo);
 			}else{
 				$permissions = common::get_permissions($section_tipo, $section_tipo);
 			}
-
-			debug_log(__METHOD__." permissions: $permissions ".to_string($section_tipo), logger::DEBUG);
+			debug_log(__METHOD__
+				." permissions: $permissions ".to_string($section_tipo)
+				, logger::DEBUG
+			);
 			if ($permissions<2) {
 				$response->error = 2;
 				$response->msg 	.= '[2] Insufficient permissions: '.$permissions;
@@ -940,9 +945,13 @@ final class dd_core_api {
 				$current_section_tipo	= $record->section_tipo;
 				$current_section_id		= $record->section_id;
 
-				# Delete method
+				$delete_diffusion_records = is_object($options) && isset($options->delete_diffusion_records)
+					? (bool)$options->delete_diffusion_records
+					: true; // default is true
+
+				// Delete method
 				$section 	= section::get_instance($current_section_id, $current_section_tipo);
-				$deleted 	= $section->Delete($delete_mode);
+				$deleted 	= $section->Delete($delete_mode, $delete_diffusion_records);
 				if ($deleted!==true) {
 					$errors[] = (object)[
 						'section_tipo'	=> $current_section_tipo,

@@ -1410,16 +1410,21 @@ class section extends common {
 	* Delete section with options
 	* @param string $delete_mode
 	* 	Options: delete_record|delete_data|delete_dataframe
+	* @param bool $delete_diffusion_records = true
+	*	Selected by user in delete dialog checkbox
 	* @return bool
 	*/
-	public function Delete( string $delete_mode ) : bool {
+	public function Delete( string $delete_mode, bool $delete_diffusion_records=true ) : bool {
 
 		// section_id
 			// force type int
 			$section_id = intval($this->section_id);
 			// prevent delete <1 records
 			if($section_id<1) {
-				debug_log(__METHOD__." Invalid section_id: $section_id. Delete action is aborted ".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Invalid section_id: $section_id. Delete action is aborted "
+					, logger::WARNING
+				);
 				return false;
 			}
 
@@ -1674,14 +1679,16 @@ class section extends common {
 			);
 
 		// publication . Remove published records in MYSQL, etc.
-			try {
-				diffusion::delete_record($this->tipo, $this->section_id);
-			} catch (Exception $e) {
-				debug_log(__METHOD__
-					." Error on diffusion::delete_record: " .PHP_EOL
-					.' Exception Catch message: '.$e->getMessage()
-					, logger::WARNING
-				);
+			if ($delete_diffusion_records===true) {
+				try {
+					diffusion::delete_record($this->tipo, $this->section_id);
+				} catch (Exception $e) {
+					debug_log(__METHOD__
+						." Error on diffusion::delete_record: " .PHP_EOL
+						.' Exception Catch message: '.$e->getMessage()
+						, logger::WARNING
+					);
+				}
 			}
 
 		// log

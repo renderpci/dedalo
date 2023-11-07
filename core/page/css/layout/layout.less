@@ -714,6 +714,23 @@
 			&.fill_vertical {
 				height: calc(70vh - 6rem);
 			}
+
+			.label {
+				padding: 1rem;
+
+				input {
+					cursor: pointer;
+					margin-right: 0.5rem;
+					vertical-align: bottom;
+				}
+			}
+
+			.block {
+				display: block;
+				padding: 1rem;
+			}
+
+
 		}
 
 		.iframe_container {
@@ -746,7 +763,14 @@
 
 			button {
 				margin-bottom: 1rem;
+				margin-left: 0.5rem;
+
+
 			}
+			button:first-of-type {
+				margin-left: 0rem;
+			}
+
 
 			&.content {
 				padding: 1.5rem;

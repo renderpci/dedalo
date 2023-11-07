@@ -1040,9 +1040,10 @@ section.prototype.delete_section = async function (options) {
 	const self = this
 
 	// options
-		const sqo				= clone(options.sqo)
-		const delete_mode		= options.delete_mode
-		const caller_dataframe	= options.caller_dataframe || null
+		const sqo						= clone(options.sqo)
+		const delete_mode				= options.delete_mode
+		const caller_dataframe			= options.caller_dataframe || null
+		const delete_diffusion_records	= options.delete_diffusion_records ?? true
 
 	// sqo
 		// sqo.limit = null
@@ -1057,9 +1058,11 @@ section.prototype.delete_section = async function (options) {
 		const rqo = {
 			action	: 'delete',
 			source	: source,
-			sqo		: sqo
+			sqo		: sqo,
+			options : {
+				delete_diffusion_records : delete_diffusion_records
+			}
 		}
-
 		const api_response = await data_manager.request({
 			body : rqo
 		})

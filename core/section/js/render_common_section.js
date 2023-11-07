@@ -87,6 +87,20 @@ render_common_section.prototype.delete_record = async (options) => {
 					})
 			}
 
+		// delete diffusion records
+			const delete_diffusion_records_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label unselectable',
+				inner_html		: 'Delete diffusion records',
+				parent			: body
+			})
+			const delete_diffusion_records_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox'
+			})
+			delete_diffusion_records_checkbox.checked = true
+			delete_diffusion_records_label.prepend(delete_diffusion_records_checkbox)
+
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
@@ -105,8 +119,9 @@ render_common_section.prototype.delete_record = async (options) => {
 					return
 				}
 				section.delete_section({
-					sqo			: sqo,
-					delete_mode	: 'delete_record'
+					sqo							: sqo,
+					delete_mode					: 'delete_record',
+					delete_diffusion_records	: delete_diffusion_records_checkbox.checked
 				})
 				.then(function(){
 					modal.on_close()
@@ -166,7 +181,7 @@ const render_relation_list = function(options) {
 	// wrapper
 		const relation_list_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'relation_list_container'
+			class_name		: 'relation_list_container block'
 		})
 
 	// relation_list_head
