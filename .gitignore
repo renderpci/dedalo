@@ -104,6 +104,7 @@ cookie_auth.php
 core/common/css/structure.css
 # core/common/js/lang/*
 *.log
+CHANGELOG.md
 
 # Ignore default text files
 robots.txt
@@ -157,3 +158,6 @@ docs_site
 
 # main read me auto-generated file
 Readme.html
+
+# tools to exclude
+tool_leaflet_special_tools
