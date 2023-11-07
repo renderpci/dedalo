@@ -29,7 +29,6 @@ view_text_list_date.render = async function(self, options) {
 	const ar_value		= get_ar_raw_data_value(self)
 	const value_string	= ar_value.join(self.context.fields_separator)
 
-
 	// wrapper. Set as span
 		const wrapper = document.createElement('span')
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
