@@ -85,6 +85,7 @@ const get_content_data = async function(self) {
 				// section load
 				await self.user_section.build(true)
 				const section_node = await self.user_section.render()
+
 				return section_node
 			}
 		})
