@@ -365,7 +365,10 @@ service_time_machine.prototype.build_request_config = function() {
 					parent			: section_tipo,
 					debug_label		: 'When',
 					mode			: 'tm',
-					view			: 'mini'
+					view			: 'mini',
+					properties		: {
+						date_mode : 'date_time'
+					}
 				},
 				// who dd543 (from activity section)
 				{

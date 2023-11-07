@@ -190,7 +190,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 			 // template_columns
 				const template_columns = self.main_element.model==='section'
 					? null
-					: '5rem 8rem 8rem 16rem 1fr 5fr'
+					: '5rem 8rem 10.8rem 16rem 1fr 5fr'
 
 			// time_machine. Create, build and assign the time machine service to the instance
 				self.service_time_machine = await get_instance({
