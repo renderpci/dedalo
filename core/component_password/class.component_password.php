@@ -172,9 +172,9 @@ class component_password extends component_common {
 			$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
 				? $_SESSION['dedalo']['auth']['username']
 				: null;
-			if ($username==='demo') {
+			if ($username==='dedalo') {
 				debug_log(__METHOD__
-					. " Attempt to change demo user password blocked "
+					. " Attempt to change dedalo demo user password blocked "
 					, logger::ERROR
 				);
 				return null;
