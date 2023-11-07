@@ -23,31 +23,25 @@
       "type": "dd151",
       "section_id": "1",
       "section_tipo": "dd64",
-      "from_component_tipo": "dd1331"
-    },
-    {
-      "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
       "from_component_tipo": "dd1332"
     },
     {
       "type": "dd151",
-      "section_id": "1",
+      "section_id": "2",
       "section_tipo": "dd64",
       "from_component_tipo": "dd1601"
-    },
-    {
-      "type": "dd151",
-      "section_id": "22",
-      "section_tipo": "dd1342",
-      "from_component_tipo": "dd1330"
     },
     {
       "type": "dd151",
       "section_id": "17",
       "section_tipo": "dd1342",
       "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
     },
     {
       "type": "dd151",
@@ -81,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 20,
-              "time": 65045708726,
+              "day": 7,
+              "hour": 17,
+              "time": 65048202650,
               "year": 2023,
-              "month": 10,
-              "minute": 25,
-              "second": 26
+              "month": 11,
+              "minute": 10,
+              "second": 50
             }
           }
         ]
@@ -121,7 +115,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.0"
+          "1.0.1"
         ]
       }
     },
@@ -193,7 +187,7 @@
   "section_id": 18,
   "created_date": "2023-10-09 19:37:41",
   "section_tipo": "dd1340",
-  "modified_date": "2023-10-09 20:25:26",
+  "modified_date": "2023-11-07 17:10:50",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
