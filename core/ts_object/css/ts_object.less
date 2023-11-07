@@ -443,33 +443,6 @@
 				top: 1px;
 			}
 
-			.arrow_spinner {
-				border: none;
-				margin: 0px;
-				padding: 0px;
-				opacity: 1;
-				position: relative;
-
-				&:after {
-					content: " ";
-					display: block;
-					position: absolute;
-					top: 0;
-					left: 0;
-					width: 1.1rem;
-					height: 1.1rem;
-
-					// background: url('../../themes/default/icons/spinner.svg');
-					// background-repeat: no-repeat;
-
-					border: 2px solid #d1d5db;
-					border-top-color: @color_orange_dedalo;
-					border-radius: 50%;
-
-					animation: run_spinner 800ms linear infinite;
-				}
-			}
-
 			.arrow_unactive {
 				display: none;
 			}
@@ -485,6 +458,56 @@
 			// }
 
 		}//end .elements_container
+
+		.arrow_spinner {
+			border: none;
+			margin: 0px;
+			padding: 0px;
+			opacity: 1;
+			position: relative;
+
+			&:after {
+				content: " ";
+				display: block;
+				position: absolute;
+				top: 0;
+				left: 0;
+				width: 1.1rem;
+				height: 1.1rem;
+
+				// background: url('../../themes/default/icons/spinner.svg');
+				// background-repeat: no-repeat;
+
+				border: 2px solid #d1d5db;
+				border-top-color: @color_orange_dedalo;
+				border-radius: 50%;
+
+				animation: run_spinner 800ms linear infinite;
+			}
+		}
+
+		// button show_more (thesaurus pagination)
+		.show_more {
+			width: auto;
+			background-color: #ffffff;
+			line-height: 1rem;
+			margin: 0.5rem;
+			margin-left: 9.25rem;
+			margin-top: 0.25rem;
+			margin-bottom: 0.6rem;
+			padding-right: 1.5rem;
+
+			&.arrow_spinner {
+				&:after {
+					left: unset;
+					right: 0px;
+				}
+			}
+
+			&.active {
+				opacity: 0.4;
+			}
+		}
 
 
 		 // ts_object_children_arrow_icon

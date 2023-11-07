@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {ts_object} from './ts_object.js'
+	import {ts_object} from './ts_object.js'
 
 
 
@@ -100,7 +100,9 @@ export const render_ts_line = function(options) {
 						if(		term_node.dataset.section_id == self.element_to_hilite.section_id
 							&& 	term_node.dataset.section_tipo===self.element_to_hilite.section_tipo) {
 							// hilite element
-							self.hilite_element(term_node)
+							setTimeout(function(){
+								self.hilite_element(term_node)
+							}, 200)
 						}
 					}
 
@@ -297,92 +299,37 @@ export const render_ts_line = function(options) {
 export const render_ts_pagination = function(options) {
 
 	// options
-		const childrens_container		= options.childrens_container
-		const element_children_target	= options.element_children_target
-		const pagination				= options.pagination
-
+		const children_container	= options.children_container
+		const target_section_tipo	= options.target_section_tipo
+		const pagination			= options.pagination
+			  pagination.offset		= (pagination.offset + pagination.limit)
 
 	// button_show_more
 		const button_show_more = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button show_more',
 			inner_html		: get_label.show_more || 'Show more',
-			parent			: childrens_container
+			parent			: children_container
 		})
-		button_show_more.addEventListener('click', function(e) {
+		button_show_more.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
 
 			// loading
-				button_show_more.classList.add('hide')
-				const spinner = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'css_spinner loading_rows',
-					parent			: childrens_container
+			button_show_more.classList.add('arrow_spinner')
+
+			// nodes selection
+			const wrapper = children_container.parentNode
+			const elements_container= [...wrapper.childNodes].find(el => el.classList.contains('elements_container'))
+			const children_element	= [...elements_container.childNodes].find(el => el.classList.contains('arrow_icon'))
+
+			// render children
+				ts_object.get_children(
+					children_element,
+					pagination
+				)
+				.then(function(response){
+					button_show_more.remove()
 				})
-
-			// debug
-				// console.log('++++++ ar_childrens_data:', ar_childrens_data);
-				// console.log('++++++ childrens_container:', childrens_container);
-				// console.log('++++++ childrens_container.parentNode:', childrens_container.parentNode);
-				// console.log('++++++ options:', options);
-				// console.log('++++++ element_children_target.dataset.tipo:', element_children_target.dataset.tipo);
-
-			const section_tipo	= childrens_container.parentNode.dataset.section_tipo
-			const section_id	= childrens_container.parentNode.dataset.section_id
-			const tipo			= element_children_target.dataset.tipo // usually 'hierarchy45'
-
-			const trigger_vars = {
-				mode				: 'get_childrens_data',
-				section_id			: section_id,
-				section_tipo		: section_tipo,
-				tipo				: tipo,
-				node_type			: 'thesaurus_node',
-				target_section_tipo	: target_section_tipo,
-				pagination			: {
-					total	: pagination.total,
-					limit	: pagination.limit,
-					offset	: pagination.limit + pagination.offset
-				}
-			}
-			self.get_json(trigger_vars)
-			.then(function(response) {
-				if(SHOW_DEBUG===true) {
-					console.log("[ts_object.get_childrens] response",response);
-				}
-
-				spinner.remove()
-
-				if (response && response.result) {
-
-					// pagination update
-						const new_pagination	= response.pagination
-						pagination.offset		= new_pagination.offset
-						const last_item			= pagination.limit + pagination.offset
-
-					// remove current button
-						button_show_more.remove()
-
-					// render more child
-						build_ts_list(response.result)
-
-					// add pagination if is needed
-						if (pagination.total && pagination.limit && pagination.total>last_item) {
-							build_ts_pagination()
-						}
-
-				}else{
-					console.error("[ts_object.get_childrens] Error, response is null");
-					button_show_more.classList.remove('hide')
-				}
-
-				if(SHOW_DEBUG===true) {
-					//var end = new Date().getTime();
-					//console.log("[ts_object.get_childrens] js execution time: " + (end - start_time) +' ms' +')')
-					//start = new Date().getTime()
-				}
-			}, function(error) {
-				console.error("Error. Failed get_json!", error);
-			});
 		})//end click
 
 
