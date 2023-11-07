@@ -1048,10 +1048,10 @@ abstract class diffusion  {
 	/**
 	* DELETE_RECORD
 	* @param string $section_tipo
-	* @param int $section_id
+	* @param string|int $section_id
 	* @return object $response
 	*/
-	public static function delete_record($section_tipo, $section_id) : object {
+	public static function delete_record(string $section_tipo, string|int $section_id) : object {
 
 		$response = new stdClass();
 			$response->result		= false;
@@ -1153,9 +1153,9 @@ abstract class diffusion  {
 							include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 							$result = (bool)diffusion_sql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
 							if ($result===true) {
-								$response->result 		= true;
-								$response->msg 			= "Deleted record successful ($table_name - $section_id) in db $database_name (all langs)";
-								$response->ar_deleted[] = (object)[
+								$response->result		= true;
+								$response->msg			= "Deleted record successfully ($table_name - $section_id) in db $database_name (all langs)";
+								$response->ar_deleted[]	= (object)[
 									"section_id"				=> $section_id,
 									"section_tipo"				=> $section_tipo,
 									"database_name"				=> $database_name,
@@ -1163,8 +1163,26 @@ abstract class diffusion  {
 									"diffusion_element_tipo"	=> $diffusion_element_tipo,
 									"class_name"				=> $class_name
 								];
+								debug_log(__METHOD__
+									. " Record successfully deleted (all langs) " . PHP_EOL
+									. ' table_name: ' . $table_name . PHP_EOL
+									. ' database_name: ' . $database_name . PHP_EOL
+									. ' section_tipo: ' . $section_tipo . PHP_EOL
+									. ' section_id: ' . $section_id . PHP_EOL
+									. ' class_name: ' . $class_name . PHP_EOL
+									, logger::WARNING
+								);
 							}else{
-								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record not exists in MySQL db: '$database_name' table: '$table_name' ";
+								$response->msg = "Unable to delete record ($table_name - $section_id). Maybe the record do not exists in MySQL db: '$database_name' table: '$table_name' ";
+								debug_log(__METHOD__
+									. " $response->msg " . PHP_EOL
+									. ' table_name: ' . $table_name . PHP_EOL
+									. ' database_name: ' . $database_name . PHP_EOL
+									. ' section_tipo: ' . $section_tipo . PHP_EOL
+									. ' section_id: ' . $section_id . PHP_EOL
+									. ' class_name: ' . $class_name . PHP_EOL
+									, logger::WARNING
+								);
 							}
 						}
 					break;
@@ -1176,18 +1194,19 @@ abstract class diffusion  {
 
 				default:
 					debug_log(__METHOD__
-						." WARNING. Ignored delete_record for class (name not defined for delete: ".to_string($class_name)
+						." WARNING. Ignored delete_record for class (name not defined for delete) " . PHP_EOL
+						. ' class_name: ' . $class_name
 						, logger::WARNING
 					);
 					break;
 
 			}//end switch ($class_name)
-
 		}//end foreach ($ar_diffusion_element as $diffusion_element)
 
 		// debug
 			debug_log(__METHOD__
-				." response:  ".json_encode($response, JSON_PRETTY_PRINT)
+				." Delete response: " . PHP_EOL
+				. json_encode($response, JSON_PRETTY_PRINT)
 				, logger::DEBUG
 			);
 
