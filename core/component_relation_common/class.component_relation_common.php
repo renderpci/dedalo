@@ -1,5 +1,5 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /*
 * CLASS COMPONENT_RELATION_COMMON
 * Used as common base from all components that works from section relations data, instead standard component dato
@@ -642,6 +642,7 @@ class component_relation_common extends component_common {
 	* Set raw dato overwrite existing dato.
 	* Usually, dato is built element by element, adding one locator to existing dato, but sometimes we need
 	* to insert complete array of locators at once. Use this method in this cases
+	* @return bool
 	*/
 	public function set_dato($dato) : bool {
 
@@ -651,141 +652,142 @@ class component_relation_common extends component_common {
 			$translatable	= $this->RecordObj_dd->get_traducible();
 			$lang			= $this->get_lang();
 
-		if (!empty($dato)) {
+		// non empty dato case
+			if (!empty($dato)) {
 
-			// Tool Time machine case, dato is string
-			if (is_string($dato)) {
-				$dato = json_decode($dato);
-			}
+				// Tool Time machine case, dato is string
+				if (is_string($dato)) {
+					$dato = json_decode($dato);
+				}
 
-			// Bad formed array case
-			if (is_object($dato)) {
-				$dato = array($dato);
-			}
+				// Bad formed array case
+				if (is_object($dato)) {
+					$dato = array($dato);
+				}
 
-			// Ensures dato is a real non-associative array (avoid json encode as object)
-			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+				// Ensures dato is a real non-associative array (avoid JSON encode as object)
+				$dato = is_array($dato) ? array_values($dato) : (array)$dato;
 
-			# Verify all locators are well formed
-			$relation_type			= $this->relation_type;
-			$from_component_tipo	= $this->tipo;
+				// Verify all locators are well formed
+				$relation_type			= $this->relation_type;
+				$from_component_tipo	= $this->tipo;
 
-			// debug
-				// if (empty($this->relation_type)) {
-				// 	dump($this->tipo, ' set dato this empty this->relation_type+ +++++++++++++++++++++++++++++++++++++++ ++ '.to_string($this->default_relation_type));
-				// }
-				// dump($dato, ' dato ++ '.to_string());
-				// error_log(json_encode($dato, JSON_PRETTY_PRINT));
-				// die();
+				// debug
+					// if (empty($this->relation_type)) {
+					// 	dump($this->tipo, ' set dato this empty this->relation_type+ +++++++++++++++++++++++++++++++++++++++ ++ '.to_string($this->default_relation_type));
+					// }
+					// dump($dato, ' dato ++ '.to_string());
+					// error_log(json_encode($dato, JSON_PRETTY_PRINT));
+					// die();
 
-			foreach ((array)$dato as $key => $current_locator) {
+				foreach ((array)$dato as $key => $current_locator) {
 
-				// is empty check
-					if (empty($current_locator)) {
-						$msg = ' Error on set locator. The locator is empty and will be ignored ';
-						debug_log( __METHOD__ . $msg, logger::ERROR);
-						continue;
-					}
-
-				// is_object check
-					if (!is_object($current_locator)) {
-						$msg = " Error on set locator (is not object)";
-						debug_log(__METHOD__
-							. $msg . PHP_EOL
-							. ' type: ' . gettype($current_locator) . PHP_EOL
-							. ' locator: ' . json_encode($current_locator)
-							, logger::ERROR
-						);
-						dump($current_locator, '$current_locator ++ dato: '.to_string($dato));
-						// throw new Exception("Error Processing Request. Look server log for details", 1);
-						if(SHOW_DEBUG===true) {
-							$bt = debug_backtrace();
-							dump($bt, ' bt ++ '.to_string());
+					// is empty check
+						if (empty($current_locator)) {
+							$msg = ' Error on set locator. The locator is empty and will be ignored ';
+							debug_log( __METHOD__ . $msg, logger::ERROR);
+							continue;
 						}
-						continue;
-					}
 
-				// section_id
-					if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
-						debug_log(__METHOD__
-							." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
-							. ' called_class: ' . get_called_class() .PHP_EOL
-							. ' current_locator: '.to_string($current_locator)
-							, logger::ERROR
-						);
-						continue;
-					}
-
-				// Clone locator to prevent issues with external data or observers (modification of the original locator).
-				// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
-				// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
-				// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
-					$locator_copy = clone $current_locator;
-
-				// type
-					if (!isset($locator_copy->type)) {
-						debug_log(__METHOD__
-							." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
-							, logger::WARNING
-						);
-						$locator_copy->type = $relation_type;
-					}
-
-				// from_component_tipo
-					if (!isset($locator_copy->from_component_tipo)) {
-						$locator_copy->from_component_tipo = $from_component_tipo;
-					}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
-						$locator_copy->from_component_tipo = $from_component_tipo;
-						debug_log(__METHOD__
-							. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
-							. ' source_locator: ' . to_string($current_locator) . PHP_EOL
-							. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
-							. ' called_class: ' . get_called_class()
-							, logger::WARNING
-						);
-					}
-
-				// lang
-					if ($translatable==='si') {
-						if (!isset($locator_copy->lang)) {
-							$locator_copy->lang = $lang;
-						}else if ($locator_copy->lang!==$lang) {
-							$locator_copy->lang = $lang;
+					// is_object check
+						if (!is_object($current_locator)) {
+							$msg = " Error on set locator (is not object)";
 							debug_log(__METHOD__
-								. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
+								. $msg . PHP_EOL
+								. ' type: ' . gettype($current_locator) . PHP_EOL
+								. ' locator: ' . json_encode($current_locator)
+								, logger::ERROR
+							);
+							dump($current_locator, '$current_locator ++ dato: '.to_string($dato));
+							// throw new Exception("Error Processing Request. Look server log for details", 1);
+							if(SHOW_DEBUG===true) {
+								$bt = debug_backtrace();
+								dump($bt, ' bt ++ '.to_string());
+							}
+							continue;
+						}
+
+					// section_id
+						if (!isset($current_locator->section_id) || !isset($current_locator->section_tipo)) {
+							debug_log(__METHOD__
+								." IGNORED bad formed locator (empty section_id or section_tipo) [$this->section_tipo, $this->parent, $this->tipo] ". PHP_EOL
+								. ' called_class: ' . get_called_class() .PHP_EOL
+								. ' current_locator: '.to_string($current_locator)
+								, logger::ERROR
+							);
+							continue;
+						}
+
+					// Clone locator to prevent issues with external data or observers (modification of the original locator).
+					// When the component is observed by other component, the locator is saved into the observer changed the from_component_tipo (get the component_tipo as his own from_component_tipo)
+					// if the locator is not cloned, the original locator of the original component will changed with the last from_component_tipo of the observers
+					// the original component will save normally but the changed locator will send to client with incorrect from_component_tipo.
+						$locator_copy = clone $current_locator;
+
+					// type
+						if (!isset($locator_copy->type)) {
+							debug_log(__METHOD__
+								." Fixing bad formed locator (empty type) [$this->section_tipo, $this->parent, $this->tipo] ". get_called_class().' - locator_copy: '.to_string($locator_copy)
+								, logger::WARNING
+							);
+							$locator_copy->type = $relation_type;
+						}
+
+					// from_component_tipo
+						if (!isset($locator_copy->from_component_tipo)) {
+							$locator_copy->from_component_tipo = $from_component_tipo;
+						}else if ($locator_copy->from_component_tipo!==$from_component_tipo) {
+							$locator_copy->from_component_tipo = $from_component_tipo;
+							debug_log(__METHOD__
+								. " Fixed bad formed locator (bad from_component_tipo $locator_copy->from_component_tipo)" . PHP_EOL
 								. ' source_locator: ' . to_string($current_locator) . PHP_EOL
 								. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
 								. ' called_class: ' . get_called_class()
 								, logger::WARNING
 							);
-						}// end if (!isset($locator_copy->lang))
-					}// end if ($translatable==='si')
+						}
 
-				// paginated_key
-					if (isset($locator_copy->paginated_key)) {
-						// remove temporal property paginated_key
-						unset($locator_copy->paginated_key);
-					}
+					// lang
+						if ($translatable==='si') {
+							if (!isset($locator_copy->lang)) {
+								$locator_copy->lang = $lang;
+							}else if ($locator_copy->lang!==$lang) {
+								$locator_copy->lang = $lang;
+								debug_log(__METHOD__
+									. " Fixed bad formed locator (bad lang in translatable locator. Lang: $locator_copy->lang) ". PHP_EOL
+									. ' source_locator: ' . to_string($current_locator) . PHP_EOL
+									. ' result_locator: ' . to_string($locator_copy) . PHP_EOL
+									. ' called_class: ' . get_called_class()
+									, logger::WARNING
+								);
+							}// end if (!isset($locator_copy->lang))
+						}// end if ($translatable==='si')
 
-				// normalized locator
-					$normalized_locator = new locator($locator_copy);
+					// paginated_key
+						if (isset($locator_copy->paginated_key)) {
+							// remove temporal property paginated_key
+							unset($locator_copy->paginated_key);
+						}
 
-				// Add. Check if locator already exists
-					$ar_properties = ($translatable==='si')
-						? ['section_id','section_tipo','type','tag_id','lang']
-						: ['section_id','section_tipo','type','tag_id'];
-					$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
-					if ($found===false) {
-						$safe_dato[] = $normalized_locator;
-					}else{
-						debug_log(__METHOD__
-							.' Ignored set_dato of already existing locator '. PHP_EOL
-							.' locator_copy: ' . to_string($locator_copy)
-							, logger::WARNING
-						);
-					}
-			}
-		}
+					// normalized locator
+						$normalized_locator = new locator($locator_copy);
+
+					// Add. Check if locator already exists
+						$ar_properties = ($translatable==='si')
+							? ['section_id','section_tipo','type','tag_id','lang']
+							: ['section_id','section_tipo','type','tag_id'];
+						$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
+						if ($found===false) {
+							$safe_dato[] = $normalized_locator;
+						}else{
+							debug_log(__METHOD__
+								.' Ignored set_dato of already existing locator '. PHP_EOL
+								.' locator_copy: ' . to_string($locator_copy)
+								, logger::WARNING
+							);
+						}
+				}//end foreach ((array)$dato as $key => $current_locator)
+			}//end if (!empty($dato))
 
 		// set again the safe dato to current component dato
 		// (this action force to refresh component property 'dato' with the new safe values)
@@ -803,7 +805,7 @@ class component_relation_common extends component_common {
 				// merge data and cleaned dato_full
 				$this->dato_full = array_merge($new_dato_full, (array)$safe_dato);
 			}else{
-				$this->dato_full =  (array)$safe_dato;
+				$this->dato_full = (array)$safe_dato;
 			}
 
 
@@ -849,7 +851,7 @@ class component_relation_common extends component_common {
 			// if not already received 'valor', force component load 'dato' from DB
 			$dato = $this->get_dato();
 		}else{
-			// use parsed received json string as dato
+			// use parsed received JSON string as dato
 			$this->set_dato( json_decode($valor) );
 		}
 
@@ -882,7 +884,8 @@ class component_relation_common extends component_common {
 			}
 			debug_log(__METHOD__
 				." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") " . PHP_EOL
-				.' locator: ' . to_string($locator)
+				.' locator: ' . to_string($locator) . PHP_EOL
+				.' Type is mandatory : locator->type: ' . $locator->type
 				, logger::ERROR
 			);
 			return false;
@@ -958,7 +961,7 @@ class component_relation_common extends component_common {
 				debug_log(__METHOD__
 					." Received locator to remove, don't have 'type'. Auto-set type: $this->relation_type to locator: " . PHP_EOL
 					.to_string($locator)
-					, logger::DEBUG
+					, logger::WARNING
 				);
 			}elseif ($locator->type!==$this->relation_type) {
 				// trigger_error("Incorrect locator type ! Expected $this->relation_type and received $locator->type. tipo:$this->tipo, section_tipo:$this->section_tipo, parent:$this->parent");
@@ -1220,67 +1223,81 @@ class component_relation_common extends component_common {
 	*/
 	public static function remove_parent_references(string $section_tipo, $section_id, array $filter=null) : object {
 
-		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-		$section_table 	= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
-		$hierarchy_table= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
-		$ar_tables 		= array( $section_table, $hierarchy_table);
-		$parents 		= component_relation_parent::get_parents($section_id, $section_tipo, $from_component_tipo=null, $ar_tables);
-
-		$ar_removed=array();
-		foreach ((array)$parents as $current_parent) {
-
-			$current_component_tipo	= $current_parent->from_component_tipo;
-			$current_section_tipo	= $current_parent->section_tipo;
-			$current_section_id		= $current_parent->section_id;
-
-			if (!empty($filter)) {
-				# compare current with filter
-				$process=false;
-				foreach ($filter as $current_locator) {
-					if ($current_locator->section_id==$current_section_id && $current_locator->section_tipo===$current_section_tipo) {
-						$process = true; break;
-					}
-				}
-				if(!$process) continue; // Skip current section
-			}
-
-
-			# Target section data
-			$model_name						= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
-			$mode							= 'edit';
-			$lang							= DEDALO_DATA_NOLAN;
-			$component_relation_children	= component_common::get_instance(
-				$model_name,
-				$current_component_tipo,
-				$current_section_id,
-				$mode,
-				$lang,
-				$current_section_tipo
+		// short vars
+			$section_table		= common::get_matrix_table_from_tipo($section_tipo); // Normally 'matrix_hierarchy'
+			$hierarchy_table	= hierarchy::$table;	// Normally 'hierarchy'. Look too in 'matrix_hierarchy_main' table for references
+			$ar_tables			= [$section_table, $hierarchy_table];
+			$parents			= component_relation_parent::get_parents(
+				$section_id,
+				$section_tipo,
+				null, // string|null from_component_tipo
+				$ar_tables
 			);
 
-			# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
-			# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
-			$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $section_id );
-			if ($removed===true) {
-				$component_relation_children->Save();
-				debug_log(__METHOD__." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo ".to_string(), logger::DEBUG);
-				$ar_removed[] = array('section_tipo' 	=> $current_section_tipo,
-									  'section_id' 	 	=> $current_section_id,
-									  'component_tipo' 	=> $current_component_tipo
-									 );
+		// parents to remove
+			$ar_removed=array();
+			foreach ((array)$parents as $current_parent) {
+
+				$current_component_tipo	= $current_parent->from_component_tipo;
+				$current_section_tipo	= $current_parent->section_tipo;
+				$current_section_id		= $current_parent->section_id;
+
+				if (!empty($filter)) {
+					# compare current with filter
+					$process=false;
+					foreach ($filter as $current_locator) {
+						if ($current_locator->section_id==$current_section_id && $current_locator->section_tipo===$current_section_tipo) {
+							$process = true; break;
+						}
+					}
+					if(!$process) continue; // Skip current section
+				}
+
+
+				# Target section data
+				$model_name						= RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true); // 'component_relation_children';
+				$mode							= 'edit';
+				$lang							= DEDALO_DATA_NOLAN;
+				$component_relation_children	= component_common::get_instance(
+					$model_name,
+					$current_component_tipo,
+					$current_section_id,
+					$mode,
+					$lang,
+					$current_section_tipo
+				);
+
+				# NOTE: remove_me_as_your_child deletes current section references from component_relation_children and section->relations container
+				# $removed = (bool)$component_relation_children->remove_child_and_save($child_locator);
+				$removed = (bool)$component_relation_children->remove_me_as_your_child( $section_tipo, $section_id );
+				if ($removed===true) {
+					$component_relation_children->Save();
+					debug_log(__METHOD__
+						." Removed references in component_relation_children ($current_section_id, $current_section_tipo) to $section_id, $section_tipo "
+						, logger::DEBUG
+					);
+					$ar_removed[] = array(
+						'section_tipo'		=> $current_section_tipo,
+						'section_id'		=> $current_section_id,
+						'component_tipo'	=> $current_component_tipo
+					);
+				}
+			}//end foreach ((array)$parents as $current_parent)
+
+		// response
+			if (!empty($ar_removed)) {
+				$response->result		= true;
+				$response->msg			= 'Removed references: '.count($ar_removed);
+				$response->ar_removed	= $ar_removed;
 			}
-		}//end foreach ((array)$parents as $current_parent)
 
-		if (!empty($ar_removed)) {
-			$response->result 		= true;
-			$response->msg 			= 'Removed references: '.count($ar_removed);
-			$response->ar_removed 	= $ar_removed;
-		}
 
-		return (object)$response;
+		return $response;
 	}//end remove_parent_references
 
 
@@ -1549,6 +1566,7 @@ class component_relation_common extends component_common {
 
 		$value = diffusion_sql::resolve_value($options, $dato);
 
+
 		return $value;
 	}//end get_diffusion_resolve_value
 
@@ -1609,9 +1627,11 @@ class component_relation_common extends component_common {
 
 		// properties . get the properties for get search section and component
 			$properties				= $this->get_properties();
-			$ar_section_to_search	= $properties->source->section_to_search ?? false;
+			$ar_section_to_search	= $properties->source->section_to_search ?? null;
 			$ar_component_to_search	= $properties->source->component_to_search ?? false;
-			$component_to_search	= is_array($ar_component_to_search) ? reset($ar_component_to_search) : $ar_component_to_search;
+			$component_to_search	= is_array($ar_component_to_search)
+				? reset($ar_component_to_search)
+				: $ar_component_to_search;
 
 		// current section tipo/id
 			$section_id		= $this->get_section_id();
@@ -1980,26 +2000,29 @@ class component_relation_common extends component_common {
 	* GET_RELATIONS_SEARCH_VALUE
 	* Resolve component search values (parent recursive) to easy search
 	* @return array|null $relations_search_value
-	* Null is default response for calls to this method. Overwritten for component_autocomplete_hi
-	* Array of locators calculated with thesaurus parents of current section and used only for search
+	* 	Null is default response for calls to this method. Overwritten for component_autocomplete_hi
+	* 	Array of locators calculated with thesaurus parents of current section and used only for search
 	*/
 	public function get_relations_search_value() : ?array {
 
 		// only for component_autocomplete_hi
 			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-			if ($legacy_model!=='component_autocomplete_hi'){
+			if ($legacy_model!=='component_autocomplete_hi') {
 				return null;
 			}
 
-		$dato = $this->get_dato();
-		if (!empty($dato)) {
+		// dato
+			$dato = $this->get_dato();
+			if (empty($dato)) {
+				return null;
+			}
 
+		// relations_search_value
 			$relations_search_value = [];
+			foreach ((array)$dato as $current_locator) {
 
-			foreach ((array)$dato as $key => $current_locator) {
-
-				$section_id 	= $current_locator->section_id;
-				$section_tipo 	= $current_locator->section_tipo;
+				$section_id		= $current_locator->section_id;
+				$section_tipo	= $current_locator->section_tipo;
 
 				$parents_recursive = component_relation_parent::get_parents_recursive(
 					$section_id, // string section_id
@@ -2008,7 +2031,7 @@ class component_relation_common extends component_common {
 					false // bool is_recursion
 				);
 
-				foreach ($parents_recursive as $key => $parent_locator) {
+				foreach ($parents_recursive as $parent_locator) {
 
 					$locator = new locator();
 						$locator->set_section_tipo($parent_locator->section_tipo);
@@ -2021,9 +2044,7 @@ class component_relation_common extends component_common {
 					}
 				}
 			}
-		}else{
-			$relations_search_value = false;
-		}
+
 
 		return $relations_search_value;
 	}//end get_relations_search_value
@@ -2039,7 +2060,7 @@ class component_relation_common extends component_common {
 	public static function get_filter_list_data(array $filter_by_list) : array {
 
 		$filter_list_data = [];
-		foreach ((array)$filter_by_list as $current_obj_value) {
+		foreach ($filter_by_list as $current_obj_value) {
 
 			$f_section_tipo   	= $current_obj_value->section_tipo;
 			$f_component_tipo 	= $current_obj_value->component_tipo;
@@ -2055,11 +2076,11 @@ class component_relation_common extends component_common {
 					$f_section_tipo
 				);
 
-			// get section json
+			// get section JSON
 				$get_json_options = new stdClass();
-					$get_json_options->get_context 	= true;
-					$get_json_options->context_type = 'simple';
-					$get_json_options->get_data 	= true;
+					$get_json_options->get_context	= true;
+					$get_json_options->context_type	= 'simple';
+					$get_json_options->get_data		= true;
 
 				$json_data = $current_component->get_json($get_json_options);
 
@@ -2178,25 +2199,34 @@ class component_relation_common extends component_common {
 	/**
 	* GET_HIERARCHY_TERMS_FILTER
 	* Create a sqo filter from
-	* @return array $filter_custom
 	* @see get_request_config
+	*
+	* @param array $ar_terms
+	* @return array $filter
 	*/
 	public static function get_hierarchy_terms_filter(array $ar_terms) : array {
 
 		$filter = [];
 
 		foreach ($ar_terms as $current_item) {
+
 			$recursive = (bool)$current_item->recursive;
-			# Get children
-			$ar_children = component_relation_children::get_children($current_item->section_id, $current_item->section_tipo, null, $recursive);
-			$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+
+			// Get children
+			$ar_children = component_relation_children::get_children(
+				$current_item->section_id,
 				$current_item->section_tipo,
-				['component_section_id'],
-				true, // bool resolve virtual
+				null, // string|null component_tipo
+				$recursive
+			);
+			$component_section_id_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$current_item->section_tipo, // string section_tipo
+				['component_section_id'], // ar_model_name _required
+				true, // bool from_cache
+				true, // bool resolve_virtual
 				true, // bool recursive
-				true,
-				true,
-				false
+				true, // bool search exact
+				false // ar_tipo_exclude
 			);
 
 			$path = new stdClass();
@@ -2210,11 +2240,11 @@ class component_relation_common extends component_common {
 			}, $ar_children);
 
 			$filter_item = new stdClass();
-				$filter_item->q 	= implode(',', $ar_section_id);
-				$filter_item->path 	= [$path];
+				$filter_item->q		= implode(',', $ar_section_id);
+				$filter_item->path	= [$path];
 
-				$filter[] = $filter_item;
-		}//end foreach
+			$filter[] = $filter_item;
+		}//end foreach ($ar_terms as $current_item)
 
 
 		return $filter;
@@ -2225,12 +2255,10 @@ class component_relation_common extends component_common {
 	/**
 	* GET_HIERARCHY_SECTIONS_FROM_TYPES
 	* Calculate hierarchy sections (target section tipo) of types requested, like es1,fr1,us1 from type 2 (Toponymy)
+	* @param array $hierarchy_types
 	* @return array $hierarchy_sections_from_types
 	*/
 	public static function get_hierarchy_sections_from_types( array $hierarchy_types ) : array {
-
-		$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-		// $hierarchy_name_tipo	= DEDALO_HIERARCHY_TERM_TIPO;
 
 		// cache
 			static $cache_hierarchy_sections_from_types;
@@ -2242,14 +2270,17 @@ class component_relation_common extends component_common {
 				}
 			}
 
-		// Active
-		$active_locator = new locator();
-			$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
-			$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
-			$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-			$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
+		// short vars
+			$hierarchy_section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 
-		$active_filter = '{
+		// active_filter
+			$active_locator = new locator();
+				$active_locator->set_section_id(NUMERICAL_MATRIX_VALUE_YES);
+				$active_locator->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$active_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+				$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
+
+			$active_filter = '{
 				"q": '.json_encode(json_encode($active_locator)).',
 				"path": [
 					{
@@ -2261,51 +2292,51 @@ class component_relation_common extends component_common {
 				]
 			}';
 
-		// Typology
-		$typology_filter = [];
-		foreach ((array)$hierarchy_types as $key => $value) {
+		// typology_filter
+			$typology_filter = [];
+			foreach ((array)$hierarchy_types as $value) {
 
-			$typology_locator = new locator();
-				$typology_locator->set_section_id($value);
-				$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
-				$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
-				$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
+				$typology_locator = new locator();
+					$typology_locator->set_section_id($value);
+					$typology_locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO);
+					$typology_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+					$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
 
-			$typology_filter[] = '{
-				"q": '.json_encode(json_encode($typology_locator)).',
-				"path": [
-					{
-						"section_tipo": "hierarchy1",
-						"component_tipo": "hierarchy9",
-						"model": "component_select",
-						"name": "Typology"
-					}
-				]
-			}';
-		}//end foreach ((array)$hierarchy_types as $key => $value)
-
-		$ar_typology_filter = implode(',',$typology_filter);
-
-		$search_query_object = json_decode('
-			{
-				"id": "get_hierarchy_sections_from_types",
-				"section_tipo": "'.$hierarchy_section_tipo.'",
-				"skip_projects_filter":"true",
-				"limit":0,
-				"filter": {
-					"$and": [
-						'.$active_filter.',
-						{ "$or":[
-								'.$ar_typology_filter.'
-							]
+				$typology_filter[] = '{
+					"q": '.json_encode(json_encode($typology_locator)).',
+					"path": [
+						{
+							"section_tipo": "hierarchy1",
+							"component_tipo": "hierarchy9",
+							"model": "component_select",
+							"name": "Typology"
 						}
 					]
-				}
-			}
-		');
+				}';
+			}//end foreach ((array)$hierarchy_types as $key => $value)
 
-		$search	= search::get_instance($search_query_object);
-		$result	= $search->search();
+		// search_query_object
+			$search_query_object = json_decode('
+				{
+					"id": "get_hierarchy_sections_from_types",
+					"section_tipo": "'.$hierarchy_section_tipo.'",
+					"skip_projects_filter":"true",
+					"limit":0,
+					"filter": {
+						"$and": [
+							'.$active_filter.',
+							{ "$or":[
+									'.implode(',', $typology_filter).'
+								]
+							}
+						]
+					}
+				}
+			');
+
+		// search exec
+			$search	= search::get_instance($search_query_object);
+			$result	= $search->search();
 
 		// iterate rows
 			$hierarchy_sections_from_types = [];
@@ -2332,7 +2363,7 @@ class component_relation_common extends component_common {
 				}
 
 				$hierarchy_sections_from_types[] = $target_section_tipo;
-			}
+			}//end foreach ($result->ar_records as $row)
 
 		// cache
 			if ($use_cache===true) {
@@ -2354,7 +2385,7 @@ class component_relation_common extends component_common {
 	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
 
 		$ar_section_tipo = [];
-		foreach ((array)$ar_section_tipo_sources as $source_item) {
+		foreach ($ar_section_tipo_sources as $source_item) {
 
 			if (is_string($source_item)) {
 
@@ -2596,11 +2627,11 @@ class component_relation_common extends component_common {
 			}
 
 			// finished group add
-			if(!empty($dato_filter->{$operator})){
+			if (!empty($dato_filter->{$operator})) {
 				$ar_fixed_filter[] =$dato_filter;
 			}
-
 		}//end foreach ($ar_fixed as $search_item)
+
 
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
@@ -2746,18 +2777,17 @@ class component_relation_common extends component_common {
 	public function conform_import_data(string $import_value, string $column_name) : object {
 
 		// Response
-		$response = new stdClass();
-			$response->result	= null;
-			$response->errors	= [];
-			$response->msg		= 'Error. Request failed';
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
-		if(json_handler::is_json($import_value)){
-
-			// try to JSON decode (null on not decode)
-			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
-			$import_value	= $dato_from_json;
-		}
+			if(json_handler::is_json($import_value)){
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+				$import_value	= $dato_from_json;
+			}
 
 		// short vars
 			$type			= $this->get_relation_type();
@@ -2774,73 +2804,75 @@ class component_relation_common extends component_common {
 
 		// column name could be only the tipo as "rsc85" or a identifier as "rsc85_rsc197"
 		// the component tipo are always the first tipo in the column name
-		$ar_tipos				= explode(locator::DELIMITER, $column_name);
-		$from_component_tipo	= $ar_tipos[0];
-		$target_section_tipo	= $ar_tipos[1] ?? null;
+			$ar_tipos				= explode(locator::DELIMITER, $column_name);
+			$from_component_tipo	= $ar_tipos[0];
+			$target_section_tipo	= $ar_tipos[1] ?? null;
 
-		// check if the value is not a valid json or if it's a int,
+		// check if the value is not a valid JSON or if it's a int,
 		// cases: 1 || 4,5
 		// 1 is an int and 4,5 is string
-		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid json
-		if (is_string($value) || is_int($value)) {
+		// but not the locator [{"section_tipo":"oh1","section_id":"1"}] it's valid JSON
+			if (is_string($value) || is_int($value)) {
 
-			// $target_section_tipo
-				if( empty($target_section_tipo)) {
+				// $target_section_tipo
+					if( empty($target_section_tipo)) {
 
-					$ar_target_section_tipo = $this->get_ar_target_section_tipo();
-					if(count($ar_target_section_tipo)>1) {
+						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
+						if(count($ar_target_section_tipo)>1) {
 
-						debug_log(__METHOD__
-							." Trying to import multiple section_tipo without clear target" .PHP_EOL
-							.' ar_target_section_tipo: '. json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
-							, logger::ERROR
-						);
+							debug_log(__METHOD__
+								." Trying to import multiple section_tipo without clear target" .PHP_EOL
+								.' ar_target_section_tipo: '. json_encode($ar_target_section_tipo, JSON_PRETTY_PRINT)
+								, logger::ERROR
+							);
 
-						$failed = new stdClass();
-							$failed->section_id		= $this->section_id;
-							$failed->data			= stripslashes( $import_value );
-							$failed->component_tipo	= $this->get_tipo();
-							$failed->msg			= 'IGNORED: mTry to import multiple section_tipo without clear target ';
-						$response->errors[] = $failed;
+							$failed = new stdClass();
+								$failed->section_id		= $this->section_id;
+								$failed->data			= stripslashes( $import_value );
+								$failed->component_tipo	= $this->get_tipo();
+								$failed->msg			= 'IGNORED: mTry to import multiple section_tipo without clear target ';
+							$response->errors[] = $failed;
 
-						return $response;
+							return $response;
+						}
+						$target_section_tipo = $ar_target_section_tipo[0] ?? null;
 					}
-					$target_section_tipo = $ar_target_section_tipo[0] ?? null;
-				}
 
-			$ar_values = explode(',', $value);
-			foreach ($ar_values as $section_id) {
-				// old format (section_id)
-				// is int. Builds complete locator and set section_id from value
-				$locator = new locator();
-					$locator->set_type($type);
-					$locator->set_section_tipo($target_section_tipo);
-					$locator->set_from_component_tipo($from_component_tipo);
-					$locator->set_section_id(trim($section_id));
-
-				$ar_locators[] = $locator;
-			}
-		}else{
-
-			// Locator case
-			$value = !is_array($value) ? [$value] : $value;
-			foreach ($value as $current_locator) {
-
-			// is full locator. Inject safe fixed properties to avoid errors
-				$locator = new locator($current_locator);
-					if (!property_exists($current_locator, 'type')) {
+				$ar_values = explode(',', $value);
+				foreach ($ar_values as $section_id) {
+					// old format (section_id)
+					// is int. Builds complete locator and set section_id from value
+					$locator = new locator();
 						$locator->set_type($type);
-					}
-					if (!property_exists($current_locator, 'from_component_tipo')) {
+						$locator->set_section_tipo($target_section_tipo);
 						$locator->set_from_component_tipo($from_component_tipo);
-					}
+						$locator->set_section_id(trim($section_id));
 
-				$ar_locators[] = $locator;
+					$ar_locators[] = $locator;
+				}
+			}else{
+
+				// Locator case
+				$value = !is_array($value) ? [$value] : $value;
+				foreach ($value as $current_locator) {
+
+				// is full locator. Inject safe fixed properties to avoid errors
+					$locator = new locator($current_locator);
+						if (!property_exists($current_locator, 'type')) {
+							$locator->set_type($type);
+						}
+						if (!property_exists($current_locator, 'from_component_tipo')) {
+							$locator->set_from_component_tipo($from_component_tipo);
+						}
+
+					$ar_locators[] = $locator;
+				}
 			}
-		}
 
-		$response->result	= $ar_locators;
-		$response->msg		= 'OK';
+		// response
+			$response->result	= $ar_locators;
+			$response->msg		= 'OK';
+
 
 		return $response;
 	}//end conform_import_data
@@ -2851,6 +2883,7 @@ class component_relation_common extends component_common {
 	* ADD_NEW_ELEMENT
 	* Creates a new record in target section and propagates filter data
 	* Add the new record section id to current component data (as locator) and save it
+	* (!) Note that this function do NOT save the value
 	* @param object $options
 	* Sample:
 	* {
@@ -2882,7 +2915,12 @@ class component_relation_common extends component_common {
 				: $this->get_current_section_filter_data();
 			if(empty($component_filter_dato)) {
 
-				debug_log(__METHOD__." Empty filter value in current section. Default project value will be used (section tipo: $this->section_tipo, section_id: $section_id) ".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Empty filter value in current section. Default project value will be used: "
+					.' section_tipo: ' . $this->section_tipo . PHP_EOL
+					.' section_id: ' . $section_id
+					, logger::WARNING
+				);
 
 				# Default value is used
 				# Temp section case Use default project here
