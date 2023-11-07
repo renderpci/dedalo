@@ -307,50 +307,33 @@ class lock_components {
 
 			$response->result = false;
 			$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
-			debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::DEBUG
+			);
 
 		}else{
 
 			$dato = pg_fetch_result($res, 0, 0);
 			$dato = (array)json_decode($dato);
 
-			$ar_user_actions=array();
+			$ar_user_actions = array();
 			foreach ($dato as $current_event_element) {
 
 				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
-
-					// ar_vars
-						// $ar_vars = array(
-						// 	$current_event_element->full_username,
-						// 	$current_event_element->component_tipo,
-						// 	RecordObj_dd	::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_APPLICATION_LANG, true, true),
-						// 	$current_event_element->section_tipo,
-						// 	RecordObj_dd	::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_APPLICATION_LANG, true, true),
-						// 	$current_event_element->section_id,
-						// );
-
-					// $msg = sprintf("User <b>%s</b> is editing component %s <b>%s</b> from section %s <b>%s</b> of record ID <b>%s</b> (%s)",
-					// 	$current_event_element->full_username,
-					// 	$current_event_element->component_tipo,
-					// 	RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_APPLICATION_LANG, true, true),
-					// 	$current_event_element->section_tipo,
-					// 	RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_APPLICATION_LANG, true, true),
-					// 	$current_event_element->section_id,
-					// 	$current_event_element->date
-					// );
 
 					$ar_user_actions[] = $current_event_element;
 				}
 			}
 			$response->ar_user_actions = $ar_user_actions;
 
-			# Recreate dato array keys
-			$new_dato = array_values($dato);		// Recreate array keys to avoid produce json objects instead array
-			$new_dato = json_encode($new_dato);		// Convert again to text before save to database
-			$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-			#$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-			pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-			$res = pg_get_result(DBi::_getConnection());
+			// Recreate dato array keys
+				// $new_dato = array_values($dato);		// Recreate array keys to avoid produce JSON objects instead array
+				// $new_dato = json_encode($new_dato);		// Convert again to text before save to database
+				// $strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+				// #$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				// pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				// $res = pg_get_result(DBi::_getConnection());
 
 			$response->result = true;
 			$response->msg 	  = sprintf("Active users focus elements: %s", count($ar_user_actions) );
