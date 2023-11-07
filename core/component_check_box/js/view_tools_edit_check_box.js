@@ -78,12 +78,14 @@ const get_content_data = function(self) {
 	// build options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
-			const current_datalist = datalist[i]
-			// do not render tool always_active, they are for all users ans profiles
-			if(current_datalist.always_active){
-				continue
-			}
-			const input_element_node = get_input_element(i, current_datalist, self)
+
+			const datalist_item = datalist[i]
+
+			// do not render tool always_active, they are for all users and profiles
+			// if(datalist_item.always_active){
+				// continue
+			// }
+			const input_element_node = get_input_element(i, datalist_item, self)
 			content_data.appendChild(input_element_node)
 			// set the pointer
 			content_data[i] = input_element_node
@@ -156,6 +158,13 @@ const get_input_element = (i, current_value, self) => {
 				) {
 					input_checkbox.checked = 'checked'
 			}
+		}
+
+	// do not render tool always_active, they are for all users and profiles
+		if(datalist_item.always_active){
+			// input_checkbox.checked = 'checked'
+			input_checkbox.disabled = true
+			option_label.innerHTML += ' (* always_active)'
 		}
 
 	// developer_info
