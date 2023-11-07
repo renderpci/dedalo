@@ -308,11 +308,15 @@ class area_maintenance extends area_common {
 		// lock_components *
 			$item = new stdClass();
 				$item->id		= 'lock_components';
+				$item->class	= 'width_100';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'Lock components status';
 				$item->value	= (object)[
-					'active_users' => lock_components::get_active_users()
+					'active_users' => (object)[ // mimic api response object
+						'result'			=> true,
+						'ar_user_actions'	=> []
+					]
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

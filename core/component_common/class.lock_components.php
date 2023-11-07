@@ -363,6 +363,33 @@ class lock_components {
 
 
 	/**
+	* GET_ACTIVE_USERS_FULL
+	* @return array ar_user_actions
+	*/
+	public static function get_active_users_full() : array {
+
+		$active_users = lock_components::get_active_users();
+
+		$ar_user_actions = [];
+		foreach ($active_users->ar_user_actions as $current_event_element) {
+
+			$item = clone $current_event_element;
+
+			// add some useful information
+				$item->component_model	= RecordObj_dd::get_modelo_name_by_tipo($current_event_element->component_tipo, true);
+				$item->component_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
+				$item->section_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
+
+			$ar_user_actions[] = $item;
+		}
+
+
+		return $ar_user_actions;
+	}//end get_active_users_full
+
+
+
+	/**
 	* CLEAN_LOCKS_GARBAGE
 	* Event format
 	* {

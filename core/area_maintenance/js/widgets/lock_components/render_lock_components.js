@@ -135,6 +135,8 @@ const get_content_data_edit = async function(self) {
 				content_data.classList.remove('lock')
 				// spinner.remove()
 		}//end fn_reset_counter
+		// force first load
+		button_refresh.click()
 
 		function print_active_users(api_response) {
 			// clean container
@@ -151,10 +153,12 @@ const get_content_data_edit = async function(self) {
 					class_name		: 'icon gear',
 					parent			: info_node
 				})
+				const label = `User ${item.user_id} (${item.full_username}) is editing ${item.component_model} ${item.component_tipo} (${item.component_label})`
+					+ ` of section ${item.section_tipo}-${item.section_id} (${item.section_label}) from ${item.date}`
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: '',
-					inner_html		: `User ${item.user_id} (${item.full_username}) is editing component ${item.component_tipo} of section ${item.section_tipo} ${item.section_id}`,
+					inner_html		: label,
 					parent			: info_node
 				})
 			}
@@ -173,6 +177,10 @@ const get_content_data_edit = async function(self) {
 
 			// prompt
 				const user_id = prompt('User id optional');
+				if (user_id===null) {
+					// user cancel action case
+					return
+				}
 
 			// lock
 				content_data.classList.add('lock')

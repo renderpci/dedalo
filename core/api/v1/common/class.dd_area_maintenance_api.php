@@ -540,7 +540,8 @@ final class dd_area_maintenance_api {
 		// switch fn_action
 			switch ($fn_action) {
 				case 'get_active_users':
-					$response = lock_components::get_active_users();
+					$response->result			= true;
+					$response->ar_user_actions	= lock_components::get_active_users_full();
 					break;
 
 				case 'force_unlock_all_components':
