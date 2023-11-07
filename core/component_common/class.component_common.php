@@ -2073,7 +2073,6 @@ abstract class component_common extends common {
 			$records_data		= $search->search();
 			$ar_current_dato	= $records_data->ar_records;
 
-
 		$result = [];
 		$ar_current_dato_size = sizeof($ar_current_dato);
 		for ($i=0; $i < $ar_current_dato_size; $i++) {
