@@ -1160,7 +1160,18 @@ final class dd_core_api {
 							.' exec time: '.exec_time_unit($start_time).' ms'
 							, logger::DEBUG
 						);
-						$component->Save();
+						$save_result = $component->Save();
+						if (is_null($save_result)) {
+							$response->error	 = 3;
+							$response->msg		.= ' Error on component Save. data it\'s not saved! ';
+							debug_log(__METHOD__
+								. " $response->msg " . PHP_EOL
+								. " model:$model (tipo:$tipo - section_tipo:$section_tipo - section_id:$section_id) " . PHP_EOL
+								.' rqo: '.to_string($rqo)
+								, logger::ERROR
+							);
+							return $response;
+						}
 
 					// force recalculate dato
 						$dato = $component->get_dato();
