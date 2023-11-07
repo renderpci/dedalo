@@ -1731,7 +1731,7 @@ class component_text_area extends component_common {
 
 		$tags_persons = array();
 
-		$section_id		= $this->get_section_id();
+		$section_id			= $this->get_section_id();
 		// $section_tipo	= $this->get_section_tipo();
 
 		$properties = $this->get_properties();
