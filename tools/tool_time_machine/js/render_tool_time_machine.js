@@ -232,17 +232,19 @@ export const add_component = async (self, component_container, lang_value, label
 						node.classList.add('disabled_component')
 					}
 
+				// time_label_node
+					const time_label_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'time_label',
+						inner_html		: label,
+						parent			: component_container
+					})
+
 				return node
 			}
 		})
 
-	// label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'time_label',
-			inner_html		: label,
-			parent			: component_container
-		})
+
 
 
 	return node
