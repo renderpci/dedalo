@@ -168,6 +168,19 @@ class component_password extends component_common {
 			}
 		}
 
+		// demo user case. Prevent to change password for logged user 'demo'
+			$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
+				? $_SESSION['dedalo']['auth']['username']
+				: null;
+			if ($username==='demo') {
+				debug_log(__METHOD__
+					. " Attempt to change demo user password blocked "
+					, logger::ERROR
+				);
+				return null;
+			}
+
+
 		// From here, we save as standard
 		return parent::Save();
 	}//end Save
