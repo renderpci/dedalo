@@ -2008,6 +2008,10 @@ class component_image extends component_media_common {
 	* usually default
 	* @param string $file_path
 	* @return object $image_dimensions
+	* 	{
+	* 		width: 1280
+	* 		height: 1024
+	* 	}
 	*/
 	public function get_image_dimensions(string $file_path) : object {
 
@@ -2017,15 +2021,23 @@ class component_image extends component_media_common {
 			if($this->external_source) {
 
 				$file_path = $this->external_source;
+
+				return $image_dimensions;
 			}
 
 		// file do not exists case
 			if ( !file_exists( $file_path )) {
 				debug_log(__METHOD__
-					." Error. Image file not found ". PHP_EOL
-					. 'filename: ' .$file_path
+					." Error. Image file not found " . PHP_EOL
+					. 'file_path: ' .$file_path . PHP_EOL
+					. 'section_tipo: ' .$this->section_tipo . PHP_EOL
+					. 'section_id: ' .$this->section_id . PHP_EOL
 					, logger::ERROR
 				);
+				// debug
+					// if(SHOW_DEBUG===true) {
+					// 	dump(debug_backtrace(), ' debug_backtrace ++ '.to_string());
+					// }
 				return $image_dimensions;
 			}
 
