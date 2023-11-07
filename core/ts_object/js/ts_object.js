@@ -66,7 +66,7 @@ export const ts_object = new function() {
 	* @param HTMLElement children_element
 	* @return promise
 	*/
-	this.get_children = function(children_element) {
+	this.get_children = function(children_element, pagination, clean_children_container) {
 
 		// short vars
 			const tipo 					= children_element.dataset.tipo
@@ -124,6 +124,9 @@ export const ts_object = new function() {
 						section_tipo	: parent_section_tipo,
 						node_type		: node_type,
 						tipo			: tipo
+					},
+					options : {
+						pagination : pagination
 					}
 				}
 				data_manager.request({
@@ -140,13 +143,17 @@ export const ts_object = new function() {
 							const options = {
 								target_section_tipo			: target_section_tipo,
 								node_type					: node_type,
-								clean_children_container	: true
+								clean_children_container	: clean_children_container ?? false,
+								pagination					: response.pagination
 							}
 							const result = await ts_object.dom_parse_children(
 								ar_children_data,
 								children_container,
 								options
 							)
+
+						// fix children_element pagination (used on refresh_element to get current pagination status)
+							children_element.pagination = response.pagination
 
 						// updates arrow
 							if (children_element && children_element.firstChild && children_element.dataset.type) {
@@ -281,11 +288,15 @@ export const ts_object = new function() {
 				})
 
 			// pagination
-				if (pagination.total && pagination.limit && pagination.total>pagination.limit) {
+				if (pagination.total &&
+					pagination.limit &&
+					pagination.total > pagination.limit &&
+					(pagination.offset + pagination.limit) < pagination.total
+					) {
 					render_ts_pagination({
-						childrens_container		: childrens_container,
-						element_children_target	: element_children_target,
-						pagination				: pagination
+						children_container	: children_container,
+						target_section_tipo	: target_section_tipo,
+						pagination			: pagination
 					})
 				}
 
@@ -710,7 +721,7 @@ export const ts_object = new function() {
 	* TOGGLE_VIEW_CHILDREN
 	* @param DOM object link_children_element
 	* @param event
-	* @return HTMLElement|null
+	* @return promise|null
 	*/
 	this.toggle_view_children = function(link_children_element, event) {
 		//var jsPromise = Promise.resolve(function(){
@@ -748,7 +759,11 @@ export const ts_object = new function() {
 
 				// Load element by AJAX
 					if (typeof event!=="undefined" && event.altKey===true) {
-						result = ts_object.get_children(link_children_element);
+						result = ts_object.get_children(
+							link_children_element,
+							null, // object pagination
+							true // bool clean_children_container
+						);
 					}
 
 				// save_opened_elements
@@ -835,10 +850,11 @@ export const ts_object = new function() {
 
 	/**
 	* HILITE_ELEMENT
-	* section_tipo, section_id
-	* element.dataset.section_tipo, element.dataset.section_id
-	* @param dom object element
+	* Adds 'element_hilite' class to matching nodes
+	* @param HTMLElment element
+	* @param bool clean_others
 	* @return int len
+	* 	matches.length
 	*/
 	this.hilite_element = function(element, clean_others) {
 
@@ -858,7 +874,7 @@ export const ts_object = new function() {
 		// hilite only current element
 			// element.classList.add("element_hilite");
 
-		// hilite all appearances of current component (can appears more than once)
+		// hilite all appearances of current component (may appear more than once)
 			const matches	= document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
 			const len		= matches.length;
 			for (let i = len - 1; i >= 0; i--) {
@@ -920,7 +936,20 @@ export const ts_object = new function() {
 
 				if(element_children) {
 
-					ts_object.get_children( element_children )
+					// pagination is set in DOM element_children from API response in get_children call
+					const pagination = element_children.pagination
+						? element_children.pagination
+						: null
+						if (pagination) {
+							pagination.limit	= pagination.offset + pagination.limit
+							pagination.offset	= 0
+						}
+
+					ts_object.get_children(
+						element_children,
+						pagination, // object pagination
+						true // bool clean_children_container
+					)
 					.then(function() {
 						// const arrow_div = element_children.querySelector('.ts_object_children_arrow_icon')
 						// if (arrow_div && arrow_div.classList.contains('ts_object_children_arrow_icon_open')===false) {
@@ -936,6 +965,7 @@ export const ts_object = new function() {
 					console.log("[refresh_element] Error on find element_children for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
 				}
 		}
+
 
 		return matches_length
 	}//end refresh_element
@@ -1703,7 +1733,9 @@ export const ts_object = new function() {
 
 				// Last elements are the final found elements and must be hilite
 				const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
-				ts_object.hilite_element(last_element, false);
+				setTimeout(function(){
+					ts_object.hilite_element(last_element, false);
+				}, 200)
 			}
 
 			// Open arrows and fix children container state

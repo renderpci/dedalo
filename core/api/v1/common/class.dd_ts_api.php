@@ -22,6 +22,13 @@ final class dd_ts_api {
 	* 		section_tipo	: parent_section_tipo,
 	* 		node_type		: node_type,
 	* 		tipo			: tipo
+	* 	},
+	* 	options : {
+	* 		pagination: {
+	* 			limit: 100,
+	* 			offset: 0,
+	* 			total: 150
+	* 		}
 	* 	}
 	* }
 	* @return object $response
@@ -39,32 +46,49 @@ final class dd_ts_api {
 			$section_id		= $source->section_id;
 			$node_type		= $source->node_type;
 			$tipo			= $source->tipo;
+			$options		= $rqo->options;
+			$pagination		= $options->pagination ?? null;
 
 		// children
 			if($node_type==='hierarchy_node') {
 
 				// Children are the same current data
-				$locator = new locator();
-					$locator->set_section_tipo($section_tipo);
-					$locator->set_section_id($section_id);
-				$children = array($locator);
+					$locator = new locator();
+						$locator->set_section_tipo($section_tipo);
+						$locator->set_section_id($section_id);
+					$dato		= [$locator];
+					$children	= $dato;
 
 			}else{
 
 				// Calculate children from parent
-				$model							= 'component_relation_children';
-				$mode							= 'list_thesaurus';
-				$lang							= DEDALO_DATA_NOLAN;
-				$component_relation_children	= component_common::get_instance(
-					$model,
-					$tipo,
-					$section_id,
-					$mode,
-					$lang,
-					$section_tipo
-				);
-				$dato		= $component_relation_children->get_dato();
-				$children	= $dato;
+					$model							= 'component_relation_children';
+					$mode							= 'list_thesaurus';
+					$lang							= DEDALO_DATA_NOLAN;
+					$component_relation_children	= component_common::get_instance(
+						$model,
+						$tipo,
+						$section_id,
+						$mode,
+						$lang,
+						$section_tipo
+					);
+
+				$dato = $component_relation_children->get_dato();
+
+				// pagination. Set default if is not defined
+					$current_pagination = !empty($pagination)
+						? $pagination
+						: (object)[
+							'limit'		=> 100,
+							'offset'	=> 0,
+							'total'		=> (is_array($dato) ? count($dato) : 0)
+						];
+					$component_relation_children->pagination = $current_pagination;
+
+				// dato_paginated
+					$dato_paginated	= $component_relation_children->get_dato_paginated();
+					$children		= $dato_paginated;
 			}
 
 		// model
@@ -90,15 +114,16 @@ final class dd_ts_api {
 				#}
 			}
 
-			$response->result	= (array)$children_data;
-			$response->msg		= 'OK. Request done [get_children_data]';
+			// response
+				$response->result		= (array)$children_data;
+				$response->msg			= 'OK. Request done [get_children_data]';
+				$response->pagination	= $current_pagination ?? null;
 
 		}catch(Exception $e) {
 
 			$response->result	= false;
 			$response->msg		= 'Error. Caught exception: '.$e->getMessage();
 		}
-
 
 		// debug
 			// if(SHOW_DEBUG===true) {
