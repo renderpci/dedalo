@@ -157,10 +157,10 @@ class component_password extends component_common {
 	*/
 	public function Save() : ?int {
 
- 		if(isset($this->updating_dato) && $this->updating_dato===true) {
-			# Dato is saved plain (unencrypted) only for updates
+		if(isset($this->updating_dato) && $this->updating_dato===true) {
+			// Dato is saved plain (unencrypted) only for updates
 		}else{
-			# Encrypt dato with md5 etc..
+			// Encrypt dato with md5 etc..
 			$dato = $this->dato;
 			foreach ((array)$dato as $key => $value) {
 				# code...
@@ -210,10 +210,11 @@ class component_password extends component_common {
 
 		if( $encryption_mode==='openssl' ) {
 			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMATION);
-		}else if($encryption_mode==='mcrypt') {
-			return dedalo_encryptStringArray($stringArray, DEDALO_INFORMATION);
 		}else{
-			debug_log(__METHOD__." UNKNOW ENCRYPT MODE !! ".to_string(), logger::ERROR);
+			debug_log(__METHOD__
+				." UNKNOW ENCRYPT MODE !! ".to_string()
+				, logger::ERROR
+			);
 		}
 
 		return false;
@@ -248,61 +249,6 @@ class component_password extends component_common {
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
-
-			case '4.0.22':
-				#$dato = $this->get_dato_unchanged();
-
-				$section_id = explode('.', $reference_id)[1];
-				if((int)$section_id === -1){
-
-					$default = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMATION);
-
-					$section = section::get_instance( -1, DEDALO_SECTION_USERS_TIPO );
-					$dato = $section->get_dato();
-					$tipo = DEDALO_USER_PASSWORD_TIPO;
-					$lang = DEDALO_DATA_NOLAN;
-
-					$dato->components->$tipo->dato->$lang = $dato->components->$tipo->valor->$lang = dedalo_encrypt_openssl($default);
-
-					$strQuery 	= "UPDATE matrix_users SET datos = $1 WHERE section_id = $2 AND section_tipo = $3";
-					$result 	= pg_query_params(DBi::_getConnection(), $strQuery, array( json_handler::encode($dato), -1, DEDALO_SECTION_USERS_TIPO ));
-					if(!$result) {
-						if(SHOW_DEBUG) {
-							dump($strQuery,"strQuery");
-						}
-						throw new Exception("Error Processing Save Update Request ". pg_last_error(DBi::_getConnection()), 1);;
-					}
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Dato change for root.<br />";	// to_string($dato_unchanged)."
-
-					return $response;
-				}
-
-				# Compatibility old dedalo instalations
-				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
-
-					$old_pw = dedalo_decryptStringArray($dato_unchanged, DEDALO_INFORMATION);
-					$new_dato = dedalo_encrypt_openssl($old_pw, DEDALO_INFORMATION);
-
-					debug_log(__METHOD__." changed pw from $dato_unchanged - $new_dato ".to_string($old_pw), logger::DEBUG);
-
-					$response = new stdClass();
-						$response->result	=1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-
-					return $response;
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-
-					return $response;
-				}
-				break;
 
 			default:
 				$response = new stdClass();
