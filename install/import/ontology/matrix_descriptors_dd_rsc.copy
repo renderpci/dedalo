@@ -210,14 +210,6 @@ rsc133	Listado relaciones	termino	lg-spa
 rsc133	Llistat relacions	termino	lg-cat
 rsc1071	Διαγράφω	termino	lg-ell
 rsc133	σχέση	termino	lg-ell
-rsc134	Nova bibliografia	termino	lg-cat
-rsc134	Nueva bibliografía	termino	lg-spa
-rsc134	Nuova bibliografia	termino	lg-ita
-rsc134	νέος	termino	lg-ell
-rsc135	Borrar bibliografía	termino	lg-spa
-rsc135	Cancellare bibliografia	termino	lg-ita
-rsc135	Esborrar bibliografia	termino	lg-cat
-rsc135	διαγράψετε	termino	lg-ell
 rsc136	Guarda statistiche	termino	lg-ita
 rsc136	Ver estadísticas	termino	lg-spa
 rsc136	Veure estadístiques	termino	lg-cat
@@ -278,6 +270,14 @@ rsc146	Localización, formato de disponibilidad y acceso al documento (enlace a
 rsc146	Διαθεσιμότητα και την πρόσβαση	termino	lg-ell
 rsc156	Estat	termino	lg-cat
 rsc14	Conservation	termino	lg-eng
+rsc134	Nuevo	termino	lg-spa
+rsc134	Nou	termino	lg-cat
+rsc134	Nuovo	termino	lg-ita
+rsc134	Νέο	termino	lg-ell
+rsc135	Borrar	termino	lg-spa
+rsc135	Διαγραφή	termino	lg-ell
+rsc135	Esborrar	termino	lg-cat
+rsc135	Cancellare	termino	lg-ita
 rsc147	ISBN o numeración para su localización	def	lg-spa
 rsc147	Número normalitzat	termino	lg-cat
 rsc147	Número normalizado	termino	lg-spa
@@ -3170,8 +3170,6 @@ rsc130	Beziehungen	termino	lg-deu
 rsc131	Liste	termino	lg-deu
 rsc132	Beschreibung	termino	lg-deu
 rsc133	Liste Beziehungen	termino	lg-deu
-rsc134	Neue Bibliographie	termino	lg-deu
-rsc135	Literaturverzeichnis löschen	termino	lg-deu
 rsc136	Statistiken ansehen	termino	lg-deu
 rsc137	Code	termino	lg-deu
 rsc138	Bibliographische Typologie	termino	lg-deu
@@ -3224,6 +3222,8 @@ rsc181	Liste	termino	lg-deu
 rsc182	Administratives Dossier	termino	lg-deu
 rsc183	Ausgeschlossene	termino	lg-deu
 rsc184	Liste	termino	lg-deu
+rsc134	Neu	termino	lg-deu
+rsc135	Löschen	termino	lg-deu
 rsc186	Ausgeschlossene	termino	lg-deu
 rsc187	Liste	termino	lg-deu
 rsc188	Bulletin oder Zeitschrift	termino	lg-deu
@@ -4133,8 +4133,6 @@ rsc130	Relations	termino	lg-eng
 rsc131	List	termino	lg-eng
 rsc132	Description	termino	lg-eng
 rsc133	Relation List	termino	lg-eng
-rsc134	New bibliography	termino	lg-eng
-rsc135	Delete bibliography	termino	lg-eng
 rsc136	View Statistics	termino	lg-eng
 rsc137	Code	termino	lg-eng
 rsc138	Tipology	termino	lg-eng
@@ -4212,6 +4210,8 @@ rsc212	Series / magazines / collections	termino	lg-eng
 rsc213	Series / Collections	termino	lg-eng
 rsc201	3D file	termino	lg-eng
 rsc202	3D document	termino	lg-eng
+rsc134	New	termino	lg-eng
+rsc135	Delete	termino	lg-eng
 rsc217	URL	termino	lg-eng
 rsc218	Source	termino	lg-eng
 rsc219	Publisher	termino	lg-eng
@@ -4221,7 +4221,6 @@ rsc222	Copy	termino	lg-eng
 rsc223	Pages. Physical description	termino	lg-eng
 rsc224	Publication date	termino	lg-eng
 rsc225	Uniform title	termino	lg-eng
-rsc227	Import from Zotero	termino	lg-eng
 rsc228	Identifying image	termino	lg-eng
 rsc229	Belonging	termino	lg-eng
 rsc230	Identification	termino	lg-eng
@@ -4327,6 +4326,7 @@ rsc283	Surname (single/maiden)	termino	lg-eng
 rsc346	Creation / production credit note	termino	lg-eng
 rsc302	Vector document	termino	lg-eng
 rsc226	Data source	termino	lg-eng
+rsc227	Import Zotero	termino	lg-eng
 rsc349	Personal name	termino	lg-eng
 rsc350	Entity name	termino	lg-eng
 rsc351	Conference name	termino	lg-eng
@@ -5023,8 +5023,6 @@ rsc130	Relations	termino	lg-fra
 rsc131	Liste	termino	lg-fra
 rsc132	Description	termino	lg-fra
 rsc133	Liste de relations	termino	lg-fra
-rsc134	Nouvelle bibliographie	termino	lg-fra
-rsc135	Supprimer la bibliographie	termino	lg-fra
 rsc136	Voir les statistiques	termino	lg-fra
 rsc137	Code	termino	lg-fra
 rsc138	Typologie bibliographique	termino	lg-fra
@@ -5096,6 +5094,8 @@ rsc199	Liste	termino	lg-fra
 rsc2	Ressources Médias	termino	lg-fra
 rsc200	État 	termino	lg-fra
 rsc201	Fichier 3D	termino	lg-fra
+rsc134	Nouveau	termino	lg-fra
+rsc135	Supprimer	termino	lg-fra
 rsc203	Individus, groupes ou communautés	termino	lg-fra
 rsc204	Administration	termino	lg-fra
 rsc205	Publications	termino	lg-fra

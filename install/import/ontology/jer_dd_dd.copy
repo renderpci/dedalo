@@ -1664,3 +1664,4 @@ dd1024	dd622	dd1231	no	si	si	20	dd	no	[{"dd431":"ww32"}]	{"process_dato":"diffus
 dd1546	dd540	dd395	no	si	si	6	dd	si	\N	{"name":"historial_del_componente"}	{"name": "component_history"}
 dd1641	dd342	dd395	no	si	si	19	dd	si	\N	{"name":"build_install_version"}	{"name": "build_install_version"}
 dd1642	dd342		no	si	si	20	dd	si	\N	{"name":"update_data_version"}	{"name": "update_data_version"}
+dd1645	dd390	dd395	no	si	si	40	dd	si	\N	{"name":"delete_diffusion_records"}	{"name": "delete_diffusion_records"}
