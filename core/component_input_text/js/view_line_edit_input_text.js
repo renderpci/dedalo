@@ -128,6 +128,10 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
+		// keydown event. Prevent to fire page events like open search panel
+			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
+			})
 		// keyup event
 			input.addEventListener('keyup', function(e) {
 				keyup_handler(e, i, self)
