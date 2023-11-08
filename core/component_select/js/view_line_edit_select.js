@@ -37,9 +37,6 @@ view_line_edit_select.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// button_exit_edit
-		// const button_exit_edit = ui.component.build_button_exit_edit(self)
-
 	// content_data
 		const content_data = get_content_data(self, {
 			render_content_data			: get_content_value,
@@ -91,6 +88,12 @@ const get_content_value = (i, current_value, self) => {
 			element_type	: 'div',
 			class_name		: 'content_value'
 		})
+
+	// button_exit_edit. Add once
+		if (i===0) {
+			const button_exit_edit = ui.component.build_button_exit_edit(self)
+			content_value.appendChild(button_exit_edit)
+		}
 
 	// select
 		const select = ui.create_dom_element({
