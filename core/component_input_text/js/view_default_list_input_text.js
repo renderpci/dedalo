@@ -25,6 +25,8 @@ export const view_default_list_input_text = function() {
 /**
 * RENDER
 * Render component node to use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_input_text.render = async function(self, options) {
@@ -42,7 +44,7 @@ view_default_list_input_text.render = async function(self, options) {
 			? ' (' + self.data.transliterate_value + ')'
 			: ''
 
-		const value_string			= fallback.join(self.context.fields_separator) + transliterate_value
+		const value_string = fallback.join(self.context.fields_separator) + transliterate_value
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
