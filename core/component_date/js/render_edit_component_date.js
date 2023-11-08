@@ -242,6 +242,10 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					ui.component.activate(self)
 				}
 			})
+		// keydown event. Prevent to fire page events like open search panel
+			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
+			})
 		// keyup event
 			input.addEventListener('keyup', function(e) {
 				keyup_handler({
@@ -532,21 +536,27 @@ export const input_element_time = (i, current_value, self) => {
 				ui.component.activate(self)
 			}
 		})
-		input.addEventListener('keyup', function(e) {
-			keyup_handler({
-				e : e
+		// keydown event. Prevent to fire page events like open search panel
+			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
 			})
-		})
-		input.addEventListener('change', function(){
-			change_handler({
-				self		: self,
-				input_value	: input.value,
-				key			: i,
-				input_wrap	: input_wrap,
-				mode		: 'start',
-				type		: 'time'
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				keyup_handler({
+					e : e
+				})
 			})
-		})
+		// change event
+			input.addEventListener('change', function(){
+				change_handler({
+					self		: self,
+					input_value	: input.value,
+					key			: i,
+					input_wrap	: input_wrap,
+					mode		: 'start',
+					type		: 'time'
+				})
+			})
 
 	// button_calendar
 		const button_calendar = ui.create_dom_element({
