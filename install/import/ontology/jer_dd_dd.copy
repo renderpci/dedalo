@@ -660,7 +660,7 @@ dd859	dd821	dd183	no	si	si	4	dd	no	\N	\N	\N
 dd1368	dd1364	dd1231	no	si	si	4	dd	si	[{"dd9":"rsc369"}]	\N	\N
 dd1343	dd1342	dd8	no	si	si	1	dd	no	\N	\N	\N
 dd952	dd938	dd91	no	si	si	2	dd	si	[{"dd9":"dd949"},{"dd10":"dd950"}]	\N	\N
-dd1412	dd1100	dd441	no	si	si	4	dd	no	\N	{\r\n  "thesaurus": {\r\n    "term": "dd1399",\r\n    "is_descriptor": "dd1445",\r\n    "is_indexable": false,\r\n    "parent": "dd1410"\r\n  }\r\n}	null
+dd1412	dd1100	dd441	no	si	si	4	dd	no	\N	{"thesaurus":{"term":"dd1399","is_descriptor":"dd1445","is_indexable":false,"parent":"dd1410"}}	{"thesaurus": {"term": "dd1399", "parent": "dd1410", "is_indexable": false, "is_descriptor": "dd1445"}}
 dd332	dd319	dd395	no	si	si	5	dd	si	\N	{"name":"auto_rebobinado"}	{"name": "auto_rewind"}
 dd848	dd822	dd530	no	si	si	8	dd	no	[{"dd6":"dd938"},{"dd9":"dd949"}]	{\r\n  "multi_value": true,\r\n  "mode": "autocomplete",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}, "mode": "autocomplete", "multi_value": true}
 dd953	dd938	dd177	no	si	si	3	dd	no	\N	\N	\N
@@ -1607,7 +1607,7 @@ dd283	dd537	dd395	no	si	si	18	dd	si	\N	{"name":"procesando_media_en_background"}
 dd1597	dd1132	dd58	no	si	si	5	dd	si	\N	\N	\N
 dd1591	dd785	dd395	no	si	si	72	dd	no	\N	{"name":"default_lang_of_file_to_import"}	{"name": "default_lang_of_file_to_import"}
 dd1623	dd389	dd395	no	si	si	36	dd	si	\N	{"name":"select_search_section"}	{"name": "select_search_section"}
-dd1340	dd1323	dd6	no	si	si	2	dd	no	[{"dd6":"dd73"}]	\N	{"css": {".list_body .column_section": {"background-color": "#f78a1b26"}, ".list_body .column_section.column_dd1326": {"min-width": "16.5rem", "background-color": "#f78a1b40"}}}
+dd1340	dd1323	dd6	no	si	si	2	dd	no	[{"dd6":"dd73"}]	\N	{"css": {".content_data": {"background-color": "rgb(247 138 27 / 10%)"}, ".list_body .column_section": {"background-color": "#f78a1b26"}, ".list_body .column_section.column_dd1326": {"min-width": "16.5rem", "background-color": "#f78a1b40"}}}
 dd418	dd147	dd395	no	si	si	10	dd	si	\N	{"name":"dias"}	{"name": "days"}
 dd419	dd147	dd395	no	si	si	11	dd	si	\N	{"name":"meses"}	{"name": "months"}
 dd420	dd147	dd395	no	si	si	12	dd	si	\N	{"name":"anyo"}	{"name": "year"}

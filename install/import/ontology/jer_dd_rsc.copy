@@ -5,7 +5,6 @@ rsc447	rsc444	dd1231	no	si	si	3	rsc	si	[{"dd9":"rsc23"}]	\N	\N
 rsc626	rsc624	dd177	no	si	si	2	rsc	no	\N	\N	\N
 rsc669	rsc481	dd6	no	si	si	10	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc847	rsc846	dd8	no	si	si	1	rsc	no	\N	\N	\N
-rsc425	rsc204	dd6	no	si	si	11	rsc	no	\N	\N	\N
 rsc74	rsc15	dd1018	no	si	si	5	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}}
 rsc483	rsc482	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc229	rsc481	dd6	no	si	si	5	rsc	si	[{"dd626":"dd22"}]		null
@@ -89,8 +88,8 @@ rsc328	rsc327	dd9	no	si	si	2	rsc	si	\N	\N	{"css": {".wrapper_component": {"grid-
 rsc77	rsc75	dd8	no	si	si	4	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 10%)"}}}
 rsc56	rsc11	dd9	no	si	si	7	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"23%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}}
 rsc420	rsc203	dd6	no	si	si	4	rsc	no	[{"dd6":"rsc412"}]	\N	\N
-rsc17	rsc2	dd58	no	si	si	17	rsc	si	[{"dd9":"rsc21"},{"dd9":"rsc23"}]	\N	\N
 rsc302	dd14	dd6	no	si	si	5	rsc	no	[{"dd6":"rsc2"}]	\N	\N
+rsc17	rsc2	dd58	no	si	si	18	rsc	si	[{"dd9":"rsc21"},{"dd9":"rsc23"}]	\N	\N
 rsc347	rsc343	dd10	no	si	si	5	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"33%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc348	rsc343	dd10	no	si	si	6	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"34%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc246	rsc245	dd1129	no	si	si	1	rsc	no	[{"dd8":"rsc152"},{"dd57":"rsc162"}]		\N
@@ -99,7 +98,6 @@ rsc266	rsc264	dd1231	no	si	si	2	rsc	si	[{"dd749":"rsc29"}]		\N
 rsc270	rsc267	dd1231	no	si	si	3	rsc	si	[{"dd9":"rsc86"}]		\N
 rsc654	rsc650	dd183	no	si	si	3	rsc	no	\N	\N	\N
 rsc757	rsc756	dd8	no	si	si	1	rsc	no	null		null
-rsc326	rsc204	dd6	no	si	si	8	rsc	no	[{"dd626":"dd481"}]	\N	\N
 rsc849	rsc847	dd9	no	si	si	2	rsc	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 rsc196	rsc194	dd91	no	si	si	2	rsc	no	[{"dd339":"rsc279"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd530":"rsc94"},{"dd9":"rsc100"},{"dd9":"rsc101"},{"dd227":"rsc102"},{"dd592":"rsc88"}]		\N
 rsc75	rsc1	dd6	no	si	si	1	rsc	no	\N		null
@@ -107,21 +105,21 @@ rsc2	rsc1	dd6	no	si	si	2	rsc	no	\N		\N
 rsc4	rsc1	dd6	no	si	si	4	rsc	no	\N		\N
 rsc278	rsc275	dd1232	no	si	si	3	rsc	si	[{"dd10":"rsc36"}]		\N
 rsc852	rsc846	dd177	no	si	si	4	rsc	no	\N	\N	\N
-rsc370	rsc204	dd6	no	si	si	9	rsc	no	[{"dd626":"dd489"}]	\N	\N
 rsc239	rsc176	dd181	no	si	si	4	rsc	no	[{"dd1018":"rsc37"},{"dd10":"rsc38"}]		\N
-rsc18	rsc2	dd183	no	si	si	16	rsc	no	\N	\N	\N
 rsc343	rsc3	dd8	no	si	si	6	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(3, 1fr)"}}}
 rsc112	rsc295	dd58	no	si	si	6	rsc	no	[{"dd9":"rsc116"},{"dd635":"rsc120"}]		\N
 rsc173	rsc167	dd181	no	si	si	3	rsc	no	[{"dd722":"rsc35"},{"dd10":"rsc36"}]		\N
 rsc59	rsc11	dd11	no	si	si	5	rsc	no	[{"dd6":"dd985"},{"dd9":"dd987"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 rsc321	rsc252	dd43	no	si	si	6	rsc	no	\N	{"type":{"float":2},"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 rsc201	rsc1130	dd1741	no	si	si	1	rsc	no	null	{"css":{".wrap_component":{"display":"none"}}}	{"max_items_folder": 1000}
+rsc326	rsc204	dd6	no	si	si	8	rsc	no	[{"dd626":"dd481"}]	\N	\N
+rsc370	rsc204	dd6	no	si	si	9	rsc	no	[{"dd626":"dd489"}]	\N	\N
+rsc18	rsc2	dd183	no	si	si	17	rsc	no	\N	\N	\N
 rsc136	rsc3	dd1058	no	si	no	10	rsc	no	\N	\N	{"disable": true}
 rsc249	rsc677	dd11	no	si	si	1	rsc	no	[{"dd6":"dd292"},{"dd9":"dd296"}]	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc147	rsc677	dd9	no	si	si	2	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc761	rsc756	dd177	no	si	si	3	rsc	no	\N		null
 rsc84	rsc75	dd1058	no	si	no	11	rsc	no	\N	\N	{"disable": true}
-rsc252	rsc2	dd8	no	si	si	10	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 1fr)"}}}
 rsc850	rsc846	dd247	no	si	si	2	rsc	no	\N	\N	\N
 rsc247	rsc245	dd91	no	si	si	2	rsc	no	[{"dd57":"rsc162"},{"dd635":"rsc163"},{"dd530":"rsc255"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]		\N
 rsc208	rsc88	dd91	no	si	si	1	rsc	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]		\N
@@ -131,25 +129,26 @@ rsc232	rsc229	dd247	no	si	si	2	rsc	no	\N		\N
 rsc233	rsc229	dd177	no	si	si	3	rsc	no	\N		\N
 rsc234	rsc229	dd91	no	si	si	4	rsc	no	[{"dd9":"rsc231"}]		\N
 rsc238	rsc236	dd91	no	si	si	2	rsc	no	[{"dd635":"rsc163"},{"dd247":"rsc164"},{"dd530":"rsc255"},{"dd10":"rsc166"},{"dd1018":"rsc165"}]		\N
-rsc226	ts11	dd524	no	si	si	3	rsc	no	[{"dd195":"dd196"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd57":"rsc93"}]	\N	\N
 rsc69	rsc14	dd11	no	si	si	1	rsc	no	[{"dd6":"dd567"},{"dd9":"dd570"}]	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
-rsc11	rsc2	dd8	no	si	si	9	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 1fr)"}}}
 rsc241	rsc14	dd635	no	si	si	3	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc243	rsc14	dd635	no	si	si	5	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_20",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
-rsc12	rsc2	dd8	no	si	si	11	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(8, 1fr)"}}}
 rsc81	rsc75	dd58	no	si	si	8	rsc	no	[{"dd9":"rsc85"},{"dd9":"rsc86"}]		\N
 rsc82	rsc75	dd177	no	si	si	9	rsc	si	\N		\N
 rsc57	rsc11	dd11	no	si	si	3	rsc	no	[{"dd6":"dd957"},{"dd9":"dd959"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}}
-rsc14	rsc2	dd8	no	si	si	13	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(5, 1fr)"}}}
-rsc15	rsc2	dd8	no	si	si	14	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(6, 1fr)"}}}
 rsc200	rsc170	dd181	no	si	si	5	rsc	no	[{"dd749":"rsc29"},{"dd10":"rsc30"}]		\N
 rsc113	rsc295	dd177	no	si	si	7	rsc	no	\N		\N
-rsc8	rsc2	dd8	no	si	si	5	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 50%)"}}}
-rsc13	rsc2	dd8	no	si	si	12	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-rows": "repeat(4, auto)", "grid-template-columns": "repeat(4, 1fr)"}}}
 rsc9	rsc2	dd8	no	si	si	7	rsc	no	\N		\N
 rsc180	rsc179	dd1129	no	si	si	1	rsc	no	[{"dd8":"rsc5"},{"dd8":"rsc6"},{"dd8":"rsc7"},{"dd8":"rsc8"},{"dd8":"rsc10"},{"dd8":"rsc11"},{"dd8":"rsc12"},{"dd8":"rsc13"},{"dd8":"rsc14"},{"dd8":"rsc15"},{"dd8":"rsc252"},{"dd8":"rsc856"},{"dd8":"rsc1130"}]	\N	\N
 rsc273	rsc267	dd1231	no	si	si	8	rsc	si	[{"dd634":"rsc91"}]		\N
 rsc271	rsc267	dd1231	no	si	si	5	rsc	si	[{"dd9":"rsc87"}]		\N
+rsc226	rsc204	dd6	no	si	si	18	rsc	no	null	\N	\N
+rsc8	rsc2	dd8	no	si	si	5	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 50%)"}}}
+rsc11	rsc2	dd8	no	si	si	9	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 1fr)"}}}
+rsc252	rsc2	dd8	no	si	si	10	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 1fr)"}}}
+rsc12	rsc2	dd8	no	si	si	11	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(8, 1fr)"}}}
+rsc13	rsc2	dd8	no	si	si	12	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-rows": "repeat(4, auto)", "grid-template-columns": "repeat(4, 1fr)"}}}
+rsc14	rsc2	dd8	no	si	si	13	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(5, 1fr)"}}}
+rsc15	rsc2	dd8	no	si	si	14	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(6, 1fr)"}}}
 rsc145	rsc343	dd10	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"33%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc762	rsc756	dd183	no	si	si	4	rsc	no	\N		null
 rsc39	rsc9	dd138	no	si	si	1	rsc	no	[{"dd1017":"rsc40"}]		\N
@@ -161,7 +160,6 @@ rsc153	rsc4	dd8	no	si	si	2	rsc	no	\N		null
 rsc151	rsc4	dd8	no	si	si	3	rsc	no	\N		\N
 rsc158	rsc4	dd177	no	si	si	4	rsc	no	\N		\N
 rsc3	rsc1	dd6	no	si	si	3	rsc	no	\N		\N
-rsc236	rsc204	dd6	no	si	si	6	rsc	no	[{"dd6":"rsc4"}]		\N
 rsc230	rsc229	dd8	no	si	si	1	rsc	no	\N		null
 rsc231	rsc230	dd9	no	si	si	1	rsc	si	\N		null
 rsc154	rsc153	dd10	no	si	si	2	rsc	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	null
@@ -171,6 +169,7 @@ rsc190	rsc188	dd91	no	si	si	2	rsc	no	[{"dd9":"rsc161"},{"dd635":"rsc163"},{"dd10
 rsc192	rsc191	dd1129	no	si	si	1	rsc	no	[{"dd57":"rsc162"}]		\N
 rsc72	rsc15	dd57	no	si	si	3	rsc	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"16%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc73	rsc15	dd57	no	si	si	4	rsc	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"14%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
+rsc236	rsc204	dd6	no	si	si	6	rsc	no	[{"dd6":"rsc4"}]		\N
 rsc129	rsc3	dd8	no	si	si	1	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 5%)"}}}
 rsc131	rsc3	dd91	no	si	si	12	rsc	no	[{"dd9":"rsc137"},{"dd11":"rsc138"},{"dd9":"rsc139"},{"dd9":"rsc140"},{"dd9":"rsc141"},{"dd9":"rsc147"}]		\N
 rsc133	rsc3	dd58	no	si	si	13	rsc	no	[{"dd9":"rsc349"},{"dd9":"rsc140"},{"dd635":"rsc224"}]		\N
@@ -181,14 +180,13 @@ rsc315	rsc313	dd9	no	si	si	2	rsc	si	\N	{\r\n  "css": {\r\n    ".wrap_component":
 rsc157	rsc4	dd58	no	si	si	6	rsc	no	\N		\N
 rsc306	rsc305	dd1747	no	si	si	1	rsc	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "8%", "border-bottom-right-radius": "8px"}}}}
 rsc365	rsc108	dd500	no	si	si	6	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 5"}}}
-rsc245	rsc204	dd6	no	si	si	7	rsc	no	[{"dd6":"rsc4"}]		\N
 rsc186	rsc185	dd1129	no	si	si	1	rsc	no	[{"dd8":"rsc152"}]		\N
 rsc359	rsc358	dd9	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	\N
 rsc33	rsc32	dd9	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_50",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
+rsc245	rsc204	dd6	no	si	si	7	rsc	no	[{"dd6":"rsc4"}]		\N
 rsc10	rsc2	dd8	no	si	si	8	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 rsc307	rsc305	dd9	no	si	si	2	rsc	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"clear": "left", "width": "40%"}}}}
 rsc319	rsc312	dd91	no	si	si	5	rsc	no	[{"dd9":"rsc315"}]	\N	\N
-rsc621	rsc204	dd6	no	si	si	1	rsc	no	\N	\N	\N
 rsc166	rsc151	dd10	no	si	si	2	rsc	si	[{"dd1018":"rsc165"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 rsc164	rsc150	dd247	no	si	si	5	rsc	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "45%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"float": "rigth", "width": "45%"}}}}
 rsc305	rsc304	dd8	no	si	si	1	rsc	no	\N	\N	\N
@@ -230,9 +228,9 @@ rsc756	dd1454	dd6	no	si	no	3	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc394	rsc389	dd247	no	si	si	4	rsc	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 rsc389	rsc388	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc393	rsc388	dd91	no	si	si	2	rsc	no	[{"dd530":"rsc391"},{"dd11":"rsc392"}]	\N	\N
-rsc377	rsc204	dd6	no	si	si	10	rsc	no	[{"dd626":"dd485"}]	\N	\N
 rsc1111	rsc1109	dd9	no	si	si	2	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 5"}}}
 rsc383	rsc267	dd1231	no	si	si	28	rsc	si	[{"dd530":"rsc449"}]	\N	\N
+rsc377	rsc204	dd6	no	si	si	10	rsc	no	[{"dd626":"dd485"}]	\N	\N
 rsc853	rsc846	dd183	no	si	si	5	rsc	no	\N	\N	\N
 rsc388	rsc481	dd6	no	si	si	9	rsc	no	\N	\N	\N
 rsc384	rsc129	dd9	no	si	si	14	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"20%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}}
@@ -322,7 +320,7 @@ rsc681	rsc3	dd441	no	si	si	18	rsc	no	\N	{\r\n  "thesaurus": {\r\n    "term": "rs
 rsc948	rsc939	dd91	no	si	si	2	rsc	no	[{"dd635":"rsc942"},{"dd11":"rsc943"},{"dd57":"rsc944"},{"dd442":"rsc945"},{"dd442":"qdp553"}]	\N	\N
 rsc209	rsc357	dd1018	no	si	si	3	rsc	no	[{"dd10":"rsc210"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"60%"}}}}	{"max_items_folder": 1000}
 rsc949	rsc684	dd6	no	si	si	5	rsc	no	\N	\N	\N
-rsc1074	rsc2	dd177	no	si	si	19	rsc	no	\N	\N	\N
+rsc1074	rsc2	dd177	no	si	si	16	rsc	no	\N	\N	\N
 rsc950	rsc949	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc427	rsc167	dd441	no	si	si	5	rsc	no	\N	{"default":{"code":"rsc21"}}	{"default": {"code": "rsc21", "term": ["rsc23"]}}
 rsc433	rsc267	dd1231	no	si	si	16	rsc	si	[{"dd530":"rsc94"}]	\N	\N
@@ -341,15 +339,15 @@ rsc590	rsc574	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc470	rsc461	dd247	no	si	si	4	rsc	no	\N	\N	\N
 rsc585	rsc551	dd592	no	si	si	2	rsc	no	[{"dd6":"rsc611"},{"dd11":"rsc615"},{"dd10":"rsc616"},{"dd592":"rsc618"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "100%"}}}}
 rsc954	rsc962	dd43	no	si	si	2	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
-rsc105	rsc78	dd500	no	si	si	1	rsc	no	\N		\N
 rsc662	rsc76	dd9	no	si	si	19	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"30%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}}
+rsc105	rsc78	dd500	no	si	si	2	rsc	no	\N		\N
 rsc599	rsc598	dd97	no	si	si	1	rsc	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "50%",\r\n    "element_height": "160px"\r\n  }\r\n}	{"edit_view_options": {"element_width": "50%", "element_height": "160px"}}
 rsc451	rsc450	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc455	rsc450	dd91	no	si	si	3	rsc	si	[{"dd9":"rsc452"}]	\N	\N
 rsc506	rsc333	dd581	no	si	si	4	rsc	si	\N	\N	\N
-rsc182	rsc204	dd6	no	si	si	2	rsc	no	[{"dd6":"rsc4"}]		null
 rsc162	rsc150	dd11	no	si	si	3	rsc	no	[{"dd6":"dd1313"},{"dd9":"dd1315"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
 rsc456	rsc450	dd177	no	si	si	4	rsc	no	\N	\N	\N
+rsc182	rsc204	dd6	no	si	si	2	rsc	no	[{"dd6":"rsc4"}]		null
 rsc392	rsc389	dd11	no	si	si	3	rsc	no	[{"dd6":"dd492"},{"dd9":"dd494"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
 rsc355	rsc132	dd9	no	si	si	1	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"70%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}}
 rsc442	rsc264	dd1231	no	si	si	4	rsc	si	[{"dd9":"rsc31"}]	\N	\N
@@ -370,7 +368,7 @@ rsc658	rsc652	dd1747	no	si	si	1	rsc	no	\N	{\r\n  "css": {\r\n    ".wrap_componen
 rsc106	rsc203	dd6	no	si	si	3	rsc	no	[{"dd6":"rsc295"}]	\N	\N
 rsc958	rsc962	dd43	no	si	si	8	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"15%"}}}}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "15%"}}}}
 rsc450	rsc480	dd6	no	si	si	4	rsc	no	[{"dd626":"dd22"}]	\N	\N
-rsc502	rsc2	dd581	no	si	si	18	rsc	si	\N	\N	\N
+rsc502	rsc2	dd581	no	si	si	19	rsc	si	\N	\N	\N
 rsc962	rsc949	dd8	no	si	si	2	rsc	no	\N	\N	\N
 rsc251	rsc129	dd904	no	si	si	20	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}, "source": {"request_config": [{"sqo": {"section_tipo": [{"value": "lg1", "source": "section"}]}, "show": {"ddo_map": [{"mode": "list", "tipo": "hierarchy25", "view": null, "label": "Term", "model": "component_input_text", "parent": "self", "section_tipo": "lg1"}]}, "type": "main", "api_engine": "dedalo"}]}}
 rsc505	rsc333	dd58	no	si	si	3	rsc	si	[{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"}]	\N	\N
@@ -421,12 +419,12 @@ rsc1106	rsc1081	dd581	no	si	si	4	rsc	no	\N	\N	\N
 rsc479	rsc477	dd11	no	si	si	2	rsc	no	[{"dd6":"rsc482"},{"dd9":"rsc485"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "20%"}}}}
 rsc1107	rsc1093	dd581	no	si	si	4	rsc	no	\N	\N	\N
 rsc577	rsc576	dd8	no	si	si	1	rsc	no	\N	\N	\N
-rsc476	rsc204	dd6	no	si	si	12	rsc	no	\N	\N	\N
 rsc183	rsc182	dd1129	no	si	si	1	rsc	no	null		null
 rsc403	rsc480	dd6	no	si	si	2	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc461	rsc480	dd6	no	si	si	9	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc481	dd68	dd4	no	si	si	4	rsc	no	\N	\N	\N
 rsc477	rsc476	dd8	no	si	si	1	rsc	no	\N	\N	\N
+rsc476	rsc204	dd6	no	si	si	12	rsc	no	\N	\N	\N
 rsc971	rsc949	dd8	no	si	si	5	rsc	no	\N	\N	\N
 rsc480	dd68	dd4	no	si	si	2	rsc	no	\N	\N	\N
 rsc541	rsc539	dd9	no	si	si	2	rsc	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "40%"}}}}
@@ -502,9 +500,9 @@ rsc619	rsc618	dd97	no	si	si	1	rsc	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	{\r\n 
 rsc551	rsc550	dd8	no	si	si	2	rsc	no	\N	\N	\N
 rsc616	rsc612	dd10	no	si	si	5	rsc	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"clear": "left", "width": "50%"}}}}
 rsc705	rsc687	dd1231	no	si	si	29	rsc	si	[{"dd9":"rsc144"}]	\N	\N
-rsc682	rsc204	dd6	no	si	si	13	rsc	no	\N	\N	\N
 rsc620	rsc617	dd97	no	si	si	1	rsc	no	[{"dd6":"rsc167"},{"dd722":"rsc35"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "25%",\r\n    "element_height": "160px"\r\n  }\r\n}	{"edit_view_options": {"element_width": "25%", "element_height": "160px"}}
 rsc126	rsc108	dd9	no	si	si	2	rsc	no	\N	{"multi_value":true,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"20%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
+rsc682	rsc204	dd6	no	si	si	13	rsc	no	\N	\N	\N
 rsc683	rsc682	dd592	no	si	si	1	rsc	no	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N	\N
 rsc679	rsc130	dd429	no	si	si	1	rsc	no	[{"dd352":"rsc680"}]	{"show_parent_name":true,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%","border-right":"none"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "source": {"records_mode": "list", "request_config": [{"sqo": {"section_tipo": [{"value": ["rsc205"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "rsc140", "parent": "self", "section_tipo": "rsc205"}]}}]}, "show_parent_name": true}
 rsc685	dd68	dd4	no	si	si	5	rsc	si	\N	\N	\N
@@ -641,8 +639,8 @@ rsc217	rsc129	dd500	no	si	si	22	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".
 rsc747	rsc740	dd183	no	si	si	5	rsc	no	\N		null
 rsc907	rsc128	dd353	no	si	no	1	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[4],"hierarchy_sections":[]}}	{"v6_update_dataframe": {"v5": {"from_component_tipo": "rsc907"}, "v6": {"section_tipo": "rsc1056", "from_component_tipo": "rsc1057"}}}
 rsc587	rsc554	dd592	no	si	si	3	rsc	no	[{"dd6":"rsc170"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"}]	{\r\n   "dragable_connectWith": "rsc560",\r\n  "ar_tools_name": {\r\n    "tool_import_files": {\r\n      "target_component": "rsc29",\r\n      "layout_map": [\r\n        "rsc10",\r\n        "rsc31",\r\n        "rsc23"\r\n      ],\r\n      "target_date": "rsc44"\r\n    }\r\n  }\r\n}	{"ar_tools_name": {"tool_import_files": {"layout_map": ["rsc10", "rsc31", "rsc23"], "target_date": "rsc44", "target_component": "rsc29"}}}
-rsc832	rsc204	dd6	no	si	si	15	rsc	no	[{"dd6":"rsc326"}]	\N	\N
 rsc175	rsc5	dd1747	no	si	si	1	rsc	no	null	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"10%","border-bottom-right-radius":"8px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
+rsc832	rsc204	dd6	no	si	si	15	rsc	no	[{"dd6":"rsc326"}]	\N	\N
 rsc833	rsc832	dd91	no	si	si	2	rsc	si	[{"dd10":"rsc329"},{"dd9":"rsc835"}]	\N	\N
 rsc34	rsc32	dd9	no	si	si	2	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".width_50",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc834	rsc832	dd1129	no	si	si	1	rsc	no	[{"dd9":"rsc328"},{"dd339":"rsc399"}]	\N	\N
@@ -857,7 +855,6 @@ rsc912	rsc413	dd500	no	si	si	12	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".
 rsc199	rsc197	dd91	no	si	si	2	rsc	no	[{"dd339":"rsc279"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd9":"rsc87"},{"dd247":"rsc98"},{"dd635":"rsc89"},{"dd634":"rsc91"},{"dd57":"rsc93"},{"dd530":"rsc94"},{"dd530":"rsc96"},{"dd592":"rsc88"}]	\N	\N
 rsc5	rsc2	dd8	no	si	si	1	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 rsc22	rsc5	dd9	no	si	si	4	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}},".label":{"style":{}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
-rsc913	rsc204	dd6	no	si	si	16	rsc	no	\N	\N	\N
 rsc914	rsc913	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc915	rsc913	dd177	no	si	si	2	rsc	no	\N	\N	\N
 rsc916	rsc913	dd183	no	si	si	3	rsc	no	\N	\N	\N
@@ -870,14 +867,15 @@ rsc921	rsc914	dd247	no	si	si	8	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".v
 rsc925	rsc913	dd91	no	si	si	4	rsc	no	[{"dd43":"rsc918"},{"dd43":"rsc919"},{"dd43":"rsc920"},{"dd43":"rsc922"},{"dd43":"rsc923"},{"dd43":"rsc924"}]	\N	\N
 rsc917	rsc914	dd1747	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"10%","border-bottom-right-radius":"8px"}}}}	\N
 rsc918	rsc914	dd11	no	si	si	2	rsc	no	[{"dd6":"dd528"},{"dd9":"dd531"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	\N
+rsc913	rsc204	dd6	no	si	si	16	rsc	no	\N	\N	\N
 rsc97	rsc76	dd57	no	si	si	3	rsc	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"dato_default":[{"section_id":"2","section_tipo":"dd64"}],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}},".content_data":{"style":{"width":"120px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}, "dato_default": [{"section_id": "2", "section_tipo": "dd64"}]}
 rsc536	rsc76	dd530	no	si	si	32	rsc	no	[{"dd6":"rsc528"},{"dd9":"rsc531"}]	{"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{}}}}	{"css": {".wrapper_component": {"grid-row": "8", "grid-column": "span 6"}}}
 rsc1038	rsc1036	dd442	no	si	si	2	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_sections":[],"hierarchy_types":[4]},"value_with_parents":false,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [4], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}}
 rsc836	dd1454	dd6	no	si	si	11	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc76	rsc75	dd8	no	si	si	1	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(20, 5%)"}}}
 rsc7	rsc2	dd8	no	si	si	3	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-rows": "repeat(6, auto)", "grid-template-columns": "repeat(10, 1fr)"}}}
-rsc1022	rsc1014	dd581	no	si	si	6	rsc	no	\N	\N	\N
 rsc1035	rsc204	dd6	no	si	si	17	rsc	no	\N	\N	\N
+rsc1022	rsc1014	dd581	no	si	si	6	rsc	no	\N	\N	\N
 rsc926	rsc275	dd1231	no	si	si	7	rsc	si	[{"dd247":"rsc28"}]	{"data_to_be_used":"dato"}	{"data_to_be_used": "dato"}
 rsc927	rsc264	dd1231	no	si	si	8	rsc	si	[{"dd247":"rsc28"}]	{"data_to_be_used":"dato"}	{"data_to_be_used": "dato"}
 rsc929	rsc444	dd1231	no	si	si	5	rsc	si	[{"dd247":"rsc28"}]	{"data_to_be_used":"dato"}	{"data_to_be_used": "dato"}
@@ -913,8 +911,8 @@ rsc387	rsc357	dd442	no	si	si	6	rsc	no	\N	{"source":{"mode":"autocomplete","hiera
 rsc1053	rsc267	dd1234	no	si	si	18	rsc	si	[{"dd635":"rsc282"}]	{"process_dato":"diffusion_sql::split_date_range","process_dato_arguments":{"selected_key":0,"selected_date":"end","date_format":"full"}}	\N
 rsc434	rsc267	dd1235	no	si	si	10	rsc	si	[{"dd442":"rsc91"}]	{"varchar":255,"process_dato":"diffusion_sql::map_locator_to_terminoID","process_dato_arguments":{"custom_arguments":{"add_parents":false}}}	\N
 rsc1036	rsc1035	dd8	no	si	si	1	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
+rsc78	rsc75	dd8	no	si	si	5	rsc	no	\N	\N	\N
 rsc411	rsc75	dd8	no	si	si	3	rsc	no	\N	\N	\N
-rsc78	rsc75	dd8	no	si	si	5	rsc	si	\N		\N
 rsc79	rsc75	dd91	no	si	si	7	rsc	no	[{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd80":"rsc90"},{"dd227":"rsc102"},{"dd247":"rsc98"},{"dd10":"rsc99"},{"dd592":"rsc88"}]		\N
 rsc83	rsc75	dd183	no	si	si	10	rsc	no	\N	{\r\n  "delete_action_pre": {\r\n    "info": "This method is exec before delete this section record, and test if any person tag is linked to current record to warning to user",\r\n    "method": "button_delete.person_used"\r\n  }\r\n}	{"delete_action_pre": {"info": "This method is exec before delete this section record, and test if any person tag is linked to current record to warning to user", "method": "button_delete.person_used"}}
 rsc501	rsc75	dd581	no	si	si	12	rsc	si	\N	\N	\N
@@ -929,8 +927,8 @@ rsc336	rsc334	dd9	no	si	si	3	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".ver
 rsc369	rsc334	dd9	no	si	si	5	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc516	rsc334	dd339	no	si	si	2	rsc	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"dato_default":[{"section_id":"1","section_tipo":"dd64"}],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc547	rsc334	dd9	no	si	si	6	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
-rsc1034	rsc295	dd441	no	si	si	11	rsc	si	\N	{"thesaurus":{"term":["rsc116"],"is_descriptor":"rsc1032","parent":"rsc1030","is_indexable":"rsc1033"}}	\N
 rsc340	rsc332	dd1129	no	si	si	1	rsc	no	null	\N	\N
+rsc1034	rsc295	dd441	no	si	si	11	rsc	si	\N	{"thesaurus":{"term":["rsc116"],"is_descriptor":"rsc1032","parent":"rsc1030","is_indexable":"rsc1033"}}	{"thesaurus": {"term": ["rsc116"], "parent": "rsc1030", "is_indexable": "rsc1033", "is_descriptor": "rsc1032"}}
 rsc1006	rsc1005	dd592	no	si	si	1	rsc	no	[{"dd6":"rsc176"},{"dd1129":"rsc287"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc38"},{"dd1018":"rsc37"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"100%"}}}}	\N
 rsc1000	rsc997	dd635	no	si	si	3	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"20%"}}}}	\N
 rsc337	rsc334	dd500	no	si	si	9	rsc	no	null	{"limit":1,"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"80%"}},".btn_add_iri":{"style":{"display":"none"}}}}	{"css": {".btn_add_iri": {"style": {"display": "none"}}, ".wrapper_component": {"grid-column": "span 8"}}, "limit": 1}
@@ -1078,21 +1076,25 @@ rsc169	rsc167	dd91	no	si	si	1	rsc	no	[{"dd57":"rsc20"},{"dd9":"rsc21"},{"dd9":"r
 rsc1110	rsc1109	dd1747	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"10%","border-bottom-right-radius":"8px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc813	rsc807	dd10	no	si	si	6	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "1 / span 10"}}}
 rsc716	rsc632	dd11	no	si	si	4	rsc	no	[{"dd6":"rsc576"},{"dd9":"rsc579"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "6 / span 2"}}}
-rsc1127	rsc76	dd57	no	si	si	10	rsc	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	{"dato_default":[{"section_id":"1","section_tipo":"dd501"}],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"45%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 8"}}}
 rsc185	rsc204	dd6	no	si	si	3	rsc	no	[{"dd6":"rsc4"}]	\N	\N
+rsc1127	rsc76	dd57	no	si	si	10	rsc	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	{"dato_default":[{"section_id":"1","section_tipo":"dd501"}],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"45%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 8"}}}
 rsc715	rsc632	dd9	no	si	si	5	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"35%"}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "8 / span 3"}}}
-rsc188	rsc204	dd6	no	si	si	4	rsc	no	[{"dd6":"rsc4"}]	\N	\N
 rsc19	rsc5	dd846	no	si	si	8	rsc	no	[{"dd749":"rsc29"},{"dd10":"rsc30"},{"dd722":"rsc35"},{"dd10":"rsc36"},{"dd1018":"rsc37"},{"dd10":"rsc38"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"40%"}}}}	{"css": {".wrapper_component": {"grid-row": "2 / 4", "grid-column": "7 / 11"}}, "observe": [{"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc156"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc80"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc431"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc285"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc437"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc439"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc438"}, {"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "rsc493"}], "widgets": [{"ipo": [{"input": {"type": "locator", "paths": [[{"var_name": "digitization", "section_tipo": "self", "component_tipo": "rsc156"}], [{"var_name": "digitization", "section_tipo": "self", "component_tipo": "rsc80"}], [{"var_name": "transcription", "section_tipo": "self", "component_tipo": "rsc431"}], [{"var_name": "transcription", "section_tipo": "self", "component_tipo": "rsc285"}], [{"var_name": "indexation", "section_tipo": "self", "component_tipo": "rsc437"}], [{"var_name": "indexation", "section_tipo": "self", "component_tipo": "rsc439"}], [{"var_name": "translation", "section_tipo": "self", "component_tipo": "rsc438"}], [{"var_name": "translation", "section_tipo": "self", "component_tipo": "rsc493"}]], "source": [{"section_id": "current", "section_tipo": "current"}]}, "output": [{"id": "digitization", "label": "digitization", "value": "int"}, {"id": "transcription", "label": "tool_transcription", "value": "int"}, {"id": "indexation", "label": "tool_indexation", "value": "int"}, {"id": "translation", "label": "tool_translation", "value": "int"}], "process": null}], "path": "/state", "widget_info": "state of the select.", "widget_name": "state"}]}
+rsc188	rsc204	dd6	no	si	si	4	rsc	no	[{"dd6":"rsc4"}]	\N	\N
 rsc641	rsc632	dd635	no	si	si	10	rsc	no	\N	{"date_mode":"range","css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"25%"}}}}	{"css": {".wrapper_component": {"grid-row": "3", "grid-column": "1 / span 3"}}, "date_mode": "range"}
 rsc24	rsc5	dd11	no	si	si	9	rsc	no	[{"dd6":"rsc740"},{"dd9":"rsc743"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"20%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 rsc194	rsc203	dd6	no	si	si	2	rsc	no	[{"dd6":"rsc75"}]	{"DES_filtered_by":{"rsc90":[{"section_id":"4","section_tipo":"dd911"},{"section_id":"5","section_tipo":"dd911"},{"section_id":"6","section_tipo":"dd911"},{"section_id":"7","section_tipo":"dd911"},{"section_id":"8","section_tipo":"dd911"},{"section_id":"9","section_tipo":"dd911"},{"section_id":"10","section_tipo":"dd911"},{"section_id":"11","section_tipo":"dd911"},{"section_id":"12","section_tipo":"dd911"},{"section_id":"13","section_tipo":"dd911"}]}}	{"DES_filtered_by": {"rsc90": [{"section_id": "4", "section_tipo": "dd911"}, {"section_id": "5", "section_tipo": "dd911"}, {"section_id": "6", "section_tipo": "dd911"}, {"section_id": "7", "section_tipo": "dd911"}, {"section_id": "8", "section_tipo": "dd911"}, {"section_id": "9", "section_tipo": "dd911"}, {"section_id": "10", "section_tipo": "dd911"}, {"section_id": "11", "section_tipo": "dd911"}, {"section_id": "12", "section_tipo": "dd911"}, {"section_id": "13", "section_tipo": "dd911"}]}}
+rsc621	rsc204	dd6	no	si	si	1	rsc	no	\N	\N	\N
+rsc425	rsc204	dd6	no	si	si	11	rsc	no	\N	\N	\N
 rsc831	rsc632	dd635	no	si	si	11	rsc	no	\N	{"date_mode":"time","css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-row": "3", "grid-column": "4 / span 2"}}, "date_mode": "time"}
 rsc732	rsc5	dd11	no	si	si	11	rsc	no	[{"dd6":"dd889"},{"dd9":"dd891"}]	{"dato_default":[{"section_id":"5","section_tipo":"dd889"}],"css":{".wrap_component":{"mixin":[".width_20",".vertical"],"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}, "dato_default": [{"section_id": "5", "section_tipo": "dd889"}]}
 rsc1136	rsc12	dd530	no	si	si	6	rsc	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".width_25",".vertical",".line_top"],"style":{"clear":"left"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
+rsc1143	rsc226	dd8	no	si	si	1	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 rsc646	rsc632	dd592	no	si	si	14	rsc	no	[{"dd6":"rsc176"},{"dd9":"rsc21"},{"dd635":"rsc733"},{"dd9":"rsc23"},{"dd11":"rsc24"},{"dd1018":"rsc37"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%","clear":"left"}},".portal_table_wraper":{"style":{"max-height":"156px","overflow-x":"hidden"}},".table_rows_list":{"style":{"width":"98.7%"}},".css_button_generic > span":{"style":{"display":"none"}}}}	{"css": {".wrapper_component": {"grid-row": "4", "grid-column": "1 / span 5"}}}
 rsc28	rsc5	dd247	no	si	si	13	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"40%","float":"right"}}}}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "40%"}}}}
 rsc335	rsc334	dd1747	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"8%","border-bottom-right-radius":"8px"}},".content_data":{"style":{"text-align":"center","font-family":"'Oxygen-Bold'"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc473	rsc334	dd10	no	si	si	10	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%","clear":"left"}}}}	{"css": {".wrapper_component": {"grid-column": "span 10"}}}
+rsc1144	rsc1143	dd1747	no	si	si	1	rsc	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "1"}}}
 rsc61	rsc12	dd530	no	si	si	1	rsc	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".width_25",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 rsc156	rsc12	dd80	no	si	si	4	rsc	no	[{"dd6":"dd174"},{"dd9":"dd185"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "observers": [{"info": "Property used for server side only", "section_tipo": "self", "component_tipo": "rsc19"}]}
 rsc285	rsc12	dd11	no	si	si	15	rsc	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	{"filtered_by_search":{"$and":[{"q":"<=3","path":[{"section_tipo":"dd501","component_tipo":"section_id","modelo":"component_section_id","name":"section_id"}]}]},"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"13%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "observers": [{"info": "Property used for server side only", "component_tipo": "rsc19"}], "filtered_by_search": {"$and": [{"q": "<=3", "path": [{"name": "section_id", "model": "component_section_id", "section_tipo": "dd501", "component_tipo": "section_id"}]}]}}
@@ -1100,33 +1102,40 @@ rsc714	rsc632	dd500	no	si	si	16	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".
 rsc30	rsc6	dd10	no	si	si	2	rsc	si	[{"dd749":"rsc29"}]	{"state":{"edit_tool":[{"section_tipo":"dd90","section_id":2,"component_tipo":"dd127"},{"section_tipo":"dd90","section_id":3,"component_tipo":"dd127"}]},"css":{".wrap_component":{"mixin":[".vertical",".width_50"],"style":{"min-height":"350px"}}},"tags_person":{"navarra60":[{"section_tipo":"navarra60","component_tipo":"navarra107","info":"victims","state":"a"}]}}	{"css": {".wrapper_component": {"grid-column": "span 1"}, ".wrapper_component >.content_data": {"min-height": "400px"}}, "state": {"edit_tool": [{"section_id": 2, "section_tipo": "dd90", "component_tipo": "dd127"}, {"section_id": 3, "section_tipo": "dd90", "component_tipo": "dd127"}]}, "observe": [{"client": {"event": "draw_change_tag", "perform": {"function": "update_tag"}}, "component_tipo": "rsc29"}]}
 rsc1135	rsc334	dd9	no	si	si	4	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 rsc1137	rsc12	dd530	no	si	si	7	rsc	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".width_25",".vertical",".line_top"]}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
+rsc1145	rsc1143	dd9	no	si	si	2	rsc	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "2 / span 2"}}}
 rsc1138	rsc12	dd635	no	si	si	8	rsc	no	\N	{"multi_value":false,"date_mode":"range","css":{".wrap_component":{"mixin":[".width_25",".vertical",".line_top"]}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}, "date_mode": "range", "multi_value": false}
 rsc1129	rsc197	dd74	no	si	si	3	rsc	si	\N	\N	{"row": {"show": {"ddo_map": [{"info": "ID (component_section_id)", "tipo": "rsc261", "parent": "self", "section_tipo": "self"}, {"info": "Nombre (component_input_text)", "tipo": "rsc85", "parent": "self", "section_tipo": "self"}, {"info": "apellidos (component_input_text)", "tipo": "rsc86", "parent": "self", "section_tipo": "self"}, {"info": "Fecha de nacimiento (component_date)", "tipo": "rsc89", "parent": "self", "section_tipo": "self"}]}, "class_list": "person", "render_label": false}}
 rsc31	rsc6	dd9	no	si	si	3	rsc	si	\N	{"css":{".wrap_component":{"mixin":[".width_50",".vertical"],"style":{"padding-top_99":"23px"}}}}	{"css": {".wrapper_component": {"grid-column": "2 / span 1"}}}
+rsc1146	rsc1143	dd9	no	si	si	3	rsc	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "4 / span 2"}}}
 rsc1119	rsc480	dd6	no	si	si	18	rsc	no	[{"dd626":"dd22"}]	\N	\N
 rsc341	rsc332	dd91	no	si	si	2	rsc	no	[{"dd339":"rsc516"},{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"},{"dd9":"rsc547"}]	\N	\N
 rsc32	rsc6	dd8	no	si	si	4	rsc	no	\N	{"css":{".wrap_section_group":{"mixin":[".width_50"]}}}	{"css": {".content_data": {"grid-template-columns": "repeat(2, 50%)"}, ".wrapper_grouper": {"grid-row": "2", "grid-column": "1 / span 1"}}}
 rsc1139	rsc12	dd80	no	si	si	9	rsc	no	[{"dd6":"dd174"},{"dd9":"dd185"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"12%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "observers": [{"info": "Property used for server side only", "section_tipo": "self", "component_tipo": "rsc19"}]}
+rsc1147	rsc1143	dd635	no	si	si	4	rsc	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "6 / span 2"}}}
 rsc35	rsc7	dd722	no	si	si	1	rsc	no	[{"dd10":"rsc36"}]	{"target_filename":"rsc398","state":{"edit_tool":[{"section_tipo":"dd90","section_id":1,"component_tipo":"dd127"}]}}	{"css": {".wrapper_component": {"grid-row": "1 / 5", "grid-column": "1 / span 5"}}, "state": {"edit_tool": [{"section_id": 1, "section_tipo": "dd90", "component_tipo": "dd127"}]}, "observe": [{"client": {"event": "click_tag_tc", "perform": {"function": "go_to_time"}}, "component_tipo": "rsc36"}, {"client": {"event": "key_up_esc", "perform": {"function": "play_pause"}}, "component_tipo": "rsc36"}, {"client": {"event": "key_up_f2", "perform": {"function": "get_data_tag"}}, "component_tipo": "rsc36"}], "tool_config": {"tool_transcription": {"ddo_map": [{"mode": "edit", "role": "media_component", "tipo": "rsc35", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "transcription_component", "tipo": "rsc36", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "status_user_component", "tipo": "rsc431", "section_id": "self", "section_tipo": "rsc167"}, {"mode": "edit", "role": "status_admin_component", "tipo": "rsc285", "section_id": "self", "section_tipo": "rsc167"}]}}, "target_duration": "rsc54", "target_filename": "rsc398"}
 rsc1120	rsc1119	dd8	no	si	si	1	rsc	no	\N	\N	\N
 rsc1140	rsc12	dd11	no	si	si	10	rsc	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	{"filtered_by_search":{"$and":[{"q":"<=3","path":[{"section_tipo":"dd501","component_tipo":"section_id","modelo":"component_section_id","name":"section_id"}]}]},"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"13%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "observers": [{"info": "Property used for server side only", "component_tipo": "rsc19"}], "filtered_by_search": {"$and": [{"q": "<=3", "path": [{"name": "section_id", "model": "component_section_id", "section_tipo": "dd501", "component_tipo": "section_id"}]}]}}
+rsc1148	rsc226	dd177	no	si	si	2	rsc	no	\N	\N	\N
 rsc36	rsc7	dd10	no	si	si	4	rsc	si	[{"dd722":"rsc35"},{"dd904":"rsc263"}]	{"state":{"edit_tool":[{"section_tipo":"dd90","section_id":2,"component_tipo":"dd127"},{"section_tipo":"dd90","section_id":3,"component_tipo":"dd127"}],"edit_component":[{"section_tipo":"dd203","section_id":0,"component_tipo":"dd223"}]},"css":{".wrap_component":{"mixin":[],"style":{"min-height":"370px"}}},"tags_person":{"oh1":[{"section_tipo":"oh1","component_tipo":"oh24","info":"informants","state":"a"},{"section_tipo":"rsc167","component_tipo":"rsc50","info":"interviewers","state":"b"},{"section_tipo":"rsc167","component_tipo":"rsc48","info":"person in charge","state":"b"},{"section_tipo":"rsc167","component_tipo":"rsc51","info":"camcorders","state":"b"}]}}	{"css": {".wrapper_component": {"grid-row": "6", "grid-column": "span 5"}, ".wrapper_component >.content_data": {"height": "65vh"}}, "observe": [{"client": {"info": "Sync selector value with the transcription lang. Is called on render/change value 'Original lang' selector", "event": "set_lang_value", "perform": {"function": "change_lang"}}, "component_tipo": "rsc263"}], "observers": [{"info": "Property used for server side only", "section_tipo": "self", "component_tipo": "rsc244"}], "tags_index": {"tipo": "rsc860", "section_id": "self", "section_tipo": "self"}, "tags_notes": {"rsc326": [{"id": "title", "type": "text", "section_tipo": "rsc326", "component_tipo": "rsc328"}, {"id": "body", "type": "text", "section_tipo": "rsc326", "component_tipo": "rsc329"}, {"id": "publishable", "type": "bool", "section_tipo": "rsc326", "component_tipo": "rsc399"}]}, "tool_config": {"tool_subtitles": {"ddo_map": [{"mode": "edit", "role": "media_component", "tipo": "rsc35", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "subtitles_component", "tipo": "rsc995", "section_id": "self", "section_tipo": "self"}]}, "tool_indexation": {"ddo_map": [{"mode": "edit", "role": "transcription_component", "tipo": "self", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "indexing_component", "tipo": "rsc860", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "media_component", "tipo": "rsc35", "section_id": "self", "section_tipo": "self"}, {"mode": "relation", "role": "area_thesaurus", "tipo": "dd100", "section_id": null, "section_tipo": "dd100"}, {"info": "Estado IN - component_checkbox ", "mode": "edit", "role": "status_user_component", "tipo": "rsc437", "section_id": "self", "section_tipo": "self"}, {"info": "Validación IN - component_select", "mode": "edit", "role": "status_admin_component", "tipo": "rsc439", "section_id": "self", "section_tipo": "self"}]}}, "tags_persons": {"oh1": [{"info": "informants", "state": "a", "section_tipo": "oh1", "component_tipo": "oh24"}, {"info": "interviewers", "state": "b", "section_tipo": "rsc167", "component_tipo": "rsc50"}, {"info": "person in charge", "state": "b", "section_tipo": "rsc167", "component_tipo": "rsc48"}, {"info": "camcorders", "state": "b", "section_tipo": "rsc167", "component_tipo": "rsc51"}]}, "show_interface": {"save_animation": false, "button_create_fragment": true}, "auto_init_editor": true}
 rsc1121	rsc1120	dd1747	no	si	si	1	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"8%","border-bottom-right-radius":"8px"}}}}	\N
 rsc45	rsc293	dd530	no	si	si	3	rsc	no	[{"dd6":"dd898"},{"dd9":"dd900"}]	{"css":{".wrap_component":{"mixin":[".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 5"}}}
 rsc909	rsc413	dd442	no	si	si	4	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[1,4,5,7,8,9],"hierarchy_sections":[]},"value_with_parents":false,"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"background-color":"#ffe2ab","width":"25%"}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "span 5"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [1, 4, 5, 7, 8, 9], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}, "config_relation": {"relation_type": "dd96"}}
-rsc6	rsc2	dd8	no	si	si	2	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 50%)"}}}
 rsc16	rsc2	dd91	no	si	si	15	rsc	si	[{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd11":"rsc25"},{"dd635":"rsc26"},{"dd10":"rsc36"},{"dd749":"rsc29"},{"dd722":"rsc35"}]		\N
+rsc1149	rsc226	dd183	no	si	si	3	rsc	no	\N	\N	\N
+rsc6	rsc2	dd8	no	si	si	2	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 50%)"}}}
 rsc91	rsc76	dd442	no	si	si	23	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[2],"hierarchy_sections":[]},"value_with_parents":true,"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{"clear":"left"}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 7"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy27", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": " | "}}]}}
 rsc92	rsc76	dd442	no	si	si	24	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[2],"hierarchy_sections":[]},"value_with_parents":true,"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy27", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": " | "}}]}}
 rsc284	rsc76	dd442	no	si	si	25	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[1,2],"hierarchy_sections":[]},"value_with_parents":true,"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 7"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy27", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": " | "}}]}}
 rsc500	rsc76	dd9	no	si	si	28	rsc	no	\N	{"state_of_component":{"alternative":{"msg":"component_alternative","target_component":"rsc284"}},"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 7"}}, "state_of_component": {"alternative": {"msg": "component_alternative", "target_component": "rsc284"}}}
 rsc548	rsc76	dd9	no	si	si	29	rsc	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".width_33",".line_top"],"style":{}}}}	{"css": {".wrapper_component": {"grid-column": "span 7"}}}
 rsc1128	rsc76	dd530	no	si	si	8	rsc	no	[{"dd6":"rsc1119"},{"dd9":"rsc1122"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"20%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}}
+rsc1150	rsc1143	dd247	no	si	si	5	rsc	no	\N	\N	\N
 rsc46	rsc293	dd442	no	si	si	4	rsc	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[2],"hierarchy_sections":[]},"value_with_parents":true,"css":{".wrap_component":{"mixin":[".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 5"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy27", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": " | "}}]}}
 rsc1130	rsc2	dd8	no	si	si	6	rsc	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(1, 100%)"}}}
 rsc88	rsc76	dd592	no	si	si	22	rsc	no	[{"dd6":"rsc170"},{"dd1129":"rsc174"},{"dd9":"rsc23"},{"dd749":"rsc29"}]	{"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"50%"}},".content_data":{"style":{}}},"elements_list_mode 999":{"rsc31":{"mode":"edit_in_list","column_width":"70%"}}}	{"css": {".wrapper_component": {"grid-column": "span 10"}}, "source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["rsc170"], "source": "section"}]}, "show": {"ddo_map": [{"info": "Publication (component_publication)", "mode": "edit", "tipo": "rsc20", "view": "line", "parent": "self", "section_tipo": "self"}, {"info": "Date of admission (component_date)", "tipo": "rsc23", "parent": "self", "section_tipo": "self"}, {"info": "Photographer (component_autocomplete)", "tipo": "rsc52", "parent": "self", "section_tipo": "self"}, {"info": "Photo caption (component_input_text)", "tipo": "rsc31", "parent": "self", "section_tipo": "self"}, {"info": "Image (component_image)", "tipo": "rsc29", "mosaic": true, "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 6}}, "search": {"ddo_map": [{"info": "Title (component_input_text)", "tipo": "rsc23", "parent": "self", "section_tipo": "self"}, {"info": "Code (component_input_text)", "tipo": "rsc21", "parent": "self", "section_tipo": "self"}, {"info": "Photo caption (component_input_text)", "tipo": "rsc31", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}, "view_DES": "mosaic"}
 rsc174	rsc170	dd1129	no	si	si	4	rsc	si	[{"dd8":"rsc7"},{"dd8":"rsc8"},{"dd8":"rsc9"},{"dd8":"rsc10"},{"dd8":"rsc11"},{"dd8":"rsc12"},{"dd8":"rsc13"},{"dd8":"rsc14"},{"dd8":"rsc15"},{"dd8":"rsc32"},{"dd8":"rsc252"},{"dd846":"rsc19"},{"dd10":"rsc27"},{"dd635":"rsc26"},{"dd9":"rsc22"},{"dd247":"rsc28"},{"dd8":"rsc856"},{"dd8":"rsc1130"}]	\N	\N
 rsc49	rsc10	dd530	no	si	si	3	rsc	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".width_33",".vertical"],"style":{"clear":"left"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}}
+rsc1151	rsc226	dd91	no	si	si	4	rsc	no	[{"dd9":"rsc1145"},{"dd9":"rsc1146"},{"dd635":"rsc1147"}]	\N	\N
 rsc50	rsc10	dd530	no	si	si	5	rsc	no	[{"dd6":"rsc194"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd6":"rsc197"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".width_33",".vertical"]}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}, "source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["rsc194"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "rsc85", "parent": "self", "section_tipo": "self"}, {"tipo": "rsc86", "parent": "self", "section_tipo": "self"}]}}]}}
 rsc720	rsc267	dd1231	no	si	si	25	rsc	no	[{"dd442":"rsc91"}]	{"option_obj":{"custom_parents":{"info":" the parents splice don't act if the previous criteria are matched, parent_end_by_ter_id, stop the get parent loop when arrive to the term_id specify, parentend_by_mode stop the parent loop when the parent has the model specify","parent_end_by_term_id":["on1_2705","on1_2748"],"DES_parent_end_by_model":["es_8871"],"parents_splice":[1,-1]}}}	\N
 rsc286	rsc170	dd1129	no	si	si	6	rsc	no	[{"dd8":"rsc7"},{"dd8":"rsc8"},{"dd8":"rsc9"},{"dd8":"rsc10"},{"dd8":"rsc11"},{"dd8":"rsc14"},{"dd8":"rsc15"},{"dd635":"rsc26"},{"dd11":"rsc25"},{"dd846":"rsc19"},{"dd9":"rsc22"},{"dd9":"rsc31"},{"dd530":"rsc52"},{"dd8":"rsc32"},{"dd8":"rsc856"},{"dd8":"rsc1130"}]	\N	\N
@@ -1139,3 +1148,4 @@ rsc1131	rsc302	dd91	no	si	si	1	rsc	no	[{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":
 rsc459	rsc267	dd1231	no	si	si	19	rsc	si	[{"dd442":"rsc284"}]	\N	\N
 rsc37	rsc8	dd1018	no	si	si	1	rsc	no	[{"dd10":"rsc38"}]	{"aditional_path":"rsc33","max_items_folder":1000,"state":{"edit_tool":[{"section_tipo":"dd90","section_id":1,"component_tipo":"dd127"}]},"css":{".wrap_component":{"mixin":[".vertical",".width_50"],"style":{"min-height":"500px","height":"510px"}},".pdf_viewer_frame":{"style":{"height":"480px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}, ".wrapper_component .content_value": {"height": "unset", "min-height": "392px"}}, "state": {"edit_tool": [{"section_id": 1, "section_tipo": "dd90", "component_tipo": "dd127"}]}, "tool_config": {"tool_pdf_extractor": {"target_tipo": "rsc38"}, "tool_transcription": {"ddo_map": [{"mode": "edit", "role": "media_component", "tipo": "rsc37", "section_id": "self", "section_tipo": "self"}, {"mode": "edit", "role": "transcription_component", "tipo": "rsc38", "section_id": "self", "section_tipo": "self"}]}}, "additional_path": "rsc33", "max_items_folder": 1000}
 rsc1132	rsc302	dd1129	no	si	si	2	rsc	no	[{"dd8":"rsc6"},{"dd8":"rsc7"},{"dd8":"rsc8"},{"dd8":"rsc1130"},{"dd8":"rsc9"},{"dd8":"rsc10"},{"dd8":"rsc11"}]	\N	\N
+rsc1142	rsc78	dd592	no	si	si	1	rsc	no	[{"dd6":"rsc332"},{"dd530":"rsc368"},{"dd9":"rsc336"},{"dd9":"rsc369"}]	{"elements_list_mode":{"rsc336":{"mode":"edit_in_list","column_width":"10%"},"rsc369":{"mode":"edit_in_list","column_width":"10%"},"rsc368":{"mode":"edit_in_list","column_width":"75%"},"rsc337":{"column_width":"5%"}},"edit_view":"view_single_line","css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"100%","clear":"left"}},".css_button_generic > span":{"style":{"display":"none"}},".btn_portal_find":{"style":{"display":"none"}},".section_id_number":{"style":{"display":"none"}},".column.component_input_text>.css_wrap_input_text":{"style":{"padding":"1px"}},".column.component_input_text>.css_wrap_input_text>.content_data":{"style":{"width":"100%"}},".column.id_column":{"style":{"width":"6% !important"}}},"portal_link_open":false}	{"css": {".wrapper_component": {"grid-row": "1 / span 1", "grid-column": "1"}, ".wrapper_component > .list_body": {"grid-template-columns": "auto 7fr 1fr 1fr auto"}}, "view": "default", "source": {"columns_map": [{"id": "a", "label": "rsc368"}, {"id": "b", "label": "rsc336"}, {"id": "c", "label": "rsc369"}], "request_config": [{"sqo": {"limit": 10, "section_tipo": [{"value": ["rsc332"], "source": "section"}]}, "show": {"ddo_map": [{"info": "Publication autocomplete", "mode": "edit", "tipo": "rsc368", "view": "line", "parent": "self", "column_id": "a", "with_value": {"mode": "list", "view": "line"}, "section_tipo": "rsc332", "children_view": "text"}, {"info": "Pages input_text", "mode": "edit", "tipo": "rsc336", "view": "line", "parent": "self", "column_id": "b", "section_tipo": "self"}, {"info": "Reference input_text", "mode": "edit", "tipo": "rsc369", "view": "line", "parent": "self", "column_id": "c", "section_tipo": "self"}], "interface": {"button_link": false, "show_autocomplete": false}, "fields_separator": " | "}, "api_engine": "dedalo"}]}}

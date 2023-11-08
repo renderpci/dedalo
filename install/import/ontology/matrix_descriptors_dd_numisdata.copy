@@ -194,7 +194,6 @@ numisdata161	Tipo	termino	lg-spa
 numisdata162	Bibliografia	termino	lg-ita
 numisdata162	Bibliografía	termino	lg-spa
 numisdata163	Bibliografia	termino	lg-ita
-numisdata163	Bibliografía	termino	lg-spa
 numisdata164	Anverso	termino	lg-spa
 numisdata164	Dritto	termino	lg-ita
 numisdata165	Reverso	termino	lg-spa
@@ -553,7 +552,6 @@ numisdata369	Listado	termino	lg-spa
 numisdata33	Denominations	termino	lg-eng
 numisdata37	Relaciones	termino	lg-spa
 numisdata37	Relazioni	termino	lg-ita
-numisdata370	Ricerca	termino	lg-ita
 numisdata371	Elenco thesaurus	termino	lg-ita
 numisdata371	Listado tesauro	termino	lg-spa
 numisdata372	Mappa della sezione	termino	lg-ita
@@ -626,6 +624,7 @@ numisdata413	Publicable	termino	lg-spa
 numisdata4	Objeto numismático	termino	lg-spa
 numisdata378	Intervención	termino	lg-spa
 numisdata4	Numismatic object	termino	lg-eng
+numisdata370	Fonte dei dati	termino	lg-ita
 numisdata424	tipo_reverso	termino	lg-spa
 numisdata425	leyenda_anverso	termino	lg-spa
 numisdata426	leyenda_reverso	termino	lg-spa
@@ -2168,12 +2167,12 @@ numisdata367	Oberbegriff	termino	lg-deu
 numisdata368	Liste	termino	lg-deu
 numisdata369	Liste	termino	lg-deu
 numisdata37	Beziehungen	termino	lg-deu
-numisdata370	Suche	termino	lg-deu
 numisdata371	Liste Thesaurus	termino	lg-deu
 numisdata372	Karte der Sektion	termino	lg-deu
 numisdata373	Neu	termino	lg-deu
 numisdata374	Löschen	termino	lg-deu
 numisdata376	Münzen	termino	lg-deu
+numisdata370	Quelle der Daten	termino	lg-deu
 numisdata379	Liste der Beziehungen	termino	lg-deu
 numisdata38	Typen	termino	lg-deu
 numisdata380	Letzte Änderungen	termino	lg-deu
@@ -2727,7 +2726,6 @@ numisdata366	Children	termino	lg-eng
 numisdata367	Father	termino	lg-eng
 numisdata368	List	termino	lg-eng
 numisdata369	List	termino	lg-eng
-numisdata370	Search	termino	lg-eng
 numisdata371	Thesaurus list	termino	lg-eng
 numisdata372	section map	termino	lg-eng
 numisdata373	New	termino	lg-eng
@@ -2806,6 +2804,7 @@ numisdata596	Latest changes	termino	lg-eng
 numisdata625	Countermark descriptions	termino	lg-eng
 numisdata560	Epigraphy	termino	lg-eng
 numisdata345	List	termino	lg-eng
+numisdata370	Data source	termino	lg-eng
 numisdata626	SVG selector	termino	lg-eng
 numisdata627	Countermarks	termino	lg-eng
 numisdata628	Coins file	termino	lg-eng
@@ -3388,7 +3387,6 @@ numisdata367	Père	termino	lg-fra
 numisdata368	Liste	termino	lg-fra
 numisdata369	Liste	termino	lg-fra
 numisdata37	Relations	termino	lg-fra
-numisdata370	Recherche	termino	lg-fra
 numisdata371	Liste de thésaurus	termino	lg-fra
 numisdata372	Plan de la section	termino	lg-fra
 numisdata373	Nouveau	termino	lg-fra
@@ -3441,6 +3439,7 @@ numisdata5	Trésors	termino	lg-fra
 numisdata500	Publication	termino	lg-fra
 numisdata51	Type de symbole de l'avers	termino	lg-fra
 numisdata511	Publication	termino	lg-fra
+numisdata370	Source des données	termino	lg-fra
 numisdata53	carte de la section	termino	lg-fra
 numisdata54	Iconographies	termino	lg-fra
 numisdata542	Publication	termino	lg-fra
@@ -3658,7 +3657,6 @@ numisdata1354	Code	termino	lg-fra
 numisdata1354	Code	termino	lg-deu
 numisdata1303	Autoría (Deprecada)	termino	lg-spa
 numisdata1303	Authorship (Deprecated)	termino	lg-eng
-numisdata370	RECYCLE NUMISDATA	termino	lg-spa
 numisdata759	Latest changes	termino	lg-eng
 numisdata718	Designs / Legends / Countermarks	termino	lg-eng
 numisdata66	Project	termino	lg-eng
@@ -3674,3 +3672,16 @@ numisdata1191	Design	termino	lg-spa
 numisdata111	identificació	termino	lg-cat
 numisdata1014	Mapa de la sección	termino	lg-spa
 numisdata1014	Carte de la section	termino	lg-fra
+numisdata1355	Estudio	termino	lg-spa
+numisdata1355	Study	termino	lg-eng
+numisdata1355	Estudy	termino	lg-cat
+numisdata163	Bibliografía	termino	lg-spa
+numisdata1357	Bibliografía	termino	lg-spa
+numisdata1358	Autoría	termino	lg-spa
+numisdata1359	Notas	termino	lg-spa
+numisdata1359	Notes	termino	lg-cat
+numisdata1359	Annotations	termino	lg-eng
+numisdata1356	Comentario	termino	lg-spa
+numisdata1356	Comentari	termino	lg-cat
+numisdata1356	Comment	termino	lg-eng
+numisdata370	Origen del dato	termino	lg-spa
