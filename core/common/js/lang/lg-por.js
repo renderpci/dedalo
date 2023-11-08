@@ -445,5 +445,6 @@
     "show_buttons": "<mark>Mostrar botones<\/mark>",
     "find": "<mark>Buscar<\/mark>",
     "component_history": "<mark>Historial del componente<\/mark>",
-    "build_install_version": "Crie uma versão de instalação"
+    "build_install_version": "Crie uma versão de instalação",
+    "delete_diffusion_records": "Eliminar registos de difusão"
 }

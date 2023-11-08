@@ -445,5 +445,6 @@
     "show_buttons": "εμφάνιση κουμπιών",
     "find": "αναζήτησή",
     "component_history": "Ιστορικό συστατικών",
-    "build_install_version": "Δημιουργήστε μια έκδοση εγκατάστασης"
+    "build_install_version": "Δημιουργήστε μια έκδοση εγκατάστασης",
+    "delete_diffusion_records": "Διαγραφή εγγραφών διάχυσης"
 }

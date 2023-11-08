@@ -445,5 +445,6 @@
     "show_buttons": "Afficher les boutons",
     "find": "Recherche",
     "component_history": "Historique des composants",
-    "build_install_version": "Créer une version d'installation"
+    "build_install_version": "Créer une version d'installation",
+    "delete_diffusion_records": "Supprimer les enregistrements de diffusion"
 }
