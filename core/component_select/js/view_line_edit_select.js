@@ -55,7 +55,6 @@ view_line_edit_select.render = async function(self, options) {
 			content_data	: content_data,
 			label			: null
 		})
-
 		// set pointers
 		wrapper.content_data = content_data
 

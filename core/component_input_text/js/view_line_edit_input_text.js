@@ -13,7 +13,7 @@
 
 
 /**
-* view_line_edit_input_text
+* VIEW_LINE_EDIT_INPUT_TEXT
 * Manages the component's logic and appearance in client side
 */
 export const view_line_edit_input_text = function() {
@@ -24,8 +24,10 @@ export const view_line_edit_input_text = function() {
 
 
 /**
-* EDIT
-* Render node for use in modes: edit, edit_in_list
+* RENDER
+* Render node for view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_line_edit_input_text.render = async function(self, options) {
@@ -42,7 +44,7 @@ view_line_edit_input_text.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			label 			: null,
+			label			: null
 		})
 		// set pointers
 		wrapper.content_data = content_data
@@ -55,6 +57,7 @@ view_line_edit_input_text.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = function(self) {
@@ -79,6 +82,7 @@ const get_content_data_edit = function(self) {
 			// set the pointer
 			content_data[i] = input_element_node
 		}
+
 
 	return content_data
 }//end get_content_data_edit

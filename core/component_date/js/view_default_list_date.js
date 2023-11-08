@@ -24,6 +24,8 @@ export const view_default_list_date = function() {
 /**
 * RENDER
 * Render node for use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_date.render = async function(self, options) {
@@ -43,6 +45,7 @@ view_default_list_date.render = async function(self, options) {
 		if (self.show_interface.read_only!==true) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
+
 				self.change_mode({
 					mode	: 'edit',
 					view	: 'line'

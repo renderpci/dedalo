@@ -66,7 +66,8 @@ render_edit_component_select.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
-* @param instance self
+* @param object self
+* @param object options
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self, options) {
@@ -118,11 +119,10 @@ export const get_content_data = function(self, options) {
 		}else{
 
 			// build options. Only one value is expected
-				const inputs_value	= value.length>0 ? value : [null]
-				const value_length	= inputs_value.length
+				const value_length = value.length || 1
 				for (let i = 0; i < value_length; i++) {
 					// get the content_value
-					const content_value = render_content_data(i, inputs_value[i], self)
+					const content_value = render_content_data(i, value[i], self)
 					// add node to content_data
 					content_data.appendChild(content_value)
 					// set pointers

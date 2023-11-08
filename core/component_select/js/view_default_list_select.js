@@ -24,6 +24,8 @@ export const view_default_list_select = function() {
 /**
 * RENDER
 * Render node for use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_select.render = async function(self, options) {

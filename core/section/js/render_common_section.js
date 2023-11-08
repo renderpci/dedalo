@@ -91,7 +91,7 @@ render_common_section.prototype.delete_record = async (options) => {
 			const delete_diffusion_records_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'block_label unselectable',
-				inner_html		: 'Delete diffusion records',
+				inner_html		: get_label.delete_diffusion_records || 'Delete diffusion records',
 				parent			: body
 			})
 			const delete_diffusion_records_checkbox = ui.create_dom_element({
