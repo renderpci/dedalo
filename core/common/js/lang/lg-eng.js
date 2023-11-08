@@ -445,5 +445,6 @@
     "show_buttons": "Show buttons",
     "find": "Find",
     "component_history": "Component history",
-    "build_install_version": "Build install version"
+    "build_install_version": "Build install version",
+    "delete_diffusion_records": "Delete diffusion records"
 }

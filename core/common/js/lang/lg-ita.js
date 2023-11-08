@@ -445,5 +445,6 @@
     "show_buttons": "Mostra i pulsanti",
     "find": "Cercare",
     "component_history": "<mark>Historial del componente<\/mark>",
-    "build_install_version": "Crea una versione di installazione"
+    "build_install_version": "Crea una versione di installazione",
+    "delete_diffusion_records": "Cancellare i record di diffusione"
 }

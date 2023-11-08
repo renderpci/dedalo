@@ -445,5 +445,6 @@
     "show_buttons": "Mostrar botons",
     "find": "Cerca",
     "component_history": "Històric del component",
-    "build_install_version": "Construir una versió d'instal·lació"
+    "build_install_version": "Construir una versió d'instal·lació",
+    "delete_diffusion_records": "Esborrar registres de difusió"
 }

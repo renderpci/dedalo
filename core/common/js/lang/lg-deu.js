@@ -445,5 +445,6 @@
     "show_buttons": "Schaltflächen anzeigen",
     "find": "Suchen",
     "component_history": "Komponentenverlauf",
-    "build_install_version": "Erstellen Sie eine Installationsversion"
+    "build_install_version": "Erstellen Sie eine Installationsversion",
+    "delete_diffusion_records": "Diffusionsdatensätze löschen"
 }
