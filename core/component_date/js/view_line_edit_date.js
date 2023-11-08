@@ -50,10 +50,6 @@ view_line_edit_date.render = async function(self, options) {
 	// content_data
 		const content_data = get_content_data(self)
 
-	// button_exit_edit
-		// const button_exit_edit = ui.component.build_button_exit_edit(self)
-		// content_data.appendChild(button_exit_edit)
-
 		if (render_level==='content') {
 			return content_data
 		}
@@ -89,6 +85,10 @@ export const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		content_data.appendChild(button_exit_edit)
 
 	// build values
 		const inputs_value	= (value.length<1) ? [''] : value
