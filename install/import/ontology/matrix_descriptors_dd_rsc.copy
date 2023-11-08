@@ -371,6 +371,7 @@ rsc173	Estado	termino	lg-spa
 rsc173	Estat	termino	lg-cat
 rsc173	Stato	termino	lg-ita
 rsc156	Estado	termino	lg-spa
+rsc18	Cancellare	termino	lg-ita
 rsc156	Condizione	termino	lg-ita
 rsc174	Esclusi Semplice	termino	lg-ita
 rsc174	Exclosos Simple	termino	lg-cat
@@ -380,6 +381,7 @@ rsc175	Id	termino	lg-ell
 rsc175	Id	termino	lg-ita
 rsc175	Id	termino	lg-spa
 rsc176	Document	termino	lg-cat
+rsc18	Διαγραφή	termino	lg-ell
 rsc176	Documento	termino	lg-ita
 rsc176	Documento	termino	lg-spa
 rsc176	έγγραφο	termino	lg-ell
@@ -394,10 +396,6 @@ rsc179	Partitura	termino	lg-ita
 rsc179	Partitura	termino	lg-spa
 rsc1072	Last changes	termino	lg-eng
 rsc179	σκορ	termino	lg-ell
-rsc18	Borrar recurso	termino	lg-spa
-rsc18	Cancellare risorsa	termino	lg-ita
-rsc18	Esborrar recurs	termino	lg-cat
-rsc18	διαγραφή των πόρων	termino	lg-ell
 rsc180	Esclusi	termino	lg-ita
 rsc180	Exclosos	termino	lg-cat
 rsc180	Excluidos	termino	lg-spa
@@ -467,11 +465,12 @@ rsc199	Llistat	termino	lg-cat
 rsc2	Media recursos	termino	lg-cat
 rsc2	Media recursos	termino	lg-spa
 rsc2	Misure	termino	lg-ita
+rsc18	Esborrar	termino	lg-cat
+rsc18	Borrar	termino	lg-spa
 rsc200	Estado	termino	lg-spa
 rsc20	Publicable	termino	lg-cat
 rsc20	Publicable	termino	lg-spa
 rsc2	Resources Media	termino	lg-eng
-rsc18	Delete resource	termino	lg-eng
 rsc200	Estat	termino	lg-cat
 rsc200	Stato	termino	lg-ita
 rsc1072	Últims canvis	termino	lg-cat
@@ -576,14 +575,13 @@ rsc223	Σελίδες. Φυσική περιγραφή	termino	lg-ell
 rsc224	Data de publicació	termino	lg-cat
 rsc224	Data di pubblicazione	termino	lg-ita
 rsc224	Fecha de publicación	termino	lg-spa
+rsc226	Origine dei dati	termino	lg-ita
 rsc224	ημερομηνία δημοσίευσης	termino	lg-ell
 rsc225	Títol uniforme	termino	lg-cat
 rsc225	Titolo uniforme	termino	lg-ita
 rsc225	Título uniforme	termino	lg-spa
 rsc1072	Τελευταίες αλλαγές	termino	lg-ell
 rsc225	ομοιόμορφο τίτλο	termino	lg-ell
-rsc226	Cerca	termino	lg-cat
-rsc226	Ricerca	termino	lg-ita
 rsc227	Importació Zotero	termino	lg-cat
 rsc227	Importar Zotero	termino	lg-spa
 rsc227	Importare Zotero	termino	lg-ita
@@ -644,6 +642,7 @@ rsc240	Copia del master	termino	lg-ita
 rsc240	Copia del máster	termino	lg-spa
 rsc240	Còpia del master	termino	lg-cat
 rsc240	Κύριο αντίγραφο	termino	lg-ell
+rsc226	Origen de les dades	termino	lg-cat
 rsc241	Data de la còpia master	termino	lg-cat
 rsc241	Data della copia master	termino	lg-ita
 rsc241	Fecha de la copia máster	termino	lg-spa
@@ -2430,10 +2429,6 @@ rsc778	Identificació	termino	lg-cat
 rsc778	Identificación	termino	lg-spa
 rsc779	Id	termino	lg-cat
 rsc779	Id	termino	lg-spa
-rsc78	Fons externes	termino	lg-cat
-rsc78	Fonti esterne	termino	lg-ita
-rsc78	Fuentes externas	termino	lg-spa
-rsc78	Εξωτερικοί πόροι	termino	lg-ell
 rsc780	Situació administrativa	termino	lg-cat
 rsc780	Situación administrativa	termino	lg-spa
 rsc781	Listado	termino	lg-spa
@@ -2515,6 +2510,9 @@ rsc93	Sexe	termino	lg-cat
 rsc94	Profesión	termino	lg-spa
 rsc94	Professió	termino	lg-cat
 rsc93	Φύλο	termino	lg-ell
+rsc78	Fonti documentarie	termino	lg-ita
+rsc78	Fuentes documentales	termino	lg-spa
+rsc78	Fons documentals	termino	lg-cat
 rsc94	Professione	termino	lg-ita
 rsc94	επάγγελμα	termino	lg-ell
 rsc95	Categoría laboral / cargo	termino	lg-spa
@@ -3221,7 +3219,6 @@ rsc176	Dokument	termino	lg-deu
 rsc177	Ausgeschlossene	termino	lg-deu
 rsc178	Liste	termino	lg-deu
 rsc179	Partitur	termino	lg-deu
-rsc18	Ressource löschen	termino	lg-deu
 rsc180	Ausgeschlossene	termino	lg-deu
 rsc181	Liste	termino	lg-deu
 rsc182	Administratives Dossier	termino	lg-deu
@@ -3270,7 +3267,6 @@ rsc222	Exemplar	termino	lg-deu
 rsc223	Seiten. Physische Beschreibung	termino	lg-deu
 rsc224	Veröffentlichungsdatum	termino	lg-deu
 rsc225	Uniformer Titel	termino	lg-deu
-rsc226	Suche	termino	lg-deu
 rsc227	Zotero importieren	termino	lg-deu
 rsc228	Identifikationsbild	termino	lg-deu
 rsc229	Eigentum	termino	lg-deu
@@ -3339,6 +3335,7 @@ rsc304	Medium des Originals	termino	lg-deu
 rsc305	Identifizierung	termino	lg-deu
 rsc306	Id	termino	lg-deu
 rsc302	Vektor-Dokument	termino	lg-deu
+rsc226	Herkunft der Daten	termino	lg-deu
 rsc307	Medium des Originals	termino	lg-deu
 rsc308	Projekt	termino	lg-deu
 rsc309	Neu	termino	lg-deu
@@ -3783,7 +3780,6 @@ rsc776	Letzte Änderungen	termino	lg-deu
 rsc777	Administrative Situation	termino	lg-deu
 rsc778	Identifizierung	termino	lg-deu
 rsc779	Id	termino	lg-deu
-rsc78	Externe Quellen	termino	lg-deu
 rsc780	Administrative Situation	termino	lg-deu
 rsc781	Liste	termino	lg-deu
 rsc782	Neu	termino	lg-deu
@@ -4076,7 +4072,6 @@ rsc74	Cession document	termino	lg-eng
 rsc75	People	termino	lg-eng
 rsc76	Identification	termino	lg-eng
 rsc77	Contact	termino	lg-eng
-rsc78	External resources	termino	lg-eng
 rsc79	List	termino	lg-eng
 rsc80	Validation	termino	lg-eng
 rsc81	Relation list	termino	lg-eng
@@ -4100,6 +4095,7 @@ rsc93	Sex	termino	lg-eng
 rsc20	Publishable	termino	lg-eng
 rsc32	File options	termino	lg-eng
 rsc49	Preproduction	termino	lg-eng
+rsc78	Documentary sources	termino	lg-eng
 rsc97	Image rights	termino	lg-eng
 rsc98	Project	termino	lg-eng
 rsc99	Observations	termino	lg-eng
@@ -4225,7 +4221,6 @@ rsc222	Copy	termino	lg-eng
 rsc223	Pages. Physical description	termino	lg-eng
 rsc224	Publication date	termino	lg-eng
 rsc225	Uniform title	termino	lg-eng
-rsc226	Search	termino	lg-eng
 rsc227	Import from Zotero	termino	lg-eng
 rsc228	Identifying image	termino	lg-eng
 rsc229	Belonging	termino	lg-eng
@@ -4331,6 +4326,7 @@ rsc488	Project	termino	lg-eng
 rsc283	Surname (single/maiden)	termino	lg-eng
 rsc346	Creation / production credit note	termino	lg-eng
 rsc302	Vector document	termino	lg-eng
+rsc226	Data source	termino	lg-eng
 rsc349	Personal name	termino	lg-eng
 rsc350	Entity name	termino	lg-eng
 rsc351	Conference name	termino	lg-eng
@@ -5076,7 +5072,6 @@ rsc176	Document	termino	lg-fra
 rsc177	Exclus 	termino	lg-fra
 rsc178	Liste	termino	lg-fra
 rsc179	Partition	termino	lg-fra
-rsc18	Supprimer la ressource	termino	lg-fra
 rsc180	Exclus 	termino	lg-fra
 rsc181	Liste	termino	lg-fra
 rsc182	Dossier administratif	termino	lg-fra
@@ -5126,7 +5121,6 @@ rsc222	Exemplaire	termino	lg-fra
 rsc223	Pages. Description physique	termino	lg-fra
 rsc224	Date de publication 	termino	lg-fra
 rsc225	Titre uniforme	termino	lg-fra
-rsc226	Recherche	termino	lg-fra
 rsc227	Importer Zotero	termino	lg-fra
 rsc228	Image d'identification	termino	lg-fra
 rsc229	Appartenance	termino	lg-fra
@@ -5214,6 +5208,7 @@ rsc317	Nouveau	termino	lg-fra
 rsc318	Supprimer	termino	lg-fra
 rsc319	Liste	termino	lg-fra
 rsc32	Options de fichier	termino	lg-fra
+rsc226	Origine des données	termino	lg-fra
 rsc323	Affiches exclues EMAKUMEAK	termino	lg-fra
 rsc324	Répertoire	termino	lg-fra
 rsc325	Options de fichiers	termino	lg-fra
@@ -5642,7 +5637,6 @@ rsc776	Dernières modifications	termino	lg-fra
 rsc777	Situations administratives	termino	lg-fra
 rsc778	Identification	termino	lg-fra
 rsc779	Id	termino	lg-fra
-rsc78	Sources externes	termino	lg-fra
 rsc780	Situation administrative	termino	lg-fra
 rsc781	Liste	termino	lg-fra
 rsc782	Nouveau	termino	lg-fra
@@ -6080,7 +6074,6 @@ rsc1128	γένος	termino	lg-ell
 rsc1128	Geschlecht	termino	lg-deu
 rsc1128	Gender	termino	lg-eng
 rsc1128	Genre	termino	lg-fra
-rsc226	RECYCLE RSC	termino	lg-spa
 rsc1129	Listado de indexaciones	termino	lg-spa
 rsc1129	Indexation list	termino	lg-eng
 rsc170	صورة	termino	lg-ara
@@ -6090,6 +6083,7 @@ rsc20	قابل للنشر	termino	lg-ara
 rsc21	شفرة	termino	lg-ara
 rsc733	تاريخ القبول	termino	lg-ara
 rsc26	مواعدة	termino	lg-ara
+rsc226	Origen de los datos	termino	lg-spa
 rsc23	عنوان	termino	lg-ara
 rsc19	ولاية	termino	lg-ara
 rsc24	التصنيف	termino	lg-ara
@@ -6279,3 +6273,42 @@ rsc1140	Validierung	termino	lg-deu
 rsc1140	Validation	termino	lg-eng
 rsc1140	تصديق	termino	lg-ara
 rsc1141	typology_data	termino	lg-spa
+rsc78	Sources documentaires	termino	lg-fra
+rsc78	Πηγές τεκμηρίωσης	termino	lg-ell
+rsc78	Dokumentarische Quellen	termino	lg-deu
+rsc1142	Bibliografía	termino	lg-spa
+rsc1142	Bibliography	termino	lg-eng
+rsc1142	Bibliographie	termino	lg-fra
+rsc1142	Literaturverzeichnis	termino	lg-deu
+rsc1142	Bibliografia	termino	lg-ita
+rsc1142	Bibliografia	termino	lg-cat
+rsc1144	Id	termino	lg-spa
+rsc1143	Identificación	termino	lg-spa
+rsc1145	Origen	termino	lg-spa
+rsc1145	Source	termino	lg-eng
+rsc1145	Fonte	termino	lg-ita
+rsc1145	Source	termino	lg-fra
+rsc1145	Quelle	termino	lg-deu
+rsc1146	Id original	termino	lg-spa
+rsc1148	Nuevo	termino	lg-spa
+rsc1147	Fecha original	termino	lg-spa
+rsc1147	Ursprüngliches Datum	termino	lg-deu
+rsc1147	Original date	termino	lg-eng
+rsc1149	Borrado	termino	lg-spa
+rsc1149	Delete	termino	lg-eng
+rsc1149	Löschen	termino	lg-deu
+rsc1149	Löschen	termino	lg-fra
+rsc1146	Original id	termino	lg-eng
+rsc1146	Original id	termino	lg-fra
+rsc1146	Ursprüngliche ID	termino	lg-deu
+rsc1150	Proyecto	termino	lg-spa
+rsc1150	Project	termino	lg-eng
+rsc1150	Projecte	termino	lg-cat
+rsc1150	Projekt	termino	lg-deu
+rsc1151	Listado	termino	lg-spa
+rsc1151	List	termino	lg-eng
+rsc1151	Llist	termino	lg-cat
+rsc1151	Liste	termino	lg-deu
+rsc18	Delete	termino	lg-eng
+rsc18	Löschen	termino	lg-deu
+rsc18	Supprimer	termino	lg-fra
