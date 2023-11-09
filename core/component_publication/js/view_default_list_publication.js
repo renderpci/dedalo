@@ -38,7 +38,7 @@ view_default_list_publication.render = async function(self, options) {
 			value_string : value_string
 		})
 		wrapper.addEventListener('click', function(e){
-			if (self.show_interface.read_only!==true) {
+			if (self.show_interface.read_only===true) {
 				// do not stop propagation here
 				return
 			}
