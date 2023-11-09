@@ -351,19 +351,21 @@ class lock_components {
 	*/
 	public static function get_active_users_full() : array {
 
-		$active_users = lock_components::get_active_users();
+		$active_users_response = lock_components::get_active_users();
 
 		$ar_user_actions = [];
-		foreach ($active_users->ar_user_actions as $current_event_element) {
+		if ($active_users_response->response===true && !empty($active_users_response->ar_user_actions)) {
+			foreach ($active_users_response->ar_user_actions as $current_event_element) {
 
-			$item = clone $current_event_element;
+				$item = clone $current_event_element;
 
-			// add some useful information
-				$item->component_model	= RecordObj_dd::get_modelo_name_by_tipo($current_event_element->component_tipo, true);
-				$item->component_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
-				$item->section_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
+				// add some useful information
+					$item->component_model	= RecordObj_dd::get_modelo_name_by_tipo($current_event_element->component_tipo, true);
+					$item->component_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->component_tipo, DEDALO_DATA_LANG, true);
+					$item->section_label	= RecordObj_dd::get_termino_by_tipo($current_event_element->section_tipo, DEDALO_DATA_LANG, true);
 
-			$ar_user_actions[] = $item;
+				$ar_user_actions[] = $item;
+			}
 		}
 
 
