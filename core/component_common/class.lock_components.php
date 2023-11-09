@@ -15,7 +15,17 @@ class lock_components {
 
 	/**
 	* UPDATE_LOCK_COMPONENTS_STATE
-	* @param object $event_elemen
+	* @param object $event_element
+	* sample:
+	* {
+	*	"section_id": "1",
+	*	"section_tipo": "rsc167",
+	*	"component_tipo": "rsc27",
+	*	"action": "focus",
+	*	"user_id": 1,
+	*	"full_username": "Render user",
+	*	"date": "2023-11-09 20:23:44"
+	* }
 	* @return object $response
 	*/
 	public static function update_lock_components_state( object $event_element ) : object {
@@ -225,25 +235,29 @@ class lock_components {
 
 		$response = new stdClass();
 
-		#
-		# LOAD CURRENT DB ELEMENTS
-		$id 	  = 1;
-		$strQuery = "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-		$res 	  = JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
-		$num_rows = pg_num_rows($res);
+		// load current db elements
+			$id			= 1;
+			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
+			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$num_rows	= pg_num_rows($res);
 
-		#
-		# CREATE FIRST ROW ON EMPTY TABLE
+
+		// create first row on empty table
 		if ($num_rows<1) {
 
-			$response->result = false;
-			$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
-			debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+			// response false
+				$response->result	= false;
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::DEBUG
+			);
 
 		}else{
 
-			$dato = pg_fetch_result($res, 0, 0);
-			$dato = (array)json_decode($dato);
+			$dato	= pg_fetch_result($res, 0, 0);
+			$dato	= (array)json_decode($dato);
 
 			$removed_elements=0;
 			foreach ($dato as $key => $current_event_element) {
@@ -251,16 +265,19 @@ class lock_components {
 				if (isset($current_event_element->action) && $current_event_element->action==='focus') {
 
 					if ( empty($user_id) ) {
-						# All elements
-						# debug_log(__METHOD__." Deleting element from all users ".to_string($current_event_element), logger::DEBUG);
+						// All elements
+						// debug_log(__METHOD__." Deleting element from all users ".to_string($current_event_element), logger::DEBUG);
 						unset($dato[$key]);
 						$removed_elements++;
 
 					}else{
 
 						if ( $current_event_element->user_id==$user_id ) {
-							# Only selected user elements (all sections)
-							debug_log(__METHOD__." Deleting element from user $user_id ".to_string($current_event_element), logger::DEBUG);
+							// Only selected user elements (all sections)
+							debug_log(__METHOD__
+								." Deleting element from user $user_id ".to_string($current_event_element)
+								, logger::DEBUG
+							);
 							unset($dato[$key]);
 							$removed_elements++;
 						}
@@ -268,16 +285,17 @@ class lock_components {
 				}
 			}//end foreach ($dato as $key => $current_event_element)
 
-			# Recreate dato array keys
-			$new_dato = array_values($dato);		// Recreate array keys to avoid produce json objects instead array
-			$new_dato = json_encode($new_dato);		// Convert again to text before save to database
-			$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-			#$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-			pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-			$res = pg_get_result(DBi::_getConnection());
+			// Recreate dato array keys
+				$new_dato	= array_values($dato);		// Recreate array keys to avoid produce JSON objects instead array
+				$new_dato	= json_encode($new_dato);		// Convert again to text before save to database
+				$strQuery	= "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				$res = pg_get_result(DBi::_getConnection());
 
-			$response->result = true;
-			$response->msg 	  = "Updated db lock elements. Removed $removed_elements elements";
+			// response OK
+				$response->result	= true;
+				$response->msg		= "Updated db lock elements. Removed $removed_elements elements";
 		}
 
 
@@ -294,19 +312,20 @@ class lock_components {
 
 		$response = new stdClass();
 
-		#
-		# LOAD CURRENT DB ELEMENTS
-		$id 	  = 1;
-		$strQuery = "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-		$res 	  = JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
-		$num_rows = pg_num_rows($res);
+		// load current db elements
+			$id			= 1;
+			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
+			$res		= JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
+			$num_rows	= pg_num_rows($res);
 
-		#
-		# CREATE FIRST ROW ON EMPTY TABLE
+
+		// create first row on empty table
 		if ($num_rows<1) {
 
-			$response->result = false;
-			$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+			// response false
+				$response->result	= false;
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+
 			debug_log(__METHOD__
 				." $response->msg "
 				, logger::DEBUG
@@ -314,8 +333,8 @@ class lock_components {
 
 		}else{
 
-			$dato = pg_fetch_result($res, 0, 0);
-			$dato = (array)json_decode($dato);
+			$dato	= pg_fetch_result($res, 0, 0);
+			$dato	= (array)json_decode($dato);
 
 			$ar_user_actions = array();
 			foreach ($dato as $current_event_element) {
@@ -335,8 +354,9 @@ class lock_components {
 				// pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
 				// $res = pg_get_result(DBi::_getConnection());
 
-			$response->result = true;
-			$response->msg 	  = sprintf("Active users focus elements: %s", count($ar_user_actions) );
+			// response OK
+				$response->result	= true;
+				$response->msg		= sprintf("Active users focus elements: %s", count($ar_user_actions) );
 		}
 
 
@@ -347,14 +367,14 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS_FULL
-	* @return array ar_user_actions
+	* @return array $ar_user_actions
 	*/
 	public static function get_active_users_full() : array {
 
 		$active_users_response = lock_components::get_active_users();
 
 		$ar_user_actions = [];
-		if ($active_users_response->response===true && !empty($active_users_response->ar_user_actions)) {
+		if ($active_users_response->result===true && !empty($active_users_response->ar_user_actions)) {
 			foreach ($active_users_response->ar_user_actions as $current_event_element) {
 
 				$item = clone $current_event_element;
@@ -391,64 +411,74 @@ class lock_components {
 	public static function clean_locks_garbage() : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed clean_locks_garbage';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed clean_locks_garbage';
 
-		#
-		# LOAD CURRENT DB ELEMENTS
-		$id 	  = 1;
-		$strQuery = "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-		$res 	  = JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
-		$num_rows = pg_num_rows($res);
+		// load current db elements
+			$id			= 1;
+			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
+			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$num_rows	= pg_num_rows($res);
 
-		#
-		# CREATE FIRST ROW ON EMPTY TABLE
+
+		// create FIRST ROW ON EMPTY TABLE
 		if ($num_rows<1) {
 
-			$response->result = false;
-			$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
-			debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+			// response false
+				$response->result = false;
+				$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::DEBUG
+			);
 
 		}else{
 
-			$dato = pg_fetch_result($res, 0, 0);
-			$dato = (array)json_decode($dato);
+			// dato
+				$dato	= pg_fetch_result($res, 0, 0);
+				$dato	= (array)json_decode($dato);
 
-			$hours	  = lock_components::MAXIMUN_LOCK_EVENT_TIME;
-			$interval = date_interval_create_from_date_string($hours." hours");
-			$now 	  = new DateTime();
+			// interval
+				$hours		= lock_components::MAXIMUN_LOCK_EVENT_TIME;
+				$interval	= date_interval_create_from_date_string($hours." hours");
+				$now		= new DateTime();
 
 			$new_dato = array();
 			$deleted_elements = false;
-			foreach ($dato as $key => $event_element) {
+			foreach ($dato as $event_element) {
 
-				$event_date = new DateTime($event_element->date);
-				$expires 	= $event_date->add($interval);
+				$event_date	= new DateTime($event_element->date);
+				$expires	= $event_date->add($interval);
 				if ( $expires < $now ) {
 					$deleted_elements = true;
-					debug_log(__METHOD__." Lock event for component: $event_element->component_tipo from ".$event_date->format('Y-m-d H:i:s')." has expired (> $hours hours). Removed from DB ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Lock event for component: $event_element->component_tipo from ".$event_date->format('Y-m-d H:i:s')." has expired (> $hours hours). Removed from DB "
+						, logger::ERROR
+					);
 				}else{
 					$new_dato[] = $event_element;
 				}
 			}//end foreach
 
 			if ($deleted_elements===true) {
-				# Recreate dato array keys
-				$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
-				$new_dato = json_encode($new_dato);		// Convert again to text before save to database
-				$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-				#$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				// Recreate dato array keys
+				$new_dato	= array_values($new_dato);	// Recreate array keys to avoid produce JSON objects instead array
+				$new_dato	= json_encode($new_dato);	// Convert again to text before save to database
+				$strQuery	= "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
 				pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
 				$res = pg_get_result(DBi::_getConnection());
 
-				$response->result = true;
-				$response->msg 	  = "Updated db lock elements. Removed expired events";
+				// response OK Updated
+					$response->result	= true;
+					$response->msg		= 'Updated db lock elements. Removed expired events';
+			}else{
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'OK';
 			}
-
 		}
-
-		$response->result = true;
-		$response->msg 	  = "Ok";
 
 
 		return $response;
