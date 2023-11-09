@@ -3675,7 +3675,7 @@ abstract class component_common extends common {
 				: $this->pagination->limit;
 
 		// offset
-			$offset = $this->pagination->offset;
+			$offset = $this->pagination->offset ?? 0;
 
 		// array_lenght. avoid use zero as limit. Instead this, use null
 			$array_lenght = $limit>0 ? $limit : null;
