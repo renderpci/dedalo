@@ -262,6 +262,30 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 						}
 					break;
 
+				case 'invalid_page_element':
+					{
+					// server_response_error h1
+						ui.create_dom_element({
+							element_type	: 'h1',
+							class_name		: 'server_response_error',
+							inner_html		: msg,
+							parent			: error_container
+						})
+					// link_home
+						const link_home = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'link home',
+							href			: DEDALO_ROOT_WEB,
+							inner_html		: 'Home',
+							parent			: error_container
+						})
+						link_home.addEventListener('click', function(e) {
+							e.stopPropagation()
+							// location.href = DEDALO_ROOT_WEB
+						})
+					}
+					break;
+
 				default:
 					// server_response_error h1
 						if (msg) {
