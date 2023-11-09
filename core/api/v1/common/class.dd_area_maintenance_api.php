@@ -1079,4 +1079,52 @@ final class dd_area_maintenance_api {
 
 
 
+	/**
+	* RUN_LONG_PROCESS
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function run_long_process(object $rqo) : object {
+
+		session_write_close();
+
+		// options
+			$options = $rqo->options;
+
+		// short vars
+			$seconds = $options->seconds ?? 35;
+
+		// wait
+			debug_log(__METHOD__
+				. " Running long process for seconds: $seconds"
+				, logger::WARNING
+			);
+
+			$cycle		= 10;
+			$rest_time	= $seconds;
+			while ($rest_time>0) {
+				debug_log(__METHOD__
+					. " Sleeping seconds: $cycle of $rest_time - remain: " . round($rest_time/$cycle) .' of ' . round($seconds/$cycle)
+					, logger::WARNING
+				);
+				sleep($cycle);
+				$rest_time = $rest_time - $cycle;
+
+				// flush
+					// echo ' ';
+					// flush();
+					// ob_flush();
+			}
+
+		// response
+			$response = new stdClass();
+				$response->result	= true;
+				$response->msg		= 'Success. Request done in seconds: ' . $seconds;
+
+
+		return $response;
+	}//end run_long_process
+
+
+
 }//end dd_area_maintenance_api
