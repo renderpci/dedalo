@@ -1378,12 +1378,15 @@ final class dd_utils_api {
 			'rtf'	=> 'application/rtf',
 			'xls'	=> 'application/vnd.ms-excel',
 			'ppt'	=> 'application/vnd.ms-powerpoint',
+			'pptx'	=> 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
 
 			// open office
 			'odt'	=> 'application/vnd.oasis.opendocument.text',
 			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
 
-			'pages'	=> 'application/pages',
+			'pages'		=> 'application/pages',
+			'key'		=> 'application/vnd.apple.keynote',
+			'numbers'	=> 'application/vnd.apple.numbers',
 
 			// 3d @see https://github.com/KhronosGroup/glTF/blob/main/specification/1.0/README.md#mimetypes
 			'glb'	=> 'application/octet-stream',
