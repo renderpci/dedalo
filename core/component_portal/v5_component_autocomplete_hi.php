@@ -96,7 +96,6 @@
 
 		$propiedades			= $this->get_propiedades();
 		$diffusion_properties	= $this->get_diffusion_properties();
-			// dump($diffusion_properties, ' diffusion_properties (component_autocomplete) tipo ++ '.to_string($this->tipo));
 
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' - ';
@@ -177,7 +176,7 @@
 						$show_parents
 					);
 					if (!empty($current_value)) {
-						$ar_value = array_merge($ar_value, (array)$current_value);
+						$ar_value[] = implode($fields_separator, $current_value);
 					}
 				}//end foreach ($dato as $key => $current_locator)
 
