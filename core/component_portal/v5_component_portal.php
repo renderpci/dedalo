@@ -165,6 +165,7 @@
 
 		$valor = $valor_from_ar_locators->result;
 
+
 		return $valor;
 	};//end get_valor
 
@@ -295,6 +296,7 @@
 			$records_separator = (isset($propiedades->source->records_separator))
 				? $propiedades->source->records_separator
 				: $option_obj->divisor_parents ?? $records_separator_default;
+
 
 		# Propiedades of diffusion element that references this component
 		# (!) Note that is possible overwrite real component properties injecting properties from diffusion (see diffusion_sql::resolve_value)

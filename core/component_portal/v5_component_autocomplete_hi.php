@@ -76,6 +76,7 @@
 		$valor_export = $this->get_valor($lang);
 		$valor_export = br2nl($valor_export);
 
+
 		return $valor_export;
 	};//end get_valor_export
 
