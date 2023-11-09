@@ -62,7 +62,8 @@ view_line_edit_number.render = async function(self, options) {
 
 
 /**
-* GET_CONTENT_DATA
+* GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
@@ -96,6 +97,10 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* Creates the current input text node
+* @param int i
+* @param string current_value
+* @param object self
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -115,22 +120,28 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
-		input.addEventListener('keyup', function(e) {
-			// page unload event
-			keyup_handler(e, i, self)
-		})//end keyup
-		input.addEventListener('blur', function(e) {
-			// saves changed data
-			blur_handler(e, i, self)
-		})//end blur
-		input.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})//end click
+		// keydown event. Prevent to fire page events like open search panel
+			input.addEventListener('keydown', function(e) {
+				e.stopPropagation()
+			})
+		// keyup event
+			input.addEventListener('keyup', function(e) {
+				// page unload event
+				keyup_handler(e, i, self)
+			})//end keyup
+		// blur event
+			input.addEventListener('blur', function(e) {
+				// saves changed data
+				blur_handler(e, i, self)
+			})//end blur
+		// click event
+			input.addEventListener('click', function(e) {
+				e.stopPropagation()
+			})//end click
 
 
 	return content_value
 }//end get_content_value
-
 
 
 
