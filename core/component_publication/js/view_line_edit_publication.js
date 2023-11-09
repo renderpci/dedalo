@@ -26,7 +26,9 @@ export const view_line_edit_publication = function() {
 
 /**
 * RENDER
-* Render node for use in edit mode
+* Render node for view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_line_edit_publication.render = async function(self, options) {
@@ -34,12 +36,15 @@ view_line_edit_publication.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-	// button_exit_edit
-		const button_exit_edit = ui.component.build_button_exit_edit(self)
+
 
 	// content_data
 		const content_data = get_content_data(self)
+
+		// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
 		content_data.appendChild(button_exit_edit)
+
 		if (render_level==='content') {
 			return content_data
 		}
