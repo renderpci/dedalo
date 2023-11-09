@@ -184,6 +184,7 @@ class install extends common {
 			'matrix_stats',			// stats data
 			'matrix_structurations',// like indexation data
 			'matrix_test',			// only for test purposes
+			'matrix_tools',			// tools register, development and config
 			'matrix_time_machine',	// data versions table
 			'matrix_users',			// users table (user 'root' will be re-created later)
 			'relations',			// search relations table
