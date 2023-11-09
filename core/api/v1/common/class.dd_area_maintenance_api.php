@@ -469,7 +469,7 @@ final class dd_area_maintenance_api {
 
 			// version info. Get from new downloaded file 'version.inc'
 				$command = 'ddversion=`'.PHP_BIN_PATH.' << \'EOF\'
-				<?php require "'.DEDALO_CONFIG_PATH.'/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
+				<?php require "'.DEDALO_CORE_PATH.'/base/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
 				echo $ddversion';
 				// exec command
 				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
