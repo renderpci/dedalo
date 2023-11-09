@@ -146,20 +146,20 @@ const get_content_data = async function(self) {
 				const current_context = self.context[i]
 
 				// component check
-					if (current_context.type==='component') {
-						console.log('Ignored component context in page:', current_context);
-						self.running_with_errors = [
-							{
-								msg		: 'Invalid page element: ' + current_context.type + ' - ' + current_context.label,
-								error	: 'invalid_page_element'
-							}
-						]
-						const error_node = render_server_response_error(
-							self.running_with_errors
-						)
-						content_data.appendChild(error_node)
-						continue;
-					}
+					// if (current_context.type==='component') {
+					// 	console.log('Ignored component context in page:', current_context);
+					// 	self.running_with_errors = [
+					// 		{
+					// 			msg		: 'Invalid page element: ' + current_context.type + ' - ' + current_context.label,
+					// 			error	: 'invalid_page_element'
+					// 		}
+					// 	]
+					// 	const error_node = render_server_response_error(
+					// 		self.running_with_errors
+					// 	)
+					// 	content_data.appendChild(error_node)
+					// 	continue;
+					// }
 
 				// menu case. Prevent to render again on refresh page
 					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
