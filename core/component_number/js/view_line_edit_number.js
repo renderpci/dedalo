@@ -27,7 +27,9 @@ export const view_line_edit_number = function() {
 
 /**
 * RENDER
-* Render node for use in modes: edit, edit_in_list
+* Render node for view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_line_edit_number.render = async function(self, options) {
@@ -71,6 +73,10 @@ const get_content_data = function(self) {
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
+
+	// button_exit_edit
+		const button_exit_edit = ui.component.build_button_exit_edit(self)
+		content_data.appendChild(button_exit_edit)
 
 	// build values
 		const inputs_value	= (value.length<1) ? [null] : value // force one empty input at least
