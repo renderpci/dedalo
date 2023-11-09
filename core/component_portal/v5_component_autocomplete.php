@@ -173,6 +173,7 @@
 		$valor_export = $this->get_valor($lang);
 		$valor_export = br2nl($valor_export);
 
+
 		return $valor_export;
 	};//end get_valor_export
 
@@ -238,6 +239,7 @@
 		}
 
 		$diffusion_value = implode($fields_separator, $diffusion_value_clean);
+
 
 		return (string)$diffusion_value;
 	};//end get_diffusion_value

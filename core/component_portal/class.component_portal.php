@@ -118,8 +118,8 @@ class component_portal extends component_relation_common {
 	*/
 	public function regenerate_component() : bool {
 
-		# External case (inverse portals with data dependency), calculate his data again.
-		$properties		= $this->get_properties() ?? new stdClass();
+		// External case (inverse portals with data dependency), calculate his data again.
+		$properties = $this->get_properties() ?? new stdClass();
 		if(isset($properties->source->mode) && $properties->source->mode==='external'){
 			$options = new stdClass();
 				$options->save				= true; // $mode==='edit' ? true : false;
@@ -132,9 +132,8 @@ class component_portal extends component_relation_common {
 			return true;
 		}
 
-		# Force loads dato always !IMPORTANT
+		// Force loads dato always !IMPORTANT
 		$this->get_dato();
-
 
 		debug_log(__METHOD__
 			." Ignored regenerate action in this component. USE generate_relations_table_data TO REGENERATE RELATIONS ". PHP_EOL
@@ -148,6 +147,7 @@ class component_portal extends component_relation_common {
 
 		// Save component data
 			 // $this->Save();
+
 
 		return true;
 	}//end regenerate_component
@@ -294,13 +294,13 @@ class component_portal extends component_relation_common {
 	public static function update_dato_version(object $request_options) : object {
 
 		$options = new stdClass();
-			$options->update_version 	= null;
-			$options->dato_unchanged 	= null;
-			$options->reference_id 		= null;
-			$options->tipo 				= null;
-			$options->section_id 		= null;
-			$options->section_tipo 		= null;
-			$options->context 			= 'update_component_dato';
+			$options->update_version	= null;
+			$options->dato_unchanged	= null;
+			$options->reference_id		= null;
+			$options->tipo				= null;
+			$options->section_id		= null;
+			$options->section_tipo		= null;
+			$options->context			= 'update_component_dato';
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
 			$update_version	= $options->update_version;
@@ -473,6 +473,7 @@ class component_portal extends component_relation_common {
 
 		$valor =  Closure::bind($_get_valor, $this)($lang, $format, $fields_separator, $records_separator, $ar_related_terms, $data_to_be_used);
 
+
 		return $valor;
 	}//end get_valor
 
@@ -495,6 +496,7 @@ class component_portal extends component_relation_common {
 
 		// $_get_valor_export = Closure::bind($_get_valor_export, $this);
 		$valor =  Closure::bind($_get_valor_export, $this)( $valor, $lang, $quotes, $add_id );
+
 
 		return $valor;
 	}//end get_valor_export
