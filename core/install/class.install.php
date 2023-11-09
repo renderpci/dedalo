@@ -492,6 +492,12 @@ class install extends common {
 			// 	}
 			// }
 
+		// vacuum analyze
+			$call_response = install::optimize_database();
+			if ($call_response->result===false) {
+				return $call_response;
+			}
+
 		// build install DDBB to default compressed psql file
 			$call_response = install::build_install_db_file();
 			if ($call_response->result===false) {
@@ -505,6 +511,45 @@ class install extends common {
 
 		return $response;
 	}//end build_install_version
+
+
+
+	/**
+	* OPTIMIZE_DATABASE
+	* @return object $response
+	*/
+	public static function optimize_database() {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		$sql = 'VACUUM ANALYZE';
+		debug_log(__METHOD__
+			." Executing DB query " . PHP_EOL
+			. $sql
+			, logger::WARNING
+		);
+		$result	= pg_query(DBi::_getConnection(), $sql);
+		if (!$result) {
+			$msg = " Error on db execution (optimize database 0): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__
+				. $msg . PHP_EOL
+				. $sql
+				, logger::ERROR
+			);
+			$response->msg = $msg;
+
+			return $response; // return error here !
+		}
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end optimize_database
 
 
 
