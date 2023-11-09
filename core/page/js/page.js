@@ -5,9 +5,13 @@
 
 
 // import
-	// custom html elements
-	// import '../../common/js/dd-modal.js'
-	// others
+	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
+	import {common, push_browser_history} from '../../common/js/common.js'
+	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+	import {render_server_response_error} from '../../common/js/render_common.js'
+	import {ui} from '../../common/js/ui.js'
 	import {
 		clone,
 		dd_console,
@@ -16,21 +20,7 @@
 		JSON_parse_safely,
 		object_to_url_vars
 	} from '../../common/js/utils/index.js'
-	// import {menu} from '../../menu/js/menu.js'
-	import {event_manager} from '../../common/js/event_manager.js'
-	// import {set_before_unload} from '../../common/js/events.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {get_instance} from '../../common/js/instances.js'
-	import {common, push_browser_history} from '../../common/js/common.js'
-	import {check_unsaved_data} from '../../component_common/js/component_common.js'
-	import {render_server_response_error} from '../../common/js/render_common.js'
-	// import {load_tool} from '../../../tools/tool_common/js/tool_common.js'
-	// import '../../common/js/components_list.js' // launch preload all components files in parallel
-	// import '../../../lib/tinymce/js/tinymce/tinymce.min.js'
 	import {render_page} from './render_page.js'
-	// import {set_element_css} from './css.js'
-	import {ui} from '../../common/js/ui.js'
-	// import {activate_window_keydown} from '../../common/js/utils/keyboard.js'
 
 
 
@@ -75,7 +65,7 @@ page.prototype.init = async function(options) {
 
 	self.model			= 'page'
 	self.type			= 'page'
-	self.mode			= 'edit' // options.mode 	  // mode like 'section', 'tool', 'thesaurus'...
+	self.mode			= 'edit' // options.mode // mode like 'section', 'tool', 'thesaurus'...
 	self.node			= null
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
@@ -84,7 +74,7 @@ page.prototype.init = async function(options) {
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
 
-	// update value, subscription to the changes: if the section or area was changed, observers dom elements will be changed own value with the observable value
+	// update value, subscription to the changes: if the section or area was changed, observers DOM elements will be changed own value with the observable value
 
 	// user_navigation. Menu navigation (not pagination)
 		self.events_tokens.push(
@@ -332,13 +322,6 @@ page.prototype.init = async function(options) {
 			// 	event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
 			// )
 
-	// window messages
-		// window.addEventListener("message", receiveMessage, false);
-		// function receiveMessage(event) {
-		// 	console.log("message event:",event);
-		// 	alert("Mensaje recibido !");
-		// }
-
 	// events. Add window/document general events
 		self.add_events()
 
@@ -370,23 +353,6 @@ page.prototype.init = async function(options) {
 		//            }
 		//        }
 		//    }
-	// setTimeout(function(){
-		// elements_css.oh1_rsc75 = {
-		//     ".wrap_component": {
-		//         "width": "12%",
-		//            "height" : '150px',
-		//            "@media (max-width: 800px)" : {
-		//         	"width": "50%",
-		//             "height" : '120px'
-		//         }
-		//     },
-		//     ".content_data": {
-		//         "style": {
-		//             "width": "120px"
-		//         }
-		//     }
-		// }
-		// }, 5)
 
 
  	return true
@@ -514,6 +480,7 @@ page.prototype.build = async function(autoload=false) {
 
 	// status update
 		self.status = 'built'
+
 
 	return true
 }//end build
@@ -788,50 +755,9 @@ const update_css_file = function(sheet_name) {
 		}
 	}
 
+
 	return false
 }//end update_css_file
-
-
-
-/**
-* USER_ACTION
-*/
-	// const user_navigation = async function(self, options) {
-
-	// 	const api_response = await data_manager.request({
-	// 		body : {
-	// 			action 		: 'get_element',
-	// 			options 	: options
-	// 		}
-	// 	})
-
-	// 	// elements to stay
-	// 		const api_element 		= api_response.result
-	// 		const elements_to_stay 	= self.elements.filter(item => item.model!==api_element.model)
-	// 			  elements_to_stay.push(api_element)
-	// 		self.elements = elements_to_stay
-
-	// 	// instances. remove all other instances but current an refresh page
-	// 		const instances_to_destroy = self.ar_instances.filter(item => item.model!==api_element.model)
-	// 		for (let i = instances_to_destroy.length - 1; i >= 0; i--) {
-	// 			instances_to_destroy[i].destroyable = false
-	// 		}
-	// 		self.refresh()
-
-	// 	// url history track
-	// 		if(options.event_in_history===true) return;
-
-	// 		const var_uri = Object.entries(options).map(([key, val]) => `${key}=${val}`).join('&');
-
-	// 		const uri_options	= clone(options)
-	// 		const state 		= {options : uri_options}
-	// 		const title 		= ''
-	// 		const url 			= "?"+var_uri //window.location.href
-
-	// 		history.pushState(state, title, url)
-
-	// 	return true
-	// }//end user_navigation
 
 
 
