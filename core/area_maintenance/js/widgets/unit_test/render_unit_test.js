@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {object_to_url_vars} from '../../../../common/js/utils/index.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -109,7 +110,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
-	// form init
+	// form init new empty test record
 		self.caller.init_form({
 			submit_label	: 'Truncate test table and Create new empty test record',
 			confirm_text	: get_label.sure || 'Sure?',
@@ -122,7 +123,63 @@ const get_content_data_edit = async function(self) {
 			}
 		})
 
+	// button_run_long_process
+		const button_run_long_process = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_run_long_process',
+			inner_html		: 'Run long process',
+			parent			: content_data
+		})
+		button_run_long_process.addEventListener('click', fn_unlock)
+		async function fn_unlock(e) {
+			e.stopPropagation()
 
+			// prompt
+				const seconds = prompt('Seconds');
+				if (seconds===null) {
+					// user cancel action case
+					return
+				}
+
+			// lock
+				content_data.classList.add('lock')
+
+			// spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner'
+				})
+				info_node.prepend(spinner)
+
+			// request
+				const api_response = await data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'run_long_process',
+						options	: {
+							seconds : seconds
+						}
+					}
+				})
+
+				info_node.innerHTML = JSON.stringify({
+					action	: 'run_long_process',
+					result	: api_response.result,
+					msg		: api_response.msg
+				}, null, 2)
+
+			// lock
+				content_data.classList.remove('lock')
+				spinner.remove()
+		}//end fn_reset_counter
+
+	// info_node
+		const info_node = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'info_node',
+			parent			: content_data
+		})
 
 
 	// add at end body_response
