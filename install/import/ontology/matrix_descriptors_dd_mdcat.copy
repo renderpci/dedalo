@@ -88,7 +88,6 @@ mdcat1014	Progetto	termino	lg-ita
 mdcat1014	Projecte	termino	lg-cat
 mdcat1014	Proyecto	termino	lg-spa
 mdcat1015	Deportats catalans i espanyols als camps nazis	termino	lg-cat
-mdcat1016	Identificació	termino	lg-spa
 mdcat1017	Id	termino	lg-spa
 mdcat1018	Presons	termino	lg-cat
 mdcat1018	Prisiones	termino	lg-spa
@@ -213,7 +212,6 @@ mdcat1075	Publicable	termino	lg-cat
 mdcat1075	Publicable	termino	lg-spa
 mdcat1085	descripcio	termino	lg-spa
 mdcat1086	terms	termino	lg-spa
-mdcat1087	List	termino	lg-spa
 mdcat1088	fons	termino	lg-spa
 mdcat1089	tipologia	termino	lg-spa
 mdcat109	Tesauro jerárquico	termino	lg-spa
@@ -900,6 +898,7 @@ mdcat1478	Filiació	termino	lg-cat
 mdcat1478	Filiación	termino	lg-spa
 mdcat1479	Referencias bibliográficas y documentales	termino	lg-spa
 mdcat1479	Referències bibliogràfiques i documentals	termino	lg-cat
+mdcat1486	Persona afectada	termino	lg-spa
 mdcat4383	Stolpersteine dirección particular	termino	lg-spa
 mdcat1480	Entidad	termino	lg-spa
 mdcat1480	Entitat	termino	lg-cat
@@ -911,8 +910,6 @@ mdcat1484	Publicaciones	termino	lg-spa
 mdcat1484	Publicacions	termino	lg-cat
 mdcat1485	Publicació web	termino	lg-cat
 mdcat1485	Publicación web	termino	lg-spa
-mdcat1486	Deportado	termino	lg-spa
-mdcat1486	Deportat	termino	lg-cat
 mdcat1487	Projecte	termino	lg-cat
 mdcat1488	Nou	termino	lg-cat
 mdcat1488	Nuevo	termino	lg-spa
@@ -2038,6 +2035,7 @@ mdcat1930	Identificación	termino	lg-spa
 mdcat1931	Id	termino	lg-cat
 mdcat1931	Id	termino	lg-spa
 mdcat4383	Stolpersteine home address	termino	lg-eng
+mdcat1937	Persona afectada	termino	lg-cat
 mdcat1933	Fondo	termino	lg-spa
 mdcat1933	Fons	termino	lg-cat
 mdcat1934	Estado de revisión	termino	lg-spa
@@ -2046,8 +2044,6 @@ mdcat1935	Projecte	termino	lg-cat
 mdcat1935	Proyecto	termino	lg-spa
 mdcat1936	Destacado	termino	lg-spa
 mdcat1936	Destacat	termino	lg-cat
-mdcat1937	Afectado	termino	lg-spa
-mdcat1937	Afectat	termino	lg-cat
 mdcat1938	Listado	termino	lg-spa
 mdcat1938	Llistat	termino	lg-cat
 mdcat1939	Nom del pare	termino	lg-cat
@@ -3330,8 +3326,6 @@ mdcat263	Identificació	termino	lg-cat
 mdcat263	Identificación	termino	lg-spa
 mdcat2630	Nom de la mare	termino	lg-cat
 mdcat2630	Nombre de la madre	termino	lg-spa
-mdcat2631	Afectado	termino	lg-spa
-mdcat2631	Afectat	termino	lg-cat
 mdcat2632	Identificació	termino	lg-cat
 mdcat2632	Identificación	termino	lg-spa
 mdcat2633	Refugiado a España	termino	lg-spa
@@ -3376,6 +3370,7 @@ mdcat2649	Id	termino	lg-spa
 mdcat265	Imágen	termino	lg-spa
 mdcat265	Imatge	termino	lg-cat
 mdcat2650	Data d&#039;arribada	termino	lg-cat
+mdcat2631	Persona afectada	termino	lg-cat
 mdcat2650	Fecha de llegada	termino	lg-spa
 mdcat2651	Arribada a França per	termino	lg-cat
 mdcat2651	Llegada a Francia por	termino	lg-spa
@@ -4035,6 +4030,7 @@ mdcat2920	colleccions_arxius	termino	lg-spa
 mdcat2921	publicacio	termino	lg-spa
 mdcat2922	colleccio_arxiu	termino	lg-spa
 mdcat4384	Identificació	termino	lg-cat
+mdcat2961	Persona afectada	termino	lg-cat
 mdcat2924	espais_tipologia	termino	lg-spa
 mdcat2925	publicacio	termino	lg-spa
 mdcat2926	tipologia_espai	termino	lg-spa
@@ -4107,8 +4103,6 @@ mdcat296	Exclosos	termino	lg-cat
 mdcat296	Excluidos	termino	lg-spa
 mdcat2960	Identificació	termino	lg-cat
 mdcat2960	Identificación	termino	lg-spa
-mdcat2961	Afectado	termino	lg-spa
-mdcat2961	Afectat	termino	lg-cat
 mdcat2962	Listado	termino	lg-spa
 mdcat2962	Llistat	termino	lg-cat
 mdcat2963	Dades condició	termino	lg-cat
@@ -5971,8 +5965,6 @@ mdcat600	Fondo	termino	lg-spa
 mdcat600	Fons	termino	lg-cat
 mdcat601	Unidad de catalogación	termino	lg-spa
 mdcat601	Unitat de catalogació	termino	lg-cat
-mdcat602	Refugiado	termino	lg-spa
-mdcat602	Refugiat	termino	lg-cat
 mdcat603	Año de incio	termino	lg-spa
 mdcat603	Any inici	termino	lg-cat
 mdcat604	Año final	termino	lg-spa
@@ -6194,8 +6186,6 @@ mdcat689	Proyecto	termino	lg-spa
 mdcat69	titol	termino	lg-spa
 mdcat690	Identificació de l'afectat	termino	lg-cat
 mdcat690	Identificación del afectado	termino	lg-spa
-mdcat691	Afectado	termino	lg-spa
-mdcat691	Afectat	termino	lg-cat
 mdcat692	Identificació	termino	lg-cat
 mdcat692	Identificación	termino	lg-spa
 mdcat693	Tipo de delito	termino	lg-spa
@@ -6226,6 +6216,7 @@ mdcat703	Data de condemna	termino	lg-cat
 mdcat703	Fecha de condena	termino	lg-spa
 mdcat704	Centres de privació de llibertad	termino	lg-cat
 mdcat704	Centros de privación de libertad	termino	lg-spa
+mdcat691	Persona afectada	termino	lg-cat
 mdcat705	Nº de la causa	termino	lg-cat
 mdcat705	Número de causa	termino	lg-spa
 mdcat706	Centre de privació de llibertat	termino	lg-cat
@@ -7978,7 +7969,6 @@ mdcat4256	context_defuncio	termino	lg-spa
 mdcat4257	indexation_fosses	termino	lg-spa
 mdcat4258	Stolpersteine	termino	lg-spa
 mdcat4258	Stolpersteine	termino	lg-cat
-mdcat4259	Stolpersteine	termino	lg-spa
 mdcat4259	Stolpersteine	termino	lg-cat
 mdcat4260	Stolpersteine	termino	lg-spa
 mdcat4260	Stolpersteine	termino	lg-cat
@@ -8421,7 +8411,6 @@ mdcat1482	Date	termino	lg-fra
 mdcat1483	Description	termino	lg-fra
 mdcat1484	Publications	termino	lg-fra
 mdcat1485	Publication web	termino	lg-fra
-mdcat1486	Déporté	termino	lg-fra
 mdcat1487	Projet	termino	lg-fra
 mdcat1488	Nouveau	termino	lg-fra
 mdcat1489	Supprimer	termino	lg-fra
@@ -8886,7 +8875,6 @@ mdcat1933	Fond 	termino	lg-fra
 mdcat1934	Statut de la révision	termino	lg-fra
 mdcat1935	Projet	termino	lg-fra
 mdcat1936	En vedette	termino	lg-fra
-mdcat1937	Affecté	termino	lg-fra
 mdcat1938	Liste	termino	lg-fra
 mdcat1939	Nom du père	termino	lg-fra
 mdcat194	Téléphone	termino	lg-fra
@@ -9348,7 +9336,6 @@ mdcat2628	En vedette	termino	lg-fra
 mdcat2629	Nom du père	termino	lg-fra
 mdcat263	Identification	termino	lg-fra
 mdcat2630	Nom de la mère	termino	lg-fra
-mdcat2631	Affecté	termino	lg-fra
 mdcat2632	Identification	termino	lg-fra
 mdcat2633	Réfugié en Espagne	termino	lg-fra
 mdcat2634	Exils	termino	lg-fra
@@ -9705,7 +9692,6 @@ mdcat2958	En vedette	termino	lg-fra
 mdcat2959	Types de division	termino	lg-fra
 mdcat296	Exclus 	termino	lg-fra
 mdcat2960	Identification	termino	lg-fra
-mdcat2961	Affecté	termino	lg-fra
 mdcat2962	Liste	termino	lg-fra
 mdcat2963	État des données	termino	lg-fra
 mdcat2964	Circonstances du décès ou de la disparition	termino	lg-fra
@@ -10684,7 +10670,6 @@ mdcat598	Identification	termino	lg-eng
 mdcat599	Id	termino	lg-eng
 mdcat600	Collection	termino	lg-eng
 mdcat601	Cataloging unit	termino	lg-eng
-mdcat602	Refugee	termino	lg-eng
 mdcat603	Start year	termino	lg-eng
 mdcat604	Final year	termino	lg-eng
 mdcat605	Installation unit	termino	lg-eng
@@ -10773,7 +10758,6 @@ mdcat687	Deadline	termino	lg-eng
 mdcat688	Observations	termino	lg-eng
 mdcat689	Project	termino	lg-eng
 mdcat690	Identification of the affected	termino	lg-eng
-mdcat691	Affected	termino	lg-eng
 mdcat692	Identification	termino	lg-eng
 mdcat693	Type of crime	termino	lg-eng
 mdcat694	Sentence	termino	lg-eng
@@ -11326,7 +11310,6 @@ mdcat1482	Date	termino	lg-eng
 mdcat1483	Description	termino	lg-eng
 mdcat1484	Publications	termino	lg-eng
 mdcat1485	Web publication	termino	lg-eng
-mdcat1486	Deportee	termino	lg-eng
 mdcat1487	Project	termino	lg-eng
 mdcat1488	New	termino	lg-eng
 mdcat1489	Delete	termino	lg-eng
@@ -11744,7 +11727,6 @@ mdcat1933	Collection	termino	lg-eng
 mdcat1934	Revision status	termino	lg-eng
 mdcat1935	Project	termino	lg-eng
 mdcat1936	Outstanding	termino	lg-eng
-mdcat1937	Affected	termino	lg-eng
 mdcat1938	List	termino	lg-eng
 mdcat1939	Father's name	termino	lg-eng
 mdcat1940	Mother's name	termino	lg-eng
@@ -12133,7 +12115,6 @@ mdcat2627	Project	termino	lg-eng
 mdcat2628	Outstanding	termino	lg-eng
 mdcat2629	Father's name	termino	lg-eng
 mdcat2630	Mother's name	termino	lg-eng
-mdcat2631	Affected	termino	lg-eng
 mdcat2632	Identification	termino	lg-eng
 mdcat2633	Refugee to Spain	termino	lg-eng
 mdcat2634	Exiled	termino	lg-eng
@@ -12454,7 +12435,6 @@ mdcat2957	Project	termino	lg-eng
 mdcat2958	Outstanding	termino	lg-eng
 mdcat2959	Division Types	termino	lg-eng
 mdcat2960	Identification	termino	lg-eng
-mdcat2961	Affected	termino	lg-eng
 mdcat2962	List	termino	lg-eng
 mdcat2963	Condition data	termino	lg-eng
 mdcat2964	Circumstances death or disappearance	termino	lg-eng
@@ -14089,7 +14069,6 @@ mdcat6	Affichage du contenu	termino	lg-fra
 mdcat60	Recherche sémantique combinée	termino	lg-fra
 mdcat600	Fond 	termino	lg-fra
 mdcat601	Unité de catalogage	termino	lg-fra
-mdcat602	Réfugié	termino	lg-fra
 mdcat603	Année de départ	termino	lg-fra
 mdcat604	Année finale 	termino	lg-fra
 mdcat605	Unité d'installation	termino	lg-fra
@@ -14182,7 +14161,6 @@ mdcat687	Date de clôture	termino	lg-fra
 mdcat688	Observations	termino	lg-fra
 mdcat689	Projet	termino	lg-fra
 mdcat690	Identification de la personne concernée	termino	lg-fra
-mdcat691	Affecté	termino	lg-fra
 mdcat692	Identification	termino	lg-fra
 mdcat693	Type de délit	termino	lg-fra
 mdcat694	Condamnation	termino	lg-fra
@@ -14533,10 +14511,74 @@ mdcat4420	Llistat	termino	lg-cat
 mdcat4420	List	termino	lg-eng
 mdcat1660	Persona afectada	termino	lg-spa
 mdcat1660	Affected person	termino	lg-eng
-mdcat1660	Personne concernée	termino	lg-fra
 mdcat4421	Informació de la persona afectada	termino	lg-cat
 mdcat4421	Información de la persona afectada	termino	lg-spa
 mdcat4421	Information of the affected person	termino	lg-eng
 mdcat4422	Excluidos	termino	lg-spa
 mdcat4418	Historical documentary research	termino	lg-eng
 mdcat4419	Excluidos	termino	lg-spa
+mdcat1486	Persona afectada	termino	lg-cat
+mdcat1486	Affected Person	termino	lg-eng
+mdcat691	Persona afectada	termino	lg-spa
+mdcat691	Affected Person	termino	lg-eng
+mdcat602	Affected Person	termino	lg-eng
+mdcat602	Persona afectada	termino	lg-spa
+mdcat602	Persona afectada	termino	lg-cat
+mdcat1937	Persona afectada	termino	lg-spa
+mdcat1937	Affected person	termino	lg-eng
+mdcat2631	Persona afectada	termino	lg-spa
+mdcat2631	Affected person	termino	lg-eng
+mdcat2961	Persona afectada	termino	lg-spa
+mdcat2961	Affected person	termino	lg-eng
+mdcat2961	Personne affecté	termino	lg-fra
+mdcat2631	Personne affecté	termino	lg-fra
+mdcat1937	Personne affecté	termino	lg-fra
+mdcat1660	Personne affecté	termino	lg-fra
+mdcat1486	Personne affecté	termino	lg-fra
+mdcat691	Personne affecté	termino	lg-fra
+mdcat602	Personne affecté	termino	lg-fra
+mdcat4423	Víctimas del nazismo	termino	lg-spa
+mdcat4423	Victimes du nazisme	termino	lg-fra
+mdcat4423	Victims of Nazism	termino	lg-eng
+mdcat4423	Víctimes del nazisme	termino	lg-cat
+mdcat1016	Identificación	termino	lg-spa
+mdcat1016	Identificació	termino	lg-cat
+mdcat4424	Identificación	termino	lg-spa
+mdcat4424	Identificació	termino	lg-cat
+mdcat4425	Id	termino	lg-spa
+mdcat4425	Id	termino	lg-cat
+mdcat4426	Publicable	termino	lg-spa
+mdcat4426	Publicable	termino	lg-cat
+mdcat4427	Estado	termino	lg-spa
+mdcat4427	Estat	termino	lg-cat
+mdcat4428	Proyecto	termino	lg-spa
+mdcat4428	Projecte	termino	lg-cat
+mdcat4429	Persona afectada	termino	lg-spa
+mdcat4429	Persona afectada	termino	lg-cat
+mdcat4430	Situación	termino	lg-spa
+mdcat4430	situació	termino	lg-cat
+mdcat4431	Situación	termino	lg-spa
+mdcat4431	Situació	termino	lg-cat
+mdcat4432	Fecha de situación	termino	lg-spa
+mdcat4432	Data de situació	termino	lg-cat
+mdcat4433	Lugar de situación	termino	lg-spa
+mdcat4433	Lloc de situació	termino	lg-cat
+mdcat4259	Stolpersteine	termino	lg-spa
+mdcat4434	Stolpersteine	termino	lg-spa
+mdcat4434	Stolpersteine	termino	lg-cat
+mdcat4435	Stolpersteine	termino	lg-spa
+mdcat4435	Stolpersteine	termino	lg-cat
+mdcat1087	Listado	termino	lg-spa
+mdcat4436	Nuevo	termino	lg-spa
+mdcat4436	Nou	termino	lg-cat
+mdcat4437	Borrar	termino	lg-spa
+mdcat4437	Esborrar	termino	lg-cat
+mdcat4438	Listado	termino	lg-spa
+mdcat4438	Llistat	termino	lg-cat
+mdcat4439	Últimos cambios	termino	lg-spa
+mdcat4439	Últims canvis	termino	lg-cat
+mdcat4440	Relaciones	termino	lg-spa
+mdcat4440	Relacions	termino	lg-cat
+mdcat4441	Listado	termino	lg-spa
+mdcat4441	Llistat	termino	lg-cat
+mdcat4442	victimes_nazisme	termino	lg-spa
