@@ -494,7 +494,8 @@ class dd_elements {
 			foreach( (array)$ar_tr as $modeloID => $terminoID) {
 
 				$termino 	 = RecordObj_dd::get_termino_by_tipo($terminoID);
-				$modelo_text = RecordObj_dd::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
+				// $modelo_text = RecordObj_dd::get_modelo_name_by_tipo($terminoID); # NO usar el guardado porque puede haberse cambiado en el tiempo (solucionar posibles inconsistencias)
+				$modelo_text = RecordObj_dd::get_legacy_model_name_by_tipo($terminoID);
 
 				$html .= "<li class=\"\" data-tipo=\"$terminoID\" data-modelo=\"$modeloID\">";	#<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>Item 1</li>
 				#$html .= "<li class=\"\" data-tipo=\"$terminoID\">";
