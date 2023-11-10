@@ -574,6 +574,26 @@ class component_media_common extends component_common {
 			}else{
 				// usual case
 				// move temporary file to final destination and name
+
+				// check target directory
+				$target_dir = dirname($full_file_path);
+				if (!is_dir($target_dir)) {
+					if(!mkdir($target_dir, 0750, true)) {
+						debug_log(__METHOD__
+							.' Error creating directory: ' . PHP_EOL
+							.' target_dir: ' . $target_dir
+							, logger::ERROR
+						);
+						$response->msg .= ' Error creating directory';
+						debug_log(__METHOD__
+							. ' '.$response->msg
+							, logger::ERROR
+						);
+						return $response;
+					}
+				}
+
+				// move the file
 				if (false===rename($source_file, $full_file_path)) {
 					$response->msg .= ' Error on move temp file '.basename($tmp_name).' to ' . basename($full_file_name);
 					debug_log(__METHOD__
