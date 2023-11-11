@@ -703,7 +703,7 @@ class component_3d extends component_media_common {
 					// update upload file info
 					$dato = $this->get_dato();
 					$key = 0;
-					if (!isset($dato[$key])) {
+					if (!isset($dato[$key]) || !is_object($dato[$key])) {
 						$dato[$key] = new stdClass();
 					}
 					$dato[$key]->original_file_name			= $original_file_name;
