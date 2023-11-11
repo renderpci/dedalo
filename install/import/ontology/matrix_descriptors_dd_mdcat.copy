@@ -2654,7 +2654,6 @@ mdcat2195	Publicación en Socrata	termino	lg-spa
 mdcat2196	api	termino	lg-spa
 mdcat2197	entrevistes	termino	lg-spa
 mdcat2198	deportats	termino	lg-spa
-mdcat2199	publicacio	termino	lg-spa
 mdcat22	Nou	termino	lg-cat
 mdcat22	Nuevo	termino	lg-spa
 mdcat220	Exposiciones virtuales	termino	lg-spa
@@ -2681,6 +2680,7 @@ mdcat2216	empresonament	termino	lg-spa
 mdcat2217	tren_salida	termino	lg-spa
 mdcat2218	camps_concentracio	termino	lg-spa
 mdcat2219	organizacio_todt	termino	lg-spa
+mdcat2199	publicacio	termino	lg-spa
 mdcat2220	kommando_extern	termino	lg-spa
 mdcat2221	situacio_deportat	termino	lg-spa
 mdcat2222	data_situacio	termino	lg-spa
@@ -14582,3 +14582,12 @@ mdcat4440	Relacions	termino	lg-cat
 mdcat4441	Listado	termino	lg-spa
 mdcat4441	Llistat	termino	lg-cat
 mdcat4442	victimes_nazisme	termino	lg-spa
+mdcat4443	publicacio	termino	lg-spa
+mdcat4444	afectat	termino	lg-spa
+mdcat4445	situacio	termino	lg-spa
+mdcat4446	situation_dato	termino	lg-spa
+mdcat4447	data_situacio	termino	lg-spa
+mdcat4448	lloc_situacio	termino	lg-spa
+mdcat4449	ref_lloc_situacio	termino	lg-spa
+mdcat4450	ref_nom	termino	lg-spa
+mdcat4451	ref_cognom	termino	lg-spa
