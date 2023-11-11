@@ -7,6 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
+	import {page} from '../../page/js/page.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -133,6 +134,9 @@ view_default_edit_section.render = async function(self, options) {
 					}
 				}
 		}
+
+	// mousedown
+		wrapper.addEventListener('mousedown', page.prototype.deactivate_components)
 
 
 	return wrapper
