@@ -1732,7 +1732,6 @@ dd151	Lien 	termino	lg-fra
 dd226	Listado	termino	lg-spa
 dd226	Llistat	termino	lg-cat
 dd227	component_email	termino	lg-spa
-dd1510	révision	termino	lg-fra
 dd228	Nou	termino	lg-cat
 dd228	Nuevo	termino	lg-spa
 dd228	Nuovo	termino	lg-ita
@@ -1914,6 +1913,7 @@ dd277	Normale	termino	lg-ita
 dd277	κανονικόςNormal	termino	lg-ell
 dd278	Borrada	termino	lg-spa
 dd278	Cancellata	termino	lg-ita
+dd1555	SVG	termino	lg-fra
 dd278	Esborrada	termino	lg-cat
 dd278	διαγράφεται	termino	lg-ell
 dd279	A revisar	termino	lg-cat
@@ -1957,7 +1957,6 @@ dd270	list_row	termino	lg-spa
 dd287	Salvare modello	termino	lg-ita
 dd272	Permisos d'eines	termino	lg-cat
 dd272	Autorizzazioni degli strumenti	termino	lg-ita
-dd1555	svg	termino	lg-fra
 dd287	πρότυπο αποθηκεύετε	termino	lg-ell
 dd288	Elementi disattivi	termino	lg-ita
 dd288	elementos desactivos	termino	lg-spa
@@ -5352,7 +5351,6 @@ dd1508	audiovisual_description	termino	lg-spa
 dd1509	document_description	termino	lg-spa
 dd1192	ts_web	termino	lg-spa
 dd1628	Ολόκληρες λέξεις	termino	lg-ell
-dd1510	revisión	termino	lg-spa
 dd1025	database_alias	termino	lg-spa
 dd1522	Usuario	termino	lg-spa
 dd1524	ref_publications_typology	termino	lg-spa
@@ -5455,7 +5453,6 @@ dd1596	Beziehungen	termino	lg-deu
 dd269	list_head	termino	lg-spa
 dd997	Excluidos	termino	lg-spa
 dd1596	Συγγένειες	termino	lg-ell
-dd1555	svg	termino	lg-spa
 dd1552	svg	termino	lg-spa
 dd1596	Relazioni	termino	lg-ita
 dd1521	Activitat d'usuaris	termino	lg-cat
@@ -5941,7 +5938,6 @@ dd1550	MARC 21 importieren	termino	lg-deu
 dd1551	Nutzeradministration	termino	lg-deu
 dd1553	Übersetzung	termino	lg-deu
 dd1554	Digitalisierung	termino	lg-deu
-dd1555	svg	termino	lg-deu
 dd1556	Element der JSON-Ontologie	termino	lg-deu
 dd1558	Basis-Ontologie	termino	lg-deu
 dd1559	Liste	termino	lg-deu
@@ -7969,7 +7965,6 @@ dd1718	Access and permissions	termino	lg-eng
 dd1504	Is model	termino	lg-eng
 dd1505	External URI	termino	lg-eng
 dd1507	Export hierarchies	termino	lg-eng
-dd1510	review	termino	lg-eng
 dd1521	User activity	termino	lg-eng
 dd1522	User	termino	lg-eng
 dd1523	Totals	termino	lg-eng
@@ -7993,7 +7988,6 @@ dd1549	Cataloging	termino	lg-eng
 dd1551	User administration	termino	lg-eng
 dd1553	Translation	termino	lg-eng
 dd1554	Digitization	termino	lg-eng
-dd1555	svg	termino	lg-eng
 dd1556	JSON Ontology Item	termino	lg-eng
 dd1558	Ontology basis	termino	lg-eng
 dd1559	List	termino	lg-eng
@@ -8101,7 +8095,7 @@ dd922	Labor Category / Title	termino	lg-eng
 dd947	New Type of association / group	termino	lg-eng
 dd1132	Collection / archive	termino	lg-eng
 dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
-dd1	Dédalo 2023-11-09T10:25:12+01:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-11-10T10:56:50+01:00 Benimamet	termino	lg-spa
 dd1639	Remove filter	termino	lg-eng
 dd1639	Eliminar filtro	termino	lg-spa
 dd1639	Supprimer le filtre	termino	lg-fra
@@ -8202,3 +8196,9 @@ dd1645	Διαγραφή εγγραφών διάχυσης	termino	lg-ell
 dd1645	Supprimer les enregistrements de diffusion	termino	lg-fra
 dd1645	Cancellare i record di diffusione	termino	lg-ita
 dd1645	Eliminar registos de difusão	termino	lg-por
+dd1510	Revisión	termino	lg-spa
+dd1510	Révision	termino	lg-fra
+dd1510	Review	termino	lg-eng
+dd1555	SVG	termino	lg-spa
+dd1555	SVG	termino	lg-deu
+dd1555	SVG	termino	lg-eng
