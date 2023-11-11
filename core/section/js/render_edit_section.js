@@ -41,7 +41,7 @@ render_edit_section.prototype.edit = async function(options) {
 		// 	return view_mosaic_edit_portal.render(self, options)
 		// 	break;
 
-		default:
+		default: {
 			// dynamic try
 				const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
 				if (render_view) {
@@ -50,7 +50,8 @@ render_edit_section.prototype.edit = async function(options) {
 					return render_method[render_view.render].render(self, options)
 				}
 
-			return view_default_edit_section.render(self, options)
+			return view_default_edit_section.render(self, options);
+		}
 	}
 }//end edit
 

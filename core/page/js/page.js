@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_LOCK_COMPONENTS, DEDALO_CORE_URL, DEDALO_NOTIFICATION, DEDALO_MAINTENANCE_MODE, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -552,7 +552,7 @@ page.prototype.add_events = function() {
 						}
 					break;
 
-				case evt.key==='Enter':
+				case evt.key==='Enter': {
 					// parent recursive check on document.activeElement
 						if (document.activeElement) {
 							// find_up_node returns node|null
@@ -582,8 +582,9 @@ page.prototype.add_events = function() {
 								event_manager.publish('toggle_search_panel_'+section.id)
 						}
 					break;
+				}
 
-				case (evt.key==='ArrowLeft' && evt.shiftKey===true):
+				case (evt.key==='ArrowLeft' && evt.shiftKey===true): {
 					// paginator left arrow <
 						// paginator right arrow >
 						const section_prev = self.ar_instances.find(el => el.model==='section')
@@ -591,14 +592,16 @@ page.prototype.add_events = function() {
 							section_prev.paginator.navigate_to_previous_page()
 						}
 					break;
+				}
 
-				case (evt.key==='ArrowRight' && evt.shiftKey===true):
+				case (evt.key==='ArrowRight' && evt.shiftKey===true): {
 					// paginator right arrow >
 						const section_next = self.ar_instances.find(el => el.model==='section')
 						if (section_next && section_next.paginator) {
 							section_next.paginator.navigate_to_next_page()
 						}
 					break;
+				}
 
 				default:
 					break;
@@ -606,48 +609,56 @@ page.prototype.add_events = function() {
 		}//end fn_keydown
 
 	// page click/mousedown
-		document.addEventListener('mousedown', fn_deactivate_components)
-		function fn_deactivate_components(e) {
-			e.stopPropagation()
-
-			// click on scrollbar case: capture event
-				const is_descendant_of_root = (e.target.parentElement !== null);
-				if (is_descendant_of_root===false) {
-					return
-				}
-
-			if (page_globals.component_active) {
-
-				const component_instance = page_globals.component_active
-
-				// lock_component. launch worker
-					if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
-						data_manager.request({
-							use_worker	: true,
-							body		: {
-								dd_api	: 'dd_utils_api',
-								action	: 'update_lock_components_state',
-								options	: {
-									component_tipo	: component_instance.tipo,
-									section_tipo	: component_instance.section_tipo,
-									section_id		: component_instance.section_id,
-									action			: 'blur' // delete_user_section_locks | blur | focus
-								}
-							}
-						})
-					}
-
-				// deactivate
-					ui.component.deactivate(component_instance)
-			}else{
-
-				// unsaved_data case
-				// This allow catch page mousedown event (outside any component) and check for unsaved components
-				// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-					check_unsaved_data()
-			}
-		}//end fn_deactivate_components
+		document.addEventListener('mousedown', self.deactivate_components)
 }//end add_events
+
+
+
+/**
+* DEACTIVATE_COMPONENTS
+* Called from document and from section in edit mode
+* @see view_default_edit_section->render
+*/
+page.prototype.deactivate_components = function(e) {
+	e.stopPropagation()
+
+	// click on scrollbar case: capture event
+		const is_descendant_of_root = (e.target.parentElement !== null);
+		if (is_descendant_of_root===false) {
+			return
+		}
+
+	if (page_globals.component_active) {
+
+		const component_instance = page_globals.component_active
+
+		// lock_component. launch worker
+			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: component_instance.tipo,
+							section_tipo	: component_instance.section_tipo,
+							section_id		: component_instance.section_id,
+							action			: 'blur' // delete_user_section_locks | blur | focus
+						}
+					}
+				})
+			}
+
+		// deactivate
+			ui.component.deactivate(component_instance)
+	}else{
+
+		// unsaved_data case
+		// This allow catch page mousedown event (outside any component) and check for unsaved components
+		// usually happens in component_text_area editions because the delay (500 ms) to set as changed
+			check_unsaved_data()
+	}
+}//end deactivate_components
 
 
 

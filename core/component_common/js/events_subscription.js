@@ -18,10 +18,7 @@ export const events_subscription = function(self) {
 
 	// hilite (search mode)
 		if (self.mode==='search') {
-			self.events_tokens.push(
-				event_manager.subscribe('render_' + self.id, fn_hilite_element)
-			)
-			function fn_hilite_element() {
+			const fn_hilite_element = function() {
 				// set instance as changed or not based on their value
 				const instance = self
 
@@ -36,18 +33,14 @@ export const events_subscription = function(self) {
 					})
 				}, 150)
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_' + self.id, fn_hilite_element)
+			)
 		}//end if (self.mode==='search')
 
 	// update value
 		if (self.mode!=='tm') {
-			// sync data on similar components (same id_base)
-			// Subscription to the changes: if the DOM input value was changed,
-			// observers DOM elements will be changed own value with the observable value
-			const id_base_lang = self.id_base + '_' + self.lang
-			self.events_tokens.push(
-				event_manager.subscribe('update_value_'+id_base_lang, fn_update_value)
-			)
-			function fn_update_value (options) {
+			const fn_update_value = function(options) {
 
 				// options
 					const caller		= options.caller
@@ -93,6 +86,13 @@ export const events_subscription = function(self) {
 						render_level	: render_level
 					})
 			}
+			// sync data on similar components (same id_base)
+			// Subscription to the changes: if the DOM input value was changed,
+			// observers DOM elements will be changed own value with the observable value
+			const id_base_lang = self.id_base + '_' + self.lang
+			self.events_tokens.push(
+				event_manager.subscribe('update_value_'+id_base_lang, fn_update_value)
+			)
 		}//end if (self.mode!=='tm')
 
 

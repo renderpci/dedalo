@@ -226,7 +226,7 @@ section.prototype.init = async function(options) {
 					action	: 'duplicate',
 					source	: {
 						section_tipo	: options.section_tipo,
-						section_id		: options.section_id,
+						section_id		: options.section_id
 					}
 				}
 				const api_response = await data_manager.request({
@@ -371,7 +371,7 @@ section.prototype.init = async function(options) {
 									const user_navigation_rqo = {
 										caller_id			: self.id,
 										source				: source,
-										sqo					: sqo,  // new sqo to use in list mode
+										sqo					: sqo  // new sqo to use in list mode
 										// event_in_history	: false // writes browser navigation step to allow back
 									}
 									event_manager.publish('user_navigation', user_navigation_rqo)
@@ -759,10 +759,7 @@ section.prototype.build = async function(autoload=false) {
 			})
 
 			// event paginator_goto_
-				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-				)
-				async function fn_paginator_goto(offset) {
+				const fn_paginator_goto = async function(offset) {
 
 					// fix new offset value
 						self.request_config_object.sqo.offset	= offset
@@ -790,6 +787,10 @@ section.prototype.build = async function(autoload=false) {
 							action				: 'paginate'
 						})
 				}
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+				)
+
 		}//end if (!self.paginator)
 
 	// inspector

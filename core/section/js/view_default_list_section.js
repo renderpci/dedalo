@@ -373,7 +373,7 @@ const get_buttons = function(self) {
 							event_manager.publish('new_section_' + self.id)
 							break;
 
-						case 'button_delete':
+						case 'button_delete': {
 							// sqo conform
 							const delete_sqo = clone(self.rqo.sqo)
 							delete_sqo.limit = null
@@ -388,6 +388,7 @@ const get_buttons = function(self) {
 							})
 
 							break;
+						}
 						// button_import and button_trigger cases for compatibility with v5 ontology
 						// in future version will be merge both with new model button_tool
 						// in the mid-time use button_trigger for general cases to dispatch tools.
