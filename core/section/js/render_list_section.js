@@ -56,7 +56,7 @@ render_list_section.prototype.list = async function(options) {
 			// 	return view_mosaic_edit_portal.render(self, options)
 			// 	break;
 
-			default:
+			default: {
 				// dynamic try
 					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 					if (render_view) {
@@ -66,6 +66,7 @@ render_list_section.prototype.list = async function(options) {
 					}
 
 				return view_default_list_section.render(self, options)
+			}
 		}
 }//end list
 
@@ -113,7 +114,7 @@ export const render_column_id = function(options) {
 		switch(true){
 
 			// initiator. is a url var used in iframe containing section list to link to opener portal
-			case (self.initiator && self.initiator.indexOf('component_')!==-1):
+			case (self.initiator && self.initiator.indexOf('component_')!==-1): {
 
 				// link_button. component portal caller (link)
 					const link_button = ui.create_dom_element({
@@ -243,7 +244,8 @@ export const render_column_id = function(options) {
 					// 		class_name		: 'button edit icon',
 					// 		parent			: button_edit
 					// 	})
-				break
+				break;
+			}
 
 			// case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
 				// 	// button time machine preview (eye)
@@ -271,7 +273,7 @@ export const render_column_id = function(options) {
 				// 			})
 				// 	break
 
-			case (self.config && self.config.source_model==='section_tool'):
+			case (self.config && self.config.source_model==='section_tool'): {
 
 				// edit button (pen)
 					if (self.permissions>1) {
@@ -326,8 +328,9 @@ export const render_column_id = function(options) {
 							})
 					}
 				break;
+			}
 
-			case (self.tipo==='dd542') :
+			case (self.tipo==='dd542'): {
 
 				// activity case
 
@@ -339,8 +342,9 @@ export const render_column_id = function(options) {
 
 				button_edit.appendChild(section_id_node)
 				break;
+			}
 
-			default:
+			default: {
 
 				// button_edit (pen)
 					if (permissions>1) {
@@ -536,6 +540,7 @@ export const render_column_id = function(options) {
 							})
 					}
 				break;
+			}
 		}
 
 

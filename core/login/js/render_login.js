@@ -309,7 +309,7 @@ const get_content_data = function(self) {
 				let class_name	= ''
 				let value		= item.value
 				switch(item.type){
-					case 'data_version':
+					case 'data_version': {
 						const is_outdated = item.value[0]<6
 						if (is_outdated) {
 							class_name	= 'error'
@@ -323,6 +323,7 @@ const get_content_data = function(self) {
 							}
 						}
 						break;
+					}
 					default:
 						break;
 				}
@@ -428,6 +429,7 @@ const validate_browser = function() {
 		AppleWebKit	: 14
 	}
 
+	// function msg
 	const msg = (browser, version, min_version) => {
 		return `Sorry, your browser ${browser} version is too old (${version}). \nPlease update your ${browser} version to ${min_version} or never`
 	}
@@ -441,8 +443,10 @@ const validate_browser = function() {
 					alert( msg('Chrome', browser_info.version, min_version.Chrome) );
 					return false;
 				}
+				break;
 
 			case (navigator.userAgent.indexOf('AppleWebKit')!==-1) :
+
 				if (browser_info && browser_info.version && parseInt(browser_info.version) < min_version.AppleWebKit) {
 					alert( msg('AppleWebKit', browser_info.version, min_version.AppleWebKit) );
 					return false;
@@ -458,13 +462,14 @@ const validate_browser = function() {
 				break;
 
 			default:
+
 				alert("Sorry. Your browser is not verified to work with Dédalo. \n\nOnly Webkit browsers are tested by now. \n\nPlease download the last version of official Dédalo browser (Google Chrome - Safari) to sure a good experience.")
 				break;
 		}
-
 	}catch (error) {
 		console.error('error', error)
 	}
+
 
 	return true;
 }//end validate_browser

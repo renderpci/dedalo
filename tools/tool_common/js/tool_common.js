@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global Promise, page_globals, SHOW_DEBUG, DEDALO_TOOLS_URL, DEDALO_CORE_URL, lzstring */
+/*global Promise, page_globals, SHOW_DEBUG, SHOW_DEVELOPER, DEDALO_TOOLS_URL, DEDALO_CORE_URL, lzstring */
 /*eslint no-undef: "error"*/
 
 
@@ -14,7 +14,7 @@
 	import {
 		clone,
 		dd_console,
-		printf,
+		printf
 		// object_to_url_vars,
 		// url_vars_to_object,
 		// JSON_parse_safely,

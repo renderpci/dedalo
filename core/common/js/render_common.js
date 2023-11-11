@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_ROOT_WEB */
 /*eslint no-undef: "error"*/
 
 
@@ -66,7 +66,7 @@ export const render_components_list = function(options) {
 
 		switch (true) {
 
-			case element.model==='section':
+			case element.model==='section': {
 				// section title bar
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
@@ -83,6 +83,7 @@ export const render_components_list = function(options) {
 					}
 				})
 				break;
+			}
 
 			case element.model==='section_group' || element.model==='section_tab':
 				// Section group container (ul)
@@ -99,7 +100,7 @@ export const render_components_list = function(options) {
 				})
 				break;
 
-			default:
+			default: {
 				// Calculated path (from DOM position)
 				const calculated_component_path = self.calculate_component_path( element, path )
 
@@ -150,10 +151,7 @@ export const render_components_list = function(options) {
 
 						component.classList.add('has_subquery')
 
-						// Event on click load "children" section inside target_list_container recursively
-						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener('click', fn_click)
-						async function fn_click(e) {
+						const fn_click = async function(e) {
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo			: target_section,
@@ -176,8 +174,13 @@ export const render_components_list = function(options) {
 							// Active current
 							this.classList.add('active');
 						}//end fn_click
+
+						// Event on click load "children" section inside target_list_container recursively
+						const target_section = element.target_section_tipo[0] // Select first only
+						component.addEventListener('click', fn_click)
 					}
 				break;
+			}
 		}//end switch (true)
 
 	}//end for (let i = 0; i < len; i++)
@@ -237,7 +240,7 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 			const dedalo_last_error	= errors[i].dedalo_last_error || null
 
 			switch (error) {
-				case 'not_logged':
+				case 'not_logged': {
 					// server_response_error h1
 						ui.create_dom_element({
 							element_type	: 'h1',
@@ -261,9 +264,9 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							error_container.classList.add('not_logged_error')
 						}
 					break;
+				}
 
-				case 'invalid_page_element':
-					{
+				case 'invalid_page_element': {
 					// server_response_error h1
 						ui.create_dom_element({
 							element_type	: 'h1',
@@ -283,10 +286,10 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							e.stopPropagation()
 							// location.href = DEDALO_ROOT_WEB
 						})
-					}
 					break;
+				}
 
-				default:
+				default: {
 					// server_response_error h1
 						if (msg) {
 							ui.create_dom_element({
@@ -342,6 +345,7 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							error_container.classList.add('raspa_error')
 						}
 					break;
+				}
 			}
 		}
 

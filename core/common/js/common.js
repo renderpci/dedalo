@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView */
+/*global SHOW_DEBUG, Promise, DEDALO_ROOT_WEB, JsonView, get_label, SHOW_DEVELOPER, Promise */
 /*eslint no-undef: "error"*/
 
 
@@ -139,7 +139,7 @@ export const set_context_vars = function(self) {
 						: null
 				},
 				set : function(value) {
-					return self.context.view = value;
+					self.context.view = value;
 				}
 			});
 
@@ -153,7 +153,7 @@ export const set_context_vars = function(self) {
 						: null
 				},
 				set : function(value) {
-					return self.context.properties = value;
+					self.context.properties = value;
 				}
 			});
 
@@ -166,7 +166,7 @@ export const set_context_vars = function(self) {
 					// return self.context.view || self.view;
 				},
 				set : function(value) {
-					return self.context.permissions = value
+					self.context.permissions = value
 				}
 			});
 
@@ -386,7 +386,7 @@ common.prototype.render = async function (options={}) {
 			// render_level
 			switch(render_level) {
 
-				case 'content':
+				case 'content': {
 
 					// replace instance content_data node
 						const wrapper = self.node
@@ -409,8 +409,8 @@ common.prototype.render = async function (options={}) {
 						self.node.content_data = new_content_data_node
 
 					// return created node (content_data)
-						return self.node
-					break;
+					return self.node
+				}
 
 				case 'full':
 				default:
@@ -445,8 +445,7 @@ common.prototype.render = async function (options={}) {
 						self.node = node
 
 					// return the new created node
-						return node
-					break;
+					return node
 			}//end switch(render_level)
 		})()//end result_node fn
 
@@ -758,7 +757,7 @@ common.prototype.destroy = async function(delete_self=true, delete_dependencies=
 
 				// delete_instance from instances register array
 					const instance_options = {
-						id				: self.id,
+						id				: self.id
 						// model		: self.model,
 						// tipo			: self.tipo,
 						// section_tipo	: self.section_tipo,
@@ -1115,7 +1114,7 @@ export const get_columns_map = function(context, datum_context) {
 					// create a new column with the ddo information or join all components in one column
 					switch(true){
 						// component_portal will join the components that doesn't has columns defined.
-						case view && view==='line':
+						case view && view==='line': {
 
 							// find if the general column was created, if not create new one with the tipo
 							// of the component_portal to include all components.
@@ -1139,6 +1138,7 @@ export const get_columns_map = function(context, datum_context) {
 								dd_object.column_id = column.id
 							}
 							break;
+						}
 						// in the mosaic case add the in_mosaic: true or false to create the mosaic and
 						// the alternative table with all ddo
 						case view && view.indexOf('mosaic') !== -1 :

@@ -116,7 +116,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 	return true
 
 
-
+	/* Working here !
 	// const unique_config = self.context.properties.unique
 
 	// search item rebuild filter q param and others
@@ -226,6 +226,7 @@ component_input_text.prototype.is_unique = async function(new_value){
 			}
 		]
 	return record
+	*/
 }//end is_unique
 
 

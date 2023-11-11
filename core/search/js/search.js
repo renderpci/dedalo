@@ -11,7 +11,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {
-		render_search,
+		render_search
 		// toggle_fields,
 		// toggle_search_panel,
 		// toggle_presets,
@@ -919,7 +919,7 @@ search.prototype.update_state = async function(options) {
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
 		switch (caller_instance.model) {
-			case 'area_thesaurus':
+			case 'area_thesaurus': {
 
 				// area. refresh current area using navigation
 					const area_ts_promise = caller_instance.navigate({
@@ -929,9 +929,9 @@ search.prototype.update_state = async function(options) {
 					})
 
 				return area_ts_promise
-				break;
+			}
 
-			case 'section':
+			case 'section': {
 
 				// paginator_node (could exist or not --area_thesaurus case--)
 					const paginator_node = caller_instance?.paginator?.node || null
@@ -959,11 +959,11 @@ search.prototype.update_state = async function(options) {
 					})
 
 				return section_promise
-				break;
+			}
 
 			default:
+
 				return new Promise(()=>{})
-				break;
 		}
 	}//end update_caller
 

@@ -6,7 +6,7 @@
 
 // imports
 	import {
-		strip_tags,
+		strip_tags
 		// find_up_node
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -1725,6 +1725,13 @@ export const ui = {
 			return false
 		}
 
+		function fn_render_target(instance_wrapper) {
+			const target_container = instance_wrapper.querySelector(container_selector)
+			if (target_container) {
+				target_container.appendChild(source_node)
+			}
+		}
+
 		if (target_instance.status==='rendered') {
 
 			if (target_instance.node===null) {
@@ -1755,12 +1762,6 @@ export const ui = {
 			source_instance.events_tokens.push(
 				event_manager.subscribe('render_'+target_instance.id , fn_render_target)
 			)
-			function fn_render_target(instance_wrapper) {
-				const target_container = instance_wrapper.querySelector(container_selector)
-				if (target_container) {
-					target_container.appendChild(source_node)
-				}
-			}
 		}
 
 
@@ -2202,7 +2203,7 @@ export const ui = {
 
 		// size. Modal special features based on property 'size'
 			switch(size) {
-				case 'big' :
+				case 'big' : {
 					// hide contents to avoid double scrollbars
 						const content_data_page = document.querySelector(".content_data.page")
 							  // content_data_page.classList.add("hide")
@@ -2226,7 +2227,7 @@ export const ui = {
 
 					modal_container._showModalBig();
 					break;
-
+				}
 				case 'small' :
 					modal_container._showModalSmall();
 					break;
@@ -2775,6 +2776,17 @@ export const ui = {
 			canvas.width	= image.width;
 			canvas.height	= image.height;
 
+			function correction(value) {
+
+				const factor = 1 // 1.016
+
+				const result = (value>127)
+					? Math.floor(value * factor)
+					: Math.floor(value / factor)
+
+				return result
+			}
+
 			try {
 				// canvas context 2d
 					const ctx = canvas.getContext("2d");
@@ -2786,17 +2798,6 @@ export const ui = {
 					const rgb = ctx.getImageData(0, 0, 1, 1).data;
 
 				// round RGB values
-					function correction(value) {
-
-						const factor = 1 // 1.016
-
-						const result = (value>127)
-							? Math.floor(value * factor)
-							: Math.floor(value / factor)
-
-						return result
-					}
-
 					const r = correction(rgb[0])
 					const g = correction(rgb[1])
 					const b = correction(rgb[2])

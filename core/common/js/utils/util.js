@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/* global Promise, structuredClone */
+/* global Promise, structuredClone, SHOW_DEBUG, SHOW_DEVELOPER */
 /*eslint no-undef: "error"*/
 
 
@@ -264,7 +264,7 @@ export function bytes_format(bytes) {
 	let result
 	switch (true) {
 
-		case (kb >= 1048576):
+		case (kb >= 1048576): {
 			// Giga Bytes
 			const gb = (kb / 1048576).toLocaleString(_locale, {
 				minimumFractionDigits: 0,
@@ -272,8 +272,9 @@ export function bytes_format(bytes) {
 			})
 			result = `${gb} GB`
 			break;
+		}
 
-		case (kb >= 1024):
+		case (kb >= 1024): {
 			// Mega Bytes
 			const mb = (kb / 1024).toLocaleString(_locale, {
 				minimumFractionDigits: 0,
@@ -281,12 +282,15 @@ export function bytes_format(bytes) {
 			})
 			result = `${mb} MB`
 			break;
+		}
 
-		default:
+		default: {
 			// KBytes
 			const kb_round = Math.round(kb)
 			result = `${kb_round} KB`
+		}
 	}
+
 
 	return result
 }//end bytes_format
