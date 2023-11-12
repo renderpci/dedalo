@@ -273,6 +273,32 @@ login.prototype.action_dispatch = async function(api_response) {
 					})();
 				}
 
+			// load_finish. Fired by render_files_loader when worker finish to load all files
+				const load_finish = function() {
+					// result_options is defined when the user is root or developer and the tools are not loaded
+					// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
+					if (api_response.result_options && api_response.result_options.redirect) {
+
+						setTimeout(function(){
+							window.location.replace( api_response.result_options.redirect )
+						}, 3)
+
+					}else{
+
+						// has_tipo in url
+							const queryString	= window.location.search
+							const urlParams		= new URLSearchParams(queryString);
+							const has_tipo		= urlParams.has('tipo')
+
+						if (api_response.default_section && !has_tipo) {
+							// user defined default_section case
+							window.location.replace( DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section );
+						}else{
+							window.location.reload(false);
+						}
+					}
+				}//end load_finish
+
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
 				const files_loader = render_files_loader({
 					on_load_finish : load_finish
@@ -319,32 +345,6 @@ login.prototype.action_dispatch = async function(api_response) {
 					}
 				}
 				// load_finish()
-
-			// triggered by render_files_loader when worker finish to load all files
-			const load_finish = function() {
-				// result_options is defined when the user is root or developer and the tools are not loaded
-				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
-				if (api_response.result_options && api_response.result_options.redirect) {
-
-					setTimeout(function(){
-						window.location.replace( api_response.result_options.redirect )
-					}, 3)
-
-				}else{
-
-					// has_tipo in url
-						const queryString	= window.location.search
-						const urlParams		= new URLSearchParams(queryString);
-						const has_tipo		= urlParams.has('tipo')
-
-					if (api_response.default_section && !has_tipo) {
-						// user defined default_section case
-						window.location.replace( DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section );
-					}else{
-						window.location.reload(false);
-					}
-				}
-			}
 		}
 
 	return true
