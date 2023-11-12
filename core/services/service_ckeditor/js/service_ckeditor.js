@@ -5,7 +5,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {event_manager} from '../../../common/js/event_manager.js'
 	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
 	// import {set_before_unload} from '../../../common/js/events.js';

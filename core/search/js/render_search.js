@@ -6,7 +6,7 @@
 
 // imports
 	import {render_components_list} from '../../common/js/render_common.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'

@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {get_section_records} from '../../section/js/section.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	import {instances} from '../../common/js/instances.js'
