@@ -43,18 +43,19 @@ render_section_tab.prototype.edit = async function(options) {
 
 	// view
 		switch (self.context.view) {
-			case 'tab':
+			case 'tab': {
 				// nothing to do
+				const fn_active = function() {
+					wrapper.classList.add('active')
+				}
 				self.events_tokens.push(
 					event_manager.subscribe('tab_active_'+self.tipo, fn_active)
 				)
-				function fn_active() {
-					wrapper.classList.add('active')
-				}
 				break;
+			}
 
 			case 'section_tab':
-			default:
+			default: {
 				// status
 					const status_id		= `section_tab_${self.section_tipo}_${self.tipo}`
 					const status_table	= 'status'

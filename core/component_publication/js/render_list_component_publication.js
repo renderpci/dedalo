@@ -5,10 +5,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {view_default_list_publication} from './view_default_list_publication.js'
 	import {view_mini_list_publication} from './view_mini_list_publication.js'
 	import {view_text_list_publication} from './view_text_list_publication.js'
+
 
 
 /**

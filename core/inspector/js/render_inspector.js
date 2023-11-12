@@ -300,8 +300,7 @@ const get_content_data = function(self) {
 				text_content	: 'View record data',
 				parent			: buttons_bottom_container
 			})
-			data_link.addEventListener('mousedown', fn_data_link)
-			function fn_data_link(e) {
+			const fn_data_link = function(e) {
 				e.stopPropagation()
 				e.preventDefault()
 
@@ -317,6 +316,7 @@ const get_content_data = function(self) {
 					features : 'new_tab'
 				})
 			}//end fn_data_link
+			data_link.addEventListener('mousedown', fn_data_link)
 
 		// tool register files.	dd1340
 			if (self.section_tipo==='dd1340') {
@@ -326,8 +326,7 @@ const get_content_data = function(self) {
 					text_content	: 'Download register file',
 					parent			: buttons_bottom_container
 				})
-				register_download.addEventListener('mousedown', fn_register)
-				function fn_register(e) {
+				const fn_register = function(e) {
 					e.preventDefault()
 
 					const file_name = 'register.json'
@@ -358,6 +357,7 @@ const get_content_data = function(self) {
 								download_data(data, file_name)
 						})
 				}//end fn_register
+				register_download.addEventListener('mousedown', fn_register)
 			}//end if (self.section_tipo==='dd1340')
 
 

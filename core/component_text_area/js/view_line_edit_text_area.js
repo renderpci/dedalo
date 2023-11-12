@@ -237,8 +237,7 @@ const get_content_value = (i, current_value, self) => {
 				// activate on user click
 
 				// click event
-				content_value.addEventListener('click', fn_click_init)
-				function fn_click_init(e) {
+				const fn_click_init = function(e) {
 					e.stopPropagation()
 
 					value_container.classList.add('loading')
@@ -257,6 +256,7 @@ const get_content_value = (i, current_value, self) => {
 					// once only. Remove event to prevent duplicates
 					content_value.removeEventListener('click', fn_click_init)
 				}//end fn_click_init
+				content_value.addEventListener('click', fn_click_init)
 				// mousedown event. Capture event propagation
 				content_value.addEventListener('mousedown', (e) => {
 					e.stopPropagation()

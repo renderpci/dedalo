@@ -375,57 +375,57 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 					// console.log("// subscribe event_id:",event_id);
 					const found = event_manager.events.find(el => el.event_name===event_id)
 					if (!found) {
+						const fn_mosaic_show_alt = function() {
+
+							// hide all except the header
+								const ar_child_node	= section_record_node.parentNode.children;
+								const len			= ar_child_node.length
+								for (let i = len - 1; i >= 0; i--) {
+									const node = ar_child_node[i]
+									if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
+										continue
+									}
+									node.classList.add('display_none')
+								}
+							// show list
+								alt_list_body.classList.remove('display_none')
+								section_record_node.classList.remove('display_none')
+
+							// header
+								const header = ui.create_dom_element({
+									element_type	: 'div',
+									inner_html		: 'Editing mosaic inline'
+								})
+
+							// body
+								const body = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'body content'
+								})
+								body.appendChild(alt_list_body)
+
+							// modal way
+								const modal = ui.attach_to_modal({
+									header	: header,
+									body	: body,
+									footer	: null,
+									size	: 'normal'
+								})
+								self.modal = modal
+								// modal.on_close = () => {
+								// 	self.refresh()
+								// }
+
+							// user click edit button action close the modal box
+								const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
+								self.events_tokens.push(token)
+								function fn_button_edit_click() {
+									event_manager.unsubscribe('button_edit_click')
+									modal.close()
+								}
+						}
 						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
 						self.events_tokens.push(token)
-					}
-					function fn_mosaic_show_alt() {
-
-						// hide all except the header
-							const ar_child_node	= section_record_node.parentNode.children;
-							const len			= ar_child_node.length
-							for (let i = len - 1; i >= 0; i--) {
-								const node = ar_child_node[i]
-								if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
-									continue
-								}
-								node.classList.add('display_none')
-							}
-						// show list
-							alt_list_body.classList.remove('display_none')
-							section_record_node.classList.remove('display_none')
-
-						// header
-							const header = ui.create_dom_element({
-								element_type	: 'div',
-								inner_html		: 'Editing mosaic inline'
-							})
-
-						// body
-							const body = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'body content'
-							})
-							body.appendChild(alt_list_body)
-
-						// modal way
-							const modal = ui.attach_to_modal({
-								header	: header,
-								body	: body,
-								footer	: null,
-								size	: 'normal'
-							})
-							self.modal = modal
-							// modal.on_close = () => {
-							// 	self.refresh()
-							// }
-
-						// user click edit button action close the modal box
-							const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
-							self.events_tokens.push(token)
-							function fn_button_edit_click() {
-								event_manager.unsubscribe('button_edit_click')
-								modal.close()
-							}
 					}
 
 				// section record append

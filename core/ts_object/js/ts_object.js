@@ -1325,20 +1325,17 @@ export const ts_object = new function() {
 						self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
 					// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
-						self.events_tokens.push(
-							event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
-						)
-						function fn_update_value(options) {
+						const fn_update_value = function(options) {
 
 							const caller = options.caller
 
 							const ar_values = []
 							switch (caller.model) {
-								case 'component_portal':
+								case 'component_portal': {
 									const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
 									ar_values.push(...data.map(el => el.value))
 									break;
-
+								}
 								default:
 									ar_values.push(...caller.data.value)
 									break;
@@ -1348,6 +1345,9 @@ export const ts_object = new function() {
 							// change the value of the current DOM element
 							button_obj.firstChild.innerHTML = value
 						}
+						self.events_tokens.push(
+							event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
+						)
 				}
 
 				// build and render component

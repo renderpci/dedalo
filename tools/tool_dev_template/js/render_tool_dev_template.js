@@ -263,8 +263,7 @@ const get_content_data = async function(self) {
 							})
 
 						// event process_uploaded_file_done_
-							event_manager.subscribe('process_uploaded_file_done_' + tool.id, fn_upload_done)
-							async function fn_upload_done(api_response) {
+							const fn_upload_done = async function(api_response) {
 
 								// close modal. This action also destroys the tool
 									if (tool.node && tool.node.modal) {
@@ -317,6 +316,7 @@ const get_content_data = async function(self) {
 										console.error('Failed to read files info from component data:', data);
 									}
 							}
+							event_manager.subscribe('process_uploaded_file_done_' + tool.id, fn_upload_done)
 					}
 
 					return null

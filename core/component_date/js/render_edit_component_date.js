@@ -128,7 +128,7 @@ export const get_ar_raw_data_value = (self) => {
 			// date_mode variants
 			switch(date_mode) {
 
-				case 'range':
+				case 'range': {
 					if (current_value.start || current_value.end) {
 
 						const ar_text_range = []
@@ -153,8 +153,9 @@ export const get_ar_raw_data_value = (self) => {
 						ar_raw_value.push(text_range)
 					}
 					break;
+				}
 
-				case 'period':
+				case 'period': {
 					const ar_period = []
 					const period = (current_value && current_value.period) ? current_value.period : null
 
@@ -181,30 +182,32 @@ export const get_ar_raw_data_value = (self) => {
 					const text_period = ar_period.join(', ')
 					ar_raw_value.push(text_period)
 					break;
+				}
 
-				case 'time':
+				case 'time': {
 					const input_time_value = (current_value)
 						? self.time_to_string(current_value.start)
 						: ''
 					ar_raw_value.push(input_time_value)
 					break;
+				}
 
-				case 'date_time':
-					{
+				case 'date_time': {
 					const input_time_value = (current_value)
 						? self.date_time_to_string(current_value.start)
 						: ''
 					ar_raw_value.push(input_time_value)
-					}
 					break;
+				}
 
 				case 'date':
-				default:
+				default: {
 					const input_date_value = (current_value && current_value.start)
 						? self.date_to_string(current_value.start)
 						: ''
 					ar_raw_value.push(input_date_value)
 					break;
+				}
 			}//end switch
 		}//end for
 

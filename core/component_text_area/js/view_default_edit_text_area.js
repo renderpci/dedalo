@@ -309,8 +309,7 @@ const get_content_value = (i, current_value, self) => {
 				// activate on user click
 
 				// click event
-				content_value.addEventListener('click', fn_click_init)
-				function fn_click_init(e) {
+				const fn_click_init = function(e) {
 					e.stopPropagation()
 
 					value_container.classList.add('loading')
@@ -329,6 +328,7 @@ const get_content_value = (i, current_value, self) => {
 					// once only. Remove event to prevent duplicates
 					content_value.removeEventListener('click', fn_click_init)
 				}//end fn_click_init
+				content_value.addEventListener('click', fn_click_init)
 				// mousedown event. Capture event propagation
 				content_value.addEventListener('mousedown', (e) => {
 					e.stopPropagation()
@@ -724,7 +724,7 @@ const get_custom_events = (self, i, text_editor) => {
 						event_manager.publish('click_tag_pdf_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						break;
 
-					case 'person':
+					case 'person': {
 						// Show person info
 						event_manager.publish('click_tag_person_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 						// get the locator in string format
@@ -756,6 +756,7 @@ const get_custom_events = (self, i, text_editor) => {
 								})
 						}
 						break;
+					}
 
 					case 'note':
 						// Show note info
@@ -773,7 +774,7 @@ const get_custom_events = (self, i, text_editor) => {
 							})
 						break;
 
-					case 'lang':
+					case 'lang': {
 						// Show note info
 						event_manager.publish('click_tag_lang_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
 
@@ -797,6 +798,7 @@ const get_custom_events = (self, i, text_editor) => {
 								size	: 'small'
 							})
 						break;
+					}
 
 					case 'reference':
 						// Show reference info
@@ -840,12 +842,13 @@ const get_custom_events = (self, i, text_editor) => {
 			switch(true) {
 
 				// 'Escape'
-				case features.av_player && evt.code===features.av_player.av_play_pause_code:
+				case features.av_player && evt.code===features.av_player.av_play_pause_code: {
 					event_manager.publish('key_up_esc' +'_'+ self.id_base, features.av_player.av_rewind_seconds)
 					break;
+				}
 
 				// 'F2'
-				case features.av_player && evt.code===features.av_player.av_insert_tc_code:
+				case features.av_player && evt.code===features.av_player.av_insert_tc_code: {
 					// publish event and receive subscription responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -867,25 +870,29 @@ const get_custom_events = (self, i, text_editor) => {
 
 							switch(data_tag.type) {
 								case ('draw'):
-								case ('geo'):
+								case ('geo'): {
 									const layer_selector = render_layer_selector(self, data_tag, tag_id, text_editor)
 									// append layer selector to wrapper
 									self.node.appendChild(layer_selector)
 									break;
-								case ('page'):
+								}
+								case ('page'): {
 									// modal selector
 									render_page_selector(self, data_tag, tag_id, text_editor)
 									break;
-								default:
+								}
+								default: {
 									const tag = self.build_view_tag_obj(data_tag, tag_id)
 									text_editor.set_content(tag)
 									break;
+								}
 							}// end switch
 						}
 					break;
+				}
 
 				// ctrl + 0
-				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')): {
 					// resolve the key number pressed by the user, it will be the key of the person array
 					const key_person_number	= evt.code.match(/\d+/g);
 					// get the person with the number pressed
@@ -896,9 +903,10 @@ const get_custom_events = (self, i, text_editor) => {
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_person)
 					break;
+				}
 
 				// ctrl + Shift + 0
-				case evt.ctrlKey && evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')):
+				case evt.ctrlKey && evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')): {
 					// get the project langs
 					const ar_project_langs	= page_globals.dedalo_projects_default_langs
 					// resolve the key number pressed by user, it will match with the key of the array of languages
@@ -920,16 +928,18 @@ const get_custom_events = (self, i, text_editor) => {
 					// set the new tag at caret position in the text.
 					text_editor.set_content(node_tag_lang)
 					break;
+				}
 
 				// Tab
-				case evt.code==='Tab':
+				case evt.code==='Tab': {
 					// prevent to jump cursor to another input
 					evt.preventDefault()
-				break;
+					break;
+				}
 
 				// case evt.code==='Backspace' || evt.code==='Delete':
-				// 	console.log(options)
-				// break;
+					//	console.log(options)
+					//	break;
 			}
 		}//end KeyUp
 
@@ -1335,8 +1345,7 @@ const render_note = async function(options) {
 			// When the user click on remove button, two actions happens:
 			// first, delete the section in the server
 			// second, remove the tag from the text_area
-			button_remove.addEventListener('click', fn_remove)
-			function fn_remove(e){
+			const fn_remove = function(e){
 				e.stopPropagation()
 
 				// ask to user if really want delete the note
@@ -1346,6 +1355,11 @@ const render_note = async function(options) {
 					// remove the tag of the note in the component_text_area
 					text_editor.delete_tag(view_tag)
 					.then(function(){
+
+						if (typeof note_section==='undefined') {
+							alert("Undefined note_section");
+						}
+
 						// Delete the server note data in the DDBB
 							// create sqo the the filter_by_locators of the section to be deleted
 							const sqo = {
@@ -1374,6 +1388,7 @@ const render_note = async function(options) {
 					})
 				}
 			}//end fn_remove
+			button_remove.addEventListener('click', fn_remove)
 
 	// save editor changes to prevent conflicts with modal components changes
 		// text_editor.save()

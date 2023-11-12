@@ -761,7 +761,7 @@ component_date.prototype.value_to_string_value = function(current_value) {
 	// build date base on date_mode
 	switch(date_mode) {
 
-		case 'range':
+		case 'range': {
 			const input_value_start	= (current_value && current_value.start)
 				? self.date_to_string(current_value.start)
 				: ''
@@ -770,8 +770,9 @@ component_date.prototype.value_to_string_value = function(current_value) {
 				: ''
 
 			return input_value_start +'<>'+ input_value_end
+		}
 
-		case 'period':
+		case 'period': {
 			// period
 				const period = (current_value && current_value.period)
 					? current_value.period
@@ -798,6 +799,7 @@ component_date.prototype.value_to_string_value = function(current_value) {
 				}
 
 			return  pairs.join(', ')
+		}
 
 		case 'time':
 

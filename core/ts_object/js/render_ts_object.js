@@ -44,7 +44,7 @@ export const render_ts_line = function(options) {
 		switch(true) {
 
 			// TERM
-			case (child_data.ar_elements[j].type==='term'):
+			case (child_data.ar_elements[j].type==='term'): {
 
 				// overwrite dataset (we need section_id and section_tipo to select when content is updated)
 					children_dataset.section_tipo	= child_data.section_tipo
@@ -123,9 +123,10 @@ export const render_ts_line = function(options) {
 						inner_html		: " ["+child_data.section_tipo+'_'+child_data.section_id+"]"
 					})
 				break;
+			}
 
 			// ND
-			case (child_data.ar_elements[j].type==='link_children_nd'):
+			case (child_data.ar_elements[j].type==='link_children_nd'): {
 
 				const element_children_nd = ui.create_dom_element({
 					element_type	: 'div',
@@ -134,8 +135,8 @@ export const render_ts_line = function(options) {
 					text_node		: child_data.ar_elements[j].value,
 					parent			: fragment
 				})
-				element_children_nd.addEventListener('mousedown', fn_child_nd_click)
-				function fn_child_nd_click(e) {
+
+				const fn_child_nd_click = function(e) {
 					e.stopPropagation()
 
 					element_children_nd.classList.add('loading')
@@ -146,10 +147,12 @@ export const render_ts_line = function(options) {
 						element_children_nd.classList.remove('loading')
 					})
 				}
+				element_children_nd.addEventListener('mousedown', fn_child_nd_click)
 				break;
+			}
 
 			// ARROW ICON
-			case (child_data.ar_elements[j].type==='link_children'):
+			case (child_data.ar_elements[j].type==='link_children'): {
 
 				// Case link open children (arrow)
 				// var event_function	= [{'type':'click','name':'ts_object.toggle_view_children'}];
@@ -174,15 +177,16 @@ export const render_ts_line = function(options) {
 				const arrow_icon = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: ar_class.join(' '),
-					parent			: element_link_children,
+					parent			: element_link_children
 				})
 				break;
+			}
 
 			// INDEXATIONS AND STRUCTURATIONS
 			case (child_data.ar_elements[j].model==='component_relation_index'):
 			case (child_data.ar_elements[j].tipo==='hierarchy40'):
 			case (child_data.ar_elements[j].tipo==='ww34'):
-			case (child_data.ar_elements[j].tipo==='hierarchy91'):
+			case (child_data.ar_elements[j].tipo==='hierarchy91'): {
 
 				if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
 					|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
@@ -225,9 +229,10 @@ export const render_ts_line = function(options) {
 						// })
 				}
 				break;
+			}
 
 			// IMG
-			case (child_data.ar_elements[j].type==='img'):
+			case (child_data.ar_elements[j].type==='img'): {
 
 				if(child_data.ar_elements[j].value) {
 
@@ -256,9 +261,10 @@ export const render_ts_line = function(options) {
 					})
 				}
 				break;
+			}
 
 			// OTHERS
-			default:
+			default: {
 
 				const current_value = child_data.ar_elements[j].value
 
@@ -281,6 +287,7 @@ export const render_ts_line = function(options) {
 					})
 				})
 				break;
+			}
 		}//end switch(true)
 	}//end for (var j = 0; j < ch_len; j++)
 
@@ -524,7 +531,7 @@ export const render_ts_list = function(options) {
 			// id_column_content elements
 				switch(self.thesaurus_mode) {
 
-					case 'relation':
+					case 'relation': {
 						// hierarchy_node cannot be used as related  and not indexable too
 						if (node_type==='hierarchy_node' || is_indexable===false) break;
 
@@ -533,7 +540,7 @@ export const render_ts_list = function(options) {
 								element_type	: 'a',
 								class_name		: 'id_column_link ts_object_related',
 								title_label		: 'add',
-								parent			: id_column_content,
+								parent			: id_column_content
 							})
 							const current_label_term = ar_children_data[i].ar_elements.find(el => el.type==='term')
 							link_related.data = {
@@ -576,8 +583,9 @@ export const render_ts_list = function(options) {
 								parent			: link_related
 							})
 						break;
+					}
 
-					default:
+					default: {
 
 						// ADD . button + add element
 							if (ar_children_data[i].permissions_button_new>=2) {
@@ -720,7 +728,7 @@ export const render_ts_list = function(options) {
 								parent			: link_edit
 							})
 							//}//end if (node_type!=='hierarchy_node')
-
+					}
 				}//end switch(ts_object.thesaurus_mode)
 
 		// LIST_THESAURUS_ELEMENTS

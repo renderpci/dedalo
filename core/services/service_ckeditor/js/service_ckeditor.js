@@ -1824,7 +1824,7 @@ export const service_ckeditor = function() {
 				// Ranges that accept the `reference` attribute. Since we will iterate over `allowedRanges`, let's clone it.
 				const rangesToUpdate = allowedRanges.slice();
 
-				function is_range_to_update( range, allowedRanges ) {
+				const is_range_to_update = function( range, allowedRanges ) {
 					for ( const allowedRange of allowedRanges ) {
 						// A range is inside an element that will have the `reference` attribute. Do not modify its nodes.
 						if ( allowedRange.containsRange( range ) ) {

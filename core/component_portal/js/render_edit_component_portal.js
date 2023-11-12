@@ -85,10 +85,10 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			// sample: <div class="wrapper_component component_portal oh24 oh1_oh24 edit view_print disabled_component">...</div>
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
-			self.permissions = 1
+			self.permissions = 1;
 
 		case 'default':
-		default:
+		default: {
 			// dynamic try
 				const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 				if (render_view) {
@@ -98,6 +98,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 				}
 
 			return view_default_edit_portal.render(self, options)
+		}
 	}
 }//end edit
 
@@ -661,8 +662,7 @@ export const get_buttons = (self) => {
 					class_name		: 'button sync',
 					parent			: buttons_fold
 				})
-				button_update_data_external.addEventListener('click', fn_update_data_external)
-				async function fn_update_data_external(e){
+				const fn_update_data_external = async function(e) {
 					e.stopPropagation()
 					// force server data to calculate external data
 					const source = self.rqo.source
@@ -678,6 +678,7 @@ export const get_buttons = (self) => {
 						render_level	: 'content'
 					})
 				}
+				button_update_data_external.addEventListener('click', fn_update_data_external)
 		}//end button external
 
 	// button_add
@@ -687,8 +688,7 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: buttons_fold
 			})
-			button_add.addEventListener('click', fn_add)
-			async function fn_add(e){
+			const fn_add = async function(e) {
 				e.stopPropagation()
 
 				// target_section_tipo. to add section selector
@@ -773,6 +773,7 @@ export const get_buttons = (self) => {
 						window.page_globals.service_autocomplete.destroy(true, true, true)
 					}
 			}
+			button_add.addEventListener('click', fn_add)
 		}//end button_add
 
 	// button_link
@@ -782,8 +783,7 @@ export const get_buttons = (self) => {
 				class_name		: 'button link',
 				parent			: buttons_fold
 			})
-			button_link.addEventListener('click', fn_link)
-			async function fn_link(e){
+			const fn_link = async function(e) {
 				e.stopPropagation()
 
 				// const section_tipo	= select_section.value
@@ -866,6 +866,7 @@ export const get_buttons = (self) => {
 					})()
 					return
 			}
+			button_link.addEventListener('click', fn_link)
 		}//end button_link
 
 	// button_open_section_list (button_add)
@@ -887,8 +888,7 @@ export const get_buttons = (self) => {
 					title			: label,
 					parent			: buttons_fold
 				})
-				button_open_section_list.addEventListener('click', fn_click)
-				function fn_click(e){
+				const fn_click = function(e){
 					e.stopPropagation()
 
 					// open a new window
@@ -910,6 +910,7 @@ export const get_buttons = (self) => {
 							})
 						})
 				}//end fn_click
+				button_open_section_list.addEventListener('click', fn_click)
 			}
 		}
 

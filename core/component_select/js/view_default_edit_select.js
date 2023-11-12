@@ -209,8 +209,7 @@ const get_content_value = (i, current_value, self) => {
 			})
 			// set pointers
 			select.button_edit = button_edit
-			button_edit.addEventListener('click', fn_click)
-			function fn_click(e) {
+			const fn_click = function(e) {
 				e.stopPropagation()
 
 				// nothing is selected case
@@ -241,6 +240,7 @@ const get_content_value = (i, current_value, self) => {
 						})
 					})
 			}
+			button_edit.addEventListener('click', fn_click)
 
 			// hide button on no value
 			if (!select.value || select.value==='null') {

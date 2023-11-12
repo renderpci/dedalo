@@ -161,7 +161,7 @@ component_portal.prototype.init = async function(options) {
 			function fn_link_term(locator) {
 
 				switch (self.view) {
-					case 'indexation':
+					case 'indexation': {
 						// empty tag_id is allowed too
 						// add tag_id. Note that 'self.active_tag' is an object with 3 properties (caller, text_editor and tag)
 							const tag_id = self.active_tag && self.active_tag.tag
@@ -195,7 +195,7 @@ component_portal.prototype.init = async function(options) {
 							}
 							Object.assign(locator, top_locator)
 						break;
-
+					}
 					case 'tree':
 						// set relation type standard portal (dd151)
 						locator.type = DD_TIPOS.DEDALO_RELATION_TYPE_LINK ?? 'dd151'
@@ -516,10 +516,7 @@ component_portal.prototype.build = async function(autoload=false) {
 					await self.paginator.build()
 
 					// paginator_goto_ event
-						self.events_tokens.push(
-							event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-						)//end events push
-						function fn_paginator_goto(offset) {
+						const fn_paginator_goto = function(offset) {
 							// navigate
 							self.navigate({
 								callback : () => {
@@ -527,12 +524,13 @@ component_portal.prototype.build = async function(autoload=false) {
 								}
 							})
 						}//end fn_paginator_goto
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+						)//end events push
+
 
 					// paginator_show_all_
-						self.events_tokens.push(
-							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
-						)//end events push
-						function fn_paginator_show_all() {
+						const fn_paginator_show_all = function() {
 							// navigate
 							self.navigate({
 								callback : async () => {
@@ -542,12 +540,12 @@ component_portal.prototype.build = async function(autoload=false) {
 								}
 							})
 						}//end fn_paginator_show_all
+						self.events_tokens.push(
+							event_manager.subscribe('paginator_show_all_'+self.paginator.id, fn_paginator_show_all)
+						)//end events push
 
 					// reset_paginator_
-						self.events_tokens.push(
-							event_manager.subscribe('reset_paginator_'+self.paginator.id, fn_reset_paginator)
-						)//end events push
-						function fn_reset_paginator(limit) {
+						const fn_reset_paginator = function(limit) {
 							// navigate
 							self.navigate({
 								callback : async () => {
@@ -557,6 +555,9 @@ component_portal.prototype.build = async function(autoload=false) {
 								}
 							})
 						}//end fn_reset_paginator
+						self.events_tokens.push(
+							event_manager.subscribe('reset_paginator_'+self.paginator.id, fn_reset_paginator)
+						)//end events push
 
 				}else{
 					// refresh existing

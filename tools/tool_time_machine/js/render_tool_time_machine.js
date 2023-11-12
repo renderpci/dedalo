@@ -116,7 +116,7 @@ const get_content_data = async function(self) {
 						class_name	: '',
 						action		: on_change_select
 					})
-					function on_change_select(e) {
+					const on_change_select = function(e) {
 						const lang = e.target.value
 						if (lang!==self.lang) {
 

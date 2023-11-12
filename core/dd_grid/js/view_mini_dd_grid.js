@@ -121,7 +121,7 @@ const get_grid_nodes = function(data) {
 						break;
 
 					case 'text':
-					default:
+					default: {
 						const column_node = get_text_column(
 							data_item,
 							true // use fallback value
@@ -133,6 +133,7 @@ const get_grid_nodes = function(data) {
 							nodes.push(' ')
 						}
 						break;
+					}
 				}//end switch(data_item.cell_type)
 			}else{
 

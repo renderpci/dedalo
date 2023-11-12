@@ -267,35 +267,41 @@ const get_table_columns = function(current_data) {
 
 				switch(current_data.cell_type) {
 					case 'header':
-						const header_node = get_header_column(current_data)
-						column_items.push(header_node)
+						column_items.push(
+							get_header_column(current_data)
+						)
 						break;
 
 					case 'av':
-						const av_node = get_av_column(current_data)
-						column_items.push(av_node)
+						column_items.push(
+							get_av_column(current_data)
+						)
 						break;
 
 					case 'img':
-						const img_node = get_img_column(current_data)
-						column_items.push(img_node)
+						column_items.push(
+							get_img_column(current_data)
+						)
 						break;
 
 					case 'json':
-						const json_node = get_json_column(current_data)
-						column_items.push(json_node)
+						column_items.push(
+							get_json_column(current_data)
+						)
 						break;
 
 					case 'section_id':
-						const section_id_node = get_section_id_column(current_data)
-						column_items.push(section_id_node)
+						column_items.push(
+							get_section_id_column(current_data)
+						)
 						break;
 
 					case 'iri':
 					case 'text':
 					default:
-						const column_node = get_text_column(current_data)
-						column_items.push(column_node)
+						column_items.push(
+							get_text_column(current_data)
+						)
 						break;
 				}//end switch(current_data.cell_type)
 			}// end if(current_data.type==='column' && current_data.cell_type)
