@@ -496,10 +496,10 @@ export function open_window(options) {
 		const url		= options.url
 		const target	= options.target || options.name || 'New window'
 		const features	= options.features || null
-		const width	= options.width && (options.width < window.screen.width)
+		const width		= options.width && (options.width < window.screen.width)
 			? options.width
 			: ((default_width < window.screen.width) ? default_width : window.screen.width)
-		const height = options.height && (options.height < window.screen.height)
+		const height	= options.height && (options.height < window.screen.height)
 			? options.height
 			: ((default_height < window.screen.height) ? default_height : window.screen.height)
 
@@ -516,17 +516,37 @@ export function open_window(options) {
 		})()
 
 	// window
-		const new_window = window.open(
-			url,
-			target,
-			window_features
-		)
-		new_window.resizeTo(width, height); // needed for Firefox
-		new_window.focus()
+		if (is_safari()===true && url.indexOf('tool=')!==-1) {
 
+			// Prevent Safari logout problems on open new tabs for tools (!)
+			window.location = url
 
-	return new_window
+			return window
+
+		}else{
+			const new_window = window.open(
+				url,
+				target,
+				window_features
+			)
+			new_window.resizeTo(width, height); // needed for Firefox
+			new_window.focus()
+
+			return new_window
+		}
 }//end open_window
+
+
+
+/**
+* IS_SAFARI
+* Check browser navigator.userAgent for detect Safari
+* @return bool
+*/
+export function is_safari(options) {
+
+	return (navigator.userAgent.indexOf('Safari')!==-1 && navigator.userAgent.indexOf('Chrome')===-1)
+}//end is_safari
 
 
 

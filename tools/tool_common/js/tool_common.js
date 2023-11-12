@@ -14,7 +14,9 @@
 	import {
 		clone,
 		dd_console,
-		printf
+		printf,
+		open_window,
+		is_safari
 		// object_to_url_vars,
 		// url_vars_to_object,
 		// JSON_parse_safely,
@@ -730,39 +732,55 @@ const view_window = async function(options) {
 
 	// tool_window
 		const window_name	= name +'_'+ (caller.id_base || '')
-		const tool_window	= window.open(url, window_name, parsed_windowFeatures)
-		tool_window.focus();
+		const tool_window	= open_window({
+			url			: url,
+			target		: window_name,
+			features	: parsed_windowFeatures || 'new_tab'
+		})
 
-	// focus event trigger on current window. Used timeout to give time to focus tool_window
-		setTimeout(function(){
-			main_window.addEventListener('focus', fn_onfocus, true);
-			function fn_onfocus() {
-				// (!) remove listener after focus
-				main_window.removeEventListener('focus', fn_onfocus, true);
+		if (is_safari()===true) {
 
-				// remove window.callers pointer
-				// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
+			// navigate in the same window
+			// This is because Safari logout problems on open new tabs (!)
 
-				// render_level
-					const render_level = (caller.mode==='list')
-						? 'full'
-						: 'content'
+		}else{
 
-				// refresh caller.
-				// Note that in some situations, caller is not an instance like in grid_dd indexation button
-				if (caller && typeof caller.refresh==='function') {
-					caller.refresh({
-						refresh_id_base_lang	: true,
-						render_level			: render_level
-					})
+			// new tab is created
+
+			// const tool_window = window.open(url, window_name, parsed_windowFeatures)
+			// tool_window.focus();
+
+			// focus event trigger on current window. Used timeout to give time to focus tool_window
+			setTimeout(function(){
+				main_window.addEventListener('focus', fn_onfocus, true);
+				function fn_onfocus() {
+					// (!) remove listener after focus
+					main_window.removeEventListener('focus', fn_onfocus, true);
+
+					// remove window.callers pointer
+					// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
+
+					// render_level
+						const render_level = (caller.mode==='list')
+							? 'full'
+							: 'content'
+
+					// refresh caller.
+					// Note that in some situations, caller is not an instance like in grid_dd indexation button
+					if (caller && typeof caller.refresh==='function') {
+						caller.refresh({
+							refresh_id_base_lang	: true,
+							render_level			: render_level
+						})
+					}
+
+					// close opened window if is open
+					// if (tool_window) {
+						// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
+					// }
 				}
-
-				// close opened window if is open
-				// if (tool_window) {
-					// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
-				// }
-			}
-		}, 300)
+			}, 300)
+		}
 
 	// close tool_window
 		// tool_window.addEventListener('close', fn_onclose, true);
