@@ -10,7 +10,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	// import {instances} from '../../common/js/instances.js'
-	import {open_tool} from '../../tools/tool_common/js/tool_common.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import * as menu_tree from './render_menu_tree.js'
 	import * as menu_mobile from './render_menu_mobile.js'
 
