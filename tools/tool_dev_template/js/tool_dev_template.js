@@ -203,15 +203,15 @@ tool_dev_template.prototype.load_component_sample = async function(options) {
 	// optional: It's possible to create the instance by your own instead use the tool_common.load_component()
 	// in this way
 			const instance_options = {
-				model			: main_element.model,
-				mode			: main_element.mode,
-				tipo			: main_element.tipo,
-				section_tipo	: main_element.section_tipo,
-				section_id		: main_element.section_id,
-				lang			: main_element.lang,
-				section_lang	: main_element.section_lang,
-				type			: main_element.type,
-				id_variant		: 'tool_dev_template_'+main_element.model, // id_variant prevents id conflicts
+				model			: self.main_element.model,
+				mode			: self.main_element.mode,
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				lang			: self.main_element.lang,
+				section_lang	: self.main_element.section_lang,
+				type			: self.main_element.type,
+				id_variant		: 'tool_dev_template_' + self.main_element.model // id_variant prevents id conflicts
 			}
 		// get instance and init
 			const own_component_instance = await get_instance(instance_options)
