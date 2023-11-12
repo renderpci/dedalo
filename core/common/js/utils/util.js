@@ -502,6 +502,7 @@ export function open_window(options) {
 		const height	= options.height && (options.height < window.screen.height)
 			? options.height
 			: ((default_height < window.screen.height) ? default_height : window.screen.height)
+		const on_blur	= options.on_blur || null
 
 	// window_features
 		const window_features = (()=>{
@@ -531,6 +532,17 @@ export function open_window(options) {
 			)
 			new_window.resizeTo(width, height); // needed for Firefox
 			new_window.focus()
+
+			// on_blur optional action callback
+				if (typeof on_blur==='function') {
+					const fn_on_blur = function() {
+						// remove self instance to prevent duplicity
+						new_window.removeEventListener('blur', fn_on_blur)
+						// exec callback function
+						on_blur()
+					}
+					new_window.addEventListener('blur', fn_on_blur)
+				}
 
 			return new_window
 		}

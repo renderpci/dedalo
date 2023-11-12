@@ -312,8 +312,8 @@ const get_content_data = function(self) {
 				})
 
 				open_window({
-					url : url,
-					features : 'new_tab'
+					url			: url,
+					features	: 'new_tab'
 				})
 			}//end fn_data_link
 			data_link.addEventListener('mousedown', fn_data_link)

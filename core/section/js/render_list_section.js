@@ -379,7 +379,13 @@ export const render_column_id = function(options) {
 								const new_window = open_window({
 									url			: url,
 									name		: 'record_view_' + section_id,
-									features	: features
+									features	: features,
+									on_blur : () => {
+										// refresh current instance
+										self.refresh({
+											build_autoload : true
+										})
+									}
 								})
 							});
 							button_edit.addEventListener('mousedown', function(e){
