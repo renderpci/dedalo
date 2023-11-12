@@ -387,7 +387,7 @@ numisdata607	numisdata336	dd248	no	si	si	9	numisdata	si	\N	\N	\N
 numisdata561	numisdata348	dd4	no	si	si	1	numisdata	si	\N	\N	\N
 numisdata190	numisdata199	dd164	no	si	si	3	numisdata	no	\N	{\r\n  "alias_of": "numisdata39",\r\n  "look_inside": true,\r\n  "edit_view999": "clean",\r\n  "css999": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ]\r\n    }\r\n  }\r\n}	{"DES_css": {".wrapper_component": {}}, "alias_of": "numisdata39", "look_inside": true, "edit_view999": "clean"}
 numisdata601	numisdata336	dd248	no	si	si	6	numisdata	si	[{"dd43":"numisdata134"}]	\N	\N
-numisdata375	dd68	dd4	no	si	si	13	numisdata	si	\N	\N	\N
+numisdata375	dd68	dd4	no	si	si	14	numisdata	si	\N	\N	\N
 numisdata624	numisdata623	dd246	no	si	si	1	numisdata	si	\N	{\r\n  "type": "fixed_uri",\r\n  "base_uri_OLD": "http://www.museuprehistoriavalencia.org/",\r\n  "base_uri_entity": {\r\n    "title": "void:inDataset",\r\n    "section_tipo": "dd1010",\r\n    "component_tipo": "dd1014"\r\n  }\r\n}	{"type": "fixed_uri", "base_uri_OLD": "http://www.museuprehistoriavalencia.org/", "base_uri_entity": {"title": "void:inDataset", "section_tipo": "dd1010", "component_tipo": "dd1014"}}
 numisdata668	numisdata33	dd441	no	si	si	9	numisdata	no	\N	{\r\n  "thesaurus": {\r\n    "term": "numisdata97"\r\n  }\r\n}	{"thesaurus": {"term": "numisdata97"}}
 numisdata608	numisdata607	dd246	no	si	si	1	numisdata	si	\N	{\r\n  "type": "add_uri",\r\n  "base_uri": "",\r\n  "add_uri": [\r\n    {\r\n      "source": "numisdata148",\r\n      "value": [\r\n        "numisdata215"\r\n      ]\r\n    }\r\n  ],\r\n  "separator": ""\r\n}	{"type": "add_uri", "add_uri": [{"value": ["numisdata215"], "source": "numisdata148"}], "base_uri": "", "separator": ""}
@@ -925,9 +925,9 @@ numisdata1208	numisdata1199	dd91	no	si	si	3	numisdata	no	[{"dd339":"numisdata120
 numisdata1213	numisdata1199	dd177	no	si	si	4	numisdata	no	\N	\N	\N
 numisdata1214	numisdata1199	dd183	no	si	si	5	numisdata	si	\N	\N	\N
 numisdata1210	numisdata1199	dd8	no	si	si	2	numisdata	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 1fr)"}}}
-numisdata1200	dd69	dd4	no	si	si	7	numisdata	no	\N	\N	\N
 numisdata1201	numisdata1199	dd8	no	si	si	1	numisdata	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 numisdata1199	numisdata1200	dd6	no	si	si	1	numisdata	no	\N	\N	\N
+numisdata1200	dd69	dd4	no	si	si	8	numisdata	no	\N	\N	\N
 numisdata1332	numisdata701	dd1230	no	si	si	21	numisdata	si	[{"dd635":"numisdata214"}]	{"process_dato":"diffusion_sql::split_date_range","process_dato_arguments":{"selected_key":0,"selected_date":"end","date_format":"year"}}	{"process_dato": "diffusion_sql::split_date_range", "process_dato_arguments": {"date_format": "year", "selected_key": 0, "selected_date": "end"}}
 numisdata1217	numisdata136	dd530	no	si	si	3	numisdata	no	[{"dd6":"numisdata1199"},{"dd530":"numisdata1204"},{"dd635":"numisdata1206"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "3 / span 2"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": ["numisdata1199"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "numisdata1204", "parent": "self", "section_tipo": "self"}, {"tipo": "numisdata211", "parent": "numisdata1204", "section_tipo": "numisdata279"}, {"tipo": "numisdata1206", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}}
 numisdata1334	numisdata180	dd43	no	si	si	17	numisdata	no	\N	{"type":{"float":2},"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"4.5%","padding-left":"5px","padding-right":"2px"}}}}	{"css": {".wrapper_component": {"grid-row": "2"}}, "view": "line", "observers": [{"info": "To sumarize the total", "section_tipo": "numisdata179", "component_tipo": "numisdata1125"}]}

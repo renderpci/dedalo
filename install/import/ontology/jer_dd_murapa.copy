@@ -33,7 +33,7 @@ murapa32	murapa4	dd1229	no	si	si	13	murapa	si	[{"dd6":"murapa17"}]	\N	\N
 murapa33	murapa32	dd1233	no	si	si	1	murapa	si	[{"dd339":"murapa20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	{"enum": {"1": "si", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "exclude_column": true, "data_to_be_used": "dato"}
 murapa22	murapa18	dd247	no	si	si	4	murapa	no	\N	{"dato_default":{"1":"2"},"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"40%","height":"9.9em","float":"right"}},".content_data":{"style":{"height":"90%"}}}}	\N
 murapa21	murapa18	dd530	no	si	si	3	murapa	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".vertical",".line_top"],"style":{"width":"40%"}}}}	{"source": {"fields_separator": " "}}
-murapa38	dd69	dd4	no	si	si	5	murapa	si	\N	\N	\N
+murapa38	dd69	dd4	no	si	si	6	murapa	si	\N	\N	\N
 murapa55	murapa4	dd1229	no	si	si	14	murapa	si	[{"dd6":"murapa39"}]	\N	\N
 murapa39	murapa38	dd6	no	si	si	1	murapa	no	\N	\N	\N
 murapa60	murapa55	dd1231	no	si	si	6	murapa	si	[{"dd10":"murapa44"}]	\N	\N

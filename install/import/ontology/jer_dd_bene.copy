@@ -42,7 +42,7 @@ bene24	bene19	dd91	no	si	si	3	bene	si	[{"dd9":"bene22"}]	\N	\N
 bene25	bene19	dd177	no	si	si	4	bene	no	\N	\N	\N
 bene26	bene19	dd183	no	si	si	5	bene	no	\N	\N	\N
 bene19	bene1	dd6	no	si	si	3	bene	no	[{"dd626":"dd22"}]	\N	\N
-bene1	dd69	dd4	no	si	si	3	bene	no	\N	\N	\N
+bene1	dd69	dd4	no	si	si	4	bene	no	\N	\N	\N
 bene22	bene20	dd9	no	si	si	2	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "40%"}}}}
 bene28	bene2	dd91	no	si	si	2	bene	no	[{"dd339":"bene7"},{"dd9":"bene5"},{"dd635":"bene6"},{"dd11":"bene9"},{"dd11":"bene18"}]	\N	\N
 bene8	bene3	dd10	no	si	si	8	bene	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "float": "right"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"float": "right", "width": "50%"}}}}

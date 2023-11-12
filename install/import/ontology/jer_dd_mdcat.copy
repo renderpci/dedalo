@@ -1210,7 +1210,7 @@ mdcat3099	mdcat3096	dd183	no	si	si	3	mdcat	no	\N	\N	\N
 mdcat1551	mdcat1457	dd97	no	si	si	1	mdcat	no	[{"dd6":"mdcat1458"},{"dd339":"mdcat2327"},{"dd11":"mdcat1461"},{"dd9":"mdcat1470"},{"dd635":"mdcat1471"},{"dd635":"mdcat1472"}]	\N	\N
 mdcat1399	mdcat1398	dd8	no	si	si	1	mdcat	no	\N	\N	\N
 mdcat3430	mdcat901	dd581	no	si	si	6	mdcat	no	\N	\N	\N
-mdcat594	dd68	dd4	no	si	si	10	mdcat	no	\N		\N
+mdcat594	dd68	dd4	no	si	si	11	mdcat	no	\N		\N
 mdcat2269	mdcat354	dd1229	no	si	si	97	mdcat	si	[{"dd6":"mdcat1375"}]	\N	\N
 mdcat1289	mdcat1164	dd1235	no	si	si	20	mdcat	si	[{"dd592":"mdcat691"}]	{\r\n  "varchar": 1024,\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc85",\r\n    "component_method": "get_diffusion_value"\r\n  }\r\n}	{"varchar": 1024, "process_dato": "diffusion_sql::resolve_value", "process_dato_arguments": {"component_method": "get_diffusion_value", "target_component_tipo": "rsc85"}}
 mdcat3512	mdcat3327	dd581	no	si	si	6	mdcat	no	\N	\N	\N
