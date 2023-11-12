@@ -587,7 +587,11 @@ export const ts_object = new function() {
 										ts_object.update_arrow_state(link_children_element, true)
 
 									// refresh children container
-										ts_object.get_children(link_children_element)
+										ts_object.get_children(
+											link_children_element,
+											null, // object|null pagination
+											false // bool clean_children_container
+										)
 										.then(function(){
 											// update parent arrow button
 											ts_object.update_arrow_state(link_children_element, true)
@@ -740,7 +744,11 @@ export const ts_object = new function() {
 			link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
 
 			// Load element by AJAX
-				result = ts_object.get_children(link_children_element);
+				result = ts_object.get_children(
+					link_children_element,
+					null, // object|null pagination
+					false // bool clean_children_container
+				);
 
 			//var children_container = ts_object.get_my_parent_container(link_children_element, 'children_container')
 			//if (children_container.style.display==='none') {
@@ -1290,7 +1298,7 @@ export const ts_object = new function() {
 	* @param object button_obj
 	* @return promise
 	*/
-	this.show_component_in_ts_object = async function(button_obj) {
+	this.show_component_in_ts_object = async function(button_obj, event) {
 
 		const self = this
 
@@ -1324,10 +1332,10 @@ export const ts_object = new function() {
 					// delete the previous registered events
 						self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
-					// update value, subscription to the changes: if the DOM input value was changed, observers dom elements will be changed own value with the observable value
+					// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
 						const fn_update_value = function(options) {
 
-							const caller = options.caller
+							const caller = current_component
 
 							const ar_values = []
 							switch (caller.model) {
@@ -1344,15 +1352,28 @@ export const ts_object = new function() {
 							const value = ar_values.join(' ')
 							// change the value of the current DOM element
 							button_obj.firstChild.innerHTML = value
+
+							// destroy
+							current_component.destroy(true, true, true)
 						}
 						self.events_tokens.push(
-							event_manager.subscribe('update_value_'+current_component.id_base, fn_update_value)
+							event_manager.subscribe('save_' + current_component.id_base, fn_update_value)
 						)
 				}
 
 				// build and render component
 					await current_component.build(true)
 					const component_node = await current_component.render()
+					setTimeout(function(){
+						ui.component.activate(current_component)
+						if (component_node.content_data[0]) {
+							const first_input = component_node.content_data[0].querySelector('input')
+							if (first_input) {
+								first_input.focus()
+							}
+						}
+					}, 50)
+
 
 				return component_node
 			}//end render_component_node
@@ -1963,7 +1984,11 @@ export const ts_object = new function() {
 
 			// Load all children and hide descriptors
 				// Load element by AJAX. Result is an array on HTMLElements
-				ts_object.get_children(button_obj)
+				ts_object.get_children(
+					button_obj,
+					null, // object|null pagination
+					false // bool clean_children_container
+				)
 				.then(function(result) {
 
 					// Show hidden nd_container
