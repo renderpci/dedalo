@@ -427,7 +427,7 @@ export const upload = async function(options) {
 						upload_error(evt)
 						console.error('evt:', evt);
 						console.log('chunk:', chunk);
-						clearInterval(intervalTimer);
+						// clearInterval(intervalTimer);
 						setTimeout(function(){
 							send_chunk(options)
 						}, 5000)
