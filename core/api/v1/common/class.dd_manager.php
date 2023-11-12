@@ -54,6 +54,9 @@ final class dd_manager {
 				// do not check login here
 			}else{
 				if (login::is_logged()!==true) {
+
+					debug_log(__METHOD__." User is not logged ", logger::ERROR);
+
 					$response = new stdClass();
 						$response->result	= false;
 						$response->msg		= 'Error. user is not logged ! [action:'.$rqo->action.']';
