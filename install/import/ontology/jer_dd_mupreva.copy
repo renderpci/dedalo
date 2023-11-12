@@ -2796,9 +2796,9 @@ mupreva29	dd70	dd1028	no	si	si	3	mupreva	no	[{"dd6":"mupreva1"}]		\N
 mupreva542	mupreva530	dd91	no	si	si	4	mupreva	no	[{"dd530":"mupreva532"},{"dd635":"mupreva535"},{"dd635":"mupreva536"},{"dd9":"mupreva533"},{"dd318":"mupreva534"},{"dd592":"mupreva546"}]		\N
 mupreva740	mupreva603	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva690"},{"dd57":"mupreva732"},{"dd530":"mupreva719"},{"dd9":"mupreva696"},{"dd10":"mupreva697"},{"dd9":"mupreva698"},{"dd592":"mupreva706"}]		\N
 mupreva607	mupreva597	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva690"},{"dd57":"mupreva732"},{"dd530":"mupreva719"},{"dd9":"mupreva696"},{"dd10":"mupreva697"},{"dd9":"mupreva698"},{"dd592":"mupreva706"}]		\N
-mupreva1408	dd69	dd4	no	si	si	1	mupreva	no	\N		\N
+mupreva1408	dd69	dd4	no	si	si	2	mupreva	no	\N		\N
 mupreva2618	mupreva2635	dd440	no	si	si	1	mupreva	si	\N	\N	\N
 mupreva33	dd3	dd17	no	si	si	13	mupreva	no	\N		\N
 mupreva2635	ts11	dd440	no	si	si	9	mupreva	no	null		null
-mupreva76	dd68	dd4	no	si	si	8	mupreva	si	\N		\N
+mupreva76	dd68	dd4	no	si	si	9	mupreva	si	\N		\N
 mupreva19	dd14	dd4	no	si	si	15	mupreva	no	\N		\N

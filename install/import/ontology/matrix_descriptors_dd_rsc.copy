@@ -918,7 +918,6 @@ rsc319	Elenco	termino	lg-ita
 rsc319	Listado	termino	lg-spa
 rsc319	Llistat	termino	lg-cat
 rsc319	λίστα	termino	lg-ell
-rsc32	Opciones de ficheros	termino	lg-spa
 rsc32	Opcions de fitxers	termino	lg-cat
 rsc32	Opzioni dei files	termino	lg-ita
 rsc32	Αρχείο επιλογές	termino	lg-ell
@@ -6312,3 +6311,4 @@ rsc1151	Liste	termino	lg-deu
 rsc18	Delete	termino	lg-eng
 rsc18	Löschen	termino	lg-deu
 rsc18	Supprimer	termino	lg-fra
+rsc32	Opciones de ficheros	termino	lg-spa

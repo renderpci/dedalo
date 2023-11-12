@@ -150,8 +150,8 @@ divalcdi9	divalcdi3	dd530	no	si	si	7	divalcdi	no	[{"dd6":"divalcdi82"},{"dd9":"d
 divalcdi79	divalcdi75	dd247	no	si	si	3	divalcdi	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  }\r\n}	{"dato_default": {"1": "2"}}
 divalcdi12	divalcdi3	dd247	no	si	si	8	divalcdi	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}, "dato_default": {"1": "2"}}
 divalcdi93	divalcdi89	dd247	no	si	si	3	divalcdi	no	\N	{"dato_default":{"1":"2"}}	{"dato_default": {"1": "2"}}
-divalcdi1	dd69	dd4	no	si	si	2	divalcdi	si	\N		\N
-divalcdi74	dd68	dd4	no	si	si	12	divalcdi	si	\N		\N
+divalcdi1	dd69	dd4	no	si	si	3	divalcdi	si	\N		\N
+divalcdi74	dd68	dd4	no	si	si	13	divalcdi	si	\N		\N
 divalcdi4	divalcdi3	dd1747	no	si	si	1	divalcdi	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "8%", "border-bottom-right-radius": "8px"}}}}
 divalcdi37	divalcdi36	dd530	no	si	si	1	divalcdi	no	[{"dd6":"divalcdi126"},{"dd9":"divalcdi57"},{"dd9":"divalcdi58"}]	{ "source": {\r\n    "divisor": " "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}, "source": {"fields_separator": " "}}
 divalcdi158	dd15	dd19	no	si	si	5	divalcdi	no	[{"dd6":"divalcdi2"}]		\N
