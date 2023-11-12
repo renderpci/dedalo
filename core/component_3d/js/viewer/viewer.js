@@ -429,7 +429,7 @@ viewer.dump_object = function(object, lines = [], isLast = true, prefix = '') {
 	const lastNdx = object.children.length - 1;
 	object.children.forEach((child, ndx) => {
 		const isLast = ndx === lastNdx;
-		dump_object(child, lines, isLast, newPrefix);
+		viewer.dump_object(child, lines, isLast, newPrefix);
 	});
 
 	return lines;
