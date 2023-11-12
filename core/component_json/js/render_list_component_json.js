@@ -51,9 +51,6 @@ render_list_component_json.prototype.list = async function(options) {
 		default:
 			return view_default_list_json.render(self, options)
 	}
-
-
-	return null
 }//end list
 
 

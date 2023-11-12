@@ -51,7 +51,7 @@ render_tool_posterframe.prototype.edit = async function(options) {
 	// main_element_container
 		const main_element_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'main_element_container',
+			class_name		: 'main_element_container'
 			// parent		: wrapper
 		})
 		wrapper.tool_header.after(main_element_container)

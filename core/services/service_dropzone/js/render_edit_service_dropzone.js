@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, DEDALO_CORE_URL */
+/*global get_label, DEDALO_CORE_URL, Dropzone */
 /*eslint no-undef: "error"*/
 
 
@@ -222,8 +222,8 @@ export const render_info = function(self) {
 		})
 		ui.create_dom_element({
 			element_type	: 'div',
-			inner_html	 	: session_cache_expire + ' [' + self.session_cache_expire.toLocaleString() + ' minutes]',
-			parent 			: info_container
+			inner_html		: session_cache_expire + ' [' + self.session_cache_expire.toLocaleString() + ' minutes]',
+			parent			: info_container
 		})
 
 
@@ -652,7 +652,7 @@ const render_template = async function(self) {
 						source	: source,
 						options	: {
 							key_dir		: self.key_dir,
-							file_name	: current_name,
+							file_name	: current_name
 						}
 					}
 
@@ -777,7 +777,7 @@ const render_template = async function(self) {
 				action	: 'list_uploaded_files',
 				source	: source,
 				options	: {
-					key_dir			: self.key_dir,
+					key_dir : self.key_dir
 				}
 			}
 

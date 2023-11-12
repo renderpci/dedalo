@@ -594,7 +594,6 @@ component_portal.prototype.build = async function(autoload=false) {
 		if (!self.context.request_config) {
 			console.error('Error. context.request_config not found. self:', self);
 			throw 'Error';
-			return false
 		}
 
 	// target_section

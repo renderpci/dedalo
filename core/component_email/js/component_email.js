@@ -80,14 +80,11 @@ component_email.prototype.verify_email = function(email_value) {
 	}
 
 	let valid_email		= false;
-	const ar_email		= []
 	const emailRegEx	= /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i;
 
-	if (!Array.isArray(email_value)){
-		ar_email.push(email_value)
-	}else{
-		ar_email = email_value
-	}
+	const ar_email = (!Array.isArray(email_value))
+		? [email_value]
+		: email_value
 
 	ar_email.forEach(function(email) {
 	 	if (email.search(emailRegEx) == -1) {

@@ -443,7 +443,7 @@ component_security_access.prototype.save_changes = async function() {
 	// change_value to save
 		const result = self.change_value({
 			changed_data			: changed_data,
-			refresh					: false,
+			refresh					: false
 			// from_save_changes	: true
 		})
 

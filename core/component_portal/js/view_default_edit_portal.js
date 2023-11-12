@@ -251,7 +251,7 @@ const rebuild_columns_map = async function(self) {
 		columns_map.push({
 			id			: 'section_id',
 			label		: 'Id',
-			width 		: 'auto',
+			width		: 'auto',
 			callback	: render_column_id
 		})
 
@@ -273,14 +273,14 @@ const rebuild_columns_map = async function(self) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',
-				width 		: 'auto',
+				width		: 'auto',
 				callback	: render_column_remove
 			})
 		}else{
 			columns_map.push({
-				id			: 'empty',
-				label		: '',
-				width 		: 'auto',
+				id		: 'empty',
+				label	: '',
+				width	: 'auto'
 			})
 		}
 

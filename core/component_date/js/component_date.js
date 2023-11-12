@@ -14,7 +14,7 @@
 
 
 
-export const component_date = function(){
+export const component_date = function() {
 
 	this.id				= null
 

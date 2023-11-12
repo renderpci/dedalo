@@ -165,7 +165,7 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		// list_body
 			const list_body = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
+				class_name		: 'list_body ' + self.mode +  ' view_'+self.view
 			})
 			// css des
 				// const items				= ui.flat_column_items(columns_map);

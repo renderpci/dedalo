@@ -122,7 +122,7 @@ tool_import_rdf.prototype.get_rdf_data = async function(ontology_tipo, ar_values
 				ar_values		: ar_values,
 				locator			: {
 					section_tipo	: self.caller.section_tipo,
-					section_id		: self.caller.section_id,
+					section_id		: self.caller.section_id
 				}
 			}
 		}

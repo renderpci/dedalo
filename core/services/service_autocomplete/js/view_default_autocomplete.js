@@ -1093,7 +1093,6 @@ const render_datalist = async function(self, result) {
 				const li_node = ui.create_dom_element({
 					element_type	: 'li',
 					class_name		: 'autocomplete_data_li',
-					class_name		: 'autocomplete_data_li',
 					title			: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
 					parent			: datalist
 				})
@@ -1305,7 +1304,7 @@ const render_datalist = async function(self, result) {
 						while (datalist.firstChild) {
 							datalist.removeChild(datalist.firstChild)
 						}
-						
+
 					// clean the input value
 						self.search_input.value = '';
 
@@ -1500,7 +1499,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 						return;
 					}
 				}
-			};
+			}//end fn_mousedown
 
 			document.addEventListener('mouseup', fn_mouseup)
 			function fn_mouseup() {
@@ -1509,7 +1508,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					target.classList.remove('dragging');
 				}
 				target = null;
-			};
+			}
 
 			document.addEventListener('mousemove', fn_mousemove)
 			function fn_mousemove(e) {
@@ -1537,7 +1536,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					if (tgtRect.bottom > (pRect.bottom)) {
 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
 					}
-			};
+			}
 
 	// button_close
 		const button_close = ui.create_dom_element({

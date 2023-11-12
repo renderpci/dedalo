@@ -125,10 +125,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 		// section_record. Add all section_record rendered nodes
 			const ar_section_record_length = ar_section_record.length
-			if (ar_section_record_length===0) {
-
-			}else{
-
+			if (ar_section_record_length>0) {
 				// const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 

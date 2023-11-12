@@ -152,7 +152,7 @@ const hilite_row = function(wrapper) {
 				const wrapper_last_column	= wrapper.lastChild
 				const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
 				const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
-				const row_style = {
+				const row_style				= {
 					// left		: parseFloat(firstChild_el_rect.x) + 'px',
 					// top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
 					// height	: parseFloat(firstChild_el_rect.height) + 'px',
@@ -652,8 +652,7 @@ const render_column_node = function(component_instance, self, ar_instances){
 			Object.assign(
 				column_node.style,
 				{
-					"grid-template-columns": grid_template_columns_ar_value.join(' '),
-					// "display": "grid"
+					"grid-template-columns": grid_template_columns_ar_value.join(' ')
 				}
 			)
 		}

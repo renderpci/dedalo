@@ -1002,7 +1002,7 @@ const render_area_item_read = function(item, datalist, value) {
 	// li DOM node
 		const li = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'li_item',
+			class_name		: 'li_item'
 		})
 
 	// label

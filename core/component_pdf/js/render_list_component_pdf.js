@@ -46,8 +46,6 @@ render_list_component_pdf.prototype.list = async function(options) {
 		default:
 			return view_default_list_pdf.render(self, options)
 	}
-
-	return null
 }//end list
 
 

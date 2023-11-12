@@ -139,7 +139,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User name',
 			mode			: 'edit',
 			properties		: {css:{}},
-			// view 			: 'line',
+			// view			: 'line',
 			permissions		: 1
 		},
 		// user profile . read only (!)
@@ -153,8 +153,8 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			// label		: 'User profile',
 			mode			: 'edit',
 			properties		: {css:{}},
-			// view 			: 'line',
-			permissions		: 1,
+			// view			: 'line',
+			permissions		: 1
 		},
 		// user full name . editable
 		{
@@ -215,7 +215,7 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'User image',
 			mode			: 'edit',
-			properties		: {css:{}},
+			properties		: {css:{}}
 		}
 	]
 

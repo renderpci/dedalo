@@ -275,7 +275,7 @@ const render_language_label = async function(self, current_lang, header, name, k
 			class_name		: 'label',
 			inner_html		: header===true ? current_lang.label : label_value,
 			dataset			: header===true ? '' : { placeholder : placeholder },
-			contenteditable	: header===true ? false : true,
+			contenteditable	: header===true ? false : true
 		})
 
 		// change event

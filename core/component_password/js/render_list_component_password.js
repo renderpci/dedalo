@@ -46,8 +46,6 @@ render_list_component_password.prototype.list = async function(options) {
 		default:
 			return view_default_list_password.render(self, options)
 	}
-
-	return null
 }//end list
 
 

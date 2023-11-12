@@ -124,6 +124,7 @@ render_section_tab.prototype.edit = async function(options) {
 						active_tab( valid_tab_node )
 					}
 				break;
+			}
 		}
 
 

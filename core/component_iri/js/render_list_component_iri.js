@@ -48,8 +48,6 @@ render_list_component_iri.prototype.list = async function(options) {
 		default:
 			return view_default_list_iri.render(self, options)
 	}
-
-	return null
 }//end list
 
 

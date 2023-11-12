@@ -287,8 +287,8 @@ const get_buttons = (self) => {
 
 			// const section_tipo	= select_section.value
 			// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-			const section_tipo	= target_section[0].tipo
-			const section_label	= target_section[0].label
+			const section_tipo	= target_section[0].tipo;
+			const section_label	= target_section[0].label;
 
 			// iframe
 				( () => {

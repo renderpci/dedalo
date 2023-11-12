@@ -143,7 +143,7 @@ const get_content_value = (i, datalist_item, self) => {
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
-			name			: self.id,
+			name			: self.id
 		})
 		input_label.prepend(input)
 		input.addEventListener('change', function() {

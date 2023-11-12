@@ -117,8 +117,7 @@ viewer.build = async function (content_value, options) {
 		ambient_color		: options.ambient_color || 0xFFFFFF,
 		direct_intensity	: options.direct_intensity || 0.8 * Math.PI,
 		direct_color		: options.direct_color || 0xFFFFFF,
-		bg_color			: options.bg_color || 0x191919,
-
+		bg_color			: options.bg_color || 0x191919
 	};
 
 	self.prev_time = 0;

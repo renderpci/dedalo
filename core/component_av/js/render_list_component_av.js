@@ -14,6 +14,7 @@
 	import {view_text_list_av} from './view_text_list_av.js'
 
 
+
 /**
 * RENDER_LIST_COMPONENT_AV
 * Manages the component's logic and appearance in client side
@@ -43,15 +44,13 @@ render_list_component_av.prototype.list = async function(options) {
 			return view_mini_list_av.render(self, options)
 
 		case 'text':
-			return view_text_list_av.render(self, options)
+			return view_text_list_av.render(self, options);
 
 		case 'column':
 		case 'default':
 		default:
 			return view_default_list_av.render(self, options)
 	}
-
-	return null
 }//end list
 
 

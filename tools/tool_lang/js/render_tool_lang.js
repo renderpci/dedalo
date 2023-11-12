@@ -204,7 +204,7 @@ const get_content_data_edit = async function(self) {
 			const translator_engine = (self.context.config)
 				? self.context.config.translator_engine.value
 				: false
-				console.log("translator_engine:",translator_engine, self);
+
 			if (translator_engine) {
 				const automatic_tranlation_node = build_automatic_translation(self, translator_engine, source_select_lang, target_select_lang, components_container)
 				buttons_container.appendChild(automatic_tranlation_node)

@@ -347,7 +347,7 @@ const get_quality_selector = (content_value, self) => {
 		quality_selector.addEventListener('change', (e) =>{
 			const src = e.target.value
 			// self.video.src = src
-			video.src = src
+			// video.src = src
 			// event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 

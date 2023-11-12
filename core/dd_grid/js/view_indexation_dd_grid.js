@@ -322,7 +322,7 @@ export const get_record_link_column = function(current_data) {
 
 	const button_edit = ui.create_dom_element({
 		element_type	: 'button',
-		class_name		: 'button_edit button_view_default ' + class_list,
+		class_name		: 'button_edit button_view_default ' + class_list
 	})
 	button_edit.addEventListener('click', function(e) {
 		e.stopPropagation()
