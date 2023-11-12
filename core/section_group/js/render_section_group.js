@@ -78,6 +78,12 @@ render_section_group.prototype.edit = async function(options) {
 				component_label.classList.add(...ar_css)
 
 			// collapse_toggle_track
+				const collapse = function() {
+					component_label.classList.remove('up')
+				}
+				const expose = function() {
+					component_label.classList.add('up')
+				}
 				ui.collapse_toggle_track({
 					toggler				: component_label,
 					container			: content_data,
@@ -85,12 +91,6 @@ render_section_group.prototype.edit = async function(options) {
 					collapse_callback	: collapse,
 					expose_callback		: expose
 				})
-				const collapse = function() {
-					component_label.classList.remove('up')
-				}
-				const expose = function() {
-					component_label.classList.add('up')
-				}
 
 			// add component_label
 				wrapper.appendChild(component_label)
