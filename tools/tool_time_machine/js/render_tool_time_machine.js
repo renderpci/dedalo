@@ -110,12 +110,6 @@ const get_content_data = async function(self) {
 						parent			: tool_bar
 					})
 					// selector
-					const select_lang = ui.build_select_lang({
-						langs		: self.langs,
-						selected	: self.lang,
-						class_name	: '',
-						action		: on_change_select
-					})
 					const on_change_select = function(e) {
 						const lang = e.target.value
 						if (lang!==self.lang) {
@@ -135,6 +129,12 @@ const get_content_data = async function(self) {
 							})
 						}
 					}
+					const select_lang = ui.build_select_lang({
+						langs		: self.langs,
+						selected	: self.lang,
+						class_name	: '',
+						action		: on_change_select
+					})
 					tool_bar.appendChild(select_lang)
 				}
 
