@@ -345,7 +345,8 @@ login.prototype.action_dispatch = async function(api_response) {
 					}
 				}
 				// load_finish()
-		}
+		}//end if (api_response.result===true) {
+
 
 	return true
 }//end action_dispatch

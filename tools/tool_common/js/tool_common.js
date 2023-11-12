@@ -735,52 +735,21 @@ const view_window = async function(options) {
 		const tool_window	= open_window({
 			url			: url,
 			target		: window_name,
-			features	: parsed_windowFeatures || 'new_tab'
-		})
-
-		if (is_safari()===true) {
-
-			// navigate in the same window
-			// This is because Safari logout problems on open new tabs (!)
-
-		}else{
-
-			// new tab is created
-
-			// const tool_window = window.open(url, window_name, parsed_windowFeatures)
-			// tool_window.focus();
-
-			// focus event trigger on current window. Used timeout to give time to focus tool_window
-			setTimeout(function(){
-				main_window.addEventListener('focus', fn_onfocus, true);
-				function fn_onfocus() {
-					// (!) remove listener after focus
-					main_window.removeEventListener('focus', fn_onfocus, true);
-
-					// remove window.callers pointer
-					// delete window.callers[caller.id] /* (!) TEMPORAL DEACTIVATED ! */
-
-					// render_level
+			features	: parsed_windowFeatures || 'new_tab',
+			on_blur : () => {
+				// refresh caller
+				// Note that in some situations, caller is not an instance like in grid_dd indexation button
+					if (caller && typeof caller.refresh==='function') {
 						const render_level = (caller.mode==='list')
 							? 'full'
 							: 'content'
-
-					// refresh caller.
-					// Note that in some situations, caller is not an instance like in grid_dd indexation button
-					if (caller && typeof caller.refresh==='function') {
 						caller.refresh({
 							refresh_id_base_lang	: true,
 							render_level			: render_level
 						})
 					}
-
-					// close opened window if is open
-					// if (tool_window) {
-						// tool_window.close() /* (!) TEMPORAL DEACTIVATED ! */
-					// }
-				}
-			}, 300)
-		}
+			}
+		})
 
 	// close tool_window
 		// tool_window.addEventListener('close', fn_onclose, true);

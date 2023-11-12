@@ -152,7 +152,13 @@ export const render_column_id = function(options) {
 			const new_window = open_window({
 				url			: url,
 				name		: 'record_view_' + section_id,
-				features	: features
+				features	: features,
+				on_blur : () => {
+					// refresh current instance
+					self.refresh({
+						build_autoload : true
+					})
+				}
 			})
 		});
 		button_edit.addEventListener('click', function(e){
@@ -162,7 +168,6 @@ export const render_column_id = function(options) {
 				if (e.which == 3 || e.altKey===true) {
 					return
 				}
-
 
 			// user_navigation event
 				// const user_navigation_rqo = {
@@ -901,13 +906,13 @@ export const get_buttons = (self) => {
 							url		: url,
 							name	: 'section_view',
 							width	: 1280,
-							height	: 740
-						})
-						new_window.addEventListener('blur', function() {
-							// refresh current instance
-							self.refresh({
-								build_autoload : true
-							})
+							height	: 740,
+							on_blur : () => {
+								// refresh current instance
+								self.refresh({
+									build_autoload : true
+								})
+							}
 						})
 				}//end fn_click
 				button_open_section_list.addEventListener('click', fn_click)

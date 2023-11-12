@@ -349,15 +349,15 @@ export const get_buttons = (self) => {
 							})
 							const new_window = open_window({
 								url		: url,
-								name	: 'section_view'
+								name	: 'section_view',
+								on_blur : () => {
+									// refresh current instance
+									self.refresh({
+										build_autoload : true
+									})
+								}
 							})
-							new_window.addEventListener('blur', function() {
-								// refresh current instance
-								self.refresh({
-									build_autoload : true
-								})
-							})
-					})
+					})//end click event
 			}
 		}
 

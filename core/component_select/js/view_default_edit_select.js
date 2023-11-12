@@ -209,6 +209,8 @@ const get_content_value = (i, current_value, self) => {
 			})
 			// set pointers
 			select.button_edit = button_edit
+
+			// click event
 			const fn_click = function(e) {
 				e.stopPropagation()
 
@@ -231,15 +233,15 @@ const get_content_value = (i, current_value, self) => {
 					})
 					const new_window = open_window({
 						url		: url,
-						name	: 'record_view'
+						name	: 'record_view',
+						on_blur : () => {
+							// refresh current instance
+							self.refresh({
+								build_autoload : true
+							})
+						}
 					})
-					new_window.addEventListener('blur', function() {
-						// refresh current instance
-						self.refresh({
-							build_autoload : true
-						})
-					})
-			}
+			}//end fn_click
 			button_edit.addEventListener('click', fn_click)
 
 			// hide button on no value
@@ -247,9 +249,6 @@ const get_content_value = (i, current_value, self) => {
 				button_edit.classList.add('hide')
 			}
 		}
-
-
-
 
 
 	return content_value
@@ -324,13 +323,13 @@ const get_buttons = (self) => {
 							})
 							const new_window = open_window({
 								url		: url,
-								name	: 'section_view'
-							})
-							new_window.addEventListener('blur', function() {
-								// refresh current instance
-								self.refresh({
-									build_autoload : true
-								})
+								name	: 'section_view',
+								on_blur : () => {
+									// refresh current instance
+									self.refresh({
+										build_autoload : true
+									})
+								}
 							})
 					})
 			}

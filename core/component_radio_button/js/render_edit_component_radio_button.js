@@ -298,13 +298,13 @@ export const get_buttons = (self) => {
 							})
 							const new_window = open_window({
 								url		: url,
-								name	: 'section_view'
-							})
-							new_window.addEventListener('blur', function() {
-								// refresh current instance
-								self.refresh({
-									build_autoload : true
-								})
+								name	: 'section_view',
+								on_blur : () => {
+									// refresh current instance
+									self.refresh({
+										build_autoload : true
+									})
+								}
 							})
 					})
 			}//end for (let i = 0; i < target_sections_length; i++)

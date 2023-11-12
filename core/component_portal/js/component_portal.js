@@ -1446,9 +1446,9 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 		const new_window = open_window({
 			url		: url,
-			name	: 'record_view_'+section_tipo+'_'+section_id
+			name	: 'record_view_'+section_tipo+'_'+section_id,
+			on_blur : fn_widow_blur
 		})
-		new_window.addEventListener('blur', fn_widow_blur)
 		function fn_widow_blur() {
 
 			// refresh. Get the proper element to refresh based on some criteria.
