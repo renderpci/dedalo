@@ -645,7 +645,7 @@ const view_window = async function(options) {
 	// options
 		const tool_context		= options.tool_context
 		const caller			= options.caller
-		const caller_options 	= options.caller_options || null
+		const caller_options	= options.caller_options || null
 		// const open_as		= options.open_as
 		const windowFeatures	= options.windowFeatures || null
 		// windowFeatures sample:
