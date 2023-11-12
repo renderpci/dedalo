@@ -6,7 +6,8 @@
 
 // imports
 	import {
-		strip_tags
+		strip_tags,
+		is_safari
 		// find_up_node
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -1266,7 +1267,11 @@ export const ui = {
 						parent			: tool_header
 					})
 					button_close.addEventListener('click', function(){
-						window.close();
+						if (is_safari()===true) {
+							history.back();
+						}else{
+							window.close();
+						}
 					})
 			}//end if (mode!=='mini')
 
@@ -1405,7 +1410,7 @@ export const ui = {
 				// })
 
 			// Events
-				tool_button.addEventListener('click', function(e){
+				tool_button.addEventListener('mousedown', function(e){
 					e.stopPropagation();
 
 					// open_tool (tool_common)
