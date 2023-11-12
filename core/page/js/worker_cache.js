@@ -242,7 +242,8 @@ data_manager.request = async function(options) {
 						switch (result.error) {
 							case 'not_logged':
 								// redirect to login page
-								location.reload();
+								// location.reload();
+								console.warn('Result error. no logged!', result);
 								break;
 
 							default:
