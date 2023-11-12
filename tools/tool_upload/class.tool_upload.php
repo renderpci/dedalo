@@ -49,7 +49,7 @@ class tool_upload extends tool_common {
 							NULL,
 							[
 								'msg'			=> 'Upload file complete. Processing uploaded file',
-								'file_data'		=> json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+								'file_data'		=> json_encode($file_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
 								// 'file_name'	=> $file_data->name,
 								// 'file_size'	=> format_size_units($file_data->size),
 								// 'time_sec'	=> $file_data->time_sec,
@@ -89,7 +89,7 @@ class tool_upload extends tool_common {
 						$default_quality	= $component->get_default_quality();
 						$preview_url		= $component->get_preview_url($default_quality);
 
-					// response ok
+					// response OK
 						$response->result		= true;
 						$response->msg			= 'OK. File processed successfully';
 						$response->preview_url	= $preview_url;
@@ -97,7 +97,11 @@ class tool_upload extends tool_common {
 					break;
 
 				default:
-					debug_log(__METHOD__." Error on process uploaded file. No target or manager received. options: ".to_string($options), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on process uploaded file. No target or manager received. options: " . PHP_EOL
+						.to_string($options)
+						, logger::ERROR
+					);
 					$response->msg .= "Error on get/move to target_dir. ".to_string($target_dir->value);
 					break;
 			}//end switch (true)
