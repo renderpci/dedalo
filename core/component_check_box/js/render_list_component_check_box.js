@@ -40,14 +40,12 @@ render_list_component_check_box.prototype.list = async function(options) {
 			return view_mini_list_check_box.render(self, options)
 
 		case 'text':
-			return view_text_list_check_box.render(self, options)
+			return view_text_list_check_box.render(self, options);
 
 		case 'default':
 		default:
 			return view_default_list_check_box.render(self, options)
 	}
-
-	return null
 }//end list
 
 

@@ -216,7 +216,7 @@ export const render_reference = async function(options) {
 		const modal = ui.attach_to_modal({
 			header	: header,
 			body	: body,
-			footer	: footer,
+			footer	: footer
 			// size	: 'small' // string size big|normal
 		})
 		// when the modal is closed the section instance of the note need to be destroyed with all events and components

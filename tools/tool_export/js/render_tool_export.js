@@ -157,12 +157,12 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// records info
-			const records_info = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'records_info',
 				parent			: export_buttons_config
 			})
-			const section_label = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'section_label',
 				inner_html		: self.caller.label,

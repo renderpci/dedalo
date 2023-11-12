@@ -364,7 +364,7 @@ export const upload = async function(options) {
 						total_chunks	: total_chunks,
 						start			: start,
 						end				: end,
-						file_size		: file_size,
+						file_size		: file_size
 					});
 
 					start += chunk_size;

@@ -610,7 +610,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 			manager_editor	: true,
 			options	: {
 				tooltip	: 'Add reference',
-				image	: '../../core/themes/default/icons/link.svg',
+				image	: '../../core/themes/default/icons/link.svg'
 			}
 		})
 
@@ -1128,7 +1128,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'span',
-			class_name 		: 'body',
+			class_name		: 'body'
 		})
 
 		const label = eval('`'+get_label.choose_page_between+'`')

@@ -476,7 +476,7 @@ export const render_ts_list = function(options) {
 				element_type	: 'div',
 				class_name		: 'data_container',
 				data_set		: {role : 'data_container'},
-				parent			: wrap_ts_object,
+				parent			: wrap_ts_object
 			})
 
 		// INDEXATIONS CONTAINER
@@ -485,7 +485,7 @@ export const render_ts_list = function(options) {
 				element_type	: 'div',
 				id				: indexations_container_id,
 				class_name		: 'indexations_container',
-				parent			: wrap_ts_object,
+				parent			: wrap_ts_object
 			})
 
 		// ND CONTAINER
@@ -494,7 +494,7 @@ export const render_ts_list = function(options) {
 					element_type	: 'div',
 					class_name		: 'nd_container',
 					data_set		: {role : 'nd_container'},
-					parent			: wrap_ts_object,
+					parent			: wrap_ts_object
 				})
 			}
 
@@ -510,7 +510,7 @@ export const render_ts_list = function(options) {
 						role		:'children_container',
 						section_id	: ar_children_data[i].section_id
 					},
-					parent			: wrap_ts_object,
+					parent			: wrap_ts_object
 				})
 				// Fix current main_div
 				// Important. Fix global var self.current_main_div used by search to parse results

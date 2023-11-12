@@ -61,8 +61,8 @@ const get_content_data_edit = async function(self) {
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'components_container',
-			parent 			: fragment
+			class_name		: 'components_container',
+			parent			: fragment
 		})
 
 	// get the component_iri data
@@ -76,9 +76,9 @@ const get_content_data_edit = async function(self) {
 
 		const default_lang_of_file_to_import = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'default_lang',
-			inner_html 		: get_label.default_lang_of_file_to_import || 'Default language of the file to import. Data without specified language will be imported in:',
-			parent 			: components_container
+			class_name		: 'default_lang',
+			inner_html		: get_label.default_lang_of_file_to_import || 'Default language of the file to import. Data without specified language will be imported in:',
+			parent			: components_container
 		})
 
 
@@ -107,8 +107,8 @@ const get_content_data_edit = async function(self) {
 	// buttons container
 		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'buttons_container',
-			parent 			: components_container
+			class_name		: 'buttons_container',
+			parent			: components_container
 		})
 
 		const btn_validate = ui.create_dom_element({
@@ -125,7 +125,7 @@ const get_content_data_edit = async function(self) {
 		})
 
 		// when user click the button do the import of the data.
-		btn_validate.addEventListener('click',()=>{
+		btn_validate.addEventListener('click', ()=>{
 				const component_data_value = iri_node.querySelectorAll('.component_data:checked')
 
 				const spinner = ui.create_dom_element({
@@ -160,8 +160,7 @@ const get_content_data_edit = async function(self) {
 								view_rdf_data_wrapper.innerHTML = response.result[i].ar_rdf_html
 
 								// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
-
-								view_dd_data_wrapper.appendChild(node)
+								// view_dd_data_wrapper.appendChild(node)
 							}
 
 							// update list
@@ -171,7 +170,6 @@ const get_content_data_edit = async function(self) {
 				}else{
 					// spinner.remove()
 				}
-
 			})
 
 	// content_data
@@ -203,22 +201,23 @@ const render_component_dato = function(self) {
 		const current_component = component_data[i]
 
 		const radio_label = ui.create_dom_element({
-						element_type	: 'label',
-						class_name		: 'component_data_label',
-						inner_html		: current_component.iri,
-						parent 			: source_component_container
+			element_type	: 'label',
+			class_name		: 'component_data_label',
+			inner_html		: current_component.iri,
+			parent			: source_component_container
 		})
 
 		const radio_input = ui.create_dom_element({
-						element_type	: 'input',
-						type 			: 'radio',
-						class_name		: 'component_data',
-						name			: 'radio_selector',
-						value 			: current_component.iri,
+			element_type	: 'input',
+			type			: 'radio',
+			class_name		: 'component_data',
+			name			: 'radio_selector',
+			value			: current_component.iri
 		})
 
 		radio_label.prepend(radio_input)
 	}
+
 
 	return source_component_container
 }//end render_component_dato

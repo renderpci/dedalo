@@ -44,7 +44,7 @@ render_edit_component_password.prototype.edit = async function(options) {
 			// sample: <div class="wrapper_component component_input_text oh14 oh1_oh14 edit view_print disabled_component">...</div>
 			// take account that to change the css when the component will render in print context
 			// for print we need to use read of the content_value and it's necessary force permissions to use read only element render
-			self.permissions = 1
+			self.permissions = 1;
 
 		case 'line':
 		case 'default':

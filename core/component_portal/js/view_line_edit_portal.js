@@ -72,8 +72,8 @@ view_line_edit_portal.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			buttons			: buttons,
-			// label			: null
+			buttons			: buttons
+			// label		: null
 		})
 		wrapper.classList.add('portal')
 		// set pointers
@@ -105,7 +105,7 @@ view_line_edit_portal.render = async function(self, options) {
 			const change_mode = 'list'
 
 			const change_view = 'line'
-			
+
 			// if the test get the component inside the main section do not perform the change mode
 			if(need_change_mode === true){
 				self.change_mode({
@@ -271,7 +271,7 @@ view_line_edit_portal.render_column_id = function(options) {
 			// edit_record_handler
 			self.edit_record_handler({
 				section_tipo	: section_tipo,
-				section_id		: section_id,
+				section_id		: section_id
 			})
 		})
 

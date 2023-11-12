@@ -51,8 +51,6 @@ render_list_component_number.prototype.list = async function(options) {
 		default:
 			return view_default_list_number.render(self, options)
 	}
-
-	return null
 }//end list
 
 

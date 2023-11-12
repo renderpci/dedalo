@@ -1361,8 +1361,8 @@ export const ts_object = new function() {
 			const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
 
 		// get the children nodes of data_contanier
-			const all_element_data_div 	   = element_data_contanier.children // childNodes;
-			const all_element_data_div_len = all_element_data_div.length
+			const all_element_data_div		= element_data_contanier.children // childNodes;
+			const all_element_data_div_len	= all_element_data_div.length
 
 
 		if (all_element_data_div_len > 0) { // if the data element is not empty

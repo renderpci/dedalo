@@ -245,8 +245,8 @@ const build_id_column = function(self) {
 								limit				: 1,
 								offset				: offset,
 								filter_by_locators	: [{
-									section_tipo : self.section_tipo,
-									section_id : self.section_id,
+									section_tipo	: self.section_tipo,
+									section_id		: self.section_id
 								}]
 							}
 						}

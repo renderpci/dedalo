@@ -266,7 +266,7 @@ export const service_ckeditor = function() {
 								// toolbar.maxWidth = width
 								// set styles
 								Object.assign(ck_toolbar.style, {
-									width		: width + 'px',
+									width		: width + 'px'
 									// maxWidth	: width + 'px'
 								});
 							}

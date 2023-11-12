@@ -188,14 +188,14 @@ component_json.prototype.save_sequence = async function(editor) {
 			try {
 				v = clone(current_value)
 			}catch(e) {
-				console.warn('Error. JSON value is invalid!',);
+				console.warn('Error. JSON value is invalid!', current_value);
 			}
 
 			if (!v) {
 				// styles as error
 					self.node.classList.add('error')
 
-				alert('Error: component_json. Trying so save non validated json value!');
+				alert('Error: component_json. Trying so save non validated JSON value!');
 				return false
 			}
 		}

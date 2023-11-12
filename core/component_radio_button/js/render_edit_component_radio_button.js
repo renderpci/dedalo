@@ -41,7 +41,6 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 
 		case 'line':
 			return view_line_edit_radio_button.render(self, options)
-			break;
 
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value

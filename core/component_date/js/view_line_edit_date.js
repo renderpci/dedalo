@@ -11,7 +11,7 @@
 		input_element_date,
 		input_element_range,
 		input_element_period,
-		input_element_time,
+		input_element_time
 		// get_input_date_node
 	} from './render_edit_component_date.js'
 
