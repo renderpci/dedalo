@@ -85,10 +85,10 @@ render_section_group.prototype.edit = async function(options) {
 					collapse_callback	: collapse,
 					expose_callback		: expose
 				})
-				function collapse() {
+				const collapse = function() {
 					component_label.classList.remove('up')
 				}
-				function expose() {
+				const expose = function() {
 					component_label.classList.add('up')
 				}
 

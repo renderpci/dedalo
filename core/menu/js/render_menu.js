@@ -8,10 +8,11 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import * as menu_tree from './render_menu_tree.js'
-	import * as menu_mobile from './render_menu_mobile.js'
 	// import {clone} from '../../common/js/utils/index.js'
 	// import {instances} from '../../common/js/instances.js'
+	import {open_tool} from '../../tools/tool_common/js/tool_common.js'
+	import * as menu_tree from './render_menu_tree.js'
+	import * as menu_mobile from './render_menu_mobile.js'
 
 
 
@@ -95,12 +96,12 @@ render_menu.prototype.edit = async function() {
 					})
 					// insert after toggle_inspector
 					toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, toggle_inspector.nextSibling);
-					event_manager.subscribe('user_navigation', fn_user_navigation)
-					function fn_user_navigation(e) {
+					const fn_user_navigation = function(e) {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
 						}
 					}
+					event_manager.subscribe('user_navigation', fn_user_navigation)
 				}else{
 					menu_mobile_wrapper.classList.toggle('hide')
 				}
@@ -128,8 +129,7 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		if (username!=='root') {
-			logged_user_name.addEventListener('click', self.open_tool_user_admin_handler.bind(self))
-			function fn_open_tool(e) {
+			const fn_open_tool = function(e) {
 				e.stopPropagation();
 
 				// tool_user_admin Get the user_admin tool to be fired
@@ -145,6 +145,7 @@ render_menu.prototype.edit = async function() {
 						caller			: self
 					})
 			}//end fn_open_tool
+			logged_user_name.addEventListener('click', self.open_tool_user_admin_handler.bind(self))
 		}
 
 	// application lang selector

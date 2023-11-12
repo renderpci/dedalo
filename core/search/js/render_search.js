@@ -1021,8 +1021,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					check_box.checked = true
 				}
 				label.prepend(check_box)
-				check_box.addEventListener('change', fn_change)
-				function fn_change() {
+				const fn_change = function() {
 					// update checked states in all elements
 					ar_check_box.map(el => {
 						el.checked = this.checked
@@ -1030,6 +1029,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 					// fire update_sections_list
 					update_sections_list()
 				}
+				check_box.addEventListener('change', fn_change)
 		}//end if (ar_check_box.length>1)
 
 	// update sections components list (left)

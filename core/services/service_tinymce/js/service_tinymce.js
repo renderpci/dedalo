@@ -653,7 +653,7 @@ export const service_tinymce = function() {
 		// get all tags of type
 			switch(tag_type) {
 
-				case 'reference':
+				case 'reference': {
 					// reference : Select all reference in text
 					const ar_tags = container.getElementsByTagName('reference')
 
@@ -673,8 +673,9 @@ export const service_tinymce = function() {
 						ar_id_final.push(number)
 					}
 					break;
+				}
 
-				default:
+				default: {
 					// like img as id: [index-n-1--label-data:**]
 					const ar_img = container.querySelectorAll('img.'+tag_type)
 
@@ -693,6 +694,7 @@ export const service_tinymce = function() {
 							ar_id_final.push(number)
 					}
 					break;
+				}
 			}
 
 		// last id

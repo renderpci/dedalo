@@ -88,8 +88,7 @@ export const get_content_data = function(self) {
 		if (file_info) {
 
 			// open viewer on click
-				content_data.addEventListener('mouseup', fn_mouseup)
-				function fn_mouseup(e) {
+				const fn_mouseup = function(e) {
 					e.stopPropagation();
 					// open a new window
 					const url_vars = {
@@ -104,11 +103,11 @@ export const get_content_data = function(self) {
 					const current_window	= window.open(url, 'threeD_viewer', 'width=1024,height=720')
 					current_window.focus()
 				}//end fn_mouseup
+				content_data.addEventListener('mouseup', fn_mouseup)
 		}else{
 
 			// open tool upload on click
-				content_data.addEventListener('mouseup', fn_open_tool)
-				function fn_open_tool(e) {
+				const fn_open_tool = function(e) {
 					e.stopPropagation();
 
 					// get the tool context to be opened
@@ -120,6 +119,7 @@ export const get_content_data = function(self) {
 							caller			: self
 						})
 				}//end fn_open_tool
+				content_data.addEventListener('mouseup', fn_open_tool)
 		}
 
 

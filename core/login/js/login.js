@@ -321,7 +321,7 @@ login.prototype.action_dispatch = async function(api_response) {
 				// load_finish()
 
 			// triggered by render_files_loader when worker finish to load all files
-			function load_finish() {
+			const load_finish = function() {
 				// result_options is defined when the user is root or developer and the tools are not loaded
 				// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 				if (api_response.result_options && api_response.result_options.redirect) {

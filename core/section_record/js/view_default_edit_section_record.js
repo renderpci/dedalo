@@ -59,8 +59,7 @@ view_default_edit_section_record.render = async function(self, options) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			wrapper.addEventListener('click', fn_click_debug)
-			function fn_click_debug(e){
+			const fn_click_debug = function(e) {
 				e.stopPropagation()
 				if (e.altKey) {
 					e.stopPropagation()
@@ -69,6 +68,7 @@ view_default_edit_section_record.render = async function(self, options) {
 					console.log("/// selected instance:", self);
 				}
 			}//end fn_click_debug
+			wrapper.addEventListener('click', fn_click_debug)
 			// wrapper.classList.add('_'+self.id)
 		}
 

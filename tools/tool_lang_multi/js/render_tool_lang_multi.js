@@ -192,8 +192,7 @@ export const create_target_component = (lang, self) => {
 									title			: get_label.traduccion_automatica || 'Automatic translation',
 									parent			: buttons_fold
 								})
-								button_translate.addEventListener('click', fn_click)
-								function fn_click(e){
+								const fn_click = function(e) {
 									e.stopPropagation()
 
 									// non empty value cases generates a confirm dialog
@@ -216,6 +215,7 @@ export const create_target_component = (lang, self) => {
 										target_component_container.classList.remove('loading')
 									})
 								}//end fn_click
+								button_translate.addEventListener('click', fn_click)
 							}
 						}//end translator_engine
 

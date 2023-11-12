@@ -174,12 +174,12 @@ const get_content_data = async function(self, ar_section_record) {
 				inner_html		: get_label.remove_filter || 'Remove filter',
 				parent			: list_footer
 			})
-			button_remove_filter.addEventListener('click', fn_click)
-			function fn_click(e) {
+			const fn_click = function(e) {
 				e.stopPropagation()
 				// reset filter
 				self.reset_filter_data()
 			}
+			button_remove_filter.addEventListener('click', fn_click)
 		}
 
 	// content_data
