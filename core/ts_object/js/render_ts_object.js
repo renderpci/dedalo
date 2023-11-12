@@ -10,7 +10,6 @@
 
 
 
-
 /**
 * RENDER_TS_LINE
 * Render standard complete ts line with term ans buttons
@@ -332,7 +331,8 @@ export const render_ts_pagination = function(options) {
 			// render children
 				ts_object.get_children(
 					children_element,
-					pagination
+					pagination, // object|null pagination
+					false // bool clean_children_container
 				)
 				.then(function(response){
 					button_show_more.remove()
@@ -619,7 +619,11 @@ export const render_ts_list = function(options) {
 														}
 
 												// refresh children container
-													self.get_children(children_element)
+													self.get_children(
+														children_element,
+														null, // object|null pagination
+														true // bool clean_children_container
+													)
 													.then(function(){
 														// Open editor in new window
 														self.edit(button_obj, null, new_section_id, section_tipo)
