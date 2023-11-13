@@ -364,13 +364,15 @@ class DDModal extends HTMLElement {
 		}
 	}
 	_hideModal(e) {
-		e.stopPropagation();
+
 		// force close always
 		if (e.target.matches('.close_modal')) {
+			e.stopPropagation();
 			this.mini = false
 		}
 		// only click over base modal or button close are accepted
 		if (e.target.matches('.modal') || e.target.matches('.close_modal')) {
+			e.stopPropagation();
 			this._closeModal()
 		}
 	}
