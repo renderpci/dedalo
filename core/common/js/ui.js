@@ -7,7 +7,7 @@
 // imports
 	import {
 		strip_tags,
-		is_safari
+		prevent_open_new_window
 		// find_up_node
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -1285,7 +1285,7 @@ export const ui = {
 						parent			: tool_header
 					})
 					button_close.addEventListener('click', function(){
-						if (is_safari()===true) {
+						if (prevent_open_new_window()===true) {
 							history.back();
 						}else{
 							window.close();

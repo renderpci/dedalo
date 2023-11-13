@@ -517,7 +517,7 @@ export function open_window(options) {
 		})()
 
 	// window
-		if (is_safari()===true && url.indexOf('tool=')!==-1) {
+		if (prevent_open_new_window()===true && url.indexOf('tool=')!==-1) {
 
 			// Prevent Safari logout problems on open new tabs for tools (!)
 			window.location = url
@@ -551,14 +551,14 @@ export function open_window(options) {
 
 
 /**
-* IS_SAFARI
+* PREVENT_OPEN_NEW_WINDOW
 * Check browser navigator.userAgent for detect Safari
 * @return bool
 */
-export function is_safari(options) {
-
-	return (navigator.userAgent.indexOf('Safari')!==-1 && navigator.userAgent.indexOf('Chrome')===-1)
-}//end is_safari
+export function prevent_open_new_window(options) {
+	return false
+	// return (navigator.userAgent.indexOf('Safari')!==-1 && navigator.userAgent.indexOf('Chrome')===-1)
+}//end prevent_open_new_window
 
 
 
