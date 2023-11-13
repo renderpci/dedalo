@@ -1363,4 +1363,54 @@ export const save_unsaved_components = async function() {
 
 
 
+/**
+* DEACTIVATE_COMPONENTS
+* Called from document and from section in edit mode
+* @see view_default_edit_section->render
+*/
+export const deactivate_components = function(e) {
+	e.stopPropagation()
+
+	console.warn('called deactivate_components:', e);
+
+	// click on scrollbar case: capture event
+		const is_descendant_of_root = (e.target.parentElement !== null);
+		if (is_descendant_of_root===false) {
+			return
+		}
+
+	if (page_globals.component_active) {
+
+		const component_instance = page_globals.component_active
+
+		// lock_component. launch worker
+			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: component_instance.tipo,
+							section_tipo	: component_instance.section_tipo,
+							section_id		: component_instance.section_id,
+							action			: 'blur' // delete_user_section_locks | blur | focus
+						}
+					}
+				})
+			}
+
+		// deactivate
+			ui.component.deactivate(component_instance)
+	}else{
+
+		// unsaved_data case
+		// This allow catch page mousedown event (outside any component) and check for unsaved components
+		// usually happens in component_text_area editions because the delay (500 ms) to set as changed
+			check_unsaved_data()
+	}
+}//end deactivate_components
+
+
+
 // @license-end
