@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
-	import {url_vars_to_object} from '../../common/js/utils/index.js'
+	import {url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
@@ -1010,7 +1010,12 @@ export const ts_object = new function() {
 			}
 
 		// url
-			const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=false'
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+				tipo			: section_tipo,
+				id				: section_id,
+				session_save	: false,
+				menu			: false
+			})
 
 		// window managing
 			if(ts_object.edit_window===null || ts_object.edit_window.closed) { //  || edit_window.location.href!=url || ts_object.edit_window.closed
