@@ -76,17 +76,20 @@ view_default_list_pdf.render = async function(self, options) {
 			}else{
 
 				// open a new window
-					const url_vars = {
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 						tipo			: self.tipo,
 						section_tipo	: self.section_tipo,
 						id				: self.section_id,
 						mode			: 'edit',
 						view			: 'viewer',
 						menu			: false
-					}
-					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, 'pdf_viewer', 'width=1024,height=800')
-					current_window.focus()
+					})
+					open_window({
+						url		: url,
+						target	: 'viewer',
+						width	: 1024,
+						height	: 800
+					})
 			}
 		})
 

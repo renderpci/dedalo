@@ -8,7 +8,7 @@
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {object_to_url_vars, download_file} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window, download_file} from '../../common/js/utils/index.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
@@ -332,7 +332,7 @@ export const open_av_player = async function(options) {
 		const tc_out_secs		= options.tc_out_secs ?? null // as seconds
 
 	// open new window. Let page collect url params and create a new instance of component_av
-		const url_vars = {
+		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 			tipo			: component_tipo,
 			section_tipo	: section_tipo,
 			id				: section_id,
@@ -341,10 +341,13 @@ export const open_av_player = async function(options) {
 			menu			: false,
 			tc_in			: tc_in_secs,
 			tc_out			: tc_out_secs
-		}
-		const url			= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-		const new_window	= window.open(url, 'av_viewer', 'width=1024,height=860')
-		new_window.focus()
+		})
+		open_window({
+			url		: url,
+			target	: 'viewer',
+			width	: 1024,
+			height	: 860
+		})
 
 
 	return true

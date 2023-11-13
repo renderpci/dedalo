@@ -8,7 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 
 
 
@@ -121,23 +121,27 @@ export const get_content_data = function(self) {
 			}else{
 
 				// open a new window
-					const url_vars = {
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 						tipo			: self.tipo,
 						section_tipo	: self.section_tipo,
 						id				: self.section_id,
 						mode			: 'edit',
 						view			: 'viewer',
 						menu			: false
-					}
-					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, 'threeD_viewer', 'width=1024,height=720')
-					current_window.focus()
+					})
+					open_window({
+						url		: url,
+						target	: 'viewer',
+						width	: 1024,
+						height	: 720
+					})
 			}
 		}//end fn_mouseup
 
 
 	return content_data
 }//end get_content_data
+
 
 
 // @license-end

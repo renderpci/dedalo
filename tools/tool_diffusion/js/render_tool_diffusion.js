@@ -383,15 +383,14 @@ export const render_publication_items = function(self) {
 						ar_fields_nodes.push(related_item)
 						related_item.addEventListener('click', function(e) {
 							e.stopPropagation()
-							const url_vars		= {
+							const url = DEDALO_CORE_URL + '/ontology/dd_list.php?' + object_to_url_vars({
 								modo			: 'tesauro_edit',
 								terminoID		: item.tipo,
 								terminoIDlist	: item.tipo,
 								n				: 1,
 								total			: 'form',
 								max				: 1
-							}
-							const url			= DEDALO_CORE_URL + '/ontology/dd_list.php?' + object_to_url_vars(url_vars)
+							})
 							const window_width	= 1001
 							const screen_width	= window.screen.width
 							const screen_height	= window.screen.height

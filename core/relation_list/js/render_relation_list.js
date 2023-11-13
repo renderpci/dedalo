@@ -388,7 +388,7 @@ const edit_relation = function(current_data) {
 			mode	: 'edit',
 			menu	: false
 		})
-		const new_window = open_window({
+		open_window({
 			url		: url,
 			name	: 'section_view'
 		})
