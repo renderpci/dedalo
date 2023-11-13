@@ -15,8 +15,7 @@
 		clone,
 		dd_console,
 		printf,
-		open_window,
-		is_safari
+		open_window
 		// object_to_url_vars,
 		// url_vars_to_object,
 		// JSON_parse_safely,
