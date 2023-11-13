@@ -832,7 +832,7 @@ export const get_buttons = (self) => {
 								class_name		: 'header_custom'
 							})
 							// header label
-							const header = ui.create_dom_element({
+							ui.create_dom_element({
 								element_type	: 'span',
 								inner_html		: get_label.section,
 								class_name		: 'label',

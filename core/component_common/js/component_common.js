@@ -1371,8 +1371,6 @@ export const save_unsaved_components = async function() {
 export const deactivate_components = function(e) {
 	e.stopPropagation()
 
-	console.warn('called deactivate_components:', e);
-
 	// click on scrollbar case: capture event
 		const is_descendant_of_root = (e.target.parentElement !== null);
 		if (is_descendant_of_root===false) {

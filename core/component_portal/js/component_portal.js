@@ -1467,7 +1467,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 						destroy			: false,
 						build_autoload	: true
 					})
-					.then(function(response){
+					.then(function(){
 						// fire window_bur event
 						event_manager.publish('window_bur_'+self.id, self)
 					})

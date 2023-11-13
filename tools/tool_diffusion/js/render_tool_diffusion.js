@@ -425,7 +425,7 @@ export const render_publication_items = function(self) {
 				}
 
 			// connection_status
-				const connection_status_label = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: get_label.connection_status || 'Connection status',
 					class_name		: 'label',
