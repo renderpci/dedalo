@@ -28,6 +28,8 @@ export const view_default_list_text_area = function() {
 /**
 * RENDER
 * Render node for use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_text_area.render = async function(self, options) {
