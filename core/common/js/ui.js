@@ -12,7 +12,7 @@
 	} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	// import {get_instance, delete_instance} from '../../common/js/instances.js'
@@ -2278,6 +2278,9 @@ export const ui = {
 					on_close()
 				}
 			}
+
+		// modal_container mousedown event
+			modal_container.addEventListener('mousedown', deactivate_components)
 
 
 		return modal_container
