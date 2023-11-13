@@ -1890,6 +1890,23 @@ export const service_ckeditor = function() {
 
 
 	/**
+	* FOCUS
+	* Focus editor and set pointer to the end of text
+	* @return void
+	*/
+	this.focus = function() {
+
+		const editorInstance = this.editor
+
+		editorInstance.model.change( writer => {
+		    writer.setSelection( writer.createPositionAt( editorInstance.model.document.getRoot(), 'end' ));
+		    editorInstance.editing.view.focus();
+		});
+	}//end focus
+
+
+
+	/**
 	* DESTROY
 	* @return void
 	*/
