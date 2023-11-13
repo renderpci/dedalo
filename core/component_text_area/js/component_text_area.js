@@ -1317,4 +1317,32 @@ component_text_area.prototype.change_lang = async function(lang, n_try=1) {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Allow focus editor area from service
+* @return bool
+*/
+component_text_area.prototype.focus_first_input = function() {
+
+	const self = this
+
+	const service = self.text_editor[0] ?? null
+	if (service) {
+
+		service.focus()
+
+	}else{
+
+		event_manager.subscribe('editor_ready_' + self.id, function(service){
+			service.focus()
+		})
+	}
+
+
+	return true
+}//end focus_first_input
+
+
+
+
 // @license-end
