@@ -742,6 +742,24 @@ export const ui = {
 					}
 				}
 
+			// try to focus first input
+				if (typeof component.focus_first_input==='function') {
+					// custom function from component like component_text_area
+					component.focus_first_input()
+				}else{
+					// generic try of first input node
+					const first_input = component.node.content_data && component.node.content_data[0]
+						? component.node.content_data[0].querySelector('input, select')
+						: null;
+					if (first_input) {
+						setTimeout(function(){
+							if (component.active) {
+								first_input.focus()
+							}
+						}, 25)
+					}
+				}
+
 			// component active status
 				component.active = true
 
@@ -2137,7 +2155,8 @@ export const ui = {
 			const size				= options.size || 'normal' // string size='normal'
 			const modal_parent		= options.modal_parent || document.querySelector('.wrapper.page') || document.body
 			const remove_overlay	= options.remove_overlay || false
-			const minimizable 		= options.minimizable ?? true
+			const minimizable		= options.minimizable ?? true
+			const on_close			= options.on_close || null
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2254,6 +2273,10 @@ export const ui = {
 		// remove on close
 			modal_container.on_close = () => {
 				modal_container.remove()
+				if (typeof on_close==='function') {
+					// exec callback
+					on_close()
+				}
 			}
 
 
