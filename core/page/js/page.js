@@ -9,7 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {common, push_browser_history} from '../../common/js/common.js'
-	import {check_unsaved_data} from '../../component_common/js/component_common.js'
+	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -609,56 +609,8 @@ page.prototype.add_events = function() {
 		}//end fn_keydown
 
 	// page click/mousedown
-		document.addEventListener('mousedown', self.deactivate_components)
+		document.addEventListener('mousedown', deactivate_components)
 }//end add_events
-
-
-
-/**
-* DEACTIVATE_COMPONENTS
-* Called from document and from section in edit mode
-* @see view_default_edit_section->render
-*/
-page.prototype.deactivate_components = function(e) {
-	e.stopPropagation()
-
-	// click on scrollbar case: capture event
-		const is_descendant_of_root = (e.target.parentElement !== null);
-		if (is_descendant_of_root===false) {
-			return
-		}
-
-	if (page_globals.component_active) {
-
-		const component_instance = page_globals.component_active
-
-		// lock_component. launch worker
-			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
-				data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api	: 'dd_utils_api',
-						action	: 'update_lock_components_state',
-						options	: {
-							component_tipo	: component_instance.tipo,
-							section_tipo	: component_instance.section_tipo,
-							section_id		: component_instance.section_id,
-							action			: 'blur' // delete_user_section_locks | blur | focus
-						}
-					}
-				})
-			}
-
-		// deactivate
-			ui.component.deactivate(component_instance)
-	}else{
-
-		// unsaved_data case
-		// This allow catch page mousedown event (outside any component) and check for unsaved components
-		// usually happens in component_text_area editions because the delay (500 ms) to set as changed
-			check_unsaved_data()
-	}
-}//end deactivate_components
 
 
 
