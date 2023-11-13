@@ -688,11 +688,12 @@ export const service_ckeditor = function() {
 	}//end onsetup_editor
 
 
+
 	/**
 	* SETUP_button_reference
 	* callback when ckeditor is ready
 	* Capture the event fired in the editor and callback to the caller to be processed. See render_edit_component_text_area.js
-	* @return true
+	* @return bool
 	*/
 	this.setup_button_reference = function() {
 
@@ -725,18 +726,21 @@ export const service_ckeditor = function() {
 				i			: key,
 				tag			: tag
 			})
-		} );
+		});
 
+
+		return true
 	}//end setup_button_reference
 
 
 
 	/**
 	* SET_CONTENT
-	* get the tag parameters and create the node of the dom using the ckeditor tools
+	* get the tag parameters and create the node of the DOM using the ckeditor tools
 	* insert the node in the caret position
 	* @param tag_obj
-	* Tag object with all parameters for create a view node in dom
+	* Tag object with all parameters for create a view node in DOM
+	* @return bool
 	*/
 	this.set_content = function(tag_obj) {
 
@@ -855,7 +859,6 @@ export const service_ckeditor = function() {
 
 
 
-
 	/**
 	* GET_EDITOR_CONTENT_DATA
 	* get the full data of the editor in html format to be saved
@@ -909,8 +912,9 @@ export const service_ckeditor = function() {
 		const selection = editor.data.stringify(content)
 
 		// const collapse = editor.model.document.selection.isCollapsed
-		return selection
 
+
+		return selection
 	}//end get_selection
 
 
@@ -922,7 +926,7 @@ export const service_ckeditor = function() {
 	* object with the definition of the in tag options
 	* @param tag_obj_out
 	* object with the definition of the out tag options
-	* @return bool true
+	* @return bool
 	*/
 	this.wrap_selection_with_tags = function(tag_obj_in, tag_obj_out) {
 
@@ -960,6 +964,7 @@ export const service_ckeditor = function() {
 
 		editor.editing.view.focus();
 		self.is_dirty = false;
+
 
 		return true
 	}//end wrap_selection_with_tags
@@ -1047,8 +1052,8 @@ export const service_ckeditor = function() {
 	 */
 	this.scroll_to_selection = function() {
 
-		const self 	 = this
-		const editor = self.editor
+		const self		= this
+		const editor	= self.editor
 
 		const selection	= editor.editing.view.document.selection;
 		const range		= selection.getFirstRange()
@@ -1065,9 +1070,9 @@ export const service_ckeditor = function() {
 
 	/**
 	* GET_VIEW_TAG
-	* @param tag_obj
-	* Tag object with all parameters for search the tag inside the model structure of ckeditor
-	* @return
+	* @param obj tag_obj
+	* 	Tag object with all parameters for search the tag inside the model structure of ckeditor
+	* @return bool
 	*/
 	this.get_view_tag = function(tag_obj) {
 
@@ -1118,6 +1123,7 @@ export const service_ckeditor = function() {
 				}
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
+
 		return false
 	}//end get_pair_tag
 
@@ -1127,9 +1133,9 @@ export const service_ckeditor = function() {
 	* GET_VIEW_TAG_NODE
 	* Get the DOM element of the tag
 	* If the tag is a index the DOM element will be the span (it context the img node as child)
-	* @param tag_obj
+	* @param object tag_obj
 	* Tag object with 'type' and 'tag_id' parameters for search the tag inside the model structure of ckeditor
-	* @return DOM node | tag_node
+	* @return HTMLElement tag_node
 	*/
 	this.get_view_tag_node = function(tag_obj) {
 
@@ -1147,8 +1153,9 @@ export const service_ckeditor = function() {
 				type	: type,
 				tag_id	: tag_id.toString()
 			})
-		// get the dom node of the view_tag, it will be the span node with the img node
+		// get the DOM node of the view_tag, it will be the span node with the img node
 			const tag_node = editor.editing.view.domConverter.mapViewToDom(view_tag)
+
 
 		return tag_node
 	}//end get_view_tag_node
@@ -1642,7 +1649,7 @@ export const service_ckeditor = function() {
 	* a linked widget is selected.
 	*
 	* @private
-	* @returns {module:engine/view/attributeelement~AttributeElement|null}
+	* @return {module:engine/view/attributeelement~AttributeElement|null}
 	*/
 	this.get_selected_reference_element = function() {
 
@@ -1722,7 +1729,7 @@ export const service_ckeditor = function() {
 	* Returns `true` if a given view node is the reference element.
 	*
 	* @param {module:engine/view/node~Node} node
-	* @returns bool
+	* @return bool
 	*/
 	this.find_reference_element_ancestor = function ( position ) {
 
@@ -1917,6 +1924,10 @@ export const service_ckeditor = function() {
 			console.error( error );
 		});
 	}//end destroy
+
+
+
+
 
 
 

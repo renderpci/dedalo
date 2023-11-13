@@ -43,6 +43,7 @@ view_text_list_text_area.render = async function(self, options) {
 		const wrapper = document.createElement('span')
 		wrapper.insertAdjacentHTML('afterbegin', value_string)
 
+
 	return wrapper
 }//end render
 
