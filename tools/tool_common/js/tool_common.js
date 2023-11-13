@@ -737,19 +737,27 @@ const view_window = async function(options) {
 			target		: window_name,
 			features	: parsed_windowFeatures || 'new_tab',
 			on_blur : () => {
-				// refresh caller
-				// Note that in some situations, caller is not an instance like in grid_dd indexation button
-					if (caller && typeof caller.refresh==='function') {
-						const render_level = (caller.mode==='list')
-							? 'full'
-							: 'content'
-						caller.refresh({
-							refresh_id_base_lang	: true,
-							render_level			: render_level
-						})
-					}
+				// Do not use blur here. Use instead this window focus
 			}
 		})
+		// this window focus event (not use blur because tool_upload blurs on open file window)
+		const fn_refresh_caller = function() {
+			window.removeEventListener('focus', fn_refresh_caller)
+			// refresh caller
+			// Note that in some situations, caller is not an instance like in grid_dd indexation button
+				if (caller && typeof caller.refresh==='function') {
+					const render_level = (caller.mode==='list')
+						? 'full'
+						: 'content'
+					caller.refresh({
+						refresh_id_base_lang	: true,
+						render_level			: render_level
+					})
+				}
+		}
+		window.addEventListener('focus', fn_refresh_caller)
+
+
 
 	// close tool_window
 		// tool_window.addEventListener('close', fn_onclose, true);
