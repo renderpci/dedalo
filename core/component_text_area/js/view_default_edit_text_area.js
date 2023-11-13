@@ -66,6 +66,11 @@ view_default_edit_text_area.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+		// label add lang
+		if (SHOW_DEVELOPER===true && self.view!=='line') {
+			wrapper.label.innerHTML += ' <span class="note">[' + self.lang + ']</span>'
+		}
+
 	// label custom style based on activate/deactivate events. (!) Deactivated 11-02-2023. Moved to inspector)
 		// event_manager.subscribe('activate_component', fn_activate_component)
 		// function fn_activate_component(component) {
