@@ -8,7 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 
 
 
@@ -99,17 +99,20 @@ view_default_list_image.render = function(self, options) {
 			}else{
 
 				// open a new window
-					const url_vars = {
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 						tipo			: self.tipo,
 						section_tipo	: self.section_tipo,
 						id				: self.section_id,
 						mode			: 'edit',
 						view			: 'viewer',
 						menu			: false
-					}
-					const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-					const current_window	= window.open(url, 'image_viewer', 'width=320,height=240')
-					current_window.focus()
+					})
+					open_window({
+						url		: url,
+						target	: 'viewer',
+						width	: 320,
+						height	: 240
+					})
 			}
 		})
 

@@ -310,7 +310,6 @@ const get_content_data = function(self) {
 					section_id		: self.caller.section_id,
 					pretty_print	: true
 				})
-
 				open_window({
 					url			: url,
 					features	: 'new_tab'

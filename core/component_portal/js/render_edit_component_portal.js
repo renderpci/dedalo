@@ -148,8 +148,7 @@ export const render_column_id = function(options) {
 				session_save	: false, // prevent to overwrite current section session
 				menu			: true
 			})
-
-			const new_window = open_window({
+			open_window({
 				url			: url,
 				name		: 'record_view_' + section_id,
 				features	: features,
@@ -803,7 +802,7 @@ export const get_buttons = (self) => {
 
 							const session_key = 'section_' + tipo + '_' + self.tipo
 
-							const url_vars = object_to_url_vars({
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 								tipo		: tipo,
 								mode		: 'list',
 								session_key	: session_key, // used to save server and local DDB custom SQO
@@ -811,7 +810,7 @@ export const get_buttons = (self) => {
 								initiator	: self.id // initiator is the caller (self)
 							})
 
-							return DEDALO_CORE_URL + '/page/?' + url_vars
+							return url
 						}
 
 						// modal_body
@@ -902,7 +901,7 @@ export const get_buttons = (self) => {
 							mode	: 'list',
 							menu	: false
 						})
-						const new_window = open_window({
+						open_window({
 							url		: url,
 							name	: 'section_view',
 							width	: 1280,

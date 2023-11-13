@@ -200,7 +200,7 @@ const get_content_value = (i, current_value, self) => {
 						mode	: 'list',
 						menu	: false
 					})
-					const new_window = open_window({
+					open_window({
 						url		: url,
 						name	: 'record_view',
 						on_blur : () => {

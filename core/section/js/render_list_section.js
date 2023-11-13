@@ -375,8 +375,7 @@ export const render_column_id = function(options) {
 									session_save	: false, // prevent to overwrite current section session
 									menu			: true
 								})
-
-								const new_window = open_window({
+								open_window({
 									url			: url,
 									name		: 'record_view_' + section_id,
 									features	: features,

@@ -296,7 +296,7 @@ export const get_buttons = (self) => {
 								mode	: 'list',
 								menu	: false
 							})
-							const new_window = open_window({
+							open_window({
 								url		: url,
 								name	: 'section_view',
 								on_blur : () => {
