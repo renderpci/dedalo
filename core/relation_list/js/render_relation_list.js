@@ -34,7 +34,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 	const render_level = options.render_level
 
 	// content_data
-		const current_content_data = await get_content_data(self)
+		const current_content_data = get_content_data(self)
 		if (render_level==='content') {
 			return current_content_data
 		}
