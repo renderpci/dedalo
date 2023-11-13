@@ -174,7 +174,7 @@ component_text_area.prototype.init = async function(options) {
 					const caller	= options.caller
 
 				// do not defined the interface to create the button_create_fragment
-					if (!self.show_interface.button_create_fragment || self.show_interface.button_create_fragment===false) {
+					if (!self.show_interface || !self.show_interface.button_create_fragment || self.show_interface.button_create_fragment===false) {
 						return
 					}
 
