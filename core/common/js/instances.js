@@ -71,17 +71,33 @@ export const get_instance = async function(options){
 				console.log("// [get_instance] element_context API response:", element_context_response);
 				console.trace();
 			}
-			const current_model = element_context_response.result[0].model
+
+			// resolved model
+			const resolved_model = element_context_response.result[0].model
+
+			// set context if is not already set
 			if(typeof options.context==='undefined'){
 				// inject context to options
-				options.context = element_context_response.result[0]
+				options.context	= element_context_response.result[0]
 			}
-		    return current_model
+
+			// lang. Set again from more reliable calculated context
+			// Note that some components may change their lang depending on whether they are with_lang_versions or allow transliteration.
+			options.lang = element_context_response.result[0].lang
+
+		    return resolved_model
 		})();
-		// reassign the optional vars to the options
-			options.model	= model
-			options.mode	= mode
-			options.lang	= lang
+
+		// options fill empty
+			if (!options.model) {
+				options.model = model
+			}
+			if (!options.mode) {
+				options.mode = mode
+			}
+			if (!options.lang) {
+				options.lang = lang
+			}
 
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options)
