@@ -555,7 +555,7 @@ export function open_window(options) {
 * Check browser navigator.userAgent for detect Safari
 * @return bool
 */
-export function prevent_open_new_window(options) {
+export function prevent_open_new_window() {
 	return false
 	// return (navigator.userAgent.indexOf('Safari')!==-1 && navigator.userAgent.indexOf('Chrome')===-1)
 }//end prevent_open_new_window

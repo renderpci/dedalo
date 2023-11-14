@@ -395,7 +395,7 @@ export const render_children_list = function(options) {
 			})
 
 		// DATA CONTAINER . elements data container
-			const data_container = ui.create_dom_element({
+			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'data_container',
 				data_set		: {role : 'data_container'},
@@ -403,8 +403,8 @@ export const render_children_list = function(options) {
 			})
 
 		// INDEXATIONS CONTAINER
-			const indexations_container_id	= 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id +'_'+ (new Date()).getTime()
-			const indexations_container		= ui.create_dom_element({
+			const indexations_container_id = 'u' + ar_children_data[i].section_tipo + '_' + ar_children_data[i].section_id +'_'+ (new Date()).getTime()
+			ui.create_dom_element({
 				element_type	: 'div',
 				id				: indexations_container_id,
 				class_name		: 'indexations_container',
@@ -413,7 +413,7 @@ export const render_children_list = function(options) {
 
 		// ND CONTAINER
 			if (is_descriptor===true && node_type!=='hierarchy_node') {
-				const nd_container = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'nd_container',
 					data_set		: {role : 'nd_container'},
@@ -625,7 +625,7 @@ export const render_children_list = function(options) {
 								title_label		: 'edit',
 								parent			: id_column_content
 							})
-							link_edit.addEventListener('mousedown', (e)=>{
+							link_edit.addEventListener('click', (e)=>{
 								e.stopPropagation()
 								self.edit(
 									link_edit,
@@ -635,14 +635,14 @@ export const render_children_list = function(options) {
 								)
 							})
 							// section_id number
-							const section_id_number = ui.create_dom_element({
+							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'ts_object_section_id_number',
 								text_node		: ar_children_data[i].section_id,
 								parent			: link_edit
 							})
 							// edit icon
-							const edit_icon = ui.create_dom_element({
+							ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'ts_object_edit_icon',
 								parent			: link_edit
