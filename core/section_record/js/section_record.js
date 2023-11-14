@@ -185,6 +185,12 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			caller			: self
 		}
 
+		// section case. (!) Force session_save = false to prevent
+		// overwrite the main section (thesaurus cases calling to self section as children, etc.)
+			if (current_context.model==='section') {
+				instance_options.session_save = false
+			}
+
 		// id_variant . Propagate a custom instance id to children
 			const section_record_id_variant = `${self.tipo}_${section_id}_${self.caller.section_tipo}_${self.caller.section_id}`
 			instance_options.id_variant = self.id_variant
