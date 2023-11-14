@@ -1325,118 +1325,139 @@ export const ts_object = new function() {
 		const self = this
 
 		// short vars
-			const wrap			= button_obj.parentNode.parentNode;
-			const section_tipo	= wrap.dataset.section_tipo
-			const section_id	= wrap.dataset.section_id
-			const tipo			= button_obj.dataset.tipo
+			const section_tipo	= button_obj.dataset.section_tipo
+			const section_id	= button_obj.dataset.section_id
 			const type			= button_obj.dataset.type
-			const mode			= 'edit'
+			const tipo			= button_obj.dataset.tipo
+			const tipos			= tipo.split(',')
 			const lang			= page_globals.dedalo_data_lang
-			const html_data		= '...';	//" show_component_in_ts_object here! "
-			const role			= section_tipo + '_' + section_id + '_' + tipo
+			// const mode		= 'edit'
+			// const html_data	= '...';	//" show_component_in_ts_object here! "
+			// const role		= section_tipo + '_' + section_id + '_' + tipo
 
-		const render_component_node = async function() {
+		// delete the previous registered events
+			self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
 
-			// component instance
-				const current_component = await instances.get_instance({
-					section_tipo	: section_tipo,
-					section_id		: section_id,
-					tipo			: tipo,
-					lang			: lang,
-					mode			: 'edit', // mode,
-					view			: 'default',
-					id_variant		: new Date().getTime()
-				})
+		// render_component_node function
+			const components = [] // array of created component instances
+			const render_component_node = async function(tipo, key) {
 
-			// term edit case
-				if(type==='term') {
+				// component instance
+					const current_component = await instances.get_instance({
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						tipo			: tipo,
+						lang			: lang,
+						mode			: 'edit', // mode,
+						view			: 'default',
+						id_variant		: new Date().getTime()
+					})
 
-					// delete the previous registered events
-						self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
+				// components
+					components.push(current_component)
 
-					// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-						const fn_update_value = function(options) {
+				// term edit case
+					if(type==='term') {
 
-							const caller = current_component
+						// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
+							const fn_update_value = function() {
 
-							const ar_values = []
-							switch (caller.model) {
-								case 'component_portal': {
-									const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
-									ar_values.push(...data.map(el => el.value))
-									break;
+								const caller = current_component
+
+								const ar_values = []
+								switch (caller.model) {
+									case 'component_portal': {
+										const data = caller.datum.data.filter(el => el.tipo !== caller.tipo)
+										ar_values.push(...data.map(el => el.value))
+										break;
+									}
+									default: {
+										const components_length = components.length
+										for (let i = 0; i < components_length; i++) {
+											ar_values.push(...components[i].data.value)
+										}
+										break;
+									}
 								}
-								default:
-									ar_values.push(...caller.data.value)
-									break;
+
+								const value = ar_values.join(' ')
+								// change the value of the current DOM element
+								button_obj.firstChild.innerHTML = value
+
+								// destroy
+								// current_component.destroy(true, true, true)
+								components.forEach((component) => {
+									component.destroy(true, true, true)
+								});
+								// clean up array of components
+								while(components.length > 0) {
+								    components.pop();
+								}
 							}
+							self.events_tokens.push(
+								event_manager.subscribe('save_' + current_component.id_base, fn_update_value)
+							)
+					}
 
-							const value = ar_values.join(' ')
-							// change the value of the current DOM element
-							button_obj.firstChild.innerHTML = value
+					// build and render component
+						await current_component.build(true)
+						const component_node = await current_component.render()
 
-							// destroy
-							current_component.destroy(true, true, true)
+					// activate
+						if (key===0) {
+							setTimeout(function(){
+								ui.component.activate(current_component)
+							}, 50)
 						}
-						self.events_tokens.push(
-							event_manager.subscribe('save_' + current_component.id_base, fn_update_value)
-						)
-				}
-
-				// build and render component
-					await current_component.build(true)
-					const component_node = await current_component.render()
-					setTimeout(function(){
-						ui.component.activate(current_component)
-						if (component_node.content_data[0]) {
-							const first_input = component_node.content_data[0].querySelector('input')
-							if (first_input) {
-								first_input.focus()
-							}
-						}
-					}, 50)
 
 
-				return component_node
+					return component_node
 			}//end render_component_node
 
 		// data_contanier
-			const element_data_contanier = wrap.querySelector(':scope > [data-role="data_container"]')
+			const wrapper					= button_obj.parentNode.parentNode;
+			// const element_data_contanier	= wrapper.querySelector(':scope > [data-role="data_container"]')
+			const element_data_contanier	= [...wrapper.childNodes].find(el => el.classList.contains('data_container'))
+			const all_element_data_div		= element_data_contanier.children // childNodes;
 
 		// get the children nodes of data_contanier
-			const all_element_data_div		= element_data_contanier.children // childNodes;
-			const all_element_data_div_len	= all_element_data_div.length
+			const all_element_data_div_len = all_element_data_div.length
+			if (all_element_data_div_len > 0) { // if the data element is not empty
 
+				// get the tipo in the class name of the node element
+				// const element_is_different = element_data_contanier.firstChild.classList.contains(tipo) ? false : true
+				// if the element is different that user want to show
+				// if(element_is_different) {
 
-		if (all_element_data_div_len > 0) { // if the data element is not empty
+				// 	// remove all nodes
+				// 	for (let i = all_element_data_div_len - 1; i >= 0; i--) {
+				// 		all_element_data_div[i].remove()
+				// 	}
 
-			// get the tipo in the class name of the node element
-			const element_is_different = element_data_contanier.firstChild.classList.contains(tipo) ? false : true
-			//if the element is different that user want to show
-			if(element_is_different){
+				// 	// add the new one
+				// 	tipos.map(async (current_tipo)=>{
+				// 		const component_node = await render_component_node(current_tipo)
+				// 		element_data_contanier.appendChild(component_node)
+				// 	})
 
-				// remove all nodes
-				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-					all_element_data_div[i].remove()
-				}
+				// }else{
+					// only remove all nodes
+					for (let i = all_element_data_div_len - 1; i >= 0; i--) {
+						all_element_data_div[i].remove()
+					}
+				// }
 
-				// add the new one
-				const component_node = await render_component_node()
-				element_data_contanier.appendChild(component_node)
+			}else{ // if the data element is empty (first click to show)
 
-			}else{
-				// only remove all nodes
-				for (let i = all_element_data_div_len - 1; i >= 0; i--) {
-					all_element_data_div[i].remove()
-				}
+				// add nodes
+					const tipos_length = tipos.length
+					for (let i = 0; i < tipos_length; i++) {
+						const current_tipo = tipos[i]
+						const component_node = await render_component_node(current_tipo, i)
+						element_data_contanier.appendChild(component_node)
+					}
 			}
 
-		}else{ // if the data element is empty (first click to show)
-
-			// add node
-				const component_node = await render_component_node()
-				element_data_contanier.appendChild(component_node)
-		}
 
 		return true // component_node;
 	}//end show_component_in_ts_object
