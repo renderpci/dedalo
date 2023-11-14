@@ -11,9 +11,9 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
-		render_ts_line,
+		// render_ts_line,
 		render_ts_pagination,
-		render_ts_list
+		render_children_list
 	} from './render_ts_object.js'
 
 
@@ -274,7 +274,7 @@ export const ts_object = new function() {
 		return new Promise(function(resolve) {
 
 			// build_ts_list
-				const ar_children_c = render_ts_list({
+				const ar_children_c = render_children_list({
 					self							: self,
 					ar_children_data				: ar_children_data,
 					target_section_tipo				: target_section_tipo,
@@ -295,7 +295,6 @@ export const ts_object = new function() {
 					) {
 					render_ts_pagination({
 						children_container	: children_container,
-						target_section_tipo	: target_section_tipo,
 						pagination			: pagination
 					})
 				}
@@ -728,35 +727,36 @@ export const ts_object = new function() {
 	* @return promise|null
 	*/
 	this.toggle_view_children = function(link_children_element, event) {
-		//var jsPromise = Promise.resolve(function(){
+
+		const self = this
 
 		let result = null
 
 		//var wrap 	= link_children_element.parentNode.parentNode
 		//var nodes 	= wrap.children  //childNodes
 
-		const children_container = ts_object.get_my_parent_container(link_children_element, 'children_container')
+		const children_container = self.get_my_parent_container(link_children_element, 'children_container')
 
 		// If is the first time that the children are loaded, remove the first class selector and send the query for get the children
-		if (children_container.classList.contains('js_first_load')) {
+		if (children_container.classList.contains('js_first_load') && !children_container.hasChildNodes()) {
 
 			children_container.classList.remove('js_first_load');
 			link_children_element.firstChild.classList.add('ts_object_children_arrow_icon_open', 'arrow_spinner');
 
 			// Load element by AJAX
-				result = ts_object.get_children(
+				result = self.get_children(
 					link_children_element,
 					null, // object|null pagination
 					false // bool clean_children_container
 				);
 
-			//var children_container = ts_object.get_my_parent_container(link_children_element, 'children_container')
+			//var children_container = self.get_my_parent_container(link_children_element, 'children_container')
 			//if (children_container.style.display==='none') {
 			//	children_container.style.display = 'inline-table'
 			//}
 
 			// save_opened_elements
-			ts_object.save_opened_elements(link_children_element,'add')
+			self.save_opened_elements(link_children_element,'add')
 
 		}else{
 
@@ -767,7 +767,7 @@ export const ts_object = new function() {
 
 				// Load element by AJAX
 					if (typeof event!=="undefined" && event.altKey===true) {
-						result = ts_object.get_children(
+						result = self.get_children(
 							link_children_element,
 							null, // object pagination
 							true // bool clean_children_container
@@ -775,7 +775,7 @@ export const ts_object = new function() {
 					}
 
 				// save_opened_elements
-				ts_object.save_opened_elements(link_children_element,'add')
+				self.save_opened_elements(link_children_element,'add')
 
 			}else{
 
@@ -783,7 +783,7 @@ export const ts_object = new function() {
 				link_children_element.firstChild.classList.remove('ts_object_children_arrow_icon_open');
 
 				// save_opened_elements
-				ts_object.save_opened_elements(link_children_element,'remove')
+				self.save_opened_elements(link_children_element,'remove')
 			}
 		}
 
@@ -886,7 +886,24 @@ export const ts_object = new function() {
 			const matches	= document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
 			const len		= matches.length;
 			for (let i = len - 1; i >= 0; i--) {
-				matches[i].classList.add("element_hilite");
+
+				const node = matches[i]
+				node.classList.add("element_hilite");
+
+				// check parent is arrow_icon_open
+					const parent_wrapper = node.parentNode.parentNode.parentNode.parentNode;
+					if (!parent_wrapper) {
+						console.warn('Unable to get parent wrapper from node:', node);
+						return
+					}
+					const elements_container = [...parent_wrapper.childNodes].find(el => el.classList.contains('elements_container'));
+					if (elements_container) {
+						const arrow_icon = [...elements_container.childNodes].find(el => el.classList.contains('arrow_icon'));
+						if (arrow_icon) {
+							arrow_icon.firstChild.classList.remove('arrow_unactive')
+							arrow_icon.firstChild.classList.add('ts_object_children_arrow_icon_open')
+						}
+					}
 			}
 
 		return len
@@ -1722,7 +1739,7 @@ export const ts_object = new function() {
 				}
 
 				// render children. dom_parse_children (returns a promise)
-					ts_object.dom_parse_children(
+					self.dom_parse_children(
 						ar_children_data,
 						main_div,
 						render_options
@@ -1734,15 +1751,15 @@ export const ts_object = new function() {
 				// 	//console.log(element.heritage);
 				// 	if (typeof element.heritage!=='undefined') {
 				// 		var h_data = element.heritage
-				// 		ts_object.parse_search_result(h_data, result)
+				// 		self.parse_search_result(h_data, result)
 
 				// 		//var children_element = result.parentNode.querySelector('.elements_container > [data-type="link_children"]')
-				// 		//ts_object.update_arrow_state(children_element, true)
+				// 		//self.update_arrow_state(children_element, true)
 
 				// 		console.log("parse_search_result case "+key);
 				// 	}else{
 				// 		console.log("else case "+key);
-				// 		//ts_object.dom_parse_children(ar_children_data, main_div, false)
+				// 		//self.dom_parse_children(ar_children_data, main_div, false)
 				// 	}
 				// })
 
@@ -1753,15 +1770,15 @@ export const ts_object = new function() {
 
 				// Recursive parent element
 				const h_data = element.heritage
-				ts_object.parse_search_result(h_data, self.current_main_div, true);
+				self.parse_search_result(h_data, self.current_main_div, true);
 
 			}else{
 
 				// Last elements are the final found elements and must be hilite
 				const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
 				setTimeout(function(){
-					ts_object.hilite_element(last_element, false);
-				}, 200)
+					self.hilite_element(last_element, false);
+				}, 150)
 			}
 
 			// Open arrows and fix children container state
