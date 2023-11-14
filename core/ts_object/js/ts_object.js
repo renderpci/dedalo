@@ -7,7 +7,7 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
-	import {url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {url_vars_to_object, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
@@ -943,15 +943,17 @@ export const ts_object = new function() {
 		const type				= 'term';
 		const matches			= document.querySelectorAll('.list_thesaurus_element[data-type="'+type+'"][data-section_tipo="'+section_tipo+'"][data-section_id="'+section_id+'"]');
 		const matches_length	= matches.length
-		if (matches_length===0) {
-			console.log("[refresh_element] Error on match elements. Not terms found for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
-			return matches_length;
-		}
+
+		// no matches case
+			if (matches_length===0) {
+				console.log("[refresh_element] Error on match elements. Not terms found for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+				return matches_length;
+			}
+
+		// iterate all matches
 		for (let i = matches_length - 1; i >= 0; i--) {
 
 			// element to hilite
-				// const term = matches[i]
-				// term.classList.add("arrow_spinner");
 				ts_object.element_to_hilite = {
 					'section_tipo'	: section_tipo,
 					'section_id'	: section_id
@@ -959,38 +961,48 @@ export const ts_object = new function() {
 
 			const parent_wrap		= matches[i].parentNode.parentNode.parentNode.parentNode
 			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
+			if(element_children) {
 
-				if(element_children) {
-
-					// pagination is set in DOM element_children from API response in get_children call
+				// pagination is set in DOM element_children from API response in get_children call
 					const pagination = element_children.pagination
 						? element_children.pagination
 						: null
-						if (pagination) {
-							pagination.limit	= pagination.offset + pagination.limit
-							pagination.offset	= 0
-						}
 
+					const edit_pagination = (pagination && pagination.offset>0)
+						? (()=>{
+
+							const new_limit = pagination.offset > 0
+								? (pagination.limit + pagination.offset)
+								: pagination.limit
+
+							return {
+								limit	: new_limit,
+								offset	: 0,
+								total	: pagination.total
+							}
+						  })()
+						: pagination
+
+				// load children data and build nodes
 					ts_object.get_children(
 						element_children,
-						pagination, // object pagination
+						edit_pagination, // object pagination
 						true // bool clean_children_container
 					)
-					.then(function() {
+					// .then(function() {
 						// const arrow_div = element_children.querySelector('.ts_object_children_arrow_icon')
 						// if (arrow_div && arrow_div.classList.contains('ts_object_children_arrow_icon_open')===false) {
 						// 	// Reopen arrow children
 						// 	//ts_object.toggle_view_children(element_children)
 						// }
-					})
-
-				}else{
-					if (SHOW_DEBUG===true) {
-						console.log(new Error().stack);
-					}
-					console.log("[refresh_element] Error on find element_children for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+					// })
+			}else{
+				if (SHOW_DEBUG===true) {
+					console.log(new Error().stack);
 				}
-		}
+				console.log("[refresh_element] Error on find element_children for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+			}
+		}//end for (let i = matches_length - 1; i >= 0; i--)
 
 
 		return matches_length
@@ -1000,10 +1012,14 @@ export const ts_object = new function() {
 
 	/**
 	* EDIT
+	* Opens a new window where edit current record
 	* section_id is optional. If not get, the function uses button_obj dataset section_id
+	* @return bool
 	*/
 	this.edit_window = null; // Class var
 	this.edit = function(button_obj, event, section_id, section_tipo) {
+
+		const self = this
 
 		// check button_obj.parentNode
 			//console.log("typeof button_obj:", typeof button_obj, "button_obj:", button_obj, "button_obj.parentNode", button_obj.parentNode);
@@ -1036,30 +1052,26 @@ export const ts_object = new function() {
 			})
 
 		// window managing
-			if(ts_object.edit_window===null || ts_object.edit_window.closed) { //  || edit_window.location.href!=url || ts_object.edit_window.closed
+			if(self.edit_window===null || self.edit_window.closed) { //  || edit_window.location.href!=url || self.edit_window.closed
 
-				// open new window
-					ts_object.edit_window = window.open(
-						url,
-						"edit_window",
-						'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes'
-					);
-					ts_object.edit_window .resizeTo(1280, 905); // needed for Firefox
-					ts_object.edit_window .focus()
-
-				// refresh caller window on blur the opened window
-					ts_object.edit_window.addEventListener("blur", function(){
-						ts_object.refresh_element(section_tipo, section_id)
-					})
+				self.edit_window = open_window({
+					url		: url,
+					target	: 'edit_window',
+					width	: 1280,
+					height	: 905,
+					on_blur : () => {
+						self.refresh_element(section_tipo, section_id)
+					}
+				})
 
 			}else{
 
-				const current_query	= ts_object.edit_window.location.href.split("?")[1]
+				const current_query	= self.edit_window.location.href.split("?")[1]
 				const new_query		= url.split("?")[1]
 				if (current_query!==new_query) {
-					ts_object.edit_window.location.href = url
+					self.edit_window.location.href = url
 				}
-				ts_object.edit_window.focus();
+				self.edit_window.focus();
 			}
 
 
