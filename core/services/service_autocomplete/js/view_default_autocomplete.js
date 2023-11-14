@@ -390,8 +390,8 @@ const render_search_input = function(self) {
 		// Init a timeout variable to be used below
 			let timeout = null
 
-		// event input. changes the input value fire the search
-			search_input.addEventListener('keyup', async function(e){
+		// input_handler
+			const input_handler = async function(e) {
 				// console.log('e1:', e);
 
 				// ignore keys
@@ -408,7 +408,7 @@ const render_search_input = function(self) {
 						'CapsLock',
 						'Enter'
 					]
-					if (ignore_keys.includes(e.key)) {
+					if (e.key && ignore_keys.includes(e.key)) {
 						return
 					}
 
@@ -483,7 +483,14 @@ const render_search_input = function(self) {
 						// spinner remove
 							spinner.remove()
 					}, ms)
-			});
+			}//end input_handler
+
+		// event input. changes the input value fire the search
+			search_input.addEventListener('keyup', input_handler);
+
+		// event paste
+			search_input.addEventListener('paste', input_handler);
+
 
 	return search_input
 }//end render_search_input
