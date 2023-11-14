@@ -243,22 +243,21 @@ export const ts_object = new function() {
 			const children_container_is_loaded	= typeof options.children_container_is_loaded!=='undefined' ? options.children_container_is_loaded : false
 			const show_arrow_opened				= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
 			const pagination					= options.pagination || {}
-			const wrap							= children_container.parentNode
 			const mode							= options.mode || 'list'
+			// const wrap						= children_container.parentNode
 			// const element_children_target	= ts_object.get_link_children_from_wrap(wrap)
 
 		// Clean children container before build contents
 			if (clean_children_container===true) {
-				// children_container.innerHTML = ''
 				while (children_container.hasChildNodes()) {
 					children_container.removeChild(children_container.lastChild);
 				}
 			}
 
 		// nd_container
-			let parent_nd_container  	= null
-			const wrapper_children 	 	= children_container.parentNode.children
-			const wrapper_children_len 	= wrapper_children.length
+			let parent_nd_container		= null
+			const wrapper_children		= children_container.parentNode.children
+			const wrapper_children_len	= wrapper_children.length
 			for (let i = wrapper_children_len - 1; i >= 0; i--) {
 				if (wrapper_children[i].dataset.role==='nd_container') {
 					parent_nd_container = wrapper_children[i];
@@ -293,6 +292,7 @@ export const ts_object = new function() {
 					pagination.total > pagination.limit &&
 					(pagination.offset + pagination.limit) < pagination.total
 					) {
+
 					render_ts_pagination({
 						children_container	: children_container,
 						pagination			: pagination
@@ -619,7 +619,7 @@ export const ts_object = new function() {
 		})
 		.then(function() {
 
-			// Update parent data (returns a promise after http request finish)
+			// Update parent data (returns a promise after HTTP request finish)
 			ts_object.update_parent_data(wrap_source)
 			.then(function(response){
 
@@ -652,6 +652,7 @@ export const ts_object = new function() {
 
 	/**
 	* UPDATE_PARENT_DATA
+	* @param HTMLElement wrap_ts_object
 	* @return promise
 	*/
 	this.update_parent_data = function(wrap_ts_object) {
@@ -715,6 +716,7 @@ export const ts_object = new function() {
 				body : rqo
 			})
 
+
 		return js_promise
 	}//end update_parent_data
 
@@ -732,8 +734,8 @@ export const ts_object = new function() {
 
 		let result = null
 
-		//var wrap 	= link_children_element.parentNode.parentNode
-		//var nodes 	= wrap.children  //childNodes
+		// var wrap		= link_children_element.parentNode.parentNode
+		// var nodes	= wrap.children  //childNodes
 
 		const children_container = self.get_my_parent_container(link_children_element, 'children_container')
 
@@ -805,10 +807,9 @@ export const ts_object = new function() {
 		}
 
 		const wrap			= link_children_element.parentNode.parentNode
+		const key			= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
 		//var parent_node	= wrap.parentNode.parentNode
 		//var parent		= parent_node.dataset.section_tipo +'_'+ parent_node.dataset.section_id
-		const key			= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
-
 
 		if (action==='add') {
 
@@ -816,10 +817,10 @@ export const ts_object = new function() {
 			const len = open_children_elements.length
 
 			for (let i = len - 1; i >= 0; i--) {
-				let current_wrap		= open_children_elements[i].parentNode.parentNode.parentNode
-				let current_parent_node	= current_wrap.parentNode.parentNode
-				let current_parent		= current_parent_node.dataset.section_tipo +'_'+ current_parent_node.dataset.section_id
-				let current_key			= current_wrap.dataset.section_tipo +'_'+ current_wrap.dataset.section_id
+				const current_wrap			= open_children_elements[i].parentNode.parentNode.parentNode
+				const current_parent_node	= current_wrap.parentNode.parentNode
+				const current_parent		= current_parent_node.dataset.section_tipo +'_'+ current_parent_node.dataset.section_id
+				const current_key			= current_wrap.dataset.section_tipo +'_'+ current_wrap.dataset.section_id
 
 				this.opened_elements[current_key] = current_parent
 			}
@@ -1092,7 +1093,7 @@ export const ts_object = new function() {
 			}
 
 		// short vars
-			const mode					= button_obj.dataset.mode || 'add_child'
+			// const mode				= button_obj.dataset.mode || 'add_child'
 			const section_id			= wrap.dataset.section_id
 			const section_tipo			= wrap.dataset.section_tipo
 			const target_section_tipo	= wrap.dataset.target_section_tipo
@@ -1260,6 +1261,7 @@ export const ts_object = new function() {
 
 	/**
 	* SELECT_FIRST_INPUT_IN_EDITOR
+	* @param HTMLElement element_data_div
 	*/
 	this.select_first_input_in_editor = function(element_data_div) {
 
@@ -1700,12 +1702,6 @@ export const ts_object = new function() {
 
 			const element = data[key]
 
-			// target section_tipo
-			const target_section_tipo = (element.section_tipo==='hierarchy1')
-				? Object.values(element.heritage)[0].section_tipo
-				: element.section_tipo
-
-
 			// checks already exists
 				if (ar_resolved.indexOf(key) !== -1) {
 					if(SHOW_DEBUG===true) {
@@ -1717,6 +1713,11 @@ export const ts_object = new function() {
 					//ts_object.parse_search_result(h_data, self.current_main_div, true)
 					continue;
 				}
+
+			// target section_tipo
+				const target_section_tipo = (element.section_tipo==='hierarchy1')
+					? Object.values(element.heritage)[0].section_tipo
+					: element.section_tipo
 
 			// clean div container
 				if(is_recursion===false) {
@@ -1799,7 +1800,7 @@ export const ts_object = new function() {
 				const last_element = self.current_main_div.parentNode.querySelector('.elements_container > [data-type="term"]')
 				setTimeout(function(){
 					self.hilite_element(last_element, false);
-				}, 150)
+				}, 120)
 			}
 
 			// Open arrows and fix children container state
@@ -1837,21 +1838,21 @@ export const ts_object = new function() {
 		const old_value = parseInt(button_obj.textContent)
 
 		// input
-		const input = document.createElement('input')
-		input.classList.add('id_column_link','input_order')
-		input.value = old_value
-		input.addEventListener("keyup", function(e){
-			e.preventDefault()
-			if (e.keyCode === 13) {
-				ts_object.save_order(button_obj, parseInt(this.value) )
-				// this.remove()
-			}
-		});
-		input.addEventListener("blur", function(e){
-			e.preventDefault()
-			this.remove()
-			button_obj.style.display = ''
-		});
+			const input = document.createElement('input')
+			input.classList.add('id_column_link','input_order')
+			input.value = old_value
+			input.addEventListener("keyup", function(e){
+				e.preventDefault()
+				if (e.keyCode === 13) {
+					ts_object.save_order(button_obj, parseInt(this.value) )
+					// this.remove()
+				}
+			});
+			input.addEventListener("blur", function(e){
+				e.preventDefault()
+				this.remove()
+				button_obj.style.display = ''
+			});
 
 		// Add input element after
 			button_obj.parentNode.insertBefore(input, button_obj.nextSibling);
@@ -1876,6 +1877,8 @@ export const ts_object = new function() {
 	* @return promise
 	*/
 	this.save_order = function(button_obj, new_value) {
+
+		const self = this
 
 		const old_value = parseInt(button_obj.textContent)
 
@@ -1989,9 +1992,9 @@ export const ts_object = new function() {
 
 					if (response.result && response.result!==false) {
 						// Refresh element
-						ts_object.refresh_element( element_section_tipo, element_section_id )
+						self.refresh_element( element_section_tipo, element_section_id )
 					}else{
-						alert("[ts_object.save_order] Error on save order. "+ ts_object.msg )
+						alert("[ts_object.save_order] Error on save order. "+ self.msg )
 					}
 
 					resolve(response)
@@ -2032,7 +2035,7 @@ export const ts_object = new function() {
 					null, // object|null pagination
 					false // bool clean_children_container
 				)
-				.then(function(result) {
+				.then(function() {
 
 					// Show hidden nd_container
 					nd_container.style.display = 'inline-table'
@@ -2079,8 +2082,8 @@ export const ts_object = new function() {
 			}
 
 		// wrapper_children
-			const wrapper_children 	= wrapper.children
-			const wrapper_children_len = wrapper_children.length
+			const wrapper_children		= wrapper.children
+			const wrapper_children_len	= wrapper_children.length
 			for (let i = wrapper_children_len - 1; i >= 0; i--) {
 				if (wrapper_children[i].dataset.role===role) {
 					parent_container = wrapper_children[i]
@@ -2137,7 +2140,7 @@ export const ts_object = new function() {
 
 		if (link_children===null) {
 			if(SHOW_DEBUG===true) {
-				console.warn("[ts_object.get_link_children_from_wrap] Error on locate link_children from wrap: ",wrap);
+				console.warn("[ts_object.get_link_children_from_wrap] Error on locate link_children from wrap: ", wrap);
 			}
 		}
 
