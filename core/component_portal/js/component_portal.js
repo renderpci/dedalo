@@ -1483,4 +1483,20 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Captures ui.component.activate calls
+* to prevent default behavior
+* @return null
+*/
+component_portal.prototype.focus_first_input = function() {
+
+	const self = this
+
+	return null
+}//end focus_first_input
+
+
+
+
 // @license-end
