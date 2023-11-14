@@ -1339,8 +1339,9 @@ export const ts_object = new function() {
 		const self = this
 
 		// short vars
-			const section_tipo	= button_obj.dataset.section_tipo
-			const section_id	= button_obj.dataset.section_id
+			const wrap			= button_obj.parentNode.parentNode;
+			const section_tipo	= wrap.dataset.section_tipo
+			const section_id	= wrap.dataset.section_id
 			const type			= button_obj.dataset.type
 			const tipo			= button_obj.dataset.tipo
 			const tipos			= tipo.split(',')
