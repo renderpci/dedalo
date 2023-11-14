@@ -745,8 +745,12 @@ const render_template = async function(self) {
 
 			//showing an image created by the server after upload
 			this.emit('thumbnail', file, response.file_data.thumbnail_url);
+
 			// Handle the responseText here. For example, add the text to the preview element:
-			file.previewTemplate.appendChild(document.createTextNode(response.msg));
+			file.previewTemplate.appendChild(
+				document.createTextNode(response.msg)
+			);
+
 			const button_start	= file.previewElement.querySelector('.start')
 			const button_cancel	= file.previewElement.querySelector('.cancel')
 			const button_delete	= file.previewElement.querySelector('.delete')
