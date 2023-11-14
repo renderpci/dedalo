@@ -507,9 +507,9 @@ class section extends common {
 	* @param object $component_obj
 	* @param string $component_data_type
 	* @param bool $save_to_database
-	* @return int|null $section_id
+	* @return int|string|null $section_id
 	*/
-	public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) : ?int {
+	public function save_component_dato(object $component_obj, string $component_data_type, bool $save_to_database) : int|string|null {
 
 		// section. The section is necessary before managing the component data. If it does not exist, we will create it previously
 			if (abs(intval($this->get_section_id()))<1  && strpos((string)$this->get_section_id(), DEDALO_SECTION_ID_TEMP)===false) {
@@ -566,7 +566,7 @@ class section extends common {
 				# Stop here (remember make a real section save later!)
 				# No component time machine data will be saved when section saves later
 				#debug_log(__METHOD__." Stopped section save process component_obj->save_to_database = true ".to_string(), logger::ERROR);
-				return (int)$this->section_id;
+				return $this->section_id;
 			}
 
 		// time machine data. We save only current component lang 'dato' in time machine
@@ -617,7 +617,7 @@ class section extends common {
 	*	    }
 	*	}
 	*/
-	public function set_component_direct_dato( object $component_obj ) : object | null {
+	public function set_component_direct_dato( object $component_obj ) : ?object {
 
 		// set self section_obj to component. (!) Important to prevent cached and not cached versions of
 		// current section conflicts (and for speed)
@@ -889,9 +889,9 @@ class section extends common {
 	* SAVE
 	* Create or update a section record in matrix
 	* @param object $save_options = null
-	* @return int|null $section_id
+	* @return int|string|null $section_id
 	*/
-	public function Save( object $save_options=null ) : ?int {
+	public function Save( object $save_options=null ) : int|string|null {
 		$start_time = start_time();
 
 		// options
@@ -972,7 +972,7 @@ class section extends common {
 				// Always encode and decode data before store in session to avoid problems on unserialize not loaded classes
 				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
 
-				return (int)$this->section_id;
+				return $this->section_id;
 			}
 
 		// caller_section. When the section get data from other section (his source is the caller section instead DDBB)
@@ -988,7 +988,7 @@ class section extends common {
 					$JSON_RecordObj_matrix->save_time_machine($options);
 
 				return !empty($this->section_id)
-					? (int)$this->section_id
+					? $this->section_id
 					: null;
 			}
 
@@ -1400,7 +1400,7 @@ class section extends common {
 			);
 
 
-		return (int)$this->section_id;
+		return $this->section_id;
 	}//end Save
 
 

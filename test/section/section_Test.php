@@ -734,8 +734,8 @@ final class section_test extends TestCase {
 		$result = $section->Save();
 
 		$this->assertTrue(
-			gettype($result)==='integer' ,
-			'expected type integer. Current type: ' .gettype($result)
+			gettype($result)==='integer' || gettype($result)==='string' ,
+			'expected type integer or string. Current type: ' .gettype($result)
 		);
 
 		$this->assertTrue(
