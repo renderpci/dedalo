@@ -535,13 +535,24 @@ export function open_window(options) {
 
 			// on_blur optional action callback
 				if (typeof on_blur==='function') {
-					const fn_on_blur = function() {
-						// remove self instance to prevent duplicity
-						new_window.removeEventListener('blur', fn_on_blur)
-						// exec callback function
-						on_blur()
-					}
-					new_window.addEventListener('blur', fn_on_blur)
+
+					// direct
+						// const fn_on_blur = function(e) {
+						// 	// remove self instance to prevent duplicity
+						// 	new_window.removeEventListener('blur', fn_on_blur)
+						// 	// exec callback function
+						// 	on_blur(e)
+						// }
+						// new_window.addEventListener('blur', fn_on_blur)
+
+					// inverse
+						const fn_on_focus = function(e) {
+							// remove self instance to prevent duplicity
+							window.removeEventListener('focus', fn_on_focus)
+							// exec callback function
+							on_blur(e)
+						}
+						window.addEventListener('focus', fn_on_focus)
 				}
 
 			return new_window
