@@ -13,8 +13,8 @@
 	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
-	import {service_dropzone} from '../../../core/services/service_dropzone/js/service_dropzone.js'
-	import {service_tmp_section} from '../../../core/services/service_tmp_section/js/service_tmp_section.js'
+	// import {service_dropzone} from '../../../core/services/service_dropzone/js/service_dropzone.js'
+	// import {service_tmp_section} from '../../../core/services/service_tmp_section/js/service_tmp_section.js'
 
 
 
