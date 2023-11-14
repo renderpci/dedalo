@@ -820,6 +820,9 @@ section.prototype.build = async function(autoload=false) {
 
 	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
 		if (self.session_save===true) {
+			if(SHOW_DEVELOPER===true) {
+				console.warn('to local DDBB value :', self.session_key + '_' + self.mode, self.rqo.sqo);
+			}
 			data_manager.set_local_db_data(
 				{
 					id		: self.session_key + '_' + self.mode,
