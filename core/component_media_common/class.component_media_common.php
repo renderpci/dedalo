@@ -246,7 +246,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*
@@ -254,13 +254,14 @@ class component_media_common extends component_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		$default_quality = $this->get_default_quality();
-		$diffusion_value = $this->get_url(
-			$default_quality,
-			false,  // bool test_file
-			false,  // bool absolute
-			false // bool default_add
-		);
+		$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
+			? ($this->get_id() .'.'. $this->get_extension())
+			: $this->get_url(
+				$this->get_default_quality(),
+				false,  // bool test_file
+				false,  // bool absolute
+				false // bool default_add
+			  );
 
 
 		return $diffusion_value;

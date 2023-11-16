@@ -521,9 +521,9 @@
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
-	define('DEDALO_NOTIFICATIONS', 	false);
-	define('DEDALO_NODEJS', 		'/usr/bin/node');
-	define('DEDALO_NODEJS_PM2', 	'/usr/bin/pm2');
+	define('DEDALO_NOTIFICATIONS',	false);
+	define('DEDALO_NODEJS',			'/usr/bin/node');
+	define('DEDALO_NODEJS_PM2',		'/usr/bin/pm2');
 
 
 // dedalo_ar_exclude_components
@@ -551,9 +551,13 @@
 
 
 // diffusion
-	// Set publication diffusion domain. Default value is 'default'
+	// string Set publication diffusion domain. Default value is 'default'
 	define('DEDALO_DIFFUSION_DOMAIN',			'default');
+	// int Set the number of resolution levels we would like to accomplish. Default: 2
 	define('DEDALO_DIFFUSION_RESOLVE_LEVELS',	2);
+	// bool Defines how the paths of the media files will be treated in diffusion processing. Default: false
+	// on true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf' from '/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf'
+	define('DEDALO_PUBLICATION_CLEAN_URL',		false);
 	// diffusion_custom
 	// Optional custom class to manipulate diffusion options. string|bool . Default: false
 	define('DIFFUSION_CUSTOM', false);
@@ -570,7 +574,7 @@
 
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
-	define('STRUCTURE_SERVER_CODE', 		'x3a0B4Y020Eg9w');
+	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
 	define('STRUCTURE_SERVER_URL',			'https://master.render.es/dedalo/lib/dedalo/extras/str_manager/');
 	define('ONTOLOGY_DOWNLOAD_DIR',			DEDALO_BACKUP_PATH_ONTOLOGY . '/download');
 	// structure_download. When ontology is updated, download files are saved here

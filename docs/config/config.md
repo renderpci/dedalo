@@ -2649,6 +2649,24 @@ If you increase the value of this parameter, the time needed by Dédalo to resol
 
 ---
 
+### Defining media paths resolution
+
+./dedalo/config/config.php
+
+DEDALO_PUBLICATION_CLEAN_URL `boolean`
+
+Defines how the paths of the media files will be treated in diffusion processing. Default value: false.
+
+```php
+define('DEDALO_PUBLICATION_CLEAN_URL', false)
+```
+
+> If isset as true, the path will be lost and you will have to reconstruct it later, on the web page.
+
+On true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf' from '/dedalo/media/pdf/web/0/rsc37_rsc176_34.pdf'.
+
+---
+
 ### Check the publication state
 
 ./dedalo/config/config.php
