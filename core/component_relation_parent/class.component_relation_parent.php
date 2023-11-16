@@ -695,71 +695,123 @@ class component_relation_parent extends component_relation_common {
 	* @param int $section_id
 	* @param string $section_tipo
 	* @param bool $skip_root = true
+	*
+	* @return array $parents_recursive
+	*/
+		// public static function get_parents_recursive_OLD($section_id, string $section_tipo, bool $skip_root=true) : array {
+
+		// 	// static vars set
+		// 		static $ar_parents_recursive_resolved	= array();
+		// 		static $locators_resolved				= array();
+
+		// 	// key_resolve
+		// 		$key_resolve = $section_tipo.'_'.$section_id;
+		// 		if (isset($ar_parents_recursive_resolved[$key_resolve])) {
+		// 			return $ar_parents_recursive_resolved[$key_resolve];
+		// 		}
+
+		// 	// parents_recursive set
+		// 		$parents_recursive = array();
+
+		// 	// Add first level
+		// 		$ar_parents			= component_relation_parent::get_parents($section_id, $section_tipo);
+		// 		$parents_recursive	= $ar_parents;
+
+		// 	// Self include as resolved
+		// 		$lkey						= $section_tipo.'_'.$section_id;
+		// 		$locators_resolved[$lkey]	= $ar_parents;
+
+		// 	// iterate ar_parents
+		// 		foreach ($ar_parents as $current_locator) {
+
+		// 			// Check self recursion
+		// 				$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
+		// 				if (array_key_exists($lkey, $locators_resolved)) {
+		// 					$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
+		// 					continue;
+		// 				}
+
+		// 			// Add every parent level
+		// 				$current_ar_parents = component_relation_parent::get_parents_recursive(
+		// 					$current_locator->section_id,
+		// 					$current_locator->section_tipo,
+		// 					$skip_root
+		// 				);
+		// 				$current_ar_parents_safe = [];
+		// 				foreach ($current_ar_parents as $c_parent) {
+		// 					#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
+		// 					if ($skip_root===true) {
+		// 						if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term
+		// 					}
+
+		// 					// Add to array
+		// 						$current_ar_parents_safe[] = $c_parent;
+
+		// 					// Self include as resolved
+		// 						#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
+		// 				}
+
+		// 			// Self include as resolved
+		// 				$locators_resolved[$lkey] = $current_ar_parents_safe;
+
+		// 			// add
+		// 				$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);
+		// 		}
+
+		// 	// Set as resolved
+		// 		$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
+
+
+		// 	return $parents_recursive;
+		// }//end get_parents_recursive
+
+
+
+	/**
+	* GET_PARENTS_RECURSIVE
+	* Iterate recursively all parents of current term
+	* @param int $section_id
+	* @param string $section_tipo
+	* @param bool $skip_root = true
+	*
 	* @return array $parents_recursive
 	*/
 	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true) : array {
 
-		// static vars set
-			static $ar_parents_recursive_resolved	= array();
-			static $locators_resolved				= array();
+		$parents_recursive = [];
 
-		// key_resolve
+		// cache key_resolve
+			static $parents_recursive_resolved = [];
 			$key_resolve = $section_tipo.'_'.$section_id;
-			if (isset($ar_parents_recursive_resolved[$key_resolve])) {
-				return $ar_parents_recursive_resolved[$key_resolve];
+			if (isset($parents_recursive_resolved[$key_resolve])) {
+				return $parents_recursive_resolved[$key_resolve];
 			}
 
-		// parents_recursive set
-			$parents_recursive = array();
-
-		// Add first level
-			$ar_parents			= component_relation_parent::get_parents($section_id, $section_tipo);
-			$parents_recursive	= $ar_parents;
-
-
-		// Self include as resolved
-			$lkey						= $section_tipo.'_'.$section_id;
-			$locators_resolved[$lkey]	= $ar_parents;
-
-		// iterate ar_parents
+		$ar_parents = component_relation_parent::get_parents($section_id, $section_tipo);
+		if (!empty($ar_parents)) {
 			foreach ($ar_parents as $current_locator) {
 
-				// Check self recursion
-					$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
-					if (array_key_exists($lkey, $locators_resolved)) {
-						$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
+				// root skip case
+					if ($skip_root===true && $current_locator->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 						continue;
 					}
 
-				// Add every parent level
-					$current_ar_parents = component_relation_parent::get_parents_recursive(
+				// add current
+					$parents_recursive[] = $current_locator;
+
+				// recursion
+					$children_recursive = component_relation_parent::get_parents_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
 						$skip_root
 					);
-					$current_ar_parents_safe = [];
-					foreach ($current_ar_parents as $c_parent) {
-						#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
-						if ($skip_root===true) {
-							if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term
-						}
+					$parents_recursive = array_merge($parents_recursive, $children_recursive);
 
-						// Add to array
-							$current_ar_parents_safe[] = $c_parent;
-
-						// Self include as resolved
-							#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
-					}
-
-				// Self include as resolved
-					$locators_resolved[$lkey] = $current_ar_parents_safe;
-
-				// add
-					$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);
 			}
+		}
 
-		// Set as resolved
-			$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
+		// cache Set as resolved
+			$parents_recursive_resolved[$key_resolve] = $parents_recursive;
 
 
 		return $parents_recursive;
@@ -927,8 +979,7 @@ class component_relation_parent extends component_relation_common {
 				$parents = self::get_parents_recursive(
 					$section_id,
 					$section_tipo,
-					true, // bool skip_root
-					false // bool is_recursion
+					true // bool skip_root
 				);
 
 			// new_dato
@@ -1002,7 +1053,7 @@ class component_relation_parent extends component_relation_common {
 				// default (untouched component dato)
 				$new_dato = $dato;
 			}
-		}
+		}//end if (isset($option_obj->add_parents))
 
 		$diffusion_value = !empty($new_dato)
 			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE) : $new_dato)
