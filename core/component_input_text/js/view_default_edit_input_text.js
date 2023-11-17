@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {get_fallback_value} from '../../common/js/common.js'
 	import {keyup_handler, remove_handler} from './render_edit_component_input_text.js'
 
 
@@ -230,12 +231,17 @@ const get_content_value = (i, current_value, self) => {
 */
 const get_content_value_read = (i, current_value, self) => {
 
+	const data				= self.data || {}
+	const fallback_value	= data.fallback_value || []
+	const final_value		= get_fallback_value([current_value], fallback_value)
+
 	// content_value node
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'content_value read_only',
-			inner_html		: current_value
+			inner_html		: final_value
 		})
+
 
 	return content_value
 }//end get_content_value_read
