@@ -104,9 +104,7 @@ class ts_object {
 				}
 			}//end if (!isset($ar_children[0]))
 
-
-		# If element exists (section_list_thesaurus) we get element 'properties' json value as array
-		# dump($ar_children, ' ar_children ++ '.to_string($section_tipo));
+		// If element exists (section_list_thesaurus) we get element 'properties' json value as array
 			if ( !empty($ar_properties) ) {
 
 				// DES
@@ -167,15 +165,16 @@ class ts_object {
 
 				foreach ($ar_properties as $key => $value_obj) {
 
-					if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
-						unset($ar_properties[$key]);
-					}else if (isset($model) && $model===true) {
-						if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+					// link_children. optional model variations
+						if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
 							unset($ar_properties[$key]);
-						}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
-							$value_obj->type = 'link_children';
+						}else if (isset($model) && $model===true) {
+							if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+								unset($ar_properties[$key]);
+							}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
+								$value_obj->type = 'link_children';
+							}
 						}
-					}
 
 					if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
 						$value_obj->type = 'link_children';
@@ -183,7 +182,6 @@ class ts_object {
 
 				}//end foreach ($ar_properties as $key => $value_obj)
 				$ar_elements = array_values($ar_properties);
-				#debug_log(__METHOD__." ar_properties ".to_string($ar_properties), logger::DEBUG);
 			}
 
 
@@ -194,7 +192,7 @@ class ts_object {
 
 	/**
 	* GET_CHILD_DATA
-	* @return object $children_data
+	* @return object $child_data
 	*/
 	public function get_child_data() : object {
 
@@ -210,7 +208,7 @@ class ts_object {
 			$child_data->permissions_button_delete	= $this->get_permissions_element('button_delete');
 			$child_data->permissions_indexation		= $this->get_permissions_element('component_relation_index');
 			$child_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
-			$child_data->ar_elements					= [];
+			$child_data->ar_elements				= [];
 
 		// model
 			$model = $this->options->model ?? null; // options are fixed on construct the class
@@ -218,7 +216,38 @@ class ts_object {
 		// short vars
 			$separator = ' ';
 
-		# elements
+		// elements
+		// Sample value:
+			// [
+			//     {
+			//         "tipo": "actv10",
+			//         "type": "term"
+			//     },
+			//     {
+			//         "icon": "ND",
+			//         "tipo": "actv9",
+			//         "type": "icon"
+			//     },
+			//     {
+			//         "icon": "M",
+			//         "tipo": "actv6",
+			//         "type": "icon"
+			//     },
+			//     {
+			//         "icon": "U",
+			//         "tipo": "actv25",
+			//         "type": "icon"
+			//     },
+			//     {
+			//         "icon": "CH",
+			//         "tipo": "actv23",
+			//         "type": "icon"
+			//     },
+			//     {
+			//         "tipo": "actv23",
+			//         "type": "link_children"
+			//     }
+			// ]
 		$ar_elements = ts_object::get_ar_elements($this->section_tipo, $model);
 		foreach ($ar_elements as $current_object) {
 
@@ -347,7 +376,6 @@ class ts_object {
 								}
 
 							if ($model_name==='component_relation_index' || $model_name==='component_relation_struct') {
-								#dump($dato, ' dato ++ '.to_string($element_tipo));
 								$total = count($dato);
 								$element_obj->value .= ':' . $total;
 							}

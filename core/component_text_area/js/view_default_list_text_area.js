@@ -89,7 +89,6 @@ const render_edit_modal = async function(self) {
 		const lang = self.data && self.data.lang
 			? self.data.lang
 			: self.lang
-		console.log('lang:', lang);
 
 	// header
 		const header = ui.create_dom_element({
