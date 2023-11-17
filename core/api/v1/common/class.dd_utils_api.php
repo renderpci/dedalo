@@ -594,7 +594,8 @@ final class dd_utils_api {
 						$msg = ' upload: No file sent.';
 						debug_log(__METHOD__
 							. " $msg " .PHP_EOL
-							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
 							, logger::ERROR
 						);
 						$response->msg .= $msg;
@@ -605,7 +606,41 @@ final class dd_utils_api {
 						$msg = ' upload: Exceeded filesize limit.';
 						debug_log(__METHOD__
 							. " $msg " .PHP_EOL
-							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
+							, logger::ERROR
+						);
+						$response->msg .= $msg;
+						return $response;
+
+					case UPLOAD_ERR_PARTIAL:
+						$msg = ' upload: The uploaded file was only partially uploaded.';
+						debug_log(__METHOD__
+							. " $msg " .PHP_EOL
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
+							, logger::ERROR
+						);
+						$response->msg .= $msg;
+						return $response;
+
+					case UPLOAD_ERR_CANT_WRITE:
+						$msg = ' upload: Failed to write file to disk.';
+						debug_log(__METHOD__
+							. " $msg " .PHP_EOL
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
+							, logger::ERROR
+						);
+						$response->msg .= $msg;
+						return $response;
+
+					case UPLOAD_ERR_NO_TMP_DIR:
+						$msg = ' upload: Missing a temporary folder.';
+						debug_log(__METHOD__
+							. " $msg " .PHP_EOL
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
 							, logger::ERROR
 						);
 						$response->msg .= $msg;
@@ -615,7 +650,8 @@ final class dd_utils_api {
 						$msg = ' upload: Unknown errors.';
 						debug_log(__METHOD__
 							." $msg " .PHP_EOL
-							. ' file_to_upload error:' .to_string($file_to_upload['error'])
+							. ' file_to_upload error: ' .to_string($file_to_upload['error']) . PHP_EOL
+							.' rqo: ' . to_string($rqo)
 							, logger::ERROR
 						);
 						$response->msg .= $msg;
