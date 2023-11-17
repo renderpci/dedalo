@@ -7,8 +7,8 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
 
 
 
