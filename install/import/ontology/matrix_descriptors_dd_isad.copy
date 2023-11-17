@@ -1,7 +1,6 @@
 isad99	Listado de relaciones	termino	lg-spa
 isad99	Relation list	termino	lg-eng
 isad91	global_search	termino	lg-spa
-isad100	Listado de indexaciones	termino	lg-spa
 isad100	Indexation list	termino	lg-eng
 isad88	onomastic_onomastic (moved to emakueak 137)	termino	lg-spa
 isad87	theme (moved to emakueak136)	termino	lg-spa
@@ -246,3 +245,4 @@ isad95	children	termino	lg-spa
 isad96	parent_data_recursive	termino	lg-spa
 isad97	access_data	termino	lg-spa
 isad98	onomastic_entities (moved to emakumeak138)	termino	lg-spa
+isad100	Listado de indexaciones	termino	lg-spa

@@ -645,7 +645,6 @@ numisdata439	descripcion	termino	lg-spa
 numisdata44	Progetto	termino	lg-ita
 numisdata44	Proyecto	termino	lg-spa
 numisdata440	catalogo	termino	lg-spa
-numisdata387	publications	termino	lg-spa
 numisdata391	ts_web	termino	lg-spa
 numisdata441	nomisma_uri	termino	lg-spa
 numisdata442	bibliografia	termino	lg-spa
@@ -1200,6 +1199,7 @@ numisdata805	Leyenda reverso	termino	lg-spa
 numisdata808	Diseño anverso	termino	lg-spa
 numisdata858	catalogue	termino	lg-spa
 numisdata859	dd_tm	termino	lg-spa
+numisdata856	bibliographic_references	termino	lg-spa
 numisdata86	Ultime modifiche	termino	lg-ita
 numisdata86	Últimos cambios	termino	lg-spa
 numisdata860	dd_tm	termino	lg-spa
@@ -1261,7 +1261,6 @@ numisdata892	web_numisdata_mib_pre	termino	lg-spa
 numisdata875		obs	lg-spa
 numisdata916	ref_type_symbol_reverse_data	termino	lg-spa
 numisdata917	ref_type_symbol_reverse	termino	lg-spa
-numisdata856	bibliographic_references	termino	lg-spa
 numisdata868	publication_data	termino	lg-spa
 numisdata885	?	termino	lg-spa
 numisdata887	Rol	termino	lg-spa
@@ -3685,3 +3684,4 @@ numisdata1356	Comentario	termino	lg-spa
 numisdata1356	Comentari	termino	lg-cat
 numisdata1356	Comment	termino	lg-eng
 numisdata370	Origen del dato	termino	lg-spa
+numisdata387	publications	termino	lg-spa
