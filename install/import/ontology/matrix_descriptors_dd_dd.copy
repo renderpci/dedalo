@@ -5096,7 +5096,6 @@ dd836	Filtre 	termino	lg-fra
 dd837	Liste des enregistrements	termino	lg-fra
 dd838	Nouveau statut de diffusion	termino	lg-fra
 dd1619	Ebenen	termino	lg-deu
-dd1635	Proyecto	termino	lg-spa
 dd839	Copie DVD 	termino	lg-fra
 dd84	Publier	termino	lg-fra
 dd840	Valeur de la liste	termino	lg-fra
@@ -5114,7 +5113,6 @@ dd851	Projet	termino	lg-fra
 dd852	Imprimer	termino	lg-fra
 dd853	Nouveau	termino	lg-fra
 dd1619	Livelli	termino	lg-ita
-dd1635	Project	termino	lg-eng
 dd854	Afficher l'inspecteur	termino	lg-fra
 dd855	Aller à la liste	termino	lg-fra
 dd856	modèles	termino	lg-fra
@@ -5180,7 +5178,6 @@ dd907	Projet	termino	lg-fra
 dd908	Nouveau	termino	lg-fra
 dd909	Supprimer	termino	lg-fra
 dd1620	Tipo	termino	lg-ita
-dd1637	Valor	termino	lg-spa
 dd911	Classes CSS	termino	lg-fra
 dd912	Identification	termino	lg-fra
 dd913	Projet	termino	lg-fra
@@ -5201,7 +5198,6 @@ dd926	Projet	termino	lg-fra
 dd927	Nouveau Catégorie d'emploi / Poste	termino	lg-fra
 dd928	Supprimer la catégorie d'emploi / le poste	termino	lg-fra
 dd929	Date de création 	termino	lg-fra
-dd1637	Value	termino	lg-eng
 dd1621	Publicar	termino	lg-spa
 dd93	créé	termino	lg-fra
 dd930	Date de résiliation	termino	lg-fra
@@ -7887,7 +7883,6 @@ dd1406	Images	termino	lg-eng
 dd1407	Video	termino	lg-eng
 dd1408	PDF	termino	lg-eng
 dd1409	Children	termino	lg-eng
-dd1410	Father	termino	lg-eng
 dd1411	Related terms	termino	lg-eng
 dd1412	section map	termino	lg-eng
 dd1413	list	termino	lg-eng
@@ -7896,6 +7891,7 @@ dd1415	New	termino	lg-eng
 dd1416	Delete	termino	lg-eng
 dd1244	Layout map (request config) presets	termino	lg-eng
 dd1390	Web programming	termino	lg-eng
+dd1410	Parent	termino	lg-eng
 dd1430	Block rendered	termino	lg-eng
 dd1434	Link	termino	lg-eng
 dd1436	Web renderers	termino	lg-eng
@@ -8095,7 +8091,7 @@ dd922	Labor Category / Title	termino	lg-eng
 dd947	New Type of association / group	termino	lg-eng
 dd1132	Collection / archive	termino	lg-eng
 dd1711	Date o range with format DD/MM/YYYY ó DD/MM/YYYY-DD/MM/YYYY	termino	lg-eng
-dd1	Dédalo 2023-11-12T19:02:04+01:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-11-17T11:27:20+01:00 Benimamet	termino	lg-spa
 dd1639	Remove filter	termino	lg-eng
 dd1639	Eliminar filtro	termino	lg-spa
 dd1639	Supprimer le filtre	termino	lg-fra
@@ -8202,3 +8198,5 @@ dd1510	Review	termino	lg-eng
 dd1555	SVG	termino	lg-spa
 dd1555	SVG	termino	lg-deu
 dd1555	SVG	termino	lg-eng
+dd1635	bibliography_data	termino	lg-spa
+dd1637	bibliographic_references	termino	lg-spa

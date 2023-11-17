@@ -128,7 +128,6 @@ mht60	MHT	termino	lg-spa
 mht61	periodos	termino	lg-spa
 mht62	restringidos	termino	lg-spa
 mht64	List	termino	lg-spa
-mht65	Búsqueda	termino	lg-spa
 mht66	web_maternidades_robadas	termino	lg-spa
 mht67	List	termino	lg-spa
 mht68	DONNA E MEMORIA	termino	lg-ita
@@ -186,7 +185,6 @@ mht93	Nuevo	termino	lg-spa
 mht93	Nuovo	termino	lg-ita
 mht94	Borrar	termino	lg-spa
 mht94	Cancellare	termino	lg-ita
-mht95	Search List	termino	lg-spa
 mht96	ts_web	termino	lg-spa
 mht97	publication	termino	lg-spa
 mht98	term_id	termino	lg-spa
@@ -366,3 +364,5 @@ mht171	Nuevo	termino	lg-spa
 mht172	Borrar	termino	lg-spa
 mht173	Proyecto	termino	lg-spa
 mht174	probability	termino	lg-spa
+mht95	bibliographic_references	termino	lg-spa
+mht65	publications	termino	lg-spa

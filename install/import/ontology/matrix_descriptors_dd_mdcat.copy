@@ -14591,3 +14591,21 @@ mdcat4448	lloc_situacio	termino	lg-spa
 mdcat4449	ref_lloc_situacio	termino	lg-spa
 mdcat4450	ref_nom	termino	lg-spa
 mdcat4451	ref_cognom	termino	lg-spa
+mdcat4452	Pasa a firmar	termino	lg-spa
+mdcat4452	Passa a signar	termino	lg-cat
+mdcat4453	Documentació escannejada	termino	lg-cat
+mdcat4453	Documentaicón escaneada	termino	lg-spa
+mdcat4454	Documentació digitalitzada	termino	lg-cat
+mdcat4454	Documentaicón digitalizada	termino	lg-spa
+mdcat4455	Agrupació documents pdf	termino	lg-cat
+mdcat4455	Agrupación documentos pdf	termino	lg-spa
+mdcat4456	Carta tancament feta	termino	lg-cat
+mdcat4456	Carta finalización hecha	termino	lg-spa
+mdcat4457	Carta firmada	termino	lg-spa
+mdcat4457	Carta signada	termino	lg-cat
+mdcat4458	Tramesa	termino	lg-cat
+mdcat4458	Tramitada	termino	lg-spa
+mdcat4459	Actuación	termino	lg-spa
+mdcat4459	Actuació	termino	lg-cat
+mdcat4460	Comentario	termino	lg-spa
+mdcat4460	Comentari	termino	lg-cat
