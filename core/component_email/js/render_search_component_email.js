@@ -51,17 +51,20 @@ render_search_component_email.prototype.search = async function(options) {
 }//end search
 
 
+
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value
+	const data	= self.data || {}
+	const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -77,7 +80,7 @@ const get_content_data = function(self) {
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
@@ -91,6 +94,7 @@ const get_content_data = function(self) {
 			content_data[i] = input_element_node
 		}
 
+
 	return content_data
 }//end get_content_data
 
@@ -98,16 +102,26 @@ const get_content_data = function(self) {
 
 /**
 * GET_INPUT_ELEMENT
-* @return dom element input
+* @param int key
+* @param string current_value
+* @param object self
+* @return HTMLElement content_value
 */
 const get_input_element = (i, current_value, self) => {
+
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
 
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value
+			value			: current_value,
+			parent			: content_value
 		})
 		input.addEventListener('change',function() {
 			// set the changed_data for replace it in the instance data
@@ -123,12 +137,12 @@ const get_input_element = (i, current_value, self) => {
 			self.update_data_value(changed_data_item)
 			// set the change_data to the instance
 			// self.data.changed_data = changed_data
-			// event to update the dom elements of the instance
+			// event to update the DOM elements of the instance
 			event_manager.publish('change_search_element', self)
 		})
 
 
-	return input
+	return content_value
 }//end get_input_element
 
 
