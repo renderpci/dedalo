@@ -2401,8 +2401,20 @@ class search {
 
 				case 'column':
 					// column case. Used in direct column access like 'section_id', 'state' (matrix_time_machine), etc.
-					$column_name = $search_object->column_name;
 
+					// check column_name property first
+						if (!isset($search_object->column_name)) {
+							debug_log(__METHOD__
+								. " column_name is not defined in search object " . PHP_EOL
+								. ' search_object: ' . to_string($search_object)
+								, logger::ERROR
+							);
+							if(SHOW_DEBUG===true) {
+								dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string());
+							}
+						}
+
+					$column_name = $search_object->column_name;
 					if(SHOW_DEBUG===true) {
 						$sql_where .= "-- COLUMN FORMAT - format: $search_object_format - $column_name - $table_alias \n";
 					}
@@ -2439,6 +2451,7 @@ class search {
 						$sql_where .= $search_object->operator. ' ' .$search_object->q_parsed;
 					}
 					break;
+
 				default:
 					// undefined format case
 					debug_log(__METHOD__
