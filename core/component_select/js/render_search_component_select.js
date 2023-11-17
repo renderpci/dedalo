@@ -54,6 +54,7 @@ render_search_component_select.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
