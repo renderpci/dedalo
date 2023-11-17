@@ -115,15 +115,12 @@ export const render_ts_line = function(options) {
 			}
 
 			// INDEXATIONS AND STRUCTURATIONS
-			case (child_data.ar_elements[j].model==='component_relation_index'):
-			case (child_data.ar_elements[j].tipo==='hierarchy40'): // Indexations component_relation_index Thesaurus
-			case (child_data.ar_elements[j].tipo==='ww34'): // Indexations component_relation_index web
-			case (child_data.ar_elements[j].tipo==='hierarchy91'): { // Structurations component_relation_struct Thesaurus
+			case (child_data.ar_elements[j].model==='component_relation_index'): {
 
-				if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
-					|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
-					|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
-					) {
+				// if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
+				// 	|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
+				// 	|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
+				// 	) {
 
 					// element_show_indexations. Build button
 					const element_show_indexations	= ui.create_dom_element({
@@ -151,7 +148,7 @@ export const render_ts_line = function(options) {
 							element_show_indexations.classList.remove('loading')
 						})
 					})
-				}
+				// }
 				break;
 			}
 
