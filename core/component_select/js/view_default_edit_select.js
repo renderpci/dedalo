@@ -106,6 +106,10 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
+		// click event
+			select.addEventListener('click', function(e){
+				e.stopPropagation()
+			})
 		// change event
 			select.addEventListener('change', function(e){
 
@@ -152,10 +156,6 @@ const get_content_value = (i, current_value, self) => {
 						)
 						event_manager.publish('set_lang_value_' + self.id_base , datalist_item.section_id)
 					}
-			})
-		// click event
-			select.addEventListener('click', function(e){
-				e.stopPropagation()
 			})
 
 	// select options

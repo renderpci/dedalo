@@ -753,7 +753,13 @@ export const ui = {
 						: null;
 					if (first_input) {
 						setTimeout(function(){
-							if (component.active) {
+							if (component.active && first_input !== document.activeElement) {
+
+								// check another focus elements like q_operator
+								if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+									return
+								}
+
 								first_input.focus()
 							}
 						}, 25)

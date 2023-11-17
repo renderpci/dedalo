@@ -283,6 +283,9 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
+		button_calendar.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+		})
 		button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
 		function fn_calendar_mouseup() {
 			const dd_date_format = page_globals.dedalo_date_order  || 'dmy'
