@@ -7,10 +7,11 @@
 	// background-color: #d2baf6;
 
 
+
 	// view_default
 	&.view_default {
 
-		&.edit, &.search {
+		&.edit {
 
 			>.content_data {
 				overflow: auto;
@@ -163,4 +164,44 @@
 			}
 		}
 	}
+
+
+
+	&.search {
+		>.content_data {
+
+			>.q_operator {
+				width: 3rem;
+				margin-right: 0.5rem;
+				text-align: center;
+			}
+
+			>.content_value {
+				display: inline-block;
+				margin-right: 0.5rem;
+				margin-top: 0.5rem;
+				margin-bottom: 0.25rem;
+				width: auto;
+
+
+				// label wraps the input too
+				>.label {
+					// width: 100%;
+					padding-top: 0.33rem;
+					padding-bottom: 0.33rem;
+					padding-right: 0.5rem;
+
+					display: flex;
+					cursor: pointer;
+
+					>input {
+						cursor: pointer;
+							margin-right: 0.33rem;
+							vertical-align: top;
+					}
+				}
+			}
+		}
+	}
+
 }

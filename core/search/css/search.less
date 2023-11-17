@@ -258,6 +258,7 @@
 							color: #ffffff;
 							border: 1px solid #ffffff;
 							border-radius: 0.25em;
+							word-break: break-word;
 
 							&:hover {
 								background-color: darken(#f99c29, 10%);
@@ -271,6 +272,7 @@
 							position: relative;
 							border-radius: 4px;
 							overflow: hidden;
+							min-width: 4.7rem;
 
 							.max_input_label {
 								display: block;
@@ -284,20 +286,26 @@
 							input.max_input {
 								border: none;
 								width: 100%;
-								// height:100%;
 								text-align: center;
 								font-size: 1.1em;
 								padding-top: 2em;
 								padding-bottom: 0.33rem;
-								flex: 1 1 auto;
+								// flex: 1 1 auto;
+
+								flex: 0;
+								min-height: 5rem;
 							}
 
 							.children_recursive_label {
 								flex: 1 1 auto;
 								cursor: pointer;
+								padding: 0.5rem;
+								word-break: break-word;
+
 								// input
 								.children_recursive {
 									margin-right: 0.33rem;
+									vertical-align: top;
 								}
 							}
 						}

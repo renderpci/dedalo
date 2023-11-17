@@ -132,6 +132,7 @@ const get_input_element = (i, current_value, self) => {
 	// label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
+			class_name		: 'label',
 			inner_html		: label,
 			parent			: content_value
 		})

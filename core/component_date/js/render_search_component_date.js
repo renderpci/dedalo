@@ -87,6 +87,12 @@ const get_content_data = function(self) {
 				ui.component.activate(self)
 			}
 		})
+		input_q_operator.addEventListener('click', function(e) {
+			e.stopPropagation();
+		})
+		input_q_operator.addEventListener('mousedown', function(e) {
+			e.stopPropagation();
+		})
 		input_q_operator.addEventListener('change', function(){
 			// value
 				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null

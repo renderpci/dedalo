@@ -119,14 +119,15 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'q_operator',
 			parent			: content_value
 		})
-		input_q_operator.addEventListener('change', function() {
-			// value
-				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
-			// q_operator. Fix the data in the instance previous to save
-				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		})// end event change
+		// change event
+			input_q_operator.addEventListener('change', function() {
+				// value
+					const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+				// q_operator. Fix the data in the instance previous to save
+					self.data.q_operator = value
+				// publish search. Event to update the DOM elements of the instance
+					event_manager.publish('change_search_element', self)
+			})// end event change
 
 	// select
 		const select = ui.create_dom_element({
@@ -134,23 +135,28 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'select',
 			parent			: content_value
 		})
-		select.addEventListener('change', function(){
-
-			const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
-
-			const changed_data_item = Object.freeze({
-				action	: (parsed_value != null) ? 'update' : 'remove',
-				key		: (parsed_value != null) ? i : false,
-				value	: parsed_value
+		// click event
+			select.addEventListener('click', function(e) {
+				e.stopPropagation()
 			})
+		// change event
+			select.addEventListener('change', function(){
 
-			// update the instance data (previous to save)
-				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
-				event_manager.publish('change_search_element', self)
-		})//end event change
+				const parsed_value = (select.value.length>0) ? JSON.parse(select.value) : null
+
+				const changed_data_item = Object.freeze({
+					action	: (parsed_value != null) ? 'update' : 'remove',
+					key		: (parsed_value != null) ? i : false,
+					value	: parsed_value
+				})
+
+				// update the instance data (previous to save)
+					self.update_data_value(changed_data_item)
+				// set data.changed_data. The change_data to the instance
+					// self.data.changed_data = changed_data
+				// publish search. Event to update the dom elements of the instance
+					event_manager.publish('change_search_element', self)
+			})//end event change
 
 	// select options
 		const datalist_length = datalist.length
