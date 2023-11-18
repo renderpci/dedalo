@@ -1446,7 +1446,7 @@ final class dd_utils_api {
 	* @param object $options
 	* @return string $thumbnail_url
 	*/
-	private static function create_thumbnail(object $options) : string {
+	private static function create_thumbnail(object $options) : ?string {
 
 		// options
 			$tmp_dir		= $options->tmp_dir;
@@ -1476,16 +1476,18 @@ final class dd_utils_api {
 					ImageMagick::convert($thumb_pdf_options);
 					break;
 
+
 				case 'image/jpeg':
-				default:
 					ImageMagick::convert((object)[
 						'source_file'	=> $target_path,
 						'target_file'	=> $thumbnail_file,
 						'thumbnail'		=> true
 					]);
-						dump($target_path, ' )))))))) source_file ++ '.to_string());
-						dump($thumbnail_file, ' )))))))) target_file thumbnail_file ++ '.to_string());
 					break;
+
+				default:
+					// Nothing to do with videos
+					return null;
 			}
 
 		$thumbnail_url = DEDALO_UPLOAD_TMP_URL .'/'. $user_id .'/'. $key_dir .'/thumbnail/'. $filename . '.jpg';
