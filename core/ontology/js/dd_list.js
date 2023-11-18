@@ -1,5 +1,3 @@
-// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-
 /**
 * DD CLASS
 *
@@ -677,6 +675,58 @@ var dd = new function() {
 
 
 	/**
+	* DUPLICATE
+	* @param string terminoID
+	* @return promise|bool
+	*/
+	this.duplicate = function(terminoID) {
+
+		if (!confirm(`Duplicate term ${terminoID} ?`)) {
+			return false
+		}
+
+		// AJAX REQUEST
+		return $.ajax({
+			url			: this.trigger_url,
+			data		: {
+				accion		: 'duplicate',
+				terminoID	: terminoID
+			},
+			type		: 'POST',
+			dataType	: 'html'
+		})
+		// DONE
+		.done(function(data_response) {
+			console.log('))) duplicate data_response:', data_response);
+
+			if (!data_response) {
+				alert("Error on get response");
+				return
+			}
+
+			const response = JSON.parse(data_response)
+				console.log('))) duplicate data_response JSON parsed:', response);
+
+			const new_terminoID	= response.new_terminoID
+			const parent		= response.parent
+
+			// OK
+			// Update parent (always)
+			dd.actualizarList(parent)
+			setTimeout(function(){
+				dd.openTSedit(new_terminoID)
+			}, 150)
+		})
+		// FAIL ERROR
+		.fail(function(jqXHR, textStatus) {
+			const msg = "[duplicate] Request failed: " + textStatus
+			alert( msg )
+		})
+	}//end duplicate
+
+
+
+	/**
 	* OPENTSEDIT : Abre la ventana de edición del termino (ts_edit.php)
 	*/
 	let editwindow;
@@ -692,6 +742,16 @@ var dd = new function() {
 		if (editwindow) {
 			// editwindow.moveTo(screenW-740,0)
 			editwindow.focus()
+			editwindow.onload = function() {
+				// input_term
+				setTimeout(function(){
+					const input_term = editwindow.document.querySelector('.input_term')
+					console.log('input_term:', input_term);
+					if (input_term) {
+						input_term.focus()
+					}
+				}, 250)
+			};
 		}else{
 			alert("Error focus window (openTSedit). \n\nPlease disable 'Block Pop-Up Windows' option in your browser ")
 		}
@@ -1173,5 +1233,3 @@ function uniq_fast(a) {
 }
 
 
-
-// @license-end
