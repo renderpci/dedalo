@@ -280,7 +280,7 @@
 							// }
 						}
 
-					$diffusion_value = implode($fields_separator, $ar_diffusion_value);
+					$diffusion_value = implode($records_separator, $ar_diffusion_value);
 
 				}else if ($key==='custom_parents') {
 
