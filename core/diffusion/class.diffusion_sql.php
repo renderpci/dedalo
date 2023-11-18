@@ -722,12 +722,16 @@ class diffusion_sql extends diffusion  {
 											});
 											if ($column_found && !empty($column_found['field_value'])) {
 												$current_value = $column_found['field_value'];
-												$ar_value[] = $current_value;
+												$ar_value[] = is_string($current_value) || is_numeric($current_value)
+													? $current_value
+													: json_encode($current_value);
 											}
 										}
 										$value = implode(' ', $ar_value);
-										$value = str_replace(['<br>',' | ','  '], ' ', $value);
-										$value = strip_tags($value);
+										if (!empty($value)) {
+											$value = str_replace(['<br>',' | ','  '], ' ', $value);
+											$value = strip_tags($value);
+										}
 
 									    $column = [];
 										$column['field_name']		= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -3108,21 +3112,18 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_TO_TERMINOID
 	* Returns current section tipo like 'es1'
+	* @param object $options
+	* @param int|string dato
+	*	Is a section_id from component_section_id value
 	* @return string $section_tipo
 	*/
-	public static function map_to_terminoID($options, $dato) {
+	public static function map_to_terminoID(object $options,  $dato) : string {
 
-		$terminoID = null;
-		/*
-		$element_tipo 		= $options->tipo;
-		$table_element_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($element_tipo, $model_name='table', $relation_type='parent', $search_exact=true);
-		$ar_section_tipo 	= common::get_ar_related_by_model('section', reset($table_element_tipo));
-		$section_tipo 	 	= reset($ar_section_tipo);
-		*/
-		$section_tipo 	 	= $options->section_tipo;
-		$section_id 		= $dato;
+		$section_tipo	= $options->section_tipo;
+		$section_id		= $dato;
 
 		$terminoID = $section_tipo .'_'. $section_id;
+
 
 		return $terminoID;
 	}//end map_to_terminoID
