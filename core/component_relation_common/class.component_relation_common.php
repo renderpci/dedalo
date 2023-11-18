@@ -1533,7 +1533,7 @@ class component_relation_common extends component_common {
 			$ar_value = [];
 			foreach ($args_list as $current_option_obj) {
 
-				$lang = $current_option_obj->lang; // $this->lang
+				$lang = $current_option_obj->lang ?? $this->lang; // $this->lang
 
 				$options = new stdClass();
 					$options->lang			= $lang;
