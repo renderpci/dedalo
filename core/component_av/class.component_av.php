@@ -1406,6 +1406,27 @@ class component_av extends component_media_common {
 		$src_file			= $this->get_media_filepath($quality);
 		$posterframe_path	= $this->get_posterframe_path();
 
+		// check source file
+			if (!file_exists($src_file)) {
+				debug_log(__METHOD__
+					. " Invalid source path. Unable to create posterframe " . PHP_EOL
+					. ' src_file: ' 		. to_string($src_file) . PHP_EOL
+					. ' target_quality: ' 	. to_string($target_quality)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// file
+			$bytes		= filesize($src_file);
+			$mega_bytes	= number_format($bytes / 1048576, 2);
+			if ($mega_bytes>1000) {
+				debug_log(__METHOD__
+					. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
+					, logger::WARNING
+				);
+			}
+
 		$Ffmpeg	= new Ffmpeg();
 		$command_response = $Ffmpeg->create_posterframe((object)[
 			'timecode'			=> $current_time, // like '00:00:10',
