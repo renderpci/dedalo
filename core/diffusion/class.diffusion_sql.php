@@ -4395,7 +4395,7 @@ class diffusion_sql extends diffusion  {
 										$target_component_tipo,
 										$locator->section_id,
 										'list',
-										$options->lang,
+										$options->lang ?? DEDALO_DATA_LANG,
 										$locator->section_tipo,
 										false);
 
