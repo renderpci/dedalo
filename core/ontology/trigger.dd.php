@@ -115,7 +115,7 @@ if(!empty($data) && $data->mode==='edit_ts') {
 	// Write session to unlock session file
 	session_write_close();
 
-	// all ouput will be in json format
+	// all output will be in json format
 	header('Content-Type: application/json');
 
 	$response = new stdClass();
@@ -226,8 +226,8 @@ if(!empty($data) && $data->mode==='edit_ts') {
 					debug_log(__METHOD__." Ignored Publication schema save on master ! ".to_string(), logger::WARNING);
 				}else{
 					// Update schema data always
-					// $publication_schema_result = tool_diffusion::update_publication_schema($terminoID);
-					$publication_schema_result = diffusion::update_publication_schema($terminoID);
+					// $publication_schema_result	= tool_diffusion::update_publication_schema($terminoID);
+					$publication_schema_result		= diffusion::update_publication_schema($terminoID);
 					debug_log("trigger_dd.edit_ts -> Processing update_publication_schema: ".to_string($publication_schema_result), logger::DEBUG);
 				}
 			}
@@ -641,3 +641,85 @@ if($accion==='searchTSform') {
 }//end searchTSform
 
 
+
+/**
+* DUPLICATE
+* Duplicate term
+*/
+if($accion==='duplicate') {
+
+	$html ='';
+
+	// check vars
+		if(empty($terminoID))	{
+			exit("Need more vars: terminoID: $terminoID ");
+		}
+
+	// prefix
+		$prefix = RecordObj_dd_edit::get_prefix_from_tipo($terminoID);
+		if (empty($prefix)) {
+			exit("Error on insertTS. Prefix not found for terminoID:$terminoID)");
+		}
+
+	// current term
+		$current_term	= new RecordObj_dd_edit($terminoID, $prefix);
+		$parent			= $current_term->get_parent();
+		$esdescriptor	= $current_term->get_esdescriptor();
+		$visible		= $current_term->get_visible();
+		$esmodelo		= $current_term->get_esmodelo();
+		$modelo			= $current_term->get_modelo();
+		$traducible		= $current_term->get_traducible();
+		$propiedades	= $current_term->get_propiedades();
+		$properties		= $current_term->get_properties();
+		$relaciones		= $current_term->get_relaciones();
+
+	// norden
+		$ar_childrens	= RecordObj_dd::get_ar_childrens($parent);
+		$norden			= (int)count($ar_childrens)+1;
+
+	// configure RecordObj_dd
+		$RecordObj_dd_edit 	= new RecordObj_dd_edit(NULL, $prefix);
+			# Defaults
+			$RecordObj_dd_edit->set_esdescriptor($esdescriptor);
+			$RecordObj_dd_edit->set_visible($visible);
+			$RecordObj_dd_edit->set_parent($parent);
+			$RecordObj_dd_edit->set_esmodelo($esmodelo);
+			$RecordObj_dd_edit->set_modelo($modelo);
+			$RecordObj_dd_edit->set_traducible($traducible);
+			$RecordObj_dd_edit->set_propiedades($propiedades);
+			$RecordObj_dd_edit->set_properties($properties);
+			$RecordObj_dd_edit->set_relaciones($relaciones);
+			$RecordObj_dd_edit->set_norden($norden);
+
+	// save : After save, we can recover new created terminoID (prefix+autoIncrement)
+		$created_id_ts = $RecordObj_dd_edit->Save();
+
+	// terminoID : Seleccionamos el último terminoID recien creado
+		$new_terminoID = $RecordObj_dd_edit->get_terminoID();
+
+		error_log("Created new terminoID : $new_terminoID from $terminoID");
+
+		// check valid created terminoID
+			if (empty($new_terminoID) || strlen($new_terminoID)<3) {
+				exit("Error on create new term.");
+			}
+			if ($new_terminoID==$parent) {
+				exit("Error on duplicate. Created record with same terminoID as parent. Maybe counter is outdated. Please change manually current created term '$terminoID' before continue)");
+			}
+
+	// JSON Ontology Item save
+		// $term_id	= $new_terminoID;
+		// $json_item	= (object)ontology::tipo_to_json_item($term_id);
+		// $save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+
+	// response
+		$response = (object)[
+			'new_terminoID'	=> $new_terminoID,
+			'parent'		=> $parent
+		];
+
+	// all is ok. return terminoID string
+		echo json_encode($response);
+
+	exit();
+}//end duplicate

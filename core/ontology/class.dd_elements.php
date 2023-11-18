@@ -96,12 +96,16 @@ class dd_elements {
 			# INDEXATIONS : DESPLEGAR INDEXACIONES QUE USAN ESTE termino BtnU
 			#if($nIndexaciones >0) $html .= $this->renderBtnU($terminoID,$termino,$nIndexaciones);
 
+			// render_button_duplicate
+			$html .= $this->render_button_duplicate($terminoID);
+
 			# MODELO
 			if(!empty($modelo) && trim($modelo)!='' && $this->esmodelo!='si') {
 				#dump($modelo,"modelo");
 				$modelo_name = RecordObj_dd::get_termino_by_tipo($modelo);
 				$html .= $this->renderBtnM($terminoID,$modelo,$modelo_name);
 			}
+
 			# DESPLEGAR HIJOS BtnFlecha
 			#if($hijosD >0) $html .= $this->renderBtnFlecha($terminoID, $children, $desplegado);
 			if($hijosD >0) $html .= $this->renderBtnFlecha($terminoID, $children, 0, $parent); // $terminoID, $children=0, $desplegado=0, $parent
@@ -436,6 +440,22 @@ class dd_elements {
 
 		return $obj ;
 	}//end renderBtnM
+
+
+
+	/**
+	* RENDER_BUTTON_DUPLICATE
+	*/
+	protected static function render_button_duplicate(string $terminoID) : string {
+
+		$obj = '';
+		$obj .= ' <div class="duplicate" title="Duplicate $terminoID" ';
+		$obj .= 'onmousedown="dd.duplicate(\''.$terminoID.'\')"';
+		$obj .= '>+</div>';
+
+
+		return $obj ;
+	}//end render_button_duplicate
 
 
 
