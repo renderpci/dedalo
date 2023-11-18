@@ -4475,9 +4475,17 @@ class diffusion_sql extends diffusion  {
 						}
 
 					if ($value_array!==null) {
-						foreach ((array)$value_array as $value_array_value) {
-							$ar_value[] = $value_array_value;
-						}
+
+						// OLD WAY
+							// foreach ((array)$value_array as $value_array_value) {
+							// 	$ar_value[] = $value_array_value;
+							// }
+
+						// NEW WAY 18-11-2023 (see actv89)
+							$separator	= $process_dato_arguments->separator ?? $default_separator;
+							$ar_value[]	= is_array($value_array)
+								? implode($separator, $value_array)
+								: $value_array;
 					}
 					break;
 
@@ -4558,8 +4566,8 @@ class diffusion_sql extends diffusion  {
 							}
 						}
 					break;
-			}
-		}
+			}//end switch ($output)
+		}//end foreach ($ar_locator as $locator)
 
 
 		switch ($output) {
