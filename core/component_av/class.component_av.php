@@ -849,7 +849,8 @@ class component_av extends component_media_common {
 				}
 
 			// quality default in upload is 'original' (!)
-				$quality = $this->get_quality();
+				$quality			= $this->get_quality();
+				$quality_default	= $this->get_quality_default();
 
 			// audio case
 			if ($quality==='audio') {
@@ -922,8 +923,8 @@ class component_av extends component_media_common {
 									}
 								}
 
-								$setting_name			= Ffmpeg::get_setting_name($source_file, DEDALO_AV_QUALITY_DEFAULT);
-								$target_file_path		= $this->get_media_filepath(DEDALO_AV_QUALITY_DEFAULT);
+								$setting_name			= Ffmpeg::get_setting_name($source_file, $quality_default);
+								$target_file_path		= $this->get_media_filepath($quality_default);
 								$av_alternate_response	= Ffmpeg::build_av_alternate_command((object)[
 									'setting_name'		=> $setting_name,
 									'source_file_path'	=> $source_file,
@@ -932,18 +933,21 @@ class component_av extends component_media_common {
 
 								// execute the command to convert with ffmpeg
 								exec("$av_alternate_response->command  > /dev/null &");
-							}
 
+								// posterframe. Create posterframe of current video
+								$this->create_posterframe(
+									'00:00:10',
+									$quality_default // 404 normally
+								);
+							}
 						// }else{
 						// 	debug_log(__METHOD__
-						// 		." WARNING: Ignored conversion to default quality (".DEDALO_AV_QUALITY_DEFAULT."). File already exists"
+						// 		." WARNING: Ignored conversion to default quality (".$quality_default."). File already exists"
 						// 		, logger::WARNING
 						// 	);
 						// }//end if (!file_exists($target_file)) {
 					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
 
-				// posterframe. Create posterframe of current video
-					$this->create_posterframe('00:00:10');
 			}//end if ($quality=='audio') {
 
 
