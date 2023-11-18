@@ -66,10 +66,11 @@ class tool_diffusion extends tool_common {
 							// $ar_related = common::get_ar_related_by_model('component', $info_item->tipo, false);
 							$ar_related = RecordObj_dd::get_ar_terminos_relacionados($info_item->tipo, true, true);
 							if (isset($ar_related[0])) {
-								$current_name = RecordObj_dd::get_termino_by_tipo($ar_related[0], null, true, true);
-								$info_item->related_tipo	= $ar_related[0];
-								$info_item->related_label	= $current_name;
-								$info_item->related_model	= RecordObj_dd::get_modelo_name_by_tipo($ar_related[0],true);
+								$current_name					= RecordObj_dd::get_termino_by_tipo($ar_related[0], null, true, true);
+								$info_item->related_tipo		= $ar_related[0];
+								$info_item->related_label		= $current_name;
+								// $info_item->related_model	= RecordObj_dd::get_modelo_name_by_tipo($ar_related[0],true);
+								$info_item->related_model		= RecordObj_dd::get_legacy_model_name_by_tipo($ar_related[0]);
 							}
 							// add model
 							$info_item->model = RecordObj_dd::get_modelo_name_by_tipo($info_item->tipo, true);
