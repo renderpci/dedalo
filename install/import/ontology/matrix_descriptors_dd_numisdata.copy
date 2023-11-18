@@ -717,7 +717,6 @@ numisdata497	mapa	termino	lg-spa
 numisdata498	monedas	termino	lg-spa
 numisdata499	municipio	termino	lg-spa
 numisdata5	Tesori	termino	lg-ita
-numisdata5	Tesoros	termino	lg-spa
 numisdata50	people	termino	lg-spa
 numisdata55	Equivalentes	termino	lg-spa
 numisdata501	ts_grupo_numismatico	termino	lg-spa
@@ -798,7 +797,8 @@ numisdata500	Publicable	termino	lg-spa
 numisdata511	Publicable	termino	lg-spa
 numisdata542	Pubblicabile	termino	lg-ita
 numisdata542	Publicable	termino	lg-spa
-numisdata5	Hoards	termino	lg-eng
+numisdata5	Hoards / set	termino	lg-eng
+numisdata5	Tesoros / conjunto	termino	lg-spa
 numisdata561	Iscrizioni	termino	lg-ita
 numisdata562	Diseño reverso	termino	lg-spa
 numisdata562	Tipo rovescio	termino	lg-ita
