@@ -429,7 +429,8 @@
 
 			.ts_object_children_arrow_icon {
 				height: 1.4em;
-				position: relative;
+				// position: relative;
+				position: static;
 				width: 1.4em;
 				margin: 3px;
 				.triangle_right;
@@ -443,6 +444,11 @@
 				.triangle_down;
 				left: -2px;
 				top: 1px;
+
+				&.arrow_spinner {
+					border-color: transparent;
+					pointer-events: none;
+				}
 			}
 
 			.arrow_unactive {
@@ -472,8 +478,15 @@
 				content: " ";
 				display: block;
 				position: absolute;
-				top: -1rem;
-				left: 0.75rem;
+				// top: -1rem;
+				// left: 0.75rem;
+				top: 0.17rem;
+				left: 0.27rem;
+				@media screen and (max-width: @width_break_point_0) {
+					top: 0.10rem;
+					left: 0.17rem;
+				}
+
 				width: 1.1rem;
 				height: 1.1rem;
 
