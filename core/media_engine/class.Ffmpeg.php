@@ -334,6 +334,10 @@ final class Ffmpeg {
 					" $response->msg"
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					dump($options, ' options ++ '.to_string());
+					dump($ar_settings, ' ar_settings ++ '.to_string());
+				}
 				return $response;
 			}
 
