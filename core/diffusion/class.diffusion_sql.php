@@ -4665,6 +4665,10 @@ class diffusion_sql extends diffusion  {
 				$dd_date	= new dd_date($date_obj);
 				$value		= $dd_date->get_dd_timestamp($date_format="H:i:s", $padding=true);
 				break;
+			case 'date':
+				$dd_date	= new dd_date($date_obj);
+				$value		= $dd_date->get_dd_timestamp($date_format="Y-m-d", $padding=true);
+				break;
 			case 'full':
 			default:
 				// Default
