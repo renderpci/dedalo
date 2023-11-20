@@ -229,7 +229,7 @@ class component_av extends component_media_common {
 		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
 		$additional_path	= $this->additional_path;
 
-		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe/'. $additional_path .'/'. $file_name;
+		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
 
 		return $posterframe_path;
