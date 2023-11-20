@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {object_to_url_vars} from '../../../core/common/js/utils/index.js'
+	import {when_in_dom} from '../../../core/common/js/events.js'
 
 
 
@@ -55,6 +56,17 @@ render_tool_diffusion.prototype.edit = async function(options) {
 		// 	// when closing the modal, common destroy is called to remove tool and elements instances
 		// 	self.destroy(true, true, true)
 		// }
+
+	// focus first publish button
+		when_in_dom(
+			wrapper,
+			function() {
+				const publication_button = wrapper.querySelector('.publication_button')
+				if (publication_button) {
+					publication_button.focus()
+				}
+			}
+		)
 
 
 	return wrapper
