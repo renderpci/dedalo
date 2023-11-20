@@ -787,9 +787,16 @@ final class Ffmpeg {
 
 		// aspect_ratio_cmd
 			$raw_aspect_ratio	= Ffmpeg::get_aspect_ratio($src_file, $quality);
-			$aspect_ratio		= strtolower($raw_aspect_ratio)==='4x3'
-				? '540x404'
-				: '720x404'; // default for 16x9
+			if ($quality==='original') {
+				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
+					? '936x720'
+					: '1280x720';
+			}else {
+				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
+					? '540x404'
+					: '720x404'; // default for 16x9
+			}
+
 			$aspect_ratio_cmd = '-s ' . $aspect_ratio;
 
 		// timecode
