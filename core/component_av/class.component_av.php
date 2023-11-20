@@ -850,7 +850,7 @@ class component_av extends component_media_common {
 
 			// quality default in upload is 'original' (!)
 				$quality			= $this->get_quality();
-				$quality_default	= $this->get_quality_default();
+				$quality_default	= $this->get_default_quality();
 
 			// audio case
 			if ($quality==='audio') {
@@ -931,14 +931,22 @@ class component_av extends component_media_common {
 									'target_file_path'	=> $target_file_path
 								]);
 
-								// execute the command to convert with ffmpeg
-								exec("$av_alternate_response->command  > /dev/null &");
+								if ($av_alternate_response->result===true) {
 
-								// posterframe. Create posterframe of current video
-								$this->create_posterframe(
-									'00:00:10',
-									$quality_default // 404 normally
-								);
+									// execute the command to convert with ffmpeg
+									exec("$av_alternate_response->command  > /dev/null &");
+
+									// posterframe. Create posterframe of current video
+									$this->create_posterframe(
+										'00:00:10',
+										$quality_default // 404 normally
+									);
+								}else{
+									$msg = ' Error Processing Request. build_av_alternate_command fails. ' . to_string($av_alternate_response->msg);
+									debug_log(__METHOD__.$msg, logger::ERROR);
+									$response->msg .= $msg;
+									return $response;
+								}
 							}
 						// }else{
 						// 	debug_log(__METHOD__
@@ -1291,6 +1299,9 @@ class component_av extends component_media_common {
 
 				$command_response  = shell_exec( $command );
 
+				// update component dato files info and save
+					$this->Save();
+
 			}else{
 
 				// launch a background process
@@ -1302,6 +1313,12 @@ class component_av extends component_media_common {
 					. ' PID: ' . $PID
 					, logger::DEBUG
 				);
+
+				// update component dato files info and save
+					// $this->Save(); // delayed (!)
+					// (!) Do not update here because process continues in background and
+					// a save action 'force_save' will be called from client from tool_media_versions
+					// when the new file is available (background process finish)
 			}
 
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
@@ -1320,12 +1337,6 @@ class component_av extends component_media_common {
 					'target_quality'	=> $quality
 				]
 			);
-
-		// update component dato files info and save
-			// $this->Save(); // delayed (!)
-			// (!) Do not update here because process continues in background and
-			// a save action 'force_save' will be called from client from tool_media_versions
-			// when the new file is available (background process finish)
 
 		// response
 			$response->result	= true;
@@ -1402,30 +1413,40 @@ class component_av extends component_media_common {
 	*/
 	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
 
-		$quality			= $target_quality ?? $this->get_quality_default();
-		$src_file			= $this->get_media_filepath($quality);
-		$posterframe_path	= $this->get_posterframe_path();
+		// short vars
+			$quality			= $target_quality ?? $this->get_original_quality();
+			$src_file			= $this->get_media_filepath($quality);
+			$posterframe_path	= $this->get_posterframe_path();
 
 		// check source file
 			if (!file_exists($src_file)) {
-				debug_log(__METHOD__
-					. " Invalid source path. Unable to create posterframe " . PHP_EOL
-					. ' src_file: ' 		. to_string($src_file) . PHP_EOL
-					. ' target_quality: ' 	. to_string($target_quality)
-					, logger::ERROR
-				);
-				return false;
+
+				if ($quality!==$this->get_default_quality()) {
+					// try with quality_default
+					$quality	= $this->get_default_quality();
+					$src_file	= $this->get_media_filepath($quality);
+				}
+
+				if (!file_exists($src_file)) {
+					debug_log(__METHOD__
+						. " Invalid source path. Unable to create posterframe " . PHP_EOL
+						. ' src_file: ' 		. to_string($src_file) . PHP_EOL
+						. ' target_quality: ' 	. to_string($target_quality)
+						, logger::ERROR
+					);
+					return false;
+				}
 			}
 
 		// file
-			$bytes		= filesize($src_file);
-			$mega_bytes	= number_format($bytes / 1048576, 2);
-			if ($mega_bytes>1000) {
-				debug_log(__METHOD__
-					. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
-					, logger::WARNING
-				);
-			}
+			// $bytes		= filesize($src_file);
+			// $mega_bytes	= number_format($bytes / 1048576, 2);
+			// if ($mega_bytes>1000) {
+			// 	debug_log(__METHOD__
+			// 		. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
+			// 		, logger::WARNING
+			// 	);
+			// }
 
 		$Ffmpeg	= new Ffmpeg();
 		$command_response = $Ffmpeg->create_posterframe((object)[

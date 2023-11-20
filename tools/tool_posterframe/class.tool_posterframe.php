@@ -207,7 +207,7 @@ class tool_posterframe extends tool_common {
 			$src_file = $component_av->get_media_filepath($quality);
 			if (!file_exists($src_file)) {
 				// try with default quality
-				$quality	= $component_av->get_quality_default();
+				$quality	= $component_av->get_default_quality();
 				$src_file	= $component_av->get_media_filepath($quality);
 			}
 			if (!file_exists($src_file)) {
