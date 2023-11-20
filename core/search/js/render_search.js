@@ -437,6 +437,7 @@ render_search.prototype.render_search_buttons = function(){
 				ar_promises.push(
 					new Promise(async function(resolve){
 						instance.data.value = []
+						instance.q_operator = null
 						await instance.refresh({
 							build_autoload : false
 						})
