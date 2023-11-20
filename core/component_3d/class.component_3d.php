@@ -306,18 +306,6 @@ class component_3d extends component_media_common {
 			. " Sorry. This method is not implemented yet " . PHP_EOL
 			, logger::ERROR
 		);
-
-		// $reelID		= $this->get_id();
-		// $quality	= $target_quality ?? $this->get_quality_default();
-
-		// # AVObj
-		// $AVObj = new AVObj($reelID, $quality);
-
-		// # Ffmpeg
-		// $Ffmpeg				= new Ffmpeg();
-		// $command_response	= $Ffmpeg->create_posterframe($AVObj, $current_time, $ar_target);
-
-		// return $command_response;
 	}//end create_posterframe
 
 

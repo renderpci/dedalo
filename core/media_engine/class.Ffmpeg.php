@@ -216,50 +216,50 @@ final class Ffmpeg {
 	* Get master media file for generate alternative version
 	* @return string|bool
 	*/
-	public function get_master_media_file(object $AVObj) {
+		// public function get_master_media_file(object $AVObj) {
 
-		$name		= $AVObj->get_name();
-		$extension	= $AVObj->get_extension();
+		// 	$name		= $AVObj->get_name();
+		// 	$extension	= $AVObj->get_extension();
 
-		$ar_quality = DEDALO_AV_AR_QUALITY;
+		// 	$ar_quality = DEDALO_AV_AR_QUALITY;
 
-		# Recorre el array de calidades de mayor a menor hasta que encuentra una que exista
-		foreach($ar_quality as $quality) {
+		// 	# Recorre el array de calidades de mayor a menor hasta que encuentra una que exista
+		// 	foreach($ar_quality as $quality) {
 
-			#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
+		// 		#$file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}/{$name}.{$extension}";
 
-				#
-				# Search for every possible file whit this name and unknown extension
-				$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}";
-				if (is_dir($target_dir)) {
+		// 			#
+		// 			# Search for every possible file whit this name and unknown extension
+		// 			$target_dir = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/{$quality}";
+		// 			if (is_dir($target_dir)) {
 
-					if ($handle = opendir($target_dir)) {
-						while (false !== ($file = readdir($handle))) {
+		// 				if ($handle = opendir($target_dir)) {
+		// 					while (false !== ($file = readdir($handle))) {
 
-							// note that '.' and '..' is returned even
-							if($name == $file && is_dir($target_dir.'/'.$file)){
-								$file_path = $target_dir.'/'.$file;
-								return $file_path;
-							}
+		// 						// note that '.' and '..' is returned even
+		// 						if($name == $file && is_dir($target_dir.'/'.$file)){
+		// 							$file_path = $target_dir.'/'.$file;
+		// 							return $file_path;
+		// 						}
 
-							$findme = $name . '.';
-							if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
-								$file_path = $target_dir.'/'.$file;
-								return $file_path;
-							}
-						}
-						closedir($handle);
-					}//end if ($handle = opendir($target_dir)) {
-				}
+		// 						$findme = $name . '.';
+		// 						if( strpos($file, $findme)!==false ) {  // && strpos($file, $this->get_target_filename())===false
+		// 							$file_path = $target_dir.'/'.$file;
+		// 							return $file_path;
+		// 						}
+		// 					}
+		// 					closedir($handle);
+		// 				}//end if ($handle = opendir($target_dir)) {
+		// 			}
 
-			#if(file_exists($file)) {
-			#	return $file;
-			#}
-		}//end if(is_array($ar_quality)) foreach($ar_quality as $quality) {
+		// 		#if(file_exists($file)) {
+		// 		#	return $file;
+		// 		#}
+		// 	}//end if(is_array($ar_quality)) foreach($ar_quality as $quality) {
 
 
-		return false;
-	}//end get_master_media_file
+		// 	return false;
+		// }//end get_master_media_file
 
 
 
@@ -269,18 +269,18 @@ final class Ffmpeg {
 	* @param object $AVObj
 	* @return string $quality
 	*/
-	public function get_master_media_file_quality(AVObj $AVObj) : string {
+		// public function get_master_media_file_quality(AVObj $AVObj) : string {
 
-		$master_media_file = $this->get_master_media_file($AVObj);
+		// 	$master_media_file = $this->get_master_media_file($AVObj);
 
-		$ar			= explode('/',$master_media_file);
+		// 	$ar			= explode('/',$master_media_file);
 
-		$key		= count($ar)-1;
-		$quality	= $ar[$key];
+		// 	$key		= count($ar)-1;
+		// 	$quality	= $ar[$key];
 
 
-		return $quality;
-	}//end get_master_media_file_quality
+		// 	return $quality;
+		// }//end get_master_media_file_quality
 
 
 
@@ -289,15 +289,15 @@ final class Ffmpeg {
 	* Get master media file quality from file name
 	* @return AVObj $obj
 	*/
-	public function get_master_media_file_obj(AVObj $AVObj) : AVObj {
+		// public function get_master_media_file_obj(AVObj $AVObj) : AVObj {
 
-		$reelID						= $AVObj->get_reelID();
-		$master_media_file_quality	= $this->get_master_media_file_quality($AVObj);
+		// 	$reelID						= $AVObj->get_reelID();
+		// 	$master_media_file_quality	= $this->get_master_media_file_quality($AVObj);
 
-		$obj = new AVObj($reelID, $master_media_file_quality);
+		// 	$obj = new AVObj($reelID, $master_media_file_quality);
 
-		return $obj;
-	}//end get_master_media_file_obj
+		// 	return $obj;
+		// }//end get_master_media_file_obj
 
 
 
