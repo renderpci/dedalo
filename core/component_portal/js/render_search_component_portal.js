@@ -98,7 +98,7 @@ const render_content_data = async function(self, ar_section_record) {
 			'component_relation_parent'
 		]
 		if (!non_q_operator_models.includes(self.model)) {
-			const q_operator = self.data.q_operator
+			const q_operator = self.data.q_operator || self.q_operator
 			const input_q_operator = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
@@ -113,7 +113,8 @@ const render_content_data = async function(self, ar_section_record) {
 				// value
 					const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 				// q_operator. Fix the data in the instance previous to save
-					self.data.q_operator = value
+					self.data.q_operator	= value
+					self.q_operator			= value
 				// publish search. Event to update the DOM elements of the instance
 					event_manager.publish('change_search_element', self)
 			})
