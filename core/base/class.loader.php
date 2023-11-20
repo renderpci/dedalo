@@ -38,7 +38,7 @@ include(DEDALO_CORE_PATH . '/common/class.search_query_object.php'); # new 30-06
 include(DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.ImageMagick.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.MediaObj.php');
-include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
+// include(DEDALO_CORE_PATH . '/media_engine/class.AVObj.php');
 include(DEDALO_CORE_PATH . '/media_engine/class.PosterFrameObj.php');
 // include(DEDALO_CORE_PATH . '/media_engine/class.Thumb.php');
 // include(DEDALO_CORE_PATH . '/media_engine/class.ImageObj.php');
