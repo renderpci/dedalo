@@ -4469,6 +4469,7 @@ class diffusion_sql extends diffusion  {
 			switch ($output) {
 				case 'merged_unique_implode':
 				case 'merged_unique':
+				case 'merged_group': // see actv89
 				case 'merged':
 					// empty_value. if defined, force custom empty value from properties arguments to insert into result array
 						if (true===self::empty_value($value) && isset($process_dato_arguments->empty_value)) {
@@ -4484,16 +4485,18 @@ class diffusion_sql extends diffusion  {
 
 					if ($value_array!==null) {
 
-						// OLD WAY
-							// foreach ((array)$value_array as $value_array_value) {
-							// 	$ar_value[] = $value_array_value;
-							// }
-
-						// NEW WAY 18-11-2023 (see actv89)
+						if ($output==='merged_group') {
+							// actv89 people case
 							$separator	= $process_dato_arguments->separator ?? $default_separator;
 							$ar_value[]	= is_array($value_array)
 								? implode($separator, $value_array)
 								: $value_array;
+						}else{
+							// default
+							foreach ((array)$value_array as $value_array_value) {
+								$ar_value[] = $value_array_value;
+							}
+						}
 					}
 					break;
 
