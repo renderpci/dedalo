@@ -446,7 +446,7 @@ component_date.prototype.get_placeholder_value = function() {
 
 	// placeholder_value
 	// set the order of the placeholder by the date_format
-		const placeholder_value = (date_mode==='time')
+		const placeholder_value = (date_mode==='time' || date_mode==='time_range')
 			? ''.concat('HH',self.time_separator,'MM',self.time_separator,'SS')
 			: (dd_date_format === 'dmy')
 				? ''.concat('DD',self.date_separator,'MM',self.date_separator,'YYYY')

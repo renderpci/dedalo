@@ -143,6 +143,9 @@ const get_input_element = (i, current_value, self) => {
 				case 'range':
 					return input_element_range(i, current_value, self)
 
+				case 'time_range':
+					return input_element_time_range(i, current_value, self)
+
 				case 'period':
 					return input_element_period(i, current_value, self)
 

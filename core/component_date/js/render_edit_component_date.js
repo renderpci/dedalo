@@ -128,7 +128,7 @@ export const get_ar_raw_data_value = (self) => {
 			// date_mode variants
 			switch(date_mode) {
 
-				case 'range': {
+				case 'range':{
 					if (current_value.start || current_value.end) {
 
 						const ar_text_range = []
@@ -142,6 +142,33 @@ export const get_ar_raw_data_value = (self) => {
 
 						const input_value_end	= (current_value && current_value.end)
 							? self.date_to_string(current_value.end)
+							: null
+							if (input_value_end) {
+								ar_text_range.push(input_value_end)
+							}
+
+						// const text_range = input_value_start + ' <> '+ input_value_end
+						const text_range = ar_text_range.join(' <> ')
+
+						ar_raw_value.push(text_range)
+					}
+					break;
+				}
+
+				case 'time_range': {
+					if (current_value.start || current_value.end) {
+
+						const ar_text_range = []
+
+						const input_value_start	= (current_value && current_value.start)
+							? self.date_time_to_string(current_value.start)
+							: null
+							if (input_value_start) {
+								ar_text_range.push(input_value_start)
+							}
+
+						const input_value_end	= (current_value && current_value.end)
+							? self.date_time_to_string(current_value.end)
 							: null
 							if (input_value_end) {
 								ar_text_range.push(input_value_end)
@@ -376,6 +403,44 @@ export const input_element_range = (i, current_value, self) => {
 }//end input_element_range
 
 
+/**
+* INPUT_ELEMENT_TIME_RANGE
+* @return HTMLElement DocumentFragment
+*/
+export const input_element_time_range = (i, current_value, self) => {
+
+	const fragment = new DocumentFragment()
+
+	// const date_mode = self.get_date_mode()
+
+	const input_value_start	= (current_value && current_value.start)
+		? self.date_time_to_string(current_value.start)
+		: ''
+	const input_value_end	= (current_value && current_value.end)
+		? self.date_time_to_string(current_value.end)
+		: ''
+
+	// start node
+		const node_start = get_input_time_node(i, 'start', input_value_start, self)
+		fragment.appendChild(node_start)
+
+	// dates_separator node
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'dates_separator',
+			text_content	: '<>',
+			parent			: fragment
+		})
+
+	// end_node
+		const node_end = get_input_time_node(i, 'end', input_value_end, self)
+		fragment.appendChild(node_end)
+
+
+	return fragment
+}//end input_element_time_range
+
+
 
 /**
 * INPUT_ELEMENT_PERIOD
@@ -512,14 +577,25 @@ export const input_element_period = (i, current_value, self) => {
 
 /**
 * INPUT_ELEMENT_TIME
-* @return HTMLElement input_wrap
+* @return HTMLElement node
 */
 export const input_element_time = (i, current_value, self) => {
 
-	// input_value
-		const input_value = (current_value)
-			? self.time_to_string(current_value.start)
-			: ''
+	const input_value = (current_value && current_value.start)
+		? self.time_to_string(current_value.start)
+		: ''
+
+	const node = get_input_time_node(i, 'start', input_value, self)
+
+	return node
+}//end input_element_time
+
+
+/**
+* GET_INPUT_TIME_NODE
+* @return HTMLElement input_wrap
+*/
+export const get_input_time_node = (i, mode, input_value, self) => {
 
 	// input_wrap. create div end
 		const input_wrap = ui.create_dom_element({
@@ -559,7 +635,7 @@ export const input_element_time = (i, current_value, self) => {
 					input_value	: input.value,
 					key			: i,
 					input_wrap	: input_wrap,
-					mode		: 'start',
+					mode		: mode,
 					type		: 'time'
 				})
 			})
@@ -602,7 +678,7 @@ export const input_element_time = (i, current_value, self) => {
 
 
 	return input_wrap
-}//end input_element_time
+}//end get_input_time_node
 
 
 

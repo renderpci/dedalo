@@ -10,6 +10,7 @@
 		get_content_value_read,
 		input_element_date,
 		input_element_range,
+		input_element_time_range,
 		input_element_period,
 		input_element_time
 	} from './render_edit_component_date.js'
@@ -131,6 +132,9 @@ export const get_content_value = (i, current_value, self) => {
 			switch(date_mode) {
 				case 'range':
 					return input_element_range(i, current_value, self)
+
+				case 'time_range':
+					return input_element_time_range(i, current_value, self)
 
 				case 'period':
 					return input_element_period(i, current_value, self)
