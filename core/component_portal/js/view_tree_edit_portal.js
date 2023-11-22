@@ -63,7 +63,7 @@ view_tree_edit_portal.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			label			: null,
+			// label			: null,
 			buttons			: buttons,
 			add_styles		: ['portal','view_line'] // added to the wrapper before view style
 		})
