@@ -291,20 +291,32 @@ class component_input_text extends component_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
-		# Default behavior is get value
-		$diffusion_value = $this->get_valor( $lang );
+		// Default behavior is get value in given lang
+			$diffusion_value = $this->get_valor( $lang );
 
-		// Fallback to nolan dato
-		if (empty($diffusion_value) && $this->traducible==='no') {
-			# try no lang
-			$this->set_lang(DEDALO_DATA_NOLAN);
-			$diffusion_value = $this->get_valor( DEDALO_DATA_NOLAN );
-		}
+		// fallback
+			if (empty($diffusion_value)) {
+				if ($this->traducible==='no') {
+					$this->set_lang(DEDALO_DATA_NOLAN);
+					$diffusion_value = $this->get_valor(DEDALO_DATA_NOLAN);
+				}else{
+					$all_project_langs = common::get_ar_all_langs();
+					foreach ($all_project_langs as $current_lang) {
+						if ($current_lang!==$lang) {
+							$this->set_lang($current_lang);
+							$diffusion_value = $this->get_valor($current_lang);
+							if (!empty($diffusion_value)) {
+								break;
+							}
+						}
+					}
+				}
+			}
 
-		# strip_tags all values (remove untranslated mark elements)
-		$diffusion_value = !empty($diffusion_value)
-			? preg_replace("/<\/?mark>/", '', $diffusion_value)
-			: null;
+		// strip_tags all values (remove untranslated mark elements)
+			$diffusion_value = !empty($diffusion_value)
+				? preg_replace("/<\/?mark>/", '', $diffusion_value)
+				: null;
 
 
 		return $diffusion_value;
