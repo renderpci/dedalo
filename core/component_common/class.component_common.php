@@ -2474,7 +2474,7 @@ abstract class component_common extends common {
 
 		// strip_tags all values (remove untranslated mark elements)
 			$diffusion_value = !empty($diffusion_value)
-				? preg_replace("/<\/?mark>/", "", $diffusion_value)
+				? preg_replace("/<\/?mark>/", "", to_string($diffusion_value))
 				: null;
 
 

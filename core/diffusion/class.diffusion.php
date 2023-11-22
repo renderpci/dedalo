@@ -769,7 +769,7 @@ abstract class diffusion  {
 		require_once(DEDALO_SHARED_PATH . '/class.subtitles.php');
 
 		$section_id		= (int)$dato;
-		$lang			= $options->lang;
+		$lang			= $options->lang ?? DEDALO_DATA_LANG;
 		$subtitles_url	= subtitles::get_subtitles_url($section_id, $tc_in=null, $tc_out=null, $lang);
 
 		return $subtitles_url;

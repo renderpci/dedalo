@@ -650,8 +650,8 @@ abstract class subtitles {
 			// $TEXT_SUBTITLES_URL_BASE = DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/';
 			$TEXT_SUBTITLES_URL_BASE = defined('TEXT_SUBTITLES_URL_BASE')
 				? TEXT_SUBTITLES_URL_BASE // defined in publication server config
-				: (defined('DEDALO_CORE_URL')
-					? DEDALO_CORE_URL . '/publication/server_api/v1/subtitles/'
+				: (defined('DEDALO_ROOT_WEB')
+					? DEDALO_ROOT_WEB . '/publication/server_api/v1/subtitles/'
 					: null);
 			if (empty($TEXT_SUBTITLES_URL_BASE)) {
 				debug_log(__METHOD__
