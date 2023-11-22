@@ -345,6 +345,24 @@ class component_date extends component_common {
 				}
 				break;
 
+			case 'time_range':
+				// start
+				$valor_start = '';
+				if(isset($data_item->start)) {
+					$dd_date = new dd_date($data_item->start);
+					$valor_start = $dd_date->get_dd_timestamp('H:i:s', true);
+					$item_value .= $valor_start;
+				}
+				// end
+				$valor_end = '';
+				if(isset($data_item->end)) {
+					$dd_date = new dd_date($data_item->end);
+					$valor_end = $dd_date->get_dd_timestamp('H:i:s', true);
+					$item_value .= ' <> '. $valor_end;
+				}
+				break;
+
+
 			case 'period':
 				if(!empty($data_item->period)) {
 
@@ -1286,6 +1304,7 @@ class component_date extends component_common {
 			// DES
 			switch ($date_mode) {
 				case 'range':
+				case 'time_range':
 					$ar_date=array();
 					// start
 					if (isset($dato->start) && isset($dato->start->year)) {
