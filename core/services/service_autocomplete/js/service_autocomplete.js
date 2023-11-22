@@ -442,12 +442,20 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// filter_by_list, modify by user
 		const filter_by_list = self.ar_filter_by_list.map(item => item.value)
+		// filter_by_list optimized version.
+		// A full selection of the list is equivalent to none. Remove useless list from search in these cases
+		const datalist = self.rqo_search.sqo_options.filter_by_list && self.rqo_search.sqo_options.filter_by_list[0]
+			? self.rqo_search.sqo_options.filter_by_list[0].datalist
+			: []
+		const filter_by_list_fast = filter_by_list.length === datalist.length
+			? []
+			:  filter_by_list
 
 	// rqo
 		const rqo = await self.rebuild_search_query_object({
 			rqo_search		: rqo_search,
 			search_sections	: search_sections,
-			filter_by_list	: filter_by_list
+			filter_by_list	: filter_by_list_fast
 		})
 
 	// empty filter_free values case. Nothing to search
