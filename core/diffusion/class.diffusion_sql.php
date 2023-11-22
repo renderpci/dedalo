@@ -4433,14 +4433,22 @@ class diffusion_sql extends diffusion  {
 				$value = call_user_func_array(array($component, $method), $custom_arguments);
 				// dump($value, ' value ++ '.to_string("method: $method"));
 
-			// process_dato (added 03-02-2021) @see mdcat3713
+			// process_dato (added 03-02-2021) @see mdcat3713 and actv108
 				if ( isset($process_dato_arguments->process_dato) ) {
 					$process_dato_arguments_inside = $process_dato_arguments->process_dato_arguments; // is a object
 					$ar_parsed_values = [];
 					foreach ($process_dato_arguments_inside as $c_value) {
-						$ar_parsed_values[] = ($c_value==='$value')
-							? $value
-							: $c_value;
+						switch ($c_value) {
+							case '$options':
+								$ar_parsed_values[] = $options;
+								break;
+							case '$value':
+								$ar_parsed_values[] = $value;
+								break;
+							default:
+								$ar_parsed_values[] = $c_value;
+								break;
+						}
 					}
 					$value2 = call_user_func_array($process_dato_arguments->process_dato, $ar_parsed_values);
 					if (!empty($value) && empty($value2)) {
@@ -4589,7 +4597,7 @@ class diffusion_sql extends diffusion  {
 				# Merge all arrays values in one only array
 				#$ar_value	= array_unique($ar_value);
 				$ar_value	= array_values($ar_value); // Restore array keys
-				$value		= json_encode($ar_value, JSON_UNESCAPED_UNICODE);
+				$value		= json_encode($ar_value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
 				break;
 
 			default:
