@@ -4597,6 +4597,7 @@ class diffusion_sql extends diffusion  {
 				}
 				// note execution here continues without break (!)
 			case 'merged':
+			case 'merged_group':
 				# Merge all arrays values in one only array
 				#$ar_value	= array_unique($ar_value);
 				$ar_value	= array_values($ar_value); // Restore array keys
