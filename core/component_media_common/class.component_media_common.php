@@ -136,8 +136,10 @@ class component_media_common extends component_common {
 	*    }
 	* }]
 	* @return array|null $dato
+	* 	(!) Note that in v5 data update could be different to null|array
+	* 	Because this, do not apply type constrain here ! ( : ?array)
 	*/
-	public function get_dato() : ?array {
+	public function get_dato() {
 
 		$dato = parent::get_dato();
 		if (!empty($dato) && !is_array($dato)) {

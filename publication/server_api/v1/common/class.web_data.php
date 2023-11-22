@@ -2404,7 +2404,7 @@ class web_data {
 			$posterframe_url	= $base_url .'/posterframe/'. $video_id .'.jpg';
 
 		// posterframe_tag_url
-			$posterframe_tag_url = $base_url .'/posterframe/'. $video_id .'/'. $video_id .'_'. $options->tag_id.'.jpg';
+			$posterframe_tag_url = $base_url .'/posterframe/' . $video_id .'_'. $options->tag_id.'.jpg';
 
 		// tags
 			$tag_in		= TR::get_mark_pattern('indexIn',  $standalone=false, $options->tag_id, $data=false);
