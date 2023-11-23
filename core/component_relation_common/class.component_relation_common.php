@@ -1386,10 +1386,14 @@ class component_relation_common extends component_common {
 			// IS NULL
 			case ($q_operator==='!*'):
 				$operator = '@>';
-				$q_obj = new stdClass();
-					$q_obj->from_component_tipo = $component_tipo ;
-				$ar_q 	  = array($q_obj);
-				$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+				if (!empty($query_object->use_function)) {
+					$q_clean  = '\'['.$q.']\' = FALSE';
+				}else{
+					$q_obj = new stdClass();
+						$q_obj->from_component_tipo = $component_tipo ;
+					$ar_q 	  = array($q_obj);
+					$q_clean  = '\''.json_encode($ar_q).'\'::jsonb=FALSE';
+				}
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= $q_clean;
 				break;
