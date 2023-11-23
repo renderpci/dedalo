@@ -414,6 +414,10 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 	// limit
 		sqo.limit = self.limit
 
+	// filter. Note that no project filter should be applied here. The user can
+	// select any target record as read. Only editing has project restriction
+		sqo.skip_projects_filter = true
+
 
 	return rqo_search
 }//end rebuild_search_query_object
