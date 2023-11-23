@@ -316,7 +316,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 		async function fn_remove(e) {
 			e.stopPropagation()
 
-			// stop if the user don't confirm
+			// stop if the user does not confirm
 				if (!confirm(get_label.sure)) {
 					return
 				}

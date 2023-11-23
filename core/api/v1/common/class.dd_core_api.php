@@ -826,19 +826,20 @@ final class dd_core_api {
 		// options
 			$options = $rqo->options ?? null;
 
-		// permissions
-			if($delete_mode==='delete_dataframe'){
-				$permissions = common::get_permissions($caller_dataframe->section_tipo, $section_tipo);
-			}else{
-				$permissions = common::get_permissions($section_tipo, $section_tipo);
-			}
+		// permissions check
+			$permissions = ($delete_mode==='delete_dataframe')
+				? common::get_permissions($caller_dataframe->section_tipo, $section_tipo)
+				: common::get_permissions($section_tipo, $section_tipo);
 			debug_log(__METHOD__
-				." permissions: $permissions ".to_string($section_tipo)
+				." to delete section. Permissions: $permissions ".to_string($section_tipo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {
+				$msg = ($delete_mode==='delete_dataframe')
+					? '[2] Insufficient permissions to delete dataframe (delete mode: '.$delete_mode.'): '.$permissions
+					: '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
 				$response->error = 2;
-				$response->msg 	.= '[2] Insufficient permissions: '.$permissions;
+				$response->msg 	.= $msg;
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
 					.' rqo: '.to_string($rqo)
