@@ -405,6 +405,7 @@ service_autocomplete.prototype.rebuild_search_query_object = async function(opti
 			if(filter_by_list && filter_by_list.length > 0) {
 				sqo.filter.$and.push({
 					$or:[...filter_by_list]
+					// $and:[...filter_by_list] // filter_by_list_inverse case
 				})
 			}
 
@@ -453,7 +454,39 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 			: []
 		const filter_by_list_fast = filter_by_list.length === datalist.length
 			? []
-			:  filter_by_list
+			: filter_by_list
+
+		// filter_by_list_inverse (experimental)
+			// const context = self.rqo_search.sqo_options.filter_by_list && self.rqo_search.sqo_options.filter_by_list[0]
+			// 	? self.rqo_search.sqo_options.filter_by_list[0].context
+			// 	: null
+			// const component_tipo = context.tipo
+
+			// const filter_by_list_inverse	= []
+			// const datalist_length			= datalist.length
+			// for (let i = 0; i < datalist_length; i++) {
+
+			// 	const item	= datalist[i]
+
+			// 	const q = '"' + component_tipo +'_'+ item.value.section_tipo +'_'+ item.value.section_id + '"'
+
+			// 	const found = filter_by_list.find(el => {
+			// 		return el.q ===  q
+			// 	})
+			// 	if (!found) {
+			// 		const path = [{
+			// 			section_tipo	: context.section_tipo,
+			// 			component_tipo	: component_tipo
+			// 		}]
+			// 		filter_by_list_inverse.push({
+			// 			q				: q,
+			// 			q_operator		: '!*',
+			// 			path			: path,
+			// 			format			: 'function',
+			// 			use_function	: 'relations_flat_fct_st_si'
+			// 		})
+			// 	}
+			// }
 
 	// rqo
 		const rqo = await self.rebuild_search_query_object({
