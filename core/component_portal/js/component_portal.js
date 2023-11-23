@@ -1357,7 +1357,7 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 /**
 * DELETE_DATAFRAME_RECORD
-* Remove section in mode 'delete_dataframe'
+* Remove section in delete_mode 'delete_dataframe'
 * @param object options
 * {
 *	section_id : section_id
