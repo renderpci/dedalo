@@ -17,6 +17,7 @@
 	import {set_element_css} from '../../page/js/css.js'
 
 
+
 export const component_common = function(){
 
 	return true
@@ -439,7 +440,7 @@ component_common.prototype.save = async function(new_changed_data) {
 			}
 		}
 
-	// remove previous success/error CSS class if exists
+	// remove the previous success/error CSS class if it exists
 		if (self.node) {
 			if (self.node.classList.contains('error')) {
 				self.node.classList.remove('error')
@@ -543,10 +544,7 @@ component_common.prototype.save = async function(new_changed_data) {
 
 				default:
 					// write message to the console
-					console.error(response.error)
-					if (response.msg) {
-						alert('Error on save self '+self.model+'. msg: \n' + response.msg)
-					}
+					console.error('component save response.error', response.error)
 					break;
 			}
 			// console.error('ERROR response:',response);
@@ -793,7 +791,7 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 
 		// check data
-			if (typeof self.data==="undefined") {
+			if (typeof self.data==='undefined') {
 				if(SHOW_DEBUG===true) {
 					console.trace();
 					console.warn("++++++++++++++++++++ self.datum:",self.datum);
