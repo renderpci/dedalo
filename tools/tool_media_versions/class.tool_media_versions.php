@@ -155,26 +155,17 @@ class tool_media_versions extends tool_common {
 
 	/**
 	* ROTATE
-	* 	Apply a rotation process to the selected file
-	* @param object $request_options
+	* Apply a rotation process to the selected file
+	* @param object $options
 	* @return object $response
 	*/
-	public static function rotate(object $request_options) : object {
+	public static function rotate(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
 		// options
-			$options = new stdClass();
-				$options->tipo			= null;
-				$options->section_tipo	= null;
-				$options->section_id	= null;
-				$options->quality		= null;
-				$options->degrees		= null; // 0 - 360 (positive/negative)
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-		// short vars
 			$tipo			= $options->tipo;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;

@@ -137,7 +137,6 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 						: null
 					: null
 
-
 	} catch (error) {
 		self.error = error
 		console.error(error)
@@ -477,7 +476,7 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
 
 /**
-* sync_files
+* SYNC_FILES
 * 	Apply a rotation process to the selected file
 * @param string quality
 * @param string|int degrees

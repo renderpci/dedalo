@@ -21,7 +21,10 @@ export const data_manager = function() {
 */
 data_manager.request = async function(options) {
 	if(SHOW_DEBUG===true) {
-		console.warn('request options:', options.body.action,  options);
+		const action = options.body && options.body.action
+			? options.body.action
+			: null;
+		console.warn('request options:', action, options);
 	}
 
 	// options
