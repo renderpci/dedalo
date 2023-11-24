@@ -4326,6 +4326,11 @@ class section extends common {
 	*/
 	public function get_section_permissions() : int {
 
+		// check if the permissions are set previously, then return it.
+		if(isset($this->permissions)){
+			return $this->permissions;
+		}
+
 		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
 
 		// logged user id
@@ -4342,6 +4347,13 @@ class section extends common {
 			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
 				return 1;
 			}
+
+		// check if the section has called to search by autocomplete
+		// in those cases set permissions and return 1 (read).
+		if ($this->permissions<1 && $this->autocomplete===true) {
+			$this->permissions = 1;
+			return $this->permissions;
+		}
 
 
 		return $this->permissions;
