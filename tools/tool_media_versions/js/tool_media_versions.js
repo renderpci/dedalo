@@ -107,24 +107,24 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 				self.files_info_db = value[0]?.files_info
 
 			// files info real (read from disk)
-				const files_info = await self.get_files_info()
+				self.files_info_disk = await self.get_files_info()
 
 			// ar_quality
 				self.ar_quality	= self.caller.context.features.ar_quality
 
 			// files_info_safe. filtered by allowed extension
-				self.files_info_safe = files_info
-					? files_info.filter(el => el.extension===self.main_element.context.features.extension)
+				self.files_info_safe = self.files_info_disk
+					? self.files_info_disk.filter(el => el.extension===self.main_element.context.features.extension)
 					: []
 
 			// files_info_alternative. filtered by alternative extension
-				self.files_info_alternative = files_info
-					? files_info.filter(el => el.extension!==self.main_element.context.features.extension)
+				self.files_info_alternative = self.files_info_disk
+					? self.files_info_disk.filter(el => el.extension!==self.main_element.context.features.extension)
 					: []
 
 			// files_info_original
-				self.files_info_original = files_info
-					? files_info.filter(el => el.quality==='original')
+				self.files_info_original = self.files_info_disk
+					? self.files_info_disk.filter(el => el.quality==='original')
 					: []
 
 			// self.file_info_normalized_name
@@ -487,11 +487,6 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 tool_media_versions.prototype.sync_files = async function() {
 
 	const self = this
-
-	// confirm dialog
-		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
-			return false
-		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
