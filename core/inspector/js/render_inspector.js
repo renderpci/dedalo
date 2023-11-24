@@ -7,13 +7,12 @@
 // import
 	import {ui} from '../../common/js/ui.js'
 	import {create_source} from '../../common/js/common.js'
-	import {download_data} from '../../common/js/data_manager.js'
+	import {data_manager, download_data} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {data_manager} from '../../common/js/data_manager.js'
-	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import * as instances from '../../common/js/instances.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
