@@ -107,6 +107,9 @@ abstract class common {
 		// with_lang_versions
 		public $with_lang_versions;
 
+		// API autocomplete search. bool
+		public $autocomplete;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
