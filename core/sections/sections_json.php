@@ -146,7 +146,10 @@
 
 				// permissions check
 					$permissions = $section->get_section_permissions();
+
+					// check if the permissions permit the access to this information.
 					if($permissions<1){
+						// in any other cases stop the process
 						continue;
 					}
 
