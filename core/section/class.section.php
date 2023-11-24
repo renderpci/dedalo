@@ -4326,6 +4326,11 @@ class section extends common {
 	*/
 	public function get_section_permissions() : int {
 
+		// check if the permissions are set previously, then return it.
+		if(isset($this->permissions)){
+			return $this->permissions;
+		}
+
 		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
 
 		// logged user id
