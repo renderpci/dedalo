@@ -2159,6 +2159,29 @@ abstract class common {
 									$caller_dataframe // object|null
 								);
 
+								// Permissions inheritance.
+								// Get the permissions to inject to children.
+								// Situation :
+								// The user can access to the source portal (permissions 1 or 2), but he/she can not access to target section (permissions 0).
+								// in this situation the user need to read the data of the target section because he/she can access to the source portal
+								// and he/she will be able to search with autocomplete, to assign data to the portal (or link data).
+								// Behavior:
+								// When a component has data to show but the user don't has permissions to access to target section
+								// or target components, the target component need to be set as read (permissions 1)
+								// the user will need read the portal and his data, event if they can not change the target section.
+								// The same case happens with the searched section with autocomplete.
+								// The user will need to read the target section and his components to choose data.
+								// Exception:
+								// if the user can read or read/write permissions, do not change it.
+									$child_permissions = $related_element->get_component_permissions();
+									if(strpos(get_called_class(), 'component_')===0 || (
+										get_called_class() === 'section' && $this->autocomplete===true
+									)){
+										if($child_permissions <1){
+											$related_element->set_permissions(1);
+										}
+									}
+
 								// component_text_area lang case. Change lang before get dato (!)
 									if ($model==='component_text_area') {
 										$original_lang = $related_element->get_original_lang();
