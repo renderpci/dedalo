@@ -543,10 +543,7 @@ component_common.prototype.save = async function(new_changed_data) {
 
 				default:
 					// write message to the console
-					console.error(response.error)
-					if (response.msg) {
-						alert('Error on save self '+self.model+'. msg: \n' + response.msg)
-					}
+					console.error('component save response.error', response.error)
 					break;
 			}
 			// console.error('ERROR response:',response);
