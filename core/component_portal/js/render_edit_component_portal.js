@@ -785,6 +785,7 @@ export const get_buttons = (self) => {
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
+				title			: get_label.vincular_recurso || 'Link resource',
 				parent			: buttons_fold
 			})
 			const fn_link = async function(e) {

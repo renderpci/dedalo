@@ -236,6 +236,7 @@ const get_content_value = (i, current_value, self) => {
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button remove hidden_button '+ active_check_class,
+			title			: get_label.vincular_recurso || 'Link resource',
 			parent			: content_value
 		})
 		button_remove.addEventListener('click', function(e) {
