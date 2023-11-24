@@ -653,6 +653,11 @@ export const instantiate_page_element = async function(self, source) {
 				instance_options.id_variant = self.id_variant
 			}
 
+		// menu case. To avoid id conflicts between different users
+			if (model==='menu') {
+				instance_options.id_variant = page_globals.user_id
+			}
+
 		// config. Used by section tools
 			if (config && config.source_section_tipo) {
 				instance_options.id_variant	= config.source_section_tipo
