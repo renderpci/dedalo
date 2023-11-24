@@ -98,13 +98,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 19,
-              "time": 65047780314,
+              "day": 24,
+              "hour": 13,
+              "time": 65049657583,
               "year": 2023,
               "month": 11,
-              "minute": 51,
-              "second": 54
+              "minute": 19,
+              "second": 43
             }
           }
         ]
@@ -158,7 +158,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -185,6 +185,120 @@
         ]
       }
     },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-spa",
+              "name": "files_info_is_unsync",
+              "value": "Los datos de información de los archivos no están sincronizados"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "files_info_is_unsync",
+              "value": "Files info data is unsync"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "files_info_is_unsync",
+              "value": "Les dades d'informació dels fitxers no estan sincronitzades"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "files_info_is_unsync",
+              "value": "Datei-Infodaten sind unsynchronisiert"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "files_info_is_unsync",
+              "value": "Les données d'information sur les fichiers ne sont pas synchronisées"
+            },
+            {
+              "lang": "lg-por",
+              "name": "files_info_is_unsync",
+              "value": "Os dados de informação dos ficheiros não estão sincronizados"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "files_info_is_unsync",
+              "value": "Files info data is unsync"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "files_info_is_unsync",
+              "value": "Τα δεδομένα πληροφοριών αρχείων δεν είναι συγχρονισμένα"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "sync_data",
+              "value": "Sincronizar datos"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "sync_data",
+              "value": "Sync data"
+            },
+            {
+              "lang": "lg-por",
+              "name": "sync_data",
+              "value": "Sincronizar dados"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "sync_data",
+              "value": "Δεδομένα συγχρονισμού"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "sync_data",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "sync_data",
+              "value": "Données de synchronisation"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "sync_data",
+              "value": "Dati di sincronizzazione"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "files_info_is_unsync",
+              "value": ""
+            },
+            {
+              "lang": "lg-deu",
+              "name": "sync_data",
+              "value": "Daten synchronisieren"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "sync_data",
+              "value": "Sincronitzar dades"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "sync_data",
+              "value": ""
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "files_info_is_unsync",
+              "value": ""
+            },
+            {
+              "lang": "lg-eus",
+              "name": "files_info_is_unsync",
+              "value": ""
+            }
+          ]
+        ]
+      }
+    },
     "dd1644": {
       "inf": "Desarollador [component_input_text]",
       "dato": {
@@ -197,7 +311,7 @@
   "section_id": 7,
   "created_date": "2022-02-07 17:34:02",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 19:51:54",
+  "modified_date": "2023-11-24 13:19:43",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
