@@ -109,11 +109,23 @@ data_manager.request = async function(options) {
 				if (result.error) {
 
 					// debug console message
-						console.error("result error:", result);
+						console.error("data_manager request result:", result);
+
+					// update_lock_components_state fails. Do not send alert here
+						if (options.body.action && options.body.action==='update_lock_components_state') {
+							return
+						}
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						alert("An error occurred in the connection with the API (data_manager). \n" + msg);
+						if (!window.dd_page.request_message || window.dd_page.request_message!==msg) {
+							alert("An error has occurred in the API connection (data_manager.request). \n" + msg);
+						}
+						// save message to prevent duplication for x seconds
+						window.dd_page.request_message = msg
+						setTimeout(function(){
+							window.dd_page.request_message = null
+						}, 2000)
 				}
 
 				return result
