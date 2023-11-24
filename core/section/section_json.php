@@ -42,7 +42,6 @@
 	// 	$this->context = $context;
 	// }//end if($options->get_context===true)
 
-
 	if($permissions>0){
 
 		if ($mode==='tm') {
