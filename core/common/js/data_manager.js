@@ -20,6 +20,9 @@ export const data_manager = function() {
 * @return api_response
 */
 data_manager.request = async function(options) {
+	if(SHOW_DEBUG===true) {
+		console.warn('request options:', options.body.action,  options);
+	}
 
 	// options
 		this.url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')

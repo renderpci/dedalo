@@ -358,7 +358,7 @@ export const render_column_id = function(options) {
 							// Prevent to show the context menu
 							// open new window with the content
 							// if user has alt pressed, open new tab
-							button_edit.addEventListener("contextmenu", (e) => {
+							button_edit.addEventListener('contextmenu', (e) => {
 								e.preventDefault();
 
 								// if alt is pressed open new tab instead new window
