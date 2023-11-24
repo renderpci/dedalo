@@ -104,7 +104,7 @@ tool_media_versions.prototype.build = async function(autoload=false) {
 			const value	= data.value || []
 
 			// files info from DB data
-				// const files_info = value[0]?.files_info
+				self.files_info_db = value[0]?.files_info
 
 			// files info real (read from disk)
 				const files_info = await self.get_files_info()
@@ -473,6 +473,58 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 			})
 		})
 }//end rotate
+
+
+
+/**
+* sync_files
+* 	Apply a rotation process to the selected file
+* @param string quality
+* @param string|int degrees
+* 	-90 / 90
+* @return promise
+* 	resolve: array of objects
+*/
+tool_media_versions.prototype.sync_files = async function() {
+
+	const self = this
+
+	// confirm dialog
+		if ( !confirm( (get_label.sure || 'Sure?') ) ) {
+			return false
+		}
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'sync_files')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> sync_files API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end sync_files
 
 
 

@@ -78,6 +78,12 @@ const get_content_data = async function(self) {
 		// fix
 		self.main_element_container = main_element_container
 
+	// render_sync_data
+		const sync_data = render_sync_data(self)
+		if (sync_data) {
+			fragment.appendChild(sync_data)
+		}
+
 	// versions_container
 		const versions_grid = render_versions_grid(self)
 		fragment.appendChild(versions_grid)
@@ -89,6 +95,101 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_SYNC_DATA
+* @param object self
+* @return HTMLElement|null
+*/
+const render_sync_data = function(self) {
+
+	// files info from DB data
+		const files_info_db = self.files_info_db
+
+	// files info from disk
+		const files_info_disk = self.files_info_safe
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('files_info_db:', files_info_db);
+			console.log('files_info_disk:', files_info_disk);;
+		}
+
+	if (files_info_db.length !== files_info_disk.length) {
+
+		const sync_data_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'sync_data_wrapper'
+		})
+
+		const versions_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'sync_data_container',
+			parent			: sync_data_wrapper
+		})
+
+		// icon
+		const icon = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button icon exclamation',
+			parent			: versions_container
+		})
+		icon.addEventListener('click', function(e) {
+			e.stopPropagation()
+			pre_data.classList.toggle('hide')
+		})
+
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync',
+				parent			: versions_container
+			})
+
+		// button_sync
+			const button_sync = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'warning gear button_sync_data',
+				inner_html		: self.get_tool_label('sync_data') || 'Sync data',
+				parent			: versions_container
+			})
+			button_sync.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				versions_container.classList.add('loading')
+
+				self.sync_files()
+				.then(function(response){
+					if (response.result===true) {
+						self.refresh()
+					}else{
+						versions_container.classList.remove('loading')
+						alert('Error: ' + (response.msg || 'Unknown') )
+					}
+				})
+			})
+
+		// pre JSON data
+			const pre_data = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'pre hide',
+				inner_html		: JSON.stringify({
+					files_info_db	: files_info_db,
+					files_info_disk	: files_info_disk
+				}, null, 2),
+				parent			: sync_data_wrapper
+			})
+
+
+		return sync_data_wrapper
+	}
+
+
+	return null
+}//end render_sync_data
 
 
 

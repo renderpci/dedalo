@@ -209,4 +209,69 @@ class tool_media_versions extends tool_common {
 
 
 
+	/**
+	* SYNC_FILES
+	* Updated component files info data when is not sync (a file is deleted, etc.)
+	* @param object $options
+	* @return object $response
+	*/
+	public static function sync_files(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+
+		// options
+			$tipo			= $options->tipo;
+			$section_tipo	= $options->section_tipo;
+			$section_id		= $options->section_id;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$lang		= DEDALO_DATA_LANG;
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'edit',
+				$lang,
+				$section_tipo,
+				false // cache
+			);
+
+		// regenerate data
+			$component->get_dato(); // !! Important get dato before regenerate
+			$result = $component->regenerate_component();
+			if ($result!==true) {
+				debug_log(__METHOD__
+					. ' Error on regenerate component ' .PHP_EOL
+					. ' model: ' .$model .PHP_EOL
+					. ' component_tipo: ' .$tipo .PHP_EOL
+					. ' section_tipo: ' .$section_tipo .PHP_EOL
+					. ' section_id: ' .$section_id
+					, logger::ERROR
+				);
+			}
+
+		// response success
+			if ($result===true) {
+				$response->result	= true;
+				$response->msg		= 'Success. Request done';
+
+				debug_log(__METHOD__
+					. ' Regenerated component ' .PHP_EOL
+					. ' model: ' .$model .PHP_EOL
+					. ' component_tipo: ' .$tipo .PHP_EOL
+					. ' section_tipo: ' .$section_tipo .PHP_EOL
+					. ' section_id: ' .$section_id
+					, logger::DEBUG
+				);
+			}
+
+
+		return $response;
+	}//end sync_files
+
+
+
 }//end class tool_media_versions
