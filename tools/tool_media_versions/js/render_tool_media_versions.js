@@ -106,10 +106,13 @@ const get_content_data = async function(self) {
 const render_sync_data = function(self) {
 
 	// files info from DB data
-		const files_info_db = self.files_info_db
+		const files_info_db = self.files_info_db || []
 
 	// files info from disk
-		const files_info_disk = self.files_info_safe
+		const files_info_disk = self.files_info_disk || []
+
+	// is_sync
+		const is_sync = files_info_db.length === files_info_disk.length
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -117,47 +120,56 @@ const render_sync_data = function(self) {
 			console.log('files_info_disk:', files_info_disk);;
 		}
 
-	if (files_info_db.length !== files_info_disk.length) {
-
+	// sync_data_wrapper
 		const sync_data_wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'sync_data_wrapper'
 		})
 
-		const versions_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'sync_data_container',
-			parent			: sync_data_wrapper
-		})
+		// versions_container
+			const versions_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'sync_data_container',
+				parent			: sync_data_wrapper
+			})
 
 		// icon
-		const icon = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button icon exclamation',
-			parent			: versions_container
-		})
-		icon.addEventListener('click', function(e) {
-			e.stopPropagation()
-			pre_data.classList.toggle('hide')
-		})
+			const icon = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon ' + (is_sync ? 'eye' : 'exclamation'),
+				parent			: versions_container
+			})
+			icon.addEventListener('click', function(e) {
+				e.stopPropagation()
+				pre_data.classList.toggle('hide')
+			})
 
 		// label
+			const label_string = !is_sync
+				? self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync'
+				: self.get_tool_label('show_data') || 'Show data'
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
-				inner_html		: self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync',
+				inner_html		: label_string,
 				parent			: versions_container
 			})
+
 
 		// button_sync
 			const button_sync = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning gear button_sync_data',
+				class_name		: 'gear button_sync_data ' + (is_sync ? 'light' : 'warning'),
 				inner_html		: self.get_tool_label('sync_data') || 'Sync data',
 				parent			: versions_container
 			})
 			button_sync.addEventListener('click', function(e) {
 				e.stopPropagation()
+
+				// confirm dialog
+				if ( !confirm( (get_label.sure || 'Sure?') ) ) {
+					return false
+				}
 
 				versions_container.classList.add('loading')
 
@@ -184,11 +196,7 @@ const render_sync_data = function(self) {
 			})
 
 
-		return sync_data_wrapper
-	}
-
-
-	return null
+	return sync_data_wrapper
 }//end render_sync_data
 
 
