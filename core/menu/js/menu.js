@@ -80,6 +80,7 @@ menu.prototype.init = function(options) {
 	// status update
 		self.status = 'initialized'
 
+
 	return true
 }//end init
 
@@ -195,19 +196,39 @@ menu.prototype.quit_handler = async function(e) {
 	const self = this
 
 	// local_db_data remove in all langs
+		self.delete_menu_local_db_data()
+
+	// exec login quit sequence
+		quit({
+			caller : self
+		})
+}//end quit_handler
+
+
+
+/**
+* DELETE_MENU_LOCAL_DB_DATA
+* Shared function to manage quit sequence
+* @param object event e
+* @return void
+*/
+menu.prototype.delete_menu_local_db_data = async function() {
+
+	const self = this
+
+	// local_db_data remove in all langs
 		const langs			= page_globals.dedalo_application_langs
 		const langs_length	= langs.length
 		for (let i = 0; i < langs_length; i++) {
 			const lang	= langs[i].value
 			const regex	= /lg-[a-z]{2,5}$/
 			const id	= self.id.replace(regex, lang)
-			await data_manager.delete_local_db_data(id, 'data')
+			await data_manager.delete_local_db_data(
+				id,
+				'data'
+			)
 		}
-	// exec login quit sequence
-		quit({
-			caller : self
-		})
-}//end quit_handler
+}//end delete_menu_local_db_data
 
 
 
