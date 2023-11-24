@@ -279,6 +279,7 @@ const get_buttons = (self) => {
 		const button_link = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button link',
+			title			: get_label.vincular_recurso || 'Link resource',
 			parent			: fragment
 		})
 		button_link.addEventListener('click', fn_link)
@@ -487,7 +488,7 @@ const render_references = function(ar_references) {
 					class_name		: 'button link',
 					parent			: li
 				})
-				button_link.addEventListener("click", function(e){
+				button_link.addEventListener('click', function(e){
 					e.stopPropagation()
 					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
 					// window.open(url,'ref_edit')

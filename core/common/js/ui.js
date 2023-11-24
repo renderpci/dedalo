@@ -445,8 +445,6 @@ export const ui = {
 						? instance.context.properties.with_value.view
 						: instance.context.properties.view
 
-				console.log('change_mode:', change_mode);
-				console.log('change_view:', change_view);
 				// change mode destroy current instance and render a fresh full element node in the new mode
 				instance.change_mode({
 					mode		: target_mode,
