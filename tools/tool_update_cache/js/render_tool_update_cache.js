@@ -191,7 +191,25 @@ const get_content_data = async function(self) {
 					components_list_container.classList.remove('loading')
 					button_apply.classList.remove('loading')
 					spinner.remove()
+
+					// response msg
 					response_message.innerHTML = response.msg || 'Unknown error'
+
+					// response n_components
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'msg_detail',
+						inner_html		: 'components: ' + (response.n_components || 'Unknown'),
+						parent			: response_message
+					})
+
+					// response n_records
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'msg_detail',
+						inner_html		: 'records: ' + (response.n_records || 'Unknown'),
+						parent			: response_message
+					})
 				})
 			}
 		})
