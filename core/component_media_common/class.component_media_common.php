@@ -792,6 +792,7 @@ class component_media_common extends component_common {
 		$extensions				= is_array($alternative_extensions)
 			? array_merge([$this->get_extension()], $alternative_extensions)
 			: [$this->get_extension()];
+		$dato					= $this->get_dato();
 
 		// files check
 			$files_info = [];
@@ -812,8 +813,7 @@ class component_media_common extends component_common {
 				}
 			}//end foreach ($ar_quality as $quality)
 
-		// original add like 'rsc29_rsc170_770.tif'
-			$dato = $this->get_dato();
+		// original_normalized_name add like 'rsc29_rsc170_770.tif'
 			if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
 
 				$original_quality	= $this->get_original_quality();
@@ -825,11 +825,13 @@ class component_media_common extends component_common {
 						// file_info
 						$quality_file_info = $this->get_quality_file_info($original_quality, $file_extension);
 						// add
-						$files_info[] = $quality_file_info;
+						if(!in_array($quality_file_info, $files_info)) {
+							$files_info[] = $quality_file_info;
+						}
 					}
 			}
 
-		// modified add like 'rsc29_rsc170_770.psd'
+		// modified_normalized_name add like 'rsc29_rsc170_770.psd'
 			if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
 
 				$modified_quality	= $this->get_modified_quality();
