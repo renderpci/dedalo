@@ -7,6 +7,9 @@
 class tool_update_cache extends tool_common {
 
 
+	static $n_records = 0;
+
+
 
 	/**
 	* UPDATE_CACHE
@@ -59,9 +62,10 @@ class tool_update_cache extends tool_common {
 			RecordObj_time_machine::$save_time_machine_version	= true;
 
 		// response
-			$response->result	= true;
-			$response->msg		= "Updated cache of section '$section_tipo' successfully." . PHP_EOL
-				." where components count: " . count($ar_component_tipo);
+			$response->result		= true;
+			$response->msg			= "Updated cache of section '$section_tipo' successfully.";
+			$response->n_records	= self::$n_records;
+			$response->n_components	= count($ar_component_tipo);
 
 
 		return $response;
@@ -128,6 +132,8 @@ class tool_update_cache extends tool_common {
 						}
 				}//end foreach ($related_terms as $current_component_tipo)
 
+				// update records counter
+				self::$n_records++;
 			}//end foreach ($records_data->result as $key => $ar_value)
 
 
