@@ -1184,8 +1184,10 @@ class section extends common {
 					if (false===$saved_id_matrix || $saved_id_matrix < 1) { //  && $tipo!==DEDALO_ACTIVITY_SECTION_TIPO
 						debug_log(__METHOD__
 							. ' Error trying to save->insert record. Nothing was saved! ' . PHP_EOL
+							. ' saved_id_matrix: '   . to_string($saved_id_matrix) . PHP_EOL
 							. ' section_id: '   . to_string($this->section_id) . PHP_EOL
-							. ' save_options: ' . to_string($save_options)
+							. ' save_options: ' . to_string($save_options) . PHP_EOL
+							. ' this->dato: ' . to_string($this->dato)
 							, logger::ERROR
 						);
 						// if(SHOW_DEBUG===true) {

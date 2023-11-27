@@ -496,7 +496,10 @@ class lang {
 			case "zh" 	: $code = "lg-zho"; break;
 			case "zu" 	: $code = "lg-zul"; break;
 			default:
-				debug_log(__METHOD__." Sorry, lang not defined: \"$lang_apha2\" ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." Sorry, lang not defined: \"$lang_apha2\" "
+					, logger::ERROR
+				);
 				break;
 		}
 		if (isset($code)) {
