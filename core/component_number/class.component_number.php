@@ -16,7 +16,10 @@
 class component_number extends component_common {
 
 
+
 	public $decimal = '.';
+
+
 
 	/**
 	* __CONSTRUCT
@@ -241,6 +244,7 @@ class component_number extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql( object $query_object) : object {
@@ -545,6 +549,7 @@ class component_number extends component_common {
 
 		return $response;
 	}//end conform_import_data
+
 
 
 }//end class component_number
