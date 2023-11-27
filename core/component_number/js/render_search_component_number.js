@@ -125,15 +125,16 @@ const get_input_element = (i, current_value, self) => {
 		})
 		input.addEventListener('change', function() {
 
-			const safe_value = (this.value.length>0)
-				? self.fix_number_format(this.value)
-				: null
+			// parsed_value
+				const parsed_value = (this.value.length>0)
+					? this.value
+					: null
 
 			// changed_data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
 					key		: i,
-					value	: safe_value
+					value	: parsed_value
 				})
 
 			// update the instance data (previous to save)

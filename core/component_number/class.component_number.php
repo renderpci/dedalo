@@ -247,59 +247,102 @@ class component_number extends component_common {
 	* @param object $query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object) : object {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		// q
+		$q = is_array($query_object->q)
+			? reset($query_object->q)
+			: $query_object->q;
 
-		#$q = $query_object->q;
-		#if (isset($query_object->type) && $query_object->type==='jsonb') {
-		#	$q = json_decode($q);
-		#}
+		// q_operator
+		$q_operator = $query_object->q_operator ?? null;
 
-    	# Always set fixed values
+		// Always set fixed values
 		$query_object->type = 'number';
 
-
-		$query_object->component_path[] = 'lg-nolan';
-
-		# Always without unaccent
+		// Always without unaccent
 		$query_object->unaccent = false;
+
+		// path
+		$query_object->component_path[] = 'lg-nolan';
 
 		$between_separator  = '...';
 		//$sequence_separator = ',';
 
 		#$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
 
-        switch (true) {
+		switch (true) {
 
-        	# BETWEEN
+			// EMPTY VALUE
+			case ($q_operator==='!*'):
+
+				$query_object->operator	= 'IS NULL';
+				$query_object->q_parsed	= '';
+
+				$logical_operator = '$or';
+				$new_query_json = new stdClass;
+					$new_query_json->{$logical_operator} = [$query_object];
+
+				$clone = clone($query_object);
+					$clone->operator	= '=';
+					$clone->q_parsed	= '\'[]\'';
+				$new_query_json->$logical_operator[] = $clone;
+
+				// legacy data (set as null instead [])
+				$clone = clone($query_object);
+					$clone->operator = 'IS NULL';
+				$new_query_json->$logical_operator[] = $clone;
+
+				// override
+				$query_object = $new_query_json;
+				break;
+
+			// NOT EMPTY (in any project lang data)
+			case ($q_operator==='*'):
+
+				$query_object->operator	= 'IS NOT NULL';
+				$query_object->q_parsed	= '';
+
+				$logical_operator = '$and';
+				$new_query_json = new stdClass;
+					$new_query_json->{$logical_operator} = [$query_object];
+
+				$clone = clone($query_object);
+					$clone->operator	= '!=';
+					$clone->q_parsed	= '\'[]\'';
+				$new_query_json->$logical_operator[] = $clone;
+
+				// override
+				$query_object = $new_query_json;
+				break;
+
+			// BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
 				$ar_parts 	= explode($between_separator, $q);
 				$first_val  = !empty($ar_parts[0]) ? intval($ar_parts[0]) : 0;
 				$second_val = !empty($ar_parts[1]) ? intval($ar_parts[1]) : $first_val;
 
+				// @@ '$[*] >= 1'
 				$query_object_one = clone $query_object;
-					$query_object_one->operator = '>=';
+					$query_object_one->operator = '@@';
 					$first_val  = str_replace(',', '.', (string)$first_val);
-					$query_object_one->q_parsed	= '\''.(string)$first_val.'\'';
+					$query_object_one->q_parsed	= '\'$[*] >='.(string)$first_val.'\'';
 
+				// @@ '$[*] <= 1'
 				$query_object_two = clone $query_object;
-					$query_object_two->operator = '<=';
+					$query_object_two->operator = '@@';
 					$second_val  = str_replace(',', '.', (string)$second_val);
-					$query_object_two->q_parsed	= '\''.$second_val.'\'';
-
-				// Return an array instead object
-				#$query_object = [$query_object_one,$query_object_two];
+					$query_object_two->q_parsed	= '\'$[*] <='.(string)$second_val.'\'';
 
 				// Group in a new "AND"
 				$current_op = '$and';
 				$new_query_object = new stdClass();
-					$new_query_object->{$current_op} = [$query_object_one,$query_object_two];
+					$new_query_object->{$current_op} = [$query_object_one, $query_object_two];
 
 				$query_object = $new_query_object;
 				break;
-        	# SEQUENCE
+			# SEQUENCE
 			/*case (strpos($q, $sequence_separator)!==false):
 				// Transform "12,25,36" to "(12 OR 25 OR 36)"
 				$ar_parts 	= explode($sequence_separator, $q);
@@ -319,37 +362,45 @@ class component_number extends component_common {
 				$query_object = $new_object;
 				break;
 				*/
-			# BIGGER OR EQUAL THAN
+			// BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
 				$operator = '>=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				// $query_object->operator = $operator;
+				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				$query_object->operator = '@@';
+				$query_object->q_parsed	= '\'$[*] >='.$q_clean.'\'';
 				break;
-			# SMALLER OR EQUAL THAN
+			// SMALLER OR EQUAL THAN
 			case (substr($q, 0, 2)==='<='):
 				$operator = '<=';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				// $query_object->operator = $operator;
+				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				$query_object->operator = '@@';
+				$query_object->q_parsed	= '\'$[*] <='.$q_clean.'\'';
 				break;
 			# BIGGER THAN
 			case (substr($q, 0, 1)==='>'):
 				$operator = '>';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				// $query_object->operator = $operator;
+				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				$query_object->operator = '@@';
+				$query_object->q_parsed	= '\'$[*] >'.$q_clean.'\'';
 				break;
 			# SMALLER THAN
 			case (substr($q, 0, 1)==='<'):
 				$operator = '<';
 				$q_clean  = str_replace($operator, '', $q);
 				$q_clean  = str_replace(',', '.', $q_clean);
-				$query_object->operator = $operator;
-    			$query_object->q_parsed	= '\''.$q_clean.'\'';
+				// $query_object->operator = $operator;
+				// $query_object->q_parsed	= '\''.$q_clean.'\'';
+				$query_object->operator = '@@';
+				$query_object->q_parsed	= '\'$[*] <'.$q_clean.'\'';
 				break;
 			// EQUAL DEFAULT
 			default:
@@ -358,11 +409,13 @@ class component_number extends component_common {
 				$q_clean  = str_replace(',', '.', $q_clean);
 				$query_object->operator = '@>';
 				$query_object->q_parsed	= '\''.$q_clean.'\'';
+				// $query_object->operator = '@@';
+				// $query_object->q_parsed	= '\'$[*] =='.$q_clean.'\'';
 				break;
-		}//end switch (true) {
+		}//end switch (true)
 
 
-        return $query_object;
+		return $query_object;
 	}//end resolve_query_object_sql
 
 
@@ -375,8 +428,10 @@ class component_number extends component_common {
 	public function search_operators_info() : array {
 
 		$ar_operators = [
-			'...' 	=> 'between',
-			'>=' 	=> 'greater_than_or_equal',
+			'*'		=> 'no_empty', // not null
+			'!*'	=> 'empty', // null
+			'...'	=> 'between',
+			'>='	=> 'greater_than_or_equal',
 			'<='	=> 'less_than_or_equal',
 			'>' 	=> 'greater_than',
 			'<'		=> 'less_than'
