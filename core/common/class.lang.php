@@ -520,18 +520,20 @@ class lang {
 		$alpha2 = null;
 
 		switch ($lang_code) {
-			case 'lg-spa' 	: $code = 'es';	break;
-			case 'lg-eng' 	: $code = 'en';	break;
-			case 'lg-cat' 	: $code = 'ca';	break;
-			case 'lg-vlca' 	: $code = 'va'; break;
-			case 'lg-fra' 	: $code = 'fr';	break;
-			case 'lg-eus' 	: $code = 'eu';	break;
-			case 'lg-por' 	: $code = 'pt';	break;
-			case 'lg-ara' 	: $code = 'ar';	break;
+			case 'lg-spa'	: $code = 'es';	break;
+			case 'lg-eng'	: $code = 'en';	break;
+			case 'lg-cat'	: $code = 'ca';	break;
+			case 'lg-vlca'	: $code = 'va'; break;
+			case 'lg-fra'	: $code = 'fr';	break;
+			case 'lg-eus'	: $code = 'eu';	break;
+			case 'lg-por'	: $code = 'pt';	break;
+			case 'lg-ara'	: $code = 'ar';	break;
 			case 'lg-rus'	: $code = 'ru';	break;
-			case 'lg-ell' 	: $code = 'el';	break;
-			case 'lg-deu' 	: $code = 'de';	break;
-			case 'lg-ita' 	: $code = 'it';	break;
+			case 'lg-ell'	: $code = 'el';	break;
+			case 'lg-deu'	: $code = 'de';	break;
+			case 'lg-ita'	: $code = 'it';	break;
+			case 'lg-lat'	: $code = 'la'; break;
+			case 'lg-glg'	: $code = 'gl'; break;
 
 			/*
 				case "aa" 	: $code = "lg-aar"; break;
