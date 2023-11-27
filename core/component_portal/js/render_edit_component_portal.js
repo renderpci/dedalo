@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
-	import {data_manager} from '../../common/js/data_manager.js'
+	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
 	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
@@ -690,6 +690,7 @@ export const get_buttons = (self) => {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
+				title			: get_label.new || 'New',
 				parent			: buttons_fold
 			})
 			const fn_add = async function(e) {
@@ -739,37 +740,10 @@ export const get_buttons = (self) => {
 								self.refresh()
 							}
 
-						// first_ddo. Get the first ddo in ddo_map to be focused
-							const first_ddo = self.request_config_object.show.ddo_map.find(el =>
-								el.model !== 'component_publication' &&
-								el.model !== 'component_radio_button' &&
-								el.model !== 'component_info' &&
-								!el.is_dataframe
-							)
-							if (first_ddo) {
-								// instance search. Get the instance of the component that was created by the section in build-render process
-									const all_instances	= get_all_instances()
-									const component		= all_instances.find( el =>
-										el.tipo === first_ddo.tipo &&
-										el.section_tipo === section_tipo &&
-										el.section_id === section_id &&
-										el.parent === section_tipo
-									)
-
-								// activate component
-								// If the component is ready and the section is in DOM, activate it and focus his input node.
-									if(component && component.node){
-										when_in_dom(component.node, function(){
-											// activate the component in DOM
-											ui.component.activate(component)
-
-											// focus the input node of the component
-											if(component.node.content_data[0]){
-												component.node.content_data[0].querySelector('input').focus()
-											}
-										})
-									}
-							}
+						// activate_first_component. Get the first ddo in ddo_map to be focused
+							ui.activate_first_component({
+								section	: section
+							})
 					}//end if (result===true)
 
 				// remove aux items
