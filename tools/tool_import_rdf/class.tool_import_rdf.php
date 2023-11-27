@@ -179,6 +179,21 @@ class tool_import_rdf extends tool_common {
 			}
 		}
 
+		if (!isset($current_section_tipo)) {
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					. " section tipo not found for rdf_type " . PHP_EOL
+					. ' ar_class_children: ' . to_string($ar_class_children) . PHP_EOL
+					. ' rdf_type: ' . to_string($rdf_type) . PHP_EOL
+					. ' rdf_graph: ' . to_string($rdf_graph) . PHP_EOL
+					. ' base_uri: ' . to_string($base_uri) . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+			}
+			return [];
+		}
+
 		$section_tipo		= reset($current_section_tipo);
 		$section_tipo_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
 		//main section
