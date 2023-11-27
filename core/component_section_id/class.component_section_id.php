@@ -143,34 +143,28 @@ class component_section_id extends component_common {
 			: $query_object->q;
 
 		$q = $query_object->q;
-		// if (isset($query_object->type) && $query_object->type==='jsonb') {
-		// 	$q = json_decode($q);
-		// }
 
 		// Always set fixed values
 		$query_object->type = 'number';
 
+		// Always without unaccent
+		$query_object->unaccent = false;
+
 		// format. Always set format to column (but in sequence case)
 		$query_object->format = 'column';
-
-		$between_separator  = '...';
-		$sequence_separator = ',';
-
-		// Case is an array of values
-		if (is_array($q)) {
-			$q = implode($sequence_separator, $q);
-		}
-
-		// component path
-		$query_object->component_path = ['section_id'];
-
-		$query_object->unaccent = false;
 
 		// column_name
 		$query_object->column_name = 'section_id';
 
+		// component path
+		$query_object->component_path = ['section_id'];
+
+		$between_separator  = '...';
+		$sequence_separator = ',';
+
 		switch (true) {
-			# BETWEEN
+
+			// BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
 				$ar_parts	= explode($between_separator, $q);
@@ -184,9 +178,6 @@ class component_section_id extends component_common {
 				$query_object_two = clone $query_object;
 					$query_object_two->operator = '<=';
 					$query_object_two->q_parsed	= $second_val;
-
-				// Return an array instead object
-				#$query_object = [$query_object_one,$query_object_two];
 
 				// Group in a new "AND"
 				$current_op = '$and';

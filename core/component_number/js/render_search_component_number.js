@@ -58,11 +58,13 @@ render_search_component_number.prototype.search = async function(options) {
 */
 const get_content_data = function(self) {
 
-	const value = self.data.value
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
-			  content_data.classList.add("nowrap")
+			  content_data.classList.add('nowrap')
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -83,8 +85,8 @@ const get_content_data = function(self) {
 		})
 
 	// values (inputs)
-		const inputs_value	= value.length>0 ? value : ['']
-		const value_length	= inputs_value.length
+		const inputs_value	= value
+		const value_length	= value.length || 1
 		for (let i = 0; i < value_length; i++) {
 			const input_element_node = get_input_element(i, inputs_value[i], self)
 			content_data.appendChild(input_element_node)
@@ -107,12 +109,19 @@ const get_content_data = function(self) {
 */
 const get_input_element = (i, current_value, self) => {
 
+	// content_value
+		const content_value = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_value'
+		})
+
 	// input field
 		const input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
 			class_name		: 'input_value',
-			value			: current_value
+			value			: current_value,
+			parent			: content_value
 		})
 		input.addEventListener('change', function() {
 
@@ -129,14 +138,13 @@ const get_input_element = (i, current_value, self) => {
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
+
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})//end event change
 
 
-	return input
+	return content_value
 }//end get_input_element
 
 
