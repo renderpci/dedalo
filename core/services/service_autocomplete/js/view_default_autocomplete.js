@@ -740,12 +740,12 @@ const render_option_checkbox = function(self, datalist_item) {
 		input_checkbox.dd_value	= value
 
 		// local storage check. If exists, use it to update checked status
-			const local_storage_ar_id = localStorage.getItem(self.id)
+			const local_storage_ar_id = JSON.parse(localStorage.getItem(self.id))
 			if (local_storage_ar_id) {
 
 				const current_state = input_checkbox.checked
 
-				if(local_storage_ar_id.indexOf(id)!==-1){
+				if (local_storage_ar_id.includes(id)) {
 					if (current_state!==true) {
 						input_checkbox.checked = true
 						change(input_checkbox) // caller callback function
