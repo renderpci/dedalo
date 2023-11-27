@@ -6,6 +6,7 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -288,16 +289,94 @@ const get_content_value_read = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	const is_inside_tool			= self.is_inside_tool
+	const mode						= self.mode
+	const target_sections			= self.context.target_sections || []
+	const target_sections_length	= target_sections.length
 
 	const fragment = new DocumentFragment()
+
+	// button_add
+		if(self.show_interface.button_add===true && self.model!=='component_select_lang') {
+			const button_add = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button add',
+				title			: get_label.new || 'New',
+				parent			: fragment
+			})
+			const fn_add = async function(e) {
+				e.stopPropagation()
+
+				// check current value. LImit to one
+					const data	= self.data || {}
+					const value	= data.value || []
+					// if (value.length>0) {
+					// 	alert('Warning. Only one value is allowed');
+					// 	return
+					// }
+
+				// target_section_tipo. to add section selector
+					const target_section_tipo = target_sections_length > 1
+						? false
+						: target_sections[0].tipo
+					if (!target_section_tipo) {
+						alert('Error. Empty or invalid target_sections');
+						return
+					}
+
+				// add_new_element
+					const result = await self.add_new_element(target_section_tipo)
+					if (result===true) {
+
+						// last_value. Get the last value of the portal to open the new section
+							const last_value	= self.data.value[self.data.value.length-1]
+							const section_tipo	= last_value.section_tipo
+							const section_id	= last_value.section_id
+
+						// section. Create the new section instance
+							const section = await get_instance({
+								model			: 'section',
+								mode			: 'edit',
+								tipo			: section_tipo,
+								section_tipo	: section_tipo,
+								section_id		: section_id,
+								inspector		: false,
+								session_save	: false,
+								session_key		: 'section_' + section_tipo + '_' + self.tipo
+							})
+							await section.build(true)
+							const section_node = await section.render()
+
+						// header
+							const header = (get_label.new || 'New section') + ' ' + target_sections[0].label
+
+						// modal. Create a modal to attach the section node
+							const modal = ui.attach_to_modal({
+								header	: header,
+								body	: section_node
+							})
+							modal.on_close = function(){
+								self.refresh()
+							}
+
+						// activate_first_component. Get the first ddo in ddo_map to be focused
+							ui.activate_first_component({
+								section	: section
+							})
+					}//end if (result===true)
+
+				// remove aux items
+					if (window.page_globals.service_autocomplete) {
+						window.page_globals.service_autocomplete.destroy(true, true, true)
+					}
+			}
+			button_add.addEventListener('click', fn_add)
+		}//end button_add
 
 	// button edit (go to target section)
 		if(!is_inside_tool) {
 
-			const target_sections			= self.context.target_sections || []
-			const target_sections_length	= target_sections.length
+
 			for (let i = 0; i < target_sections_length; i++) {
 
 				const item = target_sections[i]

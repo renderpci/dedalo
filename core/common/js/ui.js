@@ -10,12 +10,13 @@
 		prevent_open_new_window
 		// find_up_node
 	} from '../../common/js/utils/index.js'
+	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 
@@ -2289,6 +2290,67 @@ export const ui = {
 
 		return modal_container
 	},//end attach_to_modal
+
+
+
+	/**
+	* ACTIVATE_FIRST_COMPONENT
+	* This is used when a new record is created, to focus first component suitable for edit
+	* avoiding to select some models like component_publication, component_info...
+	* @param object ddo_map
+	* @param array avoid_models
+	* @return bool
+	*/
+	activate_first_component : (options) => {
+
+		// options
+			const section		= options.section // section instance
+			const avoid_models	= options.avoid_models || [
+				'component_publication',
+				'component_info',
+				'component_radio_button',
+				'component_section_id'
+			]
+
+		// short vars
+			const ddo_map		= section.request_config_object.show.ddo_map
+			const section_tipo	= section.section_tipo
+			const section_id	= section.section_id
+
+		// first_ddo
+			const first_ddo = ddo_map.find(el =>
+				el.model.indexOf('component_')!==-1 &&
+				!avoid_models.includes(el.model) &&
+				!el.is_dataframe
+			)
+			if (!first_ddo) {
+				if(SHOW_DEBUG===true) {
+					console.log('Ignored first_dd not found in ddo_map:', ddo_map)
+				}
+				return false
+			}
+
+		// instance search. Get the instance of the component that was created by the section in build-render process
+			const all_instances	= get_all_instances()
+			const component		= all_instances.find( el =>
+				el.tipo === first_ddo.tipo &&
+				el.section_tipo === section_tipo &&
+				el.section_id === section_id &&
+				el.parent === section_tipo
+			)
+
+		// activate component
+		// If the component is ready and the section is in DOM, activate it and focus his input node.
+			if(component && component.node) {
+				when_in_dom(component.node, function() {
+					// activate the component in DOM
+					ui.component.activate(component)
+				})
+			}
+
+
+		return true
+	},//end activate_first_component
 
 
 
