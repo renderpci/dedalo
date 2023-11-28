@@ -1416,9 +1416,10 @@ component_portal.prototype.delete_dataframe_record = async function(options) {
 
 /**
 * EDIT_RECORD_HANDLER
-* Unified way to open new window
-* Event 'button_edit_click' will be fired
+* Unified way to open new window for view/edit
+* Event 'button_edit_click' fire this
 * On window blur, a event is published
+* for dedalo engine sections
 * @param object options
 * {
 * 	section_tipo: oh1
@@ -1434,64 +1435,73 @@ component_portal.prototype.edit_record_handler = async function(options) {
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
 
+	// engine_request_config. Get current section engine
+		const engine_request_config = self.request_config.find(el => {
+			const sections_tipo = el.sqo.section_tipo.map(item => {
+				return item.tipo
+			})
+			return sections_tipo.includes(section_tipo)
+		})
+
 	// short vars
 		let new_window
 
-	// switch
-		switch (section_tipo) {
+	// open window
+		if (engine_request_config.api_engine!=='dedalo') {
 
-			case 'zenon1': {
-				// open a new window from Zenon to view record
-				const url	= 'https://zenon.dainst.org/Record/' + section_id
-				new_window	= open_window({
-					url		: url,
-					name	: 'zenon_' + section_id
-				})
-				break;
-			}
+			// external engines: zenon etc.
 
-			default: {
-				// open a new window from Dédalo to view/edit record
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-					tipo			: section_tipo,
-					section_tipo	: section_tipo,
-					id				: section_id,
-					mode			: 'edit',
-					session_save	: false, // prevent to overwrite current section session
-					menu			: false
-				})
+			const url = engine_request_config.properties.external_data.ui_base_url + section_id
 
-				const fn_widow_blur = function() {
-					// refresh. Get the proper element to refresh based on some criteria.
-					// Note that portals in text view are not self refresh able
-					function get_edit_caller(instance) {
-						if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
-							return instance.caller
-						}else if(instance.caller) {
-							return get_edit_caller(instance.caller)
-						}
-						return self
+			// open a new window from external source to view record
+			new_window	= open_window({
+				url		: url,
+				name	: 'zenon_' + section_id
+			})
+
+		}else{
+
+			// dedalo engine
+
+			// open a new window from Dédalo to view/edit record
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+				tipo			: section_tipo,
+				section_tipo	: section_tipo,
+				id				: section_id,
+				mode			: 'edit',
+				session_save	: false, // prevent to overwrite current section session
+				menu			: false
+			})
+
+			const fn_widow_blur = function() {
+				// refresh. Get the proper element to refresh based on some criteria.
+				// Note that portals in text view are not self refresh able
+				function get_edit_caller(instance) {
+					if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
+						return instance.caller
+					}else if(instance.caller) {
+						return get_edit_caller(instance.caller)
 					}
-					const edit_caller = get_edit_caller(self)
-					if (edit_caller) {
-						edit_caller.refresh({
-							destroy			: false,
-							build_autoload	: true
-						})
-						.then(function(){
-							// fire window_bur event
-							event_manager.publish('window_bur_'+self.id, self)
-						})
-					}
-				}//end blur event
-				new_window = open_window({
-					url		: url,
-					name	: 'record_view_' + section_tipo +'_'+ section_id,
-					on_blur : fn_widow_blur
-				})
-				break;
-			}
-		}//end switch (section_tipo)
+					return self
+				}
+				const edit_caller = get_edit_caller(self)
+				if (edit_caller) {
+					edit_caller.refresh({
+						destroy			: false,
+						build_autoload	: true
+					})
+					.then(function(){
+						// fire window_bur event
+						event_manager.publish('window_bur_'+self.id, self)
+					})
+				}
+			}//end fn_widow_blur
+			new_window = open_window({
+				url		: url,
+				name	: 'record_view_' + section_tipo +'_'+ section_id,
+				on_blur : fn_widow_blur
+			})
+		}
 
 	// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 		event_manager.publish('button_edit_click', this)
