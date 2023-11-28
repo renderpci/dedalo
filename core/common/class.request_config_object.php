@@ -145,6 +145,8 @@ class request_config_object extends stdClass {
 		public $search;
 		// $choose; // object. config of elements to show in choose mode
 		public $choose;
+		// api_config object|null
+		public $api_config;
 
 
 
@@ -236,6 +238,18 @@ class request_config_object extends stdClass {
 
 		$this->choose = $value;
 	}//end set_choose
+
+
+
+	/**
+	* SET_API_CONFIG
+	* @param object|null $value
+	* @return void
+	*/
+	public function set_api_config(object|null $value) {
+
+		$this->api_config = $value;
+	}//end set_api_config
 
 
 

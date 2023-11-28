@@ -33,7 +33,7 @@ class component_external extends component_common {
 
 		// format reference
 			# {
-			#   "external_data": {
+			#   "api_config": {
 			#     "entity": "zenon",
 			#     "api_url": "https://zenon.dainst.org/api/v1/record",
 			#     "response_map": [
@@ -50,9 +50,9 @@ class component_external extends component_common {
 			# }
 
 		// check properties config
-			if (!isset($section_properties->external_data)) {
+			if (!isset($section_properties->api_config)) {
 				debug_log(__METHOD__
-					." ERROR. Unable to load data from_remote. Empty properties section external_data (1)" .PHP_EOL
+					." ERROR. Unable to load data from_remote. Empty properties section api_config (1)" .PHP_EOL
 					.' tipo: '. $this->tipo .PHP_EOL
 					.' section_tipo: '. $section_tipo .PHP_EOL
 					.' section_id: '. $section_id .PHP_EOL
@@ -63,11 +63,11 @@ class component_external extends component_common {
 				return null;
 			}
 
-		// properties external_data vars
-			$external_data	= $section_properties->external_data;
-			$api_url		= $external_data->api_url;
-			$response_map	= $external_data->response_map;
-			$entity			= $external_data->entity;
+		// properties api_config vars
+			$api_config		= $section_properties->api_config;
+			$api_url		= $api_config->api_url;
+			$response_map	= $api_config->response_map;
+			$entity			= $api_config->entity;
 
 			// fields
 				$ar_fields = [];
@@ -112,7 +112,7 @@ class component_external extends component_common {
 		// check response
 			if (empty($response_obj)) {
 				debug_log(__METHOD__
-					." ERROR. Unable to load data from_remote. Empty response from external_data:" .PHP_EOL
+					." ERROR. Unable to load data from_remote. Empty response from api_config:" .PHP_EOL
 					.' request_response: ' . to_string($request_response)
 					, logger::ERROR
 				);
@@ -121,7 +121,7 @@ class component_external extends component_common {
 
 		// decode json response
 			// if (!$response_obj=json_decode($response)) {
-			// 	debug_log(__METHOD__." ERROR. Empty parse json response from external_data:" .PHP_EOL. to_string($request_response), logger::ERROR);
+			// 	debug_log(__METHOD__." ERROR. Empty parse json response from api_config:" .PHP_EOL. to_string($request_response), logger::ERROR);
 			// 	return null;
 			// }
 
