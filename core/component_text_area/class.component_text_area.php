@@ -72,7 +72,7 @@ class component_text_area extends component_common {
 					debug_log(__METHOD__
 						." Warning. [$this->tipo, $this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato will be converted to array" .PHP_EOL
 						.' dato:' . to_string($dato)
-						, logger::ERROR
+						, logger::WARNING
 					);
 				}
 			}
@@ -92,6 +92,7 @@ class component_text_area extends component_common {
 			}
 		}
 		$dato = $safe_dato;
+
 
 		return parent::set_dato( $dato );
 	}//end set_dato

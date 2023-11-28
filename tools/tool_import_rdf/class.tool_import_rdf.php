@@ -216,12 +216,14 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* GET_RDF_TO_DD_OBJECT
-	* @return
+	*
+	* @return array $ar_resources
 	*/
 	public static function get_resource_to_dd_object($ar_owl_ObjectProperty, $rdf_graph, $base_uri, $ar_section_tipo, $parent, $locator = false) {
 
-		$ar_resources = [];
-		$section_tipo = reset($ar_section_tipo);
+		$ar_resources	= [];
+		$section_tipo	= reset($ar_section_tipo);
+
 		foreach ($ar_owl_ObjectProperty as $ObjectProperty_tipo) {
 			$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
 			$object_property_name	= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
@@ -432,14 +434,13 @@ class tool_import_rdf extends tool_common {
 
 
 					$field = new stdClass();
-							$field->tipo 				= $current_tipo;
-							$field->section_tipo 		= $section_tipo;
-							$field->parent 				= $parent;
-							$field->rdf_type			= $object_property_name;
-							$field->value 				= $procesed_data;
-							$field->component_label 	= $ar_dd_component_label;
-							$field->section_tipo_label 	= $section_tipo_label;
-
+						$field->tipo				= $current_tipo;
+						$field->section_tipo		= $section_tipo;
+						$field->parent				= $parent;
+						$field->rdf_type			= $object_property_name;
+						$field->value				= $procesed_data;
+						$field->component_label		= $ar_dd_component_label;
+						$field->section_tipo_label	= $section_tipo_label;
 
 
 				}else{
@@ -487,7 +488,7 @@ class tool_import_rdf extends tool_common {
 								$object_dd_tipo			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'owl:ObjectProperty', 'children', false);
 								$current_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 								$parent_dd_tipo			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
-								$resource_uri 	= $resource->getUri();
+								$resource_uri			= $resource->getUri();
 								try {
 									$resource->load('rdfxml');
 								} catch (Exception $e) {
@@ -509,7 +510,7 @@ class tool_import_rdf extends tool_common {
 								$field = new stdClass();
 									$field->tipo				= $current_tipo;
 									$field->section_tipo		= $section_tipo;
-									$field->parent 				= $parent;
+									$field->parent				= $parent;
 									$field->rdf_type			= $object_property_name;
 									$field->value				= $resource_procesed_data;
 									$field->component_label		= $ar_dd_component_label;
@@ -517,19 +518,22 @@ class tool_import_rdf extends tool_common {
 
 								tool_import_rdf::set_data_into_component($locator, $current_tipo, $resource_procesed_data);
 
-
-							//get the sub_data for the link
-							$ar_resources 	= array_merge($ar_resources, tool_import_rdf::get_resource_to_dd_object($object_dd_tipo, $rdf_graph, $resource_uri, $current_section_tipo, reset($parent_dd_tipo), $resource_procesed_data));
+							// get the sub_data for the link
+							$ar_resources = array_merge(
+								$ar_resources,
+								tool_import_rdf::get_resource_to_dd_object($object_dd_tipo, $rdf_graph, $resource_uri, $current_section_tipo, reset($parent_dd_tipo), $resource_procesed_data)
+							);
 						}
-
-					}
+					}//end foreach ($ar_current_resource as $uri => $resource)
 				}
-			}
+			}//end if($children_dd_tipo)
+
 			if(isset($field)){
 				$ar_resources[] = $field;
 			}
+		}//end foreach ($ar_owl_ObjectProperty as $ObjectProperty_tipo)
 
-		}
+
 		return $ar_resources;
 	}//end get_rdf_to_dd_object
 
@@ -614,7 +618,12 @@ class tool_import_rdf extends tool_common {
 
 			// more than one exists with same value
 				dump('', ' SQO +++++++++++++++++ '.to_string($sqo));
-				debug_log(__METHOD__." Error Processing Request [get_solved_select_value]. Search in section_tipo: $section_tipo get more than one result. Only one is expected ! ($count) ".to_string(), logger::DEBUG);
+				debug_log(__METHOD__
+					." Error Processing Request [get_solved_select_value]. Search on section_tipo: $section_tipo gets more than one result. Only one is expected ! ($count) " . PHP_EOL
+					.' section_tipo: ' . $section_tipo . PHP_EOL
+					.' count: ' .$count
+					, logger::DEBUG
+				);
 
 			// use the first one
 				$section_id = reset($ar_records)->section_id;
@@ -642,13 +651,15 @@ class tool_import_rdf extends tool_common {
 
 			// save new value
 				$component_tipo_RecordObj_dd	= new RecordObj_dd($component_tipo);
-				$lang			= ($component_tipo_RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
-				$code_component	= component_common::get_instance($model_name,
-																 $component_tipo,
-																 $section_id,
-																 'list',
-																 $lang,
-																 $section_tipo);
+				$lang							= ($component_tipo_RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+				$code_component					= component_common::get_instance(
+					$model_name,
+					$component_tipo,
+					$section_id,
+					'list',
+					$lang,
+					$section_tipo
+				);
 				$dato = is_array($value) ? $value : [$value];
 				$code_component->set_dato( $dato );
 				$code_component->Save();
