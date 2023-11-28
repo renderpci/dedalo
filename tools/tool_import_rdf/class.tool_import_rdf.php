@@ -96,7 +96,7 @@ class tool_import_rdf extends tool_common {
 		// options
 			$options = new stdClass();
 				$options->ontology_tipo	= null;
-				$options->ar_values		= null;
+				$options->ar_values		= [];
 				$options->locator		= null;
 				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
 
