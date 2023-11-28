@@ -425,7 +425,7 @@ class tool_import_rdf extends tool_common {
 									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
 										// dump($literal_section_tipo_to_check.' '.$class_properties->match.' '.$resource_procesed_data, ' literal_section_tipo_to_check ++ '.to_string());
-										$procesed_data = tool_import_rdf::get_resource_macth($literal_section_tipo_to_check, $class_properties->match, $procesed_data);
+										$procesed_data = tool_import_rdf::get_resource_match($literal_section_tipo_to_check, $class_properties->match, $procesed_data);
 									}
 							}
 
@@ -503,7 +503,7 @@ class tool_import_rdf extends tool_common {
 								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
 									// dump($section_tipo_to_check.' '.$class_properties->match.' '.$resource_procesed_data, ' section_tipo_to_check ++ '.to_string());
-									$resource_procesed_data = tool_import_rdf::get_resource_macth($section_tipo_to_check, $class_properties->match, $resource_procesed_data);
+									$resource_procesed_data = tool_import_rdf::get_resource_match($section_tipo_to_check, $class_properties->match, $resource_procesed_data);
 								}
 
 							// create the component_portal of the resource link
@@ -559,12 +559,12 @@ class tool_import_rdf extends tool_common {
 
 
 	/**
-	* GET_SOLVED_SELECT_VALUE
+	* GET_RESOURCE_MATCH
 	* Search for received value in section. If it found, returns locator, else create the new value
 	* and returns the resultant locator
 	* @return object $locator
 	*/
-	public static function get_resource_macth($section_tipo, $component_tipo, $value, $filter=null) {
+	public static function get_resource_match(string $section_tipo, string $component_tipo, string $value, $filter=null) : object {
 
 		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 		$name		= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_DATA_LANG, true, true);
@@ -672,8 +672,9 @@ class tool_import_rdf extends tool_common {
 			$locator->set_section_id($section_id);
 			$locator->set_type(DEDALO_RELATION_TYPE_LINK);
 
+
 		return $locator;
-	}//end get_resource_macth
+	}//end get_resource_match
 
 
 
