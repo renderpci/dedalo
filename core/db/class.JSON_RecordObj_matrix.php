@@ -278,9 +278,12 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		$id = parent::Save($save_options);
 
 		// debug
-			if (is_null($id)) {
+			if (is_null($id) || $id===0) {
 				debug_log(__METHOD__
-					." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)"
+					." Error on save record  ($this->matrix_table - $this->section_tipo - $this->section_id)" . PHP_EOL
+					.' matrix_table: ' . $this->matrix_table . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo . PHP_EOL
+					.' section_id: '   . $this->section_id
 					, logger::ERROR
 				);
 			}else{
