@@ -80,6 +80,8 @@ class json_handler {
 					. " Error on decode JSON value: " .PHP_EOL
 					. 'json_last_error: '.json_last_error() .PHP_EOL
 					. 'json_last_error_msg: '.json_last_error_msg() .PHP_EOL
+					. 'string $json: '. $json .PHP_EOL
+					. 'assoc: '. to_string($assoc)
 					, logger::ERROR
 				);
 			}
