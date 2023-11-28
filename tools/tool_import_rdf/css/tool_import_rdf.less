@@ -4,6 +4,12 @@
 * Loaded on tool init
 */
 
+// imports
+@import (once) '../../../core/page/css/layout/vars';
+
+// local vars
+@color_bg_tool : #5e77b3;
+
 
 
 // tool wrapper
@@ -25,15 +31,18 @@
 			display: flex;
 			flex-direction: column;
 			align-items: center;
+			padding-top: 2rem;
 
 			.default_lang{
 				margin: 2em;
 				font-size: 1.2em;
 			}
 
-			.success {
-				width: 8em;
-				margin-top: 2em;
+			.button_apply {
+				width: 8rem;
+				margin-top: 2rem;
+				background-color: @color_bg_tool;
+    			border-color: darken(@color_bg_tool, 10%);
 			}
 			.component_data_label {
 				font-size: 16px;
@@ -44,11 +53,22 @@
 		}//end .components_container
 
 		.view_rdf_data_wrapper {
-			margin: 4em;
+			position: relative;
+			margin-top: 2rem;
+			margin-bottom: 1rem;
+			padding: 1rem;
+			width: 100%;
+			min-height: 3rem;
+
+			.spinner {
+				left: calc(50% - 1.5rem);
+				top: 0.5rem;
+				border-top-color: @color_bg_tool;
+			}
 		}
 
 		// spinner loading
-			.spinner {
+			.spinner99 {
 				@border_size: 7px;
 				display: block;
 				position: absolute;
@@ -104,5 +124,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_rdf {
-		background-color: #44c5ff;
+		background-color: @color_bg_tool;
 	}
