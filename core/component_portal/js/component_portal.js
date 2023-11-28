@@ -1434,45 +1434,64 @@ component_portal.prototype.edit_record_handler = async function(options) {
 		const section_tipo	= options.section_tipo
 		const section_id	= options.section_id
 
-	// open a new window
-		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			id				: section_id,
-			mode			: 'edit',
-			session_save	: false, // prevent to overwrite current section session
-			menu			: false
-		})
+	// short vars
+		let new_window
 
-		const new_window = open_window({
-			url		: url,
-			name	: 'record_view_'+section_tipo+'_'+section_id,
-			on_blur : fn_widow_blur
-		})
-		function fn_widow_blur() {
+	// switch
+		switch (section_tipo) {
 
-			// refresh. Get the proper element to refresh based on some criteria.
-			// Note that portals in text view are not self refresh able
-				function get_edit_caller(instance) {
-					if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
-						return instance.caller
-					}else if(instance.caller) {
-						return get_edit_caller(instance.caller)
+			case 'zenon1': {
+				// open a new window from Zenon to view record
+				const url	= 'https://zenon.dainst.org/Record/' + section_id
+				new_window	= open_window({
+					url		: url,
+					name	: 'zenon_' + section_id
+				})
+				break;
+			}
+
+			default: {
+				// open a new window from Dédalo to view/edit record
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					session_save	: false, // prevent to overwrite current section session
+					menu			: false
+				})
+
+				const fn_widow_blur = function() {
+					// refresh. Get the proper element to refresh based on some criteria.
+					// Note that portals in text view are not self refresh able
+					function get_edit_caller(instance) {
+						if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
+							return instance.caller
+						}else if(instance.caller) {
+							return get_edit_caller(instance.caller)
+						}
+						return self
 					}
-					return self
-				}
-				const edit_caller = get_edit_caller(self)
-				if (edit_caller) {
-					edit_caller.refresh({
-						destroy			: false,
-						build_autoload	: true
-					})
-					.then(function(){
-						// fire window_bur event
-						event_manager.publish('window_bur_'+self.id, self)
-					})
-				}
-		}//end blur event
+					const edit_caller = get_edit_caller(self)
+					if (edit_caller) {
+						edit_caller.refresh({
+							destroy			: false,
+							build_autoload	: true
+						})
+						.then(function(){
+							// fire window_bur event
+							event_manager.publish('window_bur_'+self.id, self)
+						})
+					}
+				}//end blur event
+				new_window = open_window({
+					url		: url,
+					name	: 'record_view_' + section_tipo +'_'+ section_id,
+					on_blur : fn_widow_blur
+				})
+				break;
+			}
+		}//end switch (section_tipo)
 
 	// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
 		event_manager.publish('button_edit_click', this)
