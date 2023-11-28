@@ -71,38 +71,33 @@ const get_content_data_edit = async function(self) {
 
 
 	// application lang selector
-
 		// default_lang_of_file_to_import
-
-		const default_lang_of_file_to_import = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'default_lang',
 			inner_html		: get_label.default_lang_of_file_to_import || 'Default language of the file to import. Data without specified language will be imported in:',
 			parent			: components_container
 		})
-
-
-		const lang_datalist = page_globals.dedalo_projects_default_langs
-		const dedalo_aplication_langs_selector = ui.build_select_lang({
+		const lang_datalist						= page_globals.dedalo_projects_default_langs
+		const dedalo_aplication_langs_selector	= ui.build_select_lang({
 			langs		: lang_datalist,
 			selected	: page_globals.dedalo_application_lang,
-			class_name	: 'dedalo_aplication_langs_selector'
+			class_name	: 'dedalo_aplication_langs_selector',
+			action		: async function() { // change event action
+				await data_manager.request({
+					body : {
+						action	: 'change_lang',
+						dd_api	: 'dd_utils_api',
+						options	: {
+							dedalo_data_lang		: dedalo_aplication_langs_selector.value,
+							dedalo_application_lang	: dedalo_aplication_langs_selector.value
+						}
+					}
+				})
+				// window.location.reload(false);
+			}
 		})
 		components_container.appendChild(dedalo_aplication_langs_selector)
-
-		dedalo_aplication_langs_selector.addEventListener('change', async function(){
-			const api_response = await data_manager.request({
-				body : {
-					action	: 'change_lang',
-					dd_api	: 'dd_utils_api',
-					options	: {
-						dedalo_data_lang		: dedalo_aplication_langs_selector.value,
-						dedalo_application_lang	: dedalo_aplication_langs_selector.value
-					}
-				}
-			})
-			// window.location.reload(false);
-		})
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -114,7 +109,7 @@ const get_content_data_edit = async function(self) {
 		const btn_validate = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'success button_apply',
-			inner_html		: 'ok',
+			inner_html		: 'OK',
 			parent			: buttons_container
 		})
 
@@ -126,50 +121,57 @@ const get_content_data_edit = async function(self) {
 
 		// when user click the button do the import of the data.
 		btn_validate.addEventListener('click', ()=>{
+
 				const component_data_value = iri_node.querySelectorAll('.component_data:checked')
 
-				const spinner = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'spinner',
-					parent			: view_rdf_data_wrapper
-				})
+				// ar_values
+					const ar_values = []
+					const len = component_data_value.length
+					for (let i = 0; i < len; i++) {
+						ar_values.push(component_data_value[i].value)
+					}
+					if (ar_values.length < 1){
+						alert("Nothing selected");
+						return
+					}
 
-				const len = component_data_value.length
-				const ar_values = []
-				for (let i = 0; i < len; i++) {
-					ar_values.push(component_data_value[i].value)
-				}
+				// loading styles
+					const spinner = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'spinner',
+						parent			: view_rdf_data_wrapper
+					})
+					components_container.classList.add('loading')
 
-				if (ar_values.length > 0){
-
+				// get_rdf_data
 					const ontology_tipo = self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
 						? self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
 						: null
 
+					self.get_rdf_data(ontology_tipo, ar_values)
+					.then(function(response){
+						if(SHOW_DEBUG===true) {
+							console.log("response:", response);
+						}
 
-					const result = self.get_rdf_data(ontology_tipo, ar_values).then(function(response){
-							if(SHOW_DEBUG===true) {
-								console.log("response:",response);
-							}
+						const len = ar_values.length
+						for (let i = 0; i < len; i++) {
+
+							// const current_data = ar_values[i]
+
+							view_rdf_data_wrapper.innerHTML = response.result[i].ar_rdf_html
+
+							// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
+							// view_dd_data_wrapper.appendChild(node)
+						}
+
+						// update list
+							// self.load_section(section_tipo)
+
+						// loading styles
 							spinner.remove()
-
-							const len = ar_values.length
-							for (let i = 0; i < len; i++) {
-								const current_data = ar_values[i]
-
-								view_rdf_data_wrapper.innerHTML = response.result[i].ar_rdf_html
-
-								// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
-								// view_dd_data_wrapper.appendChild(node)
-							}
-
-							// update list
-								// self.load_section(section_tipo)
-						})
-
-				}else{
-					// spinner.remove()
-				}
+							components_container.classList.remove('loading')
+					})
 			})
 
 	// content_data
