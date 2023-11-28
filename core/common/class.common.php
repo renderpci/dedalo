@@ -3238,14 +3238,15 @@ abstract class common {
 						}
 
 					// external config. Add properties
-					// like {"external_data": {"api_url": "https://zenon.dainst.org/api/v1/record",..}
+					// like {"api_config": {"api_url": "https://zenon.dainst.org/api/v1/record",..}
 						if ($parsed_item->api_engine!=='dedalo' && isset($parsed_item->show->ddo_map)) {
 							$engine_section_tipo = isset($parsed_item->show->ddo_map[0])
 								? $parsed_item->show->ddo_map[0]->section_tipo
 								: null;
 							if (!empty($engine_section_tipo)) {
 								$RecordObj_dd				= new RecordObj_dd($engine_section_tipo);
-								$parsed_item->properties	= $RecordObj_dd->get_properties();
+								$engine_section_properties	= $RecordObj_dd->get_properties();
+								$parsed_item->set_api_config($engine_section_properties->api_config);
 							}
 						}
 

@@ -1451,7 +1451,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 
 			// external engines: zenon etc.
 
-			const url = engine_request_config.properties.external_data.ui_base_url + section_id
+			const url = engine_request_config.api_config.ui_base_url + section_id
 
 			// open a new window from external source to view record
 			new_window	= open_window({
