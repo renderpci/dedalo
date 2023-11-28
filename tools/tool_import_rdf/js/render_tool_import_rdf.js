@@ -24,6 +24,7 @@ export const render_tool_import_rdf = function() {
 /**
 * RENDER_TOOL_IMPORT_RDF
 * Render node for use like button
+* @param object options = {render_level:'full'}
 * @return HTMLElement wrapper
 */
 render_tool_import_rdf.prototype.edit = async function(options={render_level:'full'}) {
@@ -52,6 +53,7 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
@@ -112,50 +114,56 @@ const get_content_data_edit = async function(self) {
 			inner_html		: 'OK',
 			parent			: buttons_container
 		})
-
-		const view_rdf_data_wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'view_rdf_data_wrapper',
-			parent			: fragment
-		})
-
-		// when user click the button do the import of the data.
+		// click event. When user click the button do the import of the data.
 		btn_validate.addEventListener('click', ()=>{
 
-				const component_data_value = iri_node.querySelectorAll('.component_data:checked')
+			// component values from radio buttons selection
+				const ar_values = []
+				const component_data_values	= iri_node.querySelectorAll('.component_data:checked')
+				const len					= component_data_values.length
+				for (let i = 0; i < len; i++) {
+					ar_values.push(component_data_values[i].value)
+				}
+				if (ar_values.length < 1){
+					alert("Nothing selected");
+					return
+				}
 
-				// ar_values
-					const ar_values = []
-					const len = component_data_value.length
-					for (let i = 0; i < len; i++) {
-						ar_values.push(component_data_value[i].value)
+			// loading styles
+				while (view_rdf_data_wrapper.firstChild) {
+					view_rdf_data_wrapper.removeChild(view_rdf_data_wrapper.firstChild)
+				}
+				const spinner = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'spinner',
+					parent			: view_rdf_data_wrapper
+				})
+				components_container.classList.add('loading')
+
+			// get_rdf_data
+				const ontology_tipo = self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+					? self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
+					: null
+
+				self.get_rdf_data(ontology_tipo, ar_values)
+				.then(function(response){
+					if(SHOW_DEBUG===true) {
+						console.log("debug response:", response);
 					}
-					if (ar_values.length < 1){
-						alert("Nothing selected");
-						return
-					}
 
-				// loading styles
-					const spinner = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'spinner',
-						parent			: view_rdf_data_wrapper
-					})
-					components_container.classList.add('loading')
+					// loading styles
+						spinner.remove()
+						components_container.classList.remove('loading')
 
-				// get_rdf_data
-					const ontology_tipo = self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
-						? self.main_element.context.properties.ar_tools_name.tool_import_rdf.external_ontology
-						: null
-
-					self.get_rdf_data(ontology_tipo, ar_values)
-					.then(function(response){
-						if(SHOW_DEBUG===true) {
-							console.log("response:", response);
+					// check results
+						if (!response || !response.result || response.result.length<1) {
+							view_rdf_data_wrapper.innerHTML = 'Empty results';
+							return
 						}
 
-						const len = ar_values.length
-						for (let i = 0; i < len; i++) {
+					// print result in view_rdf_data_wrapper
+						const response_result_len = response.result.length
+						for (let i = 0; i < response_result_len; i++) {
 
 							// const current_data = ar_values[i]
 
@@ -165,14 +173,17 @@ const get_content_data_edit = async function(self) {
 							// view_dd_data_wrapper.appendChild(node)
 						}
 
-						// update list
-							// self.load_section(section_tipo)
+					// update list
+						// self.load_section(section_tipo)
+				})
+		})
 
-						// loading styles
-							spinner.remove()
-							components_container.classList.remove('loading')
-					})
-			})
+	// view_rdf_data_wrapper. Result will be added here
+		const view_rdf_data_wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'view_rdf_data_wrapper',
+			parent			: fragment
+		})
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -186,37 +197,43 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RENDER_COMPONENT_DATO
-* @return
+* Create a radio button for each component value
+* @param object self
+* @return HTMLElement source_component_container
 */
 const render_component_dato = function(self) {
 
-	const component_data	= self.main_element.data.value
-	const len				= component_data.length
+	const data				= self.main_element.data || {}
+	const component_value	= data.value || []
 
 	const source_component_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'source_component_container'
+		element_type	: 'div',
+		class_name		: 'source_component_container'
 	})
 
-	for (let i = 0; i < len; i++) {
+	const component_value_len = component_value.length
+	for (let i = 0; i < component_value_len; i++) {
 
-		const current_component = component_data[i]
+		const iri = component_value[i].iri
 
 		const radio_label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'component_data_label',
-			inner_html		: current_component.iri,
+			class_name		: 'component_data_label' + ((!iri || !iri.length) ? ' error' : ''),
+			inner_html		: iri || 'IRI value is empty',
 			parent			: source_component_container
 		})
+
+		if (!iri || !iri.length) {
+			continue
+		}
 
 		const radio_input = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'radio',
 			class_name		: 'component_data',
 			name			: 'radio_selector',
-			value			: current_component.iri
+			value			: iri
 		})
-
 		radio_label.prepend(radio_input)
 	}
 
