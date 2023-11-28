@@ -379,13 +379,14 @@ abstract class JSON_RecordDataBoundObject {
 					}
 
 					# Insert record datos and receive a new id
-					$strQuery = 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
-
-					$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $datos ));
+					$strQuery	= 'INSERT INTO "'.$this->strTableName.'" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING id';
+					$params		= array( $section_id, $section_tipo, $datos );
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, $params);
 					if($result===false) {
 						debug_log(__METHOD__
-							." Error Processing Save Insert Request (2) error: " . PHP_EOL
-							. pg_last_error(DBi::_getConnection())
+							. ' Error Processing Save Insert Request (2) error: ' . PHP_EOL
+							. ' pg_last_error: ' .  pg_last_error(DBi::_getConnection()) . PHP_EOL
+							. ' params: ' . json_encode($params, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
@@ -395,11 +396,12 @@ abstract class JSON_RecordDataBoundObject {
 						return null;
 					}
 
-					$id = pg_fetch_result($result,0,'id');
-					if ($id===false) {
+					$id = pg_fetch_result($result, 0, 'id');
+					if ($id===false || $id===null) {
 						debug_log(__METHOD__
-							."Error Processing Request: " . PHP_EOL
-							.pg_last_error(DBi::_getConnection())
+							. ' Error Processing Insert Request: ' . PHP_EOL
+							. ' pg_last_error: ' . pg_last_error(DBi::_getConnection()) . PHP_EOL
+							. ' params: ' . json_encode($params, JSON_PRETTY_PRINT)
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
