@@ -572,20 +572,15 @@ service_autocomplete.prototype.split_q = function(q) {
 
 /**
 * ZENON_ENGINE
-* @param object options
+* @param object|null options
 * @return promise
 */
 service_autocomplete.prototype.zenon_engine = async function(options) {
 
 	const self = this
 
-	// options
-		// const q			= options.q
-		// const rqo	= await options.rqo
-
 	// dd_request
-		// const dd_request = self.request_config_object
-		const rqo_search	= await clone(self.rqo_search)
+		const rqo_search = clone(self.rqo_search)
 
 	// rqo
 		// const generate_rqo = async function(){
@@ -597,7 +592,6 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 		// 	self.rqo_search	= self.caller.build_rqo_search(zenon_rqo, 'search')
 		// }
 		// generate_rqo()
-
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -616,8 +610,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 	// section_tipo of Zenon zenon1
 		const section_tipo	= fields[0].section_tipo
 
-
-	// format data
+	// format data function
 		const format_data = function(data) {
 			if(SHOW_DEBUG===true) {
 				console.log('[zenon_engine] format_data data 1:',data);
@@ -728,30 +721,31 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 
 		// Iterate current filter
 		let q = ''
-		const filter_free =  rqo_search.sqo_options.filter_free
-			for (let operator in filter_free) {
+		const filter_free = rqo_search.sqo_options.filter_free
+		for (let operator in filter_free) {
 
-				// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
-				const new_operator				= self.operator || operator
+			// set the operator with the user selection or the default operator defined in the config_sqo (it comes in the config_rqo)
+			const new_operator = self.operator || operator
 
-				// get the array of the filters objects, they have the default operator
-				const current_filter = filter_free[operator]
-				const current_filter_length = current_filter.length
-				for (let i = 0; i < current_filter_length; i++) {
+			// get the array of the filters objects, they have the default operator
+			const current_filter = filter_free[operator]
+			const current_filter_length = current_filter.length
+			for (let i = 0; i < current_filter_length; i++) {
 
-					const filter_item = current_filter[i]
+				const filter_item = current_filter[i]
 
-					const q_check =  filter_item.q
+				const q_check =  filter_item.q
 
-					if( !q_check || q_check === "" ){
-						continue
-					}
-					// wildcards
-						q = q_check
+				if( !q_check || q_check === "" ){
+					continue
 				}
+				// wildcards
+					q = q_check
 			}
+		}
 
-		const url_trigger  = 'https://zenon.dainst.org/api/v1/search'
+		// const url_trigger  = 'https://zenon.dainst.org/api/v1/search'
+		const url_trigger  = self.request_config_object.properties.external_data.api_url_search
 		const trigger_vars = {
 				lookfor		: (q==='') ? 'ñññññññ---!!!!!' : q, // when the q is empty, Zenon get the first 10 records of your DDBB, in that case we change the empty with a nonsense q
 				type		: "AllFields", // search in all fields

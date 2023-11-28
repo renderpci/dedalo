@@ -3237,6 +3237,18 @@ abstract class common {
 							);
 						}
 
+					// external config. Add properties
+					// like {"external_data": {"api_url": "https://zenon.dainst.org/api/v1/record",..}
+						if ($parsed_item->api_engine!=='dedalo' && isset($parsed_item->show->ddo_map)) {
+							$engine_section_tipo = isset($parsed_item->show->ddo_map[0])
+								? $parsed_item->show->ddo_map[0]->section_tipo
+								: null;
+							if (!empty($engine_section_tipo)) {
+								$RecordObj_dd				= new RecordObj_dd($engine_section_tipo);
+								$parsed_item->properties	= $RecordObj_dd->get_properties();
+							}
+						}
+
 					// add complete parsed item
 						$ar_request_query_objects[] = $parsed_item;
 				}//end foreach ($properties->source->request_config as $item_request_config)
