@@ -1436,7 +1436,8 @@ component_portal.prototype.edit_record_handler = async function(options) {
 		const section_id	= options.section_id
 
 	// engine_request_config. Get current section engine
-		const engine_request_config = self.request_config.find(el => {
+		const request_config		= self.context.request_config
+		const engine_request_config	= request_config.find(el => {
 			const sections_tipo = el.sqo.section_tipo.map(item => {
 				return item.tipo
 			})
