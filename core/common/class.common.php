@@ -3246,7 +3246,9 @@ abstract class common {
 							if (!empty($engine_section_tipo)) {
 								$RecordObj_dd				= new RecordObj_dd($engine_section_tipo);
 								$engine_section_properties	= $RecordObj_dd->get_properties();
-								$parsed_item->set_api_config($engine_section_properties->api_config);
+								if (is_object($engine_section_properties) && property_exists($engine_section_properties, 'api_config')) {
+									$parsed_item->set_api_config($engine_section_properties->api_config);
+								}
 							}
 						}
 
