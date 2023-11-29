@@ -30,7 +30,8 @@
 		margin: 2px;
 		min-height: 55px;
 		border-radius: 2px;
-		flex: 1 1 32.4%;
+		// flex: 1 1 32.4%;
+		flex: 0 1 32.8%;
 		flex-wrap: wrap;
 
 		>.wrapper_component {
@@ -157,9 +158,22 @@
 						// overflow: -webkit-paged-x;
 						// overflow: hidden;
 						position: relative;
-						display: flex;
-						flex-grow: 2;
-						flex-wrap: wrap;
+
+						// display: flex;
+						// flex-grow: 2;
+						// flex-wrap: wrap;
+
+						width: 100%;
+						display: grid;
+						grid-template-columns: 1fr 1fr 1fr;
+
+						@media screen and (max-width: @width_break_point_0) {
+							grid-template-columns: 1fr 1fr;
+						}
+
+						@media screen and (max-width: @width_break_point_0) {
+							grid-template-columns: 1fr;
+						}
 
 						&.root_search_group {
 							margin: 0px;
