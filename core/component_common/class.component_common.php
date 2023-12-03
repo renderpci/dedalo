@@ -755,6 +755,11 @@ abstract class component_common extends common {
 				unset($this->ar_list_of_values);
 			}
 
+		// empty array cases: [null] to null
+			if (is_array($dato) && count($dato)===1 && is_null($dato[0]) || $dato[0]==='') {
+				$dato = null;
+			}
+
 		// call common->set_dato (!) fix var 'bl_loaded_matrix_data' as true
 			parent::set_dato($dato);
 
@@ -2591,7 +2596,10 @@ abstract class component_common extends common {
 	public function regenerate_component() : bool {
 
 		// Force loads dato always !IMPORTANT
-		$this->get_dato();
+		$dato = $this->get_dato();
+
+		// force format correctly empty data like [null] -> null
+		$this->set_dato($dato);
 
 		// Save component data
 		$this->Save();
