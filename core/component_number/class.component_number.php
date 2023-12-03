@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_NUMBER
 * Manage numbers with specific precision
@@ -34,6 +35,48 @@ class component_number extends component_common {
 
 
 	/**
+	* IS_EMPTY
+	* Check given value to determine is is really a empty numeric value
+	* @param mixed $value
+	* @return bool
+	*/
+	public static function is_empty(mixed $value) : bool {
+
+		// null|string cases
+		if (is_null($value) || $value==='') {
+			return true;
+		}
+
+		if (is_array($value)) {
+			// one empty element case
+			if (empty($value) || (count($value)===1 && self::is_empty($value[0]))) {
+				return true;
+			}
+			// if any of the values is not empty, return false
+			foreach ($value as $current_value) {
+				if (self::is_empty($current_value)===false) {
+					return false;
+				}
+			}
+		}else{
+
+			if (!is_numeric($value)) {
+				debug_log(__METHOD__
+					. ' WARNING : Checking invalid type ! ' . PHP_EOL
+					. ' type: ' . gettype($value) . PHP_EOL
+					. ' value: ' . to_string($value)
+					, logger::WARNING
+				);
+			}
+		}
+
+
+		return false;
+	}//end is_empty
+
+
+
+	/**
 	* GET_DATO
 	* @return array|null
 	*/
@@ -53,7 +96,13 @@ class component_number extends component_common {
 			$format_dato[] = $this->set_format_form_type($value);
 		}
 
-		return (array)$format_dato;
+		// empty data case
+		if (self::is_empty($format_dato)) {
+			$format_dato = null;
+		}
+
+
+		return $format_dato;
 	}//end get_dato
 
 
@@ -64,19 +113,31 @@ class component_number extends component_common {
 	*/
 	public function set_dato( $dato ) : bool {
 
-		$safe_dato = array();
-		foreach ((array)$dato as  $value) {
-			if (is_null($value) || $value==='') {
-				$safe_dato[] = null;
-			}elseif (is_numeric($value)) {
-				$safe_dato[] = $this->set_format_form_type($value);
-			}else{
-				// trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
-				debug_log(__METHOD__
-					." Invalid value! [component_number.set_dato] value: "
-					.to_string($value)
-					, logger::ERROR
-				);
+		if (self::is_empty($dato)) {
+
+			$safe_dato = null;
+
+		}else{
+
+			$safe_dato = array();
+			foreach ((array)$dato as  $value) {
+				if (is_null($value) || $value==='') {
+					$safe_dato[] = null;
+				}elseif (is_numeric($value)) {
+					$safe_dato[] = $this->set_format_form_type($value);
+				}else{
+					// trigger_error("Invalid value! [component_number.set_dato] value: ".json_encode($value));
+					debug_log(__METHOD__
+						." Invalid value! [component_number.set_dato] value: "
+						.to_string($value)
+						, logger::ERROR
+					);
+				}
+			}
+
+			// empty dato case
+			if (self::is_empty($safe_dato)) {
+				$safe_dato = null;
 			}
 		}
 
@@ -93,7 +154,7 @@ class component_number extends component_common {
 	*/
 	public function get_valor($index='all') {
 
-		$valor ='';
+		$valor = '';
 
 		$dato = $this->get_dato();
 
@@ -122,51 +183,60 @@ class component_number extends component_common {
 
 
 
-	/*
+	/**
 	* SET_FORMAT_FORM_TYPE
 	* Format the dato into the standard format or the properties format of the current instance of the component
+	* @param mixed $dato_value
+	* @return int|float|null $dato_value
 	*/
-	public function set_format_form_type( $dato_value ) : int | float | null {
+	public function set_format_form_type( mixed $dato_value ) : int|float|string|null {
 
-		if($dato_value===null || empty($dato_value)){
+		if( self::is_empty($dato_value) ) {
 			return null;
 		}
 
 		$properties = $this->get_properties();
-		if(empty($properties->type)){
+		if(empty($properties->type)) {
+
+			// default format is float
 			return (float)$dato_value;
+
 		}else{
+
 			switch ($properties->type) {
 
 				case 'int':
 					return (int)$dato_value;
-					break;
 
 				case 'float':
 				default:
-					$precision = $properties->precision ?? 2;
-
-					$dato_value = (float)round($dato_value, $precision);
+					$precision	= $properties->precision ?? 2;
+					$dato_value	= is_numeric($dato_value)
+						? (float)round($dato_value, $precision)
+						: (float)$dato_value;
 					break;
 			}
 		}//end if(empty($properties->type))
+
 
 		return $dato_value;
 	}//end set_format_form_type
 
 
-	/*
+
+	/**
 	* NUMBER_TO_STRING
 	* Format the dato into the standard format or the properties format of the current instance of the component
+	* @return string $string_value
 	*/
-	public function number_to_string( $dato ) {
+	public function number_to_string( $value ) : string {
 
 		$properties = $this->get_properties();
 
 		// default value
-		$string_value = $dato;
+		$string_value = $value;
 
-		if (!empty($dato) && !empty($properties->type)) {
+		if (!empty($value) && !empty($properties->type)) {
 
 			switch ($properties->type ) {
 				case 'int':
@@ -175,14 +245,16 @@ class component_number extends component_common {
 
 				case 'float':
 				default:
-					$precision = $properties->precision ?? 2;
-
-					$string_value = number_format($dato,$precision,'.','');
+					$precision		= $properties->precision ?? 2;
+					$string_value	= is_numeric($value)
+						? number_format($value, $precision, '.', '')
+						: $value;
 					break;
 			}
-		}//end if (!empty($dato))
+		}//end if (!empty($value))
 
 		$string_value = str_replace(',', '.', (string)$string_value);
+
 
 		return (string)$string_value;
 	}//end number_to_string
@@ -194,9 +266,9 @@ class component_number extends component_common {
 	* Parse a string as number
 	* Used to import data from other systems
 	* @param string $string_value
-	* @return number or null $number
+	* @return int|float|null $number
 	*/
-	public function string_to_number( string $string_value ) : int | float | null {
+	public function string_to_number( string $string_value ) : int|float|null {
 
 		// get the properties of the component, to assign the specific type defined.
 		// by default component_number use float numbers but in some case it can be set to int
@@ -204,11 +276,11 @@ class component_number extends component_common {
 		$type 		= !empty($properties->type)
 			? $properties->type
 			: 'float';
+
 		// decimal defines if the string use point '.' or comma ',' as decimal separator
 		// users can define it into the tool_import_csv or other tools interfaces
-		$decimal	= $this->decimal;
-
-		if($decimal===','){
+		$decimal = $this->decimal;
+		if($decimal===',') {
 			$string_value = str_replace('.', '', (string)$string_value);
 			$string_value = str_replace(',', '.', (string)$string_value);
 		}else{
@@ -311,6 +383,16 @@ class component_number extends component_common {
 				$clone = clone($query_object);
 					$clone->operator	= '!=';
 					$clone->q_parsed	= '\'[]\'';
+				$new_query_json->$logical_operator[] = $clone;
+
+				$clone = clone($query_object);
+					$clone->operator	= '!=';
+					$clone->q_parsed	= '\'[null]\'';
+				$new_query_json->$logical_operator[] = $clone;
+
+				$clone = clone($query_object);
+					$clone->operator	= '!=';
+					$clone->q_parsed	= '\'null\'';
 				$new_query_json->$logical_operator[] = $clone;
 
 				// override
