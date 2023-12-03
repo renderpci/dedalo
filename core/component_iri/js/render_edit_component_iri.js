@@ -134,20 +134,35 @@ const get_content_value = (i, current_value, self) => {
 				const input_title = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'text',
-					class_name		: 'input_value',
+					class_name		: 'input_value title',
 					placeholder		: placeholder_text,
 					value			: title,
 					parent			: content_value
 				})
-				//end change
-				input_title.addEventListener('keyup', fn_keyup)
-				function fn_keyup(e) {
-					// update property title
-						current_value.title = input_title.value
+				// keyup event
+					input_title.addEventListener('keyup', fn_keyup)
+					function fn_keyup(e) {
+						// update property title
+							current_value.title = input_title.value
 
-					// update_value(self, i, current_value)
-						self.keyup_handler(e, i, current_value, self)
-				}//end keyup
+						// update_value(self, i, current_value)
+							self.keyup_handler(e, i, current_value, self)
+					}//end keyup
+				// focus event
+					input_title.addEventListener('focus', function() {
+						// force activate on input focus (tabulating case)
+						if (!self.active) {
+							ui.component.activate(self)
+						}
+					})
+				// click event
+					input_title.addEventListener('click', function(e) {
+						e.stopPropagation()
+					})
+				// click event
+					input_title.addEventListener('mousedown', function(e) {
+						e.stopPropagation()
+					})
 		}// end if(use_title)
 
 	// IRI input field
@@ -160,29 +175,37 @@ const get_content_value = (i, current_value, self) => {
 			value			: iri,
 			parent			: content_value
 		})
-		input_iri.addEventListener('keyup', fn_keyup)
-		function fn_keyup(e) {
+		// keyup event
+			input_iri.addEventListener('keyup', fn_keyup)
+			function fn_keyup(e) {
 
-			// check if url is valid
-				const regex = /(https?)?:\/\/.*\..+/;
-				const value = input_iri.value
+				// check if url is valid
+					const regex = /(https?)?:\/\/.*\..+/;
+					const value = input_iri.value
 
-				if(value && !value.match(regex)){
-					input_iri.classList.add('error')
-					return false
+					if(value && !value.match(regex)){
+						input_iri.classList.add('error')
+						return false
+					}
+
+				// clean error class if exists
+					if (input_iri.classList.contains('error')) {
+						input_iri.classList.remove('error')
+					}
+
+				// update property iri
+					current_value.iri = input_iri.value
+
+				// update_value(self, i, current_value)
+					self.keyup_handler(e, i, current_value, self)
+			}//end keyup
+		// focus event
+			input_iri.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self)
 				}
-
-			// clean error class if exists
-				if (input_iri.classList.contains('error')) {
-					input_iri.classList.remove('error')
-				}
-
-			// update property iri
-				current_value.iri = input_iri.value
-
-			// update_value(self, i, current_value)
-				self.keyup_handler(e, i, current_value, self)
-		}//end keyup
+			})
 
 	// active
 		const use_active_check = typeof(self.context.properties.use_active_check) !== 'undefined'
