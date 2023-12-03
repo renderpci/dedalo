@@ -20,6 +20,9 @@ class tool_update_cache extends tool_common {
 	*/
 	public static function update_cache(object $options) : object {
 
+		// set time limit
+			set_time_limit( 3600 * 3 );  // 3 hours
+
 		// unlock session
 			session_write_close();
 			ignore_user_abort();
