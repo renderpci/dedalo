@@ -756,7 +756,7 @@ abstract class component_common extends common {
 			}
 
 		// empty array cases: [null] to null
-			if (is_array($dato) && count($dato)===1 && is_null($dato[0]) || $dato[0]==='') {
+			if (is_array($dato) && count($dato)===1 && (is_null($dato[0]) || $dato[0]==='')) {
 				$dato = null;
 			}
 
