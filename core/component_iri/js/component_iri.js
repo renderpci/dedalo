@@ -136,5 +136,51 @@ component_iri.prototype.keyup_handler = function(e, key, current_value, self) {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Overwrites default behavior set in ui.component.activate
+* @return bool
+*/
+component_iri.prototype.focus_first_input = function() {
+
+	const self = this
+
+	// already active
+		if (self.active) {
+			return false
+		}
+
+	// title_input
+		const title_input = self.node.content_data && self.node.content_data[0]
+			? self.node.content_data[0].querySelector('.input_value.title')
+			: null;
+		if (title_input && document.activeElement === title_input) {
+			return false
+		}
+
+	// url_input
+		const url_input = self.node.content_data && self.node.content_data[0]
+			? self.node.content_data[0].querySelector('.input_value.url')
+			: null;
+		if (url_input) {
+
+			setTimeout(function(){
+				if (self.active && url_input !== document.activeElement) {
+
+					// check another focus elements like q_operator
+					if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+						return
+					}
+
+					url_input.focus()
+				}
+			}, 25)
+		}
+
+	return true
+}//end focus_first_input
+
+
+
 // @license-end
 
