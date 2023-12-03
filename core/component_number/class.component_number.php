@@ -80,6 +80,7 @@ class component_number extends component_common {
 			}
 		}
 
+
 		return parent::set_dato( $safe_dato );
 	}//end set_dato
 

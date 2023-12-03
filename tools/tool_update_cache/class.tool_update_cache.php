@@ -46,6 +46,9 @@ class tool_update_cache extends tool_common {
 					. ' sqo_id: ' .$sqo_id
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					dump($_SESSION['dedalo']['config']['sqo'], '$_SESSION[dedalo][config][sqo] ++ ');
+				}
 				return $response;
 			}
 
