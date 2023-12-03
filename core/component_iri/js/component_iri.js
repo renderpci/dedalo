@@ -10,7 +10,7 @@
 	import {render_edit_component_iri} from '../../component_iri/js/render_edit_component_iri.js'
 	import {render_list_component_iri} from '../../component_iri/js/render_list_component_iri.js'
 	import {render_search_component_iri} from '../../component_iri/js/render_search_component_iri.js'
-	import {output_component_iri} from '../../component_iri/js/output_component_iri.js'
+	// import {output_component_iri} from '../../component_iri/js/output_component_iri.js'
 
 
 
