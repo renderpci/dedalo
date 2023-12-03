@@ -774,7 +774,7 @@
 			position: absolute;
 			top: calc(100% + 1em);//6.25em;
 			right: 1em;
-			z-index: 1;
+			z-index: 4;
 			background-color: rgba(0, 0, 0, 0.9);
 			color: #ffffff;
 			padding: 1em;
@@ -796,13 +796,13 @@
 			}
 
 			&:after {
+				position: absolute;
 				bottom: 100%;
 				left: 50%;
 				border: solid transparent;
 				content: ' ';
 				height: 0px;
 				width: 0px;
-				position: absolute;
 				pointer-events: none;
 				//border-color: rgba(0, 0, 0, 0.8);
 				border-bottom-color: rgba(0, 0, 0, 0.8);
