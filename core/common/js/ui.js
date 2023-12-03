@@ -631,9 +631,22 @@ export const ui = {
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
 						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						inner_html		: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']'
+						// inner_html	: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']',
+						inner_html		: label,
+						title			: tipo + ' ' + model.substring(10) + ' [' + instance.lang.substring(3) + ']',
+						parent			: fragment
 					})
-					fragment.appendChild(component_label)
+					// parent_grouper_label
+					const parent_grouper_label = instance.context.config?.parent_grouper_label
+					if (parent_grouper_label) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'label_info',
+							text_content	: instance.context.config?.parent_grouper_label,
+							parent			: component_label
+						})
+					}
+
 					// css
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]

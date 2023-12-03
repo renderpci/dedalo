@@ -1855,6 +1855,16 @@ abstract class common {
 			// children_view. Sometimes the component defines the view of his children (see rsc368)
 				$dd_object->children_view = $this->get_children_view();
 
+			// search
+				if ($this->mode==='search') {
+					if (isset($parent_grouper)) {
+						if (!isset($dd_object->config)) {
+							$dd_object->config = new stdClass();
+						}
+						$dd_object->config->parent_grouper_label = RecordObj_dd::get_termino_by_tipo($parent_grouper);
+					}
+				}
+
 		// cache. fix context dd_object
 			if ($use_cache===true) {
 				self::$structure_context_cache[$ddo_key] = $dd_object;
