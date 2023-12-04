@@ -677,26 +677,26 @@ class search {
 	* @param string $op
 	* 	sample: '$and'
 	* @param array $ar_value
-	* 	sample:
-	* [
-	    {
-	        "q": {
-	            "section_id": "1",
-	            "section_tipo": "dd64",
-	            "type": "dd151",
-	            "from_component_tipo": "dd1354"
-	        },
-	        "q_operator": null,
-	        "path": [
-	            {
-	                "section_tipo": "dd1324",
-	                "component_tipo": "dd1354",
-	                "model": "component_radio_button",
-	                "name": "Active"
-	            }
-	        ]
-	    }
-	  ]
+	* sample:
+		* [
+		*    {
+		*        "q": {
+		*            "section_id": "1",
+		*            "section_tipo": "dd64",
+		*            "type": "dd151",
+		*            "from_component_tipo": "dd1354"
+		*        },
+		*        "q_operator": null,
+		*        "path": [
+		*            {
+		*                "section_tipo": "dd1324",
+		*                "component_tipo": "dd1354",
+		*                "model": "component_radio_button",
+		*                "name": "Active"
+		*            }
+		*        ]
+		*    }
+		*  ]
 	* @return object $new_ar_query_object
 	*/
 	public static function conform_search_query_object(string $op, array $ar_value) : object {
@@ -710,21 +710,22 @@ class search {
 
 			$search_object = $ar_value[$i];
 
-			if (!is_object($search_object)) {
-				// dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
-				debug_log(__METHOD__
-					." Invalid (IGNORED) non object search_object: " . PHP_EOL
-					.' type: ' 			. gettype($search_object) . PHP_EOL
-					.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT) . PHP_EOL
-					.' ar_value: ' 		. json_encode($ar_value, JSON_PRETTY_PRINT)
-					, logger::ERROR
-				);
-				// throw new Exception("Error Processing Request. search_object must be an object", 1);
-				dump(debug_backtrace(), ' Error. search_object must be an object. debug_backtrace() ++ '.to_string());
-				continue;
-			}
+			// is object check
+				if (!is_object($search_object)) {
+					// dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
+					debug_log(__METHOD__
+						.' Invalid (IGNORED) non object search_object: ' . PHP_EOL
+						.' type: ' 			. gettype($search_object) . PHP_EOL
+						.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT) . PHP_EOL
+						.' ar_value: ' 		. json_encode($ar_value, JSON_PRETTY_PRINT)
+						, logger::ERROR
+					);
+					// throw new Exception("Error Processing Request. search_object must be an object", 1);
+					dump(debug_backtrace(), ' Error. search_object must be an object. debug_backtrace() ++ '.to_string());
+					continue;
+				}
 
-			#if (self::is_search_operator($search_object)===true) {
+			// if (self::is_search_operator($search_object)===true) {
 			if (!property_exists($search_object, 'path')) {
 
 				// Case object is a group
@@ -747,22 +748,24 @@ class search {
 				// Case object is a end search object
 				if (isset($search_object->format) && $search_object->format==='column') {
 
-					$ar_query_object	= [$search_object];
+					$ar_query_object = [$search_object];
+
 				}else{
 
 					$path				= $search_object->path;
 					$search_component	= end($path);
 					// model (with fallback if not exists)
 					if (!isset($search_component->model)) {
-						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo, true);
 					}
-					$model_name			= $search_component->model;
-					$ar_query_object	= $model_name::get_search_query($search_object);
+					$model_name = $search_component->model;
+
+					$ar_query_object = $model_name::get_search_query($search_object);
 				}
 
 				$new_ar_query_object->$op = array_merge($new_ar_query_object->$op, $ar_query_object);
 			}
-		}
+		}//end for ($i=0; $i < $ar_value_size; $i++)
 
 
 		return $new_ar_query_object;
