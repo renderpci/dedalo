@@ -203,15 +203,35 @@ abstract class filter {
 		// cache
 			$use_cache = true; // (SHOW_DEVELOPER!==true);
 			if ($use_cache===true) {
+
 				// $cache_key = 'user_authorized_projects_' . $user_id .'_'. $from_component_tipo;
-				$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
-				if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
-					// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
-					return filter::$user_authorized_projects_cache[$cache_key];
-				}
-				if (isset($_SESSION['dedalo']['config'][$cache_key])) {
-					return $_SESSION['dedalo']['config'][$cache_key];
-				}
+					$cache_key = filter::get_user_authorized_projects_cache_key($user_id, $from_component_tipo);
+
+				// static cache
+					if (isset(filter::$user_authorized_projects_cache[$cache_key])) {
+						// debug_log(__METHOD__." Total time: ".exec_time_unit($start_time,'ms')." ms ---- CACHED", logger::DEBUG);
+						return filter::$user_authorized_projects_cache[$cache_key];
+					}
+
+				// session cache
+					if (isset($_SESSION['dedalo']['config'][$cache_key])) {
+						// set value
+						filter::$user_authorized_projects_cache[$cache_key] = $_SESSION['dedalo']['config'][$cache_key];
+
+						return $_SESSION['dedalo']['config'][$cache_key];
+					}
+
+				// file cache
+					// $file_cache = dd_cache::cache_from_file((object)[
+					// 	'file_name'	=> 'cache_ar_projects.json'
+					// ]);
+					// if (!empty($file_cache)) {
+					// 	$ar_projects = json_handler::decode($file_cache);
+					// 	// set value
+					// 	filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+
+					// 	return $ar_projects;
+					// }
 			}
 
 		// projects_section_tipo
@@ -330,14 +350,21 @@ abstract class filter {
 
 		// cache
 			if ($use_cache===true) {
-				filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
-				$_SESSION['dedalo']['config'][$cache_key]			= $ar_projects;
+				// static cache
+					filter::$user_authorized_projects_cache[$cache_key] = $ar_projects;
+				// session cache
+					$_SESSION['dedalo']['config'][$cache_key] = $ar_projects;
+				// file cache
+					// dd_cache::cache_to_file((object)[
+					// 	'data'		=> $ar_projects,
+					// 	'file_name'	=> 'cache_ar_projects.json'
+					// ]);
 			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__
-					." Total time: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo"
+					." Total time on calculate user_authorized_projects: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo"
 					, logger::DEBUG
 				);
 			}
