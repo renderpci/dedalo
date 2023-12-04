@@ -182,12 +182,17 @@ class dd_cache {
 		// file_path
 			$file_path	= $base_path . '/' . $prefix . $file_name;
 
+		// check file exists
+			if (!file_exists($file_path)) {
+				return false;
+			}
+
 		// contents
 			$contents = file_get_contents($file_path);
 			if ($contents===false) {
 				// error reading the file
 				debug_log(__METHOD__
-					. ' Warning: cache file not found ! . This could be an error or and tes' . PHP_EOL
+					. ' Warning: cache file not found ! . This could be an error or a test for file' . PHP_EOL
 					. ' file_path: '.to_string($file_path)
 					, logger::WARNING
 				);
