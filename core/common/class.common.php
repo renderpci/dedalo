@@ -1857,6 +1857,7 @@ abstract class common {
 
 			// search
 				if ($this->mode==='search') {
+					// parent_grouper_label
 					if (isset($parent_grouper)) {
 						if (!isset($dd_object->config)) {
 							$dd_object->config = new stdClass();
