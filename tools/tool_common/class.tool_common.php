@@ -342,12 +342,34 @@ class tool_common {
 
 		$registered_tools = [];
 
+		static $registered_tools_cache;
+
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
-				if(isset($_SESSION['dedalo']['registered_tools'])) {
-					return $_SESSION['dedalo']['registered_tools'];
-				}
+				// static
+					if (isset($registered_tools_cache)) {
+						return $registered_tools_cache;
+					}
+
+				// session
+					// if(isset($_SESSION['dedalo']['registered_tools'])) {
+					// 	return $_SESSION['dedalo']['registered_tools'];
+					// }
+
+				// cache file
+			 		$file_cache = dd_cache::cache_from_file((object)[
+						'file_name'	=> 'cache_registered_tools.json'
+					]);
+					if (!empty($file_cache)) {
+						// read from file encoded JSON
+						$registered_tools = json_handler::decode($file_cache);
+
+						// static save value
+						$registered_tools_cache = $registered_tools;
+
+						return $registered_tools;
+					}
 			}
 
 		// client_registered_tools_records
@@ -443,7 +465,17 @@ class tool_common {
 
 		// cache
 			if ($use_cache===true) {
-				$_SESSION['dedalo']['registered_tools'] = $registered_tools;
+				// static
+					$registered_tools_cache = $registered_tools;
+
+				// session
+					// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
+
+				// cache file
+					dd_cache::cache_to_file((object)[
+						'data'		=> $registered_tools,
+						'file_name'	=> 'cache_registered_tools.json'
+					]);
 			}
 
 
