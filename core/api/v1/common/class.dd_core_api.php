@@ -1820,7 +1820,7 @@ final class dd_core_api {
 					// It's not used to main navigation, but it's needed by some tools like tool_export
 					// in addition to section_tool navigation (like transcription, translation, etc.)
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
-							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
 								. ' sqo:' . to_string($sqo)
@@ -1857,7 +1857,7 @@ final class dd_core_api {
 
 					// store sqo section
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
-							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
 						}
 					break;
 
