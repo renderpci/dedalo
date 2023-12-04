@@ -2763,12 +2763,12 @@ abstract class component_common extends common {
 	* GET_VALUE_WITH_FALLBACK_FROM_DATO_FULL
 	* Receive a full dato of translatable component and try to find a no empty lang
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
-	* @param object|string $dato_full_json
+	* @param mixed $dato_full_json
 	* @param bool $decore_untranslated = false
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return string|null $value
 	*/
-	public static function get_value_with_fallback_from_dato_full(object|string $dato_full_json, bool $decore_untranslated=false, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?string {
+	public static function get_value_with_fallback_from_dato_full(mixed $dato_full_json, bool $decore_untranslated=false, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?string {
 
 		if (empty($dato_full_json)) {
 			return null;
