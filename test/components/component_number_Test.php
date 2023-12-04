@@ -27,7 +27,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_is_empty
+	* TEST_IS_EMPTY
 	* @return void
 	*/
 	public function test_is_empty() {
@@ -113,7 +113,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
+	* TEST_GET_DATO
 	* @return void
 	*/
 	public function test_get_dato() {
@@ -170,7 +170,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_set_dato
+	* TEST_SET_DATO
 	* @return void
 	*/
 	public function test_set_dato() {
@@ -276,7 +276,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_set_format_form_type
+	* TEST_SET_FORMAT_FORM_TYPE
 	* @return void
 	*/
 	public function test_set_format_form_type() {
@@ -376,7 +376,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_number_to_string
+	* TEST_NUMBER_TO_STRING
 	* @return void
 	*/
 	public function test_number_to_string() {
@@ -454,7 +454,7 @@ final class component_number_test extends TestCase {
 
 
 	/**
-	* TEST_string_to_number
+	* TEST_STRING_TO_NUMBER
 	* @return void
 	*/
 	public function test_string_to_number() {
