@@ -254,8 +254,8 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 
 		# TEST VALID USER
-		#$userID		= get_user_id();
-		$userID	= $_SESSION['dedalo']['auth']['user_id'];
+		#$userID	= get_user_id();
+		$userID		= $_SESSION['dedalo']['auth']['user_id'];
 		if (
 			empty($userID)
 			&& $this->matrix_table != 'matrix_activity' && $this->matrix_table != 'matrix_counter' && $this->matrix_table != 'matrix_stats'

@@ -158,7 +158,11 @@ abstract class label {
 
 			// No data in field 'properties'
 			if(empty($properties) || empty($properties->name)) {
-				debug_log(__METHOD__." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP ".to_string($properties), logger::ERROR);
+				debug_log(__METHOD__
+					." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
+					.' properties: '. to_string($properties)
+					, logger::ERROR
+				);
 				continue;
 			}
 
