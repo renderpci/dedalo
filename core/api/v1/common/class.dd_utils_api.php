@@ -1366,6 +1366,7 @@ final class dd_utils_api {
 			'svgz'	=> 'image/svg+xml',
 			'heic'	=> 'image/heic',
 			'avif'	=> 'image/avif',
+			'webp'	=> 'image/webp',
 
 			// archives
 			'zip'	=> 'application/zip',
