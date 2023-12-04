@@ -745,6 +745,10 @@ class login extends common {
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+
+				// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
+				dd_cache::delete_cache_files();
+
 				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 				debug_log(__METHOD__
 					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
