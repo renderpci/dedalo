@@ -59,7 +59,7 @@ export function render_node_info(options) {
 					}
 			}else{
 
-				// ok response
+				// OK response
 
 				node_info.classList.add('ok')
 				const text = `${instance.label} ${get_label.saved || 'Saved'}`
