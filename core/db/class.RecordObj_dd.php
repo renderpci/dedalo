@@ -1146,23 +1146,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 				return $result;
 			}
 
-		// array case. it also accepts arrays as input type although it only uses the first one. avoid this..
-			if(is_array($tipo) && isset($tipo[0])) {
-
-				$tipo = $tipo[0];
-
-				debug_log(__METHOD__
-					." Used function 'get_ar_terminoID_by_modelo_name_and_relation' received an array instead as expected string. Used first value as tipo: "
-					.to_string($tipo)
-					, logger::ERROR
-				);
-			}
-
 		// static cache
-			static $get_ar_terminoID_by_modelo_name_and_relation_data;
+			static $ar_terminoID_by_modelo_name_and_relation_data;
 			$uid = $tipo.'_'.$modelo_name.'_'.$relation_type.'_'.(int)$search_exact;
-			if(isset($get_ar_terminoID_by_modelo_name_and_relation_data[$uid])) {
-				return $get_ar_terminoID_by_modelo_name_and_relation_data[$uid];
+			if(isset($ar_terminoID_by_modelo_name_and_relation_data[$uid])) {
+				return $ar_terminoID_by_modelo_name_and_relation_data[$uid];
 			}
 
 		switch($relation_type) {
@@ -1178,12 +1166,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();
-
 					if(empty($modelo)) {
-						$name = RecordObj_dd::get_termino_by_tipo($terminoID);
 						debug_log(__METHOD__
-							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [children - $tipo]. Model is empty. Please define model for this component $terminoID ($name) "
-							.to_string()
+							." Error processing relation children. Model is empty. Please define model for $terminoID" . PHP_EOL
+							.' tipo: ' . $tipo . PHP_EOL
+							.' relation_type: ' . $relation_type . PHP_EOL
+							.' terminoID: ' . $terminoID . PHP_EOL
+							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID)
 							, logger::ERROR
 						);
 						return [];
@@ -1214,12 +1203,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();
-
 					if(empty($modelo)) {
-						$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
 						debug_log(__METHOD__
-							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [children_recursive - $tipo]. Model is empty. Please define model for this component $terminoID ($clabel) "
-							.to_string()
+							." Error processing relation children_recursive. Model is empty. Please define model for $terminoID" . PHP_EOL
+							.' tipo: ' . $tipo . PHP_EOL
+							.' relation_type: ' . $relation_type . PHP_EOL
+							.' terminoID: ' . $terminoID . PHP_EOL
+							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID)
 							, logger::ERROR
 						);
 						return [];
@@ -1254,11 +1244,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();
-
 					if(empty($modelo)) {
-						$clabel = '';
 						debug_log(__METHOD__
-							. " Error Processing get_ar_terminoID_by_modelo_name_and_relation [termino_relacionado - $tipo]. Model is empty. Please define model for this component terminoID:$terminoID, name:$clabel "
+							." Error processing relation termino_relacionado. Model is empty. Please define model for $terminoID" . PHP_EOL
+							.' tipo: ' . $tipo . PHP_EOL
+							.' relation_type: ' . $relation_type . PHP_EOL
+							.' terminoID: ' . $terminoID . PHP_EOL
+							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID)
 							, logger::ERROR
 						);
 						return [];
@@ -1289,11 +1281,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 					$RecordObj_dd	= new RecordObj_dd($terminoID);
 					$modelo			= $RecordObj_dd->get_modelo();
-
 					if(empty($modelo)) {
-						$clabel = RecordObj_dd::get_termino_by_tipo($terminoID);
 						debug_log(__METHOD__
-							." Error Processing get_ar_terminoID_by_modelo_name_and_relation [parent - $tipo]. Model is empty. Please define model for this component $terminoID ($clabel) "
+							." Error processing relation parent. Model is empty. Please define model for $terminoID" . PHP_EOL
+							.' tipo: ' . $tipo . PHP_EOL
+							.' relation_type: ' . $relation_type . PHP_EOL
+							.' terminoID: ' . $terminoID . PHP_EOL
+							.' name: ' . RecordObj_dd::get_termino_by_tipo($terminoID)
 							, logger::ERROR
 						);
 						return [];
@@ -1316,7 +1310,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			default :
 				debug_log(__METHOD__
 					." ERROR: relation_type [$relation_type] not defined! "
-					.to_string()
+					.' tipo: ' . $tipo
 					, logger::ERROR
 				);
 				return [];
@@ -1324,10 +1318,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 		}
 
 		// store cache data
-			$get_ar_terminoID_by_modelo_name_and_relation_data[$uid] = $result;
+			$ar_terminoID_by_modelo_name_and_relation_data[$uid] = $result;
 
 
-		return (array)$result;
+		return $result;
 	}//end get_ar_terminoID_by_modelo_name_and_relation
 
 
