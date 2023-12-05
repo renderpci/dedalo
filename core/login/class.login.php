@@ -740,9 +740,15 @@ class login extends common {
 				debug_log(__METHOD__." $e ", logger::CRITICAL);
 			}
 
+
+
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+
+				// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
+				dd_cache::delete_cache_files();
+
 				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 				debug_log(__METHOD__
 					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
@@ -1092,6 +1098,11 @@ class login extends common {
 		// user activity update stats
 			diffusion_section_stats::update_user_activity_stats( (int)$user_id );
 
+		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
+			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
+				dd_cache::delete_cache_files();
+			}
+
 		// login activity report
 			self::login_activity_report(
 				"User $user_id was logout. Bye $username",
@@ -1142,7 +1153,6 @@ class login extends common {
 			#unset($_SESSION['dedalo']['auth']);
 			#unset($_SESSION['dedalo']['config']);
 			$cookie_name = session_name();
-			unset($_SESSION['dedalo']);
 			setcookie(
 				$cookie_name,
 				'',
@@ -1156,16 +1166,18 @@ class login extends common {
 		// remove cookie dedalo_logged (used to check some features in same domain web)
 			setcookie('dedalo_logged', 'false', 1, '/');
 
-			#unset($_SESSION);
+		// delete session
+			unset($_SESSION['dedalo']);
+			if (session_status() == PHP_SESSION_ACTIVE) {
+				session_destroy();
+			}
+
+		// debug
 			debug_log(__METHOD__
-				." Unset session and cookie. cookie_name: $cookie_name ".to_string()
+				." Unset session and cookie. cookie_name/session_name: $cookie_name "
 				, logger::DEBUG
 			);
 
-		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
-			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
-				dd_cache::delete_cache_files();
-			}
 
 		// saml logout
 			if (defined('SAML_CONFIG') && SAML_CONFIG['active']===true && isset(SAML_CONFIG['logout_url'])) {

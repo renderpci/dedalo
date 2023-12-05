@@ -1567,7 +1567,6 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 
 	// sqo clean
 		delete sqo.generated_time
-		delete sqo.parsed
 
 	// build the rqo
 		const rqo = {

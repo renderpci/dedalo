@@ -14,41 +14,52 @@ abstract class label {
 
  	/**
  	* GET AR LABEL
- 	* @return $ar_label
  	* Class static array
  	* Priority:
  	* 1 - Class static
  	* 2 - Session ['config']['ar_label']
  	* 3 - Calculate method 'set_static_label_vars'
+ 	* @param string $lang = DEDALO_APPLICATION_LANG
+ 	* @return array $ar_label
  	*/
  	public static function get_ar_label( string $lang=DEDALO_APPLICATION_LANG ) : array {
 
- 		if ($lang==='lg-vlca') {
-			$lang = 'lg-cat';
-		}
-
- 		# DEBUG NOT STORE SESSION LABELS
- 		#if(SHOW_DEBUG===true) unset($ar_label);
+ 		// lang vlca fallback
+	 		if ($lang==='lg-vlca') {
+				$lang = 'lg-cat';
+			}
 
 		// static cache case
 	 		if(isset(label::$ar_label[$lang])) {
 	 			return label::$ar_label[$lang];
 	 		}
 
-		// Using php session as cache
-			if( isset($_SESSION['dedalo']['config']['ar_label'][$lang]) ) {
-				// Get from session
-				label::$ar_label[$lang] = $_SESSION['dedalo']['config']['ar_label'][$lang];
-			}else{
-				// Calculate label for current lang and store
-				label::$ar_label[$lang] = self::set_static_label_vars( $lang );
-				$_SESSION['dedalo']['config']['ar_label'][$lang] = label::$ar_label[$lang];
+	 	// cache file
+	 		$file_cache = dd_cache::cache_from_file((object)[
+				'file_name'	=> 'cache_labels_'.$lang.'.json'
+			]);
+			if (!empty($file_cache)) {
 
-				debug_log(__METHOD__." Generating security access datalist in background ".to_string($lang), logger::DEBUG);
+				// read from file encoded JSON
+					$ar_label = json_handler::decode($file_cache, true);
+
+				// cache static
+					label::$ar_label[$lang] = $ar_label;
+
+				return $ar_label;
 			}
 
+		// Calculate label for current lang and store
+			$ar_label = self::set_static_label_vars( $lang );
 
-		$ar_label = label::$ar_label[$lang];
+		// cache static
+			label::$ar_label[$lang] = $ar_label;
+
+		// cache file
+			dd_cache::cache_to_file((object)[
+				'data'		=> $ar_label,
+				'file_name'	=> 'cache_labels_'.$lang.'.json'
+			]);
 
 
 		return $ar_label;
@@ -147,7 +158,11 @@ abstract class label {
 
 			// No data in field 'properties'
 			if(empty($properties) || empty($properties->name)) {
-				debug_log(__METHOD__." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP ".to_string($properties), logger::ERROR);
+				debug_log(__METHOD__
+					." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
+					.' properties: '. to_string($properties)
+					, logger::ERROR
+				);
 				continue;
 			}
 

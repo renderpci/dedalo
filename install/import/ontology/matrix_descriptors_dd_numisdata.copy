@@ -1697,6 +1697,7 @@ numisdata1277	dcterms:description	termino	lg-spa
 numisdata1279	dcterms:description	termino	lg-spa
 numisdata1280		termino	lg-eng
 numisdata1280	nmo:hasRegion	termino	lg-spa
+numisdata410	Druckreif	termino	lg-deu
 numisdata1281	Autoría	termino	lg-spa
 numisdata384	view_single_line	termino	lg-spa
 numisdata1286	authorship_data	termino	lg-spa
@@ -1790,6 +1791,8 @@ numisdata8	Id	termino	lg-eng
 numisdata1283	view_single_line	termino	lg-spa
 numisdata814	view_single_line	termino	lg-spa
 numisdata299	authorship_date	termino	lg-spa
+numisdata413	Druckreif	termino	lg-deu
+numisdata42	Legende	termino	lg-deu
 numisdata1114	Bi	termino	lg-deu
 numisdata10	Titel	termino	lg-deu
 numisdata100	Filter	termino	lg-deu
@@ -2183,9 +2186,6 @@ numisdata388	Liste der Beziehungen	termino	lg-deu
 numisdata39	Vorderseitentyp	termino	lg-deu
 numisdata40	Legende Avers	termino	lg-deu
 numisdata41	Legenden	termino	lg-deu
-numisdata410	Druckreif	termino	lg-deu
-numisdata413	Druckreif	termino	lg-deu
-numisdata42	Legende	termino	lg-deu
 numisdata43	Schlüssel	termino	lg-deu
 numisdata434	Veröffentlichbar	termino	lg-deu
 numisdata44	Projekt	termino	lg-deu
@@ -3685,3 +3685,13 @@ numisdata1356	Comentari	termino	lg-cat
 numisdata1356	Comment	termino	lg-eng
 numisdata370	Origen del dato	termino	lg-spa
 numisdata387	publications	termino	lg-spa
+numisdata1360	Grosor	termino	lg-spa
+numisdata1360	Thickness	termino	lg-eng
+numisdata1360	Dicke	termino	lg-deu
+numisdata1360	Épaisseur	termino	lg-fra
+numisdata1360	Spessore	termino	lg-ita
+numisdata1361	Bibliografía relacionada	termino	lg-spa
+numisdata1361	Related bibliography	termino	lg-eng
+numisdata1361	Bibliografia relacionada	termino	lg-cat
+numisdata1361	Zugehörige Bibliographie	termino	lg-deu
+numisdata1361	Bibliographie associée	termino	lg-fra
