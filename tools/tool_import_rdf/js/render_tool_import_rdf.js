@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {when_in_dom} from '../../../core/common/js/events.js'
 
 
 
@@ -188,7 +189,12 @@ const get_content_data_edit = async function(self) {
 						}
 				})
 		})//end btn_validate.addEventListener('click')
-
+		// focus button
+		when_in_dom(btn_validate, () => {
+			setTimeout(function(){
+				btn_validate.focus()
+			}, 150)
+		})
 
 	// view_rdf_data_wrapper. Result will be added here
 		const view_rdf_data_wrapper = ui.create_dom_element({
