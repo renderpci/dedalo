@@ -168,6 +168,8 @@ class dd_cache {
 			$file_name	= $options->file_name;
 			// prefix. (!) If you set custom prefix, the file created will not be deleted automatically on logout/quit
 			$prefix		= $options->prefix ?? dd_cache::get_cache_file_prefix();
+			// use_cache
+			$use_cache	= $options->use_cache ?? true;
 
 		// base_path. Used to save the files. Usually '/tmp'
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -180,7 +182,15 @@ class dd_cache {
 			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// file_path
-			$file_path	= $base_path . '/' . $prefix . $file_name;
+			$file_path = $base_path . '/' . $prefix . $file_name;
+
+		// cache
+			static $cache_from_file_cache;
+			if ($use_cache===true) {
+				if (isset($cache_from_file_cache[$file_path])) {
+					return $cache_from_file_cache[$file_path];
+				}
+			}
 
 		// check file exists
 			if (!file_exists($file_path)) {
@@ -198,6 +208,11 @@ class dd_cache {
 				);
 			}
 			// debug_log(__METHOD__." Returning file cache contents successfully:  ".to_string($file_path), logger::ERROR);
+
+		// cache
+			if ($use_cache===true) {
+				$cache_from_file_cache[$file_path] = $contents; // string JSON encoded data
+			}
 
 
 		return $contents;
