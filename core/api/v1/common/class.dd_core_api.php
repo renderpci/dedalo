@@ -2075,6 +2075,9 @@ final class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
+				// if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+				// 	dump($_SESSION['dedalo']['config']['sqo'][$sqo_id], ' $_SESSION[dedalo][config][sqo][$sqo_id] ++ '.to_string($sqo_id));
+				// }
 				$debug = new stdClass();
 					$debug->sqo				= $sqo ?? null;
 					// $debug->rqo			= $rqo;
