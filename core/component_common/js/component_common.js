@@ -421,15 +421,15 @@ component_common.prototype.save = async function(new_changed_data) {
 			}
 			if (ar_equals.length===update_items_length) {
 				// dispatch event save
-					event_manager.publish('save', {
-						instance		: self,
-						api_response	: null,
-						msg				: get_label.data_was_not_modified_save_canceled || 'The data was not modified. Canceled save'
-					})
+					// event_manager.publish('save', {
+					// 	instance		: self,
+					// 	api_response	: null,
+					// 	msg				: get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled'
+					// })
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						console.warn(get_label.data_was_not_modified_save_canceled || 'The data was not modified. Canceled save');
+						console.warn(get_label.data_was_not_modified_save_canceled || 'The data has not been modified. Saving canceled');
 					}
 
 				// page unload event
