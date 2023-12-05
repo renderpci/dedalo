@@ -73,7 +73,6 @@ const get_content_data_edit = async function(self) {
 		const iri_node = render_component_dato(self)
 		components_container.appendChild(iri_node)
 
-
 	// application lang selector
 		// default_lang_of_file_to_import
 		ui.create_dom_element({
@@ -98,7 +97,6 @@ const get_content_data_edit = async function(self) {
 						}
 					}
 				})
-				// window.location.reload(false);
 			}
 		})
 		components_container.appendChild(dedalo_aplication_langs_selector)
@@ -177,15 +175,10 @@ const get_content_data_edit = async function(self) {
 					// update list
 						// self.load_section(section_tipo)
 
-					// destroy event
-						const dd_modal = document.getElementsByTagName('dd-modal')
-						if (dd_modal && dd_modal[0]) {
-							dd_modal[0].on_close = () => {
-								const section = self.caller.caller.caller
-								if (section) {
-									section.refresh()
-								}
-							}
+					// refresh section
+						const section = self.caller.caller.caller
+						if (section) {
+							section.refresh()
 						}
 				})
 		})//end btn_validate.addEventListener('click')
