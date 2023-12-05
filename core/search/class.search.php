@@ -607,6 +607,11 @@ class search {
 	*/
 	public function pre_parse_search_query_object() : void {
 
+		// already parsed case
+			if ($this->search_query_object->parsed===true) {
+				return;
+			}
+
 		// filter
 			if (!empty($this->search_query_object->filter)) {
 
