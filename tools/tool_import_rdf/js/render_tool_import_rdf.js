@@ -235,6 +235,11 @@ const render_component_dato = function(self) {
 			value			: iri
 		})
 		radio_label.prepend(radio_input)
+
+		// check default if only one
+		if (component_value_len===1 && i===0) {
+			radio_input.checked = 'checked'
+		}
 	}
 
 
