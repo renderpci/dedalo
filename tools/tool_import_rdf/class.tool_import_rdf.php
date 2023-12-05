@@ -10,7 +10,7 @@ class tool_import_rdf extends tool_common {
 
 
 
-	# component
+	// section_tipo
 	public $section_tipo;
 
 
@@ -42,12 +42,19 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* GET_ONTOLOGY
+	* Get the ontology tipo associated with a given component tipo.
+	* This method retrieves the ontology tipo associated with a specified component tipo.
+	* It relies on the 'tool_import_rdf' property of the Data Definition (dd) corresponding
+	* to the provided component tipo.
+	* @param string $component_tipo
 	* @return string $ontology_tipo
 	*/
 	public function get_ontology_tipo(string $component_tipo) : string {
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$properties		= $RecordObj_dd->get_properties(true);
+
+		// Retrieve the ontology tipo from the 'tool_import_rdf' property
 		$ontology_tipo	= $properties->ar_tools_name->tool_import_rdf->external_ontology;
 
 		return $ontology_tipo;
@@ -56,10 +63,12 @@ class tool_import_rdf extends tool_common {
 
 
 	/**
-	* GET_COMPONENT_DATO($SECTION_ID,	$COMPONENT_TIPO);
+	* GET_COMPONENT_DATO
+	* @param int|string $section_id
+	* @param string $component_tipo
 	* @return mixed $component_dato
 	*/
-	public function get_component_dato($section_id,	string $component_tipo) {
+	public function get_component_dato(int|string $section_id,	string $component_tipo) : mixed {
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$translatable 	= $RecordObj_dd->get_traducible();
@@ -67,7 +76,9 @@ class tool_import_rdf extends tool_common {
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
 			: DEDALO_DATA_LANG;
-		$component_tipo = component_common::get_instance(
+
+		// component
+		$component = component_common::get_instance(
 			$model,
 			$component_tipo,
 			$section_id,
@@ -76,98 +87,103 @@ class tool_import_rdf extends tool_common {
 			$this->section_tipo
 		);
 
-		$component_dato = $component_tipo->get_dato();
+		$component_dato = $component->get_dato();
+
 
 		return $component_dato;
-	}//end get_component_dato($section_id,	$component_tipo);
+	}//end get_component_dato
 
 
 
 	/**
 	* GET_RDF_DATA
-	* @return
+	* @param object $options
+	* @return object $response
 	*/
-	public static function get_rdf_data($request_options) {
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+	public static function get_rdf_data($options) : object {
 
 		// options
-			$options = new stdClass();
-				$options->ontology_tipo	= null;
-				$options->ar_values		= [];
-				$options->locator		= null;
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+			$ontology_tipo	= $options->ontology_tipo ?? null;
+			$ar_values		= $options->ar_values ?? [];
+			$locator		= $options->locator ?? null;
 
-		// variables
-				$ontology_tipo	= $options->ontology_tipo;
-				$ar_values		= $options->ar_values;
-				$locator		= $options->locator;
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		$RecordObj_dd = new RecordObj_dd($ontology_tipo);
-		$properties = $RecordObj_dd->get_properties(true);
+		// properties
+			$RecordObj_dd = new RecordObj_dd($ontology_tipo);
+			$properties = $RecordObj_dd->get_properties(true);
 
-		$name_space = $properties->xmlns;
-
-		foreach($name_space as $key => $value){
-			\EasyRdf\RdfNamespace::set($key, $value);
-		}
-
-		$rdf_data = [];
-		foreach($ar_values as $uri){
-
-			$rdf_uri = (substr($uri, -4)!=='.rdf')
-				? $uri.'.rdf'
-				: $uri;
-
-			$base_uri = substr($rdf_uri, 0, strlen($rdf_uri)-4);
-
-			$rdf_graph = new \EasyRdf\Graph($rdf_uri);
-
-			try {
-				$rdf_graph->load();
-			} catch (Exception $e) {
-
-				debug_log(__METHOD__." Ignored broken link in rdf ".to_string($rdf_uri), logger::ERROR);
-				continue;
+		// namespace
+			$name_space = $properties->xmlns;
+			foreach($name_space as $key => $value){
+				\EasyRdf\RdfNamespace::set($key, $value);
 			}
 
-			// $resources = $rdf_graph->resources();
-			// $rdf_types = $rdf_graph->toRdfPhp();
-			$rdf_type = $rdf_graph->type($base_uri);
+		// rdf_data
+			$rdf_data = [];
+			foreach($ar_values as $uri) {
 
-			$ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
+				$rdf_uri = (substr($uri, -4)!=='.rdf')
+					? $uri.'.rdf'
+					: $uri;
 
-			$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_chidren, $rdf_type, $rdf_graph, $base_uri, $locator);
+				$base_uri = substr($rdf_uri, 0, strlen($rdf_uri)-4);
 
-			$ar_rdf_html =$rdf_graph->dump('html');
+				$rdf_graph = new \EasyRdf\Graph($rdf_uri);
 
-			$ar_dd_obj = new stdClass();
-				$ar_dd_obj->dd_obj 			= $dd_obj;
-				$ar_dd_obj->ar_rdf_html 	= $ar_rdf_html;
+				try {
+					$rdf_graph->load();
+				} catch (Exception $e) {
 
-			$rdf_data[] = $ar_dd_obj;
-		}
+					debug_log(__METHOD__
+						." Ignored broken link in RDF" . PHP_EOL
+						.' rdf_uri: ' . to_string($rdf_uri)
+						, logger::ERROR
+					);
+					continue;
+				}
 
-		$response->result 	= $rdf_data;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
-			// dump($rdf_data, ' rdf_data +-------------------------------+ '.to_string());
+				// $resources = $rdf_graph->resources();
+				// $rdf_types = $rdf_graph->toRdfPhp();
+				$rdf_type = $rdf_graph->type($base_uri);
+
+				$ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
+
+				$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_chidren, $rdf_type, $rdf_graph, $base_uri, $locator);
+
+				$ar_rdf_html =$rdf_graph->dump('html');
+
+				$ar_dd_obj = new stdClass();
+					$ar_dd_obj->dd_obj		= $dd_obj;
+					$ar_dd_obj->ar_rdf_html	= $ar_rdf_html;
+
+				$rdf_data[] = $ar_dd_obj;
+			}
+
+		// response OK
+			$response->result	= $rdf_data;
+			$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+
 		return $response;
-
-		// $me = $nmo->primaryTopic();
-		// if($nmo->type()==='nmo:TypeSeriesItem'){
-
-
 	}//end get_rdf_data
 
 
 
 	/**
 	* GET_CLASS_MAP_TO_DD
-	* @return
+	*
+	* @param array $ar_class_children
+	* @param string $rdf_type
+	* @param $rdf_graph
+	* @param $base_uri
+	* @param $locator
+	* @return array $ar_dd_object
 	*/
-	public static function get_class_map_to_dd($ar_class_children, $rdf_type, $rdf_graph, $base_uri, $locator) {
+	public static function get_class_map_to_dd(array $ar_class_children, string $rdf_type, $rdf_graph, $base_uri, $locator) : array {
 
 		$ar_owl_ObjectProperty = [];
 		foreach ($ar_class_children as $owl_class_tipo) {
@@ -196,129 +212,156 @@ class tool_import_rdf extends tool_common {
 
 		$section_tipo		= reset($current_section_tipo);
 		$section_tipo_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
-		//main section
+
+		// main section
 			$field = new stdClass();
-				$field->tipo 				= $section_tipo;
-				$field->section_tipo 		= $section_tipo;
-				$field->parent 				= 'root';
+				$field->tipo				= $section_tipo;
+				$field->section_tipo		= $section_tipo;
+				$field->parent				= 'root';
 				$field->rdf_type			= $rdf_type;
-				$field->value 				= $base_uri;
-				$field->component_label 	= $section_tipo_label;
-				$field->section_tipo_label 	= $section_tipo_label;
+				$field->value				= $base_uri;
+				$field->component_label		= $section_tipo_label;
+				$field->section_tipo_label	= $section_tipo_label;
 
-		$dd_object = [$field];
-		$dd_object = array_merge($dd_object, tool_import_rdf::get_resource_to_dd_object($ar_owl_ObjectProperty, $rdf_graph, $base_uri, $current_section_tipo, $section_tipo, $locator));
 
-		return $dd_object;
+		$ar_dd_object = array_merge(
+			[$field],
+			tool_import_rdf::get_resource_to_dd_object(
+				$ar_owl_ObjectProperty,
+				$rdf_graph,
+				$base_uri,
+				$current_section_tipo,
+				$section_tipo,
+				$locator
+			)
+		);
+
+
+		return $ar_dd_object;
 	}//end get_class_map_to_dd
 
 
 
 	/**
 	* GET_RDF_TO_DD_OBJECT
+	* @param array  $ar_owl_ObjectProperty
+	*  Array containing OWL Object Property types.
+	* @param object $rdf_graph
+	*  RDF graph object containing the data.
+	* @param string $base_uri
+	*  Base URI for constructing resource URIs.
+	* @param array  $ar_section_tipo
+	*  Array of section tipo(s).
+	* @param string $parent
+	*  Parent component.
+	* @param mixed  $locator
+	*  Locator object or false if not available.
 	*
 	* @return array $ar_resources
 	*/
-	public static function get_resource_to_dd_object($ar_owl_ObjectProperty, $rdf_graph, $base_uri, $ar_section_tipo, $parent, $locator = false) {
+	public static function get_resource_to_dd_object($ar_owl_ObjectProperty, $rdf_graph, $base_uri, $ar_section_tipo, $parent, $locator=false) : array {
 
 		$ar_resources	= [];
 		$section_tipo	= reset($ar_section_tipo);
 
 		foreach ($ar_owl_ObjectProperty as $ObjectProperty_tipo) {
+
 			$section_tipo_label		= RecordObj_dd::get_termino_by_tipo($section_tipo);
 			$object_property_name	= RecordObj_dd::get_termino_by_tipo($ObjectProperty_tipo);
 			$related_dd_tipo		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'component_', 'termino_relacionado', false);
 			$children_dd_tipo		= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:ObjectProperty', 'children', false);
-			$current_tipo 			= reset($related_dd_tipo);
+			$current_tipo			= reset($related_dd_tipo);
 
-
-			$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
+			// properties
+				$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
 				$properties = $RecordObj_dd->get_properties(true);
 				if(isset($properties->match)){
-						dump($properties, ' properties ++ '.to_string());
+					dump($properties, ' properties ++ '.to_string());
 				}
 
-			if($children_dd_tipo){
+			if($children_dd_tipo) {
 				$current_resource = $rdf_graph->getResource($base_uri, $object_property_name);
-				if(!isset($current_resource)) continue;
+				if(!isset($current_resource)) {
+					continue;
+				}
 				$resource_uri = $current_resource->getUri();
 				$ar_resources = array_merge($ar_resources, tool_import_rdf::get_resource_to_dd_object($children_dd_tipo, $rdf_graph, $resource_uri, [$section_tipo], $parent, $locator));
 			}else{
 				$procesed_data = false;
 				if(isset($properties->process->source)){
-						$source = $properties->process->source;
-						$source_data = '';
-						if($source === '$base_uri'){
-							$source_data = $base_uri;
-						}
-						$procesed_data = tool_import_rdf::process_data_map($source_data, $properties->process->data_map);
+					$source = $properties->process->source;
+					$source_data = '';
+					if($source === '$base_uri'){
+						$source_data = $base_uri;
+					}
+					$procesed_data = tool_import_rdf::process_data_map($source_data, $properties->process->data_map);
 				}
 				if(isset($properties->process->split)){
-						$source = $properties->process->split->source;
-						$source_data = '';
-						if($source === '$base_uri'){
-							$source_data = $base_uri;
-						}
-						$split_by = $properties->process->split->split_by;
-						$ar_parts = explode($split_by , $source_data);
+					$source = $properties->process->split->source;
+					$source_data = '';
+					if($source === '$base_uri'){
+						$source_data = $base_uri;
+					}
+					$split_by = $properties->process->split->split_by;
+					$ar_parts = explode($split_by , $source_data);
 
-						$get_element = $properties->process->split->get;
-						if($get_element==='end'){
-							$element_got = end($ar_parts);
-						}
-						$object_property_name = $properties->process->split->property_name;
-						$procesed_data = $element_got;
+					$get_element = $properties->process->split->get;
+					if($get_element==='end'){
+						$element_got = end($ar_parts);
+					}
+					$object_property_name = $properties->process->split->property_name;
+					$procesed_data = $element_got;
 				}
 				if(isset($properties->process->date)){
-						$source = $properties->process->date;
-						$start = $source->start;
-						$end = $source->end;
-						$date_start_literal	= $rdf_graph->getLiteral($base_uri, $start);
-						$date_end_literal	= $rdf_graph->getLiteral($base_uri, $end);
+					$source = $properties->process->date;
+					$start = $source->start;
+					$end = $source->end;
+					$date_start_literal	= $rdf_graph->getLiteral($base_uri, $start);
+					$date_end_literal	= $rdf_graph->getLiteral($base_uri, $end);
 
-						$start_data = isset($date_start_literal)
-							? $date_start_literal->getValue()
-							: null;
+					$start_data = isset($date_start_literal)
+						? $date_start_literal->getValue()
+						: null;
 
-						$start_format = isset($start_data)
-							? $date_start_literal->getDatatype()
-							: null;
+					$start_format = isset($start_data)
+						? $date_start_literal->getDatatype()
+						: null;
 
-						$end_data = isset($date_end_literal)
-							? $date_end_literal->getValue()
-							: null;
+					$end_data = isset($date_end_literal)
+						? $date_end_literal->getValue()
+						: null;
 
-						$end_format = isset($end_data)
-							? $date_end_literal->getDatatype()
-							: null;
+					$end_format = isset($end_data)
+						? $date_end_literal->getDatatype()
+						: null;
 
-						$match_format = $source ->format;
+					$match_format = $source ->format;
 
-						$object_property_name = isset($date_start_literal)
-							? $start
-							: $end;
+					$object_property_name = isset($date_start_literal)
+						? $start
+						: $end;
 
-						if(isset($start_data)){
-							$start_date = new dd_date();
-								$set_start = 'set_'.$match_format->$start_format;
-								$start_date->$set_start($start_data);
-						}else{
-							$start_date= null;
-						}
+					if(isset($start_data)){
+						$start_date = new dd_date();
+							$set_start = 'set_'.$match_format->$start_format;
+							$start_date->$set_start($start_data);
+					}else{
+						$start_date= null;
+					}
 
-						if(isset($end_data)){
-							$end_date = new dd_date();
-								$set_end = 'set_'.$match_format->$end_format;
-								$end_date->$set_end($end_data);
-						}else{
-							$end_date= null;
-						}
+					if(isset($end_data)){
+						$end_date = new dd_date();
+							$set_end = 'set_'.$match_format->$end_format;
+							$end_date->$set_end($end_data);
+					}else{
+						$end_date= null;
+					}
 
-						$date = new stdClass;
-							if(isset($start_date)){ $date->start = $start_date; }
-							if(isset($end_date)) { $date->end = $end_date; }
+					$date = new stdClass;
+						if(isset($start_date)){ $date->start = $start_date; }
+						if(isset($end_date)) { $date->end = $end_date; }
 
-						$procesed_data= [$date];
+					$procesed_data= [$date];
 				}
 				if(isset($properties->process->geo_tag)){
 					$source	= $properties->process->geo_tag;
@@ -413,10 +456,10 @@ class tool_import_rdf extends tool_common {
 							: $literal->getValue();
 
 						// get the literal in the deep link
-							$class_dd_tipo			= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'termino_relacionado', false);
+							$class_dd_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($ObjectProperty_tipo, 'owl:Class', 'termino_relacionado', false);
 							if(isset($class_dd_tipo[0])){
 
-								$ar_literal_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
+								$ar_literal_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation($class_dd_tipo[0], 'section', 'termino_relacionado', false);
 
 								// check if the current literal has a record inside Dédalo.
 									$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
@@ -540,10 +583,18 @@ class tool_import_rdf extends tool_common {
 
 
 	/**
-	* PROCESS_DATA
-	* @return
+	* PROCESS_DATA_MAP
+	* Takes source data and a data map, searches for matches in the source data,
+	* and returns the corresponding transformed data based on the mappings provided in the data map.
+	* @param mixed $source_data
+	*  The source data to be processed.
+	* @param array $data_map
+	*  An associative array mapping source data values to their corresponding transformed values.
+	* @return mixed|null $procesed_data
+	*  The processed data based on the data map, or null if no match is found.
 	*/
 	public static function process_data_map($source_data, $data_map) {
+
 		$procesed_data = false;
 
 		foreach ($data_map as $key => $value) {
@@ -554,7 +605,7 @@ class tool_import_rdf extends tool_common {
 		}
 
 		return $procesed_data;
-	}//end process_data
+	}//end process_data_map
 
 
 
@@ -593,26 +644,27 @@ class tool_import_rdf extends tool_common {
 							]
 						}
 					]
-				}';
+				  }';
 
-		$sqo = json_decode('{
-			"parsed": false,
-			"section_tipo": "'.$section_tipo.'",
-			"limit": 2,
-			"offset": 0,
-			"type": "search_json_object",
-			"full_count": false,
-			"order": false,
-			"filter": '.$filter_string.',
-			"skip_projects_filter": true,
-			"select": []
-		}');
+		// sqo
+			$sqo = json_decode('{
+				"parsed": false,
+				"section_tipo": "'.$section_tipo.'",
+				"limit": 2,
+				"offset": 0,
+				"type": "search_json_object",
+				"full_count": false,
+				"order": false,
+				"filter": '.$filter_string.',
+				"skip_projects_filter": true,
+				"select": []
+			}');
 
-
-		$search			= search::get_instance($sqo);
-		$search_result	= $search->search();
-		$ar_records		= $search_result->ar_records;
-		$count			= count($ar_records);
+		// search
+			$search			= search::get_instance($sqo);
+			$search_result	= $search->search();
+			$ar_records		= $search_result->ar_records;
+			$count			= count($ar_records);
 
 		if($count>1) {
 
@@ -680,13 +732,33 @@ class tool_import_rdf extends tool_common {
 
 	/**
 	* SET_DATA_INTO_COMPONENT
-	* @return
+	* This method sets the provided value into a specified component instance within a section.
+	* It performs checks, handles specific cases for component_iri, and relations, and saves the
+	* new value if it's different from the existing data, avoiding overwriting existing information.
+	* @param object|bool $locator
+	* @param string $component_tipo
+	* @param mixed $value
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return bool
+	* 	Returns true on successful saving, false otherwise.
 	*/
-	public static function set_data_into_component($locator, $component_tipo, $value, $lang=DEDALO_DATA_LANG) {
+	public static function set_data_into_component(object|bool $locator, string $component_tipo, mixed $value, string $lang=DEDALO_DATA_LANG) : bool {
 
-		$section_tipo	= $locator->section_tipo;
-		$section_id		= $locator->section_id;
-		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+		// locator check
+			if (empty($locator) || !is_object($locator)) {
+				debug_log(__METHOD__
+					. ' Wrong locator received ' . PHP_EOL
+					. ' locator: ' . to_string($locator) .PHP_EOL
+					. ' gettype: ' . gettype($locator)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// sort vars
+			$section_tipo	= $locator->section_tipo;
+			$section_id		= $locator->section_id;
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 
 		// save new value
 			$RecordObj_dd	= new RecordObj_dd($component_tipo);
@@ -702,10 +774,9 @@ class tool_import_rdf extends tool_common {
 				false
 			);
 
-
+		// old data
 			$old_data = $code_component->get_dato();
-
-			if(is_object($old_data)){
+			if(is_object($old_data)) {
 				$count = 0;
 				foreach ($old_data as $old_value) {
 					$count ++;
@@ -713,11 +784,8 @@ class tool_import_rdf extends tool_common {
 				if($count===0) $old_data=[];
 			};
 
-			// if($component_tipo==='numisdata64'){
-			// 		dump($lang, ' lang <>+-----////////////////////------+ '.to_string(empty($old_data)));
-			// }
-
-			if($model_name==='component_iri' && !empty($old_data)){
+		// component_iri case
+			if($model_name==='component_iri' && !empty($old_data)) {
 
 				$new_values = $old_data;
 				foreach ($value as $current_iri_obj) {
@@ -732,33 +800,55 @@ class tool_import_rdf extends tool_common {
 					}
 				}
 
-				$value 		= $new_values;
-				$old_data 	= [];
+				// overwrite value
+				$value = $new_values;
+
+				// reset old data
+				$old_data = [];
 			}
 
+		// relations
 			$relation_models = component_relation_common::get_components_with_relations();
-			if(in_array($model_name, $relation_models) && !empty($old_data)){
+			if(in_array($model_name, $relation_models) && !empty($old_data)) {
 
 				$object_exists = locator::in_array_locator($value, $old_data, ['section_id','section_tipo']);
-
 				if ($object_exists===false) {
+
 					$new_data	= $old_data;
 					$new_data[]	= $value;
-					$value		= $new_data;
+
+					// overwrite value
+					$value = $new_data;
+
+					// reset old data
 					$old_data = null;
 				}
 			}
 
+		// save if different avoiding to overwrite existing data
+			if( empty($old_data) // no previous data exists
+				&& $old_data !== $value // new value is different
+				) {
 
-			if($old_data !== $value && empty($old_data)){
-				// if($component_tipo==='numisdata98'){
-				// 		dump($value, ' final +------/////////////////////////////////-----+ '.to_string());
-				// }
+				// debug
+					// if ($model_name!=='component_iri') {
+					// 	dump($old_data, ' old_data )))))))))))) ++ '.to_string($model_name.' '.$component_tipo));
+					// 	dump($value, ' value )))))))))))) ++ '.to_string($model_name.' '.$component_tipo));
+					// }
+				debug_log(__METHOD__
+					. " Saving component data. model: $model_name - component_tipo: $component_tipo " . PHP_EOL
+					. ' value: ' .to_string($value)
+					, logger::DEBUG
+				);
+
 				$code_component->set_dato( $value );
 				$code_component->Save();
+
+				return true;
 			}
 
-			return;
+
+		return false;
 	}//end set_data_into_component
 
 
