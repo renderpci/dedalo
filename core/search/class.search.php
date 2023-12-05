@@ -1219,42 +1219,60 @@ class search {
 	* Rewrite query string building SQL union for each different matrix table
 	* based on every section tipo table resolution
 	* @param string $sql_query
+	*  The original SQL query to be modified.
 	* @return string $sql_query
+	*  The modified SQL query with UNION clauses for each matrix table.
 	*/
 	public function build_union_query(string $sql_query) : string {
 
-		// calculate tables
-			$this->ar_matrix_tables = [];
-			foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
-				$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
-				if (empty($current_matrix_table)) {
-					debug_log(__METHOD__
-						. " Ignored invalid empty matrix table " . PHP_EOL
-						. ' section_tipo: ' . $current_section_tipo
-						, logger::ERROR
-					);
+		// Calculate matrix tables based on section tipos
+		$this->ar_matrix_tables = [];
+		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
+			$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
+
+			// Ignore invalid empty matrix tables
+			if (empty($current_matrix_table)) {
+				debug_log(__METHOD__
+					. " Ignored invalid empty matrix table " . PHP_EOL
+					. ' section_tipo: ' . $current_section_tipo
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Add unique matrix tables to the list
+			if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
+				$this->ar_matrix_tables[] = $current_matrix_table;
+			}
+		}
+
+		// If there are multiple matrix tables, build UNION query
+		if (count($this->ar_matrix_tables)>1) {
+			$tables_query = [];
+
+			// Add current query
+			$tables_query[] = $sql_query;
+
+			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
+
+				// Ignore the first table
+				if ($key===0) {
 					continue;
 				}
-				if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
-					$this->ar_matrix_tables[] = $current_matrix_table;
-				}
+
+				// copy source and replace table and alias names
+				$current_query	= $sql_query;
+				$current_query	= preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
+				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
+
+				// Add the modified query to the list
+				$tables_query[] = $current_query;
 			}
-			if (count($this->ar_matrix_tables)>1) {
-				$tables_query = [];
-				// Add current query
-					$tables_query[] = $sql_query;
-				foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
-					# ignore first table
-					if ($key===0) continue;
-					// copy source and replace table and alias names
-						$current_query = $sql_query;
-						$current_query = preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
-						$current_query = str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
-					$tables_query[] = $current_query;
-				}
-				// replace original
-					$sql_query = implode(PHP_EOL.'UNION ALL'.PHP_EOL, $tables_query);
-			}
+
+			// Replace the original query with UNION ALL clauses
+			$sql_query = implode(PHP_EOL . 'UNION ALL' . PHP_EOL, $tables_query);
+		}
+
 
 		return $sql_query;
 	}//end build_union_query
