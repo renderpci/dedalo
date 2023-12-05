@@ -2763,9 +2763,12 @@ abstract class component_common extends common {
 	* GET_VALUE_WITH_FALLBACK_FROM_DATO_FULL
 	* Receive a full dato of translatable component and try to find a no empty lang
 	* Expected dato is a string like '{"lg-eng": "", "lg-spa": "Comedor"}'
+	* @param mixed $dato_full_json
+	* @param bool $decore_untranslated = false
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return string|null $value
 	*/
-	public static function get_value_with_fallback_from_dato_full($dato_full_json, bool $decore_untranslated=false, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?string {
+	public static function get_value_with_fallback_from_dato_full(mixed $dato_full_json, bool $decore_untranslated=false, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?string {
 
 		if (empty($dato_full_json)) {
 			return null;
@@ -2777,7 +2780,7 @@ abstract class component_common extends common {
 		}else{
 			if (!$decoded_obj = json_handler::decode($dato_full_json)) {
 				debug_log(__METHOD__
-					." Error on decode dato_full_json: " .PHP_EOL
+					.' Error on decode dato_full_json: ' . PHP_EOL
 					. to_string($dato_full_json)
 					, logger::ERROR
 				);
@@ -2860,8 +2863,6 @@ abstract class component_common extends common {
 
 		return $value;
 	}//end get_value_with_fallback_from_dato_full
-
-
 
 
 
@@ -2975,25 +2976,25 @@ abstract class component_common extends common {
 	* Builds a search_query taking care of split multiple values and conform output objects
 	* @param object $query_object
 	*  sample
-	* {
-	*   "q": "pepe",
-	*   "lang": "lg-spa",
-	*   "path": [
-	*     {
-	*       "section_tipo": "oh1",
-	*       "component_tipo": "oh24",
-	*       "target_section": "rsc197"
-	*     },
-	*     {
-	*       "section_tipo": "rsc197",
-	*       "component_tipo": "rsc85",
-	* 		"model": "component_input_text"
-	*     }
-	*   ],
-	*   "component_path": [
-	*     "dato"
-	*   ]
-	* }
+		* {
+		*   "q": "pepe",
+		*   "lang": "lg-spa",
+		*   "path": [
+		*     {
+		*       "section_tipo": "oh1",
+		*       "component_tipo": "oh24",
+		*       "target_section": "rsc197"
+		*     },
+		*     {
+		*       "section_tipo": "rsc197",
+		*       "component_tipo": "rsc85",
+		* 		"model": "component_input_text"
+		*     }
+		*   ],
+		*   "component_path": [
+		*     "dato"
+		*   ]
+		* }
 	* @return array $ar_query_object
 	* 	Array of one or more SQO (search query object)
 	*/
@@ -3033,11 +3034,11 @@ abstract class component_common extends common {
 						// update all resolved query objects
 						// Note that object $c_query_object is changed by the component, it not new object,
 						// it's the same object but with the component additions
-						$c_query_object = $called_class::resolve_query_object_sql($c_query_object);
+						$c_query_object = $called_class::resolve_query_object_sql( $c_query_object );
 					}
 				}
 			}else{
-				$current_query_object = $called_class::resolve_query_object_sql($current_query_object);
+				$current_query_object = $called_class::resolve_query_object_sql( $current_query_object );
 			}
 
 		// convert to array always

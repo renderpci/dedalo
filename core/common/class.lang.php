@@ -157,25 +157,21 @@ class lang {
 		}
 
 		// cache
-		$cache_uid = $code.'_'.$lang;
-		if ($from_cache===true && isset($_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid])) {
-			return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
-		}
+			$cache_uid = $code.'_'.$lang;
+			if ($from_cache===true && isset($_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid])) {
+				return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
+			}
 
 		// RESOLVE
 		$result = lang::resolve( $code, $lang );
-			#dump($total=round(start_time()-$start_time,3)*1000, '$total=round(start_time()-$start_time,3)*1000 ++ '.to_string($result));
 
 		// NOT FOUNDED NAME
 		if(!isset($result->names)) {
-			if(SHOW_DEBUG===true) {
-				#dump($result, ' result ++ '.to_string($code));
-			}
 			return null;
 		}
 
 		// Set names from object result
-		$names  = $result->names;
+		$names = $result->names;
 
 		// Fallback
 		if (!empty($names->$lang)) {
@@ -184,8 +180,8 @@ class lang {
 
 		}else{
 
-			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
-			$main_lang 	  = hierarchy::get_main_lang($section_tipo);
+			$section_tipo	= DEDALO_LANGS_SECTION_TIPO;
+			$main_lang		= hierarchy::get_main_lang($section_tipo);
 			# Recursion in main_lang lang
 			if (isset($names->$main_lang)) {
 				$name = to_string($names->$main_lang);
@@ -194,12 +190,13 @@ class lang {
 			}
 		}
 
-		if($from_cache===true){
-			$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
-		}
+		// cache
+			if($from_cache===true){
+				$_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid] = $name;
+			}
 
 
-		return (string)$name;
+		return $name;
 	}//end get_name_from_code
 
 

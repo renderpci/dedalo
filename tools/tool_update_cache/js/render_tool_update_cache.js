@@ -193,23 +193,27 @@ const get_content_data = async function(self) {
 					spinner.remove()
 
 					// response msg
-					response_message.innerHTML = response.msg || 'Unknown error'
+					response_message.innerHTML = response.msg || 'Unknown error. Perhaps a timeout occurred'
 
 					// response n_components
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'msg_detail',
-						inner_html		: 'components: ' + (response.n_components || 'Unknown'),
-						parent			: response_message
-					})
+					if (response.n_components) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'msg_detail',
+							inner_html		: 'components: ' + (response.n_components || 'Unknown'),
+							parent			: response_message
+						})
+					}
 
 					// response n_records
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'msg_detail',
-						inner_html		: 'records: ' + (response.n_records || 'Unknown'),
-						parent			: response_message
-					})
+					if (response.n_records) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'msg_detail',
+							inner_html		: 'records: ' + (response.n_records || 'Unknown'),
+							parent			: response_message
+						})
+					}
 				})
 			}
 		})

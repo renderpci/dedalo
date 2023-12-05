@@ -607,6 +607,11 @@ class search {
 	*/
 	public function pre_parse_search_query_object() : void {
 
+		// already parsed case
+			if ($this->search_query_object->parsed===true) {
+				return;
+			}
+
 		// filter
 			if (!empty($this->search_query_object->filter)) {
 
@@ -677,26 +682,26 @@ class search {
 	* @param string $op
 	* 	sample: '$and'
 	* @param array $ar_value
-	* 	sample:
-	* [
-	    {
-	        "q": {
-	            "section_id": "1",
-	            "section_tipo": "dd64",
-	            "type": "dd151",
-	            "from_component_tipo": "dd1354"
-	        },
-	        "q_operator": null,
-	        "path": [
-	            {
-	                "section_tipo": "dd1324",
-	                "component_tipo": "dd1354",
-	                "model": "component_radio_button",
-	                "name": "Active"
-	            }
-	        ]
-	    }
-	  ]
+	* sample:
+		* [
+		*    {
+		*        "q": {
+		*            "section_id": "1",
+		*            "section_tipo": "dd64",
+		*            "type": "dd151",
+		*            "from_component_tipo": "dd1354"
+		*        },
+		*        "q_operator": null,
+		*        "path": [
+		*            {
+		*                "section_tipo": "dd1324",
+		*                "component_tipo": "dd1354",
+		*                "model": "component_radio_button",
+		*                "name": "Active"
+		*            }
+		*        ]
+		*    }
+		*  ]
 	* @return object $new_ar_query_object
 	*/
 	public static function conform_search_query_object(string $op, array $ar_value) : object {
@@ -710,21 +715,22 @@ class search {
 
 			$search_object = $ar_value[$i];
 
-			if (!is_object($search_object)) {
-				// dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
-				debug_log(__METHOD__
-					." Invalid (IGNORED) non object search_object: " . PHP_EOL
-					.' type: ' 			. gettype($search_object) . PHP_EOL
-					.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT) . PHP_EOL
-					.' ar_value: ' 		. json_encode($ar_value, JSON_PRETTY_PRINT)
-					, logger::ERROR
-				);
-				// throw new Exception("Error Processing Request. search_object must be an object", 1);
-				dump(debug_backtrace(), ' Error. search_object must be an object. debug_backtrace() ++ '.to_string());
-				continue;
-			}
+			// is object check
+				if (!is_object($search_object)) {
+					// dump($search_object, ' Invalid received object (search_object) type: '.gettype($search_object));
+					debug_log(__METHOD__
+						.' Invalid (IGNORED) non object search_object: ' . PHP_EOL
+						.' type: ' 			. gettype($search_object) . PHP_EOL
+						.' search_object: ' . json_encode($search_object, JSON_PRETTY_PRINT) . PHP_EOL
+						.' ar_value: ' 		. json_encode($ar_value, JSON_PRETTY_PRINT)
+						, logger::ERROR
+					);
+					// throw new Exception("Error Processing Request. search_object must be an object", 1);
+					dump(debug_backtrace(), ' Error. search_object must be an object. debug_backtrace() ++ '.to_string());
+					continue;
+				}
 
-			#if (self::is_search_operator($search_object)===true) {
+			// if (self::is_search_operator($search_object)===true) {
 			if (!property_exists($search_object, 'path')) {
 
 				// Case object is a group
@@ -747,22 +753,24 @@ class search {
 				// Case object is a end search object
 				if (isset($search_object->format) && $search_object->format==='column') {
 
-					$ar_query_object	= [$search_object];
+					$ar_query_object = [$search_object];
+
 				}else{
 
 					$path				= $search_object->path;
 					$search_component	= end($path);
 					// model (with fallback if not exists)
 					if (!isset($search_component->model)) {
-						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo,true);
+						$search_component->model = RecordObj_dd::get_modelo_name_by_tipo($search_component->component_tipo, true);
 					}
-					$model_name			= $search_component->model;
-					$ar_query_object	= $model_name::get_search_query($search_object);
+					$model_name = $search_component->model;
+
+					$ar_query_object = $model_name::get_search_query($search_object);
 				}
 
 				$new_ar_query_object->$op = array_merge($new_ar_query_object->$op, $ar_query_object);
 			}
-		}
+		}//end for ($i=0; $i < $ar_value_size; $i++)
 
 
 		return $new_ar_query_object;
@@ -1211,42 +1219,60 @@ class search {
 	* Rewrite query string building SQL union for each different matrix table
 	* based on every section tipo table resolution
 	* @param string $sql_query
+	*  The original SQL query to be modified.
 	* @return string $sql_query
+	*  The modified SQL query with UNION clauses for each matrix table.
 	*/
 	public function build_union_query(string $sql_query) : string {
 
-		// calculate tables
-			$this->ar_matrix_tables = [];
-			foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
-				$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
-				if (empty($current_matrix_table)) {
-					debug_log(__METHOD__
-						. " Ignored invalid empty matrix table " . PHP_EOL
-						. ' section_tipo: ' . $current_section_tipo
-						, logger::ERROR
-					);
+		// Calculate matrix tables based on section tipos
+		$this->ar_matrix_tables = [];
+		foreach ($this->ar_section_tipo as $key => $current_section_tipo) {
+			$current_matrix_table = common::get_matrix_table_from_tipo($current_section_tipo);
+
+			// Ignore invalid empty matrix tables
+			if (empty($current_matrix_table)) {
+				debug_log(__METHOD__
+					. " Ignored invalid empty matrix table " . PHP_EOL
+					. ' section_tipo: ' . $current_section_tipo
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			// Add unique matrix tables to the list
+			if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
+				$this->ar_matrix_tables[] = $current_matrix_table;
+			}
+		}
+
+		// If there are multiple matrix tables, build UNION query
+		if (count($this->ar_matrix_tables)>1) {
+			$tables_query = [];
+
+			// Add current query
+			$tables_query[] = $sql_query;
+
+			foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
+
+				// Ignore the first table
+				if ($key===0) {
 					continue;
 				}
-				if (!in_array($current_matrix_table, $this->ar_matrix_tables)) {
-					$this->ar_matrix_tables[] = $current_matrix_table;
-				}
+
+				// copy source and replace table and alias names
+				$current_query	= $sql_query;
+				$current_query	= preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
+				$current_query	= str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
+
+				// Add the modified query to the list
+				$tables_query[] = $current_query;
 			}
-			if (count($this->ar_matrix_tables)>1) {
-				$tables_query = [];
-				// Add current query
-					$tables_query[] = $sql_query;
-				foreach ($this->ar_matrix_tables as $key => $current_matrix_table) {
-					# ignore first table
-					if ($key===0) continue;
-					// copy source and replace table and alias names
-						$current_query = $sql_query;
-						$current_query = preg_replace('/(FROM [a-zA-z]+ AS [a-zA-z]+)/i', 'FROM '.$current_matrix_table.' AS mix_'.$current_matrix_table, $current_query);
-						$current_query = str_replace('mix.', 'mix_'.$current_matrix_table.'.', $current_query);
-					$tables_query[] = $current_query;
-				}
-				// replace original
-					$sql_query = implode(PHP_EOL.'UNION ALL'.PHP_EOL, $tables_query);
-			}
+
+			// Replace the original query with UNION ALL clauses
+			$sql_query = implode(PHP_EOL . 'UNION ALL' . PHP_EOL, $tables_query);
+		}
+
 
 		return $sql_query;
 	}//end build_union_query

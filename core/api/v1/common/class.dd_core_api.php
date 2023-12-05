@@ -466,35 +466,35 @@ final class dd_core_api {
 	*
 	* @param object $rqo
 	* sample:
-	* {
-	*    "id": "section_rsc167_rsc167_edit_lg-eng",
-	*    "action": "read",
-	*    "source": {
-	*        "typo": "source",
-	*        "action": "search",
-	*        "model": "section",
-	*        "tipo": "rsc167",
-	*        "section_tipo": "rsc167",
-	*        "section_id": null,
-	*        "mode": "edit",
-	*        "lang": "lg-eng"
-	*    },
-	*    "sqo": {
-	*        "section_tipo": [
-	*            "rsc167"
-	*        ],
-	*        "offset": 0,
-	*        "select": [],
-	*        "full_count": false,
-	*        "limit": 1
-	*    }
-	* }
+		* {
+		*    "id": "section_rsc167_rsc167_edit_lg-eng",
+		*    "action": "read",
+		*    "source": {
+		*        "typo": "source",
+		*        "action": "search",
+		*        "model": "section",
+		*        "tipo": "rsc167",
+		*        "section_tipo": "rsc167",
+		*        "section_id": null,
+		*        "mode": "edit",
+		*        "lang": "lg-eng"
+		*    },
+		*    "sqo": {
+		*        "section_tipo": [
+		*            "rsc167"
+		*        ],
+		*        "offset": 0,
+		*        "select": [],
+		*        "full_count": false,
+		*        "limit": 1
+		*    }
+		* }
 	* @return object $response
 	* sample:
-	*  $response->result = {
-	* 		context : array
-	* 		data : array
-	*  }
+		*  $response->result = {
+		* 		context : array
+		* 		data : array
+		*  }
 	*/
 	public static function read(object $rqo) : object {
 
@@ -768,31 +768,31 @@ final class dd_core_api {
 	* Note that 'delete_mode' must be declared (delete_data|delete_record)
 	* @param object $rqo
 	* sample:
-	* {
-	*    "action": "delete",
-	*    "source": {	*
-	*        "action": "delete",
-	*        "model": "section",
-	*        "tipo": "oh1",
-	*        "section_tipo": "oh1",
-	*        "section_id": null,
-	*        "mode": "list",
-	*        "lang": "lg-eng",
-	*        "delete_mode": "delete_record"
-	*    },
-	*    "sqo": {
-	*        "section_tipo": [
-	*            "oh1"
-	*        ],
-	*        "filter_by_locators": [
-	*            {
-	*                "section_tipo": "oh1",
-	*                "section_id": "127"
-	*            }
-	*        ],
-	*        "limit": 1
-	*    }
-	* }
+		* {
+		*    "action": "delete",
+		*    "source": {	*
+		*        "action": "delete",
+		*        "model": "section",
+		*        "tipo": "oh1",
+		*        "section_tipo": "oh1",
+		*        "section_id": null,
+		*        "mode": "list",
+		*        "lang": "lg-eng",
+		*        "delete_mode": "delete_record"
+		*    },
+		*    "sqo": {
+		*        "section_tipo": [
+		*            "oh1"
+		*        ],
+		*        "filter_by_locators": [
+		*            {
+		*                "section_tipo": "oh1",
+		*                "section_id": "127"
+		*            }
+		*        ],
+		*        "limit": 1
+		*    }
+		* }
 	* @return object $response
 	*/
 	public static function delete(object $rqo) : object {
@@ -1015,44 +1015,44 @@ final class dd_core_api {
 	* 	sort_data	// re-organize the whole component data based on target key given. Used by portals to sort rows
 	* @param object $json_data
 	* sample:
-	* {
-	*    "action": "save",
-	*    "source": {
-	*        "typo": "source",
-	*        "type": "component",
-	*        "action": null,
-	*        "model": "component_input_text",
-	*        "tipo": "oh16",
-	*        "section_tipo": "oh1",
-	*        "section_id": "124",
-	*        "mode": "edit",
-	*        "lang": "lg-eng"
-	*    },
-	*    "data": {
-	*        "section_id": "124",
-	*        "section_tipo": "oh1",
-	*        "tipo": "oh16",
-	*        "lang": "lg-eng",
-	*        "from_component_tipo": "oh16",
-	*        "value": [
-	*            "title2"
-	*        ],
-	*        "parent_tipo": "oh1",
-	*        "parent_section_id": "124",
-	*        "fallback_value": [
-	*            "title"
-	*        ],
-	*        "debug_model": "component_input_text",
-	*        "debug_label": "Title",
-	*        "debug_mode": "edit",
-	*        "row_section_id": "124",
-	*        "changed_data": [{
-	*            "action": "update",
-	*            "key": 0,
-	*            "value": "title2"
-	*        }]
-	*    }
-	* }
+		* {
+		*    "action": "save",
+		*    "source": {
+		*        "typo": "source",
+		*        "type": "component",
+		*        "action": null,
+		*        "model": "component_input_text",
+		*        "tipo": "oh16",
+		*        "section_tipo": "oh1",
+		*        "section_id": "124",
+		*        "mode": "edit",
+		*        "lang": "lg-eng"
+		*    },
+		*    "data": {
+		*        "section_id": "124",
+		*        "section_tipo": "oh1",
+		*        "tipo": "oh16",
+		*        "lang": "lg-eng",
+		*        "from_component_tipo": "oh16",
+		*        "value": [
+		*            "title2"
+		*        ],
+		*        "parent_tipo": "oh1",
+		*        "parent_section_id": "124",
+		*        "fallback_value": [
+		*            "title"
+		*        ],
+		*        "debug_model": "component_input_text",
+		*        "debug_label": "Title",
+		*        "debug_mode": "edit",
+		*        "row_section_id": "124",
+		*        "changed_data": [{
+		*            "action": "update",
+		*            "key": 0,
+		*            "value": "title2"
+		*        }]
+		*    }
+		* }
 	* @return object $response
 	*/
 	public static function save(object $rqo) : object {
@@ -1288,24 +1288,24 @@ final class dd_core_api {
 	* Exec a SQL records count of given SQO
 	* @param object $json_data
 	* sample:
-	* {
-	*    "action": "count",
-	*    "source": {
-	*        "typo": "source",
-	*        "type": "tm",
-	*        "action": null,
-	*        "model": "service_time_machine",
-	*        ..
-	*    },
-	*    "sqo": {
-	*        "id": "tmp",
-	*        "mode": "tm",
-	*        "section_tipo": [
-	*            "oh1"
-	*        ]
-	*    },
-	*    "prevent_lock": true
-	* }
+		* {
+		*    "action": "count",
+		*    "source": {
+		*        "typo": "source",
+		*        "type": "tm",
+		*        "action": null,
+		*        "model": "service_time_machine",
+		*        ..
+		*    },
+		*    "sqo": {
+		*        "id": "tmp",
+		*        "mode": "tm",
+		*        "section_tipo": [
+		*            "oh1"
+		*        ]
+		*    },
+		*    "prevent_lock": true
+		* }
 	* @return object $response
 	*
 	*/
@@ -1330,7 +1330,7 @@ final class dd_core_api {
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $sqo->section_tipo;
 			foreach ($ar_section_tipo as $current_section_tipo) {
-				$permissions	= common::get_permissions($current_section_tipo, $current_section_tipo);
+				$permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
 				if($permissions<1){
 					$result = (object)[
 						'total' => 0
@@ -1811,16 +1811,16 @@ final class dd_core_api {
 							$lang // string $lang = DEDALO_DATA_NOLAN
 						);
 
-					// set the autocomplete status into sections to set correct permissions
+					// autocomplete. Set the autocomplete status into sections to set correct permissions
 					// search with autocomplete need access, at least with read, to target data,
 					// so, in the context of the search autocomplete the section and components will set his subdatum at least with permissions = 1.
 						$element->autocomplete = $autocomplete;
 
-					// store sqo section in session.
+					// session sqo. Store sqo section in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export
 					// in addition to section_tool navigation (like transcription, translation, etc.)
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
-							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
 								. ' sqo:' . to_string($sqo)
@@ -1833,7 +1833,7 @@ final class dd_core_api {
 							$element->data_source = $ddo_source->data_source;
 						}
 
-					// properties optional. If received, overwrite element properties
+					// properties (optional). If received, overwrite element properties
 						if (!empty($properties)){
 							$element->set_properties($properties);
 						}
@@ -1857,7 +1857,7 @@ final class dd_core_api {
 
 					// store sqo section
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
-							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $sqo;
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
 						}
 					break;
 
@@ -2075,6 +2075,9 @@ final class dd_core_api {
 			if(SHOW_DEBUG===true) {
 				// dump($context, ' context ++ '.to_string());
 				// dump($data, ' data ++ '.to_string());
+				// if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
+				// 	dump($_SESSION['dedalo']['config']['sqo'][$sqo_id], ' $_SESSION[dedalo][config][sqo][$sqo_id] ++ '.to_string($sqo_id));
+				// }
 				$debug = new stdClass();
 					$debug->sqo				= $sqo ?? null;
 					// $debug->rqo			= $rqo;

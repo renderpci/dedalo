@@ -501,6 +501,7 @@ hierarchy97	Beziehungen Thesaurus	termino	lg-deu
 hierarchy98	Letzte Änderungen	termino	lg-deu
 hierarchy99	Definition	termino	lg-deu
 hierarchy119	space_geojson	termino	lg-spa
+hierarchy35	Related terms	termino	lg-eng
 hierarchy1	Hierarchy	termino	lg-eng
 hierarchy2	Description	termino	lg-eng
 hierarchy6	TLD (alpha2)	termino	lg-eng
@@ -531,7 +532,6 @@ hierarchy31	Geolocation	termino	lg-eng
 hierarchy32	Instructions for indexing	termino	lg-eng
 hierarchy33	Observations	termino	lg-eng
 hierarchy34	Relations	termino	lg-eng
-hierarchy35	Related terms	termino	lg-eng
 hierarchy36	Dependent of	termino	lg-eng
 hierarchy37	List	termino	lg-eng
 hierarchy38	New	termino	lg-eng
