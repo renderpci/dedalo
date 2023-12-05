@@ -1385,6 +1385,9 @@ class section extends common {
 				if (isset($_SESSION['dedalo']['registered_tools'])) {
 					unset($_SESSION['dedalo']['registered_tools']);
 				}
+				dd_cache::delete_cache_files([
+					dd_cache::get_cache_file_prefix() . 'cache_registered_tools.json'
+				]);
 			}
 			// DEDALO_SECTION_PROJECTS_TIPO
 			else if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
