@@ -10,7 +10,7 @@
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_radio_button} from './view_default_edit_radio_button.js'
 	import {view_line_edit_radio_button} from './view_line_edit_radio_button.js'
-
+	import {view_rating_edit_radio_button} from './view_rating_edit_radio_button.js'
 
 
 /**
@@ -36,11 +36,14 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 
 	// view
 		const view = self.context.view || 'default'
-
+	console.log("self.context.view:",self.context.view);
 	switch(view) {
 
 		case 'line':
 			return view_line_edit_radio_button.render(self, options)
+
+		case 'rating':
+			return view_rating_edit_radio_button.render(self, options)
 
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value
