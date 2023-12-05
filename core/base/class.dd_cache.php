@@ -306,7 +306,7 @@ class dd_cache {
 						debug_log(__METHOD__
 							. " Warning. Ignored non found file to deleted " .PHP_EOL
 							. ' file_path: ' . $file_path
-							, logger::ERROR
+							, logger::WARNING
 						);
 					}
 				}

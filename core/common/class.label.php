@@ -24,7 +24,7 @@ abstract class label {
  	*/
  	public static function get_ar_label( string $lang=DEDALO_APPLICATION_LANG ) : array {
 
- 		// lang vlcs fallback
+ 		// lang vlca fallback
 	 		if ($lang==='lg-vlca') {
 				$lang = 'lg-cat';
 			}
