@@ -53,6 +53,7 @@ render_tool_import_rdf.prototype.edit = async function(options={render_level:'fu
 
 /**
 * GET_CONTENT_DATA_EDIT
+* Retrieves content data for editing, including components, language selector, and buttons.
 * @param object self
 * @return HTMLElement content_data
 */
@@ -115,7 +116,7 @@ const get_content_data_edit = async function(self) {
 			parent			: buttons_container
 		})
 		// click event. When user click the button do the import of the data.
-		btn_validate.addEventListener('click', ()=>{
+		btn_validate.addEventListener('click', () => {
 
 			// component values from radio buttons selection
 				const ar_values = []
@@ -166,7 +167,6 @@ const get_content_data_edit = async function(self) {
 						for (let i = 0; i < response_result_len; i++) {
 
 							// const current_data = ar_values[i]
-
 							view_rdf_data_wrapper.innerHTML = response.result[i].ar_rdf_html
 
 							// const node = self.render_dd_data(response.rdf_data[i].dd_obj, 'root')
@@ -175,8 +175,20 @@ const get_content_data_edit = async function(self) {
 
 					// update list
 						// self.load_section(section_tipo)
+
+					// destroy event
+						const dd_modal = document.getElementsByTagName('dd-modal')
+						if (dd_modal && dd_modal[0]) {
+							dd_modal[0].on_close = () => {
+								const section = self.caller.caller.caller
+								if (section) {
+									section.refresh()
+								}
+							}
+						}
 				})
-		})
+		})//end btn_validate.addEventListener('click')
+
 
 	// view_rdf_data_wrapper. Result will be added here
 		const view_rdf_data_wrapper = ui.create_dom_element({
