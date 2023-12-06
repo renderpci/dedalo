@@ -244,6 +244,19 @@ class update {
 							$log_line  = PHP_EOL . 'ERROR [run_scripts] ' . ($key+1);
 							$log_line .= PHP_EOL . 'The result is false. Check your script';
 							file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+
+						// msg update
+							$msg[] = 'Error updating Dédalo data';
+							if (isset($run_scripts->msg)) {
+								$msg[] = $run_scripts->msg;
+							}
+
+						// stop_on_error
+							if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
+								$response->result	= false ;
+								$response->msg		= $msg;
+								return $response;
+							}
 					}
 
 					// log line
