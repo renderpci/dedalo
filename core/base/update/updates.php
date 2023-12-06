@@ -7,6 +7,91 @@ $updates = new stdClass();
 
 
 
+$v=602; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 2;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 1;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '
+			WARNING!
+			<br>Before run this update, make sure that your Ontology is updated to the latest version!
+		';
+		$updates->$v->alert_update[] = $alert;
+
+	// update time machine data. Update 'data' of time_machine
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+		$script_obj = new stdClass();
+			$script_obj->info			= "Transform data from portal 'Creators' (numisdata261) to new portal (numisdata1362)";
+			$script_obj->script_class	= "transform_data";
+			$script_obj->script_method	= "add_portal_level";
+			$script_obj->stop_on_error	= true;
+			$script_obj->script_vars	= json_decode('
+				{
+					"original" : [
+						{
+							"model" : "section",
+							"tipo" : "numisdata3",
+							"role" : "section",
+							"info" : "Types"
+						},
+						{
+							"model" : "component_portal",
+							"tipo" : "numisdata261",
+							"role" : "source_portal",
+							"info" : "Creators deprecated"
+						},
+						{
+							"model" : "component_portal",
+							"tipo" : "numisdata1362",
+							"role" : "target_portal",
+							"info" : "Creators (new)"
+						},
+						{
+							"model" : "component_portal",
+							"tipo" : "numisdata887",
+							"role" : "ds",
+							"info" : "Role"
+						}
+					],
+					"new" : [
+						{
+							"model" : "section",
+							"tipo" : "rsc1152",
+							"role" : "section",
+							"info" : "People references"
+						},
+						{
+							"model" : "component_portal",
+							"tipo" : "rsc1156",
+							"role" : "target_portal",
+							"info" : "People"
+						},
+						{
+							"model" : "component_portal",
+							"tipo" : "rsc1155",
+							"role" : "ds",
+							"info" : "Role"
+						}
+					],
+					"delete_old_data" : true,
+
+				}
+		');
+		$updates->$v->run_scripts[] = $script_obj;
+
+
+
 $v=601; #####################################################################################
 $updates->$v = new stdClass();
 
