@@ -38,6 +38,7 @@ $updates->$v = new stdClass();
 			$script_obj->stop_on_error	= true;
 			$script_obj->script_vars	= json_decode('
 				{
+					"tld" : "numisdata",
 					"original" : [
 						{
 							"model" : "section",

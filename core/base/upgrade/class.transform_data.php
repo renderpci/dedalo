@@ -74,9 +74,17 @@ class transform_data {
 				$response->msg		= 'Error. Request failed';
 
 		// options
-			$original			= $options->original;
-			$new				= $options->new;
+			$tld				= $options->tld; // string like 'numisdata'
+			$original			= $options->original; // array of object
+			$new				= $options->new; // array of objects
 			$delete_old_data	= $options->delete_old_data; // bool true by default
+
+		// check Ontology
+			if (!in_array($tld, DEDALO_PREFIX_TIPOS)) {
+				$response->result	= true;
+				$response->msg		= 'Script ignored. Your installation does not use this TLD: '.$tld;
+				return $response;
+			}
 
 		// check Ontology tipos before do anything
 			foreach ([...$original, ...$new] as $item) {
