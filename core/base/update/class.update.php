@@ -646,10 +646,15 @@ class update {
 
 			$script_class	= $script_obj->script_class;
 			$script_method	= $script_obj->script_method;
-			$script_vars	= isset($script_obj->script_vars) ? (array)$script_obj->script_vars : array();
+			$script_args	= isset($script_obj->script_vars) && !is_array($script_obj->script_vars)
+				? [$script_obj->script_vars] // object|string case
+				: $script_obj->script_vars; // array|null case
 
-			//$result = $script_class::$script_method( $script_obj->script_vars );
-			$result = call_user_func_array($script_class.'::'.$script_method, $script_vars);
+			// exec function
+			$result = call_user_func_array(
+				$script_class.'::'.$script_method,
+				$script_args ?? []
+			);
 
 			if (is_object($result)) {
 				$response = $result;
