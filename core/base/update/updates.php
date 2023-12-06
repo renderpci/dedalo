@@ -85,7 +85,7 @@ $updates->$v = new stdClass();
 						}
 					],
 					"delete_old_data" : true,
-
+					"stop_on_error" : true
 				}
 		');
 		$updates->$v->run_scripts[] = $script_obj;

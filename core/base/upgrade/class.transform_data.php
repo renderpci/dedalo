@@ -120,6 +120,7 @@ class transform_data {
 				})->tipo;
 
 			$table = common::get_matrix_table_from_tipo($original_section_tipo);
+			$created_records = 0;
 
 		// section records
 			$result	= JSON_RecordDataBoundObject::search_free(
@@ -131,10 +132,6 @@ class transform_data {
 				$section_id	= (int)$row['section_id'];
 				$datos		= json_handler::decode($row['datos']);
 				$relations	= $datos->relations ?? [];
-
-				if ($section_id > 10000) {
-					continue;
-				}
 
 				// empty case
 				if (empty($relations)) {
@@ -164,6 +161,9 @@ class transform_data {
 								$new_section_tipo // string section_tipo
 							);
 							$new_section_id = $new_section->Save();
+
+						// update counter
+							$created_records++;
 
 						// append new locator to new portal. sample: add created locator to portal 'Creators'
 							$original_component_portal_target = component_common::get_instance(
@@ -244,6 +244,10 @@ class transform_data {
 						);
 					}
 			}//end while($row = pg_fetch_assoc($result))
+
+		// response
+			$response->result	= true;
+			$response->msg		= 'OK. created_records: ' . $created_records;
 
 
 		return $response;
