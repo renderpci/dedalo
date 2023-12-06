@@ -880,7 +880,7 @@ class component_relation_common extends component_common {
 
 		if (!is_object($locator) || !isset($locator->type)) {
 			if(SHOW_DEBUG===true) {
-				throw new Exception("Error Processing Request. var 'locator' not contains property 'type' ", 1);
+				throw new Exception("Error Processing Request. var 'locator' do not contains property 'type'. Type is mandatory ", 1);
 			}
 			debug_log(__METHOD__
 				." Invalid locator is received to add. Locator was ignored (type:".gettype($locator).") " . PHP_EOL
