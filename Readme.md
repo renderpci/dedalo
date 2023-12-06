@@ -67,9 +67,9 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ### 4.1. Services required for the OS
 
-- PHP 8.1+
+- PHP 8.2+
 - Apache 2.4.6+
-- PostgreSQL 14.9+
+- PostgreSQL 16.1+
 - MySQL 5.6+ (NOT MANDATORY, only for publication).
 
 ### 4.2. Libraries required for Dédalo
