@@ -66,7 +66,7 @@ render_search_component_portal.prototype.search = async function(options) {
 		const wrapper = ui.component.build_wrapper_search(self, {
 			content_data : content_data
 		})
-		wrapper.classList.add('portal', 'view_line')
+		wrapper.classList.add('portal')
 		// set pointers
 		wrapper.content_data = content_data
 
