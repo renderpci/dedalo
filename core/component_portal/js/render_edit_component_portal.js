@@ -5,8 +5,8 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
-	import {get_instance, get_all_instances} from '../../common/js/instances.js'
+	// import {event_manager} from '../../common/js/event_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
 	// import {create_source} from '../../common/js/common.js'
@@ -514,7 +514,7 @@ export const render_column_remove = function(options) {
 					class_name		: 'footer content'
 				})
 
-			// button_unlink_and_delete
+			// button_unlink_and_delete (Deletes real target record)
 				const display_delete_record = options.caller.view!=='indexation'
 				if (display_delete_record) {
 					const button_unlink_and_delete = ui.create_dom_element({
@@ -523,7 +523,7 @@ export const render_column_remove = function(options) {
 						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
 						parent			: footer
 					})
-					button_unlink_and_delete.addEventListener('click', async function(e) {
+					const fn_click_unlink_and_delete = async function(e) {
 						e.stopPropagation()
 
 						// stop if the user don't confirm
@@ -533,34 +533,36 @@ export const render_column_remove = function(options) {
 
 						footer.classList.add('loading')
 
+						// delete the record and pointers to it
 						await self.delete_linked_record({
 							section_tipo	: section_tipo,
 							section_id		: section_id
 						})
 
-						self.unlink_record({
-							paginated_key	: paginated_key,
-							row_key			: row_key,
-							section_id		: section_id
-						})
-						.then(modal.on_close)
-
-						self.delete_dataframe_record({
+						// delete_dataframe_record. if it is not dataframe it will be ignored
+						await self.delete_dataframe_record({
 							section_id : section_id
 						})
 
+						// refresh the component. Don't wait here
+						self.refresh()
+
+						// close modal
+						modal.close()
+
 						footer.classList.remove('loading')
-					})
+					}
+					button_unlink_and_delete.addEventListener('click', fn_click_unlink_and_delete)
 				}
 
-			// button_unlink_record
+			// button_unlink_record (Only delete the locator)
 				const button_unlink_record = ui.create_dom_element({
 					element_type	: 'button',
 					class_name 		: 'warning remove',
 					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
 					parent			: footer
 				})
-				button_unlink_record.addEventListener('click', function(e){
+				const fn_click_unlink_record = async function(e){
 					e.stopPropagation()
 
 					// stop if the user don't confirm
@@ -570,19 +572,27 @@ export const render_column_remove = function(options) {
 
 					footer.classList.add('loading')
 
-					self.unlink_record({
+					// deletes the locator from component data
+					await self.unlink_record({
 						paginated_key	: paginated_key,
 						row_key			: row_key,
 						section_id		: section_id
 					})
-					.then(modal.on_close)
 
-					self.delete_dataframe_record({
+					// delete_dataframe_record. if it is not dataframe it will be ignored
+					await self.delete_dataframe_record({
 						section_id : section_id
 					})
 
+					// refresh the component. Don't wait here
+					self.refresh()
+
+					// close modal
+					modal.close()
+
 					footer.classList.remove('loading')
-				})
+				}
+				button_unlink_record.addEventListener('click', fn_click_unlink_record)
 
 			// modal
 				const modal = ui.attach_to_modal({
@@ -591,12 +601,10 @@ export const render_column_remove = function(options) {
 					footer	: footer,
 					size	: 'small' // string size big|normal
 				})
-				// when the modal will be ready in dom fire the function to attack the event
-				when_in_dom(modal, focus_the_button)
 				// set the default button to be fired when the modal is active
 				// when the user press the Enter key in the keyboard
 				// the unlink option will be fired
-				function focus_the_button() {
+				const focus_the_button = function() {
 					// set the focus to the button_unlink
 					setTimeout(function(){
 						button_unlink_record.focus()
@@ -608,6 +616,8 @@ export const render_column_remove = function(options) {
 						}
 					})
 				}
+				// when the modal will be ready in DOM fire the function to attack the event
+				when_in_dom(modal, focus_the_button)
 
 			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 				const key = parseInt(row_key)
@@ -642,7 +652,6 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool		= self.caller && self.caller.type==='tool'
 		const target_section		= self.target_section || []
 		const target_section_lenght	= target_section.length
 			  // sort section by label ascendant
