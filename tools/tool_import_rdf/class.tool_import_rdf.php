@@ -114,7 +114,7 @@ class tool_import_rdf extends tool_common {
 
 		// properties
 			$RecordObj_dd = new RecordObj_dd($ontology_tipo);
-			$properties = $RecordObj_dd->get_properties(true);
+			$properties = $RecordObj_dd->get_properties();
 
 		// namespace
 			$name_space = $properties->xmlns;
@@ -150,9 +150,9 @@ class tool_import_rdf extends tool_common {
 				// $rdf_types = $rdf_graph->toRdfPhp();
 				$rdf_type = $rdf_graph->type($base_uri);
 
-				$ontology_chidren = RecordObj_dd::get_ar_childrens($ontology_tipo);
+				$ontology_children = RecordObj_dd::get_ar_childrens($ontology_tipo);
 
-				$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_chidren, $rdf_type, $rdf_graph, $base_uri, $locator);
+				$dd_obj = tool_import_rdf::get_class_map_to_dd($ontology_children, $rdf_type, $rdf_graph, $base_uri, $locator);
 
 				$ar_rdf_html =$rdf_graph->dump('html');
 
@@ -509,7 +509,7 @@ class tool_import_rdf extends tool_common {
 
 								// check if the current literal has a record inside Dédalo.
 									$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-									$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
+									$class_properties = $class_dd_tipo_RecordObj_dd->get_properties();
 
 									if(isset($class_properties->match)){
 										$literal_section_tipo_to_check = reset($ar_literal_section_tipo);
@@ -520,7 +520,6 @@ class tool_import_rdf extends tool_common {
 
 						tool_import_rdf::set_data_into_component($locator, $current_tipo, $procesed_data, $lang);
 					}
-
 
 					$field = new stdClass();
 						$field->tipo				= $current_tipo;
@@ -587,7 +586,7 @@ class tool_import_rdf extends tool_common {
 								}
 							// check if the current resource has a record inside Dédalo.
 								$class_dd_tipo_RecordObj_dd = new RecordObj_dd($class_dd_tipo[0]);
-								$class_properties = $class_dd_tipo_RecordObj_dd->get_properties(true);
+								$class_properties = $class_dd_tipo_RecordObj_dd->get_properties();
 
 								if(isset($class_properties->match)){
 									$section_tipo_to_check = reset($current_section_tipo);
@@ -900,20 +899,21 @@ class tool_import_rdf extends tool_common {
 
 
 	/**
-	* create_new_resource
+	* CREATE_NEW_RESOURCE
 	* create new section when the component has a section between values. as ref biblio or ref persons
 	* Search for received value in section. If it found, returns locator, else create the new value
 	* and returns the resultant locator
-	* @return object $locator
+	* @param object properties
+	* @return object|null $locator
 	*/
-	public static function create_new_resource(object $properties) {
+	public static function create_new_resource(object $properties) : ?object {
 
-		$locator		= $properties->locator;
-		$target_ddo		= $properties->target_ddo;
-		$component_tipo	= $properties->current_tipo;
-		$path			= $properties->path;
-		$value			= $properties->value;
-
+		// properties
+			$locator		= $properties->locator;
+			$target_ddo		= $properties->target_ddo;
+			$component_tipo	= $properties->current_tipo;
+			$path			= $properties->path;
+			$value			= $properties->value;
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
 		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
@@ -956,7 +956,7 @@ class tool_import_rdf extends tool_common {
 		}
 
 		$RecordObj_dd	= new RecordObj_dd($component_tipo);
-		$translatable 	= $RecordObj_dd->get_traducible();
+		$translatable	= $RecordObj_dd->get_traducible();
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
 		$lang			=  ($translatable==='no')
 			? DEDALO_DATA_NOLAN
@@ -974,7 +974,7 @@ class tool_import_rdf extends tool_common {
 		$data = $component->get_dato();
 
 		// no found. Create a new empty record
-		$section	= section::get_instance(null, $target_ddo->section_tipo);
+		$section = section::get_instance(null, $target_ddo->section_tipo);
 		$section->Save();
 		$section_id	= $section->get_section_id();
 
@@ -989,9 +989,10 @@ class tool_import_rdf extends tool_common {
 		$component->set_dato( $new_data );
 		$component->Save();
 
-		return $new_locator;
 
-		// debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
+		return $new_locator;
 	}//end create_new_resource
+
+
 
 }//end tool_import_rdf
