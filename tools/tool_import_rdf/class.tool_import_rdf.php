@@ -310,6 +310,7 @@ class tool_import_rdf extends tool_common {
 
 			if($children_dd_tipo) {
 				$current_resource = $rdf_graph->getResource($base_uri, $object_property_name);
+				// $all_resources = $rdf_graph->properties($base_uri);
 				if(!isset($current_resource)) {
 					continue;
 				}
@@ -342,11 +343,12 @@ class tool_import_rdf extends tool_common {
 					$procesed_data = $element_got;
 				}
 				if(isset($properties->process->date)){
-					$source = $properties->process->date;
-					$start = $source->start;
-					$end = $source->end;
+					$source				= $properties->process->date;
+					$start				= $source->start;
+					$end				= $source->end ?? null;
+
+					//start
 					$date_start_literal	= $rdf_graph->getLiteral($base_uri, $start);
-					$date_end_literal	= $rdf_graph->getLiteral($base_uri, $end);
 
 					$start_data = isset($date_start_literal)
 						? $date_start_literal->getValue()
