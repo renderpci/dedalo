@@ -4,7 +4,6 @@
 * Included from component_portal.less file
 */
 .component_portal.view_line, .portal.view_line {
-	// background-color: #d97450;
 	display: block;
 
 	// hide label when is inside a column (another portal)
@@ -39,16 +38,13 @@
 				}
 
 				&.column_section_id {
-					// margin-left: -1rem;
 					width: 1rem;
-					// margin-left: -1.5rem;
 				}
 
 				&.column_section_id, &.column_remove {
 					background-color: unset;
 					display: inline-block;
 					flex-grow: 0;
-					// margin-left: -1rem;
 
 					>.button_edit, >.button_remove {
 						width: 1rem;
@@ -69,18 +65,15 @@
 					}
 
 					>.button_edit {
-						// margin-left: 0.5rem;
 						margin-right: 0.25rem;
 					}
 
 					>.button_remove {
-						// margin-right: 0.33rem;
 						margin-left: 0.5rem;
 					}
 				}
 
 				.ddinfo_value {
-					// padding: 0.25rem;
 					padding: 0px;
 					display: inline-block;
 					display: contents;
@@ -144,21 +137,23 @@
 
 				&.view_text {
 					display: flex;
+					flex: 0 0 100%;
 					flex-wrap: nowrap;
 					justify-content: flex-start;
+
 					margin-left: 0rem;
-					padding-right: 0.5rem;
-					line-height: 1.2rem;
-					flex: 0 0 100%;
 					margin-bottom: 1px;
+					padding-right: 0.5rem;
+					padding-left: 0rem;
+
+					// var --default_height
+					--default_height: 1.1rem;
+
+					line-height: 1.2rem;
 
 					// @media screen and (max-width: @width_break_point_1) {
 					// 	flex-wrap: wrap;
 					// }
-
-					padding-left: 0px;
-
-					--default_height: 1.1rem;
 
 					.column { // , button
 						display: contents;
@@ -178,7 +173,6 @@
 						.icon {
 							margin: 0px;
 							margin-top: 0.15rem;
-							// margin-left: 0px;
 						}
 					}
 
@@ -191,7 +185,6 @@
 						margin-left: 0.25rem;
 						.icon {
 							margin-top: 0.2rem;
-							// margin-left: 0px;
 						}
 					}
 
@@ -202,9 +195,9 @@
 						padding-right: 0.33rem;
 						padding-left: 0.33rem;
 						margin-left: 0.25rem;
+
 						.icon {
 							margin-top: 0.2rem;
-							// margin-left: 0px;
 						}
 					}
 
