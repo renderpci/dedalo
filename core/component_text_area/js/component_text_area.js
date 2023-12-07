@@ -435,9 +435,10 @@ component_text_area.prototype.save_value = async function(key, value) {
 /**
 * SAVE_EDITOR
 * Order text_editor[key] to save (only if state is dirty)
+* @param int key = 0
 * @return bool result
 */
-component_text_area.prototype.save_editor = function(key=0) {
+component_text_area.prototype.save_editor = async function(key=0) {
 
 	const self = this
 
@@ -447,7 +448,7 @@ component_text_area.prototype.save_editor = function(key=0) {
 		return false
 	}
 
-	const result = text_editor.save() // return bool
+	const result = text_editor.save() // return async bool
 
 	return result
 }//end save_editor
