@@ -275,8 +275,37 @@ class tool_import_rdf extends tool_common {
 			// properties
 				$RecordObj_dd = new RecordObj_dd($ObjectProperty_tipo);
 				$properties = $RecordObj_dd->get_properties(true);
-				if(isset($properties->match)){
-					dump($properties, ' properties ++ '.to_string());
+			// When the data to import has a section between the source and resource (as ref biblio or ref person)
+			// it will have a ddo_map to indicate the path to the resource.
+				if(isset($properties->ddo_map)){
+
+					$ar_ddo = $properties->ddo_map;
+					// get the ddo has child of the current component.
+					$current_ddo = array_find($ar_ddo, function($item) use($current_tipo){
+						return $item->parent===$current_tipo;
+					});
+					// get the resource to use, normally the ref biblio or ref person has a resource in RDF
+					$resource = $rdf_graph->getResource($base_uri, $object_property_name);
+					if(!isset($resource)) {
+						continue;
+					}
+					$resource_uri = $resource->getUri();
+					// create new options
+					$resource_options = new stdClass();
+						$resource_options->current_tipo		= $current_tipo;
+						$resource_options->target_ddo		= $current_ddo;
+						$resource_options->path 			= $ar_ddo;
+						$resource_options->locator			= $locator;
+						$resource_options->value			= $resource_uri;
+					// search following the path defined in ontology to check if the resource is loaded and it's linked into the current section
+					// if not, create new one and get the new locator
+					$new_locator = tool_import_rdf::create_new_resource($resource_options);
+
+					// if is necessary set new data, go to next level with the data created and the new context (next section into the path)
+					// see the numisdata1138 as example.
+					if($new_locator!==null){
+						$ar_resources = tool_import_rdf::get_resource_to_dd_object($children_dd_tipo, $rdf_graph, $base_uri, [$current_ddo->section_tipo], $current_ddo->component_tipo, $new_locator);
+					}
 				}
 
 			if($children_dd_tipo) {
