@@ -63,7 +63,8 @@ render_edit_component_image.prototype.edit = async function(options) {
 
 /**
 * GET_QUALITY_SELECTOR
-* @return HTMLElement select
+* @param object self
+* @return HTMLElement quality_selector
 */
 export const get_quality_selector = (self) => {
 
@@ -127,4 +128,3 @@ export const get_quality_selector = (self) => {
 
 
 // @license-end
-

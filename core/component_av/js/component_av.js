@@ -196,7 +196,7 @@ component_av.prototype.get_data_tag = function() {
 * GET_CURRENT_TC
 * Get current timecode
 */
-component_av.prototype.get_current_tc = function(){
+component_av.prototype.get_current_tc = function() {
 
 	const self = this
 

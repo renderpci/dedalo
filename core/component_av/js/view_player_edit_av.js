@@ -61,7 +61,7 @@ view_player_edit_av.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA_PLAYER
-* @param instance self
+* @param object options
 * @return HTMLElement content_data
 */
 export const get_content_data_player = function(options) {
@@ -171,7 +171,7 @@ export const get_content_data_player = function(options) {
 * @param object self
 * @return HTMLElement av_control_buttons
 */
-const get_av_control_buttons = (self) =>{
+const get_av_control_buttons = (self) => {
 
 	const fragment = new DocumentFragment()
 
