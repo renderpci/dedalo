@@ -337,8 +337,7 @@
   z-index: 2;
 }
 .wrapper_tool.tool_numisdata_order_coins > .content_data .right_container .coins_container {
-  position: sticky;
-  top: 2em;
+  padding-top: 2em;
   background: white;
   z-index: 3;
 }
