@@ -356,13 +356,18 @@ class tool_import_rdf extends tool_common {
 						? $date_start_literal->getDatatype()
 						: null;
 
-					$end_data = isset($date_end_literal)
-						? $date_end_literal->getValue()
-						: null;
+					// end
+					if($end != null){
+						$date_end_literal	= $rdf_graph->getLiteral($base_uri, $end);
 
-					$end_format = isset($end_data)
-						? $date_end_literal->getDatatype()
-						: null;
+						$end_data = isset($date_end_literal)
+							? $date_end_literal->getValue()
+							: null;
+
+						$end_format = isset($end_data)
+							? $date_end_literal->getDatatype()
+							: null;
+					}
 
 					$match_format = $source ->format;
 
