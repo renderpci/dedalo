@@ -376,17 +376,26 @@ class tool_import_rdf extends tool_common {
 						: $end;
 
 					if(isset($start_data)){
+						$start_data_string = ($start_format==='xsd:date')
+							? $start_data->format('Y-m-d')
+							: $start_data;
+
 						$start_date = new dd_date();
 							$set_start = 'set_'.$match_format->$start_format;
-							$start_date->$set_start($start_data);
+							$start_date->$set_start($start_data_string);
 					}else{
 						$start_date= null;
 					}
 
 					if(isset($end_data)){
+
+						$end_data_string = ($end_format==='xsd:date')
+							? $end_data->format('Y-m-d')
+							: $end_data;
+
 						$end_date = new dd_date();
 							$set_end = 'set_'.$match_format->$end_format;
-							$end_date->$set_end($end_data);
+							$end_date->$set_end($end_data_string);
 					}else{
 						$end_date= null;
 					}
@@ -396,6 +405,7 @@ class tool_import_rdf extends tool_common {
 						if(isset($end_date)) { $date->end = $end_date; }
 
 					$procesed_data= [$date];
+
 				}
 				if(isset($properties->process->geo_tag)){
 					$source	= $properties->process->geo_tag;
