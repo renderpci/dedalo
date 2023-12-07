@@ -4,51 +4,33 @@
 * Included from component_portal.less file
 */
 .component_portal.view_default, .portal.view_default {
-	// background-color: #d97450;
 
 	&.edit {
 
 		>.list_body {
-			display: grid;
-			// grid-template-rows: 1.8rem auto;
-			grid-template-rows: 1.65rem auto;
-			min-height: var(--content_data_min_height);
-			// grid-template-rows: 2rem;
 			position: relative;
+			display: grid;
+			grid-template-rows: 1.65rem auto;
 			height: fit-content;
+			min-height: var(--content_data_min_height);
 
-			// overflow: prevent large portals breaking the layout
-			// overflow: auto;
-			.column_section_id{
+			.column_section_id {
 				padding: unset;
 			}
+
 			.button_edit {
 				position: relative;
-				// pointer-events: unset;
-
-				// section_id
-				.section_id {
-					// pointer-events: unset;
-
-					&:hover {
-						// opacity: 0.2;
-					}
-				}
-				// edit_icon
-				.icon.edit {
-					// pointer-events: unset;
-				}
+				margin-left: 0.5rem;
 			}
 
-			// // drag selectors
-			// 	.drag.icon {
-			// 	}
-
-			// 	.drop {
-			// 	}
-
-			// 	.drag_section_id {
-			// 	}
+			// portal inside, in view_text
+			.component_portal {
+				.section_record.view_text {
+					.button_edit {
+						margin-left: 0px;
+					}
+				}
+			}
 		}//end >.list_bod
 	}
 
