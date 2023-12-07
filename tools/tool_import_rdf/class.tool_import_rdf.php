@@ -853,4 +853,5 @@ class tool_import_rdf extends tool_common {
 
 
 
+	public static function create_new_resource(object $properties) {
 }//end tool_import_rdf
