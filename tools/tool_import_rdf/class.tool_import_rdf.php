@@ -853,5 +853,99 @@ class tool_import_rdf extends tool_common {
 
 
 
+	/**
+	* create_new_resource
+	* create new section when the component has a section between values. as ref biblio or ref persons
+	* Search for received value in section. If it found, returns locator, else create the new value
+	* and returns the resultant locator
+	* @return object $locator
+	*/
 	public static function create_new_resource(object $properties) {
+
+		$locator		= $properties->locator;
+		$target_ddo		= $properties->target_ddo;
+		$component_tipo	= $properties->current_tipo;
+		$path			= $properties->path;
+		$value			= $properties->value;
+
+
+		$RecordObj_dd	= new RecordObj_dd($component_tipo);
+		$lang			= ($RecordObj_dd->get_traducible()==='no') ? DEDALO_DATA_NOLAN : 'all';
+
+		// filter
+			$filter = '{
+				"$and": [
+					{
+						"q": "'.$value.'",
+						"q_split": false,
+						"unaccent": false,
+						"lang": "'.$lang.'",
+						"path": '.json_encode($path).'
+					}
+				]
+			}';
+
+		// sqo
+			$sqo = json_decode('{
+				"parsed": false,
+				"section_tipo": "'.$locator->section_tipo.'",
+				"limit": 2,
+				"offset": 0,
+				"type": "search_json_object",
+				"full_count": false,
+				"order": false,
+				"filter": '.$filter.',
+				"skip_projects_filter": true,
+				"select": []
+			}');
+
+		// search
+			$search			= search::get_instance($sqo);
+			$search_result	= $search->search();
+			$ar_records		= $search_result->ar_records;
+			$count			= count($ar_records);
+
+		if($count >= 1){
+			return null;
+		}
+
+		$RecordObj_dd	= new RecordObj_dd($component_tipo);
+		$translatable 	= $RecordObj_dd->get_traducible();
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo);
+		$lang			=  ($translatable==='no')
+			? DEDALO_DATA_NOLAN
+			: DEDALO_DATA_LANG;
+
+		// component
+		$component = component_common::get_instance(
+			$model,
+			$component_tipo,
+			$locator->section_id,
+			'list',
+			$lang,
+			$locator->section_tipo
+		);
+		$data = $component->get_dato();
+
+		// no found. Create a new empty record
+		$section	= section::get_instance(null, $target_ddo->section_tipo);
+		$section->Save();
+		$section_id	= $section->get_section_id();
+
+
+		$new_locator = new locator();
+			$new_locator->set_section_tipo($target_ddo->section_tipo);
+			$new_locator->set_section_id($section_id);
+			$new_locator->set_type(DEDALO_RELATION_TYPE_LINK);
+
+		// save new value
+		$new_data = array_merge($data, [$new_locator]);
+		$component->set_dato( $new_data );
+		$component->Save();
+
+		return $new_locator;
+
+		// debug_log(__METHOD__." Created new non existent record value: ".to_string($value), logger::ERROR);
+	}//end create_new_resource
+
 }//end tool_import_rdf
