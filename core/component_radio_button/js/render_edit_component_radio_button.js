@@ -13,6 +13,7 @@
 	import {view_rating_edit_radio_button} from './view_rating_edit_radio_button.js'
 
 
+
 /**
 * RENDER_EDIT_COMPONENT_RADIO_BUTTON
 * Manage the components logic and appearance in client side
@@ -36,7 +37,7 @@ render_edit_component_radio_button.prototype.edit = async function(options) {
 
 	// view
 		const view = self.context.view || 'default'
-	console.log("self.context.view:",self.context.view);
+
 	switch(view) {
 
 		case 'line':
@@ -118,6 +119,7 @@ export const get_content_data_edit = function(self) {
 					content_data[i] = input_element_node
 				}
 		}
+
 
 	return content_data
 }//end get_content_data_edit

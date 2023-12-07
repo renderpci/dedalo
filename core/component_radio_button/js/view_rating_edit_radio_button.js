@@ -54,6 +54,7 @@ view_rating_edit_radio_button.render = async function(self, options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+		
 
 	return wrapper
 }//end render
@@ -72,7 +73,6 @@ const get_content_data_edit = function(self) {
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
 
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
@@ -88,6 +88,7 @@ const get_content_data_edit = function(self) {
 			content_data	: content_data,
 			value			: self.data.value[0]
 		})
+		
 
 	return content_data
 }//end get_content_data_edit
@@ -101,7 +102,6 @@ const get_content_data_edit = function(self) {
 * 	datalist key
 * @param object datalist_item
 * @param object self
-*
 * @return HTMLElement content_value
 */
 const get_content_value = (i, datalist_item, self) => {
@@ -141,18 +141,19 @@ const get_content_value = (i, datalist_item, self) => {
 				refresh			: false
 			})
 
-			// update label checked status
-			console.log('value[0]:', value[0]);
+			// update label checked status			
 			update_status({
 				content_data	: self.node.content_data,
 				value			: self.data.value[0] || {}
 			})
 
 		})//end change event
+		
 		// permissions. Set disabled on low permissions
 		if (self.permissions<2) {
 			input.disabled = 'disabled'
 		}
+		
 
 	return content_value
 }//end get_content_value
@@ -167,7 +168,6 @@ const get_content_value = (i, datalist_item, self) => {
 * @param string current_value
 * 	label from datalist item that match current data value
 * @param object self
-*
 * @return HTMLElement content_value
 */
 const get_content_value_read = (i, current_value, self) => {
@@ -178,6 +178,7 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only',
 			inner_html		: current_value
 		})
+		
 
 	return content_value
 }//end get_content_value_read
@@ -208,7 +209,6 @@ const update_status = (options) => {
 	}
 }
 // end update_status
-
 
 
 
