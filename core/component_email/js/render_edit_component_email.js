@@ -85,6 +85,7 @@ export const get_content_data = function(self) {
 			// set the pointer
 			content_data[i] = input_element_node
 		}
+		
 
 	return content_data
 }//end get_content_data
@@ -203,6 +204,7 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only',
 			inner_html		: current_value
 		})
+		
 
 	return content_value
 }//end get_content_value_read
@@ -211,7 +213,7 @@ const get_content_value_read = (i, current_value, self) => {
 
 /**
 * GET_BUTTONS
-* @param object instance
+* @param object self
 * @return HTMLElement buttons_container
 */
 export const get_buttons = (self) => {

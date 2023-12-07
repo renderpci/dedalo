@@ -70,7 +70,7 @@ export const component_email = function(){
 /**
 * VERIFY_EMAIL
 * @param string email_value
-* @return bool status
+* @return bool valid_email
 */
 component_email.prototype.verify_email = function(email_value) {
 
@@ -109,6 +109,7 @@ component_email.prototype.verify_email = function(email_value) {
 
 /**
 * SEND E-MAIL
+* @return bool
 */
 component_email.prototype.send_email = function(value) {
 
@@ -116,8 +117,9 @@ component_email.prototype.send_email = function(value) {
 	if(email.length<1){
 		return false
 	}
-	//window.open('mailto:'+email, '_blank');
+	
 	window.location.href = 'mailto:' + email
+	
 
 	return true
 }//end send_email
@@ -126,6 +128,7 @@ component_email.prototype.send_email = function(value) {
 
 /**
 * GET_AR_EMAILS
+* @return array ar_emails
 */
 component_email.prototype.get_ar_emails = async function() {
 
@@ -187,15 +190,15 @@ component_email.prototype.get_ar_emails = async function() {
 			const ar_emails = []
 			// id the length is longer than the max_character proceed else add the string to the array.
 			if(emails.length > max_characters){
-				const truncate_postion = emails.indexOf(separator, max_characters);
+				const truncate_position = emails.indexOf(separator, max_characters);
 				// final strings could be a bit longer the max_characters and indexOf can not find the separator, in these cases the string will be correct.
-				if(truncate_postion === -1){
+				if(truncate_position === -1){
 					ar_emails.push(emails)
 				}else{
 					// create the part_one and the part_two of the emails breaking by the separator more close to the max_characters
 					// the part_one will be correct, but the part_two could be longer than the max_characters and need to be processed again.
-					const part_one = emails.slice(0, truncate_postion);
-					const part_two = emails.slice(truncate_postion + 1);
+					const part_one = emails.slice(0, truncate_position);
+					const part_two = emails.slice(truncate_position + 1);
 					ar_emails.push(part_one)
 					// check if the part_two is longer to be processed, else the part two will be the final string
 					if(part_two.length > max_characters){
@@ -205,7 +208,7 @@ component_email.prototype.get_ar_emails = async function() {
 					}else{
 						ar_emails.push(part_two)
 					}// end if(part_two.length > max_characters)
-				}//end if(truncate_postion === -1)
+				}//end if(truncate_position === -1)
 
 			}else{
 				ar_emails.push(emails)
@@ -217,6 +220,7 @@ component_email.prototype.get_ar_emails = async function() {
 		const ar_emails = is_windows
 			? get_ar_emails(full_emails)
 			: [full_emails]
+
 
 	return ar_emails
 }//end get_ar_emails

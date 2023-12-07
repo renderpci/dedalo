@@ -45,6 +45,7 @@ render_search_component_radio_button.prototype.search = async function(options) 
 		})
 		// set pointers
 		wrapper.content_data = content_data
+		
 
 	return wrapper
 }//end search
@@ -104,8 +105,7 @@ const get_content_data_search = function(self) {
 * 	datalist key
 * @param object datalist_item
 * @param object self
-*
-* @return DOM element content_value
+* @return HTMLElement content_value
 */
 const get_input_element = (i, datalist_item, self) => {
 
@@ -191,6 +191,7 @@ const get_input_element = (i, datalist_item, self) => {
 
 	return content_value
 }//end get_input_element
+
 
 
 // @license-end
