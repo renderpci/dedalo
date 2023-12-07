@@ -7,13 +7,13 @@ $updates = new stdClass();
 
 
 
-$v=602; #####################################################################################
+$v=604; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major			= 6;
 	$updates->$v->version_medium		= 0;
-	$updates->$v->version_minor			= 2;
+	$updates->$v->version_minor			= 4;
 
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
