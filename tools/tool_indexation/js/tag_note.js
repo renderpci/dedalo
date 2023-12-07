@@ -10,18 +10,25 @@
 
 
 
-import {tool_indexation} from './tool_indexation.js'
-import {get_instance} from '../../../core/common/js/instances.js'
-import {ui} from '../../../core/common/js/ui.js'
-import {JSON_parse_safely} from '../../../core/common/js/utils/index.js'
-import {data_manager} from '../../../core/common/js/data_manager.js'
-// import {event_manager} from '../../../core/common/js/event_manager.js'
+// imports
+	import {tool_indexation} from './tool_indexation.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
+	import {ui} from '../../../core/common/js/ui.js'
+	import {JSON_parse_safely} from '../../../core/common/js/utils/index.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
+	import {when_in_viewport} from '../../../core/common/js/events.js'
+	// import {event_manager} from '../../../core/common/js/event_manager.js'
+
+
+
+// tag notes vars
+	tool_indexation.title_instance
 
 
 
 /**
 * RENDER_INDEXATION_NOTE
-* If tag contains valid note data (expected locator pseudostringified) renders
+* If tag contains valid note data (expected locator pseudo-stringified) renders
 * components node. Else button new is rendered
 * @param object tag
 * @return HTMLElement|null tag_note_node
@@ -49,7 +56,7 @@ tool_indexation.prototype.render_indexation_note = async function(tag) {
 	// safe_data. replace non standard JSON quotes used to store data into dataset
 		const safe_data = data.replaceAll('\'', '"')
 
-	// parse stringinfied locator
+	// parse stringified locator
 		const locator = JSON_parse_safely(
 			safe_data,
 			'Error on parse indexation note'
@@ -95,64 +102,83 @@ tool_indexation.prototype.render_empty_note = function(tag) {
 		inner_html		: label,
 		parent			: empty_note_container
 	})
-	button_new_note.addEventListener('click', function(){
-		if ( confirm(get_label.sure || 'Sure?') ) {
+	button_new_note.addEventListener('click', function(e){
+		e.stopPropagation()
 
-			const section_tipo = self.DEDALO_INDEXATION_SECTION_TIPO
+		// user confirm
+			if ( !confirm(get_label.sure || 'Sure?') ) {
+				return false
+			}
 
-			new_tag_note(tag, section_tipo)  // return promise resolve: int|null
-			.then(function(new_section_id){
-			 	if (new_section_id) {
+		const section_tipo = self.DEDALO_INDEXATION_SECTION_TIPO
 
-					// Created new_section_id. Update tag data into component_text_area
+		// create a new tag record
+		new_tag_note(tag, section_tipo)  // return promise resolve: int|null
+		.then(async function(new_section_id) {
 
-					// new_data_obj
-						const new_data_obj = {
-							state : tag.state,
-							label : tag.label,
-							data : {
-								section_tipo	: section_tipo,
-								section_id		: new_section_id
-							}
-						}
-
-					// update_tag
-						self.transcription_component.update_tag({
-							type			: 'indexIn',
-							tag_id			: tag.tag_id,
-							new_data_obj	: new_data_obj,
-							key				: 0
-						})
-						.then(function(response){
-							console.log('update_tag response:', response);
-						})
-
-					// save component_text_area to prevent loose the conexion with the tag
-						const save = self.transcription_component.save_editor()
-						if (save===false) {
-							console.log('Error. transcription_component save fail');
-							alert("Failed transcription save");
-						}
-
-					// load tag_note info
-						// container. Get and clean
-						const container	= self.indexation_note
-						while (container.lastChild) {
-							container.removeChild(container.lastChild)
-						}
-						self.render_note({
-							locator : {
-								section_tipo	: section_tipo,
-								section_id		: new_section_id
-							}
-						})
-						.then(function(tag_note_node){
-							container.appendChild(tag_note_node)
-						})
+			// check received value
+				if(!new_section_id) {
+					console.error('Failed to create note. tag, section_tipo, new_section_id:', tag, section_tipo, new_section_id);
+					alert("Failed to create note");
+					return
 				}
-			})
-		}
-	})
+
+			// Created new_section_id. Update tag data into component_text_area
+
+			// new_data_obj
+				const new_data_obj = {
+					state : tag.state,
+					label : tag.label,
+					data : {
+						section_tipo	: section_tipo,
+						section_id		: new_section_id
+					}
+				}
+
+			// update_tag
+				self.transcription_component.update_tag({
+					type			: 'indexIn',
+					tag_id			: tag.tag_id,
+					new_data_obj	: new_data_obj,
+					key				: 0
+				})
+				.then(function(response){
+					console.log('update_tag response:', response);
+				})
+
+			// save component_text_area to prevent loosing the connection with the tag
+				const save = await self.transcription_component.save_editor()
+				if (save===false) {
+					console.log('Error. Failed to save transcription_component ');
+					alert('Failed transcription save');
+				}
+
+			// container. Get and clean
+				const container	= self.indexation_note
+				while (container.lastChild) {
+					container.removeChild(container.lastChild)
+			}
+
+			// render tag_note info into the container
+				self.render_note({
+					locator : {
+						section_tipo	: section_tipo,
+						section_id		: new_section_id
+					}
+				})
+				.then(function(tag_note_node){
+					container.appendChild(tag_note_node)
+
+					when_in_viewport(
+						self.title_instance.node,
+						() => {
+							// activate when in DOM
+							ui.component.activate(self.title_instance)
+						}
+					)
+				})
+		})
+	})//end event click
 
 
 	return empty_note_container
@@ -190,6 +216,8 @@ tool_indexation.prototype.render_note = async function(options) {
 		})
 		await title_instance.build(true)
 		const title_node = await title_instance.render()
+		// set instance
+		self.title_instance = title_instance
 		fragment.appendChild(title_node)
 
 	// description
@@ -251,6 +279,7 @@ const new_tag_note = async function(tag, section_tipo) {
 
 	return new_section_id
 }//end new_tag_note
+
 
 
 // @license-end
