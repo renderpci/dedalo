@@ -135,7 +135,7 @@ view_default_edit_portal.render = async function(self, options) {
 * Render all received section records and place it into a new div 'content_data'
 * @param object self
 * @param array ar_section_record
-* @return HTMLelement content_data
+* @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
 
@@ -269,7 +269,7 @@ const rebuild_columns_map = async function(self) {
 		}
 
 	// button_remove
-		if ( self.context.properties.source?.mode!=='external' && self.permissions>1) {
+		if (self.context.properties.source?.mode!=='external' && self.permissions>1) {
 			columns_map.push({
 				id			: 'remove',
 				label		: '', // get_label.delete || 'Delete',

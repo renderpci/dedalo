@@ -143,7 +143,7 @@ const render_content_data = async function(self, ar_section_record) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -197,7 +197,7 @@ const rebuild_columns_map = async function(self) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* Render column_remov node
+* Render column_remove node
 * Shared across views
 * @param object options
 * @return HTMLElement button_remove

@@ -31,6 +31,7 @@ export const view_tree_edit_portal = function() {
 * Manages the component's logic and appearance in client side
 * @param object self
 * @param object options
+* @return HTMLElement wrapper
 */
 view_tree_edit_portal.render = async function(self, options) {
 
@@ -63,7 +64,7 @@ view_tree_edit_portal.render = async function(self, options) {
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
 			content_data	: content_data,
-			// label			: null,
+			// label		: null,
 			buttons			: buttons,
 			add_styles		: ['portal','view_line'] // added to the wrapper before view style
 		})
@@ -101,8 +102,8 @@ view_tree_edit_portal.render = async function(self, options) {
 export const add_events = function(self, wrapper) {
 
 	// click delegated
-		wrapper.addEventListener('click', fn_warpper_click)
-		function fn_warpper_click(e){
+		wrapper.addEventListener('click', fn_wrapper_click)
+		function fn_wrapper_click(e){
 			e.stopPropagation() // Prevent to activate autocomplete behind
 
 			// remove row
@@ -154,7 +155,7 @@ export const add_events = function(self, wrapper) {
 					return true
 				}//end if(e.target.matches('.button.remove'))
 
-		}//end fn_warpper_click
+		}//end fn_wrapper_click
 
 
 	return true
@@ -214,9 +215,9 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will processed by section_records
 * @param object self
-* @return obj columns_map
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -261,7 +262,7 @@ const get_buttons = (self) => {
 	const mode					= self.mode
 	// const show				= self.rqo.show
 	const target_section		= self.target_section
-	const target_section_lenght	= target_section.length
+	const target_section_length	= target_section.length
 		  // sort section by label ascendant
 		  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
@@ -309,13 +310,13 @@ const get_buttons = (self) => {
 					// select_section
 						const select_section = ui.create_dom_element({
 							element_type	: 'select',
-							class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : '')
+							class_name		: 'select_section' + (target_section_length===1 ? ' mono' : '')
 						})
 						select_section.addEventListener("change", function(){
 							iframe.src = iframe_url(this.value)
 						})
 						// options for select_section
-							for (let i = 0; i < target_section_lenght; i++) {
+							for (let i = 0; i < target_section_length; i++) {
 								const item = target_section[i]
 								ui.create_dom_element({
 									element_type	: 'option',
@@ -451,7 +452,8 @@ const get_buttons = (self) => {
 
 /**
 * RENDER_REFERENCES
-* @return HTMLElement fragment
+* @param array ar_references
+* @return DocumentFragment
 */
 const render_references = function(ar_references) {
 
@@ -500,7 +502,7 @@ const render_references = function(ar_references) {
 					inner_html		: reference.label,
 					parent			: li
 				})
-		}
+		}//end for (let i = 0; i < ref_length; i++)
 
 
 	return fragment

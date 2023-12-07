@@ -23,7 +23,8 @@ export const view_mini_portal = function() {
 
 /**
 * RENDER
-* Render node for use in list
+* Render node for use in this view
+* @param object self
 * @return HTMLElement wrapper
 */
 view_mini_portal.render = async function(self) {
@@ -47,9 +48,10 @@ view_mini_portal.render = async function(self) {
 			const child_item = await ar_section_record[i].render()
 			wrapper.appendChild(child_item)
 		}
+		
 
 	return wrapper
-}//end  mini
+}//end render
 
 
 
