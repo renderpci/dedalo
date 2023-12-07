@@ -46,7 +46,7 @@ export const events_init = function(){
 		const saving = event_manager.subscribe('save', fn_save)
 		function fn_save(result) {
 			if(SHOW_DEBUG===true) {
-				console.log('events_init save result:', result);;
+				console.log('events_init save result:', result)
 			}
 			// saved = true
 		}
