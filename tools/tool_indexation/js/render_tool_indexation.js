@@ -183,7 +183,7 @@ const get_content_data_edit = async function(self) {
 			// fix node
 			self.tag_info_container = tag_info_container
 
-			// tabs label Indexation
+			// tab_indexation
 				const tab_indexation = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'tab_label active',
@@ -201,7 +201,8 @@ const get_content_data_edit = async function(self) {
 						tab_info.classList.remove('active')
 					}
 				})
-			// tabs label Info
+
+			// tab_info
 				const tab_info = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'tab_label',

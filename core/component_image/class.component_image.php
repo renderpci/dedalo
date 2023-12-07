@@ -1901,6 +1901,13 @@ class component_image extends component_media_common {
 				.' source_file: ' . $source_file
 				, logger::ERROR
 			);
+
+			// response
+				$response->result			= $result;
+				$response->msg				= 'Unable locate source_file. File does not exists';
+				$response->command_response	= null;
+
+			return $response;
 		}
 
 

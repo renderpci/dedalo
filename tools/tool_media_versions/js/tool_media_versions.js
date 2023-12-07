@@ -354,7 +354,7 @@ tool_media_versions.prototype.build_version = async function(quality) {
 				}
 
 				if (response.result===false && response.msg) {
-					alert(response.msg);
+					alert('Error: ' + response.msg);
 				}
 
 				const result = response.result // array of objects

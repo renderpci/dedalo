@@ -117,7 +117,7 @@ const render_sync_data = function(self) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log('files_info_db:', files_info_db);
-			console.log('files_info_disk:', files_info_disk);;
+			console.log('files_info_disk:', files_info_disk);
 		}
 
 	// sync_data_wrapper
@@ -945,87 +945,90 @@ const get_line_build_version = function(ar_quality, self) {
 			const quality = ar_quality[i]
 
 			// file_info
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
+				const file_info_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
+					parent			: fragment
+				})
 
 			// exclude original quality button from list
 				if (quality==='original') {
 					continue;
 				}
 
-			const button_build_version = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button gear',
-				parent			: file_info_node
-			})
-			button_build_version.addEventListener('click', fn_click)
-			async function fn_click() {
+			// button_build_version
+				const button_build_version = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button gear',
+					parent			: file_info_node
+				})
+				const fn_click = async function (e) {
+					e.stopPropagation()
 
-				self.node.classList.add('loading')
+					self.node.classList.add('loading')
 
-				// exec build_version
-				const result = await self.build_version(quality)
-				if (result===true) {
+					// exec build_version
+					const result = await self.build_version(quality)
+					if (result===true) {
 
-					// building
-					button_build_version.remove()
+						// building
+						button_build_version.remove()
 
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'blink',
-						inner_html		: get_label.procesing || 'Processing',
-						parent			: file_info_node
-					})
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'blink',
+							inner_html		: get_label.procesing || 'Processing',
+							parent			: file_info_node
+						})
 
-					switch (self.main_element.model) {
-						case 'component_av':
-							async function check_file() {
+						switch (self.main_element.model) {
 
-								if (self.timer) {
-									clearTimeout(self.timer);
+							case 'component_av': {
+								const check_file = async function() {
+
+									if (self.timer) {
+										clearTimeout(self.timer);
+									}
+
+									const files_info	= await self.get_files_info()
+									const found			= files_info.find(el => el.quality===quality)
+									if (found && found.file_exist===true) {
+										// processing_label.remove()
+										// button_build_version.classList.remove('hide')
+										self.main_element_quality = quality
+
+										// force save component to update dato files_info
+										// Note that action 'force_save' do not save data really and do not need more
+										// properties, is only to allow API exec component save transparently
+											await self.main_element.save([{
+												action : 'force_save'
+											}])
+
+										self.refresh({
+											build_autoload : false
+										})
+									}else{
+										// check again after 5 sec
+										self.timer = setTimeout(async function(){
+											check_file()
+										}, 2000)
+									}
 								}
-
-								const files_info	= await self.get_files_info()
-								const found			= files_info.find(el => el.quality===quality)
-								if (found && found.file_exist===true) {
-									// processing_label.remove()
-									// button_build_version.classList.remove('hide')
-									self.main_element_quality = quality
-
-									// force save component to update dato files_info
-									// Note that action 'force_save' do not save data really and do not need more
-									// properties, is only to allow API exec component save transparently
-										await self.main_element.save([{
-											action : 'force_save'
-										}])
-
+								check_file()
+								break;
+							}
+							default:
+								setTimeout(async function(){
 									self.refresh({
 										build_autoload : false
 									})
-								}else{
-									// check again after 5 sec
-									self.timer = setTimeout(async function(){
-										check_file()
-									}, 2000)
-								}
-							}
-							check_file()
-							break;
-
-						default:
-							setTimeout(async function(){
-								self.refresh({
-									build_autoload : false
-								})
-							}, 1)
-							break;
+								}, 1)
+								break;
+						}
 					}
+					self.node.classList.remove('loading')
 				}
-				self.node.classList.remove('loading')
-			}
+				button_build_version.addEventListener('click', fn_click)
 		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
