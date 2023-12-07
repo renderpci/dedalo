@@ -94,7 +94,6 @@ view_default_list_pdf.render = async function(self, options) {
 		})
 
 
-
 	return wrapper
 }//end render
 

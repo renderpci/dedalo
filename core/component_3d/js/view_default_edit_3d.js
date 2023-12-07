@@ -322,7 +322,8 @@ const get_content_value_read = (i, current_value, self) => {
 /**
 * GET_QUALITY_SELECTOR
 * @param object content_value
-* @return HTMLElement select
+* @param object self
+* @return HTMLElement quality_selector
 */
 const get_quality_selector = (content_value, self) => {
 

@@ -27,6 +27,8 @@ export const view_viewer_pdf = function() {
 /**
 * RENDER
 * Render node to be used by in current view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_viewer_pdf.render = async function(self, options) {
@@ -35,7 +37,7 @@ view_viewer_pdf.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data_edit(self)
+		const content_data = get_content_data_edit(self)
 		if (render_level==='content') {
 			return content_data
 		}
