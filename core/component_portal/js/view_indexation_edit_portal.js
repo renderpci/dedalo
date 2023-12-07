@@ -196,7 +196,7 @@ const get_content_data = async function(self, ar_section_record) {
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -418,7 +418,7 @@ const render_tag_column = function(options) {
 					}else{
 						console.error('Unable to locate component into instances. id_base:', id_base);
 					}
-			})
+			})//end event click
 		}
 
 

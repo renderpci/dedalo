@@ -458,7 +458,7 @@ export const render_column_component_info = function(options) {
 
 /**
 * RENDER_COLUMN_REMOVE
-* Render column_remov node
+* Render column_remove node
 * Shared across views
 * @param object options
 * @return DocumentFragment
@@ -653,7 +653,7 @@ export const get_buttons = (self) => {
 
 	// short vars
 		const target_section		= self.target_section || []
-		const target_section_lenght	= target_section.length
+		const target_section_length	= target_section.length
 			  // sort section by label ascendant
 			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
 
@@ -706,7 +706,7 @@ export const get_buttons = (self) => {
 				e.stopPropagation()
 
 				// target_section_tipo. to add section selector
-					const target_section_tipo = target_section_lenght > 1
+					const target_section_tipo = target_section_length > 1
 						? false
 						: target_section[0].tipo
 					if (!target_section_tipo) {
@@ -826,14 +826,14 @@ export const get_buttons = (self) => {
 						// select_section
 							const select_section = ui.create_dom_element({
 								element_type	: 'select',
-								class_name		: 'select_section' + (target_section_lenght===1 ? ' mono' : ''),
+								class_name		: 'select_section' + (target_section_length===1 ? ' mono' : ''),
 								parent			: header_custom
 							})
 							select_section.addEventListener('change', function(){
 								iframe.src = get_iframe_url(this.value)
 							})
 							// options for select_section
-								for (let i = 0; i < target_section_lenght; i++) {
+								for (let i = 0; i < target_section_length; i++) {
 									const item = target_section[i]
 									ui.create_dom_element({
 										element_type	: 'option',
@@ -1076,7 +1076,7 @@ export const render_references = function(ar_references) {
 
 /**
 * RENDER_DATAFRAME_TABLE
-* Render column_remov node
+* Render column_remove node
 * Shared across views
 * @param object options
 * @return DocumentFragment

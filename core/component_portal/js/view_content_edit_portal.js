@@ -129,14 +129,14 @@ const get_content_data = async function(self, ar_section_record) {
 				// const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
 
-					const section_record	= ar_section_record[i]
+					const section_record = ar_section_record[i]
 
-						const section_record_node = await section_record.render()
-						// set the pointer
-						content_data[i] = section_record_node
+					const section_record_node = await section_record.render()
+					// set the pointer
+					content_data[i] = section_record_node
 
 					// section record
-						fragment.appendChild(section_record_node)
+					fragment.appendChild(section_record_node)
 				}
 			}//end if (ar_section_record_length===0)
 
@@ -157,7 +157,7 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
+* Adding control columns to the columns_map that will processed by section_records
 * @param object self
 * @return array columns_map
 */

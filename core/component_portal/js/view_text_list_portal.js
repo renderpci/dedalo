@@ -83,6 +83,7 @@ view_text_list_portal.render = async function(self, options) {
 					wrapper.appendChild(node_records_separator)
 				}
 		}
+		
 
 	return wrapper
 }//end render

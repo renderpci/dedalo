@@ -46,8 +46,11 @@ export const view_mosaic_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's appearance in client side
+* @param object self
+* @param object options
 */
 view_mosaic_edit_portal.render = async function(self, options) {
+	
 	// options
 		const render_level 	= options.render_level || 'full'
 
@@ -229,7 +232,6 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		})
 
 
-
 	return wrapper
 }//end render
 
@@ -238,6 +240,8 @@ view_mosaic_edit_portal.render = async function(self, options) {
 /**
 * GET_CONTENT_DATA
 * Render all received section records and place it into a new div 'content_data'
+* @param object self
+* @param array ar_section_record
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record, hover_ar_section_record) {
@@ -328,14 +332,15 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 const drag_and_drop = function(options) {
 
 	// options
-		const drag_node			= options.section_record_node
-
-	drag_node.draggable = true
-	drag_node.classList.add('draggable')
-	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
-	drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
-	drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-	drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
+		const drag_node	= options.section_record_node
+	
+	// set properties/events
+		drag_node.draggable = true
+		drag_node.classList.add('draggable')
+		drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+		drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
+		drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
 }//end drag_and_drop
@@ -451,14 +456,13 @@ const render_alternative_table_view = async function(self, ar_section_record, al
 * @param instance self
 * @param array ar_section_record
 * @param DOM node alt_list_body
-*
-* @return DocumentFragment
+* @return HTMLElement section_record_node
 */
 const render_hover_view = async function(self, hover_section_record) {
 
-	// add  section_record rendered nodes
+	// add section_record rendered nodes
 	// section_record
-		const section_record_node	= await hover_section_record.render()
+		const section_record_node = await hover_section_record.render()
 			  section_record_node.classList.add('sr_mosaic_hover', 'display_none')
 
 	// button alt view (table)
@@ -479,6 +483,7 @@ const render_hover_view = async function(self, hover_section_record) {
 			const event_id = `mosaic_show_${hover_section_record.id_base}_${hover_section_record.caller.section_tipo}_${hover_section_record.caller.section_id}`
 			event_manager.publish(event_id, this)
 		})
+		
 
 	return section_record_node
 }//end render_hover_view
@@ -487,8 +492,11 @@ const render_hover_view = async function(self, hover_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @return obj full_columns_map
+* Adding control columns to the columns_map that will processed by section_records
+* @param array base_columns_map
+* @param object self
+* @param bool view_mosaic
+* @return array full_columns_map
 */
 const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) {
 
@@ -519,7 +527,7 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 				}
 
 			// button_remove
-				if( self.context.properties.source?.mode !=='external' && self.permissions>1) {
+				if(self.context.properties.source?.mode !=='external' && self.permissions>1) {
 					full_columns_map.push({
 						id			: 'remove',
 						label		: '', // get_label.delete || 'Delete',

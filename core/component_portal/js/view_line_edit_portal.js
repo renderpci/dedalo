@@ -33,7 +33,7 @@ export const view_line_edit_portal = function() {
 /**
 * RENDER
 * Manages the component's logic and appearance in client side
-* @param component_portal instance self
+* @param object self
 * @param object options
 * @return promise
 * 	DOM node wrapper
@@ -113,8 +113,7 @@ view_line_edit_portal.render = async function(self, options) {
 					view	: change_view
 				})
 			}
-
-		})
+		})//end event dblclick
 
 
 	return wrapper
@@ -179,9 +178,9 @@ const get_content_data = async function(self, ar_section_record) {
 
 /**
 * REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recod
+* Adding control columns to the columns_map that will processed by section_record
 * @param object self
-* @return obj columns_map
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -292,7 +291,7 @@ view_line_edit_portal.render_column_id = function(options) {
 /**
 * RENDER_COLUMN_REMOVE
 * It is called by section_record to create the column remove with custom options
-* Render column_remov node
+* Render column_remove node
 * Shared across views
 * @param object options
 * @return HTMLElement button_remove
