@@ -792,13 +792,14 @@ class component_media_common extends component_common {
 		$extensions				= is_array($alternative_extensions)
 			? array_merge([$this->get_extension()], $alternative_extensions)
 			: [$this->get_extension()];
+		$unique_extensions		= array_unique($extensions);
 		$dato					= $this->get_dato();
 
 		// files check
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
-				foreach ($extensions as $extension) {
+				foreach ($unique_extensions as $extension) {
 
 					$quality_file_info = $this->get_quality_file_info($quality, $extension);
 
