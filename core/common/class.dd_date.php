@@ -683,6 +683,45 @@ class dd_date extends stdClass {
 
 
 
+
+	/**
+	* set_from_timestamp
+	* @param string $timestamp
+	* @return dd_date object
+	*/
+	public function set_from_timestamp( string $timestamp ) : bool {
+
+		$regex = "/^(-?[0-9]+)-?([0-9]+)?-?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?/";
+		preg_match($regex, $timestamp, $matches);
+
+		if(isset($matches[1])) {
+			$this->set_year( (int)$matches[1], true );
+		}
+
+		if(isset($matches[2])) {
+			$this->set_month( (int)$matches[2], true );
+		}
+
+		if(isset($matches[3])) {
+			$this->set_day( (int)$matches[3], true );
+		}
+
+		if(isset($matches[4])) {
+			$this->set_hour( (int)$matches[4], true );
+		}
+
+		if(isset($matches[5])) {
+			$this->set_minute( (int)$matches[5], true );
+		}
+
+		if(isset($matches[6])) {
+			$this->set_second( (int)$matches[6], true );
+		}
+
+		return true;
+	}//end set_from_timestamp
+
+
 	/**
 	* SET_DATE_FROM_INPUT_FIELD (!) NOT USED !
 	* @param string $search_field_value
