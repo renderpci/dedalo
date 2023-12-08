@@ -160,10 +160,6 @@ class RecordObj_matrix extends RecordDataBoundObject {
 
 		$matrix_table = $this->matrix_table;
 
-		#unset($_SESSION['dedalo']['config']['calculate_ID']);
-		#$idu = $parent.'-'.$tipo.'-'.$lang.'-'.$this->matrix_table;
-		#if(isset($_SESSION['dedalo']['config']['calculate_ID'][$idu])) return $_SESSION['dedalo']['config']['calculate_ID'][$idu];
-
 		$arguments = array();
 
 		# PARENT (optional)

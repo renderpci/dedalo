@@ -691,8 +691,6 @@ class ts_object {
 
 		// Cache control (session)
 			$cache_uid = $locator->section_tipo.'_'.$locator->section_id.'_'.$lang;
-			#if ($from_cache===true && isset($_SESSION['dedalo']['config']['term_by_locator'][$cache_uid])) {
-			#	return $_SESSION['dedalo']['config']['term_by_locator'][$cache_uid];
 			static $term_by_locator_data;
 			if ($from_cache===true && isset($term_by_locator_data[$cache_uid])) {
 				return $term_by_locator_data[$cache_uid];
@@ -765,7 +763,6 @@ class ts_object {
 			*/
 
 		// cache control
-			// $_SESSION['dedalo']['config']['term_by_locator'][$cache_uid] = $valor;
 			$term_by_locator_data[$cache_uid] = $valor;
 
 
