@@ -1826,6 +1826,8 @@ final class dd_core_api {
 								. ' sqo:' . to_string($sqo)
 								, logger::DEBUG
 							);
+							// close current session and set as read only to unlock thread
+							session_write_close();
 						}
 
 					// data_source. Used by time machine as 'tm' to force component to load data from different sources. data_source='tm'
@@ -1858,6 +1860,8 @@ final class dd_core_api {
 					// store sqo section
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
+							// close current session and set as read only to unlock thread
+							session_write_close();
 						}
 					break;
 
