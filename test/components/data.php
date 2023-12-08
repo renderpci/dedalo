@@ -23,6 +23,7 @@ function random_string($length = 128) {
 }
 
 
+
 function ar_random_string() {
 	$result = random_string(func_get_args());
 
@@ -34,6 +35,7 @@ function ar_random_string() {
 function random_number($length = 10000000) {
 	return rand(1, $length-1);
 }
+
 
 
 function ar_random_number() {
@@ -113,6 +115,7 @@ function custom_locator($arguments) {
 }
 
 
+
 function random_date() {
 	$day = random_number(30) ?: 1;
 	$month = random_number(12) ?: 1;
@@ -133,6 +136,7 @@ function random_date() {
 	];
 	return [$value];
 }
+
 
 
 function convert_date_to_seconds($dd_date, $mode) {
@@ -205,6 +209,7 @@ function convert_date_to_seconds($dd_date, $mode) {
 }
 
 
+
 function random_email() {
 	$result = '';
 	$length = 40;
@@ -266,6 +271,7 @@ function random_iri_data() {
 }
 
 
+
 function random_security_access() {
 	$result = (object)[
 		"tipo"			=> "oh25",
@@ -275,6 +281,7 @@ function random_security_access() {
 
 	return [$result];
 }
+
 
 
 function random_3d_data() {
@@ -322,6 +329,7 @@ function random_3d_data() {
 
 	return [$value_object];
 }
+
 
 
 function random_av_data() {
@@ -502,6 +510,7 @@ function random_pdf_data() {
 }
 
 
+
 function random_svg_data() {
 
 	$file_name = random_string(64) . '_' . random_number(99);
@@ -547,5 +556,3 @@ function random_svg_data() {
 
 	return [$value_object];
 }
-
-
