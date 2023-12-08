@@ -2318,9 +2318,9 @@ final class dd_core_api {
 		// page_globals
 			$page_globals = (function() {
 
+				$user_id			= get_user_id();
+				$username			= get_username();
 				$mode				= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-				$user_id			= $_SESSION['dedalo']['auth']['user_id'] ?? null;
-				$username			= $_SESSION['dedalo']['auth']['username'] ?? null;
 				$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
 				$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
 				$is_root			= $user_id==DEDALO_SUPERUSER;
