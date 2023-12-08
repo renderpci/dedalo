@@ -102,7 +102,7 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 */
 function get_user_id() : ?int {
 
-	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
+	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['user_id'])
 		? (int)$_SESSION['dedalo']['auth']['user_id']
 		: null;
 
