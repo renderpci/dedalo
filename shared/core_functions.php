@@ -112,6 +112,22 @@ function get_user_id() : ?int {
 
 
 /**
+* GET_USERNAME
+* Resolve current logged user username
+* This is the short version, like 'render'
+* @return int|null
+*/
+function get_username() : ?string {
+
+	$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['username'])
+		? $_SESSION['dedalo']['auth']['username']
+		: null;
+
+	return $username;
+}//end get_username
+
+
+
 /**
 * DEBUG_LOG
 * Print a php error log message
