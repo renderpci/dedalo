@@ -61,7 +61,7 @@ final class login_test extends TestCase {
 			$is_developer = (bool)security::is_developer($user_id);
 			$_SESSION['dedalo']['auth']['is_developer'] = $is_developer;
 
-		// session : If backup is ok, fix session data
+		// session : If backup is OK, fix session data
 			$_SESSION['dedalo']['auth']['user_id']			= $user_id;
 			$_SESSION['dedalo']['auth']['username']			= $username;
 			$_SESSION['dedalo']['auth']['full_username']	= $full_username;

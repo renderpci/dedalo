@@ -92,18 +92,6 @@ class component_security_access extends component_common {
 				// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
 					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
 
-				// cache from session
-					// if (isset($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG])) {
-					// 	if(SHOW_DEBUG===true) {
-					// 		$total = count($_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG]);
-					// 		debug_log(
-					// 			__METHOD__." Return already in session datalist ".$total,
-					// 			logger::DEBUG
-					// 		);
-					// 	}
-					// 	return $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG];
-					// }
-
 				// cache from file. (!) This file is generated in background on every user login
 					$contents = dd_cache::cache_from_file((object)[
 						'file_name' => $cache_file_name
@@ -203,7 +191,6 @@ class component_security_access extends component_common {
 
 		// cache session. Store in session for speed
 			if ($use_cache===true) {
-				// $_SESSION['dedalo']['component_security_access']['datalist'][DEDALO_APPLICATION_LANG] = $datalist;
 				// cache to file.
 				// (!) This file is already generated on user login, launching the process in background
 			}

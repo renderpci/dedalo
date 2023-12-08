@@ -369,6 +369,7 @@ abstract class diffusion  {
 	/**
 	* GET_DIFFUSION_SECTIONS_FROM_DIFFUSION_ELEMENT
 	* @param string $diffusion_element_tipo
+	* @param string $class_name
 	* @return array $ar_diffusion_sections
 	*/
 	public static function get_diffusion_sections_from_diffusion_element(string $diffusion_element_tipo, string $class_name) : array {
@@ -379,19 +380,13 @@ abstract class diffusion  {
 			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
 			// }
 
-		// if(SHOW_DEVELOPER!==true) {
-			// if( isset($_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo]) ) {
-			// 	return $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo];
-			// }
-		// }
-
 		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
 
 		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 
 		// cache
-			// $_SESSION['dedalo']['config']['ar_diffusion_sections'][$diffusion_element_tipo] = $ar_diffusion_sections;
 			// $diffusion_sections_from_diffusion_element[$diffusion_element_tipo] = $ar_diffusion_sections;
+
 
 		return $ar_diffusion_sections;
 	}//end get_diffusion_sections_from_diffusion_element

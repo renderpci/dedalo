@@ -35,7 +35,7 @@ class area_maintenance extends area_common {
 	* ITEM_MAKE_BACKUP
 	* @return object $item
 	*/
-	public function item_make_backup() {
+	public function item_make_backup() : object {
 
 		// short vars
 			$mysql_db			= (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
