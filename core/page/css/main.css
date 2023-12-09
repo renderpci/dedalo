@@ -12419,7 +12419,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .component_portal.view_default.edit > .list_body .button_edit,
 .portal.view_default.edit > .list_body .button_edit {
   position: relative;
-  margin-left: 0.5rem;
 }
 .component_portal.view_default.edit > .list_body .component_portal .section_record.view_text .button_edit,
 .portal.view_default.edit > .list_body .component_portal .section_record.view_text .button_edit {
@@ -13207,6 +13206,10 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   opacity: 0;
   width: 1.5rem;
   height: 1.5rem;
+  cursor: pointer;
+}
+.component_radio_button.view_rating > .content_data > .content_value input[type="radio"]:active {
+  opacity: 0.4;
 }
 .component_radio_button.search > .content_data > .q_operator {
   width: 3rem;

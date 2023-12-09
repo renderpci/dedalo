@@ -170,10 +170,9 @@
 
 // show_debug
 	// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
-	define('SHOW_DEBUG',
-		(isset($_SESSION['dedalo']['auth']['user_id']) && $_SESSION['dedalo']['auth']['user_id']==DEDALO_SUPERUSER)
-			? true
-			: false // default false
+	define('SHOW_DEBUG', (get_user_id()==DEDALO_SUPERUSER)
+		? true
+		: false // default false
 	);
 
 

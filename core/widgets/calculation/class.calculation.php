@@ -169,26 +169,23 @@ class calculation extends widget_common {
 					break;
 
 				case 'all':
-						foreach ($data->components as $current_component) {
-							$component_tipo	= $current_component->tipo;
-							$var_name		= $current_component->var_name;
-							$options		=  isset($current_component->options) ? $current_component->options : null;
-							$component		= new RecordObj_dd($component_tipo);
-							$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-							$lang			= ($component->get_traducible()==='no')
-								? DEDALO_DATA_NOLAN
-								: DEDALO_DATA_LANG;
 
-							$search_options = new StdClass;
-								$search_options->section_tipo	= $section_tipo;
-								$search_options->component_tipo	= $component_tipo;
+					foreach ($data->components as $current_component) {
+						$component_tipo	= $current_component->tipo;
+						$var_name		= $current_component->var_name;
+						$options		=  isset($current_component->options) ? $current_component->options : null;
+						$component		= new RecordObj_dd($component_tipo);
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$lang			= ($component->get_traducible()==='no')
+							? DEDALO_DATA_NOLAN
+							: DEDALO_DATA_LANG;
 
-							$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
-						}
+						$search_options = new StdClass;
+							$search_options->section_tipo	= $section_tipo;
+							$search_options->component_tipo	= $component_tipo;
 
-						# Store for speed
-						#$_SESSION['dedalo']['config']['sum_total'][$search_options_session_key] = $total;
-					#}
+						$data_resolved->{$var_name} = $this->get_sum_from_component_tipo($search_options);
+					}
 					break;
 
 				case 'search_session':
@@ -227,13 +224,13 @@ class calculation extends widget_common {
 				$section_id = $this->section_id;
 				foreach ($data->components as $current_component) {
 
-					$component_tipo = $current_component->tipo;
-					$var_name 		= $current_component->var_name;
-					$options 		= isset($current_component->options) ? $current_component->options : null;
+					$component_tipo	= $current_component->tipo;
+					$var_name		= $current_component->var_name;
+					$options		= isset($current_component->options) ? $current_component->options : null;
 
 					// Component (component_json) where is stored source data, a json search_query_object
 						$component			= new RecordObj_dd($component_tipo);
-						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
+						$model_name			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 						$lang				= ($component->get_traducible()==='no') ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
 						$current_component	= component_common::get_instance(
 							$model_name,
@@ -265,7 +262,6 @@ class calculation extends widget_common {
 		// true. set the value of true variable
 			switch (true) {
 				case isset($data->true) && isset($data->true->ar_locators):
-
 					// $ar_locators = json_decode( str_replace("'", '"', $data->true->ar_locators) );
 					//
 					// $options = new stdClass();
@@ -305,9 +301,9 @@ class calculation extends widget_common {
 					break;
 			}
 
-		//set the filter
+		// set the filter
 		// NEED TO BE DEFINED
-		#dump($data_resolved, ' data_resolved ++ '.to_string());
+
 
 		return $data_resolved;
 	}//end resolve_data
@@ -507,8 +503,6 @@ class calculation extends widget_common {
 
 			$search_query_object = clone $_SESSION['dedalo']['config']['search_options'][$current_section_tipo]->search_query_object;
 		}
-
-			#dump($search_query_object, ' search_query_object ++ '.to_string());
 
 		# Select
 		$select = [];

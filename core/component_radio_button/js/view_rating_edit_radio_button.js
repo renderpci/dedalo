@@ -54,7 +54,7 @@ view_rating_edit_radio_button.render = async function(self, options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-		
+
 
 	return wrapper
 }//end render
@@ -88,7 +88,7 @@ const get_content_data_edit = function(self) {
 			content_data	: content_data,
 			value			: self.data.value[0]
 		})
-		
+
 
 	return content_data
 }//end get_content_data_edit
@@ -107,7 +107,8 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, datalist_item, self) => {
 
 	// short vars
-		const value				= self.data.value || []
+		const data				= self.data || {}
+		const value				= data.value || []
 		const datalist_value	= datalist_item.value
 		const label				= datalist_item.label
 
@@ -141,19 +142,19 @@ const get_content_value = (i, datalist_item, self) => {
 				refresh			: false
 			})
 
-			// update label checked status			
+			// update label checked status
 			update_status({
 				content_data	: self.node.content_data,
 				value			: self.data.value[0] || {}
 			})
 
 		})//end change event
-		
+
 		// permissions. Set disabled on low permissions
 		if (self.permissions<2) {
 			input.disabled = 'disabled'
 		}
-		
+
 
 	return content_value
 }//end get_content_value
@@ -178,7 +179,7 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only',
 			inner_html		: current_value
 		})
-		
+
 
 	return content_value
 }//end get_content_value_read
@@ -193,14 +194,15 @@ const get_content_value_read = (i, current_value, self) => {
 *		content_data	: content_data, 	component nodes
 *		value			: value 			current value object
 * 	}
+* @return void
 */
 const update_status = (options) => {
 
-	const children		= options.content_data.childNodes
-	const value			= options.value
+	const children	= options.content_data.childNodes
+	const value		= options.value
 
  	for (const node of children) {
-		if (value.section_id >= node.section_id) {
+		if (value && value.section_id >= node.section_id) {
 			node.classList.add('rated')
 		}
 		else{
