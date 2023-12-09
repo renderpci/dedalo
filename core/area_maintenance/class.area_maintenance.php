@@ -35,7 +35,7 @@ class area_maintenance extends area_common {
 	* ITEM_MAKE_BACKUP
 	* @return object $item
 	*/
-	public function item_make_backup() {
+	public function item_make_backup() : object {
 
 		// short vars
 			$mysql_db			= (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
@@ -51,11 +51,12 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[
 					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
 					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
-					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. $_SESSION['dedalo']['auth']['user_id'] .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup',
+					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. get_user_id() .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup',
 					'backup_files'			=> array_slice($backup_files, 0, $max_files), // first 10 items
 					'mysql_db'				=> $mysql_db, // first 10 items
 					'mysql_backup_files'	=> array_slice($mysql_backup_files, 0, $max_files) // first 10 items
 				];
+
 
 		return $item;
 	}//end item_make_backup

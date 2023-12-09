@@ -1553,8 +1553,8 @@ abstract class backup {
 	public static function make_backup(object $options=new stdClass()) : object {
 
 		// options
-			$user_id				= $options->user_id ?? $_SESSION['dedalo']['auth']['user_id'];
-			$username				= $options->username ?? $_SESSION['dedalo']['auth']['username'];
+			$user_id				= $options->user_id ?? get_user_id();
+			$username				= $options->username ?? get_username();
 			$skip_backup_time_range	= $options->skip_backup_time_range ?? true;
 
 		// response

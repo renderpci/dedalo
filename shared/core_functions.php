@@ -102,7 +102,7 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 */
 function get_user_id() : ?int {
 
-	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
+	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['user_id'])
 		? (int)$_SESSION['dedalo']['auth']['user_id']
 		: null;
 
@@ -112,19 +112,36 @@ function get_user_id() : ?int {
 
 
 /**
+* GET_USERNAME
+* Resolve current logged user username
+* This is the short version, like 'render'
+* @return int|null
+*/
+function get_username() : ?string {
+
+	$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['username'])
+		? $_SESSION['dedalo']['auth']['username']
+		: null;
+
+	return $username;
+}//end get_username
+
+
+
+/**
 * DEBUG_LOG
 * Print a php error log message
 * @param string $info
 * @param int $level
-* @return $bool
+* @return void
 */
-function debug_log(string $info, int $level=logger::DEBUG) : bool {
+function debug_log(string $info, int $level=logger::DEBUG) : void {
 
 	// only debug mode and a minimum level generates messages
 	// see config file to check minimum log level
 	// Note that if SHOW_DEBUG is true, all messages will be printed to the log file (level will be ignored)
 		if(!defined('LOGGER_LEVEL') || ($level > LOGGER_LEVEL && SHOW_DEBUG===false)) {
-			return false;
+			return;
 		}
 
 	// level ref
@@ -135,8 +152,8 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 		// const ERROR		= 10;
 		// const CRITICAL	= 5;
 
-	if ($level<11) {
-		$colorFormats = array(
+	// colorFormats
+		$colorFormats = [
 			// styles
 			// italic and blink may not work depending of your terminal
 			'bold'			=> "\033[1m%s\033[0m",
@@ -164,38 +181,79 @@ function debug_log(string $info, int $level=logger::DEBUG) : bool {
 			'bg_magenta'	=> "\033[45m%s\033[0m",
 			'bg_cyan'		=> "\033[46m%s\033[0m",
 			'bg_white'		=> "\033[47m%s\033[0m"
-		);
+		];
 
-		// bt
-		$bt		= debug_backtrace();
-		$source	= $bt[0];
+	// level string
+		$level_string = logger::level_to_string($level);
 
-		$base_msg	= 'DEBUG_LOG ['.logger::level_to_string($level).']' . PHP_EOL
-			. ' ' . $info .' '. PHP_EOL
-			. ' [File]: ' . $source['file'].' '. PHP_EOL
-			. ' [Line]: ' . $source['line'].' ';
+	// msg building based on level
+	switch ($level) {
+		case logger::DEBUG:
+			$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			break;
 
-		$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
+		case logger::INFO:
+			$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			break;
 
-		// DEDALO_ERRORS ADD
-		$_ENV['DEDALO_LAST_ERROR'] = $info;
+		case logger::NOTICE:
+			$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			break;
 
-		// error log print
+		case logger::WARNING:
+			$msg = sprintf(
+				$colorFormats['cyan'],
+				'DEBUG_LOG ['.$level_string.'] '. $info
+			);
+			break;
+
+		case logger::ERROR:
+			// backtrace
+				$bt		= debug_backtrace();
+				$source	= $bt[0];
+
+			$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
+				. ' ' . $info .' '. PHP_EOL
+				. ' [File]: ' . $source['file'].' '. PHP_EOL
+				. ' [Line]: ' . $source['line'].' ';
+
+			$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
+
+			// DEDALO_ERRORS ADD
+			$_ENV['DEDALO_LAST_ERROR'] = $info;
+			break;
+
+		case logger::CRITICAL:
+			// backtrace
+				$bt		= debug_backtrace();
+				$source	= $bt[0];
+
+			$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
+				. ' ' . $info .' '. PHP_EOL
+				. ' [File]: ' . $source['file'].' '. PHP_EOL
+				. ' [Line]: ' . $source['line'].' ';
+
+			$msg = sprintf($colorFormats['bg_red'], $base_msg);
+
+			// DEDALO_ERRORS ADD
+			$_ENV['DEDALO_LAST_ERROR'] = $info;
+
+			// print full backtrace too
+			$additional_msg = print_r($bt, true);
+			break;
+
+		default:
+			$msg = 'DEBUG_LOG [undefined] '. $info;
+			break;
+	}//end switch ($level)
+
+	// error log print
 		error_log($msg);
 
-		// critical
-		if ($level<6) {
-			error_log( print_r($bt, true) );
+	// additional messages print
+		if (isset($additional_msg)) {
+			error_log($additional_msg);
 		}
-
-	}else{
-		$msg		= 'DEBUG_LOG ['.logger::level_to_string($level).'] '. $info;
-		// error log print
-		error_log($msg);
-	}
-
-
-	return true;
 }//end debug_log
 
 

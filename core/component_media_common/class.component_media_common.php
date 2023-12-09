@@ -1967,11 +1967,16 @@ class component_media_common extends component_common {
 					$dato = null;
 
 				}else{
-					// create a new dato from scratch
-					$dato_item = (object)[
-						'files_info' => $files_info
-					];
-					$dato = [$dato_item];
+
+					if (empty($dato)) {
+						// create a new dato from scratch
+						$dato_item = (object)[
+							'files_info' => $files_info
+						];
+						$dato = [$dato_item];
+					}else{
+						// Leave dato as is (used in test unit)
+					}
 				}
 			}
 

@@ -402,8 +402,11 @@ class security {
 				return false;
 			}
 
+		// logged user_id (from session)
+			$logged_user_id = get_user_id();
+
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+			if ( $user_id==$logged_user_id ) {
 
 				// get from session (set on user login)
 				$is_global_admin = isset($_SESSION['dedalo']['auth']['is_global_admin'])
@@ -457,8 +460,11 @@ class security {
 				return true;
 			}
 
+		// logged user_id (from session)
+			$logged_user_id = get_user_id();
+
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
-			if ( isset($_SESSION['dedalo']['auth']['user_id']) && $user_id==$_SESSION['dedalo']['auth']['user_id'] ) {
+			if ( $user_id==$logged_user_id ) {
 
 				// get from session value (set on user login)
 				$is_developer = isset($_SESSION['dedalo']['auth']['is_developer'])

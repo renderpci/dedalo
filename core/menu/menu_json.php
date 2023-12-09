@@ -49,7 +49,7 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->info_data		= $info_data;
 			$item->show_ontology	= security::is_developer($user_id); //  SHOW_DEVELOPER; // boolean from config file
-			$item->username			= $_SESSION['dedalo']['auth']['username'] ?? null;
+			$item->username			= get_username();
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)
