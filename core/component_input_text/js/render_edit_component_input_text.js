@@ -9,6 +9,7 @@
 	import {view_line_edit_input_text} from './view_line_edit_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
 	import {view_mini_input_text} from './view_mini_input_text.js'
+	import {view_colorpicker_edit_input_text} from './view_colorpicker_edit_input_text.js'
 
 
 
@@ -51,6 +52,10 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 		case 'line':
 			// same as default but without label
 			return view_line_edit_input_text.render(self, options)
+
+		case 'colorpicker':
+			// used as view color and open the color picker
+			return view_colorpicker_edit_input_text.render(self, options)
 
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value

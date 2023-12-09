@@ -11929,6 +11929,48 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   padding-left: 0.3rem;
 }
 /**
+* view_colorpicker_input_text
+*
+* (!) with suffix _mini like 'view_colorpicker_input_text'
+*
+* Included from component_input_text.less file
+*/
+.component_input_text.view_colorpicker > .content_data > .content_value {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+}
+.component_input_text.view_colorpicker > .content_data > .content_value > .input_value:focus {
+  padding-right: 0;
+}
+.component_input_text.view_colorpicker > .content_data > .content_value .color_read {
+  width: 3rem;
+  height: 1.5rem;
+  border-top-left-radius: 0.7rem;
+  border-bottom-left-radius: 0.7rem;
+  margin-right: 0.5rem;
+}
+.component_input_text.view_colorpicker > .content_data > .content_value .color_picker {
+  width: 3rem;
+  height: 2.5rem;
+  appearance: none;
+  border: none;
+  background-color: transparent;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+.component_input_text.view_colorpicker > .content_data > .content_value .color_picker::-webkit-color-swatch {
+  border: none;
+  border-top-left-radius: 0.7rem;
+  border-bottom-left-radius: 0.7rem;
+}
+.component_input_text.view_colorpicker > .content_data > .content_value .color_picker::-moz-color-swatch {
+  border: none;
+  border-top-left-radius: 1rem;
+  border-bottom-left-radius: 1rem;
+}
+/**
 * component_inverse
 *
 * Included from main.less file
