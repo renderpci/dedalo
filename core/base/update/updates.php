@@ -7,6 +7,45 @@ $updates = new stdClass();
 
 
 
+$v=605; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 5;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 4;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// Add new matrix table nexus main, to create relations between nodes
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_nexus_main
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE matrix_nexus_main_id_seq;
+				ALTER TABLE public.matrix_nexus_main ALTER COLUMN id SET DEFAULT nextval('matrix_nexus_main_id_seq'::regclass);
+			");
+		// Add new matrix table nexus, to create relations between nodes
+			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_nexus
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE matrix_nexus_id_seq;
+				ALTER TABLE public.matrix_nexus ALTER COLUMN id SET DEFAULT nextval('matrix_nexus_id_seq'::regclass);
+			");
+
+
+
 $v=604; #####################################################################################
 $updates->$v = new stdClass();
 
