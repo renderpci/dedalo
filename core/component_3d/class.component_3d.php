@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_3D
 *
@@ -270,8 +271,28 @@ class component_3d extends component_media_common {
 			$posterframe_url .= '?t=' .time();
 		}
 
+
 		return $posterframe_url;
 	}//end get_posterframe_url
+
+
+
+	/**
+	* GET_PREVIEW_URL
+	* Alias of get_posterframe_url
+	* Return posterframe url
+	* @return string $preview_url
+	*/
+	public function get_preview_url() : string {
+
+		$preview_url = $this->get_posterframe_url(
+			false, // bool test_file
+			false, // bool absolute
+			true // bool avoid_cache
+		);
+
+		return $preview_url;
+	}//end get_preview_url
 
 
 
@@ -297,15 +318,17 @@ class component_3d extends component_media_common {
 	* @param string|null $quality
 	* @param array|string $ar_target
 	* 	Optional array value with forced target destination path and file name
-	* @return string $command_response
+	* @return bool $command_response
 	* 	FFMPEG terminal command response
 	*/
-	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) {
+	public function create_posterframe($current_time, string $target_quality=null, array $ar_target=null) : bool {
 
 		debug_log(__METHOD__
 			. " Sorry. This method is not implemented yet " . PHP_EOL
 			, logger::ERROR
 		);
+
+		return false;
 	}//end create_posterframe
 
 
@@ -348,8 +371,7 @@ class component_3d extends component_media_common {
 	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Returns the full path of the original file if exists
-	* If a file with an extension other than DEDALO_IMAGE_EXTENSION is uploaded, it is converted to DEDALO_IMAGE_EXTENSION.
-	* The original files files are saved renamed but keeping the ending. This function is used to locate them by checking
+	* The original files are saved renamed but with the file ending preserved. This function is used to locate them by checking
 	* if there is more than one.
 	* @param string $quality
 	* @return string|null $result
@@ -451,12 +473,12 @@ class component_3d extends component_media_common {
 	*
 	* @param array $ar_quality=[]
 	* @param bool $remove_posterframe=true
-	* @return bool
+	* @return bool $result
 	*/
 	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
 
 		// files remove
-			parent::remove_component_media_files($ar_quality);
+			$result = parent::remove_component_media_files($ar_quality);
 
 		// posterframe remove (default is true)
 			if ($remove_posterframe===true) {
@@ -504,7 +526,7 @@ class component_3d extends component_media_common {
 			}//end if ($remove_posterframe===true)
 
 
-		return true;
+		return $result;
 	}//end remove_component_media_files
 
 
@@ -562,24 +584,6 @@ class component_3d extends component_media_common {
 
 
 	/**
-	* GET_PREVIEW_URL
-	* Return posterframe url
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = $this->get_posterframe_url(
-			false, // bool test_file
-			false, // bool absolute
-			true // bool avoid_cache
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
 	* PROCESS_UPLOADED_FILE
 	* TODO: modify this to transform input file into .glb
 	* Note that this is the last method called in a sequence started on upload file.
@@ -605,6 +609,20 @@ class component_3d extends component_media_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
+		// check vars
+			if (empty($file_data->original_file_name) ||
+				empty($file_data->full_file_path) ||
+				empty($file_data->full_file_name)
+			) {
+				debug_log(__METHOD__
+					. " Not enough file_data variables " . PHP_EOL
+					. ' file_data: ' . to_string($file_data)
+					, logger::ERROR
+				);
+				$response->msg .= 'Not enough file_data variables';
+				return $response;
+			}
+
 		// short vars
 			$original_file_name			= $file_data->original_file_name;	// like "my file85.glb"
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/3d/web/test175_test65_1.glb"
@@ -613,7 +631,7 @@ class component_3d extends component_media_common {
 
 		// debug
 			debug_log(__METHOD__
-				. " process_uploaded_file " . PHP_EOL
+				. " Processing file " . PHP_EOL
 				. ' original_file_name: ' . $original_file_name .PHP_EOL
 				. ' full_file_path: ' . $full_file_path
 				, logger::WARNING
