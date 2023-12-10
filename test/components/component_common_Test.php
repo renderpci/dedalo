@@ -1,18 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-	require_once 'data.php';
-	require_once 'elements.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -21,23 +13,22 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_USER_1_LOGIN
+	* TEST_USER_LOGIN
 	* @return void
 	*/
-	public function test_user_1_login() {
+	public function test_user_login() {
 
-		$this->assertTrue(
-			login::is_logged()===false ,
-			'expected login false'
-		);
+		$user_id = TEST_USER_ID; // Defined in boostrap
 
-		login_test::force_login(1);
+		if (login::is_logged()===false) {
+			login_test::force_login($user_id);
+		}
 
 		$this->assertTrue(
 			login::is_logged()===true ,
 			'expected login true'
 		);
-	}//end test_user_1_login
+	}//end test_user_login
 
 
 
@@ -1550,9 +1541,6 @@ final class component_common_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_component_json(): void {
-
-		// force status as logged to allow test
-			// login_test::force_login(DEDALO_SUPERUSER);
 
 		foreach (get_elements() as $element) {
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset

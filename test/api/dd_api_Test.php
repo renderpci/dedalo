@@ -112,6 +112,8 @@ final class dd_api_Test extends TestCase {
 
 		// login_Test::force_login('-1');
 
+		$user_id = 1; // DEDALO_SUPERUSER
+
 		// rqo start section
 			$rqo = (object)[
 				'options' => (object)[
@@ -131,7 +133,7 @@ final class dd_api_Test extends TestCase {
 				$this->assertTrue( $login_element->model==='login' );
 
 			// logged case
-				login_Test::force_login(DEDALO_SUPERUSER);
+				login_Test::force_login($user_id);
 
 				$response = dd_core_api::start($rqo);
 

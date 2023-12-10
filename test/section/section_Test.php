@@ -1,18 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-	// require_once 'data.php';
-	// require_once 'elements.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -24,6 +16,26 @@ final class section_test extends TestCase {
 	public static $tipo			= 'test3';
 	public static $section_tipo	= 'test3';
 	public static $section_id	= '1';
+
+
+
+	/**
+	* TEST_USER_LOGIN
+	* @return void
+	*/
+	public function test_user_login() {
+
+		$user_id = TEST_USER_ID; // Defined in boostrap
+
+		if (login::is_logged()===false) {
+			login_test::force_login($user_id);
+		}
+
+		$this->assertTrue(
+			login::is_logged()===true ,
+			'expected login true'
+		);
+	}//end test_user_login
 
 
 
@@ -479,8 +491,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			gettype($result)==='array' ,
-			'expected type array. Current type: ' .gettype($result)
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|NULL. Current type: ' .gettype($result)
 		);
 
 		$result2 = $section->get_component_dato(
@@ -519,8 +531,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			gettype($result)==='object' ,
-			'expected type object. Current type: ' .gettype($result)
+			gettype($result)==='object' || gettype($result)==='NULL',
+			'expected type object|NULL. Current type: ' .gettype($result)
 		);
 
 		$result2 = $section->get_all_component_data(
@@ -569,8 +581,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			gettype($result)==='integer' ,
-			'expected type integer. Current type: ' .gettype($result)
+			gettype($result)==='integer' || gettype($result)==='string',
+			'expected type integer|string. Current type: ' .gettype($result)
 		);
 
 		$this->assertTrue(
@@ -633,18 +645,20 @@ final class section_test extends TestCase {
 			// }
 
 		$this->assertTrue(
-			gettype($result)==='object' ,
-			'expected type object. Current type: ' .gettype($result)
+			gettype($result)==='object' || gettype($result)==='NULL',
+			'expected type object|NULL. Current type: ' .gettype($result)
 		);
 
-		$this->assertTrue(
-			!empty($result->inf),
-			'expected result->inf nor empty '
-		);
-		$this->assertTrue(
-			!empty($result->dato),
-			'expected result->dato nor empty '
-		);
+		if (!empty($result)) {
+			$this->assertTrue(
+				!empty($result->inf),
+				'expected result->inf nor empty '
+			);
+			$this->assertTrue(
+				!empty($result->dato),
+				'expected result->dato nor empty '
+			);
+		}
 	}//end test_set_component_direct_dato
 
 

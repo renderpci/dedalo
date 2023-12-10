@@ -1,18 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-	require_once 'data.php';
-	require_once 'elements.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -23,6 +15,66 @@ final class component_image_test extends TestCase {
 	public static $model		= 'component_image';
 	public static $tipo			= 'test99';
 	public static $section_tipo	= 'test3';
+
+
+
+	/**
+	* TEST_USER_LOGIN
+	* @return void
+	*/
+	public function test_user_login() {
+
+		$user_id = TEST_USER_ID; // Defined in boostrap
+
+		if (login::is_logged()===false) {
+			login_test::force_login($user_id);
+		}
+
+		$this->assertTrue(
+			login::is_logged()===true ,
+			'expected login true'
+		);
+	}//end test_user_login
+
+
+
+	/**
+	* TEST_get_ar_quality
+	* @return void
+	*/
+	public function test_get_ar_quality() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		$result = $component->get_ar_quality();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_AR_QUALITY,
+			'expected DEDALO_IMAGE_AR_QUALITY ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_ar_quality
+
 
 
 
@@ -435,45 +487,6 @@ final class component_image_test extends TestCase {
 				. $result
 		);
 	}//end test_get_thumb_quality
-
-
-
-	/**
-	* TEST_get_ar_quality
-	* @return void
-	*/
-	public function test_get_ar_quality() {
-
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
-
-		$result = $component->get_ar_quality();
-
-		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$this->assertTrue(
-			$result===DEDALO_IMAGE_AR_QUALITY,
-			'expected DEDALO_IMAGE_AR_QUALITY ' . PHP_EOL
-				. json_encode($result)
-		);
-	}//end test_get_ar_quality
 
 
 
