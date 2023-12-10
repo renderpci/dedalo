@@ -117,7 +117,7 @@ function custom_locator($arguments) {
 
 
 function random_date() {
-	$day = random_number(30) ?: 1;
+	$day = random_number(28) ?: 1;
 	$month = random_number(12) ?: 1;
 	$year = random_number(2022) ?: 1;
 	$time = convert_date_to_seconds(array(
