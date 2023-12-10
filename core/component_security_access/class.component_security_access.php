@@ -565,7 +565,7 @@ class component_security_access extends component_common {
 			// Fiber::suspend();
 			debug_log(__METHOD__
 				. " (2 end) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
-				. ' ))) finished calculation datalist ////////////////////////////////////////////////// '
+				. ' ))) finished calculation datalist /////////////////////////////////////// '
 				, logger::WARNING
 			);
 
