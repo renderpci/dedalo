@@ -195,6 +195,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		if ( !isset($_SESSION['dedalo']['auth']['user_id']) ) {
 			$msg = "Save matrix: valid 'userID' value is mandatory. No data is saved! ";
 			trigger_error($msg);
+			dump($_SESSION, ' $_SESSION[dedalo][auth] ++ '.to_string());
 			return false;
 		}
 

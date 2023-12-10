@@ -116,7 +116,12 @@ class login extends common {
 				}
 				// response
 				$response->msg = "Error: User does not exists or password is invalid!";
-				error_log("DEDALO LOGIN ERROR : Invalid user or password");
+				// error_log("DEDALO LOGIN ERROR : Invalid user or password");
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' username: ' . $username
+					, logger::WARNING
+				);
 				return $response;
 			}
 
@@ -142,7 +147,12 @@ class login extends common {
 				}
 				#exit("Error: User $username not exists !");
 				$response->msg = 'Error: User ambiguous';
-				error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
+				// error_log("DEDALO LOGIN ERROR : Invalid user or password. User ambiguous ($username)");
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' username: ' . $username
+					, logger::WARNING
+				);
 				return $response;
 			}
 
@@ -184,14 +194,26 @@ class login extends common {
 						sleep(2);
 					}
 					$response->msg = 'Error: Wrong password [1]';
-					error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
+					// error_log("DEDALO LOGIN ERROR : Wrong password [1] (".DEDALO_ENTITY.")");
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' username: ' . $username . PHP_EOL
+						. ' DEDALO_ENTITY: ' . DEDALO_ENTITY
+						, logger::WARNING
+					);
 					return $response;
 				}//end if( $password_encrypted!==$password_dato )
 
 			// password length check
 				if( empty($password_dato) || strlen($password_dato)<8 ) {
 					$response->msg = 'Error: Wrong password [2]';
-					error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
+					// error_log("DEDALO LOGIN ERROR : Wrong password [2] (".DEDALO_ENTITY.")");
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' username: ' . $username . PHP_EOL
+						. ' DEDALO_ENTITY: ' . DEDALO_ENTITY
+						, logger::WARNING
+					);
 					return $response;
 				}
 
@@ -220,7 +242,12 @@ class login extends common {
 					sleep(2);
 				}
 				$response->msg = 'Error: Account inactive or not defined [1]';
-				error_log("DEDALO LOGIN ERROR : Account inactive");
+				// error_log("DEDALO LOGIN ERROR : Account inactive");
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' username: ' . $username
+					, logger::WARNING
+				);
 				return $response;
 			}
 
@@ -273,7 +300,7 @@ class login extends common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end Login
 
 
