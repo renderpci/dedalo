@@ -3445,16 +3445,20 @@ abstract class component_common extends common {
     *	"key": null,
     *	"value": "rsc167"
     * }
+    * @param bool $fix_changed_data = true
+    * 	Used to discriminate import actions from API calls
 	* @return bool
 	*/
-	public function update_data_value(object $changed_data) : bool {
+	public function update_data_value(object $changed_data, $fix_changed_data=true) : bool {
 
 		$dato				= $this->get_dato() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
 
 		// fix changed_data
-			$this->changed_data = $changed_data;
+			if ($fix_changed_data) {
+				$this->changed_data = $changed_data;
+			}
 
 		switch ($changed_data->action) {
 
@@ -3468,7 +3472,6 @@ abstract class component_common extends common {
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
 					: $dato;
-
 				break;
 
 			case 'update':
@@ -3537,7 +3540,9 @@ abstract class component_common extends common {
 						$key = $changed_data->key;
 
 						// fix property 'to_remove' to help properly remove
+						if ($fix_changed_data) {
 							$this->changed_data->to_remove = $dato[$key];
+						}
 
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
@@ -3553,7 +3558,6 @@ abstract class component_common extends common {
 				$this->observable_dato = (get_called_class() === 'component_relation_related')
 					? $this->get_dato_with_references()
 					: $changed_data->value;
-
 				break;
 
 			// re-organize the whole component data based on target key given. Used by portals to sort rows
@@ -3618,7 +3622,6 @@ abstract class component_common extends common {
 						}
 
 						$new_dato[] = $current_value;
-
 					}
 
 				// new dato set
