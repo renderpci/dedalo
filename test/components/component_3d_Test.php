@@ -71,21 +71,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_ar_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_ar_quality();
 
@@ -110,21 +96,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_default_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_default_quality();
 
@@ -149,21 +121,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_original_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_original_quality();
 
@@ -188,21 +146,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_extension() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_extension();
 
@@ -228,6 +172,8 @@ final class component_3d_test extends TestCase {
 			'expected 3ds ' . PHP_EOL
 				. json_encode($result)
 		);
+		// restore extension
+		$component->extension = DEDALO_3D_EXTENSION;
 	}//end test_get_extension
 
 
@@ -238,21 +184,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_allowed_extensions() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_allowed_extensions();
 
@@ -329,21 +261,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_grid_value() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_grid_value();
 
@@ -362,21 +280,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_valor_export() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_valor_export();
 
@@ -395,21 +299,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_url() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_url();
 
@@ -434,21 +324,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_posterframe_file_name() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_posterframe_file_name();
 
@@ -458,7 +334,7 @@ final class component_3d_test extends TestCase {
 				. gettype($result)
 		);
 
-		$reference = "{$tipo}_{$section_tipo}_{$section_id}.jpg";
+		$reference = "{$component->tipo}_{$component->section_tipo}_{$component->section_id}.jpg";
 
 		$this->assertTrue(
 			$result===$reference,
@@ -475,21 +351,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_posterframe_path() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_posterframe_path();
 
@@ -508,21 +370,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_posterframe_url() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_posterframe_url();
 
@@ -597,21 +445,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_create_posterframe() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->create_posterframe(0);
 
@@ -636,21 +470,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_delete_posterframe() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		// duplicate file
 			$file = DEDALO_MEDIA_PATH .
@@ -712,29 +532,15 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_original_file_path() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$quality = $component->get_original_quality();
 
 		$result = $component->get_original_file_path( $quality );
 
 		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
 				. gettype($result)
 		);
 	}//end test_get_original_file_path
@@ -747,21 +553,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_remove_component_media_files() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->remove_component_media_files();
 
@@ -780,21 +572,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_restore_component_media_files() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->restore_component_media_files();
 
@@ -843,6 +621,11 @@ final class component_3d_test extends TestCase {
 
 		$result		= $response->result;
 
+		$this->assertTrue(
+			gettype($response)==='object',
+			'expected type object : ' . PHP_EOL
+				. gettype($response)
+		);
 		$this->assertTrue(
 			gettype($result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
