@@ -148,11 +148,14 @@ const render_sync_data = function(self) {
 			const label_string = !is_sync
 				? self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync'
 				: self.get_tool_label('show_data') || 'Show data'
-			ui.create_dom_element({
+			const label_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
 				inner_html		: label_string,
 				parent			: versions_container
+			})
+			label_node.addEventListener('click', (e)=> {
+				icon.click(e)
 			})
 
 
