@@ -5,7 +5,9 @@
 // require __DIR__ . '/autoload.php';
 
 // overwrite config SHOW_DEBUG
-define('SHOW_DEBUG', true);
+define('SHOW_DEBUG', false);
+// TEST_USER_ID
+define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 
 // config file
 	require_once dirname(dirname(__FILE__)) . '/config/config.php';
@@ -14,9 +16,6 @@ define('SHOW_DEBUG', true);
 	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
 		throw new Exception("Error. Only development servers can use this method", 1);
 	}
-
-// TEST_USER_ID
-	define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 
 // require files
 	require_once 'components/data.php';
