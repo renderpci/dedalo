@@ -59,8 +59,9 @@ render_edit_service_upload.prototype.edit = async function (options) {
 * @return HTMLElement content_data
 */
 export const get_content_data = function(self) {
-
-	const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment();
+	var ocr = 0;
+	var lg = "";
 
 	// form
 		const form = ui.create_dom_element({
@@ -88,8 +89,9 @@ export const get_content_data = function(self) {
 				return false
 			}
 
-			file_selected(self, file)
+			file_selected(self, file, ocr, lg)
 		})
+		input_file.accept = self.allowed_extensions.map((ext) => {return '.'+ext}).join(", ");
 
 	// filedrag (add node to form)
 		const filedrag = render_filedrag(self)
@@ -102,6 +104,64 @@ export const get_content_data = function(self) {
 			text_content	: '',
 			parent			: form
 		})
+
+
+	if(self.allowed_extensions.includes('pdf')) {
+		// checkbox_label
+			const checkbox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label',
+				inner_html		: '<label>OCR</label>',
+				parent			: form
+			})
+
+		// input checkbox
+			const checkbox_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				name			: 'checkbox_activo',
+			})
+
+			checkbox_label.prepend(checkbox_input)
+			
+			checkbox_input.addEventListener('click', function(e) {
+				if (checkbox_input.checked==true) {
+					ocr=1;			
+				}else{
+					ocr=0;
+				}
+			})
+
+		// combobox_label
+			const combobox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label',
+				inner_html		: '<label>Lenguaje</label>',
+				parent			: form
+			})
+
+		// input combobox
+			const combobox_input = ui.create_dom_element({
+				element_type	: 'select',
+				name			: 'combobox_activo'
+			})
+
+			combobox_label.prepend(combobox_input)
+
+		// input Languages (from dedalo config)
+			page_globals.dedalo_application_langs.forEach((lang) => {
+				var lang_option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: lang.value,
+					text_content	: lang.label,
+					parent			: combobox_input
+				});
+			});
+
+			combobox_input.addEventListener('click', function(e) {
+				lg = combobox_input.value;
+			})
+	}
 
 	// progress_bar_container
 		const progress_bar_container = render_progress_bar(self)
@@ -372,13 +432,15 @@ export const render_filedrag = function(self) {
 * @param object file
 * @return object response
 */
-export const file_selected = async function(self, file) {
+export const file_selected = async function(self, file, ocr, lg) {
 
 	self.filedrag.classList.add('loading_file')
 
 	// upload file to server
 		const response = await self.upload_file({
-			file : file
+			file : file,
+            ocr : ocr,
+			lg : lg
 		})
 
 	// show filedrag again

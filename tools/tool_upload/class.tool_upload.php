@@ -28,6 +28,8 @@ class tool_upload extends tool_common {
 
 		// options
 			$file_data		= $options->file_data;
+			$ocr			= $options->ocr;
+			$lg				= $options->lg;
 			$tipo			= $options->tipo ?? null;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id ?? null;
@@ -68,6 +70,39 @@ class tool_upload extends tool_common {
 							$section_tipo
 						);
 
+					// OCR Processing
+						if($ocr===1){
+							$tmp_file_location = 
+										// httpdocs route
+										dirname($_SERVER['DOCUMENT_ROOT']).
+										// Route to tmp file location using a substring of the thumbnail location in $file_data->thumbnail_url
+										substr($file_data->thumbnail_url,0,strpos($file_data->thumbnail_url,"thumbnail/")-strlen($file_data->thumbnail_url)).
+										// Name of the tmp file
+										$file_data->tmp_name;
+
+							switch($lg) {
+								case 'lg-spa':
+									$lang = 'spa';
+									break;
+								case 'lg-vlca':
+									$lang = 'cat';
+									break;
+								case 'lg-fra':
+									$lang = 'fra';
+									break;
+								case 'lg-ita':
+									$lang = 'ita';
+									break;
+								case 'lg-eng':
+								default:
+									$lang = 'eng';
+									break;
+							}
+							
+							shell_exec("ocrmypdf -l ".$lang." --force-ocr ".$tmp_file_location." ".$tmp_file_location);
+						}
+							
+						
 					// fix current component target quality (defines the destination directory for the file, like 'original')
 						$component->set_quality($quality);
 
