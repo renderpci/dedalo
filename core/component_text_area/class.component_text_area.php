@@ -2089,7 +2089,7 @@ class component_text_area extends component_common {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
 					. ' component_tipo: '. $this->tipo
-					, logger::ERROR
+					, logger::WARNING
 				);
 				return [];
 			}
