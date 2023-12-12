@@ -3399,6 +3399,42 @@ button.exclamation:before {
   -webkit-mask-position: center;
   mask-position: center;
 }
+button.graph {
+  --icon-path: url('../../themes/default/icons/graph.svg');
+}
+button.graph:before {
+  background-color: #3f3f3f;
+  content: ' ';
+  display: inline-block;
+  height: 1em;
+  margin-right: 0.25em;
+  opacity: 1;
+  vertical-align: baseline;
+  width: 1em;
+  -webkit-mask-image: var(--icon-path);
+  mask-image: var(--icon-path);
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
+@media screen and (max-width: 960px) {
+  button.graph:before {
+    margin-right: 0px;
+  }
+}
+.button.graph {
+  -webkit-mask-image: url('../../themes/default/icons/graph.svg');
+  mask-image: url('../../themes/default/icons/graph.svg');
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+}
 .contenteditable_buttons {
   display: flex;
   padding: 0px;
@@ -9906,6 +9942,54 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 }
 .section.list > .list_body > .content_data {
   width: 100%;
+}
+/**
+* view_graph_list_section
+*
+* (!) with suffix _mini like 'view_graph_list_section'
+*
+* Included from component_input_text.less file
+*/
+.section.view_graph .content_data {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  column-gap: 3rem;
+  align-items: start;
+}
+.section.view_graph .content_data .group_label {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+.section.view_graph .content_data .grouper_block {
+  display: grid;
+}
+.section.view_graph .content_data .grouper_block .group_content {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.section.view_graph .content_data .grouper_block .group_content .section_record.list {
+  display: inline-grid;
+  grid-template-columns: 2fr 1fr 1fr 3fr 3fr ;
+}
+.section.view_graph .content_data .grouper_block .group_content .column.column_section_id {
+  background-color: unset;
+  box-shadow: unset;
+  flex-direction: row;
+}
+.section.view_graph .content_data .grouper_block .group_content .column.column_section_id .button_edit,
+.section.view_graph .content_data .grouper_block .group_content .column.column_section_id .button_delete {
+  width: auto;
+  padding: 0;
+}
+.section.view_graph .content_data .grouper_block .group_content .column.column_section_id .button_delete {
+  margin-left: 0.6rem;
+  padding-right: 0.3rem;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+}
+.section.view_graph .content_data .grouper_block .button.graph {
+  background-color: #7092e0;
+  height: 100%;
 }
 /**
 * section_record
