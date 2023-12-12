@@ -39,10 +39,10 @@ final class component_image_test extends TestCase {
 
 
 	/**
-	* TEST_get_ar_quality
-	* @return void
+	* BUILD_COMPONENT_INSTANCE
+	* @return
 	*/
-	public function test_get_ar_quality() {
+	private function build_component_instance() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -59,6 +59,19 @@ final class component_image_test extends TestCase {
 			$lang,
 			$section_tipo
 		);
+
+		return $component;
+	}//end build_component_instance
+
+
+
+	/**
+	* TEST_get_ar_quality
+	* @return void
+	*/
+	public function test_get_ar_quality() {
+
+		$component = $this->build_component_instance();
 
 		$result = $component->get_ar_quality();
 
@@ -84,21 +97,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_dato() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_dato();
 			// dump($value, ' value ++ '.to_string());
@@ -171,21 +170,9 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_Save() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$section_id = 1;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->Save();
 
@@ -217,14 +204,7 @@ final class component_image_test extends TestCase {
 		$mode			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_id();
 
@@ -252,21 +232,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_url() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		// default
 			$result = $component->get_url(
@@ -349,6 +315,12 @@ final class component_image_test extends TestCase {
 			);
 
 		// default_add
+			$model			= self::$model;
+			$tipo			= self::$tipo;
+			$section_tipo	= self::$section_tipo;
+			$mode			= 'edit';
+			$lang			= DEDALO_DATA_NOLAN;
+
 			$component = component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -379,21 +351,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_external_source() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_external_source();
 
@@ -418,21 +376,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_default_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_default_quality();
 
@@ -457,21 +401,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_thumb_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_thumb_quality();
 
@@ -503,14 +433,7 @@ final class component_image_test extends TestCase {
 		$mode			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_target_filename();
 
@@ -537,21 +460,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_convert_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$original_quality	= $component->get_original_quality();
 		$source_file		= $component->get_media_filepath($original_quality);
@@ -586,21 +495,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_set_quality() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$target_quality	= '6MB';
 		$result			= $component->set_quality(
@@ -704,21 +599,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_generate_thumb() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->generate_thumb();
 
@@ -752,21 +633,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_thumb_url() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_thumb_url();
 
@@ -785,21 +652,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_thumb_path() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_thumb_path();
 
@@ -818,21 +671,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_get_image_print_dimensions() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$quality = $component->get_default_quality();
 
@@ -869,21 +708,7 @@ final class component_image_test extends TestCase {
 	*/
 	public function test_regenerate_component() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->regenerate_component();
 
