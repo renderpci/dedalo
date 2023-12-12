@@ -608,7 +608,7 @@ class section extends common {
 	* SET_COMPONENT_DIRECT_DATO
 	* Set literal value to component (path: dato->relations)
 	* @param object $component_obj
-	* @return object $fixed_component_dato
+	* @return object|null $fixed_component_dato
 	*  sample:
 	*  {
 	*	    "inf": "input_text [component_input_text]",

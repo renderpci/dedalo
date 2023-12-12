@@ -13899,7 +13899,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   pointer-events: unset !important;
 }
 .component_text_area.list {
-  max-height: 6.3rem;
   overflow: hidden;
 }
 .component_text_area.list img {

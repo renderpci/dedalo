@@ -1154,16 +1154,22 @@ class component_media_common extends component_common {
 							$file_name			= $this->get_name();
 							$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $current_extension;
 							if( !rename($media_path, $media_path_moved) ) {
-								trigger_error(" Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted");
+								debug_log(__METHOD__
+									. " Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted" . PHP_EOL
+									. ' media_path: ' . $media_path . PHP_EOL
+									. ' media_path_moved: ' . $media_path_moved
+									, logger::ERROR
+								);
 								return false;
 							}
 
-						debug_log(__METHOD__
-							. ' Moved file'. PHP_EOL
-							. ' media_path: ' . $media_path . PHP_EOL
-							. ' media_path_moved: ' . $media_path_moved
-							, logger::WARNING
-						);
+						// debug
+							debug_log(__METHOD__
+								. ' Moved file'. PHP_EOL
+								. ' media_path: ' . $media_path . PHP_EOL
+								. ' media_path_moved: ' . $media_path_moved
+								, logger::WARNING
+							);
 					}//end foreach ($ar_extensions as $current_extension)
 			}//end foreach ($ar_quality as $current_quality)
 
@@ -1596,6 +1602,21 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_TARGET_DIR
+	*  Alias of get_media_path_dir
+	* @param string|null $quality
+	* @return string $target_dir
+	*/
+	public function get_target_dir(string $quality) : string {
+
+		$target_dir = $this->get_media_path_dir($quality);
+
+		return $target_dir;
+	}//end get_target_dir
+
+
+
+	/**
 	* GET_MEDIA_URL_DIR
 	* 	Creates the relative URL path in current quality as
 	* 	'/dedalo/media/pd/standard'
@@ -1615,21 +1636,6 @@ class component_media_common extends component_common {
 
 		return $media_url_dir;
 	}//end get_media_url_dir
-
-
-
-
-	/**
-	* GET_TARGET_DIR
-	* @param string|null $quality
-	* @return string $target_dir
-	*/
-	public function get_target_dir(string $quality) : string {
-
-		$target_dir = $this->get_media_path_dir($quality);
-
-		return $target_dir;
-	}//end get_target_dir
 
 
 
@@ -1922,7 +1928,7 @@ class component_media_common extends component_common {
 	* updates the component dato. Does not save!
 	* @return bool
 	*/
-	protected function update_component_dato_files_info() {
+	protected function update_component_dato_files_info() : bool {
 
 		// get files info
 			// $files_info	= [];

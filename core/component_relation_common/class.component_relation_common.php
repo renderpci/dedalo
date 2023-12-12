@@ -2775,6 +2775,8 @@ class component_relation_common extends component_common {
 	/**
 	* CONFORM_IMPORT_DATA
 	* @param string $import_value
+	*  sample JSON stringified array of locators:
+	*  [{"section_tipo":"ts1","section_id":"273","from_component_tipo":"hierarchy36"}]
 	* @param string $column_name
 	* @return object $response
 	*/
@@ -2819,7 +2821,7 @@ class component_relation_common extends component_common {
 			if (is_string($value) || is_int($value)) {
 
 				// $target_section_tipo
-					if( empty($target_section_tipo)) {
+					if( empty($target_section_tipo) ) {
 
 						$ar_target_section_tipo = $this->get_ar_target_section_tipo();
 						if(count($ar_target_section_tipo)>1) {
@@ -2842,12 +2844,15 @@ class component_relation_common extends component_common {
 						$target_section_tipo = $ar_target_section_tipo[0] ?? null;
 					}
 
-				$ar_values = explode(',', $value);
+				$ar_values = explode(',', (string)$value);
 				foreach ($ar_values as $section_id) {
 					// old format (section_id)
 					// is int. Builds complete locator and set section_id from value
 					$locator = new locator();
-						$locator->set_type($type);
+						// ! type could be false (component_relation_parent)
+						if (!empty($type)) {
+							$locator->set_type($type);
+						}
 						$locator->set_section_tipo($target_section_tipo);
 						$locator->set_from_component_tipo($from_component_tipo);
 						$locator->set_section_id(trim($section_id));
@@ -2862,7 +2867,8 @@ class component_relation_common extends component_common {
 
 				// is full locator. Inject safe fixed properties to avoid errors
 					$locator = new locator($current_locator);
-						if (!property_exists($current_locator, 'type')) {
+						// ! type could be false (component_relation_parent)
+						if (!empty($type) && !property_exists($current_locator, 'type')) {
 							$locator->set_type($type);
 						}
 						if (!property_exists($current_locator, 'from_component_tipo')) {

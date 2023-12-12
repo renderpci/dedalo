@@ -1,16 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-		die();
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -99,7 +93,6 @@ final class login_test extends TestCase {
 				'LOG IN',
 				null
 			);
-
 	}//end force_login
 
 
@@ -138,28 +131,46 @@ final class login_test extends TestCase {
 	*/
 	public function test_login(): void {
 
+		$user_id = TEST_USER_ID; //Defined in boostrap
+
 		if (isset($_SESSION['dedalo']['auth'])) {
 
 			// already logged case
 
-			login_Test::logout(DEDALO_SUPERUSER);
+			login_Test::logout($user_id);
 			$this->assertTrue( !isset($_SESSION['dedalo']['auth']) );
 
 			// restore login status
-			login_Test::force_login(DEDALO_SUPERUSER);
+			login_Test::force_login($user_id);
 
 		}else{
 
 			// not logged case
 
-			login_Test::force_login(DEDALO_SUPERUSER);
+			login_Test::force_login($user_id);
 			$this->assertFalse( $_SESSION['dedalo']['auth']===null );
 
 
 			// restore login status
-			login_Test::logout(DEDALO_SUPERUSER);
+			login_Test::logout($user_id);
 		}
 	}//end test_login
+
+
+
+	/**
+	* test_re_login
+	* @return void
+	*/
+		// public function test_re_login() {
+
+		// 	self::force_login(DEDALO_SUPERUSER);
+
+		// 	$this->assertTrue(
+		// 		login::is_logged()===true ,
+		// 		'expected login true'
+		// 	);
+		// }//end test_re_login
 
 
 

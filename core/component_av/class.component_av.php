@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_AV
 *
@@ -275,6 +276,25 @@ class component_av extends component_media_common {
 
 
 	/**
+	* GET_PREVIEW_URL
+	* Return posterframe url
+	* Alias of get_posterframe_url
+	* @return string $preview_url
+	*/
+	public function get_preview_url() : string {
+
+		$preview_url = $this->get_posterframe_url(
+			false, // bool test_file
+			false, // bool absolute
+			true // bool avoid_cache
+		);
+
+		return $preview_url;
+	}//end get_preview_url
+
+
+
+	/**
 	* GET_THUMB_URL
 	* Unified method to get thumbnail, posterframe, etc.
 	* @return string|null
@@ -283,6 +303,104 @@ class component_av extends component_media_common {
 
 		return $this->get_posterframe_url();
 	}//end get_thumb_url
+
+
+
+	/**
+	* CREATE_POSTERFRAME
+	* Creates a image 'posterframe' from the default quality of current video file
+	*
+	* @param string|float $current_time
+	* 	A double-precision floating-point value indicating the current playback time in seconds.
+	* 	From HML5 video element command 'currentTime'
+	* @param string|null $quality
+	* 	Optional string like 'original'. if not defined, default is used
+	* @return bool $command_response
+	* 	FFMPEG terminal command response
+	*/
+	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
+
+		// short vars
+			$quality			= $target_quality ?? $this->get_original_quality();
+			$src_file			= $this->get_media_filepath($quality);
+			$posterframe_path	= $this->get_posterframe_path();
+
+		// check source file
+			if (!file_exists($src_file)) {
+
+				if ($quality!==$this->get_default_quality()) {
+					// try with quality_default
+					$quality	= $this->get_default_quality();
+					$src_file	= $this->get_media_filepath($quality);
+				}
+
+				if (!file_exists($src_file)) {
+					debug_log(__METHOD__
+						. " Invalid source path. Unable to create posterframe " . PHP_EOL
+						. ' src_file: ' 		. to_string($src_file) . PHP_EOL
+						. ' target_quality: ' 	. to_string($target_quality)
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+
+		// file
+			// $bytes		= filesize($src_file);
+			// $mega_bytes	= number_format($bytes / 1048576, 2);
+			// if ($mega_bytes>1000) {
+			// 	debug_log(__METHOD__
+			// 		. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
+			// 		, logger::WARNING
+			// 	);
+			// }
+
+		$Ffmpeg	= new Ffmpeg();
+		$command_response = $Ffmpeg->create_posterframe((object)[
+			'timecode'			=> $current_time, // like '00:00:10',
+			'src_file'			=> $src_file,
+			'quality'			=> $quality,
+			'posterframe_path'	=> $posterframe_path
+		]);
+
+
+		return $command_response;
+	}//end create_posterframe
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* 	Remove the file 'posterframe' from the disk
+	* @return bool
+	*/
+	public function delete_posterframe() : bool {
+
+		$folder					= $this->get_folder(); // like DEDALO_AV_FOLDER
+		$additional_path		= $this->additional_path;
+		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
+
+		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
+
+		// check file already exists
+			if(!file_exists($file)) {
+				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
+				return false;
+			}
+
+		 // delete file
+			if(!unlink($file)) {
+				debug_log(__METHOD__
+					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
+					. ' file: ' . $file
+					, logger::ERROR
+				);
+				return false;
+			}
+
+
+		return true;
+	}//end delete_posterframe
 
 
 
@@ -528,7 +646,7 @@ class component_av extends component_media_common {
 			}
 
 
-		return $duration;
+		return (float)$duration;
 	}//end get_duration
 
 
@@ -694,7 +812,20 @@ class component_av extends component_media_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// check vars
+			if (empty($tmp_name) || empty($folder_path) || empty($file_name)) {
+				$response->msg .= 'Too few arguments. All params are mandatory';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' tmp_name: ' . $tmp_name . PHP_EOL
+					. ' folder_path: ' . $folder_path . PHP_EOL
+					. ' file_name: ' . $file_name
+					, logger::ERROR
+				);
+				return $response;
+			}
 
 		// zip
 			$zip = new ZipArchive;
@@ -768,24 +899,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_PREVIEW_URL
-	* Return posterframe url
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = $this->get_posterframe_url(
-			false, // bool test_file
-			false, // bool absolute
-			true // bool avoid_cache
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
 	* PROCESS_UPLOADED_FILE
 	* Note that this is the last method called in a sequence started on upload file.
 	* The sequence order is:
@@ -809,6 +922,20 @@ class component_av extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// check vars
+			if (empty($file_data->original_file_name) ||
+				empty($file_data->full_file_path) ||
+				empty($file_data->full_file_name)
+			) {
+				debug_log(__METHOD__
+					. " Not enough file_data variables " . PHP_EOL
+					. ' file_data: ' . to_string($file_data)
+					, logger::ERROR
+				);
+				$response->msg .= 'Not enough file_data variables';
+				return $response;
+			}
 
 		// short vars
 			$original_file_name			= $file_data->original_file_name;	// kike "my video785.mp4"
@@ -1078,9 +1205,9 @@ class component_av extends component_media_common {
 	* GET_MEDIA_STREAMS
 	* Check the file to get the head streams of the video file
 	* @param string $quality
-	* @return mixed $media_streams
+	* @return object|null $media_streams
 	*/
-	public function get_media_streams(string $quality) : mixed {
+	public function get_media_streams(string $quality) : ?object {
 
 		// get the video file path
 			$file_path = $this->get_media_filepath($quality);
@@ -1361,11 +1488,22 @@ class component_av extends component_media_common {
 
 		$response = new stdClass();
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed';
+			$response->msg		= 'Error. Request failed ';
 
 		// short vars
 			$id					= $this->get_id();
 			$source_file_path	= $this->get_media_filepath($quality);
+
+		// check file
+			if (!file_exists($source_file_path)) {
+				$response->msg .= 'File does not exists. The file headers have not been conformed.';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' source_file_path: ' . to_string($source_file_path)
+					, logger::ERROR
+				);
+				return $response;
+			}
 
 		// Ffmpeg
 			$command_response	= Ffmpeg::conform_header(
@@ -1394,106 +1532,9 @@ class component_av extends component_media_common {
 				]
 			);
 
+
 		return $response;
 	}//end conform_headers
-
-
-
-	/**
-	* CREATE_POSTERFRAME
-	* Creates a image 'posterframe' from the default quality of current video file
-	*
-	* @param string|float $current_time
-	* 	A double-precision floating-point value indicating the current playback time in seconds.
-	* 	From HML5 video element command 'currentTime'
-	* @param string|null $quality
-	* 	Optional string like 'original'. if not defined, default is used
-	* @return bool $command_response
-	* 	FFMPEG terminal command response
-	*/
-	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
-
-		// short vars
-			$quality			= $target_quality ?? $this->get_original_quality();
-			$src_file			= $this->get_media_filepath($quality);
-			$posterframe_path	= $this->get_posterframe_path();
-
-		// check source file
-			if (!file_exists($src_file)) {
-
-				if ($quality!==$this->get_default_quality()) {
-					// try with quality_default
-					$quality	= $this->get_default_quality();
-					$src_file	= $this->get_media_filepath($quality);
-				}
-
-				if (!file_exists($src_file)) {
-					debug_log(__METHOD__
-						. " Invalid source path. Unable to create posterframe " . PHP_EOL
-						. ' src_file: ' 		. to_string($src_file) . PHP_EOL
-						. ' target_quality: ' 	. to_string($target_quality)
-						, logger::ERROR
-					);
-					return false;
-				}
-			}
-
-		// file
-			// $bytes		= filesize($src_file);
-			// $mega_bytes	= number_format($bytes / 1048576, 2);
-			// if ($mega_bytes>1000) {
-			// 	debug_log(__METHOD__
-			// 		. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
-			// 		, logger::WARNING
-			// 	);
-			// }
-
-		$Ffmpeg	= new Ffmpeg();
-		$command_response = $Ffmpeg->create_posterframe((object)[
-			'timecode'			=> $current_time, // like '00:00:10',
-			'src_file'			=> $src_file,
-			'quality'			=> $quality,
-			'posterframe_path'	=> $posterframe_path
-		]);
-
-
-		return $command_response;
-	}//end create_posterframe
-
-
-
-	/**
-	* DELETE_POSTERFRAME
-	* 	Remove the file 'posterframe' from the disk
-	* @return bool
-	*/
-	public function delete_posterframe() : bool {
-
-		$folder					= $this->get_folder(); // like DEDALO_AV_FOLDER
-		$additional_path		= $this->additional_path;
-		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
-
-		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
-
-		// check file already exists
-			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
-				return false;
-			}
-
-		 // delete file
-			if(!unlink($file)) {
-				debug_log(__METHOD__
-					."  Error on delete posterframe file. Posterframe file is not deleted " . PHP_EOL
-					. ' file: ' . $file
-					, logger::ERROR
-				);
-				return false;
-			}
-
-
-		return true;
-	}//end delete_posterframe
 
 
 
@@ -1506,6 +1547,7 @@ class component_av extends component_media_common {
 	public function get_media_attributes(string $file_path) : ?object {
 
 		$media_attributes = Ffmpeg::get_media_attributes($file_path);
+
 
 		return $media_attributes;
 	}//end get_media_attributes
