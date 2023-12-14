@@ -67,18 +67,6 @@ class component_check_box extends component_relation_common {
 
 
 	/**
-	* GET_DATO_AS_STRING
-	* Return JSON encoded dato
-	* @return string
-	*/
-	public function get_dato_as_string() : string {
-
-		return json_handler::encode($this->get_dato());
-	}//end get_dato_as_string
-
-
-
-	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
