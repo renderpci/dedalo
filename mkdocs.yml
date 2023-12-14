@@ -15,6 +15,7 @@ site_name: Dédalo Documentation
 site_dir: docs_site
 theme:
   name: material
+  custom_dir: docs/assets/overrides
   logo: assets/images/dedalo_logo_white.svg
   favicon: assets/favicon.ico
   font: false
@@ -77,3 +78,6 @@ copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedal
 
 extra_css:
   - additional_docs.css
+
+extra_javascript:
+  - additional_javascript.js
