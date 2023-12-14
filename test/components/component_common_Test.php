@@ -1301,10 +1301,10 @@ final class component_common_test extends TestCase {
 
 
 	/**
-	* TEST_GET_DIFFUSION_VALUE
+	* TEST_update_dato_version
 	* @return void
 	*/
-	public function test_get_diffusion_value() {
+	public function test_update_dato_version() {
 
 		// default dato
 		foreach (get_elements() as $element) {
@@ -1348,7 +1348,7 @@ final class component_common_test extends TestCase {
 				'response->msg type expected integer. current type: ' .gettype($response) .' - '.$element->model
 			);
 		}
-	}//end test_get_diffusion_value
+	}//end test_update_dato_version
 
 
 
@@ -1636,343 +1636,37 @@ final class component_common_test extends TestCase {
 
 
 
+	/**
+	* TEST_get_diffusion_value
+	* @return void
+	*/
+	public function test_get_diffusion_value() {
+
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_diffusion_value();
+
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL' || gettype($result)==='array',
+				'expected type string|null|array : ' . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_get_diffusion_value
+
+
+
 	////////////////////////// common functions applied over reference component ///////////////////////////
-
-
-
-	/**
-	* TEST_get_media_path_dir
-	* @return void
-	*/
-	public function test_get_media_path_dir() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->get_media_path_dir( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_get_media_path_dir
-
-
-
-	/**
-	* TEST_get_target_dir
-	* @return void
-	*/
-	public function test_get_target_dir() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->get_target_dir( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_get_target_dir
-
-
-
-	/**
-	* TEST_get_media_url_dir
-	* @return void
-	*/
-	public function test_get_media_url_dir() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->get_media_url_dir( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-
-			$this->assertTrue(
-				strpos($result, 'http')!==0,
-				'unexpected http protocol in relative URL : ' . PHP_EOL
-					. to_string($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_get_media_url_dir
-
-
-
-	/**
-	* TEST_get_media_filepath
-	* @return void
-	*/
-	public function test_get_media_filepath() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$result = $component->get_media_filepath();
-
-			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_get_media_filepath
-
-
-
-	/**
-	* TEST_set_quality
-	* @return void
-	*/
-	public function test_set_quality() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$result = $component->set_quality('patata');
-
-			$this->assertTrue(
-				gettype($result)==='boolean',
-				'expected type boolean : ' . PHP_EOL
-					. gettype($result)
-			);
-
-			$this->assertTrue(
-				$result===false,
-				'expected false : ' . PHP_EOL
-					. to_string($result)
-			);
-
-			$result = $component->set_quality('original');
-
-			$this->assertTrue(
-				$result===true,
-				'expected true : ' . PHP_EOL
-					. to_string($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_set_quality
-
-
-
-	/**
-	* TEST_get_size
-	* @return void
-	*/
-	public function test_get_size() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->get_size( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='string' || gettype($result)==='NULL',
-				'expected type string or NULL : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_get_size
-
-
-
-	/**
-	* TEST_build_version
-	* @return void
-	*/
-	public function DES_test_build_version() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->build_version( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_build_version
-
-
-
-	/**
-	* TEST_update_component_dato_files_info
-	* @return void
-	*/
-	public function test_update_component_dato_files_info() {
-
-		// default dato
-		foreach (get_elements() as $element) {
-			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-
-			// ignore non media components
-			if (!in_array($element->model, component_media_common::get_media_components())) {
-				continue;
-			}
-
-			$component = component_common::get_instance(
-				$element->model, // string model
-				$element->tipo, // string tipo
-				$element->section_id, // string section_id
-				$element->mode, // string mode
-				$element->lang, // string lang
-				$element->section_tipo, // string section_tipo
-				false
-			);
-
-			$quality = $component->get_default_quality();
-
-			$result = $component->update_component_dato_files_info( $quality );
-
-			$this->assertTrue(
-				gettype($result)==='boolean',
-				'expected type boolean : ' . PHP_EOL
-					. gettype($result)
-			);
-		}//end foreach (get_elements() as $element)
-	}//end test_update_component_dato_files_info
-
 
 
 

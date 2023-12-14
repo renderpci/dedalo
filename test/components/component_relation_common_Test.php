@@ -223,6 +223,32 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
+	* TEST_get_dato_as_string
+	* @return void
+	*/
+	public function test_get_dato_as_string() : void {
+
+		$component = component_common::get_instance(
+			self::$model, // string model
+			self::$tipo, // string tipo
+			self::$section_id, // string section_id
+			'edit', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			self::$section_tipo // string section_tipo
+		);
+
+		$value = $component->get_dato_as_string();
+
+		$this->assertTrue(
+			gettype($value)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($value)
+		);
+	}//end test_get_dato_as_string
+
+
+
+	/**
 	* TEST_set_dato
 	* @return void
 	*/
