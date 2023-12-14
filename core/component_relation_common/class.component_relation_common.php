@@ -214,6 +214,18 @@ class component_relation_common extends component_common {
 
 
 	/**
+	* GET_DATO_AS_STRING
+	* Return JSON encoded dato
+	* @return string
+	*/
+	public function get_dato_as_string() : string {
+
+		return json_handler::encode($this->get_dato());
+	}//end get_dato_as_string
+
+
+
+	/**
 	* LOAD MATRIX DATA
 	* Get data once from matrix about parent, dato
 	* @return bool
