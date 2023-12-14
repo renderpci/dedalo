@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_SVG
 * Manage specific component input text logic
@@ -77,32 +78,14 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_FILE_CONTENT
-	* Get the SVG file data as text
-	* @return string|null $file_content
+	* GET_FOLDER
+	* 	Get element directory from config
+	* @return string
 	*/
-	public function get_file_content() : ?string {
+	public function get_folder() : string {
 
-		$file_path		= $this->get_media_filepath();
-		$file_content	= (file_exists($file_path))
-			? file_get_contents($file_path)
-			: null;
-
-		return $file_content;
-	}//end get_file_content
-
-
-
-	/**
-	* GET_DEFAULT_SVG_URL
-	* @return string $url
-	*/
-	public static function get_default_svg_url() : string {
-
-		$url = DEDALO_CORE_URL . '/themes/default/upload.svg';
-
-		return $url;
-	}//end get_default_svg_url
+		return $this->folder ?? DEDALO_SVG_FOLDER;
+	}//end get_folder
 
 
 
@@ -171,6 +154,36 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* GET_FILE_CONTENT
+	* Get the SVG file data as text
+	* @return string|null $file_content
+	*/
+	public function get_file_content() : ?string {
+
+		$file_path		= $this->get_media_filepath();
+		$file_content	= (file_exists($file_path))
+			? file_get_contents($file_path)
+			: null;
+
+		return $file_content;
+	}//end get_file_content
+
+
+
+	/**
+	* GET_DEFAULT_SVG_URL
+	* @return string $url
+	*/
+	public static function get_default_svg_url() : string {
+
+		$url = DEDALO_CORE_URL . '/themes/default/upload.svg';
+
+		return $url;
+	}//end get_default_svg_url
+
+
+
+	/**
 	* GET_URL_FROM_LOCATOR
 	* @param object $locator
 	* @return string|null $url
@@ -195,6 +208,7 @@ class component_svg extends component_media_common {
 
 	/**
 	* GET_PREVIEW_URL
+	* Alias of get_url
 	* @return string $url
 	*/
 	public function get_preview_url() : string {
@@ -208,18 +222,6 @@ class component_svg extends component_media_common {
 
 		return $preview_url;
 	}//end get_preview_url
-
-
-
-	/**
-	* GET_FOLDER
-	* 	Get element directory from config
-	* @return string
-	*/
-	public function get_folder() : string {
-
-		return $this->folder ?? DEDALO_SVG_FOLDER;
-	}//end get_folder
 
 
 

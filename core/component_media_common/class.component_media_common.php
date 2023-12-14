@@ -1010,6 +1010,22 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_THUMB_PATH
+	* @return string $image_thumb_path
+	*/
+	public function get_thumb_path() : string {
+
+		$thumb_quality = $this->get_thumb_quality();
+
+		// target data (target quality is thumb)
+		$image_thumb_path = $this->get_media_filepath($thumb_quality);
+
+		return $image_thumb_path;
+	}//end get_thumb_path
+
+
+
+	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files

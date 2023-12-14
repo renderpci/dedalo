@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT PDF
 *
@@ -55,6 +56,18 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_THUMB_QUALITY
+	* @return string $thumb_quality
+	* Defined in config file
+	*/
+	public function get_thumb_quality() : string {
+
+		return DEDALO_PDF_THUMB_DEFAULT;
+	}//end get_thumb_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
@@ -91,14 +104,50 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
-	* Defined in config file
+	* GET_URL
+	* Get PDF url for current quality
+	*
+	* @param string|bool $quality = null
+	* @param bool $test_file = true
+	*	Check if file exists. If not use 0.jpg as output
+	* @param bool $absolute = false
+	* @param bool $default_add = true
+	*
+	* @return string|null $url
+	*	Return relative o absolute url
 	*/
-	public function get_thumb_quality() : string {
+	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
 
-		return DEDALO_PDF_THUMB_DEFAULT;
-	}//end get_thumb_quality
+		// quality fallback to default
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
+
+		// pdf id
+			$id = $this->get_id();
+
+		// url
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file===true) {
+				$file = $this->get_media_filepath($quality);
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return null;
+					}
+					$url = DEDALO_CORE_URL . '/themes/default/0.pdf';
+				}
+			}
+
+		// Absolute (Default false)
+			if ($absolute===true) {
+				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+			}
+
+
+		return $url;
+	}//end get_url
 
 
 
@@ -164,50 +213,41 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_URL
-	* Get PDF url for current quality
-	*
-	* @param string|bool $quality = null
-	* @param bool $test_file = true
-	*	Check if file exists. If not use 0.jpg as output
-	* @param bool $absolute = false
-	* @param bool $default_add = true
-	*
-	* @return string|null $url
-	*	Return relative o absolute url
+	* GET_VALOR_EXPORT
+	* Return component value sent to export data
+	* @return string|null $valor
 	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
-		// quality fallback to default
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
+		if (empty($valor)) {
+			$dato = $this->get_dato();				// Get dato from DB
+		}else{
+			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+		}
 
-		// pdf id
-			$id = $this->get_id();
+		$force_create	= false;
+		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
 
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
 
-		// File exists test : If not, show '0' dedalo image logo
-			if($test_file===true) {
-				$file = $this->get_media_filepath($quality);
-				if(!file_exists($file)) {
-					if ($default_add===false) {
-						return null;
-					}
-					$url = DEDALO_CORE_URL . '/themes/default/0.pdf';
-				}
-			}
-
-		// Absolute (Default false)
-			if ($absolute===true) {
-				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-			}
+		return $valor;
+	}//end get_valor_export
 
 
-		return $url;
-	}//end get_url
+
+	/**
+	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
+	* @return array $related_component_text_area_tipo
+	*/
+	public function get_related_component_text_area_tipo() : array {
+
+		$related_component_text_area_tipo = common::get_ar_related_by_model(
+			'component_text_area', // model,
+			$this->tipo // tipo
+		);
+
+		return $related_component_text_area_tipo;
+	}//end get_related_component_text_area_tipo
 
 
 
@@ -398,6 +438,19 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_PREVIEW_URL
+	* @return string $preview_url
+	*/
+	public function get_preview_url() : string {
+
+		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
+
+		return $preview_url;
+	}//end get_preview_url
+
+
+
+	/**
 	* GET_THUMB_URL
 	* Unified method to get thumbnail, posterframe, etc.
 	* @return string|null
@@ -446,60 +499,9 @@ class component_pdf extends component_media_common {
 
 			$result = (file_exists($target_file)) ? $target_file : false;
 
+
 		return $result;
 	}//end create_image
-
-
-
-	/**
-	* GET_VALOR_EXPORT
-	* Return component value sent to export data
-	* @return string $valor
-	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
-
-		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
-		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
-		}
-
-		$force_create	= false;
-		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
-
-		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
-
-		return $valor;
-	}//end get_valor_export
-
-
-
-	/**
-	* GET_RELATED_COMPONENT_TEXT_AREA_TIPO
-	* @return array $related_component_text_area_tipo
-	*/
-	public function get_related_component_text_area_tipo() : array {
-
-		$related_component_text_area_tipo = common::get_ar_related_by_model(
-			'component_text_area', // model,
-			$this->tipo // tipo
-		);
-
-		return $related_component_text_area_tipo;
-	}//end get_related_component_text_area_tipo
-
-
-
-	/**
-	* GET_PREVIEW_URL
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
-
-		return $preview_url;
-	}//end get_preview_url
 
 
 
@@ -526,6 +528,20 @@ class component_pdf extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+
+		// check vars
+			if (empty($file_data->original_file_name) ||
+				empty($file_data->full_file_path) ||
+				empty($file_data->full_file_name)
+			) {
+				debug_log(__METHOD__
+					. " Not enough file_data variables " . PHP_EOL
+					. ' file_data: ' . to_string($file_data)
+					, logger::ERROR
+				);
+				$response->msg .= 'Not enough file_data variables';
+				return $response;
+			}
 
 		// short vars
 			$original_file_name			= $file_data->original_file_name;	// like "my doc is beaty.psdf"
