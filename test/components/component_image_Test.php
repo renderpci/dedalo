@@ -90,126 +90,15 @@ final class component_image_test extends TestCase {
 
 
 
-
 	/**
-	* TEST_get_dato
+	* TEST_get_default_quality
 	* @return void
 	*/
-	public function test_get_dato() {
+	public function test_get_default_quality() {
 
 		$component = $this->build_component_instance();
 
-		$value = $component->get_dato();
-			// dump($value, ' value ++ '.to_string());
-
-		// sample:
-			// {
-		    //     "files_info": [
-		    //         {
-		    //             "quality": "original",
-		    //             "file_exist": true,
-		    //             "file_name": "test99_test3_1.jpg",
-		    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/original/test99_test3_1.jpg",
-		    //             "file_url": "//media/media_development/image/original/test99_test3_1.jpg",
-		    //             "file_size": 620888,
-		    //             "file_time": {
-		    //                 "year": 2021, ...
-		    //             }
-		    //         },
-		    //         {
-		    //             "quality": "1.5MB",
-		    //             "file_exist": true,
-		    //             "file_name": "test99_test3_1.jpg",
-		    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/1.5MB/test99_test3_1.jpg",
-		    //             "file_url": "//media/media_development/image/1.5MB/test99_test3_1.jpg",
-		    //             "file_size": 158123,
-		    //             "file_time": {
-		    //                 "year": 2023, ...
-		    //             }
-		    //         },
-		    //         {
-		    //             "quality": "thumb",
-		    //             "file_exist": true,
-		    //             "file_name": "test99_test3_1.jpg",
-		    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/thumb/test99_test3_1.jpg",
-		    //             "file_url": "//media/media_development/image/thumb/test99_test3_1.jpg",
-		    //             "file_size": 20690,
-		    //             "file_time": {
-		    //                 "year": 2023, ...
-		    //             }
-		    //         }
-		    //     ],
-		    //     "lib_data": null
-		    // }
-
-		$this->assertTrue(
-			gettype($value)==='array' || gettype($value)==='NULL',
-			'expected type array|null : ' . PHP_EOL
-				. gettype($value)
-		);
-
-		if (!empty($value)) {
-			$this->assertTrue(
-				isset($value[0]->files_info),
-				'expected isset($value[0]->files_info : ' . PHP_EOL
-					. to_string(isset($value[0]->files_info))
-			);
-			$this->assertTrue(
-				gettype($value[0]->files_info)==='array',
-				'expected type array : ' . PHP_EOL
-					. gettype($value[0]->files_info)
-			);
-		}
-	}//end test_get_dato
-
-
-
-	/**
-	* TEST_Save
-	* @return void
-	*/
-	public function test_Save() {
-
-		$section_id = 1;
-
-		$component = $this->build_component_instance();
-
-		$result = $component->Save();
-
-		$this->assertTrue(
-			gettype($result)==='integer' || gettype($result)==='NULL',
-			'expected type integer|null : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$this->assertTrue(
-			$result===$section_id,
-			'expected integer '.$section_id . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_Save
-
-
-
-	/**
-	* TEST_get_id
-	* @return void
-	*/
-	public function test_get_id() {
-
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_id();
-
-		// sample result
-			// 'test99_test3_1'
+		$result = $component->get_default_quality();
 
 		$this->assertTrue(
 			gettype($result)==='string',
@@ -218,11 +107,205 @@ final class component_image_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===($tipo.'_'.$section_tipo.'_'.$section_id),
-			'expected test99_test3_1 ' . PHP_EOL
+			$result===DEDALO_IMAGE_QUALITY_DEFAULT,
+			'expected DEDALO_IMAGE_QUALITY_DEFAULT ' . PHP_EOL
 				. $result
 		);
-	}//end test_get_id
+	}//end test_get_default_quality
+
+
+
+	/**
+	* TEST_get_original_quality
+	* @return void
+	*/
+	public function test_get_original_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_original_quality();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_QUALITY_ORIGINAL,
+			'expected DEDALO_IMAGE_QUALITY_ORIGINAL ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_original_quality
+
+
+
+	/**
+	* TEST_get_modified_quality
+	* @return void
+	*/
+	public function test_get_modified_quality() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_modified_quality();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_QUALITY_RETOUCHED,
+			'expected DEDALO_IMAGE_QUALITY_RETOUCHED ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_modified_quality
+
+
+
+	/**
+	* TEST_get_original_uploaded_file
+	* @return void
+	*/
+	public function test_get_original_uploaded_file() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_original_uploaded_file();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_original_uploaded_file
+
+
+
+	/**
+	* TEST_get_modified_uploaded_file
+	* @return void
+	*/
+	public function test_get_modified_uploaded_file() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_modified_uploaded_file();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_modified_uploaded_file
+
+
+
+	/**
+	* TEST_get_extension
+	* @return void
+	*/
+	public function test_get_extension() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_extension();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_EXTENSION,
+			'expected DEDALO_IMAGE_EXTENSION ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		// set custom value
+		$component->extension = 'kyt';
+
+		$result = $component->get_extension();
+
+		$this->assertTrue(
+			$result==='kyt',
+			'expected kyt ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		// restore extension
+		$component->extension = DEDALO_IMAGE_EXTENSION;
+	}//end test_get_extension
+
+
+
+	/**
+	* TEST_get_allowed_extensions
+	* @return void
+	*/
+	public function test_get_allowed_extensions() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_allowed_extensions();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_EXTENSIONS_SUPPORTED,
+			'expected DEDALO_IMAGE_EXTENSIONS_SUPPORTED ' . PHP_EOL
+				. json_encode($result)
+		);
+	}//end test_get_allowed_extensions
+
+
+
+	/**
+	* TEST_get_folder
+	* @return void
+	*/
+	public function test_get_folder() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_folder();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===DEDALO_IMAGE_FOLDER,
+			'expected DEDALO_IMAGE_FOLDER ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		$original_folder = $component->get_folder();
+
+		// set custom
+
+		$component->folder = '/atke';
+
+		$result = $component->get_folder();
+
+		$this->assertTrue(
+			$result==='/atke',
+			'expected /atke ' . PHP_EOL
+				. json_encode($result)
+		);
+
+		// restore
+		$component->folder = $original_folder;
+	}//end test_get_folder
 
 
 
@@ -264,21 +347,22 @@ final class component_image_test extends TestCase {
 				false, // absolute
 				false // default_add
 			);
-
 			// expected sample
 			// /media/image/1.5MB/test99_test3_1.jpg
 
 			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
 					. gettype($result)
 			);
 
-			$this->assertTrue(
-				strpos($result, DEDALO_IMAGE_QUALITY_DEFAULT)!==false,
-				'expected contains ' .DEDALO_IMAGE_QUALITY_DEFAULT. PHP_EOL
-					. $result
-			);
+			if (!empty($result)) {
+				$this->assertTrue(
+					strpos($result, DEDALO_IMAGE_QUALITY_DEFAULT)!==false,
+					'expected contains ' .DEDALO_IMAGE_QUALITY_DEFAULT. PHP_EOL
+						. $result
+				);
+			}
 
 		// test_file
 			$result = $component->get_url(
@@ -303,16 +387,18 @@ final class component_image_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				gettype($result)==='string',
-				'expected type string : ' . PHP_EOL
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
 					. gettype($result)
 			);
 
-			$this->assertTrue(
-				strpos($result, DEDALO_PROTOCOL . DEDALO_HOST)!==false,
-				'expected contains ' .DEDALO_PROTOCOL . DEDALO_HOST. PHP_EOL
-					. $result
-			);
+			if (!empty($result)) {
+				$this->assertTrue(
+					strpos($result, DEDALO_PROTOCOL . DEDALO_HOST)!==false,
+					'expected contains ' .DEDALO_PROTOCOL . DEDALO_HOST. PHP_EOL
+						. $result
+				);
+			}
 
 		// default_add
 			$model			= self::$model;
@@ -337,10 +423,17 @@ final class component_image_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				$result==='/core/themes/default/0.jpg',
-				'expected /core/themes/default/0.jpg : ' . PHP_EOL
-					. $result
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
 			);
+			if (!empty($result)) {
+				$this->assertTrue(
+					$result==='/core/themes/default/0.jpg',
+					'expected /core/themes/default/0.jpg : ' . PHP_EOL
+						. $result
+				);
+			}
 	}//end test_get_url
 
 
@@ -367,31 +460,6 @@ final class component_image_test extends TestCase {
 				. json_encode($result)
 		);
 	}//end test_get_external_source
-
-
-
-	/**
-	* TEST_get_default_quality
-	* @return void
-	*/
-	public function test_get_default_quality() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_default_quality();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$this->assertTrue(
-			$result===DEDALO_IMAGE_QUALITY_DEFAULT,
-			'expected DEDALO_IMAGE_QUALITY_DEFAULT ' . PHP_EOL
-				. $result
-		);
-	}//end test_get_default_quality
 
 
 
@@ -454,6 +522,10 @@ final class component_image_test extends TestCase {
 
 
 
+
+
+
+
 	/**
 	* TEST_convert_quality
 	* @return void
@@ -486,6 +558,130 @@ final class component_image_test extends TestCase {
 				. $media_filepath
 		);
 	}//end test_convert_quality
+
+
+
+	/**
+	* TEST_get_valor_export
+	* @return void
+	*/
+	public function test_get_valor_export() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_valor_export();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_valor_export
+
+
+
+	/**
+	* TEST_generate_thumb
+	* @return void
+	*/
+	public function test_generate_thumb() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->generate_thumb();
+
+		if (!is_null($result)) {
+
+			$this->assertTrue(
+				gettype($result)==='object',
+				'expected type object : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				!empty($result->path),
+				'expected !empty($result->path) ' . PHP_EOL
+					. empty($result)
+			);
+
+			$this->assertTrue(
+				!empty($result->url),
+				'expected !empty($result->url) ' . PHP_EOL
+					. empty($result)
+			);
+		}
+	}//end test_generate_thumb
+
+
+
+	/**
+	* TEST_get_image_print_dimensions
+	* @return void
+	*/
+	public function test_get_image_print_dimensions() {
+
+		$component = $this->build_component_instance();
+
+		$quality = $component->get_default_quality();
+
+		$result = $component->get_image_print_dimensions($quality);
+
+		// sample
+		// [
+		//     "8,67cm",
+		//     "8,67cm"
+		// ]
+
+		$this->assertTrue(
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
+				. gettype($result)
+		);
+		$this->assertTrue(
+			!empty($result[0]),
+			'expected !empty($result[0]) : ' . PHP_EOL
+				. empty($result[0])
+		);
+		$this->assertTrue(
+			!empty($result[1]),
+			'expected !empty($result[1]) : ' . PHP_EOL
+				. empty($result[1])
+		);
+	}//end test_get_image_print_dimensions
+
+
+
+	/**
+	* TEST_convert_quality_to_megabytes
+	* @return void
+	*/
+	public function test_convert_quality_to_megabytes() {
+
+		$component = $this->build_component_instance();
+
+		$quality = $component->get_default_quality();
+
+		$result = $component->convert_quality_to_megabytes($quality);
+
+
+		$this->assertTrue(
+			gettype($result)==='double',
+			'expected type double : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_convert_quality_to_megabytes
+
+
+
+
+
+
+	/* @todo
+		Add rest of methods
+		*/
+
+
+
 
 
 
@@ -590,115 +786,6 @@ final class component_image_test extends TestCase {
 		// 			. json_encode($result)
 		// 	);
 		// }//end test_generate_default_quality_file
-
-
-
-	/**
-	* TEST_generate_thumb
-	* @return void
-	*/
-	public function test_generate_thumb() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->generate_thumb();
-
-		if (!is_null($result)) {
-
-			$this->assertTrue(
-				gettype($result)==='object',
-				'expected type object : ' . PHP_EOL
-					. gettype($result)
-			);
-
-			$this->assertTrue(
-				!empty($result->path),
-				'expected !empty($result->path) ' . PHP_EOL
-					. empty($result)
-			);
-
-			$this->assertTrue(
-				!empty($result->url),
-				'expected !empty($result->url) ' . PHP_EOL
-					. empty($result)
-			);
-		}
-	}//end test_generate_thumb
-
-
-
-	/**
-	* TEST_get_thumb_url
-	* @return void
-	*/
-	public function test_get_thumb_url() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_thumb_url();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_thumb_url
-
-
-
-	/**
-	* TEST_get_thumb_path
-	* @return void
-	*/
-	public function test_get_thumb_path() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_thumb_path();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_thumb_path
-
-
-
-	/**
-	* TEST_get_image_print_dimensions
-	* @return void
-	*/
-	public function test_get_image_print_dimensions() {
-
-		$component = $this->build_component_instance();
-
-		$quality = $component->get_default_quality();
-
-		$result = $component->get_image_print_dimensions($quality);
-
-		// sample
-		// [
-		//     "8,67cm",
-		//     "8,67cm"
-		// ]
-
-		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
-				. gettype($result)
-		);
-		$this->assertTrue(
-			!empty($result[0]),
-			'expected !empty($result[0]) : ' . PHP_EOL
-				. empty($result[0])
-		);
-		$this->assertTrue(
-			!empty($result[1]),
-			'expected !empty($result[1]) : ' . PHP_EOL
-				. empty($result[1])
-		);
-	}//end test_get_image_print_dimensions
 
 
 

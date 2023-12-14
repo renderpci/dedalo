@@ -157,9 +157,9 @@ class component_av extends component_media_common {
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
-	* @return string $valor_export
+	* @return string|null $valor_export
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
 		if (empty($valor)) {
 			$this->get_dato();				// Get dato from DB
@@ -279,9 +279,9 @@ class component_av extends component_media_common {
 	* GET_PREVIEW_URL
 	* Return posterframe url
 	* Alias of get_posterframe_url
-	* @return string $preview_url
+	* @return string|null $preview_url
 	*/
-	public function get_preview_url() : string {
+	public function get_preview_url() : ?string {
 
 		$preview_url = $this->get_posterframe_url(
 			false, // bool test_file

@@ -74,4 +74,293 @@ final class component_media_common_test extends TestCase {
 
 
 
+	/**
+	* TEST_GET_DATO
+	* @return void
+	*/
+	public function test_get_dato() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$value = $component->get_dato();
+			// dump($value, ' value ++ '.to_string());
+
+			// sample:
+				// {
+			    //     "files_info": [
+			    //         {
+			    //             "quality": "original",
+			    //             "file_exist": true,
+			    //             "file_name": "test99_test3_1.jpg",
+			    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/original/test99_test3_1.jpg",
+			    //             "file_url": "//media/media_development/image/original/test99_test3_1.jpg",
+			    //             "file_size": 620888,
+			    //             "file_time": {
+			    //                 "year": 2021, ...
+			    //             }
+			    //         },
+			    //         {
+			    //             "quality": "1.5MB",
+			    //             "file_exist": true,
+			    //             "file_name": "test99_test3_1.jpg",
+			    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/1.5MB/test99_test3_1.jpg",
+			    //             "file_url": "//media/media_development/image/1.5MB/test99_test3_1.jpg",
+			    //             "file_size": 158123,
+			    //             "file_time": {
+			    //                 "year": 2023, ...
+			    //             }
+			    //         },
+			    //         {
+			    //             "quality": "thumb",
+			    //             "file_exist": true,
+			    //             "file_name": "test99_test3_1.jpg",
+			    //             "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/thumb/test99_test3_1.jpg",
+			    //             "file_url": "//media/media_development/image/thumb/test99_test3_1.jpg",
+			    //             "file_size": 20690,
+			    //             "file_time": {
+			    //                 "year": 2023, ...
+			    //             }
+			    //         }
+			    //     ],
+			    //     "lib_data": null
+			    // }
+
+			$this->assertTrue(
+				gettype($value)==='array' || gettype($value)==='NULL',
+				'expected type array|null : ' . PHP_EOL
+					. gettype($value)
+			);
+
+			if (!empty($value)) {
+				$this->assertTrue(
+					isset($value[0]->files_info),
+					'expected isset($value[0]->files_info : ' . PHP_EOL
+						. to_string(isset($value[0]->files_info))
+				);
+				$this->assertTrue(
+					gettype($value[0]->files_info)==='array',
+					'expected type array : ' . PHP_EOL
+						. gettype($value[0]->files_info)
+				);
+			}
+		}
+	}//end test_get_dato
+
+
+
+	/**
+	* TEST_SAVE
+	* @return void
+	*/
+	public function test_Save() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$section_id = 1;
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->Save();
+
+			$this->assertTrue(
+				gettype($result)==='integer' || gettype($result)==='NULL',
+				'expected type integer|null : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				$result===$section_id,
+				'expected integer '.$section_id . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_Save
+
+
+
+	/**
+	* TEST_get_id
+	* @return void
+	*/
+	public function test_get_id() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_id();
+
+			// sample result
+			// 'test99_test3_1'
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
+					. gettype($result)
+			);
+
+			$this->assertTrue(
+				$result===($element->tipo.'_'.$element->section_tipo.'_'.$element->section_id),
+				'expected as test99_test3_1 ' . PHP_EOL
+					. $result
+			);
+		}
+	}//end test_get_id
+
+
+
+	/**
+	* test_get_thumb_url
+	* @return void
+	*/
+	public function test_get_thumb_url() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_thumb_url();
+
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
+			);
+			if (!empty($result)) {
+				$this->assertTrue(
+					strpos($result, 'http')!==0,
+					'unexpected http protocol in relative URL : ' . PHP_EOL
+						. to_string($result)
+				);
+			}
+		}
+	}//end test_get_thumb_url
+
+
+
+	/**
+	* test_get_valor_export
+	* @return void
+	*/
+	public function test_get_valor_export() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_valor_export();
+
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_get_valor_export
+
+
+
+	/**
+	* test_get_thumb_path
+	* @return void
+	*/
+	public function test_get_thumb_path() {
+
+		foreach (get_elements() as $element) {
+
+			if (!in_array($element->model, component_media_common::get_media_components())) {
+				continue;
+			}
+
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_thumb_path();
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'expected type string : ' . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_get_thumb_path
+
+
+
+
 }//end class component_media_common_test

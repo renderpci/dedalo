@@ -196,52 +196,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ORIGINAL_UPLOADED_FILE
-	* From component dato
-	* @return string|null $original_quality
-	*/
-	public function get_original_uploaded_file() : ?string {
-
-		$original_uploaded_file = null;
-
-		$dato = $this->get_dato();
-		if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
-
-			$original_quality	= $this->get_original_quality();
-
-			// original file like 'memoria_oral_presentacion.mov'
-			$original_uploaded_file	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
-		}
-
-		return $original_uploaded_file;
-	}//end get_original_uploaded_file
-
-
-
-	/**
-	* GET_MODIFIED_UPLOADED_FILE
-	* From component dato
-	* @return string|null $modified_quality
-	*/
-	public function get_modified_uploaded_file() : ?string {
-
-		$modified_uploaded_file = null;
-
-		$dato = $this->get_dato();
-		if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
-
-			$modified_quality	= $this->get_modified_quality();
-
-			// original file like 'memoria_oral_presentacion.mov'
-			$modified_uploaded_file	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
-		}
-
-		return $modified_uploaded_file;
-	}//end get_modified_uploaded_file
-
-
-
-	/**
 	* GET_EXTENSION
 	* @return string $this->extension
 	* 	Normally DEDALO_IMAGE_EXTENSION from config
@@ -400,6 +354,52 @@ class component_image extends component_media_common {
 
 		return $external_source ?? null;
 	}//end get_external_source
+
+
+
+	/**
+	* GET_ORIGINAL_UPLOADED_FILE
+	* From component dato
+	* @return string|null $original_quality
+	*/
+	public function get_original_uploaded_file() : ?string {
+
+		$original_uploaded_file = null;
+
+		$dato = $this->get_dato();
+		if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
+
+			$original_quality	= $this->get_original_quality();
+
+			// original file like 'memoria_oral_presentacion.mov'
+			$original_uploaded_file	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
+		}
+
+		return $original_uploaded_file;
+	}//end get_original_uploaded_file
+
+
+
+	/**
+	* GET_MODIFIED_UPLOADED_FILE
+	* From component dato
+	* @return string|null $modified_quality
+	*/
+	public function get_modified_uploaded_file() : ?string {
+
+		$modified_uploaded_file = null;
+
+		$dato = $this->get_dato();
+		if (isset($dato[0]) && isset($dato[0]->modified_normalized_name)) {
+
+			$modified_quality	= $this->get_modified_quality();
+
+			// original file like 'memoria_oral_presentacion.mov'
+			$modified_uploaded_file	= $this->get_media_path_dir($modified_quality) .'/'. $dato[0]->modified_normalized_name;
+		}
+
+		return $modified_uploaded_file;
+	}//end get_modified_uploaded_file
 
 
 
@@ -882,22 +882,6 @@ class component_image extends component_media_common {
 
 		return $image_thumb_url;
 	}//end get_thumb_url
-
-
-
-	/**
-	* GET_THUMB_PATH
-	* @return string $image_thumb_path
-	*/
-	public function get_thumb_path() : string {
-
-		$thumb_quality = $this->get_thumb_quality();
-
-		// target data (target quality is thumb)
-		$image_thumb_path = $this->get_media_filepath($thumb_quality);
-
-		return $image_thumb_path;
-	}//end get_thumb_path
 
 
 
