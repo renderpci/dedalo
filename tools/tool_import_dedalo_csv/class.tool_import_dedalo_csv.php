@@ -175,6 +175,10 @@ class tool_import_dedalo_csv extends tool_common {
 	* DELETE_CSV_FILE
 	* 	Delete given CSV file from server
 	* @param object $options
+	* {
+	* 	file_name: string name.csv,
+	* 	files_path: string '/path' // optional
+	* }
 	* @return object $response
 	* {
 	* 	result : bool,
@@ -1377,7 +1381,6 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// 	return $ar_locators;
 		// }//end build_ar_locators
-
 
 
 

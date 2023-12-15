@@ -2401,20 +2401,14 @@ class section extends common {
 				$user_name = null;
 
 			}else{
-				$user_id	= (int)reset($dato)->section_id;
-				$user_name	= section::get_user_name_by_userID($user_id, false);
-				// $model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO,true);
-				// $component	= component_common::get_instance(
-				// 	$model_name,
-				// 	DEDALO_USER_NAME_TIPO,
-				// 	$user_id,
-				// 	'list',
-				// 	DEDALO_DATA_NOLAN,
-				// 	DEDALO_SECTION_USERS_TIPO
-				// );
-				// $dato		= $component->get_dato();
-				// $user_name	= $dato[0] ?? null;
+				$user_id	= isset($dato[0]) && isset($dato[0]->section_id)
+					? (int)$dato[0]->section_id
+					: null;
+				$user_name	= isset($user_id)
+					? section::get_user_name_by_userID($user_id, false)
+					: null;
 			}
+
 
 		return $user_name;
 	}//end get_publication_user

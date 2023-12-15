@@ -1632,7 +1632,7 @@ class component_date extends component_common {
 
 				$value = [];
 				// explode the possibles rows of the date
-				$ar_date_rows	= explode('|',$import_value);
+				$ar_date_rows	= explode('|', $import_value);
 
 				foreach ($ar_date_rows as $key => $date_row) {
 
