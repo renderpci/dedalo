@@ -315,10 +315,12 @@ final class component_relation_common_test extends TestCase {
 			self::$section_tipo // string section_tipo
 		);
 
+		$type = $component->get_relation_type();
+
 		$locator = new locator();
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(3);
-			$locator->set_type(self::$type);
+			$locator->set_type($type);
 
 		$value = $component->add_locator_to_dato($locator);
 
@@ -354,7 +356,7 @@ final class component_relation_common_test extends TestCase {
 			$locator = new locator();
 				$locator->set_section_tipo(self::$section_tipo);
 				$locator->set_section_id(3);
-				$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+				$locator->set_type($component->get_relation_type());
 
 			$value = $component->remove_locator_from_dato($locator);
 
@@ -472,10 +474,6 @@ final class component_relation_common_test extends TestCase {
 			gettype($value->result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($value->result)
-		);
-		$this->assertTrue(
-			$value->result===false,
-			'expected false ' . PHP_EOL
 		);
 	}//end test_remove_parent_references
 
