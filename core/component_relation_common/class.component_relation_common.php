@@ -981,7 +981,11 @@ class component_relation_common extends component_common {
 					." Error: Incorrect locator type property! Remove action was aborted" . PHP_EOL
 					.' expected: ' . $this->relation_type . PHP_EOL
 					.' received: ' . $locator->type . PHP_EOL
-					.' locator: ' . to_string($locator)
+					.' locator_to_remove: ' . to_string($locator_to_remove) . PHP_EOL
+					.' model: ' . get_called_class() . PHP_EOL
+					.' tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->tipo . PHP_EOL
+					.' section_id: ' . $this->section_id
 					, logger::ERROR
 				);
 				return false;

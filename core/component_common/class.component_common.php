@@ -3890,7 +3890,13 @@ abstract class component_common extends common {
 
 				// log JSON conversion error
 				debug_log(__METHOD__
-					." json_last_error: ".json_last_error()
+					." JSON json_last_error: ".json_last_error() . PHP_EOL
+					.' tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo . PHP_EOL
+					.' section_id: ' . $this->section_id . PHP_EOL
+					.' model: ' . get_called_class() . PHP_EOL
+					.' import_value: ' . to_string($import_value) . PHP_EOL
+					.' column_name: ' . $column_name
 					, logger::ERROR
 				);
 
