@@ -311,4 +311,59 @@ class component_email extends component_common {
 
 
 
+	/**
+	* CONFORM_IMPORT_DATA
+	* @param string $import_value
+	* import data format options:
+	* 1 a string like 'myemail@mydomain.org'
+	* 2 an array of values like ["myemail@mydomain.org","myemail2@mydomain.org"]
+	* @param string $column_name
+	* @return object $response
+	*/
+	public function conform_import_data(string $import_value, string $column_name) : object {
+
+		// Response
+			$response = new stdClass();
+				$response->result	= null;
+				$response->errors	= [];
+				$response->msg		= 'Error. Request failed';
+
+		// object | array case
+			// Check if is a JSON string. Is yes, decode
+			// if data is a object | array it will be the Dédalo format and it's not necessary processed
+			if(json_handler::is_json($import_value)){
+
+				// try to JSON decode (null on not decode)
+				$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+				$response->result	= $dato_from_json;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// string case
+
+		// empty
+			if(empty($import_value)) {
+
+				$response->result	= null;
+				$response->msg		= 'OK';
+
+				return $response;
+			}
+
+		// convert value
+			$value = trim($import_value);
+
+		// response OK
+			$response->result	= [$value];
+			$response->msg		= 'OK';
+
+
+		return $response;
+	}//end conform_import_data
+
+
+
 }//end class email
