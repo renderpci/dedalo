@@ -11,8 +11,24 @@ class tool_import_dedalo_csv extends tool_common {
 
 
 	/**
+	* GET_FILES_PATH
+	* Default CSV upload directory for current logged user
+	* @return string $files_path
+	*/
+	public static function get_files_path() : string {
+
+		$files_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH .'/'. get_user_id();
+
+
+		return $files_path;
+	}//end get_files_path
+
+
+
+	/**
 	* GET_CSV_FILES
 	* Read requested directory and return all files of the request extension found
+	* @param object $options = new stdClass()
 	* @return object $response
 	* {
 	* 	result	: array $files_info,
@@ -20,15 +36,15 @@ class tool_import_dedalo_csv extends tool_common {
 	* 	error	: string|null
 	* }
 	*/
-	public static function get_csv_files() : object {
+	public static function get_csv_files(object $options=new stdClass()) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 			$response->error	= null;
 
-		// short vars
-			$dir = tool_import_dedalo_csv::get_files_path();
+		// options
+			$dir = $options->files_path ?? tool_import_dedalo_csv::get_files_path();
 
 		// read_files
 			$files_list	= tool_common::read_files(
@@ -192,15 +208,24 @@ class tool_import_dedalo_csv extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$file_name = $options->file_name ?? null;
-
-		// short vars
-			$dir		= tool_import_dedalo_csv::get_files_path();
-			$file_name	= $file_name;
+			$file_name	= $options->file_name ?? '';
+			$dir		= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
 
 		// remove file is exists
 			$file_full_path = $dir .'/'. $file_name;
 			if (file_exists($file_full_path)) {
+
+				// check is file (prevent to delete directories accidentally)
+				if (!is_file($file_full_path)) {
+					$response->msg = 'Error. This path does not correspond to a file. Ignored delete_csv_file action';
+					debug_log(__METHOD__
+						." response->msg: $response->msg" . PHP_EOL
+						.' file_full_path: ' .$file_full_path
+						, logger::ERROR
+					);
+					return $response;
+				}
+
 				if( unlink($file_full_path) ) {
 
 					$response->result 	= true;
@@ -222,7 +247,7 @@ class tool_import_dedalo_csv extends tool_common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end delete_csv_file
 
 
@@ -231,6 +256,11 @@ class tool_import_dedalo_csv extends tool_common {
 	* IMPORT_FILES
 	* 	Import user selected files
 	* @param object $options
+	* {
+	* 	files: array,
+	* 	time_machine_save: bool,
+	* 	files_path: string optional
+	* }
 	* @return object $response
 	* {
 	* 	result : bool,
@@ -245,11 +275,9 @@ class tool_import_dedalo_csv extends tool_common {
 			ignore_user_abort(true);
 
 		// options
-			$files				= $options->files ?? null;
+			$files				= $options->files ?? [];
 			$time_machine_save	= $options->time_machine_save ?? null;
-
-		// short vars
-			$dir = tool_import_dedalo_csv::get_files_path();
+			$dir				= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
 
 		// import each file
 			$import_response=[];
@@ -1673,19 +1701,6 @@ class tool_import_dedalo_csv extends tool_common {
 
 		return $response;
 	}//end process_uploaded_file
-
-
-
-	/**
-	* GET_FILES_PATH
-	* @return string $files_path
-	*/
-	public static function get_files_path() {
-
-		$files_path = DEDALO_TOOL_IMPORT_DEDALO_CSV_FOLDER_PATH .'/'. get_user_id();
-
-		return $files_path;
-	}//end get_files_path
 
 
 
