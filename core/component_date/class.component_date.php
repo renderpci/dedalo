@@ -1611,7 +1611,7 @@ class component_date extends component_common {
 		// Response
 		$response = new stdClass();
 			$response->result	= null;
-			$response->errors 	= [];
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
@@ -1619,7 +1619,7 @@ class component_date extends component_common {
 				// try to JSON decode (null on not decode)
 				$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 				$lang = $this->lang;
-				$value = (is_object($dato_from_json))
+				$value = (is_object($dato_from_json) && property_exists($dato_from_json, $lang))
 					? $dato_from_json->$lang
 					: $dato_from_json;
 			}else{
@@ -1809,6 +1809,11 @@ class component_date extends component_common {
 		// to null when is empty
 			if (!is_null($value) && empty($value)) {
 				$value = null;
+			}
+
+		// values are array except for null
+			if (is_object($value)) {
+				$value = [$value];
 			}
 
 		$response->result	= $value;
