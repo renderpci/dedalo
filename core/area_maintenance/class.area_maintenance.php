@@ -108,10 +108,10 @@ class area_maintenance extends area_common {
 					'body'					=> defined('ONTOLOGY_DB')
 						? 'Disabled update Ontology. You are using config ONTOLOGY_DB !'
 						: label::get_label('update_ontology')." is disabled for ".DEDALO_ENTITY,
-					'confirm_text'			=> '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
-						.'!!!!!!!!!!!!!! DELETING ACTUAL DATABASE !!!!!!!!!!!!!!!!' . PHP_EOL
-						.'Are you sure to overwrite current Ontology data ? ' .PHP_EOL.PHP_EOL
-						.'You will lose all changes made to the current Ontology'
+					'confirm_text'			=> '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! WARNING !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
+						.'!!!!!!!!!!!!!! DELETING ACTUAL ONTOLOGY !!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
+						.'Are you sure you want to overwrite the current Ontology data?' .PHP_EOL
+						.'You will lose all changes made to the local Ontology.'
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;

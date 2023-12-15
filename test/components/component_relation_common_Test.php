@@ -26,7 +26,7 @@ final class component_relation_common_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
