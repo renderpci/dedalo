@@ -958,7 +958,7 @@ class section extends common {
 			$user_id = get_user_id();
 
 		// date now
-			$date_now = component_date::get_timestamp_now_for_db();
+			$date_now = dd_date::get_timestamp_now_for_db();
 
 		// save_handler session case
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
@@ -1464,7 +1464,7 @@ class section extends common {
 							$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
-							$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
+							$RecordObj_time_machine_new->set_timestamp((string)dd_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
 							$RecordObj_time_machine_new->set_userID(get_user_id());
 							$RecordObj_time_machine_new->set_dato((object)$this->dato);
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
@@ -2127,7 +2127,7 @@ class section extends common {
 
 		$dato			= $this->get_dato();
 		$local_value	= isset($dato->created_date)
-			? component_date::timestamp_to_date(
+			? dd_date::timestamp_to_date(
 				$dato->created_date,
 				true // bool full
 			  )
@@ -2146,7 +2146,7 @@ class section extends common {
 
 		$dato			= $this->get_dato();
 		$local_value	= isset($dato->modified_date)
-			? component_date::timestamp_to_date(
+			? dd_date::timestamp_to_date(
 				$dato->modified_date,
 				true // bool full
 			  )
@@ -2363,7 +2363,7 @@ class section extends common {
 				$current_date	= reset($dato);
 				$dd_date		= new dd_date($current_date->start);
 				$timestamp		= $dd_date->get_dd_timestamp();
-				$local_date		= component_date::timestamp_to_date($timestamp, true); // string|null
+				$local_date		= dd_date::timestamp_to_date($timestamp, true); // string|null
 			}
 
 
