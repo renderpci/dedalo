@@ -38,26 +38,26 @@ final class component_common_test extends TestCase {
 	* Reference component to apply common functions
 	* @return
 	*/
-	private function build_component_instance() {
+		// private function build_component_instance() {
 
-		$model			= 'conponent_3d';
-		$tipo			= 'test26';
-		$section_tipo	= 'test3';
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		// 	$model			= 'conponent_3d';
+		// 	$tipo			= 'test26';
+		// 	$section_tipo	= 'test3';
+		// 	$section_id		= 1;
+		// 	$mode			= 'edit';
+		// 	$lang			= DEDALO_DATA_NOLAN;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		// 	$component = component_common::get_instance(
+		// 		$model, // string model
+		// 		$tipo, // string tipo
+		// 		$section_id,
+		// 		$mode,
+		// 		$lang,
+		// 		$section_tipo
+		// 	);
 
-		return $component;
-	}//end build_component_instance
+		// 	return $component;
+		// }//end build_component_instance
 
 
 

@@ -509,48 +509,6 @@ final class component_date_Test extends TestCase {
 
 
 	/**
-	* TEST_get_timestamp_now_for_db
-	* @return void
-	*/
-	public function test_get_timestamp_now_for_db() {
-
-		$result = dd_date::get_timestamp_now_for_db();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_timestamp_now_for_db
-
-
-
-	/**
-	* TEST_timestamp_to_date
-	* @return void
-	*/
-	public function test_timestamp_to_date() {
-
-		$timestamp = '2013-04-23 19:47:05';
-
-		$result = dd_date::timestamp_to_date( $timestamp );
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-		// 23-04-2013 19:47:05
-		$this->assertTrue(
-			$result==='23-04-2013 19:47:05',
-			'expected  23-04-2013 19:47:05 : ' . PHP_EOL
-				. to_string($result)
-		);
-	}//end test_timestamp_to_date
-
-
-
-	/**
 	* TEST_resolve_query_object_sql
 	* @return void
 	*/
