@@ -1,8 +1,10 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_EXTERNAL
 * Manage specific component logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
+* Mainly used in external APIs that manage data such as ZENON
 */
 class component_external extends component_common {
 
@@ -52,7 +54,7 @@ class component_external extends component_common {
 		// check properties config
 			if (!isset($section_properties->api_config)) {
 				debug_log(__METHOD__
-					." ERROR. Unable to load data from_remote. Empty properties section api_config (1)" .PHP_EOL
+					." ERROR. Unable to load data from_remote. Empty section properties api_config (1)" .PHP_EOL
 					.' tipo: '. $this->tipo .PHP_EOL
 					.' section_tipo: '. $section_tipo .PHP_EOL
 					.' section_id: '. $section_id .PHP_EOL
@@ -76,7 +78,7 @@ class component_external extends component_common {
 				foreach ($ar_component_tipo as $component_tipo) {
 					$RecordObj_dd			= new RecordObj_dd($component_tipo);
 					$component_properties	= $RecordObj_dd->get_properties();
-					if (empty($component_properties)) {
+					if (empty($component_properties) || !isset($component_properties->fields_map)) {
 						continue;
 					}
 
@@ -91,19 +93,19 @@ class component_external extends component_common {
 			// call entity class to build custom api url
 				include_once( dirname(__FILE__) . '/entities/class.'.$entity.'.php' );
 
-				$options = new stdClass();
-					$options->api_url		= $api_url;
-					$options->ar_fields		= $ar_fields;
-					$options->section_id	= $section_id;
-					$options->lang			= $lang;
-
-				$url = $entity::build_row_request_url($options);
+				// url build
+					$url = $entity::build_row_request_url((object)[
+						'api_url'		=> $api_url,
+						'ar_fields'		=> $ar_fields,
+						'section_id'	=> $section_id,
+						'lang'			=> $lang
+					]);
 
 				// request
 					$request_response = curl_request((object)[
 						'url'		=> $url, // string
 						'header'	=> false, // bool
-						'timeout'	=> 7 // int in secs
+						'timeout'	=> 6 // int in secs
 					]);
 					$response_obj = !empty($request_response->result)
 						? json_decode($request_response->result)
@@ -119,9 +121,9 @@ class component_external extends component_common {
 				return null;
 			}
 
-		// decode json response
+		// decode JSON response
 			// if (!$response_obj=json_decode($response)) {
-			// 	debug_log(__METHOD__." ERROR. Empty parse json response from api_config:" .PHP_EOL. to_string($request_response), logger::ERROR);
+			// 	debug_log(__METHOD__." ERROR. Empty parse JSON response from api_config:" .PHP_EOL. to_string($request_response), logger::ERROR);
 			// 	return null;
 			// }
 
@@ -200,7 +202,11 @@ class component_external extends component_common {
 						}
 						return $value;
 					}else{
-						debug_log(__METHOD__." Error. Not found key: $name in row_data".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." Error. Not found key: $name in row_data" . PHP_EOL
+							.' row_data: ' . to_string($row_data)
+							, logger::ERROR
+						);
 					}
 				}
 				return $carry;
@@ -218,40 +224,47 @@ class component_external extends component_common {
 
 	/**
 	*  SET_DATO
-	* @param array $dato
+	* @param mixed $dato
 	* 	Dato now is multiple. For this expected type is array
 	*	but in some cases can be an array JSON encoded or some rare times a plain string
 	* @return bool
 	*/
 	public function set_dato($dato) : bool {
 
-		if (is_string($dato)) { # Tool Time machine case, dato is string
-			if (strpos($dato, '[')!==false) {
-				# dato is JSON encoded
-				$dato = json_handler::decode($dato);
-			}else{
-				# dato is string plain value
-				$dato = array($dato);
+		// string case
+			if (is_string($dato)) { # Tool Time machine case, dato is string
+				if (strpos($dato, '[')!==false) {
+					# dato is JSON encoded
+					$dato = json_handler::decode($dato);
+				}else{
+					# dato is string plain value
+					$dato = array($dato);
+				}
 			}
-		}
 
-		if(SHOW_DEBUG===true) {
-			if (!is_array($dato)) {
-				debug_log(__METHOD__." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array", logger::DEBUG);
+		// array check
+			if(SHOW_DEBUG===true) {
+				if (!is_array($dato)) {
+					debug_log(__METHOD__
+						." Warning. [$this->tipo,$this->parent]. Received dato is NOT array. Type is '".gettype($dato)."' and dato: '".to_string($dato)."' will be converted to array"
+						, logger::DEBUG
+					);
+				}
 			}
-		}
 
-		$safe_dato=array();
-		foreach ((array)$dato as $value) {
-			if (!is_string($value)) {
-				$safe_dato[] = to_string($value);
-			}else{
-				$safe_dato[] = $value;
+		// safe_dato
+			$safe_dato = [];
+			foreach ((array)$dato as $value) {
+				if (!is_string($value)) {
+					$safe_dato[] = to_string($value);
+				}else{
+					$safe_dato[] = $value;
+				}
 			}
-		}
-		$dato = $safe_dato;
+			$dato = $safe_dato;
 
-		return parent::set_dato( (array)$dato );
+
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -271,16 +284,6 @@ class component_external extends component_common {
 
 		return (string)$valor;
 	}//end get_valor
-
-
-
-	/**
-	* LOAD TOOLS (DEPRECATED)
-	*/
-		// public function load_tools( bool $check_lang_tools=true ) : array {
-
-		// 	return [];
-		// }//end load_tools
 
 
 
