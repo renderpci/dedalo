@@ -2846,7 +2846,13 @@ abstract class common {
 
 											$section_map = section::get_section_map( $current_section_tipo );
 											if(empty($section_map)) {
-												debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+												debug_log(__METHOD__
+													." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+													.' tipo: ' . $this->tipo . PHP_EOL
+													.' section_tipo: ' . $this->section_tipo . PHP_EOL
+													.' section_id: ' . $this->section_id
+													, logger::WARNING
+												);
 												continue;
 											}
 											foreach ($get_ddo_map->columns as $current_column_path) {
@@ -2855,7 +2861,13 @@ abstract class common {
 
 												// ignore value
 												if(empty($section_map_value)){
-													debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+													debug_log(__METHOD__
+														." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+														.' tipo: ' . $this->tipo . PHP_EOL
+														.' section_tipo: ' . $this->section_tipo . PHP_EOL
+														.' section_id: ' . $this->section_id
+														, logger::WARNING
+													);
 													continue;
 												}
 												$ar_component_tipo = (array)$section_map_value;
