@@ -276,7 +276,7 @@ class tools_register {
 				unset($_SESSION['dedalo']['registered_tools']);
 			}
 			dd_cache::delete_cache_files([
-				dd_cache::get_cache_file_prefix() . 'cache_registered_tools.json'
+				'cache_registered_tools.json'
 			]);
 
 		// debug
