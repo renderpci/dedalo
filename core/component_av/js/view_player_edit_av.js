@@ -33,6 +33,11 @@ view_player_edit_av.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// media_streams (used to know frame rate)
+		if (!self.media_streams) {
+			self.media_streams = await self.get_media_streams()
+		}
+
 	// content_data
 		const content_data = get_content_data_player({
 			self					: self,
@@ -263,7 +268,7 @@ const get_av_control_buttons = (self) => {
 		})
 		av_minus_1_frame.addEventListener('mouseup', () =>{
 			// get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
+			const r_frame_rate				= self.media_streams[0].r_frame_rate
 			const ar_frame_rate_operator	= r_frame_rate.split('/')
 			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
 			const time_for_frame			= 1 / frame_rate
@@ -284,7 +289,7 @@ const get_av_control_buttons = (self) => {
 		})
 		av_plus_1_frame.addEventListener('mouseup', () =>{
 			// get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate				= self.data.media_info.streams[0].r_frame_rate
+			const r_frame_rate				= self.media_streams[0].r_frame_rate
 			const ar_frame_rate_operator	= r_frame_rate.split('/')
 			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
 			const time_for_frame			= (1 / frame_rate)
