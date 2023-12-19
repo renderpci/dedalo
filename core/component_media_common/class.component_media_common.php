@@ -998,7 +998,8 @@ class component_media_common extends component_common {
 
 		debug_log(__METHOD__
 			. " Calling unimplemented method get_thumb_quality catch by component_media_common " . PHP_EOL
-			. ' Define a real get_thumb_quality method ASAP'
+			. ' Define a real get_thumb_quality method ASAP' . PHP_EOL
+			.' called class: ' . get_called_class()
 			, logger::DEBUG
 		);
 

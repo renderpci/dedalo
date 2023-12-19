@@ -207,7 +207,7 @@ paginator.prototype.get_total = async function() {
 	// 	? await this.caller.total()
 	// 	: this.caller.total
 
-	const total = await this.caller.get_total()
+	const total = await self.caller.get_total()
 
 	paginator.loading_total_status = 'resolved'
 
