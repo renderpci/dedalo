@@ -73,7 +73,12 @@
 
 		foreach ((array)$ar_section_tipo as $current_section_tipo) {
 
-			$section = $section_class::get_instance(null, $current_section_tipo, $mode);
+			// section instance
+				$section = $section_class::get_instance(
+					null,
+					$current_section_tipo,
+					$mode
+				);
 
 			// pagination. fix pagination vars (defined in class component_common)
 				$limit	= $this->search_query_object->limit;
@@ -82,6 +87,11 @@
 					$pagination->limit	= $limit;
 					$pagination->offset	= $offset;
 				$section->pagination = $pagination;
+
+			// view fix. Section instance inherits the view (from API request)
+				if (isset($this->view)) {
+					$section->set_view($this->view);
+				}
 
 			// section JSON context
 				$section_json = $section->get_json();
@@ -160,6 +170,11 @@
 
 				// pagination. fix pagination vars (defined in class component_common)
 					// $section->pagination = $pagination;
+
+				// view fix. Section instance inherits the view (from API request)
+					if (isset($this->view)) {
+						$section->set_view($this->view);
+					}
 
 				// set dato
 					if ($mode==='tm') {

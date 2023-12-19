@@ -4326,13 +4326,24 @@ abstract class common {
 
 
 	/**
+	* SET_VIEW
+	* @return void
+	*/
+	public function set_view(?string $view) : void {
+
+		$this->view = $view;
+	}//end set_view
+
+
+
+	/**
 	* GET_VIEW
 	* @return string|null $view
 	*/
 	public function get_view() : ?string {
 
 		// When view is injected by ddo_map
-			if(isset($this->view)){
+			if(isset($this->view)) {
 				return $this->view;
 			}
 
