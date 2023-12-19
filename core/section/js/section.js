@@ -168,6 +168,9 @@ section.prototype.init = async function(options) {
 		self.session_save			= options.session_save ?? true
 		self.session_key			= options.session_key ?? 'section_' + self.tipo
 
+		// view
+		self.view					= options.view ?? null
+
 	// event subscriptions
 		// new_section_ event
 			self.events_tokens.push(
@@ -561,6 +564,9 @@ section.prototype.build = async function(autoload=false) {
 				self.rqo.source.session_save	= self.session_save
 				self.rqo.source.session_key		= self.session_key
 
+			// view
+				self.rqo.source.view = self.view
+
 			// build_autoload
 			// Use unified way to load context and data with
 			// errors and not login situation managing
@@ -652,6 +658,11 @@ section.prototype.build = async function(autoload=false) {
 				// 	rqo,
 				// 	'rqo'
 				// )
+
+			// view
+				if (self.context.view) {
+					self.view = self.context.view
+				}
 
 			// debug
 				if(SHOW_DEBUG===true) {
