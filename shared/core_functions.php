@@ -344,8 +344,8 @@ function curl_request(object $options) : object {
 					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
 					break;
 			}
-			$debug_level = $httpcode===200 ? logger::DEBUG : logger::ERROR;
-			debug_log(__METHOD__ . PHP_EOL
+			$debug_level = $httpcode===200 ? logger::WARNING : logger::ERROR;
+			debug_log(__METHOD__ . ' ' .$httpcode. ' : '. PHP_EOL
 				. ' url: ' . $url . PHP_EOL
 				. ' msg: ' .$msg
 				, $debug_level
