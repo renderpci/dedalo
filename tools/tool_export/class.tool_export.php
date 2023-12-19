@@ -336,7 +336,7 @@ class tool_export extends tool_common {
 
 	/**
 	* GET_GRID_VALUE
-	* Builds ddgrid value object
+	* Builds dd_grid value object
 	* @param array $ar_ddo
 	* @param locator $locator
 	*
