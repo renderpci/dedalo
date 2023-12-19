@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT EMAIL
 *
@@ -30,26 +31,40 @@ class component_email extends component_common {
 
 		$dato = parent::get_dato();
 
-		return (array)$dato;
+
+		return $dato;
 	}//end get_dato
 
 
 
 	/**
 	* SET_DATO
+	* @param array|null $dato
 	* @return bool
 	*/
 	public function set_dato($dato) : bool {
 
-		$safe_dato=array();
-		foreach ((array)$dato as $value) {
-			$safe_dato[] = empty($value)
-				? $value
-				: component_email::clean_email($value);
-		}
-		$dato = $safe_dato;
+		if (empty($dato)) {
 
-		return parent::set_dato( (array)$dato );
+			// null case
+
+			$dato = null;
+
+		}else{
+
+			// array case
+
+			$safe_dato = [];
+			foreach ((array)$dato as $value) {
+				$safe_dato[] = empty($value)
+					? null
+					: component_email::clean_email($value);
+			}
+			$dato = $safe_dato;
+		}
+
+
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -101,7 +116,9 @@ class component_email extends component_common {
 	public static function clean_email(string $email) : string {
 
 		if (!empty($email)) {
-			$email = trim( preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', '', $email) );
+			$email = trim(
+				preg_replace('=((<CR>|<LF>|0x0A/%0A|0x0D/%0D|\\n|\\r|\'|\")\S).*=i', '', $email)
+			);
 		}
 
 		return $email;
@@ -115,30 +132,24 @@ class component_email extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
-		#debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
+	public static function resolve_query_object_sql(object $query_object) : object {
+		// debug_log(__METHOD__." query_object ".to_string($query_object), logger::DEBUG);
 
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		// q
+			$q = is_array($query_object->q)
+				? reset($query_object->q)
+				: $query_object->q;
+			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
-		#$q = $query_object->q;
-		#if (isset($query_object->type) && $query_object->type==='jsonb') {
-		#	$q = json_decode($q);
-		#}
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
 
-		# Always set fixed values
-		$query_object->type = 'string';
+		// type. Always set fixed values
+			$query_object->type = 'string';
 
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
-		# Prepend if exists
-		#if (isset($query_object->q_operator)) {
-		#	$q = $query_object->q_operator . $q;
-		#}
-
+		// variants switch
 		switch (true) {
-			# EMPTY VALUE (in current lang data)
+			// EMPTY VALUE (in current lang data)
 			case ($q==='!*'):
 				$operator = 'IS NULL';
 				$q_clean  = '';
@@ -176,10 +187,10 @@ class component_email extends component_common {
 						$clone->lang 	 = $lang;
 					$new_query_json->$logical_operator[] = $clone;
 
-				# override
+				// override
 				$query_object = $new_query_json ;
 				break;
-			# NOT EMPTY (in any project lang data)
+			// NOT EMPTY (in any project lang data)
 			case ($q==='*'):
 				$operator = 'IS NOT NULL';
 				$q_clean  = '';
@@ -214,7 +225,7 @@ class component_email extends component_common {
 				# override
 				$query_object = [$new_query_json, $langs_query_json];
 				break;
-			# IS DIFFERENT
+			// IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
 				$operator = '!=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -222,7 +233,7 @@ class component_email extends component_common {
 				$query_object->q_parsed = '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
-			# IS SIMILAR
+			// IS SIMILAR
 			case (strpos($q, '=')===0 || $q_operator==='='):
 				$operator = '=';
 				$q_clean  = str_replace($operator, '', $q);
@@ -230,7 +241,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = true;
 				break;
-			# NOT CONTAIN
+			// NOT CONTAIN
 			case (strpos($q, '-')===0 || $q_operator==='-'):
 				$operator = '!~*';
 				$q_clean  = str_replace('-', '', $q);
@@ -238,7 +249,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-			# CONTAIN EXPLICIT
+			// CONTAIN EXPLICIT
 			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -246,7 +257,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-			# ENDS WITH
+			// ENDS WITH
 			case (substr($q, 0, 1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -254,7 +265,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'".*\'';
 				$query_object->unaccent = true;
 				break;
-			# BEGINS WITH
+			// BEGINS WITH
 			case (substr($q, -1)==='*'):
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
@@ -262,7 +273,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-			# LITERAL
+			// LITERAL
 			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
 				$operator = '~';
 				$q_clean  = str_replace("'", '', $q);
@@ -270,7 +281,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
 				$query_object->unaccent = false;
 				break;
-			# DEFAULT CONTAIN
+			// DEFAULT CONTAIN
 			default:
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);
@@ -278,8 +289,7 @@ class component_email extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-		}//end switch (true) {
-		#dump($query_object, ' query_object ++ '.to_string());
+		}//end switch (true)
 
 
 		return $query_object;
