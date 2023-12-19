@@ -1404,8 +1404,16 @@ abstract class common {
 					}
 				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
 				$current_section_id		= $this->get_section_id() ?? '';
+
+				$len = !empty($called_tipo)
+					? strlen($called_tipo)
+					: 0;
+				$repeat = ($len < 21)
+					? (21 - $len)
+					: 0;
+				$tipo_line = $called_tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
+					'------- get_json --------------------- '. $tipo_line .' '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
 					logger::DEBUG
 				);
 			}
@@ -1458,12 +1466,12 @@ abstract class common {
 							$len = !empty($this->tipo)
 								? strlen($this->tipo)
 								: 0;
-							$repeat = ($len < 14)
-								? (14 - $len)
+							$repeat = ($len < 21)
+								? (21 - $len)
 								: 0;
 							$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 							debug_log(
-								"------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config),
+								'------- get_structure_context CACHED - ' . $tipo_line .' '. exec_time_unit($start_time,'ms').' ms' . " ---- $model ". json_encode($add_request_config),
 								logger::DEBUG
 							);
 						}
@@ -1767,7 +1775,7 @@ abstract class common {
 					? (14 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				// error_log('------- get_structure_context -------- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
 
 
@@ -1826,12 +1834,12 @@ abstract class common {
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
+				$repeat = ($len < 35)
+					? (35 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'------- get_subdatum start ----------- '. $tipo_line.' '. get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -2239,10 +2247,20 @@ abstract class common {
 					// add calculated subcontext
 						// $ar_subcontext_calculated[] = $cid;
 
-					debug_log(
-						"------------------- resolve ddo ------------------ $dd_object->tipo ---------- ".exec_time_unit($ddo_start_time,'ms')." ms ",
-						logger::DEBUG
-					);
+					if(SHOW_DEBUG===true) {
+						$len = !empty($dd_object->tipo)
+							? strlen($dd_object->tipo)
+							: 0;
+						$repeat = ($len < 21)
+							? (21 - $len)
+							: 0;
+						$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
+
+						debug_log(
+							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms',
+							logger::DEBUG
+						);
+					}
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
 			}//end foreach($ar_locators as $current_locator)
@@ -2262,12 +2280,12 @@ abstract class common {
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
+				$repeat = ($len < 21)
+					? (21 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'------- get_subdatum ----------------- '."$tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
