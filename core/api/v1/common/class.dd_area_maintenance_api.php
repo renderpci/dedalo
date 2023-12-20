@@ -484,6 +484,10 @@ final class dd_area_maintenance_api {
 					, logger::DEBUG
 				);
 
+			// pause and force garbage collector (prevent cached files generating errors)
+				sleep(2);
+				gc_collect_cycles();
+
 			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 				logger::$obj['activity']->log_message(
 					'SAVE',
