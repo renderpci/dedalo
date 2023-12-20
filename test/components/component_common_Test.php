@@ -1679,73 +1679,73 @@ final class component_common_test extends TestCase {
 	* TEST_SAVE_COMPONENT_DATO
 	* @return void
 	*/
-	public function XXX_test_save_component_dato() : void {
+		// public function XXX_test_save_component_dato() : void {
 
-		// working here (!)
+		// 	// working here (!)
 
-		// section 1
-			$section_id		= 1;
-			$section_tipo	= 'test3';
-			$section		= section::get_instance(
-				$section_id, // string|null section_id
-				$section_tipo, // string section_tipo
-				'list',
-				// false
-			);
-			$section_dato = $section->get_dato();
+		// 	// section 1
+		// 		$section_id		= 1;
+		// 		$section_tipo	= 'test3';
+		// 		$section		= section::get_instance(
+		// 			$section_id, // string|null section_id
+		// 			$section_tipo, // string section_tipo
+		// 			'list',
+		// 			// false
+		// 		);
+		// 		$section_dato = $section->get_dato();
 
-		// component 1
-			$model	= 'component_input_text';
-			$tipo	= 'test52';
-			$mode	= 'list';
-			$lang	= 'lg-eng';
-			$component = component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				$mode, // string mode
-				$lang, // string lang
-				$section_tipo, // string section_tipo
-				// false
-			);
-			$component_dato = $component->get_dato();
+		// 	// component 1
+		// 		$model	= 'component_input_text';
+		// 		$tipo	= 'test52';
+		// 		$mode	= 'list';
+		// 		$lang	= 'lg-eng';
+		// 		$component = component_common::get_instance(
+		// 			$model, // string model
+		// 			$tipo, // string tipo
+		// 			$section_id, // string section_id
+		// 			$mode, // string mode
+		// 			$lang, // string lang
+		// 			$section_tipo, // string section_tipo
+		// 			// false
+		// 		);
+		// 		$component_dato = $component->get_dato();
 
-			$new_dato = [
-				'New dato key 0 C'
-			];
-			$component->set_dato($new_dato);
+		// 		$new_dato = [
+		// 			'New dato key 0 C'
+		// 		];
+		// 		$component->set_dato($new_dato);
 
-			$section->save_component_dato(
-				$component,
-				'direct',
-				false // bool $save_to_database
-			);
-			$dato_from_section = $section_dato->components->{$tipo}->dato->{$lang};
+		// 		$section->save_component_dato(
+		// 			$component,
+		// 			'direct',
+		// 			false // bool $save_to_database
+		// 		);
+		// 		$dato_from_section = $section_dato->components->{$tipo}->dato->{$lang};
 
-		// section 2
-			$section2 = section::get_instance(
-				$section_id, // string|null section_id
-				$section_tipo, // string section_tipo
-				'list',
-				// false
-			);
-		// component 2
-			$component2 = component_common::get_instance(
-				$model, // string model
-				$tipo, // string tipo
-				$section_id, // string section_id
-				$mode, // string mode
-				$lang, // string lang
-				$section_tipo, // string section_tipo
-				// false
-			);
-				// dump($component2->get_dato(), '$component2->get_dato() 2 ++ '.to_string($component2->uid));
+		// 	// section 2
+		// 		$section2 = section::get_instance(
+		// 			$section_id, // string|null section_id
+		// 			$section_tipo, // string section_tipo
+		// 			'list',
+		// 			// false
+		// 		);
+		// 	// component 2
+		// 		$component2 = component_common::get_instance(
+		// 			$model, // string model
+		// 			$tipo, // string tipo
+		// 			$section_id, // string section_id
+		// 			$mode, // string mode
+		// 			$lang, // string lang
+		// 			$section_tipo, // string section_tipo
+		// 			// false
+		// 		);
+		// 			// dump($component2->get_dato(), '$component2->get_dato() 2 ++ '.to_string($component2->uid));
 
-		$this->assertSame(
-			$component->uid, $component2->uid,
-			'expected component is the same uid '.$component->uid.' => '.$component2->uid
-		);
-	}//end test_save_component_dato
+		// 	$this->assertSame(
+		// 		$component->uid, $component2->uid,
+		// 		'expected component is the same uid '.$component->uid.' => '.$component2->uid
+		// 	);
+		// }//end test_save_component_dato
 
 
 
@@ -1753,36 +1753,30 @@ final class component_common_test extends TestCase {
 	* TEST_LOGOUT_USERS
 	* @return void
 	*/
-	public function XXX_test_logout_users(): void {
+		// public function XXX_test_logout_users(): void {
 
-		$users = [
-			-1,
-			1
-		];
-		foreach ($users as $user_id) {
+		// 	$users = [
+		// 		-1,
+		// 		1
+		// 	];
+		// 	foreach ($users as $user_id) {
 
-			// login_Test::logout($user_id);
+		// 		// login_Test::logout($user_id);
 
-			$options = (object)[
-				'mode'	=> null,
-				'cause'	=> 'test unit exit'
-			];
-			login::quit($options);
+		// 		$options = (object)[
+		// 			'mode'	=> null,
+		// 			'cause'	=> 'test unit exit'
+		// 		];
+		// 		login::quit($options);
 
-			// unset($_SESSION['dedalo']);
+		// 		// unset($_SESSION['dedalo']);
 
-			$this->assertTrue(
-				!isset($_SESSION['dedalo']['auth']),
-				'expected session dedalo auth is not set'
-			);
-		}
-
-		// dump($_SESSION['dedalo'], ' $_SESSION[dedalo] ++ '.to_string());
-	}//end test_logout_users
-
-
-
-
+		// 		$this->assertTrue(
+		// 			!isset($_SESSION['dedalo']['auth']),
+		// 			'expected session dedalo auth is not set'
+		// 		);
+		// 	}
+		// }//end test_logout_users
 
 
 
