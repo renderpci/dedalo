@@ -1089,7 +1089,11 @@ class component_relation_common extends component_common {
 		// section save. The section will be the responsible to save the component data
 			$save_to_database	= isset($this->save_to_database) ? (bool)$this->save_to_database : true; // default is true
 			$section			= $this->get_my_section();
-			$section_id			= $section->save_component_dato($this, 'relation', $save_to_database);
+			$section_id			= $section->save_component_dato(
+				$this, // object $component_obj
+				'relation', // string $component_data_type
+				$save_to_database // bool $save_to_database
+			);
 
 		// relations table links update (default is true)
 			if ($this->save_to_database_relations===true) {
@@ -1102,7 +1106,7 @@ class component_relation_common extends component_common {
 					$relation_options->from_component_tipo	= $tipo;
 					$relation_options->ar_locators			= $current_dato;
 
-				$propagate_response = search::propagate_component_dato_to_relations_table($relation_options);
+				search::propagate_component_dato_to_relations_table($relation_options);
 			}
 
 		// save_to_database. Optional stop the save process to delay ddbb access
@@ -1117,6 +1121,7 @@ class component_relation_common extends component_common {
 
 		// Observers. The observers will be need to be notified for re-calculate your own dato with the new component dato
 			$this->propagate_to_observers();
+
 
 		return (int)$section_id;
 	}//end Save
