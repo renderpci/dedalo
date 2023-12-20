@@ -252,16 +252,18 @@ class component_date extends component_common {
 		// ar_values
 			$ar_values	= [];
 			$data		= $this->get_dato();
-			foreach ($data as $key => $current_dato) {
+			if (!empty($data)) {
+				foreach ($data as $key => $current_dato) {
 
-				$ar_values[$key] = ''; // default
+					$ar_values[$key] = ''; // default
 
-				if(empty($current_dato)) {
-					continue;
-				}
+					if(empty($current_dato)) {
+						continue;
+					}
 
-				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
-			}//end foreach ($data as $key => $current_dato)
+					$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
+				}//end foreach ($data as $key => $current_dato)
+			}
 
 		// flat_value (array of one value full resolved)
 			$flat_value = [implode($records_separator, $ar_values)];
