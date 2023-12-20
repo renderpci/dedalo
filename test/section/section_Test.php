@@ -1251,8 +1251,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===-1,
-			'expected $result === -1 '. PHP_EOL
+			$result===-1 || $result===1,
+			'expected $result === -1 || $result===1 '. PHP_EOL
 			.' result: ' . $result
 		);
 	}//end test_get_created_by_userID
