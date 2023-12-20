@@ -475,18 +475,20 @@ final class dd_area_maintenance_api {
 				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
 
 			// response OK
-				$response->result	= $result;
-				$response->msg		= "OK. Updated Dédalo code successfully. " . $new_version_info;
+				// $response->result	= $result;
+				// $response->msg		= 'OK. Updated Dédalo code successfully. ' . $new_version_info;
 
 			// debug
 				debug_log(__METHOD__
-					." Updated Dédalo code successfully. " . $new_version_info
+					.' Updated Dédalo code successfully. ' . $new_version_info
 					, logger::DEBUG
 				);
 
 			// pause and force garbage collector (prevent cached files generating errors)
-				sleep(2);
+				sleep(1);
+				opcache_reset();
 				gc_collect_cycles();
+				sleep(1);
 
 			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 				logger::$obj['activity']->log_message(
@@ -499,14 +501,13 @@ final class dd_area_maintenance_api {
 					]
 				);
 
-
 		} catch (Exception $e) {
 
 			$response->msg = $e->getMessage();
 		}
 
 		$response->result	= true;
-		$response->msg		= 'OK. Request done '.__METHOD__;
+		$response->msg		= 'OK. Updated Dédalo code successfully. '.__METHOD__;
 
 
 		return $response;
