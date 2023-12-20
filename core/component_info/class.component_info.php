@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
 *
@@ -87,6 +88,7 @@ class component_info extends component_common {
 	public function get_widgets() : ?array {
 
 		$properties = $this->get_properties();
+
 		// get the widgets defined in the ontology
 		$widgets = $properties->widgets ?? null;
 		if (empty($widgets) || !is_array($widgets)) {
@@ -95,6 +97,7 @@ class component_info extends component_common {
 				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
 				, logger::ERROR
 			);
+
 			return null;
 		}
 
@@ -112,10 +115,11 @@ class component_info extends component_common {
 
 		$this->widget_lang = $widget_lang;
 
-		$valor = $this->get_html();
+		$valor = $this->get_value();
 		$valor = !empty($valor)
 			? strip_tags($valor)
 			: $valor;
+
 
 		return $valor;
 	}//end get_valor
@@ -129,16 +133,11 @@ class component_info extends component_common {
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		#if (empty($valor)) {
+		$this->widget_lang = $lang;
+		$this->widget_mode = 'export';
 
-			#$this->set_mode('export');
+		$valor = $this->get_value();
 
-			$this->widget_lang = $lang;
-			$this->widget_mode = 'export';
-
-			$valor = $this->get_html();
-			#$valor = strip_tags($valor);
-		#}
 
 		return to_string($valor);
 	}//end get_valor_export
@@ -149,16 +148,16 @@ class component_info extends component_common {
 	* GET_DIFFUSION_DATO
 	* @param object $options
 	* Sample:
-	* {
-		"widget_name": [
-			"get_archive_weights"
-		],
-		"select": [
-			"media_diameter"
-		],
-		"value_format": "first_value",
-		"lang": "lg-spa"
-	* }
+		* {
+		*	"widget_name": [
+		*		"get_archive_weights"
+		*	],
+		*	"select": [
+		*		"media_diameter"
+		*	],
+		*	"value_format": "first_value",
+		*	"lang": "lg-spa"
+		* }
 	* @return mixed $diffusion_dato
 	*/
 	public function get_diffusion_dato( object $options ) : mixed {
@@ -275,16 +274,21 @@ class component_info extends component_common {
 	*/
 	public function get_data_list() : ?array {
 
+		// get the widgets defined in the ontology
+		$widgets = $this->get_widgets();
+		if (empty($widgets) || !is_array($widgets)) {
+			debug_log(__METHOD__
+				." Empty or invalid defined widgets for ".get_called_class()." : $this->label [$this->tipo]" . PHP_EOL
+				.' widgets: ' . to_string($widgets)
+				, logger::ERROR
+			);
+
+			return null;
+		}
+
 		// the component info dato will be the all widgets data
 		$data_list = [];
 
-		$properties = $this->get_properties();
-		// get the widgets defined in the ontology
-		$widgets = $properties->widgets ?? null;
-		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty or invalid defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
-			return null;
-		}
 		// every widget will be created and calculate your own data
 		foreach ($widgets as $widget_obj) {
 
@@ -301,15 +305,18 @@ class component_info extends component_common {
 			$widget = widget_common::get_instance($widget_options);
 
 			// Widget data
-			$widget_data_list = method_exists($widget, 'get_data_list') ? $widget->get_data_list() : null;
+			$widget_data_list = method_exists($widget, 'get_data_list')
+				? $widget->get_data_list()
+				: null;
 
-			if($widget_data_list !== null){
+			if($widget_data_list!==null){
 				$data_list = array_merge($data_list, $widget_data_list);
 			}
 		}//end foreach ($widgets as $widget_obj)
 
 		// set the component info dato with the result
 		$this->data_list = $data_list;
+
 
 		return $data_list;
 	}//end get_data_list
