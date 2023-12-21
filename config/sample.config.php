@@ -179,11 +179,13 @@
 
 // is_developer
 	// Logged user is developer value. Depends of user config 'is_developer' value from database
-	define('SHOW_DEVELOPER',
-		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
-			? true
-			: false // default false
-	);
+	if (!defined('SHOW_DEBUG')) {
+		define('SHOW_DEVELOPER',
+			(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
+				? true
+				: false // default false
+		);
+	}
 
 
 
