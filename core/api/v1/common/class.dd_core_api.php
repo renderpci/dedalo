@@ -1552,6 +1552,7 @@ final class dd_core_api {
 			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
+			$source 				= $rqo->source;
 
 		// response
 			$response = new stdClass();
@@ -1561,9 +1562,10 @@ final class dd_core_api {
 
 		// section_elements_context_options
 			$section_elements_context_options = (object)[
+				'context_type'		=> $context_type,
 				'ar_section_tipo'	=> $ar_section_tipo,
 				'use_real_sections'	=> $use_real_sections,
-				'context_type'		=> $context_type
+				'skip_permissions'	=> ($source->type === 'filter') ? true : false
 			];
 			if (isset($ar_components_exclude)) {
 				$section_elements_context_options->ar_components_exclude = $ar_components_exclude;

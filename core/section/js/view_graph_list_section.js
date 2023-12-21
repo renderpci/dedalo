@@ -7,6 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import * as instances from '../../common/js/instances.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -19,13 +20,13 @@
 
 
 /**
-* VIEW_DEFAULT_LIST_SECTION
+* VIEW_GRAPH_LIST_SECTION
 * Manages the component's logic and appearance in client side
 */
-export const view_default_list_section = function() {
+export const view_graph_list_section = function() {
 
 	return true
-}//end view_default_list_section
+}//end view_graph_list_section
 
 
 
@@ -41,7 +42,7 @@ export const view_default_list_section = function() {
 * }
 * @return HTMLElement wrapper
 */
-view_default_list_section.render = async function(self, options) {
+view_graph_list_section.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -50,28 +51,16 @@ view_default_list_section.render = async function(self, options) {
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-	// ar_section_record. section_record instances (initialized and built)
-		self.ar_instances = self.ar_instances && self.ar_instances.length>0
-			? self.ar_instances
-			: await get_section_records({caller: self})
-
-	// content_data
-		const content_data = await get_content_data(self, self.ar_instances)
-		if (render_level==='content') {
-
-			// list_header_node. Remove possible style 'hide' if not empty
-				if (self.ar_instances.length>0) {
-					const wrapper = self.node
-					if (wrapper.list_header_node && wrapper.list_header_node.classList.contains('hide')) {
-						wrapper.list_header_node.classList.remove('hide')
-					}
-				}
-
-			return content_data
-		}
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
+
+	// content_data
+		const content_data = await get_content_data(self)
+
+		if (render_level==='content') {
+			return content_data
+		}
 
 	// buttons add
 		if (self.buttons && self.mode!=='tm') {
@@ -92,84 +81,7 @@ view_default_list_section.render = async function(self, options) {
 			self.search_container = search_container
 		}
 
-	// paginator container node
-		if (self.paginator) {
-			const paginator_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'paginator_container',
-				parent			: fragment
-			})
-			self.paginator.build()
-			.then(function(){
-				self.paginator.render().then(paginator_wrapper =>{
-					paginator_container.appendChild(paginator_wrapper)
-				})
-			})
-		}
-
-	// list body
-		const list_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'list_body',
-			parent			: fragment
-		})
-		// fix last list_body (for pagination selection)
-		self.node_body = list_body
-
-		// list_body css
-			const selector = `${self.section_tipo}_${self.tipo}.list`
-
-		// custom properties defined css
-			// if (self.context.css) {
-				// use defined section css
-				// set_element_css(selector, self.context.css)
-			// }
-			// flat columns create a sequence of grid widths taking care of sub-column space
-			// like 1fr 1fr 1fr 3fr 1fr
-			const items				= ui.flat_column_items(columns_map)
-			const template_columns	= items.join(' ')
-
-			// direct assign DES
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns": template_columns
-				// 	}
-				// )
-
-			// re-parse template_columns as percent
-				// const items_lenght = items.length
-				// const percent_template_columns = items.map(el => {
-				// 	if (el==='1fr') {
-				// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-				// 	}
-				// 	return el
-				// }).join(' ')
-				// console.log("percent_template_columns:",percent_template_columns);
-
-			const css_object = {
-				'.list_body' : {
-					'grid-template-columns' : template_columns
-				}
-			}
-			if (self.context.css) {
-				// use defined section css
-				for(const property in self.context.css) {
-					css_object[property] = self.context.css[property]
-				}
-			}
-			// use calculated css
-			set_element_css(selector, css_object)
-
-	// list_header_node. Create and append if ar_instances is not empty
-		const list_header_node = ui.render_list_header(columns_map, self)
-		list_body.appendChild(list_header_node)
-		if (self.ar_instances.length<1) {
-			list_header_node.classList.add('hide')
-		}
-
-	// content_data append
-		list_body.appendChild(content_data)
+		fragment.appendChild(content_data)
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -180,9 +92,6 @@ view_default_list_section.render = async function(self, options) {
 		wrapper.appendChild(fragment)
 		// set pointers
 		wrapper.content_data		= content_data
-		wrapper.list_body			= list_body
-		wrapper.list_header_node	= list_header_node
-
 
 	return wrapper
 }//end render
@@ -195,45 +104,100 @@ view_default_list_section.render = async function(self, options) {
 * @para object self
 * @return HTMLElement content_data
 */
-const get_content_data = async function(self, ar_section_record) {
-
-	const fragment = new DocumentFragment()
-
-	// add all section_record rendered nodes
-		const ar_section_record_length = ar_section_record.length
-		if (ar_section_record_length===0) {
-
-			// no records found case
-			const row_item = no_records_node()
-			fragment.appendChild(row_item)
-
-		}else{
-			// rows
-			// parallel mode
-				const ar_promises = []
-				for (let i = 0; i < ar_section_record_length; i++) {
-					const render_promise_node = ar_section_record[i].render({
-						add_hilite_row : true
-					})
-					ar_promises.push(render_promise_node)
-				}
-				await Promise.all(ar_promises).then(function(values) {
-				  for (let i = 0; i < ar_section_record_length; i++) {
-				  	const section_record_node = values[i]
-					fragment.appendChild(section_record_node)
-				  }
-				});
-		}
+const get_content_data = async function(self) {
 
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.mode, self.type)
-			  content_data.appendChild(fragment)
 
+	// get values by typologies
+		const order_key = self.context.properties.view_config.group_by || 'nexus46'
+		const data_to_be_grouped = self.datum.data.filter(el => el.tipo === order_key)
+
+		const group_by = function(array, key) {
+			return array.reduce(function(rv, x) {
+			(rv[x[key]] = rv[x[key]] || []).push(x);
+				return rv;
+			}, {});
+		};
+		const order_value = group_by(data_to_be_grouped, 'value')
+
+		for (const group_label in order_value) {
+			const current_group = order_value[group_label]
+
+			const grouped_value = []
+
+			const current_group_length = current_group.length
+			for (let i = 0; i < current_group_length; i++) {
+				const item = current_group[i]
+
+				const current_value = self.data.value.find(el => el.section_id === item.section_id)
+
+				grouped_value.push(current_value)
+			}
+
+			// ar_section_record. section_record instances (initialized and built)
+			const current_instances = await get_section_records({caller: self, view: self.view, value: grouped_value})
+			self.ar_instances.push(...current_instances)
+
+			const current_block = await render_grouper_block(self, group_label, current_instances)
+
+			content_data.appendChild(current_block)
+		}
 
 	return content_data
 }//end get_content_data
 
+
+
+
+/**
+* RENDER_GROUPER_BLOCK
+* @param array ar_section_record
+* @para object self
+* @return HTMLElement content_data
+*/
+const render_grouper_block = async function(self, group_label, ar_section_record) {
+
+	const fragment = new DocumentFragment()
+
+	const grouper_block = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'grouper_block',
+		parent			: fragment
+	})
+
+	const group_label_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'group_label',
+		inner_html 		: group_label || '',
+		parent			: grouper_block
+	})
+
+	const group_content = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'group_content',
+		parent			: grouper_block
+	})
+
+	// rows
+	// parallel mode
+	const ar_section_record_length = ar_section_record.length
+		const ar_promises = []
+		for (let i = 0; i < ar_section_record_length; i++) {
+			const render_promise_node = ar_section_record[i].render()
+			ar_promises.push(render_promise_node)
+		}
+		await Promise.all(ar_promises).then(function(values) {
+		  for (let i = 0; i < ar_section_record_length; i++) {
+		  	const section_record_node = values[i]
+			group_content.appendChild(section_record_node)
+		  }
+		});
+
+
+	return fragment
+}//end render_grouper_block
 
 
 /**
@@ -270,19 +234,31 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_column_id
 		})
 
-	// button_remove
-		// 	if (self.permissions>1) {
-		// 		columns_map.push({
-		// 			id			: 'remove',
-		// 			label		: '', // get_label.delete || 'Delete',
-		// 			width 		: 'auto',
-		// 			callback	: render_column_remove
-		// 		})
-		// 	}
+	// graph column
+		columns_map.push({
+			id			: 'graph',
+			label		: '', // get_label.delete || 'Delete',
+			width 		: 'auto',
+			callback	: render_column_graph
+		})
 
 	// columns base
 		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
+
+		const remove_columns = self.context.properties.view_config.remove_columns || []
+		const base_columns_map_length = base_columns_map.length
+
+		for (let i = 0; i < base_columns_map_length; i++) {
+			const column = base_columns_map[i]
+
+			const found = remove_columns.includes(column.tipo)
+			if(found){
+				continue
+			}
+			columns_map.push(column)
+		}
+
+
 
 	// fixed as calculated
 		self.fixed_columns_map = true
@@ -290,7 +266,6 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-
 
 
 /**
@@ -446,6 +421,56 @@ const get_buttons = function(self) {
 	return fragment
 }//end get_buttons
 
+
+
+
+const render_column_graph = function(options){
+
+	// options
+		const self			= options.caller
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	const graph_button = ui.create_dom_element({
+		element_type	: 'button',
+		class_name		: 'button graph',
+		parent			: fragment
+	})
+
+	graph_button.addEventListener('mouseup', async function(e){
+
+		const target_section_value = self.context.properties.view_config.target_section_value || 'nexus53'
+		const target_section_data = self.datum.data.find(el => el.section_id === section_id && el.section_tipo === section_tipo && el.tipo === target_section_value)
+		const target_section = target_section_data.value[0]
+
+		const instance_options = {
+			model 			: 'section',
+			tipo			: target_section,
+			section_tipo	: target_section,
+			mode 			: 'solved',
+			inspector 		: false
+		}
+
+		const section = await instances.get_instance(instance_options)
+
+		await section.build(true)
+
+		section.view = 'graph'
+		const section_node = await section.render()
+
+		self.node.after(section_node)
+
+		self.destroy(true, true, true)
+
+	})
+
+
+
+return fragment
+}
 
 
 // @license-end

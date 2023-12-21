@@ -19,13 +19,13 @@
 
 
 /**
-* VIEW_DEFAULT_LIST_SECTION
+* view_base_list_section
 * Manages the component's logic and appearance in client side
 */
-export const view_default_list_section = function() {
+export const view_base_list_section = function() {
 
 	return true
-}//end view_default_list_section
+}//end view_base_list_section
 
 
 
@@ -41,14 +41,20 @@ export const view_default_list_section = function() {
 * }
 * @return HTMLElement wrapper
 */
-view_default_list_section.render = async function(self, options) {
+view_base_list_section.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
 
 	// columns_map
-		const columns_map	= await rebuild_columns_map(self)
-		self.columns_map	= columns_map
+	// the method could be injected by caller in this case use it
+	// or it can build his own columns and inject the final columns_map
+	const columns_map = (self.rebuild_columns_map)
+		? await self.rebuild_columns_map(self)
+		: self.columns_map
+
+	// assign the result of rebuild columns_map to the instance
+	self.columns_map = columns_map
 
 	// ar_section_record. section_record instances (initialized and built)
 		self.ar_instances = self.ar_instances && self.ar_instances.length>0
@@ -72,6 +78,7 @@ view_default_list_section.render = async function(self, options) {
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
+
 
 	// buttons add
 		if (self.buttons && self.mode!=='tm') {
@@ -99,13 +106,17 @@ view_default_list_section.render = async function(self, options) {
 				class_name		: 'paginator_container',
 				parent			: fragment
 			})
+
 			self.paginator.build()
-			.then(function(){
-				self.paginator.render().then(paginator_wrapper =>{
+			.then(async function(){
+				await self.paginator.render().then(paginator_wrapper =>{
 					paginator_container.appendChild(paginator_wrapper)
 				})
 			})
+
 		}
+
+			console.log("self.paginator:",self.paginator);
 
 	// list body
 		const list_body = ui.create_dom_element({
@@ -120,32 +131,10 @@ view_default_list_section.render = async function(self, options) {
 			const selector = `${self.section_tipo}_${self.tipo}.list`
 
 		// custom properties defined css
-			// if (self.context.css) {
-				// use defined section css
-				// set_element_css(selector, self.context.css)
-			// }
 			// flat columns create a sequence of grid widths taking care of sub-column space
 			// like 1fr 1fr 1fr 3fr 1fr
 			const items				= ui.flat_column_items(columns_map)
 			const template_columns	= items.join(' ')
-
-			// direct assign DES
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns": template_columns
-				// 	}
-				// )
-
-			// re-parse template_columns as percent
-				// const items_lenght = items.length
-				// const percent_template_columns = items.map(el => {
-				// 	if (el==='1fr') {
-				// 		return Math.ceil(90 / (items_lenght -1)) + '%'
-				// 	}
-				// 	return el
-				// }).join(' ')
-				// console.log("percent_template_columns:",percent_template_columns);
 
 			const css_object = {
 				'.list_body' : {
@@ -237,63 +226,6 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 /**
-* REBUILD_COLUMNS_MAP
-* Adding control columns to the columns_map that will processed by section_recods
-* @param object self
-* @return obj columns_map
-*/
-const rebuild_columns_map = async function(self) {
-
-	// columns_map already rebuilt case
-		if (self.fixed_columns_map===true) {
-			return self.columns_map
-		}
-
-	const columns_map = []
-
-	// column section_id check
-		columns_map.push({
-			id			: 'section_id',
-			label		: 'Id',
-			tipo		: 'section_id', // used to sort only
-			sortable	: true,
-			width		: 'minmax(auto, 6rem)',
-			path		: [{
-				// note that component_tipo=section_id is valid here
-				// because section_id is a direct column in search
-				component_tipo	: 'section_id',
-				// optional. Just added for aesthetics
-				model			: 'component_section_id',
-				name			: 'ID',
-				section_tipo	: self.section_tipo
-			}],
-			callback	: render_column_id
-		})
-
-	// button_remove
-		// 	if (self.permissions>1) {
-		// 		columns_map.push({
-		// 			id			: 'remove',
-		// 			label		: '', // get_label.delete || 'Delete',
-		// 			width 		: 'auto',
-		// 			callback	: render_column_remove
-		// 		})
-		// 	}
-
-	// columns base
-		const base_columns_map = await self.columns_map
-		columns_map.push(...base_columns_map)
-
-	// fixed as calculated
-		self.fixed_columns_map = true
-
-
-	return columns_map
-}//end rebuild_columns_map
-
-
-
-/**
 * GET_BUTTONS
 * @param object self
 * @return HTMLElement fragment
@@ -329,123 +261,8 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
-	// non_editable_sections. Activity section 'dd542'
-		const non_editable_sections = [
-			'dd542', // activity
-			'dd1324' // registered tools
-		]
-		if (non_editable_sections.includes(self.tipo)) {
-			return fragment
-		}
-
-	// other_buttons_block
-		const other_buttons_block = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'other_buttons_block hide',
-			parent			: buttons_container
-		})
-
-	// other buttons
-		const ar_buttons_length = ar_buttons.length;
-		for (let i = 0; i < ar_buttons_length; i++) {
-
-			const current_button = ar_buttons[i]
-
-			// button_delete multiple
-			// check if user is global admin to activate the button delete (avoid users to delete multiple sections)
-				if(current_button.model==='button_delete' && page_globals.is_global_admin===false){
-					continue
-				}
-
-			// button node
-				const class_name	= 'warning ' + current_button.model.replace('button_', '')
-				const button_node	= ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: class_name,
-					inner_html		: current_button.label,
-					parent			: other_buttons_block
-				})
-				button_node.addEventListener('click', (e) => {
-					e.stopPropagation()
-
-					switch(current_button.model){
-						case 'button_new':
-							event_manager.publish('new_section_' + self.id)
-							break;
-
-						case 'button_delete': {
-							// sqo conform
-							const delete_sqo = clone(self.rqo.sqo)
-							delete_sqo.limit = null
-							delete delete_sqo.offset
-
-							// delete_record
-							self.delete_record({
-								section			: self,
-								section_id		: null,
-								section_tipo	: self.section_tipo,
-								sqo				: delete_sqo
-							})
-
-							break;
-						}
-						// button_import and button_trigger cases for compatibility with v5 ontology
-						// in future version will be merge both with new model button_tool
-						// in the mid-time use button_trigger for general cases to dispatch tools.
-						case 'button_import':
-						case 'button_trigger':
-							// open_tool (tool_common)
-							open_tool({
-								tool_context	: current_button.tools[0],
-								caller			: self
-							})
-							break;
-
-						default:
-							event_manager.publish('click_' + current_button.model)
-							break;
-					}
-				})
-		}//end for (let i = 0; i < ar_buttons_length; i++)
-
-	// tools buttons
-		ui.add_tools(self, other_buttons_block)
-
-	// show_other_buttons_button
-		const show_other_buttons_label	= get_label.show_buttons || 'Show buttons'
-		const show_other_buttons_button	= ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'icon_arrow show_other_buttons_button',
-			title			: show_other_buttons_label,
-			dataset			: {
-				label : show_other_buttons_label
-			},
-			parent			: buttons_container
-		})
-		show_other_buttons_button.addEventListener('click', function(e) {
-			e.stopPropagation()
-		})
-
-		// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: show_other_buttons_button,
-			container			: other_buttons_block,
-			collapsed_id		: 'section_other_buttons_block',
-			collapse_callback	: collapse,
-			expose_callback		: expose,
-			default_state		: 'closed'
-		})
-		function collapse() {
-			show_other_buttons_button.classList.remove('up')
-		}
-		function expose() {
-			show_other_buttons_button.classList.add('up')
-		}
-
-
 	return fragment
 }//end get_buttons
-
 
 
 // @license-end

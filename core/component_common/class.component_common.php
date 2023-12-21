@@ -2886,6 +2886,10 @@ abstract class component_common extends common {
 
 				$this->permissions = 2; // Allow all users to search with section info components
 
+			}elseif ( strpos($this->section_id, 'search') === 0){
+
+				$this->permissions = 2;
+
 			}else{
 
 				$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
@@ -3420,6 +3424,10 @@ abstract class component_common extends common {
 			$item->lang					= $this->get_lang();
 			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
 			$item->value				= $value;
+
+		if($this->mode === 'solved'){
+			$item->literal 				= $this->get_value();
+		}
 
 		// debug
 			if(SHOW_DEBUG===true) {
