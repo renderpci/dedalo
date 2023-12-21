@@ -26,6 +26,7 @@
 	import {inspector} from '../../inspector/js/inspector.js'
 	import {render_edit_section} from './render_edit_section.js'
 	import {render_list_section} from './render_list_section.js'
+	import {render_solved_section} from './render_solved_section.js'
 	import {render_common_section} from './render_common_section.js'
 
 
@@ -95,6 +96,8 @@ export const section = function() {
 	section.prototype.list_portal		= render_list_section.prototype.list
 	section.prototype.tm				= render_list_section.prototype.list
 	section.prototype.list_header		= render_list_section.prototype.list_header
+	section.prototype.solved			= render_solved_section.prototype.solved
+
 
 	section.prototype.delete_record		= render_common_section.prototype.delete_record
 
