@@ -1,8 +1,9 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_INVERSE
-*
-*
+* It is used to manage inverse relations
+* (references to current section)
 */
 class component_inverse extends component_common {
 
@@ -25,10 +26,12 @@ class component_inverse extends component_common {
 			$dato		= $section->get_inverse_references();
 
 		// fix dato
-			$this->dato = $dato;
+			$this->dato				= $dato;
+			$this->dato_resolved	= $dato;
 
 		// Set as loaded
 			$this->bl_loaded_matrix_data = true;
+
 
 		return $dato;
 	}//end get_dato
@@ -161,7 +164,6 @@ class component_inverse extends component_common {
 				$dd_grid_cell_object->set_records_separator($records_separator);
 				$dd_grid_cell_object->set_value([$grid_row]);
 
-		// dump($dd_grid_cell_object, '$dd_grid_cell_object ++ '.to_string());
 
 		return $dd_grid_cell_object;
 	}//end get_grid_value
@@ -170,13 +172,17 @@ class component_inverse extends component_common {
 
 	/**
 	* GET_VALOR
-	* @return string $valor
+	* @return string|null $valor
 	*/
 	public function get_valor() {
 
 		$dato = $this->get_dato();
 
-		return (string)json_encode($dato);
+		if (empty($dato)) {
+			return null;
+		}
+
+		return json_handler::encode($dato);
 	}//end get_valor
 
 
@@ -184,12 +190,12 @@ class component_inverse extends component_common {
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
-	* @return string $valor
+	* @return string $valor_export
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		# When is received 'valor', set as dato to avoid trigger get_dato against DB
-		# Received 'valor' is a json string (array of locators) from previous database search
+		// When is received 'valor', set as dato to avoid trigger get_dato against DB
+		// Received 'valor' is a JSON string (array of locators) from previous database search
 		if (!is_null($valor)) {
 			$dato = json_decode($valor);
 			$this->set_dato($dato);
@@ -197,15 +203,14 @@ class component_inverse extends component_common {
 			$dato = $this->get_dato();
 		}
 
-
 		$inverse_show = $this->get_properties()->inverse_show;
 
 		$ar_lines = [];
-		foreach ($dato as $key => $current_locator) {
+		foreach ($dato as $current_locator) {
 
-			$section_id   	= $current_locator->from_section_id;
-			$section_tipo 	= $current_locator->from_section_tipo;
-			$component_tipo = $current_locator->from_component_tipo;
+			$section_id		= $current_locator->from_section_id;
+			$section_tipo	= $current_locator->from_section_tipo;
+			$component_tipo	= $current_locator->from_component_tipo;
 
 			$line = '';
 			foreach ($inverse_show as $ikey => $ivalue) {
@@ -246,12 +251,15 @@ class component_inverse extends component_common {
 				}
 			}
 
+			// add
 			$ar_lines[] = $line;
-		}
-		$lines = implode(PHP_EOL, $ar_lines);
+		}//end foreach ($dato as $current_locator)
+
+		// valor_export: lines string
+		$valor_export = implode(PHP_EOL, $ar_lines);
 
 
-		return $lines;
+		return $valor_export;
 	}//end get_valor_export
 
 
