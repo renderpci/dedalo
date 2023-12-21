@@ -60,7 +60,7 @@ class dd_iri extends stdClass {
 
 		$iri = parse_url($value);
 		if(empty($iri['scheme']) || empty($iri['host'])){
-				throw new Exception("Error Processing Request. Invalid iri: $value", 1);
+			throw new Exception("Error Processing Request. Invalid iri: $value", 1);
 		}
 		$this->iri = (string)$value;
 	}//end set_iri

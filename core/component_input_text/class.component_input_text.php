@@ -398,24 +398,26 @@ class component_input_text extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object|array {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
-		// $q = $query_object->q;
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		// $q
+			$q = is_array($query_object->q)
+				? reset($query_object->q)
+				: $query_object->q;
+			if (is_string($q)) {
+				$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+			}
 
-		// Always set fixed values
-		$query_object->type = 'string';
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
 
-		if (is_string($q)) {
-			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-		}
+		// type. Always set fixed values
+			$query_object->type = 'string';
 
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
-		# Prepend if exists
-		#if (isset($query_object->q_operator)) {
-		#	$q = $query_object->q_operator . $q;
-		#}
+		// Prepend if exists
+			// if (isset($query_object->q_operator)) {
+			// 	$q = $query_object->q_operator . $q;
+			// }
 
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
@@ -609,6 +611,7 @@ class component_input_text extends component_common {
 				$query_object->unaccent	= true;
 				break;
 		}//end switch (true) {
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
