@@ -8506,6 +8506,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .relation_list > .content_data .relation_list_grid li.relation_list_data_row_center {
   justify-self: center;
 }
+.relation_list > .content_data .relation_list_grid li .svg {
+  height: 2.5rem;
+}
 /**
 * area
 *
