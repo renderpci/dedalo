@@ -43,6 +43,20 @@ $updates->$v = new stdClass();
 				CREATE SEQUENCE matrix_nexus_id_seq;
 				ALTER TABLE public.matrix_nexus ALTER COLUMN id SET DEFAULT nextval('matrix_nexus_id_seq'::regclass);
 			");
+		// Index matrix_test table to get flat locator used by inverse searches
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX matrix_test_relations_flat_st_si ON matrix_test
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_fct_st_si ON matrix_test
+					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_ty_st_si ON matrix_test
+					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_ty_st ON matrix_test
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+			");
 
 
 
