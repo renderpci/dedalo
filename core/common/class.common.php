@@ -4028,7 +4028,10 @@ abstract class common {
 
 					// others case
 					default:
-						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." Ignored model '$model' - current_tipo: '$element_tipo' "
+							, logger::WARNING
+						);
 						break;
 				}//end switch (true)
 
