@@ -3850,6 +3850,7 @@ abstract class common {
 			$context_type				= $options->context_type ?? 'simple';
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
 			$use_real_sections			= $options->use_real_sections ?? false;
+			$skip_permissions 			= $options->skip_permissions ?? false;
 			$path						= $options->path ?? [];
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
@@ -3893,8 +3894,15 @@ abstract class common {
 		$context			= [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
-			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
-			$user_id_logged 	= get_user_id();
+			// permissions
+				$section_permisions = ($skip_permissions === true)
+					? 1
+					: security::get_security_permissions($section_tipo, $section_tipo);
+
+				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
+
+			// user id
+				$user_id_logged = get_user_id();
 
 			// skip section if permissions are not enough
 				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
