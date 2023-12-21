@@ -335,8 +335,8 @@ final class Ffmpeg {
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
-					dump($options, ' options ++ '.to_string());
-					dump($ar_settings, ' ar_settings ++ '.to_string());
+					dump($options, ' build_av_alternate_command options ++ '.to_string());
+					dump($ar_settings, ' build_av_alternate_command ar_settings ++ '.to_string());
 				}
 				return $response;
 			}
