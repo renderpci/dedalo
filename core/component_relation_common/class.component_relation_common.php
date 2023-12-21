@@ -538,15 +538,19 @@ class component_relation_common extends component_common {
 
 			$fields_separator = isset($fields_separator)
 				? $fields_separator
-				: (isset($properties->fields_separator)
-					? $properties->fields_separator
-					: ', ');
+				: (isset($dedalo_request_config->show->fields_separator)
+					? $dedalo_request_config->show->fields_separator
+					: (isset($properties->fields_separator)
+						? $properties->fields_separator
+						: ', '));
 
 			$records_separator = isset($records_separator)
 				? $records_separator
-				: (isset($properties->records_separator)
-					? $properties->records_separator
-					: ' | ');
+				: (isset($dedalo_request_config->show->records_separator)
+					? $dedalo_request_config->show->records_separator
+					: (isset($properties->records_separator)
+						? $properties->records_separator
+						: ' | '));
 
 		// value object (dd_grid_cell_object)
 			$value = new dd_grid_cell_object();
