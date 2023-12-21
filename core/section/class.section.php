@@ -2909,7 +2909,7 @@ class section extends common {
 		$removed_locators = [];
 
 		$inverse_locators = $this->get_inverse_references();
-		foreach ((array)$inverse_locators as $current_locator) {
+		foreach ($inverse_locators as $current_locator) {
 
 			$component_tipo	= $current_locator->from_component_tipo;
 			$section_tipo	= $current_locator->from_section_tipo;
@@ -2920,7 +2920,7 @@ class section extends common {
 			if ('component_relation_common' !== get_parent_class($model_name)) {
 				debug_log(__METHOD__
 					. " ERROR (remove_all_inverse_references): Only portals are supported!! Ignored received: $model_name " . PHP_EOL
-					, logger::DEBUG
+					, logger::WARNING
 				);
 				continue;
 			}
@@ -2934,6 +2934,7 @@ class section extends common {
 				$section_tipo,
 			);
 
+			// locator_to_remove
 			$locator_to_remove = new locator();
 				$locator_to_remove->set_type($component->get_relation_type());
 				$locator_to_remove->set_section_id($this->section_id);
@@ -2941,6 +2942,8 @@ class section extends common {
 				$locator_to_remove->set_from_component_tipo($component_tipo);
 
 			if (true === $component->remove_locator_from_dato( $locator_to_remove )) {
+
+				// removed case
 
 				// Save component dato
 				if ($save===true) {
@@ -2960,6 +2963,8 @@ class section extends common {
 				}
 			}else{
 
+				// not removed case
+
 				debug_log(__METHOD__
 					." Error on remove reference to current_locator. locator_to_remove was not removed from inverse_locators! ". PHP_EOL
 					.' current_locator: ' . to_string($current_locator) . PHP_EOL
@@ -2968,14 +2973,14 @@ class section extends common {
 					.' tipo: ' . $component_tipo . PHP_EOL
 					.' section_tipo: ' . $section_tipo . PHP_EOL
 					.' section_id: ' . $section_id
-					, logger::ERROR
+					, logger::WARNING
 				);
 				if(SHOW_DEBUG===true) {
-					dump($inverse_locators, ' inverse_locators ++ save: '.to_string($save));
-					dump($component->get_dato(), ' component->get_dato() ++ '.to_string());
+					dump($inverse_locators, ' remove_all_inverse_references inverse_locators ++ save: '.to_string($save));
+					dump($component->get_dato(), ' remove_all_inverse_references component->get_dato() ++ '.to_string());
 				}
 			}
-		}
+		}//end foreach ($inverse_locators as $current_locator)
 
 
 		return $removed_locators;
@@ -3117,7 +3122,7 @@ class section extends common {
 				debug_log(__METHOD__
 					.' Ignored add locator action: locator already exists: ' . PHP_EOL
 					.' locator: '. to_string($locator)
-					, logger::ERROR
+					, logger::WARNING
 				);
 
 				return false;
