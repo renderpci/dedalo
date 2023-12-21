@@ -17,6 +17,8 @@
 	// import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
+	import {view_graph_list_section} from './view_graph_list_section.js'
+	import {view_base_list_section} from './view_base_list_section.js'
 
 
 
@@ -47,7 +49,7 @@ render_list_section.prototype.list = async function(options) {
 	const self = this
 
 	// view
-		const view = self.context?.view || null
+		const view = self.context?.view || 'default'
 
 	// wrapper
 		switch(view) {
@@ -56,6 +58,15 @@ render_list_section.prototype.list = async function(options) {
 			// 	return view_mosaic_edit_portal.render(self, options)
 			// 	break;
 
+			case 'base':
+				return view_base_list_section.render(self, options)
+				break;
+
+			case 'graph':
+				return view_graph_list_section.render(self, options)
+				break;
+
+			case 'default':
 			default: {
 				// dynamic try
 					const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
