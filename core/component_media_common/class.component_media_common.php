@@ -450,6 +450,7 @@ class component_media_common extends component_common {
 	* {
 	* 	"name": "montaje3.jpg",
 	*	"type": "image/jpeg",
+	*   "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
 	*	"tmp_name": "/private/var/tmp/php6nd4A2",
 	*	"error": 0,
 	*	"size": 132898
@@ -489,7 +490,7 @@ class component_media_common extends component_common {
 
 		// source_file
 			if (!defined($tmp_dir)) {
-				$msg = 'constant is not defined!  tmp_dir: '.$tmp_dir;
+				$msg = 'constant is not defined! tmp_dir: '.$tmp_dir;
 				$response->msg .= $msg;
 				debug_log(__METHOD__
 					.' ' .$response->msg . PHP_EOL
@@ -499,8 +500,8 @@ class component_media_common extends component_common {
 				return $response;
 			}
 
-			$user_id = get_user_id();
-			$source_file 	= isset($source_file)
+			$user_id		= get_user_id();
+			$source_file	= isset($source_file)
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
 
@@ -609,7 +610,7 @@ class component_media_common extends component_common {
 				}
 			}
 
-		// all is ok
+		// all is OK
 			$response->result	= true;
 			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
 
