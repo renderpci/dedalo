@@ -1478,11 +1478,20 @@ component_portal.prototype.edit_record_handler = async function(options) {
 				// refresh. Get the proper element to refresh based on some criteria.
 				// Note that portals in text view are not self refresh able
 				function get_edit_caller(instance) {
+					if(instance && instance.mode==='edit' && instance.type==='component') {
+						return instance
+					}
 					if(instance.caller && instance.caller.mode==='edit' && instance.caller.type==='component') {
 						return instance.caller
-					}else if(instance.caller) {
-						return get_edit_caller(instance.caller)
 					}
+					if(instance.caller.caller && instance.caller.caller.mode==='edit' && instance.caller.caller.type==='component') {
+						return instance.caller.caller
+					}
+					// removed 21-12-2023, it create a infinite loop in some cases as component_portal "numisdata77"
+					// in numisdata_order_coins tool, when edit the original section
+					// else if(instance.caller) {
+					// 	return get_edit_caller(instance.caller)
+					// }
 					return self
 				}
 				const edit_caller = get_edit_caller(self)
