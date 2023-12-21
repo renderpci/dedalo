@@ -309,9 +309,11 @@ abstract class counter {
 				$table_name			= common::get_matrix_table_from_tipo($section_tipo);
 				$sql2				= 'SELECT section_id FROM "'.$table_name.'" WHERE section_tipo = \''.$section_tipo.'\' ORDER BY section_id DESC LIMIT 1 ';
 				$result2			= JSON_RecordObj_matrix::search_free($sql2);
-				$last_section_id	= (pg_num_rows($result2)===0)
+				$last_section_id	= ($result2 === false)
 					? 0 // Skip empty tables
-					: (int)pg_fetch_result($result2, 0, 'section_id');
+					: ((pg_num_rows($result2)===0)
+						? 0 // Skip empty tables
+						: (int)pg_fetch_result($result2, 0, 'section_id'));
 
 			// item_info
 				$item_info = (object)[

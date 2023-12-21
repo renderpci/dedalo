@@ -1504,6 +1504,20 @@ abstract class common {
 
 		// properties
 			$properties = $this->get_properties() ?? new stdClass();
+			// set properties of the section_list node
+			if($model==='section' && $this->mode==='list'){
+				// section list
+				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$this->tipo,
+					'section_list',
+					'children',
+					true
+				);
+				if(isset($ar_terms[0])) {
+					$RecordObj_dd	= new RecordObj_dd($ar_terms[0]);
+					$properties		= $RecordObj_dd->get_properties();
+				}
+			}
 
 		// css
 			$css = $properties->css ?? null; // new stdClass();
@@ -3903,6 +3917,7 @@ abstract class common {
 			$context_type				= $options->context_type ?? 'simple';
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
 			$use_real_sections			= $options->use_real_sections ?? false;
+			$skip_permissions 			= $options->skip_permissions ?? false;
 			$path						= $options->path ?? [];
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
@@ -3946,8 +3961,15 @@ abstract class common {
 		$context			= [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
-			$section_permisions = security::get_security_permissions($section_tipo, $section_tipo);
-			$user_id_logged 	= get_user_id();
+			// permissions
+				$section_permisions = ($skip_permissions === true)
+					? 1
+					: security::get_security_permissions($section_tipo, $section_tipo);
+
+				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
+
+			// user id
+				$user_id_logged = get_user_id();
 
 			// skip section if permissions are not enough
 				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
@@ -4059,7 +4081,10 @@ abstract class common {
 
 					// others case
 					default:
-						debug_log(__METHOD__ ." Ignored model '$model' - current_tipo: '$element_tipo' ".to_string(), logger::WARNING);
+						debug_log(__METHOD__
+							." Ignored model '$model' - current_tipo: '$element_tipo' "
+							, logger::WARNING
+						);
 						break;
 				}//end switch (true)
 
@@ -4401,7 +4426,8 @@ abstract class common {
 			}
 
 		// list mode
-			if ($this->mode==='list' && strpos(get_called_class(), 'component_')===0) {
+			if ($this->mode==='list' &&
+				(strpos(get_called_class(), 'component_')===0 || get_called_class()==='section')){
 				// section list
 				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$this->tipo,

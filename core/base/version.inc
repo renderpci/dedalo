@@ -1,10 +1,10 @@
 <?php
 
 	# Version
-	$DEDALO_VERSION = '6.0.5';
+	$DEDALO_VERSION = '6.0.6';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
 		$DEDALO_VERSION .= '.dev'; // .time();
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2023-12-20T10:45:28+01:00');
+	define('DEDALO_BUILD'	, '2023-12-21T20:42:43+01:00');
 	define('DEDALO_MAJOR_VERSION', '6');

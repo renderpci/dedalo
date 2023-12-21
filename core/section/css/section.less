@@ -224,6 +224,18 @@
 			//flex-wrap: wrap;
 			width: 100%;
 
+			.column{
+				&.column_drag{
+					justify-content	: center;
+					align-items		: center;
+					align-content	: center;
+					.button.move{
+						height	: 1.5rem;
+						width	: 1.5rem;
+					}
+				}
+			}
+
 			// (!) moved to list.less to allow shared use (time machine list, etc.)
 			// .column_section_id {
 			// 	display: flex;
@@ -292,3 +304,7 @@
 
 	}//end &.list
 }
+
+
+@import (once) './view_graph_section';
+@import (once) './view_base_section';

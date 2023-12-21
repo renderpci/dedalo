@@ -58,6 +58,7 @@ class area extends area_common  {
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_resource')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_tool')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_thesaurus')[0];
+			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_graph')[0];
 			$ar_root_areas[]	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_admin')[0];
 			// area_maintenance. Temporal check (if user do not have the Ontology updated, error is given here)
 			$area_maintenance	= RecordObj_dd::get_ar_terminoID_by_modelo_name('area_maintenance');
