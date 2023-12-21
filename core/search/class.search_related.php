@@ -1,8 +1,15 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS SEARCH_RELATED
 * Specific search related methods overwrite search methods
 *
+* PostgreSQL functions:
+* 	relations_flat_st_si
+* 	relations_flat_fct_st_si
+* 	relations_flat_ty_st_si
+* 	relations_flat_ty_st
+* and indexes are required to work with this search
 */
 class search_related extends search {
 
@@ -11,22 +18,24 @@ class search_related extends search {
 	/**
 	* PARSE_SEARCH_QUERY_OBJECT NEW
 	* Build full final SQL query to send to DDBB
+	* Please note that special indexes and functions such as 'matrix_relations_flat_st_si'
+	* must exists to enable this search
 	* @param bool $full_count
 	*	default false
 	* @return string $sql_query
 	*/
 	public function parse_search_query_object( bool $full_count=false ) : string {
 
-		$ar_tables_to_search = common::get_matrix_tables_with_relations();
+		// tables where to search
+			$ar_tables_to_search = common::get_matrix_tables_with_relations();
 
-		$limit	= $this->search_query_object->limit;
-		$offset	= $this->search_query_object->offset;
+		// pagination
+			$limit	= $this->search_query_object->limit;
+			$offset	= $this->search_query_object->offset;
 
-		#debug_log(__METHOD__." ar_tables_to_search: ".json_encode($ar_tables_to_search), logger::DEBUG);
-
-		// reference locator it's the locator of the source section that will be used to get the sections with call to it.
+		// reference locator is the locator of the source section that will be
+		// used to obtain the sections with calls to it.
 			$ar_locators = $this->filter_by_locators;
-
 
 		// add filter of sections when the filter is not 'all', it's possible add specific section to get the related records only for these sections.
 		// if the section has all, the filter don't add any section to the WHERE
@@ -42,7 +51,7 @@ class search_related extends search {
 				: false;
 
 		// each table query
-			$ar_query=array();
+			$ar_query = array();
 			foreach ($ar_tables_to_search as $table) {
 
 				$query	 = '';
@@ -59,36 +68,35 @@ class search_related extends search {
 
 						case !isset($locator->section_id) && isset($locator->type):
 							// relation index case
-							$locator_index = $locator->type.'_'.$locator->section_tipo;
-							$locators_query[] = PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$locator_index		= $locator->type.'_'.$locator->section_tipo;
+							$locators_query[]	= PHP_EOL.'relations_flat_ty_st(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
 						case isset($locator->from_component_tipo):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->from_component_tipo.'_'.$base_flat_locator;
-							$locators_query[] = PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$locators_query[]	= PHP_EOL.'relations_flat_fct_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
 						case isset($locator->type):
 							$base_flat_locator	= locator::get_term_id_from_locator($locator);
 							$locator_index		= $locator->type.'_'.$base_flat_locator;
-							$locators_query[] = PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
+							$locators_query[]	= PHP_EOL.'relations_flat_ty_st_si(datos) @> \'['. json_encode($locator_index) . ']\'::jsonb';
 							break;
 
 						default:
-							$base_flat_locator = locator::get_term_id_from_locator($locator);
-							$locators_query[] = PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
+							$base_flat_locator	= locator::get_term_id_from_locator($locator);
+							$locators_query[]	= PHP_EOL.'relations_flat_st_si(datos) @> \'['. json_encode($base_flat_locator) . ']\'::jsonb';
 							break;
 					}
 					// Old model, it search directly in the table with gin index of relations, but it's slow for large databases.
 					// now tables has a contraction/flat of the locator to be indexed the combination of section_tipo and section_id
 					// $locators_query[]	= PHP_EOL.'datos#>\'{relations}\' @> \'['. json_encode($locator) . ']\'::jsonb';
-
-				}
-				$query	.= '(' . implode(' OR ', $locators_query) . ')';
+				}//end foreach ($ar_locators as $locator)
+				$query .= '(' . implode(' OR ', $locators_query) . ')';
 
 				if ($section_filter!==false) {
-					$query	.= PHP_EOL . ' AND (' . $section_filter .')';
+					$query .= PHP_EOL . ' AND (' . $section_filter . ')';
 				}
 
 				$ar_query[] = $query;
@@ -97,9 +105,8 @@ class search_related extends search {
 		// final query union with all tables
 			$str_query = implode(PHP_EOL .' UNION ALL ', $ar_query);
 
-
-		// Set order to maintain results stable
-		// count and pagination optional
+		// establish order to maintain stable results
+		// count and pagination are optional
 			if($full_count===false) {
 				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
 				if($limit !== false){
@@ -120,7 +127,7 @@ class search_related extends search {
 
 	/**
 	* GET_REFERENCED_LOCATORS
-	* Get the sections that is pointed by any kind of locator to the caller (reference_locator)
+	* Get the sections pointed by any type of locator to the caller (reference_locator)
 	* @see section::get_inverse_references
 	*
 	* @param object $reference_locator
@@ -133,6 +140,13 @@ class search_related extends search {
 	*/
 	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false ) : array {
 		$start_time = start_time();
+
+		// cache
+			// static $referenced_locators_cache;
+			// $cache_key = implode('_', get_object_vars($reference_locator)) .'_'. $limit .'_'. $offset .'_'. $count;
+			// if (isset($referenced_locators_cache[$cache_key])) {
+			// 	return $referenced_locators_cache[$cache_key];
+			// }
 
 		$ar_inverse_locators = [];
 
@@ -150,21 +164,19 @@ class search_related extends search {
 			// fix result ar_records as dato
 			$result	= $rows_data->ar_records;
 
-
-			# Note that row relations contains all relations and not only searched because we need
-			# filter relations array for each records to get only desired coincidences
+			// Note that row relations contains all relations and not just searched, because we need
+			// to filter the relationship array for each record to get only the desired matches
 
 		// debug
 			if(SHOW_DEBUG===true) {
 				$total_records	= count($result);
 				$time_ms		= exec_time_unit($start_time, 'ms');
 				debug_log(__METHOD__
-					. " Calculated referenced_locators step 1 (total: $total_records) section_tipo: $reference_locator->section_tipo,  section_id: " . ($reference_locator->section_id ?? '')
-					. ', time: ' . $time_ms .' ms'
+					. " Calculated referenced_locators step 1 (total: $total_records)" . PHP_EOL
+					. ' reference_locator: ' . to_string($reference_locator) . PHP_EOL
+					. ' time: ' . $time_ms .' ms'
 					, logger::DEBUG
 				);
-				// $bt = debug_backtrace();
-				// dump($bt, ' bt ++ '.to_string());
 			}
 
 			// Compare all properties of received locator in each relations locator
@@ -173,6 +185,7 @@ class search_related extends search {
 				$ar_properties[] = $key;
 			}
 
+		// filter results
 			foreach ($result as $row) {
 
 				$current_section_id		= $row->section_id;
@@ -192,11 +205,19 @@ class search_related extends search {
 
 		// debug
 			debug_log(__METHOD__
-				. " Calculated referenced_locators step 2 section_tipo: $reference_locator->section_tipo, section_id: " . ($reference_locator->section_id ?? '')
-				. ', time: ' . exec_time_unit($start_time, 'ms').' ms'
+				. ' Calculated referenced_locators step 2 (total: ' .count($ar_inverse_locators). ')' . PHP_EOL
+				. ' reference_locator: ' . to_string($reference_locator) . PHP_EOL
+				. ' time: ' . exec_time_unit($start_time, 'ms').' ms'
 				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
 			);
+
+		// cache
+			// $referenced_locators_cache[$cache_key] = $ar_inverse_locators;
+
+		// debug
+			// $bt = debug_backtrace();
+			// dump($bt, ' bt ++ '.to_string());
 
 
 		return $ar_inverse_locators;
