@@ -43,6 +43,20 @@ $updates->$v = new stdClass();
 				CREATE SEQUENCE matrix_nexus_id_seq;
 				ALTER TABLE public.matrix_nexus ALTER COLUMN id SET DEFAULT nextval('matrix_nexus_id_seq'::regclass);
 			");
+		// Index matrix_test table to get flat locator used by inverse searches
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX matrix_test_relations_flat_st_si ON matrix_test
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_fct_st_si ON matrix_test
+					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_ty_st_si ON matrix_test
+					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX matrix_test_relations_flat_ty_st ON matrix_test
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+			");
 
 
 
@@ -284,6 +298,7 @@ $updates->$v = new stdClass();
 				DROP FUNCTION IF EXISTS public.relations_flat_ty_st_si(jsonb);
 				DROP FUNCTION IF EXISTS public.relations_flat_ty_st(jsonb);
 
+				-- Create function with base flat locators st=section_tipo si=section_id (rsc197_2)
 				CREATE OR REPLACE FUNCTION public.relations_flat_st_si(datos jsonb) RETURNS jsonb
 					AS $$ SELECT jsonb_agg( concat(rel->>'section_tipo','_',rel->>'section_id') )
 					FROM jsonb_array_elements($1->'relations') rel(rel)

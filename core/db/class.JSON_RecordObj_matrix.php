@@ -345,7 +345,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			$time_machine_data			= $save_options->time_machine_data ?? null;
 			// saving from component cases
 			$previous_component_dato	= $save_options->previous_component_dato ?? null;
-			$time_machine_date			= $save_options->time_machine_date ?? component_date::get_timestamp_now_for_db();
+			$time_machine_date			= $save_options->time_machine_date ?? dd_date::get_timestamp_now_for_db();
 
 		// short vars
 			// $section_tipo = $this->get_section_tipo();

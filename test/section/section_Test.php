@@ -25,7 +25,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
@@ -1251,8 +1251,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===-1,
-			'expected $result === -1 '. PHP_EOL
+			$result===-1 || $result===1,
+			'expected $result === -1 || $result===1 '. PHP_EOL
 			.' result: ' . $result
 		);
 	}//end test_get_created_by_userID

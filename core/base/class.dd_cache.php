@@ -150,6 +150,7 @@ class dd_cache {
 	*/
 	public static function get_cache_file_prefix() : string {
 		return DEDALO_ENTITY .'_'. get_user_id() . '_';
+		// return session_id() . '_';
 	}//end get_cache_file_prefix
 
 
@@ -263,7 +264,7 @@ class dd_cache {
 	* 	If null, all files with default prefix will be deleted
 	* @return bool
 	*/
-	public static function delete_cache_files( array $cache_files=null ) : bool {
+	public static function delete_cache_files( array $cache_files=null, string $prefix=null ) : bool {
 
 		// check base_path
 			if (!defined('DEDALO_CACHE_MANAGER') || !isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -276,8 +277,17 @@ class dd_cache {
 			$base_path = DEDALO_CACHE_MANAGER['files_path'];
 
 		// files
-			$cache_files = !empty($cache_files)
-				? $cache_files
+			$cache_files_parsed = !empty($cache_files)
+				? (function() use($cache_files, $prefix) {
+					$cache_files_parsed = [];
+					foreach ($cache_files as $file_name) {
+						$full_file_name = empty($prefix)
+							? dd_cache::get_cache_file_prefix() . $file_name
+							: $prefix . $file_name;
+						$cache_files_parsed[] = $full_file_name;
+					}
+					return $cache_files_parsed;
+				  })()
 				: (function() use($base_path){
 					$prefix			= dd_cache::get_cache_file_prefix();
 					$file_pattern	= $base_path .'/'. $prefix .'*';
@@ -286,8 +296,8 @@ class dd_cache {
 				  })();
 
 		// delete
-			if (!empty($cache_files)) {
-				foreach ($cache_files as $file_name) {
+			if (!empty($cache_files_parsed)) {
+				foreach ($cache_files_parsed as $file_name) {
 					$file_path = strpos($file_name, $base_path)===0
 						? $file_name
 						: $base_path .'/'. $file_name;
@@ -297,14 +307,14 @@ class dd_cache {
 							debug_log(__METHOD__." Deleted file $file_path ", logger::DEBUG);
 						}else{
 							debug_log(__METHOD__
-								. " Error on deleted file " .PHP_EOL
+								. " Error deleting file " .PHP_EOL
 								. ' file_path: ' . $file_path
 								, logger::ERROR
 							);
 						}
 					}else{
 						debug_log(__METHOD__
-							. " Warning. Ignored non found file to deleted " .PHP_EOL
+							. " Warning. Ignored file not found for deletion " .PHP_EOL
 							. ' file_path: ' . $file_path
 							, logger::WARNING
 						);

@@ -108,4 +108,132 @@ final class dd_component_av_api {
 
 
 
+	/**
+	* GET_MEDIA_STREAMS
+	* 	Get file streams info in JSON format
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "get_media_streams",
+	*	dd_api	: 'dd_component_av_api',
+	*	source	: {
+	*		tipo			: 'rsc36',
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id
+	*	},
+	*	options	: {
+	*		quality	: quality // optional
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function get_media_streams( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+			$lang			= $source->lang;
+
+		// options
+			$options = $rqo->options;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				$lang, // string lang
+				$section_tipo // string section_tipo
+			);
+
+		// media_streams
+			$quality		= $options->quality ?? $component->get_default_quality();
+			$media_streams	= $component->get_media_streams( $quality );
+
+			// sample
+				// {
+				// 	"streams": [
+				// 		{
+				// 			"index": 0,
+				// 			"codec_name": "h264",
+				// 			"codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+				// 			"profile": "High",
+				// 			"codec_type": "video",
+				// 			"codec_tag_string": "avc1",
+				// 			"codec_tag": "0x31637661",
+				// 			"width": 720,
+				// 			"height": 404,
+				// 			"coded_width": 720,
+				// 			"coded_height": 404,
+				// 			"closed_captions": 0,
+				// 			"film_grain": 0,
+				// 			"has_b_frames": 2,
+				// 			"pix_fmt": "yuv420p",
+				// 			"level": 30,
+				// 			"color_range": "tv",
+				// 			"color_space": "bt709",
+				// 			"color_transfer": "bt709",
+				// 			"color_primaries": "bt709",
+				// 			"chroma_location": "left",
+				// 			"field_order": "progressive",
+				// 			"refs": 1,
+				// 			"is_avc": "true",
+				// 			"nal_length_size": "4",
+				// 			"id": "0x1",
+				// 			"r_frame_rate": "25/1",
+				// 			"avg_frame_rate": "25/1",
+				// 			"time_base": "1/12800",
+				// 			"start_pts": 0,
+				// 			"start_time": "0.000000",
+				// 			"duration_ts": 2560,
+				// 			"duration": "0.200000",
+				// 			"bit_rate": "1095680",
+				// 			"bits_per_raw_sample": "8",
+				// 			"nb_frames": "5",
+				// 			"extradata_size": 50,
+				// 			"disposition": {
+				// 				"default": 1,
+				// 				"dub": 0,
+				// 				"original": 0,
+				// 				"comment": 0,
+				// 				"lyrics": 0,
+				// 				"karaoke": 0,
+				// 				"forced": 0,
+				// 				"hearing_impaired": 0,
+				// 				"visual_impaired": 0,
+				// 				"clean_effects": 0,
+				// 				"attached_pic": 0,
+				// 				"timed_thumbnails": 0,
+				// 				"captions": 0,
+				// 				"descriptions": 0,
+				// 				"metadata": 0,
+				// 				"dependent": 0,
+				// 				"still_image": 0
+				// 			},
+				// 			"tags": {
+				// 				"language": "und",
+				// 				"handler_name": "VideoHandler",
+				// 				"vendor_id": "[0][0][0][0]",
+				// 				"encoder": "Lavc60.3.100 libx264"
+				// 			}
+				// 		}
+				// 	]
+				// }
+
+		// response
+			$response = new stdClass();
+				$response->result	= $media_streams;
+				$response->msg		= ['OK. Request done'];
+				$response->error	= null;
+
+
+		return $response;
+	}//end get_media_streams
+
+
+
 }//end dd_component_av_api

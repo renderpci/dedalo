@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /*
 * CLASS COMPONENT_CHECK_BOX
 *
@@ -19,10 +20,11 @@ class component_check_box extends component_relation_common {
 
 
 	/**
-	* GET VALOR
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECDIFIC COMPONENT
+	* GET_VALOR
+	* Get value . default is get dato . overwrite in every different specific component
+	* @return string|null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string' ) {
+	public function get_valor($lang=DEDALO_DATA_LANG, $format='string') : string|null|array {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -63,18 +65,6 @@ class component_check_box extends component_relation_common {
 
 		return $valor;
 	}//end get_valor
-
-
-
-	/**
-	* GET_DATO_AS_STRING
-	* Return JSON encoded dato
-	* @return string
-	*/
-	public function get_dato_as_string() : string {
-
-		return json_handler::encode($this->get_dato());
-	}//end get_dato_as_string
 
 
 

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_INFO
 *
@@ -23,44 +24,55 @@ class component_info extends component_common {
 	*/
 	public function get_dato() {
 
-		// the component info dato will be the all widgets data
-		$dato = [];
-
-		$widgets = $this->get_widgets();
-		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__
-				." Empty defined widgets for ".get_called_class()." : $this->label [$this->tipo] ". PHP_EOL
-				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
-				, logger::ERROR
-			);
-			return null;
-		}
-
-		// every widget will be created and calculate your own data
-		foreach ($widgets as $widget_obj) {
-
-			$widget_options = new stdClass();
-				$widget_options->section_tipo		= $this->get_section_tipo();
-				$widget_options->section_id			= $this->get_section_id();
-				$widget_options->lang				= DEDALO_DATA_LANG;
-				// $widget_options->component_info	= $this;
-				$widget_options->widget_name		= $widget_obj->widget_name;
-				$widget_options->path				= $widget_obj->path;
-				$widget_options->ipo				= $widget_obj->ipo;
-				$widget_options->mode				= $this->get_mode();
-
-			// instance the current widget
-			$widget = widget_common::get_instance($widget_options);
-
-			// Widget data
-			$widget_value = $widget->get_dato();
-			if (!empty($widget_value)) {
-				$dato = array_merge($dato, $widget_value);
+		// dato_resolved. Already resolved case
+			if(isset($this->dato_resolved)) {
+				return $this->dato_resolved;
 			}
-		}//end foreach ($widgets as $widget)
+
+		// widgets check
+			$widgets = $this->get_widgets();
+			if (empty($widgets) || !is_array($widgets)) {
+				debug_log(__METHOD__
+					." Empty defined widgets for ".get_called_class()." : ". PHP_EOL
+					.' label: ' .$this->label . PHP_EOL
+					.' tipo: ' .$this->tipo . PHP_EOL
+					.' widgets:' . to_string($widgets)
+					, logger::ERROR
+				);
+
+				return null;
+			}
+
+		// the component info dato will be the all widgets data
+			$dato = [];
+
+		// each widget will be created and compute its own data
+			foreach ($widgets as $widget_obj) {
+
+				$widget_options = new stdClass();
+					$widget_options->section_tipo		= $this->get_section_tipo();
+					$widget_options->section_id			= $this->get_section_id();
+					$widget_options->lang				= DEDALO_DATA_LANG;
+					// $widget_options->component_info	= $this;
+					$widget_options->widget_name		= $widget_obj->widget_name;
+					$widget_options->path				= $widget_obj->path;
+					$widget_options->ipo				= $widget_obj->ipo;
+					$widget_options->mode				= $this->get_mode();
+
+				// instance the current widget
+					$widget = widget_common::get_instance($widget_options);
+
+				// Widget data
+					$widget_value = $widget->get_dato();
+					if (!empty($widget_value)) {
+						$dato = array_merge($dato, $widget_value);
+					}
+			}//end foreach ($widgets as $widget)
 
 		// set the component info dato with the result
-		$this->dato = $dato;
+			$this->dato				= $dato;
+			$this->dato_resolved	= $dato;
+
 
 		return $dato;
 	}//end get_dato
@@ -76,6 +88,7 @@ class component_info extends component_common {
 	public function get_widgets() : ?array {
 
 		$properties = $this->get_properties();
+
 		// get the widgets defined in the ontology
 		$widgets = $properties->widgets ?? null;
 		if (empty($widgets) || !is_array($widgets)) {
@@ -84,6 +97,7 @@ class component_info extends component_common {
 				.' widgets:' . json_encode($widgets, JSON_PRETTY_PRINT)
 				, logger::ERROR
 			);
+
 			return null;
 		}
 
@@ -101,10 +115,11 @@ class component_info extends component_common {
 
 		$this->widget_lang = $widget_lang;
 
-		$valor = $this->get_html();
+		$valor = $this->get_value();
 		$valor = !empty($valor)
 			? strip_tags($valor)
 			: $valor;
+
 
 		return $valor;
 	}//end get_valor
@@ -118,16 +133,11 @@ class component_info extends component_common {
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
-		#if (empty($valor)) {
+		$this->widget_lang = $lang;
+		$this->widget_mode = 'export';
 
-			#$this->set_mode('export');
+		$valor = $this->get_value();
 
-			$this->widget_lang = $lang;
-			$this->widget_mode = 'export';
-
-			$valor = $this->get_html();
-			#$valor = strip_tags($valor);
-		#}
 
 		return to_string($valor);
 	}//end get_valor_export
@@ -138,16 +148,16 @@ class component_info extends component_common {
 	* GET_DIFFUSION_DATO
 	* @param object $options
 	* Sample:
-	* {
-		"widget_name": [
-			"get_archive_weights"
-		],
-		"select": [
-			"media_diameter"
-		],
-		"value_format": "first_value",
-		"lang": "lg-spa"
-	* }
+		* {
+		*	"widget_name": [
+		*		"get_archive_weights"
+		*	],
+		*	"select": [
+		*		"media_diameter"
+		*	],
+		*	"value_format": "first_value",
+		*	"lang": "lg-spa"
+		* }
 	* @return mixed $diffusion_dato
 	*/
 	public function get_diffusion_dato( object $options ) : mixed {
@@ -264,16 +274,21 @@ class component_info extends component_common {
 	*/
 	public function get_data_list() : ?array {
 
+		// get the widgets defined in the ontology
+		$widgets = $this->get_widgets();
+		if (empty($widgets) || !is_array($widgets)) {
+			debug_log(__METHOD__
+				." Empty or invalid defined widgets for ".get_called_class()." : $this->label [$this->tipo]" . PHP_EOL
+				.' widgets: ' . to_string($widgets)
+				, logger::ERROR
+			);
+
+			return null;
+		}
+
 		// the component info dato will be the all widgets data
 		$data_list = [];
 
-		$properties = $this->get_properties();
-		// get the widgets defined in the ontology
-		$widgets = $properties->widgets ?? null;
-		if (empty($widgets) || !is_array($widgets)) {
-			debug_log(__METHOD__." Empty or invalid defined widgets for ".get_called_class()." : $this->label [$this->tipo] ".to_string($widgets), logger::ERROR);
-			return null;
-		}
 		// every widget will be created and calculate your own data
 		foreach ($widgets as $widget_obj) {
 
@@ -290,15 +305,18 @@ class component_info extends component_common {
 			$widget = widget_common::get_instance($widget_options);
 
 			// Widget data
-			$widget_data_list = method_exists($widget, 'get_data_list') ? $widget->get_data_list() : null;
+			$widget_data_list = method_exists($widget, 'get_data_list')
+				? $widget->get_data_list()
+				: null;
 
-			if($widget_data_list !== null){
+			if($widget_data_list!==null){
 				$data_list = array_merge($data_list, $widget_data_list);
 			}
 		}//end foreach ($widgets as $widget_obj)
 
 		// set the component info dato with the result
 		$this->data_list = $data_list;
+
 
 		return $data_list;
 	}//end get_data_list

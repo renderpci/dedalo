@@ -864,7 +864,7 @@
 			// write test file
 			$test_user_id	= $user_id ?? 0;
 			$file_name		= DEDALO_ENTITY .'_'. $test_user_id.'.cache_test_file.json';
-			$custom_prefix	= 'to_delete_';
+			// $custom_prefix	= 'to_delete_';
 			dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/base/cache_test_file.php',
 				'data'			=> (object)[
@@ -872,13 +872,11 @@
 					'user_id'		=> $test_user_id
 				],
 				'file_name'	=> $file_name,
-				'wait'		=> true,
-				'prefix'	=> $custom_prefix
+				'wait'		=> true
 			]);
 			// read test file
 			$cache_data = dd_cache::cache_from_file((object)[
-				'file_name'	=> $file_name,
-				'prefix'	=> $custom_prefix
+				'file_name'	=> $file_name
 			]);
 			// check file data
 			if (empty($cache_data)) {
@@ -894,7 +892,7 @@
 			}else{
 				// delete test file
 				$delete_cache = dd_cache::delete_cache_files([
-					$custom_prefix . $file_name
+					$file_name // file name
 				]);
 				if ($delete_cache!==true) {
 					$init_response->msg[]	= 'Warning: delete cache test file fails. Check your DEDALO_CACHE_MANAGER files_path permissions to fix it';

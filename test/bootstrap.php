@@ -17,6 +17,10 @@ define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 		throw new Exception("Error. Only development servers can use this method", 1);
 	}
 
+// PHPUnit classes
+	// use PHPUnit\Framework\TestCase;
+	// use PHPUnit\Framework\Attributes\TestDox;
+
 // require files
 	require_once 'components/data.php';
 	require_once 'components/elements.php';

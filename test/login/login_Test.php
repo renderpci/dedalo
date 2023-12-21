@@ -131,7 +131,7 @@ final class login_test extends TestCase {
 	*/
 	public function test_login(): void {
 
-		$user_id = TEST_USER_ID; //Defined in boostrap
+		$user_id = TEST_USER_ID; //Defined in bootstrap
 
 		if (isset($_SESSION['dedalo']['auth'])) {
 

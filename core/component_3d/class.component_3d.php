@@ -80,13 +80,39 @@ class component_3d extends component_media_common {
 
 	/**
 	* GET_FOLDER
-	* 	Get element dir from config
+	* 	Get element directory from config
 	* @return string
 	*/
 	public function get_folder() : string {
 
 		return $this->folder ?? DEDALO_3D_FOLDER;
 	}//end get_folder
+
+
+
+	/**
+	* GET_URL
+	* Get file url for current quality
+	*
+	* @param string|null $quality = null
+	* @return string|null $url
+	*/
+	public function get_url(?string $quality=null) : string {
+
+		// quality fallback to default
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
+
+		// item id like 'rsc201_rsc202_9'
+			$id = $this->get_id();
+
+		// url
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+
+
+		return $url;
+	}//end get_url
 
 
 
@@ -177,32 +203,6 @@ class component_3d extends component_media_common {
 
 		return $valor_export;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET_URL
-	* Get file url for current quality
-	*
-	* @param string|null $quality = null
-	* @return string|null $url
-	*/
-	public function get_url(?string $quality=null) : string {
-
-		// quality fallback to default
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
-
-		// item id like 'rsc201_rsc202_9'
-			$id = $this->get_id();
-
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
-
-
-		return $url;
-	}//end get_url
 
 
 

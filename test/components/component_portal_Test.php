@@ -24,7 +24,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
@@ -39,10 +39,10 @@ final class component_portal_test extends TestCase {
 
 
 	/**
-	* TEST_regenerate_component
-	* @return void
+	* BUILD_COMPONENT_INSTANCE
+	* @return
 	*/
-	public function test_regenerate_component() {
+	private function build_component_instance() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -59,6 +59,19 @@ final class component_portal_test extends TestCase {
 			$lang,
 			$section_tipo
 		);
+
+		return $component;
+	}//end build_component_instance
+
+
+
+	/**
+	* TEST_regenerate_component
+	* @return void
+	*/
+	public function test_regenerate_component() {
+
+		$component = $this->build_component_instance();
 
 		$value = $component->regenerate_component();
 
@@ -83,14 +96,7 @@ final class component_portal_test extends TestCase {
 		$mode			= 'edit';
 		$lang			= DEDALO_DATA_NOLAN;
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$request_options = new stdClass();
 			$request_options->target_section_tipo = $section_tipo;
@@ -112,21 +118,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_remove_element() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$request_options = new stdClass();
 			$request_options->locator = null;
@@ -153,21 +145,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_current_section_filter_data() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_current_section_filter_data();
 
@@ -227,21 +205,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_valor() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_valor();
 
@@ -260,21 +224,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_valor_export() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_valor_export();
 
@@ -298,21 +248,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_diffusion_value() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_diffusion_value();
 
@@ -334,21 +270,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_sortable() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_sortable();
 
@@ -370,21 +292,7 @@ final class component_portal_test extends TestCase {
 	*/
 	public function test_get_order_path() {
 
-		$model			= self::$model;
-		$tipo			= 'test80';
-		$section_tipo	= 'test3';
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo
-		);
+		$component = $this->build_component_instance();
 
 		$component->build_request_config();
 

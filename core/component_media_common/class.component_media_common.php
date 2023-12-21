@@ -998,7 +998,8 @@ class component_media_common extends component_common {
 
 		debug_log(__METHOD__
 			. " Calling unimplemented method get_thumb_quality catch by component_media_common " . PHP_EOL
-			. ' Define a real get_thumb_quality method ASAP'
+			. ' Define a real get_thumb_quality method ASAP' . PHP_EOL
+			.' called class: ' . get_called_class()
 			, logger::DEBUG
 		);
 
@@ -1006,6 +1007,22 @@ class component_media_common extends component_common {
 
 		return $fake_quality;
 	}//end get_thumb_quality
+
+
+
+	/**
+	* GET_THUMB_PATH
+	* @return string $image_thumb_path
+	*/
+	public function get_thumb_path() : string {
+
+		$thumb_quality = $this->get_thumb_quality();
+
+		// target data (target quality is thumb)
+		$image_thumb_path = $this->get_media_filepath($thumb_quality);
+
+		return $image_thumb_path;
+	}//end get_thumb_path
 
 
 

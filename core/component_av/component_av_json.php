@@ -81,8 +81,8 @@
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='edit') {
 
-				// media info
-					$item->media_info = $this->get_media_streams( $quality );
+				// media info (!) Moved to a specific API request because it is used only in the player view
+					// $item->media_info = $this->get_media_streams( $quality );
 
 				// subtitles info
 					$item->subtitles = (object)[

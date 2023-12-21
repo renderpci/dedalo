@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_GEOLOCATION
 *
@@ -77,12 +78,13 @@ class component_geolocation extends component_common {
 			$dato = [$dato];
 			$this->set_dato($dato);
 			debug_log(__METHOD__
-				. " Fixed and set bad format dato to array " . PHP_EOL
-				. to_string($dato)
+				. ' Fixed and set bad format dato to array ' . PHP_EOL
+				. ' saved dato: ' . to_string($dato)
 				, logger::WARNING
 			);
 			$this->Save();
 		}
+
 
 		return $dato;
 	}//end get_dato
@@ -98,35 +100,47 @@ class component_geolocation extends component_common {
 	public function set_dato($dato) : bool {
 
 		// JSON encoded dato case
-		if (is_string($dato)) {
-			debug_log(__METHOD__." Trying to decode string dato ".to_string($dato), logger::ERROR);
-			$dato = json_decode($dato);
-		}
+			if (is_string($dato)) {
+				debug_log(__METHOD__
+					." Trying to decode string dato ". PHP_EOL
+					.' dato: ' . to_string($dato)
+					, logger::ERROR
+				);
+				$dato = json_handler::decode($dato);
+			}
 
-		if (!empty($dato) && !is_array($dato)) {
-			debug_log(__METHOD__." Converted non array dato to array ".to_string($dato), logger::ERROR);
-			$dato = [$dato];
-		}
+		// convert to array if is not and not null
+			if (!is_null($dato) && !is_array($dato)) {
+				debug_log(__METHOD__
+					.' Converted non array dato to array '. PHP_EOL
+					.' dato: ' . to_string($dato)
+					, logger::ERROR
+				);
+				$dato = [$dato];
+			}
 
-		return parent::set_dato( (array)$dato );
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
 
 	/**
 	* GET VALOR
-	* LIST:
-	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* v5 compatibility
+	* @return array|null $valor
 	*/
 	public function get_valor() {
 
 		$valor = (array)self::get_dato();
 
-		$separator = ' ,  ';
-		if($this->mode==='list') $separator = '<br>';
+		// separator
+			$separator = ' ,  ';
+			if($this->mode==='list') {
+				$separator = '<br>';
+			}
 
 		if (is_object($valor)) {
-			$valor = array($valor); # Convert json obj to array
+			$valor = array($valor); # Convert JSON obj to array
 		}
 
 		if (is_array($valor)) {
@@ -196,6 +210,7 @@ class component_geolocation extends component_common {
 			? json_encode($value)
 			: null;
 
+
 		return $diffusion_value;
 	}//end get_diffusion_value
 
@@ -204,23 +219,23 @@ class component_geolocation extends component_common {
 	/**
 	* BUILD_GEOLOCATION_TAG_STRING
 	* Example
-	* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
-	* {
-	*	"type": "FeatureCollection",
-	*	"features": [
-	*	    {
-	*	      "type": "Feature",
-	*	      "properties": {},
-	*	      "geometry": {
-	*	        "type": "Point",
-	*	        "coordinates": [
-	*	          2.304362542927265,
-	*	          41.82053505145308
-	*	        ]
-	*	      }
-	*	    }
-	*	]
-	* }
+		* [geo-n-1-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[2.304362542927265,41.82053505145308]}}]}:data]
+		* {
+		*	"type": "FeatureCollection",
+		*	"features": [
+		*	    {
+		*	      "type": "Feature",
+		*	      "properties": {},
+		*	      "geometry": {
+		*	        "type": "Point",
+		*	        "coordinates": [
+		*	          2.304362542927265,
+		*	          41.82053505145308
+		*	        ]
+		*	      }
+		*	    }
+		*	]
+		* }
 	*
 	* @return string $result
 	*/
@@ -241,7 +256,8 @@ class component_geolocation extends component_common {
 		*/
 		$result = "[geo-n-".$tag_id."-data:{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[".$lon.",".$lat."]}}]}:data]";
 
-		return (string)$result;
+
+		return $result;
 	}//end build_geolocation_tag_string
 
 
@@ -313,8 +329,8 @@ class component_geolocation extends component_common {
 		#	$point->latitude  = 47.59815;
 		#	$point->longitude = -122.334540;
 
-
 		$diffusion_value_socrata = $geo_json_point;// json_encode($geo_json_point, JSON_UNESCAPED_SLASHES); // json_encode($socrata_data, JSON_UNESCAPED_SLASHES);
+
 
 		return $diffusion_value_socrata;
 	}//end get_diffusion_value_socrata
@@ -324,32 +340,32 @@ class component_geolocation extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE_AS_GEOJSON
 	* Sample
-	* [
-	*    {
-	*      "layer_id": 1,
-	*      "text": "...",
-	*      "layer_data": {
-	*        "type": "FeatureCollection",
-	*        "features": [
-	*          {
-	*            "type": "Feature",
-	*            "properties": {},
-	*            "geometry": {
-	*              "type": "Point",
-	*              "coordinates": [
-	*                2.011618, // longitude
-	*                41.562546 // latitude
-	*              ]
-	*            }
-	*          }
-	*        ]
-	*      }
-	*    }
-	* ]
+		* [
+		*    {
+		*      "layer_id": 1,
+		*      "text": "...",
+		*      "layer_data": {
+		*        "type": "FeatureCollection",
+		*        "features": [
+		*          {
+		*            "type": "Feature",
+		*            "properties": {},
+		*            "geometry": {
+		*              "type": "Point",
+		*              "coordinates": [
+		*                2.011618, // longitude
+		*                41.562546 // latitude
+		*              ]
+		*            }
+		*          }
+		*        ]
+		*      }
+		*    }
+		* ]
 	* @see ontology publication use in mdcat4091
 	* @see diffusion_sql::build_geolocation_data_geojson
 	* @return string $value
-	* 	Encoded geojson data
+	* 	Encoded GEOJSON data
 	*/
 	public function get_diffusion_value_as_geojson() : ?string {
 
@@ -385,7 +401,7 @@ class component_geolocation extends component_common {
 			$lon = number_format( $value->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
 			$lat = number_format( $value->lat, 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
 
-		// geojson
+		// GEOJSON
 			$ar_value = json_decode('[
 			  {
 			      "layer_id": 1,

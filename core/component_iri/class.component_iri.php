@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 include dirname(__FILE__) . "/class.dd_iri.php";
 /**
 * CLASS COMPONENT_IRI
@@ -21,20 +22,21 @@ class component_iri extends component_common {
 	* GET DATO
 	* Array with objects, every object have two properties:
 	* "iri" mandatory with string value and "title" optional with string value
-	* [
-	*	{
-	*    "iri": "http://www.render.es/dedalo",
-	*    "title": "dedalo"
-	* 	}
-	* ]
+	* Sample:
+		* [
+		*	{
+		*    "iri": "http://www.render.es/dedalo",
+		*    "title": "dedalo"
+		* 	}
+		* ]
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
 
 		$dato = parent::get_dato();
 
-		// input_text. For accept values from component_input_text
-		// we need to change the string value of the input_text to object value of IRI
+		// input_text. To accept values from component_input_text, we need
+		// to change the string value of the input_text to IRI object value
 			$input_text = false;
 			if(!empty($dato)) {
 				foreach ($dato as $key => $value) {
@@ -77,24 +79,26 @@ class component_iri extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
-		if (is_string($dato)) { # Tool Time machine case, dato is string
+		// string case. Tool Time machine mode, dato is string
+		if (is_string($dato)) {
 			$dato = json_handler::decode($dato);
 		}
 
 		// check type
-		if (!is_array($dato)) {
+		if (!is_array($dato) && !is_null($dato)) {
 			debug_log(__METHOD__
 				. " Warning. Received dato is NOT array. Type is '".gettype($dato)."' and will be converted to array" . PHP_EOL
 				. " tipo: $this->tipo" . PHP_EOL
 				. " section_tipo: $this->section_tipo" . PHP_EOL
 				. " section_id: $this->section_id" . PHP_EOL
-				. " dato: " . to_string($dato)
+				. " dato: " . to_string($dato) . PHP_EOL
+				. ' type: ' . gettype($dato)
 				, logger::DEBUG
 			);
 		}
 
 
-		return parent::set_dato( (array)$dato );
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -116,14 +120,14 @@ class component_iri extends component_common {
 			}
 
 		// dato format verify
-			if ( !is_array($dato) ) {
+			if ( !is_array($dato) && !is_null($dato) ) {
 				if(SHOW_DEBUG===true) {
-					#dump($dato,'$dato');
-					#throw new Exception("Dato is not string!", 1);
 					debug_log(__METHOD__
 						." Bad IRI format: ". PHP_EOL
-						.' dato:' . to_string($dato)
-						, logger::ERROR);
+						.' dato:' . to_string($dato) . PHP_EOL
+						.' type: ' . gettype($dato)
+						, logger::ERROR
+					);
 				}
 				return false;
 			}
@@ -293,11 +297,13 @@ class component_iri extends component_common {
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
+			$this->get_dato(); // Get dato from DB
 		}
 
 		$valor = $this->get_valor($lang);
-		$valor = strip_tags($valor); // Removes the span tag used in list mode
+		$valor = !empty($valor)
+			? strip_tags($valor) // Removes the span tag used in list mode
+			: $valor;
 
 
 		return (string)$valor;
@@ -319,7 +325,10 @@ class component_iri extends component_common {
 
 			$ar_values = [];
 			foreach ($dato as $value) {
-				if(empty($value)) continue;
+
+				if(empty($value)) {
+					continue;
+				}
 
 				$ar_parts = [];
 				if (!empty($value->title)) {
@@ -328,13 +337,16 @@ class component_iri extends component_common {
 				if (!empty($value->iri)) {
 					$ar_parts[] = $value->iri;
 				}
+
 				$ar_values[] = implode(', ', $ar_parts);
 			}
 
 			$diffusion_value = implode(' | ', $ar_values);
 		}else{
+
 			$diffusion_value = null;
 		}
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value
@@ -387,24 +399,26 @@ class component_iri extends component_common {
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
-	public static function resolve_query_object_sql(object $query_object) : object|array {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
-		// $q = $query_object->q;
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
+		// $q
+			$q = is_array($query_object->q)
+				? reset($query_object->q)
+				: $query_object->q;
+			if (is_string($q)) {
+				$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+			}
 
-		// Always set fixed values
-		$query_object->type = 'string';
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
 
-		if (is_string($q)) {
-			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
-		}
+		// type. Always set fixed values
+			$query_object->type = 'string';
 
-		$q_operator = isset($query_object->q_operator) ? $query_object->q_operator : null;
-
-		# Prepend if exists
-		#if (isset($query_object->q_operator)) {
-		#	$q = $query_object->q_operator . $q;
-		#}
+		// Prepend if exists
+			// if (isset($query_object->q_operator)) {
+			// 	$q = $query_object->q_operator . $q;
+			// }
 
 		switch (true) {
 			# EMPTY VALUE (in current lang data)
@@ -540,7 +554,8 @@ class component_iri extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-		}//end switch (true) {
+		}//end switch (true)
+
 
 		return $query_object;
 	}//end resolve_query_object_sql
@@ -659,7 +674,7 @@ class component_iri extends component_common {
 							if(!in_array($lang, $valid_langs)){
 
 								debug_log(__METHOD__
-									." invalid language, seems a syntax error: ". PHP_EOL
+									." invalid language, looks like a syntax error: ". PHP_EOL
 									. to_string($import_value)
 									, logger::ERROR
 								);
@@ -694,7 +709,7 @@ class component_iri extends component_common {
 											// it begin [" or end with "]
 											// log JSON conversion error
 											debug_log(__METHOD__
-												." invalid http uri value, seems a syntax error: ". PHP_EOL
+												." invalid http uri value, looks like a syntax error: ". PHP_EOL
 												. to_string($import_value)
 												, logger::ERROR
 											);
@@ -724,7 +739,7 @@ class component_iri extends component_common {
 										// it begin [" or end with "]
 										// log JSON conversion error
 										debug_log(__METHOD__
-											." invalid http uri value, seems a syntax error: ". PHP_EOL
+											." invalid http uri value, looks like a syntax error: ". PHP_EOL
 											. to_string($iri_object)
 											, logger::ERROR
 										);
@@ -764,7 +779,7 @@ class component_iri extends component_common {
 								// it begin [" or end with "]
 								// log JSON conversion error
 								debug_log(__METHOD__
-									." invalid http uri value, seems a syntax error: ". PHP_EOL
+									." invalid http uri value, looks like a syntax error: ". PHP_EOL
 									. to_string($dato_from_json)
 									, logger::ERROR
 								);
@@ -811,7 +826,7 @@ class component_iri extends component_common {
 								// it begin [" or end with "]
 								// log JSON conversion error
 								debug_log(__METHOD__
-									." invalid http uri value, seems a syntax error: ". PHP_EOL
+									." invalid http uri value, looks like a syntax error: ". PHP_EOL
 									. to_string($import_value)
 									, logger::ERROR
 								);
@@ -844,7 +859,7 @@ class component_iri extends component_common {
 									// it begin [" or end with "]
 									// log JSON conversion error
 									debug_log(__METHOD__
-										." invalid http uri value, seems a syntax error: ". PHP_EOL
+										." invalid http uri value, looks like a syntax error: ". PHP_EOL
 										. to_string($import_value)
 										, logger::ERROR
 									);
@@ -891,7 +906,7 @@ class component_iri extends component_common {
 				// it begin [" or end with "]
 				// log JSON conversion error
 				debug_log(__METHOD__
-					." invalid JSON value, seems a syntax error: ". PHP_EOL
+					." invalid JSON value, looks like a syntax error: ". PHP_EOL
 					. to_string($import_value)
 					, logger::ERROR
 				);
@@ -928,7 +943,7 @@ class component_iri extends component_common {
 
 				// error
 				debug_log(__METHOD__
-					." invalid http uri value, seems a syntax error: ". PHP_EOL
+					." invalid http uri value, looks like a syntax error: ". PHP_EOL
 					. to_string($import_value)
 					, logger::ERROR
 				);

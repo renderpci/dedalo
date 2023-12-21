@@ -492,41 +492,64 @@ abstract class common {
 	/**
 	* GET_MATRIX_TABLES_WITH_RELATIONS
 	* Note: Currently tables are static. make a connection to db to do dynamic ASAP
-	* @return array $ar_tables
+	* @return array $ar_tables_with_relations
 	*/
 	public static function get_matrix_tables_with_relations() : array {
 
-		static $ar_tables_with_relations;
-
-		if (isset($ar_tables_with_relations)) {
-			return $ar_tables_with_relations;
-		}
-
-		$ar_tables_with_relations = [];
+		// cache
+			static $ar_tables_with_relations_cache;
+			if (isset($ar_tables_with_relations_cache)) {
+				return $ar_tables_with_relations_cache;
+			}
 
 		// tables
-		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
-		foreach ($ar_children_tables as $table_tipo) {
-			$RecordObj_dd	= new RecordObj_dd( $table_tipo );
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
-			if ($model_name!=='matrix_table') {
-				continue;
-			}
-			$properties = $RecordObj_dd->get_properties();
-			if (isset($properties) && property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
-				$ar_tables_with_relations[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-			}
-		}
+			$ar_tables_with_relations = [];
+			$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
+			foreach ($ar_children_tables as $table_tipo) {
 
-		if (empty($ar_tables_with_relations)) {
-			debug_log(__METHOD__." Error on read Ontology tables list. Old Ontology version < 26-01-2018 ! ".to_string(), logger::ERROR);
-			$ar_tables_with_relations = [
-				"matrix",
-				"matrix_list",
-				"matrix_activities",
-				"matrix_hierarchy"
-			];
-		}
+				// model
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+				if ($model_name!=='matrix_table') {
+					continue;
+				}
+
+				// properties
+				$RecordObj_dd	= new RecordObj_dd( $table_tipo );
+				$properties		= $RecordObj_dd->get_properties();
+				if (isset($properties) && property_exists($properties,'inverse_relations')) {
+
+					// table_name, such 'matrix_hierarchy'
+					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+
+					if ($properties->inverse_relations===true) {
+
+						// add table
+						$ar_tables_with_relations[] = $table_name;
+
+					}else if($table_name==='matrix_test' && DEVELOPMENT_SERVER===true){
+
+						// add table matrix_test only in development server context
+						$ar_tables_with_relations[] = $table_name;
+					}
+				}
+			}//end foreach ($ar_children_tables as $table_tipo)
+
+		// fallback to defaults when a problem is detected
+			if (empty($ar_tables_with_relations)) {
+				debug_log(__METHOD__
+					.' Error on read Ontology tables list. Old Ontology version < 26-01-2018 ! '
+					, logger::ERROR
+				);
+				$ar_tables_with_relations = [
+					"matrix",
+					"matrix_list",
+					"matrix_activities",
+					"matrix_hierarchy"
+				];
+			}
+
+		// cache
+			$ar_tables_with_relations_cache = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
@@ -1404,8 +1427,16 @@ abstract class common {
 					}
 				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
 				$current_section_id		= $this->get_section_id() ?? '';
+
+				$len = !empty($called_tipo)
+					? strlen($called_tipo)
+					: 0;
+				$repeat = ($len < 21)
+					? (21 - $len)
+					: 0;
+				$tipo_line = $called_tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					'------------------- get_json --------------------- '. $called_tipo .' ---------- '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
+					'------- get_json --------------------- '. $tipo_line .' '. $exec_time .' ---- '. $called_model.' - '.$current_section_tipo.'.'.$current_section_id,
 					logger::DEBUG
 				);
 			}
@@ -1458,12 +1489,12 @@ abstract class common {
 							$len = !empty($this->tipo)
 								? strlen($this->tipo)
 								: 0;
-							$repeat = ($len < 14)
-								? (14 - $len)
+							$repeat = ($len < 21)
+								? (21 - $len)
 								: 0;
 							$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 							debug_log(
-								"------------------- get_structure_context CACHED - $tipo_line ". exec_time_unit($start_time,'ms')." ms" . " ---- $model ". json_encode($add_request_config),
+								'------- get_structure_context CACHED - ' . $tipo_line .' '. exec_time_unit($start_time,'ms').' ms' . " ---- $model ". json_encode($add_request_config),
 								logger::DEBUG
 							);
 						}
@@ -1781,7 +1812,7 @@ abstract class common {
 					? (14 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				// error_log("------------------- get_structure_context -------- $tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				// error_log('------- get_structure_context -------- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
 			}
 
 
@@ -1840,12 +1871,12 @@ abstract class common {
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
+				$repeat = ($len < 35)
+					? (35 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum start ----------- $tipo_line ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'------- get_subdatum start ----------- '. $tipo_line.' '. get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -2253,10 +2284,20 @@ abstract class common {
 					// add calculated subcontext
 						// $ar_subcontext_calculated[] = $cid;
 
-					debug_log(
-						"------------------- resolve ddo ------------------ $dd_object->tipo ---------- ".exec_time_unit($ddo_start_time,'ms')." ms ",
-						logger::DEBUG
-					);
+					if(SHOW_DEBUG===true) {
+						$len = !empty($dd_object->tipo)
+							? strlen($dd_object->tipo)
+							: 0;
+						$repeat = ($len < 21)
+							? (21 - $len)
+							: 0;
+						$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
+
+						debug_log(
+							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms',
+							logger::DEBUG
+						);
+					}
 				}//end foreach ($layout_map as $section_tipo => $ar_list_tipos) foreach ($ar_list_tipos as $current_tipo)
 
 			}//end foreach($ar_locators as $current_locator)
@@ -2276,12 +2317,12 @@ abstract class common {
 				$len = !empty($this->tipo)
 					? strlen($this->tipo)
 					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
+				$repeat = ($len < 21)
+					? (21 - $len)
 					: 0;
 				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
 				debug_log(
-					"------------------- get_subdatum ----------------- $tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
+					'------- get_subdatum ----------------- '."$tipo_line $time_string ms ---- ". get_class($this) .' -- '. ($this->get_section_tipo() ?? $this->tipo).'-'.$this->get_section_id(),
 					logger::DEBUG
 				);
 			}
@@ -2860,7 +2901,13 @@ abstract class common {
 
 											$section_map = section::get_section_map( $current_section_tipo );
 											if(empty($section_map)) {
-												debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+												debug_log(__METHOD__
+													." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+													.' tipo: ' . $this->tipo . PHP_EOL
+													.' section_tipo: ' . $this->section_tipo . PHP_EOL
+													.' section_id: ' . $this->section_id
+													, logger::WARNING
+												);
 												continue;
 											}
 											foreach ($get_ddo_map->columns as $current_column_path) {
@@ -2869,7 +2916,13 @@ abstract class common {
 
 												// ignore value
 												if(empty($section_map_value)){
-													debug_log(__METHOD__." Ignored section_tipo without section_map  ".to_string($current_section_tipo), logger::WARNING);
+													debug_log(__METHOD__
+														." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+														.' tipo: ' . $this->tipo . PHP_EOL
+														.' section_tipo: ' . $this->section_tipo . PHP_EOL
+														.' section_id: ' . $this->section_id
+														, logger::WARNING
+													);
 													continue;
 												}
 												$ar_component_tipo = (array)$section_map_value;
@@ -4351,13 +4404,24 @@ abstract class common {
 
 
 	/**
+	* SET_VIEW
+	* @return void
+	*/
+	public function set_view(?string $view) : void {
+
+		$this->view = $view;
+	}//end set_view
+
+
+
+	/**
 	* GET_VIEW
 	* @return string|null $view
 	*/
 	public function get_view() : ?string {
 
 		// When view is injected by ddo_map
-			if(isset($this->view)){
+			if(isset($this->view)) {
 				return $this->view;
 			}
 
