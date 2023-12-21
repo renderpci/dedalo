@@ -7,6 +7,43 @@ $updates = new stdClass();
 
 
 
+$v=606; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 0;
+	$updates->$v->version_minor			= 6;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 5;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// Index matrix_test table to get flat locator used by inverse searches
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS matrix_test_relations_flat_st_si ON matrix_test
+					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX IF NOT EXISTS matrix_test_relations_flat_fct_st_si ON matrix_test
+					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX IF NOT EXISTS matrix_test_relations_flat_ty_st_si ON matrix_test
+					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
+
+				CREATE INDEX IF NOT EXISTS matrix_test_relations_flat_ty_st ON matrix_test
+					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
+			");
+
+
+
 $v=605; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -42,20 +79,6 @@ $updates->$v = new stdClass();
 				WITH (OIDS = FALSE);
 				CREATE SEQUENCE matrix_nexus_id_seq;
 				ALTER TABLE public.matrix_nexus ALTER COLUMN id SET DEFAULT nextval('matrix_nexus_id_seq'::regclass);
-			");
-		// Index matrix_test table to get flat locator used by inverse searches
-			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-				CREATE INDEX matrix_test_relations_flat_st_si ON matrix_test
-					USING gin(relations_flat_st_si(datos) jsonb_path_ops);
-
-				CREATE INDEX matrix_test_relations_flat_fct_st_si ON matrix_test
-					USING gin(relations_flat_fct_st_si(datos) jsonb_path_ops);
-
-				CREATE INDEX matrix_test_relations_flat_ty_st_si ON matrix_test
-					USING gin(relations_flat_ty_st_si(datos) jsonb_path_ops);
-
-				CREATE INDEX matrix_test_relations_flat_ty_st ON matrix_test
-					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
 			");
 
 
