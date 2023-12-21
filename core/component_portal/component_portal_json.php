@@ -84,6 +84,16 @@
 		// value
 			switch ($mode) {
 
+				case 'solved':
+					$value	= $dato;
+
+					$item = $this->get_data_item($value);
+						$item->parent_tipo			= $tipo;
+						$item->parent_section_id	= $section_id;
+						
+					$data[] = $item;
+					break;
+
 				case 'list':
 				case 'tm':
 					// data item (list mode result don't include self data, only subdata)
@@ -102,7 +112,7 @@
 			}//end switch ($mode)
 
 		// data
-			if (!empty($dato)) {
+			if (!empty($dato) && $mode!='solved') {
 
 				// data item (list mode result don't include self data, only subdata)
 					$item = $this->get_data_item($value);
