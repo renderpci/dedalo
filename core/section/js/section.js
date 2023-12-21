@@ -1128,7 +1128,9 @@ section.prototype.navigate = async function(options) {
 		}
 
 	// loading
-		self.node_body.classList.add('loading')
+		if (self.node_body){
+			self.node_body.classList.add('loading')
+		}
 		if (self.inspector && self.inspector.node) {
 			self.inspector.node.classList.add('loading')
 		}
@@ -1139,7 +1141,9 @@ section.prototype.navigate = async function(options) {
 		})
 
 	// loading
-		self.node_body.classList.remove('loading')
+		if (self.node_body){
+			self.node_body.classList.remove('loading')
+		}
 		if (self.inspector && self.inspector.node) {
 			self.inspector.node.classList.remove('loading')
 		}
