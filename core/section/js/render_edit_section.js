@@ -32,15 +32,12 @@ render_edit_section.prototype.edit = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context?.view
+		const view	= self.context?.view || 'default'
 
 	// wrapper
 	switch(view) {
 
-		// case 'mosaic':
-		// 	return view_mosaic_edit_portal.render(self, options)
-		// 	break;
-
+		case 'default':
 		default: {
 			// dynamic try
 				const render_view = self.render_views.find(el => el.view === view && el.mode === self.mode)
