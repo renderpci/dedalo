@@ -68,7 +68,6 @@
 .wrapper_tool.tool_numisdata_order_coins > .content_data {
   display: grid;
   grid-template-columns: 50% 50%;
-  column-gap: 1rem;
   align-items: start;
   width: calc(100% - 1rem);
 }
@@ -83,6 +82,7 @@
 .wrapper_tool.tool_numisdata_order_coins > .content_data .right_container {
   overflow: scroll;
   height: calc(100vh - 90px);
+  padding-left: 1rem;
 }
 .wrapper_tool.tool_numisdata_order_coins > .content_data .left_container .wrapper_component,
 .wrapper_tool.tool_numisdata_order_coins > .content_data .right_container .wrapper_component {
