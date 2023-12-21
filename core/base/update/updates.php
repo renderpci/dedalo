@@ -298,6 +298,7 @@ $updates->$v = new stdClass();
 				DROP FUNCTION IF EXISTS public.relations_flat_ty_st_si(jsonb);
 				DROP FUNCTION IF EXISTS public.relations_flat_ty_st(jsonb);
 
+				-- Create function with base flat locators st=section_tipo si=section_id (rsc197_2)
 				CREATE OR REPLACE FUNCTION public.relations_flat_st_si(datos jsonb) RETURNS jsonb
 					AS $$ SELECT jsonb_agg( concat(rel->>'section_tipo','_',rel->>'section_id') )
 					FROM jsonb_array_elements($1->'relations') rel(rel)
