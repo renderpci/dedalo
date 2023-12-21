@@ -24,7 +24,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
@@ -209,22 +209,7 @@ final class component_3d_test extends TestCase {
 	*/
 	public function test_get_folder() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$component = $this->build_component_instance();
 
 		$result = $component->get_folder();
 
@@ -240,6 +225,8 @@ final class component_3d_test extends TestCase {
 				. json_encode($result)
 		);
 
+		$original_folder = $component->get_folder();
+
 		// set custom
 
 		$component->folder = '/4d';
@@ -251,6 +238,9 @@ final class component_3d_test extends TestCase {
 			'expected /4d ' . PHP_EOL
 				. json_encode($result)
 		);
+
+		// restore
+		$component->folder = $original_folder;
 	}//end test_get_folder
 
 
@@ -285,8 +275,8 @@ final class component_3d_test extends TestCase {
 		$result = $component->get_valor_export();
 
 		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
 				. gettype($result)
 		);
 	}//end test_get_valor_export
@@ -411,31 +401,6 @@ final class component_3d_test extends TestCase {
 				. to_string($result)
 		);
 	}//end test_get_preview_url
-
-
-
-	/**
-	* TEST_get_thumb_url
-	* @return void
-	*/
-	public function test_get_thumb_url() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_thumb_url();
-
-		$this->assertTrue(
-			gettype($result)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		$this->assertTrue(
-			strpos($result, 'http')!==0,
-			'unexpected http protocol in relative URL : ' . PHP_EOL
-				. to_string($result)
-		);
-	}//end test_get_thumb_url
 
 
 

@@ -595,6 +595,7 @@ class calculation extends widget_common {
 	* @return
 	*/
 	private function resolve_logic(object $process, $data) {
+
 		// path to the file with the functions, defined in structure
 		$file 	= DEDALO_WIDGETS_PATH . $process->file;
 		// function name, defined in structure

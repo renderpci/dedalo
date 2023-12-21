@@ -155,6 +155,8 @@ final class dd_core_api {
 			$context = [];
 			if (true!==login::is_logged()) {
 
+				// not logged case
+
 				// check_basic_system (lang and structure files)
 					$is_system_ready = check_basic_system();
 					if ($is_system_ready->result===false) {
@@ -273,6 +275,10 @@ final class dd_core_api {
 
 							$section = section::get_instance($section_id, $tipo, $mode);
 							$section->set_lang(DEDALO_DATA_LANG);
+							// set view
+							if (!empty($view)) {
+								$section->set_view($view);
+							}
 
 							$current_context = $section->get_structure_context(
 								1, // permissions
@@ -320,6 +326,10 @@ final class dd_core_api {
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
+							// set view
+							if (!empty($view)) {
+								$area->set_view($view);
+							}
 
 							// add to page context
 								$current_context = $area->get_structure_context(1, true);
@@ -375,6 +385,10 @@ final class dd_core_api {
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
+							// set view
+							if (!empty($view)) {
+								$area->set_view($view);
+							}
 
 							$current_context = $area->get_structure_context(1, true);
 
@@ -397,6 +411,11 @@ final class dd_core_api {
 									$component_lang,
 									$section_tipo
 								);
+
+							// set view
+							if (!empty($view)) {
+								$element->set_view($view);
+							}
 
 							// element JSON
 								$get_json_options = new stdClass();
@@ -1840,6 +1859,11 @@ final class dd_core_api {
 					// properties (optional). If received, overwrite element properties
 						if (!empty($properties)){
 							$element->set_properties($properties);
+						}
+
+					// view
+						if (isset($view)) {
+							$element->set_view($view);
 						}
 
 					// unlock user components. Normally this occurs when user navigate across sections or paginate

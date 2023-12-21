@@ -1,31 +1,45 @@
 <?php
-
-
+/**
+* CLASS ZENON
+* Manage specific entity Dainst Zenon API elements
+*/
 class zenon {
 
 
 
 	/**
 	* BUILD_ROW_REQUEST_URL
+	* @param object $options
+	* {
+	* 	api_url : string,
+	* 	ar_fields: array,
+	* 	section_id: int|string,
+	* 	lang: string
+	* }
 	* @return string $url
+	*  sample:
+	*  https://zenon.dainst.org/api/v1/record?id=000903635&lgn=en&field[]=id&field[]=title&field[]=authors
 	*/
-	public static function build_row_request_url($request_options) {
+	public static function build_row_request_url( object $options ) : string {
 
-		$options = new stdClass();
-			$options->api_url 		= null;
-			$options->ar_fields 	= null;
-			$options->section_id 	= null;
-			$options->lang 			= null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$api_url	= $options->api_url;
+			$ar_fields	= $options->ar_fields;
+			$section_id	= $options->section_id ;
+			$lang		= $options->lang;
 
-		$lang_value = lang::get_alpha2_from_code($options->lang);
+		// lang value tld 2
+			$lang_value = lang::get_alpha2_from_code($lang);
 
-		$ar_fields_var = [];
-		foreach ($options->ar_fields as $field) {
-			$ar_fields_var[] = 'field[]=' . $field;
-		}
+		// ar_fields_var
+			$ar_fields_var = [];
+			foreach($ar_fields as $field) {
+				$ar_fields_var[] = 'field[]=' . $field;
+			}
 
-		$url = $options->api_url . '?id='. $options->section_id .'&lgn='. $lang_value .'&'. implode('&', $ar_fields_var);
+		// url
+			$url = $api_url .'?id='. $section_id .'&lgn='. $lang_value .'&'. implode('&', $ar_fields_var);
+
 
 		return $url;
 	}//end build_row_request_url

@@ -958,7 +958,7 @@ class section extends common {
 			$user_id = get_user_id();
 
 		// date now
-			$date_now = component_date::get_timestamp_now_for_db();
+			$date_now = dd_date::get_timestamp_now_for_db();
 
 		// save_handler session case
 			// Sometimes we need use section as temporal element without save real data to database. Is this case
@@ -1386,7 +1386,7 @@ class section extends common {
 					unset($_SESSION['dedalo']['registered_tools']);
 				}
 				dd_cache::delete_cache_files([
-					dd_cache::get_cache_file_prefix() . 'cache_registered_tools.json'
+					'cache_registered_tools.json'
 				]);
 			}
 			// DEDALO_SECTION_PROJECTS_TIPO
@@ -1464,7 +1464,7 @@ class section extends common {
 							$RecordObj_time_machine_new->set_section_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
-							$RecordObj_time_machine_new->set_timestamp((string)component_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
+							$RecordObj_time_machine_new->set_timestamp((string)dd_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
 							$RecordObj_time_machine_new->set_userID(get_user_id());
 							$RecordObj_time_machine_new->set_dato((object)$this->dato);
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
@@ -1560,7 +1560,8 @@ class section extends common {
 
 					// don't delete some components
 					$ar_components_model_no_delete_dato = [
-						'component_section_id'
+						'component_section_id',
+						'component_external'
 					];
 
 					$ar_models_of_media_components = section::get_components_with_media_content();
@@ -2127,7 +2128,7 @@ class section extends common {
 
 		$dato			= $this->get_dato();
 		$local_value	= isset($dato->created_date)
-			? component_date::timestamp_to_date(
+			? dd_date::timestamp_to_date(
 				$dato->created_date,
 				true // bool full
 			  )
@@ -2146,7 +2147,7 @@ class section extends common {
 
 		$dato			= $this->get_dato();
 		$local_value	= isset($dato->modified_date)
-			? component_date::timestamp_to_date(
+			? dd_date::timestamp_to_date(
 				$dato->modified_date,
 				true // bool full
 			  )
@@ -2363,7 +2364,7 @@ class section extends common {
 				$current_date	= reset($dato);
 				$dd_date		= new dd_date($current_date->start);
 				$timestamp		= $dd_date->get_dd_timestamp();
-				$local_date		= component_date::timestamp_to_date($timestamp, true); // string|null
+				$local_date		= dd_date::timestamp_to_date($timestamp, true); // string|null
 			}
 
 
@@ -2401,20 +2402,14 @@ class section extends common {
 				$user_name = null;
 
 			}else{
-				$user_id	= (int)reset($dato)->section_id;
-				$user_name	= section::get_user_name_by_userID($user_id, false);
-				// $model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO,true);
-				// $component	= component_common::get_instance(
-				// 	$model_name,
-				// 	DEDALO_USER_NAME_TIPO,
-				// 	$user_id,
-				// 	'list',
-				// 	DEDALO_DATA_NOLAN,
-				// 	DEDALO_SECTION_USERS_TIPO
-				// );
-				// $dato		= $component->get_dato();
-				// $user_name	= $dato[0] ?? null;
+				$user_id	= isset($dato[0]) && isset($dato[0]->section_id)
+					? (int)$dato[0]->section_id
+					: null;
+				$user_name	= isset($user_id)
+					? section::get_user_name_by_userID($user_id, false)
+					: null;
 			}
+
 
 		return $user_name;
 	}//end get_publication_user

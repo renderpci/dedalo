@@ -722,6 +722,80 @@ class dd_date extends stdClass {
 	}//end set_from_timestamp
 
 
+
+	/**
+	* TIMESTAMP_TO_DATE
+	* timestamp to European date
+	* @param $timestamp
+	* @param $seconds (default false)
+	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
+	*/
+	public static function timestamp_to_date($timestamp, $full=true) : ?string {
+
+		if (empty($timestamp) || strlen($timestamp)<10) {
+			return null;
+		}
+
+		$year  	= substr($timestamp, 0, 4);
+		$month 	= substr($timestamp, 5, 2);
+		$day   	= substr($timestamp, 8, 2);
+		$hour 	= substr($timestamp, 11, 2);
+		$min 	= substr($timestamp, 14, 2);
+		$sec 	= substr($timestamp, 17, 2);
+		/*
+		if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
+			# American format month/day/year
+			$date	= $mes . '-' .$day . '-' .$year ;
+		}else{
+			# European format day.month.year
+			$date	= $day . '-' .$mes . '-' .$year ;
+		}
+		*/
+		$date = $day . '-' .$month . '-' .$year ;
+
+		if($full===true) {
+			$date .= ' ' .$hour . ':' .$min . ':' .$sec ;
+		}
+
+
+		return $date;
+	}//end timestamp_to_date
+
+
+
+	/**
+	* GET_TIMESTAMP_NOW_FOR_DB
+	* Build current time ready to save to SQL as timestamp field
+	* @param array $offset
+	* @return string $timestamp
+	* 	current time formatted for saved to SQL timestamp field
+	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
+	*	DateTime is available for PHP >=5.3.0
+	*/
+	public static function get_timestamp_now_for_db( $offset=null ) : string {
+
+		$date = new DateTime();
+
+		switch (true) {
+
+			case !empty($offset):
+
+				$offset_key 	= key($offset);
+				$offset_value 	= $offset[$offset_key];
+				$date->$offset_key(new DateInterval($offset_value)); // Formatted like: P10D (10 days)
+				$timestamp = $date->format('Y-m-d H:i:s'); 	// Default as DB format
+				break;
+
+			default:
+				$timestamp = $date->format('Y-m-d H:i:s'); // Default as DB format
+				break;
+		}
+
+		return $timestamp;
+	}//end get_timestamp_now_for_db
+
+
+
 	/**
 	* SET_DATE_FROM_INPUT_FIELD (!) NOT USED !
 	* @param string $search_field_value

@@ -1739,7 +1739,7 @@ class component_text_area extends component_common {
 		if (!isset($properties->tags_persons)) {
 			debug_log(__METHOD__
 				." Warning: empty properties for tags_persons [properties->tags_persons] (related_section_tipo: $related_section_tipo)" .PHP_EOL
-				.to_string($properties)
+				.' properties: ' . to_string($properties)
 				, logger::WARNING
 			);
 			return $tags_persons;
@@ -1747,7 +1747,7 @@ class component_text_area extends component_common {
 		elseif (!isset($properties->tags_persons->$related_section_tipo)) {
 			debug_log(__METHOD__
 				." Warning: bad top_tipo for tags_persons (related_section_tipo: $related_section_tipo)" .PHP_EOL
-				.to_string($properties)
+				.' properties: ' . to_string($properties)
 				, logger::WARNING
 			);
 			return $tags_persons;
@@ -1778,8 +1778,12 @@ class component_text_area extends component_common {
 					if (empty($ar_references)) {
 
 						debug_log(__METHOD__
-							." Error (empty ar_references) on calculate section_id from inverse locators $this->section_tipo - $this->parent"
-							. 'ar_related_sections: '.to_string($ar_related_sections)
+							.' Warning: empty ar_references on calculate section_id from inverse locators' . PHP_EOL
+							.' tipo: ' . $this->tipo . PHP_EOL
+							.' section_tipo: ' . $this->section_tipo . PHP_EOL
+							.' section_id: ' . $this->section_id . PHP_EOL
+							.' ar_related_sections: '.to_string($ar_related_sections) . PHP_EOL
+							.' properties: ' . to_string($properties)
 							, logger::WARNING
 						);
 

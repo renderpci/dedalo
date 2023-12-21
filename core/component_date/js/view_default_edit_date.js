@@ -190,6 +190,8 @@ const get_buttons = (self) => {
 
 	const is_inside_tool	= self.is_inside_tool
 	const mode				= self.mode
+	const data				= self.data || {}
+	const value				= data.value || []
 
 	const fragment = new DocumentFragment()
 
@@ -205,7 +207,7 @@ const get_buttons = (self) => {
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,
+					key		: value.length,
 					value	: null
 				})]
 				self.change_value({

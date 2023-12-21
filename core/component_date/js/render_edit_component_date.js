@@ -739,7 +739,6 @@ export const change_handler = function(options) {
 					return self.parse_string_date(input_value)
 			}
 		})()
-		console.log('response:', response);
 
 	// error case
 		if(response.error){
@@ -751,14 +750,18 @@ export const change_handler = function(options) {
 	// success format. reset component error styles
 		ui.component.error(false, input_wrap)
 
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
 	// new value. New parsed value
 		const new_value = Object.keys(response.result).length===0 && response.result.constructor===Object
 			? null // empty object case
 			: response.result
 
 	// data_value. Current data value for current key
-		const data_value = self.data.value[key]
-			? JSON.parse(JSON.stringify(self.data.value[key]))
+		const data_value = value[key]
+			? JSON.parse(JSON.stringify(value[key]))
 			: {mode}
 
 	// replace value only in current mode

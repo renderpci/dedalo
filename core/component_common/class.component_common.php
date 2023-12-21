@@ -3888,17 +3888,33 @@ abstract class component_common extends common {
 
 			// try to JSON decode (null on not decode)
 			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
+
+			// array convert all except null
+			if (!is_array($dato_from_json) && !is_null($dato_from_json)) {
+				$dato_from_json = [$dato_from_json];
+			}
+
 			$import_value	= $dato_from_json;
 
 		}else{
 
-			if(empty($import_value)){
+			// string case
+
+			if(empty($import_value)) {
+
 				$import_value = null;
+
 			}else{
 
 				// log JSON conversion error
 				debug_log(__METHOD__
-					." json_last_error: ".json_last_error()
+					." JSON json_last_error: ".json_last_error() . PHP_EOL
+					.' tipo: ' . $this->tipo . PHP_EOL
+					.' section_tipo: ' . $this->section_tipo . PHP_EOL
+					.' section_id: ' . $this->section_id . PHP_EOL
+					.' model: ' . get_called_class() . PHP_EOL
+					.' import_value: ' . to_string($import_value) . PHP_EOL
+					.' column_name: ' . $column_name
 					, logger::ERROR
 				);
 
@@ -3916,8 +3932,10 @@ abstract class component_common extends common {
 		$response->result	= $import_value;
 		$response->msg		= 'OK';
 
+
 		return $response;
 	}//end conform_import_data
+
 
 
 }//end class component_common

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT DATE
 * used to manage dates, component_date use a object to represent dates, ISO dates as '2012-11-07 17:33:49' will be transform to object format as:
@@ -41,7 +42,7 @@ class component_date extends component_common {
 
 
 
-	# American data format
+	// American data format
 	public static $ar_american = ['lg-eng','lg-angl','lg-ango','lg-meng'];
 
 
@@ -129,7 +130,7 @@ class component_date extends component_common {
 
 		$dato = parent::get_dato();
 
-		return (array)$dato;
+		return $dato;
 	}//end get_dato
 
 
@@ -140,21 +141,22 @@ class component_date extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
+		// string case (JSON encoded value)
 		if (is_string($dato)) {
-			$dato = json_decode($dato);
-		}
-		if (is_null($dato) || empty($dato)) {
-			$dato = array();
+			$dato = json_handler::decode($dato);
 		}
 
-		# Compatibility with version 4.0.14 to 4.7 dedalo installations
-		if (is_object($dato) && !empty(get_object_vars($dato)) ) {
-			$safe_dato		= array();
-			$safe_dato[] 	= $dato;
-			$dato 			= $safe_dato;
+		// if (is_null($dato) || empty($dato)) {
+		// 	$dato = array();
+		// }
+
+		// Compatibility with version 4.0.14 to 4.7 dedalo installations
+		if ( is_object($dato) && !empty(get_object_vars($dato)) ) {
+			$dato = [$dato];
 		}
 
-		return parent::set_dato( (array)$dato );
+
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -250,16 +252,18 @@ class component_date extends component_common {
 		// ar_values
 			$ar_values	= [];
 			$data		= $this->get_dato();
-			foreach ($data as $key => $current_dato) {
+			if (!empty($data)) {
+				foreach ($data as $key => $current_dato) {
 
-				$ar_values[$key] = ''; // default
+					$ar_values[$key] = ''; // default
 
-				if(empty($current_dato)) {
-					continue;
-				}
+					if(empty($current_dato)) {
+						continue;
+					}
 
-				$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
-			}//end foreach ($data as $key => $current_dato)
+					$ar_values[$key] = self::data_item_to_value($current_dato, $date_mode);
+				}//end foreach ($data as $key => $current_dato)
+			}
 
 		// flat_value (array of one value full resolved)
 			$flat_value = [implode($records_separator, $ar_values)];
@@ -318,8 +322,7 @@ class component_date extends component_common {
 
 			case 'range':
 				// start
-				$valor_start = '';
-				if(isset($data_item->start)) {
+				if(isset($data_item->start) && is_object($data_item->start)) {
 					$dd_date = new dd_date($data_item->start);
 					if(isset($data_item->start->day)) {
 						$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
@@ -331,8 +334,7 @@ class component_date extends component_common {
 					$item_value .= $valor_start;
 				}
 				// end
-				$valor_end = '';
-				if(isset($data_item->end)) {
+				if(isset($data_item->end) && is_object($data_item->end)) {
 					$dd_date = new dd_date($data_item->end);
 					if(isset($data_item->end->day)) {
 						$valor_end = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
@@ -347,21 +349,18 @@ class component_date extends component_common {
 
 			case 'time_range':
 				// start
-				$valor_start = '';
-				if(isset($data_item->start)) {
+				if(isset($data_item->start) && is_object($data_item->start)) {
 					$dd_date = new dd_date($data_item->start);
 					$valor_start = $dd_date->get_dd_timestamp('H:i:s', true);
 					$item_value .= $valor_start;
 				}
 				// end
-				$valor_end = '';
-				if(isset($data_item->end)) {
+				if(isset($data_item->end) && is_object($data_item->end)) {
 					$dd_date = new dd_date($data_item->end);
 					$valor_end = $dd_date->get_dd_timestamp('H:i:s', true);
 					$item_value .= ' <> '. $valor_end;
 				}
 				break;
-
 
 			case 'period':
 				if(!empty($data_item->period)) {
@@ -388,8 +387,21 @@ class component_date extends component_common {
 				break;
 
 			case 'time':
-				$dd_date	= new dd_date($data_item);
-				$item_value	= $dd_date->get_dd_timestamp('H:i:s', true);
+				$data_item_object = isset($data_item->start)
+					? $data_item->start
+					: $data_item;
+				if (is_object($data_item_object)) {
+					$dd_date	= new dd_date($data_item_object);
+					$item_value	= $dd_date->get_dd_timestamp('H:i:s', true);
+				}else{
+					debug_log(__METHOD__
+						. " Ignored invalid date. Expected data_item_object is object " . PHP_EOL
+						.' type: '. gettype($data_item_object) . PHP_EOL
+						.' data_item_object: '. to_string($data_item_object) . PHP_EOL
+						.' data_item: '. to_string($data_item)
+						, logger::ERROR
+					);
+				}
 				break;
 
 			case 'datetime':
@@ -398,41 +410,52 @@ class component_date extends component_common {
 					. to_string( debug_backtrace()[0] )
 					, logger::ERROR
 				);
-				// don't break here !
-
+				// ! don't break here
 			case 'date_time':
-				if(isset($data_item->start)) {
-					$dd_date	= new dd_date($data_item->start);
+				$data_item_object = isset($data_item->start)
+					? $data_item->start
+					: $data_item;
+				if (is_object($data_item_object)) {
+					$dd_date	= new dd_date($data_item_object);
 					$item_value	= $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d H:i:s', true);
+				}else{
+					debug_log(__METHOD__
+						. " Ignored invalid date. Expected data_item_object is object " . PHP_EOL
+						.' type: '. gettype($data_item_object) . PHP_EOL
+						.' data_item_object: '. to_string($data_item_object) . PHP_EOL
+						.' data_item: '. to_string($data_item)
+						, logger::ERROR
+					);
 				}
 				break;
 
 			case 'date':
 			default:
-				// start
-				$valor_start = '';
-				if(isset($data_item->start)) {
-					if (!is_object($data_item->start)) {
-						debug_log(__METHOD__
-							. " Ignored invalid date. Expected data_item->start is object " . PHP_EOL
-							.' type: '. gettype($data_item->start) . PHP_EOL
-							.' data_item->start: '. to_string($data_item->start)
-							, logger::ERROR
-						);
+				$data_item_object = isset($data_item->start)
+					? $data_item->start
+					: $data_item;
+				if (is_object($data_item_object)) {
+					$dd_date = new dd_date($data_item_object);
+
+					if(isset($data_item_object->day)) {
+						$item_value = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
 					}else{
-						$dd_date = new dd_date($data_item->start);
-						if(isset($data_item->start->day)) {
-							$valor_start = $dd_date->get_dd_timestamp('Y'.$sep.'m'.$sep.'d');
-						}else{
-							$valor_start = isset($data_item->start->month)
-								? $dd_date->get_dd_timestamp('Y'.$sep.'m')
-								: $dd_date->get_dd_timestamp('Y', $padding=false);
-						}
-						$item_value .= $valor_start;
+						$item_value = isset($data_item_object->month)
+							? $dd_date->get_dd_timestamp('Y'.$sep.'m')
+							: $dd_date->get_dd_timestamp('Y', $padding=false);
 					}
+				}else{
+					debug_log(__METHOD__
+						. " Ignored invalid date. Expected data_item_object is object " . PHP_EOL
+						.' type: '. gettype($data_item_object) . PHP_EOL
+						.' data_item_object: '. to_string($data_item_object) . PHP_EOL
+						.' data_item: '. to_string($data_item)
+						, logger::ERROR
+					);
 				}
 				break;
-		}
+		}//end switch ($date_mode)
+
 
 		return $item_value;
 	}//end data_item_to_value
@@ -519,82 +542,12 @@ class component_date extends component_common {
 			$dato = $this->get_dato();				// Get dato from DB
 			$valor = $this->get_valor($lang);
 		}else{
-			#$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			#$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 
 		return (string)$valor;
 	}//end get_valor_export
-
-
-
-	/**
-	* GET TIMESTAMP
-	* @param array $offset
-	* @return string $timestamp
-	* 	current time formatted for saved to SQL timestamp field
-	*	like 2013-01-22 22:33:29 ('Y-m-d H:i:s')
-	*	DateTime is available for PHP >=5.3.0
-	*/
-	public static function get_timestamp_now_for_db( $offset=null ) : string {
-
-		$date = new DateTime();
-
-		switch (true) {
-
-			case !empty($offset) :
-
-				$offset_key 	= key($offset);
-				$offset_value 	= $offset[$offset_key];
-				$date->$offset_key(new DateInterval($offset_value));		# Formated like: P10D (10 days)
-				$timestamp = $date->format('Y-m-d H:i:s'); 	# Default as DB format
-				break;
-
-			default:
-				$timestamp 	= $date->format('Y-m-d H:i:s'); # Default as DB format
-				break;
-		}
-
-		return $timestamp;
-	}//end get_timestamp_now_for_db
-
-
-
-	/**
-	* TIMESTAMP TO EUROPEAN DATE
-	* @param $timestamp
-	* @param $seconds (default false)
-	* Convert DB timestamp to date (American or European date) like '2013-04-23 19:47:05' to 23-04-2013 19:47:05
-	*/
-	public static function timestamp_to_date($timestamp, $full=true) : ?string {
-
-		if (empty($timestamp) || strlen($timestamp)<10) {
-			return null;
-		}
-
-		$year  	= substr($timestamp, 0, 4);
-		$month 	= substr($timestamp, 5, 2);
-		$day   	= substr($timestamp, 8, 2);
-		$hour 	= substr($timestamp, 11, 2);
-		$min 	= substr($timestamp, 14, 2);
-		$sec 	= substr($timestamp, 17, 2);
-		/*
-		if (in_array(DEDALO_APPLICATION_LANG, self::$ar_american)) {
-			# American format month/day/year
-			$date	= $mes . '-' .$day . '-' .$year ;
-		}else{
-			# European format day.month.year
-			$date	= $day . '-' .$mes . '-' .$year ;
-		}
-		*/
-		$date	= $day . '-' .$month . '-' .$year ;
-
-		if($full===true) {
-			$date	.= ' ' .$hour . ':' .$min . ':' .$sec ;
-		}
-
-		return $date;
-	}//end timestamp_to_date
 
 
 
@@ -1087,7 +1040,7 @@ class component_date extends component_common {
 	* @param object|null $dd_date
 	* @return int $final_range
 	*/
-	protected static function get_final_search_range_seconds(?object $dd_date) : int {
+	public static function get_final_search_range_seconds(?object $dd_date) : int {
 
 		$final_search_range_seconds = 0;
 
@@ -1146,10 +1099,9 @@ class component_date extends component_common {
 
 	/**
 	* ADD_TIME
-	* Recoge el current dato recibido (de tipo stdClass) y lo usa para crear un objeto dd_date al que inyecta
-	* el time (seconds) calculado.
-	* Retorna el objeto dd_date creado
-	*
+	* Gets the current data received (of type stdClass) and uses it to create a dd_date object to which it injects
+	* the calculated time (seconds).
+	* Returns the created dd_date object
 	* @param object $current_dato
 	* 	dd_date object as
 	* {
@@ -1161,6 +1113,16 @@ class component_date extends component_common {
 	*    }
 	* }
 	* @return object dd_date $current_dato
+	*  Modified object with injected time in seconds
+	* {
+	*    "start": {
+	*        "errors": null,
+	*        "year": 2023,
+	*        "month": 7,
+	*        "day": 11,
+	* 		 "time": 64638561691
+	*    }
+	* }
 	*/
 	public static function add_time( object $current_dato ) : object {
 
@@ -1216,7 +1178,9 @@ class component_date extends component_common {
 
 				if (isset($current_dato->time) && $current_dato->time!=$time) {
 					debug_log(__METHOD__
-						." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []"
+						." Unequal time seconds value: current: ".to_string($current_dato->time).", calculated: $time. Used calculated time. []" . PHP_EOL
+						.' $current_dato->time: ' . to_string($current_dato->time) . PHP_EOL
+						.' calculated: ' . $time
 						, logger::WARNING
 					);
 				}
@@ -1375,8 +1339,8 @@ class component_date extends component_common {
 		# Para publicación, NO está solucionado el caso en que hay más de una fecha... ejem.. VALORAR ;-)
 		$diffusion_value = reset($ar_diffusion_values); // Temporal !!
 
-		# Force null on empty to avoid errors on mysql save value invalid format
-		# Only valid dates or null area accepted
+		// Force null on empty value to avoid errors on MYSQL save value invalid format
+		// Only valid dates or null area accepted
 		if (empty($diffusion_value)) {
 			$diffusion_value = null;
 		}
@@ -1389,39 +1353,40 @@ class component_date extends component_common {
 
 	/**
 	* GET_CALCULATION_DATA
-	* @return int|object $data
-	* get the data of the component for do a calculation
+	*  Get the data of the component for do a calculation
+	* @param object|null $options = null
+	* @return mixed $data
 	*/
-	public function get_calculation_data($options = null){
+	public function get_calculation_data($options=null) : mixed {
 
 		$ar_data = [];
 
-		// select
-		$select 	= $options->select;
-		if(isset($options->format)){
-			$format = $options->format;
-		}else{
-			$format = 'unix_timestamp';
-		}
-		$dato 		= $this->get_dato();
+		// options
+			$select	= $options->select ?? 'start';
+			$format	= $options->format ?? 'unix_timestamp';
 
-		foreach ($dato as $current_dato) {
-			if (isset($current_dato->{$select})){
-				$data_obj =	$current_dato->{$select};
-			}else{
-				return false;
-			}
+		$dato = $this->get_dato();
+		if (!empty($dato)) {
+			foreach ($dato as $current_dato) {
 
-			if($format==='dd_date'){
-				$data_obj->format = ($select==='period') ? 'period' : 'date';
-				return $data_obj; // Only one expected
-			}
+				if (isset($current_dato->{$select})){
+					$data_obj =	$current_dato->{$select};
+				}else{
+					return false;
+				}
 
-			// value to seconds
-			if (!empty($data_obj)) {
-				$dd_date		= new dd_date($data_obj);
-				$unix_timestamp	= $dd_date->get_unix_timestamp();
-				$ar_data[] = $unix_timestamp ;
+				if($format==='dd_date'){
+					$data_obj->format = ($select==='period') ? 'period' : 'date';
+					return $data_obj; // Only one expected
+				}
+
+				// value to seconds
+				if (!empty($data_obj)) {
+					$dd_date		= new dd_date($data_obj);
+					$unix_timestamp	= $dd_date->get_unix_timestamp();
+
+					$ar_data[] = $unix_timestamp ;
+				}
 			}
 		}
 
@@ -1466,7 +1431,10 @@ class component_date extends component_common {
 		}else{
 			$to_timestamp = function($item) {
 				$dd_date = new dd_date($item);
-				return $dd_date->get_dd_timestamp($date_format="Y-m-d", $padding=true);
+				return $dd_date->get_dd_timestamp(
+					"Y-m-d", // date_format
+					true // padding
+				);
 			};
 			$ar_text = [];
 			if (isset($data->start)) {
@@ -1552,7 +1520,7 @@ class component_date extends component_common {
 	/**
 	* GET_LIST_VALUE
 	* Unified value list output
-	* By default, list value is equivalent to dato. Override in other cases.
+	* By default, list value is equivalent to dato. Overwrite in other cases.
 	* Note that empty array or string are returned as null
 	* @return array|null $list_value
 	*/
@@ -1611,7 +1579,7 @@ class component_date extends component_common {
 		// Response
 		$response = new stdClass();
 			$response->result	= null;
-			$response->errors 	= [];
+			$response->errors	= [];
 			$response->msg		= 'Error. Request failed';
 
 		// Check if is a JSON string. Is yes, decode
@@ -1619,7 +1587,7 @@ class component_date extends component_common {
 				// try to JSON decode (null on not decode)
 				$dato_from_json = json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 				$lang = $this->lang;
-				$value = (is_object($dato_from_json))
+				$value = (is_object($dato_from_json) && property_exists($dato_from_json, $lang))
 					? $dato_from_json->$lang
 					: $dato_from_json;
 			}else{
@@ -1632,7 +1600,7 @@ class component_date extends component_common {
 
 				$value = [];
 				// explode the possibles rows of the date
-				$ar_date_rows	= explode('|',$import_value);
+				$ar_date_rows	= explode('|', $import_value);
 
 				foreach ($ar_date_rows as $key => $date_row) {
 
@@ -1811,11 +1779,18 @@ class component_date extends component_common {
 				$value = null;
 			}
 
+		// values are array except for null
+			if (is_object($value)) {
+				$value = [$value];
+			}
+
 		$response->result	= $value;
 		$response->msg		= 'OK';
 
 
 		return $response;
 	}//end conform_import_data
+
+
 
 }//end class component_date

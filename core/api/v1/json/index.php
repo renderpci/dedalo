@@ -71,8 +71,6 @@ $global_start_time = hrtime(true);
 // includes
 	// config dedalo
 	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
-	// JSON dd_manager
-	include dirname(dirname(__FILE__)) .'/common/class.dd_manager.php';
 
 
 

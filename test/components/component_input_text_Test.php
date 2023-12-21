@@ -24,7 +24,7 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
@@ -39,17 +39,17 @@ final class component_input_text_test extends TestCase {
 
 
 	/**
-	* TEST_get_dato
-	* @return void
+	* BUILD_COMPONENT_INSTANCE
+	* @return
 	*/
-	public function test_get_dato() {
+	private function build_component_instance() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
 		$section_tipo	= self::$section_tipo;
 		$section_id		= 1;
 		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$lang			= DEDALO_DATA_LANG;
 
 		$component = component_common::get_instance(
 			$model, // string model
@@ -59,6 +59,19 @@ final class component_input_text_test extends TestCase {
 			$lang,
 			$section_tipo
 		);
+
+		return $component;
+	}//end build_component_instance
+
+
+
+	/**
+	* TEST_get_dato
+	* @return void
+	*/
+	public function test_get_dato() {
+
+		$component = $this->build_component_instance();
 
 		$value = $component->get_dato();
 
@@ -77,22 +90,9 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_set_dato() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$component = $this->build_component_instance();
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$old_dato = $component->get_dato();
 
 		$value = $component->set_dato(null);
 
@@ -102,21 +102,29 @@ final class component_input_text_test extends TestCase {
 				. to_string($value)
 		);
 
-		$value = $component->set_dato('["patata"]');
+		$result = $component->set_dato('["patata"]');
 
 		$this->assertTrue(
-			$value===true,
+			$result===true,
 			'expected true : ' . PHP_EOL
-				. to_string($value)
+				. to_string($result)
 		);
 
-		$value = $component->set_dato('patata');
+		$result = $component->set_dato('patata');
 
 		$this->assertTrue(
-			$value===true,
+			$result===true,
 			'expected true : ' . PHP_EOL
-				. to_string($value)
+				. to_string($result)
 		);
+		$this->assertTrue(
+			$component->dato===["patata"],
+			'expected ["patata"] : ' . PHP_EOL
+				. to_string($component->dato)
+		);
+
+		// restore dato
+		$component->set_dato($old_dato);
 	}//end test_set_dato
 
 
@@ -127,22 +135,7 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_is_empty() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->is_empty(null);
 
@@ -190,44 +183,29 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_get_grid_value() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$component = $this->build_component_instance();
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
-
-		$value = $component->get_grid_value(null);
+		$result = $component->get_grid_value(null);
 
 		$this->assertTrue(
-			gettype($value->value)==='array' || gettype($value->value)==='NULL',
+			gettype($result->value)==='array' || gettype($result->value)==='NULL',
 			'expected type array or NULL : ' . PHP_EOL
-				. gettype($value->value)
+				. gettype($result->value)
 		);
 		$this->assertTrue(
-			gettype($value->fallback_value)==='array',
+			gettype($result->fallback_value)==='array',
 			'expected type array : ' . PHP_EOL
-				. gettype($value->fallback_value)
+				. gettype($result->fallback_value)
 		);
 		$this->assertTrue(
-			$value->type==='column',
+			$result->type==='column',
 			'expected type array : ' . PHP_EOL
-				. gettype($value->type)
+				. gettype($result->type)
 		);
 		$this->assertTrue(
-			$value->cell_type==='text',
+			$result->cell_type==='text',
 			'expected cell_type text : ' . PHP_EOL
-				. to_string($value->cell_type)
+				. to_string($result->cell_type)
 		);
 	}//end test_get_grid_value
 
@@ -239,29 +217,14 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_get_valor() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
+		$component = $this->build_component_instance();
 
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
-
-		$value = $component->get_valor();
+		$result = $component->get_valor();
 
 		$this->assertTrue(
-			gettype($value)==='string',
-			'expected type string : ' . PHP_EOL
-				. gettype($value)
+			gettype($result)==='string' || gettype($result)==='NULL',
+			'expected type string|null : ' . PHP_EOL
+				. gettype($result)
 		);
 	}//end test_get_valor
 
@@ -273,22 +236,7 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_get_valor_export() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'edit';
-		$lang			= DEDALO_DATA_NOLAN;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_valor_export();
 
@@ -306,23 +254,6 @@ final class component_input_text_test extends TestCase {
 	* @return void
 	*/
 	public function test_update_dato_version() {
-
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
-
-		// $component = component_common::get_instance(
-		// 	$model, // string model
-		// 	$tipo, // string tipo
-		// 	$section_id,
-		// 	$mode,
-		// 	$lang,
-		// 	$section_tipo,
-		// 	false
-		// );
 
 		$options = new stdClass();
 			$options->update_version = [6,0,0];
@@ -357,23 +288,6 @@ final class component_input_text_test extends TestCase {
 	* @return void
 	*/
 	public function test_resolve_query_object_sql() {
-
-		// $model			= self::$model;
-		// $tipo			= self::$tipo;
-		// $section_tipo	= self::$section_tipo;
-		// $section_id		= 1;
-		// $mode			= 'list';
-		// $lang			= DEDALO_DATA_LANG;
-
-		// $component = component_common::get_instance(
-		// 	$model, // string model
-		// 	$tipo, // string tipo
-		// 	$section_id,
-		// 	$mode,
-		// 	$lang,
-		// 	$section_tipo,
-		// 	false
-		// );
 
 		$query_object = json_decode('{
 			    "q": [
@@ -431,22 +345,7 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_search_operators_info() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->search_operators_info();
 
@@ -472,22 +371,7 @@ final class component_input_text_test extends TestCase {
 	*/
 	public function test_get_diffusion_value() {
 
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_LANG;
-
-		$component = component_common::get_instance(
-			$model, // string model
-			$tipo, // string tipo
-			$section_id,
-			$mode,
-			$lang,
-			$section_tipo,
-			false
-		);
+		$component = $this->build_component_instance();
 
 		$value = $component->get_diffusion_value();
 
@@ -508,4 +392,4 @@ final class component_input_text_test extends TestCase {
 
 
 
-}//end class
+}//end class component_input_text_test

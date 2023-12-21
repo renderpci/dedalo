@@ -1,16 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -895,7 +889,10 @@ final class dd_api_Test extends TestCase {
 		}
 
 		// expected running without errors
-		$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors'
+		);
 
 		// expected result as not false
 		$this->assertTrue( $response->result!==false );

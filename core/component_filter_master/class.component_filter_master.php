@@ -1,7 +1,8 @@
 <?php
-/*
+declare(strict_types=1);
+/**
 * CLASS COMPONENT_FILTER_MASTER
-*
+* Overwrite some methods of component_filter
 *
 */
 class component_filter_master extends component_filter {

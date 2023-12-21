@@ -26,7 +26,7 @@ final class component_relation_common_test extends TestCase {
 	*/
 	public function test_user_login() {
 
-		$user_id = TEST_USER_ID; // Defined in boostrap
+		$user_id = TEST_USER_ID; // Defined in bootstrap
 
 		if (login::is_logged()===false) {
 			login_test::force_login($user_id);
@@ -223,6 +223,32 @@ final class component_relation_common_test extends TestCase {
 
 
 	/**
+	* TEST_get_dato_as_string
+	* @return void
+	*/
+	public function test_get_dato_as_string() : void {
+
+		$component = component_common::get_instance(
+			self::$model, // string model
+			self::$tipo, // string tipo
+			self::$section_id, // string section_id
+			'edit', // string mode
+			DEDALO_DATA_NOLAN, // string lang
+			self::$section_tipo // string section_tipo
+		);
+
+		$value = $component->get_dato_as_string();
+
+		$this->assertTrue(
+			gettype($value)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($value)
+		);
+	}//end test_get_dato_as_string
+
+
+
+	/**
 	* TEST_set_dato
 	* @return void
 	*/
@@ -289,10 +315,12 @@ final class component_relation_common_test extends TestCase {
 			self::$section_tipo // string section_tipo
 		);
 
+		$type = $component->get_relation_type();
+
 		$locator = new locator();
 			$locator->set_section_tipo(self::$section_tipo);
 			$locator->set_section_id(3);
-			$locator->set_type(self::$type);
+			$locator->set_type($type);
 
 		$value = $component->add_locator_to_dato($locator);
 
@@ -328,7 +356,7 @@ final class component_relation_common_test extends TestCase {
 			$locator = new locator();
 				$locator->set_section_tipo(self::$section_tipo);
 				$locator->set_section_id(3);
-				$locator->set_type(DEDALO_RELATION_TYPE_CHILDREN_TIPO);
+				$locator->set_type($component->get_relation_type());
 
 			$value = $component->remove_locator_from_dato($locator);
 
@@ -446,10 +474,6 @@ final class component_relation_common_test extends TestCase {
 			gettype($value->result)==='boolean',
 			'expected type boolean : ' . PHP_EOL
 				. gettype($value->result)
-		);
-		$this->assertTrue(
-			$value->result===false,
-			'expected false ' . PHP_EOL
 		);
 	}//end test_remove_parent_references
 

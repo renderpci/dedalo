@@ -1,16 +1,10 @@
 <?php
 declare(strict_types=1);
+// PHPUnit classes
 use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\Attributes\TestDox;
-
-// require_once dirname(dirname(__FILE__)). '/lib/vendor/autoload.php';
-	require_once dirname(dirname(dirname(__FILE__))) . '/config/config.php';
-	require_once dirname(dirname(__FILE__)) . '/login/login_Test.php';
-
-// check is development server. if not, throw to prevent malicious access
-	if (!defined('DEVELOPMENT_SERVER') || DEVELOPMENT_SERVER!==true) {
-		throw new Exception("Error. Only development servers can use this method", 1);
-	}
+// bootstrap
+require_once dirname(dirname(__FILE__)) . '/bootstrap.php';
 
 
 
@@ -302,6 +296,48 @@ final class dd_date_test extends TestCase {
 			'expected true (1689159693), but received is: ' . to_string( $test )
 		);
 	}//end test_get_unix_timestamp
+
+
+
+	/**
+	* TEST_get_timestamp_now_for_db
+	* @return void
+	*/
+	public function test_get_timestamp_now_for_db() {
+
+		$result = dd_date::get_timestamp_now_for_db();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+	}//end test_get_timestamp_now_for_db
+
+
+
+	/**
+	* TEST_timestamp_to_date
+	* @return void
+	*/
+	public function test_timestamp_to_date() {
+
+		$timestamp = '2013-04-23 19:47:05';
+
+		$result = dd_date::timestamp_to_date( $timestamp );
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected type string : ' . PHP_EOL
+				. gettype($result)
+		);
+		// 23-04-2013 19:47:05
+		$this->assertTrue(
+			$result==='23-04-2013 19:47:05',
+			'expected  23-04-2013 19:47:05 : ' . PHP_EOL
+				. to_string($result)
+		);
+	}//end test_timestamp_to_date
 
 
 

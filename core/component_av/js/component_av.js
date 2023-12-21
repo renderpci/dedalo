@@ -461,4 +461,59 @@ export const download_av_fragment = async function(options) {
 
 
 
+/**
+* GET_MEDIA_STREAMS
+* 	Get media_streams info from default quality file calling API
+* @return promise
+* 	resolve object|null
+*/
+component_av.prototype.get_media_streams = function() {
+
+	const self = this
+
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			body : {
+				action	: 'get_media_streams',
+				dd_api	: 'dd_component_av_api',
+				source	: {
+					tipo			: self.tipo,
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					lang			: self.lang
+				},
+				options : {
+					// quality	: quality
+				}
+			}
+		})
+		.then(async function(api_response) {
+			if(SHOW_DEBUG===true) {
+				console.log('))) get_media_streams api_response:', api_response);
+			}
+
+			if (api_response.result===false) {
+
+				// error case
+
+				const msg = api_response.msg || 'Error on get_media_streams'
+				console.error(msg)
+
+				resolve(null)
+
+			}else{
+
+				// success case
+
+				const media_streams	= api_response.result
+
+				resolve(media_streams)
+			}
+		})
+	})
+}//end get_media_streams
+
+
+
 // @license-end
