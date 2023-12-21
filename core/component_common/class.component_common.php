@@ -3425,6 +3425,10 @@ abstract class component_common extends common {
 			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
 			$item->value				= $value;
 
+		if($this->mode === 'solved'){
+			$item->literal 				= $this->get_value();
+		}
+
 		// debug
 			if(SHOW_DEBUG===true) {
 				$item->debug_model = $this->get_model();
