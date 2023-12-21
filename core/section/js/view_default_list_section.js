@@ -175,7 +175,7 @@ view_default_list_section.render = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
 			id				: self.id,
-			class_name		: `wrapper_${self.type} ${self.model} ${self.tipo} ${self.section_tipo+'_'+self.tipo} list`
+			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
