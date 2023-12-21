@@ -1473,6 +1473,20 @@ abstract class common {
 
 		// properties
 			$properties = $this->get_properties() ?? new stdClass();
+			// set properties of the section_list node
+			if($model==='section' && $this->mode==='list'){
+				// section list
+				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+					$this->tipo,
+					'section_list',
+					'children',
+					true
+				);
+				if(isset($ar_terms[0])) {
+					$RecordObj_dd	= new RecordObj_dd($ar_terms[0]);
+					$properties		= $RecordObj_dd->get_properties();
+				}
+			}
 
 		// css
 			$css = $properties->css ?? null; // new stdClass();
