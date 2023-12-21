@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_JSON
-*
 *
 */
 class component_json extends component_common {
@@ -59,25 +59,26 @@ class component_json extends component_common {
 			// }
 
 		if (!is_null($dato) && !is_array($dato)) {
-			$type = gettype($dato);
-			debug_log(__METHOD__
-				. " Expected dato type array or null, but type is: $type. Converted to array and saving " . PHP_EOL
-				. ' tipo: ' . $this->tipo . PHP_EOL
-				. ' section_tipo: ' . $this->section_tipo . PHP_EOL
-				. ' section_id: ' . $this->section_id
-				, logger::ERROR
-			);
-			dump($dato, ' dato ++ '.to_string());
+			if(SHOW_DEBUG===true) {
+				debug_log(__METHOD__
+					. ' Expected dato type array or null, but type is different. Converted to array|null and saving' . PHP_EOL
+					. ' type: ' . gettype($dato) . PHP_EOL
+					. ' tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section_id: ' . $this->section_id
+					, logger::ERROR
+				);
+				dump($dato, ' dato ++ '.to_string());
+			}
 
-			$dato = !empty($dato)
-				? [$dato]
-				: null;
+			// format
+				$dato = !empty($dato)
+					? [$dato]
+					: null;
 
-			dump($dato, ' dato_to_save ++ '.to_string());
-
-			// update
-			$this->set_dato($dato);
-			$this->Save();
+			// update DDBB value
+				$this->set_dato($dato);
+				$this->Save();
 		}
 
 
@@ -88,22 +89,37 @@ class component_json extends component_common {
 
 	/**
 	* SET_DATO
+	* @param array|null $dato
 	* @return bool
 	*/
 	public function set_dato($dato) : bool {
 
 		if (!empty($dato)) {
 
-			if (is_string($dato)) {
-				if (!$dato = json_decode($dato)) {
-					trigger_error("Error. Only valid JSON is accepted as dato");
-					return false;
+			// old format v5
+				if (is_string($dato)) {
+					if (!$dato = json_decode($dato)) {
+						debug_log(__METHOD__
+							. " Error. Only valid JSON is accepted as dato " . PHP_EOL
+							. ' dato: ' . to_string($dato)
+							, logger::ERROR
+						);
+						return false;
+					}
 				}
+
+			if(!is_object($dato) && !is_array($dato) && !is_null($dato)) {
+				debug_log(__METHOD__
+					. " Error. Stopped set_dato because is not as expected type " . PHP_EOL
+					. ' type: ' . gettype($dato) . PHP_EOL
+					. ' dato: ' . to_string($dato)
+					, logger::ERROR
+				);
+				return false;
 			}
 
-			if(!is_object($dato) && !is_array($dato)) {
-				trigger_error("Error. Stopped set_dato because is not as expected object. ". gettype($dato));
-				return false;
+			if (!is_null($dato) && !is_array($dato)) {
+				$dato = [$dato];
 			}
 		}
 
@@ -130,12 +146,27 @@ class component_json extends component_common {
 	* GET_ALLOWED_EXTENSIONS
 	* @return array $allowed_extensions
 	*/
-	public function get_allowed_extensions() {
+	public function get_allowed_extensions() : array {
 
 		$allowed_extensions = ['json'];
 
 		return $allowed_extensions;
 	}//end get_allowed_extensions
+
+
+
+	/**
+	* VALID_FILE_EXTENSION
+	* @return bool
+	*/
+	public function valid_file_extension(string $file_extension) : bool {
+
+		$allowed_extensions = $this->get_allowed_extensions();
+
+		$valid = in_array($file_extension, $allowed_extensions);
+
+		return (bool)$valid;
+	}//end valid_file_extension
 
 
 
@@ -149,7 +180,7 @@ class component_json extends component_common {
 	*/
 	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
 
-		# Default behavior is get value
+		// Default behavior is get value
 		$dato = $this->get_dato();
 
 		$value = $dato[0] ?? null;
@@ -258,57 +289,161 @@ class component_json extends component_common {
 
 
 	/**
+	* GET_UPLOAD_FILE_NAME
+	* Compound the normalized name for the upload files
+	* Such as 'test3_test18_1'
+	* @return string
+	*/
+	public function get_upload_file_name() : string {
+
+		return $this->section_tipo .'_'. $this->tipo .'_'. $this->section_id;
+	}//end get_upload_file_name
+
+
+
+	/**
 	* ADD_FILE
-	* Receive a file info object from tool upload with data properties as:
+	* Receive a file info object from tool upload
+	* and move/rename the file to the proper target
+	* @param object $options
 	* {
-	* 	"name": "mydata.json",
-	*	"type": "text/json",
+	* 	"name": "myfile.json",
+	*	"type": "application/octet-stream",
+	*   "tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
 	*	"tmp_name": "/private/var/tmp/php6nd4A2",
 	*	"error": 0,
 	*	"size": 132898
 	* }
 	* @return object $response
+	* {
+	* 	"original_file_name" : $name, // myfile.json
+	*	"full_file_name"	 : $full_file_name, // rsc29_rsc170_1.jpg
+	*	"full_file_path"	 : $full_file_path // /media/image/original/0/rsc29_rsc170_1.jpg
+	* }
 	*/
-	public function add_file($file_data) {
+	public function add_file(object $options) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// file info
-			$file_extension = strtolower(pathinfo($file_data->name, PATHINFO_EXTENSION));
+		// options sample
+			// {
+			// 	"name": "myfile.json",
+			// 	"type": "application/octet-stream",
+			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
+			// 	"key_dir": "tool_upload",
+			// 	"tmp_name": "phpJIQq4e",
+			// 	"error": 0,
+			// 	"size": 22131522,
+			// 	"extension": "json"
+			// }
+
+		// short vars
+			$name			= $options->name; // string original file name like 'myfile.json'
+			$key_dir		= $options->key_dir; // string upload caller name like 'oh1_oh1'
+			$tmp_dir		= $options->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+			$tmp_name		= $options->tmp_name; // string like 'phpJIQq4e'
+			$source_file 	= $options->source_file ?? null;
+
+		// source_file
+			if (!defined($tmp_dir)) {
+				$msg = 'constant is not defined! tmp_dir: '.$tmp_dir;
+				$response->msg .= $msg;
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' tmp_dir: ' . $tmp_dir
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+			$user_id		= get_user_id();
+			$source_file	= isset($source_file)
+				? $source_file
+				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
+
+		// check source file
+			if (!file_exists($source_file)) {
+				$response->msg .= ' Source file not found: ' . basename($source_file);
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' source_file: ' . $source_file
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+		// target file info
+			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
+			$file_name		= $this->get_upload_file_name(); // such as 'test3_test18_1'
+			$folder_path	= pathinfo($source_file, PATHINFO_DIRNAME);
+			$full_file_name	= $file_name . '.' . $file_extension;
+			$full_file_path	= $folder_path .'/'. $full_file_name;
+
+		// debug
+			debug_log(__METHOD__
+				." component_json.add_file Target file: " . PHP_EOL
+				.' folder_path: '    . to_string($folder_path) . PHP_EOL
+				.' full_file_path: ' . to_string($full_file_path)
+				, logger::WARNING
+			);
 
 		// validate extension
-			$allowed_extensions = $this->get_allowed_extensions();
-			if (!in_array($file_extension, $allowed_extensions)) {
+			if (!$this->valid_file_extension($file_extension)) {
+				$allowed_extensions = $this->get_allowed_extensions();
 				$response->msg  = "Error: " .$file_extension. " is an invalid file type ! ";
 				$response->msg .= "Allowed file extensions are: ". implode(', ', $allowed_extensions);
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' file_extension: ' . $file_extension
+					, logger::ERROR
+				);
 				return $response;
 			}
 
-		// read the uploaded file
-			$file_content = file_get_contents($file_data->tmp_name);
+		// move file to destination. Move temporary file to final destination and name
 
-		// remove it after store
-			unlink($file_data->tmp_name);
+			// check target directory
+			$target_dir = dirname($full_file_path);
+			if (!is_dir($target_dir)) {
+				if(!mkdir($target_dir, 0750, true)) {
+					debug_log(__METHOD__
+						.' Error creating directory: ' . PHP_EOL
+						.' target_dir: ' . $target_dir
+						, logger::ERROR
+					);
+					$response->msg .= ' Error creating directory';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					return $response;
+				}
+			}
 
-		// read content
-			if ($value = json_decode($file_content)) {
-
-				// uploaded ready file info
-				$response->ready 	= (object)[
-					'imported_parsed_data' => $value
-				];
-
-			}else{
-
-				$response->msg  = "Error: " .$file_data->name. " content is an invalid json data";
+			// move the file
+			if (false===rename($source_file, $full_file_path)) {
+				$response->msg .= ' Error on move temp file '.basename($tmp_name).' to ' . basename($full_file_name);
+				debug_log(__METHOD__
+					.' ' .$response->msg . PHP_EOL
+					. ' source_file: ' . $source_file . PHP_EOL
+					. ' full_file_path: ' . $full_file_path
+					, logger::ERROR
+				);
 				return $response;
 			}
 
-		// all is ok
-			$response->result 	= true;
-			$response->msg 		= 'Ok. Request done ['.__METHOD__.'] ';
+		// all is OK
+			$response->result	= true;
+			$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+
+			// uploaded ready file info
+			$response->ready = (object)[
+				'original_file_name'	=> $name,
+				'full_file_name'		=> $full_file_name,
+				'full_file_path'		=> $full_file_path
+			];
 
 
 		return $response;
@@ -318,27 +453,81 @@ class component_json extends component_common {
 
 	/**
 	* PROCESS_UPLOADED_FILE
+	* @param object $file_data
+	* sample:
+	* {
+	*	"original_file_name": "my file name.json",
+    *	"full_file_name": "test3_test18_1.json",
+    *	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
+	* }
 	* @return object $response
 	*/
 	public function process_uploaded_file(object $file_data) : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
-		// imported_data. (Is JSON decoded data from raw uploaded file content)
-			$imported_data = $file_data->imported_parsed_data;
+		// short vars
+			$original_file_name	= $file_data->original_file_name;	// like "my file name.json"
+			$full_file_name		= $file_data->full_file_name;		// like "test3_test18_1.json"
+			$full_file_path		= $file_data->full_file_path;		// like "/fake_path/component_json/test3_test18_1.json"
 
-		// wrap data with array to maintain component data format
-			$dato = [$imported_data];
-			$this->set_dato($dato);
+		// check file exists
+			if (!file_exists($full_file_path)) {
+				$response->msg .= 'File not found';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' file_data: ' . to_string($file_data) . PHP_EOL
+					. ' original_file_name: ' . $original_file_name
+					, logger::ERROR
+				);
+				return $response;
+			}
 
-		// save full dato
-			$this->Save();
+		// read the uploaded file
+			$file_content = file_get_contents($full_file_path);
 
-		$response = new stdClass();
-			$response->result 	= true;
-			$response->msg 		= 'OK. Request done';
+		// read content
+			if ($value = json_handler::decode($file_content)) {
+
+				// wrap data with array to maintain component data format
+					$dato = [$value];
+					$this->set_dato($dato);
+
+				// save full dato
+					$this->Save();
+
+				// remove it after store
+					if(!unlink($full_file_path)) {
+						debug_log(__METHOD__
+							. " Error deleting file " . PHP_EOL
+							. ' full_file_path: ' . to_string($full_file_path) . PHP_EOL
+							. ' original_file_name: ' . $original_file_name
+							, logger::ERROR
+						);
+					}
+
+				// response OK
+					$response->result	= true;
+					$response->msg		= 'OK. Request done';
+
+			}else{
+
+				// response ERROR
+					$response->result	= false;
+					$response->msg		= "Error: " .$full_file_name. " content is an invalid JSON data";
+
+				// debug
+					debug_log(__METHOD__
+						. " Error decoding JSON file data " . PHP_EOL
+						. " full_file_path: " . $full_file_path . PHP_EOL
+						. ' value: ' . to_string($value) . PHP_EOL
+						. ' original_file_name: ' . $original_file_name
+						, logger::DEBUG
+					);
+			}
+
 
 		return $response;
 	}//end process_uploaded_file
