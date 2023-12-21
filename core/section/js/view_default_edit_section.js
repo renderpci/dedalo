@@ -93,8 +93,8 @@ view_default_edit_section.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'section',
-			class_name		: `${'wrapper_'+self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode}`,
-			id				: self.id
+			id				: self.id,
+			class_name		: `wrapper_${self.type} ${self.model} ${self.section_tipo}_${self.tipo} ${self.tipo} ${self.mode} view_${self.view}`
 		})
 		if (self.inspector===false) {
 			wrapper.classList.add('no_inspector')
