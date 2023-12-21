@@ -4359,7 +4359,8 @@ abstract class common {
 			}
 
 		// list mode
-			if ($this->mode==='list' && strpos(get_called_class(), 'component_')===0) {
+			if ($this->mode==='list' &&
+				(strpos(get_called_class(), 'component_')===0 || get_called_class()==='section')){
 				// section list
 				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$this->tipo,
