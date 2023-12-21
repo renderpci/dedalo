@@ -1801,7 +1801,7 @@ final class dd_core_api {
 
 					// prevent edit mode set limit greater than 1
 						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || $sqo->limit>1)) {
-							// $sqo->limit = 1;
+							$sqo->limit = 1;
 						}
 
 					// sections instance
