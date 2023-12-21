@@ -492,41 +492,64 @@ abstract class common {
 	/**
 	* GET_MATRIX_TABLES_WITH_RELATIONS
 	* Note: Currently tables are static. make a connection to db to do dynamic ASAP
-	* @return array $ar_tables
+	* @return array $ar_tables_with_relations
 	*/
 	public static function get_matrix_tables_with_relations() : array {
 
-		static $ar_tables_with_relations;
-
-		if (isset($ar_tables_with_relations)) {
-			return $ar_tables_with_relations;
-		}
-
-		$ar_tables_with_relations = [];
+		// cache
+			static $ar_tables_with_relations_cache;
+			if (isset($ar_tables_with_relations_cache)) {
+				return $ar_tables_with_relations_cache;
+			}
 
 		// tables
-		$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
-		foreach ($ar_children_tables as $table_tipo) {
-			$RecordObj_dd	= new RecordObj_dd( $table_tipo );
-			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
-			if ($model_name!=='matrix_table') {
-				continue;
-			}
-			$properties = $RecordObj_dd->get_properties();
-			if (isset($properties) && property_exists($properties,'inverse_relations') && $properties->inverse_relations===true) {
-				$ar_tables_with_relations[] = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
-			}
-		}
+			$ar_tables_with_relations = [];
+			$ar_children_tables = RecordObj_dd::get_ar_childrens('dd627', 'norden');
+			foreach ($ar_children_tables as $table_tipo) {
 
-		if (empty($ar_tables_with_relations)) {
-			debug_log(__METHOD__." Error on read Ontology tables list. Old Ontology version < 26-01-2018 ! ".to_string(), logger::ERROR);
-			$ar_tables_with_relations = [
-				"matrix",
-				"matrix_list",
-				"matrix_activities",
-				"matrix_hierarchy"
-			];
-		}
+				// model
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($table_tipo,true);
+				if ($model_name!=='matrix_table') {
+					continue;
+				}
+
+				// properties
+				$RecordObj_dd	= new RecordObj_dd( $table_tipo );
+				$properties		= $RecordObj_dd->get_properties();
+				if (isset($properties) && property_exists($properties,'inverse_relations')) {
+
+					// table_name, such 'matrix_hierarchy'
+					$table_name = RecordObj_dd::get_termino_by_tipo($table_tipo, DEDALO_STRUCTURE_LANG, true, false);
+
+					if ($properties->inverse_relations===true) {
+
+						// add table
+						$ar_tables_with_relations[] = $table_name;
+
+					}else if($table_name==='matrix_test' && DEVELOPMENT_SERVER===true){
+
+						// add table matrix_test only in development server context
+						$ar_tables_with_relations[] = $table_name;
+					}
+				}
+			}//end foreach ($ar_children_tables as $table_tipo)
+
+		// fallback to defaults when a problem is detected
+			if (empty($ar_tables_with_relations)) {
+				debug_log(__METHOD__
+					.' Error on read Ontology tables list. Old Ontology version < 26-01-2018 ! '
+					, logger::ERROR
+				);
+				$ar_tables_with_relations = [
+					"matrix",
+					"matrix_list",
+					"matrix_activities",
+					"matrix_hierarchy"
+				];
+			}
+
+		// cache
+			$ar_tables_with_relations_cache = $ar_tables_with_relations;
 
 
 		return $ar_tables_with_relations;
