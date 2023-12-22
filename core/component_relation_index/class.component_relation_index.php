@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_INDEX
-*
 *
 */
 class component_relation_index extends component_relation_common {
@@ -25,6 +25,7 @@ class component_relation_index extends component_relation_common {
 	* Note that this component data is always EXTERNAL
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
 	* to current section
+	* But, values are saved too to allow easy search
 	* @return array|null $dato
 	*/
 	public function get_dato() : ?array {
@@ -209,36 +210,41 @@ class component_relation_index extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG ) {
+	public function get_valor(string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return null;
-		}
 
-		$ar_valor = array();
-		foreach ((array)$dato as $key => $current_locator) {
-			// get_locator_value returns array|null
-			$ar_valor[] = self::get_locator_value(
-				$current_locator, // object locator
-				$lang, // string lang
-				false // bool show_parents
-			);
-		}//end if (!empty($dato))
-
-		# Set component valor
-		$valor='';
-		foreach ($ar_valor as $key => $value) {
-			if(!empty($value)) {
-				$valor .= $value;
-				if(end($ar_valor)!=$value) $valor .= ', ';
+		// empty dato case
+			if (empty($dato)) {
+				return null;
 			}
-		}
+
+		// resolve locators
+			$ar_valor = array();
+			foreach ((array)$dato as $current_locator) {
+				// get_locator_value returns array|null
+				$ar_valor[] = self::get_locator_value(
+					$current_locator, // object locator
+					$lang, // string lang
+					false // bool show_parents
+				);
+			}//end foreach ((array)$dato as $current_locator)
+
+		// component valor
+			$ar_valor_clean = [];
+			foreach ($ar_valor as $value) {
+				if (empty($value)) {
+					continue;
+				}
+				$ar_valor_clean[] = to_string($value);
+			}
+			$valor = implode(', ', $ar_valor_clean);
 
 
-		return (string)$valor;
+		return $valor;
 	}//end get_valor
 
 
@@ -248,71 +254,73 @@ class component_relation_index extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
+	*
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	*
+	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$dato = $this->get_dato();
 
-		// preserve v5 order (old webs compatibility
-		// [{"type":"dd96","tag_id":"29","section_id":"30","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"26","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
-		if (empty($dato)) {
-
-			$diffusion_value = null;
-
-		}else{
-
-			$diffusion_dato = [];
-			foreach ($dato as $current_locator) {
-
-				$locator = new locator();
-
-				// type
-				$locator->set_type($current_locator->type ?? DEDALO_RELATION_TYPE_INDEX_TIPO);
-
-				// tag_id
-				if (isset($current_locator->tag_id)) {
-					$locator->set_tag_id($current_locator->tag_id);
-				}
-
-				// section_id
-				$locator->set_section_id($current_locator->section_id);
-
-				// section_tipo
-				$locator->set_section_tipo($current_locator->section_tipo);
-
-				// component_tipo
-				if (isset($current_locator->component_tipo)) {
-					$locator->set_component_tipo($current_locator->component_tipo);
-				}
-
-				// section_top_id
-				if (isset($current_locator->section_top_id)) {
-					$locator->set_section_top_id($current_locator->section_top_id);
-				}
-
-				// section_top_tipo
-				if (isset($current_locator->section_top_tipo)) {
-					$locator->set_section_top_tipo($current_locator->section_top_tipo);
-				}
-
-				// from_component_tipo
-				$locator->set_from_component_tipo($current_locator->from_component_tipo);
-
-				// from_component_top_tipo
-				if (isset($current_locator->from_component_top_tipo)) {
-					$locator->set_from_component_top_tipo($current_locator->from_component_top_tipo);
-				}
-
-				$diffusion_dato[] = $locator;
+		// empty dato case
+			if (empty($dato)) {
+				return null;
 			}
 
-			$diffusion_value = !empty($diffusion_dato)
-				? json_encode($diffusion_dato)
-				: null;
+		// preserve v5 order (old webs compatibility
+		// [{"type":"dd96","tag_id":"29","section_id":"30","section_tipo":"rsc167","component_tipo":"rsc36","section_top_id":"26","section_top_tipo":"oh1","from_component_tipo":"hierarchy40"}]
+		$diffusion_dato = [];
+		foreach ($dato as $current_locator) {
+
+			$locator = new locator();
+
+			// type
+			$locator->set_type($current_locator->type ?? DEDALO_RELATION_TYPE_INDEX_TIPO);
+
+			// tag_id
+			if (isset($current_locator->tag_id)) {
+				$locator->set_tag_id($current_locator->tag_id);
+			}
+
+			// section_id
+			$locator->set_section_id($current_locator->section_id);
+
+			// section_tipo
+			$locator->set_section_tipo($current_locator->section_tipo);
+
+			// component_tipo
+			if (isset($current_locator->component_tipo)) {
+				$locator->set_component_tipo($current_locator->component_tipo);
+			}
+
+			// section_top_id
+			if (isset($current_locator->section_top_id)) {
+				$locator->set_section_top_id($current_locator->section_top_id);
+			}
+
+			// section_top_tipo
+			if (isset($current_locator->section_top_tipo)) {
+				$locator->set_section_top_tipo($current_locator->section_top_tipo);
+			}
+
+			// from_component_tipo
+			$locator->set_from_component_tipo($current_locator->from_component_tipo);
+
+			// from_component_top_tipo
+			if (isset($current_locator->from_component_top_tipo)) {
+				$locator->set_from_component_top_tipo($current_locator->from_component_top_tipo);
+			}
+
+			$diffusion_dato[] = $locator;
 		}
+
+		// diffusion_value
+		$diffusion_value = !empty($diffusion_dato)
+			? json_encode($diffusion_dato)
+			: null;
 
 
 		return $diffusion_value;
@@ -367,30 +375,30 @@ class component_relation_index extends component_relation_common {
 
 		$locator = clone($locator);
 
-		# Verify exists locator type
-		if (!property_exists($locator,'type')) {
-			$locator->type = $this->relation_type;
-		}
+		// type. Verify exists locator type
+			if (!property_exists($locator,'type')) {
+				$locator->type = $this->relation_type;
+			}
 
-		# Verify exists locator from_component_tipo
-		if (!property_exists($locator,'from_component_tipo')) {
-			$locator->from_component_tipo = $this->tipo;
-		}
+		// from_component_tipo. Verify exists locator from_component_tipo
+			if (!property_exists($locator,'from_component_tipo')) {
+				$locator->from_component_tipo = $this->tipo;
+			}
 
-		# Properties to compare for match locator to remove
-		$ar_properties = [
-			'type',
-			'section_tipo',
-			'section_id',
-			'component_tipo',
-			'tag_id',
-			'from_component_tipo'
-		];
+		// Properties to compare for match locator to remove
+			$ar_properties = [
+				'type',
+				'section_tipo',
+				'section_id',
+				'component_tipo',
+				'tag_id',
+				'from_component_tipo'
+			];
 
-		# Add current locator to component dato
-		if (!$this->remove_locator_from_dato($locator, $ar_properties)) {
-			return false;
-		}
+		// Add current locator to component dato
+			if (!$this->remove_locator_from_dato($locator, $ar_properties)) {
+				return false;
+			}
 
 		return true;
 	}//end remove_locator
@@ -400,6 +408,7 @@ class component_relation_index extends component_relation_common {
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @todo This method do not works if no references are found !
+	*
 	* @param object $query_object
 	* @return object $query_object
 	*/
@@ -408,38 +417,38 @@ class component_relation_index extends component_relation_common {
 		$with_references = false;
 
 		// q_operator check
-		$q_operator = $query_object->q_operator ?? null;
-		if (	$q_operator==='*' // It contains information
-			|| 	$q_operator==='!*' // Empty
-			) {
+			$q_operator = $query_object->q_operator ?? null;
+			if (	$q_operator==='*' // It contains information
+				|| 	$q_operator==='!*' // Empty
+				) {
 
-			// section_tipo from path
-			$section_tipo = end($query_object->path)->section_tipo;
+				// section_tipo from path
+				$section_tipo = end($query_object->path)->section_tipo;
 
-			// references to current section tipo and type
-			$references = component_relation_index::get_references_to_section(
-				$section_tipo
-			);
-			if (!empty($references)) {
+				// references to current section tipo and type
+				$references = component_relation_index::get_references_to_section(
+					$section_tipo
+				);
+				if (!empty($references)) {
 
-				// format. Always set format to column (but in sequence case)
-				$query_object->format = 'column';
-				// component path  array
-				$query_object->component_path = ['section_id'];
-				// operator
-				$query_object->operator	= $q_operator==='!*'
-					? 'NOT IN'
-					: 'IN';
-				// in column sentence
-				$q_clean = array_map(function($el){
-					return (int)$el;
-				}, $references);
-				$query_object->q_parsed	= implode(',', $q_clean);
-				$query_object->format	= 'in_column';
+					// format. Always set format to column (but in sequence case)
+					$query_object->format = 'column';
+					// component path  array
+					$query_object->component_path = ['section_id'];
+					// operator
+					$query_object->operator	= $q_operator==='!*'
+						? 'NOT IN'
+						: 'IN';
+					// in column sentence
+					$q_clean = array_map(function($el){
+						return (int)$el;
+					}, $references);
+					$query_object->q_parsed	= implode(',', $q_clean);
+					$query_object->format	= 'in_column';
 
-				$with_references = true;
+					$with_references = true;
+				}
 			}
-		}
 
 		// no references case
 			if ($with_references===false) {
