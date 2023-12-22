@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_MODEL
-*
 *
 */
 class component_relation_model extends component_relation_common {
@@ -20,40 +20,54 @@ class component_relation_model extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
+	* @param string|null $lang = DEDALO_DATA_LANG
+	* @param string $separator = ', '
 	* @return string|null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $separator=', ') {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, string $separator=', ') : ?string {
 
 		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return null;
-		}
 
-		# debug. Test dato format (b4 changed to object)
+		// empty case
+			if (empty($dato)) {
+				return null;
+			}
+
+		// debug. Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
-				foreach ($dato as $key => $current_value) {
+				foreach ($dato as $current_value) {
 					if (!is_object($current_value)) {
 						if(SHOW_DEBUG) {
 							dump($dato," dato");
 						}
-						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_value) .' : '. print_r($current_value,true) );
+						debug_log(__METHOD__
+							. " Wrong dato format. OLD format dato in $this->label $this->tipo " . PHP_EOL
+							. " Expected object locator, but received: " . PHP_EOL
+							. ' type: ' . gettype($current_value) . PHP_EOL
+							. ' current_value: ' . to_string($current_value) . PHP_EOL
+							. ' tipo: ' . $this->tipo . PHP_EOL
+							. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+							. ' section_id: ' . $this->section_id
+							, logger::ERROR
+						);
 						return null;
 					}
 				}
 			}
 
-		$ar_values = [];
-		foreach ($dato as $locator) {
-			// current_label array|null
-			$current_label = component_relation_common::get_locator_value(
-				$locator, // object locator
-				$lang ?? DEDALO_DATA_LANG, // string lang
-				false // bool show_parents
-			);
-			$ar_values[] = is_array($current_label)
-				? implode($separator, $current_label)
-				: $current_label;
-		}
+		// resolve locators
+			$ar_values = [];
+			foreach ($dato as $locator) {
+				// current_label array|null
+				$current_label = component_relation_common::get_locator_value(
+					$locator, // object locator
+					$lang ?? DEDALO_DATA_LANG, // string lang
+					false // bool show_parents
+				);
+				$ar_values[] = is_array($current_label)
+					? implode($separator, $current_label)
+					: $current_label;
+			}
 
 		$valor = implode($separator, $ar_values);
 
@@ -70,9 +84,12 @@ class component_relation_model extends component_relation_common {
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = $this->get_valor($lang);
 		$diffusion_value = !empty($diffusion_value)
@@ -142,7 +159,7 @@ class component_relation_model extends component_relation_common {
 		}
 
 
-		# Fix value
+		// Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
 
 
