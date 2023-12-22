@@ -26,7 +26,6 @@ hierarchy22	Id	termino	lg-fra
 hierarchy23	C'est un descripteur	termino	lg-fra
 hierarchy24	Utilisable pour l'indexation	termino	lg-fra
 hierarchy25	Terme	termino	lg-fra
-hierarchy26	Publication	termino	lg-fra
 hierarchy27	Modèle	termino	lg-fra
 hierarchy28	Note de portée	termino	lg-fra
 hierarchy29	Description	termino	lg-fra
@@ -133,7 +132,6 @@ hierarchy61	Note de portée	termino	lg-fra
 hierarchy23	Περιγραφέας αυτό	termino	lg-ell
 hierarchy24	Usable en indexació	termino	lg-cat
 hierarchy24	Usable en indexación	termino	lg-spa
-hierarchy62	Publication	termino	lg-fra
 hierarchy24	Utilizzabile nell&#039; indicizzazione	termino	lg-ita
 hierarchy24	Χρησιμοποιήσιμα στην ευρετηρίαση	termino	lg-ell
 hierarchy63	Géonames ID	termino	lg-fra
@@ -523,7 +521,6 @@ hierarchy22	Id	termino	lg-eng
 hierarchy23	Is descriptor	termino	lg-eng
 hierarchy24	Usable in indexing	termino	lg-eng
 hierarchy25	Term	termino	lg-eng
-hierarchy26	Publication	termino	lg-eng
 hierarchy27	Model	termino	lg-eng
 hierarchy28	Scope note	termino	lg-eng
 hierarchy29	Description	termino	lg-eng
@@ -556,7 +553,6 @@ hierarchy58	Target model	termino	lg-eng
 hierarchy59	General term model	termino	lg-eng
 hierarchy60	Relations	termino	lg-eng
 hierarchy61	Scope note	termino	lg-eng
-hierarchy62	Publication	termino	lg-eng
 hierarchy63	Geonames ID	termino	lg-eng
 hierarchy64	External sources	termino	lg-eng
 hierarchy77	Component Map	termino	lg-eng
@@ -580,3 +576,7 @@ hierarchy120	Autoría	termino	lg-spa
 hierarchy120	Urheberschaft	termino	lg-deu
 hierarchy120	Authorship	termino	lg-eng
 hierarchy120	Auteur	termino	lg-fra
+hierarchy26	Publishable	termino	lg-eng
+hierarchy26	Publiable	termino	lg-fra
+hierarchy62	Publishable	termino	lg-eng
+hierarchy62	Publiable	termino	lg-fra
