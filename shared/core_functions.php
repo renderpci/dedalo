@@ -624,18 +624,26 @@ function get_last_modified_file(string $path, array $allowed_extensions, $fn_val
 
 /**
 * DEDALO_ENCRYPT_OPENSSL
+* Encrypt given value
+* @param string $string_value
+* @param string $key = DEDALO_INFORMATION
 * @return string $output
 */
-function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMATION) : string {
+function dedalo_encrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) : string {
 
-	if (!function_exists('openssl_encrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	if (!function_exists('openssl_encrypt')) {
+		throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	}
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
 	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
-	$output = base64_encode(openssl_encrypt(serialize($stringArray), $encrypt_method, md5(md5($key)), 0, $iv));
+	$output = base64_encode(
+		openssl_encrypt(serialize($string_value), $encrypt_method, md5(md5($key)), 0, $iv)
+	);
+
 
 	return $output;
 }//end dedalo_encrypt_openssl
@@ -644,18 +652,22 @@ function dedalo_encrypt_openssl(string $stringArray, string $key=DEDALO_INFORMAT
 
 /**
 * DEDALO_DECRYPT_OPENSSL
+* @param string $string_value
+* @param string $key = DEDALO_INFORMATION
 * @return string $output
 */
-function dedalo_decrypt_openssl(string $stringArray, string $key=DEDALO_INFORMATION) : string {
+function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMATION) : string {
 
-	if (!function_exists('openssl_decrypt')) throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	if (!function_exists('openssl_decrypt')) {
+		throw new Exception("Error Processing Request: Lib OPENSSL unavailable.", 1);
+	}
 
 	$encrypt_method = "AES-256-CBC";
 	// iv - encrypt method AES-256-CBC expects 16 bytes - else you will get a warning
 	$secret_iv = DEDALO_INFO_KEY;
 	$iv = substr(hash('sha256', $secret_iv), 0, 16);
 
-	$output = openssl_decrypt(base64_decode($stringArray), $encrypt_method, md5(md5($key)), 0, $iv);
+	$output = openssl_decrypt(base64_decode($string_value), $encrypt_method, md5(md5($key)), 0, $iv);
 
 	if ( is_serialized($output) ) {
 		return unserialize($output);
