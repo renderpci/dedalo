@@ -1666,6 +1666,38 @@ final class component_common_test extends TestCase {
 
 
 
+	/**
+	* TEST_search_operators_info
+	* @return void
+	*/
+	public function test_search_operators_info() {
+
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->search_operators_info();
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'expected type array : ' . PHP_EOL
+					. gettype($result)
+			);
+		}
+	}//end test_search_operators_info
+
+
+
+
+
 	////////////////////////// common functions applied over reference component ///////////////////////////
 
 
