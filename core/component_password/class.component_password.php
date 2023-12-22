@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT PASSWORD
-*
 *
 */
 class component_password extends component_common {
@@ -11,9 +11,13 @@ class component_password extends component_common {
 	/**
 	* __CONSTRUCT
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true) {
+	protected function __construct(
+		string $tipo=null, $parent=null, string $mode='list', string $lang=DEDALO_DATA_NOLAN, string $section_tipo=null, bool $cache=true
+		) {
 
-		$this->lang = DEDALO_DATA_NOLAN;
+		$this->lang = $lang===DEDALO_DATA_NOLAN
+			? $lang
+			: DEDALO_DATA_NOLAN;
 
 		parent::__construct($tipo, $parent, $mode, $this->lang, $section_tipo, $cache);
 	}//end __construct
@@ -44,7 +48,11 @@ class component_password extends component_common {
 	*/
 	public function set_dato($dato) : bool {
 
-		return parent::set_dato( (array)$dato );
+		if (!is_null($dato) && !is_array($dato)) {
+			$dato = [$dato];
+		}
+
+		return parent::set_dato( $dato );
 	}//end set_dato
 
 
@@ -53,34 +61,37 @@ class component_password extends component_common {
 	* GET_VALOR
 	* Return array dato as comma separated elements string by default
 	* If index var is received, return dato element corresponding to this index if exists
-	* @return string $valor
+	* @return string|null $valor
 	*/
-	public function get_valor($index='all' ) {
+	public function get_valor($index='all') : ?string {
 
-		$valor ='';
+		$valor = null;
 
 		$dato = $this->get_dato();
 		if(empty($dato)) {
-			return (string)$valor;
+			return null;
 		}
 
 		if ($index==='all') {
 			$ar = array();
-			foreach ($dato as $key => $value) {
+			foreach ($dato as $value) {
 				$value = trim($value);
 				if (!empty($value)) {
 					$ar[] = $value;
 				}
 			}
 			if (count($ar)>0) {
-				$valor = implode(',',$ar);
+				$valor = implode(',', $ar);
 			}
 		}else{
 			$index = (int)$index;
-			$valor = isset($dato[$index]) ? $dato[$index] : null;
+			$valor = isset($dato[$index])
+				? $dato[$index]
+				: null;
 		}
 
-		return (string)$valor;
+
+		return $valor;
 	}//end get_valor
 
 
@@ -160,18 +171,18 @@ class component_password extends component_common {
 		if(isset($this->updating_dato) && $this->updating_dato===true) {
 			// Dato is saved plain (unencrypted) only for updates
 		}else{
-			// Encrypt dato with md5 etc..
+			// Encrypt dato with MD5 etc..
 			$dato = $this->dato;
-			foreach ((array)$dato as $key => $value) {
-				# code...
-				$this->dato[$key] = component_password::encrypt_password($value);		#dump($dato,'dato md5');
+			foreach ((array)$dato as $key => $current_value) {
+				// set encrypted value
+				$this->dato[$key] = component_password::encrypt_password(
+					$current_value
+				);
 			}
 		}
 
 		// demo user case. Prevent to change password for logged user 'demo'
-			$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth'])
-				? $_SESSION['dedalo']['auth']['username']
-				: null;
+			$username = get_username();
 			if ($username==='dedalo') {
 				debug_log(__METHOD__
 					. " Attempt to change dedalo demo user password blocked "
@@ -181,43 +192,27 @@ class component_password extends component_common {
 			}
 
 
-		// From here, we save as standard
+		// from here, we save as standard way
 		return parent::Save();
 	}//end Save
 
 
 
-	// GET EJEMPLO
-		// protected function get_ejemplo() {
-		//
-		// 	if($this->ejemplo===false) return "example: 'Kp3Myuser9Jt1'";
-		// 	return parent::get_ejemplo();
-		// }
-
-
-
 	/**
 	* ENCRYPT_PASSWORD
-	*
-	* Crypto password
-	# Change the mycript lib to OpenSSL in the 4.0.22 update
-	# we need the to encryptors for sustain the login of the user before the update to 4.0.22
-	# this function will be change to only Open SSl in the 4.5.
+	* Alias of dedalo_encrypt_openssl
+	* Change the mycript lib to OpenSSL in the 4.0.22 update
+	* we need the to encrypts for sustain the login of the user before the update to 4.0.22
+	* this function will be change to only Open SSl in the 4.5.
+	* @param string $string_value
+	* @return string|boolean
 	*/
-	public static function encrypt_password($stringArray) {
+	public static function encrypt_password(string $string_value) : string {
 
-		$encryption_mode = encryption_mode();
-
-		if( $encryption_mode==='openssl' ) {
-			return dedalo_encrypt_openssl($stringArray, DEDALO_INFORMATION);
-		}else{
-			debug_log(__METHOD__
-				." UNKNOW ENCRYPT MODE !! ".to_string()
-				, logger::ERROR
-			);
-		}
-
-		return false;
+		return dedalo_encrypt_openssl(
+			$string_value,
+			DEDALO_INFORMATION
+		);
 	}//end encrypt_password
 
 
@@ -268,9 +263,12 @@ class component_password extends component_common {
 	* Catch extract_component_dato_fallback common method calls
 	* @return array $dato_fb
 	*/
-	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
+	public static function extract_component_dato_fallback(
+		object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT
+		) : array {
+
 		return [];
-	}
+	}//end extract_component_dato_fallback
 
 
 
@@ -279,9 +277,12 @@ class component_password extends component_common {
 	* Catch common method calls
 	* @return string $value
 	*/
-	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+	public static function extract_component_value_fallback(
+		object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT
+		) : string {
+
 		return '';
-	}
+	}//end extract_component_value_fallback
 
 
 
