@@ -163,13 +163,6 @@ actv28	Identification des images	termino	lg-fra
 actv28	Immagini identificative	termino	lg-ita
 actv28	Προσδιορισμός εικόνων	termino	lg-ell
 actv28	Identifikationsbilder	termino	lg-deu
-actv29	Audiovisual identificativo	termino	lg-spa
-actv29	Audiovisual identificatiu	termino	lg-cat
-actv29	Audiovisivo che identifica	termino	lg-ita
-actv29	Audiovisual that identifies	termino	lg-eng
-actv29	Audiovisuelles, das identifiziert	termino	lg-deu
-actv29	Audiovisuel qui identifie	termino	lg-fra
-actv29	Οπτικοακουστικό υλικό που προσδιορίζει	termino	lg-ell
 actv30	Galerías	termino	lg-spa
 actv30	Galleries	termino	lg-eng
 actv30	Galeries	termino	lg-cat
@@ -183,12 +176,6 @@ actv31	Immagini	termino	lg-ita
 actv31	εικόνες	termino	lg-ell
 actv31	Images	termino	lg-fra
 actv31	Bilder	termino	lg-deu
-actv32	Audiovisuals	termino	lg-spa
-actv32	Audiovisuals	termino	lg-eng
-actv32	Audiovisuals	termino	lg-cat
-actv32	Audiovisuelles	termino	lg-deu
-actv32	Audiovisuels	termino	lg-fra
-actv32	Audiovisivi	termino	lg-ita
 actv33	Nuevo	termino	lg-spa
 actv33	Nou	termino	lg-cat
 actv33	New	termino	lg-eng
@@ -202,6 +189,19 @@ actv27	People	termino	lg-eng
 actv27	Persones	termino	lg-cat
 actv27	Menschen	termino	lg-deu
 actv27	Les personnes	termino	lg-fra
+actv29	Οπτικοακουστικά μέσα	termino	lg-ell
+actv29	Audiovisuales	termino	lg-spa
+actv29	Audiovisuals	termino	lg-cat
+actv29	Audiovisuals	termino	lg-eng
+actv29	Audiovisivi	termino	lg-ita
+actv29	Audiovisuelles	termino	lg-deu
+actv29	Audiovisuels	termino	lg-fra
+actv32	Documentos	termino	lg-spa
+actv32	Documents	termino	lg-fra
+actv32	Documents	termino	lg-eng
+actv32	Documents	termino	lg-cat
+actv32	Dokumente	termino	lg-deu
+actv32	Documenti	termino	lg-ita
 actv34	Esborrar	termino	lg-cat
 actv34	Supprimer	termino	lg-fra
 actv34	Löschen	termino	lg-deu
@@ -384,19 +384,12 @@ actv76	motto	termino	lg-spa
 actv77	description	termino	lg-spa
 actv78	project	termino	lg-spa
 actv79	project_data	termino	lg-spa
-actv80	identifying_av	termino	lg-spa
-actv81	identifying_av_data	termino	lg-spa
-actv82	time_frame	termino	lg-spa
-actv83	time_frame_start	termino	lg-spa
-actv84	time_frame_end	termino	lg-spa
+actv111	Ort	termino	lg-deu
 actv85	municipality	termino	lg-spa
-actv88	time	termino	lg-spa
 actv89	people	termino	lg-spa
 actv90	people_data	termino	lg-spa
 actv91	images	termino	lg-spa
 actv92	images_data	termino	lg-spa
-actv93	audiovisuals	termino	lg-spa
-actv94	audiovisuals_data	termino	lg-spa
 actv95	parent_data	termino	lg-spa
 actv96	children_data	termino	lg-spa
 actv97	related_data	termino	lg-spa
@@ -408,3 +401,42 @@ actv100	change_to_data	termino	lg-spa
 actv101	change_to	termino	lg-spa
 actv102	relations	termino	lg-spa
 actv103	global_search	termino	lg-spa
+actv104	dd_tm	termino	lg-spa
+actv105	people_role	termino	lg-spa
+actv106	people_community	termino	lg-spa
+actv107	images_caption	termino	lg-spa
+actv110	Mapa	termino	lg-spa
+actv110	Map	termino	lg-eng
+actv110	Map	termino	lg-cat
+actv110	Carte	termino	lg-fra
+actv110	Karte	termino	lg-deu
+actv110	Mappa	termino	lg-ita
+actv112	Entidad	termino	lg-spa
+actv112	Entity	termino	lg-eng
+actv112	Entitat	termino	lg-cat
+actv112	Entität	termino	lg-deu
+actv112	Entité	termino	lg-fra
+actv112	Οντότητα	termino	lg-ell
+actv112	Entità	termino	lg-ita
+actv111	Luogo	termino	lg-ita
+actv80	audiovisuals	termino	lg-spa
+actv81	audiovisuals_data	termino	lg-spa
+actv108	audiovisuals_subtitles	termino	lg-spa
+actv93	documents	termino	lg-spa
+actv94	documents_data	termino	lg-spa
+actv109	entity	termino	lg-spa
+actv113	entity_data	termino	lg-spa
+actv111	Lugar	termino	lg-spa
+actv111	Place	termino	lg-eng
+actv111	Lloc	termino	lg-cat
+actv111	Τόπος	termino	lg-ell
+actv111	Lieu	termino	lg-fra
+actv114	time_end	termino	lg-spa
+actv88	time_start	termino	lg-spa
+actv83	date_start_year	termino	lg-spa
+actv84	date_end_year	termino	lg-spa
+actv82	time_frame	termino	lg-spa
+actv115	documents_title	termino	lg-spa
+actv117	place	termino	lg-spa
+actv118	map	termino	lg-spa
+actv116	people_date	termino	lg-spa

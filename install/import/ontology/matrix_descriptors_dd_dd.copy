@@ -1602,7 +1602,6 @@ dd193	Eines	termino	lg-cat
 dd193	Herramientas	termino	lg-spa
 dd193	Strumenti	termino	lg-ita
 dd194	tools	termino	lg-spa
-dd195	tools_search	termino	lg-spa
 dd196	Info sezione	termino	lg-ita
 dd196	Secció info	termino	lg-cat
 dd196	Sección info	termino	lg-spa
@@ -3312,8 +3311,6 @@ dd628	matrix_activity	termino	lg-spa
 dd629	Elenco	termino	lg-ita
 dd629	List	termino	lg-spa
 dd63	Actividad	termino	lg-spa
-dd630	Ricerca	termino	lg-ita
-dd630	Search	termino	lg-spa
 dd631	New	termino	lg-spa
 dd631	Nou	termino	lg-cat
 dd631	Nuovo	termino	lg-ita
@@ -3335,6 +3332,7 @@ dd640	Públic	termino	lg-cat
 dd640	Público	termino	lg-spa
 dd640	Se muestra para todos los usuarios	def	lg-spa
 dd640	Shows for all users	def	lg-eng
+dd630	Reti	termino	lg-ita
 dd641	Default	termino	lg-ita
 dd641	Default	termino	lg-spa
 dd641	Per defecte	termino	lg-cat
@@ -4097,7 +4095,6 @@ dd818	Nuovo	termino	lg-ita
 dd819	Borrar	termino	lg-spa
 dd819	Cancellare	termino	lg-ita
 dd366	État civil	termino	lg-fra
-dd82	matrix_activities	termino	lg-spa
 dd367	État civil	termino	lg-fra
 dd821	Metodi	termino	lg-ita
 dd821	Métodos	termino	lg-spa
@@ -6390,7 +6387,6 @@ dd624	Name	termino	lg-deu
 dd625	JSON-Daten	termino	lg-deu
 dd629	Liste	termino	lg-deu
 dd63	Aktivität	termino	lg-deu
-dd630	Suchen	termino	lg-deu
 dd631	Neu	termino	lg-deu
 dd632	Löschen	termino	lg-deu
 dd637	Allgemein	termino	lg-deu
@@ -8199,5 +8195,15 @@ dd1555	SVG	termino	lg-eng
 dd1635	bibliography_data	termino	lg-spa
 dd1637	bibliographic_references	termino	lg-spa
 dd1646	activities	termino	lg-spa
-dd1	Dédalo 2023-12-04T13:48:16+01:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2023-12-21T12:56:05+01:00 Benimamet	termino	lg-spa
 dd1631	RECYCLE DD +	termino	lg-spa
+dd82	matrix_activities	termino	lg-spa
+dd1647	matrix_nexus	termino	lg-spa
+dd1648	matrix_nexus_main	termino	lg-spa
+dd195	area_graph	termino	lg-spa
+dd630	Grafos	termino	lg-spa
+dd630	Graphs	termino	lg-eng
+dd630	Grafs	termino	lg-cat
+dd630	Grafiken	termino	lg-deu
+dd630	Δίκτυα	termino	lg-ell
+dd630	Réseaux	termino	lg-fra

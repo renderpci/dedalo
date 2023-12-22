@@ -175,8 +175,6 @@ numisdata154	Contramarca anverso	termino	lg-spa
 numisdata154	Contromarca dritto	termino	lg-ita
 numisdata155	Objeto	termino	lg-spa
 numisdata155	Oggetto	termino	lg-ita
-numisdata156	Tecnica	termino	lg-ita
-numisdata156	Técnica	termino	lg-spa
 numisdata157	Descartes	termino	lg-spa
 numisdata157	Scarti	termino	lg-ita
 numisdata136	Hallazgo	termino	lg-spa
@@ -220,6 +218,7 @@ numisdata180	Identificazione	termino	lg-ita
 numisdata181	Id	termino	lg-spa
 numisdata172	Metodología analítica	termino	lg-spa
 numisdata158	Publicable	termino	lg-spa
+numisdata156	Fabbricazione	termino	lg-ita
 numisdata172	Metodologia analitica	termino	lg-ita
 numisdata173	Técnica analítica	termino	lg-spa
 numisdata170	Título	termino	lg-spa
@@ -375,8 +374,6 @@ numisdata259	Listado	termino	lg-spa
 numisdata26	Id	termino	lg-spa
 numisdata260	Indexación	termino	lg-spa
 numisdata260	Indicizzazione	termino	lg-ita
-numisdata261	Autori	termino	lg-ita
-numisdata261	Creadores	termino	lg-spa
 numisdata262	Información privada	termino	lg-spa
 numisdata262	Informazione privata	termino	lg-ita
 numisdata263	Importar tesoros kml	termino	lg-spa
@@ -419,6 +416,7 @@ numisdata29	Web MIB	termino	lg-spa
 numisdata290	Buscar	termino	lg-spa
 numisdata272	view_single_line	termino	lg-spa
 numisdata25	Identification	termino	lg-eng
+numisdata261	Autori DEPRECATO	termino	lg-ita
 numisdata265	URL	termino	lg-spa
 numisdata271	Últimos cambios	termino	lg-spa
 numisdata271	Ultime modifiche	termino	lg-ita
@@ -1074,7 +1072,6 @@ numisdata754	ts_find_context	termino	lg-spa
 numisdata755	ts_culture	termino	lg-spa
 numisdata756	ts_numismatic_group	termino	lg-spa
 numisdata757	findspots	termino	lg-spa
-numisdata758	ts_iconography	termino	lg-spa
 numisdata760	ts_period	termino	lg-spa
 numisdata761	ts_territories	termino	lg-spa
 numisdata762	ts_theme	termino	lg-spa
@@ -1557,9 +1554,7 @@ numisdata1133	dcterms:source	termino	lg-spa
 numisdata1135	nmo:hasManufacture	termino	lg-spa
 numisdata1136	nmo:hasDenomination	termino	lg-spa
 numisdata1137	nmo:hasMaterial	termino	lg-spa
-numisdata1138	nmo:hasAuthority	termino	lg-spa
 numisdata1140	nmo:hasMint	termino	lg-spa
-numisdata1139	nmo:hasIssuer	termino	lg-spa
 numisdata1145	nmo:hasLegend	termino	lg-spa
 numisdata1146	dcterms:description	termino	lg-spa
 numisdata1143	Rol	termino	lg-spa
@@ -1574,19 +1569,20 @@ numisdata1170	skos:exactMatch	termino	lg-spa
 numisdata1171	foaf:Person	termino	lg-spa
 numisdata1172	skos:prefLabel	termino	lg-spa
 numisdata1173	skos:exactMatch	termino	lg-spa
-numisdata1176	bio:death	termino	lg-spa
 numisdata1178	org:hasMembership	termino	lg-spa
 numisdata1179	org:Membership	termino	lg-spa
 numisdata1180	org:role	termino	lg-spa
 numisdata1183	skos:prefLabel	termino	lg-spa
 numisdata1184	geo:location	termino	lg-spa
 numisdata1187	skos:closeMatch	termino	lg-spa
-numisdata1174	bio:birth	termino	lg-spa
 numisdata1188	skos:exactMatch	termino	lg-spa
 numisdata1185	Geo tag	termino	lg-spa
 numisdata1186	Geo map	termino	lg-spa
 numisdata1182	nmo:Mint	termino	lg-spa
 numisdata1190	Number	termino	lg-spa
+numisdata1139	nmo:hasIssuer	termino	lg-spa
+numisdata1174	bio:Birth	termino	lg-spa
+numisdata1176	bio:Death	termino	lg-spa
 numisdata1143	Rol	termino	lg-cat
 numisdata1175	Date	termino	lg-spa
 numisdata1177	Date	termino	lg-spa
@@ -1974,7 +1970,6 @@ numisdata152	Authentizität	termino	lg-deu
 numisdata153	Art	termino	lg-deu
 numisdata154	Gegenstempel Avers	termino	lg-deu
 numisdata155	Objekt	termino	lg-deu
-numisdata156	Technik	termino	lg-deu
 numisdata157	verworfene	termino	lg-deu
 numisdata158	Veröffentlichbar	termino	lg-deu
 numisdata159	Sammlung	termino	lg-deu
@@ -2080,7 +2075,6 @@ numisdata258	Löschen	termino	lg-deu
 numisdata259	Liste	termino	lg-deu
 numisdata26	Id	termino	lg-deu
 numisdata260	Indexierung	termino	lg-deu
-numisdata261	Ersteller	termino	lg-deu
 numisdata262	Private Informationen	termino	lg-deu
 numisdata263	Schatzfunde importieren KML	termino	lg-deu
 numisdata264	Karte	termino	lg-deu
@@ -2548,7 +2542,6 @@ numisdata152	Authenticity	termino	lg-eng
 numisdata153	Nature	termino	lg-eng
 numisdata154	Obverse countermark	termino	lg-eng
 numisdata155	Object	termino	lg-eng
-numisdata156	Technique	termino	lg-eng
 numisdata157	Discard	termino	lg-eng
 numisdata158	Publish	termino	lg-eng
 numisdata159	Collection	termino	lg-eng
@@ -2643,7 +2636,6 @@ numisdata257	List	termino	lg-eng
 numisdata258	Delete	termino	lg-eng
 numisdata259	List	termino	lg-eng
 numisdata260	Indexation	termino	lg-eng
-numisdata261	Creators	termino	lg-eng
 numisdata262	Private information	termino	lg-eng
 numisdata263	Import hoards kml	termino	lg-eng
 numisdata264	Map	termino	lg-eng
@@ -2740,7 +2732,6 @@ numisdata385	List of relationships	termino	lg-eng
 numisdata386	Latest changes	termino	lg-eng
 numisdata388	Relations list	termino	lg-eng
 numisdata410	Web publication	termino	lg-eng
-numisdata413	Publication	termino	lg-eng
 numisdata434	Publication	termino	lg-eng
 numisdata472	Rol	termino	lg-eng
 numisdata473	Find type	termino	lg-eng
@@ -3191,7 +3182,6 @@ numisdata152	Authenticité	termino	lg-fra
 numisdata153	Caractère	termino	lg-fra
 numisdata154	Avers de la contremarque	termino	lg-fra
 numisdata155	Objet	termino	lg-fra
-numisdata156	Technique	termino	lg-fra
 numisdata157	Rejets	termino	lg-fra
 numisdata158	Publier	termino	lg-fra
 numisdata159	Collection	termino	lg-fra
@@ -3293,7 +3283,6 @@ numisdata258	Supprimer	termino	lg-fra
 numisdata259	Liste	termino	lg-fra
 numisdata26	Id	termino	lg-fra
 numisdata260	Indexation	termino	lg-fra
-numisdata261	Créateurs	termino	lg-fra
 numisdata262	Information privée	termino	lg-fra
 numisdata263	Importation de trésors kml	termino	lg-fra
 numisdata264	Carte 	termino	lg-fra
@@ -3406,7 +3395,6 @@ numisdata4	Objet numismatique	termino	lg-fra
 numisdata40	Légende de l'avers	termino	lg-fra
 numisdata41	Légendes 	termino	lg-fra
 numisdata410	Publication web	termino	lg-fra
-numisdata413	Publication	termino	lg-fra
 numisdata42	Légende	termino	lg-fra
 numisdata43	Clé	termino	lg-fra
 numisdata434	Publication	termino	lg-fra
@@ -3631,8 +3619,6 @@ numisdata713	Web numisdata_mib_portugal	termino	lg-spa
 numisdata1350	Publicable	termino	lg-spa
 numisdata1350	Pubblicabile	termino	lg-ita
 numisdata1350	Veröffentlichbar	termino	lg-deu
-numisdata1350	Publication	termino	lg-eng
-numisdata1350	Publication	termino	lg-fra
 numisdata1351	Información pública	termino	lg-spa
 numisdata1351	Informazione pubblica	termino	lg-ita
 numisdata1351	Öffentliche Information	termino	lg-deu
@@ -3654,6 +3640,7 @@ numisdata1354	Code	termino	lg-eng
 numisdata1354	Codi	termino	lg-cat
 numisdata1354	Code	termino	lg-fra
 numisdata1354	Code	termino	lg-deu
+numisdata1350	Publiable	termino	lg-fra
 numisdata1303	Autoría (Deprecada)	termino	lg-spa
 numisdata1303	Authorship (Deprecated)	termino	lg-eng
 numisdata759	Latest changes	termino	lg-eng
@@ -3685,13 +3672,430 @@ numisdata1356	Comentari	termino	lg-cat
 numisdata1356	Comment	termino	lg-eng
 numisdata370	Origen del dato	termino	lg-spa
 numisdata387	publications	termino	lg-spa
+numisdata1363	designs	termino	lg-spa
+numisdata1372	Date text	termino	lg-eng
+numisdata1377	Publiable	termino	lg-fra
+numisdata1383	Borrar	termino	lg-spa
+numisdata1388	Münzstätte	termino	lg-deu
+numisdata1389	Maestro de ceca	termino	lg-spa
+numisdata1394	Bemerkung zur Stückelung	termino	lg-deu
+numisdata1401	Grau de corrosió	termino	lg-cat
+numisdata1405	Project	termino	lg-cat
+numisdata1409	Osservazione sulla misura	termino	lg-ita
+numisdata1415	Particularité	termino	lg-fra
+numisdata1420	Project	termino	lg-eng
+numisdata1424	Standort	termino	lg-deu
+numisdata1428	Elenco	termino	lg-ita
+numisdata1433	Peculiarity of production	termino	lg-eng
+numisdata1437	Stato di conservazione	termino	lg-ita
+numisdata1364	publication	termino	lg-spa
+numisdata1372	Datierung Text	termino	lg-deu
+numisdata1377	Publizierbar	termino	lg-deu
+numisdata1383	Delete	termino	lg-eng
+numisdata1388	Atelier	termino	lg-fra
+numisdata1389	Mintmaster	termino	lg-eng
+numisdata1394	Note sur la dénomination	termino	lg-fra
+numisdata1401	Grado di corrosione	termino	lg-ita
+numisdata1405	Progetto	termino	lg-ita
+numisdata1410	NUMISDATA	termino	lg-spa
+numisdata1415	Peculiarità	termino	lg-ita
+numisdata1420	Projecte	termino	lg-cat
+numisdata1424	Localizzazione	termino	lg-ita
+numisdata1429	Últimos cambios	termino	lg-spa
+numisdata1433	Peculiarità della produzione	termino	lg-ita
+numisdata1438	Nota del estado de conservación	termino	lg-spa
 numisdata1360	Grosor	termino	lg-spa
+numisdata1365	desing	termino	lg-spa
+numisdata1372	Datation texte	termino	lg-fra
+numisdata1378	Autoridad	termino	lg-spa
+numisdata1383	Löschen	termino	lg-deu
+numisdata1388	Zecca	termino	lg-ita
+numisdata1389	Münzmeister	termino	lg-deu
+numisdata1394	Nota sulla denominazione	termino	lg-ita
+numisdata1401	Degré de corrosion	termino	lg-fra
+numisdata1405	Projekt	termino	lg-deu
+numisdata1411	Peculiaridad de producción	termino	lg-spa
+numisdata1416	Localizaciones en objecto	termino	lg-spa
+numisdata1420	Projeck	termino	lg-deu
+numisdata1424	Lacalització	termino	lg-cat
+numisdata1429	Latest changes	termino	lg-eng
+numisdata1433	Particularité de la production	termino	lg-fra
+numisdata1438	Conservation state remark	termino	lg-eng
 numisdata1360	Thickness	termino	lg-eng
+numisdata1366	iconography_data	termino	lg-spa
+numisdata1372	Datazione text	termino	lg-ita
+numisdata1378	Authority	termino	lg-eng
+numisdata1383	Supprimer	termino	lg-fra
+numisdata1389	Maître de la monnaie	termino	lg-fra
+numisdata1395	Nota tipo	termino	lg-spa
+numisdata1401	Grad der Korrosion	termino	lg-deu
+numisdata1405	Projet	termino	lg-fra
+numisdata1411	Peculiarity of production	termino	lg-eng
+numisdata1416	Locations in object	termino	lg-eng
+numisdata1420	Progetto	termino	lg-ita
+numisdata1425	Proyecto	termino	lg-spa
+numisdata1429	Últims canvis	termino	lg-cat
+numisdata1433	Besonderheit der Produktion	termino	lg-deu
+numisdata1438	Nota de l'estat de conservació	termino	lg-cat
 numisdata1360	Dicke	termino	lg-deu
+numisdata758	ts_iconography	termino	lg-spa
+numisdata1373	Periodo	termino	lg-spa
+numisdata1378	Münzherrschaft	termino	lg-deu
+numisdata1383	Cancellare	termino	lg-ita
+numisdata1389	Maestro di zecca	termino	lg-ita
+numisdata1395	Type remark	termino	lg-eng
+numisdata1402	Información pública	termino	lg-spa
+numisdata1406	Nuevo	termino	lg-spa
+numisdata1411	Besonderheit der Produktion	termino	lg-deu
+numisdata1416	Standorte im Objekt	termino	lg-deu
+numisdata1420	Projet	termino	lg-fra
+numisdata1425	Project	termino	lg-eng
+numisdata1429	Letzte Änderungen	termino	lg-deu
+numisdata1434	Nota de la peculiaridad de producción	termino	lg-spa
+numisdata1438	Bemerkung zum Erhaltungszustand	termino	lg-deu
 numisdata1360	Épaisseur	termino	lg-fra
+numisdata1367	iconography	termino	lg-spa
+numisdata1373	Period	termino	lg-eng
+numisdata1378	Autorité émettrice	termino	lg-fra
+numisdata1384	Listado	termino	lg-spa
+numisdata1390	Denominación	termino	lg-spa
+numisdata1395	Bemerkung zum typen	termino	lg-deu
+numisdata1402	Public information	termino	lg-eng
+numisdata1406	New	termino	lg-eng
+numisdata1411	Particularité de la production	termino	lg-fra
+numisdata1416	Localisation dans l'objet	termino	lg-fra
+numisdata1421	Nuevo	termino	lg-spa
+numisdata1425	Projecte	termino	lg-cat
+numisdata1429	Dernières modifications	termino	lg-fra
+numisdata1434	Production peculiarity remark	termino	lg-eng
+numisdata1438	Osservazione sullo stato di conservazione	termino	lg-ita
 numisdata1360	Spessore	termino	lg-ita
+numisdata1368	nmo:hasAuthority	termino	lg-spa
+numisdata1373	Periode	termino	lg-deu
+numisdata1378	Autorità emitente	termino	lg-ita
+numisdata1384	List	termino	lg-eng
+numisdata1390	Denomination	termino	lg-eng
+numisdata1395	Nota del tipo	termino	lg-ita
+numisdata1402	Informació pública	termino	lg-cat
+numisdata1406	Nou	termino	lg-cat
+numisdata1411	Peculiarità della produzione	termino	lg-ita
+numisdata1416	Posizioni nell'oggetto	termino	lg-ita
+numisdata1421	New	termino	lg-eng
+numisdata1425	Projekt	termino	lg-deu
+numisdata1429	Ultime modifiche	termino	lg-ita
+numisdata1434	Bemerkung zur Produktionsbesonderheit	termino	lg-deu
+numisdata1438	Remarque sur l'état de conservation	termino	lg-fra
 numisdata1361	Bibliografía relacionada	termino	lg-spa
+numisdata1138	nmo:hasAuthority	termino	lg-spa
+numisdata1373	Période	termino	lg-fra
+numisdata1379	Emisor	termino	lg-spa
+numisdata1384	Liste	termino	lg-deu
+numisdata1390	Bezeichnung	termino	lg-deu
+numisdata1395	Note de type	termino	lg-fra
+numisdata1398	Grados de corrosión	termino	lg-spa
+numisdata1402	Öffentliche Informationen	termino	lg-deu
+numisdata1406	Neu	termino	lg-deu
+numisdata1412	Identificación	termino	lg-spa
+numisdata1417	Identificación	termino	lg-spa
+numisdata1421	Nou	termino	lg-cat
+numisdata1425	Projet	termino	lg-fra
+numisdata1430	Últimos cambios	termino	lg-spa
+numisdata1434	Nota de la peculiaritat de producció	termino	lg-cat
+numisdata1439	Nota de manufactura	termino	lg-spa
 numisdata1361	Related bibliography	termino	lg-eng
+numisdata1369	nmo:hasIssuer	termino	lg-spa
+numisdata1373	Periodo	termino	lg-ita
+numisdata1379	Issuer	termino	lg-eng
+numisdata1384	Liste	termino	lg-fra
+numisdata1390	Désignation	termino	lg-fra
+numisdata1396	Contexto arqueológico	termino	lg-spa
+numisdata1398	Corrosion degrees	termino	lg-eng
+numisdata1402	Informations publiques	termino	lg-fra
+numisdata1406	Nouveau	termino	lg-fra
+numisdata1412	Identificació	termino	lg-cat
+numisdata1417	Identificació	termino	lg-cat
+numisdata1421	Neu	termino	lg-deu
+numisdata1425	Progetto	termino	lg-ita
+numisdata1430	Latest changes	termino	lg-eng
+numisdata1434	Remarque sur la particularité de la production	termino	lg-fra
+numisdata1439	Manufacture remark	termino	lg-eng
 numisdata1361	Bibliografia relacionada	termino	lg-cat
+numisdata1374	Grupo de autoridades	termino	lg-spa
+numisdata1379	Münzherr	termino	lg-deu
+numisdata1384	Elenco	termino	lg-ita
+numisdata1390	Designazione	termino	lg-ita
+numisdata1396	Archeological context	termino	lg-eng
+numisdata1398	Graus de corrosió	termino	lg-cat
+numisdata1406	Nuovo	termino	lg-ita
+numisdata1412	Indentification	termino	lg-eng
+numisdata1417	Identifizierung	termino	lg-deu
+numisdata1421	Nuovo	termino	lg-ita
+numisdata1426	Nuevo	termino	lg-spa
+numisdata1430	Últims canvis	termino	lg-cat
+numisdata1434	Remarque sur la particularité de la production	termino	lg-ita
+numisdata1439	Remarque sur la fabrication	termino	lg-fra
 numisdata1361	Zugehörige Bibliographie	termino	lg-deu
+numisdata1374	Authorities group	termino	lg-eng
+numisdata1379	Autorité émettrice	termino	lg-fra
+numisdata1385	Autoridad	termino	lg-spa
+numisdata1391	Tipo - número	termino	lg-spa
+numisdata1396	Archäologischer Kontext	termino	lg-deu
+numisdata1398	Korrosionsgrade	termino	lg-deu
+numisdata1402	Informazioni al pubblico	termino	lg-ita
+numisdata1407	Borrar	termino	lg-spa
+numisdata1412	Identifizierung	termino	lg-deu
+numisdata1417	Indentification	termino	lg-fra
+numisdata1421	Nouveau	termino	lg-fra
+numisdata1426	New	termino	lg-eng
+numisdata1430	Letzte Änderungen	termino	lg-deu
+numisdata1435	Tratamiento secundario	termino	lg-spa
+numisdata1439	Nota de manufactura	termino	lg-cat
 numisdata1361	Bibliographie associée	termino	lg-fra
+numisdata1374	Gruppe Autoroties	termino	lg-deu
+numisdata1379	Emittente	termino	lg-ita
+numisdata1385	Authority	termino	lg-eng
+numisdata1391	Type number	termino	lg-eng
+numisdata1396	Contexte archéologique	termino	lg-fra
+numisdata1398	Degrés de corrosion	termino	lg-fra
+numisdata1403	Información interna	termino	lg-spa
+numisdata1407	Delete	termino	lg-eng
+numisdata1412	Indentification	termino	lg-fra
+numisdata1417	Indentificaction	termino	lg-eng
+numisdata1422	Borrar	termino	lg-spa
+numisdata1426	Nou	termino	lg-cat
+numisdata1430	Dernières modifications	termino	lg-fra
+numisdata1435	Tractament secundari	termino	lg-cat
+numisdata1439	Anmerkung der Herstellerin	termino	lg-deu
+numisdata1374	Groupe Autorités	termino	lg-fra
+numisdata1380	Retrato	termino	lg-spa
+numisdata1385	Münzherrschaft	termino	lg-deu
+numisdata1391	Numéro de type	termino	lg-fra
+numisdata1396	Contesto archeologico	termino	lg-ita
+numisdata1398	Gradi di corrosione	termino	lg-ita
+numisdata1403	Internal information	termino	lg-eng
+numisdata1407	Löschen	termino	lg-deu
+numisdata1412	Identificazione	termino	lg-ita
+numisdata1417	Indentificazione	termino	lg-ita
+numisdata1422	Delete	termino	lg-eng
+numisdata1426	Neu	termino	lg-deu
+numisdata1430	Ultime modifiche	termino	lg-ita
+numisdata1435	Sekundäre Behandlung	termino	lg-deu
+numisdata1439	Osservazione di fabbricazione	termino	lg-ita
+numisdata1374	Gruppo di autorità	termino	lg-ita
+numisdata1380	Portrait	termino	lg-eng
+numisdata1385	Autorité	termino	lg-fra
+numisdata1391	Numero di tipo	termino	lg-ita
+numisdata1397	Coordenadas	termino	lg-spa
+numisdata1399	Identificación	termino	lg-spa
+numisdata1403	Informació interna	termino	lg-cat
+numisdata1407	Cancellare	termino	lg-ita
+numisdata1413	Id	termino	lg-spa
+numisdata1418	Id	termino	lg-spa
+numisdata1422	Esborrar	termino	lg-cat
+numisdata1426	Nouvo	termino	lg-ita
+numisdata1431	Relaciones	termino	lg-spa
+numisdata1435	Secundary treatment	termino	lg-eng
+numisdata156	Manufactura	termino	lg-spa
+numisdata1375	Identificación	termino	lg-spa
+numisdata1380	Porträt	termino	lg-deu
+numisdata1385	Autorità	termino	lg-ita
+numisdata1391	Typennummer	termino	lg-deu
+numisdata1397	Coordinates	termino	lg-eng
+numisdata1399	Identification	termino	lg-eng
+numisdata1403	interne Informationen	termino	lg-deu
+numisdata1407	Supprimer	termino	lg-fra
+numisdata1413	Id	termino	lg-eng
+numisdata1418	Id	termino	lg-eng
+numisdata1426	Nouveau	termino	lg-fra
+numisdata1431	Relations	termino	lg-eng
+numisdata1435	Trattamento secondario	termino	lg-ita
+numisdata156	Manufacture	termino	lg-eng
+numisdata261	Creadores DEPRECADO	termino	lg-spa
+numisdata1370	Datos Politicos	termino	lg-spa
+numisdata1375	Identification	termino	lg-eng
+numisdata1380	Portrait	termino	lg-fra
+numisdata1386	Nota de autoridad	termino	lg-spa
+numisdata1392	Nota de ceca	termino	lg-spa
+numisdata1397	Koordinaten	termino	lg-deu
+numisdata1399	Identificació	termino	lg-cat
+numisdata1403	Information interne	termino	lg-fra
+numisdata1407	Esborrar	termino	lg-cat
+numisdata1413	Id	termino	lg-cat
+numisdata1418	Id	termino	lg-cat
+numisdata1422	Supprimer	termino	lg-fra
+numisdata1427	Borrar	termino	lg-spa
+numisdata1431	Relacions	termino	lg-cat
+numisdata1435	Traitement secondaire	termino	lg-fra
+numisdata156	Herstellung	termino	lg-deu
+numisdata261	Creators DEPRECATED	termino	lg-eng
+numisdata1370	Political data	termino	lg-eng
+numisdata1375	Identifizierung	termino	lg-deu
+numisdata1380	Ritratto	termino	lg-ita
+numisdata1386	Authority remark	termino	lg-eng
+numisdata1392	Mint remark	termino	lg-eng
+numisdata1397	Coordonnées	termino	lg-fra
+numisdata1399	Identifizierung	termino	lg-deu
+numisdata1403	Informazioni interne	termino	lg-ita
+numisdata1408	Listado	termino	lg-spa
+numisdata1413	Id	termino	lg-deu
+numisdata1418	Id	termino	lg-deu
+numisdata1422	Cancellare	termino	lg-ita
+numisdata1427	Esborrar	termino	lg-cat
+numisdata1431	Beziehungen	termino	lg-deu
+numisdata1436	Nota tratamiento secundario	termino	lg-spa
+numisdata156	Fabrication	termino	lg-fra
+numisdata261	Créateurs DÉCRYPTÉ	termino	lg-fra
+numisdata1370	Politische Daten	termino	lg-deu
+numisdata1375	Identification	termino	lg-fra
+numisdata1381	Proyecto	termino	lg-spa
+numisdata1386	Münzherrschaft Bemerkung	termino	lg-deu
+numisdata1392	Minzige Bemerkung	termino	lg-deu
+numisdata1397	Coordinate	termino	lg-ita
+numisdata1399	Identification	termino	lg-fra
+numisdata1350	Publishable	termino	lg-eng
+numisdata1408	List	termino	lg-eng
+numisdata1413	Id	termino	lg-fra
+numisdata1418	Id	termino	lg-fra
+numisdata1422	Löschen	termino	lg-deu
+numisdata1427	Löschen	termino	lg-deu
+numisdata1431	Relations	termino	lg-fra
+numisdata1436	Secondary treatment remark	termino	lg-eng
+numisdata156	Manufactura	termino	lg-cat
+numisdata1362	Creadores	termino	lg-spa
+numisdata261	Ersteller ABGESCHLOSSEN	termino	lg-deu
+numisdata1370	Πολιτικά δεδομένα	termino	lg-ell
+numisdata1375	Identificazione	termino	lg-ita
+numisdata1381	Project	termino	lg-eng
+numisdata1386	Remarque de l'autorité monétaire	termino	lg-fra
+numisdata1392	Remarque de la Monnaie	termino	lg-fra
+numisdata1399	Identificazione	termino	lg-ita
+numisdata1350	Publicable	termino	lg-cat
+numisdata1408	Elenco	termino	lg-ita
+numisdata1413	Id	termino	lg-ita
+numisdata1418	Id	termino	lg-ita
+numisdata1423	Listado	termino	lg-spa
+numisdata1431	Relazioni	termino	lg-ita
+numisdata1436	Remarque sur le traitement secondaire	termino	lg-fra
+numisdata1440	Material	termino	lg-spa
+numisdata1362	Autori	termino	lg-ita
+numisdata1370	Dati politici	termino	lg-ita
+numisdata1376	Id	termino	lg-spa
+numisdata1381	Projekt	termino	lg-deu
+numisdata1386	Osservazione dell'autorità emittente	termino	lg-ita
+numisdata1392	Osservazione della zecca	termino	lg-ita
+numisdata1400	Id	termino	lg-spa
+numisdata1404	Publicable	termino	lg-spa
+numisdata1408	Llistat	termino	lg-cat
+numisdata1414	Publicable	termino	lg-spa
+numisdata1419	Localización	termino	lg-spa
+numisdata1423	List	termino	lg-eng
+numisdata1427	Delete	termino	lg-eng
+numisdata1432	Relaciones	termino	lg-spa
+numisdata1436	Osservazione sul trattamento secondario	termino	lg-ita
+numisdata1440	Material	termino	lg-eng
+numisdata1362	Ersteller	termino	lg-deu
+numisdata1370	Données politiques	termino	lg-fra
+numisdata1376	Id	termino	lg-eng
+numisdata1381	Progetto	termino	lg-ita
+numisdata1387	Nota del emisor y retratado	termino	lg-spa
+numisdata1393	Nota maestro de ceca	termino	lg-spa
+numisdata1400	Id	termino	lg-eng
+numisdata1404	Publishable	termino	lg-eng
+numisdata1408	Liste	termino	lg-ell
+numisdata1414	Publishable	termino	lg-eng
+numisdata1419	Location	termino	lg-eng
+numisdata1423	Llistat	termino	lg-cat
+numisdata1427	Supprimer	termino	lg-fra
+numisdata1432	Relations	termino	lg-eng
+numisdata1436	Nota del tractament secundari	termino	lg-cat
+numisdata1440	Matériel	termino	lg-fra
+numisdata1362	Creators	termino	lg-eng
+numisdata1371	Fecha	termino	lg-spa
+numisdata1376	Id	termino	lg-deu
+numisdata1381	Projet	termino	lg-fra
+numisdata1387	Issuer and Portrait remark	termino	lg-eng
+numisdata1393	Mintmaster remark	termino	lg-eng
+numisdata1400	Id	termino	lg-cat
+numisdata1404	Publiable	termino	lg-fra
+numisdata1408	Liste	termino	lg-fra
+numisdata1414	Publizierbar	termino	lg-deu
+numisdata1419	Localització	termino	lg-cat
+numisdata1423	List	termino	lg-deu
+numisdata1427	Cancellare	termino	lg-ita
+numisdata1432	Relacions	termino	lg-cat
+numisdata1436	Anmerkung zur Zweitbehandlung	termino	lg-deu
+numisdata1440	Materiale	termino	lg-ita
+numisdata1362	Créateurs	termino	lg-fra
+numisdata1371	Date	termino	lg-eng
+numisdata1376	Id	termino	lg-fra
+numisdata1382	Nuevo	termino	lg-spa
+numisdata1387	Bemerkung zu Münzherr und Portrait	termino	lg-deu
+numisdata1393	Nota del maestro di zecca	termino	lg-ita
+numisdata1400	Id	termino	lg-deu
+numisdata1404	Publicable	termino	lg-cat
+numisdata1409	Notas de medidas	termino	lg-spa
+numisdata1414	Pubblicabile	termino	lg-ita
+numisdata1419	Standortg	termino	lg-deu
+numisdata1423	Liste	termino	lg-fra
+numisdata1428	Listado	termino	lg-spa
+numisdata1432	Beziehungen	termino	lg-deu
+numisdata1437	Estado de conservación	termino	lg-spa
+numisdata1440	Material	termino	lg-cat
+numisdata1371	Datierung	termino	lg-deu
+numisdata1376	Id	termino	lg-ita
+numisdata1382	New	termino	lg-eng
+numisdata1387	Remarque d'autorité émettrice et du portrait	termino	lg-fra
+numisdata1393	Nota maître de la monnaie	termino	lg-fra
+numisdata1400	Id	termino	lg-fra
+numisdata1404	Publizierbar	termino	lg-deu
+numisdata1409	Measurement remark	termino	lg-eng
+numisdata1414	Publiable	termino	lg-fra
+numisdata1423	Elenco	termino	lg-ita
+numisdata1428	List	termino	lg-eng
+numisdata1432	Relations	termino	lg-fra
+numisdata1437	Conservation state	termino	lg-eng
+numisdata1440	Material	termino	lg-deu
+numisdata413	Publishable	termino	lg-eng
+numisdata1371	Datazione	termino	lg-ita
+numisdata1377	Publicable	termino	lg-spa
+numisdata1382	Neu	termino	lg-deu
+numisdata1387	Osservazione del autorità emittente e del ritratto	termino	lg-ita
+numisdata1393	Bemerkung des Münzmeisters	termino	lg-deu
+numisdata1400	Id	termino	lg-ita
+numisdata1404	Pubblicabile	termino	lg-ita
+numisdata1409	Notes de mesures	termino	lg-cat
+numisdata1415	Peculiaridad	termino	lg-spa
+numisdata1419	Localisation	termino	lg-fra
+numisdata1424	Localización	termino	lg-spa
+numisdata1428	Llistat	termino	lg-cat
+numisdata1432	Relazioni	termino	lg-ita
+numisdata1437	Estat de conservació	termino	lg-cat
+numisdata1371	Datation	termino	lg-fra
+numisdata1377	Publishable	termino	lg-eng
+numisdata1382	Nouveau	termino	lg-fra
+numisdata1388	Ceca	termino	lg-spa
+numisdata1394	Nota denominación	termino	lg-spa
+numisdata1401	Grado de corrosión	termino	lg-spa
+numisdata1405	Proyecto	termino	lg-spa
+numisdata1409	Bemerkung zur Messung	termino	lg-deu
+numisdata1415	Peculiarity	termino	lg-eng
+numisdata1419	Localizzazione	termino	lg-ita
+numisdata1424	Location	termino	lg-eng
+numisdata1428	Liste	termino	lg-deu
+numisdata1433	Peculiaridad de producción	termino	lg-spa
+numisdata1437	Erhaltungszustand	termino	lg-deu
+numisdata413	Publiable	termino	lg-fra
+numisdata1372	Fecha texto	termino	lg-spa
+numisdata1377	Pubblicabile	termino	lg-ita
+numisdata1382	Nuovo	termino	lg-ita
+numisdata1388	Mint	termino	lg-eng
+numisdata1394	Denomination remark	termino	lg-eng
+numisdata1401	Corrosion degree	termino	lg-eng
+numisdata1405	Project	termino	lg-eng
+numisdata1409	Note de mesure	termino	lg-fra
+numisdata1415	Eigentümlichkeit	termino	lg-deu
+numisdata1420	Proyecto	termino	lg-spa
+numisdata1424	Localisation	termino	lg-fra
+numisdata1428	Liste	termino	lg-fra
+numisdata1433	Peculiaritat de producció	termino	lg-cat
+numisdata1437	État de conservation	termino	lg-fra
