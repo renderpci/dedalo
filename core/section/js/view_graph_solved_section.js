@@ -357,16 +357,16 @@ const get_graph = function(options){
 		source_text_node.append("text")
 			.attr("x", 14)
 			.attr("y", 20)
-			.attr("dy", ".35em")
+			.attr("dy", "0em")
 			.attr("id", "role")
-			.text(p.source_role);
+			.text(`(${p.source_role})`);
 
 		target_text_node.append("text")
 			.attr("x", 14)
 			.attr("y", 20)
-			.attr("dy", ".35em")
+			.attr("dy", "0em")
 			.attr("id", "role")
-			.text(p.target_role);
+			.text(`(${p.target_role})`);
 	}
 
 	function link_mouse_leave(event, p) {
