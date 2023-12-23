@@ -418,7 +418,7 @@ const get_buttons = function(self) {
 * render_left
 * @return HTMLElement node
 */
-const render_left = (self) => {
+const render_left = async (self) => {
 
 	const left_node = ui.create_dom_element({
 		element_type	: 'div',
