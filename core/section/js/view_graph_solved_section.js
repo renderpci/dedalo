@@ -54,15 +54,11 @@ view_graph_solved_section.render = async function(self, options) {
 				connection	: 'nexus29'
 			}
 
-	// left side
-		const left_node = render_left(self)
-
 	// right side
 		const right_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'right_node'
 		})
-
 
 	// content_data
 		const content_data = await get_content_data(self)
@@ -71,6 +67,9 @@ view_graph_solved_section.render = async function(self, options) {
 		if (render_level==='content') {
 			return content_data
 		}
+
+	// left side
+		const left_node = await render_left(self)
 
 	// buttons
 		const buttons_node = get_buttons(self);
