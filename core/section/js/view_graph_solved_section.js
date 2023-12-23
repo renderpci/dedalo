@@ -236,7 +236,7 @@ const get_graph = function(options){
 	node.append("circle")
 		.attr("stroke", "#ffffff")
 		.attr("stroke-width", 1.5)
-		.attr("r", 9)
+		.attr("r", 10)
 		.attr("fill", d => color(d.section_tipo))
 		.on("click", node_clicked);
 
@@ -246,7 +246,6 @@ const get_graph = function(options){
 	node.append("text")
 		.attr("x", 14)
 		.attr("y", "0.31em")
-
 		.text(d => d.name)
 		.clone(true).lower()
 			.attr("fill", "none")
