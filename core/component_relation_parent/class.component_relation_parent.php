@@ -517,10 +517,15 @@ class component_relation_parent extends component_relation_common {
 
 		// save if changed
 			if ($changed===true) {
+
 				$saved = $component_relation_children->Save();
 				if ($saved && $saved>0) {
 					$result = true;
 				}
+
+				// force read the new value on get_dato (prevent cache inconsistency)
+				$this->dato_resolved = null;
+				$this->get_dato();
 			}
 
 
