@@ -24,7 +24,7 @@ class component_radio_button extends component_relation_common {
 	* @param string $lang=DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
-	public function get_valor( string $lang=DEDALO_DATA_LANG ) {
+	public function get_valor(string $lang=DEDALO_DATA_LANG) {
 
 		$dato = $this->get_dato();
 

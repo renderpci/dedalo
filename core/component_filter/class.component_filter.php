@@ -544,7 +544,7 @@ class component_filter extends component_relation_common {
 	* Devuelve los valores del array 'dato' separados por '<br>'
 	* @return string $html | array $ar_final
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $format='html') {
+	public function get_valor(string $lang=DEDALO_DATA_LANG, $format='html') {
 
 		// Current logged user
 		$user_id		= get_user_id();
