@@ -40,7 +40,6 @@ view_graph_solved_section.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
 		self.graph_map =  (self.properties.graph_map)
@@ -179,7 +178,7 @@ const get_graph = function(options){
 	// Create a simulation with several forces.
 	const simulation = d3.forceSimulation(nodes)
 		.force("link", d3.forceLink(links).id(d => d.id))
-		.force("charge", d3.forceManyBody().strength(-800))
+		.force("charge", d3.forceManyBody().strength(-5000))
 		.force("x", d3.forceX())
 		.force("y", d3.forceY());
 
@@ -503,7 +502,6 @@ const render_left = (self) => {
 		.then(function(section_node){
 			section_container.appendChild(section_node)
 		})
-
 
 	return left_node
 }//end render_left
