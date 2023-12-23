@@ -428,7 +428,21 @@ const render_left = (self) => {
 	})
 
 	const source					= self.graph_map.source
-	const source_component_context	= self.datum.context.find(el => el.tipo === source)
+	const source_component_context	= (self.datum.context.find(el => el.tipo === source))
+		? self.datum.context.find(el => el.tipo === source)
+		: await get_source_component_context(source)
+
+
+	async function get_source_component_context(source){
+
+		const component = await instances.get_instance({
+			tipo			: source,
+			section_tipo	: self.section_tipo,
+			section_id		: 'tmp',
+			mode 			: 'list'
+		})
+		return component.context
+	}
 
 	const request_config = source_component_context.request_config
 
