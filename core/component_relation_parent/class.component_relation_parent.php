@@ -156,114 +156,284 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function set_dato($dato) : bool {
 
-		// format check
+		// dato format check
 			if (is_string($dato)) { // Tool Time machine case, dato is string
-				$dato = json_decode($dato);
+				$dato = json_handler::decode($dato);
 			}
 			if (is_object($dato)) {
-				$dato = array($dato);
+				$dato = [$dato];
 			}
-			# Ensures is a real non-associative array (avoid JSON encode as object)
-			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+			// Ensures is a real non-associative array (avoid JSON encode as object)
+			if (!is_null($dato)) {
+				$dato = is_array($dato)
+					? array_values($dato)
+					: (array)$dato;
+			}
 
 		// search mode
 			if ($this->mode==='search') {
-				# Fix dato
+				// Fix dato
 				$this->dato = $dato;
 
 				return true;
 			}
 
-		// changed_data. Updates and SAVE data in component children associated with the current component
-			if (isset($this->changed_data)) {
-
-				// changed_data case
-
-				// format object:
-					// {
-					//     "action": "remove",
-					//     "key": 3,
-					//     "value": null
-					//     "to_remove": {locator}
-					// }
-				$changed_data = $this->changed_data;
-				switch ($changed_data->action) {
-					case 'remove':
-						if (isset($changed_data->to_remove)) {
-							$locator	= $changed_data->to_remove;
-							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on remove parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-						break;
-					case 'insert':
-					case 'update':
-						if (isset($dato[$changed_data->key])) {
-							$locator	= $dato[$changed_data->key];
-							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-						break;
-					default:
+		// remove previous dato
+			$previous_dato = $this->get_dato();
+			if (!empty($previous_dato)) {
+				foreach ($previous_dato as $locator) {
+					$result = (bool)$this->remove_parent(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
 						debug_log(__METHOD__
-							." Error. action: '$changed_data->action' not defined ! "
+							. " Error on remove parent" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
 							, logger::ERROR
 						);
-						break;
+					}
 				}
-			}else{
-
-				// import case
-
-				// remove previous dato
-					$previous_dato = $this->get_dato();
-					if (!empty($previous_dato)) {
-						foreach ($previous_dato as $locator) {
-							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on remove parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-					}
-
-				// add the new one
-					if (!empty($dato)) {
-						foreach ($dato as $locator) {
-							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-					}
 			}
 
-			// $this->update_parents($dato);
+		// add the new one if any
+			if (!empty($dato)) {
+				foreach ($dato as $locator) {
+					$result	= (bool)$this->add_parent(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
+						debug_log(__METHOD__
+							. " Error on add parent" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
+							, logger::ERROR
+						);
+					}
+				}
+			}
+
+		// $this->update_parents($dato);
+
+		// force read the new value on get_dato (prevent cache inconsistency)
+			$this->dato_resolved = null;
+
 
 		return true;
 	}//end set_dato
+
+
+
+	/**
+	* GET_VALOR
+	* Get value . default is get dato . overwrite in every different specific component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $valor
+	*/
+	public function get_valor($lang=DEDALO_DATA_LANG) {
+
+		$dato = $this->get_dato();
+		if (empty($dato)) {
+			return null;
+		}
+
+		$ar_valor = [];
+		foreach ((array)$dato as $current_locator) {
+			$ar_valor[] = ts_object::get_term_by_locator(
+				$current_locator,
+				$lang,
+				true // bool from_cache
+			);
+		}
+
+		# Set component valor
+			$valor='';
+			foreach ($ar_valor as $value) {
+				if(!empty($value)) {
+					$valor .= $value;
+					if(end($ar_valor)!=$value) $valor .= ', ';
+				}
+			}
+
+		return (string)$valor;
+	}//end get_valor
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = DEDALO_DATA_LANG
+	* @param object $option_obj = null
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=DEDALO_DATA_LANG, object $option_obj=null) : ?string {
+
+		$resolve_value = isset($option_obj->resolve_value)
+			? $option_obj->resolve_value
+			: false;
+
+		// custom_get_term_by_locator function.
+		// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
+			$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
+
+				$section_map	= section::get_section_map($locator->section_tipo);
+				$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+				if ($thesaurus_map===false) {
+					return null;
+				}
+
+				$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+				$section_id		= $locator->section_id;
+				$section_tipo	= $locator->section_tipo;
+
+				$ar_value = [];
+				foreach ($ar_tipo as $tipo) {
+
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					// $model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
+					$component	= component_common::get_instance(
+						$model,
+						$tipo,
+						$section_id,
+						'list',
+						$lang,
+						$section_tipo
+					);
+					// process_dato_arguments
+						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
+					// valor
+						// $valor	= $component->get_valor($lang);
+						$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
+						if (empty($valor)) {
+
+							$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
+							$dato_full	= $component->get_dato_full();
+							$valor		= component_common::get_value_with_fallback_from_dato_full(
+								$dato_full,
+								true,
+								$main_lang,
+								$lang
+							);
+							if (is_array($valor)) {
+								$valor = implode(', ', $valor);
+							}
+						}
+
+					if (!empty($valor)) {
+						$ar_value[] = $valor;
+					}
+				}//end foreach ($ar_tipo as $tipo)
+
+				$value = implode(', ', $ar_value);
+
+				return $value;
+			};//end custom_get_term_by_locator function
+
+		if (isset($option_obj->add_parents)) {
+
+			// recursively
+				$section_id		= $this->get_section_id();
+				$section_tipo	= $this->section_tipo;
+
+			// parent_section_tipo
+				$parent_section_tipo = isset($option_obj->parent_section_tipo)
+					? $option_obj->parent_section_tipo
+					: false;
+
+			// parents
+				$parents = self::get_parents_recursive(
+					$section_id,
+					$section_tipo,
+					true // bool skip_root
+				);
+
+			// new_dato
+			$new_dato = [];
+			foreach ($parents as $locator) {
+
+				// non resolve case (only section_id from current locator)
+					if ($resolve_value!==true) {
+						$new_dato[] = $locator->section_id;
+						continue;
+					}
+
+				// to resolve cases
+				if($parent_section_tipo!==false) {
+
+					// term is autocomplete cases
+					$term_dato = ts_object::get_term_dato_by_locator($locator);
+					foreach ($term_dato as $term_locator) {
+
+						// check valid locator section_tipo
+							if (!isset($term_locator->section_tipo)) {
+								debug_log(__METHOD__
+									. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
+									. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
+									. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
+									, logger::DEBUG
+								);
+								continue;
+							}
+
+						if($parent_section_tipo===$term_locator->section_tipo){
+
+							// value custom calculate
+								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+							// new dato add
+								$new_dato[] = !empty($value)
+									? strip_tags($value)
+									: $value;
+						}
+					}//end foreach ($term_dato as $term_locator)
+
+				}else{
+
+					$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+					$current_value = !empty($value)
+						? strip_tags($value)
+						: $value;
+
+					$new_dato[] = $current_value;
+				}
+			}//end foreach ($parents as $locator)
+
+		}else{
+
+			$dato = $this->get_dato();
+
+			if ($resolve_value===true) {
+				$new_dato = [];
+				foreach ((array)$dato as $current_locator) {
+					// $value = ts_object::get_term_by_locator(
+					// 	$current_locator,
+					// 	$lang,
+					// 	true // bool from_cache
+					// );
+					$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
+					$new_dato[] = strip_tags($value);
+				}
+			}else{
+				// default (untouched component dato)
+				$new_dato = $dato;
+			}
+		}//end if (isset($option_obj->add_parents))
+
+		$diffusion_value = !empty($new_dato)
+			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE) : $new_dato)
+			: null;
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 

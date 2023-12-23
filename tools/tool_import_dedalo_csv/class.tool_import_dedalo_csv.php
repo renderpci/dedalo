@@ -1104,10 +1104,7 @@ class tool_import_dedalo_csv extends tool_common {
 											$changed_data_item->action = 'set_data';
 											$changed_data_item->value = $conformed_value;
 
-										$component->update_data_value(
-											$changed_data_item,
-											false // bool fix_changed_data. (!) Set to false to discriminate import actions from API calls
-										);
+										$component->update_data_value($changed_data_item);
 									}
 
 								// Save of course
