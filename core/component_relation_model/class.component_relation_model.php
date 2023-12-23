@@ -24,7 +24,7 @@ class component_relation_model extends component_relation_common {
 	* @param string $separator = ', '
 	* @return string|null $valor
 	*/
-	public function get_valor(?string $lang=DEDALO_DATA_LANG, string $separator=', ') : ?string {
+	public function get_valor(string $lang=DEDALO_DATA_LANG, string $separator=', ') : ?string {
 
 		$dato = $this->get_dato();
 

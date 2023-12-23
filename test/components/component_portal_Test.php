@@ -65,6 +65,10 @@ final class component_portal_test extends TestCase {
 
 
 
+	/////////// ⬇︎ test start ⬇︎ ////////////////
+
+
+
 	/**
 	* TEST_regenerate_component
 	* @return void
@@ -163,13 +167,6 @@ final class component_portal_test extends TestCase {
 	* @return void
 	*/
 	public function test_update_dato_version() {
-
-		$model			= self::$model;
-		$tipo			= self::$tipo;
-		$section_tipo	= self::$section_tipo;
-		$section_id		= 1;
-		$mode			= 'list';
-		$lang			= DEDALO_DATA_NOLAN;
 
 		$options = new stdClass();
 			$options->update_version = [6,0,0];
@@ -325,4 +322,4 @@ final class component_portal_test extends TestCase {
 
 
 
-}//end class
+}//end class component_portal_test

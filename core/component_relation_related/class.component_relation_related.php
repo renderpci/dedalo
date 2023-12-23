@@ -68,7 +68,7 @@ class component_relation_related extends component_relation_common {
 	* Get value. default is get dato . overwrite in every different specific component
 	* @return array|string|null $valor
 	*/
-	public function get_valor( $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false ) {
+	public function get_valor(string $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
 
 		// lang never must be DEDALO_DATA_NOLAN
 			if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
