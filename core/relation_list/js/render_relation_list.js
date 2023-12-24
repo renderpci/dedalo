@@ -383,10 +383,11 @@ const edit_relation = function(current_data) {
 
 	// open a new window
 		const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-			tipo	: section_tipo,
-			id		: section_id,
-			mode	: 'edit',
-			menu	: false
+			tipo			: section_tipo,
+			id				: section_id,
+			mode			: 'edit',
+			menu			: false,
+			session_save	: false // prevent to overwrite current section session
 		})
 		open_window({
 			url		: url,
