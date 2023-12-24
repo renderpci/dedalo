@@ -65,6 +65,34 @@ final class component_relation_parent_test extends TestCase {
 
 
 
+	/**
+	* test_create_minimum_sections
+	* @return object $component
+	*/
+	public function test_create_minimum_sections() {
+
+		$ar_section_id = [
+			2,
+			3
+		];
+		foreach ($ar_section_id as $section_id) {
+			$section = section::get_instance(
+				$section_id, // string|null section_id
+				self::$section_tipo, // string section_tipo
+				'list'
+			);
+			$section->forced_create_record();
+
+			$this->assertTrue(
+				gettype($section)==='object',
+				'expected type object : ' . PHP_EOL
+					. gettype($section)
+			);
+		}
+	}//end test_create_minimum_sections
+
+
+
 	/////////// ⬇︎ test start ⬇︎ ////////////////
 
 
@@ -145,7 +173,7 @@ final class component_relation_parent_test extends TestCase {
 			$dato = json_decode('
 				[{
 			        "section_tipo": "test3",
-			        "section_id": "7975",
+			        "section_id": "2",
 			        "paginated_key": 1,
 			        "from_component_tipo": "test71"
 			    }]
@@ -167,17 +195,21 @@ final class component_relation_parent_test extends TestCase {
 			$reference_dato = json_decode('
 				[{
 			        "section_tipo": "test3",
-			        "section_id": "7975",
+			        "section_id": "2",
 			        "from_component_tipo": "test71"
 			    }]
 			');
 			$fixed_dato = $component->get_dato();
+
+				// dump($fixed_dato, ' fixed_dato ++ '.to_string());
+				// dump($reference_dato, '$reference_dato ++ '.to_string());
+
 			$this->assertTrue(
 				json_encode($fixed_dato)===json_encode($reference_dato),
 				'expected equal : ' . PHP_EOL
-					. gettype($fixed_dato)
+					.' fixed_dato: ' . to_string($fixed_dato) . PHP_EOL
+					.' reference_dato: ' . to_string($reference_dato)
 			);
-
 
 		// set null or []
 			$dato = null;
@@ -207,7 +239,7 @@ final class component_relation_parent_test extends TestCase {
 			// 	    "key": 0,
 			// 	    "value": {
 			// 	        "section_tipo": "test3",
-			// 	        "section_id": "7975",
+			// 	        "section_id": "2",
 			// 	        "paginated_key": 1,
 			// 	        "from_component_tipo": "test71"
 			// 	    }
@@ -222,7 +254,7 @@ final class component_relation_parent_test extends TestCase {
 			// $reference_dato	= json_decode('
 			// 	[{
 			//         "section_tipo": "test3",
-			//         "section_id": "7975",
+			//         "section_id": "2",
 			//         "from_component_tipo": "test71"
 			// 	}]
 			// ');
@@ -241,7 +273,7 @@ final class component_relation_parent_test extends TestCase {
 			// 	    "key": 0,
 			// 	    "value": {
 			// 	        "section_tipo": "test3",
-			// 	        "section_id": "7975",
+			// 	        "section_id": "2",
 			// 	        "paginated_key": 1,
 			// 	        "from_component_tipo": "test71"
 			// 	    }
@@ -256,7 +288,7 @@ final class component_relation_parent_test extends TestCase {
 			// $reference_dato	= json_decode('
 			// 	[{
 			//         "section_tipo": "test3",
-			//         "section_id": "7975",
+			//         "section_id": "2",
 			//         "from_component_tipo": "test71"
 			// 	}]
 			// ');
@@ -338,7 +370,7 @@ final class component_relation_parent_test extends TestCase {
 			$dato = json_decode('
 				[{
 			        "section_tipo": "test3",
-			        "section_id": "7975",
+			        "section_id": "2",
 			        "paginated_key": 1,
 			        "from_component_tipo": "test71"
 			    }]
@@ -391,7 +423,7 @@ final class component_relation_parent_test extends TestCase {
 		// 	// empty old values
 		// 	$component->set_dato(null);
 
-		// 	$section_id	= 7975;
+		// 	$section_id	= 2;
 
 		// 	// private method access. Note that this method saves !
 		// 	$result	= PHPUnitUtil::callMethod(
@@ -446,7 +478,7 @@ final class component_relation_parent_test extends TestCase {
 		// empty old values
 		$component->set_dato(null);
 
-		$section_id	= 7974;
+		$section_id	= 3;
 
 		$result = $component->add_parent(
 			$component->section_tipo,
@@ -495,7 +527,7 @@ final class component_relation_parent_test extends TestCase {
 
 		$old_dato = $component->get_dato();
 
-		$section_id	= 7974;
+		$section_id	= 3;
 
 		// add dato (this action saves too)
 			$component->set_dato(null);
@@ -624,7 +656,7 @@ final class component_relation_parent_test extends TestCase {
 			    "q": [
 			        {
 			            "section_tipo": "test3",
-			            "section_id": "7974",
+			            "section_id": "3",
 			            "from_component_tipo": "test71"
 			        }
 			    ],
