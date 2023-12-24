@@ -1759,7 +1759,9 @@ abstract class component_common extends common {
 			// 	}
 			// }
 
-		if(!is_array($valor)) return $valor;
+		if(!is_array($valor)) {
+			return $valor;
+		}
 
 		return "<em>No string value</em>";
 	}//end get_valor
@@ -2470,7 +2472,7 @@ abstract class component_common extends common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		// Default behavior is get value
 			$diffusion_value = $this->get_valor(

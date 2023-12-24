@@ -219,7 +219,7 @@ class component_relation_parent extends component_relation_common {
 		// $this->update_parents($dato);
 
 		// force read the new value on get_dato (prevent cache inconsistency)
-			$this->dato_resolved = null;
+			unset($this->dato_resolved); //  = null;
 
 
 		return true;
@@ -233,7 +233,7 @@ class component_relation_parent extends component_relation_common {
 	* @param string $lang = DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG) : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -625,23 +625,26 @@ class component_relation_parent extends component_relation_common {
 	*/
 	protected function get_my_parents() : array {
 
-		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
-
 		$parents = [];
 
-		if(empty($this->section_id)){
-			return $parents;
-		}
+		// empty section_id case
+			if(empty($this->section_id)){
+				return $parents;
+			}
 
-		foreach ($target_component_children_tipos as $children_component_tipo) {
-			$parents = array_merge(
-				$parents,
-				component_relation_parent::get_parents(
-					$this->section_id,
-					$this->section_tipo,
-					$children_component_tipo
-				)
-			);
+		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
+
+		if (!empty($target_component_children_tipos)) {
+			foreach ($target_component_children_tipos as $children_component_tipo) {
+				$parents = array_merge(
+					$parents,
+					component_relation_parent::get_parents(
+						$this->section_id,
+						$this->section_tipo,
+						$children_component_tipo
+					)
+				);
+			}
 		}
 
 		return $parents;

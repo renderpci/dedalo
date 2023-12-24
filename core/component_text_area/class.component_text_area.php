@@ -245,7 +245,7 @@ class component_text_area extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
 		$valor = '';
 
@@ -1580,7 +1580,7 @@ class component_text_area extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$dato = $this->get_dato();  # Important: use raw text (!)
 
