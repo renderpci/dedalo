@@ -891,23 +891,23 @@ class component_relation_parent extends component_relation_common {
 	/**
 	* GET_PARENTS_RECURSIVE
 	* Iterate recursively all parents of current term
-	* @param int $section_id
+	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param bool $skip_root = true
-	*
+	* @param array $parents_recursive = []
+	* 	Accumulates results to allow check for duplicates
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true) : array {
-
-		$parents_recursive = [];
+	public static function get_parents_recursive(int|string $section_id, string $section_tipo, bool $skip_root=true, array $parents_recursive=[]) : array {
 
 		// cache key_resolve
 			static $parents_recursive_resolved = [];
-			$key_resolve = $section_tipo.'_'.$section_id;
+			$key_resolve = $section_tipo.'_'.$section_id.'_'.(int)$skip_root;
 			if (isset($parents_recursive_resolved[$key_resolve])) {
 				return $parents_recursive_resolved[$key_resolve];
 			}
 
+		// parents
 		$ar_parents = component_relation_parent::get_parents($section_id, $section_tipo);
 		if (!empty($ar_parents)) {
 			foreach ($ar_parents as $current_locator) {
@@ -917,17 +917,64 @@ class component_relation_parent extends component_relation_common {
 						continue;
 					}
 
+				// skip self
+					if ($current_locator->section_tipo===$section_tipo && $current_locator->section_id==$section_id) {
+						debug_log(__METHOD__
+							. " Reference to self is omitted (current_locator) " . PHP_EOL
+							. ' current_locator: ' . to_string($current_locator)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+				// skip already added
+					if (locator::in_array_locator($current_locator, $parents_recursive, ['section_tipo','section_id'])) {
+						debug_log(__METHOD__
+							. " Already added locator is omitted (current_locator) " . PHP_EOL
+							. ' current_locator: ' . to_string($current_locator)
+							, logger::WARNING
+						);
+						continue;
+					}
+
 				// add current
 					$parents_recursive[] = $current_locator;
 
 				// recursion
-					$children_recursive = component_relation_parent::get_parents_recursive(
+					$parent_parents_recursive = component_relation_parent::get_parents_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
-						$skip_root
+						$skip_root,
+						$parents_recursive
 					);
-					$parents_recursive = array_merge($parents_recursive, $children_recursive);
-			}
+					if (!empty($parent_parents_recursive)) {
+						foreach ($parent_parents_recursive as $parent_locator) {
+
+							// skip self
+								if ($parent_locator->section_tipo===$section_tipo && $parent_locator->section_id==$section_id) {
+									debug_log(__METHOD__
+										. " Reference to self is omitted (parent_locator) " . PHP_EOL
+										. ' parent_locator: ' . to_string($parent_locator)
+										, logger::WARNING
+									);
+									continue;
+								}
+
+							// skip already added
+								if (locator::in_array_locator($parent_locator, $parents_recursive, ['section_tipo','section_id'])) {
+									debug_log(__METHOD__
+										. " Already added locator is omitted (parent_locator) " . PHP_EOL
+										. ' parent_locator: ' . to_string($parent_locator)
+										, logger::WARNING
+									);
+									continue;
+								}
+
+							// add current
+								$parents_recursive[] = $parent_locator;
+						}
+					}
+			}//end foreach ($ar_parents as $current_locator)
 		}
 
 		// cache Set as resolved
