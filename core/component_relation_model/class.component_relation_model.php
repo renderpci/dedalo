@@ -24,7 +24,7 @@ class component_relation_model extends component_relation_common {
 	* @param string $separator = ', '
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG, string $separator=', ') : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, string $separator=', ') : ?string {
 
 		$dato = $this->get_dato();
 
@@ -91,10 +91,17 @@ class component_relation_model extends component_relation_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
-		$diffusion_value = $this->get_valor($lang);
-		$diffusion_value = !empty($diffusion_value)
-			? strip_tags($diffusion_value)
-			: null;
+		// lang empty case. Apply default
+			if (empty($lang)) {
+				$lang = DEDALO_DATA_LANG;
+			}
+
+		// diffusion_value
+			$diffusion_value = $this->get_valor($lang);
+			$diffusion_value = !empty($diffusion_value)
+				? strip_tags($diffusion_value)
+				: null;
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value

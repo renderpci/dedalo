@@ -68,7 +68,7 @@ class component_relation_related extends component_relation_common {
 	* Get value. default is get dato . overwrite in every different specific component
 	* @return array|string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false) {
 
 		// lang never must be DEDALO_DATA_NOLAN
 			if ($lang===DEDALO_DATA_NOLAN) $lang=DEDALO_DATA_LANG;
@@ -489,19 +489,24 @@ class component_relation_related extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = null;
 
 		$separator = '<br>';
 
-		# $dato_with_references = $this->get_dato_with_references();
-		# 	dump($dato_with_references, ' dato_with_references ++ tipo: '.$this->get_tipo()." - ".$this->lang." - ".$this->get_parent());
+		// $dato_with_references = $this->get_dato_with_references();
 
-		$valor = $this->get_valor(
-			$lang,  // string lang
-			'array' // string format array|string
-		);
+		// lang empty case. Apply default
+			if (empty($lang)) {
+				$lang = DEDALO_DATA_LANG;
+			}
+
+		// valor
+			$valor = $this->get_valor(
+				$lang,  // string lang
+				'array' // string format array|string
+			);
 
 		// calculated references
 		$calculated_references = $this->get_calculated_references();

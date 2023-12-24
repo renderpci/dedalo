@@ -533,7 +533,7 @@ class component_number extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$dato				= parent::get_dato();
 		$value				= is_array($dato) ? reset($dato) : $dato;

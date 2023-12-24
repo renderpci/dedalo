@@ -245,7 +245,7 @@ class component_iri extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
 		$dato = $this->get_dato();
 

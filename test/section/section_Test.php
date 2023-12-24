@@ -355,11 +355,8 @@ final class section_test extends TestCase {
 					$save===null ,
 					'expected save result null. Current result: ' .to_string($save)
 				);
-
 				// break;
 			}
-
-
 	}//end test_get_instance
 
 
@@ -413,18 +410,19 @@ final class section_test extends TestCase {
 			'expected type object. Current type: ' .gettype($result)
 		);
 
-		$section2 = section::get_instance(
-			DEDALO_SECTION_ID_TEMP, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode
-		);
+		// save_handler session
+			$section2 = section::get_instance(
+				DEDALO_SECTION_ID_TEMP, // string|null section_id
+				$section_tipo, // string section_tipo
+				$mode
+			);
 
-		$result = $section2->get_dato();
+			$result = $section2->get_dato();
 
-		$this->assertTrue(
-			$section2->save_handler==='session' ,
-			'expected save_handler session. Current type: ' .$section2->save_handler
-		);
+			$this->assertTrue(
+				$section2->save_handler==='session' ,
+				'expected save_handler session. Current type: ' .$section2->save_handler
+			);
 	}//end test_get_dato
 
 
@@ -453,7 +451,8 @@ final class section_test extends TestCase {
 
 		$this->assertTrue(
 			gettype($result)==='boolean' ,
-			'expected type boolean. Current type: ' .gettype($result)
+			'expected type boolean. Current type: ' . PHP_EOL
+				.gettype($result)
 		);
 
 		$dato = $section->get_dato();
@@ -1504,9 +1503,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_get_ar_all_section_records_unfiltered() : void {
 
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$section_tipo = self::$section_tipo;
 
 		$result = section::get_ar_all_section_records_unfiltered( $section_tipo );
 
@@ -1531,9 +1528,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_get_resource_all_section_records_unfiltered() : void {
 
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$section_tipo = self::$section_tipo;
 
 		$result = section::get_resource_all_section_records_unfiltered( $section_tipo );
 
@@ -1562,10 +1557,6 @@ final class section_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_components_with_media_content() : void {
-
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
 
 		$result = section::get_components_with_media_content();
 

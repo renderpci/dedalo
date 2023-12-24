@@ -213,7 +213,7 @@ class component_relation_index extends component_relation_common {
 	* @param string $lang = DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG) : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
 
