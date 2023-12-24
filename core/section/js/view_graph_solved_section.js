@@ -40,7 +40,6 @@ view_graph_solved_section.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
-
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
 		self.graph_map =  (self.properties.graph_map)
@@ -54,15 +53,11 @@ view_graph_solved_section.render = async function(self, options) {
 				connection	: 'nexus29'
 			}
 
-	// left side
-		const left_node = render_left(self)
-
 	// right side
 		const right_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'right_node'
 		})
-
 
 	// content_data
 		const content_data = await get_content_data(self)
@@ -71,6 +66,9 @@ view_graph_solved_section.render = async function(self, options) {
 		if (render_level==='content') {
 			return content_data
 		}
+
+	// left side
+		const left_node = await render_left(self)
 
 	// buttons
 		const buttons_node = get_buttons(self);
@@ -180,7 +178,7 @@ const get_graph = function(options){
 	// Create a simulation with several forces.
 	const simulation = d3.forceSimulation(nodes)
 		.force("link", d3.forceLink(links).id(d => d.id))
-		.force("charge", d3.forceManyBody().strength(-800))
+		.force("charge", d3.forceManyBody().strength(-5000))
 		.force("x", d3.forceX())
 		.force("y", d3.forceY());
 
@@ -238,7 +236,7 @@ const get_graph = function(options){
 	node.append("circle")
 		.attr("stroke", "#ffffff")
 		.attr("stroke-width", 1.5)
-		.attr("r", 9)
+		.attr("r", 10)
 		.attr("fill", d => color(d.section_tipo))
 		.on("click", node_clicked);
 
@@ -248,7 +246,6 @@ const get_graph = function(options){
 	node.append("text")
 		.attr("x", 14)
 		.attr("y", "0.31em")
-
 		.text(d => d.name)
 		.clone(true).lower()
 			.attr("fill", "none")
@@ -360,16 +357,16 @@ const get_graph = function(options){
 		source_text_node.append("text")
 			.attr("x", 14)
 			.attr("y", 20)
-			.attr("dy", ".35em")
+			.attr("dy", "0em")
 			.attr("id", "role")
-			.text(p.source_role);
+			.text(`(${p.source_role})`);
 
 		target_text_node.append("text")
 			.attr("x", 14)
 			.attr("y", 20)
-			.attr("dy", ".35em")
+			.attr("dy", "0em")
 			.attr("id", "role")
-			.text(p.target_role);
+			.text(`(${p.target_role})`);
 	}
 
 	function link_mouse_leave(event, p) {
@@ -421,7 +418,7 @@ const get_buttons = function(self) {
 * render_left
 * @return HTMLElement node
 */
-const render_left = (self) => {
+const render_left = async (self) => {
 
 	const left_node = ui.create_dom_element({
 		element_type	: 'div',
@@ -429,7 +426,21 @@ const render_left = (self) => {
 	})
 
 	const source					= self.graph_map.source
-	const source_component_context	= self.datum.context.find(el => el.tipo === source)
+	const source_component_context	= (self.datum.context.find(el => el.tipo === source))
+		? self.datum.context.find(el => el.tipo === source)
+		: await get_source_component_context(source)
+
+
+	async function get_source_component_context(source){
+
+		const component = await instances.get_instance({
+			tipo			: source,
+			section_tipo	: self.section_tipo,
+			section_id		: 'tmp',
+			mode 			: 'list'
+		})
+		return component.context
+	}
 
 	const request_config = source_component_context.request_config
 
@@ -490,7 +501,6 @@ const render_left = (self) => {
 		.then(function(section_node){
 			section_container.appendChild(section_node)
 		})
-
 
 	return left_node
 }//end render_left

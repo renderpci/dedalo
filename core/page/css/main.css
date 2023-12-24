@@ -10049,6 +10049,9 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
 .section.view_graph.solved .right_node > .content_data .svg_content {
   font: 16px sans-serif;
 }
+.section.view_graph.solved .right_node > .content_data .svg_content #role {
+  font-size: 0.9rem;
+}
 /**
 * view_base_section
 *
