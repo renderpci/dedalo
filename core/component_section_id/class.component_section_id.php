@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_SECTION_ID
-*
 *
 */
 class component_section_id extends component_common {
@@ -10,11 +10,13 @@ class component_section_id extends component_common {
 
 	/**
 	* GET_DATO
-	* @return int $dato
+	* @return int|null $dato
 	*/
-	public function get_dato() {
+	public function get_dato() : ?int {
 
-		$dato = (int)$this->section_id;
+		$dato = !empty($this->section_id)
+			? (int)$this->section_id
+			: null;
 
 		// Set as loaded
 			$this->bl_loaded_matrix_data = true;
@@ -61,22 +63,26 @@ class component_section_id extends component_common {
 
 
 	/**
-	* GET_VALOR
-	*/
-	public function get_valor() {
-
-		return $this->get_dato();
-	}//end get_valor
-
-
-
-	/**
 	* GET_DATO_FULL
+	* Alias of get_dato
+	* @return int|null
 	*/
 	public function get_dato_full() {
 
 		return $this->get_dato();
 	}//end get_dato_full
+
+
+
+	/**
+	* GET_VALOR
+	* Alias of get_dato
+	* @return int|null
+	*/
+	public function get_valor() {
+
+		return $this->get_dato();
+	}//end get_valor
 
 
 
@@ -88,7 +94,7 @@ class component_section_id extends component_common {
 	* The relation components will separate the locator in rows
 	* @param object|null $ddo = null
 	*
-	* @return object $value
+	* @return dd_grid_cell_object $value
 	*/
 	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
 
@@ -137,12 +143,12 @@ class component_section_id extends component_common {
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
-		// reset array value
-		$query_object->q = is_array($query_object->q)
-			? reset($query_object->q)
-			: $query_object->q;
+		// q. reset array value
+			$query_object->q = is_array($query_object->q)
+				? reset($query_object->q)
+				: $query_object->q;
 
-		$q = $query_object->q;
+			$q = $query_object->q;
 
 		// Always set fixed values
 		$query_object->type = 'number';
@@ -163,7 +169,6 @@ class component_section_id extends component_common {
 		$sequence_separator = ',';
 
 		switch (true) {
-
 			// BETWEEN
 			case (strpos($q, $between_separator)!==false):
 				// Transform "12...25" to "12 AND 25"
@@ -283,22 +288,24 @@ class component_section_id extends component_common {
 	/**
 	* EXTRACT_COMPONENT_DATO_FALLBACK
 	* Catch extract_component_dato_fallback common method calls
-	* @return array $dato_fb
+	* @return array []
 	*/
 	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
+
 		return [];
-	}
+	}//end extract_component_dato_fallback
 
 
 
 	/**
 	* EXTRACT_COMPONENT_VALUE_FALLBACK
 	* Catch common method calls
-	* @return string $value
+	* @return string ''
 	*/
 	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
+
 		return '';
-	}
+	}//end extract_component_value_fallback
 
 
 
