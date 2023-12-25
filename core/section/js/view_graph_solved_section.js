@@ -696,10 +696,11 @@ const render_left = async (self) => {
 			}
 			const selected = e.target.options[e.target.selectedIndex]
 			const section_tipo = selected.section_tipo;
-			const new_section_node = await render_section({
+			const new_section_node = await render_source_section({
 				section_tipo	: section_tipo,
 				rqo				: rqo
 			})
+
 			section_container.appendChild(new_section_node)
 		})
 
@@ -711,7 +712,7 @@ const render_left = async (self) => {
 		})
 		// render first selection
 		const selected_section = section_select[section_select.selectedIndex].section_tipo
-		render_section({
+		render_source_section({
 			section_tipo	: selected_section,
 			rqo				: rqo
 		})
@@ -724,7 +725,7 @@ const render_left = async (self) => {
 
 
 
-const render_section = async function(options){
+const render_source_section = async function(options){
 
 	const section_tipo = options.section_tipo
 	const rqo = options.rqo
@@ -976,16 +977,6 @@ export const on_dragstart = function(node, event, options) {
 
 	return true
 }//end ondrag_start
-
-
-
-
-
-
-
-
-
-
 
 
 
