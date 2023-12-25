@@ -10,12 +10,15 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {
+		create_source
+	} from '../../common/js/common.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	import {
 		get_d3_data
 	} from './render_solved_section.js'
-
 
 /**
 * VIEW_GRAPH_SOLVED_SECTION
@@ -134,6 +137,7 @@ const get_content_data = async function(self) {
 				})
 
 				const d3_node = get_graph({
+					self 			: self,
 					content_data	: content_data,
 					data			: d3_data
 				})
@@ -157,9 +161,13 @@ const get_content_data = async function(self) {
 
 const get_graph = function(options){
 
+	// vars
+	const content_data	= options.content_data
+	const data			= options.data
+	const self			= options.self
 
-	const content_data = options.content_data
-	const size = content_data.getBoundingClientRect()
+	// Specify the dimensions of the graph.
+	const size		= content_data.getBoundingClientRect()
 
 	const data = options.data
 
@@ -300,20 +308,20 @@ const get_graph = function(options){
 		node
 			.attr("id", d => d.id)
 
-	node.append("circle")
-		.attr("stroke", "#ffffff")
-		.attr("stroke-width", 1.5)
-		.attr("r", 10)
-		.attr("fill", d => color(d.section_tipo))
-		.on("click", node_clicked);
-
-	// node.append("title")
-	// 	.text(d => d.id);
-
-	node.append("text")
-		.attr("x", 14)
-		.attr("y", "0.31em")
-		.text(d => d.name)
+		// circle
+		// the node representation of the thing
+		// the user can drop new thing (people, entity, mint,...) in the node
+		// when user drop a thing, create new nexus section, the node will be source and the dropped thing will be the target
+		node.append("circle")
+			.attr("stroke", "#ffffff") // a stroke around the circle, white as background
+			.attr("stroke-width", 1.5) // a tiny stroke use to "cut" the link path
+			.attr("r", 10) // fixed radius, if it change, change the r in the "tick" function
+			.attr("fill", d => (d.section_tipo) ? color(d.section_tipo) : '#dddddd') // use different color for every section, if the section is empty, use gray
+			.on("click", node_clicked) // open the main section of the thing
+			.on("dragenter", on_dragenter) // show active the node
+			.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
+			.on("drop", on_drop ) // create new nexus section with the source and target
+			.on("dragleave", on_dragleave) // deactivate the node
 		.clone(true).lower()
 			.attr("fill", "none")
 			.attr("stroke", "white")
@@ -402,11 +410,119 @@ const get_graph = function(options){
 		event.subject.fy = null;
 	}
 
-	// When this cell is re-run, stop the previous simulation. (This doesn’t
-	// really matter since the target alpha is zero and the simulation will
-	// stop naturally, but it’s a good practice.)
-	// invalidation.then(() => simulation.stop());
+		// when mouse enter with a drag move, change the node style to show it as activate
+		function on_dragenter(event){
+			d3.select(this).classed("dragover", true);
+		}
+		// remove default behavior to allow drop
+		function on_dragover(event){
+			event.preventDefault(); // allow drop
+		}
+		// when mouse leave the node, remove the style to show as normal
+		function on_dragleave(event){
+			d3.select(this).classed("dragover", false);
+		}
+		// drop
+		// when user drop new section_record into a node, create new nexus section and assign the source (node) and target (section_record dragged)
+		async function on_drop(event, p){
 
+			event.preventDefault() // Necessary. Allows us to drop.
+			event.stopPropagation()
+
+			// remove the style of the node to show it as normal
+			d3.select(this).classed("dragover", false);
+			// self is the component_portat that call and it has the sort_order function
+			const data	= event.dataTransfer.getData('text/plain');// element that's move
+			// the drag element will sent the data of the original position, the source_key
+			const data_parse = JSON.parse(data)
+
+			// locators for source / target components
+			const source_locator = p.locator
+			const target_locator = data_parse.locator
+
+			// data_manager. create new section
+				const rqo = {
+					action	: 'create',
+					source	: {
+						section_tipo : self.section_tipo
+					}
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				// if the server response is ok, it will send the new section_id
+				if (api_response.result && api_response.result>0) {
+
+					const section_id = api_response.result
+					// source
+					// assign the source data for the source component with the node locator
+					set_component_data({
+						tipo			: self.graph_map.source,
+						locator			: source_locator,
+						section_tipo	: self.section_tipo,
+						section_id		: section_id
+					})
+					// target
+					// assign the target data for the target component with the section_record dragged
+					set_component_data({
+						tipo			: self.graph_map.target,
+						locator			: target_locator,
+						section_tipo	: self.section_tipo,
+						section_id		: section_id
+					})
+				}
+			/** set_component_data
+			* assign and save the data into the specific component (source, target component)
+			* @param tipo component tipo
+			* @param locator data of the component
+			* @param section_tipo
+			* @param section_id
+			*/
+			async function set_component_data(options){
+
+				const tipo			= options.tipo
+				const locator		= options.locator
+				const section_tipo	= options.section_tipo
+				const section_id	= options.section_id
+
+				// create the component source instance
+					const source_component = await instances.get_instance({
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						tipo			: tipo,
+						type 			: 'component'
+					})
+
+				// create the source (instance source of the component)
+					const source = create_source(source_component, null)
+
+				// set the changed_data for replace it in the instance data
+				// update_data_value. key is the position in the data array, the value is the new value
+					const value = {
+						section_id			: locator.section_id,
+						section_tipo		: locator.section_tipo,
+						from_component_tipo	: tipo
+					}
+				// set the changed_data for update the component data and send it to the server for change when save
+					const data = {}
+					data.changed_data = [{
+						action	: 'insert',
+						key		: 0,
+						value	: value
+					}]
+				// rqo
+					const rqo = {
+						action	: 'save',
+						source	: source,
+						data	: data
+					}
+
+				// data_manager. create new record
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+			}
+		}
 
 	function node_clicked(event, p) {
 
