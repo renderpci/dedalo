@@ -8,11 +8,10 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {clone} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {set_element_css} from '../../page/js/css.js'
-	import {no_records_node} from './render_common_section.js'
 	import {
 		render_column_id
 	} from './render_list_section.js'
@@ -51,7 +50,6 @@ view_graph_list_section.render = async function(self, options) {
 		const columns_map	= await rebuild_columns_map(self)
 		self.columns_map	= columns_map
 
-
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
@@ -81,6 +79,7 @@ view_graph_list_section.render = async function(self, options) {
 			self.search_container = search_container
 		}
 
+	// content_data append at end
 		fragment.appendChild(content_data)
 
 	// wrapper
@@ -91,7 +90,8 @@ view_graph_list_section.render = async function(self, options) {
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
-		wrapper.content_data		= content_data
+		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end render
@@ -143,11 +143,11 @@ const get_content_data = async function(self) {
 			const current_block = await render_grouper_block(self, group_label, current_instances)
 
 			content_data.appendChild(current_block)
-		}
+		}//end for (const group_label in order_value)
+
 
 	return content_data
 }//end get_content_data
-
 
 
 
@@ -180,24 +180,24 @@ const render_grouper_block = async function(self, group_label, ar_section_record
 		parent			: grouper_block
 	})
 
-	// rows
-	// parallel mode
-	const ar_section_record_length = ar_section_record.length
+	// rows. parallel mode
+		const ar_section_record_length = ar_section_record.length
 		const ar_promises = []
 		for (let i = 0; i < ar_section_record_length; i++) {
 			const render_promise_node = ar_section_record[i].render()
 			ar_promises.push(render_promise_node)
 		}
 		await Promise.all(ar_promises).then(function(values) {
-		  for (let i = 0; i < ar_section_record_length; i++) {
-		  	const section_record_node = values[i]
-			group_content.appendChild(section_record_node)
-		  }
+			for (let i = 0; i < ar_section_record_length; i++) {
+				const section_record_node = values[i]
+				group_content.appendChild(section_record_node)
+			}
 		});
 
 
 	return fragment
 }//end render_grouper_block
+
 
 
 /**
@@ -258,14 +258,13 @@ const rebuild_columns_map = async function(self) {
 			columns_map.push(column)
 		}
 
-
-
 	// fixed as calculated
 		self.fixed_columns_map = true
 
 
 	return columns_map
 }//end rebuild_columns_map
+
 
 
 /**
@@ -361,7 +360,6 @@ const get_buttons = function(self) {
 								section_tipo	: self.section_tipo,
 								sqo				: delete_sqo
 							})
-
 							break;
 						}
 						// button_import and button_trigger cases for compatibility with v5 ontology
@@ -423,8 +421,12 @@ const get_buttons = function(self) {
 
 
 
-
-const render_column_graph = function(options){
+/**
+* RENDER_COLUMN_GRAPH
+* @param object DocumentFragment
+* @return HTMLElement fragment
+*/
+const render_column_graph = function(options) {
 
 	// options
 		const self			= options.caller
@@ -434,43 +436,64 @@ const render_column_graph = function(options){
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
+	// graph_button
 	const graph_button = ui.create_dom_element({
 		element_type	: 'button',
 		class_name		: 'button graph',
 		parent			: fragment
 	})
+	// mouseup event
+	graph_button.addEventListener('mouseup', async function(e) {
 
-	graph_button.addEventListener('mouseup', async function(e){
+		const target_section_value	= self.context.properties.view_config.target_section_value || 'nexus53'
+		const target_section_data	= self.datum.data.find(el =>
+			el.section_id === section_id &&
+			el.section_tipo === section_tipo &&
+			el.tipo === target_section_value
+		)
+		const target_section_tipo = target_section_data.value[0]
 
-		const target_section_value = self.context.properties.view_config.target_section_value || 'nexus53'
-		const target_section_data = self.datum.data.find(el => el.section_id === section_id && el.section_tipo === section_tipo && el.tipo === target_section_value)
-		const target_section = target_section_data.value[0]
+		// target section
+			const section = await instances.get_instance({
+				model 			: 'section',
+				tipo			: target_section_tipo,
+				section_tipo	: target_section_tipo,
+				mode 			: 'solved',
+				inspector 		: false
+			})
+			await section.build(true)
+			section.view = 'graph'
+			const section_node = await section.render()
+			// add to DOM
+			self.node.after(section_node)
 
-		const instance_options = {
-			model 			: 'section',
-			tipo			: target_section,
-			section_tipo	: target_section,
-			mode 			: 'solved',
-			inspector 		: false
-		}
+		// remove current section instance and nodes
+			self.destroy(true, true, true)
 
-		const section = await instances.get_instance(instance_options)
+		// navigation (update browser URL and history)
+			const source	= create_source(section, null)
+			const sqo		= section.request_config_object.sqo
+			const title		= section.id
 
-		await section.build(true)
+			// url search. Append section_id if exists
+			const url_vars	= url_vars_to_object(location.search)
+			url_vars.mode	= section.mode
+			url_vars.view	= section.view
+			const url = '?' + object_to_url_vars(url_vars)
 
-		section.view = 'graph'
-		const section_node = await section.render()
+			// browser navigation update
+			push_browser_history({
+				source	: source,
+				sqo		: sqo,
+				title	: title,
+				url		: url
+			})
+	})//end mouseup
 
-		self.node.after(section_node)
 
-		self.destroy(true, true, true)
+	return fragment
+}//end render_column_graph
 
-	})
-
-
-
-return fragment
-}
 
 
 // @license-end
