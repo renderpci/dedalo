@@ -575,39 +575,28 @@ const get_graph = function(options){
 				})
 		}
 
-		// open a new window
-			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-				tipo			: section_tipo,
-				section_tipo	: section_tipo,
-				id				: section_id,
-				mode			: 'edit',
-				session_save	: false, // prevent to overwrite current section session
-				menu			: true
-			})
-			open_window({
-				url			: url,
-				name		: 'record_view_' + section_id,
-			})
-	}
+	// link behavior
+		// when user click in the link path open the nexus section of the connection
+		function link_clicked(event, p) {
 
-	function link_mouse_enter(event, p) {
+			// short vars
+			const section_tipo	= p.locator.section_tipo
+			const section_id	= p.locator.section_id
 
-		const source_text_node = d3.select("#" + p.source.id);
-		const target_text_node = d3.select("#" + p.target.id);
-			// p.source.name = p.source_role
-
-		source_text_node.append("text")
-			.attr("x", 14)
-			.attr("y", 20)
-			.attr("dy", "0em")
-			.attr("id", "role")
-			.text(`(${p.source_role})`);
-
-		target_text_node.append("text")
-			.attr("x", 14)
-			.attr("y", 20)
-			.attr("dy", "0em")
-			.attr("id", "role")
+			// open a new window of the section
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					session_save	: false, // prevent to overwrite current section session
+					menu			: true
+				})
+				open_window({
+					url			: url,
+					name		: 'record_view_' + section_id,
+				})
+		}
 			.text(`(${p.target_role})`);
 	}
 
