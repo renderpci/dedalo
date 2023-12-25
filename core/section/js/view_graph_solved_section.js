@@ -312,16 +312,21 @@ const get_graph = function(options){
 			.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
 			.on("drop", on_drop ) // create new nexus section with the source and target
 			.on("dragleave", on_dragleave) // deactivate the node
-		.clone(true).lower()
-			.attr("fill", "none")
-			.attr("stroke", "white")
-			.attr("stroke-width", 3);
 
-	// Add a drag behavior.
-	node.call(d3.drag()
-		.on("start", dragstarted)
-		.on("drag", dragged)
-		.on("end", dragended));
+		// node.append("title")
+		// 	.text(d => d.id);
+
+		// text
+		// the text of the thing
+		node.append("text")
+			.attr("x", 14) // move the x position to left of the center of the node, a small offset to show it
+			.attr("y", "0.31em")// move the y position to center in the middle of the circle
+			.text(d => d.name) // the name
+			.clone(true).lower() // duplicate it to create a white version around the text, it help to read when the text is in the top of circles or paths
+				.attr("fill", "none")// remove the text
+				.attr("stroke", "white") // create a border around the text
+				.attr("stroke-width", 3);
+
 		// Add a drag behavior for the node
 		// nodes can move at any position and all connected will be re-calculated his position
 			node.call(d3.drag()
