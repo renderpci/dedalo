@@ -544,8 +544,36 @@ const get_graph = function(options){
 			event.subject.fy = null;
 		}
 
-		const section_tipo	= p.locator.section_tipo
-		const section_id	= p.locator.section_id
+	// When this cell is re-run, stop the previous simulation. (This doesn’t
+	// really matter since the target alpha is zero and the simulation will
+	// stop naturally, but it’s a good practice.)
+	// invalidation.then(() => simulation.stop());
+
+	// node behavior
+		// when user click into the node, open the main section of the thing
+		function node_clicked(event, p) {
+			// if node has not a locator (empty component) is not possible open the main section
+			if(!p.locator){
+				return null
+			}
+			// sort vars
+			const section_tipo	= p.locator.section_tipo
+			const section_id	= p.locator.section_id
+
+			// open a new window of the node section
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					session_save	: false, // prevent to overwrite current section session
+					menu			: true
+				})
+				open_window({
+					url			: url,
+					name		: 'record_view_' + section_id,
+				})
+		}
 
 		// open a new window
 			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
