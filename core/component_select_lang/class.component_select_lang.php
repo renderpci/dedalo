@@ -20,9 +20,9 @@ class component_select_lang extends component_relation_common {
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
-	* @return string | null $valor
+	* @return string|null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -31,13 +31,13 @@ class component_select_lang extends component_relation_common {
 
 		// Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
-				foreach ($dato as $key => $current_locator) {
+				foreach ($dato as $current_locator) {
 					if (!is_object($current_locator)) {
 						if(SHOW_DEBUG) {
 							dump($dato," dato");
 						}
 						trigger_error(__METHOD__." Wrong dato format. OLD format dato in $this->label $this->tipo .Expected object locator, but received: ".gettype($current_locator) .' : '. print_r($current_locator,true) );
-						return $current_locator;
+						return to_string($current_locator);
 					}
 				}
 			}
@@ -186,7 +186,7 @@ class component_select_lang extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$valor = $this->get_valor( $lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
 
