@@ -218,7 +218,8 @@ const get_content_data = async function(self) {
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
 							modification_date	: self.modification_date || null, // tm var
-							locator				: self.locator
+							locator				: self.locator,
+							ar_instances		: self.ar_instances
 						})
 						if (content_node) {
 							column_node.appendChild(content_node)
