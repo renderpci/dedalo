@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_RELATION_RELATED
-*
 *
 */
 class component_relation_related extends component_relation_common {
@@ -143,6 +143,11 @@ class component_relation_related extends component_relation_common {
 					, logger::DEBUG
 				);
 				return false;
+			}
+
+		// Add type
+			if (!isset($locator->type)) {
+				$locator->type = $this->default_relation_type;
 			}
 
 		// Add type_rel
@@ -485,9 +490,11 @@ class component_relation_related extends component_relation_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
+	*
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
@@ -572,7 +579,7 @@ class component_relation_related extends component_relation_common {
 						}
 					}
 				}
-			}
+			}//end foreach ($option_obj as $key => $value)
 		}
 
 
