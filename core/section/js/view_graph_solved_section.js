@@ -913,20 +913,69 @@ view_graph_solved_section.render_column_drag = function(options){
 			parent			: fragment
 		})
 
+	const drag_container = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'drag_container',
+		parent 			: fragment
+	})
+		const drag_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'drag_node draggable',
+			parent 			: drag_container
+		})
+		drag_container.draggable = true
+		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, options={
+				section_record_node	: drag_container,
+				paginated_key		: options.paginated_key,
+				total_records		: self.total,
+				locator 			: options.locator,
+				caller 				: self,
+				drag_node 			: drag_node
+			})
+		})
+
+		for (var i = 0; i < options.ar_instances.length; i++) {
+			const instace_node = options.ar_instances[i].node.cloneNode(true)
+			drag_node.appendChild(instace_node)
+		}
 
 	return fragment
 }// end render_column_drag
 
 
 
+/**
+* ON_DRAGSTART
+* Get element dataset path as event.dataTransfer from selected component
+* @param DOM node
+*	Its a section record (only in mosaic mode)
+* @param event
+* @param object options
+* @return bool true
+*/
+export const on_dragstart = function(node, event, options) {
+	// event.preventDefault();
+	event.stopPropagation();
 
+	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+	const transfer_data = {
+		locator			: options.locator,
+		paginated_key	: options.paginated_key
+	}
 
+	// the data will be transfer to drop in text format
+	const data = JSON.stringify(transfer_data)
 
+	// event.dataTransfer.effectAllowed = 'c';
+	event.dataTransfer.setData('text/plain', data);
 
+	// style the drag element to be showed in drag mode
+	node.classList.add('dragging')
 
+	event.dataTransfer.setDragImage(options.drag_node, 0, 20);
 
-
-
+	return true
+}//end ondrag_start
 
 
 
