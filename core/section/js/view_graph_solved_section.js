@@ -245,13 +245,33 @@ const get_graph = function(options){
 			svg.attr("viewBox", [-new_width / 2, -new_height / 2, new_width, new_height])
 		});
 
-	// Add a line for each link, and a circle for each node.
+ 	// Per-type markers
+	// Arrow pointer: It will store into the svg and will use in the path as "marker-end" with URL pointed to id
+	svg.append("defs")
+		.append('marker')
+		.attr("id", "arrow")
+		.attr("viewBox", "0 -5 10 10")
+		.attr("refX", 0)
+		.attr("refY", 0)
+		.attr("markerWidth", 3)
+		.attr("markerHeight", 3)
+		.attr("orient", "auto-start-reverse")
+		.append("path")
+			.attr("fill", color)
+			.attr("d", "M0,-5L10,0L0,5");
+
+	// links
+	// path between nodes
+	// the path will have a arrow pointing to the target
+	// use .data array to create all links
 	const link = svg.append("g")
-		.attr("stroke", "#999")
+		.attr("fill", "none")
 		.attr("stroke-opacity", 0.6)
-		.selectAll("line")
+		.selectAll("path")
 		.data(links)
-		.join("line")
+		.join("path")
+			.attr("stroke", d => color(d.type))
+			.attr("marker-end", 'url(#arrow)')
 			.attr("stroke-width", d => Math.sqrt(d.value))
 			.on("click", link_clicked)
 			.on("mouseenter", link_mouse_enter)
