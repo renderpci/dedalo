@@ -62,7 +62,8 @@ export const get_d3_data = function(options) {
 
 	const nodes = []
 	const links = []
-	for (var i = sources.length - 1; i >= 0; i--) {
+
+	for (let i = sources.length - 1; i >= 0; i--) {
 		// source
 			const current_souce = sources[i]
 			const ar_source_id = current_souce.value.map(el => {
@@ -105,6 +106,7 @@ export const get_d3_data = function(options) {
 			if(!target_found){
 				nodes.push(target)
 			}
+
 
 		// source role
 			const source_role = datum.data.find(el =>
