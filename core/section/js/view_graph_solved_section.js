@@ -307,37 +307,71 @@ const get_graph = function(options){
 
 	// Set the position attributes of links and nodes each time the simulation ticks.
 	simulation.on("tick", () => {
+		// links
+		// target point will need to be calculated twice;
+		// - first the path need a target in the center of the node (d.target)
+		// - second when first is done, is possible calculate the path length, the node size (circle) and arrow size
+		// with all sizes, creates new point that will be the target point.
 		link
-			//.attr("d", linkArc);
-			.attr("x1", d => d.source.x)
-			.attr("y1", d => d.source.y)
-			.attr("x2", d => d.target.x)
-			.attr("y2", d => d.target.y);
+			.attr("d", function(d){
+				// first, use the target point to create the path
+				const x_target	= d.target.x
+				const y_target	= d.target.y
+
+				return link_form({
+					d: d,
+					x_target : x_target,
+					y_target : y_target
+				})
+			})
+			.attr("d", function(d){
+				// second, with the previous path, calculate his length
+				const pl = this.getTotalLength()
+				// use the radius of the circle (10) a offset it (*2) and calculate the arrow size √3**2+3**2)
+				const r = 10 * 2 + Math.sqrt(3**2 + 3 **2)
+				// create new point in the path
+				const m = this.getPointAtLength(pl - r);
+				const x_target	= m.x
+				const y_target	= m.y
+
+				return link_form({
+					d: d,
+					x_target : x_target,
+					y_target : y_target
+				})
+			});
 
 		node
 			.attr("transform", d => `translate(${d.x},${d.y})`);
 	});
 
+	// calculate the svg parameters for the paths
+	// if the path is duplicated, an arc will created, it will has 'link_number' parameter with an int of the number of the duplicate 1,2,3
+	// if the path is not duplicate, it will be a line
+	function link_form(options) {
 
-	// function linkArc(d) {
-	// 	const r = Math.hypot(d.target.x - d.source.x, d.target.y - d.source.y);
-	// 	return `
-	// 			M${d.source.x},${d.source.y}
-	// 			A${r},${r} 0 0,1 ${d.target.x},${d.target.y}
-	// 		`;
-	// }
+		const d			= options.d
+		const x_target	= options.x_target
+		const y_target	= options.y_target
 
-	// Reheat the simulation when drag starts, and fix the subject position.
-	function dragstarted(event) {
-		if (!event.active) simulation.alphaTarget(0.3).restart();
-		event.subject.fx = event.subject.x;
-		event.subject.fy = event.subject.y;
-	}
+		// the path is duplicate; create a arc
+		if(d.link_number){
+			// the radius of the arc will be different for every duplicate
+			const r = 75/d.link_number;
+			// if the path point to same node, self_linked, the large of the path need to be 1 else 0
+			const large_arc	= (d.self_linked) ? 1 : 0
+			// if the path point to same node, self_linked, the source point and target point need to be different
+			// if the path has the same source point as target point the path collapse and don't show it.
+			const x_source	= (d.self_linked) ? d.source.x + 1 : d.source.x
+			const y_source	= (d.self_linked) ? d.source.y + 1 : d.source.y
 
-	// Update the subject (dragged node) position during drag.
-	function dragged(event) {
-		event.subject.fx = event.x;
-		event.subject.fy = event.y;
+			return `
+					M${x_source},${y_source}
+					A${r},${r} 0 ${large_arc},1 ${x_target},${y_target}
+				`;
+		}else{
+			return `M${d.source.x},${d.source.y} L ${x_target},${y_target}`
+		}
 	}
 
 	// Restore the target alpha so the simulation cools after dragging ends.
