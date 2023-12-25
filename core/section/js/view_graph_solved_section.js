@@ -322,6 +322,12 @@ const get_graph = function(options){
 		.on("start", dragstarted)
 		.on("drag", dragged)
 		.on("end", dragended));
+		// Add a drag behavior for the node
+		// nodes can move at any position and all connected will be re-calculated his position
+			node.call(d3.drag()
+				.on("start", dragstarted)
+				.on("drag", dragged)
+				.on("end", dragended));
 
 	// Set the position attributes of links and nodes each time the simulation ticks.
 	simulation.on("tick", () => {
@@ -394,11 +400,6 @@ const get_graph = function(options){
 
 	// Drag and Drop new connections
 	// user drag a section_record of the left section list into a node
-	function dragended(event) {
-		if (!event.active) simulation.alphaTarget(0);
-		event.subject.fx = null;
-		event.subject.fy = null;
-	}
 
 		// when mouse enter with a drag move, change the node style to show it as activate
 		function on_dragenter(event){
@@ -516,26 +517,27 @@ const get_graph = function(options){
 
 	// Drag the nodes into new position
 	// user move a node to other position, recalculate all sizes and positions of the links and nodes
-		const section_tipo	= p.locator.section_tipo
-		const section_id	= p.locator.section_id
 
-		// open a new window
-			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-				tipo			: section_tipo,
-				section_tipo	: section_tipo,
-				id				: section_id,
-				mode			: 'edit',
-				session_save	: false, // prevent to overwrite current section session
-				menu			: true
-			})
-			open_window({
-				url			: url,
-				name		: 'record_view_' + section_id,
-			})
-	}
+		// Reheat the simulation when drag starts, and fix the subject position.
+		function dragstarted(event) {
+			if (!event.active) simulation.alphaTarget(0.3).restart();
+			event.subject.fx = event.subject.x;
+			event.subject.fy = event.subject.y;
+		}
 
+		// Update the subject (dragged node) position during drag.
+		function dragged(event) {
+			event.subject.fx = event.x;
+			event.subject.fy = event.y;
+		}
 
-	function link_clicked(event, p) {
+		// Restore the target alpha so the simulation cools after dragging ends.
+		// Unfix the subject position now that it’s no longer being dragged.
+		function dragended(event) {
+			if (!event.active) simulation.alphaTarget(0);
+			event.subject.fx = null;
+			event.subject.fy = null;
+		}
 
 		const section_tipo	= p.locator.section_tipo
 		const section_id	= p.locator.section_id
