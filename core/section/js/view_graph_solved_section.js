@@ -600,7 +600,28 @@ const get_graph = function(options){
 			.text(`(${p.target_role})`);
 	}
 
-	function link_mouse_leave(event, p) {
+		// when user move mouse over path, show the role of the source and the target
+		function link_mouse_enter(event, p) {
+
+			// get the text of the source and target node
+			const source_text_node = d3.select("#" + p.source.id);
+			const target_text_node = d3.select("#" + p.target.id);
+
+			// add source and target text node with role enclosed by "()"
+			source_text_node.append("text")
+				.attr("x", 14)
+				.attr("y", 20)
+				.attr("dy", "0em")
+				.attr("id", "role")
+				.text((p.source_role) ? `(${p.source_role})` : '');
+
+			target_text_node.append("text")
+				.attr("x", 14)
+				.attr("y", 20)
+				.attr("dy", "0em")
+				.attr("id", "role")
+				.text((p.target_role) ? `(${p.target_role})`: '');
+		}
 
 		const source_text_node = d3.selectAll("#role").remove();;
 	}
