@@ -70,14 +70,14 @@ export const get_d3_data = function(options) {
 				return `${el.section_tipo}_${el.section_id}`
 			})
 
-			const source_id = ar_source_id.join('|')
+			const source_id = (current_souce.value[0]) ? ar_source_id.join('|') : `s${i}_s${i}`
 			const source_found = nodes.find(el => el.id === source_id)
 
 			const source = {
 				id				: source_id,
 				name			: current_souce.literal,
 				locator			: current_souce.value[0],
-				section_tipo	: current_souce.value[0].section_tipo
+				section_tipo	: (current_souce.value[0]) ? current_souce.value[0].section_tipo : null
 			}
 
 			if(!source_found){
@@ -94,14 +94,14 @@ export const get_d3_data = function(options) {
 			const ar_target_id = current_target.value.map(el => {
 				return `${el.section_tipo}_${el.section_id}`
 			})
-			const target_id = ar_target_id.join('|')
+			const target_id = (current_target.value[0]) ?  ar_target_id.join('|') : `t${i}_t${i}`
 			const target_found = nodes.find(el => el.id === target_id)
 
 			const target = {
 				id				: target_id,
 				name			: current_target.literal,
 				locator			: current_target.value[0],
-				section_tipo	: current_target.value[0].section_tipo
+				section_tipo	: (current_target.value[0]) ? current_target.value[0].section_tipo : null
 			}
 			if(!target_found){
 				nodes.push(target)
