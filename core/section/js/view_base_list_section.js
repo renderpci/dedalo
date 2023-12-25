@@ -116,8 +116,6 @@ view_base_list_section.render = async function(self, options) {
 
 		}
 
-			console.log("self.paginator:",self.paginator);
-
 	// list body
 		const list_body = ui.create_dom_element({
 			element_type	: 'div',
