@@ -168,10 +168,6 @@ const get_graph = function(options){
 
 	// Specify the dimensions of the graph.
 	const size		= content_data.getBoundingClientRect()
-
-	const data = options.data
-
-	// Specify the dimensions of the chart.
 	const width		= size.width;
 	const height	= size.height;
 
@@ -246,6 +242,7 @@ const get_graph = function(options){
 		// .attr("style", "max-width: 100%; height: auto;")
 		.classed("svg_content", true);;
 
+		// recalculate the size of the view-box every time that window has resized.
 		window.addEventListener("resize", function(){
 			const new_size 		= content_data.getBoundingClientRect()
 			const new_width		= new_size.width;
@@ -285,17 +282,10 @@ const get_graph = function(options){
 			.on("mouseenter", link_mouse_enter)
 			.on("mouseleave", link_mouse_leave);
 
-
-	// const link = svg.append("g")
-	// 	.attr("fill", "none")
-	// 	.attr("stroke-width", 1.5)
-	// 	.selectAll("path")
-	// 	.data(links)
-	// 	.join("path")
-	// 		.attr("stroke", d => color(d.type))
-	// 		.attr("marker-end", d => `url(${new URL(`#arrow-${d.type}`, location)})`);
-
-
+	// nodes
+	// a circle representing the connected thing
+	// nodes will open his section (people will open rsc197, entity will open rsc106, etc.)
+	// nodes of different sections will use different colors to identify it
 	const node = svg.append("g")
 		.attr("fill", "currentColor")
 		.attr("stroke-linecap", "round")
@@ -304,7 +294,7 @@ const get_graph = function(options){
 			.data(nodes)
 			.join("g");
 
-	// add id to the node
+		// add id to the node
 		node
 			.attr("id", d => d.id)
 
@@ -402,8 +392,8 @@ const get_graph = function(options){
 		}
 	}
 
-	// Restore the target alpha so the simulation cools after dragging ends.
-	// Unfix the subject position now that it’s no longer being dragged.
+	// Drag and Drop new connections
+	// user drag a section_record of the left section list into a node
 	function dragended(event) {
 		if (!event.active) simulation.alphaTarget(0);
 		event.subject.fx = null;
@@ -524,8 +514,8 @@ const get_graph = function(options){
 			}
 		}
 
-	function node_clicked(event, p) {
-
+	// Drag the nodes into new position
+	// user move a node to other position, recalculate all sizes and positions of the links and nodes
 		const section_tipo	= p.locator.section_tipo
 		const section_id	= p.locator.section_id
 
