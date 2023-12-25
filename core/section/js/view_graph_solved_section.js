@@ -597,8 +597,6 @@ const get_graph = function(options){
 					name		: 'record_view_' + section_id,
 				})
 		}
-			.text(`(${p.target_role})`);
-	}
 
 		// when user move mouse over path, show the role of the source and the target
 		function link_mouse_enter(event, p) {
@@ -623,8 +621,11 @@ const get_graph = function(options){
 				.text((p.target_role) ? `(${p.target_role})`: '');
 		}
 
-		const source_text_node = d3.selectAll("#role").remove();;
-	}
+		// when user move the mouse out of the path remove all text role nodes
+		function link_mouse_leave(event, p) {
+
+			const source_text_node = d3.selectAll("#role").remove();;
+		}
 
 	return svg.node();
 }
@@ -723,7 +724,8 @@ const render_left = async (self) => {
 				parent			: section_select
 			})
 			section_option.section_tipo = section.tipo
-		}
+		}// end for
+
 		section_select.addEventListener('change', async function(e) {
 
 			while (section_container.hasChildNodes()) {
