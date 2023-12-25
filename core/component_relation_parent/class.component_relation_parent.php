@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * COMPONENT_RELATION_PARENT
 * Class to manage parent relation between section.
@@ -156,114 +157,291 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public function set_dato($dato) : bool {
 
-		// format check
+		// dato format check
 			if (is_string($dato)) { // Tool Time machine case, dato is string
-				$dato = json_decode($dato);
+				$dato = json_handler::decode($dato);
 			}
 			if (is_object($dato)) {
-				$dato = array($dato);
+				$dato = [$dato];
 			}
-			# Ensures is a real non-associative array (avoid JSON encode as object)
-			$dato = is_array($dato) ? array_values($dato) : (array)$dato;
+			// Ensures is a real non-associative array (avoid JSON encode as object)
+			if (!is_null($dato)) {
+				$dato = is_array($dato)
+					? array_values($dato)
+					: (array)$dato;
+			}
 
 		// search mode
 			if ($this->mode==='search') {
-				# Fix dato
+				// Fix dato
 				$this->dato = $dato;
 
 				return true;
 			}
 
-		// changed_data. Updates and SAVE data in component children associated with the current component
-			if (isset($this->changed_data)) {
-
-				// changed_data case
-
-				// format object:
-					// {
-					//     "action": "remove",
-					//     "key": 3,
-					//     "value": null
-					//     "to_remove": {locator}
-					// }
-				$changed_data = $this->changed_data;
-				switch ($changed_data->action) {
-					case 'remove':
-						if (isset($changed_data->to_remove)) {
-							$locator	= $changed_data->to_remove;
-							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on remove parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-						break;
-					case 'insert':
-					case 'update':
-						if (isset($dato[$changed_data->key])) {
-							$locator	= $dato[$changed_data->key];
-							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-						break;
-					default:
+		// remove previous dato
+			$previous_dato = $this->get_dato();
+			if (!empty($previous_dato)) {
+				foreach ($previous_dato as $locator) {
+					$result = (bool)$this->remove_parent(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
 						debug_log(__METHOD__
-							." Error. action: '$changed_data->action' not defined ! "
+							. " Error on remove parent" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
 							, logger::ERROR
 						);
-						break;
+					}
 				}
-			}else{
-
-				// import case
-
-				// remove previous dato
-					$previous_dato = $this->get_dato();
-					if (!empty($previous_dato)) {
-						foreach ($previous_dato as $locator) {
-							$result		= (bool)$this->remove_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on remove parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-					}
-
-				// add the new one
-					if (!empty($dato)) {
-						foreach ($dato as $locator) {
-							$result		= (bool)$this->add_parent($locator->section_tipo, $locator->section_id);
-							if (!$result) {
-								debug_log(__METHOD__
-									. " Error on add parent" . PHP_EOL
-									. 'result: ' . to_string($result) . PHP_EOL
-									. 'locator: ' . to_string($locator)
-									, logger::ERROR
-								);
-							}
-						}
-					}
 			}
 
-			// $this->update_parents($dato);
+		// add the new one if any
+			if (!empty($dato)) {
+				foreach ($dato as $locator) {
+					$result	= (bool)$this->add_parent(
+						$locator->section_tipo,
+						$locator->section_id
+					);
+					if (!$result) {
+						debug_log(__METHOD__
+							. " Error on add parent" . PHP_EOL
+							. 'result: ' . to_string($result) . PHP_EOL
+							. 'locator: ' . to_string($locator)
+							, logger::ERROR
+						);
+					}
+				}
+			}
+
+		// $this->update_parents($dato);
+
+		// force read the new value on get_dato (prevent cache inconsistency)
+			unset($this->dato_resolved); //  = null;
+
 
 		return true;
 	}//end set_dato
+
+
+
+	/**
+	* GET_VALOR
+	* Get value . default is get dato . overwrite in every different specific component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @return string|null $valor
+	*/
+	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
+
+		$dato = $this->get_dato();
+
+		// empty case
+			if (empty($dato)) {
+				return null;
+			}
+
+		// resolve locators
+			$ar_valor = [];
+			foreach ((array)$dato as $current_locator) {
+				$ar_valor[] = ts_object::get_term_by_locator(
+					$current_locator,
+					$lang,
+					true // bool from_cache
+				);
+			}
+
+		// component valor
+			$ar_valor_clean = [];
+			foreach ($ar_valor as $value) {
+				if (empty($value)) {
+					continue;
+				}
+				if(!empty(trim($value))) {
+					$ar_valor_clean[] = $value;
+				}
+			}
+			$valor = implode(', ', $ar_valor_clean);
+
+
+		return $valor;
+	}//end get_valor
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @param string|null $lang = DEDALO_DATA_LANG
+	* @param object $option_obj = null
+	* @return string $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=DEDALO_DATA_LANG, object $option_obj=null) : ?string {
+
+		$resolve_value = isset($option_obj->resolve_value)
+			? $option_obj->resolve_value
+			: false;
+
+		// custom_get_term_by_locator function.
+		// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
+			$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
+
+				$section_map	= section::get_section_map($locator->section_tipo);
+				$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
+				if ($thesaurus_map===false) {
+					return null;
+				}
+
+				$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
+				$section_id		= $locator->section_id;
+				$section_tipo	= $locator->section_tipo;
+
+				$ar_value = [];
+				foreach ($ar_tipo as $tipo) {
+
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+					// $model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
+					$component	= component_common::get_instance(
+						$model,
+						$tipo,
+						$section_id,
+						'list',
+						$lang,
+						$section_tipo
+					);
+					// process_dato_arguments
+						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
+					// valor
+						// $valor	= $component->get_valor($lang);
+						$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
+						if (empty($valor)) {
+
+							$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
+							$dato_full	= $component->get_dato_full();
+							$valor		= component_common::get_value_with_fallback_from_dato_full(
+								$dato_full,
+								true,
+								$main_lang,
+								$lang
+							);
+							if (is_array($valor)) {
+								$valor = implode(', ', $valor);
+							}
+						}
+
+					if (!empty($valor)) {
+						$ar_value[] = $valor;
+					}
+				}//end foreach ($ar_tipo as $tipo)
+
+				$value = implode(', ', $ar_value);
+
+				return $value;
+			};//end custom_get_term_by_locator function
+
+		if (isset($option_obj->add_parents)) {
+
+			// recursively
+				$section_id		= $this->get_section_id();
+				$section_tipo	= $this->section_tipo;
+
+			// parent_section_tipo
+				$parent_section_tipo = isset($option_obj->parent_section_tipo)
+					? $option_obj->parent_section_tipo
+					: false;
+
+			// parents
+				$parents = self::get_parents_recursive(
+					$section_id,
+					$section_tipo,
+					true // bool skip_root
+				);
+
+			// new_dato
+			$new_dato = [];
+			foreach ($parents as $locator) {
+
+				// non resolve case (only section_id from current locator)
+					if ($resolve_value!==true) {
+						$new_dato[] = $locator->section_id;
+						continue;
+					}
+
+				// to resolve cases
+				if($parent_section_tipo!==false) {
+
+					// term is autocomplete cases
+					$term_dato = ts_object::get_term_dato_by_locator($locator);
+					foreach ($term_dato as $term_locator) {
+
+						// check valid locator section_tipo
+							if (!isset($term_locator->section_tipo)) {
+								debug_log(__METHOD__
+									. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
+									. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
+									. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
+									, logger::DEBUG
+								);
+								continue;
+							}
+
+						if($parent_section_tipo===$term_locator->section_tipo){
+
+							// value custom calculate
+								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+							// new dato add
+								$new_dato[] = !empty($value)
+									? strip_tags($value)
+									: $value;
+						}
+					}//end foreach ($term_dato as $term_locator)
+
+				}else{
+
+					$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
+
+					$current_value = !empty($value)
+						? strip_tags($value)
+						: $value;
+
+					$new_dato[] = $current_value;
+				}
+			}//end foreach ($parents as $locator)
+
+		}else{
+
+			$dato = $this->get_dato();
+
+			if ($resolve_value===true) {
+				$new_dato = [];
+				foreach ((array)$dato as $current_locator) {
+					// $value = ts_object::get_term_by_locator(
+					// 	$current_locator,
+					// 	$lang,
+					// 	true // bool from_cache
+					// );
+					$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
+					$new_dato[] = strip_tags($value);
+				}
+			}else{
+				// default (untouched component dato)
+				$new_dato = $dato;
+			}
+		}//end if (isset($option_obj->add_parents))
+
+		$diffusion_value = !empty($new_dato)
+			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE) : $new_dato)
+			: null;
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
 
 
 
@@ -273,20 +451,22 @@ class component_relation_parent extends component_relation_common {
 	* @param string $action
 	* 	remove|add
 	* @param string $children_section_tipo
-	* @param mixed $children_section_id
+	* @param int|string $children_section_id
 	* @param string $component_relation_children_tipo = null
 	*
 	* @return bool $result
 	*/
-	private function update_children(string $action, string $children_section_tipo, $children_section_id, string $component_relation_children_tipo=null) : bool {
+	private function update_children(
+		string $action, string $children_section_tipo, int|string $children_section_id, string $component_relation_children_tipo=null
+		) : bool {
 
-		$result = false;
+		// default bool 	result
+			$result = false;
 
 		// short vars
 			$tipo			= $this->tipo;
 			$section_tipo	= $this->section_tipo;
 			$section_id		= $this->section_id;
-
 
 		// component_relation_children_tipo. Resolve if null
 			if (empty($component_relation_children_tipo)) {
@@ -328,11 +508,17 @@ class component_relation_parent extends component_relation_common {
 		// change link to me in relation_children
 			switch ($action) {
 				case 'remove':
-					$changed = (bool)$component_relation_children->remove_me_as_your_child($section_tipo, $section_id);
+					$changed = (bool)$component_relation_children->remove_me_as_your_child(
+						$section_tipo,
+						$section_id
+					);
 					break;
 
 				case 'add':
-					$changed = (bool)$component_relation_children->make_me_your_child($section_tipo, $section_id);
+					$changed = (bool)$component_relation_children->make_me_your_child(
+						$section_tipo,
+						$section_id
+					);
 					break;
 
 				default:
@@ -347,10 +533,15 @@ class component_relation_parent extends component_relation_common {
 
 		// save if changed
 			if ($changed===true) {
+
 				$saved = $component_relation_children->Save();
 				if ($saved && $saved>0) {
 					$result = true;
 				}
+
+				// force read the new value on get_dato (prevent cache inconsistency)
+				$this->dato_resolved = null;
+				$this->get_dato();
 			}
 
 
@@ -394,9 +585,9 @@ class component_relation_parent extends component_relation_common {
 	*/
 	public static function get_component_relation_children_tipo(string $component_tipo) : ?string {
 
-		$model_name 	 = 'component_relation_children';
-		$ar_children 	 = (array)common::get_ar_related_by_model($model_name, $component_tipo);
-		$ar_children_len = count($ar_children);
+		$model_name			= 'component_relation_children';
+		$ar_children		= (array)common::get_ar_related_by_model($model_name, $component_tipo);
+		$ar_children_len	= count($ar_children);
 		if ($ar_children_len===0) {
 
 			debug_log(__METHOD__
@@ -420,7 +611,8 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		// component_relation_children_tipo. Select first
-		$component_relation_children_tipo = reset($ar_children);
+		$component_relation_children_tipo = $ar_children[0] ?? null;
+
 
 		return $component_relation_children_tipo;
 	}//end get_component_relation_children_tipo
@@ -433,16 +625,26 @@ class component_relation_parent extends component_relation_common {
 	*/
 	protected function get_my_parents() : array {
 
-		$target_component_children_tipos = (array)component_relation_parent::get_target_component_children_tipos($this->tipo);
-
 		$parents = [];
 
-		if(empty($this->section_id)){
-			return $parents;
-		}
+		// empty section_id case
+			if(empty($this->section_id)){
+				return $parents;
+			}
 
-		foreach ($target_component_children_tipos as $children_component_tipo) {
-			$parents = array_merge($parents, component_relation_parent::get_parents($this->section_id, $this->section_tipo, $children_component_tipo));
+		$target_component_children_tipos = component_relation_parent::get_target_component_children_tipos($this->tipo);
+
+		if (!empty($target_component_children_tipos)) {
+			foreach ($target_component_children_tipos as $children_component_tipo) {
+				$parents = array_merge(
+					$parents,
+					component_relation_parent::get_parents(
+						$this->section_id,
+						$this->section_tipo,
+						$children_component_tipo
+					)
+				);
+			}
 		}
 
 		return $parents;
@@ -692,101 +894,23 @@ class component_relation_parent extends component_relation_common {
 	/**
 	* GET_PARENTS_RECURSIVE
 	* Iterate recursively all parents of current term
-	* @param int $section_id
+	* @param int|string $section_id
 	* @param string $section_tipo
 	* @param bool $skip_root = true
-	*
+	* @param array $parents_recursive = []
+	* 	Accumulates results to allow check for duplicates
 	* @return array $parents_recursive
 	*/
-		// public static function get_parents_recursive_OLD($section_id, string $section_tipo, bool $skip_root=true) : array {
-
-		// 	// static vars set
-		// 		static $ar_parents_recursive_resolved	= array();
-		// 		static $locators_resolved				= array();
-
-		// 	// key_resolve
-		// 		$key_resolve = $section_tipo.'_'.$section_id;
-		// 		if (isset($ar_parents_recursive_resolved[$key_resolve])) {
-		// 			return $ar_parents_recursive_resolved[$key_resolve];
-		// 		}
-
-		// 	// parents_recursive set
-		// 		$parents_recursive = array();
-
-		// 	// Add first level
-		// 		$ar_parents			= component_relation_parent::get_parents($section_id, $section_tipo);
-		// 		$parents_recursive	= $ar_parents;
-
-		// 	// Self include as resolved
-		// 		$lkey						= $section_tipo.'_'.$section_id;
-		// 		$locators_resolved[$lkey]	= $ar_parents;
-
-		// 	// iterate ar_parents
-		// 		foreach ($ar_parents as $current_locator) {
-
-		// 			// Check self recursion
-		// 				$lkey = $current_locator->section_tipo.'_'.$current_locator->section_id;
-		// 				if (array_key_exists($lkey, $locators_resolved)) {
-		// 					$parents_recursive = array_merge($parents_recursive, $locators_resolved[$lkey]);
-		// 					continue;
-		// 				}
-
-		// 			// Add every parent level
-		// 				$current_ar_parents = component_relation_parent::get_parents_recursive(
-		// 					$current_locator->section_id,
-		// 					$current_locator->section_tipo,
-		// 					$skip_root
-		// 				);
-		// 				$current_ar_parents_safe = [];
-		// 				foreach ($current_ar_parents as $c_parent) {
-		// 					#debug_log(__METHOD__." c_parent ".to_string($c_parent), logger::DEBUG);
-		// 					if ($skip_root===true) {
-		// 						if ($c_parent->section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) continue; // Skip root hierarchy term
-		// 					}
-
-		// 					// Add to array
-		// 						$current_ar_parents_safe[] = $c_parent;
-
-		// 					// Self include as resolved
-		// 						#$locators_resolved[$c_parent->section_tipo.'_'.$c_parent->section_id] = [$c_parent];
-		// 				}
-
-		// 			// Self include as resolved
-		// 				$locators_resolved[$lkey] = $current_ar_parents_safe;
-
-		// 			// add
-		// 				$parents_recursive = array_merge($parents_recursive, $current_ar_parents_safe);
-		// 		}
-
-		// 	// Set as resolved
-		// 		$ar_parents_recursive_resolved[$key_resolve] = $parents_recursive;
-
-
-		// 	return $parents_recursive;
-		// }//end get_parents_recursive
-
-
-
-	/**
-	* GET_PARENTS_RECURSIVE
-	* Iterate recursively all parents of current term
-	* @param int $section_id
-	* @param string $section_tipo
-	* @param bool $skip_root = true
-	*
-	* @return array $parents_recursive
-	*/
-	public static function get_parents_recursive($section_id, string $section_tipo, bool $skip_root=true) : array {
-
-		$parents_recursive = [];
+	public static function get_parents_recursive(int|string $section_id, string $section_tipo, bool $skip_root=true, array $parents_recursive=[]) : array {
 
 		// cache key_resolve
 			static $parents_recursive_resolved = [];
-			$key_resolve = $section_tipo.'_'.$section_id;
+			$key_resolve = $section_tipo.'_'.$section_id.'_'.(int)$skip_root;
 			if (isset($parents_recursive_resolved[$key_resolve])) {
 				return $parents_recursive_resolved[$key_resolve];
 			}
 
+		// parents
 		$ar_parents = component_relation_parent::get_parents($section_id, $section_tipo);
 		if (!empty($ar_parents)) {
 			foreach ($ar_parents as $current_locator) {
@@ -796,18 +920,64 @@ class component_relation_parent extends component_relation_common {
 						continue;
 					}
 
+				// skip self
+					if ($current_locator->section_tipo===$section_tipo && $current_locator->section_id==$section_id) {
+						debug_log(__METHOD__
+							. " Reference to self is omitted (current_locator) " . PHP_EOL
+							. ' current_locator: ' . to_string($current_locator)
+							, logger::WARNING
+						);
+						continue;
+					}
+
+				// skip already added
+					if (locator::in_array_locator($current_locator, $parents_recursive, ['section_tipo','section_id'])) {
+						debug_log(__METHOD__
+							. " Already added locator is omitted (current_locator) " . PHP_EOL
+							. ' current_locator: ' . to_string($current_locator)
+							, logger::WARNING
+						);
+						continue;
+					}
+
 				// add current
 					$parents_recursive[] = $current_locator;
 
 				// recursion
-					$children_recursive = component_relation_parent::get_parents_recursive(
+					$parent_parents_recursive = component_relation_parent::get_parents_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
-						$skip_root
+						$skip_root,
+						$parents_recursive
 					);
-					$parents_recursive = array_merge($parents_recursive, $children_recursive);
+					if (!empty($parent_parents_recursive)) {
+						foreach ($parent_parents_recursive as $parent_locator) {
 
-			}
+							// skip self
+								if ($parent_locator->section_tipo===$section_tipo && $parent_locator->section_id==$section_id) {
+									debug_log(__METHOD__
+										. " Reference to self is omitted (parent_locator) " . PHP_EOL
+										. ' parent_locator: ' . to_string($parent_locator)
+										, logger::WARNING
+									);
+									continue;
+								}
+
+							// skip already added
+								if (locator::in_array_locator($parent_locator, $parents_recursive, ['section_tipo','section_id'])) {
+									debug_log(__METHOD__
+										. " Already added locator is omitted (parent_locator) " . PHP_EOL
+										. ' parent_locator: ' . to_string($parent_locator)
+										, logger::WARNING
+									);
+									continue;
+								}
+
+							// add current
+								$parents_recursive[] = $parent_locator;
+						}
+					}
+			}//end foreach ($ar_parents as $current_locator)
 		}
 
 		// cache Set as resolved
@@ -855,274 +1025,57 @@ class component_relation_parent extends component_relation_common {
 
 
 	/**
-	* GET_VALOR
-	* Get value . default is get dato . overwrite in every different specific component
-	* @param string $lang = DEDALO_DATA_LANG
-	* @return string|null $valor
-	*/
-	public function get_valor($lang=DEDALO_DATA_LANG) {
-
-		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return null;
-		}
-
-		$ar_valor = [];
-		foreach ((array)$dato as $current_locator) {
-			$ar_valor[] = ts_object::get_term_by_locator(
-				$current_locator,
-				$lang,
-				true // bool from_cache
-			);
-		}
-
-		# Set component valor
-			$valor='';
-			foreach ($ar_valor as $value) {
-				if(!empty($value)) {
-					$valor .= $value;
-					if(end($ar_valor)!=$value) $valor .= ', ';
-				}
-			}
-
-		return (string)$valor;
-	}//end get_valor
-
-
-
-	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a MYSQL field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @param string|null $lang = DEDALO_DATA_LANG
-	* @param object $option_obj = null
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, object $option_obj=null ) : ?string {
-
-		$resolve_value = isset($option_obj->resolve_value)
-			? $option_obj->resolve_value
-			: false;
-
-		// custom_get_term_by_locator function.
-		// This is a variant of ts_object::get_term_by_locator function, using 'get_diffusion_value' instead 'get_value'
-			$custom_get_term_by_locator = function(object $locator, string $lang, object $option_obj) : ?string {
-
-				$section_map	= section::get_section_map($locator->section_tipo);
-				$thesaurus_map	= isset($section_map->thesaurus) ? $section_map->thesaurus : false;
-				if ($thesaurus_map===false) {
-					return null;
-				}
-
-				$ar_tipo		= is_array($thesaurus_map->term) ? $thesaurus_map->term : [$thesaurus_map->term];
-				$section_id		= $locator->section_id;
-				$section_tipo	= $locator->section_tipo;
-
-				$ar_value = [];
-				foreach ($ar_tipo as $tipo) {
-
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-					// $model	= RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
-					$component	= component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						'list',
-						$lang,
-						$section_tipo
-					);
-					// process_dato_arguments
-						$process_dato_arguments = $option_obj->process_dato_arguments ?? null;
-					// valor
-						// $valor	= $component->get_valor($lang);
-						$valor		= $component->get_diffusion_value($lang, $process_dato_arguments);
-						if (empty($valor)) {
-
-							$main_lang	= hierarchy::get_main_lang( $locator->section_tipo );
-							$dato_full	= $component->get_dato_full();
-							$valor		= component_common::get_value_with_fallback_from_dato_full(
-								$dato_full,
-								true,
-								$main_lang,
-								$lang
-							);
-							if (is_array($valor)) {
-								$valor = implode(', ', $valor);
-							}
-						}
-
-					if (!empty($valor)) {
-						$ar_value[] = $valor;
-					}
-				}//end foreach ($ar_tipo as $tipo)
-
-				$value = implode(', ', $ar_value);
-
-				return $value;
-			};//end custom_get_term_by_locator function
-
-		if (isset($option_obj->add_parents)) {
-
-			// recursively
-				$section_id		= $this->get_section_id();
-				$section_tipo	= $this->section_tipo;
-
-			// parent_section_tipo
-				$parent_section_tipo = isset($option_obj->parent_section_tipo)
-					? $option_obj->parent_section_tipo
-					: false;
-
-			// parents
-				$parents = self::get_parents_recursive(
-					$section_id,
-					$section_tipo,
-					true // bool skip_root
-				);
-
-			// new_dato
-			$new_dato = [];
-			foreach ($parents as $locator) {
-
-				// non resolve case (only section_id from current locator)
-					if ($resolve_value!==true) {
-						$new_dato[] = $locator->section_id;
-						continue;
-					}
-
-				// to resolve cases
-				if($parent_section_tipo!==false) {
-
-					// term is autocomplete cases
-					$term_dato = ts_object::get_term_dato_by_locator($locator);
-					foreach ($term_dato as $term_locator) {
-
-						// check valid locator section_tipo
-							if (!isset($term_locator->section_tipo)) {
-								debug_log(__METHOD__
-									. " Skipped  term_locator (NOT LOCATOR) " . PHP_EOL
-									. ' term_locator: ' . json_encode($term_locator, JSON_PRETTY_PRINT) . PHP_EOL
-									. ' option_obj: ' . json_encode($option_obj, JSON_PRETTY_PRINT)
-									, logger::DEBUG
-								);
-								continue;
-							}
-
-						if($parent_section_tipo===$term_locator->section_tipo){
-
-							// value custom calculate
-								$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-							// new dato add
-								$new_dato[] = !empty($value)
-									? strip_tags($value)
-									: $value;
-						}
-					}//end foreach ($term_dato as $term_locator)
-
-				}else{
-
-					$value = $custom_get_term_by_locator($locator, $lang, $option_obj);
-
-					$current_value = !empty($value)
-						? strip_tags($value)
-						: $value;
-
-					$new_dato[] = $current_value;
-				}
-			}//end foreach ($parents as $locator)
-
-		}else{
-
-			$dato = $this->get_dato();
-
-			if ($resolve_value===true) {
-				$new_dato = [];
-				foreach ((array)$dato as $current_locator) {
-					// $value = ts_object::get_term_by_locator(
-					// 	$current_locator,
-					// 	$lang,
-					// 	true // bool from_cache
-					// );
-					$value = $custom_get_term_by_locator($current_locator, $lang, $option_obj);
-					$new_dato[] = strip_tags($value);
-				}
-			}else{
-				// default (untouched component dato)
-				$new_dato = $dato;
-			}
-		}//end if (isset($option_obj->add_parents))
-
-		$diffusion_value = !empty($new_dato)
-			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE) : $new_dato)
-			: null;
-
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* RESOLVE_CHILDREN
-	* @return
-	*/
-		// private function resolve_children() {
-
-		// 	return true;
-		// }//end resolve_children
-
-
-
-	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
-		$q = $query_object->q;
+		// q
+			$q = $query_object->q;
+			// q sample :
+			// [
+			//     {
+			//         "section_tipo": "test3",
+			//         "section_id": "7974",
+			//         "from_component_tipo": "test71"
+			//     }
+			// ]
 
-		# Like
-		# [section_tipo] => on1
-		# [section_id] => 6286
-		# [type] => dd48
-		# [from_component_tipo] => hierarchy49
+		// parent_locators
+			$parent_locators = is_string($q)
+				? json_decode($q)
+				: $q;
+			if (!is_array($parent_locators)) {
+				$parent_locators = [$parent_locators];
+			}
 
-		$parent_locators = is_string($q)
-			? json_decode($q)
-			: $q;
-		if (!is_array($parent_locators)) {
-			$parent_locators = [$parent_locators];
-		}
+		// children
+			$ar_children = [];
+			foreach ($parent_locators as $current_locator) {
 
-		$ar_children = [];
-		foreach ($parent_locators as $current_locator) {
-
-			$current_component_relation_parent_tipo	= $current_locator->from_component_tipo;
-			$target_component_children_tipos		= component_relation_parent::get_target_component_children_tipos(
-				$current_component_relation_parent_tipo
-			);
-
-			foreach ($target_component_children_tipos as $children_component_tipo) {
-
-				$model_name 	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
-				$component 		= component_common::get_instance(
-					$model_name,
-					$children_component_tipo,
-					$current_locator->section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$current_locator->section_tipo
+				$current_component_relation_parent_tipo	= $current_locator->from_component_tipo;
+				$target_component_children_tipos		= component_relation_parent::get_target_component_children_tipos(
+					$current_component_relation_parent_tipo
 				);
-				$component_children_dato = $component->get_dato();
-				foreach ($component_children_dato as $children_locator) {
-					$ar_children[] = $children_locator->section_id;
+
+				foreach ($target_component_children_tipos as $children_component_tipo) {
+
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
+					$component	= component_common::get_instance(
+						$model_name,
+						$children_component_tipo,
+						$current_locator->section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$current_locator->section_tipo
+					);
+					$component_children_dato = $component->get_dato();
+					foreach ($component_children_dato as $children_locator) {
+						$ar_children[] = $children_locator->section_id;
+					}
 				}
 			}
-		}
 
 		// q_clean
 			$q_clean = array_map(function($el){
@@ -1177,8 +1130,12 @@ class component_relation_parent extends component_relation_common {
 			$my_component_children_tipo_properties	= $RecordObj->get_properties();
 
 		// hierarchy_sections
-			$hierarchy_types	= !empty($my_component_children_tipo_properties->source->hierarchy_types) 	 ? $my_component_children_tipo_properties->source->hierarchy_types : null;
-			$hierarchy_sections	= !empty($my_component_children_tipo_properties->source->hierarchy_sections) ? $my_component_children_tipo_properties->source->hierarchy_sections : null;
+			$hierarchy_types	= !empty($my_component_children_tipo_properties->source->hierarchy_types)
+				? $my_component_children_tipo_properties->source->hierarchy_types
+				: null;
+			$hierarchy_sections	= !empty($my_component_children_tipo_properties->source->hierarchy_sections)
+				? $my_component_children_tipo_properties->source->hierarchy_sections
+				: null;
 
 		// Resolve hierarchy_sections for speed
 			if (!empty($hierarchy_types)) {

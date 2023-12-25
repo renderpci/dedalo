@@ -241,7 +241,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> ['es1','test71',4],
+			'new_value_params'	=> ['test3','test71',2],
 			'test_save'			=> false
 		],
 		(object)[
@@ -252,7 +252,7 @@ function get_elements() : array {
 			'mode'				=> $mode,
 			'lang'				=> $lang,
 			'new_value'			=> 'ar_random_locator',
-			'new_value_params'	=> [$section_tipo,'test54',4]
+			'new_value_params'	=> [$section_tipo,'test54',3]
 		],
 		(object)[
 			'model'			=> 'component_section_id',

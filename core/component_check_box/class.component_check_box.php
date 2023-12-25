@@ -24,7 +24,7 @@ class component_check_box extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string|null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $format='string') : string|null|array {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, $format='string') : string|null|array {
 
 		$dato = $this->get_dato();
 		if (empty($dato)) {
@@ -80,7 +80,7 @@ class component_check_box extends component_relation_common {
 	*
 	* @return string|null $diffusion_value
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = $this->get_valor(
 			$lang ?? DEDALO_DATA_LANG,

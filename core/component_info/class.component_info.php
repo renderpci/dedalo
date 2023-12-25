@@ -111,7 +111,7 @@ class component_info extends component_common {
 	* @param string $widget_lang = DEDALO_DATA_LANG
 	* @return string $valor
 	*/
-	public function get_valor( $widget_lang=DEDALO_DATA_LANG ) : string {
+	public function get_valor(string $widget_lang=DEDALO_DATA_LANG) : string {
 
 		$this->widget_lang = $widget_lang;
 

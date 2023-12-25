@@ -1759,7 +1759,9 @@ abstract class component_common extends common {
 			// 	}
 			// }
 
-		if(!is_array($valor)) return $valor;
+		if(!is_array($valor)) {
+			return $valor;
+		}
 
 		return "<em>No string value</em>";
 	}//end get_valor
@@ -2470,7 +2472,7 @@ abstract class component_common extends common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		// Default behavior is get value
 			$diffusion_value = $this->get_valor(
@@ -3453,20 +3455,13 @@ abstract class component_common extends common {
     *	"key": null,
     *	"value": "rsc167"
     * }
-    * @param bool $fix_changed_data = true
-    * 	Used to discriminate import actions from API calls
 	* @return bool
 	*/
-	public function update_data_value(object $changed_data, $fix_changed_data=true) : bool {
+	public function update_data_value(object $changed_data) : bool {
 
 		$dato				= $this->get_dato() ?? [];
 		$lang				= $this->get_lang();
 		$with_lang_versions	= $this->with_lang_versions;
-
-		// fix changed_data
-			if ($fix_changed_data) {
-				$this->changed_data = $changed_data;
-			}
 
 		switch ($changed_data->action) {
 
@@ -3546,12 +3541,6 @@ abstract class component_common extends common {
 
 					default:
 						$key = $changed_data->key;
-
-						// fix property 'to_remove' to help properly remove
-						if ($fix_changed_data) {
-							$this->changed_data->to_remove = $dato[$key];
-						}
-
 						array_splice($dato, $key, 1);
 						$this->set_dato($dato);
 						break;

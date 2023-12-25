@@ -1040,7 +1040,7 @@ final class Ffmpeg {
 	/**
 	* CONFORM_HEADER
 	* @param string $source_file_path
-	*  like: '/../dedalo/media/av/404/0/test94_test3_334.mp4'
+	*  like: '/../dedalo/media/av/404/0/test94_test3_3.mp4'
 	* @return string|null $result
 	*/
 	public static function conform_header(string $source_file_path) : ?string {
@@ -1053,11 +1053,11 @@ final class Ffmpeg {
 			// source_dir_path. Like /../dedalo/media/av/404/0
 			$source_dir_path	= dirname($source_file_path);
 			$path_info			= pathinfo($source_file_path);
-			// file_path_temp. Like /../dedalo/media/av/404/0/test94_test3_334_temp.mp4
+			// file_path_temp. Like /../dedalo/media/av/404/0/test94_test3_3_temp.mp4
 			$file_path_temp	= $source_dir_path .'/'. $path_info['filename'] .'_temp.'. $path_info['extension'];
-			// file_path_untouched. Like /../dedalo/media/av/404/0/test94_test3_334_untouched.mp4
+			// file_path_untouched. Like /../dedalo/media/av/404/0/test94_test3_3_untouched.mp4
 			$file_path_untouched = $source_dir_path .'/'. $path_info['filename'] .'_untouched.'. $path_info['extension'];
-			// target_file_path. Like /../dedalo/media/av/404/0/test94_test3_334.mp4
+			// target_file_path. Like /../dedalo/media/av/404/0/test94_test3_3.mp4
 			$target_file_path = $source_file_path; // to the same location than the source (moved previously)
 
 		// command

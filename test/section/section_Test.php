@@ -40,6 +40,37 @@ final class section_test extends TestCase {
 
 
 	/**
+	* TEST_CREATE_MINIMUM_SECTIONS
+	* @return object $component
+	*/
+	public function test_create_minimum_sections() {
+
+		$ar_section_id = [
+			1,
+			2,
+			3,
+			4
+		];
+		foreach ($ar_section_id as $section_id) {
+			$section = section::get_instance(
+				$section_id, // string|null section_id
+				self::$section_tipo, // string section_tipo
+				'list',
+				false
+			);
+			$section->forced_create_record();
+
+			$this->assertTrue(
+				gettype($section)==='object',
+				'expected type object : ' . PHP_EOL
+					. gettype($section)
+			);
+		}
+	}//end test_create_minimum_sections
+
+
+
+	/**
 	* TEST_GET_INSTANCE
 	* @return void
 	*/
@@ -355,11 +386,8 @@ final class section_test extends TestCase {
 					$save===null ,
 					'expected save result null. Current result: ' .to_string($save)
 				);
-
 				// break;
 			}
-
-
 	}//end test_get_instance
 
 
@@ -413,18 +441,19 @@ final class section_test extends TestCase {
 			'expected type object. Current type: ' .gettype($result)
 		);
 
-		$section2 = section::get_instance(
-			DEDALO_SECTION_ID_TEMP, // string|null section_id
-			$section_tipo, // string section_tipo
-			$mode
-		);
+		// save_handler session
+			$section2 = section::get_instance(
+				DEDALO_SECTION_ID_TEMP, // string|null section_id
+				$section_tipo, // string section_tipo
+				$mode
+			);
 
-		$result = $section2->get_dato();
+			$result = $section2->get_dato();
 
-		$this->assertTrue(
-			$section2->save_handler==='session' ,
-			'expected save_handler session. Current type: ' .$section2->save_handler
-		);
+			$this->assertTrue(
+				$section2->save_handler==='session' ,
+				'expected save_handler session. Current type: ' .$section2->save_handler
+			);
 	}//end test_get_dato
 
 
@@ -435,7 +464,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_set_dato() : void {
 
-		$section_id		= 3833; // self::$section_id;
+		$section_id		= 4; // self::$section_id;
 		$section_tipo	= self::$section_tipo;
 		$mode			= 'edit';
 
@@ -453,7 +482,8 @@ final class section_test extends TestCase {
 
 		$this->assertTrue(
 			gettype($result)==='boolean' ,
-			'expected type boolean. Current type: ' .gettype($result)
+			'expected type boolean. Current type: ' . PHP_EOL
+				.gettype($result)
 		);
 
 		$dato = $section->get_dato();
@@ -788,7 +818,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_Delete() : void {
 
-		$section_id		= 333;
+		$section_id		= 4;
 		$section_tipo	= self::$section_tipo;
 		$mode			= 'edit';
 
@@ -827,7 +857,7 @@ final class section_test extends TestCase {
 			);
 
 		// new section
-			$section_id = 334;
+			$section_id = 5;
 
 			// check exists
 			$current_section_id_exists = section::section_id_exists( $section_id, $section_tipo );
@@ -1504,9 +1534,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_get_ar_all_section_records_unfiltered() : void {
 
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$section_tipo = self::$section_tipo;
 
 		$result = section::get_ar_all_section_records_unfiltered( $section_tipo );
 
@@ -1531,9 +1559,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_get_resource_all_section_records_unfiltered() : void {
 
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$section_tipo = self::$section_tipo;
 
 		$result = section::get_resource_all_section_records_unfiltered( $section_tipo );
 
@@ -1562,10 +1588,6 @@ final class section_test extends TestCase {
 	* @return void
 	*/
 	public function test_get_components_with_media_content() : void {
-
-		$section_id		= self::$section_id;
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
 
 		$result = section::get_components_with_media_content();
 
@@ -1623,17 +1645,40 @@ final class section_test extends TestCase {
 	*/
 	public function test_forced_create_record() : void {
 
-		$section_id		= 333;
+		$section_id		= 5;
 		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$mode			= 'list';
+
+		// delete section if exists
+			$current_section_id_exists = section::section_id_exists($section_id, $section_tipo);
+			if ($current_section_id_exists) {
+				$section = section::get_instance(
+					$section_id, // string|null section_id
+					$section_tipo, // string section_tipo
+					$mode,
+					false
+				);
+				$result_delete_record = $section->Delete('delete_record');
+				$this->assertTrue(
+					$result_delete_record===true,
+					'expected true '. PHP_EOL
+					.to_string($result_delete_record)
+				);
+			}
 
 		$section = section::get_instance(
 			$section_id, // string|null section_id
 			$section_tipo, // string section_tipo
-			$mode
+			$mode,
+			false
 		);
 
 		$result = $section->forced_create_record();
+		// $result = $section->Save(
+		// 	(object)[
+		// 		'forced_create_record' => true
+		// 	]
+		// );
 
 		$this->assertTrue(
 			gettype($result)==='boolean',
@@ -1656,7 +1701,7 @@ final class section_test extends TestCase {
 	*/
 	public function test_section_id_exists() : void {
 
-		$section_id		= 333;
+		$section_id		= 5;
 		$section_tipo	= self::$section_tipo;
 		$mode			= 'edit';
 
@@ -2050,7 +2095,7 @@ final class section_test extends TestCase {
 		$locator = json_decode('
 			 {
 				"section_tipo": "test3",
-				"section_id": "2",
+				"section_id": "4",
 				"from_component_tipo": "test80",
 				"type": "'.DEDALO_RELATION_TYPE_LINK.'"
 			}

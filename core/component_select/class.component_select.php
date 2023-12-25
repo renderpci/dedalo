@@ -22,7 +22,7 @@ class component_select extends component_relation_common {
 	* Get value . default is get dato . overwrite in every different specific component
 	* @return string|null $valor
 	*/
-	public function get_valor(string $lang=DEDALO_DATA_LANG) : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
 
@@ -73,7 +73,7 @@ class component_select extends component_relation_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = $this->get_valor(
 			$lang ?? DEDALO_DATA_LANG

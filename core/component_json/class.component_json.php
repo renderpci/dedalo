@@ -178,7 +178,7 @@ class component_json extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		// Default behavior is get value
 		$dato = $this->get_dato();

@@ -211,7 +211,7 @@ class component_input_text extends component_common {
 	* If index var is received, return dato element corresponding to this index if exists
 	* @return string|null $valor
 	*/
-	public function get_valor($lang=DEDALO_DATA_LANG, $index='all') : ?string {
+	public function get_valor(?string $lang=DEDALO_DATA_LANG, $index='all') : ?string {
 
 		$valor ='';
 
@@ -291,8 +291,13 @@ class component_input_text extends component_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
+		// lang empty case. Apply default
+			if (empty($lang)) {
+				$lang = DEDALO_DATA_LANG;
+			}
+
 		// Default behavior is get value in given lang
-			$diffusion_value = $this->get_valor( $lang );
+			$diffusion_value = $this->get_valor($lang);
 
 		// fallback
 			if (empty($diffusion_value)) {

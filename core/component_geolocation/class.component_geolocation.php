@@ -196,7 +196,7 @@ class component_geolocation extends component_common {
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	public function get_diffusion_value( ?string $lang=null, ?object $option_obj=null ) : ?string {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$diffusion_value = null;
 
