@@ -175,10 +175,57 @@ const get_graph = function(options){
 	const links			= data.links.map(d => ({...d}));
 	const nodes			= data.nodes.map(d => ({...d}));
 
+	// Duplicate nodes
+	// - Some nodes can be connected with the same target multiple times (duplicate the connection with different contexts),
+	// for represent duplicate connections will use an arc path, unique or first duplicate will represent as a line.
+	// - Every duplicate path will has a different radius of the arc, to show as different path
+	// so, any links with duplicate source and target get an incremented 'link_number',
+	// 'link_number' will use to calculate the final radius of the path into 'link_form' function (r=75/link_number).
+	// - nodes connected with himself need to be identified as 'self_linked'
+	for (let i = links.length - 1; i >= 0; i--) {
+
+		const link = links[i]
+
+		// check the the link is calling to himself
+		// if yes, set it as self_linked and use 3 as link_number (small radius)
+		if(link.source === link.target){
+			link.link_number	= 3
+			link.self_linked	= true
+		}
+		// the the node has link_number assigned by previous link don't touch
+		if(link.link_number>=1){
+			continue
+		}
+		// found the links with the same source connected with the same target
+		const found_source = links.filter(el => el.source === link.source && el.target === link.target)
+		const found_target = links.filter(el => el.source === link.target && el.target === link.source)
+
+		// join all duplicates to count the total
+		const duplicates = [...found_source, ...found_target]
+		// if the link has a duplicate add link_number, but leave the original without touch
+		if(duplicates.length > 1){
+			let link_number = 1
+			// don't change the original link (i≠0)
+			for (let i = 1; i < found_source.length; i++) {
+				const current_source		= found_source[i]
+				current_source.link_number	= link_number
+				link_number++
+			}
+			//reset the link_number because the duplicate in other direction will represent in the other side of the connection
+			link_number = 1
+			// in this case add link_number to all nodes (the original has avoided it in previous step)
+			for (let i = 0; i < found_target.length; i++) {
+				const current_target		= found_target[i]
+				current_target.link_number	= link_number
+				link_number++
+			}
+		}
+	}
+
 	// Create a simulation with several forces.
 	const simulation = d3.forceSimulation(nodes)
-		.force("link", d3.forceLink(links).id(d => d.id))
-		.force("charge", d3.forceManyBody().strength(-5000))
+		.force("link", d3.forceLink(links).id(d	=> d.id))
+		.force("charge", d3.forceManyBody().strength(-4000))
 		.force("x", d3.forceX())
 		.force("y", d3.forceY());
 
