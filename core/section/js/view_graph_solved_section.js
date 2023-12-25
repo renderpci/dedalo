@@ -73,6 +73,16 @@ view_graph_solved_section.render = async function(self, options) {
 	// left side
 		const left_node = await render_left(self)
 
+
+	// label
+		const label_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label_container',
+			inner_html 		: self.label || '',
+			parent			: right_node
+		})
+
+
 	// buttons
 		const buttons_node = get_buttons(self);
 		if(buttons_node){
