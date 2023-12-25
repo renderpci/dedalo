@@ -48,6 +48,8 @@ component_common.prototype.init = async function(options) {
 		self.mode			= options.mode // current component mode like 'edit'
 		self.lang			= options.lang // current component lang like 'lg-nolan'
 		self.column_id		= options.column_id // id of the column when the instance is created to render a column list.
+		self.type			= options.type || 'component' // a instance type
+
 
 		self.section_lang	= options.section_lang // current section lang like 'lg-eng'
 		self.parent			= options.parent // tipo of structure parent like a section group 'dd4567'
