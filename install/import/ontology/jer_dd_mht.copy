@@ -49,13 +49,13 @@ mht64	mht36	dd91	no	si	si	1	mht	si	[{"dd1747":"mht41"},{"dd635":"mht42"},{"dd11"
 mht68	dd606	dd4	no	si	si	1	mht	no	\N	\N	\N
 mht71	mht39	dd183	no	si	si	6	mht	no	\N	\N	\N
 mht146	mht145	dd1259	no	si	si	1	mht	si	\N	\N	\N
-mht37	dd68	dd4	no	si	si	15	mht	no	null	\N	\N
 mht70	mht69	dd91	no	si	si	1	mht	no	[{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd10":"rsc30"},{"dd749":"rsc29"}]	\N	\N
 mht147	mht146	dd347	no	si	si	1	mht	si	[{"dd1229":"mht96"},{"dd6":"mht140"}]	\N	\N
 mht148	mht146	dd347	no	si	si	2	mht	si	[{"dd1229":"dd600"}]	\N	\N
 mht149	mht3	dd347	no	si	si	9	mht	si	[{"dd1229":"mht96"},{"dd6":"mht134"}]	\N	\N
 mht138	mht23	dd581	no	si	si	7	mht	si	\N	\N	\N
 mht150	mht3	dd347	no	si	si	10	mht	si	[{"dd1229":"dd600"}]	\N	\N
+mht60	hierarchy56	dd4	no	si	si	9	mht	si	\N	\N	\N
 mht134	mht60	dd6	no	si	si	6	mht	si	[{"dd6":"mht72"}]	\N	\N
 mht135	mht72	dd8	no	si	si	3	mht	si	null	\N	\N
 mht94	mht72	dd183	no	si	si	10	mht	no	\N	\N	\N
@@ -104,7 +104,6 @@ mht139	mht115	dd1235	no	si	si	5	mht	si	[{"dd442":"mht43"}]	{\r\n  "varchar": 100
 mht124	mht110	dd1231	no	si	si	6	mht	si	[{"dd592":"mht56"}]	{\r\n  "data_to_be_used": "dato"\r\n}	{"data_to_be_used": "dato"}
 mht38	mht40	dd530	no	si	si	5	mht	no	[{"dd6":"rsc106"},{"dd9":"rsc116"}]	{"search_list_add":["rsc119"],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}, "search_list_add": ["rsc119"]}
 mht53	mht40	dd339	no	si	si	2	mht	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"dato_default":[{"section_id":"2","section_tipo":"dd64"}],"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"8%"}},".content_data":{"style":{"width":"120px"}}}}	{"dato_default": [{"section_id": "2", "section_tipo": "dd64"}]}
-mht60	hierarchy56	dd4	no	si	si	9	mht	si	\N	\N	\N
 mht116	mht115	dd1233	no	si	si	1	mht	si	[{"dd339":"mht53"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	{"enum": {"1": "si", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "exclude_column": true, "data_to_be_used": "dato"}
 mht66	mht50	dd1259	no	si	si	1	mht	si	null	\N	\N
 mht2	mht21	dd1743	no	si	si	1	mht	si	null	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}	{"diffusion": {"class_name": "diffusion_mysql"}}
@@ -161,7 +160,7 @@ mht157	mht96	dd1233	no	si	si	14	mht	si	[{"dd57":"mht153"}]	{\r\n  "varchar": 32,
 mht96	mht66	dd1229	no	si	si	1	mht	si	[{"dd6":"mht72"}]	\N	\N
 mht48	mht66	dd347	no	si	si	2	mht	no	[{"dd1229":"rsc275"}]		\N
 mht156	mht66	dd347	no	si	si	10	mht	si	[{"dd1229":"rsc902"}]	\N	\N
-mht131	ts11	dd440	no	si	si	11	mht	si	[{"dd6":"rsc170"}]		null
+mht131	ts11	dd440	no	si	si	9	mht	si	[{"dd6":"rsc170"}]		null
 mht159	mht160	dd91	no	si	si	2	mht	si	[{"dd339":"ww17"},{"dd9":"ww11"},{"dd9":"ww18"},{"dd318":"ww20"},{"dd318":"ww21"},{"dd592":"ww22"}]	\N	\N
 mht29	mht24	dd530	no	si	si	4	mht	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".vertical",".width_50"]}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}, "source": {"fields_separator": " "}}
 mht160	mht60	dd6	no	si	si	7	mht	si	[{"dd6":"ww10"}]	\N	\N
@@ -172,3 +171,4 @@ mht133	mht3	dd347	no	si	si	3	mht	si	[{"dd1229":"rsc264"}]	\N	\N
 mht19	mht3	dd347	no	si	si	5	mht	si	[{"dd1229":"rsc267"}]	\N	\N
 mht65	mht131	dd347	no	si	si	5	mht	no	[{"dd1229":"rsc687"}]	\N	\N
 mht43	mht40	dd442	no	si	si	3	mht	no	null	{"source":{"mode":"tree","hierarchy_types":[1],"hierarchy_sections":["aa1"],"hierarchy_terms":[{"section_tipo":"aa1","section_id":"202","recursive":true}]},"value_with_parents":false,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [1], "source": "hierarchy_types"}, {"value": ["aa1"], "source": "section"}, {"value": [{"recursive": true, "section_id": "202", "section_tipo": "aa1"}], "source": "hierarchy_terms"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}}
+mht37	dd68	dd4	no	si	si	16	mht	no	null	\N	\N
