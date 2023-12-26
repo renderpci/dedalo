@@ -1,8 +1,8 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT SECURITY ACCESS
 * Manages ontology elements access and permissions
-*
 */
 class component_security_access extends component_common {
 
@@ -16,45 +16,9 @@ class component_security_access extends component_common {
 
 
 	/**
-	* GET DATO
-	* @return array $dato
-	* Format [{"tipo":"dd21","parent":"dd20","value":3}]
-	*/
-	public function get_dato() {
-		$dato = parent::get_dato();
-		if (!is_array($dato) && empty($dato)) {
-			$dato = [];
-		}
-
-		return (array)$dato;
-	}//end get_dato
-
-
-
-	/**
-	* SET_DATO
-	* @param array $dato
-	* @return bool
-	*/
-	public function set_dato($dato) : bool {
-
-		if (!is_array($dato)) {
-			if(empty($dato)) {
-				$dato = [];
-			}else{
-				$dato = (array)$dato;
-			}
-		}
-
-		return parent::set_dato($dato);
-	}//end set_dato
-
-
-
-	/**
 	* GET_CACHE_TREE_FILE_NAME
 	* @param string $lang
-	* @return string $tree_file_name
+	* @return string
 	*/
 	public static function get_cache_tree_file_name(string $lang) : string {
 
@@ -460,10 +424,8 @@ class component_security_access extends component_common {
 		switch ($update_version) {
 
 			case '6.0.0':
-
 				// old dato: {"oh1":{"oh2":2}}
 				// new dato :[{"tipo":"oh2","section_tipo":"oh1","value":2}]
-
 				if(!empty($dato_unchanged) && is_object($dato_unchanged)) {
 
 					$new_dato = [];
