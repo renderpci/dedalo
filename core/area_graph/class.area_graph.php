@@ -1,7 +1,7 @@
 <?php
 /**
-* area_graph
-* Manage whole thesaurus hierarchies
+* AREA_GRAPH
+*
 *
 */
 class area_graph extends area_common {
@@ -13,15 +13,13 @@ class area_graph extends area_common {
 	* @var
 	*/
 	static $typologies_section_tipo	= 'nexus57'; // 'hierarchy13'
-	static $typologies_name_tipo	= 'nexus61';	// 'hierarchy16'
+	static $typologies_name_tipo	= 'nexus61'; // 'hierarchy16'
 
 	// Default vars for use in thesaurus mode (set GET['model']=true to change this vars in runtime)
-	protected $model_view			= false;
-	// protected $target_section_tipo 		= DEDALO_HIERARCHY_TARGET_SECTION_TIPO;
-	// protected $hierarchy_children_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;
+	protected $model_view = false;
 
 	// thesaurus_mode
-	public $thesaurus_mode			= null;
+	public $thesaurus_mode = null;
 
 
 
@@ -39,7 +37,7 @@ class area_graph extends area_common {
 
 
 	/**
-	* ks
+	* get_networks_typologies
 	* Get an array of all section_id from records of current section
 	* @return array $networks_typologies
 	*/
@@ -110,8 +108,8 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy target section name
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
-				$hierarchy_section_name = component_common::get_instance(
+				$model					= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_TERM_TIPO,true);
+				$hierarchy_section_name	= component_common::get_instance(
 					$model,
 					DEDALO_HIERARCHY_TERM_TIPO,
 					$row->section_id,
@@ -125,8 +123,8 @@ class area_graph extends area_common {
 				}
 
 			// hierarchy order
-				$model = RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
-				$hierarchy_section_order = component_common::get_instance(
+				$model						= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_ORDER_TIPO,true);
+				$hierarchy_section_order	= component_common::get_instance(
 					$model,
 					DEDALO_HIERARCHY_ORDER_TIPO,
 					$row->section_id,
@@ -165,7 +163,7 @@ class area_graph extends area_common {
 
 		$section_tipo	= 'nexus40'; // hierarchy1
 		$active_tipo	= 'nexus44'; // hierarchy4
-		$order_tipo 	= 'nexus42'; // section_id
+		$order_tipo		= 'nexus42'; // section_id
 
 		$search_query_object = json_decode('{
 			"id": "networks",
@@ -205,6 +203,7 @@ class area_graph extends area_common {
 
 		$ar_records = $result->ar_records;
 
+
 		return $ar_records;
 	}//end get_active_networks_sections
 
@@ -215,7 +214,7 @@ class area_graph extends area_common {
 	* @param int|string int|string $section_id
 	* @return object|null $locator
 	*/
-	public function get_typology_data( int|string $section_id ) : ?object {
+	public function get_typology_data(int|string $section_id) : ?object {
 
 		$tipo			= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // 'hierarchy9' component_select
 		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
@@ -232,6 +231,7 @@ class area_graph extends area_common {
 		$dato		= $component->get_dato();
 		$locator	= $dato[0] ?? null;
 
+
 		return $locator;
 	}//end get_typology_data
 
@@ -239,9 +239,10 @@ class area_graph extends area_common {
 
 	/**
 	* GET_TYPOLOGY_NAME
+	* @param int|string $typology_section_id
 	* @return string $typology_name
 	*/
-	public function get_typology_name( int $typology_section_id ) : string {
+	public function get_typology_name(int|string $typology_section_id) : string {
 
 		// cache Store for speed
 			static $typology_names;
@@ -289,7 +290,7 @@ class area_graph extends area_common {
 	* @param int|string $typology_section_id
 	* @return int $order_value
 	*/
-	public function get_typology_order($typology_section_id) : int {
+	public function get_typology_order(int|string $typology_section_id) : int {
 
 		// cache. Store for speed
 			static $typology_order_values;
@@ -299,14 +300,14 @@ class area_graph extends area_common {
 
 		$tipo			= DEDALO_HIERARCHY_TYPES_ORDER;
 		$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$parent			= $typology_section_id;
+		$section_id		= $typology_section_id;
 		$mode			= 'list';
 		$lang			= DEDALO_DATA_LANG;
 		$section_tipo	= area_graph::$typologies_section_tipo;
 		$component		= component_common::get_instance(
 			$model_name,
 			$tipo,
-			$parent,
+			$section_id,
 			$mode,
 			$lang,
 			$section_tipo
@@ -328,44 +329,44 @@ class area_graph extends area_common {
 	* @param string|int $hierarchy_section_id
 	* @return string $hierarchy_name
 	*/
-	public function get_hierarchy_name( $hierarchy_section_id ) : string {
+	public function get_hierarchy_name(int|string $hierarchy_section_id) : string {
 
-		# Store for speed
-		static $hierarchy_names;
-		if (isset($hierarchy_names[$hierarchy_section_id])) {
-			return $hierarchy_names[$hierarchy_section_id];
-		}
+		// cache
+			static $hierarchy_names_cache;
+			if (isset($hierarchy_names_cache[$hierarchy_section_id])) {
+				return $hierarchy_names_cache[$hierarchy_section_id];
+			}
 
+		// short vars
+			$tipo			= DEDALO_HIERARCHY_TERM_TIPO;
+			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$section_id		= $hierarchy_section_id;
+			$mode			= 'list';
+			$lang			= DEDALO_DATA_LANG;
+			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
 
-		$tipo 			 = DEDALO_HIERARCHY_TERM_TIPO;
-		$model_name 	 = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-		$parent 		 = $hierarchy_section_id;
-		$mode 			 = 'list';
-		$lang 			 = DEDALO_DATA_LANG;
-		$section_tipo 	 = DEDALO_HIERARCHY_SECTION_TIPO;
+		// value
+			$component = component_common::get_instance(
+				$model_name,
+				$tipo,
+				$section_id,
+				$mode,
+				$lang,
+				$section_tipo
+			);
+			$value = $component->get_valor($lang);
 
-		$component 		 = component_common::get_instance(
-			$model_name,
-			$tipo,
-			$parent,
-			$mode,
-			$lang,
-			$section_tipo
-		);
-		$value = $component->get_valor($lang);
+		// hierarchy name
+			$hierarchy_name = empty($value)
+				? component_common::extract_component_value_fallback($component)
+				: $value;
 
-		if (empty($value)) {
-			$hierarchy_name = component_common::extract_component_value_fallback($component);
-		}else{
-			$hierarchy_name = $value;
-		}
+			if (empty($hierarchy_name)) {
+				$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $section_id;
+			}
 
-		if (empty($hierarchy_name)) {
-			$hierarchy_name = 'Hierarchy untranslated ' . $tipo .' '. $parent;
-		}
-
-		# Store for speed
-		$hierarchy_names[$hierarchy_section_id] = $hierarchy_name;
+		// cache
+			$hierarchy_names_cache[$hierarchy_section_id] = $hierarchy_name;
 
 
 		return (string)$hierarchy_name;
@@ -379,10 +380,10 @@ class area_graph extends area_common {
 	* @param int|string $typology_section_id
 	* @return object $options
 	*/
-	public static function get_options_for_search_hierarchies( string $typology_section_tipo, $typology_section_id ) : object {
+	public static function get_options_for_search_hierarchies(string $typology_section_tipo, int|null $typology_section_id) : object {
 
-		$section_tipo 	= DEDALO_HIERARCHY_SECTION_TIPO;
-		$matrix_table   = common::get_matrix_table_from_tipo($section_tipo);
+		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+		$matrix_table	= common::get_matrix_table_from_tipo($section_tipo);
 
 		# LAYOUT_MAP
 		# Build a custom layout map with our needs
@@ -481,9 +482,8 @@ class area_graph extends area_common {
 				$ar_path_mix[] = $ar_path;
 			}
 
-		# AR_DATA_COMBINED
+		// ar_data_combined
 			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-				#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
 		$result = self::walk_hierarchy_data($ar_data_combined);
 
@@ -512,7 +512,7 @@ class area_graph extends area_common {
 	* @param array $ar_path_mix
 	* @return array $ar_combine
 	*/
-	public static function combine_ar_data( array $ar_path_mix ) : array {
+	public static function combine_ar_data(array $ar_path_mix) : array {
 
 		/*
 			REFERENCE ar_simple
@@ -528,7 +528,6 @@ class area_graph extends area_common {
 				$ar_simple[$key][$i] = $ckey;
 			}
 		}
-		#dump($ar_simple, ' ar_simple ++ '.to_string());
 		#return $ar_simple;
 
 		// REFERENCE ar_hierarchy
@@ -565,15 +564,15 @@ class area_graph extends area_common {
 
 
 				if(empty($ar_hierarchy[$key])) {
-					// Último elemento (estará vacío porque es el que estamos buscando)
+					// Last element (it will be empty because it is the one we are looking for)
 					$ar_hierarchy[$key][$cvalue] = array();
 
 				}else{
-					// Elementos intermendios descendentes
+					// Intermediate downward elements
 					$ar_hierarchy[$key] = array($cvalue => $ar_hierarchy[$key]);
 
 
-					# Add siblings
+					// Add siblings
 					/*
 					if (strpos($cvalue, 'hierarchy')===false) {
 						$ar_children = area_graph::get_siblings($cvalue, $ar_value);
@@ -585,8 +584,6 @@ class area_graph extends area_common {
 				}
 			}
 		}
-		#dump($ar_hierarchy, ' ar_hierarchy ++ '.to_string()); die();
-
 
 		// REFERENCE ar_combine
 			// Combines hierarchized arrays to obtain one global array with combined values
@@ -669,7 +666,7 @@ class area_graph extends area_common {
 	* ]
 	* @return array $ar_mix
 	*/
-	public static function walk_hierarchy_data( array $ar_data_combined ) : array {
+	public static function walk_hierarchy_data(array $ar_data_combined) : array {
 
 		$ar_mix = array();
 		foreach ($ar_data_combined as $key => $ar_values) {
