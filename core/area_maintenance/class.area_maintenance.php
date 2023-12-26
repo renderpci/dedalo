@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * AREA_MAINTENANCE
-*
 *
 */
 class area_maintenance extends area_common {
