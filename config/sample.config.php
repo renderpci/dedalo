@@ -274,7 +274,7 @@
 
 // dedalo default config values
 	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
-	// mandatory: ['dd','rsc','tool','hierarchy','lg']
+	// mandatory: ['dd','rsc','tool','hierarchy','lg','nexus']
 	// optional: ['test']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
@@ -283,6 +283,7 @@
 		'lg',
 		'oh',
 		'ich',
+		'nexus',
 		'test'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any
