@@ -76,7 +76,7 @@ export const get_d3_data = function(options) {
 			const source = {
 				id				: source_id,
 				name			: current_souce.literal,
-				locator			: current_souce.value[0],
+				value			: current_souce.value[0],
 				section_tipo	: (current_souce.value[0]) ? current_souce.value[0].section_tipo : null
 			}
 
@@ -100,7 +100,7 @@ export const get_d3_data = function(options) {
 			const target = {
 				id				: target_id,
 				name			: current_target.literal,
-				locator			: current_target.value[0],
+				value			: current_target.value[0],
 				section_tipo	: (current_target.value[0]) ? current_target.value[0].section_tipo : null
 			}
 			if(!target_found){
@@ -141,7 +141,7 @@ export const get_d3_data = function(options) {
 			const link = {
 				source		: source_id,
 				target		: target_id,
-				locator		: {
+				value		: {
 					section_id		: current_souce.section_id,
 					section_tipo	: current_souce.section_tipo
 				},
