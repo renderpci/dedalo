@@ -601,6 +601,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
 
     /**
      * @internal This method is not covered by the backward compatibility promise for PHPUnit
+     *
+     * @deprecated
      */
     final public function registerMockObjectsFromTestArgumentsRecursively(): void
     {
@@ -720,7 +722,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
         }
 
         if ($this->status->isSuccess()) {
-            Event\Facade::emitter()->testPassed(
+            $emitter->testPassed(
                 $this->valueObjectForEvents(),
             );
 
@@ -1827,6 +1829,9 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
         return !in_array($mock, $enumerator->enumerate($this->testResult), true);
     }
 
+    /**
+     * @deprecated
+     */
     private function registerMockObjectsFromTestArguments(array $testArguments, Context $context = new Context): void
     {
         if ($this->registerMockObjectsFromTestArgumentsRecursively) {
@@ -1836,16 +1841,17 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
                 }
             }
         } else {
-            foreach ($testArguments as $testArgument) {
+            foreach ($testArguments as &$testArgument) {
                 if ($testArgument instanceof MockObject) {
                     $testArgument = Cloner::clone($testArgument);
 
                     $this->registerMockObject($testArgument);
                 } elseif (is_array($testArgument) && !$context->contains($testArgument)) {
+                    $testArgumentCopy = $testArgument;
                     $context->add($testArgument);
 
                     $this->registerMockObjectsFromTestArguments(
-                        $testArgument,
+                        $testArgumentCopy,
                         $context,
                     );
                 }

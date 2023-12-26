@@ -215,7 +215,7 @@ final class component_relation_related_test extends TestCase {
 
 		$locator = new locator();
 			$locator->set_section_tipo(self::$section_tipo);
-			$locator->set_section_id(2);
+			$locator->set_section_id(3);
 			$locator->set_from_component_tipo(self::$tipo);
 
 		$result = $component->remove_related($locator);

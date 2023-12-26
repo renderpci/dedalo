@@ -746,6 +746,11 @@ abstract class component_common extends common {
 				}
 			}
 
+		// force array on non empty
+			if (!is_array($dato) && !is_null($dato)) {
+				$dato = [$dato];
+			}
+
 		// unset previous calculated valor
 			if (isset($this->valor)) {
 				unset($this->valor);
@@ -778,7 +783,7 @@ abstract class component_common extends common {
 	* To get data from other sources, set var $data_source like 'tm'
 	* @return array|null $dato
 	*/
-	protected function get_dato() {
+	public function get_dato() {
 
 		// dato_resolved. Already resolved case
 			if(isset($this->dato_resolved)) {
