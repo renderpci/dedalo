@@ -181,6 +181,8 @@ class install extends common {
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
 			'matrix_list',			// public list values
+			'matrix_nexus',
+			'matrix_nexus_main',
 			'matrix_notes',			// notes inside transcription content
 			'matrix_notifications',	// internal notifications data
 			'matrix_profiles',		// user profiles table
