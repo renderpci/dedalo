@@ -6,6 +6,7 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
+	import {set_element_css} from '../../page/js/css.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 
 
@@ -53,6 +54,17 @@ view_default_edit_section_id.render = async function(self, options) {
 			wrapper_options.label = null // prevent to create label node
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
+
+		const selector = `${self.section_tipo}_${self.tipo}.edit`
+		set_element_css(selector, {
+			".wrapper_component": {
+				'background-color' : self.context.color
+			},
+			".wrapper_component.active": {
+				'background-color' : self.context.color
+			}
+		})
+		
 		// set pointers
 		wrapper.content_data = content_data
 
