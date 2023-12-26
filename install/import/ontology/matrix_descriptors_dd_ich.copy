@@ -1,3 +1,7 @@
+ich184	Nou	termino	lg-cat
+ich184	Nuevo	termino	lg-spa
+ich184	Nuovo	termino	lg-ita
+ich184	νέος	termino	lg-ell
 ich1	Beni	termino	lg-ita
 ich1	Béns	termino	lg-cat
 ich1	Bienes	termino	lg-spa
@@ -22,6 +26,14 @@ ich104	Ricerca	termino	lg-ita
 ich105	Eliminar	termino	lg-spa
 ich105	Eliminare	termino	lg-ita
 ich105	Esborrar	termino	lg-cat
+ich185	Borrar	termino	lg-spa
+ich185	Cancellare	termino	lg-ita
+ich185	Esborrar	termino	lg-cat
+ich185	διαγράψετε	termino	lg-ell
+ich186	Elenco	termino	lg-ita
+ich186	Listado	termino	lg-spa
+ich186	λίστα	termino	lg-ell
+ich187	PCI	termino	lg-cat
 ich106	Incluye tanto los componentes como los procedimientos para la preparación, elaboración o ejecución, además de los resultados obtenidos. Ejemplos de uso: Actividades productivas: cortar, limar, moler a noria, nombre de la fuente de energía, cerámica... Creencias y rituales festivos: Pasos, entrega de llaves, tratamientos de sanación... Tradición oral: tipos de comunicación empleada, códigos, significados... Representaciones y juegos: primer acto, aparición del santo, nombre de la indumentaria, decorados, pintar en el suelo, se reparten los equipos... Manifestaciones musicales: preparación, primera estrofa, formaciones instrumentales... Formas de alimentación: materias primas, condimentar, preparar, degustar... Formas de sociabilidad: normas, composición, cargos, funciones...	def	lg-spa
 ich106	Nom de l'element / procés	termino	lg-cat
 ich106	Nombre del elemento / proceso	termino	lg-spa
@@ -90,6 +102,7 @@ ich118	Persona/s que realiza/n la tarea, elemento o proceso y su tipología de p
 ich119	Descripció de la participació / execució	termino	lg-cat
 ich119	Descripción de la participación / ejecución	termino	lg-spa
 ich119	Descripción del modelo de participación / ejecución	def	lg-spa
+ich187	PCI	termino	lg-ita
 ich119	Descrizione della partecipazione / esecuzione	termino	lg-ita
 ich12	Elenco	termino	lg-ita
 ich12	Listado	termino	lg-spa
@@ -181,6 +194,7 @@ ich143	Nova tipologia de participació / execució	termino	lg-cat
 ich143	Nueva tipología de participación / ejecución	termino	lg-spa
 ich143	Nuova tipologia di partecipazione / esecuzione	termino	lg-ita
 ich143	νέος	termino	lg-ell
+ich187	PCI	termino	lg-spa
 ich144	Eliminar tipologia de participació / execució	termino	lg-cat
 ich144	Eliminar tipología de participación / ejecución	termino	lg-spa
 ich144	Eliminare tipologia di partecipazione / esecuzione	termino	lg-ita
@@ -291,20 +305,6 @@ ich183	Progetto	termino	lg-ita
 ich183	Projecte	termino	lg-cat
 ich183	Proyecto	termino	lg-spa
 ich183	σχέδιο	termino	lg-ell
-ich184	Nou	termino	lg-cat
-ich184	Nuevo	termino	lg-spa
-ich184	Nuovo	termino	lg-ita
-ich184	νέος	termino	lg-ell
-ich185	Borrar	termino	lg-spa
-ich185	Cancellare	termino	lg-ita
-ich185	Esborrar	termino	lg-cat
-ich185	διαγράψετε	termino	lg-ell
-ich186	Elenco	termino	lg-ita
-ich186	Listado	termino	lg-spa
-ich186	λίστα	termino	lg-ell
-ich187	PCI	termino	lg-cat
-ich187	PCI	termino	lg-ita
-ich187	PCI	termino	lg-spa
 ich188	Darrers canvis	termino	lg-cat
 ich188	Ultime modifiche	termino	lg-ita
 ich188	Últimos cambios	termino	lg-spa
