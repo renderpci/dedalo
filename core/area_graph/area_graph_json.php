@@ -7,7 +7,7 @@
 	$tipo			= $this->get_tipo();
 	$permissions	= common::get_permissions($tipo, $tipo);
 	$mode			= $this->get_mode();
-	$properties 	= $this->get_properties() ?? new stdClass();
+	$properties		= $this->get_properties() ?? new stdClass();
 
 
 // context
@@ -42,10 +42,7 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
-
-
-		
+	if($options->get_data===true && $permissions>0) {
 
 		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
 			$hierarchy_types_filter		= $properties->hierarchy_types ?? null;
@@ -58,8 +55,8 @@
 			); // $this->get_data_items();
 
 		// typologies
-			$ar_tipologies_section_id = [];
-			$ar_typologies = [];
+			$ar_tipologies_section_id	= [];
+			$ar_typologies				= [];
 			foreach ($hierarchy_sections as $hierarchy_data) {
 				if (!in_array($hierarchy_data->typology_section_id, $ar_tipologies_section_id)) {
 					$ar_tipologies_section_id[] = $hierarchy_data->typology_section_id;
@@ -73,32 +70,34 @@
 				}
 			}
 
-		// value . Vertical array with typologies and sections
+		// value. Vertical array with typologies and sections
 			$value = array_merge($ar_typologies, $hierarchy_sections);
 
-		$item = new stdClass();
-			$item->tipo		= $this->get_tipo();
-			$item->value	= $value;
+		// item
+			$item = new stdClass();
+				$item->tipo		= $this->get_tipo();
+				$item->value	= $value;
 
-		// hierarchy_terms
-			$hierarchy_terms = $properties->hierarchy_terms ?? null;
-			if(!empty($hierarchy_terms)) {
-				$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
-				$result	= $this->search_thesaurus( $sqo );
-				$item->ts_search = $result;
-			}
+			// hierarchy_terms
+				$hierarchy_terms = $properties->hierarchy_terms ?? null;
+				if(!empty($hierarchy_terms)) {
+					$sqo	= $this->get_hierarchy_terms_sqo($hierarchy_terms);
+					$result	= $this->search_thesaurus( $sqo );
+					// add ts_search
+					$item->ts_search = $result;
+				}
 
-		// properties
-			if (!empty($properties) && $properties->action==='search') {
-				// search rows
-				$result = $this->search_thesaurus( $properties->sqo );
-				$item->ts_search = $result;
-			}
+			// properties
+				if (!empty($properties) && $properties->action==='search') {
+					// search rows
+					$result = $this->search_thesaurus( $properties->sqo );
+					// add ts_search
+					$item->ts_search = $result;
+				}
 
 		// subdata add
 			$data[] = $item;
-	dump($data, '$data ++ '.to_string());
-	}// end if $permissions > 0
+	}//end if $permissions > 0
 
 
 
