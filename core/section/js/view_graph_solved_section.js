@@ -508,16 +508,16 @@ const get_graph = function(options){
 			/** set_component_data
 			* assign and save the data into the specific component (source, target component)
 			* @param tipo component tipo
-			* @param locator data of the component
+			* @param value data of the component
 			* @param section_tipo
 			* @param section_id
 			*/
 			async function set_component_data(options){
 
-				const tipo			= options.tipo
-				const locator		= options.locator
-				const section_tipo	= options.section_tipo
-				const section_id	= options.section_id
+				const tipo				= options.tipo
+				const component_value	= options.value
+				const section_tipo		= options.section_tipo
+				const section_id		= options.section_id
 
 				// create the component source instance
 					const source_component = await instances.get_instance({
@@ -533,8 +533,8 @@ const get_graph = function(options){
 				// set the changed_data for replace it in the instance data
 				// update_data_value. key is the position in the data array, the value is the new value
 					const value = {
-						section_id			: locator.section_id,
-						section_tipo		: locator.section_tipo,
+						section_id			: component_value.section_id,
+						section_tipo		: component_value.section_tipo,
 						from_component_tipo	: tipo
 					}
 				// set the changed_data for update the component data and send it to the server for change when save
@@ -590,13 +590,13 @@ const get_graph = function(options){
 	// node behavior
 		// when user click into the node, open the main section of the thing
 		function node_clicked(event, p) {
-			// if node has not a locator (empty component) is not possible open the main section
-			if(!p.locator){
+			// if node has not a value (empty component) is not possible open the main section
+			if(!p.value){
 				return null
 			}
 			// sort vars
-			const section_tipo	= p.locator.section_tipo
-			const section_id	= p.locator.section_id
+			const section_tipo	= p.value.section_tipo
+			const section_id	= p.value.section_id
 
 			// open a new window of the node section
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -618,8 +618,8 @@ const get_graph = function(options){
 		function link_clicked(event, p) {
 
 			// short vars
-			const section_tipo	= p.locator.section_tipo
-			const section_id	= p.locator.section_id
+			const section_tipo	= p.value.section_tipo
+			const section_id	= p.value.section_id
 
 			// open a new window of the section
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -1034,9 +1034,9 @@ export const on_dragstart = function(node, event, options) {
 	// event.preventDefault();
 	event.stopPropagation();
 
-	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+	// will be necessary the original locator (send as value) of the section_record and the paginated_key (the position in the array of data)
 	const transfer_data = {
-		locator			: options.locator,
+		value			: options.value,
 		paginated_key	: options.paginated_key
 	}
 
