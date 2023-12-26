@@ -71,13 +71,16 @@ class component_external extends component_common {
 			$response_map	= $api_config->response_map;
 			$entity			= $api_config->entity;
 
-			// fields
+			// ar_fields
 				$ar_fields = [];
-				# get_ar_children_tipo_by_model_name_in_section($section_tipo, $ar_modelo_name_required, $from_cache=true, $resolve_virtual=false, $recursive=true, $search_exact=false, $ar_tipo_exclude_elements=false)
-				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component'], true, true, true, false, false);
+				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo, ['component'], true, true, true, false, false
+				);
 				foreach ($ar_component_tipo as $component_tipo) {
+
 					$RecordObj_dd			= new RecordObj_dd($component_tipo);
 					$component_properties	= $RecordObj_dd->get_properties();
+
 					if (empty($component_properties) || !isset($component_properties->fields_map)) {
 						continue;
 					}

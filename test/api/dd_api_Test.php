@@ -361,8 +361,14 @@ final class dd_api_Test extends TestCase {
 				$this->assertTrue( gettype($context)==='array' );
 				$this->assertTrue( gettype($data)==='array' );
 				$this->assertTrue( count($data)>0 );
-				// expected running without errors
-				$this->assertTrue( empty($_ENV['DEDALO_LAST_ERROR']) );
+
+			// expected running without errors
+				$this->assertTrue(
+					empty($_ENV['DEDALO_LAST_ERROR']),
+					' expected non empty DEDALO_LAST_ERROR' . PHP_EOL
+						.'DEDALO_LAST_ERROR: '.to_string($_ENV['DEDALO_LAST_ERROR']) . PHP_EOL
+						.'$_ENV: '.to_string($_ENV)
+				);
 
 		// related_search
 			$rqo = json_handler::decode('
