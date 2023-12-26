@@ -14,7 +14,7 @@
 
 
 
-export const component_security_access = function(){
+export const component_security_access = function() {
 
 	this.id
 
@@ -112,12 +112,16 @@ component_security_access.prototype.build = async function(options) {
 	// to be processed by client interface (to propagate values)
 		const filled_value		= []
 		const data				= self.data || {}
+		const value				= data.value || []
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
 		for (let i = datalist_length - 1; i >= 0; i--) {
 
-			const item = self.data.datalist[i]
-			const found = self.data.value.find(el => el.tipo===item.tipo && el.section_tipo===item.section_tipo)
+			const item	= data.datalist[i]
+			const found	= value.find(el =>
+				el.tipo===item.tipo &&
+				el.section_tipo===item.section_tipo
+			)
 			if (found) {
 				filled_value.push(found)
 			}else{
@@ -330,7 +334,7 @@ component_security_access.prototype.get_children = function(item, datalist) {
 *
 * @return bool diff_value
 */
-component_security_access.prototype.update_parents_radio_butons = async function(item, input_value){
+component_security_access.prototype.update_parents_radio_butons = async function(item, input_value) {
 
 	const self = this
 
@@ -406,7 +410,6 @@ component_security_access.prototype.update_parents_radio_butons = async function
 	// 	const api_response = (from_save_changes===true)
 	// 		? await component_common.prototype.change_value.call(this, options) // internal call from self save_changes. Pass untouched to component_common
 	// 		: await self.save_changes() // Prepare as save changes mode that triggers change_value again
-
 
 	// 	return api_response
 	// }//end change_value

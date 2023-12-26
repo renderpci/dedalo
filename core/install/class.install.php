@@ -69,9 +69,13 @@ class install extends common {
 					// failed. Stop here
 					$dd_object->set_properties($properties);
 
+					$error_msg = !empty($init_test_response->msg)
+						? implode(', ', $init_test_response->msg)
+						: 'Unknown error on init_test_response';
+
 					debug_log(__METHOD__
 						." Error: dd_init_test " . PHP_EOL
-						. $init_test_response->msg ?? 'Unknown error on init_test_response'
+						. $error_msg
 						, logger::ERROR
 					);
 
@@ -177,6 +181,8 @@ class install extends common {
 			'matrix_indexations',	// indexation data
 			'matrix_layout',		// print presets layout table
 			'matrix_list',			// public list values
+			'matrix_nexus',
+			'matrix_nexus_main',
 			'matrix_notes',			// notes inside transcription content
 			'matrix_notifications',	// internal notifications data
 			'matrix_profiles',		// user profiles table

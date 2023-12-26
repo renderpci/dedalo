@@ -28,12 +28,18 @@
 	// xx_WEB is relative url path (to current dedalo url dir, often 'dedalo') like '/dedalo/core'
 
 	// host
-		define('DEDALO_HOST',		$_SERVER['HTTP_HOST']);
+		define('DEDALO_HOST', php_sapi_name()==='cli'
+			? 'localhost'
+			: $_SERVER['HTTP_HOST'] ?? ''
+		);
 		define('DEDALO_PROTOCOL',	(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	// root paths
 		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
-		define('DEDALO_ROOT_WEB',	'/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
+		define('DEDALO_ROOT_WEB',	php_sapi_name()==='cli'
+			? ''
+			: '/' . explode('/', $_SERVER["REQUEST_URI"])[1]
+		);
 
 	// base paths
 		define('DEDALO_CONFIG',	'config');
@@ -169,23 +175,23 @@
 
 
 // show_debug
-	// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
-	define('SHOW_DEBUG', (get_user_id()==DEDALO_SUPERUSER)
-		? true
-		: false // default false
-	);
+	if (!defined('SHOW_DEBUG')) {
+		// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
+		define('SHOW_DEBUG', (get_user_id()==DEDALO_SUPERUSER)
+			? true
+			: false // default false
+		);
+	}
 
 
 
 // is_developer
 	// Logged user is developer value. Depends of user config 'is_developer' value from database
-	if (!defined('SHOW_DEBUG')) {
-		define('SHOW_DEVELOPER',
-			(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
-				? true
-				: false // default false
-		);
-	}
+	define('SHOW_DEVELOPER',
+		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
+			? true
+			: false // default false
+	);
 
 
 
@@ -274,7 +280,7 @@
 
 // dedalo default config values
 	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
-	// mandatory: ['dd','rsc','tool','hierarchy','lg']
+	// mandatory: ['dd','rsc','tool','hierarchy','lg','actv','nexus']
 	// optional: ['test']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
@@ -283,6 +289,8 @@
 		'lg',
 		'oh',
 		'ich',
+		'nexus',
+		'actv',
 		'test'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any

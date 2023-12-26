@@ -638,16 +638,22 @@ class area_maintenance extends area_common {
 			$response->msg		= 'Error. Request failed ';
 
 		// sample config file
-			$input_lines = file_get_contents(DEDALO_CONFIG_PATH . '/sample.config.php');
-			if(empty($input_lines)) {
-				$response->msg .= 'Invalid sample config file';
+			$input_lines = '';
+			$file = DEDALO_CONFIG_PATH . '/sample.config.php';
+			if (!file_exists($file)) {
+				$response->msg .= 'sample config file do not exists';
+			}else{
+				$input_lines = file_get_contents($file);
+				if(empty($input_lines)) {
+					$response->msg .= 'Invalid sample config file';
+				}
 			}
 
 			// regex search
 			preg_match_all('/[^\/\/ ]define\(\'(\S*)\',.*/', $input_lines, $output_array);
 
 			// check every constant from config
-				$constants_list	= $output_array[1];
+				$constants_list	= $output_array[1] ?? [];
 				$ar_missing		= [];
 				foreach ($constants_list as $const_name) {
 					if (!defined($const_name)) {
@@ -656,16 +662,22 @@ class area_maintenance extends area_common {
 				}
 
 		// sample config db
-			$input_lines = file_get_contents(DEDALO_CONFIG_PATH . '/sample.config_db.php');
-			if(empty($input_lines)) {
-				$response->msg .= 'Invalid sample config_db file';
+			$input_lines = '';
+			$file = DEDALO_CONFIG_PATH . '/sample.config_db.php';
+			if (!file_exists($file)) {
+				$response->msg .= 'sample config_db file do not exists';
+			}else{
+				$input_lines = file_get_contents($file );
+				if(empty($input_lines)) {
+					$response->msg .= 'Invalid sample config_db file';
+				}
 			}
 
 			// regex search
 			preg_match_all("/[^\/\/ ]define\(\'(\S*)\',.*'.*/", $input_lines, $db_output_array);
 
 			// check every constant from config
-				$db_constants_list	= $db_output_array[1];
+				$db_constants_list	= $db_output_array[1] ?? [];
 				$db_ar_missing		= [];
 				foreach ($db_constants_list as $const_name) {
 					if (!defined($const_name)) {
@@ -674,16 +686,22 @@ class area_maintenance extends area_common {
 				}
 
 		// sample config core
-			$input_lines = file_get_contents(DEDALO_CONFIG_PATH . '/sample.config_core.php');
-			if(empty($input_lines)) {
-				$response->msg .= 'Invalid sample config_db file';
+			$input_lines = '';
+			$file = DEDALO_CONFIG_PATH . '/sample.config_core.php';
+			if (!file_exists($file)) {
+				$response->msg .= 'sample config_core file do not exists';
+			}else{
+				$input_lines = file_get_contents($file);
+				if(empty($input_lines)) {
+					$response->msg .= 'Invalid sample config_core file';
+				}
 			}
 
 			// regex search
 			preg_match_all("/[^\/\/ ]define\(\'(\S*)\',.*/", $input_lines, $core_output_array);
 
 			// check every constant from config
-				$core_constants_list	= $core_output_array[1];
+				$core_constants_list	= $core_output_array[1] ?? [];
 				$core_ar_missing		= [];
 				foreach ($core_constants_list as $const_name) {
 					if (!defined($const_name)) {
