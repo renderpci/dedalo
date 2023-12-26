@@ -28,12 +28,18 @@
 	// xx_WEB is relative url path (to current dedalo url dir, often 'dedalo') like '/dedalo/core'
 
 	// host
-		define('DEDALO_HOST',		$_SERVER['HTTP_HOST']);
+		define('DEDALO_HOST', php_sapi_name()==='cli'
+			? 'localhost'
+			: $_SERVER['HTTP_HOST'] ?? ''
+		);
 		define('DEDALO_PROTOCOL',	(isset($_SERVER['HTTPS']) && $_SERVER['HTTPS']==='on') ? 'https://' : 'http://');
 
 	// root paths
 		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
-		define('DEDALO_ROOT_WEB',	'/' . explode('/', $_SERVER["REQUEST_URI"])[1]);
+		define('DEDALO_ROOT_WEB',	php_sapi_name()==='cli'
+			? ''
+			: '/' . explode('/', $_SERVER["REQUEST_URI"])[1]
+		);
 
 	// base paths
 		define('DEDALO_CONFIG',	'config');
