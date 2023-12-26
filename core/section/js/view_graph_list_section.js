@@ -463,6 +463,7 @@ const render_column_graph = function(options) {
 			})
 			await section.build(true)
 			section.view = 'graph'
+			section.caller = self.caller // injected caller (page), needed because to render new menu label
 			const section_node = await section.render()
 			// add to DOM
 			self.node.after(section_node)
