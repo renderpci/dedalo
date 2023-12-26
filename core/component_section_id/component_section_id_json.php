@@ -20,7 +20,10 @@
 				break;
 
 			default:
-				$context[] = $this->get_structure_context($permissions);
+				$color = RecordObj_dd::get_color($this->section_tipo);
+				$current_context = $this->get_structure_context($permissions);
+					$current_context->color = $color;
+				$context[] = $current_context;
 				break;
 		}
 	}//end if($options->get_context===true)
