@@ -1021,6 +1021,8 @@ view_graph_solved_section.render_column_drag = function(options){
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
+		const locator		= options.locator
+		const paginated_key	= options.paginated_key
 
 	const fragment = new DocumentFragment()
 
@@ -1041,12 +1043,13 @@ view_graph_solved_section.render_column_drag = function(options){
 			class_name		: 'drag_node draggable',
 			parent 			: drag_container
 		})
+
 		drag_container.draggable = true
-		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, options={
+		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, {
 				section_record_node	: drag_container,
-				paginated_key		: options.paginated_key,
+				paginated_key		: paginated_key,
 				total_records		: self.total,
-				locator 			: options.locator,
+				value 				: locator,
 				caller 				: self,
 				drag_node 			: drag_node
 			})
