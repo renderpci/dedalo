@@ -2850,6 +2850,7 @@ abstract class common {
 								$ddo = new dd_object();
 									$ddo->set_tipo($section_tipo);
 									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+									$ddo->set_color(RecordObj_dd::get_color($section_tipo));
 								return $ddo;
 							}, (array)$ar_section_tipo);
 

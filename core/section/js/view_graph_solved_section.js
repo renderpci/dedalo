@@ -14,7 +14,7 @@
 	import {
 		create_source
 	} from '../../common/js/common.js'
-	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	import {
 		get_d3_data
@@ -43,6 +43,7 @@ view_graph_solved_section.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// graph_map
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
 		self.graph_map =  (self.properties.graph_map)
@@ -56,51 +57,79 @@ view_graph_solved_section.render = async function(self, options) {
 				connection	: 'nexus29'
 			}
 
+	// from_map
+	// Used to show the name of the section caller
+	// name component is defined in ontology from_map property of the current section
+		self.from_map =  (self.properties.from_map)
+			? self.properties.from_map
+			: {
+				name: "nexus48"
+			}
+
 	// right side
 		const right_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'right_node'
 		})
 
-	// content_data
-		const content_data = await get_content_data(self)
-		// fix last content_data (for pagination selection)
-		self.node_body = content_data
-		if (render_level==='content') {
-			return content_data
-		}
+		// content_data
+			const content_data = await get_content_data(self)
 
-	// left side
-		const left_node = await render_left(self)
+			// fix last content_data (for pagination selection)
+			self.node_body = content_data
+			if (render_level==='content') {
+				return content_data
+			}
 
-
-	// label
-		const label_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label_container',
-			inner_html 		: self.label || '',
-			parent			: right_node
-		})
-
-
-	// buttons
-		const buttons_node = get_buttons(self);
-		if(buttons_node){
-			right_node.appendChild(buttons_node)
-		}
-
-	// search filter
-		// if (self.filter) {
-			const search_container = ui.create_dom_element({
+		// label of the caller section
+			const label_container = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'search_container',
+				class_name		: 'label_container',
 				parent			: right_node
 			})
-			self.search_container = search_container
-		// }
 
-	// content_data add to fragment
-		right_node.appendChild(content_data)
+			const url_vars = url_vars_to_object()
+			if(url_vars.fst && url_vars.fsi){
+
+				const section_tipo	= url_vars.fst
+				const section_id	= url_vars.fsi
+				const tipo			= self.from_map.name
+
+				const component_name = instances.get_instance({
+					tipo			: tipo,
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					mode			: 'solved',
+					inspector		: false
+				})
+				.then(async function(component_name){
+					await component_name.build(true)
+					label_container.textContent = component_name.data.literal || self.label
+				})
+			}
+
+		// buttons
+			const buttons_node = get_buttons(self);
+			if(buttons_node){
+				right_node.appendChild(buttons_node)
+			}
+
+		// search filter
+			// if (self.filter) {
+				const search_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'search_container',
+					parent			: right_node
+				})
+				self.search_container = search_container
+			// }
+
+		// content_data add to fragment
+			right_node.appendChild(content_data)
+
+	// left side
+		// left node with the d3 visualization
+			const left_node = await render_left(self)
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -136,13 +165,11 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode) // ,'nowrap','full_width'
 			  // content_data.appendChild(fragment)
 
-
 		when_in_dom(content_data, ()=>{
 
 			// get d3 data
 				const d3_data = get_d3_data({
 					graph_map	: self.graph_map,
-					data		: self.data,
 					datum		: self.datum
 				})
 
@@ -250,7 +277,11 @@ const get_graph = function(options){
 		.attr("viewBox", [-width / 2, -height / 2, width, height])
 		// .attr("preserveAspectRatio", "xMinYMin meet")
 		// .attr("style", "max-width: 100%; height: auto;")
-		.classed("svg_content", true);;
+		.classed("svg_content", true)
+		.on("dragenter", on_dragenter) // show active the node
+		.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
+		.on("drop", on_drop ) // create new nexus section with the source and target
+		.on("dragleave", on_dragleave) // deactivate the node
 
 		// recalculate the size of the view-box every time that window has resized.
 		window.addEventListener("resize", function(){
@@ -287,7 +318,7 @@ const get_graph = function(options){
 		.join("path")
 			.attr("stroke", d => color(d.type))
 			.attr("marker-end", 'url(#arrow)')
-			.attr("stroke-width", d => Math.sqrt(d.value))
+			.attr("stroke-width", d => Math.sqrt(d.weight))
 			.on("click", link_clicked)
 			.on("mouseenter", link_mouse_enter)
 			.on("mouseleave", link_mouse_leave);
@@ -316,7 +347,7 @@ const get_graph = function(options){
 			.attr("stroke", "#ffffff") // a stroke around the circle, white as background
 			.attr("stroke-width", 1.5) // a tiny stroke use to "cut" the link path
 			.attr("r", 10) // fixed radius, if it change, change the r in the "tick" function
-			.attr("fill", d => (d.section_tipo) ? color(d.section_tipo) : '#dddddd') // use different color for every section, if the section is empty, use gray
+			.attr("fill", d => (d.value) ? d.color : '#dddddd') // use different color for every section, if the value is empty, use gray
 			.on("click", node_clicked) // open the main section of the thing
 			.on("dragenter", on_dragenter) // show active the node
 			.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
@@ -442,54 +473,91 @@ const get_graph = function(options){
 			// the drag element will sent the data of the original position, the source_key
 			const data_parse = JSON.parse(data)
 
-			// locators for source / target components
-			const source_locator = p.locator
-			const target_locator = data_parse.locator
+			// values for source / target components
+			// if the user drop into a node the p will exist and p.value will be the source
+			// when drop is a empty space (svg viewbox) the p and p.value will not defined
+			// in this case the source will be the dragged value
+			// and the target will null
+			const source_value = (p && p.value)
+				? p.value
+				: data_parse.value
+			const target_value = (p && p.value)
+				? data_parse.value
+				: null
 
-			// data_manager. create new section
-				const rqo = {
-					action	: 'create',
-					source	: {
-						section_tipo : self.section_tipo
+				const bool = (p && p.value)
+
+			// if the user drop into empty node or the node has value:
+			// create new nexus section and assign the dragged value
+			// else (the node has not value) assign the dragged value into the empty node
+			if(!p || p.value){
+				// data_manager. create new section
+					const rqo = {
+						action	: 'create',
+						source	: {
+							section_tipo : self.section_tipo
+						}
 					}
-				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				// if the server response is ok, it will send the new section_id
-				if (api_response.result && api_response.result>0) {
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					// if the server response is ok, it will send the new section_id
+					if (api_response.result && api_response.result>0) {
 
-					const section_id = api_response.result
-					// source
-					// assign the source data for the source component with the node locator
-					set_component_data({
-						tipo			: self.graph_map.source,
-						locator			: source_locator,
-						section_tipo	: self.section_tipo,
-						section_id		: section_id
-					})
-					// target
-					// assign the target data for the target component with the section_record dragged
-					set_component_data({
-						tipo			: self.graph_map.target,
-						locator			: target_locator,
-						section_tipo	: self.section_tipo,
-						section_id		: section_id
-					})
-				}
+						const section_id = api_response.result
+
+						// source
+						// assign the source data for the source component with the node value
+						await set_component_data({
+							tipo			: self.graph_map.source,
+							value			: source_value,
+							section_tipo	: self.section_tipo,
+							section_id		: section_id
+						})
+
+						// target
+						// assign the target data for the target component with the section_record dragged
+						// when the user drop into empty space, the target will be not defined and it will be not assigned
+						if(target_value){
+							await set_component_data({
+								tipo			: self.graph_map.target,
+								value			: target_value,
+								section_tipo	: self.section_tipo,
+								section_id		: section_id
+							})
+						}
+
+						self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
+						self.refresh()
+					}
+			}else{
+				// empty node case
+				// assign the source data for the source component with the node value
+				// source value will be the dragged value
+				await set_component_data({
+					tipo			: p.tipo,
+					value			: source_value,
+					section_tipo	: p.from.section_tipo,
+					section_id		: p.from.section_id,
+				})
+
+				self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
+				self.refresh()
+
+			}
 			/** set_component_data
 			* assign and save the data into the specific component (source, target component)
 			* @param tipo component tipo
-			* @param locator data of the component
+			* @param value data of the component
 			* @param section_tipo
 			* @param section_id
 			*/
 			async function set_component_data(options){
 
-				const tipo			= options.tipo
-				const locator		= options.locator
-				const section_tipo	= options.section_tipo
-				const section_id	= options.section_id
+				const tipo				= options.tipo
+				const component_value	= options.value
+				const section_tipo		= options.section_tipo
+				const section_id		= options.section_id
 
 				// create the component source instance
 					const source_component = await instances.get_instance({
@@ -501,12 +569,14 @@ const get_graph = function(options){
 
 				// create the source (instance source of the component)
 					const source = create_source(source_component, null)
-
+					// set the current view and mode to get the new data in the same model than current data
+					source.view = 'graph'
+					source.mode = 'solved'
 				// set the changed_data for replace it in the instance data
 				// update_data_value. key is the position in the data array, the value is the new value
 					const value = {
-						section_id			: locator.section_id,
-						section_tipo		: locator.section_tipo,
+						section_id			: component_value.section_id,
+						section_tipo		: component_value.section_tipo,
 						from_component_tipo	: tipo
 					}
 				// set the changed_data for update the component data and send it to the server for change when save
@@ -562,13 +632,13 @@ const get_graph = function(options){
 	// node behavior
 		// when user click into the node, open the main section of the thing
 		function node_clicked(event, p) {
-			// if node has not a locator (empty component) is not possible open the main section
-			if(!p.locator){
+			// if node has not a value (empty component) is not possible open the main section
+			if(!p.value){
 				return null
 			}
 			// sort vars
-			const section_tipo	= p.locator.section_tipo
-			const section_id	= p.locator.section_id
+			const section_tipo	= p.value.section_tipo
+			const section_id	= p.value.section_id
 
 			// open a new window of the node section
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -590,8 +660,8 @@ const get_graph = function(options){
 		function link_clicked(event, p) {
 
 			// short vars
-			const section_tipo	= p.locator.section_tipo
-			const section_id	= p.locator.section_id
+			const section_tipo	= p.value.section_tipo
+			const section_id	= p.value.section_id
 
 			// open a new window of the section
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -710,6 +780,7 @@ const render_left = async (self) => {
 	const rqo = request_config.find(el => el.api_engine === 'dedalo')
 
 	const sqo = rqo.sqo
+
 
 	// section_selector_container
 		const section_selector_container = ui.create_dom_element({
@@ -951,6 +1022,8 @@ view_graph_solved_section.render_column_drag = function(options){
 		const self			= options.caller
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
+		const locator		= options.locator
+		const paginated_key	= options.paginated_key
 
 	const fragment = new DocumentFragment()
 
@@ -971,12 +1044,13 @@ view_graph_solved_section.render_column_drag = function(options){
 			class_name		: 'drag_node draggable',
 			parent 			: drag_container
 		})
+
 		drag_container.draggable = true
-		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, options={
+		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, {
 				section_record_node	: drag_container,
-				paginated_key		: options.paginated_key,
+				paginated_key		: paginated_key,
 				total_records		: self.total,
-				locator 			: options.locator,
+				value 				: locator,
 				caller 				: self,
 				drag_node 			: drag_node
 			})
@@ -1005,9 +1079,9 @@ export const on_dragstart = function(node, event, options) {
 	// event.preventDefault();
 	event.stopPropagation();
 
-	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+	// will be necessary the original locator (send as value) of the section_record and the paginated_key (the position in the array of data)
 	const transfer_data = {
-		locator			: options.locator,
+		value			: options.value,
 		paginated_key	: options.paginated_key
 	}
 

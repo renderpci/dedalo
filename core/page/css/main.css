@@ -13469,9 +13469,6 @@ dd-modal .find_and_replace .options_container .check input[type="checkbox"]:chec
   border-bottom-right-radius: 1rem;
   max-height: 5.5rem;
 }
-.component_section_id.edit.active {
-  background-color: #b9b9b9 !important;
-}
 .component_section_id.edit > .label {
   color: #ffffff;
 }

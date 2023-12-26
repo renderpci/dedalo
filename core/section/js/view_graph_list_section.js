@@ -447,9 +447,9 @@ const render_column_graph = function(options) {
 
 		const target_section_value	= self.context.properties.view_config.target_section_value || 'nexus53'
 		const target_section_data	= self.datum.data.find(el =>
-			el.section_id === section_id &&
-			el.section_tipo === section_tipo &&
-			el.tipo === target_section_value
+			el.section_id	=== section_id &&
+			el.section_tipo	=== section_tipo &&
+			el.tipo			=== target_section_value
 		)
 		const target_section_tipo = target_section_data.value[0]
 
@@ -463,6 +463,7 @@ const render_column_graph = function(options) {
 			})
 			await section.build(true)
 			section.view = 'graph'
+			section.caller = self.caller // injected caller (page), needed because to render new menu label
 			const section_node = await section.render()
 			// add to DOM
 			self.node.after(section_node)
@@ -476,10 +477,13 @@ const render_column_graph = function(options) {
 			const title		= section.id
 
 			// url search. Append section_id if exists
-			const url_vars	= url_vars_to_object(location.search)
-			url_vars.mode	= section.mode
-			url_vars.view	= section.view
-			const url = '?' + object_to_url_vars(url_vars)
+			const url = '?' + object_to_url_vars({
+				tipo	: section.tipo,
+				mode	: section.mode,
+				view	: section.view,
+				fst		: section_tipo,
+				fsi		: section_id
+			})
 
 			// browser navigation update
 			push_browser_history({
