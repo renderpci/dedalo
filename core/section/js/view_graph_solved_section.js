@@ -43,6 +43,7 @@ view_graph_solved_section.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// graph_map
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
 		self.graph_map =  (self.properties.graph_map)
@@ -71,8 +72,8 @@ view_graph_solved_section.render = async function(self, options) {
 			class_name		: 'right_node'
 		})
 
-	// content_data
-		const content_data = await get_content_data(self)
+		// content_data
+			const content_data = await get_content_data(self)
 		// fix last content_data (for pagination selection)
 		self.node_body = content_data
 		if (render_level==='content') {
@@ -144,7 +145,6 @@ const get_content_data = async function(self) {
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.mode) // ,'nowrap','full_width'
 			  // content_data.appendChild(fragment)
-
 
 		when_in_dom(content_data, ()=>{
 
@@ -719,6 +719,7 @@ const render_left = async (self) => {
 	const rqo = request_config.find(el => el.api_engine === 'dedalo')
 
 	const sqo = rqo.sqo
+
 
 	// section_selector_container
 		const section_selector_container = ui.create_dom_element({
