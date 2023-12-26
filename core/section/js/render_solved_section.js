@@ -53,7 +53,6 @@ render_solved_section.prototype.solved = async function(options) {
 */
 export const get_d3_data = function(options) {
 
-	const data 		= options.data
 	const datum		= options.datum
 	const graph_map	= options.graph_map
 
