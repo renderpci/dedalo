@@ -2057,7 +2057,6 @@ class component_relation_common extends component_common {
 					$section_id, // string section_id
 					$section_tipo, // string section_tipo
 					true, // bool skip_root
-					false // bool is_recursion
 				);
 
 				foreach ($parents_recursive as $parent_locator) {

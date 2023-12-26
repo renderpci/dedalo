@@ -1274,6 +1274,32 @@ class dd_object extends stdClass {
 	}//end get_section_map
 
 
+	/**
+	* SET_COLOR
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_color(?string $value) : bool {
+
+		$this->color = $value;
+
+		return true;
+	}//end set_color
+
+
+
+	/**
+	* GET_COLOR
+	* Return property value
+	* @return string|null $this->label
+	*/
+	public function get_color() : ?string {
+
+		return $this->color ?? null;
+	}//end get_color
+
+
+
 
 	/**
 	* COMPARE_DDO
