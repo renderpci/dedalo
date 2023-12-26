@@ -74,14 +74,12 @@ view_graph_solved_section.render = async function(self, options) {
 
 		// content_data
 			const content_data = await get_content_data(self)
-		// fix last content_data (for pagination selection)
-		self.node_body = content_data
-		if (render_level==='content') {
-			return content_data
-		}
 
-	// left side
-		const left_node = await render_left(self)
+			// fix last content_data (for pagination selection)
+			self.node_body = content_data
+			if (render_level==='content') {
+				return content_data
+			}
 
 		// label of the caller section
 			const label_container = ui.create_dom_element({
@@ -110,18 +108,28 @@ view_graph_solved_section.render = async function(self, options) {
 				})
 			}
 
-	// search filter
-		// if (self.filter) {
-			const search_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'search_container',
-				parent			: right_node
-			})
-			self.search_container = search_container
-		// }
+		// buttons
+			const buttons_node = get_buttons(self);
+			if(buttons_node){
+				right_node.appendChild(buttons_node)
+			}
 
-	// content_data add to fragment
-		right_node.appendChild(content_data)
+		// search filter
+			// if (self.filter) {
+				const search_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'search_container',
+					parent			: right_node
+				})
+				self.search_container = search_container
+			// }
+
+		// content_data add to fragment
+			right_node.appendChild(content_data)
+
+	// left side
+		// left node with the d3 visualization
+			const left_node = await render_left(self)
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
