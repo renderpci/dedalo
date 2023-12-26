@@ -36,6 +36,15 @@ const t0 = performance.now()
 			// 		window[key] = value
 			// 	}
 
+		// check environment
+			if (typeof page_globals==='undefined') {
+				document.getElementById('main').innerHTML = `
+				<div class="maintenance_container">
+					Error: the environment is not available. Check your configuration files
+				</div>`
+				return
+			}
+
 		// main events init (visibility change, save,..)
 			events_init()
 
