@@ -57,8 +57,17 @@ export const get_d3_data = function(options) {
 	const datum		= options.datum
 	const graph_map	= options.graph_map
 
-	const sources		= datum.data.filter(el => el.tipo === graph_map.source)
-	const targets		= datum.data.filter(el => el.tipo === graph_map.target)
+	const sources			= datum.data.filter(el => el.tipo === graph_map.source)
+	const targets			= datum.data.filter(el => el.tipo === graph_map.target)
+	const source_context	= datum.context.find(el => el.tipo === graph_map.source)
+
+	const request_config = source_context?.request_config
+	const rqo = request_config
+		? request_config.find(el => el.api_engine === 'dedalo')
+		: null
+	const sqo = rqo
+		? rqo.sqo
+		: null
 
 	const nodes = []
 	const links = []
@@ -76,6 +85,10 @@ export const get_d3_data = function(options) {
 			const source_section_tipo = (current_souce.value[0])
 				? current_souce.value[0].section_tipo
 				: null
+			const source_section = (sqo)
+				? sqo.section_tipo.find(el => el.tipo === source_section_tipo)
+				: null
+
 			const source = {
 				id				: source_id,
 				name			: current_souce.literal,
@@ -86,6 +99,7 @@ export const get_d3_data = function(options) {
 					section_id		: current_souce.section_id,
 					section_tipo	: current_souce.section_tipo
 				},
+				color 			: (source_section && source_section.color) ? source_section.color : '#dddddd'
 			}
 			if(!source_found){
 				nodes.push(source)
@@ -107,16 +121,21 @@ export const get_d3_data = function(options) {
 			const target_section_tipo = (current_target.value[0])
 				? current_target.value[0].section_tipo
 				: null
+			const target_color = (sqo)
+				? sqo.section_tipo.find(el => el.tipo === target_section_tipo)
+				: null
+
 			const target = {
 				id				: target_id,
 				name			: current_target.literal,
 				value			: current_target.value[0],
-				section_tipo	: (current_target.value[0]) ? current_target.value[0].section_tipo : null
+				section_tipo	: target_section_tipo,
 				tipo			: current_target.tipo,
 				from			: {
 					section_id		: current_target.section_id,
 					section_tipo	: current_target.section_tipo
 				},
+				color 			: (target_color && target_color) ? target_color.color : '#dddddd'
 			}
 			if(!target_found){
 				nodes.push(target)
@@ -129,7 +148,6 @@ export const get_d3_data = function(options) {
 				el.section_id	=== current_souce.section_id &&
 				el.section_tipo	=== current_souce.section_tipo
 			)
-
 
 		// target role
 			const target_role = datum.data.find(el =>
