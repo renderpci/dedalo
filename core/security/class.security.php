@@ -231,7 +231,7 @@ class security {
 	* Search in matrix record with this id (user_id) as parent,
 	* filter by tipo - model name (component_security_access) and get dato if exists in db
 	* @param int $user_id
-	* @return array $ar_permissions_in_matrix_for_current_user
+	* @return array $dato_access
 	*	Array of all elements of current Ontology with permission values
 	*	Include areas and components permissions
 	*/
@@ -247,7 +247,7 @@ class security {
 				: [];
 
 
-		return $dato_access;
+		return $dato_access ?? [];
 	}//end get_ar_permissions_in_matrix_for_current_user
 
 
