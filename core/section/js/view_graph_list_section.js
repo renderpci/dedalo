@@ -476,10 +476,13 @@ const render_column_graph = function(options) {
 			const title		= section.id
 
 			// url search. Append section_id if exists
-			const url_vars	= url_vars_to_object(location.search)
-			url_vars.mode	= section.mode
-			url_vars.view	= section.view
-			const url = '?' + object_to_url_vars(url_vars)
+			const url = '?' + object_to_url_vars({
+				tipo	: section.tipo,
+				mode	: section.mode,
+				view	: section.view,
+				fst		: section_tipo,
+				fsi		: section_id
+			})
 
 			// browser navigation update
 			push_browser_history({
