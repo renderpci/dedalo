@@ -347,7 +347,7 @@ const get_graph = function(options){
 			.attr("stroke", "#ffffff") // a stroke around the circle, white as background
 			.attr("stroke-width", 1.5) // a tiny stroke use to "cut" the link path
 			.attr("r", 10) // fixed radius, if it change, change the r in the "tick" function
-			.attr("fill", d => (d.section_tipo) ? color(d.section_tipo) : '#dddddd') // use different color for every section, if the section is empty, use gray
+			.attr("fill", d => (d.value) ? d.color : '#dddddd') // use different color for every section, if the value is empty, use gray
 			.on("click", node_clicked) // open the main section of the thing
 			.on("dragenter", on_dragenter) // show active the node
 			.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
