@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS COMPONENT_SELECT_LANG
-*
 *
 */
 class component_select_lang extends component_relation_common {
@@ -12,22 +12,25 @@ class component_select_lang extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
 
-	# test_equal_properties is used to verify duplicates when add locators
-	#public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
+	// test_equal_properties is used to verify duplicates when add locators
+	// public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
 
 
 
 	/**
 	* GET_VALOR
 	* Get value . default is get dato . overwrite in every different specific component
+	* @param string|null $lang = DEDALO_DATA_LANG
 	* @return string|null $valor
 	*/
 	public function get_valor(?string $lang=DEDALO_DATA_LANG) : ?string {
 
 		$dato = $this->get_dato();
-		if (empty($dato)) {
-			return null;
-		}
+
+		// empty case
+			if (empty($dato)) {
+				return null;
+			}
 
 		// Test dato format (b4 changed to object)
 			if(SHOW_DEBUG) {
@@ -42,13 +45,13 @@ class component_select_lang extends component_relation_common {
 				}
 			}
 
-		# Always run ar_all_project_select_langs
-		# $ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang );
+		// Always run ar_all_project_select_langs
+		// $ar_all_project_select_langs = $this->get_ar_all_project_select_langs( $lang );
 		$ar_all_project_select_langs = common::get_ar_all_langs_resolved(DEDALO_DATA_LANG);
 		foreach ((array)$ar_all_project_select_langs as $lang_code => $lang_name ) {
 
 			$locator = lang::get_lang_locator_from_code( $lang_code );
-			if (locator::in_array_locator( $locator, (array)$dato, $ar_properties=array('section_id','section_tipo') )) {
+			if (locator::in_array_locator($locator, $dato, ['section_id','section_tipo'])) {
 				$valor = $lang_name;
 				break;
 			}
@@ -61,15 +64,53 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
-	* BUILD_SEARCH_COMPARISON_OPERATORS
-	* Note: Override in every specific component
-	* @param array $comparison_operators . Like array('=','!=')
-	* @return object stdClass $search_comparison_operators
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @see class.diffusion_mysql.php
+	*
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string $diffusion_value
 	*/
-		// public function build_search_comparison_operators( $comparison_operators=array('=','!=') ) {
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
-		// 	return (object)parent::build_search_comparison_operators($comparison_operators);
-		// }//end build_search_comparison_operators
+		// Important: Pass lang as parameter to indicate in the resolution
+		// of the get_ar_list_of_values the desired language.
+		$valor = $this->get_valor( $lang );
+
+		$diffusion_value = !empty($valor)
+			? preg_replace("/<\/?mark>/", '', $valor) # Remove untranslated string tags
+			: null;
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_VALUE_CODE
+	* Returns the value lang code like 'lg-cat'
+	* Used in diffusion to get the av file lang for example
+	* @return string|null $code
+	*/
+	public function get_value_code() : ?string {
+
+		$dato = $this->get_dato();
+
+		// empty case
+			if (empty($dato)) {
+				return null;
+			}
+
+		// lang class manage resolution
+			$locator	= reset($dato);
+			$code		= lang::get_code_from_locator($locator);
+
+
+		return $code;
+	}//end get_value_code
 
 
 
@@ -93,6 +134,7 @@ class component_select_lang extends component_relation_common {
 			default:
 				break;
 		}
+
 
 		return $tipo;
 	}//end get_related_component_text_area
@@ -178,53 +220,9 @@ class component_select_lang extends component_relation_common {
 
 
 	/**
-	* GET_DIFFUSION_VALUE
-	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
-	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string $diffusion_value
-	*
-	* @see class.diffusion_mysql.php
-	*/
-	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
-
-		$valor = $this->get_valor( $lang ); # Importante!: Pasar lang como parámetro para indicar en la resolución del get_ar_list_of_values el lenguaje deseado
-
-		$diffusion_value = !empty($valor)
-			? preg_replace("/<\/?mark>/", '', $valor) # Remove untranslated string tags
-			: null;
-
-		return $diffusion_value;
-	}//end get_diffusion_value
-
-
-
-	/**
-	* GET_VALUE_CODE
-	* Returns the value lang code like 'lg-cat'
-	* Used in diffusion to get the av file lang for example
-	* @return string $code | null
-	*/
-	public function get_value_code() {
-
-		$dato = $this->get_dato();
-
-		if (empty($dato)) {
-			return null;
-		}
-
-		$locator	= reset($dato);
-		$code		= lang::get_code_from_locator($locator);
-
-		return (string)$code;
-	}//end get_value_code
-
-
-
-	/**
 	* GET_SORTABLE
 	* @return bool
-	* 	Default is true. Override when component is sortable
+	* 	Default is false. Override when component is sortable
 	*/
 	public function get_sortable() : bool {
 
