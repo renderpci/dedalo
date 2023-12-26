@@ -318,7 +318,7 @@ const get_graph = function(options){
 		.join("path")
 			.attr("stroke", d => color(d.type))
 			.attr("marker-end", 'url(#arrow)')
-			.attr("stroke-width", d => Math.sqrt(d.value))
+			.attr("stroke-width", d => Math.sqrt(d.weight))
 			.on("click", link_clicked)
 			.on("mouseenter", link_mouse_enter)
 			.on("mouseleave", link_mouse_leave);
