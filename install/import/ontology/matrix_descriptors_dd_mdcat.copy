@@ -42,7 +42,13 @@ mdcat4381	Delete	termino	lg-eng
 mdcat4381	Esborrar	termino	lg-cat
 mdcat4382	Listado	termino	lg-spa
 mdcat4382	List	termino	lg-eng
+mdcat1880	Indret	termino	lg-cat
+mdcat1880	Lugar	termino	lg-spa
+mdcat1881	Municipi	termino	lg-cat
 mdcat4382	Llistat	termino	lg-cat
+mdcat1881	Municipio	termino	lg-spa
+mdcat1882	Nou	termino	lg-cat
+mdcat1882	Nuevo	termino	lg-spa
 mdcat1	Memorial Democràtic	termino	lg-cat
 mdcat1	Memorial Democràtic	termino	lg-spa
 mdcat10	Projecte del Banc	termino	lg-cat
@@ -1656,8 +1662,6 @@ mdcat1776	Últims canvis	termino	lg-cat
 mdcat1777	Documentació	termino	lg-cat
 mdcat1777	Documentación	termino	lg-spa
 mdcat1778	view_single_line	termino	lg-spa
-mdcat1779	Localització	termino	lg-cat
-mdcat1779	Localitzación	termino	lg-spa
 mdcat178	Listado	termino	lg-spa
 mdcat178	Llistat	termino	lg-cat
 mdcat1780	Localitzat	termino	lg-cat
@@ -1689,6 +1693,7 @@ mdcat1792	Hospital Militar	termino	lg-spa
 mdcat1793	Fondos bibliográficos	termino	lg-spa
 mdcat1793	Fonts bibliogràfiques	termino	lg-cat
 mdcat1794	Fondos documentales	termino	lg-spa
+mdcat1779	Cierre y localización	termino	lg-spa
 mdcat1794	Fonts documentals	termino	lg-cat
 mdcat1795	Notas sobre la fosa	termino	lg-spa
 mdcat1795	Notes sobre la fossa	termino	lg-cat
@@ -1908,12 +1913,6 @@ mdcat1879	Cementerio	termino	lg-spa
 mdcat1879	Cementiri	termino	lg-cat
 mdcat188	Data de tramitació	termino	lg-cat
 mdcat188	Fecha de tramitación	termino	lg-spa
-mdcat1880	Indret	termino	lg-cat
-mdcat1880	Lugar	termino	lg-spa
-mdcat1881	Municipi	termino	lg-cat
-mdcat1881	Municipio	termino	lg-spa
-mdcat1882	Nou	termino	lg-cat
-mdcat1882	Nuevo	termino	lg-spa
 mdcat1883	Borrar	termino	lg-spa
 mdcat1883	Esborrar	termino	lg-cat
 mdcat1884	Listado	termino	lg-spa
@@ -7050,8 +7049,8 @@ mdcat4405	imatges	termino	lg-spa
 mdcat4406	geojson	termino	lg-spa
 mdcat4407	gestio	termino	lg-spa
 mdcat4408	municipi_rec	termino	lg-spa
-mdcat4409	ref_stolpersteine_municipi_nom	termino	lg-spa
 mdcat4410	ref_stolpersteine_municipi_nom_rec	termino	lg-spa
+mdcat3889	Altres referències cadastrals	termino	lg-cat
 mdcat1706	MEMORIAL DEMOCRATIC	termino	lg-spa
 mdcat3686	Radio button	obs	lg-spa
 mdcat1302	Changed &#039;component_method&#039; from get_diffusion_valor to &#039;get_diffusion_value&#039; in rsc23 (25-02-2021 Paco)	obs	lg-spa
@@ -7397,7 +7396,6 @@ mdcat3886	Esborrar	termino	lg-cat
 mdcat3887	Referència cadastral	termino	lg-cat
 mdcat3887	Referencia catastral	termino	lg-spa
 mdcat3888	URI catastro	termino	lg-spa
-mdcat3889	Altres referències cadastrals	termino	lg-cat
 mdcat3889	Otras referencias catastrales	termino	lg-spa
 mdcat3890	Dades de la propietat	termino	lg-cat
 mdcat3890	Datos de la propiedad	termino	lg-spa
@@ -8708,7 +8706,6 @@ mdcat1774	Identification	termino	lg-fra
 mdcat1775	Liste	termino	lg-fra
 mdcat1776	Dernières modifications	termino	lg-fra
 mdcat1777	Documentation 	termino	lg-fra
-mdcat1779	Localisation	termino	lg-fra
 mdcat178	Liste	termino	lg-fra
 mdcat1780	Localisé	termino	lg-fra
 mdcat1781	Fosse 	termino	lg-fra
@@ -11577,7 +11574,6 @@ mdcat1774	Identification	termino	lg-eng
 mdcat1775	List	termino	lg-eng
 mdcat1776	Latest changes	termino	lg-eng
 mdcat1777	Documentation	termino	lg-eng
-mdcat1779	Location	termino	lg-eng
 mdcat1780	Located	termino	lg-eng
 mdcat1781	Graveyard	termino	lg-eng
 mdcat1782	Grave in catalonia	termino	lg-eng
@@ -14514,7 +14510,6 @@ mdcat1660	Affected person	termino	lg-eng
 mdcat4421	Informació de la persona afectada	termino	lg-cat
 mdcat4421	Información de la persona afectada	termino	lg-spa
 mdcat4421	Information of the affected person	termino	lg-eng
-mdcat4422	Excluidos	termino	lg-spa
 mdcat4418	Historical documentary research	termino	lg-eng
 mdcat4419	Excluidos	termino	lg-spa
 mdcat1486	Persona afectada	termino	lg-cat
@@ -14611,3 +14606,46 @@ mdcat4460	Comentario	termino	lg-spa
 mdcat4460	Comentari	termino	lg-cat
 mdcat4461	Observaciones	termino	lg-spa
 mdcat4461	Observacions	termino	lg-cat
+mdcat4462	stolpersteine_dato	termino	lg-spa
+mdcat4463	ref_stolpersteine_data	termino	lg-spa
+mdcat4464	ref_stolpersteine_municipi	termino	lg-spa
+mdcat4409	ref_stolpersteine_municipi_nom	termino	lg-spa
+mdcat4465	ref_stolpersteine_municipi_nom	termino	lg-spa
+mdcat4466	ref_stolpersteine_municipi_rec	termino	lg-spa
+mdcat4467	ref_stolpersteine_image	termino	lg-spa
+mdcat4468	ref_stolpersteine_geojson	termino	lg-spa
+mdcat4469	ref_stolpersteine_municipi_geojson	termino	lg-spa
+mdcat4470	ref_stolpersteine_municipi_nom_rec	termino	lg-spa
+mdcat4422	Comunicaciones con los solicitantes	termino	lg-spa
+mdcat4472	Identificación	termino	lg-spa
+mdcat4472	Identificació	termino	lg-cat
+mdcat4473	Id	termino	lg-spa
+mdcat4473	Id	termino	lg-cat
+mdcat4474	Fecha	termino	lg-spa
+mdcat4474	Data	termino	lg-cat
+mdcat4475	Notas	termino	lg-spa
+mdcat4475	Notes	termino	lg-eng
+mdcat4476	Documento	termino	lg-spa
+mdcat4476	Document	termino	lg-cat
+mdcat4477	Proyecto	termino	lg-spa
+mdcat4477	Projecte	termino	lg-cat
+mdcat4478	Nuevo	termino	lg-spa
+mdcat4478	Nou	termino	lg-cat
+mdcat4479	Borar	termino	lg-spa
+mdcat4479	Esborrar	termino	lg-cat
+mdcat4480	Listado	termino	lg-spa
+mdcat4480	Llistat	termino	lg-cat
+mdcat4481	Listado	termino	lg-spa
+mdcat1779	Tancament i localització	termino	lg-cat
+mdcat4481	Llistat	termino	lg-cat
+mdcat1779	Fermeture et localisation	termino	lg-fra
+mdcat4482	Últimos cambios	termino	lg-spa
+mdcat1779	Closure and location	termino	lg-eng
+mdcat4482	Últims canvis	termino	lg-cat
+mdcat4483	Relaciones	termino	lg-spa
+mdcat4471	Guiá de la investigación	termino	lg-spa
+mdcat4483	Relacions	termino	lg-cat
+mdcat4471	Guia de la recerca	termino	lg-cat
+mdcat4484	Comunicaciones con los solicitantes	termino	lg-spa
+mdcat4422	Comunicacions amb els sol·licitants	termino	lg-cat
+mdcat4484	Comunicacions amb els sol·licitants	termino	lg-cat

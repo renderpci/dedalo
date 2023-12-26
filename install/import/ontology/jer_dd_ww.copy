@@ -3,15 +3,15 @@ ww2	hierarchy57	dd6	no	si	si	151	ww	no	[{"dd6":"hierarchy20"}]		\N
 ww38	ww44	dd635	no	si	si	1	ww	no	null	{"date_mode":"range","css":{".wrap_component":{"mixin":[".vertical"],"display":"inline-block !important","style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}, "date_mode": "range"}
 ww4	ww2	dd91	no	si	si	1	ww	no	[{"dd9":"hierarchy25"},{"dd9":"hierarchy27"},{"dd10":"hierarchy28"},{"dd57":"hierarchy24"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"}]		\N
 ww6	ww2	dd1129	no	si	si	1	ww	no	null		\N
+ww1	hierarchy56	dd6	no	si	si	15	ww	no	[{"dd6":"ww10"}]	\N	\N
 ww8	ww2	dd524	no	si	si	1	ww	no	[{"dd195":"dd196"},{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]		\N
 ww23	ww22	dd91	no	si	si	1	ww	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N	\N
-ww10	dd100	dd6	no	si	si	5	ww	no	[{"dd626":"dd425"}]	\N	\N
 ww26	ww10	dd183	no	si	si	11	ww	si	\N	\N	\N
 ww24	ww10	dd8	no	si	si	5	ww	si	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 1fr)"}}}
 ww15	ww10	dd8	no	si	si	2	ww	si	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
+ww10	dd100	dd6	no	si	si	5	ww	no	[{"dd626":"dd425"}]	\N	\N
 ww25	ww10	dd177	no	si	si	10	ww	no	\N	\N	\N
 ww7	ww10	dd434	no	si	si	8	ww	no	[{"dd57":"ww14"},{"dd57":"ww35"},{"dd9":"ww11"},{"dd431":"ww32"},{"dd432":"ww34"}]	{\r\n  "ww35": {\r\n    "type": "link",\r\n    "icon": ">>"\r\n  },\r\n  "ww11": {\r\n    "type": "term"\r\n  },\r\n  "ww32": {\r\n    "icon": "TR"\r\n  },\r\n  "ww34": {\r\n    "icon": "U"\r\n  }\r\n}	\N
-ww1	hierarchy56	dd6	no	si	si	15	ww	no	[{"dd6":"ww10"}]	\N	\N
 ww20	ww15	dd318	no	si	si	6	ww	si	\N	{"css":{".wrap_component":{"mixin":[".line_top"],"style":{"width":"50%"}},".content_data":{"style":{"height":"400px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}}
 ww41	ww1	dd91	no	si	si	1	ww	no	[{"dd339":"ww17"},{"dd57":"ww14"},{"dd57":"ww33"},{"dd9":"ww11"},{"dd9":"ww12"},{"dd11":"ww13"},{"dd9":"ww18"},{"dd318":"ww20"},{"dd318":"ww21"},{"dd352":"ww27"},{"dd429":"ww28"},{"dd431":"ww32"},{"dd432":"ww34"},{"dd592":"ww22"}]	\N	\N
 ww42	ww1	dd144	no	si	si	2	ww	no	\N	[\r\n  {\r\n    "tipo": "ww11",\r\n    "type": "term"\r\n  },\r\n  {\r\n    "tipo": "ww27",\r\n    "type": "icon",\r\n    "icon": "CH"\r\n  },\r\n  {\r\n    "tipo": "ww32",\r\n    "type": "icon",\r\n    "icon": "TR"\r\n  },\r\n  {\r\n    "tipo": "ww34",\r\n    "type": "icon",\r\n    "icon": "U"\r\n  },\r\n  {\r\n    "tipo": "ww27",\r\n    "type": "link_childrens"\r\n  }\r\n]	[{"tipo": "ww11", "type": "term"}, {"icon": "CH", "tipo": "ww27", "type": "icon"}, {"icon": "TR", "tipo": "ww32", "type": "icon"}, {"icon": "U", "tipo": "ww34", "type": "icon"}, {"tipo": "ww27", "type": "link_childrens"}]
