@@ -1340,5 +1340,25 @@ class RecordObj_dd extends RecordDataBoundObject {
 	}//end get_translatable
 
 
+	/**
+	* GET_COLOR
+	* get the color define in properties
+	* if it's not defined return default gray
+	* @param string $section_tiop
+	* @return string $color #ddddd
+	*/
+	public static function get_color($section_tipo) {
+
+		$RecordObj_dd	= new RecordObj_dd($section_tipo);
+		$properties		= $RecordObj_dd->get_properties();
+
+		$color = isset($properties->color)
+			? $properties->color
+			: '#b9b9b9'; // default gray
+
+		return $color;
+	}//end get_color
+
+
 
 }//end class RecordObj_dd
