@@ -570,7 +570,9 @@ const get_graph = function(options){
 
 				// create the source (instance source of the component)
 					const source = create_source(source_component, null)
-
+					// set the current view and mode to get the new data in the same model than current data
+					source.view = 'graph'
+					source.mode = 'solved'
 				// set the changed_data for replace it in the instance data
 				// update_data_value. key is the position in the data array, the value is the new value
 					const value = {
