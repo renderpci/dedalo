@@ -278,7 +278,11 @@ const get_graph = function(options){
 		.attr("viewBox", [-width / 2, -height / 2, width, height])
 		// .attr("preserveAspectRatio", "xMinYMin meet")
 		// .attr("style", "max-width: 100%; height: auto;")
-		.classed("svg_content", true);;
+		.classed("svg_content", true)
+		.on("dragenter", on_dragenter) // show active the node
+		.on("dragover", on_dragover) // show active the node and remove the default behavior to allow drop
+		.on("drop", on_drop ) // create new nexus section with the source and target
+		.on("dragleave", on_dragleave) // deactivate the node
 
 		// recalculate the size of the view-box every time that window has resized.
 		window.addEventListener("resize", function(){
@@ -470,41 +474,78 @@ const get_graph = function(options){
 			// the drag element will sent the data of the original position, the source_key
 			const data_parse = JSON.parse(data)
 
-			// locators for source / target components
-			const source_locator = p.locator
-			const target_locator = data_parse.locator
+			// values for source / target components
+			// if the user drop into a node the p will exist and p.value will be the source
+			// when drop is a empty space (svg viewbox) the p and p.value will not defined
+			// in this case the source will be the dragged value
+			// and the target will null
+			const source_value = (p && p.value)
+				? p.value
+				: data_parse.value
+			const target_value = (p && p.value)
+				? data_parse.value
+				: null
 
-			// data_manager. create new section
-				const rqo = {
-					action	: 'create',
-					source	: {
-						section_tipo : self.section_tipo
+				const bool = (p && p.value)
+
+			// if the user drop into empty node or the node has value:
+			// create new nexus section and assign the dragged value
+			// else (the node has not value) assign the dragged value into the empty node
+			if(!p || p.value){
+				// data_manager. create new section
+					const rqo = {
+						action	: 'create',
+						source	: {
+							section_tipo : self.section_tipo
+						}
 					}
-				}
-				const api_response = await data_manager.request({
-					body : rqo
-				})
-				// if the server response is ok, it will send the new section_id
-				if (api_response.result && api_response.result>0) {
+					const api_response = await data_manager.request({
+						body : rqo
+					})
+					// if the server response is ok, it will send the new section_id
+					if (api_response.result && api_response.result>0) {
 
-					const section_id = api_response.result
-					// source
-					// assign the source data for the source component with the node locator
-					set_component_data({
-						tipo			: self.graph_map.source,
-						locator			: source_locator,
-						section_tipo	: self.section_tipo,
-						section_id		: section_id
-					})
-					// target
-					// assign the target data for the target component with the section_record dragged
-					set_component_data({
-						tipo			: self.graph_map.target,
-						locator			: target_locator,
-						section_tipo	: self.section_tipo,
-						section_id		: section_id
-					})
-				}
+						const section_id = api_response.result
+
+						// source
+						// assign the source data for the source component with the node value
+						await set_component_data({
+							tipo			: self.graph_map.source,
+							value			: source_value,
+							section_tipo	: self.section_tipo,
+							section_id		: section_id
+						})
+
+						// target
+						// assign the target data for the target component with the section_record dragged
+						// when the user drop into empty space, the target will be not defined and it will be not assigned
+						if(target_value){
+							await set_component_data({
+								tipo			: self.graph_map.target,
+								value			: target_value,
+								section_tipo	: self.section_tipo,
+								section_id		: section_id
+							})
+						}
+
+						self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
+						self.refresh()
+					}
+			}else{
+				// empty node case
+				// assign the source data for the source component with the node value
+				// source value will be the dragged value
+				await set_component_data({
+					tipo			: p.tipo,
+					value			: source_value,
+					section_tipo	: p.from.section_tipo,
+					section_id		: p.from.section_id,
+				})
+
+				self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
+				self.refresh()
+
+			}
 			/** set_component_data
 			* assign and save the data into the specific component (source, target component)
 			* @param tipo component tipo
