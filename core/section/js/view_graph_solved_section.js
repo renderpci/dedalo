@@ -170,7 +170,6 @@ const get_content_data = async function(self) {
 			// get d3 data
 				const d3_data = get_d3_data({
 					graph_map	: self.graph_map,
-					data		: self.data,
 					datum		: self.datum
 				})
 
