@@ -69,9 +69,13 @@ class install extends common {
 					// failed. Stop here
 					$dd_object->set_properties($properties);
 
+					$error_msg = !empty($init_test_response->msg)
+						? implode(', ', $init_test_response->msg)
+						: 'Unknown error on init_test_response';
+
 					debug_log(__METHOD__
 						." Error: dd_init_test " . PHP_EOL
-						. $init_test_response->msg ?? 'Unknown error on init_test_response'
+						. $error_msg
 						, logger::ERROR
 					);
 
