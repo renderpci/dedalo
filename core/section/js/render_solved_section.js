@@ -145,7 +145,7 @@ export const get_d3_data = function(options) {
 					section_id		: current_souce.section_id,
 					section_tipo	: current_souce.section_tipo
 				},
-				value : 18, // stroke-width
+				weight : 18, // stroke-width
 				source_role	: source_role.literal || '',
 				target_role	: target_role.literal || '',
 			}
