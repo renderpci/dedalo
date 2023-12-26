@@ -2833,13 +2833,37 @@ class search {
 				return $response;
 			}
 
+		// empty section_id case
+			if (empty($section_id)) {
+				$response->msg[]	= " options->section_id is mandatory ! Stopped action";
+				$response->msg		= implode(', ', $response->msg);
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' . to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+		// empty section_tipo case
+			if (empty($section_tipo)) {
+				$response->msg[]	= " options->section_tipo is mandatory ! Stopped action";
+				$response->msg		= implode(', ', $response->msg);
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' . to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// empty from_component_tipo case
 			if (empty($from_component_tipo)) {
 				$response->msg[]	= " options->from_component_tipo is mandatory ! Stopped action";
 				$response->msg		= implode(', ', $response->msg);
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
-					. ' options: ' . json_encode($options, JSON_PRETTY_PRINT)
+					. ' options: ' . to_string($options)
 					, logger::ERROR
 				);
 				return $response;
@@ -2921,7 +2945,9 @@ class search {
 		// Exec query (all records at once)
 			if (!empty($ar_insert_values)) {
 
-				$strQuery	= 'INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES '.implode(',', $ar_insert_values).';';
+				$strQuery	= '
+					INSERT INTO '.$table.' (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo)
+					VALUES '.implode(',', $ar_insert_values).';';
 				$result		= pg_query(DBi::_getConnection(), $strQuery);
 				if(!$result) {
 					$msg = " Failed Insert relations record ";
