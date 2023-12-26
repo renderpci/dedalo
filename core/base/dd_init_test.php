@@ -863,8 +863,7 @@
 
 			// write test file
 			$test_user_id	= $user_id ?? 0;
-			$file_name		= DEDALO_ENTITY .'_'. $test_user_id.'.cache_test_file.json';
-			// $custom_prefix	= 'to_delete_';
+			$file_name		= 'cache_test_file.json';
 			dd_cache::process_and_cache_to_file((object)[
 				'process_file'	=> DEDALO_CORE_PATH . '/base/cache_test_file.php',
 				'data'			=> (object)[
