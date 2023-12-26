@@ -73,13 +73,20 @@ export const get_d3_data = function(options) {
 			const source_id = (current_souce.value[0]) ? ar_source_id.join('|') : `s${i}_s${i}`
 			const source_found = nodes.find(el => el.id === source_id)
 
+			const source_section_tipo = (current_souce.value[0])
+				? current_souce.value[0].section_tipo
+				: null
 			const source = {
 				id				: source_id,
 				name			: current_souce.literal,
 				value			: current_souce.value[0],
-				section_tipo	: (current_souce.value[0]) ? current_souce.value[0].section_tipo : null
+				section_tipo	: source_section_tipo,
+				tipo			: current_souce.tipo,
+				from			: {
+					section_id		: current_souce.section_id,
+					section_tipo	: current_souce.section_tipo
+				},
 			}
-
 			if(!source_found){
 				nodes.push(source)
 			}
@@ -97,11 +104,19 @@ export const get_d3_data = function(options) {
 			const target_id = (current_target.value[0]) ?  ar_target_id.join('|') : `t${i}_t${i}`
 			const target_found = nodes.find(el => el.id === target_id)
 
+			const target_section_tipo = (current_target.value[0])
+				? current_target.value[0].section_tipo
+				: null
 			const target = {
 				id				: target_id,
 				name			: current_target.literal,
 				value			: current_target.value[0],
 				section_tipo	: (current_target.value[0]) ? current_target.value[0].section_tipo : null
+				tipo			: current_target.tipo,
+				from			: {
+					section_id		: current_target.section_id,
+					section_tipo	: current_target.section_tipo
+				},
 			}
 			if(!target_found){
 				nodes.push(target)
