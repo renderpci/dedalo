@@ -56,6 +56,15 @@ view_graph_solved_section.render = async function(self, options) {
 				connection	: 'nexus29'
 			}
 
+	// from_map
+	// Used to show the name of the section caller
+	// name component is defined in ontology from_map property of the current section
+		self.from_map =  (self.properties.from_map)
+			? self.properties.from_map
+			: {
+				name: "nexus48"
+			}
+
 	// right side
 		const right_node = ui.create_dom_element({
 			element_type	: 'div',
