@@ -435,10 +435,7 @@ const get_graph = function(options){
 			const x_source	= (d.self_linked) ? d.source.x + 1 : d.source.x
 			const y_source	= (d.self_linked) ? d.source.y + 1 : d.source.y
 
-			return `
-					M${x_source},${y_source}
-					A${r},${r} 0 ${large_arc},1 ${x_target},${y_target}
-				`;
+			return `M${x_source},${y_source} A${r},${r} 0 ${large_arc},1 ${x_target},${y_target}`;
 		}else{
 			return `M${d.source.x},${d.source.y} L ${x_target},${y_target}`
 		}
