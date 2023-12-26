@@ -447,9 +447,9 @@ const render_column_graph = function(options) {
 
 		const target_section_value	= self.context.properties.view_config.target_section_value || 'nexus53'
 		const target_section_data	= self.datum.data.find(el =>
-			el.section_id === section_id &&
-			el.section_tipo === section_tipo &&
-			el.tipo === target_section_value
+			el.section_id	=== section_id &&
+			el.section_tipo	=== section_tipo &&
+			el.tipo			=== target_section_value
 		)
 		const target_section_tipo = target_section_data.value[0]
 
