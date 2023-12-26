@@ -14,7 +14,7 @@
 	import {
 		create_source
 	} from '../../common/js/common.js'
-	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
 	import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	import {
 		get_d3_data
@@ -83,21 +83,32 @@ view_graph_solved_section.render = async function(self, options) {
 	// left side
 		const left_node = await render_left(self)
 
+		// label of the caller section
+			const label_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label_container',
+				parent			: right_node
+			})
 
-	// label
-		const label_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label_container',
-			inner_html 		: self.label || '',
-			parent			: right_node
-		})
+			const url_vars = url_vars_to_object()
+			if(url_vars.fst && url_vars.fsi){
 
+				const section_tipo	= url_vars.fst
+				const section_id	= url_vars.fsi
+				const tipo			= self.from_map.name
 
-	// buttons
-		const buttons_node = get_buttons(self);
-		if(buttons_node){
-			right_node.appendChild(buttons_node)
-		}
+				const component_name = instances.get_instance({
+					tipo			: tipo,
+					section_tipo	: section_tipo,
+					section_id		: section_id,
+					mode			: 'solved',
+					inspector		: false
+				})
+				.then(async function(component_name){
+					await component_name.build(true)
+					label_container.textContent = component_name.data.literal || self.label
+				})
+			}
 
 	// search filter
 		// if (self.filter) {
