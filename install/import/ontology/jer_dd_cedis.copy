@@ -120,4 +120,4 @@ cedis121	cedis2	dd1743	no	si	si	2	cedis	si	\N	{\r\n  "diffusion": {\r\n    "clas
 cedis4	cedis75	dd440	no	si	si	1	cedis	si	\N	{"engine":"MyISAM"}	{"engine": "MyISAM"}
 cedis3	cedis2	dd1743	no	si	si	1	cedis	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_mysql"\r\n  }\r\n}	{"diffusion": {"class_name": "diffusion_mysql"}}
 cedis1	dd3	dd17	no	si	si	19	cedis	no	\N	\N	\N
-cedis75	ts11	dd440	no	si	si	13	cedis	si	\N	{"varchar":2000}	{"varchar": 2000}
+cedis75	ts11	dd440	no	si	si	11	cedis	si	\N	{"varchar":2000}	{"varchar": 2000}
