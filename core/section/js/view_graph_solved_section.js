@@ -685,26 +685,46 @@ const get_graph = function(options){
 			const source_text_node = d3.select("#" + p.source.id);
 			const target_text_node = d3.select("#" + p.target.id);
 
-			// add source and target text node with role enclosed by "()"
-			source_text_node.append("text")
-				.attr("x", 14)
-				.attr("y", 20)
-				.attr("dy", "0em")
-				.attr("id", "role")
-				.text((p.source_role) ? `(${p.source_role})` : '');
+			// if the link is to same node, the text will be only 1 in the node with both roles
+			// (source -> target)
+			// if the link point two different nodes, every node will has his own role
+			// (source)
+			if(p.source.id === p.target.id){
+				// add source and target text node with role enclosed by "()"
+				const source_text = (p.source_role) ? `${p.source_role}` : '';
+				const target_text = (p.target_role) ? `${p.target_role}`: '';
 
-			target_text_node.append("text")
+				const text = `${source_text} -> ${target_text}`
+
+				source_text_node.append("text")
 				.attr("x", 14)
 				.attr("y", 20)
 				.attr("dy", "0em")
 				.attr("id", "role")
-				.text((p.target_role) ? `(${p.target_role})`: '');
+				.text(text);
+
+			}else{
+				// add source and target text node with role enclosed by "()"
+				source_text_node.append("text")
+					.attr("x", 14)
+					.attr("y", 20)
+					.attr("dy", "0em")
+					.attr("id", "role")
+					.text((p.source_role) ? `(${p.source_role})` : '');
+
+				target_text_node.append("text")
+					.attr("x", 14)
+					.attr("y", 20)
+					.attr("dy", "0em")
+					.attr("id", "role")
+					.text((p.target_role) ? `(${p.target_role})`: '');
+			}
 		}
 
 		// when user move the mouse out of the path remove all text role nodes
 		function link_mouse_leave(event, p) {
 
-			const source_text_node = d3.selectAll("#role").remove();;
+			const source_text_node = d3.selectAll("#role").remove();
 		}
 
 	return svg.node();
