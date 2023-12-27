@@ -1,10 +1,10 @@
 <?php
 /**
-* DATA_CHECK
+* DB_DATA_CHECK
 *
 *
 */
-class data_check {
+class db_data_check {
 
 
 
@@ -12,7 +12,7 @@ class data_check {
 	* CHECK_SEQUENCES
 	* @return stdClass object $response
 	*/
-	public function check_sequences() : object {
+	public static function check_sequences() : object {
 
 		$response = new stdClass();
 			$response->result	= true;
@@ -128,5 +128,5 @@ class data_check {
 
 
 
-}//end data_check
+}//end db_data_check
 
