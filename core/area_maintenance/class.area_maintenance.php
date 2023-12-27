@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
 /**
 * AREA_MAINTENANCE
 *
@@ -401,9 +402,7 @@ class area_maintenance extends area_common {
 
 
 		// sequences_status *
-			require(DEDALO_CORE_PATH.'/db/class.data_check.php');
-			$data_check = new data_check();
-			$response 	= $data_check->check_sequences();
+			$response = db_data_check::check_sequences();
 			$item = new stdClass();
 				$item->id		= 'sequences_status';
 				$item->typo		= 'widget';
