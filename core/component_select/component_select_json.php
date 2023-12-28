@@ -24,7 +24,7 @@
 				// item_context
 					$item_context = $this->get_structure_context(
 						$permissions,
-						false // bool add_request_config
+						true // bool add_request_config
 					);
 				// target_sections add
 					$target_sections		= [];
@@ -64,7 +64,7 @@
 				case 'edit':
 				default:
 					$value				= $this->get_dato();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$list_of_values		= $this->get_list_of_values(DEDALO_DATA_LANG);
 					break;
 			}
 
@@ -72,9 +72,9 @@
 			$item = $this->get_data_item($value);
 
 			// datalist add if exits
-			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
-				$datalist = $ar_list_of_values->result;
-			
+			if (isset($list_of_values) && isset($list_of_values->result)) {
+				$datalist = $list_of_values->result;
+
 				$item->datalist = $datalist;
 			}
 
