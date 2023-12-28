@@ -2754,12 +2754,12 @@ abstract class common {
 			switch ($mode) {
 				case 'list':
 					// default. Properties from self element
-					$properties = $this->get_properties();
+					$source_properties = $this->get_properties();
 
 					// section. If section or component has properties injected, use it instead the section_list
 					// And sometimes the portals don't has section_list defined.
 					// In these cases get the properties from the current tipo
-					if($model==='section' && isset($properties->source->request_config)){
+					if($model==='section' && isset($source_properties->source->request_config)){
 						break; // stop here
 					}
 
@@ -2778,15 +2778,22 @@ abstract class common {
 						$RecordObj_dd	= new RecordObj_dd($current_term);
 
 						// override properties var
-						$properties		= $RecordObj_dd->get_properties();
+						$source_properties	=  $RecordObj_dd->get_properties();
 					}
 					break;
 
 				default:
 					// edit mode or components without section_list defined
-					$properties = $this->get_properties();
+					$source_properties = $this->get_properties();
 					break;
 			}
+
+		// clone the source properties
+		// to use a copy of the properties to parse the request_config resolving section_tipo as self or other needs
+		// don't use php clone, it doesn't work with deep objects
+			$properties = ($source_properties !== null)
+				? json_decode(json_encode( $source_properties ))
+				: null;
 
 		// pagination defaults. Note that injected values may exist in element pagination.
 			$offset	= isset($this->pagination->offset)
