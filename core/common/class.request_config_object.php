@@ -13,6 +13,8 @@
 			(it modify the show and it will create the choose, when these object is not sent)
 		choose	: layout_map
 			(it modify search)
+		hide	: layout_map
+			(component to resolve to use as internal use data)
 
 	// REQUEST_CONFIG SAMPLE (request configuration for Dédalo API or others API):
 		[
@@ -103,6 +105,12 @@
 					[{"section_tipo":"self","tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list"}]
 				]},
 				"choose":{
+					"ddo_map":[
+						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": true},
+						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"}
+						{"section_tipo":"self","tipo":"numisdata81","label":"key", "parent": "numisdata3"}
+				]},
+				"hide":{
 					"ddo_map":[
 						{"section_tipo":"self","tipo":"numisdata27","mode":"edit","label":"number", "parent": "numisdata3", "value_with_parents": true},
 						{"section_tipo":"self","tipo":"numisdata309","mode":"list","label":"catalog", "parent": "numisdata3"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list","label":"catalog", "parent": "numisdata309"}
