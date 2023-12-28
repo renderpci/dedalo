@@ -248,6 +248,17 @@ class request_config_object extends stdClass {
 	}//end set_choose
 
 
+	/**
+	* SET_HIDE
+	* @param object $value
+	* @return void
+	*/
+	public function set_hide(object $value) {
+
+		$this->hide = $value;
+	}//end set_hide
+
+
 
 	/**
 	* SET_API_CONFIG
