@@ -27,6 +27,10 @@
             <directory>../test/section</directory>
         </testsuite>
 
+        <testsuite name="unit areas">
+            <directory>../test/area</directory>
+        </testsuite>
+
         <testsuite name="unit components">
             <directory>../test/components</directory>
         </testsuite>
