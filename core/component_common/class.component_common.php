@@ -2209,6 +2209,180 @@ abstract class component_common extends common {
 	}//end get_ar_list_of_values
 
 
+	/**
+	* GET_LIST_OF_VALUES
+	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
+	* It will use by component_select, component_check_box, component_radio_button .. to show the possibles values of the component
+	* Use the request_config of the component to get the ddo_map to show and the ddo_map to hide (use as internal data values)
+	* @param string $lang used to resolve the litera
+	* @return object $response
+	*/
+	public function get_list_of_values(string $lang) : object {
+
+			$start_time = start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= [];
+				$response->msg		= __METHOD__ . ' Error. Request failed';
+
+		// request config (mandatory)
+			$request_config = $this->request_config;
+
+		// fix ddo_map (dd_core_api static var)
+			$dedalo_request_config = array_find($request_config, function($el){
+				return isset($el->api_engine) && $el->api_engine==='dedalo';
+			});
+
+
+		$result = [];
+
+		if (!empty($dedalo_request_config)) {
+
+			// 1 search all sections in the target list
+				$ar_target_section = $dedalo_request_config->sqo->section_tipo;
+
+				// get all target sections defined in sqo
+				$ar_sections_tipo = [];
+				foreach ($ar_target_section as $current_section) {
+					$ar_sections_tipo[] = $current_section->tipo;
+				}
+
+				// cache of the list_of_values, if the list was calculated return it
+					static $list_of_values_data = [];
+
+					$hash_id = isset($dedalo_request_config->sqo->filter)
+						? md5(json_encode($dedalo_request_config->sqo->filter))
+						: 'full';
+
+					$uid = !empty($ar_sections_tipo)
+						? implode('-', $ar_sections_tipo) .'_'. $lang . '_' . $hash_id
+						: $this->tipo .'_'. $lang . '_'. $hash_id;
+					if (isset($list_of_values_data[$uid])) {
+
+						if(SHOW_DEBUG===true) {
+							// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+							$list_of_values_data[$uid]->debug	= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+						}
+
+						// response OK from cache
+							$response = $list_of_values_data[$uid];
+
+						return $response;
+					}
+
+				// set the limit 0 to retrieve all records of the target section
+				$limit = 0;
+				// sqo create
+					$sqo = new search_query_object();
+						$sqo->set_section_tipo($ar_sections_tipo);
+						$sqo->set_limit($limit);
+
+				$search = search::get_instance($sqo);
+				$search_result = $search->search();
+
+			//2 with the all section create the list_of values
+
+			foreach ($search_result->ar_records as $row) {
+
+				// create the section instance and set current row as his own data
+				// it prevent to call multiple times to DDBB
+				$section = section::get_instance(
+						$row->section_id,
+						$row->section_tipo
+					);
+				$section->set_dato($row->datos);
+
+				// get the locator of the current row
+				$locator = new locator();
+					$locator->set_section_tipo($row->section_tipo);
+					$locator->set_section_id($row->section_id);
+
+				// get the values of the show
+				$show_ddo_map = $dedalo_request_config->show->ddo_map;
+
+				$ar_label = [];
+				foreach ($show_ddo_map as $ddo) {
+
+					// create the component to be resolved
+					$current_component = component_common::get_instance(
+						$ddo->model, // string model
+						$ddo->tipo, // string tipo
+						$row->section_id, // string section_id
+						'solved', // string mode
+						$lang, // string lang
+						$row->section_tipo // string section_tipo
+					);
+					// get the literal of the component
+					$ar_label[] = $current_component->get_value();
+				}
+
+				// get the values of the hide components
+				// hide component are used as internal data of the component, it doesn't show into the list.
+				$ar_hide = [];
+
+				if(isset($dedalo_request_config->hide)){
+					$hide_ddo_map = $dedalo_request_config->hide->ddo_map;
+
+					foreach ($hide_ddo_map as $ddo) {
+
+						// create the component to be resolved
+						$current_component = component_common::get_instance(
+							$ddo->model, // string model
+							$ddo->tipo, // string tipo
+							$row->section_id, // string section_id
+							'solved', // string modo
+							$lang, // string lang
+							$row->section_tipo // string section_tipo
+						);
+						// create a object with the literal and his own information
+						$hide_item = new stdClass();
+							$hide_item->literal			= $current_component->get_value();
+							$hide_item->tipo			= $ddo->tipo;
+							$hide_item->section_id		= $row->section_id;
+							$hide_item->section_tipo	= $row->section_tipo;
+
+						$ar_hide[] = $hide_item;
+					}
+				}
+				// for the literals to show, create a label with the fields_separator
+				$label = implode(" | ", $ar_label);
+
+				$item = new stdClass();
+					$item->value		= $locator;
+					$item->label		= $label;
+					$item->section_id	= $row->section_id;
+					$item->hide			= $ar_hide;
+
+				$result[] = $item;
+			}
+		}else{
+
+			debug_log(__METHOD__
+				. " Error: component without requetst_config!!!" .PHP_EOL
+				. ' tipo: ' . $this->tipo . PHP_EOL
+				. ' section_id: '. $this->section_id .PHP_EOL
+				. ' section_tipo: '. $this->section_tipo
+				, logger::ERROR
+			);
+			return $response;
+		}
+
+		// response OK
+			$response->result	= (array)$result;
+			$response->msg		= 'Ok';
+			if(SHOW_DEBUG===true) {
+				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+				$response->debug			= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+			}
+
+		// cache adds the response to cache to be reused
+			$list_of_values_data[$uid] = $response;
+
+		return $response;
+	}//end get_list_of_values
+
+
 
 	/**
 	* DECORE_UNTRANSLATED
