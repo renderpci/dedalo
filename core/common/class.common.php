@@ -3016,10 +3016,10 @@ abstract class common {
 								// see 'zenon5' or 'isad30'
 									if(isset($current_ddo->fields_map) && $current_ddo->fields_map===true){
 										$RecordObj_dd				= new RecordObj_dd($current_ddo->tipo);
-										$properties					= $RecordObj_dd->get_properties();
-										$current_ddo->properties	= $properties;
-										$current_ddo->fields_map	= isset($properties->fields_map)
-											? $properties->fields_map
+										$current_ddo_properties		= $RecordObj_dd->get_properties();
+										$current_ddo->properties	= $current_ddo_properties;
+										$current_ddo->fields_map	= isset($current_ddo_properties->fields_map)
+											? $current_ddo_properties->fields_map
 											: [];
 										$current_ddo->lang			= $RecordObj_dd->get_traducible()==='si' ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 										$current_ddo->model			= $RecordObj_dd->get_modelo_name();
