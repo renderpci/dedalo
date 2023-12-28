@@ -3200,6 +3200,44 @@ abstract class common {
 							);
 						}
 
+					// hide
+						if (isset($item_request_config->hide)) {
+
+							$hide_ddo_map = $item_request_config->hide->ddo_map;
+							foreach ($hide_ddo_map as $current_ddo_map) {
+
+								// section_tipo
+									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+										? $ar_section_tipo
+										: $current_ddo_map->section_tipo;
+
+								// parent. Set the default "self" value to the current tipo (the parent)
+									$current_ddo_map->parent = $current_ddo_map->parent==='self'
+										? $tipo
+										: $current_ddo_map->parent;
+
+								// label. Add to all ddo_map items
+									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+
+								// mode
+									$current_ddo_map->mode = isset($current_ddo_map->mode)
+										? $current_ddo_map->mode
+										: ($model !== 'section'
+											? 'list'
+											: $mode);
+								// model
+									$current_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo_map->tipo, true);
+
+
+								$final_ddo_map[] = $current_ddo_map;
+							}
+
+							// set item
+							$parsed_item->set_hide(
+								$item_request_config->hide
+							);
+						}
+
 					// external config. Add properties
 					// like {"api_config": {"api_url": "https://zenon.dainst.org/api/v1/record",..}
 						if ($parsed_item->api_engine!=='dedalo' && isset($parsed_item->show->ddo_map)) {
