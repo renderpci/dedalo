@@ -28,6 +28,22 @@ class component_security_access extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component_common method
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		return 'There is no diffusion value for this component';
+	}//end get_diffusion_value
+
+
+
+	/**
 	* GET_DATALIST
 	* Generates the whole component datalist (ontology tree) to set access permissions by admins
 	* Note that login sequence launch a background process to calculate this datalist because
