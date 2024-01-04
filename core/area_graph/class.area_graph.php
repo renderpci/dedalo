@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * AREA_GRAPH
-*
 *
 */
 class area_graph extends area_common {
@@ -20,19 +20,6 @@ class area_graph extends area_common {
 
 	// thesaurus_mode
 	public $thesaurus_mode = null;
-
-
-
-	/**
-	* GET_SECTION_TIPO
-	* @return array $section_tipo
-	*/
-	public function get_section_tipo() : string {
-
-		$section_tipo = $this->tipo; // 'dd100'
-
-		return $section_tipo;
-	}//end get_section_tipo
 
 
 
@@ -371,6 +358,11 @@ class area_graph extends area_common {
 
 		return (string)$hierarchy_name;
 	}//end get_hierarchy_name
+
+
+
+
+	/////////////// @ others ///////////////////////////////
 
 
 
