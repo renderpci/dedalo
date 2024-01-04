@@ -338,7 +338,7 @@ function curl_request(object $options) : object {
 					$msg .= "Error. Unauthorized code (status code: $httpcode)";
 					break;
 				case 400:
-					$msg .= "Error. Server has problems collect structure files (status code: $httpcode)";
+					$msg .= "Error. Bad Request. Server has problems connecting to file (status code: $httpcode)";
 					break;
 				default:
 					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";

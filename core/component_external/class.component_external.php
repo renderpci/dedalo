@@ -179,6 +179,9 @@ class component_external extends component_common {
 
 		// dato
 			$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
+				if (empty($row_data)) {
+					return $carry;
+				}
 				if($item->local==='dato') {
 					$name = $item->remote;
 					if (isset($row_data->{$name})) {
@@ -206,7 +209,9 @@ class component_external extends component_common {
 						return $value;
 					}else{
 						debug_log(__METHOD__
-							." Error. Not found key: $name in row_data" . PHP_EOL
+							." Error. Not found key: '$name' in row_data" . PHP_EOL
+							.' name: ' .$name . PHP_EOL
+							.' row_data type: ' .gettype($row_data) . PHP_EOL
 							.' row_data: ' . to_string($row_data)
 							, logger::ERROR
 						);
