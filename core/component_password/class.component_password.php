@@ -8,6 +8,10 @@ class component_password extends component_common {
 
 
 
+	public $fake_value = '****************';
+
+
+
 	/**
 	* __CONSTRUCT
 	*/
@@ -93,6 +97,22 @@ class component_password extends component_common {
 
 		return $valor;
 	}//end get_valor
+
+
+
+	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component_common method
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		return $this->fake_value;
+	}//end get_diffusion_value
 
 
 

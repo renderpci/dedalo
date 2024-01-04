@@ -127,6 +127,24 @@ class component_email extends component_common {
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component_common method
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		return $this->get_value(
+			($lang ?? DEDALO_DATA_LANG)
+		);
+	}//end get_diffusion_value
+
+
+
+	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
 	* @return object $query_object
