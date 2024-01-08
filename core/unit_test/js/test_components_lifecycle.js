@@ -218,11 +218,16 @@ async function life_cycle_test(element, view) {
 							'component_relation_children',
 							'component_relation_index',
 							'component_relation_related',
-							'component_relation_parent'
+							'component_relation_parent',
+							'component_text_area'
 						]
 						if (!skip_models.includes(new_instance.model)) {
 							// assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');
-							assert.equal(new_instance.node.querySelector('.content_data'), null, 'content_data must be null on list mode');
+							assert.equal(
+								new_instance.node.querySelector('.content_data'),
+								null,
+								'content_data must be null on list mode'
+							);
 						}
 						assert.equal(new_instance.node.querySelector('.label'), null, 'label must be null on list mode');
 						assert.equal(new_instance.node.querySelector('.buttons_container'), null, 'buttons_container must be null on list mode');
