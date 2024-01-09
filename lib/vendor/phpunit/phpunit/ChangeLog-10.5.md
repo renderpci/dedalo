@@ -2,6 +2,23 @@
 
 All notable changes of the PHPUnit 10.5 release series are documented in this file using the [Keep a CHANGELOG](https://keepachangelog.com/) principles.
 
+## [10.5.5] - 2023-12-27
+
+### Fixed
+
+* [#5619](https://github.com/sebastianbergmann/phpunit/pull/5619): Reverted change introduced in PHPUnit 10.5.4 that broke backward compatibility
+
+## [10.5.4] - 2023-12-27
+
+### Fixed
+
+* [#5592](https://github.com/sebastianbergmann/phpunit/issues/5592): Error Handler prevents `error_get_last()` usage in tests
+* [#5592](https://github.com/sebastianbergmann/phpunit/issues/5592): `E_USER_ERROR` does not abort test execution
+* [#5612](https://github.com/sebastianbergmann/phpunit/issues/5612): Empty `<coverage>` element in XML configuration after migrating configuration
+* [#5616](https://github.com/sebastianbergmann/phpunit/issues/5616): Values from data provider are not shown for failed test
+* [#5619](https://github.com/sebastianbergmann/phpunit/pull/5619): Check and restore error/exception global handlers
+* [#5621](https://github.com/sebastianbergmann/phpunit/issues/5621): Name of data set is missing from TeamCity output
+
 ## [10.5.3] - 2023-12-13
 
 ### Deprecated
@@ -45,6 +62,8 @@ All notable changes of the PHPUnit 10.5 release series are documented in this fi
 
 * [#5563](https://github.com/sebastianbergmann/phpunit/issues/5563): `createMockForIntersectionOfInterfaces()` does not automatically register mock object for expectation verification
 
+[10.5.5]: https://github.com/sebastianbergmann/phpunit/compare/10.5.4...10.5.5
+[10.5.4]: https://github.com/sebastianbergmann/phpunit/compare/10.5.3...10.5.4
 [10.5.3]: https://github.com/sebastianbergmann/phpunit/compare/10.5.2...10.5.3
 [10.5.2]: https://github.com/sebastianbergmann/phpunit/compare/10.5.1...10.5.2
 [10.5.1]: https://github.com/sebastianbergmann/phpunit/compare/10.5.0...10.5.1

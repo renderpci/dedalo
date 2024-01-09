@@ -7,18 +7,13 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\TestRunner\TestResult;
+namespace PHPUnit\Runner;
 
-use PHPUnit\Event\TestSuite\Finished;
-use PHPUnit\Event\TestSuite\FinishedSubscriber;
+use Error;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class TestSuiteFinishedSubscriber extends Subscriber implements FinishedSubscriber
+final class ErrorException extends Error implements Exception
 {
-    public function notify(Finished $event): void
-    {
-        $this->collector()->testSuiteFinished($event);
-    }
 }
