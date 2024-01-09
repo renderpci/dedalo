@@ -3088,6 +3088,16 @@ class section extends common {
 				return false;
 			}
 
+		// paginated_key. Remove possible property paginated_key if it exists
+			if (isset($locator->paginated_key)) {
+				debug_log(__METHOD__
+					. " Removing temporal property 'paginated_key' from locator " . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				unset($locator->paginated_key);
+			}
+
 		// relations. section relations data. Could be empty
 			$relations = $this->get_relations( $relations_container );
 			if (!empty($relations)) {
