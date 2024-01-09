@@ -7,7 +7,7 @@
 // overwrite config SHOW_DEBUG
 define('SHOW_DEBUG', false);
 // TEST_USER_ID
-define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
+define('TEST_USER_ID', 2); // DEDALO_SUPERUSER
 
 // config file
 	require_once dirname(dirname(__FILE__)) . '/config/config.php';
