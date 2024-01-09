@@ -1314,9 +1314,10 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===-1 || $result===1,
-			'expected $result === -1 || $result===1 '. PHP_EOL
-			.' result: ' . $result
+			$result===TEST_USER_ID,
+			'expected $result === TEST_USER_ID '. PHP_EOL
+				.' result: ' . $result . PHP_EOL
+				.' TEST_USER_ID: ' . TEST_USER_ID
 		);
 	}//end test_get_modified_by_userID
 
@@ -1380,8 +1381,8 @@ final class section_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result==='root' || $result==='render',
-			'expected $result === root || $result===render ' . PHP_EOL
+			$result==='root' || $result==='render' || $result==='pepe',
+			'expected $result === root || $result===render || $result===pepe ' . PHP_EOL
 			.' result: ' . $result . ' - ' . $section_tipo.'_'.$section_id
 		);
 	}//end test_get_modified_by_user_name

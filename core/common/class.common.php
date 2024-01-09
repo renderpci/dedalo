@@ -436,7 +436,8 @@ abstract class common {
 				debug_log(__METHOD__
 					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
 					. " tipo: $tipo " . PHP_EOL
-					. " model: $model_name"
+					. " model: $model_name" . PHP_EOL
+					. ' bt: ' . to_string( debug_backtrace()[0] )
 					, logger::ERROR
 				);
 				return null;
