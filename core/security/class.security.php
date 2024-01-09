@@ -120,9 +120,12 @@ class security {
 
 		// access to list of values: public (matrix_list) and private (matrix_dd)
 			if ($permissions===0) {
-				$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
-				if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
-					$permissions = 1;
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
+				if ($model_name==='section') {
+					$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
+					if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
+						$permissions = 1;
+					}
 				}
 			}
 
