@@ -594,6 +594,7 @@ return array(
     'PHPUnit\\Runner\\ClassIsAbstractException' => $vendorDir . '/phpunit/phpunit/src/Runner/Exception/ClassIsAbstractException.php',
     'PHPUnit\\Runner\\CodeCoverage' => $vendorDir . '/phpunit/phpunit/src/Runner/CodeCoverage.php',
     'PHPUnit\\Runner\\DirectoryCannotBeCreatedException' => $vendorDir . '/phpunit/phpunit/src/Runner/Exception/DirectoryCannotBeCreatedException.php',
+    'PHPUnit\\Runner\\ErrorException' => $vendorDir . '/phpunit/phpunit/src/Runner/Exception/ErrorException.php',
     'PHPUnit\\Runner\\ErrorHandler' => $vendorDir . '/phpunit/phpunit/src/Runner/ErrorHandler.php',
     'PHPUnit\\Runner\\Exception' => $vendorDir . '/phpunit/phpunit/src/Runner/Exception/Exception.php',
     'PHPUnit\\Runner\\Extension\\Extension' => $vendorDir . '/phpunit/phpunit/src/Runner/Extension/Extension.php',
