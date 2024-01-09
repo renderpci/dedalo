@@ -216,7 +216,7 @@ page.prototype.init = async function(options) {
 								// const url = "?tipo="+ current_tipo + '&m=' + source.mode
 
 								// url search. Append section_id if exists
-									const url_vars = url_vars_to_object(location.search)
+									const url_vars = {} // url_vars_to_object(location.search)
 										  url_vars.tipo = current_tipo
 										  url_vars.mode = source.mode
 									if(source.mode==='list' && url_vars.id){
