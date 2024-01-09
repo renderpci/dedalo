@@ -2858,6 +2858,45 @@ abstract class common {
 									$ddo->set_tipo($section_tipo);
 									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
 									$ddo->set_color(RecordObj_dd::get_color($section_tipo));
+									$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+
+								// buttons. Add button_new and button_delete to determine new and delete permissions on client
+									$buttons = [];
+									// button_new
+										$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+											$section_tipo,
+											['button_new'],
+											true, // bool from_cache
+											true, // bool resolve_virtual
+											true, // bool recursive
+											true, // bool search_exact
+											false // array|bool $ar_tipo_exclude_elements
+										);
+										if (isset($ar_button_new[0])) {
+											$buttons[] = (object)[
+												'model'			=> 'button_new',
+												'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+											];
+										}
+									// button_delete
+										$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+											$section_tipo,
+											['button_delete'],
+											true, // bool from_cache
+											true, // bool resolve_virtual
+											true, // bool recursive
+											true, // bool search_exact
+											false // array|bool $ar_tipo_exclude_elements
+										);
+										if (isset($ar_button_delete[0])) {
+											$buttons[] = (object)[
+												'model'			=> 'button_delete',
+												'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+											];
+										}
+									// set buttons
+									$ddo->set_buttons($buttons);
+
 								return $ddo;
 							}, (array)$ar_section_tipo);
 
@@ -3501,6 +3540,46 @@ abstract class common {
 						$ddo = new dd_object();
 							$ddo->set_tipo($section_tipo);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_color(RecordObj_dd::get_color($section_tipo));
+							$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+
+						// buttons. Add button_new and button_delete to determine new and delete permissions on client
+							$buttons = [];
+							// button_new
+								$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+									$section_tipo,
+									['button_new'],
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									true, // bool recursive
+									true, // bool search_exact
+									false // array|bool $ar_tipo_exclude_elements
+								);
+								if (isset($ar_button_new[0])) {
+									$buttons[] = (object)[
+										'model'			=> 'button_new',
+										'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+									];
+								}
+							// button_delete
+								$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+									$section_tipo,
+									['button_delete'],
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									true, // bool recursive
+									true, // bool search_exact
+									false // array|bool $ar_tipo_exclude_elements
+								);
+								if (isset($ar_button_delete[0])) {
+									$buttons[] = (object)[
+										'model'			=> 'button_delete',
+										'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+									];
+								}
+							// set buttons
+							$ddo->set_buttons($buttons);
+
 						return $ddo;
 					}, $ar_section_tipo);
 

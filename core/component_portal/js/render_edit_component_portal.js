@@ -476,54 +476,118 @@ export const render_column_remove = function(options) {
 		const fragment = new DocumentFragment()
 
 	// button_remove
-		const button_remove = ui.create_dom_element({
-			element_type	: 'button',
-			class_name		: 'button_remove',
-			parent			: fragment
-		})
-		button_remove.addEventListener('click', function(e){
-			e.stopPropagation()
+		// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample
+			// {
+			//     "typo": "ddo",
+			//     "tipo": "rsc170",
+			//     "model": "section",
+			//     "label": "Image",
+			//     "color": "#b9b9b9",
+			//     "permissions": 2,
+			//     "buttons": [
+			//         {
+			//             "model": "button_new",
+			//             "permissions": 1
+			//         },
+			//         {
+			//             "model": "button_delete",
+			//             "permissions": 1
+			//         }
+			//     ]
+			// }
+		const target_section_ddo	= self.target_section.find(el => el.tipo===section_tipo) || {}
+		const section_buttons		= target_section_ddo.buttons || []
+		const button_delete			= section_buttons.find(el => el.model==='button_delete')
 
-			// invalid permissions
-				if (self.permissions<2) {
-					return
-				}
+		if(button_delete && button_delete.permissions>1) {
 
-			// header
-				const header = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'header'
-				})
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
-					parent			: header
-				})
+			const button_remove = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'button_remove',
+				parent			: fragment
+			})
+			button_remove.addEventListener('click', function(e){
+				e.stopPropagation()
 
-			// body
-				const body = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'body content',
-					inner_html		: ' '
-				})
+				// invalid permissions
+					if (self.permissions<2) {
+						return
+					}
 
-			// footer
-				const footer = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'footer content'
-				})
+				// header
+					const header = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'header'
+					})
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'label',
+						inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+						parent			: header
+					})
 
-			// button_unlink_and_delete (Deletes real target record)
-				const display_delete_record = options.caller.view!=='indexation'
-				if (display_delete_record) {
-					const button_unlink_and_delete = ui.create_dom_element({
+				// body
+					const body = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'body content',
+						inner_html		: ' '
+					})
+
+				// footer
+					const footer = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'footer content'
+					})
+
+				// button_unlink_and_delete (Deletes real target record)
+					const display_delete_record = options.caller.view!=='indexation'
+					if (display_delete_record && button_delete && button_delete.permissions>1) {
+						const button_unlink_and_delete = ui.create_dom_element({
+							element_type	: 'button',
+							class_name		: 'danger remove',
+							text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+							parent			: footer
+						})
+						const fn_click_unlink_and_delete = async function(e) {
+							e.stopPropagation()
+
+							// stop if the user don't confirm
+							if (!confirm(get_label.sure)) {
+								return
+							}
+
+							footer.classList.add('loading')
+
+							// delete the record and pointers to it
+							await self.delete_linked_record({
+								section_tipo	: section_tipo,
+								section_id		: section_id
+							})
+
+							// delete_dataframe_record. if it is not dataframe it will be ignored
+							await self.delete_dataframe_record({
+								section_id : section_id
+							})
+
+							// refresh the component. Don't wait here
+							self.refresh()
+
+							// close modal
+							modal.close()
+
+							footer.classList.remove('loading')
+						}
+						button_unlink_and_delete.addEventListener('click', fn_click_unlink_and_delete)
+					}
+
+				// button_unlink_record (Only delete the locator)
+					const button_unlink_record = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'danger remove',
-						text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+						class_name 		: 'warning remove',
+						text_content 	: get_label.delete_only_the_link || 'Delete only the link',
 						parent			: footer
 					})
-					const fn_click_unlink_and_delete = async function(e) {
+					const fn_click_unlink_record = async function(e){
 						e.stopPropagation()
 
 						// stop if the user don't confirm
@@ -533,9 +597,10 @@ export const render_column_remove = function(options) {
 
 						footer.classList.add('loading')
 
-						// delete the record and pointers to it
-						await self.delete_linked_record({
-							section_tipo	: section_tipo,
+						// deletes the locator from component data
+						await self.unlink_record({
+							paginated_key	: paginated_key,
+							row_key			: row_key,
 							section_id		: section_id
 						})
 
@@ -552,90 +617,50 @@ export const render_column_remove = function(options) {
 
 						footer.classList.remove('loading')
 					}
-					button_unlink_and_delete.addEventListener('click', fn_click_unlink_and_delete)
-				}
+					button_unlink_record.addEventListener('click', fn_click_unlink_record)
 
-			// button_unlink_record (Only delete the locator)
-				const button_unlink_record = ui.create_dom_element({
-					element_type	: 'button',
-					class_name 		: 'warning remove',
-					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
-					parent			: footer
-				})
-				const fn_click_unlink_record = async function(e){
-					e.stopPropagation()
-
-					// stop if the user don't confirm
-					if (!confirm(get_label.sure)) {
-						return
+				// modal
+					const modal = ui.attach_to_modal({
+						header	: header,
+						body	: body,
+						footer	: footer,
+						size	: 'small' // string size big|normal
+					})
+					// set the default button to be fired when the modal is active
+					// when the user press the Enter key in the keyboard
+					// the unlink option will be fired
+					const focus_the_button = function() {
+						// set the focus to the button_unlink
+						setTimeout(function(){
+							button_unlink_record.focus()
+							button_unlink_record.classList.add('focus')
+						}, 100)
+						button_unlink_record.addEventListener('keyup', (e)=>{
+							if(e.key==='Enter'){
+								button_unlink_record.click()
+							}
+						})
 					}
+					// when the modal will be ready in DOM fire the function to attack the event
+					when_in_dom(modal, focus_the_button)
 
-					footer.classList.add('loading')
-
-					// deletes the locator from component data
-					await self.unlink_record({
-						paginated_key	: paginated_key,
-						row_key			: row_key,
-						section_id		: section_id
-					})
-
-					// delete_dataframe_record. if it is not dataframe it will be ignored
-					await self.delete_dataframe_record({
-						section_id : section_id
-					})
-
-					// refresh the component. Don't wait here
-					self.refresh()
-
-					// close modal
-					modal.close()
-
-					footer.classList.remove('loading')
-				}
-				button_unlink_record.addEventListener('click', fn_click_unlink_record)
-
-			// modal
-				const modal = ui.attach_to_modal({
-					header	: header,
-					body	: body,
-					footer	: footer,
-					size	: 'small' // string size big|normal
-				})
-				// set the default button to be fired when the modal is active
-				// when the user press the Enter key in the keyboard
-				// the unlink option will be fired
-				const focus_the_button = function() {
-					// set the focus to the button_unlink
-					setTimeout(function(){
-						button_unlink_record.focus()
-						button_unlink_record.classList.add('focus')
-					}, 100)
-					button_unlink_record.addEventListener('keyup', (e)=>{
-						if(e.key==='Enter'){
-							button_unlink_record.click()
-						}
-					})
-				}
-				// when the modal will be ready in DOM fire the function to attack the event
-				when_in_dom(modal, focus_the_button)
-
-			// data pagination offset. Check and update self data to allow save API request return the proper paginated data
-				const key = parseInt(row_key)
-				if (key===0 && self.data.pagination.offset>0) {
-					const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
-					// set before exec API request on Save
-					self.data.pagination.offset = next_offset>0
-						? next_offset
-						: 0
-				}
-		})
-
-	// remove_icon
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button delete_light icon',
-			parent			: button_remove
-		})
+				// data pagination offset. Check and update self data to allow save API request return the proper paginated data
+					const key = parseInt(row_key)
+					if (key===0 && self.data.pagination.offset>0) {
+						const next_offset = (self.data.pagination.offset - self.data.pagination.limit)
+						// set before exec API request on Save
+						self.data.pagination.offset = next_offset>0
+							? next_offset
+							: 0
+					}
+			})
+			// remove_icon
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button delete_light icon',
+				parent			: button_remove
+			})
+		}
 
 
 	return fragment
@@ -695,7 +720,30 @@ export const get_buttons = (self) => {
 		}//end button external
 
 	// button_add
-		if(self.show_interface.button_add===true) {
+		// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample:
+			// {
+			//     "typo": "ddo",
+			//     "tipo": "rsc170",
+			//     "model": "section",
+			//     "label": "Image",
+			//     "color": "#b9b9b9",
+			//     "permissions": 2,
+			//     "buttons": [
+			//         {
+			//             "model": "button_new",
+			//             "permissions": 1
+			//         },
+			//         {
+			//             "model": "button_delete",
+			//             "permissions": 1
+			//         }
+			//     ]
+			// }
+		const target_section_ddo	= target_section.find(el => el.tipo===target_section[0].tipo) || {}
+		const section_buttons		= target_section_ddo.buttons || []
+		const button_new			= section_buttons.find(el => el.model==='button_new')
+
+		if(self.show_interface.button_add===true && button_new && button_new.permissions>1) {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
