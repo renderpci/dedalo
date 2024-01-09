@@ -867,40 +867,42 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// permissions (button delete)
-			$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-				$section_tipo,
-				['button_delete'],
-				true, // bool from_cache
-				true, // bool resolve_virtual
-				true, // bool recursive
-				true, // bool search_exact
-				false // array|bool $ar_tipo_exclude_elements
-			);
-			if (!isset($ar_button_delete[0])) {
-				$msg = '[2] This section '.$section_tipo.' does not have a button delete. Unable to calculate delete permissions';
-				$response->error = 2;
-				$response->msg 	.= $msg;
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::ERROR
+		// permissions (button delete). Ignore this check in delete_mode 'delete_dataframe'
+			if ($delete_mode!=='delete_dataframe') {
+				$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo,
+					['button_delete'],
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true, // bool search_exact
+					false // array|bool $ar_tipo_exclude_elements
 				);
-				return $response;
-			}
-			$button_delete_permissions = isset($ar_button_delete[0])
-				? common::get_permissions($section_tipo, $ar_button_delete[0])
-				: 0;
-			if ($button_delete_permissions<2) {
-				$msg = '[2] Insufficient button_delete_permissions to delete record (delete mode: '.$delete_mode.'): '.$button_delete_permissions;
-				$response->error = 2;
-				$response->msg 	.= $msg;
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::ERROR
-				);
-				return $response;
+				if (!isset($ar_button_delete[0])) {
+					$msg = '[2] This section '.$section_tipo.' does not have a button delete. Unable to calculate delete permissions';
+					$response->error = 2;
+					$response->msg 	.= $msg;
+					debug_log(__METHOD__
+						." $response->msg " . PHP_EOL
+						.' rqo: '.to_string($rqo)
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$button_delete_permissions = isset($ar_button_delete[0])
+					? common::get_permissions($section_tipo, $ar_button_delete[0])
+					: 0;
+				if ($button_delete_permissions<2) {
+					$msg = '[2] Insufficient button_delete_permissions to delete record (delete mode: '.$delete_mode.'): '.$button_delete_permissions;
+					$response->error = 2;
+					$response->msg 	.= $msg;
+					debug_log(__METHOD__
+						." $response->msg " . PHP_EOL
+						.' rqo: '.to_string($rqo)
+						, logger::ERROR
+					);
+					return $response;
+				}
 			}
 
 		// dataframe section case
