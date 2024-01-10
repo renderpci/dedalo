@@ -56,15 +56,12 @@ render_list_section.prototype.list = async function(options) {
 
 			// case 'mosaic':
 			// 	return view_mosaic_edit_portal.render(self, options)
-			// 	break;
 
 			case 'base':
 				return view_base_list_section.render(self, options)
-				break;
 
 			case 'graph':
 				return view_graph_list_section.render(self, options)
-				break;
 
 			case 'default':
 			default: {

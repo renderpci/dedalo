@@ -5,8 +5,9 @@
 
 
 // imports
-	// import {ui} from '../../common/js/ui.js'
 	import {view_graph_solved_section} from './view_graph_solved_section.js'
+
+
 
 /**
 * RENDER_SOLVED_SECTION
@@ -20,7 +21,7 @@ export const render_solved_section = function() {
 
 
 /**
-* EDIT
+* SOLVED
 * Render node for use in solved
 * @param object options
 * @return HTMLElement wrapper
@@ -30,16 +31,14 @@ render_solved_section.prototype.solved = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context?.view || 'default'
+		const view = self.context?.view || 'default'
 
 	// wrapper
 	switch(view) {
-
 		case 'graph':
 		case 'default':
 		default:
 			return view_graph_solved_section.render(self, options)
-			break;
 	}
 }//end solved
 
@@ -49,7 +48,7 @@ render_solved_section.prototype.solved = async function(options) {
 * GET_D3_DATA
 * transform dedalo data into d3 format
 * @param object options
-* @return DOM DocumentFragment
+* @return object d3_data
 */
 export const get_d3_data = function(options) {
 
@@ -71,7 +70,8 @@ export const get_d3_data = function(options) {
 	const nodes = []
 	const links = []
 
-	for (let i = sources.length - 1; i >= 0; i--) {
+	const sources_length = sources.length
+	for (let i = sources_length - 1; i >= 0; i--) {
 		// source
 			const current_souce = sources[i]
 			const ar_source_id = current_souce.value.map(el => {
@@ -140,7 +140,6 @@ export const get_d3_data = function(options) {
 				nodes.push(target)
 			}
 
-
 		// source role
 			const source_role = datum.data.find(el =>
 				el.tipo			=== graph_map.source_role &&
@@ -179,11 +178,11 @@ export const get_d3_data = function(options) {
 				},
 				weight : 18, // stroke-width
 				source_role	: source_role.literal || '',
-				target_role	: target_role.literal || '',
+				target_role	: target_role.literal || ''
 			}
 
 			links.push(link)
-	}
+	}//end for (let i = sources_length - 1; i >= 0; i--)
 
 	const d3_data = {
 		nodes : nodes,
@@ -191,7 +190,7 @@ export const get_d3_data = function(options) {
 	}
 
 	return d3_data
-}// end
+}//end get_d3_data
 
 
 
