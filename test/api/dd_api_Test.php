@@ -29,7 +29,7 @@ final class dd_api_Test extends TestCase {
 
 		$api_url = defined('DEDALO_API_URL_UNIT_TEST')
 			? DEDALO_API_URL_UNIT_TEST
-			: 'http://localhost:8080' .DEDALO_API_URL;
+			: 'https://localhost:8443/' .DEDALO_API_URL;
 
 		$response = curl_request((object)[
 			'url'				=> $api_url,
@@ -41,12 +41,14 @@ final class dd_api_Test extends TestCase {
 
 		$API_response = json_decode($response->result);
 		if (!is_object($API_response)) {
+			dump($api_url, ' api_url ++ '.to_string());
 			dump($API_response, ' API_response ++ '.to_string($rqo));
 			debug_log(__METHOD__
 				. " Invalid object received from API " . PHP_EOL
 				. ' rqo: ' . to_string($rqo) .PHP_EOL
+				. ' api_url: ' . $api_url . PHP_EOL
 				. ' response: ' . to_string($response) .PHP_EOL
-				, logger::DEBUG
+				, logger::ERROR
 			);
 		}
 
