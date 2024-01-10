@@ -8,6 +8,7 @@
 	// import {get_section_records} from '../../section/js/section.js'
 	// import {set_element_css} from '../../page/js/css.js'
 	import {when_in_dom} from '../../common/js/events.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -537,7 +538,7 @@ const get_graph = function(options) {
 					tipo			: p.tipo,
 					value			: source_value,
 					section_tipo	: p.from.section_tipo,
-					section_id		: p.from.section_id,
+					section_id		: p.from.section_id
 				})
 
 				self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
@@ -650,7 +651,7 @@ const get_graph = function(options) {
 				})
 				open_window({
 					url			: url,
-					name		: 'record_view_' + section_id,
+					name		: 'record_view_' + section_id
 				})
 		}
 
@@ -673,7 +674,7 @@ const get_graph = function(options) {
 				})
 				open_window({
 					url			: url,
-					name		: 'record_view_' + section_id,
+					name		: 'record_view_' + section_id
 				})
 		}
 
