@@ -2123,6 +2123,41 @@ function get_file_extension(string $name, bool $lowercase=true) : string {
 
 
 /**
+* GET_CLIENT_IP
+* Cascade client IP resolution from server vars
+* @return string $ip_address
+*/
+function get_client_ip() : string {
+
+	if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+		$ip_address = $_SERVER['HTTP_CLIENT_IP'];
+	}
+	else if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+		$ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+	}
+	else if(isset($_SERVER['HTTP_X_FORWARDED'])) {
+		$ip_address = $_SERVER['HTTP_X_FORWARDED'];
+	}
+	else if(isset($_SERVER['HTTP_FORWARDED_FOR'])) {
+		$ip_address = $_SERVER['HTTP_FORWARDED_FOR'];
+	}
+	else if(isset($_SERVER['HTTP_FORWARDED'])) {
+		$ip_address = $_SERVER['HTTP_FORWARDED'];
+	}
+	else if(isset($_SERVER['REMOTE_ADDR'])) {
+		$ip_address = $_SERVER['REMOTE_ADDR'];
+	}
+	else {
+		$ip_address = 'UNKNOWN';
+	}
+
+
+	return $ip_address;
+}//end get_client_ip
+
+
+
+/**
 * MANAGE_CACHE_OVERLOAD
 * @return array
 */
