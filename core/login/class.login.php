@@ -322,7 +322,7 @@ class login extends common {
 
 		// IP validation
 			if (!empty(SAML_CONFIG['idp_ip'])) {
-				$client_ip = common::get_client_ip();
+				$client_ip = get_client_ip();
 				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
 					return $response;
