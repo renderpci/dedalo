@@ -947,7 +947,7 @@ class login extends common {
 		$_SESSION['dedalo']['auth']['cookie_auth'] = $data;
 
 		// set cookie
-			$cookie_properties = common::get_cookie_properties();
+			$cookie_properties = get_cookie_properties();
 			// setcookie($data->$ktoday->cookie_name, $data->$ktoday->cookie_value, time() + (86400 * 1), '/'); // 86400 = 1 day
 			$cookie_values = (object)[
 				'name'		=> $data->{$ktoday}->cookie_name,
@@ -1144,7 +1144,7 @@ class login extends common {
 			);
 
 		// Cookie properties
-			$cookie_properties = common::get_cookie_properties();
+			$cookie_properties = get_cookie_properties();
 
 		// Delete authorization cookie
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
