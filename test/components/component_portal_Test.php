@@ -322,4 +322,124 @@ final class component_portal_test extends TestCase {
 
 
 
+	/**
+	* TEST_get_structure_context
+	* @return void
+	*/
+	public function test_get_structure_context() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_structure_context(
+			2,
+			true
+		);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$result->typo==='ddo',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->typo)
+		);
+
+		$this->assertTrue(
+			$result->tipo===$component->tipo,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->tipo)
+		);
+	}//end test_get_structure_context
+
+
+
+	/**
+	* TEST_build_request_config
+	* @return void
+	*/
+	public function test_build_request_config() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->build_request_config();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_build_request_config
+
+
+
+	/**
+	* TEST_get_ar_request_config
+	* @return void
+	*/
+	public function test_get_ar_request_config() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_ar_request_config();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_ar_request_config
+
+
+
+	/**
+	* TEST_get_request_config_object
+	* @return void
+	*/
+	public function test_get_request_config_object() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_request_config_object();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_request_config_object
+
+
+
+	/**
+	* TEST_get_subdatum
+	* @return void
+	*/
+	public function test_get_subdatum() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_subdatum(
+			null,
+			$component->get_dato()
+		);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_subdatum
+
+
+
 }//end class component_portal_test
