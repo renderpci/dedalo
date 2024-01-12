@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * COMMON (ABSTRACT CLASS)
 * Shared methods by sections and components
@@ -694,26 +695,29 @@ abstract class common {
 	/**
 	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
 	*/
-	public static function notify_load_lib_element_tipo(string $model_name, string $mode) : bool {
+		// public static function notify_load_lib_element_tipo(string $model_name, string $mode) : bool {
 
-		#if ($mode!=='edit') {
-		#	return false;
-		#}
+		// 	#if ($mode!=='edit') {
+		// 	#	return false;
+		// 	#}
 
-		if (empty($model_name) || in_array($model_name, common::$ar_loaded_models_name)) {
-			return false;
-		}
-		common::$ar_loaded_models_name[] = $model_name;
+		// 	if (empty($model_name) || in_array($model_name, common::$ar_loaded_models_name)) {
+		// 		return false;
+		// 	}
+		// 	common::$ar_loaded_models_name[] = $model_name;
 
-		return true;
-	}//end notify_load_lib_element_tipo
+		// 	return true;
+		// }//end notify_load_lib_element_tipo
 
 
 
 	/**
 	* SETVAR
+	* @param string $name
+	* @param mixed $default = false
+	* @return mixed
 	*/
-	public static function setVar(string $name, $default=false) {
+	public static function setVar(string $name, $default=false) : mixed {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVar]: Name 'name' is invalid", 1);
 
@@ -737,7 +741,7 @@ abstract class common {
 	* @param string $name
 	* @param object|false $data_obj
 	*/
-	public static function setVarData(string $name, $data_obj, $default=false) {
+	public static function setVarData(string $name, $data_obj, $default=false) : mixed {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVarData]: Name 'name' is invalid", 1);
 
@@ -760,57 +764,57 @@ abstract class common {
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
 	* @return string
 	*/
-	public static function get_page_query_string(bool $remove_optional_vars=true) : string {
+		// public static function get_page_query_string(bool $remove_optional_vars=true) : string {
 
-		$queryString	= $_SERVER['QUERY_STRING']; # like max=10
-		$queryString	= safe_xss($queryString);
+		// 	$queryString	= $_SERVER['QUERY_STRING']; # like max=10
+		// 	$queryString	= safe_xss($queryString);
 
-		if($remove_optional_vars===false) {
-			return $queryString;
-		}
+		// 	if($remove_optional_vars===false) {
+		// 		return $queryString;
+		// 	}
 
-		$qs 				= '' ;
-		$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
+		// 	$qs 				= '' ;
+		// 	$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
 
-		$search			= array('&&',	'&=',	'=&',	'??',	'==');
-		$replace		= array('&',	'&',	'&',	'?',	'=' );
-		$queryString	= str_replace($search, $replace, $queryString);
+		// 	$search			= array('&&',	'&=',	'=&',	'??',	'==');
+		// 	$replace		= array('&',	'&',	'&',	'?',	'=' );
+		// 	$queryString	= str_replace($search, $replace, $queryString);
 
-		$posAND		= strpos($queryString, '&');
-		$posEQUAL	= strpos($queryString, '=');
+		// 	$posAND		= strpos($queryString, '&');
+		// 	$posEQUAL	= strpos($queryString, '=');
 
-		# go through and rebuild the query without the optional variables
-		if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
+		// 	# go through and rebuild the query without the optional variables
+		// 	if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
 
-			$ar_pares = explode('&', $queryString);
-			if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
+		// 		$ar_pares = explode('&', $queryString);
+		// 		if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
 
-				#echo " <br> $key - $par ";
-				if(strpos($par,'=')!==false) {
+		// 			#echo " <br> $key - $par ";
+		// 			if(strpos($par,'=')!==false) {
 
-					$troz		= explode('=',$par) ;
+		// 				$troz		= explode('=',$par) ;
 
-					$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
-					$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
+		// 				$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
+		// 				$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
 
-					if(!in_array($varName, $ar_optional_vars)) {
-						$qs .= $varName . '=' . $varValue .'&';
-					}
-				}
-			}
+		// 				if(!in_array($varName, $ar_optional_vars)) {
+		// 					$qs .= $varName . '=' . $varValue .'&';
+		// 				}
+		// 			}
+		// 		}
 
-		}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
+		// 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
 
-			$qs = $queryString ;
-		}
+		// 		$qs = $queryString ;
+		// 	}
 
-		$qs = str_replace($search, $replace, $qs);
+		// 	$qs = str_replace($search, $replace, $qs);
 
-		# if last char is & delete it
-		if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
+		// 	# if last char is & delete it
+		// 	if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
 
-		return $qs;
-	}//end get_page_query_string
+		// 	return $qs;
+		// }//end get_page_query_string
 
 
 
@@ -829,7 +833,7 @@ abstract class common {
 
 
 	/**
-	* GET_AR
+	* GET_AR_ALL_LANGS_RESOLVED
 	* @param string $lang
 	*	Default DEDALO_DATA_LANG
 	* @return array $ar_all_langs_resolved
@@ -1007,34 +1011,10 @@ abstract class common {
 	* Alias of core function get_request_var
 	* @return mixed string | bool $var_value
 	*/
-	public static function get_request_var(string $var_name) {
+		// public static function get_request_var(string $var_name) {
 
-		return get_request_var($var_name);
-	}//end get_request_var
-
-
-
-	/**
-	* GET_COOKIE_PROPERTIES
-	* @return object $cookie_properties
-	* Calculate safe cookie properties to use on set/delete http cookies
-	* @return object $cookie_properties
-	*/
-	public static function get_cookie_properties() : object {
-
-		// Cookie properties
-		$domain		= $_SERVER['SERVER_NAME'] ?? '';
-		$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? true : false;
-		$httponly	= true; // Not accessible for javascript, only for http/s requests
-
-		$cookie_properties = new stdClass();
-			$cookie_properties->domain		= $domain;
-			$cookie_properties->secure		= $secure;
-			$cookie_properties->httponly	= $httponly;
-
-
-		return $cookie_properties;
-	}//end get_cookie_properties
+		// 	return get_request_var($var_name);
+		// }//end get_request_var
 
 
 
@@ -1074,102 +1054,102 @@ abstract class common {
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
 	*/
-	public static function DES_truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
+		// public static function DES_truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
 
-		$full_text = '';
+		// 	$full_text = '';
 
-		if (empty($html)) {
-			return $full_text;
-		}
+		// 	if (empty($html)) {
+		// 		return $full_text;
+		// 	}
 
-		$printedLength	= 0;
-		$position		= 0;
-		$tags			= array();
+		// 	$printedLength	= 0;
+		// 	$position		= 0;
+		// 	$tags			= array();
 
-		// For UTF-8, we need to count multibyte sequences as one character.
-		$re = $isUtf8
-			? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
-			: '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
+		// 	// For UTF-8, we need to count multibyte sequences as one character.
+		// 	$re = $isUtf8
+		// 		? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
+		// 		: '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
 
-		while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
-		{
-			list($tag, $tagPosition) = $match[0];
+		// 	while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
+		// 	{
+		// 		list($tag, $tagPosition) = $match[0];
 
-			// Print text leading up to the tag.
-			$str = substr($html, $position, $tagPosition - $position);
-			if ($printedLength + strlen($str) > $maxLength)
-			{
-				#print(substr($str, 0, $maxLength - $printedLength));
-				$full_text .= substr($str, 0, $maxLength - $printedLength);
-				$printedLength = $maxLength;
-				break;
-			}
+		// 		// Print text leading up to the tag.
+		// 		$str = substr($html, $position, $tagPosition - $position);
+		// 		if ($printedLength + strlen($str) > $maxLength)
+		// 		{
+		// 			#print(substr($str, 0, $maxLength - $printedLength));
+		// 			$full_text .= substr($str, 0, $maxLength - $printedLength);
+		// 			$printedLength = $maxLength;
+		// 			break;
+		// 		}
 
-			#print($str);
-			$full_text .= $str;
-			$printedLength += strlen($str);
-			if ($printedLength >= $maxLength) break;
+		// 		#print($str);
+		// 		$full_text .= $str;
+		// 		$printedLength += strlen($str);
+		// 		if ($printedLength >= $maxLength) break;
 
-			if ($tag[0] === '&' || ord($tag) >= 0x80)
-			{
-				// Pass the entity or UTF-8 multibyte sequence through unchanged.
-				#print($tag);
-				$full_text .= $tag;
-				$printedLength++;
-			}
-			else
-			{
-				// Handle the tag.
-				$tagName = $match[1][0];
-				if ($tag[1] === '/')
-				{
-					// This is a closing tag.
+		// 		if ($tag[0] === '&' || ord($tag) >= 0x80)
+		// 		{
+		// 			// Pass the entity or UTF-8 multibyte sequence through unchanged.
+		// 			#print($tag);
+		// 			$full_text .= $tag;
+		// 			$printedLength++;
+		// 		}
+		// 		else
+		// 		{
+		// 			// Handle the tag.
+		// 			$tagName = $match[1][0];
+		// 			if ($tag[1] === '/')
+		// 			{
+		// 				// This is a closing tag.
 
-					$openingTag = array_pop($tags);
-					//assert($openingTag === $tagName); // check that tags are properly nested.
+		// 				$openingTag = array_pop($tags);
+		// 				//assert($openingTag === $tagName); // check that tags are properly nested.
 
-					// assert($openingTag === $tagName); // check that tags are properly nested.
-					// $full_text .= $tag;
+		// 				// assert($openingTag === $tagName); // check that tags are properly nested.
+		// 				// $full_text .= $tag;
 
-					if ($openingTag!==$tagName) {
-						debug_log(__METHOD__." Error. openingTag ($openingTag) is different to expected tagName ($tagName)".to_string(), logger::ERROR);
-					}else{
-						 $full_text .= $tag;
-					}
-				}
-				else if ($tag[strlen($tag) - 2] === '/')
-				{
-					// Self-closing tag.
-					#print($tag);
-					$full_text .= $tag;
-				}
-				else
-				{
-					// Opening tag.
-					#print($tag);
-					$full_text .= $tag;
-					$tags[] = $tagName;
-				}
-			}
+		// 				if ($openingTag!==$tagName) {
+		// 					debug_log(__METHOD__." Error. openingTag ($openingTag) is different to expected tagName ($tagName)".to_string(), logger::ERROR);
+		// 				}else{
+		// 					 $full_text .= $tag;
+		// 				}
+		// 			}
+		// 			else if ($tag[strlen($tag) - 2] === '/')
+		// 			{
+		// 				// Self-closing tag.
+		// 				#print($tag);
+		// 				$full_text .= $tag;
+		// 			}
+		// 			else
+		// 			{
+		// 				// Opening tag.
+		// 				#print($tag);
+		// 				$full_text .= $tag;
+		// 				$tags[] = $tagName;
+		// 			}
+		// 		}
 
-			// Continue after the tag.
-			$position = $tagPosition + strlen($tag);
-		}
+		// 		// Continue after the tag.
+		// 		$position = $tagPosition + strlen($tag);
+		// 	}
 
-		// Print any remaining text.
-		if ($printedLength < $maxLength && $position < strlen($html))
-			#print(substr($html, $position, $maxLength - $printedLength));
-			$full_text .= substr($html, $position, $maxLength - $printedLength);
+		// 	// Print any remaining text.
+		// 	if ($printedLength < $maxLength && $position < strlen($html))
+		// 		#print(substr($html, $position, $maxLength - $printedLength));
+		// 		$full_text .= substr($html, $position, $maxLength - $printedLength);
 
-		// Close any open tags.
-		while (!empty($tags)) {
-			#printf('</%s>', array_pop($tags));
-			$full_text .= sprintf('</%s>', array_pop($tags));
-		}
+		// 	// Close any open tags.
+		// 	while (!empty($tags)) {
+		// 		#printf('</%s>', array_pop($tags));
+		// 		$full_text .= sprintf('</%s>', array_pop($tags));
+		// 	}
 
 
-		return $full_text;
-	}//end truncate_html
+		// 	return $full_text;
+		// }//end truncate_html
 
 
 
@@ -3394,7 +3374,7 @@ abstract class common {
 							if ($current_model==='section') {
 								$target_section_tipo = $current_tipo; // Overwrite (!)
 								continue;
-							}else if ($current_model==='section' || $current_model==='exclude_elements') {
+							}else if ($current_model==='exclude_elements') {
 								continue;
 							}else if($current_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 								continue; // 'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
@@ -4237,8 +4217,13 @@ abstract class common {
 
 		$tools = [];
 
+		// user_id
+			$user_id = get_user_id();
+			if (empty($user_id)) {
+				return $tools;
+			}
+
 		// user_tools
-			$user_id	= get_user_id();
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars
@@ -4564,6 +4549,7 @@ abstract class common {
 
 	/**
 	* RESOlVE_VIEW
+	* @param object $options
 	* @return string|null $view
 	*/
 	public static function resolve_view(object $options) : ?string {
