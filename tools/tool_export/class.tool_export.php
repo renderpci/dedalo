@@ -113,6 +113,8 @@ class tool_export extends tool_common {
 	*/
 	public static function get_export_grid(object $options) : object {
 
+		set_time_limit ( 10800 );  // 3 hours (60x60x3)
+
 		// response
 			$response = new stdClass();
 				$response->result	= false;
