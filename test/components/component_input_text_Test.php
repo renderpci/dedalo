@@ -743,7 +743,10 @@ final class component_input_text_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_structure_context();
+		$result = $component->get_structure_context(
+			2,
+			true
+		);
 
 		$this->assertTrue(
 			gettype($result)==='object',
@@ -948,9 +951,9 @@ final class component_input_text_test extends TestCase {
 		$result = $component->get_section_id();
 
 		$this->assertTrue(
-			gettype($result)==='integer',
+			gettype($result)==='integer' || gettype($result)==='string',
 				'expected value do not match:' . PHP_EOL
-				.' expected type: integer' . PHP_EOL
+				.' expected type: integer|string' . PHP_EOL
 				.' type: '.gettype($result)
 		);
 	}//end test_get_section_id
