@@ -392,4 +392,754 @@ final class component_input_text_test extends TestCase {
 
 
 
+	/////////// ⬇︎ common methods ⬇︎ ////////////////
+
+
+
+	/**
+	* TEST_get_model
+	* @return void
+	*/
+	public function test_get_model() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->get_model();
+
+		$this->assertTrue(
+			gettype($value)==='string',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			$value==='component_input_text',
+				'expected value do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_model
+
+
+
+	/**
+	* TEST_set_permissions
+	* @return void
+	*/
+	public function test_set_permissions() {
+
+		$component = $this->build_component_instance();
+
+		$new_value = 1;
+
+		$value = $component->set_permissions($new_value);
+
+		$permissions = $component->get_permissions();
+
+		$this->assertTrue(
+			gettype($value)==='NULL',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: NULL' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			$component->permissions===$new_value,
+				'expected permissions do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' permissions: '.to_string($permissions)
+		);
+	}//end test_set_permissions
+
+
+
+	/**
+	* TEST_set_bl_loaded_matrix_data
+	* @return void
+	*/
+	public function test_set_bl_loaded_matrix_data() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->set_bl_loaded_matrix_data(
+			true
+		);
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			$component->bl_loaded_matrix_data===true,
+				'expected bl_loaded_matrix_data do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' bl_loaded_matrix_data: '.to_string($component->bl_loaded_matrix_data)
+		);
+
+		$value = $component->set_bl_loaded_matrix_data(
+			false
+		);
+
+		$this->assertTrue(
+			$component->bl_loaded_matrix_data===false,
+				'expected bl_loaded_matrix_data do not match:' . PHP_EOL
+				.' expected: component_input_text' . PHP_EOL
+				.' bl_loaded_matrix_data: '.to_string($component->bl_loaded_matrix_data)
+		);
+	}//end test_set_bl_loaded_matrix_data
+
+
+
+	/**
+	* TEST_get_bl_loaded_matrix_data
+	* @return void
+	*/
+	public function test_get_bl_loaded_matrix_data() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->get_bl_loaded_matrix_data();
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+	}//end test_get_bl_loaded_matrix_data
+
+
+
+	/**
+	* TEST_load_structure_data
+	* @return void
+	*/
+	public function test_load_structure_data() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->load_structure_data();
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+	}//end test_load_structure_data
+
+
+
+	/**
+	* TEST_is_translatable
+	* @return void
+	*/
+	public function test_is_translatable() {
+
+		$component = $this->build_component_instance();
+
+		$value = $component->is_translatable();
+
+		$this->assertTrue(
+			gettype($value)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($value)
+		);
+
+		$this->assertTrue(
+			$value===true,
+				'expected value do not match:' . PHP_EOL
+				.' expected: true' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_is_translatable
+
+
+
+	/**
+	* TEST_set_lang
+	* @return void
+	*/
+	public function test_set_lang() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->set_lang(
+			'lg-spa'
+		);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$component->lang==='lg-spa',
+				'expected result do not match:' . PHP_EOL
+				.' expected: true' . PHP_EOL
+				.' result: '.to_string($component->lang)
+		);
+	}//end test_set_lang
+
+
+
+	/**
+	* TEST_set_to_force_reload_dato
+	* @return void
+	*/
+	public function test_set_to_force_reload_dato() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->set_to_force_reload_dato();
+
+		$this->assertTrue(
+			gettype($result)==='NULL',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: NULL' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_set_to_force_reload_dato
+
+
+
+	/**
+	* TEST_get_properties
+	* @return void
+	*/
+	public function test_get_properties() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_properties();
+
+		$this->assertTrue(
+			gettype($result)==='object' || gettype($result)==='NULL',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object|null' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_properties
+
+
+
+	/**
+	* TEST_set_properties
+	* @return void
+	*/
+	public function test_set_properties() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->set_properties(
+			(object)[
+				'label' => 'rsc654'
+			]
+		);
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: boolean' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===true,
+				'expected result do not match:' . PHP_EOL
+				.' expected: true' . PHP_EOL
+				.' result: '.to_string($result)
+		);
+	}//end test_set_properties
+
+
+
+	/**
+	* TEST_get_propiedades
+	* @return void
+	*/
+	public function test_get_propiedades() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_propiedades();
+
+		$this->assertTrue(
+			gettype($result)==='NULL',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: NULL' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_propiedades
+
+
+
+	/**
+	* TEST_get_ar_related_component_tipo
+	* @return void
+	*/
+	public function test_get_ar_related_component_tipo() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_ar_related_component_tipo();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_ar_related_component_tipo
+
+
+
+	/**
+	* TEST_get_json
+	* @return void
+	*/
+	public function test_get_json() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_json();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			gettype($result->context)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result->context)
+		);
+
+		$this->assertTrue(
+			gettype($result->data)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result->data)
+		);
+	}//end test_get_json
+
+
+
+	/**
+	* TEST_get_structure_context
+	* @return void
+	*/
+	public function test_get_structure_context() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_structure_context();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$result->typo==='ddo',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->typo)
+		);
+
+		$this->assertTrue(
+			$result->tipo===$component->tipo,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->tipo)
+		);
+	}//end test_get_structure_context
+
+
+
+	/**
+	* TEST_get_structure_context_simple
+	* @return void
+	*/
+	public function test_get_structure_context_simple() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_structure_context_simple();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$result->typo==='ddo',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->typo)
+		);
+
+		$this->assertTrue(
+			$result->tipo===$component->tipo,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: ddo' . PHP_EOL
+				.' type: '.to_string($result->tipo)
+		);
+	}//end test_get_structure_context_simple
+
+
+
+	/**
+	* TEST_build_request_config
+	* @return void
+	*/
+	public function test_build_request_config() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->build_request_config();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		// $this->assertTrue(
+		// 	$result->typo==='ddo',
+		// 		'expected value do not match:' . PHP_EOL
+		// 		.' expected type: ddo' . PHP_EOL
+		// 		.' type: '.to_string($result->typo)
+		// );
+
+		// $this->assertTrue(
+		// 	$result->tipo===$component->tipo,
+		// 		'expected value do not match:' . PHP_EOL
+		// 		.' expected type: ddo' . PHP_EOL
+		// 		.' type: '.to_string($result->tipo)
+		// );
+	}//end test_build_request_config
+
+
+
+	/**
+	* TEST_get_ar_request_config
+	* @return void
+	*/
+	public function test_get_ar_request_config() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_ar_request_config();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_ar_request_config
+
+
+
+	/**
+	* TEST_get_request_config_object
+	* @return void
+	*/
+	public function test_get_request_config_object() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_request_config_object();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_request_config_object
+
+
+
+	/**
+	* TEST_get_subdatum
+	* @return void
+	*/
+	public function test_get_subdatum() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_subdatum();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_subdatum
+
+
+
+	/**
+	* TEST_get_records_mode
+	* @return void
+	*/
+	public function test_get_records_mode() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_records_mode();
+
+		$this->assertTrue(
+			gettype($result)==='string',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_records_mode
+
+
+
+	/**
+	* TEST_get_source
+	* @return void
+	*/
+	public function test_get_source() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_source();
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_source
+
+
+
+	/**
+	* TEST_get_section_id
+	* @return void
+	*/
+	public function test_get_section_id() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_section_id();
+
+		$this->assertTrue(
+			gettype($result)==='integer',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: integer' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_section_id
+
+
+
+	/**
+	* TEST_get_data_item
+	* @return void
+	*/
+	public function test_get_data_item() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_data_item(
+			['my value']
+		);
+
+		$this->assertTrue(
+			gettype($result)==='object',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: object' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_data_item
+
+
+
+	/**
+	* TEST_get_tools
+	* @return void
+	*/
+	public function test_get_tools() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_tools();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_tools
+
+
+
+	/**
+	* TEST_get_buttons_context
+	* @return void
+	*/
+	public function test_get_buttons_context() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_buttons_context();
+
+		$this->assertTrue(
+			gettype($result)==='array',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_buttons_context
+
+
+
+	/**
+	* TEST_get_columns_map
+	* @return void
+	*/
+	public function test_get_columns_map() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_columns_map();
+
+		$this->assertTrue(
+			gettype($result)==='array' || gettype($result)==='NULL',
+				'expected value do not match:' . PHP_EOL
+				.' expected type: array|null' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_get_columns_map
+
+
+
+	/**
+	* TEST_set_view
+	* @return void
+	*/
+	public function test_set_view() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->set_view(
+			'line'
+		);
+
+		$this->assertTrue(
+			gettype($result)==='NULL' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: NULL' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$component->view==='line' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected view line' . PHP_EOL
+				.' type: '.gettype($component->view)
+		);
+	}//end test_set_view
+
+
+
+	/**
+	* TEST_get_view
+	* @return void
+	*/
+	public function test_get_view() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_view();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string|null' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$component->view==='line' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected view line' . PHP_EOL
+				.' type: '.gettype($component->view)
+		);
+	}//end test_get_view
+
+
+
+	/**
+	* TEST_get_children_view
+	* @return void
+	*/
+	public function test_get_children_view() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->get_children_view();
+
+		$this->assertTrue(
+			gettype($result)==='string' || gettype($result)==='NULL' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: string|null' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$component->view==='line' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected view line' . PHP_EOL
+				.' type: '.gettype($component->view)
+		);
+	}//end test_get_children_view
+
+
+
+	/**
+	* TEST_resolve_limit
+	* @return void
+	*/
+	public function test_resolve_limit() {
+
+		$component = $this->build_component_instance();
+
+		$result = $component->resolve_limit();
+
+		$this->assertTrue(
+			gettype($result)==='integer' || gettype($result)==='NULL' ,
+				'expected value do not match:' . PHP_EOL
+				.' expected type: integer|null' . PHP_EOL
+				.' type: '.gettype($result)
+		);
+	}//end test_resolve_limit
+
+
+
 }//end class component_input_text_test

@@ -388,7 +388,7 @@ abstract class common {
 	/**
 	* GET MATRIX_TABLE FROM TIPO
 	* @param string $tipo
-	* @return string $matrix_table
+	* @return string|null $matrix_table
 	*/
 	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
@@ -581,8 +581,10 @@ abstract class common {
 	* SET_LANG
 	* When isset lang, valor and dato are cleaned
 	* and $this->bl_loaded_matrix_data is reset to force load from database again
+	* @param string $lang
+	* @return bool
 	*/
-	public function set_lang(string $lang) {
+	public function set_lang(string $lang) : bool {
 
 		#if($lang!==DEDALO_DATA_LANG) {
 			# FORCE reload dato from database when dato is requested again
@@ -590,6 +592,8 @@ abstract class common {
 		#}
 
 		$this->lang = $lang;
+
+		return true;
 	}//end set_lang
 
 
@@ -919,16 +923,16 @@ abstract class common {
 	public function get_ar_related_component_tipo() : array {
 
 		$ar_related_component_tipo=array();
-		#dump($this, ' this ++ '.to_string());
+
 		$relaciones = $this->RecordObj_dd->get_relaciones();
-		if(is_array($relaciones )) {
-			foreach ($relaciones as $key => $value) {
+		if(is_array($relaciones)) {
+			foreach ($relaciones as $value) {
 				$tipo = reset($value);
 				$ar_related_component_tipo[] = $tipo;
 			}
 		}
 
-		return (array)$ar_related_component_tipo;
+		return $ar_related_component_tipo;
 	}//end get_ar_related_component_tipo
 
 
@@ -3583,6 +3587,40 @@ abstract class common {
 
 
 	/**
+	* GET_REQUEST_CONFIG_OBJECT
+	* Call method get_ar_request_config whit current options
+	* and return the expected one request_config_object
+	* @return request_config_object|null $request_config_object
+	*/
+	public function get_request_config_object() : ?request_config_object {
+
+		// short vars
+			// $mode			= $this->get_mode(); // records_mode;
+			// $tipo			= $this->get_tipo();
+			// $section_tipo	= $this->get_section_tipo();
+			// $section_id		= $this->get_section_id();
+			// $limit			= $this->pagination->limit;
+
+		// ar_request_config
+			// $options = new stdClass();
+			// 	$options->tipo			= $tipo;
+			// 	$options->external		= false;
+			// 	$options->section_tipo	= $section_tipo;
+			// 	$options->mode			= $mode;
+			// 	$options->section_id	= $section_id;
+			// 	$options->limit			= $limit;
+			$ar_request_query_objects = $this->get_ar_request_config();
+
+		// request_config_object
+			$request_config_object = reset($ar_request_query_objects) ?? null;
+
+
+		return $request_config_object;
+	}//end get_request_config_object
+
+
+
+	/**
 	* GET_RECORDS_MODE
 	* @return string $records_mode
 	*/
@@ -3591,11 +3629,11 @@ abstract class common {
 		$model			= get_called_class();
 		$properties		= $this->get_properties();
 		$records_mode	= isset($properties->source->records_mode)
-							? $properties->source->records_mode
-							: (in_array($model, component_relation_common::get_components_with_relations())
-								? 'list'
-								: $this->get_mode()
-							);
+			? $properties->source->records_mode
+			: (in_array($model, component_relation_common::get_components_with_relations())
+				? 'list'
+				: $this->get_mode()
+			);
 
 		return $records_mode;
 	}//end get_records_mode
@@ -3895,48 +3933,16 @@ abstract class common {
 
 
 	/**
-	* GET_REQUEST_CONFIG_OBJECT
-	* Call method get_ar_request_config whit current options
-	* and return the expected one request_config_object
-	* @return request_config_object|null $request_config_object
-	*/
-	public function get_request_config_object() : ?request_config_object {
-
-		// short vars
-			// $mode			= $this->get_mode(); // records_mode;
-			// $tipo			= $this->get_tipo();
-			// $section_tipo	= $this->get_section_tipo();
-			// $section_id		= $this->get_section_id();
-			// $limit			= $this->pagination->limit;
-
-		// ar_request_config
-			// $options = new stdClass();
-			// 	$options->tipo			= $tipo;
-			// 	$options->external		= false;
-			// 	$options->section_tipo	= $section_tipo;
-			// 	$options->mode			= $mode;
-			// 	$options->section_id	= $section_id;
-			// 	$options->limit			= $limit;
-			$ar_request_query_objects = $this->get_ar_request_config();
-
-		// request_config_object
-			$request_config_object = reset($ar_request_query_objects) ?? null;
-
-
-		return $request_config_object;
-	}//end get_request_config_object
-
-
-
-	/**
 	* GET SECTION ID
 	* Section id está en el dato (registro matrix) de la sección estructurado en json
 	* tal que: {"section_id": 2 ..}
+	* @param string|int|null
 	*/
-	public function get_section_id() {
+	public function get_section_id() : string|int|null {
 
 		return $this->section_id ?? null;
 	}//end get_section_id
+
 
 
 	/**
