@@ -2360,6 +2360,7 @@ abstract class component_common extends common {
 
 			debug_log(__METHOD__
 				. " Error: component without requetst_config!!!" .PHP_EOL
+				. ' model: ' . get_called_class() . PHP_EOL
 				. ' tipo: ' . $this->tipo . PHP_EOL
 				. ' section_id: '. $this->section_id .PHP_EOL
 				. ' section_tipo: '. $this->section_tipo
