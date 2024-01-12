@@ -398,8 +398,12 @@ class component_geolocation extends component_common {
 			}
 
 		// coordinates. Converts float number to 16 decimals number using '.' separator
-			$lon = number_format( $value->lon, 16, '.', ''); // string as "2.012151410452" (use dot notation to preserve JSON integrity)
-			$lat = number_format( $value->lat, 16, '.', ''); // string as "41.562363467527" (use dot notation to preserve JSON integrity)
+			$lon = !empty($value->lon)
+				? number_format( (float)$value->lon, 16, '.', '')
+				: 0; // string as "2.012151410452" (use dot notation to preserve JSON integrity)
+			$lat = !empty($value->lat)
+				? number_format( (float)$value->lat, 16, '.', '')
+				: 0; // string as "41.562363467527" (use dot notation to preserve JSON integrity)
 
 		// GEOJSON
 			$ar_value = json_decode('[
