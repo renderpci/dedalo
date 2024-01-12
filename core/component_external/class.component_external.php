@@ -59,9 +59,13 @@ class component_external extends component_common {
 					.' section_tipo: '. $section_tipo .PHP_EOL
 					.' section_id: '. $section_id .PHP_EOL
 					.' section_properties type: ' . gettype($section_properties) .PHP_EOL
-					.' section_properties: ' . json_encode($section_properties, JSON_PRETTY_PRINT)
+					.' section_properties: ' . to_string($section_properties) .PHP_EOL
+					// .' bt: ' . to_string( debug_backtrace() )
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());
+				}
 				return null;
 			}
 
