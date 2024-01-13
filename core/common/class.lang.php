@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * LANG CLASS
 * Manages dedalo lang resolutions
@@ -15,16 +16,26 @@ class lang {
 
 	/**
 	* RESOLVE
-	* Resolve request lag tld in requested language
-	* For example: resolves "Spanish" from $lang_tld='lg-spa', $lang='lg-eng'
-	* or "Español" from $lang_tld='lg-spa', $lang='lg-spa'
+	* Resolve request lang tld in requested language
+	* For example: resolves "Spanish" from $lang_tld = 'lg-spa', $lang = 'lg-eng'
+	* or "Español" from $lang_tld = 'lg-spa', $lang = 'lg-spa'
 	* @param string $lang_tld
 	*	like 'lg-spa'
-	* @param string $lang
-	*	like 'lg-eng'. Default is current dedalo data lang
 	* @return object|null $response
+	* {
+	*	"section_id": "17344",
+	*	"names": {
+	*		"lg-eng": [
+	*			"Spanish"
+	*		],
+	*		"lg-spa": [
+	*			"Castellano"
+	*		]
+	*	}
+	* }
+	*
 	*/
-	private static function resolve( string $lang_tld, string $lang=DEDALO_DATA_LANG ) : ?object {
+	private static function resolve(string $lang_tld) : ?object {
 
 		// lang tld formatting
 			if (strpos($lang_tld, 'lg-')===0) {
@@ -64,8 +75,8 @@ class lang {
 				$names = $rows['names'];
 				$names = json_decode($names);
 
-				$response->section_id = $rows['section_id'];
-				$response->names 	  = $names;
+				$response->section_id	= $rows['section_id'];
+				$response->names		= $names;
 
 				break; // only one is expected
 			}
@@ -85,13 +96,12 @@ class lang {
 	*	like 'lg-spa'
 	* @return int|null $section_id
 	*/
-	public static function get_section_id_from_code( string $code ) : ?int {
+	public static function get_section_id_from_code(string $code) : int|null {
 
-		$result = lang::resolve(
-			$code, // string $code
-			DEDALO_DATA_LANG // string $lang
-		);
-		$section_id = $result->section_id;
+		$result		= lang::resolve($code);
+		$section_id	= !empty($result->section_id)
+			? (int)$result->section_id
+			: null;
 
 		return $section_id;
 	}//end get_section_id_from_code
@@ -104,13 +114,14 @@ class lang {
 	*	like 'lg-spa'
 	* @return locator $locator
 	*/
-	public static function get_lang_locator_from_code( string $code ) : locator {
+	public static function get_lang_locator_from_code(string $code) : locator {
 
-		$result = lang::resolve( $code, $lang=DEDALO_DATA_LANG );
+		$result = lang::resolve($code);
 		if (!isset($result->section_id)) {
-			# Temporal cath error for import v4.0.15 to v4.5.0
-			# When import hierarchy, langs are not imported yet (langs are insise hierarchies)
-			# Remove this catch in next versions
+			// Temporal catch error for import v4.0.15 to v4.5.0
+			// When import hierarchy, langs are not imported yet (langs are inside hierarchies)
+			// Remove this catch in next versions
+			$lang = DEDALO_DATA_LANG;
 			switch ($lang) {
 				case 'lg-eng':	$section_id = 5101;		break;
 				case 'lg-spa':	$section_id = 17344;	break;
@@ -128,13 +139,14 @@ class lang {
 					break;
 			}
 		}else{
-			# Normal case
+			// Normal case
 			$section_id  = $result->section_id;
 		}
 
 		$locator = new locator();
 			$locator->set_section_tipo(DEDALO_LANGS_SECTION_TIPO);
 			$locator->set_section_id($section_id);
+
 
 		return $locator;
 	}//end get_lang_locator_from_code
@@ -149,12 +161,12 @@ class lang {
 	* @param bool $from_cache = true
 	* @return string|null $name
 	*/
-	public static function get_name_from_code( string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true ) : ?string {
+	public static function get_name_from_code(string $code, string $lang=DEDALO_DATA_LANG, bool $from_cache=true) : ?string {
 
-		// NO LANG : When lang code is lg-nolan, null is returned
-		if ($code===DEDALO_DATA_NOLAN) {
-			return null;
-		}
+		// DEDALO_DATA_NOLAN case : When lang code is lg-nolan, null is returned
+			if ($code===DEDALO_DATA_NOLAN) {
+				return null;
+			}
 
 		// cache
 			$cache_uid = $code.'_'.$lang;
@@ -162,33 +174,33 @@ class lang {
 				return $_SESSION['dedalo']['config']['lang_name_from_code'][$cache_uid];
 			}
 
-		// RESOLVE
-		$result = lang::resolve( $code, $lang );
+		// resolve
+			$result = lang::resolve($code);
 
-		// NOT FOUNDED NAME
-		if(!isset($result->names)) {
-			return null;
-		}
-
-		// Set names from object result
-		$names = $result->names;
-
-		// Fallback
-		if (!empty($names->$lang)) {
-
-			$name = to_string($names->$lang);
-
-		}else{
-
-			$section_tipo	= DEDALO_LANGS_SECTION_TIPO;
-			$main_lang		= hierarchy::get_main_lang($section_tipo);
-			# Recursion in main_lang lang
-			if (isset($names->$main_lang)) {
-				$name = to_string($names->$main_lang);
-			}else{
+		// not founded name
+			if(!isset($result->names)) {
 				return null;
 			}
-		}
+
+		// Set names from object result
+			$names = $result->names;
+
+		// Fallback
+			if (!empty($names->$lang)) {
+
+				$name = to_string($names->$lang);
+
+			}else{
+
+				$section_tipo	= DEDALO_LANGS_SECTION_TIPO;
+				$main_lang		= hierarchy::get_main_lang($section_tipo);
+				// Recursion in main_lang lang
+				if (isset($names->$main_lang)) {
+					$name = to_string($names->$main_lang);
+				}else{
+					return null;
+				}
+			}
 
 		// cache
 			if($from_cache===true){
@@ -225,17 +237,19 @@ class lang {
 	*/
 	public static function get_code_from_locator(object $locator, bool $add_prefix=true) : ?string {
 
-		if (!isset($locator->section_id)) {
-			if(SHOW_DEBUG===true) {
-				dump($locator, ' locator ++ (locator_id not found!)'.to_string());
-				dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());;
+		// locator check section_id
+			if (!isset($locator->section_id)) {
+				if(SHOW_DEBUG===true) {
+					dump($locator, ' locator ++ (locator_id not found!)'.to_string());
+					dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());;
+				}
+				return null;
 			}
-			return null;
-		}
 
-		$section_tipo = DEDALO_LANGS_SECTION_TIPO;
+		// section_tipo
+			$section_tipo = DEDALO_LANGS_SECTION_TIPO;
 
-			# Test section tipo and model_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
+			// Test section tipo and model_name exists (TEMPORAL FOR INSTALATIONS BEFORE 4.5)
 			$section_model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo, true);
 			if ($section_model_name!=='section') {
 
@@ -255,29 +269,39 @@ class lang {
 					default:
 						break;
 				}
+				debug_log(__METHOD__
+					. " Error Processing Request. Impossible calculate lang code from locator. " . PHP_EOL
+					. " Your desired code could be code: '$code' for $locator->section_tipo - $locator->section_id " . PHP_EOL
+					. " But, please review your langs section ($section_tipo) data before continue working to avoid critical errors. " . PHP_EOL
+					. ' code: ' . to_string($code) . PHP_EOL
+					. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
 				throw new Exception("Error Processing Request. Impossible calculate lang code from locator. <br>
 					Your desired code could be '$code' for $locator->section_tipo - $locator->section_id<br>
 					But, please review your langs section ($section_tipo) data before continue working to avoid critical errors.<br>
 					<a href=\"../?t=$section_tipo\">Go to langs section</a><br> Locator: ".to_string($locator), 1);
-
 			}
 
-		$tipo		= DEDALO_THESAURUS_CODE_TIPO;
-		$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
-		$parent		= $locator->section_id;
-		$component	= component_common::get_instance(
-			$model_name,
-			$tipo,
-			$parent,
-			'edit',
-			DEDALO_DATA_NOLAN,
-			$section_tipo
-		);
-		$code = $component->get_valor();
+		// component value (code)
+			$tipo		= DEDALO_THESAURUS_CODE_TIPO;
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$parent		= $locator->section_id;
+			$component	= component_common::get_instance(
+				$model_name,
+				$tipo,
+				$parent,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$code = $component->get_value(); // changed from 'get_value' 13-01-2024 Paco to modernize value calls
 
-		if ($add_prefix===true) {
-			$code = 'lg-'.$code;
-		}
+		// add_prefix. Default is true
+			if ($add_prefix===true) {
+				$code = 'lg-'.$code;
+			}
 
 
 		return (string)$code;
@@ -288,210 +312,204 @@ class lang {
 	/**
 	* GET_LANG_CODE_FROM_ALPHA2
 	* @param string $lang_apha2
-	* @return string $lang_code
+	* 	like: 'es'
+	* @return string|null $lang_code
+	* 	like 'lg-spa'
 	*/
-	public static function get_lang_code_from_alpha2( string $lang_apha2 ) : string {
+	public static function get_lang_code_from_alpha2(string $lang_apha2) : ?string {
 
 		$lang_code = null;
 
 		switch ($lang_apha2) {
-			#case 'es' 	: $code = 'lg-spa';	break;
-			#case 'en' 	: $code = 'lg-eng';	break;
-			#case 'cat' 	: $code = 'lg-cat';	break;
-			case 'va' 	: $code = 'lg-vlca';break;
-			#case 'fr' 	: $code = 'lg-fra';	break;
-			#case 'eu' 	: $code = 'lg-eus';	break;
-			#case 'pt' 	: $code = 'lg-por';	break;
-			#case 'ar' 	: $code = 'lg-ara';	break;
-			#case 'ru'	: $code = 'lg-rus';	break;
-			#case 'el' 	: $code = 'lg-ell';	break;
-			#case 'de' 	: $code = 'lg-deu';	break;
-
-			case "aa" 	: $code = "lg-aar"; break;
-			case "ab" 	: $code = "lg-abk"; break;
-			case "ae" 	: $code = "lg-ave"; break;
-			case "af" 	: $code = "lg-afr"; break;
-			case "ak" 	: $code = "lg-aka"; break;
-			case "am" 	: $code = "lg-amh"; break;
-			case "an" 	: $code = "lg-arg"; break;
-			case "ar" 	: $code = "lg-ara"; break;
-			case "as" 	: $code = "lg-asm"; break;
-			case "av" 	: $code = "lg-ava"; break;
-			case "ay" 	: $code = "lg-aym"; break;
-			case "az" 	: $code = "lg-aze"; break;
-			case "ba" 	: $code = "lg-bak"; break;
-			case "be" 	: $code = "lg-bel"; break;
-			case "bg" 	: $code = "lg-bul"; break;
-			case "bi" 	: $code = "lg-bis"; break;
-			case "bm" 	: $code = "lg-bam"; break;
-			case "bn" 	: $code = "lg-ben"; break;
-			case "bo" 	: $code = "lg-bod"; break;
-			case "br" 	: $code = "lg-bre"; break;
-			case "bs" 	: $code = "lg-bos"; break;
-			case "ca" 	: $code = "lg-cat"; break;
-			case "ce" 	: $code = "lg-che"; break;
-			case "ch" 	: $code = "lg-cha"; break;
-			case "co" 	: $code = "lg-cos"; break;
-			case "cr" 	: $code = "lg-cre"; break;
-			case "cs" 	: $code = "lg-ces"; break;
-			case "cu" 	: $code = "lg-chu"; break;
-			case "cv" 	: $code = "lg-chv"; break;
-			case "cy" 	: $code = "lg-cym"; break;
-			case "da" 	: $code = "lg-dan"; break;
-			case "de" 	: $code = "lg-deu"; break;
-			case "dv" 	: $code = "lg-div"; break;
-			case "dz" 	: $code = "lg-dzo"; break;
-			case "ee" 	: $code = "lg-ewe"; break;
-			case "el" 	: $code = "lg-ell"; break;
-			case "en" 	: $code = "lg-eng"; break;
-			case "eo" 	: $code = "lg-epo"; break;
-			case "es" 	: $code = "lg-spa"; break;
-			case "et" 	: $code = "lg-est"; break;
-			case "eu" 	: $code = "lg-eus"; break;
-			case "fa" 	: $code = "lg-fas"; break;
-			case "ff" 	: $code = "lg-ful"; break;
-			case "fi" 	: $code = "lg-fin"; break;
-			case "fj" 	: $code = "lg-fij"; break;
-			case "fo" 	: $code = "lg-fao"; break;
-			case "fr" 	: $code = "lg-fra"; break;
-			case "fy" 	: $code = "lg-fry"; break;
-			case "ga" 	: $code = "lg-gle"; break;
-			case "gd" 	: $code = "lg-gla"; break;
-			case "gl" 	: $code = "lg-glg"; break;
-			case "gn" 	: $code = "lg-grn"; break;
-			case "gu" 	: $code = "lg-guj"; break;
-			case "gv" 	: $code = "lg-glv"; break;
-			case "ha" 	: $code = "lg-hau"; break;
-			case "he" 	: $code = "lg-heb"; break;
-			case "hi" 	: $code = "lg-hin"; break;
-			case "ho" 	: $code = "lg-hmo"; break;
-			case "hr" 	: $code = "lg-hrv"; break;
-			case "ht" 	: $code = "lg-hat"; break;
-			case "hu" 	: $code = "lg-hun"; break;
-			case "hy" 	: $code = "lg-hye"; break;
-			case "hz" 	: $code = "lg-her"; break;
-			case "ia" 	: $code = "lg-ina"; break;
-			case "id" 	: $code = "lg-ind"; break;
-			case "ie" 	: $code = "lg-ile"; break;
-			case "ig" 	: $code = "lg-ibo"; break;
-			case "ii" 	: $code = "lg-iii"; break;
-			case "ik" 	: $code = "lg-ipk"; break;
-			case "io" 	: $code = "lg-ido"; break;
-			case "is" 	: $code = "lg-isl"; break;
-			case "it" 	: $code = "lg-ita"; break;
-			case "iu" 	: $code = "lg-iku"; break;
-			case "ja" 	: $code = "lg-jpn"; break;
-			case "jv" 	: $code = "lg-jav"; break;
-			case "ka" 	: $code = "lg-kat"; break;
-			case "kg" 	: $code = "lg-kon"; break;
-			case "ki" 	: $code = "lg-kik"; break;
-			case "kj" 	: $code = "lg-kua"; break;
-			case "kk" 	: $code = "lg-kaz"; break;
-			case "kl" 	: $code = "lg-kal"; break;
-			case "km" 	: $code = "lg-khm"; break;
-			case "kn" 	: $code = "lg-kan"; break;
-			case "ko" 	: $code = "lg-kor"; break;
-			case "kr" 	: $code = "lg-kau"; break;
-			case "ks" 	: $code = "lg-kas"; break;
-			case "ku" 	: $code = "lg-kur"; break;
-			case "kv" 	: $code = "lg-kom"; break;
-			case "kw" 	: $code = "lg-cor"; break;
-			case "ky" 	: $code = "lg-kir"; break;
-			case "la" 	: $code = "lg-lat"; break;
-			case "lb" 	: $code = "lg-ltz"; break;
-			case "lg" 	: $code = "lg-lug"; break;
-			case "li" 	: $code = "lg-lim"; break;
-			case "ln" 	: $code = "lg-lin"; break;
-			case "lo" 	: $code = "lg-lao"; break;
-			case "lt" 	: $code = "lg-lit"; break;
-			case "lu" 	: $code = "lg-lub"; break;
-			case "lv" 	: $code = "lg-lav"; break;
-			case "mg" 	: $code = "lg-mlg"; break;
-			case "mh" 	: $code = "lg-mah"; break;
-			case "mi" 	: $code = "lg-mri"; break;
-			case "mk" 	: $code = "lg-mkd"; break;
-			case "ml" 	: $code = "lg-mal"; break;
-			case "mn" 	: $code = "lg-mon"; break;
-			case "mr" 	: $code = "lg-mar"; break;
-			case "ms" 	: $code = "lg-msa"; break;
-			case "mt" 	: $code = "lg-mlt"; break;
-			case "my" 	: $code = "lg-mya"; break;
-			case "na" 	: $code = "lg-nau"; break;
-			case "nb" 	: $code = "lg-nob"; break;
-			case "nd" 	: $code = "lg-nde"; break;
-			case "ne" 	: $code = "lg-nep"; break;
-			case "ng" 	: $code = "lg-ndo"; break;
-			case "nl" 	: $code = "lg-nld"; break;
-			case "nn" 	: $code = "lg-nno"; break;
-			case "no" 	: $code = "lg-nor"; break;
-			case "nr" 	: $code = "lg-nbl"; break;
-			case "nv" 	: $code = "lg-nav"; break;
-			case "ny" 	: $code = "lg-nya"; break;
-			case "oc" 	: $code = "lg-oci"; break;
-			case "oj" 	: $code = "lg-oji"; break;
-			case "om" 	: $code = "lg-orm"; break;
-			case "or" 	: $code = "lg-ori"; break;
-			case "os" 	: $code = "lg-oss"; break;
-			case "pa" 	: $code = "lg-pan"; break;
-			case "pi" 	: $code = "lg-pli"; break;
-			case "pl" 	: $code = "lg-pol"; break;
-			case "ps" 	: $code = "lg-pus"; break;
-			case "pt" 	: $code = "lg-por"; break;
-			case "qu" 	: $code = "lg-que"; break;
-			case "rm" 	: $code = "lg-roh"; break;
-			case "rn" 	: $code = "lg-run"; break;
-			case "ro" 	: $code = "lg-ron"; break;
-			case "ru" 	: $code = "lg-rus"; break;
-			case "rw" 	: $code = "lg-kin"; break;
-			case "sa" 	: $code = "lg-san"; break;
-			case "sc" 	: $code = "lg-srd"; break;
-			case "sd" 	: $code = "lg-snd"; break;
-			case "se" 	: $code = "lg-sme"; break;
-			case "sg" 	: $code = "lg-sag"; break;
-			case "sh" 	: $code = "lg-hbs"; break;//deprecated
-			case "hbs" 	: $code = "lg-hbs"; break;//changed
-			case "si" 	: $code = "lg-sin"; break;
-			case "sk" 	: $code = "lg-slk"; break;
-			case "sl" 	: $code = "lg-slv"; break;
-			case "sm" 	: $code = "lg-smo"; break;
-			case "sn" 	: $code = "lg-sna"; break;
-			case "so" 	: $code = "lg-som"; break;
-			case "sq" 	: $code = "lg-sqi"; break;
-			case "sr" 	: $code = "lg-srp"; break;
-			case "ss" 	: $code = "lg-ssw"; break;
-			case "st" 	: $code = "lg-sot"; break;
-			case "su" 	: $code = "lg-sun"; break;
-			case "sv" 	: $code = "lg-swe"; break;
-			case "sw" 	: $code = "lg-swa"; break;
-			case "ta" 	: $code = "lg-tam"; break;
-			case "te" 	: $code = "lg-tel"; break;
-			case "tg" 	: $code = "lg-tgk"; break;
-			case "th" 	: $code = "lg-tha"; break;
-			case "ti" 	: $code = "lg-tir"; break;
-			case "tk" 	: $code = "lg-tuk"; break;
-			case "tl" 	: $code = "lg-tgl"; break;
-			case "tn" 	: $code = "lg-tsn"; break;
-			case "to" 	: $code = "lg-ton"; break;
-			case "tr" 	: $code = "lg-tur"; break;
-			case "ts" 	: $code = "lg-tso"; break;
-			case "tt" 	: $code = "lg-tat"; break;
-			case "tw" 	: $code = "lg-twi"; break;
-			case "ty" 	: $code = "lg-tah"; break;
-			case "ug" 	: $code = "lg-uig"; break;
-			case "uk" 	: $code = "lg-ukr"; break;
-			case "ur" 	: $code = "lg-urd"; break;
-			case "uz" 	: $code = "lg-uzb"; break;
-			case "ve" 	: $code = "lg-ven"; break;
-			case "vi" 	: $code = "lg-vie"; break;
-			case "vo" 	: $code = "lg-vol"; break;
-			case "wa" 	: $code = "lg-wln"; break;
-			case "wo" 	: $code = "lg-wol"; break;
-			case "xh" 	: $code = "lg-xho"; break;
-			case "yi" 	: $code = "lg-yid"; break;
-			case "yo" 	: $code = "lg-yor"; break;
-			case "za" 	: $code = "lg-zha"; break;
-			case "zh" 	: $code = "lg-zho"; break;
-			case "zu" 	: $code = "lg-zul"; break;
+			// custom
+			// case 'cat'	: $code = 'lg-cat';	break;
+			case 'va'		: $code = 'lg-vlca';break;
+			// official list
+			case 'aa' 	: $code = 'lg-aar'; break;
+			case 'ab' 	: $code = 'lg-abk'; break;
+			case 'ae' 	: $code = 'lg-ave'; break;
+			case 'af' 	: $code = 'lg-afr'; break;
+			case 'ak' 	: $code = 'lg-aka'; break;
+			case 'am' 	: $code = 'lg-amh'; break;
+			case 'an' 	: $code = 'lg-arg'; break;
+			case 'ar' 	: $code = 'lg-ara'; break;
+			case 'as' 	: $code = 'lg-asm'; break;
+			case 'av' 	: $code = 'lg-ava'; break;
+			case 'ay' 	: $code = 'lg-aym'; break;
+			case 'az' 	: $code = 'lg-aze'; break;
+			case 'ba' 	: $code = 'lg-bak'; break;
+			case 'be' 	: $code = 'lg-bel'; break;
+			case 'bg' 	: $code = 'lg-bul'; break;
+			case 'bi' 	: $code = 'lg-bis'; break;
+			case 'bm' 	: $code = 'lg-bam'; break;
+			case 'bn' 	: $code = 'lg-ben'; break;
+			case 'bo' 	: $code = 'lg-bod'; break;
+			case 'br' 	: $code = 'lg-bre'; break;
+			case 'bs' 	: $code = 'lg-bos'; break;
+			case 'ca' 	: $code = 'lg-cat'; break;
+			case 'ce' 	: $code = 'lg-che'; break;
+			case 'ch' 	: $code = 'lg-cha'; break;
+			case 'co' 	: $code = 'lg-cos'; break;
+			case 'cr' 	: $code = 'lg-cre'; break;
+			case 'cs' 	: $code = 'lg-ces'; break;
+			case 'cu' 	: $code = 'lg-chu'; break;
+			case 'cv' 	: $code = 'lg-chv'; break;
+			case 'cy' 	: $code = 'lg-cym'; break;
+			case 'da' 	: $code = 'lg-dan'; break;
+			case 'de' 	: $code = 'lg-deu'; break;
+			case 'dv' 	: $code = 'lg-div'; break;
+			case 'dz' 	: $code = 'lg-dzo'; break;
+			case 'ee' 	: $code = 'lg-ewe'; break;
+			case 'el' 	: $code = 'lg-ell'; break;
+			case 'en' 	: $code = 'lg-eng'; break;
+			case 'eo' 	: $code = 'lg-epo'; break;
+			case 'es' 	: $code = 'lg-spa'; break;
+			case 'et' 	: $code = 'lg-est'; break;
+			case 'eu' 	: $code = 'lg-eus'; break;
+			case 'fa' 	: $code = 'lg-fas'; break;
+			case 'ff' 	: $code = 'lg-ful'; break;
+			case 'fi' 	: $code = 'lg-fin'; break;
+			case 'fj' 	: $code = 'lg-fij'; break;
+			case 'fo' 	: $code = 'lg-fao'; break;
+			case 'fr' 	: $code = 'lg-fra'; break;
+			case 'fy' 	: $code = 'lg-fry'; break;
+			case 'ga' 	: $code = 'lg-gle'; break;
+			case 'gd' 	: $code = 'lg-gla'; break;
+			case 'gl' 	: $code = 'lg-glg'; break;
+			case 'gn' 	: $code = 'lg-grn'; break;
+			case 'gu' 	: $code = 'lg-guj'; break;
+			case 'gv' 	: $code = 'lg-glv'; break;
+			case 'ha' 	: $code = 'lg-hau'; break;
+			case 'he' 	: $code = 'lg-heb'; break;
+			case 'hi' 	: $code = 'lg-hin'; break;
+			case 'ho' 	: $code = 'lg-hmo'; break;
+			case 'hr' 	: $code = 'lg-hrv'; break;
+			case 'ht' 	: $code = 'lg-hat'; break;
+			case 'hu' 	: $code = 'lg-hun'; break;
+			case 'hy' 	: $code = 'lg-hye'; break;
+			case 'hz' 	: $code = 'lg-her'; break;
+			case 'ia' 	: $code = 'lg-ina'; break;
+			case 'id' 	: $code = 'lg-ind'; break;
+			case 'ie' 	: $code = 'lg-ile'; break;
+			case 'ig' 	: $code = 'lg-ibo'; break;
+			case 'ii' 	: $code = 'lg-iii'; break;
+			case 'ik' 	: $code = 'lg-ipk'; break;
+			case 'io' 	: $code = 'lg-ido'; break;
+			case 'is' 	: $code = 'lg-isl'; break;
+			case 'it' 	: $code = 'lg-ita'; break;
+			case 'iu' 	: $code = 'lg-iku'; break;
+			case 'ja' 	: $code = 'lg-jpn'; break;
+			case 'jv' 	: $code = 'lg-jav'; break;
+			case 'ka' 	: $code = 'lg-kat'; break;
+			case 'kg' 	: $code = 'lg-kon'; break;
+			case 'ki' 	: $code = 'lg-kik'; break;
+			case 'kj' 	: $code = 'lg-kua'; break;
+			case 'kk' 	: $code = 'lg-kaz'; break;
+			case 'kl' 	: $code = 'lg-kal'; break;
+			case 'km' 	: $code = 'lg-khm'; break;
+			case 'kn' 	: $code = 'lg-kan'; break;
+			case 'ko' 	: $code = 'lg-kor'; break;
+			case 'kr' 	: $code = 'lg-kau'; break;
+			case 'ks' 	: $code = 'lg-kas'; break;
+			case 'ku' 	: $code = 'lg-kur'; break;
+			case 'kv' 	: $code = 'lg-kom'; break;
+			case 'kw' 	: $code = 'lg-cor'; break;
+			case 'ky' 	: $code = 'lg-kir'; break;
+			case 'la' 	: $code = 'lg-lat'; break;
+			case 'lb' 	: $code = 'lg-ltz'; break;
+			case 'lg' 	: $code = 'lg-lug'; break;
+			case 'li' 	: $code = 'lg-lim'; break;
+			case 'ln' 	: $code = 'lg-lin'; break;
+			case 'lo' 	: $code = 'lg-lao'; break;
+			case 'lt' 	: $code = 'lg-lit'; break;
+			case 'lu' 	: $code = 'lg-lub'; break;
+			case 'lv' 	: $code = 'lg-lav'; break;
+			case 'mg' 	: $code = 'lg-mlg'; break;
+			case 'mh' 	: $code = 'lg-mah'; break;
+			case 'mi' 	: $code = 'lg-mri'; break;
+			case 'mk' 	: $code = 'lg-mkd'; break;
+			case 'ml' 	: $code = 'lg-mal'; break;
+			case 'mn' 	: $code = 'lg-mon'; break;
+			case 'mr' 	: $code = 'lg-mar'; break;
+			case 'ms' 	: $code = 'lg-msa'; break;
+			case 'mt' 	: $code = 'lg-mlt'; break;
+			case 'my' 	: $code = 'lg-mya'; break;
+			case 'na' 	: $code = 'lg-nau'; break;
+			case 'nb' 	: $code = 'lg-nob'; break;
+			case 'nd' 	: $code = 'lg-nde'; break;
+			case 'ne' 	: $code = 'lg-nep'; break;
+			case 'ng' 	: $code = 'lg-ndo'; break;
+			case 'nl' 	: $code = 'lg-nld'; break;
+			case 'nn' 	: $code = 'lg-nno'; break;
+			case 'no' 	: $code = 'lg-nor'; break;
+			case 'nr' 	: $code = 'lg-nbl'; break;
+			case 'nv' 	: $code = 'lg-nav'; break;
+			case 'ny' 	: $code = 'lg-nya'; break;
+			case 'oc' 	: $code = 'lg-oci'; break;
+			case 'oj' 	: $code = 'lg-oji'; break;
+			case 'om' 	: $code = 'lg-orm'; break;
+			case 'or' 	: $code = 'lg-ori'; break;
+			case 'os' 	: $code = 'lg-oss'; break;
+			case 'pa' 	: $code = 'lg-pan'; break;
+			case 'pi' 	: $code = 'lg-pli'; break;
+			case 'pl' 	: $code = 'lg-pol'; break;
+			case 'ps' 	: $code = 'lg-pus'; break;
+			case 'pt' 	: $code = 'lg-por'; break;
+			case 'qu' 	: $code = 'lg-que'; break;
+			case 'rm' 	: $code = 'lg-roh'; break;
+			case 'rn' 	: $code = 'lg-run'; break;
+			case 'ro' 	: $code = 'lg-ron'; break;
+			case 'ru' 	: $code = 'lg-rus'; break;
+			case 'rw' 	: $code = 'lg-kin'; break;
+			case 'sa' 	: $code = 'lg-san'; break;
+			case 'sc' 	: $code = 'lg-srd'; break;
+			case 'sd' 	: $code = 'lg-snd'; break;
+			case 'se' 	: $code = 'lg-sme'; break;
+			case 'sg' 	: $code = 'lg-sag'; break;
+			case 'sh' 	: $code = 'lg-hbs'; break; // deprecated
+			case 'hbs' 	: $code = 'lg-hbs'; break; // changed
+			case 'si' 	: $code = 'lg-sin'; break;
+			case 'sk' 	: $code = 'lg-slk'; break;
+			case 'sl' 	: $code = 'lg-slv'; break;
+			case 'sm' 	: $code = 'lg-smo'; break;
+			case 'sn' 	: $code = 'lg-sna'; break;
+			case 'so' 	: $code = 'lg-som'; break;
+			case 'sq' 	: $code = 'lg-sqi'; break;
+			case 'sr' 	: $code = 'lg-srp'; break;
+			case 'ss' 	: $code = 'lg-ssw'; break;
+			case 'st' 	: $code = 'lg-sot'; break;
+			case 'su' 	: $code = 'lg-sun'; break;
+			case 'sv' 	: $code = 'lg-swe'; break;
+			case 'sw' 	: $code = 'lg-swa'; break;
+			case 'ta' 	: $code = 'lg-tam'; break;
+			case 'te' 	: $code = 'lg-tel'; break;
+			case 'tg' 	: $code = 'lg-tgk'; break;
+			case 'th' 	: $code = 'lg-tha'; break;
+			case 'ti' 	: $code = 'lg-tir'; break;
+			case 'tk' 	: $code = 'lg-tuk'; break;
+			case 'tl' 	: $code = 'lg-tgl'; break;
+			case 'tn' 	: $code = 'lg-tsn'; break;
+			case 'to' 	: $code = 'lg-ton'; break;
+			case 'tr' 	: $code = 'lg-tur'; break;
+			case 'ts' 	: $code = 'lg-tso'; break;
+			case 'tt' 	: $code = 'lg-tat'; break;
+			case 'tw' 	: $code = 'lg-twi'; break;
+			case 'ty' 	: $code = 'lg-tah'; break;
+			case 'ug' 	: $code = 'lg-uig'; break;
+			case 'uk' 	: $code = 'lg-ukr'; break;
+			case 'ur' 	: $code = 'lg-urd'; break;
+			case 'uz' 	: $code = 'lg-uzb'; break;
+			case 've' 	: $code = 'lg-ven'; break;
+			case 'vi' 	: $code = 'lg-vie'; break;
+			case 'vo' 	: $code = 'lg-vol'; break;
+			case 'wa' 	: $code = 'lg-wln'; break;
+			case 'wo' 	: $code = 'lg-wol'; break;
+			case 'xh' 	: $code = 'lg-xho'; break;
+			case 'yi' 	: $code = 'lg-yid'; break;
+			case 'yo' 	: $code = 'lg-yor'; break;
+			case 'za' 	: $code = 'lg-zha'; break;
+			case 'zh' 	: $code = 'lg-zho'; break;
+			case 'zu' 	: $code = 'lg-zul'; break;
 			default:
 				debug_log(__METHOD__
 					." Sorry, lang not defined: \"$lang_apha2\" "
@@ -515,7 +533,7 @@ class lang {
 	* @return string|null $alpha2
 	*	Sample 'es'
 	*/
-	public static function get_alpha2_from_code( string $lang_code ) : ?string {
+	public static function get_alpha2_from_code(string $lang_code) : ?string {
 
 		$alpha2 = null;
 
@@ -744,7 +762,7 @@ class lang {
 	* @return string $locale
 	*	Like 'en-EN' from lg-eng
 	*/
-	public static function get_locale_from_code( string $lang_code ) : string {
+	public static function get_locale_from_code(string $lang_code) : string {
 
 		switch ($lang_code) {
 			case 'lg-eng':	$locale='en-US'; 	break;
