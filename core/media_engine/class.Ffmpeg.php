@@ -1251,7 +1251,7 @@ final class Ffmpeg {
 
 		// debug
 			debug_log(__METHOD__
-				. ' media_streams calculation  exec time: '.exec_time_unit($start_time).' ms'
+				. ' media_streams calculation exec time: '.exec_time_unit($start_time).' ms'
 				, logger::DEBUG
 			);
 

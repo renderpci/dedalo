@@ -1058,22 +1058,23 @@ class component_relation_parent extends component_relation_common {
 				$target_component_children_tipos		= component_relation_parent::get_target_component_children_tipos(
 					$current_component_relation_parent_tipo
 				);
+				if (!empty($target_component_children_tipos)) {
+					foreach ($target_component_children_tipos as $children_component_tipo) {
 
-				foreach ($target_component_children_tipos as $children_component_tipo) {
-
-					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
-					$component	= component_common::get_instance(
-						$model_name,
-						$children_component_tipo,
-						$current_locator->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$current_locator->section_tipo
-					);
-					$component_children_dato = $component->get_dato();
-					foreach ($component_children_dato as $children_locator) {
-						$ar_children[] = $children_locator->section_id;
-					}
+						$model_name	= RecordObj_dd::get_modelo_name_by_tipo($children_component_tipo, true); // component_relation_children
+						$component	= component_common::get_instance(
+							$model_name,
+							$children_component_tipo,
+							$current_locator->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$current_locator->section_tipo
+						);
+						$component_children_dato = $component->get_dato();
+						foreach ($component_children_dato as $children_locator) {
+							$ar_children[] = $children_locator->section_id;
+						}
+					}//end foreach ($target_component_children_tipos as $children_component_tipo)
 				}
 			}
 

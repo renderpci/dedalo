@@ -864,7 +864,7 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 		}else{
 			if (changed_value===null && self.data.value) {
 				// delete current value key from array
-				self.data.value.splice(data_key,1)
+				self.data.value.splice(data_key, 1)
 			}else{
 				// add / update array key value
 				self.data.value = self.data.value || []

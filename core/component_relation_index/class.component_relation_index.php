@@ -111,7 +111,7 @@ class component_relation_index extends component_relation_common {
 	public function get_section_datum_from_locator( locator $locator) : object {
 
 		// cache
-			$solved_section_datum_tipo =[];
+			$solved_section_datum_tipo = [];
 
 		// self context. Calculate if not already resolved
 			if(!isset($this->context)) {
