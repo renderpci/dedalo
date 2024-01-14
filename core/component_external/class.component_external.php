@@ -24,8 +24,8 @@ class component_external extends component_common {
 		// cache
 			static $data_from_remote_cache = [];
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
-			if (isset($data_from_remote_cache[$uid])) {
-				#debug_log(__METHOD__." Loaded from cache: $uid ".to_string(), logger::DEBUG);
+			if (array_key_exists($uid, $data_from_remote_cache)) {
+				// dump($data_from_remote_cache[$uid], ' ))) RETURN FROM CACHE ++ '.to_string($uid));
 				return $data_from_remote_cache[$uid];
 			}
 
