@@ -7,30 +7,18 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\Framework\TestStatus;
+namespace PHPUnit\Logging\TestDox;
+
+use PHPUnit\Event\Test\NoticeTriggered;
+use PHPUnit\Event\Test\NoticeTriggeredSubscriber;
 
 /**
- * @psalm-immutable
- *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Success extends Known
+final class TestTriggeredNoticeSubscriber extends Subscriber implements NoticeTriggeredSubscriber
 {
-    /**
-     * @psalm-assert-if-true Success $this
-     */
-    public function isSuccess(): bool
+    public function notify(NoticeTriggered $event): void
     {
-        return true;
-    }
-
-    public function asInt(): int
-    {
-        return 0;
-    }
-
-    public function asString(): string
-    {
-        return 'success';
+        $this->collector()->testTriggeredNotice($event);
     }
 }
