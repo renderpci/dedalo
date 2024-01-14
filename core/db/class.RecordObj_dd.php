@@ -481,6 +481,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 			elseif ($model==='component_security_tools') {
 				$model='component_check_box';
 			}
+			elseif ($model==='component_dataframe') {
+				if (!class_exists('component_dataframe', false)) {
+					debug_log(__METHOD__
+						. " Your Ontology version do not support component_dataframe ! Ignored model resolution (used box elements)"
+						, logger::ERROR
+					);
+					$model='box elements';
+				}
+			}
 
 		return $model;
 	}//end get_modelo_name
