@@ -230,7 +230,8 @@ const get_content_value = (i, current_value, self) => {
 						tipo			: target_section_tipo,
 						id				: target_section_id,
 						mode			: 'edit',
-						menu			: false
+						menu			: false,
+						session_save	: false
 					})
 					open_window({
 						url		: url,
@@ -375,7 +376,6 @@ const get_buttons = (self) => {
 
 	// button edit (go to target section)
 		if(!is_inside_tool) {
-
 
 			for (let i = 0; i < target_sections_length; i++) {
 
