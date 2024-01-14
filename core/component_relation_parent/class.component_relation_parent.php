@@ -1101,9 +1101,9 @@ class component_relation_parent extends component_relation_common {
 	* GET_TARGET_COMPONENT_CHILDREN_TIPOS
 	* Resolve all possible component relation children targeted to current component relation parent
 	* @param string $component_tipo
-	* @return array|null $target_component_children_tipos
+	* @return array $target_component_children_tipos
 	*/
-	public static function get_target_component_children_tipos(string $component_tipo) : ?array {
+	public static function get_target_component_children_tipos(string $component_tipo) : array {
 
 		// Static cache
 			static $ar_resolved_target_component_children_tipos = [];
@@ -1122,7 +1122,7 @@ class component_relation_parent extends component_relation_common {
 					, logger::ERROR
 				);
 
-				return null;
+				return $target_component_children_tipos;
 			}
 
 		// Look in children properties different possible sources

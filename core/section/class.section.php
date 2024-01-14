@@ -1797,10 +1797,11 @@ class section extends common {
 		# AR_MODEL_NAME_REQUIRED cast 'ar_model_name_required' to array
 		$ar_model_name_required = (array)$ar_model_name_required;
 
-		static $cache_ar_children_tipo;
+		static $cache_ar_children_tipo = [];
 		$cache_uid = $section_tipo.'_'.serialize($ar_model_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
 		if ($from_cache === true) {
-			if (isset($cache_ar_children_tipo[$cache_uid])) {
+			// if (isset($cache_ar_children_tipo[$cache_uid])) {
+			if (array_key_exists($cache_uid, $cache_ar_children_tipo)) {
 				return $cache_ar_children_tipo[$cache_uid];
 			}
 			// elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
@@ -3272,8 +3273,9 @@ class section extends common {
 	public static function get_section_map( string $section_tipo ) : ?object {
 
 		// cache
-			static $section_map_cache;
-			if(isset($section_map_cache[$section_tipo])) {
+			static $section_map_cache = [];
+			// if(isset($section_map_cache[$section_tipo])) {
+			if (array_key_exists($section_tipo, $section_map_cache)) {
 				return $section_map_cache[$section_tipo];
 			}
 
