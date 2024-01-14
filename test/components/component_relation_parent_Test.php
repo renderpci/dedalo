@@ -711,8 +711,8 @@ final class component_relation_parent_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type array|null : ' . PHP_EOL
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
 

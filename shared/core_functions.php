@@ -347,7 +347,8 @@ function curl_request(object $options) : object {
 			$debug_level = $httpcode===200 ? logger::WARNING : logger::ERROR;
 			debug_log(__METHOD__ . ' ' .$httpcode. ' : '. PHP_EOL
 				. ' url: ' . $url . PHP_EOL
-				. ' msg: ' .$msg
+				. ' msg: ' .$msg . PHP_EOL
+				. ' bt: ' . to_string( debug_backtrace()[0] )
 				, $debug_level
 			);
 
