@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS LOCATOR
 *
@@ -176,133 +177,291 @@ class locator extends stdClass {
 	* SET  METHODS
 	* Verify values and set property to current object
 	*/
+
+
+
 	/**
 	* SET_SECTION_TOP_TIPO
+	* (!) This property it is being abandoned in v6
+	* @param string $value
+	* @return bool
 	*/
-	public function set_section_top_tipo(string $value) {
+	public function set_section_top_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid section_top_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid section_top_tipo: $value", 1);
 		}
 		$this->section_top_tipo = (string)$value;
-	}
+
+		return true;
+	}//end set_section_top_tipo
+
+
+
 	/**
 	* SET_SECTION_TOP_ID
+	* (!) This property it is being abandoned in v6
+	* @param string|int $value
+	* @return bool
 	*/
-	public function set_section_top_id($value) {
+	public function set_section_top_id(string|int $value) : bool {
 		if(abs(intval($value))<1) {
+			debug_log(__METHOD__
+				. ' Invalid section_top_id' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid section_top_id: $value", 1);
 		}
 		$this->section_top_id = (string)$value;
-	}
+
+		return true;
+	}//end set_section_top_id
+
+
+
 	/**
 	* SET_FROM_COMPONENT_TIPO
+	* @param string $value
+	* @return bool
 	*/
-	public function set_from_component_top_tipo(string $value) {
+	public function set_from_component_top_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid from_component_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
 		}
 		$this->from_component_top_tipo = (string)$value;
-	}
+
+		return true;
+	}//end set_from_component_top_tipo
+
+
+
 	/**
 	* SET_SECTION_ID
+	* @param string|int $value
+	* @return bool
 	*/
-	public function set_section_id($value) {
-		#if(abs($value)<1 && $value!='unknown' && strpos($value, DEDALO_SECTION_ID_TEMP)===false) {
-		if(abs(intval($value))<0 && $value!='unknown' && strpos((string)$value, DEDALO_SECTION_ID_TEMP)===false) {
+	public function set_section_id(string|int $value) : bool {
+
+		if(	abs(intval($value))<0
+			&& $value!='unknown'
+			&& strpos((string)$value, DEDALO_SECTION_ID_TEMP)===false
+		) {
+			debug_log(__METHOD__
+				. ' Invalid section_id' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid section_id: $value", 1);
 		}
 
 		$this->section_id = (string)$value;
-	}
+
+		return true;
+	}//end set_section_id
+
+
+
 	/**
 	* SET_SECTION_TIPO
+	* @param string $value
+	* @return bool
 	*/
-	public function set_section_tipo(string $value) {
+	public function set_section_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid section_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid section_tipo: $value", 1);
 		}
 		$this->section_tipo = $value;
-	}
+
+		return true;
+	}//end set_section_tipo
+
+
+
 	/**
 	* SET_COMPONENT_TIPO
+	* @param string $value
+	* @return bool
 	*/
-	public function set_component_tipo(string $value) {
+	public function set_component_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid component_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
 		}
 		$this->component_tipo = $value;
-	}
+
+		return true;
+	}//end set_component_tipo
+
+
+
 	/**
 	* SET_FROM_COMPONENT_TIPO
+	* @param string $value
+	* @return bool
 	*/
-	public function set_from_component_tipo(string $value) {
+	public function set_from_component_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid from_component_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
 		}
 		$this->from_component_tipo = $value;
-	}
+
+		return true;
+	}//end set_from_component_tipo
+
+
+
 	/**
 	* SET_TAG_ID
+	* Set tag_id value as string
+	* @param string|int $value
+	* @return bool
 	*/
-	public function set_tag_id($value) {
+	public function set_tag_id(string|int $value) : bool {
 		if(abs(intval($value))<1) {
+			debug_log(__METHOD__
+				. ' Invalid tag_id' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid tag_id: $value", 1);
 		}
 		$this->tag_id = (string)$value;
-	}
+
+		return true;
+	}//end set_tag_id
+
+
+
 	/**
 	* SET_TAG_COMPONENT_TIPO
+	* @param string $value
+	* @return bool
 	*/
-	public function set_tag_component_tipo(string $value) {
+	public function set_tag_component_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid component_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid component_tipo: $value", 1);
 		}
 		$this->tag_component_tipo = $value;
-	}
+
+		return true;
+	}//end set_tag_component_tipo
+
 
 
 	/**
 	* SET_TYPE_REL
-	* Only defined relation direction
+	* Only define relation direction
+	* @param string $value
+	* @return bool
 	*/
-	public function set_type_rel(string $value) {
-		# No verification is made now
+	public function set_type_rel(string $value) : bool {
+		// No verification is made now
 		$this->type_rel = $value;
-	}
+
+		return true;
+	}//end set_type_rel
+
+
 	/**
-	* SET_section_id_key
-	* @return
+	* SET_SECTION_ID_KEY
+	* @param int $value
+	* @return bool
 	*/
-	public function set_section_id_key(int $value) {
+	public function set_section_id_key(int $value) : bool {
 		if($value < 0) {
+			debug_log(__METHOD__
+				. ' Invalid section_id_key (only integer are allowed)' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
 		$this->section_id_key = $value;
+
+		return true;
 	}//end set_section_id_key
+
+
+
 	/**
 	* SET_TIPO
+	* @param string $value
+	* 	like 'rsc36'
+	* @return bool
 	*/
-	public function set_tipo(string $value) {
+	public function set_tipo(string $value) : bool {
 		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
-			throw new Exception("Error Processing Request. Invalid section_top_tipo: $value", 1);
+			debug_log(__METHOD__
+				. ' Invalid tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
+			throw new Exception("Error Processing Request. Invalid tipo: $value", 1);
 		}
 		$this->tipo = $value;
-	}// end set_tipo
+
+		return true;
+	}//end set_tipo
+
+
+
 	/**
 	* SET_LANG
+	* @param string $value
+	* 	like 'lg-eng'
+	* @return bool
 	*/
-	public function set_lang(string $value) {
+	public function set_lang(string $value) : bool {
 		if(strpos($value, 'lg-')!==0) {
+			debug_log(__METHOD__
+				. ' Invalid lang' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
 			throw new Exception("Error Processing Request. Invalid lang: $value", 1);
 		}
 		$this->lang = $value;
+
+		return true;
 	}//end set_lang
+
 
 
 	/**
 	* GET_TERM_ID_FROM_LOCATOR
 	* Contract locator object as string like 'es1_185' (section_tipo and section_id)
+	* @param object $locator
 	* @return string $term_id
+	* 	like 'test3_1'
 	*/
 	public static function get_term_id_from_locator(object $locator) : string {
 
@@ -332,9 +491,9 @@ class locator extends stdClass {
 	/**
 	* GET_SECTION_ID_FROM_LOCATOR
 	* Get section_id value of current locator
-	* @return string|array $section_id
+	* @return string|null $section_id
 	*/
-	public static function get_section_id_from_locator(object $locator) : int {
+	public static function get_section_id_from_locator(object $locator) : ?string {
 
 		// if (is_string($locator)) {
 		// 	// Decode json
@@ -351,7 +510,7 @@ class locator extends stdClass {
 		// 	$section_id = (int)$locator->section_id;
 		// }
 
-		$section_id = (int)$locator->section_id;
+		$section_id = $locator->section_id ?? null;
 
 
 		return $section_id;
@@ -361,7 +520,9 @@ class locator extends stdClass {
 
 	/**
 	* GET_STD_CLASS
-	* @return stdClass
+	* converts locator object to PHP stdClass
+	* @param object $locator
+	* @return stdClass $locator
 	*/
 	public static function get_std_class(object $locator) : stdClass {
 
@@ -369,13 +530,6 @@ class locator extends stdClass {
 		$locator = json_decode($locator);
 
 		return $locator;
-
-		// $std_object = new stdClass();
-		// foreach ($locator as $key => $value) {
-		// 	$std_object->$key = $value;
-		// }
-
-		// return $std_object;
 	}//end get_std_class
 
 
@@ -383,6 +537,7 @@ class locator extends stdClass {
 	/**
 	* LANG_TO_LANG_LOCATOR
 	* Gets a lang like 'lg-spa' and it converts to lang locator like {"section_tipo":"lg-spa","section_id":17344}
+	* @param string $lang
 	* @return object $locator
 	*/
 	public static function lang_to_locator(string $lang) : object {
@@ -399,8 +554,8 @@ class locator extends stdClass {
 			case 'lg-por':	$section_id = 14895;	break;
 			case 'lg-ara':	$section_id = 841;		break;
 			default:
-				# Serach in database
-				$section_id = (int)lang::get_section_id_from_code($lang);
+				// Search in database
+				$section_id = lang::get_section_id_from_code($lang);
 				break;
 		}
 
@@ -415,33 +570,36 @@ class locator extends stdClass {
 
 	/**
 	* COMPARE_LOCATORS
+	* Compare property by property two locators
+	* @param object $locator1
+	* @param object $locator2
+	* @param array $ar_properties = []
+	* @param array $ar_exclude_properties = []
 	* @return bool $equal
 	*/
 	public static function compare_locators(object $locator1, object $locator2, array $ar_properties=[], array $ar_exclude_properties=[]) : bool {
 
-		if (!is_object($locator1) || !is_object($locator2)) {
-			return false;
-		}
-
-		if (empty($ar_properties)){
-			foreach ($locator1 as $property => $value) {
-				if (!in_array($property, $ar_exclude_properties)) {
-					$ar_properties[] = $property;
+		// ar_properties. If not defined, add all locators properties to compare
+			if (empty($ar_properties)){
+				foreach ($locator1 as $property => $value) {
+					if (!in_array($property, $ar_exclude_properties)) {
+						$ar_properties[] = $property;
+					}
 				}
+
+				foreach ($locator2 as $property => $value) {
+					if (!in_array($property, $ar_exclude_properties)) {
+						$ar_properties[] = $property;
+					}
+				}
+
+				$ar_properties = array_unique($ar_properties);
 			}
 
-			foreach ($locator2 as $property => $value) {
-				if (!in_array($property, $ar_exclude_properties)) {
-					$ar_properties[] = $property;
-				}
-			}
-
-			$ar_properties = array_unique($ar_properties);
-		}
-
-
+		// equal . Default true
 		$equal = true;
 
+		// iterate properties
 		foreach ((array)$ar_properties as $current_property) { // 'section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'
 
 			#if (!is_object($locator1) || !is_object($locator2)) {
@@ -503,20 +661,13 @@ class locator extends stdClass {
 	* @return bool $found
 	*/
 	public static function in_array_locator(object $locator, array $ar_locator, array $ar_properties=[]) : bool {
+
 		$found = false;
 
-		foreach ((array)$ar_locator as $current_locator) {
+		foreach ($ar_locator as $current_locator) {
 			$found = self::compare_locators( $locator, $current_locator, $ar_properties );
 			if($found===true) break;
 		}
-
-		#$ar = array_filter(
-		#		$ar_locator,
-		#		function($current_locator) use($locator, $ar_properties){
-		#			return self::compare_locators( $locator, $current_locator, $ar_properties );
-		#		}
-		#); return $ar;
-
 
 		return $found;
 	}//end in_array_locator
@@ -525,12 +676,18 @@ class locator extends stdClass {
 
 	/**
 	* GET_KEY_IN_ARRAY_LOCATOR
-	* @return mixed bool | int $key_founded
+	* @param object $locator
+	* @param array $ar_locator
+	* @param array $ar_properties = ['section_id','section_tipo']
+	* @return int|bool $key_founded
+	* 	integer when found, boolean false otherwise
 	*/
-	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) {
+	public static function get_key_in_array_locator(object $locator, array $ar_locator, array $ar_properties=['section_id','section_tipo']) : int|bool {
+
 		$key_founded = false;
 
 		foreach ((array)$ar_locator as $key => $current_locator) {
+
 			$result = self::compare_locators( $locator, $current_locator, $ar_properties );
 
 			if($result===true) {
@@ -553,10 +710,6 @@ class locator extends stdClass {
 		$strMethodType		= substr($strFunction, 0, 4); # like set or get_
 		$strMethodMember	= substr($strFunction, 4);
 		switch($strMethodType) {
-			#case 'set_' :
-			#	if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
-			#	return($this->SetAccessor($strMethodMember, $arArguments[0]));
-			#	break;
 			case 'get_' :
 				return($this->GetAccessor($strMethodMember));
 				break;
@@ -576,15 +729,14 @@ class locator extends stdClass {
 	/**
 	* DESTRUCT
 	* On destruct object, test if minimum data is set or not
+	* @return void
 	*/
 	function __destruct() {
 
-		#
-		# ONLY FOR DEBUG !!
+		// ONLY FOR DEBUG !!
 		if(SHOW_DEBUG===true) {
 			if (!isset($this->section_tipo)) {
 				dump($this, ' this');
-				#dump(debug_backtrace(), 'debug_backtrace()');
 				throw new Exception("Error Processing Request. locator section_tipo is mandatory", 1);
 			}
 			if (!isset($this->section_id)) {
@@ -593,7 +745,11 @@ class locator extends stdClass {
 			}
 		}else{
 			if (!isset($this->section_tipo) || !isset($this->section_id)) {
-				debug_log(__METHOD__." ERROR: wrong locator format detected. Please fix this ASAP : ".to_string($this), logger::DEBUG);
+				debug_log(__METHOD__
+					." ERROR: wrong locator format detected. Please fix this ASAP : "
+					.' locator this: ' . to_string($this)
+					, logger::WARNING
+				);
 			}
 		}
 	}//end __destruct
