@@ -626,7 +626,7 @@ abstract class common {
 			return 'lg-eng';
 		}
 
-		static $current_main_lang;
+		static $current_main_lang = [];
 		$uid = $section_tipo.'_'.$section_id;
 		if (isset($current_main_lang[$uid])) {
 			return $current_main_lang[$uid];
@@ -947,9 +947,10 @@ abstract class common {
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		// cache
-			static $ar_related_by_model_data;
+			static $ar_related_by_model_data = [];
 			$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
-			if (isset($ar_related_by_model_data[$uid])) {
+			// if (isset($ar_related_by_model_data[$uid])) {
+			if (array_key_exists($uid, $ar_related_by_model_data)) {
 				return $ar_related_by_model_data[$uid];
 			}
 
