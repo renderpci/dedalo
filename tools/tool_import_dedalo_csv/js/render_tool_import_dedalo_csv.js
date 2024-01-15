@@ -153,7 +153,7 @@ const get_content_data = async function(self) {
 				const loading_items = (SHOW_DEBUG === true)
 					? [content_data, api_response_container]
 					: [content_data]
-					
+
 				loading_items.map((el)=>{
 					el.classList.add('loading')
 					if (el.classList.contains('hide')) {
@@ -562,10 +562,17 @@ const render_file_info = function(self, item) {
 					section_warn.innerHTML = 'Auto-detected file section tipo "'+section_tipo+'" appears to be invalid.'
 				}else{
 					section_warn.classList.add('hide')
+					columns_maper.classList.add('loading')
+
 					// render again columns_maper
 					render_columns_mapper(self, item)
 					.then(function(columns_list){
+						while (columns_maper.firstChild) {
+							columns_maper.removeChild(columns_maper.firstChild);
+						}
 						columns_maper.appendChild(columns_list)
+
+						columns_maper.classList.remove('loading')
 					})
 				}
 			}
