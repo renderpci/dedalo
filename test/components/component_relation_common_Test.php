@@ -910,8 +910,8 @@ final class component_relation_common_test extends TestCase {
 		);
 
 		$value = $component->conform_import_data(
-			'1',
-			self::$tipo
+			'1', // import_value
+			self::$tipo // column_name
 		);
 
 		$this->assertTrue(

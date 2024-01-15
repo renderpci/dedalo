@@ -4042,6 +4042,7 @@ abstract class component_common extends common {
 	* CONFORM_IMPORT_DATA
 	* @param string $import_value
 	* @param string $column_name
+	* 	like 'test145_dmy'
 	* @return object $response
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
