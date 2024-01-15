@@ -756,7 +756,7 @@ final class component_date_Test extends TestCase {
 
 		$response = $component->conform_import_data(
 			'17-12-2023', // import_value
-			self::$tipo // column_name
+			self::$tipo . '_dmy' // column_name
 		);
 
 		$this->assertTrue(

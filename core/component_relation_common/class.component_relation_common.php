@@ -2802,6 +2802,7 @@ class component_relation_common extends component_common {
 	*  sample JSON stringified array of locators:
 	*  [{"section_tipo":"ts1","section_id":"273","from_component_tipo":"hierarchy36"}]
 	* @param string $column_name
+	* 	like: 'hierarchy36' or 'hierarchy36_ts1'
 	* @return object $response
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {
