@@ -503,7 +503,7 @@ const render_file_info = function(self, item) {
 		})
 
 		// icon file
-			ui.create_dom_element({
+			const button_csv = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button csv',
 				parent			: file_line
@@ -524,13 +524,27 @@ const render_file_info = function(self, item) {
 			})
 			checkbox_file_selection.addEventListener("change", function(){
 				item.checked = checkbox_file_selection.checked ? true : false
+				button_csv.classList.toggle('active')
+				arrow_right.classList.toggle('active')
 			})
 			checkbox_label.prepend(checkbox_file_selection)
+
+		// icon arrow_right >
+			const arrow_right = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'icon arrow_right',
+				parent			: file_line
+			})
 
 		// section_tipo
 			const regex			= /.*-([a-z0-9]{3,}) ?.*\.csv/g;
 			const res			= regex.exec(item.name)
-			const section_tipo	= (res && res[1]) ? res[1] : null
+			let section_tipo	= (res && res[1]) ? res[1] : null
+			// empty case. Fallback to current section caller tipo
+			if (!section_tipo || !section_tipo.length) {
+				section_tipo = self.caller.tipo
+			}
+
 			const section_tipo_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'section_tipo_label',
@@ -556,10 +570,21 @@ const render_file_info = function(self, item) {
 					columns_maper.removeChild(columns_maper.firstChild);
 				}
 
+				// section_label reset
+				section_label.innerHTML = ''
+
+				// validate
 				const valid_section_tipo = validate_tipo(item.section_tipo)
 				if (!valid_section_tipo) {
 					section_warn.classList.remove('hide')
-					section_warn.innerHTML = 'Auto-detected file section tipo "'+section_tipo+'" appears to be invalid.'
+					if (!item.section_tipo || !item.section_tipo.length) {
+						section_warn.innerHTML = `The section tipo seems to be empty. Please, fill in the target section_tipo`
+					}else{
+						section_warn.innerHTML = `Auto-detected file name section tipo "${item.section_tipo}" seems to be invalid.`
+					}
+					setTimeout(function(){
+						input_section_tipo.focus()
+					}, 500)
 				}else{
 					section_warn.classList.add('hide')
 					columns_maper.classList.add('loading')
@@ -572,10 +597,30 @@ const render_file_info = function(self, item) {
 						}
 						columns_maper.appendChild(columns_list)
 
+						// section_label
+						section_label.innerHTML = item.section_label || ''
+
 						columns_maper.classList.remove('loading')
 					})
 				}
-			}
+			}//end update_section_warn
+
+
+
+			// section_label
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'section_name',
+					inner_html		: 'section name:',
+					parent			: section_tipo_label
+				})
+				const section_label = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'section_label',
+					inner_html		: item.section_label || 'XX',
+					parent			: section_tipo_label
+				})
+
 			// const section_warn = (!section_tipo)
 			// 	? 'Unable to autodetected file section tipo "'+section_tipo+'" using name file. Remember, only current ('+self.caller.tipo+') is accepted'
 			// 	: (section_tipo!==self.caller.tipo)
@@ -704,11 +749,14 @@ const render_columns_mapper = async function(self, item) {
 
 	const fragment = new DocumentFragment()
 
+	// update item section_label
+		item.section_label = section_label
+
 	// no results case
 		if (!ar_components) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: '',
+				class_name		: 'warning error',
 				inner_html		: section_components_list.msg,
 				parent			: fragment
 			})
