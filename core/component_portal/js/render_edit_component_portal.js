@@ -551,7 +551,12 @@ export const render_column_remove = function(options) {
 						const fn_click_unlink_and_delete = async function(e) {
 							e.stopPropagation()
 
-							// stop if the user don't confirm
+							// stop if the user don't confirm 1
+							if (!confirm(get_label.sure)) {
+								return
+							}
+
+							// stop if the user don't confirm 2
 							if (!confirm(get_label.sure)) {
 								return
 							}
