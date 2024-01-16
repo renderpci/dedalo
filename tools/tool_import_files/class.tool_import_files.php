@@ -54,13 +54,13 @@ class tool_import_files extends tool_common {
 		// regex values
 			preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
 			$regex_data = new stdClass();
-				$regex_data->full_name		= $ar_match[0];
-				$regex_data->name			= $ar_match[1];
-				$regex_data->base_name		= $ar_match[2];
-				$regex_data->section_id		= $ar_match[3];
-				$regex_data->portal_order	= $ar_match[6];
-				$regex_data->letter			= $ar_match[8];
-				$regex_data->extension		= $ar_match[9];
+				$regex_data->full_name		= $ar_match[0] ?? null;
+				$regex_data->name			= $ar_match[1] ?? null;
+				$regex_data->base_name		= $ar_match[2] ?? null;
+				$regex_data->section_id		= $ar_match[3] ?? null;
+				$regex_data->portal_order	= $ar_match[6] ?? null;
+				$regex_data->letter			= $ar_match[8] ?? null;
+				$regex_data->extension		= $ar_match[9] ?? null;
 			$ar_data['regex'] = $regex_data;
 
 
