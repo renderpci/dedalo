@@ -30,7 +30,6 @@ dd189	dd174	dd91	no	si	si	3	dd	no	[{"dd9":"dd185"}]		\N
 dd376	dd373	dd635	no	si	si	4	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	\N
 dd509	dd536	dd395	no	si	si	4	dd	si	\N	{\r\n  "name": "actualizar_vista"\r\n}	{"name": "actualizar_vista"}
 dd185	dd182	dd9	no	si	si	1	dd	si	\N		\N
-dd339	dd440	\N	si	si	si	39	dd	no	\N	\N	\N
 dd89	dd427	dd206	no	si	si	8	dd	no			\N
 dd412	dd409	dd635	no	si	si	2	dd	no	\N	\N	\N
 dd573	dd567	dd177	no	si	si	3	dd	si			\N
@@ -59,16 +58,16 @@ dd411	dd409	dd9	no	si	si	1	dd	si	\N	\N	\N
 dd140	dd90	dd91	no	si	si	3	dd	si	[{"dd9":"dd127"}]		\N
 dd367	dd366	dd9	no	si	si	1	dd	si	\N	\N	\N
 dd421	dd147	dd395	no	si	si	13	dd	si	\N	{"name":"mes"}	{"name": "month"}
-dd247	dd440	null	si	si	si	35	dd	no			\N
+dd387	dd390	dd395	no	si	si	9	dd	si		{"name":"salir"}	{"name": "salir"}
+dd397	dd390	dd395	no	si	si	11	dd	si		{"name":"volver"}	{"name": "volver"}
+dd437	dd439	dd395	no	si	si	1	dd	si	\N	{\r\n  "name": "ruta_carpeta_ficheros"\r\n}	{"name": "ruta_carpeta_ficheros"}
+dd1242	dd637	dd9	no	si	si	3	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	\N
 dd428	dd440	\N	si	si	si	40	dd	no	\N	\N	\N
 dd429	dd440	\N	si	si	si	42	dd	no	\N	\N	\N
 dd352	dd440	null	si	si	si	43	dd	no			\N
 dd431	dd440	\N	si	si	si	44	dd	no	\N	\N	\N
 dd487	dd440	\N	si	si	si	47	dd	no	\N	\N	\N
-dd387	dd390	dd395	no	si	si	9	dd	si		{"name":"salir"}	{"name": "salir"}
-dd397	dd390	dd395	no	si	si	11	dd	si		{"name":"volver"}	{"name": "volver"}
-dd437	dd439	dd395	no	si	si	1	dd	si	\N	{\r\n  "name": "ruta_carpeta_ficheros"\r\n}	{"name": "ruta_carpeta_ficheros"}
-dd1242	dd637	dd9	no	si	si	3	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	\N
+dd247	dd440	null	si	si	si	35	dd	no			\N
 dd1050	dd1020	dd177	no	si	si	3	dd	no	\N	\N	\N
 dd423	dd627	dd626	no	si	si	7	dd	no	\N	{\r\n  "inverse_relations": false\r\n}	{"inverse_relations": false}
 dd228	dd203	dd177	no	si	si	4	dd	no	\N		\N
@@ -102,7 +101,6 @@ dd536	dd785	dd392	no	si	si	12	dd	si	\N	\N	\N
 dd118	dd785	dd392	no	si	si	13	dd	si	null		\N
 dd436	dd785	dd395	no	si	si	39	dd	si	\N	{\r\n  "name": "leer"\r\n}	{"name": "leer"}
 dd427	dd193	dd303	no	si	si	6	dd	no	\N	\N	\N
-dd479	dd440	\N	si	si	si	46	dd	no	\N	\N	\N
 dd465	dd1631	dd524	no	si	si	7	dd	si	null	\N	\N
 dd1319	dd1318	dd8	no	si	si	1	dd	no			\N
 dd1021	dd391	dd395	no	si	si	59	dd	si		{"name":"datos"}	{"name": "data"}
@@ -128,10 +126,11 @@ dd1314	dd1313	dd8	no	si	si	1	dd	no			\N
 dd1316	dd1313	dd247	no	si	si	2	dd	no			\N
 dd642	dd637	dd9	no	si	si	4	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	\N
 dd1196	dd1132	dd177	no	si	si	3	dd	si			\N
-dd163	dd440	null	si	si	si	36	dd	no			\N
 dd1311	dd1309	dd9	no	si	si	1	dd	si			\N
 dd1315	dd1314	dd9	no	si	si	1	dd	si			\N
+dd479	dd440	\N	si	si	si	46	dd	no	\N	\N	\N
 dd299	dd137	dd6	no	si	si	26	dd	no	[{"dd626":"dd963"}]	\N	\N
+dd163	dd440	null	si	si	si	36	dd	no			\N
 dd639	dd622	dd1231	no	si	si	19	dd	si	[{"dd432":"ww34"}]	\N	\N
 dd1259	dd5	null	si	si	si	1	dd	si			\N
 dd61	dd21	dd9	no	si	si	1	dd	no			\N
@@ -193,7 +192,6 @@ dd70	dd60	dd6	no	si	si	1	dd	si	[{"dd626":"dd46"}]		\N
 dd570	dd568	dd9	no	si	si	1	dd	si			\N
 dd1712	dd1125	dd395	no	si	si	4	dd	si		{"name":"georeferenciacion_en_formato"}	{"name": "georeferenciacion_en_formato"}
 dd912	dd911	dd8	no	si	si	1	dd	no			null
-dd225	dd440	null	si	si	si	26	dd	no			\N
 dd383	dd193	dd386	no	si	si	5	dd	si			\N
 dd320	dd356	dd4	no	si	si	1	dd	si		\N	\N
 dd812	dd811	dd9	no	si	si	2	dd	si			\N
@@ -285,9 +283,7 @@ dd1117	dd137	dd6	no	si	si	20	dd	si	[{"dd626":"dd963"}]		\N
 dd567	dd137	dd6	no	si	si	21	dd	no	[{"dd626":"dd963"}]		\N
 dd889	dd137	dd6	no	si	si	15	dd	no	[{"dd626":"dd963"}]		\N
 dd279	dd276	dd395	no	si	si	3	dd	si	\N	{"name":"etiqueta_revisar"}	{"name": "label_to_review"}
-dd438	dd440	null	si	si	si	20	dd	no			\N
 dd1713	dd1125	dd395	no	si	si	5	dd	si		{"name":"mapa"}	{"name": "mapa"}
-dd80	dd440	null	si	si	si	28	dd	no			\N
 dd835	dd834	dd9	no	si	si	1	dd	si			\N
 dd277	dd276	dd395	no	si	si	1	dd	si	\N	{"name":"etiqueta_normal"}	{"name": "label_normal"}
 dd841	dd840	dd9	no	si	si	1	dd	si			\N
@@ -297,7 +293,6 @@ dd964	dd1313	dd177	no	si	si	3	dd	no			\N
 dd965	dd1313	dd183	no	si	si	4	dd	si			\N
 dd25	dd20	dd91	no	si	si	2	dd	no	[{"dd9":"dd29"},{"dd9":"dd61"},{"dd438":"dd23"}]		\N
 dd765	dd391	dd395	no	si	si	43	dd	si		{"name":"indexaciones"}	{"name": "indexings"}
-dd722	dd440	null	si	si	si	14	dd	si			\N
 dd220	dd537	dd395	no	si	si	4	dd	si		{\r\n  "name": "tamano_archivo"\r\n}	{"name": "tamano_archivo"}
 dd315	dd389	dd395	no	si	si	22	dd	si	\N	{"name":"componente_en_uso"}	{"name": "component_in_use"}
 dd960	dd957	dd91	no	si	si	3	dd	si	[{"dd9":"dd959"}]		\N
@@ -344,10 +339,12 @@ dd304	dd300	dd9	no	si	si	1	dd	si	\N	\N	\N
 dd306	dd299	dd91	no	si	si	3	dd	no	[{"dd9":"dd304"}]	\N	\N
 dd281	dd276	dd395	no	si	si	5	dd	si	\N	{\r\n  "name": "etiquetas_perdidas"\r\n}	{"name": "etiquetas_perdidas"}
 dd309	dd307	dd8	no	si	si	1	dd	no	\N	\N	\N
-dd1017	dd440	null	si	si	si	12	dd	si			\N
 dd113	dd390	dd395	no	si	si	4	dd	si		{"name":"comenzar_la_carga"}	{"name": "comenzar_la_carga"}
-dd1018	dd440	null	si	si	si	11	dd	si			\N
 dd363	dd137	dd6	no	si	si	3	dd	no	[{"dd626":"dd963"}]	\N	\N
+dd1017	dd440	null	si	si	si	12	dd	si			\N
+dd438	dd440	null	si	si	si	20	dd	no			\N
+dd80	dd440	null	si	si	si	28	dd	no			\N
+dd1018	dd440	null	si	si	si	11	dd	si			\N
 dd310	dd309	dd9	no	si	si	1	dd	si	\N	\N	\N
 dd311	dd307	dd247	no	si	si	2	dd	no	\N	\N	\N
 dd312	dd307	dd91	no	si	si	3	dd	no	[{"dd9":"dd310"}]	\N	\N
@@ -394,7 +391,6 @@ dd1229	dd1259	\N	si	si	si	2	dd	no			\N
 dd676	dd785	dd395	no	si	si	46	dd	si	\N	{\r\n  "name": "tool_ts_print"\r\n}	{"name": "tool_ts_print"}
 dd248	dd245	\N	si	si	si	2	dd	si	\N	\N	\N
 dd246	dd245	\N	si	si	si	1	dd	si	\N		\N
-dd10	dd440	null	si	si	si	30	dd	no			\N
 dd233	dd251	\N	si	si	si	3	dd	si	\N	\N	\N
 dd239	dd234	dd91	no	si	si	5	dd	si	[{"dd9":"dd237"},{"dd10":"dd238"}]		\N
 dd258	dd251	\N	si	si	si	2	dd	si	\N		\N
@@ -413,6 +409,7 @@ dd529	dd528	dd8	no	si	si	1	dd	no	\N	\N	\N
 dd235	dd234	dd177	no	si	si	4	dd	si			\N
 dd272	dd234	dd8	no	si	si	3	dd	no	\N	\N	\N
 dd327	dd319	dd395	no	si	si	3	dd	si	\N	{\r\n  "name": "tool_subtitles"\r\n}	{"name": "tool_subtitles"}
+dd10	dd440	null	si	si	si	30	dd	no			\N
 dd276	dd785	dd392	no	si	si	23	dd	si	\N		\N
 dd331	dd319	dd395	no	si	si	4	dd	si	\N	{"name":"play_pause_tecla"}	{"name": "play_pause_key"}
 dd250	dd245	\N	si	si	si	3	dd	si	\N	\N	\N
@@ -505,11 +502,11 @@ dd1718	dd234	dd8	no	si	si	2	dd	si			\N
 dd263	dd147	dd395	no	si	si	7	dd	si	\N	{"name":"ir_al_perfil"}	{"name": "ir_al_perfil"}
 dd214	dd516	dd183	no	si	si	5	dd	no			\N
 dd860	dd372	dd58	no	si	si	6	dd	no	[{"dd9":"dd374"},{"dd9":"dd375"}]	\N	\N
-dd57	dd440	null	si	si	si	29	dd	no			\N
 dd476	dd469	dd91	no	si	si	3	dd	si	[{"dd9":"dd471"}]	\N	\N
 dd472	dd906	dd395	no	si	si	6	dd	si	null	{"name":"new_fixed_page"}	{"name": "new_fixed_page"}
 dd534	dd528	dd177	no	si	si	4	dd	no	\N	\N	\N
 dd95	dd117	\N	si	si	si	14	dd	no			\N
+dd57	dd440	null	si	si	si	29	dd	no			\N
 dd1040	dd906	dd395	no	si	si	3	dd	si	null	{"name":"nueva_plantilla_vacia"}	{"name": "nueva_plantilla_vacia"}
 dd161	dd147	dd395	no	si	si	6	dd	si	\N	{"name":"para_revisar"}	{"name": "para_revisar"}
 dd287	dd906	dd395	no	si	si	4	dd	no	null	{"name":"save_template"}	{"name": "save_template"}
@@ -525,9 +522,6 @@ dd1221	dd6	null	si	si	si	10	dd	si			\N
 dd106	dd126	dd9	no	si	si	1	dd	si	null	{"css":{".wrap_component":{"mixin":[".width_25",".vertical"],"style":{}},".label":{"style":{}},".content_data":{"style":{}}}}	\N
 dd75	dd6	null	si	si	si	11	dd	no			\N
 dd77	dd427	dd206	no	si	si	10	dd	no			\N
-dd241	dd440	null	si	si	si	24	dd	no			\N
-dd9	dd440	null	si	si	si	31	dd	no			\N
-dd1747	dd440	\N	si	si	si	37	dd	no			\N
 dd463	dd460	dd247	no	si	si	2	dd	no	\N	\N	\N
 dd464	dd460	dd91	no	si	si	3	dd	si	[{"dd9":"dd462"}]	\N	\N
 dd30	dd32	dd6	no	si	si	2	dd	no	[{"dd626":"dd16"}]	{\r\n  "info": "Propiedades NO standarizadas. Sólo en puebas",\r\n  "section_config": {\r\n    "list_line": "single"\r\n  }\r\n}	{"info": "Propiedades NO standarizadas. Sólo en puebas", "section_config": {"list_line": "single"}}
@@ -535,7 +529,6 @@ dd141	dd540	dd395	no	si	si	1	dd	si		{\r\n  "name": "historico"\r\n}	{"name": "hi
 dd389	dd383	dd392	no	si	si	7	dd	si			\N
 dd334	dd785	dd395	no	si	si	34	dd	si	\N	{"name":"opciones"}	{"name": "opciones"}
 dd1061	dd785	dd395	no	si	si	58	dd	si	null	{\r\n  "name": "weight"\r\n}	{"name": "weight"}
-dd79	dd440	\N	si	si	si	9	dd	no	\N		\N
 dd154	dd153	dd8	no	si	si	1	dd	si		\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 dd1049	dd390	dd395	no	si	si	8	dd	si	null	{"name":"crear_subtitulos"}	{"name": "build_subtitles"}
 dd371	dd365	dd247	no	si	si	5	dd	no	\N	\N	\N
@@ -555,7 +548,10 @@ dd1082	dd537	dd395	no	si	si	10	dd	si		{"name":"archivo_subido_con_exito"}	{"name
 dd36	dd117	null	si	si	si	6	dd	no			\N
 dd14	dd1	dd357	no	si	si	4	dd	si		\N	\N
 dd100	dd1	dd50	no	si	si	6	dd	si	null	\N	\N
+dd9	dd440	null	si	si	si	31	dd	no			\N
 dd207	dd1	dd231	no	si	si	8	dd	si		\N	\N
+dd1747	dd440	\N	si	si	si	37	dd	no			\N
+dd79	dd440	\N	si	si	si	9	dd	no	\N		\N
 dd183	dd6	null	si	si	si	6	dd	no	null		\N
 dd434	dd6	\N	si	si	si	14	dd	no	\N	\N	\N
 dd125	dd6	null	si	si	si	15	dd	no			\N
@@ -580,7 +576,6 @@ dd505	dd501	dd247	no	si	si	3	dd	no	\N	\N	\N
 dd278	dd276	dd395	no	si	si	2	dd	si	\N	{"name":"etiqueta_borrada"}	{"name": "label_deleted"}
 dd1086	dd537	dd395	no	si	si	14	dd	si		{"name":"ningun_archivo_fue_subido"}	{"name": "no_file_was_uploaded"}
 dd1087	dd537	dd395	no	si	si	15	dd	si		{"name":"carpeta_temporal_no_accesible"}	{"name": "temp_dir_not_accessible"}
-dd592	dd440	null	si	si	si	23	dd	no			\N
 dd820	dd408	dd58	no	si	si	6	dd	no	[{"dd9":"dd411"}]	\N	\N
 dd1015	dd118	dd395	no	si	si	3	dd	si	null	{"name":"registros_actualizados"}	{"name": "registros_actualizados"}
 dd490	dd427	dd206	no	si	si	5	dd	no	\N	\N	\N
@@ -594,11 +589,6 @@ dd458	dd449	dd395	no	si	si	11	dd	si	\N	{"name":"informantes"}	{"name": "informan
 dd317	dd342	dd395	no	si	si	9	dd	si	\N	{\r\n  "name": "usuarios_activos"\r\n}	{"name": "usuarios_activos"}
 dd430	dd342	dd395	no	si	si	13	dd	no	null	{"name":"hacer_backup"}	{"name": "make_backup"}
 dd1633	dd1581	dd580	no	si	si	4	dd	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 10"}, ".wrapper_component >.content_data": {"min-height": "70vh"}}}
-dd252	dd440	null	si	si	si	22	dd	no			\N
-dd227	dd440	null	si	si	si	25	dd	no			\N
-dd605	dd440	null	si	si	si	34	dd	no			\N
-dd432	dd440	\N	si	si	si	41	dd	no	\N	\N	\N
-dd138	dd440	\N	si	si	si	8	dd	si			\N
 dd32	dd207	dd4	no	si	si	6	dd	no	null		\N
 dd522	dd129	dd749	no	si	si	16	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{}},".content_data > .canvas_edit":{"style":{"height":"150px"}}}}	{"css": {".wrapper_component": {"grid-row": "3", "grid-column": "7 / span 4"}}}
 dd1369	dd1364	dd1231	no	si	si	5	dd	si	[{"dd530":"rsc368"}]	{\r\n  "info": "'data_to_be_used' indicates what value to use to create the field. It may be 'data', 'value' or 'valor_list'",\r\n  "data_to_be_used": "dato"\r\n}	{"info": "'data_to_be_used' indicates what value to use to create the field. It may be 'data', 'value' or 'valor_list'", "data_to_be_used": "dato"}
@@ -611,6 +601,10 @@ dd453	dd449	dd395	no	si	si	4	dd	si	\N	{"name":"indexations_info"}	{"name": "inde
 dd388	dd389	dd395	no	si	si	8	dd	si		{"name":"error_de_conexion"}	{"name": "error_de_conexion"}
 dd1033	dd389	dd395	no	si	si	18	dd	si		{"name":"seleccione_un_idioma_de_destino"}	{"name": "seleccione_un_idioma_de_destino"}
 dd789	dd785	dd395	no	si	si	19	dd	si		{"name":"tool_indexation"}	{"name": "tool_indexation"}
+dd227	dd440	null	si	si	si	25	dd	no			\N
+dd605	dd440	null	si	si	si	34	dd	no			\N
+dd432	dd440	\N	si	si	si	41	dd	no	\N	\N	\N
+dd138	dd440	\N	si	si	si	8	dd	si			\N
 dd1219	dd1553	dd395	no	si	si	2	dd	si		{\r\n  "name": "idioma_de_origen"\r\n}	{"name": "idioma_de_origen"}
 dd291	dd785	dd395	no	si	si	29	dd	si	\N	{"name":"conservar_los_cambios_transcripcion"}	{"name": "conservar_los_cambios_transcripcion"}
 dd480	dd449	dd395	no	si	si	1	dd	si	\N	{"name":"personas"}	{"name": "persons"}
@@ -639,7 +633,6 @@ dd1289	dd1137	dd347	no	si	si	13	dd	no	[{"dd1229":"rsc264"}]	{"check_publication_
 dd1594	dd1592	dd352	no	si	si	2	dd	no	\N	{"css":{".wrap_component":{"style":{"display":"none"}}}}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_left"], "style": {"width": "50%"}}}, "source": {"records_mode": "list", "request_config": [{"sqo": {"section_tipo": [{"source": "self"}]}, "show": {"ddo_map": [{"tipo": "dd156", "parent": "self", "section_tipo": "self"}]}}]}}
 dd1367	dd1364	dd1231	no	si	si	3	dd	si	[{"dd9":"rsc547"}]	\N	\N
 dd1541	dd461	dd9	no	si	si	2	dd	si	\N	\N	\N
-dd198	dd614	null	si	si	no	3	dd	no	null	\N	\N
 dd1342	dd137	dd6	no	si	si	33	dd	no	[{"dd626":"dd963"}]	\N	\N
 dd1542	dd460	dd177	no	si	si	4	dd	si	\N	\N	\N
 dd859	dd821	dd183	no	si	si	4	dd	no	\N	\N	\N
@@ -744,7 +737,6 @@ dd677	dd383	dd392	no	si	si	9	dd	si	\N	\N	\N
 dd498	dd562	dd177	no	si	si	4	dd	si			\N
 dd559	dd555	dd557	no	si	si	2	dd	no	\N	\N	\N
 dd560	dd555	dd557	no	si	si	3	dd	no	\N	\N	\N
-dd563	dd562	dd8	no	si	si	1	dd	no	\N	\N	\N
 dd572	dd562	dd91	no	si	si	2	dd	no	[{"dd9":"dd565"},{"dd43":"dd566"}]	\N	\N
 dd575	dd562	dd247	no	si	si	3	dd	no	\N	\N	\N
 dd576	dd557	\N	si	si	si	1	dd	si	\N	\N	\N
@@ -873,17 +865,17 @@ dd242	dd1	dd341	no	si	si	1	dd	si		\N	\N
 dd1153	dd1101	dd1231	no	si	si	16	dd	no	[{"dd592":"dd813"}]	\N	\N
 dd1275	dd1276	dd1747	no	si	si	1	dd	no	null	\N	\N
 dd816	dd810	dd91	no	si	si	4	dd	no	[{"dd9":"dd812"}]		\N
-dd164	dd440	null	si	si	si	51	dd	no			\N
-dd11	dd440	null	si	si	si	33	dd	no			\N
 dd638	dd194	null	si	si	si	2	dd	no			\N
 dd606	dd35	dd4	no	si	si	2	dd	si	\N	\N	\N
 dd784	dd154	dd1747	no	si	si	1	dd	no		{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"8%","border-bottom-right-radius":"8px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 dd1278	dd622	dd1231	no	si	si	32	dd	no	[{"dd500":"ww47"}]	{"data_to_be_used":"dato"}	{"data_to_be_used": "dato"}
 dd626	dd638	null	si	si	si	1	dd	si			\N
-dd353	dd440	\N	si	si	si	52	dd	no	\N	\N	\N
 dd1348	dd1342	dd177	no	si	si	4	dd	no	\N	\N	\N
 dd292	dd137	dd6	no	si	si	24	dd	no	[{"dd626":"dd963"}]		\N
 dd751	dd348	dd1229	no	si	si	4	dd	si	[{"dd6":"rsc176"}]	\N	\N
+dd164	dd440	null	si	si	si	51	dd	no			\N
+dd353	dd440	\N	si	si	si	52	dd	no	\N	\N	\N
+dd11	dd440	null	si	si	si	33	dd	no			\N
 dd556	dd2	\N	si	si	si	6	dd	si	\N	\N	\N
 dd614	dd2	\N	si	si	no	8	dd	no	\N	\N	\N
 dd103	dd6	\N	si	si	no	3	dd	no			\N
@@ -896,7 +888,6 @@ dd1349	dd1342	dd183	no	si	si	5	dd	no	\N	\N	\N
 dd609	dd117	\N	si	si	si	11	dd	no	\N	\N	\N
 dd752	dd751	dd1231	no	si	si	2	dd	si	[{"dd9":"rsc23"}]	\N	\N
 dd73	dd1323	dd6	no	si	si	1	dd	no	[{"dd626":"dd46"}]		\N
-dd1741	dd440	\N	si	si	si	10	dd	si	\N	\N	\N
 dd657	dd391	dd395	no	si	si	79	dd	si	\N	{\r\n  "name": "go_to_page"\r\n}	{"name": "go_to_page"}
 dd65	dd391	dd395	no	si	si	78	dd	si	\N	{"name":"sitio_en_mantenimiento"}	{"name": "site_under_maintenance"}
 dd658	dd391	dd395	no	si	si	80	dd	si	\N	{"name":"go_to_record"}	{"name": "go_to_record"}
@@ -965,11 +956,11 @@ dd971	dd1318	dd177	no	si	si	5	dd	no	\N	\N	\N
 dd1639	dd390	dd395	no	si	si	39	dd	si	\N	{"name":"remove_filter"}	{"name": "remove_filter"}
 dd797	dd773	dd530	no	si	si	3	dd	no	[{"dd6":"dd917"},{"dd9":"dd921"},{"dd635":"dd929"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "30%"}}}}
 dd1172	dd1104	dd1234	no	si	si	3	dd	no	[{"dd635":"dd929"}]	\N	\N
-dd52	dd440	\N	si	si	si	38	dd	no	\N		\N
-dd149	dd440	null	si	si	si	19	dd	no			\N
-dd491	dd440	\N	si	si	si	48	dd	no	\N	\N	\N
 dd1640	dd389	dd395	no	si	si	37	dd	si	\N	{"name":"no_hay_etiqueta_seleccionada"}	{"name": "no_hay_etiqueta_seleccionada"}
+dd52	dd440	\N	si	si	si	38	dd	no	\N		\N
 dd770	dd1	dd609	no	si	si	9	dd	si	\N	\N	\N
+dd491	dd440	\N	si	si	si	48	dd	no	\N	\N	\N
+dd149	dd440	null	si	si	si	19	dd	no			\N
 dd1456	dd1455	dd8	no	si	si	1	dd	no	\N		null
 dd37	dd2	null	si	si	si	4	dd	no		\N	\N
 dd1174	dd1104	dd1234	no	si	si	4	dd	no	[{"dd635":"dd930"}]	\N	\N
@@ -1051,8 +1042,8 @@ dd810	dd137	dd6	no	si	si	10	dd	si	[{"dd626":"dd963"}]		\N
 dd197	dd196	dd11	no	si	si	3	dd	no	[{"dd6":"dd128"},{"dd9":"dd132"},{"dd9":"dd452"},{"dd1747":"dd330"}]		\N
 dd635	dd440	null	si	si	si	4	dd	si			\N
 dd580	dd440	\N	si	si	si	49	dd	no	\N	\N	\N
-dd66	dd440	null	si	si	si	2	dd	si			\N
 dd686	dd440	\N	si	si	si	50	dd	si	\N	\N	\N
+dd66	dd440	null	si	si	si	2	dd	si			\N
 dd1390	dd1100	dd8	no	si	si	1	dd	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(5, 1fr)"}}}
 dd1372	dd1581	dd580	no	si	si	3	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%","height":"80vh"}}}}	{"css": {".wrapper_component": {"grid-column": "span 10"}, ".wrapper_component >.content_data": {"min-height": "60vh"}}}
 dd1391	dd1100	dd8	no	si	si	2	dd	si	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
@@ -1146,7 +1137,6 @@ dd712	dd622	dd1231	no	si	si	16	dd	si	[{"dd592":"ww22"}]	{\r\n  "data_to_be_used"
 dd931	dd918	dd57	no	si	si	5	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "15%"}}}}
 dd1184	dd1179	dd247	no	si	si	5	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "30%"}}}}
 dd1037	dd1011	dd11	no	si	si	3	dd	no	[{"dd6":"dd1020"},{"dd9":"dd1030"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "34.5%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "34.5%"}}}}
-dd565	dd563	dd9	no	si	si	2	dd	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "42%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "42%"}}}}
 dd792	dd785	dd395	no	si	si	20	dd	si		{"name":"tool_relation"}	{"name": "tool_relation"}
 dd1482	dd1473	dd9	no	si	si	4	dd	no	\N	{\r\n  "read_only": "read_only",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%",\r\n        "background-color": "#FFE2AB",\r\n        "border-right": "1px solid #d0d0d0"\r\n      }\r\n    }\r\n  }\r\n}	\N
 dd1500	dd770	dd6	no	si	si	2	dd	no	[{"dd626":"dd963"},{"dd6":"dd1558"}]	\N	\N
@@ -1166,7 +1156,6 @@ dd1359	dd785	dd395	no	si	si	55	dd	si	\N	{"name":"activar_todas_las_columnas"}	{"
 dd216	dd785	dd395	no	si	si	18	dd	si		{"name":"numero_recurso"}	{"name": "numero_recurso"}
 dd1575	dd785	dd395	no	si	si	71	dd	si	\N	{"name":"borrar_secciones"}	{"name": "borrar_secciones"}
 dd610	dd785	dd395	no	si	no	70	dd	no	null	{"name":"tool_import_rdf"}	{"name": "tool_import_rdf"}
-dd564	dd563	dd1747	no	si	si	1	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "8%", "border-bottom-right-radius": "8px"}}}}
 dd651	dd785	dd395	no	si	si	43	dd	si	\N	{"name":"campos"}	{"name": "fields"}
 dd723	dd785	dd395	no	si	si	47	dd	si	\N	{\r\n  "name": "tool_description"\r\n}	{"name": "tool_description"}
 dd1381	dd785	dd395	no	si	si	60	dd	si	\N	{\r\n  "name": "tool_qr"\r\n}	{"name": "tool_qr"}
@@ -1370,23 +1359,23 @@ dd763	dd390	dd395	no	si	si	17	dd	si		{"name":"borrar_registro_completo"}	{"name"
 dd1041	dd19	null	si	si	si	1	dd	si			\N
 dd1397	dd1391	dd1747	no	si	si	1	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"10%","border-bottom-right-radius":"8px","background-color":"rgba(44, 145, 206, 0.8)"}},".css_label":{"style":{"color":"#ffffff"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 dd766	dd391	dd395	no	si	si	44	dd	si		{"name":"descriptores"}	{"name": "descriptores"}
-dd634	dd440	null	si	si	si	5	dd	si			\N
 dd762	dd390	dd395	no	si	si	16	dd	si		{"name":"borrar_solo_datos"}	{"name": "delete_data_only"}
-dd633	dd440	null	si	si	si	6	dd	si			\N
 dd735	dd391	dd395	no	si	si	25	dd	si		{"name":"seleccione_fotograma"}	{"name": "seleccione_fotograma"}
 dd544	dd548	dd633	no	si	si	3	dd	no		\N	{"show_interface": {"tools": false, "read_only": true}}
-dd530	dd440	null	si	si	si	13	dd	no			\N
-dd1724	dd440	\N	si	si	si	15	dd	si			\N
-dd1538	dd440	null	si	si	si	17	dd	no			\N
-dd43	dd440	\N	si	si	si	21	dd	no	null		\N
-dd318	dd440	null	si	si	si	32	dd	no			\N
-dd442	dd440	\N	si	si	si	45	dd	no	\N	\N	\N
 dd1742	dd614	\N	si	si	si	37	dd	no	\N	\N	\N
 dd440	dd6	null	si	si	si	2	dd	no			\N
 dd177	dd6	null	si	si	si	7	dd	no	null		\N
 dd8	dd6	null	si	si	si	17	dd	no	null		\N
 dd74	dd6	null	si	si	si	22	dd	no		\N	\N
 dd2	dd0	null	si	si	si	2	dd	no			\N
+dd634	dd440	null	si	si	si	5	dd	si			\N
+dd633	dd440	null	si	si	si	6	dd	si			\N
+dd530	dd440	null	si	si	si	13	dd	no			\N
+dd1724	dd440	\N	si	si	si	15	dd	si			\N
+dd1538	dd440	null	si	si	si	17	dd	no			\N
+dd43	dd440	\N	si	si	si	21	dd	no	null		\N
+dd318	dd440	null	si	si	si	32	dd	no			\N
+dd442	dd440	\N	si	si	si	45	dd	no	\N	\N	\N
 dd783	dd440	null	si	si	si	3	dd	si			\N
 dd761	dd390	dd395	no	si	si	15	dd	si		{"name":"cancelar"}	{"name": "cancel"}
 dd746	dd391	dd395	no	si	si	31	dd	si		{"name":"recargar"}	{"name": "reload"}
@@ -1422,6 +1411,7 @@ dd1291	dd604	dd339	no	si	si	1	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css"
 dd1383	dd604	dd9	no	si	si	2	dd	si	\N		null
 dd1601	dd1582	dd57	no	si	si	4	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 dd1332	dd1582	dd57	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
+dd564	dd563	dd1747	no	si	si	1	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical",".inverse"],"style":{"width":"8%","border-bottom-right-radius":"8px"}}}}	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 dd1486	dd1472	dd1231	no	si	si	8	dd	si	[{"dd10":"dd1478"}]	\N	\N
 dd1485	dd1472	dd1231	no	si	si	3	dd	si	[{"dd9":"dd1482"}]	\N	\N
 dd1496	dd1472	dd1231	no	si	si	6	dd	si	[{"dd9":"dd1477"}]	\N	\N
@@ -1469,10 +1459,10 @@ dd1559	dd1500	dd91	no	si	si	1	dd	no	[{"dd339":"dd1481"},{"dd9":"dd1475"},{"dd9":
 dd1564	dd1473	dd592	no	si	no	9	dd	no	[{"dd6":"dd1560"},{"dd339":"dd1481"},{"dd9":"dd1562"},{"dd10":"dd1478"},{"dd500":"dd1505"}]	\N	\N
 dd1560	dd770	dd6	no	si	si	3	dd	si	[{"dd626":"dd963"},{"dd6":"dd1558"}]	\N	\N
 dd627	dd193	dd440	no	si	si	1	dd	si		\N	\N
-dd500	dd440	\N	si	si	si	27	dd	si			\N
 dd244	dd129	dd252	no	si	no	3	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "span 1"}}}
-dd44	dd440	\N	si	si	si	7	dd	si			\N
 dd72	dd117	\N	si	si	si	10	dd	no		\N	\N
+dd565	dd563	dd9	no	si	si	2	dd	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"42%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}}
+dd500	dd440	\N	si	si	si	27	dd	si			\N
 dd1062	dd785	dd395	no	si	si	1	dd	si	null	{\r\n  "name": "items"\r\n}	{"name": "items"}
 dd1066	dd785	dd395	no	si	si	3	dd	no		{\r\n  "name": "min"\r\n}	{"name": "min"}
 dd852	dd785	dd395	no	si	si	5	dd	si	null	{\r\n  "name": "tool_layout_print"\r\n}	{"name": "tool_layout_print"}
@@ -1494,6 +1484,10 @@ dd1053	dd129	dd9	no	si	si	10	dd	no	\N	{"mandatory":true,"unique":{"check":true,"
 dd1341	dd1340	dd91	no	si	si	1	dd	no	[{"dd57":"dd1354"},{"dd9":"dd1326"},{"dd9":"dd799"},{"dd10":"dd612"},{"dd9":"dd1327"},{"dd9":"dd1328"},{"dd80":"dd1330"},{"dd57":"dd1331"},{"dd57":"dd1332"},{"dd57":"dd1333"}]	\N	{"css": {".content_data": {"background-color": "rgb(247 138 27 / 10%)"}, ".list_body .column_section": {"background-color": "#f78a1b26"}, ".list_body .column_section.column_dd1326": {"min-width": "16.5rem", "background-color": "#f78a1b40"}}}
 dd1608	dd389	dd395	no	si	si	35	dd	si	\N	{"name":"type_root_password"}	{"name": "type_root_password"}
 dd1009	dd1000	dd91	no	si	si	3	dd	no	[{"dd9":"dd1002"},{"dd9":"dd1007"},{"dd10":"dd1005"},{"dd500":"dd1004"}]	\N	\N
+dd1741	dd440	\N	si	si	si	10	dd	si	\N	\N	\N
+dd722	dd440	null	si	si	si	14	dd	si			\N
+dd592	dd440	null	si	si	si	23	dd	no			\N
+dd225	dd440	null	si	si	si	26	dd	no			\N
 dd1276	dd1266	dd8	no	si	si	1	dd	no	\N	\N	\N
 dd1558	dd770	dd6	no	si	no	1	dd	no	[{"dd626":"dd963"}]	\N	\N
 dd1565	dd1560	dd1129	no	si	si	2	dd	no	[{"dd9":"dd1475"},{"dd9":"dd1482"},{"dd9":"dd1483"},{"dd9":"dd1477"},{"dd57":"dd1504"},{"dd580":"dd1556"},{"dd592":"dd1529"},{"dd592":"dd1564"}]	\N	\N
@@ -1503,13 +1497,18 @@ dd1192	dd1137	dd1229	no	si	si	1	dd	no	[{"dd6":"dd1100"}]		null
 dd1104	dd1137	dd1229	no	si	si	9	dd	no	[{"dd6":"dd917"}]	\N	\N
 dd1302	dd1137	dd1229	no	si	si	15	dd	no	[{"dd6":"dd1265"}]	\N	\N
 dd1284	dd1286	dd1233	no	si	si	1	dd	no	[{"dd339":"dd1271"}]	{"info":"For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue","data_to_be_used":"dato","enum":{"1":0,"2":1},"exclude_column":true}	{"enum": {"1": 0, "2": 1}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "exclude_column": true, "data_to_be_used": "dato"}
+dd339	dd440	\N	si	si	si	39	dd	no	\N	\N	\N
 dd1472	dd1137	dd1229	no	si	si	3	dd	si	[{"dd6":"dd1500"}]	\N	\N
+dd44	dd440	\N	si	si	si	7	dd	si			\N
+dd252	dd440	null	si	si	si	22	dd	no			\N
 dd1271	dd1276	dd339	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}},".content_data":{"style":{"width":"120px"}}}}	{"css": {".content_data": {"style": {"width": "120px"}}, ".wrap_component": {"mixin": [".vertical"], "style": {"width": "10%"}}}}
 dd1103	dd1137	dd1229	no	si	si	8	dd	no	[{"dd6":"dd867"}]	\N	\N
 dd1283	dd1286	dd1231	no	si	si	4	dd	no	[{"dd318":"dd1280"}]	\N	\N
 dd1280	dd1276	dd318	no	si	si	5	dd	si	null	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"100%"}}}}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "100%"}}}}
-dd904	dd440	null	si	si	si	1	dd	no			\N
 dd1604	dd276	dd395	no	si	si	11	dd	si	\N	{"name":"deleted_tags"}	{"name": "deleted_tags"}
+dd904	dd440	null	si	si	si	1	dd	no			\N
+dd241	dd440	null	si	si	si	24	dd	no			\N
+dd198	dd440	null	si	si	si	53	dd	no	null	\N	\N
 dd1605	dd659	dd395	no	si	si	18	dd	si	\N	{"name":"source"}	{"name": "source"}
 dd1439	dd622	dd1233	no	si	si	3	dd	si	[{"dd57":"ww14"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}	{"enum": {"1": "yes", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "data_to_be_used": "dato"}
 dd1019	dd390	dd395	no	si	si	1	dd	si	null	{"name":"operadores_de_busqueda"}	{"name": "search_operators"}
@@ -1614,7 +1613,7 @@ dd1587	dd389	dd395	no	si	si	33	dd	si	\N	{"name":"email_limit_explanation"}	{"nam
 dd1588	dd389	dd395	no	si	si	34	dd	si	\N	{"name":"alert_limit_of_emails"}	{"name": "alert_limit_of_emails"}
 dd1589	dd147	dd395	no	si	si	19	dd	si	\N	{"name":"email"}	{"name": "email"}
 dd1189	dd773	dd530	no	si	si	14	dd	no	[{"dd6":"dd772"},{"dd9":"dd797"}]	{"multi_value":true,"mode":"autocomplete","source":{"filter_custom":[{"q":{"section_id":"3","section_tipo":"dd1178","from_component_tipo":"dd1188","type":"dd151"},"path":[{"section_tipo":"dd772","component_tipo":"dd1188","modelo":"component_select","name":"Typology"}]}]},"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}, "mode": "autocomplete", "source": {"filter_custom": [{"q": {"type": "dd151", "section_id": "3", "section_tipo": "dd1178", "from_component_tipo": "dd1188"}, "path": [{"name": "Typology", "model": "component_select", "section_tipo": "dd772", "component_tipo": "dd1188"}]}]}, "multi_value": true}
-dd566	dd563	dd43	no	si	si	3	dd	no	\N	{"type":{"float":2},"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
+dd566	dd563	dd57	no	si	si	3	dd	no	[{"dd6":"dd889"},{"dd9":"dd891"}]	{"type":{"float":2},"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}, "view": "rating"}
 dd625	dd637	dd580	no	si	si	11	dd	no	\N	{"css":{".content_data":{"style":{"height":"64vh"}},".wrap_component":{"mixin":[".vertical"],"style":{"width":"100%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}, ".wrapper_component >.content_data": {"min-height": "70vh"}}}
 dd581	dd6	\N	si	si	si	23	dd	no	\N	\N	\N
 dd1592	dd153	dd8	no	si	si	3	dd	si	\N	{"css":{".wrap_section_group":{"style":{"display":"none"}}}}	{"css": {".content_data": {"grid-template-columns": "repeat(2, 1fr)"}}}
@@ -1653,8 +1652,8 @@ dd1537	dd1636	dd52	no	si	si	19	dd	si	\N	{"css":{".wrap_component":{"mixin":[".ve
 dd1409	dd1392	dd352	no	si	si	2	dd	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	{"source": {"records_mode": "list", "request_config": [{"sqo": {"section_tipo": [{"source": "self"}]}, "show": {"ddo_map": [{"tipo": "dd1399", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "dd1401", "parent": "self", "section_tipo": "hierarchy1"}]}}]}}
 dd1413	dd1100	dd91	no	si	si	5	dd	no	[{"dd339":"dd1398"},{"dd11":"dd1442"},{"dd9":"dd1399"},{"dd11":"dd1430"},{"dd11":"dd1389"},{"dd9":"dd1465"},{"dd11":"dd1394"},{"dd9":"dd1393"},{"dd57":"dd1396"},{"dd57":"dd1395"},{"dd9":"dd1401"},{"dd318":"dd1402"},{"dd318":"dd1403"},{"dd592":"dd1408"},{"dd592":"dd1407"},{"dd592":"dd1555"},{"dd592":"dd1404"}]	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["dd1100"], "source": "section"}]}, "show": {"ddo_map": [{"info": "Publishable component_publication", "tipo": "dd1398", "width": "4.5rem", "parent": "self", "section_tipo": "self"}, {"info": "Web element type component_select", "tipo": "dd1442", "width": "4.5rem", "parent": "self", "section_tipo": "self"}, {"info": "Name component_input_text", "tipo": "dd1399", "width": "minmax(10rem, 1fr)", "parent": "self", "section_tipo": "self"}, {"info": "Title component_input_text", "tipo": "dd1401", "parent": "self", "section_tipo": "self"}, {"info": "Renderer component_select", "tipo": "dd1430", "width": "6rem", "parent": "self", "section_tipo": "self"}, {"info": "CSS class component_select", "tipo": "dd1389", "parent": "self", "section_tipo": "self"}, {"info": "CSS modificator component_input_text", "tipo": "dd1465", "parent": "self", "section_tipo": "self"}, {"info": "Template component_select", "tipo": "dd1394", "parent": "self", "section_tipo": "self"}, {"info": "URI component_input_text", "tipo": "dd1393", "width": "4.5rem", "parent": "self", "section_tipo": "self"}, {"info": "In menu component_radio_button", "tipo": "dd1396", "parent": "self", "section_tipo": "self"}, {"info": "Active component_radio_button", "tipo": "dd1395", "parent": "self", "section_tipo": "self"}, {"info": "Abstract component_text_area", "tipo": "dd1402", "parent": "self", "section_tipo": "self"}, {"info": "PDF component_portal", "tipo": "dd1408", "width": "102px", "parent": "self", "section_tipo": "self"}, {"info": "PDF doc component_pdf", "tipo": "rsc37", "width": "102px", "parent": "dd1408", "section_tipo": "rsc176"}, {"info": "AV component_portal", "tipo": "dd1407", "width": "102px", "parent": "self", "section_tipo": "self"}, {"info": "AV video component_av", "tipo": "rsc35", "width": "102px", "parent": "dd1407", "section_tipo": "rsc167"}, {"info": "SVG portal", "tipo": "dd1555", "width": "102px", "parent": "self", "section_tipo": "self"}, {"info": "SVG file component_svg", "tipo": "rsc855", "width": "102px", "parent": "dd1555", "section_tipo": "rsc302"}, {"info": "Identifying image component_portal", "tipo": "dd1404", "width": "102px", "parent": "self", "section_tipo": "self"}, {"info": "Identifying image component_image", "tipo": "rsc29", "width": "102px", "parent": "dd1404", "section_tipo": "rsc170"}], "fields_separator": " | "}, "api_engine": "dedalo"}]}}
 dd305	dd614	null	si	si	si	35	dd	no		\N	\N
-dd846	dd440	null	si	si	si	16	dd	no			\N
 dd749	dd440	null	si	si	si	18	dd	no			\N
+dd846	dd440	null	si	si	si	16	dd	no			\N
 dd128	dd207	dd6	no	si	si	1	dd	no	[{"dd626":"dd1719"}]	{"info":"Propiedades NO standarizadas. Sólo en puebas","section_config":{"list_line":"single"},"css":{".wrap_component_dd515":{"style":{"width":"50%"}},".wrap_component_dd170":{"style":{"width":"50%"}},".wrap_component_dd135":{"style":{"width":"50%","height":"400px"}},".wrap_component_dd522":{"style":{"width":"50%"}}}}	\N
 dd234	dd207	dd6	no	si	si	2	dd	no	[{"dd626":"dd1721"}]	{\r\n  "info": "Propiedades NO standarizadas. Sólo en puebas",\r\n  "section_config": {\r\n    "list_line": "single"\r\n  }\r\n}	{"info": "Propiedades NO standarizadas. Sólo en puebas", "section_config": {"list_line": "single"}}
 dd153	dd207	dd6	no	si	si	3	dd	no	[{"dd626":"dd1720"}]	{\r\n  "info": "Propiedades NO standarizadas. Sólo en puebas",\r\n  "section_config": {\r\n    "list_line": "single"\r\n  }\r\n}	{"info": "Propiedades NO standarizadas. Sólo en puebas", "section_config": {"list_line": "single"}}
@@ -1668,3 +1667,4 @@ dd1454	dd68	dd4	no	si	si	7	dd	si	\N		null
 dd137	dd68	dd4	no	si	si	1	dd	si			\N
 dd1453	dd68	dd4	no	si	si	20	dd	no	\N		null
 dd622	dd348	dd1229	no	si	si	3	dd	si	[{"dd6":"ww10"}]	\N	\N
+dd563	dd562	dd8	no	si	si	1	dd	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}

@@ -6,7 +6,6 @@ test16	test63	dd347	no	si	si	4	test	si	[{"dd1229":"rsc264"}]	\N	\N
 test8	test63	dd347	no	si	si	6	test	si	[{"dd1229":"rsc267"}]	\N	\N
 test58	test63	dd347	no	si	si	1	test	si	[{"dd1229":"dd622"},{"dd6":"ww1"}]	\N	\N
 test59	test63	dd347	no	si	si	7	test	si	[{"dd1229":"hierarchy65"},{"dd6":"ts1"}]	\N	\N
-test29	test209	dd1231	no	si	si	8	test	no	[{"dd163":"test70"}]	\N	\N
 test41	test40	dd97	no	si	si	1	test	no	[{"dd6":"test2"},{"dd749":"test9"}]	{\r\n  "edit_view_options": {\r\n    "element_width": "25%",\r\n    "element_height": "150px"\r\n  }\r\n}	{"edit_view_options": {"element_width": "25%", "element_height": "150px"}}
 test33	test48	dd634	no	si	si	5	test	no	\N	{\r\n  "source": {\r\n    "mode": "tree",\r\n    "value": "[2,3,7]"\r\n  }\r\n}	{"source": {"mode": "tree", "value": "[2,3,7]"}}
 test42	test43	dd18	no	si	si	1	test	si	null	\N	\N
@@ -14,9 +13,9 @@ test39	test63	dd347	no	si	si	5	test	si	[{"dd1229":"oh66"}]	\N	\N
 test18	test45	dd580	no	si	si	16	test	no	\N	\N	\N
 test35	test63	dd347	no	si	si	2	test	si	[{"dd1229":"dd600"}]	\N	\N
 test60	test19	dd1231	no	si	si	1	test	si	\N	\N	\N
-test27	test209	dd1231	no	si	si	7	test	no	[{"dd9":"dd62"},{"dd247":"test101"}]	\N	\N
-test50	test48	dd442	no	si	si	7	test	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": true\r\n}	{"source": {"mode": "autocomplete", "hierarchy_types": [2], "hierarchy_sections": []}, "value_with_parents": true}
+test27	test209	dd1231	no	si	si	8	test	no	[{"dd247":"test101"}]	\N	\N
 test49	test48	dd442	no	si	si	4	test	no	\N	{\r\n  "source": {\r\n    "mode": "jer_tipo",\r\n    "value": 2\r\n  },\r\n  "value_with_parents": true\r\n}	{"source": {"mode": "jer_tipo", "value": 2}, "value_with_parents": true}
+test50	test209	dd1231	no	si	si	31	test	no	[{"dd686":"test177"}]	\N	\N
 test65	dd770	dd6	no	si	si	10	test	no	null	\N	\N
 test4	test2	dd8	no	si	si	2	test	si	\N	{}	{}
 test186	test183	dd91	no	si	si	2	test	no	[{"dd592":"test185"}]		null
@@ -30,37 +29,29 @@ test137	test3	dd441	no	si	si	7	test	si	null	\N	{"thesaurus": {"term": "test52", 
 test138	test3	dd58	no	si	si	8	test	no	[{"dd9":"test52"}]	\N	\N
 test114	test158	dd227	no	si	si	4	test	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"10%"}}}}	\N
 test176	test65	dd8	no	si	si	2	test	no	\N	\N	\N
-test79	test83	dd8	no	si	si	3	test	no	null	\N	\N
 test115	test3	dd440	no	si	si	9	test	no	null	\N	\N
 test24	dd627	dd626	no	si	si	18	test	no	\N	{\r\n  "inverse_relations": false\r\n}	{"inverse_relations": false}
 test90	test115	dd8	no	si	si	2	test	no	\N	\N	\N
 test48	test22	dd8	no	si	si	4	test	si	\N	\N	\N
-test14	test4	dd635	no	si	si	7	test	no	\N	{\r\n  "mandatory": true,\r\n  "date_mode": "period"\r\n}	{"date_mode": "period", "mandatory": true}
 test1	dd770	dd4	no	si	si	15	test	si		\N	{"mykey2": 2}
-test10	test209	dd1231	no	si	si	6	test	no	[{"dd227":"test208"}]	\N	\N
 test102	test45	dd1747	no	si	si	28	test	no	null	\N	\N
-test129	test105	dd11	no	si	si	6	test	no	[{"dd6":"mdcat1626"},{"dd9":"mdcat1629"}]	\N	\N
+test10	test209	dd1231	no	si	si	6	test	no	[{"dd227":"test208"}]	\N	\N
+test14	test209	dd1231	no	si	si	27	test	no	[{"dd1747":"test102"}]	\N	\N
 test96	test3	dd183	no	si	si	4	test	no	null	\N	\N
 test97	test95	dd10	no	si	si	5	test	si	[{"dd1018":"test85"}]	\N	{"observe": [{"client": {"event": "pdf_change_tag", "perform": {"function": "update_tag"}}, "component_tipo": "test97"}]}
-test130	test105	dd442	no	si	si	7	test	no	[{"dd66":"test132"}]	\N	\N
 test125	test158	dd149	no	si	si	30	test	no	null	\N	\N
-test131	test105	dd10	no	si	si	8	test	si	[{"dd66":"test132"}]	\N	\N
-test123	test106	dd592	no	si	si	1	test	no	[{"dd6":"rsc332"}]	\N	\N
 test122	test163	dd247	no	si	si	5	test	no	\N	\N	\N
 test112	test155	dd347	no	si	si	2	test	si	[{"dd1229":"dd600"}]	\N	\N
 test113	test155	dd347	no	si	si	8	test	no	[{"dd1229":"hierarchy65"},{"dd6":"es1"}]	\N	\N
-test106	test103	dd8	no	si	si	3	test	si	\N	\N	\N
-test103	test83	dd6	no	si	si	3	test	si	\N	\N	\N
-test104	test103	dd8	no	si	si	1	test	si	\N	\N	\N
-test105	test103	dd8	no	si	si	2	test	si	\N	\N	\N
-test127	test105	dd9	no	si	si	4	test	si	\N	\N	\N
-test133	test105	dd10	no	si	si	10	test	si	\N	\N	\N
-test134	test105	dd10	no	si	si	11	test	si	\N	\N	\N
-test136	test105	dd10	no	si	si	13	test	si	\N	\N	\N
 test135	test34	dd318	no	si	si	11	test	si	\N	\N	\N
 test126	test3	dd177	no	si	si	3	test	no	null	\N	\N
 test118	test3	dd434	no	si	si	6	test	no	[{"dd9":"test52"},{"dd749":"test99"}]	\N	[{"tipo": "test52", "type": "term"}, {"tipo": "test99", "type": "img"}]
 test128	test158	dd353	no	si	si	34	test	no	null	\N	\N
+test136	test209	dd1231	no	si	si	16	test	si	[{"dd580":"test18"}]	\N	\N
+test133	test209	dd1231	no	si	si	18	test	si	[{"dd225":"test152"}]	\N	\N
+test131	test209	dd1231	no	si	si	20	test	si	[{"dd592":"test80"}]	\N	\N
+test127	test209	dd1231	no	si	si	23	test	si	[{"dd432":"test25"}]	\N	\N
+test103	test209	dd1231	no	si	si	25	test	si	[{"dd429":"test71"}]	\N	\N
 test107	test155	dd347	no	si	si	3	test	si	[{"dd1229":"rsc264"}]	\N	\N
 test31	test158	dd66	no	si	si	9	test	no	\N	{"observe":[{"component_tipo":"test32","event":"click_tag_geo","perform":"load_tag_into_geo_editor"},{"component_tipo":"test32","event":"key_up_f2","perform":"get_data_tag"}]}	{"observe": [{"client": {"event": "click_tag_geo", "perform": {"function": "load_tag_into_geo_editor"}}, "component_tipo": "test32"}, {"client": {"event": "key_up_f2", "perform": {"function": "get_data_tag"}}, "component_tipo": "test32"}]}
 test95	test115	dd8	no	si	si	3	test	no	\N	\N	\N
@@ -82,8 +73,6 @@ test144	test158	dd57	no	si	si	23	test	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	\N
 test172	test34	dd635	no	si	si	7	test	no	\N	\N	{"date_mode": "range"}
 test66	test65	dd91	no	si	si	3	test	no	[{"dd9":"test159"},{"dd43":"test139"},{"dd80":"test146"},{"dd57":"test144"},{"dd635":"test145"},{"dd635":"test172"},{"dd635":"test173"},{"dd635":"test174"},{"dd10":"test32"},{"dd686":"test170"},{"dd722":"test81"},{"dd749":"test175"}]	\N	\N
 test162	test34	dd9	no	si	si	2	test	no	\N	\N	\N
-test203	test3	dd91	no	si	si	2	test	no	[{"dd9":"test52"},{"dd10":"test17"},{"dd1018":"test85"},{"dd686":"test177"},{"dd1741":"test26"},{"dd722":"test94"},{"dd749":"test99"}]	\N	\N
-test132	test105	dd66	no	si	si	9	test	no	[{"dd10":"test131"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 test173	test34	dd635	no	si	si	10	test	no	\N	\N	{"date_mode": "period"}
 test40	test15	dd592	no	si	si	2	test	no	[{"dd6":"test2"},{"dd749":"test9"},{"dd10":"test17"}]	{\r\n  "edit_view": "view_mosaic",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}, "edit_view": "view_mosaic"}
 test47	test48	dd442	no	si	si	6	test	no	\N	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [\r\n      2\r\n    ],\r\n    "hierarchy_sections": []\r\n  },\r\n  "value_with_parents": false\r\n}	{"source": {"mode": "autocomplete", "hierarchy_types": [2], "hierarchy_sections": []}, "value_with_parents": false}
@@ -113,14 +102,14 @@ test120	test158	dd225	no	si	si	19	test	no	\N	{"mandatory":true,"css":{".wrap_com
 test61	test20	dd440	no	si	si	5	test	no	null	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["zenon1"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "zenon3", "parent": "zenon1", "section_tipo": "zenon1"}, {"tipo": "zenon4", "parent": "zenon1", "section_tipo": "zenon1"}, {"tipo": "zenon5", "parent": "zenon1", "section_tipo": "zenon1"}, {"tipo": "zenon6", "parent": "zenon1", "section_tipo": "zenon1"}]}, "api_engine": "zenon"}]}}
 test69	test45	dd479	no	si	si	9	test	no	null	\N	\N
 test210	test209	dd1233	no	si	si	1	test	si	[{"dd339":"test92"}]	{"info":"For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue","data_to_be_used":"dato","enum":{"1":"si","2":"no"},"exclude_column":true}	\N
-test12	test4	dd9	no	si	si	4	test	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [],\r\n      "style": {\r\n        "background-color": "#B5210E"\r\n      }\r\n    },\r\n    ".label": {\r\n      "style": {\r\n        "color": "#FFFFFF !important"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".label": {"style": {"color": "#FFFFFF !important"}}, ".wrap_component": {"mixin": [], "style": {"background-color": "#B5210E"}}}}
-test72	test4	dd9	no	si	si	5	test	si	\N	{\r\n  "multi_value": true\r\n}	{"multi_value": true}
-test6	test4	dd635	no	si	si	6	test	no	\N	{"mandatory":true,"date_mode":"range"}	{"date_mode": "range", "mandatory": true}
-test53	test209	dd1231	no	si	si	10	test	no	[{"dd66":"test100"}]	\N	\N
-test82	test4	dd749	no	si	si	2	test	no	[{"dd10":"test17"},{"dd442":"test80"}]	{"tool_additions 9999":[{"tool_transcription":[{"component":"test80"}]}]}	{"max_items_folder": 1000, "tool_additions 9999": [{"tool_transcription": [{"component": "test80"}]}]}
+test53	test209	dd1231	no	si	si	11	test	no	[{"dd66":"test100"}]	\N	\N
+test72	test209	dd1231	no	si	si	28	test	si	[{"dd149":"test157"}]	\N	\N
+test6	test209	dd1231	no	si	si	29	test	no	[{"dd11":"test91"}]	\N	\N
+test12	test209	dd1231	no	si	si	30	test	si	[{"dd904":"test89"}]	\N	\N
 test22	test2	dd440	no	si	si	1	test	no	null		\N
 test74	test2	dd1221	no	si	si	3	test	si	\N	{\r\n  "section_tipo": "numisdata5",\r\n  "tool_name": "tool_import_kml",\r\n  "context_name": "upload",\r\n  "layout": [\r\n    "numisdata221"\r\n  ],\r\n  "tool_import_kml": {\r\n    "root_parent": {\r\n      "section_tipo": "numisdata241",\r\n      "component_tipo": "numisdata243"\r\n    },\r\n    "parent": {\r\n      "section_tipo": "numisdata240",\r\n      "component_tipo": "numisdata246"\r\n    },\r\n    "point": {\r\n      "section_tipo": "numisdata5",\r\n      "name": "numisdata211",\r\n      "description": "numisdata262",\r\n      "coordinates": "numisdata213",\r\n      "root_parent": "numisdata260",\r\n      "parent": "numisdata261",\r\n      "tag_geo": "numisdata212"\r\n    }\r\n  }\r\n}	{"layout": ["numisdata221"], "tool_name": "tool_import_kml", "context_name": "upload", "section_tipo": "numisdata5", "tool_import_kml": {"point": {"name": "numisdata211", "parent": "numisdata261", "tag_geo": "numisdata212", "coordinates": "numisdata213", "description": "numisdata262", "root_parent": "numisdata260", "section_tipo": "numisdata5"}, "parent": {"section_tipo": "numisdata240", "component_tipo": "numisdata246"}, "root_parent": {"section_tipo": "numisdata241", "component_tipo": "numisdata243"}}}
 test77	test209	dd1231	no	si	si	3	test	no	[{"dd722":"test94"}]	\N	\N
+test82	test209	dd1231	no	si	si	32	test	no	[{"dd10":"test17"}]	\N	\N
 test51	test19	dd1231	no	si	si	2	test	no	\N	\N	\N
 test2	test1	dd6	no	si	no	1	test	no	[{"dd80":"dd1330"}]	{"info":"section_config es una propiedade NO standarizada. Sólo en puebas","section_config":{"list_line9988":"single"},"aditional_css":[{"name":"Custom edit view 2","path":"\\/extras\\/render\\/test\\/aditional_css.css"}]}	{"info": "section_config es una propiedade NO standarizada. Sólo en puebas", "additional_css": [{"name": "Custom edit view", "path": "/extras/render/test/additional_css.css"}], "section_config": {"list_line99": "single"}}
 test38	dd770	dd6	no	si	si	13	test	no	null	\N	\N
@@ -141,21 +130,30 @@ test166	test34	dd9	no	si	si	3	test	no	\N	\N	{"with_lang_versions": true}
 test101	test45	dd247	no	si	si	7	test	no	null	\N	\N
 test70	test45	dd163	no	si	si	8	test	no	null	\N	\N
 test157	test45	dd149	no	si	si	29	test	no	\N	\N	\N
-test75	test209	dd1231	no	si	si	2	test	no	[{"dd1741":"test26"}]	\N	\N
+test132	test209	dd1231	no	si	si	19	test	no	[{"dd1018":"test85"}]	\N	\N
 test36	test209	dd1231	no	si	si	4	test	no	[{"dd80":"test88"}]	\N	\N
+test75	test209	dd1231	no	si	si	2	test	no	[{"dd1741":"test26"}]	\N	\N
+test106	test209	dd1231	no	si	si	15	test	si	[{"dd500":"test140"}]	\N	\N
+test130	test209	dd1231	no	si	si	21	test	no	[{"dd57":"test87"}]	\N	\N
 test81	test158	dd722	no	si	si	1	test	no	null	{"observe":[{"component_tipo":"test161","event":"click_tag_tc","perform":"go_to_time"},{"component_tipo":"test161","event":"key_up_esc","perform":"play_pause"},{"component_tipo":"test161","event":"key_up_f2","perform":"get_data_tag"}]}	{"observe": [{"info": " ", "client": {"event": "click_tag_tc", "perform": {"function": "go_to_time"}}, "component_tipo": "test161"}, {"info": " ", "client": {"event": "key_up_esc", "perform": {"function": "play_pause"}}, "component_tipo": "test161"}, {"info": " ", "client": {"event": "key_up_f2", "perform": {"function": "get_data_tag"}}, "component_tipo": "test161"}]}
-test76	test209	dd1231	no	si	si	11	test	no	[{"dd749":"test99"}]	\N	\N
+test76	test209	dd1231	no	si	si	12	test	no	[{"dd749":"test99"}]	\N	\N
+test134	test209	dd1231	no	si	si	17	test	si	[{"dd43":"test211"}]	\N	\N
 test161	test176	dd10	no	si	si	3	test	si	\N	\N	\N
+test79	test209	dd1231	no	si	si	26	test	no	[{"dd431":"test54"}]	\N	\N
 test37	test20	dd592	no	si	si	2	test	no	null	\N	{"source": {"operator": "$or", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy41", "parent": "test37", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy25", "parent": "test37", "section_tipo": "self"}], "sqo_config": {"limit": 5, "operator": "$or"}, "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy41", "parent": "test37", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy25", "parent": "test37", "section_tipo": "self"}, {"tipo": "hierarchy27", "parent": "test37", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": ", "}, "search": {"ddo_map": [{"tipo": "hierarchy25", "parent": "test37", "section_tipo": "self"}]}, "search_engine": "dedalo_engine"}]}}
 test205	test90	dd442	no	si	si	3	test	no	\N	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"info": "Term (component input text)", "tipo": "hierarchy25", "parent": "test205", "section_tipo": "self"}], "sqo_config": {"limit": 5}, "fields_separator": ", ", "value_with_parents": true}}]}}
 test52	test45	dd9	no	si	si	13	test	si	null	\N	\N
 test208	test45	dd227	no	si	si	5	test	no	\N	\N	\N
+test104	test209	dd1231	no	si	si	7	test	si	[{"dd79":"test215"}]	\N	\N
 test56	test57	dd431	no	si	si	4	test	no	null	\N	{"source": {"records_mode": "list", "request_config": [{"show": {"ddo_map": [{"tipo": "test52", "parent": "test56", "section_tipo": "self"}]}}]}, "config_relation": {"relation_type": "dd47", "relation_type_rel": "dd621"}}
 test211	test45	dd43	no	si	si	17	test	no	\N	\N	{"type": "float", "precision": 4}
+test123	test209	dd1231	no	si	si	14	test	no	[{"dd487":"test68"}]	\N	\N
 test9	test95	dd442	no	si	si	9	test	no	[{"dd66":"test100"}]	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"info": "Term (component input text)", "tipo": "hierarchy25", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 5}, "fields_separator": ", ", "value_with_parents": true}}]}, "target_geolocation_tipo": "hierarchy31"}
 test201	test45	dd352	no	si	si	23	test	no	\N	\N	{"source": {"records_mode": "list", "request_config": [{"show": {"ddo_map": [{"tipo": "test52", "parent": "test201", "section_tipo": "self"}]}}]}}
 test71	test45	dd429	no	si	si	26	test	no	[{"dd352":"test201"}]	\N	{"source": {"records_mode": "list", "request_config": [{"show": {"ddo_map": [{"tipo": "test52", "parent": "test71", "section_tipo": "self"}]}}]}}
 test177	test45	dd686	no	si	si	32	test	no	\N	\N	{"max_items_folder": 1000}
+test129	test209	dd1231	no	si	si	22	test	no	[{"dd352":"test201"}]	\N	\N
+test105	test209	dd1231	no	si	si	24	test	si	[{"dd428":"test169"}]	\N	\N
 test98	test95	dd10	no	si	si	1	test	no	[{"dd749":"test99"}]	\N	{"observe": [{"client": {"event": "draw_change_tag", "perform": {"function": "update_tag"}}, "component_tipo": "test99"}]}
 test92	test45	dd339	no	si	si	21	test	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	\N
 test87	test45	dd57	no	si	si	22	test	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	\N
@@ -168,6 +166,7 @@ test28	test115	dd8	no	si	si	7	test	no	null	\N	\N
 test116	test158	dd479	no	si	si	8	test	no	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%","clear":"left"}}}}	\N
 test160	test158	dd9	no	si	si	14	test	no	\N	{"unique":true}	{"unique": true}
 test169	test45	dd428	no	si	si	25	test	no	[{"dd9":"dd924"}]	\N	{"target_mode": "free", "target_values": ["dd922"]}
+test29	test209	dd1231	no	si	si	9	test	no	[{"dd163":"test70"}]	\N	\N
 test26	test45	dd1741	no	si	si	1	test	no	null	\N	{"max_items_folder": 1000}
 test200	test184	dd431	no	si	si	4	test	no	\N	\N	{"source": {"records_mode": "list", "request_config": [{"show": {"ddo_map": [{"tipo": "test187", "parent": "test200", "section_tipo": "test183"}]}}]}, "observers": [{"info": "Property used for server side only", "section_tipo": "test183", "component_tipo": "test199"}], "config_relation": {"relation_type": "dd47", "relation_type_rel": "dd621"}}
 test199	test184	dd592	no	si	si	3	test	no	\N	\N	{"source": {"mode": "external", "request_config": [{"sqo": {"section_tipo": [{"value": ["test65"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "test159", "parent": "test199", "section_tipo": "self", "value_with_parents": true}, {"tipo": "test55", "parent": "test199", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 10}}, "search": {"ddo_map": [{"tipo": "test159", "parent": "test199", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 10}}}], "data_from_field": ["test200"], "section_to_search": ["test65"], "component_to_search": ["test188"]}, "observe": [{"info": "Observes 'equivalents para external' component_relation_related value changes to update this calculated value", "client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"config": {"use_self_section": true, "use_observable_dato": true}, "perform": {"params": {"save": true, "changed": false, "current_dato": false, "references_limit": 0}, "function": "set_dato_external"}}, "component_tipo": "test200"}, {"info": "Observes 'autocomple busca en autocomplete' component_autocomplete value changes to update this calculated value", "client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"config": {"use_self_section": false, "use_observable_dato": true}, "filter": {"$and": [{"q": "", "path": [{"section_tipo": "test183", "component_tipo": "test199"}]}]}, "perform": {"params": {"save": true, "changed": false, "current_dato": false, "references_limit": 0}, "function": "set_dato_external"}}, "component_tipo": "test188"}]}
@@ -175,6 +174,7 @@ test180	test158	dd52	no	si	si	12	test	no	\N	{"observe":[{"component_tipo":"test1
 test3	dd770	dd6	no	si	si	14	test	no	[{"dd626":"test24"}]	\N	{"api_config": {"entity": "zenon", "api_url": "https://zenon.dainst.org/api/v1/record", "ui_base_url": "https://zenon.dainst.org/Record/", "response_map": [{"local": "ar_records", "remote": "records"}, {"local": "msg", "remote": "status"}], "api_url_search": "https://zenon.dainst.org/api/v1/search"}, "search_engine": "search_zenon"}
 test45	test3	dd8	no	si	si	1	test	no	null	\N	\N
 test88	test45	dd80	no	si	si	3	test	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	\N
+test203	test3	dd91	no	si	si	2	test	no	[{"dd9":"test52"},{"dd10":"test17"},{"dd43":"test211"},{"dd635":"test145"},{"dd11":"test91"},{"dd1018":"test85"},{"dd686":"test177"},{"dd1741":"test26"},{"dd722":"test94"},{"dd749":"test99"}]	\N	\N
 test68	test45	dd487	no	si	si	14	test	no	\N	\N	{"inverse_show": {"section_id": true, "section_tipo": false, "section_label": true, "component_tipo": false, "component_label": false}}
 test91	test45	dd11	no	si	si	30	test	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	\N
 test178	test176	dd52	no	si	si	2	test	no	\N	{"observe":[{"component_tipo":"test139","filter":false,"event":"update_data","perform":"update_data"}],"widgets":[{"widget_name":"calculation","widget_info":"sum calc.","path":"\\/calculation","ipo":[{"input":{"section_tipo":"current","section_id":"current","filter":false,"value":"sum","components":[{"tipo":"test139","var_name":"numero"},{"tipo":"test139","var_name":"numero2"}]},"process":{"engine":"php","file":"\\/mdcat\\/calculation\\/mdcat.php","fn":"to_euros","options":{"years":true,"days":true,"total":false}},"output":[{"id":"total","value":"float","label_after":"euros"}]}]}]}	{"css": {".wrapper_component >.content_data": {"min-height": "80px"}}, "observe": [{"info": "Observes 'number' component_number value changes to update this calculated value", "client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "test139"}], "widgets": [{"ipo": [{"input": {"value": "sum", "filter": false, "components": [{"tipo": "test139", "var_name": "numero"}, {"tipo": "test139", "var_name": "numero2"}], "section_id": "current", "section_tipo": "current"}, "output": [{"id": "total", "value": "float", "label_after": "euros"}], "process": {"fn": "to_euros", "file": "/mdcat/calculation/mdcat.php", "engine": "php", "options": {"days": true, "total": false, "years": true}}}], "path": "/calculation", "widget_info": "sum calc.", "widget_name": "calculation"}]}
@@ -205,9 +205,9 @@ test89	test45	dd904	no	si	si	31	test	no	\N	\N	{"source": {"request_config": [{"s
 test17	test45	dd10	no	si	si	33	test	si	null	\N	\N
 test156	test158	dd352	no	si	si	24	test	no	\N	{"source":{"config_context":[{"type":"internal","section_tipo":"self","search":["test159"],"select":["test159"],"show":["test159"]}],"section_to_search XXX":["self"],"filter_by_list XXX":[{"section_tipo":"self","component_tipo":"test159"}],"type_map":{"test159":["string"]},"operator":"or","records_mode":"list"},"divisor":" | ","max_records":3}	{"source": {"operator": "or", "type_map": {"test159": ["string"]}, "records_mode": "list", "request_config": [{"show": {"ddo_map": [{"tipo": "test159", "parent": "self", "section_tipo": "self"}]}, "type": "internal", "search": {"ddo_map": [{"tipo": "test159", "parent": "self", "section_tipo": "self"}]}, "section_tipo": [{"source": "self"}]}], "filter_by_list XXX": [{"section_tipo": "self", "component_tipo": "test159"}], "section_to_search XXX": ["self"], "OLD_request_config XXX": [{"show": ["test159"], "type": "internal", "search": ["test159"], "select": ["test159"], "section_tipo": "self"}]}, "max_records": 3, "fields_separator": " | "}
 test168	test158	dd431	no	si	si	28	test	no	\N	{"config_relation":{"relation_type":"dd47","relation_type_rel":"dd621"},"source":{"config_context":[{"type":"internal","section_tipo":"self","search":["test159"],"select":["test159"],"show":["test159"]},{"type":"internal","section_tipo":"es1","search":["hierarchy25"],"select":["hierarchy25"],"show":["hierarchy25"]}],"filter_by_list":[{"section_tipo":"self","component_tipo":"test159"},{"section_tipo":"es1","component_tipo":"hierarchy25"}],"section_to_search XXX":["self"],"type_map":{"test159":["string"]},"operator":"or","records_mode":"list"},"divisor":" | ","max_records":5}	{"source": {"operator": "or", "type_map": {"test159": ["string"]}, "records_mode": "list", "filter_by_list": [{"section_tipo": "self", "component_tipo": "test159"}, {"section_tipo": "es1", "component_tipo": "hierarchy25"}], "request_config": [{"show": {"ddo_map": [{"tipo": "test159", "parent": "self", "section_tipo": "self"}]}, "type": "internal", "search": {"ddo_map": [{"tipo": "test159", "parent": "self", "section_tipo": "self"}]}, "section_tipo": [{"source": "self"}]}], "config_context XXXX": [{"show": ["test159"], "type": "internal", "search": ["test159"], "select": ["test159"], "section_tipo": "self"}, {"show": ["hierarchy25"], "type": "internal", "search": ["hierarchy25"], "select": ["hierarchy25"], "section_tipo": "es1"}], "section_to_search XXX": ["self"]}, "max_records": 5, "config_relation": {"relation_type": "dd47", "relation_type_rel": "dd621"}, "fields_separator": " | "}
-test11	test209	dd1231	no	si	si	9	test	no	[{"dd479":"test69"}]	\N	\N
+test11	test209	dd1231	no	si	si	10	test	no	[{"dd479":"test69"}]	\N	\N
 test179	test158	dd52	no	si	si	11	test	no	\N	{"observe":[{"component_tipo":"test139","filter":false,"event":"update_data","perform":"update_data"}],"widgets":[{"widget_name":"calculation","widget_info":"sum calc.","path":"\\/calculation","ipo":[{"input":{"section_tipo":"current","section_id":"current","filter":false,"components":[{"tipo":"test139","var_name":"total_days"}]},"process":{"engine":"php","file":"\\/mdcat\\/calculation\\/mdcat.php","fn":"calculate_period","options":{"label":true,"years":true,"months":true,"days":true,"separator":", ","total":false}},"output":[{"id":"years","value":"int","label_after_singular":"anyo","label_after":"anyos","separator":", "},{"id":"months","value":"int","label_after_singular":"mes","label_after":"meses","separator":", "},{"id":"days","value":"int","label_after_singular":"dia","label_after":"dias"}]}]}]}	{"css": {".wrapper_component >.content_data": {"min-height": "80px"}}, "observe": [{"client": {"event": "update_value", "perform": {"function": "refresh"}}, "server": {"filter": false}, "component_tipo": "test139"}], "widgets": [{"ipo": [{"input": {"filter": false, "components": [{"tipo": "test139", "var_name": "total_days"}], "section_id": "current", "section_tipo": "current"}, "output": [{"id": "years", "value": "int", "separator": ", ", "label_after": "anyos", "label_after_singular": "anyo"}, {"id": "months", "value": "int", "separator": ", ", "label_after": "meses", "label_after_singular": "mes"}, {"id": "days", "value": "int", "label_after": "dias", "label_after_singular": "dia"}], "process": {"fn": "calculate_period", "file": "/mdcat/calculation/mdcat.php", "engine": "php", "options": {"days": true, "label": true, "total": false, "years": true, "months": true, "separator": ", "}}}], "path": "/calculation", "widget_info": "sum calc.", "widget_name": "calculation"}]}
-test30	test209	dd1231	no	si	si	12	test	no	[{"dd9":"test52"}]	\N	\N
+test30	test209	dd1231	no	si	si	13	test	no	[{"dd9":"test52"}]	\N	\N
 test21	oh88	dd347	no	si	si	16	test	no	[{"dd1229":"test209"}]	\N	\N
 test80	test45	dd592	no	si	si	20	test	no	[{"dd6":"test3"},{"dd9":"test52"}]	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["test3"], "source": "section"}]}, "show": {"ddo_map": [{"info": "component_input_text traducible", "mode": "list", "tipo": "test52", "parent": "self", "section_tipo": "self"}]}, "search": {"ddo_map": [{"tipo": "test52", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}}
 test100	test45	dd66	no	si	si	10	test	no	[{"dd10":"test84"}]	\N	{"css": {".wrapper_component >.content_data": {"min-height": "500px"}}, "observe": [{"client": {"event": "click_tag_geo", "perform": {"function": "load_tag_into_geo_editor"}}, "component_tipo": "test84"}, {"client": {"event": "key_up_f2", "perform": {"function": "get_data_tag"}}, "component_tipo": "test84"}, {"client": {"event": "editor_tag_geo_change", "perform": {"function": "layer_data_change"}}, "component_tipo": "test84"}, {"client": {"event": "update_value", "perform": {"function": "map_update_coordinates"}}, "component_tipo": "test9"}]}

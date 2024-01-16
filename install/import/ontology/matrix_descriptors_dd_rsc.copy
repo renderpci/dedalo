@@ -6326,76 +6326,91 @@ rsc1162	Διαγραφή	termino	lg-ell
 rsc1168	Precisione	termino	lg-ita
 rsc1172	Tipo di precisione	termino	lg-ita
 rsc1177	Höhenlage	termino	lg-deu
+rsc1178	Nuevo	termino	lg-spa
+rsc1183	Images	termino	lg-fra
 rsc1152	Références aux personnes	termino	lg-fra
 rsc1158	Indexación	termino	lg-spa
 rsc1163	Últimos cambios	termino	lg-spa
 rsc1168	Précision	termino	lg-fra
 rsc1173	Proyecto	termino	lg-spa
 rsc1177	Altitud	termino	lg-cat
+rsc1178	New	termino	lg-eng
 rsc1152	Αναφορές προσώπων	termino	lg-ell
 rsc1158	Indexation	termino	lg-eng
 rsc1163	Lasts changes	termino	lg-eng
 rsc1168	Genauigkeit	termino	lg-deu
 rsc1173	Project	termino	lg-cat
 rsc1177	Altitude	termino	lg-fra
+rsc1178	Nou	termino	lg-cat
 rsc1153	Identificación	termino	lg-spa
 rsc1158	Indexació	termino	lg-cat
 rsc1163	Últims canvis	termino	lg-cat
 rsc1173	Projekt	termino	lg-deu
 rsc1177	Altitudine	termino	lg-ita
+rsc1178	Neu	termino	lg-deu
 rsc1153	Indentification	termino	lg-eng
 rsc1158	Indexierung	termino	lg-deu
 rsc1163	Letzte Änderungen	termino	lg-deu
 rsc1168	Precisió	termino	lg-cat
 rsc1173	Projet	termino	lg-fra
 rsc924	"	termino	lg-fra
+rsc1178	Nouveau	termino	lg-fra
 rsc1153	Identificació	termino	lg-cat
 rsc1158	Ευρετηρίαση	termino	lg-ell
 rsc1163	Τελευταίες αλλαγές	termino	lg-ell
 rsc1169	Tipos de precisión	termino	lg-spa
 rsc1173	Project	termino	lg-eng
 rsc924	"	termino	lg-ita
+rsc1178	Nuovo	termino	lg-ita
 rsc1153	Kennzeichnung	termino	lg-deu
 rsc1158	Indexation	termino	lg-fra
 rsc1163	Derniers changements	termino	lg-fra
 rsc1169	Types of accuracy	termino	lg-eng
 rsc1173	Progetto	termino	lg-ita
 rsc924	"	termino	lg-cat
+rsc1179	Borrar	termino	lg-spa
 rsc1153	ταυτοποίηση	termino	lg-ell
 rsc1159	Proyecto	termino	lg-spa
 rsc1163	Ultime modifiche	termino	lg-ita
 rsc1169	Arten der Genauigkeit	termino	lg-deu
 rsc1174	Nuevo	termino	lg-spa
+rsc1179	Delete	termino	lg-eng
 rsc1153	Identification	termino	lg-fra
 rsc1159	Project	termino	lg-eng
 rsc1164	Relaciones	termino	lg-spa
 rsc1166	Resumen	termino	lg-spa
 rsc1169	Types de précision	termino	lg-fra
 rsc1174	New	termino	lg-eng
+rsc1179	Esborrar	termino	lg-cat
 rsc1154	Id	termino	lg-spa
 rsc1159	Projecte	termino	lg-cat
 rsc1164	Relations	termino	lg-eng
 rsc1166	Abstract	termino	lg-eng
 rsc1169	Tipi di precisione	termino	lg-ita
 rsc1174	Nou	termino	lg-cat
+rsc1179	Löschen	termino	lg-deu
 rsc1154	Id	termino	lg-eng
 rsc1159	Projet	termino	lg-fra
 rsc1164	Relacions	termino	lg-cat
 rsc1166	Resum	termino	lg-cat
 rsc1170	Identificación	termino	lg-spa
 rsc1174	Neu	termino	lg-deu
+rsc1179	Cancellare	termino	lg-ita
 rsc1154	Id	termino	lg-cat
 rsc1159	Projekt	termino	lg-deu
 rsc1164	Beziehungen	termino	lg-deu
 rsc1166	Abstrakt	termino	lg-deu
 rsc1170	Identification	termino	lg-eng
 rsc1174	Nouveau	termino	lg-fra
+rsc1179	Supprimer	termino	lg-fra
+rsc1180	Nuevo	termino	lg-spa
 rsc1154	Id	termino	lg-deu
 rsc1159	Έργο	termino	lg-ell
 rsc1164	Relazioni	termino	lg-ita
 rsc1166	Περίληψη	termino	lg-ell
 rsc1170	Identificació	termino	lg-cat
 rsc1174	Nuovo	termino	lg-ita
+rsc1180	New	termino	lg-eng
 rsc1039	Persona	termino	lg-spa
 rsc1154	Id	termino	lg-ell
 rsc1159	Progetto	termino	lg-ita
@@ -6403,6 +6418,7 @@ rsc1164	Σχέσεις	termino	lg-ell
 rsc1166	Résumé	termino	lg-fra
 rsc1170	Identifizierung	termino	lg-deu
 rsc1175	Borrar	termino	lg-spa
+rsc1180	Nou	termino	lg-cat
 rsc1039	Person	termino	lg-eng
 rsc1154	It	termino	lg-ita
 rsc1160	Listado	termino	lg-spa
@@ -6410,50 +6426,67 @@ rsc1164	Relations	termino	lg-fra
 rsc1166	Sintesi	termino	lg-ita
 rsc1170	Identification	termino	lg-fra
 rsc1175	Delete	termino	lg-eng
+rsc1180	New	termino	lg-deu
 rsc1039	Person	termino	lg-deu
 rsc1155	Rol	termino	lg-spa
 rsc1160	List	termino	lg-eng
 rsc1170	Identificazione	termino	lg-ita
 rsc1175	Esborrar	termino	lg-cat
+rsc1180	Nouveau	termino	lg-fra
+rsc1182	Cita	termino	lg-spa
 rsc1039	Personne	termino	lg-fra
 rsc1155	Role	termino	lg-eng
 rsc1160	Llistat	termino	lg-cat
 rsc1171	Id	termino	lg-spa
 rsc1175	Löschen	termino	lg-deu
+rsc1180	Nuovo	termino	lg-ita
+rsc1182	Citation	termino	lg-eng
 rsc1039	Persona	termino	lg-ita
 rsc1155	Rôle	termino	lg-fra
 rsc1160	Liste	termino	lg-fra
 rsc1171	Id	termino	lg-eng
 rsc1175	Cancellare	termino	lg-ita
+rsc1181	Borrar	termino	lg-spa
+rsc1182	Cita	termino	lg-cat
 rsc1155	Rolle	termino	lg-deu
 rsc1160	Elenco	termino	lg-ita
 rsc1171	Id	termino	lg-cat
 rsc1175	Supprimer	termino	lg-fra
 rsc924	"	termino	lg-spa
+rsc1181	Delete	termino	lg-eng
+rsc1182	Zitat	termino	lg-deu
 rsc1155	Ruolo	termino	lg-ita
 rsc1160	Auflistung	termino	lg-deu
 rsc1165	Publicable	termino	lg-spa
 rsc1171	Id	termino	lg-deu
 rsc1176	Lista	termino	lg-spa
 rsc924	"	termino	lg-deu
+rsc1181	Esborrar	termino	lg-cat
+rsc1182	Citation	termino	lg-fra
 rsc1155	Ρόλος	termino	lg-ell
 rsc1160	Λίστα	termino	lg-ell
 rsc1165	Publishable	termino	lg-eng
 rsc1167	Notas	termino	lg-spa
 rsc1171	Id	termino	lg-fra
 rsc1176	List	termino	lg-eng
+rsc1181	Löschen	termino	lg-deu
+rsc1182	Citazione	termino	lg-ita
 rsc1156	Persona	termino	lg-spa
 rsc1161	Nuevo	termino	lg-spa
 rsc1165	Publicable	termino	lg-cat
 rsc1167	Remark	termino	lg-eng
 rsc1171	Id	termino	lg-ita
 rsc1176	Llistat	termino	lg-cat
+rsc1181	Supprimer	termino	lg-fra
+rsc1182	Παραπομπή	termino	lg-ell
 rsc1156	Person	termino	lg-eng
 rsc1161	New	termino	lg-eng
 rsc1165	Pubblicabile	termino	lg-ita
 rsc1167	Bemerkung	termino	lg-deu
 rsc1172	Tipo de precisión	termino	lg-spa
 rsc1176	Liste	termino	lg-deu
+rsc1181	Cancellare	termino	lg-ita
+rsc1183	Imagenes	termino	lg-spa
 rsc1152	Referencias de personas	termino	lg-spa
 rsc1156	Persona	termino	lg-cat
 rsc1161	Nou	termino	lg-cat
@@ -6461,12 +6494,14 @@ rsc1165	Druckreif	termino	lg-deu
 rsc1167	Notes	termino	lg-fra
 rsc1172	Type of accuracy	termino	lg-eng
 rsc1176	Liste	termino	lg-fra
+rsc1183	Imatges	termino	lg-cat
 rsc1152	People references	termino	lg-eng
 rsc1156	Person	termino	lg-deu
 rsc1161	Neu	termino	lg-deu
 rsc1167	Note	termino	lg-ita
 rsc1172	Tipo de precisió	termino	lg-cat
 rsc1176	Elenco	termino	lg-ita
+rsc1183	Images	termino	lg-eng
 rsc1152	References de persones	termino	lg-cat
 rsc1156	Πρόσωπο	termino	lg-ell
 rsc1161	Νέο	termino	lg-ell
@@ -6474,9 +6509,11 @@ rsc1165	Publiable	termino	lg-fra
 rsc1168	Precisión	termino	lg-spa
 rsc1172	Art der Genauigkeit	termino	lg-deu
 rsc1177	Altitud	termino	lg-spa
+rsc1183	Bilder	termino	lg-deu
 rsc1152	Persönliche Referenzen	termino	lg-deu
 rsc1156	Persona	termino	lg-ita
 rsc1161	Nuovo	termino	lg-ita
 rsc1168	Accuracy	termino	lg-eng
 rsc1172	Type de précision	termino	lg-fra
 rsc1177	Altitude	termino	lg-eng
+rsc1183	εικόνες	termino	lg-ell

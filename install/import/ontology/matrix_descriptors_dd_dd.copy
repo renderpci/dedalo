@@ -1610,7 +1610,6 @@ dd197	Modificado por usuario	termino	lg-spa
 dd197	Modificat per l&#039;usuari	termino	lg-cat
 dd197	Modificato per utente	termino	lg-ita
 dd197	Τροποποιήθηκε από το χρήστη	termino	lg-ell
-dd198	button_search	termino	lg-spa
 dd199	Data de creació	termino	lg-cat
 dd199	Data della creazione	termino	lg-ita
 dd199	Fecha de creación	termino	lg-spa
@@ -1697,6 +1696,7 @@ dd217	extensión	termino	lg-spa
 dd217	επέκταση	termino	lg-ell
 dd218	Registres visualitzats	termino	lg-cat
 dd218	Registri visualizzati	termino	lg-ita
+dd198	component_dataframe	termino	lg-spa
 dd218	Registros visualizados	termino	lg-spa
 dd218	εμφανίζονται τα αρχεία	termino	lg-ell
 dd1611	Εγγραφή εργαλείου	termino	lg-ell
@@ -8195,7 +8195,7 @@ dd1555	SVG	termino	lg-eng
 dd1635	bibliography_data	termino	lg-spa
 dd1637	bibliographic_references	termino	lg-spa
 dd1646	activities	termino	lg-spa
-dd1	Dédalo 2023-12-26T18:27:28+01:00 Benimamet	termino	lg-spa
+dd1	Dédalo 2024-01-16T09:46:51+01:00 Benimamet	termino	lg-spa
 dd1631	RECYCLE DD +	termino	lg-spa
 dd82	matrix_activities	termino	lg-spa
 dd1647	matrix_nexus	termino	lg-spa
