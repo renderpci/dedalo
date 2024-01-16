@@ -546,9 +546,8 @@ page.prototype.add_events = function() {
 
 				case evt.key==='Escape':
 					// inactive user activated component
-						if (ui.component.component_active) {
-							ui.component.deactivate(ui.component.component_active)
-							ui.component.component_active = null
+						if (page_globals.component_active) {
+							ui.component.deactivate(page_globals.component_active)
 						}
 					break;
 
