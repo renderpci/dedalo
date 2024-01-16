@@ -1693,7 +1693,7 @@ mdcat1792	Hospital Militar	termino	lg-spa
 mdcat1793	Fondos bibliográficos	termino	lg-spa
 mdcat1793	Fonts bibliogràfiques	termino	lg-cat
 mdcat1794	Fondos documentales	termino	lg-spa
-mdcat1779	Cierre y localización	termino	lg-spa
+mdcat1779	Cierre	termino	lg-spa
 mdcat1794	Fonts documentals	termino	lg-cat
 mdcat1795	Notas sobre la fosa	termino	lg-spa
 mdcat1795	Notes sobre la fossa	termino	lg-cat
@@ -4941,7 +4941,6 @@ mdcat3343	Id	termino	lg-spa
 mdcat3344	Agrupación BI	termino	lg-spa
 mdcat3344	Agrupament BI	termino	lg-cat
 mdcat3345	DIV muerte	termino	lg-spa
-mdcat3346	DIV muerte	termino	lg-spa
 mdcat4385	Id	termino	lg-cat
 mdcat3348	1936	termino	lg-spa
 mdcat335	Exclosos	termino	lg-cat
@@ -8035,7 +8034,6 @@ mdcat4281	Estatura mín. cm.	termino	lg-spa
 mdcat4281	Estaura mín. cm.	termino	lg-cat
 mdcat4294	Estatura máx. cm.	termino	lg-spa
 mdcat4294	Estatura máx. cm.	termino	lg-cat
-mdcat4295	geojson	termino	lg-spa
 mdcat3778	Tipo	termino	lg-spa
 mdcat4296	Individuos exhumados tipo	termino	lg-spa
 mdcat4296	Individus exhumats tipus	termino	lg-cat
@@ -10110,7 +10108,6 @@ mdcat3342	Liste	termino	lg-fra
 mdcat3343	Id	termino	lg-fra
 mdcat3344	Groupement BI	termino	lg-fra
 mdcat3345	DIV mort	termino	lg-fra
-mdcat3346	DIV mort	termino	lg-fra
 mdcat3347	Municipalité de naissance 1936	termino	lg-fra
 mdcat3348	1936	termino	lg-fra
 mdcat3349	Municipalité de résidence 1936	termino	lg-fra
@@ -12810,7 +12807,6 @@ mdcat3342	List	termino	lg-eng
 mdcat3343	Id	termino	lg-eng
 mdcat3344	BI pool	termino	lg-eng
 mdcat3345	DIV death	termino	lg-eng
-mdcat3346	DIV death	termino	lg-eng
 mdcat3347	Municipality of birth 1936	termino	lg-eng
 mdcat3348	1936	termino	lg-eng
 mdcat3349	Municipality of residence 1936	termino	lg-eng
@@ -14619,14 +14615,23 @@ mdcat4470	ref_stolpersteine_municipi_nom_rec	termino	lg-spa
 mdcat4422	Comunicaciones con los solicitantes	termino	lg-spa
 mdcat4472	Identificación	termino	lg-spa
 mdcat4472	Identificació	termino	lg-cat
+mdcat3346	Indexación	termino	lg-spa
 mdcat4473	Id	termino	lg-spa
+mdcat3346	Indexació	termino	lg-cat
 mdcat4473	Id	termino	lg-cat
+mdcat3346	Indexation	termino	lg-eng
 mdcat4474	Fecha	termino	lg-spa
+mdcat3346	Indexation	termino	lg-fra
 mdcat4474	Data	termino	lg-cat
+mdcat4486	Indexación	termino	lg-spa
 mdcat4475	Notas	termino	lg-spa
+mdcat4486	Indexació	termino	lg-cat
 mdcat4475	Notes	termino	lg-eng
+mdcat4487	Indexación	termino	lg-spa
 mdcat4476	Documento	termino	lg-spa
+mdcat4487	Indeació	termino	lg-cat
 mdcat4476	Document	termino	lg-cat
+mdcat4487	Indexation	termino	lg-eng
 mdcat4477	Proyecto	termino	lg-spa
 mdcat4477	Projecte	termino	lg-cat
 mdcat4478	Nuevo	termino	lg-spa
@@ -14636,16 +14641,20 @@ mdcat4479	Esborrar	termino	lg-cat
 mdcat4480	Listado	termino	lg-spa
 mdcat4480	Llistat	termino	lg-cat
 mdcat4481	Listado	termino	lg-spa
-mdcat1779	Tancament i localització	termino	lg-cat
 mdcat4481	Llistat	termino	lg-cat
-mdcat1779	Fermeture et localisation	termino	lg-fra
+mdcat1779	Tancament	termino	lg-cat
 mdcat4482	Últimos cambios	termino	lg-spa
-mdcat1779	Closure and location	termino	lg-eng
+mdcat1779	Fermeture	termino	lg-fra
 mdcat4482	Últims canvis	termino	lg-cat
+mdcat1779	Closure	termino	lg-eng
 mdcat4483	Relaciones	termino	lg-spa
 mdcat4471	Guiá de la investigación	termino	lg-spa
 mdcat4483	Relacions	termino	lg-cat
+mdcat4485	Localización	termino	lg-spa
+mdcat4295	geojson	termino	lg-spa
 mdcat4471	Guia de la recerca	termino	lg-cat
 mdcat4484	Comunicaciones con los solicitantes	termino	lg-spa
+mdcat4485	localització	termino	lg-cat
 mdcat4422	Comunicacions amb els sol·licitants	termino	lg-cat
 mdcat4484	Comunicacions amb els sol·licitants	termino	lg-cat
+mdcat4485	Location	termino	lg-eng
