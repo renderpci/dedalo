@@ -1037,21 +1037,23 @@ final class dd_utils_api {
 			$tmp_url = DEDALO_UPLOAD_TMP_URL . '/'. $user_id . '/' . $key_dir;
 
 		// read files dir
-			$files		= [];
-			$files_raw	= scandir($tmp_dir);
-			foreach ($files_raw as $file_name) {
-				$file_path = $tmp_dir . '/' . $file_name;
+			$files = [];
+			if (is_dir($tmp_dir)) {
+				$files_raw	= scandir($tmp_dir);
+				foreach ($files_raw as $file_name) {
+					$file_path = $tmp_dir . '/' . $file_name;
 
-				if (strlen($file_name) > 0 && $file_name[0]!=='.' && is_file($file_path)) {
+					if (strlen($file_name) > 0 && $file_name[0]!=='.' && is_file($file_path)) {
 
-					$info		= pathinfo($file_name);
-					$basemane	= basename($file_name,'.'.$info['extension']);
+						$info		= pathinfo($file_name);
+						$basemane	= basename($file_name,'.'.$info['extension']);
 
-					$files[] = (object)[
-						'url'	=> $tmp_url .'/thumbnail/'. $basemane . '.jpg',
-						'name'	=> $file_name,
-						'size'	=> filesize($file_path)
-					];
+						$files[] = (object)[
+							'url'	=> $tmp_url .'/thumbnail/'. $basemane . '.jpg',
+							'name'	=> $file_name,
+							'size'	=> filesize($file_path)
+						];
+					}
 				}
 			}
 
