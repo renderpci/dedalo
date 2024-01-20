@@ -133,8 +133,7 @@ const get_content_data = function(self) {
 			})
 			button_search.addEventListener('click', function(e){
 				e.stopPropagation()
-				const section_id = self.caller.id
-				event_manager.publish('toggle_search_panel_'+section_id)
+				event_manager.publish('toggle_search_panel_' + self.caller.id)
 			})
 
 		// button_new . Call API to create new section and navigate to the new record
@@ -164,8 +163,8 @@ const get_content_data = function(self) {
 				button_duplicate.addEventListener('click', (e) => {
 					e.stopPropagation()
 					event_manager.publish('duplicate_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
 				})
@@ -183,8 +182,8 @@ const get_content_data = function(self) {
 				button_delete.addEventListener('click', (e) => {
 					e.stopPropagation()
 					event_manager.publish('delete_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
 				})
@@ -1109,8 +1108,6 @@ const render_relation_list = function(self) {
 		})
 		async function load_relation_list( instance ) {
 
-			self.section_id	= self.caller.section_id
-
 			relation_list_head.classList.add('up')
 
 			const relation_list_tipo = self.caller.context.config.relation_list_tipo
@@ -1120,8 +1117,8 @@ const render_relation_list = function(self) {
 				: await instances.get_instance({
 					model			: 'relation_list',
 					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
 					mode			: self.mode
 				})
 
@@ -1133,7 +1130,6 @@ const render_relation_list = function(self) {
 			relation_list_body.appendChild(relation_list_container)
 		}
 		function unload_relation_list() {
-			self.section_id = self.caller.section_id
 
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild);
@@ -1239,7 +1235,7 @@ export const load_time_machine_list = async function(self) {
 	// create and render a service_time_machine instance
 		const service_time_machine	= await instances.get_instance({
 			model			: 'service_time_machine',
-			section_tipo	: self.section_tipo,
+			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			view			: 'mini',
 			id_variant		: self.section_tipo + '_tm_list',
@@ -1247,7 +1243,7 @@ export const load_time_machine_list = async function(self) {
 			config			: {
 				id					: 'section_history',
 				model				: 'dd_grid', // used to create the filter
-				tipo				: self.section_tipo, // used to create the filter
+				tipo				: self.caller.section_tipo, // used to create the filter
 				template_columns	: '1fr 1fr 1fr 2fr',
 				ignore_columns		: [
 					'matrix_id' // matrix_id dd1573
@@ -1400,7 +1396,7 @@ export const load_component_history = async function(self, component) {
 	// create and render a component_history instance
 		const service_time_machine	= await instances.get_instance({
 			model			: 'service_time_machine',
-			section_tipo	: self.section_tipo,
+			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			view			: 'history',
 			id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',
