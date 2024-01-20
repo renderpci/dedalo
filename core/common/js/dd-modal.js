@@ -111,7 +111,7 @@ class DDModal extends HTMLElement {
 					cursor: pointer;
 				}
 
-			/* The Close Button */
+			/* Close Button */
 				.close_modal {
 					color: white;
 					font-size: 1.75rem;
@@ -294,6 +294,7 @@ class DDModal extends HTMLElement {
 						clickedDragger = true;
 					}
 					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
+
 						// draggable is set (all modal-content)
 						self.drag_data.target = path[i];
 						self.drag_data.target.classList.add('dragging');
@@ -312,11 +313,10 @@ class DDModal extends HTMLElement {
 			});
 
 			// mouseup
-				document.addEventListener('mouseup', this.mouseup)
+			document.addEventListener('mouseup', this.mouseup)
 
 			// mousemove
-				document.addEventListener('mousemove', this.mousemove)
-
+			document.addEventListener('mousemove', this.mousemove)
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);

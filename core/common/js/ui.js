@@ -2207,7 +2207,7 @@ export const ui = {
 				modal_container.remove()
 			}
 
-		// header . Add node header to modal header and insert it into slot
+		// header. Add node header to modal header and insert it into slot
 			if (header) {
 				header.slot = 'header'
 				if (!header.classList.contains('header')) {
@@ -2223,7 +2223,7 @@ export const ui = {
 				modal_container.appendChild(header_blank)
 			}
 
-		// body . Add  wrapper to modal body and insert it into slot
+		// body. Add  wrapper to modal body and insert it into slot
 			if (body) {
 				body.slot = 'body'
 				if (!body.classList.contains('body')) {
@@ -2232,7 +2232,7 @@ export const ui = {
 				modal_container.appendChild(body)
 			}
 
-		// footer . Add node footer to modal footer and insert it into slot
+		// footer. Add node footer to modal footer and insert it into slot
 			if (footer) {
 				footer.slot = 'footer'
 				if (!footer.classList.contains('footer')) {
