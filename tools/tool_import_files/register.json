@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 1,
-              "hour": 21,
-              "time": 65047699106,
-              "year": 2023,
-              "month": 11,
-              "minute": 18,
-              "second": 26
+              "day": 18,
+              "hour": 13,
+              "time": 65054496725,
+              "year": 2024,
+              "month": 1,
+              "minute": 32,
+              "second": 5
             }
           }
         ]
@@ -91,7 +91,7 @@
           "<p>Dateien auf den Server hochladen und verarbeiten</p>"
         ],
         "lg-eng": [
-          "<p>Upload files to the server and procesed it</p>"
+          "<p>Upload files to the server and processed it.</p><p>This tool does not appear in all the selected components, only in the correctly configured ones (by configuring the ontology properties).</p>"
         ],
         "lg-fra": [
           "<p>Télécharger des fichiers sur le serveur et les traiter</p>"
@@ -109,9 +109,6 @@
       "dato": {
         "lg-eng": [
           "Tool import files"
-        ],
-        "lg-spa": [
-          ""
         ]
       }
     },
@@ -133,7 +130,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -153,6 +150,14 @@
             "open_as": "window",
             "windowFeatures": null
           }
+        ]
+      }
+    },
+    "dd1362": {
+      "inf": "Implementación [component_text_area]",
+      "dato": {
+        "lg-nolan": [
+          "<p>To activate this tool, set a component_portal Ontology properties to configure it.</p><p>Sample from component oh17 (section oh1 - Oral History)</p><p>&nbsp;</p><p>\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_import_files\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_date\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc44\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_filename\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc398\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc52\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc31\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc23\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p>"
         ]
       }
     },
@@ -297,7 +302,7 @@
   "section_id": 19,
   "created_date": "2023-11-01 21:16:17",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-01 21:18:26",
+  "modified_date": "2024-01-18 13:32:05",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
