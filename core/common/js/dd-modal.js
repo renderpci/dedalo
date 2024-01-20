@@ -46,10 +46,11 @@ class DDModal extends HTMLElement {
 
 			/* Modal Content */
 				.modal-content {
+					display: grid;
 					position: relative;
 					background-color: #fefefe;
 					margin: auto;
-					margin-top: 3.5vh;
+					top: 3.5vh;
 					padding: 0;
 					padding-bottom: 1.5rem;
 					width: 80%;
@@ -69,13 +70,18 @@ class DDModal extends HTMLElement {
 					animation-name: animatetop;
 					animation-duration: 0.4s;
 					*/
-					display: grid;
 					/*grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);*/
 				}
 				@media screen and (max-width: 1024px) {
 					.modal-content {
 						width: 98%;
 					}
+				}
+				.modal-content.center {
+					position: absolute;
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%);
 				}
 				.dragging {
 					cursor: move;
@@ -269,6 +275,8 @@ class DDModal extends HTMLElement {
 		document.addEventListener('keyup', this.detect_key)
 		window.modal = this // fix modal in window for easy access to close
 
+		this.modal_content = this.shadowRoot.querySelector(".modal-content")
+
 		// draggable modal feature
 			const self = this
 
@@ -282,7 +290,14 @@ class DDModal extends HTMLElement {
 
 			// header is the drag area
 			const header = this.shadowRoot.querySelector(".modal-header")
-			header.addEventListener('mousedown', function(e) {
+			header.addEventListener('mousedown', (e) => {
+
+				// re-calculate the top style based on current position (centered case)
+					if (this.modal_content.classList.contains('center')) {
+						const modal_content_dimensions = this.modal_content.getBoundingClientRect()
+						this.modal_content.style.top = modal_content_dimensions.top + 'px'
+						this.modal_content.classList.remove('center')
+					}
 
 				const path = e.composedPath();
 
@@ -524,6 +539,7 @@ class DDModal extends HTMLElement {
 	*/
 	detect_key(e) {
 		if (e.keyCode===27 && window.modal) {
+			e.preventDefault()
 			window.modal._closeModal()
 			window.modal = null
 			return
