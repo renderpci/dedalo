@@ -9,7 +9,6 @@
 	// import {tr} from '../../common/js/tr.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import * as instances from '../../common/js/instances.js'
-	// import {service_tinymce} from '../../services/service_tinymce/js/service_tinymce.js'
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
 
