@@ -3076,6 +3076,20 @@ export const ui = {
 	*/
 	enter_fullscreen : function(node) {
 
+		// check if node is inside modal
+		// Remove dd-modal class list 'center' in this case
+			let parent = node.parentNode
+			while(parent) {
+				parent = parent.parentNode
+				if (parent && parent.nodeName==='DD-MODAL') {
+					// remove class center if exits
+					if (parent.modal_content.classList.contains('center')) {
+						parent.modal_content.classList.remove('center')
+					}
+					break;
+				}
+			}
+
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
 
