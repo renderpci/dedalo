@@ -2176,6 +2176,7 @@ export const ui = {
 			const remove_overlay	= options.remove_overlay || false
 			const minimizable		= options.minimizable ?? true
 			const on_close			= options.on_close || null
+			const callback			= options.callback || null
 
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.pageYOffset || 0
@@ -2296,6 +2297,11 @@ export const ui = {
 					// exec callback
 					on_close()
 				}
+			}
+
+		// callback
+			if (callback && typeof callback=='function') {
+				callback(modal_container)
 			}
 
 		// modal_container mousedown event
