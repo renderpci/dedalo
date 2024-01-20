@@ -1104,13 +1104,25 @@ export const render_references = function(ar_references) {
 		// button_link
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button link',
+				class_name		: 'button link grey',
 				parent			: li
 			})
 			button_link.addEventListener('click', function(e){
 				e.stopPropagation()
-				window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-				// window.open(url,'ref_edit')
+
+				// window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&mode=edit&id='+ reference.value.section_id
+
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: reference.value.section_tipo,
+					id				: reference.value.section_id,
+					mode			: 'edit',
+					session_save	: false, // prevent to overwrite current section session
+					menu			: false
+				})
+				new_window = open_window({
+					url		: url,
+					name	: 'record_view_' + reference.value.section_tipo +'_'+ reference.value.section_id
+				})
 			})
 		// label
 			const button_edit = ui.create_dom_element({
