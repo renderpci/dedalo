@@ -60,6 +60,11 @@ abstract class backup {
 						#throw new Exception(" Error on read or create backup directory. Permission denied");
 						$response->result	= false;
 						$response->msg		= "Error on read or create backup directory. Permission denied ".__METHOD__;
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. ' file_path: ' . to_string($file_path)
+							, logger::ERROR
+						);
 						return $response;
 					}
 					debug_log(__METHOD__
