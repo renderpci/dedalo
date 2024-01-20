@@ -40,10 +40,17 @@ view_default_list_filter.render = async function(self, options) {
 		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			self.change_mode({
-				mode : 'edit',
-				view : 'line'
-			})
+			// inline way
+				// self.change_mode({
+				// 	mode : 'edit',
+				// 	view : 'line'
+				// })
+
+			// modal way
+				ui.render_edit_modal({
+					self	: self,
+					e		: e
+				})
 		})
 
 
