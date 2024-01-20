@@ -49,11 +49,30 @@ view_default_list_text_area.render = async function(self, options) {
 		if (self.show_interface.read_only!==true) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
-				/**
-				 * @todo Working here to allow inline editor
-				 * */
-				// modal
-				render_edit_modal(self)
+
+				// modal way
+					// lang. Use lang from data instead from context because the problem with component_text_area context lang
+					const lang = self.data && self.data.lang
+						? self.data.lang
+						: self.lang
+					// modal
+					ui.render_edit_modal({
+						self		: self,
+						e			: e,
+						lang		: lang, // to use in new instance
+						callback	: (dd_modal) => {
+							dd_modal.modal_content.style.width = '90%'
+
+							dd_modal.on_close = () => {
+								// force to preserve the editing language (can be different from the language in list mode)
+								self.lang = lang
+								// refresh whole component
+								self.refresh({
+									autoload : false
+								})
+							}
+						}
+					})
 			})
 		}
 
@@ -74,80 +93,6 @@ view_default_list_text_area.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-
-/**
-* RENDER_EDIT_MODAL
-* Creates a modal container where place a new component instance in edit mode
-* @param object self
-* @return HTMLElement modal_node
-*/
-const render_edit_modal = async function(self) {
-
-	// lang. Use lang from data instead from context because the problem with component_text_area context lang
-		const lang = self.data && self.data.lang
-			? self.data.lang
-			: self.lang
-
-	// header
-		const header = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'header'
-		})
-		// header_label_node
-		const header_label_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'label',
-			inner_html		: (get_label.edit || 'Edit') + ' ' + self.label + ' - ID: ' + self.section_id,
-			parent			: header
-		})
-
-	// body
-		const body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'body content'
-		})
-		// component instance
-		const instance = await instances.get_instance({
-			model			: self.model,
-			tipo			: self.tipo,
-			section_tipo	: self.section_tipo || self.tipo,
-			section_id		: self.section_id,
-			mode			: 'edit',
-			view			: null, // self.view || self.context?.view || null, // 'default',
-			lang			: lang
-		})
-		instance.auto_init_editor = true
-		await instance.build(true)
-		const node = await instance.render()
-		body.appendChild(node)
-		ui.component.activate(instance)
-
-	// footer
-		const footer = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'footer content distribute'
-		})
-
-	const modal_node = ui.attach_to_modal({
-		header	: header,
-		body	: body,
-		footer	: footer,
-		on_close : () => {
-			// force to preserve the editing language (can be different from the language in list mode)
-			self.lang = lang
-			// refresh whole component
-			self.refresh({
-				autoload : false
-			})
-		}
-		// size	: 'normal' // string size big|normal|small
-	})
-
-
-	return modal_node
-}//end render_edit_modal
 
 
 

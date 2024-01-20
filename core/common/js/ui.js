@@ -16,7 +16,8 @@
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {get_instance, get_all_instances} from '../../common/js/instances.js'
+	import * as instances from '../../common/js/instances.js'
+	// import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 
@@ -2344,7 +2345,7 @@ export const ui = {
 			}
 
 		// instance search. Get the instance of the component that was created by the section in build-render process
-			const all_instances	= get_all_instances()
+			const all_instances	= instances.get_all_instances()
 			const component		= all_instances.find( el =>
 				el.tipo === first_ddo.tipo &&
 				el.section_tipo === section_tipo &&
@@ -3208,7 +3209,97 @@ export const ui = {
 
 
 		return result_node
-	}//end load_item_with_spinner
+	},//end load_item_with_spinner
+
+
+
+	/**
+	* RENDER_EDIT_MODAL
+	* Render a component into a modal window
+	* Used for section list records to allow users edit inline big
+	* components like component_text_area
+	* @param object options
+	* 	{
+	* 		self		: object,
+	* 		e			: mouse event,
+	* 		callback	: function,
+	* 		lang		: string
+	* 	}
+	* @return HTMLElement result_node
+	*/
+	render_edit_modal : async function(options) {
+
+		// options
+			const self		= options.self // component instance
+			const e			= options.e // mouse event
+			const callback	= options.callback // function optional
+			const lang		= options.lang // string optional
+
+		// header
+			const header = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'header'
+			})
+			// header_label_node
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: (get_label.edit || 'Edit') + ' ' + self.label + ' - ID: ' + self.section_id,
+				parent			: header
+			})
+
+		// body
+			const body = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'body content'
+			})
+			// component instance
+			const instance = await instances.get_instance({
+				model			: self.model,
+				tipo			: self.tipo,
+				section_tipo	: self.section_tipo || self.tipo,
+				section_id		: self.section_id,
+				mode			: 'edit',
+				view			: null, // self.view || self.context?.view || null, // 'default',
+				lang			: lang || self.lang
+			})
+			await instance.build(true)
+			const node = await instance.render()
+			body.appendChild(node)
+			ui.component.activate(instance)
+
+		// footer
+			const footer = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'footer content distribute'
+			})
+
+		const modal_node = ui.attach_to_modal({
+			header	: header,
+			body	: body,
+			footer	: footer,
+			on_close : () => {
+				// refresh whole component
+				// self.refresh({
+				// 	autoload : false
+				// })
+			},
+			callback : (dd_modal) => {
+				// re-size and position the modal content
+				dd_modal.modal_content.classList.add('center')
+				dd_modal.modal_content.style.width = '30rem'
+				// dd_modal.modal_content.style.top = (e.clientY + 25) + 'px'
+
+				if (callback) {
+					callback(dd_modal)
+				}
+			},
+			size	: 'normal' // string size big|normal|small
+		})
+
+
+		return modal_node
+	}//end render_edit_modal
 
 
 
