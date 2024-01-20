@@ -55,10 +55,9 @@ inspector.prototype.init = async function(options) {
 	self.id								= 'inspector_' + options.section_tipo
 	self.model							= 'inspector'
 	self.section_tipo					= options.section_tipo
-	self.section_id						= options.section_id
 	self.mode							= 'edit'
 	self.node							= null
-	self.caller							= options.caller
+	self.caller							= options.caller // section instance
 
 	self.actived_component				= null
 
