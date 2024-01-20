@@ -2209,12 +2209,13 @@ abstract class component_common extends common {
 	}//end get_ar_list_of_values
 
 
+
 	/**
 	* GET_LIST_OF_VALUES
 	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
 	* It will use by component_select, component_check_box, component_radio_button .. to show the possibles values of the component
 	* Use the request_config of the component to get the ddo_map to show and the ddo_map to hide (use as internal data values)
-	* @param string $lang used to resolve the litera
+	* @param string $lang used to resolve the literal
 	* @return object $response
 	*/
 	public function get_list_of_values(string $lang) : object {
@@ -2233,7 +2234,10 @@ abstract class component_common extends common {
 			$dedalo_request_config = array_find($request_config, function($el){
 				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
-
+			// if the component has not created his own request_config, create new one
+			$dedalo_request_config = isset($dedalo_request_config)
+				? $dedalo_request_config
+				: $this->build_request_config()[0];
 
 		$result = [];
 
@@ -2360,7 +2364,6 @@ abstract class component_common extends common {
 
 			debug_log(__METHOD__
 				. " Error: component without requetst_config!!!" .PHP_EOL
-				. ' model: ' . get_called_class() . PHP_EOL
 				. ' tipo: ' . $this->tipo . PHP_EOL
 				. ' section_id: '. $this->section_id .PHP_EOL
 				. ' section_tipo: '. $this->section_tipo
@@ -2369,16 +2372,36 @@ abstract class component_common extends common {
 			return $response;
 		}
 
+		// Sort result for easy user select
+			if(isset($this->properties->sort_by)){
+				$custom_sort = reset($this->properties->sort_by); // Only one at this time
+				if ($custom_sort->direction==='DESC') {
+					usort($result, function($a,$b) use($custom_sort){
+						return strnatcmp($b->{$custom_sort->path}, $a->{$custom_sort->path});
+					});
+				}else{
+					usort($result, function($a,$b) use($custom_sort){
+						return strnatcmp($a->{$custom_sort->path}, $b->{$custom_sort->path});
+					});
+				}
+			}else{
+				// Default. Alphabetic ascendant label
+				usort($result, function($a,$b){
+					return strnatcmp($a->label, $b->label);
+				});
+			}
+
 		// response OK
 			$response->result	= (array)$result;
 			$response->msg		= 'Ok';
 			if(SHOW_DEBUG===true) {
 				// $response->request_config	= json_encode($request_config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-				$response->debug			= 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
+				$response->debug = 'Total time: ' . exec_time_unit($start_time,'ms').' ms';
 			}
 
 		// cache adds the response to cache to be reused
 			$list_of_values_data[$uid] = $response;
+
 
 		return $response;
 	}//end get_list_of_values
