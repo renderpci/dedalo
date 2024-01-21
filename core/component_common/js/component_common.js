@@ -1348,6 +1348,10 @@ export const save_unsaved_components = async function() {
 
 		const item = ar_instances[i]
 		if (item.type==='component') {
+			if (!item.data) {
+				console.error('))) Ignored item without data:', item);
+				return true
+			}
 			if (item.data.changed_data && item.data.changed_data.length>0) {
 				console.log('Saving component unsaved', item);
 				await item.save()
