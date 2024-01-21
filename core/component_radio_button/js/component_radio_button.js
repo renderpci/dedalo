@@ -90,4 +90,17 @@ component_radio_button.prototype.get_checked_value_label = function() {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Captures ui.component.activate calls
+* to prevent default behavior
+* @return bool
+*/
+component_radio_button.prototype.focus_first_input = function() {
+
+	return true
+}//end focus_first_input
+
+
+
 // @license-end
