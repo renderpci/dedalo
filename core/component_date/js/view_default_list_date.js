@@ -31,12 +31,8 @@ export const view_default_list_date = function() {
 view_default_list_date.render = async function(self, options) {
 
 	// short vars
-		// const data			= self.data || {}
-		// const value			= data.value || ''
-		// const value_string	= value
-
-	const ar_value		= get_ar_raw_data_value(self)
-	const value_string	= ar_value.join(self.context.fields_separator)
+		const ar_value		= get_ar_raw_data_value(self)
+		const value_string	= ar_value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {

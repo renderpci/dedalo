@@ -120,9 +120,9 @@ component_email.prototype.send_email = function(value) {
 	if(email.length<1){
 		return false
 	}
-	
+
 	window.location.href = 'mailto:' + email
-	
+
 
 	return true
 }//end send_email

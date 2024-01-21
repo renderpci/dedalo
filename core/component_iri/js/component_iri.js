@@ -14,7 +14,7 @@
 
 
 
-export const component_iri = function(){
+export const component_iri = function() {
 
 	this.id
 
