@@ -30,6 +30,9 @@ export const component_radio_button = function(){
 	this.data
 	this.parent
 	this.node
+
+	// ui
+	this.minimum_width_px = 90 // integer pixels
 }//end component_radio_button
 
 
