@@ -31,6 +31,9 @@ export const component_iri = function(){
 	this.data
 	this.parent
 	this.node
+
+	// ui
+	this.minimum_width_px = 135 // integer pixels
 }//end component_iri
 
 

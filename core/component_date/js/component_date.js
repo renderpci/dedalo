@@ -36,6 +36,9 @@ export const component_date = function() {
 
 	this.date_separator	= '/'
 	this.time_separator	= ':'
+
+	// ui
+	this.minimum_width_px = 140 // integer pixels
 }//end component_date
 
 

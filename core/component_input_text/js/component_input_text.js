@@ -38,6 +38,9 @@ export const component_input_text = function(){
 	this.tools			= null
 
 	this.duplicates		= false
+
+	// ui
+	this.minimum_width_px = 90 // integer pixels
 }//end component_input_text
 
 

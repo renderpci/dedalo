@@ -33,6 +33,9 @@ export const component_email = function(){
 	this.node			= null
 
 	this.tools			= null
+
+	// ui
+	this.minimum_width_px = 100 // integer pixels
 }//end component_email
 
 
