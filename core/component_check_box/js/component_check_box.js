@@ -182,4 +182,17 @@ component_check_box.prototype.change_handler = async function(options) {
 
 
 
+/**
+* FOCUS_FIRST_INPUT
+* Captures ui.component.activate calls
+* to prevent default behavior
+* @return bool
+*/
+component_check_box.prototype.focus_first_input = function() {
+
+	return true
+}//end focus_first_input
+
+
+
 // @license-end
