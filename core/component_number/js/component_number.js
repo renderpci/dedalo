@@ -32,7 +32,7 @@ export const component_number = function(){
 	this.node
 
 	// ui
-	this.minimum_width_px = 800 // integer pixels
+	this.minimum_width_px = 80 // integer pixels
 }//end component_number
 
 
