@@ -3755,7 +3755,7 @@ class section extends common {
 										$note_model,
 										$current_ddo_tipo,
 										$note_section_id,
-										$mode,
+										'edit', // use edit mode to get full value
 										$ddo->lang ?? DEDALO_DATA_LANG,
 										$sqo->section_tipo
 									);

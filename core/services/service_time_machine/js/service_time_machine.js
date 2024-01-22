@@ -400,6 +400,25 @@ service_time_machine.prototype.build_request_config = function() {
 			// add defaults
 			ddo_map.push(...default_ddo_map)
 
+		// tool view case
+			if (self.view==='tool' && model.includes('component')) {
+				ddo_map.push(
+					// annotations rsc329 (section_tipo "rsc832")
+					{
+						id				: 'annotations',
+						tipo			: 'rsc329',
+						type			: 'component',
+						typo			: 'ddo',
+						model			: 'component_text_area',
+						section_tipo	: 'rsc832',
+						parent			: section_tipo,
+						debug_label		: 'annotations',
+						mode			: 'tm',
+						view			: 'mini'
+					}
+				)
+			}
+
 		// config_ddo_map. Additional ddo array
 			if (config_ddo_map) {
 				const config_ddo_map_length = config_ddo_map.length
