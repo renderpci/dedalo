@@ -885,6 +885,12 @@ export const get_buttons = (self) => {
 								class_name		: 'select_section' + (target_section_length===1 ? ' mono' : ''),
 								parent			: header_custom
 							})
+							select_section.addEventListener('click', function(e){
+								e.stopPropagation()
+							})
+							select_section.addEventListener('mousedown', function(e){
+								e.stopPropagation()
+							})
 							select_section.addEventListener('change', function(){
 								iframe.src = get_iframe_url(this.value)
 							})
