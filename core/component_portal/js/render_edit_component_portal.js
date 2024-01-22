@@ -499,7 +499,7 @@ export const render_column_remove = function(options) {
 		const section_buttons		= target_section_ddo.buttons || []
 		const button_delete			= section_buttons.find(el => el.model==='button_delete')
 
-		if(button_delete && button_delete.permissions>1) {
+		if(button_delete) {
 
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
@@ -626,10 +626,13 @@ export const render_column_remove = function(options) {
 
 				// modal
 					const modal = ui.attach_to_modal({
-						header	: header,
-						body	: body,
-						footer	: footer,
-						size	: 'small' // string size big|normal
+						header		: header,
+						body		: body,
+						footer		: footer,
+						size		: 'small', // string size big|normal
+						callback	: (dd_modal) => {
+							dd_modal.modal_content.style.width = '30rem'
+						}
 					})
 					// set the default button to be fired when the modal is active
 					// when the user press the Enter key in the keyboard
