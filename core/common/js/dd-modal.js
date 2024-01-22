@@ -556,7 +556,7 @@ class DDModal extends HTMLElement {
 		const self = window.modal
 
 		// no target case (mouse position changes but target is null or undefined)
-			if (!self.drag_data.target) {
+			if (!self.drag_data || !self.drag_data.target) {
 				return;
 			}
 
