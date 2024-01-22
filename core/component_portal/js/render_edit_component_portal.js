@@ -629,7 +629,7 @@ export const render_column_remove = function(options) {
 						header		: header,
 						body		: body,
 						footer		: footer,
-						size		: 'small', // string size big|normal
+						size		: 'normal', // string size big|normal
 						callback	: (dd_modal) => {
 							dd_modal.modal_content.style.width = '30rem'
 						}
