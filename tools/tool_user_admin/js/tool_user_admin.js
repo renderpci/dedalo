@@ -89,6 +89,14 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 
 	try {
 
+		// demo user case in demo installation. Generates and exception and control will be passed to the catch block
+		// Note that the server security controls already handle this situation for added security
+			const dedalo_entity	= page_globals.dedalo_entity
+			const username		= page_globals.username
+			if (dedalo_entity==='dedalo_demo' && username==='dedalo') {
+				throw('Tool not allowed. dedalo_entity "dedalo_demo" cannot change user dedalo configuration')
+			}
+
 		// specific actions.. like fix main_element for convenience
 			self.user_section = await self.build_user_section()
 
