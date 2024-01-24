@@ -521,8 +521,8 @@ class component_security_access extends component_common {
 		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
 
 			debug_log(__METHOD__
-				. " (1 start) user_id: " .$user_id
-				. ' ))) launching datalist ///////////////////////////////////////////////////////////// '
+				. " (1 start) user_id: " .$user_id. ' ('.DEDALO_APPLICATION_LANG.')'
+				. ' ))) launching datalist ///////////////////////////////////////////////////// '
 				, logger::WARNING
 			);
 
