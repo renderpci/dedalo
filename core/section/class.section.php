@@ -4357,7 +4357,9 @@ class section extends common {
 			if ($this->permissions<2 &&
 				$this->tipo===DEDALO_SECTION_USERS_TIPO &&
 				$this->section_id==$user_id) {
-				return 1;
+
+				$this->permissions = 1; // set to 1 to allow tool_user_admin access
+				return $this->permissions;
 			}
 
 		// maintains dedalo_activity_section_tipo < 2 to prevent edition

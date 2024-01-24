@@ -5,7 +5,7 @@
 
 
 // import needed modules
-	import {clone} from '../../../core/common/js/utils/index.js'
+	// import {clone} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -17,7 +17,7 @@
 
 /**
 * TOOL_USER_ADMIN
-* Tool to make interesting things
+* Tool to manage user auto change values like email or password
 */
 export const tool_user_admin = function () {
 
@@ -34,7 +34,7 @@ export const tool_user_admin = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-}//end page
+}//end tool_user_admin
 
 
 
@@ -66,7 +66,6 @@ tool_user_admin.prototype.init = async function(options) {
 
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
-
 
 	// set the self specific vars not defined by the generic init (in tool_common)
 
