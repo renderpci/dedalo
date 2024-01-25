@@ -1614,14 +1614,16 @@
 		}
 	}
 }
+
 .media_wrapper.list.wrapper_component {
-	&.view_default {
+	&.view_default, &.view_mosaic {
 		height: var(--view_line_height); // 5rem;
 		@media screen and (max-width: @width_break_point_0) {
 			background-color: unset !important;
 		}
 	}
 }
+
 // prevents component_3d an other media to loose the necessary height in the
 // upload window preview
 .preview_component_container {
@@ -1631,6 +1633,7 @@
 		}
 	}
 }
+
 // affects all media components span wrapper (3d,av,image,pdf,svg)
 .media.view_text {
 	height: var(--view_text_height); //	2rem;
