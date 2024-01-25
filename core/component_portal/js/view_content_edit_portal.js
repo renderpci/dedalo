@@ -98,8 +98,13 @@ view_content_edit_portal.render = async function(self, options) {
 		wrapper.content_data	= content_data
 
 	// autocomplete
-		wrapper.addEventListener('click', function() {
-			activate_autocomplete(self, wrapper)
+		wrapper.addEventListener('click', function(e) {
+			e.stopPropagation()
+			setTimeout(function(){
+				if (self.active) {
+					activate_autocomplete(self, wrapper)
+				}
+			}, 1)
 		})
 
 
