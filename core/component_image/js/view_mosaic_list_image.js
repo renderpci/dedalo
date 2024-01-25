@@ -43,7 +43,7 @@ view_mosaic_list_image.render = function(self, options) {
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : false
 		})
-		wrapper.classList.add('media')
+		wrapper.classList.add('media','media_wrapper')
 		wrapper.appendChild(content_data)
 		// add pointers
 		wrapper.content_data = content_data
