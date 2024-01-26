@@ -73,6 +73,14 @@ data_manager.request = async function(options) {
 					resolve(e.data.api_response)
 				}
 			})
+			.catch(error => {
+				console.error(error)
+				return {
+					result	: false,
+					msg		: error.message,
+					error	: error
+				}
+			});
 		}
 
 	// check url
