@@ -359,10 +359,6 @@ abstract class common {
 				// if(!isset($this->matrix_table))
 				// $this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
 
-			// notify : We notify the loading of the element to common
-				$model_name = get_called_class();
-				common::notify_load_lib_element_tipo($model_name, $this->mode);
-
 			// bl_loaded_structure_data
 				$this->bl_loaded_structure_data = true;
 		}
