@@ -2253,7 +2253,7 @@ abstract class common {
 						$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
 
 						debug_log(
-							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms',
+							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms' . ' ---- ' . $related_element->get_model(),
 							logger::DEBUG
 						);
 					}
@@ -2370,6 +2370,7 @@ abstract class common {
 	* @return array $this->request_config
 	*/
 	public function build_request_config() : array {
+		$start_time=start_time();
 
 		// already fixed value case
 			if (isset($this->request_config)) {
@@ -2660,6 +2661,12 @@ abstract class common {
 			// 				dd_core_api::$request_ddo_value[] = $ddo;
 			// 			}
 			// 		}
+
+		// debug
+			debug_log(
+				'------- build_request_config --------- '.$this->tipo.' ---------------- '.exec_time_unit($start_time,'ms').' ms' . ' --- ' . get_called_class() . ' -- ' . $resolved_key,
+				logger::DEBUG
+			);
 
 
 		return $this->request_config;
