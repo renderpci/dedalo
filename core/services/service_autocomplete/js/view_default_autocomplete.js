@@ -1243,9 +1243,11 @@ const render_datalist = async function(self, result) {
 	// mouseenter_handler
 		async function mouseenter_handler(e){
 			// reset
-				const children = e.target.parentNode.children;
-				await [...children].map((el)=>{
-					if(el.classList.contains('selected')) el.classList.remove('selected')
+				const children = e.target.parentNode.children || [];
+				[...children].map((el)=>{
+					if(el.classList.contains('selected')) {
+						el.classList.remove('selected')
+					}
 				})
 			// set as selected
 				e.target.classList.add('selected')
