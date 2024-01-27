@@ -693,25 +693,6 @@ abstract class common {
 
 
 	/**
-	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
-	*/
-		// public static function notify_load_lib_element_tipo(string $model_name, string $mode) : bool {
-
-		// 	#if ($mode!=='edit') {
-		// 	#	return false;
-		// 	#}
-
-		// 	if (empty($model_name) || in_array($model_name, common::$ar_loaded_models_name)) {
-		// 		return false;
-		// 	}
-		// 	common::$ar_loaded_models_name[] = $model_name;
-
-		// 	return true;
-		// }//end notify_load_lib_element_tipo
-
-
-
-	/**
 	* SETVAR
 	* @param string $name
 	* @param mixed $default = false
@@ -837,13 +818,18 @@ abstract class common {
 	* @param string $lang
 	*	Default DEDALO_DATA_LANG
 	* @return array $ar_all_langs_resolved
+	* [
+	*	lg-spa : Spanish,
+	*   lg-eng : English,
+	*   ..
+	* ]
 	*/
 	public static function get_ar_all_langs_resolved( string $lang=DEDALO_DATA_LANG ) : array {
 
 		$ar_all_langs = common::get_ar_all_langs();
 
 		$ar_all_langs_resolved = [];
-		foreach ((array)$ar_all_langs as $current_lang) {
+		foreach ($ar_all_langs as $current_lang) {
 
 			$lang_name = lang::get_name_from_code( $current_lang, $lang );
 			$ar_all_langs_resolved[$current_lang] = $lang_name;
@@ -866,10 +852,8 @@ abstract class common {
 			: $this->RecordObj_dd->get_properties(); // already parsed
 
 		if ($properties===false) {
-			// dump($this, ' this setting properties false as null ++ '.to_string($this->tipo));
 			$properties = null;
 		}
-
 
 		return $properties;
 	}//end get_properties
@@ -878,6 +862,7 @@ abstract class common {
 
 	/**
 	* SET_PROPERTIES
+	* @param mixed $value
 	* @return bool
 	*/
 	public function set_properties($value) : bool {
@@ -886,11 +871,12 @@ abstract class common {
 			? json_decode($value)
 			: $value;
 
-		# Fix properties object|null
+		// Fix properties object|null
 		$this->properties = $properties;
 
 		return true;
 	}//end set_properties
+
 
 
 	/**
@@ -1269,7 +1255,7 @@ abstract class common {
 
 	/**
 	* BUILD_ELEMENT_JSON_OUTPUT
-	* Simply group context and data into a ¡n object and encode as JSON string
+	* It simply groups the context and the data into one object.
 	* @param array $context
 	* @param array $data
 	* @return object $result
