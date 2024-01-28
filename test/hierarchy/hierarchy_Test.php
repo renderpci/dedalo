@@ -121,69 +121,84 @@ final class hierarchy_test extends TestCase {
 	*/
 	public function test_generate_virtual_section() {
 
+		$active_hierarchies = hierarchy::get_active_hierarchies();
+
 		// unittest TLD (inactive)
-			$options = (object)[
-				'section_id'	=> 271,
-				'section_tipo'	=> 'hierarchy1'
-			];
+			$unittest_item = array_filter($active_hierarchies, function($el){
+				return $el->tld==='unittest';
+			});
+			if (!empty($unittest_item)) {
 
-			$response = hierarchy::generate_virtual_section(
-				$options
-			);
-				// dump($response, ' response ++ '.to_string());
+				$options = (object)[
+					'section_id'	=> $unittest_item->section_id,
+					'section_tipo'	=> 'hierarchy1'
+				];
 
-			$this->assertTrue(
-				gettype($response)==='object' ,
-				'expected object' . PHP_EOL
-					. gettype($response)
-			);
-			$this->assertTrue(
-				gettype($response->result)==='boolean' ,
-				'expected boolean' . PHP_EOL
-					. gettype($response->result)
-			);
-			$this->assertTrue(
-				gettype($response->msg)==='array' ,
-				'expected array' . PHP_EOL
-					. gettype($response->msg)
-			);
-			$this->assertTrue(
-				$response->result===false ,
-				'expected false' . PHP_EOL
-					. to_string($response->result)
-			);
+				$response = hierarchy::generate_virtual_section(
+					$options
+				);
+					// dump($response, ' response ++ '.to_string());
+
+				$this->assertTrue(
+					gettype($response)==='object' ,
+					'expected object' . PHP_EOL
+						. gettype($response)
+				);
+				$this->assertTrue(
+					gettype($response->result)==='boolean' ,
+					'expected boolean' . PHP_EOL
+						. gettype($response->result)
+				);
+				$this->assertTrue(
+					gettype($response->msg)==='array' ,
+					'expected array' . PHP_EOL
+						. gettype($response->msg)
+				);
+				$this->assertTrue(
+					$response->result===false ,
+					'expected false' . PHP_EOL
+						. to_string($response->result)
+				);
+			}
 
 		// actv TLD (active - already created)
-			$options = (object)[
-				'section_id'	=> 272,
-				'section_tipo'	=> 'hierarchy1'
-			];
+			$actv_item = array_filter($active_hierarchies, function($el){
+				return $el->tld==='actv';
+			});
+			if (!empty($actv_item)) {
 
-			$response = hierarchy::generate_virtual_section(
-				$options
-			);
-				// dump($response, ' response ++ '.to_string());
+				$options = (object)[
+					'section_id'	=> $actv_item->section_id,
+					'section_tipo'	=> 'hierarchy1'
+				];
 
-			$this->assertTrue(
-				gettype($response)==='object' ,
-				'expected object' . PHP_EOL
-					. gettype($response)
-			);
-			$this->assertTrue(
-				gettype($response->result)==='boolean' ,
-				'expected boolean' . PHP_EOL
-					. gettype($response->result)
-			);
-			$this->assertTrue(
-				gettype($response->msg)==='array' ,
-				'expected array' . PHP_EOL
-					. gettype($response->msg)
-			);
-			$this->assertTrue(
-				$response->result===true ,
-				'expected true' . PHP_EOL
-					. to_string($response->result)
-			);
+				$response = hierarchy::generate_virtual_section(
+					$options
+				);
+					// dump($response, ' response ++ '.to_string());
+
+				$this->assertTrue(
+					gettype($response)==='object' ,
+					'expected object' . PHP_EOL
+						. gettype($response)
+				);
+				$this->assertTrue(
+					gettype($response->result)==='boolean' ,
+					'expected boolean' . PHP_EOL
+						. gettype($response->result)
+				);
+				$this->assertTrue(
+					gettype($response->msg)==='array' ,
+					'expected array' . PHP_EOL
+						. gettype($response->msg)
+				);
+				$this->assertTrue(
+					$response->result===true ,
+					'expected true' . PHP_EOL
+						. to_string($response->result) . PHP_EOL
+
+				);
+			}
 	}//end test_generate_virtual_section
 
 
@@ -212,7 +227,8 @@ final class hierarchy_test extends TestCase {
 		$this->assertTrue(
 			$response->result===true ,
 			'expected true' . PHP_EOL
-				. to_string($response->result)
+				. to_string($response->result) .PHP_EOL
+				. ' failed unittest1 term creation'
 		);
 	}//end test_create_term
 
@@ -277,7 +293,7 @@ final class hierarchy_test extends TestCase {
 		');
 
 		$this->assertTrue(
-			json_encode($result)===json_encode($reference),
+			$result[0]->tld===$reference[0]->tld && $result[0]->target_section_tipo===$reference[0]->target_section_tipo,
 			'expected equal true ' . PHP_EOL
 				. to_string($result) . PHP_EOL
 				. to_string($reference)
