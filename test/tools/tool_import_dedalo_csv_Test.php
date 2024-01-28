@@ -437,7 +437,16 @@ final class tool_import_dedalo_csv_Test extends TestCase {
 			// target file
 				$target_file = tool_import_dedalo_csv::get_files_path() .'/'. $file_name;
 
-				copy($source_test_file, $target_file);
+				$copy = copy($source_test_file, $target_file);
+				if (!$copy) {
+					debug_log(__METHOD__
+						." Error copying file ". PHP_EOL
+						.' source_test_file: ' . $source_test_file . PHP_EOL
+						.' target_file: ' . $target_file . PHP_EOL
+						.' sourcefile_exists: ' . to_string( file_exists($source_test_file) )
+						, logger::ERROR
+					);
+				}
 
 				$result = file_exists($target_file);
 				$this->assertTrue(
