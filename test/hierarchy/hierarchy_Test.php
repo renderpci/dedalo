@@ -124,7 +124,7 @@ final class hierarchy_test extends TestCase {
 		$active_hierarchies = hierarchy::get_active_hierarchies();
 
 		// unittest TLD (inactive)
-			$unittest_item = array_filter($active_hierarchies, function($el){
+			$unittest_item = array_find($active_hierarchies, function($el){
 				return $el->tld==='unittest';
 			});
 			if (!empty($unittest_item)) {
@@ -162,7 +162,7 @@ final class hierarchy_test extends TestCase {
 			}
 
 		// actv TLD (active - already created)
-			$actv_item = array_filter($active_hierarchies, function($el){
+			$actv_item = array_find($active_hierarchies, function($el){
 				return $el->tld==='actv';
 			});
 			if (!empty($actv_item)) {
