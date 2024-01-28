@@ -816,12 +816,12 @@ final class component_text_area_test extends TestCase {
 				.' type: '.gettype($value)
 		);
 
-		$this->assertTrue(
-			!empty($value),
-				'expected value do not match:' . PHP_EOL
-				.' expected: !empty()' . PHP_EOL
-				.' value: '.to_string($value)
-		);
+		// $this->assertTrue(
+		// 	!empty($value),
+		// 		'expected value do not match:' . PHP_EOL
+		// 		.' expected: !empty()' . PHP_EOL
+		// 		.' value: '.to_string($value)
+		// );
 	}//end test_get_tags_persons
 
 

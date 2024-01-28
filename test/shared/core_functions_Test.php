@@ -121,7 +121,9 @@ final class core_functions_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
-				. to_string( $eq )
+				. to_string( $eq ) .PHP_EOL
+				. ' response code: ' . to_string( $response->code ) . PHP_EOL
+				. ' api_url: ' . $api_url
 		);
 	}//end test_curl_request
 
