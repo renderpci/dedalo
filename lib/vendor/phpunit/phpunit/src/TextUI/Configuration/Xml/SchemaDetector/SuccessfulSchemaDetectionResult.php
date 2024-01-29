@@ -16,18 +16,30 @@ namespace PHPUnit\TextUI\XmlConfiguration;
  */
 final class SuccessfulSchemaDetectionResult extends SchemaDetectionResult
 {
+    /**
+     * @psalm-var non-empty-string
+     */
     private readonly string $version;
 
+    /**
+     * @psalm-param non-empty-string $version
+     */
     public function __construct(string $version)
     {
         $this->version = $version;
     }
 
+    /**
+     * @psalm-assert-if-true SuccessfulSchemaDetectionResult $this
+     */
     public function detected(): bool
     {
         return true;
     }
 
+    /**
+     * @psalm-return non-empty-string
+     */
     public function version(): string
     {
         return $this->version;
