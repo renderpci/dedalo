@@ -5,7 +5,7 @@
 
 
 // imports
-	import {clone, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {clone, url_vars_to_object, object_to_url_vars, dd_console} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import * as instances from '../../common/js/instances.js'
@@ -893,6 +893,7 @@ section.prototype.build = async function(autoload=false) {
 *	node first DOM node stored in instance 'node' array
 */
 section.prototype.render = async function(options={}) {
+	const t0 = performance.now()
 
 	const self = this
 
@@ -904,6 +905,9 @@ section.prototype.render = async function(options={}) {
 
 	// add node to instance
 		self.node = result_node
+
+	// debug
+		dd_console(`__Time to render ${self.model} ${Math.round(performance.now()-t0)} ms`, 'DEBUG')
 
 	return result_node
 }//end render
