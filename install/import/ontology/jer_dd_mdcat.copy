@@ -22,8 +22,8 @@ mdcat2206	mdcat2198	dd1231	no	si	si	8	mdcat	si	[{"dd442":"mdcat1325"}]	{"option_
 mdcat1412	mdcat1757	dd6	no	si	si	6	mdcat	no	\N	\N	\N
 mdcat1389	mdcat1388	dd8	no	si	si	1	mdcat	no	\N	\N	\N
 mdcat1413	mdcat1412	dd8	no	si	si	1	mdcat	no	\N	\N	\N
-mdcat622	dd14	dd4	no	si	si	18	mdcat	no	\N	\N	\N
 mdcat1755	mdcat1739	dd8	no	si	si	3	mdcat	no	\N		null
+mdcat622	dd14	dd4	no	si	si	18	mdcat	no	\N	\N	\N
 mdcat2240	mdcat2198	dd1235	no	si	si	43	mdcat	si	[{"dd592":"mdcat1486"}]	{"varchar":1024,"process_dato":"diffusion_sql::resolve_value","process_dato_arguments":{"target_component_tipo":"rsc89","component_method":"get_diffusion_value"}}	\N
 mdcat2686	mdcat2681	dd183	no	si	si	3	mdcat	no	\N	\N	\N
 mdcat3403	mdcat3000	dd177	no	si	si	2	mdcat	no	\N	\N	\N
@@ -2975,8 +2975,8 @@ mdcat612	mdcat597	dd91	no	si	si	3	mdcat	no	[{"dd339":"mdcat92"},{"dd43":"mdcat60
 mdcat1115	mdcat138	dd1231	no	si	si	31	mdcat	si	[{"dd592":"mdcat856"}]		null
 mdcat1279	mdcat495	dd1235	no	si	si	23	mdcat	si	[{"dd592":"mdcat602"}]	{\r\n  "varchar": 1024,\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "rsc91",\r\n    "component_method": "map_locator_to_term_id",\r\n    "output": "merged",\r\n    "custom_arguments": [\r\n      {\r\n        "add_parents": false\r\n      }\r\n    ]\r\n  }\r\n}	{"varchar": 1024, "process_dato": "diffusion_sql::resolve_value", "process_dato_arguments": {"output": "merged", "component_method": "map_locator_to_term_id", "custom_arguments": [{"add_parents": false}], "target_component_tipo": "rsc91"}}
 mdcat3631	mdcat4345	dd91	no	si	si	2	mdcat	si	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"},{"dd635":"rsc89"}]	\N	\N
-mdcat596	dd351	dd4	no	si	si	1	mdcat	si	\N	\N	\N
 mdcat1792	mdcat1890	dd10	no	si	si	1	mdcat	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"100%"}}}}	\N
+mdcat596	dd351	dd4	no	si	si	1	mdcat	si	\N	\N	\N
 mdcat3610	mdcat138	dd1231	no	si	si	55	mdcat	si	[{"dd442":"mdcat860"}]	{\r\n  "process_dato": "diffusion_sql::map_locator_to_terminoID",\r\n  "process_dato_arguments": {\r\n    "custom_arguments": {\r\n      "add_parents": true\r\n    }\r\n  }\r\n}	{"process_dato": "diffusion_sql::map_locator_to_terminoID", "process_dato_arguments": {"custom_arguments": {"add_parents": true}}}
 mdcat3624	mdcat1164	dd1231	no	si	si	40	mdcat	si	[{"dd592":"mdcat624"}]	{\r\n  "process_dato": "diffusion_sql::resolve_value",\r\n  "process_dato_arguments": {\r\n    "target_component_tipo": "mdcat708",\r\n    "component_method": "map_locator_to_term_id",\r\n    "output": "merged",\r\n    "custom_arguments": [\r\n      {\r\n        "add_parents": true\r\n      }\r\n    ]\r\n  }\r\n}	{"process_dato": "diffusion_sql::resolve_value", "process_dato_arguments": {"output": "merged", "component_method": "map_locator_to_term_id", "custom_arguments": [{"add_parents": true}], "target_component_tipo": "mdcat708"}}
 mdcat3586	mdcat3592	dd57	no	si	si	8	mdcat	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".line_top"], "style": {"width": "25%"}}}}

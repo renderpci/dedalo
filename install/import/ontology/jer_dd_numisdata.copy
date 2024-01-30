@@ -31,10 +31,10 @@ numisdata638	numisdata409	dd347	no	si	si	8	numisdata	si	[{"dd1229":"hierarchy79"
 numisdata639	numisdata409	dd347	no	si	si	9	numisdata	si	[{"dd1229":"numisdata540"}]	\N	\N
 numisdata640	numisdata409	dd347	no	si	si	10	numisdata	si	[{"dd1229":"numisdata506"}]	\N	\N
 numisdata2	numisdata701	dd1231	no	si	si	2	numisdata	no	[{"dd9":"numisdata211"}]		\N
-numisdata856	numisdata869	dd347	no	si	si	30	numisdata	si	[{"dd1229":"dd1364"}]	\N	\N
 numisdata364	numisdata355	dd592	no	si	si	7	numisdata	no	[{"dd6":"rsc170"},{"dd339":"rsc20"},{"dd9":"rsc21"},{"dd9":"rsc23"},{"dd9":"rsc31"},{"dd749":"rsc29"}]	\N	{"css": {".wrapper_component": {"grid-column": "span 10"}}}
 numisdata649	numisdata409	dd347	no	si	si	14	numisdata	si	[{"dd1229":"numisdata391"}]	\N	\N
 numisdata650	numisdata348	dd4	no	si	si	2	numisdata	no	\N	\N	\N
+numisdata856	numisdata869	dd347	no	si	si	30	numisdata	si	[{"dd1229":"rsc1186"}]	\N	\N
 numisdata1099	numisdata1096	dd1233	no	si	si	1	numisdata	si	[{"dd339":"dd1539"}]	{\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	{"enum": {"1": "si", "2": "no"}, "exclude_column": true, "data_to_be_used": "dato"}
 numisdata708	numisdata869	dd1229	no	si	si	19	numisdata	si	[{"dd6":"numisdatacatalog1"}]	\N	\N
 numisdata704	numisdata701	dd1231	no	si	si	15	numisdata	si	[{"dd442":"numisdata260"}]	{"source":{"divisor":", ","records_separator":" - "}}	\N
@@ -1393,8 +1393,8 @@ numisdata1408	numisdata1398	dd91	no	si	si	5	numisdata	si	[{"dd339":"numisdata140
 numisdata1411	numisdata1410	dd6	no	si	si	2	numisdata	no	\N	\N	\N
 numisdata1416	numisdata375	dd6	no	si	si	13	numisdata	si	[{"dd626":"dd22"}]	\N	\N
 numisdata1292	numisdata708	dd1235	no	si	si	77	numisdata	si	[{"dd442":"numisdata656"}]	{"varchar":1024,"process_dato":"diffusion_sql::resolve_value","process_dato_arguments":{"target_component_tipo":"numisdata1362","component_method":"get_diffusion_resolve_value","custom_arguments":[{"process_dato_arguments":{"target_component_tipo":"rsc1039","component_method":"get_diffusion_value","target_component_properties":{"data_to_be_used":"valor_list","separator_rows":" | ","separator_fields":" "}}}]}}	\N
-numisdata375	dd68	dd4	no	si	si	15	numisdata	si	\N	\N	\N
 numisdata1378	numisdata1375	dd530	no	si	si	3	numisdata	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "span 2"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": ["rsc106"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "rsc116", "parent": "self", "section_tipo": "self"}]}}]}}
+numisdata375	dd68	dd4	no	si	si	15	numisdata	si	\N	\N	\N
 numisdata1410	dd14	dd4	no	si	si	19	numisdata	si	\N	\N	\N
 numisdata1379	numisdata1375	dd530	no	si	si	4	numisdata	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "span 2"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": ["rsc197"], "source": "section"}]}, "show": {"ddo_map": [{"tipo": "rsc85", "parent": "self", "section_tipo": "self"}]}}]}}
 numisdata1412	numisdata1411	dd8	no	si	si	1	numisdata	si	\N	\N	\N
