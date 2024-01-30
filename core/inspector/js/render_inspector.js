@@ -50,7 +50,7 @@ render_inspector.prototype.edit = async function(options) {
 		const label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label icon_arrow up',
-			inner_html		: 'Inspector'
+			inner_html		: get_label.inspector || 'Inspector'
 		})
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -295,7 +295,7 @@ const get_content_data = function(self) {
 			const data_link = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light eye data_link',
-				text_content	: 'View record data',
+				text_content	: get_label.record || 'View record data',
 				parent			: buttons_bottom_container
 			})
 			const fn_data_link = function(e) {
@@ -447,7 +447,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'tipo',
+				inner_html		: get_label.tipo || 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -531,7 +531,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'table',
+				inner_html		: get_label.table || 'table',
 				parent			: fragment
 			})
 		// value
@@ -888,7 +888,7 @@ const render_element_info = function(self) {
 		const element_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'element_info_head label icon_arrow up',
-			inner_html		: get_label.info || "Info",
+			inner_html		: get_label.informacion || "Info",
 			parent			: element_info_wrap
 		})
 

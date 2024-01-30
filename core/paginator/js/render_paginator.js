@@ -253,10 +253,24 @@ const get_content_data = async function(self) {
 
 		// displayed_records (hidden on edit mode) // page_globals.locale
 			const total_label = new Intl.NumberFormat(locale, {}).format(total);
+			// displayed_records_label . Using legacy format label from v5 in PHP
+			const displayed_records_label = get_label.registros_mostrados
+				? (() => {
+					// ref: Registros mostrados de X a Y de Z.
+					const map = {
+						X	: page_row_begin,
+						Y	: page_row_end,
+						Z	: total_label
+					};
+					return get_label.registros_mostrados.replace(/X|Y|Z/gi, (matched)=> {
+						return map[matched];
+					})
+			      })()
+			     : `Showing ${page_row_begin}-${page_row_end} of ${total_label}`
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'displayed_records',
-				inner_html		: `Showing ${page_row_begin}-${page_row_end} of ${total_label}`,
+				inner_html		: displayed_records_label,
 				parent			: paginator_info
 			})
 

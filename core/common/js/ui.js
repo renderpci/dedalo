@@ -3198,7 +3198,7 @@ export const ui = {
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'container container_placeholder ' + label,
-				inner_html		: 'Loading ' + label,
+				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
 				parent			: container
 			})
 			if (style) {
