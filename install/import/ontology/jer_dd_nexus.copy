@@ -22,6 +22,7 @@ nexus64	nexus57	dd91	no	si	si	4	nexus	si	[{"dd9":"nexus61"},{"dd43":"nexus60"}]	
 nexus50	nexus41	dd247	no	si	si	7	nexus	no	\N	\N	\N
 nexus46	nexus41	dd11	no	si	si	6	nexus	no	[{"dd6":"nexus57"},{"dd9":"nexus61"}]	\N	{"css": {".wrapper_component": {"grid-column": "span 2"}}, "mandatory": true}
 nexus43	nexus41	dd339	no	si	si	2	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
+nexus30	dd68	dd4	no	si	si	9	nexus	no	\N	\N	\N
 nexus24	nexus1	dd91	no	si	si	7	nexus	si	[{"dd339":"nexus4"},{"dd9":"nexus5"},{"dd9":"nexus6"},{"dd11":"nexus7"},{"dd530":"nexus10"},{"dd442":"nexus13"},{"dd530":"nexus11"},{"dd442":"nexus12"},{"dd11":"nexus29"}]	\N	\N
 nexus39	nexus32	dd9	no	si	si	3	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 2"}}, "view": "colorpicker", "dato_default": ["#f78a1c"]}
 nexus40	dd630	dd6	no	si	si	1	nexus	no	[{"dd626":"dd1648"}]	\N	\N
@@ -41,7 +42,6 @@ nexus2	nexus1	dd8	no	si	si	1	nexus	no	\N	\N	{"css": {".content_data": {"grid-tem
 nexus52	nexus51	dd580	no	si	si	4	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "span 5"}, ".wrapper_component >.content_data": {"min-height": "70vh"}}, "dato_default": {"source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["rsc197", "rsc106"], "source": "section"}]}, "show": {"ddo_map": [{"info": "Name - component_input_text", "tipo": "rsc85", "parent": "self", "section_tipo": "rsc197"}, {"info": "Surame - component_input_text", "tipo": "rsc86", "parent": "self", "section_tipo": "rsc197"}, {"info": "Entity Name - component_input_text", "tipo": "rsc116", "parent": "self", "section_tipo": "rsc106"}], "sqo_config": {"limit": 30}, "fields_separator": " "}}]}}}
 nexus14	nexus9	dd635	no	si	si	1	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "date_mode": "range"}
 nexus3	nexus2	dd1747	no	si	si	1	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 1", "background-color": "#6490d7"}}}
-nexus30	dd68	dd4	no	si	si	9	nexus	no	\N	\N	\N
 nexus54	nexus40	dd177	no	si	si	3	nexus	no	\N	\N	\N
 nexus4	nexus2	dd339	no	si	si	2	nexus	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "dato_default": [{"section_id": "1", "section_tipo": "dd64"}]}
 nexus15	nexus9	dd66	no	si	si	3	nexus	no	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
