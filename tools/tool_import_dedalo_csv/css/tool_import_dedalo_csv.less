@@ -6,9 +6,8 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
-@tool_main_color: #17a2b8;
-
+// local vars
+@tool_color: #17a2b8;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -29,6 +28,10 @@
 		}
 
 		>.content_data {
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			// generic box
 			.container {
@@ -346,8 +349,8 @@
 					margin-left: 0.75rem;
 					margin-bottom: 0.5rem;
 
-					// background-color: @tool_main_color;
-					// border-color: darken(@tool_main_color, 5%);
+					// background-color: @tool_color;
+					// border-color: darken(@tool_color, 5%);
 				}
 
 				>label {
@@ -363,5 +366,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_dedalo_csv {
-		background-color: @tool_main_color;
+		background-color: @tool_color;
 	}

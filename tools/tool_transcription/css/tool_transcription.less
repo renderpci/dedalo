@@ -7,7 +7,7 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool: #fd7f26; // @color_orange_dedalo;
+@tool_color: #fd7f26; // @color_orange_dedalo;
 
 
 
@@ -15,7 +15,7 @@
 	.column_section_id > .button_edit.list_tool_transcription {
 
 		&:hover {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 		}
 		>.icon {
 			-webkit-mask-image: url('../img/icon.svg');
@@ -28,8 +28,12 @@
 // wrapper_tool
 	.wrapper_tool.tool_transcription {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		>.tool_header {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 			position: relative;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -307,8 +311,8 @@
 						margin: 1rem;
 						height: 3em;
 						&:hover{
-							background-color: @color_bg_tool;
-							border-color: darken(@color_bg_tool, 10%);
+							background-color: @tool_color;
+							border-color: darken(@tool_color, 10%);
 							color: #ffffff;
 						}
 					}
@@ -327,8 +331,8 @@
 						margin: 1rem;
 						height: 3em;
 						&:hover{
-							background-color: @color_bg_tool;
-							border-color: darken(@color_bg_tool, 10%);
+							background-color: @tool_color;
+							border-color: darken(@tool_color, 10%);
 							color: #ffffff;
 						}
 						&.disable{
@@ -418,7 +422,7 @@
 	// 				// text-align: left;
 
 	// 				&.warning {
-	// 					background-color: @color_bg_tool;
+	// 					background-color: @tool_color;
 	// 				}
 
 
@@ -447,7 +451,7 @@
 
 // tool_transcription_icon
 	.tool_transcription_icon {
-		background-color: @color_bg_tool;
+		background-color: @tool_color;
 		background-image: url('../../themes/default/icon_transcription_hover.svg');
 		// Adjust icon size
 		background-size: 18px !important;

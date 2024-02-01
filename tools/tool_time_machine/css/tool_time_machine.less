@@ -3,10 +3,12 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
+// local vars
+@tool_color: #f78a1c;
 
 // wrapper_tool
 	.wrapper_tool.tool_time_machine {
@@ -16,6 +18,10 @@
 			grid-template-columns: 1fr 1fr;
 			// grid-template-rows: auto 2em 1fr;
 			grid-template-rows: auto auto auto;
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			// component containers
 			.current_component_container, .preview_component_container {
@@ -104,5 +110,5 @@
 
 // modal header tool modification
 	.tool_header.tool_time_machine {
-		// background-color: #36a6c1;
+		background-color: @tool_color;
 	}

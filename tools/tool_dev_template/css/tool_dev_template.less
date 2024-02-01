@@ -7,16 +7,18 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
-@base_color : #f78a1c;
-
-
+// local vars
+@tool_color : #f78a1c;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_dev_template {
 
 		>.content_data {
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			>.info_container {
 				padding: 2rem;
@@ -41,5 +43,5 @@
 
 // modal and new window header tool modification
 	.tool_header.tool_dev_template {
-		background-color: @base_color;
+		background-color: @tool_color;
 	}
