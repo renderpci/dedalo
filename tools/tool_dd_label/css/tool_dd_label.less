@@ -8,15 +8,17 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@bg_color : #818181;
-
-
+@tool_color : #818181;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_dd_label {
 
 		>.content_data {
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			>.label_matix {
 				display: grid;
@@ -44,14 +46,14 @@
 						>.label {
 							padding: 0.6em;
 							text-align: center;
-							background-color: @bg_color;
+							background-color: @tool_color;
 							color: #fff;
 							font-weight: 400;
 							z-index: 2;
 							border-right: 1px solid #ffffff;
 
 							&.name {
-								background-color: darken(@bg_color, 15%);
+								background-color: darken(@tool_color, 15%);
 							}
 						}
 					}
@@ -63,7 +65,7 @@
 							    content:attr(data-placeholder);
 								color: #aaa;
 							}
-							// height:20px;
+							// height: 20px;
 							border:1px solid gray;
 						}
 					}
@@ -76,5 +78,5 @@
 
 // modal header tool modification
 	.tool_header.tool_dd_label {
-		background-color: @bg_color;
+		background-color: @tool_color;
 	}

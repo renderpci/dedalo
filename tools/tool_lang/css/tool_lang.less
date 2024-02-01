@@ -8,14 +8,14 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool : #7f75e0;
+@tool_color : #7f75e0;
 
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_lang {
 
 		&:hover {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 		}
 		>.icon {
 			-webkit-mask-image: url('../img/icon.svg');
@@ -36,7 +36,7 @@
 		}
 
 		>.tool_header {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 			position: relative;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -136,6 +136,10 @@
 
 		>.content_data {
 
+			.spinner {
+				border-top-color: @tool_color;
+			}
+
 			// components_container
 			>.components_container {
 				display: grid;
@@ -204,8 +208,8 @@
 					}
 
 					.button_automatic_translation {
-						background-color: @color_bg_tool;
-						border-color: darken(@color_bg_tool, 10%);
+						background-color: @tool_color;
+						border-color: darken(@tool_color, 10%);
 					}
 
 					>select {
@@ -241,5 +245,5 @@
 
 // modal header tool modification
 	.tool_header.tool_lang {
-		background-color: @color_bg_tool;
+		background-color: @tool_color;
 	}

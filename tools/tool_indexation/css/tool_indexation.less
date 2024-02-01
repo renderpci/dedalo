@@ -7,13 +7,13 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool: #23bcc7;
+@tool_color: #23bcc7;
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_indexation {
 
 		&:hover {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 		}
 		>.icon {
 			-webkit-mask-image: url('../img/icon.svg');
@@ -28,7 +28,7 @@
 		// height: calc(100vh - 20%);
 
 		>.tool_header {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 			position: relative;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -141,6 +141,10 @@
 			@media screen and (max-width: @width_break_point_0) {
 				// display: flex;
 				flex-wrap: wrap;
+			}
+
+			.spinner {
+				border-top-color: @tool_color;
 			}
 
 			>.left_container, >.right_container {

@@ -3,19 +3,19 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-	@color_bg_tool : #fd7f26; // @color_orange_dedalo;
-
+	@tool_color : #fd7f26; // @color_orange_dedalo;
 
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_subtitles {
 
 		&:hover{
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 		}
 		>.icon{
 			-webkit-mask-image: url('../img/icon.svg');
@@ -32,7 +32,6 @@
 
 // wrapper_tool
 	.wrapper_tool.tool_subtitles {
-
 
 		>.tool_header {
 
@@ -94,6 +93,10 @@
 			width: calc(100% - 1rem);
 			@media screen and (max-width: @width_break_point_0) {
 				display: block;
+			}
+
+			.spinner {
+				border-top-color: @tool_color;
 			}
 
 			.left_container{
@@ -302,7 +305,7 @@
 	// 				// text-align: left;
 
 	// 				&.warning {
-	// 					background-color: @color_bg_tool;
+	// 					background-color: @tool_color;
 	// 				}
 
 
@@ -331,12 +334,17 @@
 
 // tool_subtitles_icon
 	.tool_subtitles_icon {
-		background-color: @color_bg_tool;
+		background-color: @tool_color;
 		background-image: url('../../themes/default/icon_transcription_hover.svg');
 		// Adjust icon size
 		background-size: 18px !important;
 	    background-position-y: 3px !important;
 	    background-position-x: 6px !important;
+	}
+
+// modal and new window header tool modification
+	.tool_header.tool_subtitles {
+		background-color: @tool_color;
 	}
 
 

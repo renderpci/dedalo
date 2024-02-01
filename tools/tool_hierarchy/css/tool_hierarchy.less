@@ -4,10 +4,8 @@
 * Loaded on tool init
 */
 
-
+// local vars
 @tool_color: #c80000;
-
-
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -27,6 +25,9 @@
 
 		>.content_data {
 
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			>.components_container {
 				display: grid;

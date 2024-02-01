@@ -3,9 +3,12 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
+// local vars
+@tool_color: #a24540;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -19,6 +22,10 @@
 			padding-bottom: 0px;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			>.main_element_container {
 				width: 100%;
@@ -138,5 +145,5 @@
 
 // modal header tool modification
 	.tool_header.tool_media_versions {
-		background-color: #a24540;
+		background-color: @tool_color;
 	}
