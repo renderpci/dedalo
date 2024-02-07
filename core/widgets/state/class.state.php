@@ -274,7 +274,10 @@ class state extends widget_common {
 		);
 
 		$dato	= $component_portal->get_dato();
-		$value	= reset($dato);
+		$value	= !empty($dato)
+			? reset($dato)
+			: 0;
+
 
 		return $value;
 	}//end get_value
