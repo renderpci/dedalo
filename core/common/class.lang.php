@@ -123,20 +123,28 @@ class lang {
 			// Remove this catch in next versions
 			$lang = DEDALO_DATA_LANG;
 			switch ($lang) {
-				case 'lg-eng':	$section_id = 5101;		break;
-				case 'lg-spa':	$section_id = 17344;	break;
-				case 'lg-cat':	$section_id = 3032;		break;
-				case 'lg-ell':	$section_id = 5037;		break;
-				case 'lg-deu':	$section_id = 4253;		break;
-				case 'lg-vlca':	$section_id = 20155;	break;
-				case 'lg-fra':	$section_id = 5450;		break;
-				case 'lg-eus':	$section_id = 5223;		break;
-				case 'lg-por':	$section_id = 14895;	break;
-				case 'lg-ara':	$section_id = 841;		break;
-				case 'lg-rus':	$section_id = 15862;	break;
-				case 'lg-ita':	$section_id = 7466;		break;
-				default:
-					break;
+				case 'lg-eng':	$section_id = 5101; break;
+				case 'lg-spa':	$section_id = 17344; break;
+				case 'lg-cat':	$section_id = 3032; break;
+				case 'lg-ell':	$section_id = 5037; break;
+				case 'lg-deu':	$section_id = 4253; break;
+				case 'lg-vlca':	$section_id = 20155; break;
+				case 'lg-fra':	$section_id = 5450; break;
+				case 'lg-eus':	$section_id = 5223; break;
+				case 'lg-por':	$section_id = 14895; break;
+				case 'lg-ara':	$section_id = 841; break;
+				case 'lg-rus':	$section_id = 15862; break;
+				case 'lg-ita':	$section_id = 7466; break;
+				// Nepal add
+				case 'lg-nep':	$section_id = 12943; break;
+				case 'lg-bho':	$section_id = 1792; break;
+				case 'lg-mai':	$section_id = 10912; break;
+				case 'lg-nptl':	$section_id = 13486; break;
+				case 'lg-tajs':	$section_id = 18132; break;
+				case 'lg-awa':	$section_id = 1154; break;
+				case 'lg-vjk':	$section_id = 21712; break;
+				// default
+				default: break;
 			}
 		}else{
 			// Normal case
@@ -255,19 +263,27 @@ class lang {
 
 				$section_id = (int)$locator->section_id;
 				switch ($section_id) {
-					case 17344 	: $code = 'spa';	break;
-					case 5101 	: $code = 'lg-eng';	break;
-					case 3032 	: $code = 'lg-cat';	break;
-					case 20155 	: $code = 'lg-vlca';break;
-					case 5450 	: $code = 'lg-fra';	break;
-					case 5223 	: $code = 'lg-eus';	break;
-					case 14895 	: $code = 'lg-por';	break;
-					case 841 	: $code = 'lg-ara';	break;
-					case 15862	: $code = 'lg-rus';	break;
-					case 5037 	: $code = 'lg-ell';	break;
-					case 4253 	: $code = 'lg-deu';	break;
-					default:
-						break;
+					case 17344 	: $code = 'spa'; break;
+					case 5101 	: $code = 'lg-eng'; break;
+					case 3032 	: $code = 'lg-cat'; break;
+					case 20155 	: $code = 'lg-vlca'; break;
+					case 5450 	: $code = 'lg-fra'; break;
+					case 5223 	: $code = 'lg-eus'; break;
+					case 14895 	: $code = 'lg-por'; break;
+					case 841 	: $code = 'lg-ara'; break;
+					case 15862	: $code = 'lg-rus'; break;
+					case 5037 	: $code = 'lg-ell'; break;
+					case 4253 	: $code = 'lg-deu'; break;
+					// Nepal
+					case 12943 	: $code = 'lg-nep'; break;
+					case 1792 	: $code = 'lg-bho'; break;
+					case 10912 	: $code = 'lg-mai'; break;
+					case 13486 	: $code = 'lg-nptl'; break;
+					case 18132 	: $code = 'lg-tajs'; break;
+					case 1154 	: $code = 'lg-awa'; break;
+					case 21712 	: $code = 'lg-vjk'; break;
+					//default
+					default 	: break;
 				}
 				debug_log(__METHOD__
 					. " Error Processing Request. Impossible calculate lang code from locator. " . PHP_EOL
@@ -322,8 +338,7 @@ class lang {
 
 		switch ($lang_apha2) {
 			// custom
-			// case 'cat'	: $code = 'lg-cat';	break;
-			case 'va'		: $code = 'lg-vlca';break;
+			case 'va'	: $code = 'lg-vlca';break;
 			// official list
 			case 'aa' 	: $code = 'lg-aar'; break;
 			case 'ab' 	: $code = 'lg-abk'; break;
@@ -552,6 +567,7 @@ class lang {
 			case 'lg-ita'	: $code = 'it';	break;
 			case 'lg-lat'	: $code = 'la'; break;
 			case 'lg-glg'	: $code = 'gl'; break;
+			case 'lg-nep'	: $code = 'ne'; break;
 
 			/*
 				case "aa" 	: $code = "lg-aar"; break;
@@ -765,9 +781,10 @@ class lang {
 	public static function get_locale_from_code(string $lang_code) : string {
 
 		switch ($lang_code) {
-			case 'lg-eng':	$locale='en-US'; 	break;
-			case 'lg-spa':	$locale='es-ES'; 	break;
-			case 'lg-cat':	$locale='ca'; 		break;
+			case 'lg-eng':	$locale = 'en-US'; break;
+			case 'lg-spa':	$locale = 'es-ES'; break;
+			case 'lg-cat':	$locale = 'ca'; break;
+			case 'lg-nep':	$locale = 'ne_NP'; break;
 
 			default:
 				$alpha2 = lang::get_alpha2_from_code($lang_code);
