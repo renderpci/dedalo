@@ -1397,6 +1397,7 @@ final class dd_utils_api {
 			'm4v'	=> 'video/x-m4v',
 			'jpgv'	=> 'video/jpeg',
 			'webm'	=> 'video/webm',
+			'wav'	=> 'audio/x-wav',
 
 			// 3d
 			'glb'	=> 'model/gltf-binary',
