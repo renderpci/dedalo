@@ -68,7 +68,7 @@ const get_content_data_edit = async function(self) {
 	// grid_top
 		const grid_top = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'grid_top',
+			class_name		: 'grid_top no_print',
 			parent			: fragment
 		})
 
@@ -410,7 +410,7 @@ const get_content_data_edit = async function(self) {
 	// download_buttons_options
 		const export_buttons_options = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'export_buttons_options',
+			class_name		: 'export_buttons_options no_print',
 			parent			: fragment
 		})
 		const filename = 'export_' +self.caller.label +'_'+ new Date().toLocaleDateString()+'-'+ self.caller.section_tipo
@@ -518,7 +518,10 @@ const get_content_data_edit = async function(self) {
 				parent			: export_buttons_options
 			})
 			button_export_print.addEventListener('click', function(e) {
-				console.log('e:', e);
+				e.stopPropagation()
+				e.preventDefault()
+				window.print()
+				return false;
 			})
 
 	// grid data container

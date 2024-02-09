@@ -15,6 +15,12 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_export {
 
+		@media print {
+		    .tool_header, .no_print, .no_print * {
+		        display: none !important;
+		    }
+		}
+
 		>.content_data {
 			width: 100%;
 
