@@ -380,9 +380,9 @@ const render_selection_info = function(self) {
 		self.selection_info_node = selection_info_node
 
 		selection_info_node.addEventListener('click', function(e) {
-			if (selection_info_node.caller) {
-				console.log('node info caller:', selection_info_node.caller);
-			}
+			e.stopPropagation()
+			// go to section in list mode (useful when no menu is available)
+			self.caller.goto_list()
 		})
 
 
