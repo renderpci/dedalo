@@ -376,14 +376,46 @@ const render_selection_info = function(self) {
 			element_type	: 'div',
 			class_name		: 'selection_info'
 		})
+		// update_label function called form event caller (section) render and activate_componentº
+		selection_info_node.update_label = function(caller) {
+
+			// fix caller
+			self.selection_info_node.caller = caller
+
+			// clean container
+			while (selection_info_node.firstChild) {
+				selection_info_node.removeChild(selection_info_node.firstChild)
+			}
+
+			// update label text
+			const label_node = document.createTextNode(caller.label);
+			selection_info_node.appendChild(label_node)
+
+			// add button list when info is about section
+			add_list_button(caller)
+		}
 		// fix pointer
 		self.selection_info_node = selection_info_node
 
-		selection_info_node.addEventListener('click', function(e) {
-			e.stopPropagation()
-			// go to section in list mode (useful when no menu is available)
-			self.caller.goto_list()
-		})
+	// add_list_button to go to section list
+		const add_list_button = function(caller) {
+			if (caller && caller.model==='section') {
+				const button_list = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button light list',
+					title			: get_label.list || 'List',
+					parent			: selection_info_node
+				})
+				button_list.addEventListener('mousedown', (e) => {
+					e.stopPropagation()
+					// go to section in list mode (useful when no menu is available)
+					self.caller.goto_list()
+				})
+			}
+		}
+
+	// exec once
+		add_list_button(self.caller)
 
 
 	return selection_info_node
