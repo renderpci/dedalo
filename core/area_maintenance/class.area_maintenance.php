@@ -123,7 +123,7 @@ class area_maintenance extends area_common {
 				$item->id		= 'register_tools';
 				$item->typo		= 'widget';
 				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('register_tools');
+				$item->label	= label::get_label('registrar_herramientas');
 				$item->value	= (object)[
 					'datalist' => tools_register::get_tools_files_list()
 				];

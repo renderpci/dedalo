@@ -384,11 +384,11 @@ const get_buttons = (self) => {
 				// button edit
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
-						: item.label
+						: item.label || ''
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button pen',
-						title			: label,
+						title			: label.replace(/<\/?[^>]+(>|$)/g, ""),
 						parent			: fragment
 					})
 					button_edit.addEventListener('click', function(e){
