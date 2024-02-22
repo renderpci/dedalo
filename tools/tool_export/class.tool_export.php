@@ -52,7 +52,7 @@ class tool_export extends tool_common {
 
 		// fix sqo
 			// add filter from saved session if exists
-			$sqo_id = implode('_', ['section', $section_tipo]); // cache key sqo_id
+			$sqo_id = section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (!isset($sqo->filter)
 				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
 				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter)

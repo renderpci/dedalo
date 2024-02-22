@@ -4381,6 +4381,27 @@ class section extends common {
 
 
 	/**
+	* BUILD_SQO_ID
+	* Unified way to compound sqo_id value
+	* This string is used as key for section session SQO
+	* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
+	* @param string $tipo
+	* 	section tipo like 'oh1'
+	* @param string $mode
+	* 	current section mode like 'list'
+	* @return string $sqo_id
+	* 	final sqo_id like 'section_oh1_list'
+	*/
+	public static function build_sqo_id(string $tipo, string $mode) {
+
+		$sqo_id = implode('_', ['section', $tipo, $mode]);
+
+		return $sqo_id;
+	}//end build_sqo_id
+
+
+
+	/**
 	* __DESTRUCT
 	*/
 		// public function __destruct() {
