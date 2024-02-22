@@ -175,9 +175,10 @@ class tool_export extends tool_common {
 		foreach ($records as $row) {
 
 			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
-
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
-			$row_count = max($ar_row_value->ar_row_count);
+			$row_count = !empty($ar_row_value->ar_row_count)
+				? max($ar_row_value->ar_row_count)
+				: 0;
 			// store the result to sum with the head rows
 			$rows_max_count[] = $row_count;
 
