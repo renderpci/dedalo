@@ -1656,3 +1656,6 @@ qdp152	Nombre del bien	termino	lg-spa
 qdp554	Web Pre	termino	lg-spa
 qdp555	Web Preservem Pre	termino	lg-spa
 qdp556	web_coib_pre	termino	lg-spa
+qdp557	other_documentation	termino	lg-spa
+qdp558	education_level_data	termino	lg-spa
+qdp559	education_level	termino	lg-spa

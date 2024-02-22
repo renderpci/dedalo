@@ -79,7 +79,7 @@ test47	test48	dd442	no	si	si	6	test	no	\N	{\r\n  "source": {\r\n    "mode": "aut
 test154	test155	dd347	no	si	si	1	test	si	[{"dd1229":"dd622"},{"dd6":"ww1"}]	\N	\N
 test46	test209	dd1231	no	si	si	5	test	no	[{"dd635":"test145"}]	\N	\N
 test187	test184	dd9	no	si	si	2	test	si	\N		null
-test83	ts11	dd440	no	si	si	12	test	si	\N	\N	\N
+test83	ts11	dd440	no	si	si	14	test	si	\N	\N	\N
 test215	test45	dd79	no	si	si	6	test	no	\N	\N	{"fields_map": [{"local": "dato", "format": "zenon_authors", "remote": "authors"}]}
 test188	test20	dd440	no	si	si	6	test	no	\N	\N	{"source": {"request_config": [{"show": {"ddo_map": ["test185"]}, "search": {"ddo_map": [{"f_path": ["test183", "test185", "test38", "test164"]}], "sqo_config": {"limit": 20}}, "section_tipo": [{"value": ["test183"], "source": "section"}]}]}, "observers": [{"info": "Coins. Property used for server side only", "section_tipo": "test183", "component_tipo": "test199"}]}
 test62	test20	dd592	no	si	si	4	test	si	null	\N	{"source": {"request_config": [{"sqo": {"section_tipo": [{"value": ["test65"], "source": "section"}], "filter_by_list": [{"section_tipo": "test65", "component_tipo": "test55"}, {"section_tipo": "test65", "component_tipo": "test144"}]}, "show": {"ddo_map": [{"tipo": "test159", "parent": "test62", "section_tipo": "test65"}, {"tipo": "test166", "parent": "test62", "section_tipo": "test65"}], "sqo_config": {"limit": 20}}}]}}

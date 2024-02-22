@@ -2731,7 +2731,6 @@ dd478	Αρχεία φίλτρο	termino	lg-ell
 dd479	component_filter_records	termino	lg-spa
 dd1716	Titre	termino	lg-fra
 dd48	Figlio	termino	lg-ita
-dd48	fill	termino	lg-cat
 dd48	Hijo	termino	lg-spa
 dd48	Γιος	termino	lg-ell
 dd480	Personas	termino	lg-spa
@@ -4681,14 +4680,12 @@ dd977	Valore della lista	termino	lg-ita
 dd490	Structure	termino	lg-fra
 dd948	Pubblicabile	termino	lg-ita
 dd948	Publicable	termino	lg-spa
-dd96	indexation	termino	lg-eng
 dd978	Relació d'aspecte	termino	lg-cat
 dd978	Relación de aspecto	termino	lg-spa
 dd978	Relazione dell&#039; aspetto	termino	lg-ita
 dd979	Elenco dei registri	termino	lg-ita
 dd979	Listado de registros	termino	lg-spa
 dd979	Llistat de registres	termino	lg-cat
-dd98	model	termino	lg-cat
 dd98	Modello	termino	lg-ita
 dd98	Modelo	termino	lg-spa
 dd98	Μοντέλο	termino	lg-ell
@@ -4713,6 +4710,7 @@ dd985	Standard del Colore Audiovisivo	termino	lg-ita
 dd986	Valor de la lista	termino	lg-spa
 dd986	Valor de la llista	termino	lg-cat
 dd986	Valore della lista	termino	lg-ita
+dd96	Indexation	termino	lg-eng
 dd987	Estándar del Color Audivosiual	termino	lg-spa
 dd987	Estàndard del Color Audivosiual	termino	lg-cat
 dd987	Standard del Colore Audiovisivo	termino	lg-ita
@@ -6878,8 +6876,6 @@ dd38	Name	termino	lg-eng
 dd40	Diffusion	termino	lg-eng
 dd41	List	termino	lg-eng
 dd42	Activity events	termino	lg-eng
-dd47	father	termino	lg-eng
-dd48	child	termino	lg-eng
 dd49	Project	termino	lg-eng
 dd51	Document	termino	lg-eng
 dd53	Person responsible for the project	termino	lg-eng
@@ -6896,10 +6892,8 @@ dd83	Value %	termino	lg-eng
 dd84	Publish	termino	lg-eng
 dd85	Menu	termino	lg-eng
 dd86	It will delete the selected tag in all languages and all the relationships and indexing associated with it	termino	lg-eng
-dd89	related	termino	lg-eng
 dd90	Investigation process	termino	lg-eng
 dd94	by user	termino	lg-eng
-dd98	model	termino	lg-eng
 dd99	Process	termino	lg-eng
 dd100	Thesaurus	termino	lg-eng
 dd101	Toponymy	termino	lg-eng
@@ -6954,6 +6948,9 @@ dd170	Projects	termino	lg-eng
 dd171	Where	termino	lg-eng
 dd172	What	termino	lg-eng
 dd173	Created records	termino	lg-eng
+dd98	Model	termino	lg-eng
+dd48	Child	termino	lg-eng
+dd47	Father	termino	lg-eng
 dd175	Target directory	termino	lg-eng
 dd176	File name	termino	lg-eng
 dd178	Zotero file processed successfully	termino	lg-eng
@@ -8539,4 +8536,76 @@ dd1651	Μετάφραση	termino	lg-ell
 dd1651	Traduzione	termino	lg-ita
 dd1651	Traduction	termino	lg-fra
 dd1651	Tradução	termino	lg-por
-dd1	Dédalo 2024-01-30T18:09:28+01:00 Benimamet	termino	lg-spa
+dd1652	Nuevo	termino	lg-spa
+dd1652	Nou	termino	lg-cat
+dd1653	Borrar	termino	lg-spa
+dd1653	Esborrar	termino	lg-cat
+dd1653	Delete	termino	lg-eng
+dd1652	New	termino	lg-eng
+dd77	ओन्टोलजी	termino	lg-nep
+dd675	फिल्टर गर्नुहोस्	termino	lg-nep
+dd1500	ओन्टोलजी	termino	lg-nep
+dd1654	Pantalla completa	termino	lg-spa
+dd1654	Full screen	termino	lg-eng
+dd1654	पूर्ण स्क्रिन	termino	lg-nep
+dd1654	Ganzer Bildschirm	termino	lg-deu
+dd1654	ΠΛΗΡΗΣ ΟΘΟΝΗ	termino	lg-ell
+dd1654	Pantalla completa	termino	lg-cat
+dd1654	A schermo intero	termino	lg-ita
+dd1655	Cargando ficheros de Dédalo	termino	lg-spa
+dd1655	Loading Dédalo files	termino	lg-eng
+dd1655	Carregant fitxers Dédalo	termino	lg-cat
+dd1655	Dédalo फाइलहरू लोड गर्दै	termino	lg-nep
+dd1655	Laden von Dédalo-Dateien	termino	lg-deu
+dd1655	Φόρτωση αρχείων Dédalo	termino	lg-ell
+dd1655	Carregando arquivos Dédalo	termino	lg-por
+dd1655	Caricamento file Dédalo	termino	lg-ita
+dd1655	Chargement des fichiers Dédalo	termino	lg-fra
+dd1656	Ontología	termino	lg-spa
+dd1656	Ontology	termino	lg-eng
+dd1656	Ontologie	termino	lg-fra
+dd1656	Ontologia	termino	lg-ita
+dd1656	ओन्टोलजी	termino	lg-nep
+dd1656	Οντολογία	termino	lg-ell
+dd1656	Ontologia	termino	lg-por
+dd1656	Ontologie	termino	lg-deu
+dd1745	नाम	termino	lg-nep
+dd1740	फाइल पथ	termino	lg-nep
+dd277	सामान्य	termino	lg-nep
+dd278	मेटाइयो	termino	lg-nep
+dd279	समीक्षा गर्न	termino	lg-nep
+dd281	ट्यागहरू छुटेका छन्	termino	lg-nep
+dd495	लेबल मेट्ने हो?	termino	lg-nep
+dd275	कृपया नीलो ट्यागहरूको स्थिति समीक्षा गर्नुहोस् (संयोगवश मेटाइयो)	termino	lg-nep
+dd1604	मेटाइएका ट्यागहरू	termino	lg-nep
+dd151	लिङ्क	termino	lg-nep
+dd687	बाह्य लिङ्क	termino	lg-nep
+dd98	Model	termino	lg-cat
+dd98	मोडेल	termino	lg-nep
+dd96	अनुक्रमणिका	termino	lg-nep
+dd48	Fill	termino	lg-cat
+dd48	बच्चा	termino	lg-nep
+dd47	बुबा	termino	lg-nep
+dd89	Related	termino	lg-eng
+dd89	सम्बन्धित	termino	lg-nep
+dd85	मेनु	termino	lg-nep
+dd1590	स्थापना गर्नुहोस्	termino	lg-nep
+dd1657	Desarrollador	termino	lg-spa
+dd1657	Developer	termino	lg-eng
+dd1657	विकासकर्ता	termino	lg-nep
+dd1657	Desenvolupador	termino	lg-cat
+dd1657	Entwicklerin	termino	lg-deu
+dd1657	Desenvolvedor	termino	lg-por
+dd1657	Développeur	termino	lg-fra
+dd1657	Προγραμματιστής	termino	lg-ell
+dd1658	Instalado	termino	lg-spa
+dd1658	Installed	termino	lg-eng
+dd1658	Εγκατεστημένο	termino	lg-ell
+dd1658	Instal·lat	termino	lg-cat
+dd1658	Eingerichtet	termino	lg-deu
+dd1658	Installé	termino	lg-fra
+dd1658	Installato	termino	lg-ita
+dd1658	Instalado	termino	lg-por
+dd1658	स्थापना गरियो	termino	lg-nep
+dd1	Dédalo 2024-02-22T17:14:09+01:00 Benimamet	termino	lg-spa
+dd598	नयाँ	termino	lg-nep
