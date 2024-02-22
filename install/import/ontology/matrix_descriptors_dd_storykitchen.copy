@@ -25,7 +25,6 @@ storykitchen26	Id	termino	lg-spa
 storykitchen39	Delete	termino	lg-eng
 storykitchen53	Caso / Incidente	termino	lg-spa
 storykitchen67	Publicable	termino	lg-spa
-storykitchen80	Side by Whom	termino	lg-cat
 storykitchen94	Valor	termino	lg-spa
 storykitchen27	मूल्य	termino	lg-nep
 storykitchen50	मेटाउन	termino	lg-nep
@@ -58,7 +57,6 @@ storykitchen151	En caso afirmativo, nombre del CSO	termino	lg-spa
 storykitchen156	Identification	termino	lg-eng
 storykitchen164	Nota de efecto sobre la salud del entrevistada	termino	lg-spa
 storykitchen68	उल्लङ्घनको प्रकार	termino	lg-nep
-storykitchen2	पीडित जनगणना	termino	lg-nep
 storykitchen22	अपाङ्गता	termino	lg-nep
 storykitchen129	प्राप्त राहतको प्रकार (CSO)	termino	lg-nep
 storykitchen170	आफन्तहरूको नोट, वर्तमान स्वास्थ्य स्थिति	termino	lg-nep
@@ -175,7 +173,6 @@ storykitchen183	Tipos de efectos sociales, culturales	termino	lg-spa
 storykitchen140	आवेदन पेश गर्ने	termino	lg-nep
 storykitchen194	Note of Cultural Effect Due to Conflict	termino	lg-eng
 storykitchen208	Significado de "Justicia" para Superviviente	termino	lg-spa
-storykitchen2	Censo de víctimas	termino	lg-spa
 storykitchen16	Id	termino	lg-spa
 storykitchen29	Delete	termino	lg-eng
 storykitchen43	Número de hijos	termino	lg-spa
@@ -198,7 +195,6 @@ storykitchen189	Proyecto	termino	lg-spa
 storykitchen182	वर्तमान जीविकोपार्जन स्थितिको नोट	termino	lg-nep
 storykitchen177	परियोजना	termino	lg-nep
 storykitchen208	Meaning of "Justice" for Survivor	termino	lg-eng
-storykitchen2	Victims census	termino	lg-eng
 storykitchen16	Id	termino	lg-eng
 storykitchen30	Proyecto	termino	lg-spa
 storykitchen43	Number of Children	termino	lg-eng
@@ -607,3 +603,79 @@ storykitchen128	राहत कार्यक्रम सामुदाय�
 storykitchen193	Efecto cultural debido al conflicto	termino	lg-spa
 storykitchen171	जीविकोपार्जन समर्थनका प्रकारहरू	termino	lg-nep
 storykitchen199	नयाँ	termino	lg-nep
+storykitchen205	कुनै पनि पीडित सम्बन्धित नेटवर्कसँग सम्बद्ध	termino	lg-nep
+storykitchen80	Side by Whom	termino	lg-eng
+storykitchen216	Entrevista	termino	lg-spa
+storykitchen216	Interview	termino	lg-eng
+storykitchen216	अन्तर्वार्ता	termino	lg-nep
+storykitchen206	नेटवर्कको प्रकार/नाम	termino	lg-nep
+storykitchen207	नेटवर्क मा स्थिति	termino	lg-nep
+storykitchen208	को अर्थ	termino	lg-nep
+storykitchen209	कथा सुन्नुहोस् द्वारा	termino	lg-nep
+storykitchen210	नयाँ	termino	lg-nep
+storykitchen211	मेटाउन	termino	lg-nep
+storykitchen212	सूची	termino	lg-nep
+storykitchen213	नवीनतम परिवर्तनहरू	termino	lg-nep
+storykitchen214	सम्बन्धहरू	termino	lg-nep
+storykitchen217	Imagen	termino	lg-spa
+storykitchen217	Images	termino	lg-eng
+storykitchen217	Bilder	termino	lg-deu
+storykitchen217	Images	termino	lg-fra
+storykitchen217	Imagens	termino	lg-por
+storykitchen217	छविहरू	termino	lg-nep
+storykitchen2	Perfil de víctimas y supervivientes	termino	lg-spa
+storykitchen2	Victims and survivors profile	termino	lg-eng
+storykitchen2	पीडित र बाँचेको प्रोफाइल	termino	lg-nep
+storykitchen219	Images	termino	lg-spa
+storykitchen219	Images	termino	lg-eng
+storykitchen219	छविहरू	termino	lg-nep
+storykitchen220	Documentos	termino	lg-spa
+storykitchen220	Documents	termino	lg-eng
+storykitchen220	कागजातहरू	termino	lg-nep
+storykitchen221	Imágenes	termino	lg-spa
+storykitchen221	Images	termino	lg-eng
+storykitchen221	छविहरू	termino	lg-nep
+storykitchen223	Estado	termino	lg-spa
+storykitchen223	Status	termino	lg-eng
+storykitchen223	स्थिति	termino	lg-nep
+storykitchen224	Imagenes	termino	lg-spa
+storykitchen225	Documentos	termino	lg-spa
+storykitchen225	Documents	termino	lg-eng
+storykitchen226	Documentación	termino	lg-spa
+storykitchen226	Documentation	termino	lg-eng
+storykitchen227	Audiovisual	termino	lg-spa
+storykitchen227	Audivisual	termino	lg-eng
+storykitchen229	Descripción	termino	lg-spa
+storykitchen229	Description	termino	lg-eng
+storykitchen229	विवरण	termino	lg-nep
+storykitchen224	Images	termino	lg-eng
+storykitchen222	Documentos	termino	lg-spa
+storykitchen222	Documents	termino	lg-eng
+storykitchen222	कागजातहरू	termino	lg-nep
+storykitchen218	Imágenes	termino	lg-spa
+storykitchen218	Images	termino	lg-eng
+storykitchen218	छविहरू	termino	lg-nep
+storykitchen224	छविहरू	termino	lg-nep
+storykitchen225	कागजातहरू	termino	lg-nep
+storykitchen227	श्रव्य दृश्य	termino	lg-nep
+storykitchen228	Bibliographic references	termino	lg-eng
+storykitchen228	Referencias bibliográficas	termino	lg-spa
+storykitchen228	बिबिलोग्राफिक सन्दर्भहरू	termino	lg-nep
+storykitchen230	Narrative	termino	lg-eng
+storykitchen230	Narrativa	termino	lg-spa
+storykitchen230	कथा	termino	lg-nep
+storykitchen231	Notas	termino	lg-spa
+storykitchen231	Notes	termino	lg-eng
+storykitchen231	नोटहरू	termino	lg-nep
+storykitchen226	कागजात	termino	lg-nep
+storykitchen232	Descripción	termino	lg-spa
+storykitchen232	Description	termino	lg-eng
+storykitchen232	विवरण	termino	lg-nep
+storykitchen233	Narrativa	termino	lg-spa
+storykitchen233	Narrative	termino	lg-eng
+storykitchen233	कथा	termino	lg-nep
+storykitchen234	Notas	termino	lg-spa
+storykitchen234	Notes	termino	lg-eng
+storykitchen234	नोटहरू	termino	lg-nep
+storykitchen203	द्वन्द्वका कारण कानुनी प्रभाव	termino	lg-nep
+storykitchen204	द्वन्द्वको कारणले कानुनी प्रभावको नोट	termino	lg-nep

@@ -48,7 +48,6 @@ qdp425	qdp51	dd58	no	si	si	3	qdp	no	\N	\N	\N
 qdp426	qdp421	dd91	no	si	si	3	qdp	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N	\N
 qdp427	qdp166	dd6	no	si	si	2	qdp	no	\N	\N	\N
 qdp428	qdp427	dd8	no	si	si	1	qdp	no	\N	\N	\N
-qdp550	ts11	dd347	no	si	si	2	qdp	si	[{"dd1229":"oh66"}]	\N	\N
 qdp268	qdp267	dd1747	no	si	si	1	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgb(255, 164, 61)"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "10%", "background-color": "rgb(255, 164, 61)", "border-bottom-right-radius": "8px"}}}}
 qdp270	qdp266	dd247	no	si	si	2	qdp	no	\N	\N	\N
 qdp271	qdp266	dd177	no	si	si	3	qdp	no	\N	\N	\N
@@ -59,6 +58,8 @@ qdp274	qdp280	dd8	no	si	si	3	qdp	no	\N	\N	\N
 qdp276	qdp274	dd352	no	si	si	2	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 qdp434	qdp427	dd91	no	si	si	2	qdp	no	[{"dd339":"qdp422"},{"dd11":"qdp430"},{"dd10":"qdp431"},{"dd10":"qdp433"},{"dd247":"qdp432"},{"dd592":"qdp421"}]	{\r\n  "css": {\r\n    ".column_qdp421": {\r\n      "_info": "Portal image column",\r\n      "style": {\r\n        "width": "104px",\r\n        "overflow": "hidden"\r\n      }\r\n    }\r\n  }\r\n}	\N
 qdp21	qdp4	dd177	no	si	si	3	qdp	no	\N	\N	\N
+qdp557	qdp360	dd1231	no	si	si	1	qdp	si	[{"dd10":"oh37"}]	\N	\N
+qdp558	qdp358	dd1231	no	si	si	1	qdp	si	[{"dd11":"rsc410"}]	{"data_to_be_used":"dato"}	\N
 qdp430	qdp428	dd442	no	si	si	4	qdp	no	null	{\r\n  "source": {\r\n    "mode": "autocomplete",\r\n    "hierarchy_types": [],\r\n    "hierarchy_sections": [\r\n      "ts1",\r\n      "pieces1",\r\n      "technique1",\r\n      "material1"\r\n    ]\r\n  },\r\n  "value_with_parents": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {}\r\n    }\r\n  }\r\n}	\N
 qdp429	qdp428	dd1747	no	si	si	1	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "10%",\r\n        "border-bottom-right-radius": "10px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical", ".inverse"], "style": {"width": "10%", "border-bottom-right-radius": "10px"}}}}
 qdp431	qdp428	dd10	no	si	si	5	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "75%",\r\n        "float": "right"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "height": "450px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"clear": "left", "width": "50%"}}}}
@@ -66,6 +67,7 @@ qdp422	qdp428	dd339	no	si	si	2	qdp	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "cs
 qdp432	qdp428	dd247	no	si	si	3	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 qdp433	qdp428	dd10	no	si	si	6	qdp	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 qdp460	qdp458	dd144	no	si	si	2	qdp	si	\N	[\r\n  {\r\n    "tipo": "qdp251",\r\n    "type": "term"\r\n  },\r\n  {\r\n    "tipo": "qdp277",\r\n    "type": "icon",\r\n    "icon": "ND"\r\n  },\r\n  {\r\n    "tipo": "qdp255",\r\n    "type": "icon",\r\n    "icon": "obj"\r\n  },\r\n  {\r\n    "tipo": "qdp256",\r\n    "type": "icon",\r\n    "icon": "foto"\r\n  },\r\n  {\r\n    "tipo": "qdp276",\r\n    "type": "icon",\r\n    "icon": "CH"\r\n  },\r\n  {\r\n    "tipo": "qdp276",\r\n    "type": "link_childrens"\r\n  }\r\n]	[{"tipo": "qdp251", "type": "term"}, {"icon": "ND", "tipo": "qdp277", "type": "icon"}, {"icon": "obj", "tipo": "qdp255", "type": "icon"}, {"icon": "foto", "tipo": "qdp256", "type": "icon"}, {"icon": "CH", "tipo": "qdp276", "type": "icon"}, {"tipo": "qdp276", "type": "link_childrens"}]
+qdp559	qdp358	dd1231	no	si	si	2	qdp	si	[{"dd11":"rsc410"}]	\N	\N
 qdp461	qdp209	dd347	no	si	si	19	qdp	si	[{"dd1229":"qdp361"},{"dd6":"qdp458"}]	\N	\N
 qdp203	qdp100	dd1129	no	si	si	1	qdp	no	[{"dd635":"qdp236"},{"dd592":"qdp60"}]	\N	\N
 qdp462	qdp458	dd1129	no	si	si	3	qdp	si	[{"dd592":"qdp255"},{"dd592":"qdp256"},{"dd592":"qdp219"}]	\N	\N
@@ -554,3 +556,4 @@ qdp152	qdp43	dd442	no	si	si	7	qdp	no	\N	{"source":{"mode":"autocomplete","hierar
 qdp555	qdp554	dd1743	no	si	si	1	qdp	si	\N	{"diffusion":{"class_name":"diffusion_mysql"}}	\N
 qdp556	qdp555	dd1025	no	si	si	1	qdp	si	[{"dd1259":"qdp209"}]	\N	\N
 qdp327	dd321	dd4	no	si	si	3	qdp	no	null		null
+qdp550	ts11	dd347	no	si	si	2	qdp	si	[{"dd1229":"oh66"}]	\N	\N

@@ -284,7 +284,6 @@ dd889	dd137	dd6	no	si	si	15	dd	no	[{"dd626":"dd963"}]		\N
 dd279	dd276	dd395	no	si	si	3	dd	si	\N	{"name":"etiqueta_revisar"}	{"name": "label_to_review"}
 dd1713	dd1125	dd395	no	si	si	5	dd	si		{"name":"mapa"}	{"name": "mapa"}
 dd835	dd834	dd9	no	si	si	1	dd	si			\N
-dd277	dd276	dd395	no	si	si	1	dd	si	\N	{"name":"etiqueta_normal"}	{"name": "label_normal"}
 dd841	dd840	dd9	no	si	si	1	dd	si			\N
 dd475	dd469	dd247	no	si	si	2	dd	no	\N	\N	\N
 dd1209	dd1208	dd31	no	si	si	1	dd	si			\N
@@ -292,6 +291,7 @@ dd964	dd1313	dd177	no	si	si	3	dd	no			\N
 dd965	dd1313	dd183	no	si	si	4	dd	si			\N
 dd25	dd20	dd91	no	si	si	2	dd	no	[{"dd9":"dd29"},{"dd9":"dd61"},{"dd438":"dd23"}]		\N
 dd765	dd391	dd395	no	si	si	43	dd	si		{"name":"indexaciones"}	{"name": "indexings"}
+dd277	dd276	dd395	no	si	si	1	dd	si	\N	{"name":"etiqueta_normal"}	{"name": "label_normal"}
 dd220	dd537	dd395	no	si	si	4	dd	si		{\r\n  "name": "tamano_archivo"\r\n}	{"name": "tamano_archivo"}
 dd315	dd389	dd395	no	si	si	22	dd	si	\N	{"name":"componente_en_uso"}	{"name": "component_in_use"}
 dd960	dd957	dd91	no	si	si	3	dd	si	[{"dd9":"dd959"}]		\N
@@ -472,11 +472,11 @@ dd127	dd99	dd9	no	si	si	1	dd	si	\N		\N
 dd1317	dd1313	dd91	no	si	si	5	dd	si	[{"dd9":"dd1315"}]		\N
 dd1134	dd1132	dd247	no	si	si	2	dd	no			\N
 dd655	dd1453	dd6	no	si	si	5	dd	no	[{"dd6":"dd623"}]		null
+dd1745	dd906	dd395	no	si	si	5	dd	si	\N	{"name":"nombre"}	{"name": "name"}
 dd1000	dd1052	dd6	no	si	si	1	dd	no	[{"dd626":"dd963"}]		\N
 dd107	dd118	dd395	no	si	si	2	dd	no	null	{"name":"tool_replace_component_data"}	{"name": "tool_replace_component_data"}
 dd111	dd906	dd395	no	si	si	9	dd	si	\N	{"name":"number_page_of_total_pages"}	{"name": "number_page_of_total_pages"}
 dd483	dd118	dd395	no	si	si	7	dd	si	null	{"name":"vacio"}	{"name": "vacio"}
-dd1745	dd906	dd395	no	si	si	5	dd	si	\N	{"name":"nombre"}	{"name": "name"}
 dd316	dd342	dd395	no	si	si	8	dd	si	\N	{\r\n  "name": "desbloquear_todos_los_componentes"\r\n}	{"name": "desbloquear_todos_los_componentes"}
 dd63	dd70	dd1028	no	si	si	2	dd	no	[{"dd6":"dd542"}]		\N
 dd980	dd976	dd177	no	si	si	4	dd	no			\N
@@ -913,20 +913,26 @@ dd195	dd117	null	si	si	si	2	dd	no		\N	\N
 dd1159	dd1102	dd1231	no	si	si	3	dd	no	[{"dd9":"dd828"}]	\N	\N
 dd768	dd751	dd1231	no	si	si	4	dd	si	[{"dd1018":"rsc37"}]	\N	\N
 dd870	dd868	dd339	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    },\r\n    ".content_data": {\r\n      "style": {\r\n        "width": "120px"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".content_data": {"style": {"width": "120px"}}, ".wrap_component": {"mixin": [".vertical"], "style": {"width": "10%"}}}}
+dd1654	dd391	dd395	no	si	si	100	dd	si	\N	{"name":"full_screen"}	{"name": "full_screen"}
 dd1160	dd1102	dd1231	no	si	si	4	dd	no	[{"dd580":"dd829"}]	\N	\N
 dd148	dd1324	dd91	no	si	si	1	dd	no	[{"dd57":"dd1354"},{"dd9":"dd1326"},{"dd9":"dd799"},{"dd10":"dd612"},{"dd9":"dd1327"},{"dd9":"dd1328"},{"dd80":"dd1330"},{"dd57":"dd1331"},{"dd57":"dd1332"},{"dd57":"dd1333"}]		\N
 dd1030	dd1026	dd9	no	si	si	2	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "25%"}}}}
 dd1465	dd1390	dd9	no	si	si	9	dd	no	\N	{"multi_value":true,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"40%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 2"}}}
 dd1161	dd1102	dd1231	no	si	si	5	dd	no	[{"dd10":"dd845"}]	\N	\N
 dd1031	dd1026	dd247	no	si	si	3	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
+dd1655	dd391	dd395	no	si	si	101	dd	si	\N	{"name":"loading_dedalo_files"}	{"name": "loading_dedalo_files"}
 dd1162	dd1102	dd1231	no	si	si	6	dd	no	[{"dd9":"dd847"}]	\N	\N
 dd1445	dd1390	dd57	no	si	si	6	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": [\r\n    {\r\n      "section_id": "1",\r\n      "section_tipo": "dd64"\r\n    }\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "13%",\r\n        "opacity": "0.2"\r\n      }\r\n    }\r\n  }\r\n}	null
 dd929	dd918	dd635	no	si	si	4	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"style": {"width": "15%"}}}}
 dd1032	dd1026	dd10	no	si	si	4	dd	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "50%"}}}}
 dd1163	dd1102	dd1231	no	si	si	7	dd	no	[{"dd530":"dd848"}]	\N	\N
+dd1656	dd391	dd395	no	si	si	102	dd	si	\N	{"name":"ontology"}	{"name": "ontology"}
 dd1164	dd1102	dd1231	no	si	si	8	dd	no	[{"dd580":"dd849"}]	\N	\N
 dd930	dd918	dd635	no	si	si	8	dd	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"style": {"width": "15%"}}}}
+dd1590	dd193	dd204	no	si	si	9	dd	si	\N	\N	\N
+dd1657	dd391	dd395	no	si	si	103	dd	si	\N	{"name":"developer"}	{"name": "developer"}
 dd1274	dd1266	dd247	no	si	si	4	dd	no	\N	\N	\N
+dd1658	dd391	dd395	no	si	si	104	dd	si	\N	{"name":"installed"}	{"name": "installed"}
 dd822	dd821	dd8	no	si	si	1	dd	no	\N	\N	\N
 dd934	dd917	dd91	no	si	si	2	dd	si	[{"dd9":"dd921"},{"dd635":"dd929"}]	\N	\N
 dd1167	dd1103	dd1231	no	si	si	3	dd	no	[{"dd11":"dd872"}]	\N	\N
@@ -1239,7 +1245,6 @@ dd613	dd342	dd395	no	si	si	16	dd	si		{"name":"export_json_ontology"}	{"name": "e
 dd738	dd389	dd395	no	si	si	14	dd	si		{"name":"fichero_demasiado_grande"}	{"name": "filesize_is_too_big"}
 dd781	dd390	dd395	no	si	si	19	dd	si		{"name":"crear_nuevo_fragmento"}	{"name": "crear_nuevo_fragmento"}
 dd830	dd390	dd395	no	si	si	20	dd	si		{"name":"borrar_solo_el_vinculo"}	{"name": "delete_only_the_link"}
-dd1590	dd193	dd204	no	si	si	9	dd	si	\N	\N	\N
 dd611	dd811	dd339	no	si	si	1	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{\r\n  "dato_default": {\r\n    "section_id": "1",\r\n    "section_tipo": "dd64"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}	{"css": {".wrap_component": {"mixin": [".vertical"], "style": {"width": "10%"}}}, "dato_default": {"section_id": "1", "section_tipo": "dd64"}}
 dd131	dd129	dd57	no	si	si	2	dd	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"12%"}},".content_data":{"style":{}}}}	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "span 1"}}}
 dd769	dd751	dd1233	no	si	si	1	dd	si	[{"dd339":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "si",\r\n    "2": "no"\r\n  },\r\n  "exclude_column": true\r\n}	{"enum": {"1": "si", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "exclude_column": true, "data_to_be_used": "dato"}
@@ -1666,6 +1671,8 @@ dd1453	dd68	dd4	no	si	si	21	dd	no	\N		null
 dd137	dd68	dd4	no	si	si	1	dd	si			\N
 dd622	dd348	dd1229	no	si	si	3	dd	si	[{"dd6":"ww10"}]	\N	\N
 dd563	dd562	dd8	no	si	si	1	dd	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
+dd1652	dd898	dd177	no	si	si	4	dd	no	\N	\N	\N
+dd1653	dd898	dd183	no	si	si	5	dd	no	\N	\N	\N
 dd998	dd147	dd395	no	si	si	16	dd	no		{"name":"select_page_of_the_doc"}	{"name": "select_page_of_the_doc"}
 dd1614	dd147	dd395	no	si	si	20	dd	si	\N	{"name":"component"}	{"name": "component"}
 dd1616	dd147	dd395	no	si	si	22	dd	si	\N	{"name":"translatable"}	{"name": "translatable"}
