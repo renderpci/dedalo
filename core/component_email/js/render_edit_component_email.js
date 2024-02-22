@@ -85,7 +85,7 @@ export const get_content_data = function(self) {
 			// set the pointer
 			content_data[i] = input_element_node
 		}
-		
+
 
 	return content_data
 }//end get_content_data
@@ -204,7 +204,7 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only',
 			inner_html		: current_value
 		})
-		
+
 
 	return content_value
 }//end get_content_value_read
@@ -229,7 +229,7 @@ export const get_buttons = (self) => {
 			const add_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
-				title			: 'Add new input field',
+				title			: get_label.new || 'Add new input field',
 				parent			: fragment
 			})
 			add_button.addEventListener('click', function(e) {

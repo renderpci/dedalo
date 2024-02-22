@@ -214,7 +214,7 @@ const render_content_data = async function(self) {
 
 	// form init
 		self.caller.init_form({
-			submit_label	: self.name,
+			submit_label	: get_label.registrar_herramientas || self.name,
 			confirm_text	: get_label.sure || 'Sure?',
 			body_info		: content_data,
 			body_response	: body_response,

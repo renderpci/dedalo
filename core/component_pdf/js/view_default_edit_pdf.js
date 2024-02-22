@@ -337,6 +337,7 @@ const get_buttons = (self) => {
 		const button_fullscreen = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button full_screen',
+			title			: get_label.full_screen || 'Full screen',
 			parent			: fragment
 		})
 		button_fullscreen.addEventListener('click', function() {

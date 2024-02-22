@@ -126,8 +126,8 @@ const build_widget = (item, self) => {
 		const label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'widget_label icon_arrow',
+			inner_html		: item.label || '',
 			parent			: container,
-			inner_html		: item.label || ''
 		})
 
 	// body
@@ -468,7 +468,7 @@ export const build_form = function(widget_object) {
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light',
-			text_content	: submit_label,
+			inner_html		: submit_label,
 			parent			: form_container
 		})
 		button_submit.addEventListener('click', function(){
