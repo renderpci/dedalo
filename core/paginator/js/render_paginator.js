@@ -262,7 +262,7 @@ const get_content_data = async function(self) {
 						Y	: page_row_end,
 						Z	: total_label
 					};
-					return get_label.registros_mostrados.replace(/X|Y|Z/gi, (matched)=> {
+					return get_label.registros_mostrados.replace(/X|Y|Z/g, (matched)=> {
 						return map[matched];
 					})
 			      })()
