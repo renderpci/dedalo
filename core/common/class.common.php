@@ -2687,11 +2687,16 @@ abstract class common {
 			static $resolved_request_properties_parsed = [];
 			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
-			// (!) Removed $section_id from resolved_key 10-08-2023 because is necessary only in case that sqo->fixed_filter is defined.
-			// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
-			// In those cases, prevent to cache this result
-			// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
-			// define use_cache as true. Change before set value if needed
+
+			// @todo : Remove section_id from cache $resolved_key (resolve numisdata4 list problem before)
+				// @note : To verify this cache behavior, see numisdata4 list
+				// (!) Removed $section_id from resolved_key 25-01-2024 because it is only needed in case sqo->fixed_filter is defined.
+				// When case is sqo->fixed_filter, the $use_cache property is set to false to prevent saving as resolved cache item
+				// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
+				// In those cases, prevent to cache this result
+				// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
+				// define use_cache as true. Change before set value if needed
+
 			$use_cache = true;
 			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
 				// debug_log(__METHOD__." Return ar_request_config from cached value. resolved_key: ".to_string($resolved_key), logger::ERROR);
@@ -2916,7 +2921,7 @@ abstract class common {
 													debug_log(__METHOD__
 														." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
 														.' tipo: ' . $this->tipo . PHP_EOL
-														.' section_tipo: ' . $this->section_tipo . PHP_EOL
+														.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
 														.' section_id: ' . $this->section_id
 														, logger::WARNING
 													);
