@@ -169,7 +169,7 @@ section.prototype.init = async function(options) {
 
 		// session_key
 		self.session_save			= options.session_save ?? true
-		self.session_key			= options.session_key ?? 'section_' + self.tipo
+		self.session_key			= options.session_key ?? ('section_' + self.tipo +'_'+ self.mode)
 
 		// view
 		self.view					= options.view ?? null
@@ -763,11 +763,11 @@ section.prototype.build = async function(autoload=false) {
 	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
 		if (self.session_save===true) {
 			if(SHOW_DEVELOPER===true) {
-				console.warn('to local DDBB value :', self.session_key + '_' + self.mode, self.rqo.sqo);
+				console.warn('to local DDBB value :', self.session_key, self.rqo.sqo);
 			}
 			data_manager.set_local_db_data(
 				{
-					id		: self.session_key + '_' + self.mode,
+					id		: self.session_key, //+ '_' + self.mode,
 					value	: self.rqo.sqo
 				},
 				'sqo'
@@ -1293,8 +1293,9 @@ section.prototype.goto_list = async function() {
 		// Note that section build method store SQO in local DDBB to preserve user
 		// navigation section filter and pagination. It's recovered here when exists,
 		// to pass values to API server
+		const session_key = 'section_' + self.tipo + '_' + 'list'
 		const saved_sqo	= await data_manager.get_local_db_data(
-			self.session_key + '_list',
+			session_key, // self.session_key + '_list',
 			'sqo',
 			true
 		);

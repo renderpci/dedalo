@@ -1067,7 +1067,8 @@ final class dd_api_Test extends TestCase {
 					"typo"			: "source",
 					"type"			: "section",
 					"tipo"			: "test3",
-					"section_tipo"	: "test3"
+					"section_tipo"	: "test3",
+					"mode"			: "list"
 				},
 				"sqo" : {
 					"section_tipo" : ["test3"]

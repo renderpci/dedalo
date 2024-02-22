@@ -1372,6 +1372,7 @@ final class dd_core_api {
 			$tipo	= $rqo->source->tipo;
 			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$sqo	= $rqo->sqo;
+			$mode	= $rqo->source->mode;
 
 		// prevent_lock. Close session if not already closed
 			if (!isset($rqo->prevent_lock)) {
@@ -1398,8 +1399,10 @@ final class dd_core_api {
 		// session filter check
 			// If session filter exists from current section, add to the sqo
 			// to be consistent with the last search
-			$sqo_id			= ($model==='section') ? implode('_', ['section', $tipo]) : 'undefined';
-			$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+			$sqo_id = ($model==='section')
+				? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+				: 'undefined';
+			$sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
 				$sqo->filter = $sqo_session->filter;
 			}
@@ -1748,7 +1751,10 @@ final class dd_core_api {
 			$caller_dataframe	= $ddo_source->caller_dataframe ?? null;
 			$properties			= $ddo_source->properties ?? null;
 			$session_save		= $ddo_source->session_save ?? true;
-			$session_key		= $ddo_source->session_key ?? (($model==='section') ? implode('_', ['section', $tipo]) : 'undefined'); // cache key sqo_id;
+			$session_key		= $ddo_source->session_key ?? (($model==='section')
+				? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+				: 'undefined'
+			); // cache key sqo_id;
 			$autocomplete 		= $ddo_source->autocomplete ?? null;
 
 		// sqo (search_query_object)
@@ -1857,7 +1863,7 @@ final class dd_core_api {
 						// }
 
 					// prevent edit mode set limit greater than 1
-						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || $sqo->limit>1)) {
+						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
 							$sqo->limit = 1;
 						}
 
@@ -1865,7 +1871,7 @@ final class dd_core_api {
 						$element = sections::get_instance(
 							null, // ?array $ar_locators
 							$sqo, // object $search_query_object = null
-							$tipo, //  string $caller_tipo = null
+							$tipo, // string $caller_tipo = null
 							$mode, // string $mode = 'list'
 							$lang // string $lang = DEDALO_DATA_NOLAN
 						);
@@ -1875,11 +1881,14 @@ final class dd_core_api {
 					// so, in the context of the search autocomplete the section and components will set his subdatum at least with permissions = 1.
 						$element->autocomplete = $autocomplete;
 
-					// session sqo. Store sqo section in session.
+					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export
 					// in addition to section_tool navigation (like transcription, translation, etc.)
 						if ($model==='section' && ($mode==='edit' || $mode==='list') && $session_save===true) {
-							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = clone $sqo;
+
+							$safe_sqo = clone $sqo;
+
+							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $safe_sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
 								. ' sqo:' . to_string($sqo)

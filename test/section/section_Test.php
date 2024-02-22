@@ -2211,4 +2211,35 @@ final class section_test extends TestCase {
 
 
 
+	/**
+	* TEST_build_sqo_id
+	* @return void
+	*/
+	public function test_build_sqo_id() : void {
+
+		$section_tipo	= self::$section_tipo;
+		$mode			= 'edit';
+
+		// Note that section is not saved
+		$result = section::build_sqo_id(
+			$section_tipo,
+			$mode
+		);
+
+		$this->assertTrue(
+			gettype($result)==='string',
+			'expected string'. PHP_EOL
+			.' result: ' . gettype($result)
+		);
+
+		$eq = ($result==='section_' . $section_tipo . '_' . $mode);
+		$this->assertTrue(
+			$eq===true,
+			'expected equal true in result '. PHP_EOL
+			.' result: ' . json_encode($result)
+		);
+	}//end test_build_sqo_id
+
+
+
 }//end class section_test

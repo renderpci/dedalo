@@ -34,7 +34,7 @@ class tool_propagate_component_data extends tool_common {
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= implode('_', ['section', $section_tipo]); // cache key sqo_id
+			$sqo_id	= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' section session sqo is not found!';
 				return $response;
