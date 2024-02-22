@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 20,
-              "time": 65047781669,
-              "year": 2023,
-              "month": 11,
-              "minute": 14,
-              "second": 29
+              "day": 22,
+              "hour": 12,
+              "time": 65057516861,
+              "year": 2024,
+              "month": 2,
+              "minute": 27,
+              "second": 41
             }
           }
         ]
@@ -113,6 +113,9 @@
         "lg-ita": [
           "Amministrazione degli utenti"
         ],
+        "lg-nep": [
+          "प्रयोगकर्ता व्यवस्थापक"
+        ],
         "lg-por": [
           "Administração do utilizador"
         ],
@@ -140,7 +143,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -173,7 +176,7 @@
   "section_id": 9,
   "created_date": "2022-02-16 12:47:25",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 20:14:29",
+  "modified_date": "2024-02-22 12:27:41",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

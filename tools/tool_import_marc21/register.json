@@ -54,13 +54,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 20,
-              "time": 65047782680,
-              "year": 2023,
-              "month": 11,
-              "minute": 31,
-              "second": 20
+              "day": 22,
+              "hour": 12,
+              "time": 65057518189,
+              "year": 2024,
+              "month": 2,
+              "minute": 49,
+              "second": 49
             }
           }
         ]
@@ -84,6 +84,9 @@
         "lg-ita": [
           "<p>Per importare file in formato Marc21.</p>"
         ],
+        "lg-nep": [
+          "<p>Για εισαγωγή αρχείων σε μορφή Marc21.</p>"
+        ],
         "lg-por": [
           "<p>Para importar ficheiros no formato Marc21.</p>"
         ],
@@ -104,7 +107,9 @@
         "lg-deu": [
           "Marc21 einführen"
         ],
-        "lg-ell": [],
+        "lg-ell": [
+          "Εισαγωγή Marc21"
+        ],
         "lg-eng": [
           "Import Marc21"
         ],
@@ -112,6 +117,9 @@
           "Importation Marc21"
         ],
         "lg-ita": [],
+        "lg-nep": [
+          "मार्च २१ आयात गर्नुहोस्"
+        ],
         "lg-por": [
           "Importação Marc21"
         ],
@@ -132,7 +140,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -389,6 +397,21 @@
               "lang": "lg-eng",
               "name": "quality",
               "value": "Quality"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "file_processor",
+              "value": "Επεξεργαστής"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "target_componet",
+              "value": "Πεδίο στόχου"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "quality",
+              "value": "Ποιότητα"
             }
           ]
         ]
@@ -882,7 +905,7 @@
   "section_id": 17,
   "created_date": "2023-10-09 19:37:41",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 20:31:20",
+  "modified_date": "2024-02-22 12:49:49",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

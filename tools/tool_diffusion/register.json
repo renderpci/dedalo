@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 17,
-              "time": 65047772925,
-              "year": 2023,
-              "month": 11,
-              "minute": 48,
-              "second": 45
+              "day": 22,
+              "hour": 12,
+              "time": 65057517445,
+              "year": 2024,
+              "month": 2,
+              "minute": 37,
+              "second": 25
             }
           }
         ]
@@ -95,8 +95,32 @@
     },
     "dd799": {
       "dato": {
+        "lg-cat": [
+          "Difusió"
+        ],
+        "lg-deu": [
+          "Diffusion"
+        ],
+        "lg-ell": [
+          "Διάχυση"
+        ],
         "lg-eng": [
           "Diffusion"
+        ],
+        "lg-fra": [
+          "La diffusion"
+        ],
+        "lg-ita": [
+          "Diffusione"
+        ],
+        "lg-nep": [
+          "प्रसार"
+        ],
+        "lg-por": [
+          "Difusão"
+        ],
+        "lg-spa": [
+          "Difusión"
         ]
       }
     },
@@ -110,7 +134,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -218,6 +242,51 @@
             {
               "lang": "lg-ell",
               "name": "skip_publication_state_check",
+              "value": "Αγνοήστε προσωρινά την κατάσταση δημοσίευσης κατά τη δημοσίευση"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "publish_selected_records",
+              "value": "Pubblica i {0} record selezionati"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "publish_selected_records",
+              "value": ""
+            },
+            {
+              "lang": "lg-deu",
+              "name": "publish_selected_records",
+              "value": "Veröffentlichen Sie die {0} ausgewählten Datensätze"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "publish_selected_records",
+              "value": "{0} चयन गरिएका रेकर्डहरू प्रकाशित गर्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "depth_levels",
+              "value": "समाधान गर्न गहिराइ स्तर"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "skip_publication_state_check",
+              "value": "प्रकाशन गर्दा अस्थायी रूपमा प्रकाशन स्थितिलाई बेवास्ता गर्नुहोस्"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "depth_levels",
+              "value": "Zu lösende Tiefenstufen"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "depth_levels",
+              "value": "Livelli di profondità da risolvere"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "depth_levels",
               "value": ""
             }
           ]
@@ -236,7 +305,7 @@
   "section_id": 12,
   "created_date": "2022-03-01 20:37:27",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 17:48:45",
+  "modified_date": "2024-02-22 12:37:25",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

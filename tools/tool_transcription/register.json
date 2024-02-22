@@ -78,13 +78,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047845137,
-              "year": 2023,
-              "month": 11,
-              "minute": 52,
-              "second": 17
+              "day": 22,
+              "hour": 12,
+              "time": 65057518610,
+              "year": 2024,
+              "month": 2,
+              "minute": 56,
+              "second": 50
             }
           }
         ]
@@ -114,6 +114,9 @@
         "lg-ita": [
           "<p>Trascrivi qualsiasi tipo di media in testo</p>"
         ],
+        "lg-nep": [
+          "<p>पाठमा कुनै पनि प्रकारको मिडिया ट्रान्सक्राइब गर्नुहोस्।</p>"
+        ],
         "lg-spa": [
           "<p>Transcribir cualquier tipo de media a texto.</p>"
         ]
@@ -139,6 +142,9 @@
         ],
         "lg-ita": [
           "Trascrizione"
+        ],
+        "lg-nep": [
+          "ट्रान्सक्रिप्शन"
         ],
         "lg-por": [
           "Transcrição"
@@ -166,7 +172,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -1259,6 +1265,86 @@
               "lang": "lg-ell",
               "name": "seconds_abbr",
               "value": "Δεύτερος"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "babel_transcriber",
+              "value": "Babel"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "tiny",
+              "value": "कम, छिटो"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "base",
+              "value": "कम, छिटो"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "small",
+              "value": "कम"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "medium",
+              "value": "मध्यम"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "large",
+              "value": "उच्च"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "quality",
+              "value": "गुणस्तर"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "build_subtitles",
+              "value": "उपशीर्षकहरू बनाउनुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "automatic_transcription",
+              "value": "स्वचालित ट्रान्सक्रिप्शन"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "chars_per_line",
+              "value": "प्रति रेखा वर्णहरू"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "insert_tag",
+              "value": "ट्याग घुसाउनुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "auto_rewind",
+              "value": "स्वत: रिवाइन्ड"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "play_pause",
+              "value": "प्ले / पज कुञ्जी"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "engine",
+              "value": "सेवा"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "play_speed",
+              "value": "गति खेल्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "seconds_abbr",
+              "value": "सेकेन्ड"
             }
           ]
         ]
@@ -1276,7 +1362,7 @@
   "section_id": 28,
   "created_date": "2023-11-03 13:52:50",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:52:50",
+  "modified_date": "2024-02-22 12:56:50",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

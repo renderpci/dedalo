@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 30,
-              "hour": 18,
-              "time": 65055551466,
+              "day": 22,
+              "hour": 12,
+              "time": 65057517743,
               "year": 2024,
-              "month": 1,
-              "minute": 31,
-              "second": 6
+              "month": 2,
+              "minute": 42,
+              "second": 23
             }
           }
         ]
@@ -100,11 +100,17 @@
         "lg-deu": [
           "<p>Auf Versionen von Änderungsverlaufsdaten zugreifen und diese abrufen</p>"
         ],
+        "lg-ell": [
+          "<p>Πρόσβαση και ανάκτηση εκδόσεων των δεδομένων ιστορικού αλλαγών</p>"
+        ],
         "lg-eng": [
           "<p>Access and retrieve versions of change history data</p>"
         ],
         "lg-fra": [
           "<p>Accéder et récupérer des versions des données de l'historique des modifications</p>"
+        ],
+        "lg-nep": [
+          "<p>परिवर्तन इतिहास डेटाको संस्करणहरू पहुँच र पुन: प्राप्त गर्नुहोस्</p>"
         ],
         "lg-spa": [
           "<p>Accede y recupera versiones de los datos del historial de cambios</p>"
@@ -311,7 +317,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2024-01-30 18:31:06",
+  "modified_date": "2024-02-22 12:42:23",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

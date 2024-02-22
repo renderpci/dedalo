@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047844390,
-              "year": 2023,
-              "month": 11,
-              "minute": 39,
-              "second": 50
+              "day": 22,
+              "hour": 14,
+              "time": 65057524114,
+              "year": 2024,
+              "month": 2,
+              "minute": 28,
+              "second": 34
             }
           }
         ]
@@ -90,8 +90,17 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-deu": [
+          "<p>Extrahieren Sie den Inhalt der zu verwendenden PDF-Datei in die entsprechenden Felder, z. B. text_areas.</p>"
+        ],
+        "lg-ell": [
+          "<p>Εξαγάγετε το περιεχόμενο του PDF που θα χρησιμοποιηθεί στα σχετικά πεδία, όπως το text_areas.</p>"
+        ],
         "lg-eng": [
           "Extract the content of the PDF to be used into the fields related, like text_areas."
+        ],
+        "lg-nep": [
+          "<p>सम्बन्धित क्षेत्रहरूमा प्रयोग गर्न PDF को सामग्री निकाल्नुहोस्, जस्तै text_areas।</p>"
         ]
       }
     },
@@ -115,6 +124,9 @@
         ],
         "lg-ita": [
           "Estrarre il contenuto del PDF"
+        ],
+        "lg-nep": [
+          "PDF फाइल सामग्री निकाल्नुहोस्"
         ],
         "lg-por": [
           "Extrair conteúdo de PDF"
@@ -153,7 +165,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -378,6 +390,81 @@
               "lang": "lg-eng",
               "name": "do_process",
               "value": "Process"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "page_in",
+              "value": "पृष्ठ मा"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "page_out",
+              "value": "पृष्ठ बाहिर"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "page_in",
+              "value": "Σελίδα μέσα"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "page_out",
+              "value": "Σελίδα έξω"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "total_pages",
+              "value": "कुल पृष्ठहरू"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "total_pages",
+              "value": "Σύνολο σελίδων"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "proces_method",
+              "value": "Μέθοδος επεξεργασίας"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "proces_method",
+              "value": "प्रशोधन विधि"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "proces_method",
+              "value": "Verarbeitungsmethode"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "do_process",
+              "value": "प्रक्रिया"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "do_process",
+              "value": "διαδικασία"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "do_process",
+              "value": "Verfahren"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "total_pages",
+              "value": "Alle Seiten"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "page_in",
+              "value": "Seite ein"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "page_out",
+              "value": "Seite raus"
             }
           ]
         ]
@@ -395,7 +482,7 @@
   "section_id": 27,
   "created_date": "2023-11-03 13:36:32",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:39:50",
+  "modified_date": "2024-02-22 14:28:34",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
