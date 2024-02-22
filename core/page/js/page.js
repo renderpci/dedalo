@@ -216,11 +216,18 @@ page.prototype.init = async function(options) {
 								// const url = "?tipo="+ current_tipo + '&m=' + source.mode
 
 								// url search. Append section_id if exists
+									const current_url_vars = url_vars_to_object(location.search)
 									const url_vars = {} // url_vars_to_object(location.search)
 										  url_vars.tipo = current_tipo
 										  url_vars.mode = source.mode
 									if(source.mode==='list' && url_vars.id){
 										delete url_vars.id
+									}
+									if (typeof current_url_vars.menu!=='undefined') {
+										url_vars.menu = current_url_vars.menu
+									}
+									if (typeof current_url_vars.session_save!=='undefined') {
+										url_vars.session_save = current_url_vars.session_save
 									}
 									const url = '?' + object_to_url_vars(url_vars)
 
