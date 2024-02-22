@@ -69,13 +69,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047843676,
-              "year": 2023,
-              "month": 11,
-              "minute": 27,
-              "second": 56
+              "day": 22,
+              "hour": 14,
+              "time": 65057523902,
+              "year": 2024,
+              "month": 2,
+              "minute": 25,
+              "second": 2
             }
           }
         ]
@@ -84,8 +84,17 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-deu": [
+          "<p>Importieren Sie RDF-Schemata, die von externen Ontologien wie Nomisma, Dublin Core usw. definiert wurden</p>"
+        ],
+        "lg-ell": [
+          "<p>Εισαγωγή σχημάτων RDF που ορίζονται από εξωτερικές οντολογίες, όπως Nomisma, Dublin Core, κ.λπ.</p>"
+        ],
         "lg-eng": [
           "Import RDF schemas defined by external ontologies, like Nomisma, Dublin Core, etc&nbsp;"
+        ],
+        "lg-nep": [
+          "<p>नोमिस्मा, डब्लिन कोर, इत्यादि जस्ता बाह्य ओन्टोलजीहरू द्वारा परिभाषित RDF योजनाहरू आयात गर्नुहोस्</p>"
         ]
       }
     },
@@ -116,6 +125,9 @@
         "lg-ita": [
           "Importa RDF"
         ],
+        "lg-nep": [
+          "RDF आयात गर्नुहोस्"
+        ],
         "lg-por": [
           "Importar RDF"
         ],
@@ -139,7 +151,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -283,7 +295,7 @@
   "section_id": 25,
   "created_date": "2023-11-03 13:25:16",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:27:56",
+  "modified_date": "2024-02-22 14:25:02",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

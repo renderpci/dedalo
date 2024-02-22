@@ -60,13 +60,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047843995,
-              "year": 2023,
-              "month": 11,
-              "minute": 33,
-              "second": 15
+              "day": 22,
+              "hour": 14,
+              "time": 65057524206,
+              "year": 2024,
+              "month": 2,
+              "minute": 30,
+              "second": 6
             }
           }
         ]
@@ -78,8 +78,17 @@
         "lg-cat": [
           "<p>Exporti el format JSON de Zotero per a importar. Si vol contolar l'id, pongalo en Zotero en el camp 'call-number'. Si vol importar fitxers PDF, utilitze el camp 'archive' de Zotero &nbsp;amb el nom del PDF, i adjunti els fitxers PDF al mateix temps que el fitxer de Zotero.</p>"
         ],
+        "lg-deu": [
+          "<p>Exportieren Sie das JSON-Format aus Zotero zum Importieren. Wenn Sie die ID steuern möchten, legen Sie sie im Zotero-Rufnummernfeld fest. Wenn Sie PDF-Dateien importieren möchten, verwenden Sie das Feld „Zotero-Archiv“, um den Namen der PDF-Datei einzugeben, und laden Sie die PDF-Dateien gleichzeitig mit der Zotero-Datei hoch.</p>"
+        ],
+        "lg-ell": [
+          "<p>Εξαγωγή μορφής JSON από το Zotero για εισαγωγή. Εάν θέλετε να ελέγξετε το αναγνωριστικό, ορίστε το στο πεδίο αριθμού κλήσης Zotero. Εάν θέλετε να εισαγάγετε αρχεία PDF, χρησιμοποιήστε το πεδίο Zotero Archive για να εισαγάγετε το όνομα του PDF και μεταφορτώστε τα αρχεία PDF ταυτόχρονα με το αρχείο Zotero.</p>"
+        ],
         "lg-eng": [
           "<p>Export JSON format from Zotero to import. If you want control the id, set it in Zotero call-number field. If you want to import PDF files, use the Zotero Archive field to introduce the name of the PDF, and upload the PDF files at the same time than Zotero file.</p>"
+        ],
+        "lg-nep": [
+          "<p>आयात गर्न Zotero बाट JSON ढाँचा निर्यात गर्नुहोस्। यदि तपाइँ आईडी नियन्त्रण गर्न चाहनुहुन्छ भने, यसलाई Zotero कल-नम्बर फिल्डमा सेट गर्नुहोस्। यदि तपाइँ PDF फाइलहरू आयात गर्न चाहनुहुन्छ भने, Zotero Archive फिल्ड प्रयोग गर्नुहोस् PDF को नाम परिचय गर्न, र Zotero फाइल भन्दा एकै समयमा PDF फाइलहरू अपलोड गर्नुहोस्।</p>"
         ],
         "lg-spa": [
           "<p>Exporte el formato JSON de Zotero para importar. Si quiere contolar el id, pongalo en Zotero en el campo 'call-number'. Si quiere importar ficheros PDF, use el campo 'archive' de Zotero &nbsp;con el nombre del PDF, y adjunte los ficheros PDF al mismo tiempo que el fichero de Zotero.</p>"
@@ -107,6 +116,9 @@
         "lg-ita": [
           "Importa Zotero"
         ],
+        "lg-nep": [
+          "Zotero आयात गर्नुहोस्"
+        ],
         "lg-por": [
           "Importar Zotero"
         ],
@@ -130,7 +142,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -921,7 +933,7 @@
   "section_id": 26,
   "created_date": "2023-11-03 13:29:54",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:33:15",
+  "modified_date": "2024-02-22 14:30:06",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

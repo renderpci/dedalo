@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047845359,
-              "year": 2023,
-              "month": 11,
-              "minute": 55,
-              "second": 59
+              "day": 22,
+              "hour": 12,
+              "time": 65057516917,
+              "year": 2024,
+              "month": 2,
+              "minute": 28,
+              "second": 37
             }
           }
         ]
@@ -113,6 +113,9 @@
         "lg-ita": [
           "Aggiornamento della cache"
         ],
+        "lg-nep": [
+          "क्यास अपडेट गर्नुहोस्"
+        ],
         "lg-por": [
           "Atualizar cache"
         ],
@@ -131,7 +134,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -154,7 +157,7 @@
   "section_id": 10,
   "created_date": "2022-02-28 10:50:50",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:55:59",
+  "modified_date": "2024-02-22 12:28:37",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

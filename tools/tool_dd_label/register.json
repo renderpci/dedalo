@@ -69,13 +69,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 14,
-              "time": 65045688608,
-              "year": 2023,
-              "month": 10,
-              "minute": 50,
-              "second": 8
+              "day": 22,
+              "hour": 12,
+              "time": 65057517638,
+              "year": 2024,
+              "month": 2,
+              "minute": 40,
+              "second": 38
             }
           }
         ]
@@ -98,8 +98,20 @@
     "dd799": {
       "inf": "Etiqueta [component_input_text]",
       "dato": {
+        "lg-deu": [
+          "Etikettenzusammensetzung"
+        ],
+        "lg-ell": [
+          "Σύνθεση ετικέτας"
+        ],
         "lg-eng": [
           "Label composition"
+        ],
+        "lg-nep": [
+          "लेबल संरचना"
+        ],
+        "lg-spa": [
+          "Composición de etiquetas"
         ]
       }
     },
@@ -121,7 +133,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -183,7 +195,7 @@
   "section_id": 14,
   "created_date": "2020-04-24 18:12:00",
   "section_tipo": "dd1340",
-  "modified_date": "2023-10-09 14:50:08",
+  "modified_date": "2024-02-22 12:40:38",
   "diffusion_info": null,
   "created_by_userID": 2,
   "section_real_tipo": "dd73",

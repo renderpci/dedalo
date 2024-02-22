@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 19,
-              "time": 65047779513,
-              "year": 2023,
-              "month": 11,
-              "minute": 38,
-              "second": 33
+              "day": 22,
+              "hour": 14,
+              "time": 65057523818,
+              "year": 2024,
+              "month": 2,
+              "minute": 23,
+              "second": 38
             }
           }
         ]
@@ -84,11 +84,17 @@
         "lg-deu": [
           "<p>Erzeugt eine druckbare Version des Interviewprotokolls. Sie können den Ausdruck durch Hinzufügen oder Entfernen von Tags für Zeitcode, Indexierung, Personen usw. anpassen.</p>"
         ],
+        "lg-ell": [
+          "<p>Δημιουργεί μια εκτυπώσιμη έκδοση του πρακτικού της συνέντευξης. Σας επιτρέπει να προσαρμόσετε την εκτύπωση προσθέτοντας ή αφαιρώντας ετικέτες για τον κώδικα ώρας, την ευρετηρίαση, τα άτομα κ.λπ.</p>"
+        ],
         "lg-eng": [
           "<p>Generates a printable version of the interview transcript. Allows you to customize the printout by adding or removing tags for time code, indexing, people, etc.</p>"
         ],
         "lg-fra": [
           "Générez une version imprimable de la transcription de l'entretien. Utilisé pour personnaliser la sortie d'impression en ajoutant ou en supprimant des balises pour le code temporel, l'indexation, les personnes, etc."
+        ],
+        "lg-nep": [
+          "<p>अन्तर्वार्ता ट्रान्सक्रिप्टको मुद्रण योग्य संस्करण उत्पन्न गर्दछ। समय कोड, अनुक्रमणिका, व्यक्ति, इत्यादिका लागि ट्यागहरू थपेर वा हटाएर प्रिन्टआउटलाई अनुकूलन गर्न अनुमति दिन्छ।</p>"
         ],
         "lg-spa": [
           "<p>Genera una versión imprimible de la transcripción de una entrevista. Utilizado para personalizar la salida de impresión, añadiendo o eliminando las etiquetas de código de tiempo, indexación, personas, etc.</p>"
@@ -101,8 +107,17 @@
         "lg-cat": [
           "Impresió de transcripció"
         ],
+        "lg-deu": [
+          "Transkription drucken"
+        ],
+        "lg-ell": [
+          "Εκτύπωση μεταγραφής"
+        ],
         "lg-eng": [
           "Print transcription"
+        ],
+        "lg-nep": [
+          "प्रिन्ट ट्रान्सक्रिप्शन"
         ],
         "lg-spa": [
           "Impresión de transcripción"
@@ -121,7 +136,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -237,7 +252,7 @@
   "section_id": 24,
   "created_date": "2023-11-02 19:36:20",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 19:38:33",
+  "modified_date": "2024-02-22 14:23:38",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
