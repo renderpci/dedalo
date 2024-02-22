@@ -387,9 +387,13 @@ const render_selection_info = function(self) {
 				selection_info_node.removeChild(selection_info_node.firstChild)
 			}
 
-			// update label text
-			const label_node = document.createTextNode(caller.label);
-			selection_info_node.appendChild(label_node)
+			// add label text
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: '',
+				inner_html		: caller.label || '',
+				parent			: selection_info_node
+			})
 
 			// add button list when info is about section
 			add_list_button(caller)
