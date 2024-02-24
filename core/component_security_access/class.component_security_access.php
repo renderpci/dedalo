@@ -175,8 +175,6 @@ class component_security_access extends component_common {
 	/**
 	* GET_ELEMENT_DATALIST
 	* Create the datalist items inside sections.
-	* Sometimes the section could have dataframe sections (sub-sections), in these cases
-	* the components inside the subsection will set as child of the subsection.
 	* @param string $section_tipo
 	* @return array $datalist
 	*/
@@ -184,9 +182,6 @@ class component_security_access extends component_common {
 
 		$datalist = [];
 
-		// subsection as dataframe section are inside normal section
-		// sub_sections has his own components and need to be checked and set with the correct section_tipo
-		$sub_section_children_recursive = [];
 
 		// get the exclude elements defined into ontology to be remove of the datalist
 		$ar_tipo_to_be_exclude = null;
@@ -196,30 +191,14 @@ class component_security_access extends component_common {
 			$ar_tipo_to_be_exclude = RecordObj_dd::get_ar_terminos_relacionados($exclude_elements_tipo, $cache=false, $simple=true);
 		}
 
-		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, dataframes, etc.)
+		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, etc.)
 		$children_recursive = self::get_children_recursive_security_acces($section_tipo, $ar_tipo_to_be_exclude);
 		foreach ($children_recursive as $current_child) {
-
-			// sub section case
-			// when a main section has a sub section (used as dataframe)
-			// get the children of this subsection to be checked in the loop
-			if($current_child->model === 'section'){
-				$sub_section_children_recursive = self::get_children_recursive_security_acces($current_child->tipo);
-			}
-
-			// check if the current child is inside a subsection
-			$found = array_find($sub_section_children_recursive, function($el) use ($current_child) {
-				return $el->tipo === $current_child->tipo;
-			});
-			// if the current child is inside a subsection, use the subsection tipo instead the main section tipo
-			$current_section_tipo = !empty($found)
-				? $found->section_tipo
-				: $section_tipo;
 
 			// add
 				$item = (object)[
 					'tipo'			=> $current_child->tipo,
-					'section_tipo'	=> $current_section_tipo,
+					'section_tipo'	=> $section_tipo,
 					'model'			=> $current_child->model,
 					'label'			=> $current_child->label,
 					'parent'		=> $current_child->parent

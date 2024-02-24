@@ -302,18 +302,6 @@ const render_area_item = function(item, datalist, value, self) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
-		// add children subsections (dataframe cases)
-		if (item.model==='section') {
-			const direct_children_length = direct_children.length
-			for (let i = 0; i < direct_children_length; i++) {
-				const item = direct_children[i]
-				if (item.model==='section') {
-					const sub_children = datalist.filter(el => el.parent===item.tipo)
-					// console.log('sub_children:', item.tipo, sub_children);
-					direct_children.push(...sub_children)
-				}
-			}
-		}
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
@@ -974,18 +962,6 @@ const render_area_item_read = function(item, datalist, value) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
-		// add children subsections (dataframe cases)
-		if (item.model==='section') {
-			const direct_children_length = direct_children.length
-			for (let i = 0; i < direct_children_length; i++) {
-				const item = direct_children[i]
-				if (item.model==='section') {
-					const sub_children = datalist.filter(el => el.parent===item.tipo)
-					// console.log('sub_children:', item.tipo, sub_children);
-					direct_children.push(...sub_children)
-				}
-			}
-		}
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
