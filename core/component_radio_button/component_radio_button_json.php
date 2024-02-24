@@ -69,9 +69,7 @@
 			// datalist add if exits
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$datalist = $ar_list_of_values->result;
-				usort($datalist, function($a, $b) {
-					return strcmp($a->label, $b->label);
-				});
+
 				$item->datalist = $datalist;
 			}
 
