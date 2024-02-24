@@ -609,7 +609,7 @@ export const render_column_remove = function(options) {
 							section_id		: section_id
 						})
 
-						// delete_dataframe_record. if it is not dataframe it will be ignored						// delete_dataframe_record
+						// delete_dataframe_record. if it is not dataframe it will be ignored
 						delete_dataframe({
 							self			: self,
 							section_id		: self.section_id,
@@ -627,48 +627,6 @@ export const render_column_remove = function(options) {
 						footer.classList.remove('loading')
 					}
 					button_unlink_record.addEventListener('click', fn_click_unlink_record)
-
-			// button_unlink_record (Only delete the locator)
-				const button_unlink_record = ui.create_dom_element({
-					element_type	: 'button',
-					class_name 		: 'warning remove',
-					text_content 	: get_label.delete_only_the_link || 'Delete only the link',
-					parent			: footer
-				})
-				const fn_click_unlink_record = async function(e){
-					e.stopPropagation()
-
-					// stop if the user don't confirm
-					if (!confirm(get_label.sure)) {
-						return
-					}
-
-					footer.classList.add('loading')
-
-					// deletes the locator from component data
-					await self.unlink_record({
-						paginated_key	: paginated_key,
-						row_key			: row_key,
-						section_id		: section_id
-					})
-
-					delete_dataframe({
-						self			: self,
-						section_id		: self.section_id,
-						section_tipo	: self.section_tipo,
-						section_id_key	: section_id,
-						// tipo_key		: self.tipo
-					})
-
-					// refresh the component. Don't wait here
-					self.refresh()
-
-					// close modal
-					modal.close()
-
-					footer.classList.remove('loading')
-				}
-				button_unlink_record.addEventListener('click', fn_click_unlink_record)
 
 				// modal
 					const modal = ui.attach_to_modal({
