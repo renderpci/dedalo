@@ -132,7 +132,8 @@ const get_content_value = function(i, value, self) {
 		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 
 	// render image node
-		const image_node = render_image_node(self, file_info, content_value)
+		self.image_container = render_image_node(self, file_info, content_value)
+		const image_node = self.image_container
 		content_value.appendChild(image_node)
 
 	// quality_selector
@@ -291,132 +292,139 @@ const render_image_node = function(self, file_info, content_value) {
 				: page_globals.fallback_image
 
 	// image. (!) Only to get background color and apply to li node
+		const image_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'image_container'
+		})
+
 		const bg_reference_image_url = url // || page_globals.fallback_image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name 		: 'hide'
+			class_name 		: 'img',
+			parent 			: image_container
 		})
 		// image background color
-			image.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				// ui.set_background_image(this, content_value)
-				image.classList.remove('hide')
-			}
-		// error
-			image.addEventListener('error', function(){
-				// console.warn('Error on load image:', bg_reference_image_url, image);
-				svg_fallback(object_node)
-			}, false)
+		// 	image.addEventListener('load', set_bg_color, false)
+		// 	function set_bg_color() {
+		// 		this.removeEventListener('load', set_bg_color, false)
+		// 		// ui.set_background_image(this, content_value)
+		// 		image.classList.remove('hide')
+		// 	}
+		// // error
+		// 	image.addEventListener('error', function(){
+		// 		// console.warn('Error on load image:', bg_reference_image_url, image);
+		// 		svg_fallback(object_node)
+		// 	}, false)
 		image.src = bg_reference_image_url
 
+		image_container.image = image
 
 	// fallback to default svg file
-		function svg_fallback(object_node) {
-			// fallback to default svg file
-			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
-			const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
-			object_node.data			= base_svg_url_default
+		// function svg_fallback(object_node) {
+		// 	// fallback to default svg file
+		// 	// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
+		// 	const base_svg_url_default	= page_globals.fallback_image.substr(0, page_globals.fallback_image.lastIndexOf('.')) + '.svg'
+		// 	object_node.data			= base_svg_url_default
 
-			if (self.permissions>1) {
-				// upload tool is open on click
-				content_value.addEventListener('click', function(e) {
-					e.stopPropagation();
-					// tool_upload. Get the tool context to be opened
-					const tool_upload = self.tools.find(el => el.model==='tool_upload')
-					// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-				})
-				content_value.classList.add('clickable')
-			}
-		}
+		// 	if (self.permissions>1) {
+		// 		// upload tool is open on click
+		// 		content_value.addEventListener('click', function(e) {
+		// 			e.stopPropagation();
+		// 			// tool_upload. Get the tool context to be opened
+		// 			const tool_upload = self.tools.find(el => el.model==='tool_upload')
+		// 			// open_tool (tool_common)
+		// 			open_tool({
+		// 				tool_context	: tool_upload,
+		// 				caller			: self
+		// 			})
+		// 		})
+		// 		content_value.classList.add('clickable')
+		// 	}
+		// }
 
 	// object_node <object type="image/svg+xml" data="image.svg"></object>
-		const object_node = ui.create_dom_element({
-			element_type	: 'object',
-			class_name		: 'image'
-		})
-		object_node.type = "image/svg+xml"
-		// set pointer
-		self.object_node = object_node
-		// set data or fallback
-		if (data.base_svg_url) {
+		// const object_node = ui.create_dom_element({
+		// 	element_type	: 'object',
+		// 	class_name		: 'image'
+		// })
+		// object_node.type = "image/svg+xml"
+		// // set pointer
+		// self.object_node = object_node
+		// // set data or fallback
+		// if (data.base_svg_url) {
 
-			// svg file already exists
-			object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
+		// 	// svg file already exists
+		// 	object_node.data = data.base_svg_url + '?t=' + (new Date()).getTime()
 
-		}else{
-			// fallback to default svg file
-			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
-			svg_fallback(object_node)
-		}
+		// }else{
+		// 	// fallback to default svg file
+		// 	// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
+		// 	svg_fallback(object_node)
+		// }
 
-		// auto-change url the first time
-		object_node.onload = async function() {
-			if (quality!==self.context.features.default_quality) {
-				await fn_img_quality_change(url)
-			}
+		// // auto-change url the first time
+		// object_node.onload = async function() {
+		// 	if (quality!==self.context.features.default_quality) {
+		// 		await fn_img_quality_change(url)
+		// 	}
 
-			// dynamic_url . prevents to cache files inside svg object
-			const image = object_node.contentDocument.querySelector('image')
-			if (image) {
-				const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
-				image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
-			}
+		// 	// dynamic_url . prevents to cache files inside svg object
+		// 	const image = object_node.contentDocument.querySelector('image')
+		// 	if (image) {
+		// 		const dynamic_url = image.href.baseVal + '?t=' + (new Date()).getTime()
+		// 		image.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', dynamic_url);
+		// 	}
 
-			content_value.classList.remove('hide')
-		}
+		// 	content_value.classList.remove('hide')
+		// }
 
 	// change event
-		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		self.events_tokens.push(image_change_event)
-		object_node.dataset.image_change_event = image_change_event // string like 'event_167'
-		async function fn_img_quality_change (img_src) {
+		// const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
+		// self.events_tokens.push(image_change_event)
+		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
+		// async function fn_img_quality_change (img_src) {
 
-			self.img_src = img_src
+		// 	self.img_src = img_src
 
-			// svg document inside the object_node tag
-			const svg_doc = object_node.contentDocument;
-			// Get one of the svg items by ID;
-			const image_node = svg_doc
-				? await svg_doc.querySelector('image')
-				: null
+		// 	// svg document inside the object_node tag
+		// 	const svg_doc = object_node.contentDocument;
+		// 	// Get one of the svg items by ID;
+		// 	const image_node = svg_doc
+		// 		? await svg_doc.querySelector('image')
+		// 		: null
 
-			// self.img_src = image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
-			if (image_node) {
+		// 	// self.img_src = image.setAttributeNS('http://www.w3.org/1999/xlink','href',img_src)
+		// 	if (image_node) {
 
-				// add spinner when new image is loading
-				content_value.classList.add('loading')
-				image_node.addEventListener('load', function(){
-					content_value.classList.remove('loading')
-				})
+		// 		// add spinner when new image is loading
+		// 		content_value.classList.add('loading')
+		// 		image_node.addEventListener('load', function(){
+		// 			content_value.classList.remove('loading')
+		// 		})
 
-				// no load case (example: original tiff files)
-				image_node.addEventListener('error', function(){
-					content_value.classList.remove('loading')
-				})
+		// 		// no load case (example: original tiff files)
+		// 		image_node.addEventListener('error', function(){
+		// 			content_value.classList.remove('loading')
+		// 		})
 
-				// update t var from image URL
-				const beats	= img_src.split('?')
+		// 		// update t var from image URL
+		// 		const beats	= img_src.split('?')
 
-				// force to refresh image from svg
-				await fetch(beats[0], { cache: 'reload' })
+		// 		// force to refresh image from svg
+		// 		await fetch(beats[0], { cache: 'reload' })
 
-				// new_url
-				const new_url = beats[0] + '?t=' + (new Date()).getTime()
+		// 		// new_url
+		// 		const new_url = beats[0] + '?t=' + (new Date()).getTime()
 
-				// set the new source to the image node into the svg
-				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', new_url)
-			}
+		// 		// set the new source to the image node into the svg
+		// 		image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', new_url)
+		// 	}
 
-			return true
-		}
+		// 	return true
+		// }
 
 
-	return object_node
+	return image_container
 }//end render_image_node
 
 
@@ -445,10 +453,13 @@ const get_buttons = (self) => {
 		// button_fullscreen.addEventListener('mouseup', () =>{
 		// 	self.node.classList.toggle('fullscreen')
 		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
+			// event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// })
 		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node)
+			ui.enter_fullscreen(self.node,()=>{
+				event_manager.publish('full_screen_'+self.id, false)
+			})
+			event_manager.publish('full_screen_'+self.id, true)
 		})
 
 	// buttons tools
