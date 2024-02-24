@@ -17,14 +17,14 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$item_context = $this->get_structure_context_simple($permissions);
+				$item_context = $this->get_structure_context_simple($permissions,true);
 				break;
 
 			default:
 				// item_context
 					$item_context = $this->get_structure_context(
 						$permissions,
-						false // add_request_config
+						true // add_request_config
 					);
 
 				// target_sections add
