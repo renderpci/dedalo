@@ -3069,7 +3069,7 @@ export const ui = {
 	* 	Usually the component wrapper
 	* @return bool
 	*/
-	enter_fullscreen : function(node) {
+	enter_fullscreen : function(node, exit_callback) {
 
 		// apply style fullscreen
 		node.classList.toggle('fullscreen')
@@ -3091,6 +3091,9 @@ export const ui = {
 			node.classList.remove('fullscreen')
 			menu_wrapper.classList.remove('hide')
 			exit_button.remove()
+			if(exit_callback){
+				exit_callback()
+			}
 		})
 
 		// set exit event
@@ -3104,6 +3107,9 @@ export const ui = {
 					menu_wrapper.classList.remove('hide')
 				}
 				exit_button.remove()
+				if(exit_callback){
+					exit_callback()
+				}
 			}
 		}
 
