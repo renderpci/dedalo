@@ -4032,6 +4032,7 @@ abstract class common {
 				'component_password',
 				// 'component_filter_records',
 				'component_image',
+				'component_3d',
 				'component_av',
 				'component_pdf',
 				'component_security_administrator',
