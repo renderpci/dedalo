@@ -1122,6 +1122,15 @@ class component_relation_common extends component_common {
 					$relation_options->ar_locators			= $current_dato;
 
 				search::propagate_component_dato_to_relations_table($relation_options);
+
+				// Dataframe
+				// restores the caller dataframe of the component
+				// and delete his data caches to be re-calculated for other calls with the caller_dataframe
+				if(get_called_class() === 'component_dataframe'){
+					$this->caller_dataframe			= $current_caller_dataframe;
+					$this->dato_resolved			= null;
+					$this->bl_loaded_matrix_data	= false;
+				}
 			}
 
 		// save_to_database. Optional stop the save process to delay ddbb access
