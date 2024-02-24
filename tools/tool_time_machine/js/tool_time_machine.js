@@ -16,7 +16,6 @@
 	// import {paginator} from '../../../core/paginator/js/paginator.js'
 
 
-
 /**
 * TOOL_TIME_MACHINE
 * Tool to translate contents from one language to other in any text component
@@ -83,18 +82,44 @@ tool_time_machine.prototype.init = async function(options) {
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
 		)
 		async function fn_tm_edit_record(data) {
-			const matrix_id	= data.matrix_id
-			const date		= data.date
-			// render. Create and add new component to preview container
-			const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
-			add_component(
-				self,
-				self.preview_component_container,
-				self.lang,
-				date,
-				load_mode,
-				matrix_id
-			)
+			const matrix_id			= data.matrix_id
+			const date				= data.date
+			const caller_dataframe	= data.caller_dataframe || null
+
+			// Check if the main component, caller component, has a dataframe
+			// when the main component has a dataframe, we will use the rendered node of the selected row
+			// instead create new instance and get his data,
+			// if you create new instance you can not re-create the dataframe because the dataframe data is not in time_machine DDBB
+			// data of component with dataframe is calculated and recreated matching the data from main component and his dataframe
+			// see API: build_json_rows() with action 'search'
+			// Else creates new component instance and render it.
+			if( self.main_element.properties.has_dataframe && self.main_element.properties.has_dataframe === true){
+
+				const selected_instace = data.caller.ar_instances.find(el => el.tipo===self.main_element.tipo && el.matrix_id === matrix_id)
+				const new_node = await selected_instace.node.cloneNode(true)
+
+				const component_container = self.preview_component_container
+				// empty the preview container
+				while (self.preview_component_container.firstChild) {
+					// remove node from DOM (not component instance)
+					self.preview_component_container.removeChild(self.preview_component_container.firstChild)
+				}
+
+				self.preview_component_container.appendChild(new_node)
+			}else{
+				// render. Create and add new component to preview container
+				const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
+				add_component(
+					self,
+					self.preview_component_container,
+					self.lang,
+					date,
+					load_mode,
+					matrix_id,
+					caller_dataframe
+				)
+			}
+
 			// fix selected matrix_id
 			self.selected_matrix_id = matrix_id
 			// show Apply button
@@ -163,19 +188,40 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 			// ddo_map for service_time_machine. Section uses is request_config_object show
 			// NOTE: The ddo_map will be changed in service_time_machine to mode = list
+				const ddo = {
+					tipo			: self.main_element.tipo,
+					type			: self.main_element.type,
+					typo			: 'ddo',
+					model			: self.main_element.model,
+					section_tipo	: self.main_element.section_tipo,
+					parent			: self.main_element.section_tipo,
+					label			: self.main_element.label,
+					mode			: 'tm',
+					view			: 'text'
+				}
+			// check if the main component has a dataframe associated
+			// if yes, assign the has_dataframe property
+			// has_dataframe will use in API build_json_rows() in search action to calculate the component and dataframe data
+				if(self.caller_dataframe){
+					ddo.caller_dataframe = self.caller_dataframe
+				}
+				if(self.main_element.properties.has_dataframe){
+					ddo.has_dataframe = self.main_element.properties.has_dataframe
+					// get the dataframe component defined in request_config to assign it to main ddo
+					const request_config = self.main_element.context.request_config || null
+					const dataframe_ddo = request_config
+						? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
+						: null
+					if(dataframe_ddo){
+						ddo.dataframe_ddo = dataframe_ddo
+					}
+					// the main and dataframe will use the mini view,
+					// it removes the events and functionality of the dataframe
+					ddo.view = 'mini'
+				}
 				const ddo_map = self.main_element.model==='section'
 					? self.main_element.request_config_object.show.ddo_map
-					: [{
-							tipo			: self.main_element.tipo,
-							type			: self.main_element.type,
-							typo			: 'ddo',
-							model			: self.main_element.model,
-							section_tipo	: self.main_element.section_tipo,
-							parent			: self.main_element.section_tipo,
-							label			: self.main_element.label,
-							mode			: 'tm',
-							view			: 'text'
-					   }]
+					: [ddo]
 
 			// ignore_columns
 				const ignore_columns = self.main_element.model==='section'
@@ -193,23 +239,31 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					: '5rem 8rem 10.8rem 16rem 1fr 5fr'
 
 			// time_machine. Create, build and assign the time machine service to the instance
-				self.service_time_machine = await get_instance({
+			// config is used in service_time_machine to get the ddo_map and send it to API
+				const config = {
+					id					: 'tool_tm',
+					model				: self.main_element.model,
+					tipo				: self.main_element.tipo,
+					lang				: self.main_element.lang,
+					template_columns	: template_columns,
+					ignore_columns		: ignore_columns,
+					ddo_map				: ddo_map
+				}
+				if(self.caller_dataframe){
+					config.caller_dataframe = self.caller_dataframe
+				}
+				const instance_options = {
 					model			: 'service_time_machine',
 					section_tipo	: self.caller.section_tipo,
 					section_id		: self.caller.section_id,
 					view			: 'tool',
 					id_variant		: self.main_element.tipo +'_'+ self.model,
 					caller			: self,
-					config			: {
-						id					: 'tool_tm',
-						model				: self.main_element.model,
-						tipo				: self.main_element.tipo,
-						lang				: self.main_element.lang,
-						template_columns	: template_columns,
-						ignore_columns		: ignore_columns,
-						ddo_map				: ddo_map
-					}
-				})
+					config			: config
+				}
+				self.config = config
+
+				self.service_time_machine = await get_instance(instance_options)
 
 			// build
 				await self.service_time_machine.build(true)
@@ -240,7 +294,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 * @param string|int|null matrix_id
 * @return object component_instance
 */
-tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null) {
+tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null, caller_dataframe) {
 	// console.log("))))))))))) get_component:",lang, mode, matrix_id);
 
 	const self = this
@@ -256,7 +310,8 @@ tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id
 			section_id			: self.main_element.section_id,
 			matrix_id			: matrix_id,
 			data_source			: 'tm',
-			to_delete_instances	: to_delete_instances // array of instances to delete after create the new on
+			to_delete_instances	: to_delete_instances, // array of instances to delete after create the new on
+			caller_dataframe	: caller_dataframe
 		})
 
 	// call generic common tool build
@@ -301,6 +356,26 @@ tool_time_machine.prototype.apply_value = function(options) {
 				lang			: lang,
 				matrix_id		: matrix_id
 			}
+		}
+	// dataframe
+		const main_ddo = self.config.ddo_map.find(el => el.tipo == self.main_element.tipo)
+
+		if ( main_ddo && main_ddo.has_dataframe && main_ddo.has_dataframe === true){
+
+			const source_data = self.service_time_machine.datum.data.find(el =>
+				el.tipo === main_ddo.tipo
+				&& el.matrix_id === matrix_id
+			)
+
+			const dataframe_data = self.service_time_machine.datum.data.filter(el =>
+				el.tipo === main_ddo.dataframe_ddo.tipo
+				&& el.matrix_id === matrix_id
+			 )
+
+			rqo.options.source_data		= source_data
+			rqo.options.dataframe_data	= dataframe_data
+			rqo.options.ddo_map			= self.config.ddo_map[0]
+			rqo.options.has_dataframe	= main_ddo.has_dataframe
 		}
 
 	// dataframe caller
