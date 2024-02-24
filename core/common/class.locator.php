@@ -395,11 +395,12 @@ class locator extends stdClass {
 
 	/**
 	* SET_SECTION_ID_KEY
-	* @param int $value
+	* @param int|string $value
 	* @return bool
 	*/
-	public function set_section_id_key(int $value) : bool {
-		if($value < 0) {
+	public function set_section_id_key(int|string $value) : bool {
+
+		if((int)$value < 0) {
 			debug_log(__METHOD__
 				. ' Invalid section_id_key (only integer are allowed)' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -407,7 +408,7 @@ class locator extends stdClass {
 			);
 			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
-		$this->section_id_key = $value;
+		$this->section_id_key = (int)$value;
 
 		return true;
 	}//end set_section_id_key
