@@ -2215,7 +2215,7 @@ abstract class component_common extends common {
 	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
 	* It will use by component_select, component_check_box, component_radio_button .. to show the possibles values of the component
 	* Use the request_config of the component to get the ddo_map to show and the ddo_map to hide (use as internal data values)
-	* @param string $lang used to resolve the litera
+	* @param string $lang used to resolve the literal
 	* @return object $response
 	*/
 	public function get_list_of_values(string $lang) : object {
@@ -2234,7 +2234,10 @@ abstract class component_common extends common {
 			$dedalo_request_config = array_find($request_config, function($el){
 				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
-
+			// if the component has not created his own request_config, create new one
+			$dedalo_request_config = isset($dedalo_request_config)
+				? $dedalo_request_config
+				: $this->build_request_config()[0];
 
 		$result = [];
 
