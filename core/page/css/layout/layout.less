@@ -783,13 +783,10 @@
 			button {
 				margin-bottom: 1rem;
 				margin-left: 0.5rem;
-
-
 			}
 			button:first-of-type {
 				margin-left: 0rem;
 			}
-
 
 			&.content {
 				padding: 1.5rem;
@@ -799,6 +796,14 @@
 				padding-bottom: 0px;
 			}
 
+			// default text align is right
+			// overwrite it using this selectors:
+			&.center {
+				text-align: center;
+			}
+			&.left {
+				text-align: left;
+			}
 			&.distribute {
 				display: flex;
 				justify-content: space-between;
