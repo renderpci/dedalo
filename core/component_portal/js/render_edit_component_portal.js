@@ -1074,61 +1074,6 @@ export const render_references = function(ar_references) {
 
 
 
-/**
-* RENDER_DATAFRAME_TABLE
-* Render column_remove node
-* Shared across views
-* @param object options
-* @return DocumentFragment
-*/
-export const render_dataframe_table = async function(options) {
-
-	// options
-		const self = options.self
-
-	// DocumentFragment
-		const fragment = new DocumentFragment()
-
-	// ddo_map
-		const ddo_map			= self.request_config_object.show.ddo_map || []
-		const column_dataframe	= ddo_map.find(el => el.is_dataframe===true)
-		if (!column_dataframe) {
-			return fragment
-		}
-		const section_tipo	= column_dataframe.section_tipo
-
-	// data
-		const data_item		= self.datum.data.find(el => el.section_tipo===section_tipo)
-		const section_id	= data_item.section_id
-
-	// section
-		const section = await get_instance({
-			model			: 'section',
-			mode			: 'list',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id
-		})
-		await section.build(true)
-		const section_node = await section.render()
-
-	// body
-		const body = ui.create_dom_element({ // string case. auto-create the body node
-			element_type	: 'div',
-			class_name		: 'body content'
-		})
-		body.appendChild(section_node)
-
-		ui.attach_to_modal({
-			header : 'Dataframe',
-			body : body
-		})
-
-
-	return fragment
-}//end render_dataframe_table
-
-
 
 // @license-end
 
