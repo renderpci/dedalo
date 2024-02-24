@@ -10,8 +10,8 @@
 	import {common} from '../../../common/js/common.js'
 	// import {set_before_unload} from '../../../common/js/events.js';
 	import {clone} from '../../../common/js/utils/index.js'
-	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
+	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
@@ -1930,10 +1930,6 @@ export const service_ckeditor = function() {
 			console.error( error );
 		});
 	}//end destroy
-
-
-
-
 
 
 

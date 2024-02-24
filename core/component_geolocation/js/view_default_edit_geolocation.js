@@ -35,7 +35,7 @@ view_default_edit_geolocation.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -68,7 +68,7 @@ view_default_edit_geolocation.render = async function(self, options) {
 * @param object self
 * @return HTMLElement content_data
 */
-export const get_content_data = async function(self) {
+export const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
