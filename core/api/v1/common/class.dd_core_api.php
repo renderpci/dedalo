@@ -846,17 +846,13 @@ final class dd_core_api {
 			$options = $rqo->options ?? null;
 
 		// permissions check
-			$permissions = ($delete_mode==='delete_dataframe')
-				? common::get_permissions($caller_dataframe->section_tipo, $section_tipo)
-				: common::get_permissions($section_tipo, $section_tipo);
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
 			debug_log(__METHOD__
 				." to delete section. Permissions: $permissions ".to_string($section_tipo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {
-				$msg = ($delete_mode==='delete_dataframe')
-					? '[2] Insufficient permissions to delete dataframe (delete mode: '.$delete_mode.'): '.$permissions
-					: '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
+				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
 				$response->error = 2;
 				$response->msg 	.= $msg;
 				debug_log(__METHOD__
@@ -864,40 +860,6 @@ final class dd_core_api {
 					.' rqo: '.to_string($rqo)
 					, logger::ERROR
 				);
-				return $response;
-			}
-
-		// dataframe section case
-			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
-				$section = section::get_instance(
-					$section_id,
-					$section_tipo,
-					'list',
-					false,
-					$caller_dataframe
-				);
-				$deleted 	= $section->Delete($delete_mode);
-
-				if ($deleted!==true) {
-					$errors[] = (object)[
-						'section_tipo'	=> $section_tipo,
-						'section_id'	=> $section_id
-					];
-				}
-
-				$response->result		= [$section_id];
-				$response->error		= !empty($errors) ? $errors : null;
-				$response->delete_mode	= $delete_mode;
-				$response->msg			= !empty($errors)
-					? 'Some errors occurred when delete sections. delete_mode:' . $delete_mode
-					: 'OK. Request done successfully.';
-
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::WARNING
-				);
-
 				return $response;
 			}
 
@@ -970,7 +932,7 @@ final class dd_core_api {
 					: true; // default is true
 
 				// Delete method
-				$section 	= section::get_instance($current_section_id, $current_section_tipo);
+				$section 	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
 				$deleted 	= $section->Delete($delete_mode, $delete_diffusion_records);
 				if ($deleted!==true) {
 					$errors[] = (object)[
