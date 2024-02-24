@@ -3081,16 +3081,6 @@ abstract class component_common extends common {
 			// permissions_section_tipo
 				$permissions_section_tipo = $this->get_section_tipo(); // default
 
-				// On dataframe case, permissions of dataframe components are saved with caller dataframe section (see oh126)
-					if(isset($this->caller_dataframe) && isset($this->caller_dataframe->section_tipo)) {
-						$RecordObj_dd		= new RecordObj_dd( $this->get_section_tipo() );
-						$section_properties	= $RecordObj_dd->get_properties();
-						if (isset($section_properties->source) && $section_properties->source==='caller_section') {
-							// overwrite section tipo to calculate permissions
-							$permissions_section_tipo = $this->caller_dataframe->section_tipo;
-						}
-					}
-
 			// permissions
 				$this->permissions = common::get_permissions($permissions_section_tipo, $this->tipo);
 
