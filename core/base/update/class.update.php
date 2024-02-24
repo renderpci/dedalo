@@ -719,4 +719,136 @@ class update {
 
 
 
+
+	/**
+	* CONVERT_TABLE_DATA
+	* Get all data from required tables and apply the action required to every row
+	* @param array $ar_tables
+	* @param string $action
+	* @return bool
+	* 	true
+	*/
+	public static function convert_table_data(array $ar_tables, string $action) : bool {
+
+		// Maximum execution time
+		set_time_limit(0);
+
+		foreach ($ar_tables as $table) {
+
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " CONVERTING ... " . PHP_EOL
+				. " convert_table_data - table: $table " . PHP_EOL
+				. " convert_table_data - action: $action " . PHP_EOL
+				. " convert_table_data memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				, logger::WARNING
+			);
+
+			// Get last id in the table
+			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			$rows		= pg_fetch_assoc($result);
+			if (!$rows) {
+				continue;
+			}
+			$max = $rows['id'];
+
+			// Get first id in the table
+			$min_strQuery	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
+			$min_result		= JSON_RecordDataBoundObject::search_free($min_strQuery);
+			$min_rows		= pg_fetch_assoc($min_result);
+			if (!$min_rows) {
+				continue;
+			}
+			$min = $min_rows['id'];
+
+			//$min = 1;
+
+			// iterate from 1 to last id
+			$i_ref = 0; $start_time = start_time();
+			for ($i=$min; $i<=$max; $i++) {
+
+				$strQuery	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+				if($result===false) {
+					$msg = "Failed Search id $i. Data is not found.";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					continue;
+				}
+				$n_rows = pg_num_rows($result);
+
+				if ($n_rows<1) continue;
+
+				while($row = pg_fetch_assoc($result)) {
+
+					$id		= $row['id'];
+					$datos	= json_handler::decode($row['datos']);
+
+					if (!empty($datos)) {
+
+						// called_class extends current class
+						$called_class = get_called_class();
+
+						$section_data			= $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
+						if($section_data===null){
+							continue;
+						}
+						$section_data_encoded	= json_encode($section_data);
+
+						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+						if($result===false) {
+							$msg = "Failed Update section_data $i";
+							debug_log(__METHOD__
+								." ERROR: $msg "
+								, logger::ERROR
+							);
+							continue;
+						}
+					}else{
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: $table - $id "
+							, logger::ERROR
+						);
+					}
+				}
+
+				// log info each 1000
+					if ($i_ref===0) {
+						debug_log(__METHOD__
+							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
+							, logger::DEBUG
+						);
+
+						// clean vars
+						// unset($result);
+						// let GC do the memory job
+						time_nanosleep(0, 5000); // Slept for 5000 nanoseconds
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
+					}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 1001) {
+						$i_ref = 0;
+					}
+			}
+			#break; // stop now
+
+			// let GC do the memory job
+			sleep(1);
+			// Forces collection of any existing garbage cycles
+			gc_collect_cycles();
+		}//end foreach ($ar_tables as $key => $table)
+
+
+		return true;
+	}//end convert_table_data
+
+
 }//end update class
