@@ -56,6 +56,7 @@
 
 		$context[] = $this->context;
 
+
 	if($permissions>0) {
 	// if($options->get_data===true ){
 		// short vars
