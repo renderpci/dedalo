@@ -2322,7 +2322,8 @@ export const ui = {
 				'component_publication',
 				'component_info',
 				'component_radio_button',
-				'component_section_id'
+				'component_section_id',
+				'component_dataframe'
 			]
 
 		// short vars
@@ -2333,8 +2334,7 @@ export const ui = {
 		// first_ddo
 			const first_ddo = ddo_map.find(el =>
 				el.model.indexOf('component_')!==-1 &&
-				!avoid_models.includes(el.model) &&
-				!el.is_dataframe
+				!avoid_models.includes(el.model)
 			)
 			if (!first_ddo) {
 				if(SHOW_DEBUG===true) {
