@@ -55,14 +55,14 @@ class component_relation_common extends component_common {
 	/**
 	* __CONSTRUCT
 	* @param string $tipo = null
-	* @param string|null $parent = null
+	* @param string|null $section_id = null
 	* @param string $mode = 'list'
 	* @param string $lang = null
 	* @param string $section_tipo = null
 	*
 	* @return bool
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
+	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -105,7 +105,7 @@ class component_relation_common extends component_common {
 					: $this->default_relation_type_rel;
 
 		// Build the component normally
-			parent::__construct($tipo, $parent, $mode, $lang, $section_tipo, $cache);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
 	}//end __construct
 
 
