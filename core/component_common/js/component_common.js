@@ -1410,5 +1410,91 @@ export const deactivate_components = function(e) {
 }//end deactivate_components
 
 
+/**
+* GET_DATAFRAME
+* Check if the component has a component_dataframe in his own rqo
+* if it has a dataframe, create the component, and inject his context and data
+* @return object | null component_dataframe
+*/
+export const get_dataframe = async function(options) {
+
+	const self = options.self
+
+	const section_id		= options.section_id
+	const section_tipo		= options.section_tipo
+	// const tipo_key			= options.tipo_key
+	const section_id_key	= options.section_id_key
+	const view				= options.view
+
+	const request_config = self.context.request_config || null
+
+	const original_dataframe_ddo = request_config
+		? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
+		: null
+
+	if(!original_dataframe_ddo){
+		return null
+	}
+
+	const instance_options = clone(original_dataframe_ddo)
+	instance_options.section_id	= section_id
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_id_key}`
+	instance_options.standalone	= false
+
+	const component_dataframe = await instances.get_instance(instance_options)
+	// get his data from datum
+	// it get data from datum as section_record does (see section_record get_component_data() for portals)
+	const data = self.datum.data.find( function(el) {
+		if( el.tipo							=== component_dataframe.tipo
+			&& el.section_tipo				=== component_dataframe.section_tipo
+			&& parseInt(el.section_id)		=== parseInt(component_dataframe.section_id)
+			){
+				// time machine case
+				if( el.matrix_id && self.matrix_id){
+					return (
+						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
+						// && el.tipo_key					=== tipo_key
+						&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
+					)
+				}
+				// normal case
+				if( !self.matrix_id ){
+					return (
+						 parseInt(el.section_id_key)	=== parseInt(section_id_key)
+						// && el.tipo_key						=== tipo_key
+
+					)
+				}
+			}
+		return false
+	})
+	const context = self.datum.context.find( el =>
+		el.tipo				=== component_dataframe.tipo
+		&& el.section_tipo	=== component_dataframe.section_tipo
+	)
+
+	// get view from options, in not defined get from ddo, if not defined apply "dataframe"
+	context.view = (view)
+		? view
+		: instance_options.view
+			? instance_options.view
+			: 'default'
+
+	const dataframe_data = data
+		? data
+		: {
+			// tipo_key		: tipo_key,
+			section_id_key	: section_id_key
+		}
+
+	component_dataframe.data	= dataframe_data
+	component_dataframe.context	= context
+	component_dataframe.datum	= self.datum
+	component_dataframe.caller	= self
+
+	await component_dataframe.build(false)
+
+	return component_dataframe
+}// end get_dataframe
 
 // @license-end
