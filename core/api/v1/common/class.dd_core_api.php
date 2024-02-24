@@ -1787,7 +1787,7 @@ final class dd_core_api {
 						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
 						// }
 
-<<<<<<< HEAD
+
 					// check if the search has a dataframe associated (time_machine of the component with dataframe)
 					// when the component has a dataframe need to be re_created using his own data with the dataframe data
 					// it will be showed as an unique component, the main component and his dataframe
@@ -1888,35 +1888,20 @@ final class dd_core_api {
 								$element->set_dato( $full_data );
 						}else{
 
-						// prevent edit mode set limit greater than 1
-							if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || $sqo->limit>1)) {
-								$sqo->limit = 1;
-							}
+							// prevent edit mode set limit greater than 1
+								if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
+									$sqo->limit = 1;
+								}
 
-						// sections instance
-							$element = sections::get_instance(
-								null, // ?array $ar_locators
-								$sqo, // object $search_query_object = null
-								$tipo, //  string $caller_tipo = null
-								$mode, // string $mode = 'list'
-								$lang // string $lang = DEDALO_DATA_NOLAN
-							);
+							// sections instance
+								$element = sections::get_instance(
+									null, // ?array $ar_locators
+									$sqo, // object $search_query_object = null
+									$tipo, // string $caller_tipo = null
+									$mode, // string $mode = 'list'
+									$lang // string $lang = DEDALO_DATA_NOLAN
+								);
 						}
-=======
-					// prevent edit mode set limit greater than 1
-						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
-							$sqo->limit = 1;
-						}
-
-					// sections instance
-						$element = sections::get_instance(
-							null, // ?array $ar_locators
-							$sqo, // object $search_query_object = null
-							$tipo, // string $caller_tipo = null
-							$mode, // string $mode = 'list'
-							$lang // string $lang = DEDALO_DATA_NOLAN
-						);
->>>>>>> refs/remotes/gitdedalo/v6_developer
 
 					// autocomplete. Set the autocomplete status into sections to set correct permissions
 					// search with autocomplete need access, at least with read, to target data,
