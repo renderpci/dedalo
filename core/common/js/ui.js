@@ -3216,7 +3216,57 @@ export const ui = {
 
 
 		return result_node
-	}//end load_item_with_spinner
+	},//end load_item_with_spinner
+
+
+
+	/**
+	* GET_TEXT_COLOR
+	* Calculate dynamic text color based on background
+	* Always return a black or white color, the most
+	* appropriated in current case for good visibility
+	* @see https://wunnle.com/dynamic-text-color-based-on-background
+	* @return string text_color
+	* 	"#ffffff" | "#000000"
+	*/
+	get_text_color : function(background_color) {
+
+		function getRGB(c) {
+		  return parseInt(c, 16) || c;
+		}
+
+		function getsRGB(c) {
+		  return getRGB(c) / 255 <= 0.03928
+			? getRGB(c) / 255 / 12.92
+			: Math.pow((getRGB(c) / 255 + 0.055) / 1.055, 2.4);
+		}
+
+		function getLuminance(hexColor) {
+		  return (
+			0.2126 * getsRGB(hexColor.substr(1, 2)) +
+			0.7152 * getsRGB(hexColor.substr(3, 2)) +
+			0.0722 * getsRGB(hexColor.substr(-2))
+		  );
+		}
+
+		function getContrast(f, b) {
+		  const L1 = getLuminance(f);
+		  const L2 = getLuminance(b);
+		  return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+		}
+
+		function getTextColor(bgColor) {
+		  const whiteContrast = getContrast(bgColor, "#ffffff");
+		  const blackContrast = getContrast(bgColor, "#000000");
+
+		  return whiteContrast > blackContrast ? "#ffffff" : "#000000";
+		}
+
+		const text_color = getTextColor(background_color)
+
+
+		return text_color;
+	}//end get_text_color
 
 
 
