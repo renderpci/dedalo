@@ -3,10 +3,12 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
+// local vars
+@tool_color: #779a32;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -17,6 +19,10 @@
 		// 	margin-left: auto;
 		// 	margin-right: auto;
 		// }
+
+		.spinner {
+			border-top-color: @tool_color;
+		}
 
 		// av component container
 		>.main_element_container {
@@ -69,8 +75,6 @@
 			padding: 0px;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
-
-
 
 			// buttons and preview container
 			>.buttons_container {
@@ -150,8 +154,7 @@
 	}//end wrapper_tool
 
 
-
 // modal header tool modification
 	.tool_header.tool_posterframe {
-		background-color: #779a32;
+		background-color: @tool_color;
 	}

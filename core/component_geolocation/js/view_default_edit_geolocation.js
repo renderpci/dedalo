@@ -412,6 +412,7 @@ const get_buttons = (self) => {
 		const button_fullscreen = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button full_screen',
+			title			: get_label.full_screen || 'Full screen',
 			parent			: fragment
 		})
 		// button_fullscreen.addEventListener('mouseup', () =>{
@@ -437,6 +438,7 @@ const get_buttons = (self) => {
 		const save = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button tool save',
+			title			: get_label.save || 'Save',
 			parent			: fragment
 		})
 		save.addEventListener('click', fn_save)

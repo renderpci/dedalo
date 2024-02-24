@@ -96,6 +96,7 @@ view_viewer_edit_av.render = async function(self, options) {
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary download',
+			title			: get_label.download || 'Download',
 			parent			: wrapper
 		})
 		download_image_button.addEventListener('click', function(e) {

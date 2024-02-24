@@ -38,6 +38,9 @@ export const component_input_text = function(){
 	this.tools			= null
 
 	this.duplicates		= false
+
+	// ui
+	this.minimum_width_px = 90 // integer pixels
 }//end component_input_text
 
 
@@ -228,6 +231,65 @@ component_input_text.prototype.is_unique = async function(new_value){
 	return record
 	*/
 }//end is_unique
+
+
+
+/**
+* VALIDATE
+* Check the value of the input_text with the given regex defined in properties
+* @param string value
+* @result string safe_value
+*/
+component_input_text.prototype.validate = function( value ) {
+
+	const self = this
+
+	// empty string case
+		if (value.length<1) {
+			return value
+		}
+
+	// properties validation
+	// sample definition in properties:
+	//  "validation": {
+	//		"mode": "replace",
+	//		"regex": "[\\d\\s]",
+	//		"options": "g",
+	//		"replace": "",
+	//		"process": "toLowerCase"
+	// }
+		const validation = self.context.properties.validation || {}
+		if (!validation.mode) {
+			console.warn('Undefined context.properties.validation !', self.context.properties );
+			return value
+		}
+
+	// switch validation mode
+	switch (validation.mode) {
+		case 'replace': {
+			// regex replace
+				const re = new RegExp(
+					validation.regex,
+					validation.options || ''
+				)
+				const safe_value = value.replace(re, validation.replace)
+
+			// process optional
+				if (validation.process) {
+					// like 'toLowerCase' to exec str.toLowerCase()
+					return safe_value[validation.process]()
+				}
+
+			return safe_value
+		}
+		default:
+
+			break;
+	}
+
+	return value
+}//end validate
+
 
 
 

@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * COMMON (ABSTRACT CLASS)
 * Shared methods by sections and components
@@ -358,10 +359,6 @@ abstract class common {
 				// if(!isset($this->matrix_table))
 				// $this->matrix_table = self::get_matrix_table_from_tipo($this->tipo);
 
-			// notify : We notify the loading of the element to common
-				$model_name = get_called_class();
-				common::notify_load_lib_element_tipo($model_name, $this->mode);
-
 			// bl_loaded_structure_data
 				$this->bl_loaded_structure_data = true;
 		}
@@ -387,7 +384,7 @@ abstract class common {
 	/**
 	* GET MATRIX_TABLE FROM TIPO
 	* @param string $tipo
-	* @return string $matrix_table
+	* @return string|null $matrix_table
 	*/
 	public static function get_matrix_table_from_tipo(string $tipo) : ?string {
 
@@ -436,7 +433,8 @@ abstract class common {
 				debug_log(__METHOD__
 					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
 					. " tipo: $tipo " . PHP_EOL
-					. " model: $model_name"
+					. " model: $model_name" . PHP_EOL
+					. ' bt: ' . to_string( debug_backtrace()[0] )
 					, logger::ERROR
 				);
 				return null;
@@ -579,8 +577,10 @@ abstract class common {
 	* SET_LANG
 	* When isset lang, valor and dato are cleaned
 	* and $this->bl_loaded_matrix_data is reset to force load from database again
+	* @param string $lang
+	* @return bool
 	*/
-	public function set_lang(string $lang) {
+	public function set_lang(string $lang) : bool {
 
 		#if($lang!==DEDALO_DATA_LANG) {
 			# FORCE reload dato from database when dato is requested again
@@ -588,6 +588,8 @@ abstract class common {
 		#}
 
 		$this->lang = $lang;
+
+		return true;
 	}//end set_lang
 
 
@@ -620,7 +622,7 @@ abstract class common {
 			return 'lg-eng';
 		}
 
-		static $current_main_lang;
+		static $current_main_lang = [];
 		$uid = $section_tipo.'_'.$section_id;
 		if (isset($current_main_lang[$uid])) {
 			return $current_main_lang[$uid];
@@ -691,28 +693,12 @@ abstract class common {
 
 
 	/**
-	* NOTIFY_LOAD_LIB_ELEMENT_TIPO
-	*/
-	public static function notify_load_lib_element_tipo(string $model_name, string $mode) : bool {
-
-		#if ($mode!=='edit') {
-		#	return false;
-		#}
-
-		if (empty($model_name) || in_array($model_name, common::$ar_loaded_models_name)) {
-			return false;
-		}
-		common::$ar_loaded_models_name[] = $model_name;
-
-		return true;
-	}//end notify_load_lib_element_tipo
-
-
-
-	/**
 	* SETVAR
+	* @param string $name
+	* @param mixed $default = false
+	* @return mixed
 	*/
-	public static function setVar(string $name, $default=false) {
+	public static function setVar(string $name, $default=false) : mixed {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVar]: Name 'name' is invalid", 1);
 
@@ -736,7 +722,7 @@ abstract class common {
 	* @param string $name
 	* @param object|false $data_obj
 	*/
-	public static function setVarData(string $name, $data_obj, $default=false) {
+	public static function setVarData(string $name, $data_obj, $default=false) : mixed {
 
 		if($name==='name') throw new Exception("Error Processing Request [setVarData]: Name 'name' is invalid", 1);
 
@@ -759,57 +745,57 @@ abstract class common {
 	* GET_PAGE_QUERY_STRING . REMOVED ORDER CODE BY DEFAULT
 	* @return string
 	*/
-	public static function get_page_query_string(bool $remove_optional_vars=true) : string {
+		// public static function get_page_query_string(bool $remove_optional_vars=true) : string {
 
-		$queryString	= $_SERVER['QUERY_STRING']; # like max=10
-		$queryString	= safe_xss($queryString);
+		// 	$queryString	= $_SERVER['QUERY_STRING']; # like max=10
+		// 	$queryString	= safe_xss($queryString);
 
-		if($remove_optional_vars===false) {
-			return $queryString;
-		}
+		// 	if($remove_optional_vars===false) {
+		// 		return $queryString;
+		// 	}
 
-		$qs 				= '' ;
-		$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
+		// 	$qs 				= '' ;
+		// 	$ar_optional_vars	= array('order_by','order_dir','lang','accion','pageNum');
 
-		$search			= array('&&',	'&=',	'=&',	'??',	'==');
-		$replace		= array('&',	'&',	'&',	'?',	'=' );
-		$queryString	= str_replace($search, $replace, $queryString);
+		// 	$search			= array('&&',	'&=',	'=&',	'??',	'==');
+		// 	$replace		= array('&',	'&',	'&',	'?',	'=' );
+		// 	$queryString	= str_replace($search, $replace, $queryString);
 
-		$posAND		= strpos($queryString, '&');
-		$posEQUAL	= strpos($queryString, '=');
+		// 	$posAND		= strpos($queryString, '&');
+		// 	$posEQUAL	= strpos($queryString, '=');
 
-		# go through and rebuild the query without the optional variables
-		if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
+		// 	# go through and rebuild the query without the optional variables
+		// 	if($posAND !== false){ # query tipo ?captacionID=1&informantID=6&list=0
 
-			$ar_pares = explode('&', $queryString);
-			if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
+		// 		$ar_pares = explode('&', $queryString);
+		// 		if(is_array($ar_pares)) foreach ($ar_pares as $key => $par){
 
-				#echo " <br> $key - $par ";
-				if(strpos($par,'=')!==false) {
+		// 			#echo " <br> $key - $par ";
+		// 			if(strpos($par,'=')!==false) {
 
-					$troz		= explode('=',$par) ;
+		// 				$troz		= explode('=',$par) ;
 
-					$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
-					$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
+		// 				$varName	= false;	if(isset($troz[0])) $varName  = $troz[0];
+		// 				$varValue	= false;	if(isset($troz[1])) $varValue = $troz[1];
 
-					if(!in_array($varName, $ar_optional_vars)) {
-						$qs .= $varName . '=' . $varValue .'&';
-					}
-				}
-			}
+		// 				if(!in_array($varName, $ar_optional_vars)) {
+		// 					$qs .= $varName . '=' . $varValue .'&';
+		// 				}
+		// 			}
+		// 		}
 
-		}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
+		// 	}else if($posAND === false && $posEQUAL !== false) { # query tipo ?captacionID=1
 
-			$qs = $queryString ;
-		}
+		// 		$qs = $queryString ;
+		// 	}
 
-		$qs = str_replace($search, $replace, $qs);
+		// 	$qs = str_replace($search, $replace, $qs);
 
-		# if last char is & delete it
-		if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
+		// 	# if last char is & delete it
+		// 	if(substr($qs, -1)==='&') $qs = substr($qs, 0, -1);
 
-		return $qs;
-	}//end get_page_query_string
+		// 	return $qs;
+		// }//end get_page_query_string
 
 
 
@@ -828,17 +814,22 @@ abstract class common {
 
 
 	/**
-	* GET_AR
+	* GET_AR_ALL_LANGS_RESOLVED
 	* @param string $lang
 	*	Default DEDALO_DATA_LANG
 	* @return array $ar_all_langs_resolved
+	* [
+	*	lg-spa : Spanish,
+	*   lg-eng : English,
+	*   ..
+	* ]
 	*/
 	public static function get_ar_all_langs_resolved( string $lang=DEDALO_DATA_LANG ) : array {
 
 		$ar_all_langs = common::get_ar_all_langs();
 
 		$ar_all_langs_resolved = [];
-		foreach ((array)$ar_all_langs as $current_lang) {
+		foreach ($ar_all_langs as $current_lang) {
 
 			$lang_name = lang::get_name_from_code( $current_lang, $lang );
 			$ar_all_langs_resolved[$current_lang] = $lang_name;
@@ -861,10 +852,8 @@ abstract class common {
 			: $this->RecordObj_dd->get_properties(); // already parsed
 
 		if ($properties===false) {
-			// dump($this, ' this setting properties false as null ++ '.to_string($this->tipo));
 			$properties = null;
 		}
-
 
 		return $properties;
 	}//end get_properties
@@ -873,6 +862,7 @@ abstract class common {
 
 	/**
 	* SET_PROPERTIES
+	* @param mixed $value
 	* @return bool
 	*/
 	public function set_properties($value) : bool {
@@ -881,11 +871,12 @@ abstract class common {
 			? json_decode($value)
 			: $value;
 
-		# Fix properties object|null
+		// Fix properties object|null
 		$this->properties = $properties;
 
 		return true;
 	}//end set_properties
+
 
 
 	/**
@@ -914,16 +905,16 @@ abstract class common {
 	public function get_ar_related_component_tipo() : array {
 
 		$ar_related_component_tipo=array();
-		#dump($this, ' this ++ '.to_string());
+
 		$relaciones = $this->RecordObj_dd->get_relaciones();
-		if(is_array($relaciones )) {
-			foreach ($relaciones as $key => $value) {
+		if(is_array($relaciones)) {
+			foreach ($relaciones as $value) {
 				$tipo = reset($value);
 				$ar_related_component_tipo[] = $tipo;
 			}
 		}
 
-		return (array)$ar_related_component_tipo;
+		return $ar_related_component_tipo;
 	}//end get_ar_related_component_tipo
 
 
@@ -938,9 +929,10 @@ abstract class common {
 	public static function get_ar_related_by_model(string $model_name, string $tipo, bool $strict=true) : array {
 
 		// cache
-			static $ar_related_by_model_data;
+			static $ar_related_by_model_data = [];
 			$uid = $model_name.'_'.$tipo.'_'.(int)$strict;
-			if (isset($ar_related_by_model_data[$uid])) {
+			// if (isset($ar_related_by_model_data[$uid])) {
+			if (array_key_exists($uid, $ar_related_by_model_data)) {
 				return $ar_related_by_model_data[$uid];
 			}
 
@@ -1006,61 +998,10 @@ abstract class common {
 	* Alias of core function get_request_var
 	* @return mixed string | bool $var_value
 	*/
-	public static function get_request_var(string $var_name) {
+		// public static function get_request_var(string $var_name) {
 
-		return get_request_var($var_name);
-	}//end get_request_var
-
-
-
-	/**
-	* GET_COOKIE_PROPERTIES
-	* @return object $cookie_properties
-	* Calculate safe cookie properties to use on set/delete http cookies
-	* @return object $cookie_properties
-	*/
-	public static function get_cookie_properties() : object {
-
-		// Cookie properties
-		$domain		= $_SERVER['SERVER_NAME'] ?? '';
-		$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? true : false;
-		$httponly	= true; // Not accessible for javascript, only for http/s requests
-
-		$cookie_properties = new stdClass();
-			$cookie_properties->domain		= $domain;
-			$cookie_properties->secure		= $secure;
-			$cookie_properties->httponly	= $httponly;
-
-
-		return $cookie_properties;
-	}//end get_cookie_properties
-
-
-
-	/**
-	* GET_CLIENT_IP
-	* @return string $ipaddress
-	*/
-	public static function get_client_ip() : string {
-
-		$ipaddress = '';
-		if (isset($_SERVER['HTTP_CLIENT_IP']))
-			$ipaddress = $_SERVER['HTTP_CLIENT_IP'];
-		else if(isset($_SERVER['HTTP_X_FORWARDED_FOR']))
-			$ipaddress = $_SERVER['HTTP_X_FORWARDED_FOR'];
-		else if(isset($_SERVER['HTTP_X_FORWARDED']))
-			$ipaddress = $_SERVER['HTTP_X_FORWARDED'];
-		else if(isset($_SERVER['HTTP_FORWARDED_FOR']))
-			$ipaddress = $_SERVER['HTTP_FORWARDED_FOR'];
-		else if(isset($_SERVER['HTTP_FORWARDED']))
-			$ipaddress = $_SERVER['HTTP_FORWARDED'];
-		else if(isset($_SERVER['REMOTE_ADDR']))
-			$ipaddress = $_SERVER['REMOTE_ADDR'];
-		else
-			$ipaddress = 'UNKNOWN';
-
-		return $ipaddress;
-	}//end get_client_ip
+		// 	return get_request_var($var_name);
+		// }//end get_request_var
 
 
 
@@ -1100,102 +1041,102 @@ abstract class common {
 	* TRUNCATE_HTML
 	* Thanks to Søren Løvborg (printTruncated)
 	*/
-	public static function DES_truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
+		// public static function DES_truncate_html(int $maxLength, string $html, bool $isUtf8=true) : string {
 
-		$full_text = '';
+		// 	$full_text = '';
 
-		if (empty($html)) {
-			return $full_text;
-		}
+		// 	if (empty($html)) {
+		// 		return $full_text;
+		// 	}
 
-		$printedLength	= 0;
-		$position		= 0;
-		$tags			= array();
+		// 	$printedLength	= 0;
+		// 	$position		= 0;
+		// 	$tags			= array();
 
-		// For UTF-8, we need to count multibyte sequences as one character.
-		$re = $isUtf8
-			? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
-			: '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
+		// 	// For UTF-8, we need to count multibyte sequences as one character.
+		// 	$re = $isUtf8
+		// 		? '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;|[\x80-\xFF][\x80-\xBF]*}'
+		// 		: '{</?([a-z]+)[^>]*>|&#?[a-zA-Z0-9]+;}';
 
-		while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
-		{
-			list($tag, $tagPosition) = $match[0];
+		// 	while ($printedLength < $maxLength && preg_match($re, $html, $match, PREG_OFFSET_CAPTURE, $position))
+		// 	{
+		// 		list($tag, $tagPosition) = $match[0];
 
-			// Print text leading up to the tag.
-			$str = substr($html, $position, $tagPosition - $position);
-			if ($printedLength + strlen($str) > $maxLength)
-			{
-				#print(substr($str, 0, $maxLength - $printedLength));
-				$full_text .= substr($str, 0, $maxLength - $printedLength);
-				$printedLength = $maxLength;
-				break;
-			}
+		// 		// Print text leading up to the tag.
+		// 		$str = substr($html, $position, $tagPosition - $position);
+		// 		if ($printedLength + strlen($str) > $maxLength)
+		// 		{
+		// 			#print(substr($str, 0, $maxLength - $printedLength));
+		// 			$full_text .= substr($str, 0, $maxLength - $printedLength);
+		// 			$printedLength = $maxLength;
+		// 			break;
+		// 		}
 
-			#print($str);
-			$full_text .= $str;
-			$printedLength += strlen($str);
-			if ($printedLength >= $maxLength) break;
+		// 		#print($str);
+		// 		$full_text .= $str;
+		// 		$printedLength += strlen($str);
+		// 		if ($printedLength >= $maxLength) break;
 
-			if ($tag[0] === '&' || ord($tag) >= 0x80)
-			{
-				// Pass the entity or UTF-8 multibyte sequence through unchanged.
-				#print($tag);
-				$full_text .= $tag;
-				$printedLength++;
-			}
-			else
-			{
-				// Handle the tag.
-				$tagName = $match[1][0];
-				if ($tag[1] === '/')
-				{
-					// This is a closing tag.
+		// 		if ($tag[0] === '&' || ord($tag) >= 0x80)
+		// 		{
+		// 			// Pass the entity or UTF-8 multibyte sequence through unchanged.
+		// 			#print($tag);
+		// 			$full_text .= $tag;
+		// 			$printedLength++;
+		// 		}
+		// 		else
+		// 		{
+		// 			// Handle the tag.
+		// 			$tagName = $match[1][0];
+		// 			if ($tag[1] === '/')
+		// 			{
+		// 				// This is a closing tag.
 
-					$openingTag = array_pop($tags);
-					//assert($openingTag === $tagName); // check that tags are properly nested.
+		// 				$openingTag = array_pop($tags);
+		// 				//assert($openingTag === $tagName); // check that tags are properly nested.
 
-					// assert($openingTag === $tagName); // check that tags are properly nested.
-					// $full_text .= $tag;
+		// 				// assert($openingTag === $tagName); // check that tags are properly nested.
+		// 				// $full_text .= $tag;
 
-					if ($openingTag!==$tagName) {
-						debug_log(__METHOD__." Error. openingTag ($openingTag) is different to expected tagName ($tagName)".to_string(), logger::ERROR);
-					}else{
-						 $full_text .= $tag;
-					}
-				}
-				else if ($tag[strlen($tag) - 2] === '/')
-				{
-					// Self-closing tag.
-					#print($tag);
-					$full_text .= $tag;
-				}
-				else
-				{
-					// Opening tag.
-					#print($tag);
-					$full_text .= $tag;
-					$tags[] = $tagName;
-				}
-			}
+		// 				if ($openingTag!==$tagName) {
+		// 					debug_log(__METHOD__." Error. openingTag ($openingTag) is different to expected tagName ($tagName)".to_string(), logger::ERROR);
+		// 				}else{
+		// 					 $full_text .= $tag;
+		// 				}
+		// 			}
+		// 			else if ($tag[strlen($tag) - 2] === '/')
+		// 			{
+		// 				// Self-closing tag.
+		// 				#print($tag);
+		// 				$full_text .= $tag;
+		// 			}
+		// 			else
+		// 			{
+		// 				// Opening tag.
+		// 				#print($tag);
+		// 				$full_text .= $tag;
+		// 				$tags[] = $tagName;
+		// 			}
+		// 		}
 
-			// Continue after the tag.
-			$position = $tagPosition + strlen($tag);
-		}
+		// 		// Continue after the tag.
+		// 		$position = $tagPosition + strlen($tag);
+		// 	}
 
-		// Print any remaining text.
-		if ($printedLength < $maxLength && $position < strlen($html))
-			#print(substr($html, $position, $maxLength - $printedLength));
-			$full_text .= substr($html, $position, $maxLength - $printedLength);
+		// 	// Print any remaining text.
+		// 	if ($printedLength < $maxLength && $position < strlen($html))
+		// 		#print(substr($html, $position, $maxLength - $printedLength));
+		// 		$full_text .= substr($html, $position, $maxLength - $printedLength);
 
-		// Close any open tags.
-		while (!empty($tags)) {
-			#printf('</%s>', array_pop($tags));
-			$full_text .= sprintf('</%s>', array_pop($tags));
-		}
+		// 	// Close any open tags.
+		// 	while (!empty($tags)) {
+		// 		#printf('</%s>', array_pop($tags));
+		// 		$full_text .= sprintf('</%s>', array_pop($tags));
+		// 	}
 
 
-		return $full_text;
-	}//end truncate_html
+		// 	return $full_text;
+		// }//end truncate_html
 
 
 
@@ -1314,7 +1255,7 @@ abstract class common {
 
 	/**
 	* BUILD_ELEMENT_JSON_OUTPUT
-	* Simply group context and data into a ¡n object and encode as JSON string
+	* It simply groups the context and the data into one object.
 	* @param array $context
 	* @param array $data
 	* @return object $result
@@ -2349,7 +2290,7 @@ abstract class common {
 						$tipo_line = $dd_object->tipo .' '. str_repeat('-', $repeat);
 
 						debug_log(
-							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms',
+							'------- resolve ddo ------------------ '.$tipo_line.' '.exec_time_unit($ddo_start_time,'ms').' ms' . ' ---- ' . $related_element->get_model(),
 							logger::DEBUG
 						);
 					}
@@ -2466,6 +2407,7 @@ abstract class common {
 	* @return array $this->request_config
 	*/
 	public function build_request_config() : array {
+		$start_time=start_time();
 
 		// already fixed value case
 			if (isset($this->request_config)) {
@@ -2656,7 +2598,9 @@ abstract class common {
 
 				// sqo. Preserves filter across calls using session sqo if exists
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				$sqo_id	= ($model==='section') ? implode('_', ['section', $tipo]) : null; // cache key sqo_id
+				$sqo_id	= ($model==='section')
+					? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+					: null; // cache key sqo_id
 				if ($model==='section') {
 					// dd_core_api::$rqo->sqo is set case
 					// Fixed in dd_core_api::start if user browser has SQO value for this section on local DDBB
@@ -2757,6 +2701,12 @@ abstract class common {
 			// 			}
 			// 		}
 
+		// debug
+			debug_log(
+				'------- build_request_config --------- '.$this->tipo.' ---------------- '.exec_time_unit($start_time,'ms').' ms' . ' --- ' . get_called_class() . ' -- ' . $resolved_key,
+				logger::DEBUG
+			);
+
 
 		return $this->request_config;
 	}//end build_request_config
@@ -2792,11 +2742,16 @@ abstract class common {
 			static $resolved_request_properties_parsed = [];
 			// resolved_key
 			$resolved_key = $tipo .'_'. $section_tipo .'_'. (int)$external .'_'. $mode .'_'. $section_id;
-			// (!) Removed $section_id from resolved_key 10-08-2023 because is necessary only in case that sqo->fixed_filter is defined.
-			// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
-			// In those cases, prevent to cache this result
-			// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
-			// define use_cache as true. Change before set value if needed
+
+			// @todo : Remove section_id from cache $resolved_key (resolve numisdata4 list problem before)
+				// @note : To verify this cache behavior, see numisdata4 list
+				// (!) Removed $section_id from resolved_key 25-01-2024 because it is only needed in case sqo->fixed_filter is defined.
+				// When case is sqo->fixed_filter, the $use_cache property is set to false to prevent saving as resolved cache item
+				// (!) Removed $external from resolved_key 10-08-2023 because is not longer used
+				// In those cases, prevent to cache this result
+				// $resolved_key = $tipo .'_'. $section_tipo .'_'. $mode;
+				// define use_cache as true. Change before set value if needed
+
 			$use_cache = true;
 			if ($use_cache===true && isset($resolved_request_properties_parsed[$resolved_key])) {
 				// debug_log(__METHOD__." Return ar_request_config from cached value. resolved_key: ".to_string($resolved_key), logger::ERROR);
@@ -2913,6 +2868,45 @@ abstract class common {
 									$ddo->set_tipo($section_tipo);
 									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
 									$ddo->set_color(RecordObj_dd::get_color($section_tipo));
+									$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+
+								// buttons. Add button_new and button_delete to determine new and delete permissions on client
+									$buttons = [];
+									// button_new
+										$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+											$section_tipo,
+											['button_new'],
+											true, // bool from_cache
+											true, // bool resolve_virtual
+											true, // bool recursive
+											true, // bool search_exact
+											false // array|bool $ar_tipo_exclude_elements
+										);
+										if (isset($ar_button_new[0])) {
+											$buttons[] = (object)[
+												'model'			=> 'button_new',
+												'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+											];
+										}
+									// button_delete
+										$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+											$section_tipo,
+											['button_delete'],
+											true, // bool from_cache
+											true, // bool resolve_virtual
+											true, // bool recursive
+											true, // bool search_exact
+											false // array|bool $ar_tipo_exclude_elements
+										);
+										if (isset($ar_button_delete[0])) {
+											$buttons[] = (object)[
+												'model'			=> 'button_delete',
+												'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+											];
+										}
+									// set buttons
+									$ddo->set_buttons($buttons);
+
 								return $ddo;
 							}, (array)$ar_section_tipo);
 
@@ -2982,7 +2976,7 @@ abstract class common {
 													debug_log(__METHOD__
 														." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
 														.' tipo: ' . $this->tipo . PHP_EOL
-														.' section_tipo: ' . $this->section_tipo . PHP_EOL
+														.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
 														.' section_id: ' . $this->section_id
 														, logger::WARNING
 													);
@@ -3113,7 +3107,7 @@ abstract class common {
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
 								if ($model==='section') {
-									$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
+									$sqo_id	= section::build_sqo_id($tipo, $mode); // implode('_', ['section', $tipo]); // cache key sqo_id
 									$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;
@@ -3203,7 +3197,7 @@ abstract class common {
 								// if (isset($parsed_item->search->sqo_config->limit)) {
 								// 	// get session limit if it was defined
 								// 	if ($model==='section') {
-								// 		$sqo_id	= implode('_', ['section', $tipo]); // cache key sqo_id
+								// 		$sqo_id	= section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo]); // cache key sqo_id
 								// 		$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 								// 			? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 								// 			: $parsed_item->search->sqo_config->limit;
@@ -3443,7 +3437,7 @@ abstract class common {
 							if ($current_model==='section') {
 								$target_section_tipo = $current_tipo; // Overwrite (!)
 								continue;
-							}else if ($current_model==='section' || $current_model==='exclude_elements') {
+							}else if ($current_model==='exclude_elements') {
 								continue;
 							}else if($current_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
 								continue; // 'component_security_areas' removed in v6 but the component will stay in ontology, PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
@@ -3563,6 +3557,46 @@ abstract class common {
 						$ddo = new dd_object();
 							$ddo->set_tipo($section_tipo);
 							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_color(RecordObj_dd::get_color($section_tipo));
+							$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+
+						// buttons. Add button_new and button_delete to determine new and delete permissions on client
+							$buttons = [];
+							// button_new
+								$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+									$section_tipo,
+									['button_new'],
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									true, // bool recursive
+									true, // bool search_exact
+									false // array|bool $ar_tipo_exclude_elements
+								);
+								if (isset($ar_button_new[0])) {
+									$buttons[] = (object)[
+										'model'			=> 'button_new',
+										'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+									];
+								}
+							// button_delete
+								$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+									$section_tipo,
+									['button_delete'],
+									true, // bool from_cache
+									true, // bool resolve_virtual
+									true, // bool recursive
+									true, // bool search_exact
+									false // array|bool $ar_tipo_exclude_elements
+								);
+								if (isset($ar_button_delete[0])) {
+									$buttons[] = (object)[
+										'model'			=> 'button_delete',
+										'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+									];
+								}
+							// set buttons
+							$ddo->set_buttons($buttons);
+
 						return $ddo;
 					}, $ar_section_tipo);
 
@@ -3612,6 +3646,40 @@ abstract class common {
 
 
 	/**
+	* GET_REQUEST_CONFIG_OBJECT
+	* Call method get_ar_request_config whit current options
+	* and return the expected one request_config_object
+	* @return request_config_object|null $request_config_object
+	*/
+	public function get_request_config_object() : ?request_config_object {
+
+		// short vars
+			// $mode			= $this->get_mode(); // records_mode;
+			// $tipo			= $this->get_tipo();
+			// $section_tipo	= $this->get_section_tipo();
+			// $section_id		= $this->get_section_id();
+			// $limit			= $this->pagination->limit;
+
+		// ar_request_config
+			// $options = new stdClass();
+			// 	$options->tipo			= $tipo;
+			// 	$options->external		= false;
+			// 	$options->section_tipo	= $section_tipo;
+			// 	$options->mode			= $mode;
+			// 	$options->section_id	= $section_id;
+			// 	$options->limit			= $limit;
+			$ar_request_query_objects = $this->get_ar_request_config();
+
+		// request_config_object
+			$request_config_object = reset($ar_request_query_objects) ?? null;
+
+
+		return $request_config_object;
+	}//end get_request_config_object
+
+
+
+	/**
 	* GET_RECORDS_MODE
 	* @return string $records_mode
 	*/
@@ -3620,11 +3688,11 @@ abstract class common {
 		$model			= get_called_class();
 		$properties		= $this->get_properties();
 		$records_mode	= isset($properties->source->records_mode)
-							? $properties->source->records_mode
-							: (in_array($model, component_relation_common::get_components_with_relations())
-								? 'list'
-								: $this->get_mode()
-							);
+			? $properties->source->records_mode
+			: (in_array($model, component_relation_common::get_components_with_relations())
+				? 'list'
+				: $this->get_mode()
+			);
 
 		return $records_mode;
 	}//end get_records_mode
@@ -3924,48 +3992,16 @@ abstract class common {
 
 
 	/**
-	* GET_REQUEST_CONFIG_OBJECT
-	* Call method get_ar_request_config whit current options
-	* and return the expected one request_config_object
-	* @return request_config_object|null $request_config_object
-	*/
-	public function get_request_config_object() : ?request_config_object {
-
-		// short vars
-			// $mode			= $this->get_mode(); // records_mode;
-			// $tipo			= $this->get_tipo();
-			// $section_tipo	= $this->get_section_tipo();
-			// $section_id		= $this->get_section_id();
-			// $limit			= $this->pagination->limit;
-
-		// ar_request_config
-			// $options = new stdClass();
-			// 	$options->tipo			= $tipo;
-			// 	$options->external		= false;
-			// 	$options->section_tipo	= $section_tipo;
-			// 	$options->mode			= $mode;
-			// 	$options->section_id	= $section_id;
-			// 	$options->limit			= $limit;
-			$ar_request_query_objects = $this->get_ar_request_config();
-
-		// request_config_object
-			$request_config_object = reset($ar_request_query_objects) ?? null;
-
-
-		return $request_config_object;
-	}//end get_request_config_object
-
-
-
-	/**
 	* GET SECTION ID
 	* Section id está en el dato (registro matrix) de la sección estructurado en json
 	* tal que: {"section_id": 2 ..}
+	* @param string|int|null
 	*/
-	public function get_section_id() {
+	public function get_section_id() : string|int|null {
 
 		return $this->section_id ?? null;
 	}//end get_section_id
+
 
 
 	/**
@@ -4247,8 +4283,13 @@ abstract class common {
 
 		$tools = [];
 
+		// user_id
+			$user_id = get_user_id();
+			if (empty($user_id)) {
+				return $tools;
+			}
+
 		// user_tools
-			$user_id	= get_user_id();
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars
@@ -4574,6 +4615,7 @@ abstract class common {
 
 	/**
 	* RESOlVE_VIEW
+	* @param object $options
 	* @return string|null $view
 	*/
 	public static function resolve_view(object $options) : ?string {

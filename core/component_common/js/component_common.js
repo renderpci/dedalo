@@ -888,9 +888,9 @@ component_common.prototype.update_data_value = function(changed_data_item) {
 				// delete all values
 				self.data.value = []
 		}else{
-			if (changed_value===null) {
+			if (changed_value===null && self.data.value) {
 				// delete current value key from array
-				self.data.value.splice(data_key,1)
+				self.data.value.splice(data_key, 1)
 			}else{
 				// add / update array key value
 				self.data.value = self.data.value || []
@@ -1374,6 +1374,10 @@ export const save_unsaved_components = async function() {
 
 		const item = ar_instances[i]
 		if (item.type==='component') {
+			if (!item.data) {
+				console.error('))) Ignored item without data:', item);
+				return true
+			}
 			if (item.data.changed_data && item.data.changed_data.length>0) {
 				console.log('Saving component unsaved', item);
 				await item.save()

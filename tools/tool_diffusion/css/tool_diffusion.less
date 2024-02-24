@@ -3,18 +3,22 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
-@base_color : #8aa364;
-
+// local vars
+@tool_color : #8aa364;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_diffusion {
 
 		>.content_data {
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			.section_info {
 				display: flex;
@@ -96,7 +100,7 @@
 					border-radius: 0.5rem;
 					margin-left: 0.5rem;
 					margin-right: 0.5rem;
-					border: 1px solid lighten(@base_color, 10%);
+					border: 1px solid lighten(@tool_color, 10%);
 					padding: 1rem;
 					flex: 1 0;
 					margin-bottom: 0.75rem;
@@ -135,7 +139,7 @@
 					// }
 
 					.fields_grid_value.label {
-						// border-left: 1px solid @base_color;
+						// border-left: 1px solid @tool_color;
 						margin-left: 1rem;
 
 						// &:first {
@@ -147,7 +151,7 @@
 					.fields_grid_value.link {
 						cursor: pointer;
 						&:hover {
-							color: darken(@base_color, 50%);
+							color: darken(@tool_color, 50%);
 							font-weight: 400;
 						}
 						&:active {
@@ -216,8 +220,8 @@
 
 						.publication_button {
 							margin: 1rem;
-							background-color: @base_color;
-							border-color: darken(@base_color, 5%);
+							background-color: @tool_color;
+							border-color: darken(@tool_color, 5%);
 
 							&.not_ready {
 								opacity: 0.4;
@@ -249,5 +253,5 @@
 
 // modal header tool modification
 	.tool_header.tool_diffusion {
-		background-color: @base_color;
+		background-color: @tool_color;
 	}

@@ -63,10 +63,24 @@ view_default_list_iri.render = async function(self, options) {
 		wrapper.addEventListener('click', function(e){
 			e.stopPropagation()
 
-			self.change_mode({
-				mode : 'edit',
-				view : 'line'
-			})
+			const wrapper_width	= wrapper.getBoundingClientRect().width
+			if (wrapper_width >= self.minimum_width_px) {
+				// inline way
+				self.change_mode({
+					mode	: 'edit',
+					view	: 'line'
+				})
+			}else{
+				// modal way
+				ui.render_edit_modal({
+					self		: self,
+					e			: e,
+					callback	: (dd_modal) => {
+						dd_modal.modal_content.style.width = '40rem'
+						dd_modal.modal_content.style.top = (e.clientY - 25) + 'px'
+					}
+				})
+			}
 		})
 
 

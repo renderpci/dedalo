@@ -75,7 +75,7 @@ class area_common extends common  {
 	* Overwrites common method
 	* @return null
 	*/
-	public function get_section_id() {
+	public function get_section_id() : string|int|null {
 
 		return null;
 	}//end get_section_id

@@ -5,7 +5,7 @@
 
 
 // import needed modules
-	import {clone} from '../../../core/common/js/utils/index.js'
+	// import {clone} from '../../../core/common/js/utils/index.js'
 	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -17,7 +17,7 @@
 
 /**
 * TOOL_USER_ADMIN
-* Tool to make interesting things
+* Tool to manage user auto change values like email or password
 */
 export const tool_user_admin = function () {
 
@@ -34,7 +34,7 @@ export const tool_user_admin = function () {
 	this.target_lang	= null
 	this.langs			= null
 	this.caller			= null
-}//end page
+}//end tool_user_admin
 
 
 
@@ -67,7 +67,6 @@ tool_user_admin.prototype.init = async function(options) {
 	// call the generic common tool init
 		const common_init = await tool_common.prototype.init.call(this, options);
 
-
 	// set the self specific vars not defined by the generic init (in tool_common)
 
 	return common_init
@@ -89,6 +88,14 @@ tool_user_admin.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	try {
+
+		// demo user case in demo installation. Generates and exception and control will be passed to the catch block
+		// Note that the server security controls already handle this situation for added security
+			const dedalo_entity	= page_globals.dedalo_entity
+			const username		= page_globals.username
+			if (dedalo_entity==='dedalo_demo' && username==='dedalo') {
+				throw('Tool not allowed. dedalo_entity "dedalo_demo" cannot change user dedalo configuration')
+			}
 
 		// specific actions.. like fix main_element for convenience
 			self.user_section = await self.build_user_section()

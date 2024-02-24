@@ -59,6 +59,7 @@ view_indexation_dd_grid.render = async function(self, options) {
 
 /**
 * GET_GRID_NODES
+* (!) Note that data comes from server class indexation_grid->build_indexation_grid()
 * @param array data
 * @return DocumentFragment
 */
@@ -238,7 +239,7 @@ export const get_button_column = function(current_data) {
 
 				// module
 					const module = await import(value.action.module_path)
-					console.log('module:', module);
+
 				// method
 					const method_name = value.action.method
 

@@ -957,10 +957,15 @@ class component_media_common extends component_common {
 
 					// debug only
 						if (!isset($file_info->extension)) {
-							dump($file_info, ' file_info ++ '.to_string());
+							// dump($file_info, ' file_info without extension info: ++ '.to_string());
+							debug_log(__METHOD__
+								. " file_info without extension info " . PHP_EOL
+								. ' file_info: ' . to_string($file_info)
+								, logger::ERROR
+							);
 						}
 
-					if (	$file_info->extension===$extension
+					if (	(isset($file_info->extension) && $file_info->extension===$extension)
 						&&  in_array($file_info->quality, $ar_quality_to_include)
 						) {
 

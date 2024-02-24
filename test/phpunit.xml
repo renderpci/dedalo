@@ -39,6 +39,14 @@
             <directory>../test/ts_object</directory>
         </testsuite>
 
+        <testsuite name="unit hierarchy">
+            <directory>../test/hierarchy</directory>
+        </testsuite>
+
+        <testsuite name="unit dd_grid">
+            <directory>../test/dd_grid</directory>
+        </testsuite>
+
          <testsuite name="tools">
             <directory>../test/tools</directory>
         </testsuite>

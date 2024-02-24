@@ -260,13 +260,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 7,
-              "hour": 19,
-              "time": 65048212274,
-              "year": 2023,
-              "month": 11,
-              "minute": 51,
-              "second": 14
+              "day": 22,
+              "hour": 13,
+              "time": 65057518931,
+              "year": 2024,
+              "month": 2,
+              "minute": 2,
+              "second": 11
             }
           }
         ]
@@ -289,6 +289,9 @@
         "lg-ita": [
           "<p>Propaga i dati dei componenti allo stesso componente tra i record</p>"
         ],
+        "lg-nep": [
+          "<p>हालको खण्डको अभिलेखहरूमा कम्पोनेन्ट डाटालाई एउटै कम्पोनेन्टमा प्रचार गर्छ</p>"
+        ],
         "lg-spa": [
           "<p>Propaga datos de componentes al mismo componente a través de registros de la misma sección</p>"
         ]
@@ -308,8 +311,17 @@
         "lg-eng": [
           "Propagate component data"
         ],
+        "lg-fra": [
+          "Propager les données des composants"
+        ],
         "lg-ita": [
           "Propaga i dati dei componenti"
+        ],
+        "lg-nep": [
+          "कम्पोनेन्ट डाटा प्रचार गर्नुहोस्"
+        ],
+        "lg-por": [
+          "Propagar dados de componentes"
         ],
         "lg-spa": [
           "Propaga datos de componentes"
@@ -326,7 +338,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -539,7 +551,7 @@
             {
               "lang": "lg-por",
               "name": "all_records",
-              "value": ""
+              "value": "Todos"
             },
             {
               "lang": "lg-spa",
@@ -569,7 +581,7 @@
             {
               "lang": "lg-por",
               "name": "empty_value",
-              "value": ""
+              "value": "Em branco"
             },
             {
               "lang": "lg-fra",
@@ -599,7 +611,7 @@
             {
               "lang": "lg-por",
               "name": "content_will_be_added_removed",
-              "value": ""
+              "value": "O conteúdo será adicionado ou removido do campo: {0} s nos {1} registros atuais"
             },
             {
               "lang": "lg-ara",
@@ -624,7 +636,7 @@
             {
               "lang": "lg-por",
               "name": "successfully",
-              "value": ""
+              "value": "Com sucesso"
             },
             {
               "lang": "lg-fra",
@@ -699,7 +711,7 @@
             {
               "lang": "lg-por",
               "name": "will_replaced_all_records",
-              "value": ""
+              "value": "Todos os registros serão substituídos!"
             },
             {
               "lang": "lg-ell",
@@ -735,6 +747,71 @@
               "lang": "lg-ara",
               "name": "will_replaced_all_records",
               "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "tool_do_add",
+              "value": "Adicione o conteúdo"
+            },
+            {
+              "lang": "lg-por",
+              "name": "tool_do_delete",
+              "value": "Exclua o conteúdo"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "tool_do_add",
+              "value": "सामग्री थप्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "tool_do_delete",
+              "value": "सामग्री मेटाउनुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "content_will_be_added_removed",
+              "value": "सामग्री फिल्डबाट थपिने वा हटाइनेछ: {0} हालको रेकर्डहरूमा {1}"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "updated_records",
+              "value": "अद्यावधिक गरिएका अभिलेखहरू"
+            },
+            {
+              "lang": "lg-por",
+              "name": "updated_records",
+              "value": "Registros atualizados"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "all_records",
+              "value": "सबै"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "empty_value",
+              "value": "खाली"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "do_replace",
+              "value": "मानहरू बदल्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "successfully",
+              "value": "सफलतापूर्वक"
+            },
+            {
+              "lang": "lg-por",
+              "name": "do_replace",
+              "value": "Substituir valores"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "will_replaced_all_records",
+              "value": "सबै रेकर्डहरू प्रतिस्थापन गरिनेछ!"
             }
           ]
         ]
@@ -752,7 +829,7 @@
   "section_id": 11,
   "created_date": "2022-02-28 16:55:15",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-07 19:51:14",
+  "modified_date": "2024-02-22 13:02:11",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

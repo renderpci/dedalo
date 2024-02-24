@@ -219,9 +219,10 @@ abstract class RecordDataBoundObject {
 		# CACHE_MANAGER
 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
-		static $ar_RecordDataObject_load_query_cache;
+		static $ar_RecordDataObject_load_query_cache = [];
 		$use_cache = $this->use_cache;
-		if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
+		// if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
+		if ($use_cache===true && array_key_exists($strQuery, $ar_RecordDataObject_load_query_cache)) {
 
 			// from cache data case
 

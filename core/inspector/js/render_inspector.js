@@ -50,7 +50,7 @@ render_inspector.prototype.edit = async function(options) {
 		const label = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'label icon_arrow up',
-			inner_html		: 'Inspector'
+			inner_html		: get_label.inspector || 'Inspector'
 		})
 		// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -133,8 +133,7 @@ const get_content_data = function(self) {
 			})
 			button_search.addEventListener('click', function(e){
 				e.stopPropagation()
-				const section_id = self.caller.id
-				event_manager.publish('toggle_search_panel_'+section_id)
+				event_manager.publish('toggle_search_panel_' + self.caller.id)
 			})
 
 		// button_new . Call API to create new section and navigate to the new record
@@ -164,8 +163,8 @@ const get_content_data = function(self) {
 				button_duplicate.addEventListener('click', (e) => {
 					e.stopPropagation()
 					event_manager.publish('duplicate_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
 				})
@@ -183,8 +182,8 @@ const get_content_data = function(self) {
 				button_delete.addEventListener('click', (e) => {
 					e.stopPropagation()
 					event_manager.publish('delete_section_' + self.caller.id, {
-						section_tipo	: self.section_tipo,
-						section_id		: self.section_id,
+						section_tipo	: self.caller.section_tipo,
+						section_id		: self.caller.section_id,
 						caller			: self.caller // section
 					})
 				})
@@ -296,7 +295,7 @@ const get_content_data = function(self) {
 			const data_link = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'light eye data_link',
-				text_content	: 'View record data',
+				text_content	: get_label.record || 'View record data',
 				parent			: buttons_bottom_container
 			})
 			const fn_data_link = function(e) {
@@ -377,14 +376,50 @@ const render_selection_info = function(self) {
 			element_type	: 'div',
 			class_name		: 'selection_info'
 		})
+		// update_label function called form event caller (section) render and activate_componentº
+		selection_info_node.update_label = function(caller) {
+
+			// fix caller
+			self.selection_info_node.caller = caller
+
+			// clean container
+			while (selection_info_node.firstChild) {
+				selection_info_node.removeChild(selection_info_node.firstChild)
+			}
+
+			// add label text
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: '',
+				inner_html		: caller.label || '',
+				parent			: selection_info_node
+			})
+
+			// add button list when info is about section
+			add_list_button(caller)
+		}
 		// fix pointer
 		self.selection_info_node = selection_info_node
 
-		selection_info_node.addEventListener('click', function(e) {
-			if (selection_info_node.caller) {
-				console.log('node info caller:', selection_info_node.caller);
+	// add_list_button to go to section list
+		const add_list_button = function(caller) {
+			if (caller && caller.model==='section') {
+				const button_list = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button light list',
+					title			: get_label.listado || 'List',
+					parent			: selection_info_node
+				})
+				button_list.addEventListener('mousedown', (e) => {
+					e.stopPropagation()
+					// go to section in list mode (useful when no menu is available)
+					self.caller.goto_list()
+				})
 			}
-		})
+		}
+
+	// exec once
+		add_list_button(self.caller)
 
 
 	return selection_info_node
@@ -448,7 +483,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'tipo',
+				inner_html		: get_label.tipo || 'tipo',
 				parent			: fragment
 			})
 		// value
@@ -532,7 +567,7 @@ export const render_section_info = function(self) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'key',
-				inner_html		: 'table',
+				inner_html		: get_label.table || 'table',
 				parent			: fragment
 			})
 		// value
@@ -889,7 +924,7 @@ const render_element_info = function(self) {
 		const element_info_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'element_info_head label icon_arrow up',
-			inner_html		: get_label.info || "Info",
+			inner_html		: get_label.informacion || "Info",
 			parent			: element_info_wrap
 		})
 
@@ -1109,8 +1144,6 @@ const render_relation_list = function(self) {
 		})
 		async function load_relation_list( instance ) {
 
-			self.section_id	= self.caller.section_id
-
 			relation_list_head.classList.add('up')
 
 			const relation_list_tipo = self.caller.context.config.relation_list_tipo
@@ -1120,8 +1153,8 @@ const render_relation_list = function(self) {
 				: await instances.get_instance({
 					model			: 'relation_list',
 					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
-					section_tipo	: self.section_tipo,
-					section_id		: self.section_id,
+					section_tipo	: self.caller.section_tipo,
+					section_id		: self.caller.section_id,
 					mode			: self.mode
 				})
 
@@ -1133,7 +1166,6 @@ const render_relation_list = function(self) {
 			relation_list_body.appendChild(relation_list_container)
 		}
 		function unload_relation_list() {
-			self.section_id = self.caller.section_id
 
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild);
@@ -1239,7 +1271,7 @@ export const load_time_machine_list = async function(self) {
 	// create and render a service_time_machine instance
 		const service_time_machine	= await instances.get_instance({
 			model			: 'service_time_machine',
-			section_tipo	: self.section_tipo,
+			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			view			: 'mini',
 			id_variant		: self.section_tipo + '_tm_list',
@@ -1247,7 +1279,7 @@ export const load_time_machine_list = async function(self) {
 			config			: {
 				id					: 'section_history',
 				model				: 'dd_grid', // used to create the filter
-				tipo				: self.section_tipo, // used to create the filter
+				tipo				: self.caller.section_tipo, // used to create the filter
 				template_columns	: '1fr 1fr 1fr 2fr',
 				ignore_columns		: [
 					'matrix_id' // matrix_id dd1573
@@ -1400,7 +1432,7 @@ export const load_component_history = async function(self, component) {
 	// create and render a component_history instance
 		const service_time_machine	= await instances.get_instance({
 			model			: 'service_time_machine',
-			section_tipo	: self.section_tipo,
+			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
 			view			: 'history',
 			id_variant		: component.tipo +'_'+ component.section_tipo + '_tm_list',

@@ -33,6 +33,9 @@ export const component_email = function(){
 	this.node			= null
 
 	this.tools			= null
+
+	// ui
+	this.minimum_width_px = 100 // integer pixels
 }//end component_email
 
 
@@ -117,9 +120,9 @@ component_email.prototype.send_email = function(value) {
 	if(email.length<1){
 		return false
 	}
-	
+
 	window.location.href = 'mailto:' + email
-	
+
 
 	return true
 }//end send_email

@@ -3,10 +3,12 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-@tool_main_color: #2b77c7; // blue
+// local vars
+@tool_color: #2b77c7; // blue
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -14,14 +16,16 @@
 
 		>.content_data {
 
+			.spinner {
+				border-top-color: @tool_color;
+			}
+
 			// common
 			input[type='checkbox'] {
 				margin-left: 0.5rem;
 				vertical-align: middle;
 				transform: scale(1.2);
 			}
-
-
 
 			>.component.options {
 				display: flex;
@@ -254,8 +258,8 @@
 					margin: 2rem;
 					padding-left: 1.5em;
 					padding-right: 1.5em;
-					background-color: @tool_main_color;
-					border-color: darken(@tool_main_color, 3%);
+					background-color: @tool_color;
+					border-color: darken(@tool_color, 3%);
 				}
 			}
 
@@ -283,5 +287,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_files {
-		background-color: @tool_main_color;
+		background-color: @tool_color;
 	}

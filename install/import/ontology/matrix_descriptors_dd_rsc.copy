@@ -698,7 +698,6 @@ rsc253	Format de l'original	termino	lg-cat
 rsc253	Formato del original	termino	lg-spa
 rsc253	Formato dell'originale	termino	lg-ita
 rsc253	Αρχική μορφή	termino	lg-ell
-rsc254	dossier	termino	lg-cat
 rsc254	Dossier	termino	lg-ita
 rsc254	Dossier	termino	lg-spa
 rsc254	φάκελος	termino	lg-ell
@@ -2356,7 +2355,6 @@ rsc746	Nuevo	termino	lg-spa
 rsc747	Borrar	termino	lg-spa
 rsc747	Esborrar	termino	lg-cat
 rsc748	Fonts externes	termino	lg-cat
-rsc748	fuentes externas	termino	lg-spa
 rsc749	typology	termino	lg-spa
 rsc75	Personas	termino	lg-spa
 rsc75	Persone	termino	lg-ita
@@ -2557,7 +2555,6 @@ rsc797	Motivos de valoraciones	termino	lg-spa
 rsc801	Proyecto	termino	lg-spa
 rsc803	Nou	termino	lg-cat
 rsc805	Últimos cambios	termino	lg-spa
-rsc111	localidad valor	termino	lg-spa
 rsc111	localitat valor	termino	lg-cat
 rsc111	τιμή τοποθεσίας	termino	lg-ell
 rsc807	Identificació	termino	lg-cat
@@ -2569,6 +2566,7 @@ rsc817	Borrar	termino	lg-spa
 rsc788	Tipo de divisa	termino	lg-spa
 rsc791	Nombre de la divisa	termino	lg-spa
 rsc791	Nom de la divisa	termino	lg-cat
+rsc111	Localidad valor	termino	lg-spa
 rsc796	Últimos cambios	termino	lg-spa
 rsc798	Identificació	termino	lg-cat
 rsc800	Motivo de valoración	termino	lg-spa
@@ -4115,13 +4113,11 @@ rsc107	Identification	termino	lg-eng
 rsc108	Contact	termino	lg-eng
 rsc109	Latest changes	termino	lg-eng
 rsc110	List	termino	lg-eng
-rsc111	location value	termino	lg-eng
 rsc112	Relations list	termino	lg-eng
 rsc113	New Entity, Group or Community	termino	lg-eng
 rsc114	Delete	termino	lg-eng
 rsc115	View Statistics	termino	lg-eng
 rsc116	Name	termino	lg-eng
-rsc117	Can use the image?	termino	lg-eng
 rsc118	Place	termino	lg-eng
 rsc119	Location	termino	lg-eng
 rsc120	Year Founded	termino	lg-eng
@@ -4202,7 +4198,6 @@ rsc198	Excluded	termino	lg-eng
 rsc199	List	termino	lg-eng
 rsc200	Estate	termino	lg-eng
 rsc203	Individuals, groups and communities	termino	lg-eng
-rsc204	Administation	termino	lg-eng
 rsc205	Publications	termino	lg-eng
 rsc206	Excluded	termino	lg-eng
 rsc207	List	termino	lg-eng
@@ -4219,6 +4214,7 @@ rsc134	New	termino	lg-eng
 rsc135	Delete	termino	lg-eng
 rsc217	URL	termino	lg-eng
 rsc218	Source	termino	lg-eng
+rsc111	Location value	termino	lg-eng
 rsc219	Publisher	termino	lg-eng
 rsc220	Notes	termino	lg-eng
 rsc221	Abstract	termino	lg-eng
@@ -4239,8 +4235,6 @@ rsc238	List	termino	lg-eng
 rsc239	Estate	termino	lg-eng
 rsc240	Master copy	termino	lg-eng
 rsc241	Copy date of master	termino	lg-eng
-rsc242	Copy in standar format	termino	lg-eng
-rsc243	Copy date of standar	termino	lg-eng
 rsc244	Info	termino	lg-eng
 rsc245	Questionnaire	termino	lg-eng
 rsc246	Excluded	termino	lg-eng
@@ -4251,7 +4245,6 @@ rsc250	Legal deposit	termino	lg-eng
 rsc251	Publication language	termino	lg-eng
 rsc252	Technical data	termino	lg-eng
 rsc253	Original format	termino	lg-eng
-rsc254	dossier	termino	lg-eng
 rsc255	Authorship and responsibility	termino	lg-eng
 rsc256	Id	termino	lg-eng
 rsc257	Series	termino	lg-eng
@@ -4260,9 +4253,7 @@ rsc260	Check transcription	termino	lg-eng
 rsc261	Id	termino	lg-eng
 rsc262	Id	termino	lg-eng
 rsc263	Original language	termino	lg-eng
-rsc279	Publication	termino	lg-eng
 rsc280	DIV group	termino	lg-eng
-rsc281	Diffusion	termino	lg-eng
 rsc282	Death date	termino	lg-eng
 rsc284	Death town	termino	lg-eng
 rsc285	TR Validation	termino	lg-eng
@@ -4275,11 +4266,9 @@ rsc291	Religion	termino	lg-eng
 rsc292	Excluded WOMAN AND MEMORY - STOLEN MOTHERHOOD	termino	lg-eng
 rsc293	DIV	termino	lg-eng
 rsc294	Excluded indexing	termino	lg-eng
-rsc295	Entites	termino	lg-eng
 rsc296	Excluded	termino	lg-eng
 rsc297	List	termino	lg-eng
 rsc298	Id	termino	lg-eng
-rsc299	Publication	termino	lg-eng
 rsc300	Postal code	termino	lg-eng
 rsc301	Postal code	termino	lg-eng
 rsc303	Support of original	termino	lg-eng
@@ -4335,6 +4324,12 @@ rsc227	Import Zotero	termino	lg-eng
 rsc349	Personal name	termino	lg-eng
 rsc350	Entity name	termino	lg-eng
 rsc351	Conference name	termino	lg-eng
+rsc242	Copy in standard format	termino	lg-eng
+rsc243	Copy date of standard	termino	lg-eng
+rsc281	Publishable	termino	lg-eng
+rsc295	Entities	termino	lg-eng
+rsc299	Publishable	termino	lg-eng
+rsc254	Dossier	termino	lg-eng
 rsc352	Added entry - Personal name	termino	lg-eng
 rsc353	Add entry - Entity name	termino	lg-eng
 rsc354	Add entry - Conference name	termino	lg-eng
@@ -4465,7 +4460,6 @@ rsc506	Latest changes	termino	lg-eng
 rsc507	Relations	termino	lg-eng
 rsc508	Latest changes	termino	lg-eng
 rsc516	Publication	termino	lg-eng
-rsc518	Publication	termino	lg-eng
 rsc519	Birthplace	termino	lg-eng
 rsc520	Birthplaces	termino	lg-eng
 rsc521	Identification	termino	lg-eng
@@ -4639,7 +4633,6 @@ rsc727	New	termino	lg-eng
 rsc728	Delete	termino	lg-eng
 rsc729	Project	termino	lg-eng
 rsc730	Llist	termino	lg-eng
-rsc731	Ttile	termino	lg-eng
 rsc732	Quality	termino	lg-eng
 rsc733	Date of admission	termino	lg-eng
 rsc740	Resources typologies	termino	lg-eng
@@ -4799,7 +4792,6 @@ rsc900	Map	termino	lg-eng
 rsc907	Role	termino	lg-eng
 rsc908	Milestone	termino	lg-eng
 rsc909	Indexation	termino	lg-eng
-rsc910	Gerorreferenciation	termino	lg-eng
 rsc911	Space frame	termino	lg-eng
 rsc912	URI	termino	lg-eng
 rsc913	Coordinates	termino	lg-eng
@@ -6326,76 +6318,333 @@ rsc1162	Διαγραφή	termino	lg-ell
 rsc1168	Precisione	termino	lg-ita
 rsc1172	Tipo di precisione	termino	lg-ita
 rsc1177	Höhenlage	termino	lg-deu
+rsc1178	Nuevo	termino	lg-spa
+rsc1183	Images	termino	lg-fra
+rsc1185	Borrar	termino	lg-spa
+rsc1207	image_data	termino	lg-spa
 rsc1152	Références aux personnes	termino	lg-fra
 rsc1158	Indexación	termino	lg-spa
 rsc1163	Últimos cambios	termino	lg-spa
 rsc1168	Précision	termino	lg-fra
 rsc1173	Proyecto	termino	lg-spa
 rsc1177	Altitud	termino	lg-cat
+rsc1178	New	termino	lg-eng
+rsc1185	Delete	termino	lg-eng
+rsc1208	image	termino	lg-spa
+rsc664	बच्चाहरूको संख्या	termino	lg-nep
+rsc410	शिक्षा स्तर	termino	lg-nep
+rsc1051	अनुक्रमणिकाहरू	termino	lg-nep
+rsc910	Georeferencing	termino	lg-eng
+rsc1211	Editorial	termino	lg-cat
+rsc1212	Quadro temporale	termino	lg-ita
+rsc33	निर्देशिका	termino	lg-nep
+rsc253	मूल ढाँचा	termino	lg-nep
+rsc754	मिति	termino	lg-nep
+rsc1215	Id	termino	lg-cat
+rsc1218	διαγράψετε	termino	lg-ell
+rsc18	मेटाउन	termino	lg-nep
+rsc1221	Autres codifications	termino	lg-fra
+rsc1223	Id	termino	lg-fra
+rsc1224	Druckreif	termino	lg-deu
+rsc363	marc21 आयात गर्नुहोस्	termino	lg-nep
+rsc1228	URL	termino	lg-fra
+rsc299	प्रकाशन योग्य	termino	lg-nep
+rsc111	स्थान मूल्य	termino	lg-nep
+rsc1033	अनुक्रमणिका	termino	lg-nep
 rsc1152	Αναφορές προσώπων	termino	lg-ell
 rsc1158	Indexation	termino	lg-eng
 rsc1163	Lasts changes	termino	lg-eng
 rsc1168	Genauigkeit	termino	lg-deu
 rsc1173	Project	termino	lg-cat
 rsc1177	Altitude	termino	lg-fra
+rsc1178	Nou	termino	lg-cat
+rsc1209	dd_tm	termino	lg-spa
+rsc662	बालबालिकाको नाम	termino	lg-nep
+rsc449	टाइपोलोजी	termino	lg-nep
+rsc82	नयाँ	termino	lg-nep
+rsc910	भौगोलिक सन्दर्भ	termino	lg-nep
+rsc1211	Publisher	termino	lg-eng
+rsc27	अवलोकनहरू	termino	lg-nep
+rsc34	फाइलनाम	termino	lg-nep
+rsc303	मूल को समर्थन	termino	lg-nep
+rsc437	IN स्थिति	termino	lg-nep
+rsc1216	Lugar	termino	lg-spa
+rsc1218	Esborrar	termino	lg-cat
+rsc17	सम्बन्ध	termino	lg-nep
+rsc142	प्रकाशन स्थल	termino	lg-nep
+rsc1223	Id	termino	lg-ita
+rsc1224	Δημοσιεύσιμο	termino	lg-ell
+rsc503	नवीनतम परिवर्तनहरू	termino	lg-nep
+rsc1228	URL	termino	lg-ita
+rsc1227	Nuovo	termino	lg-ita
+rsc122	सञ्चालन संरचना	termino	lg-nep
+rsc112	सम्बन्ध सूची	termino	lg-nep
 rsc1153	Identificación	termino	lg-spa
 rsc1158	Indexació	termino	lg-cat
 rsc1163	Últims canvis	termino	lg-cat
 rsc1173	Projekt	termino	lg-deu
 rsc1177	Altitudine	termino	lg-ita
+rsc1178	Neu	termino	lg-deu
+rsc1186	bibliographic_references	termino	lg-spa
+rsc475	परिचय	termino	lg-nep
+rsc83	मेटाउन	termino	lg-nep
+rsc912	URI	termino	lg-nep
+rsc1212	Χρόνος πλαίσιο	termino	lg-ell
+rsc496	बाह्य स्रोत	termino	lg-nep
+rsc258	रङ स्पेस	termino	lg-nep
+rsc439	अनुक्रमणिका प्रमाणीकरण	termino	lg-nep
+rsc1216	Lloc	termino	lg-cat
+rsc242	मानक ढाँचामा प्रतिलिपि गर्नुहोस्	termino	lg-nep
+rsc502	नवीनतम परिवर्तनहरू	termino	lg-nep
+rsc1221	Altre codificazioni	termino	lg-ita
+rsc132	विवरण	termino	lg-nep
+rsc1224	Publiable	termino	lg-fra
+rsc4	प्रशासन मिडिया	termino	lg-nep
+rsc255	लेखकत्व र जिम्मेवारी	termino	lg-nep
+rsc1230	Borrar	termino	lg-spa
+rsc124	अवलोकनहरू	termino	lg-nep
+rsc113	नयाँ	termino	lg-nep
 rsc1153	Indentification	termino	lg-eng
 rsc1158	Indexierung	termino	lg-deu
 rsc1163	Letzte Änderungen	termino	lg-deu
 rsc1168	Precisió	termino	lg-cat
 rsc1173	Projet	termino	lg-fra
 rsc924	"	termino	lg-fra
+rsc1178	Nouveau	termino	lg-fra
+rsc1187	publication	termino	lg-spa
+rsc90	राष्ट्रियता	termino	lg-nep
+rsc99	अवलोकनहरू	termino	lg-nep
+rsc84	तथ्याङ्क हेर्नुहोस्	termino	lg-nep
+rsc203	व्यक्ति, समूह र समुदाय	termino	lg-nep
+rsc1211	Editoriale	termino	lg-ita
+rsc28	परियोजना	termino	lg-nep
+rsc9	स्कोर	termino	lg-nep
+rsc322	मापन	termino	lg-nep
+rsc1213	Lugares de publicación	termino	lg-spa
+rsc13	स्थान	termino	lg-nep
+rsc1219	Proyecto	termino	lg-spa
+rsc3	प्रकाशन मिडिया	termino	lg-nep
+rsc144	स्थान	termino	lg-nep
+rsc355	माध्यमिक प्रविष्टि - अनियन्त्रित विश्लेषणात्मक / सम्बन्धित शीर्षक	termino	lg-nep
+rsc397	अन्य विवरणहरू	termino	lg-nep
+rsc1226	Numero / codice	termino	lg-ita
+rsc154	अवलोकनहरू	termino	lg-nep
+rsc1230	Delete	termino	lg-eng
+rsc254	डोजियर	termino	lg-nep
+rsc114	मेटाउन	termino	lg-nep
 rsc1153	Identificació	termino	lg-cat
 rsc1158	Ευρετηρίαση	termino	lg-ell
 rsc1163	Τελευταίες αλλαγές	termino	lg-ell
 rsc1169	Tipos de precisión	termino	lg-spa
 rsc1173	Project	termino	lg-eng
 rsc924	"	termino	lg-ita
+rsc1178	Nuovo	termino	lg-ita
+rsc1188	pages	termino	lg-spa
+rsc88	छवि	termino	lg-nep
+rsc894	अनुक्रमणिका	termino	lg-nep
+rsc501	नवीनतम परिवर्तनहरू	termino	lg-nep
+rsc197	अध्ययनरत व्यक्तिहरू	termino	lg-nep
+rsc1166	सार	termino	lg-nep
+rsc39	स्कोर	termino	lg-nep
+rsc320	चौडाइ (X)	termino	lg-nep
+rsc376	अनुवादित	termino	lg-nep
+rsc1217	Nuevo	termino	lg-spa
+rsc243	मानकको मिति प्रतिलिपि गर्नुहोस्	termino	lg-nep
+rsc129	प्रकाशन	termino	lg-nep
+rsc251	प्रकाशन भाषा	termino	lg-nep
+rsc356	प्रविष्टि संग्रह थप्नुहोस् - समान शीर्षक	termino	lg-nep
+rsc1224	Pubblicabile	termino	lg-ita
+rsc1226	Number / code	termino	lg-eng
+rsc1229	Proyecto	termino	lg-spa
+rsc117	Can you use the image?	termino	lg-eng
+rsc254	Dossier	termino	lg-cat
+rsc115	तथ्याङ्क हेर्नुहोस्	termino	lg-nep
 rsc1153	Kennzeichnung	termino	lg-deu
 rsc1158	Indexation	termino	lg-fra
 rsc1163	Derniers changements	termino	lg-fra
 rsc1169	Types of accuracy	termino	lg-eng
 rsc1173	Progetto	termino	lg-ita
 rsc924	"	termino	lg-cat
+rsc1179	Borrar	termino	lg-spa
+rsc1189	sheet	termino	lg-spa
+rsc91	जन्मेको सहर	termino	lg-nep
+rsc98	परियोजना	termino	lg-nep
+rsc194	मानिसहरू	termino	lg-nep
+rsc1054	वर्णनकर्ताहरू	termino	lg-nep
+rsc40	नोटेशन	termino	lg-nep
+rsc321	उचाइ (Y)	termino	lg-nep
+rsc1213	Publication places	termino	lg-eng
+rsc66	भण्डारण स्थान	termino	lg-nep
+rsc1219	Project	termino	lg-eng
+rsc281	प्रकाशन योग्य	termino	lg-nep
+rsc1221	Andere Kodifizierungen	termino	lg-deu
+rsc352	थपिएको प्रविष्टि - व्यक्तिगत नाम	termino	lg-nep
+rsc143	अद्यावधिक वा संशोधनको मिति	termino	lg-nep
+rsc150	परिचय	termino	lg-nep
+rsc151	कागजात	termino	lg-nep
+rsc1230	Esborrar	termino	lg-cat
+rsc123	परियोजना	termino	lg-nep
+rsc109	नवीनतम परिवर्तनहरू	termino	lg-nep
 rsc1153	ταυτοποίηση	termino	lg-ell
 rsc1159	Proyecto	termino	lg-spa
 rsc1163	Ultime modifiche	termino	lg-ita
 rsc1169	Arten der Genauigkeit	termino	lg-deu
 rsc1174	Nuevo	termino	lg-spa
+rsc1179	Delete	termino	lg-eng
+rsc1190	reference	termino	lg-spa
+rsc92	बसोबास नगर	termino	lg-nep
+rsc411	जीवनी	termino	lg-nep
+rsc106	संस्थाहरू	termino	lg-nep
+rsc6	छवि	termino	lg-nep
+rsc41	स्रोतहरू	termino	lg-nep
+rsc257	शृङ्खला	termino	lg-nep
+rsc402	गुणस्तर व्यवस्थापन अनुवाद	termino	lg-nep
+rsc65	नगरपालिका	termino	lg-nep
+rsc68	मूल को संरक्षण	termino	lg-nep
+rsc137	कोड	termino	lg-nep
+rsc149	सम्पादकीय	termino	lg-nep
+rsc353	प्रविष्टि थप्नुहोस् - संस्थाको नाम	termino	lg-nep
+rsc667	प्रिन्टर	termino	lg-nep
+rsc1226	Nombre / codi	termino	lg-cat
+rsc1229	Project	termino	lg-eng
+rsc1230	Löschen	termino	lg-deu
+rsc108	सम्पर्क गर्नुहोस्	termino	lg-nep
+rsc333	बिब्लियोग्राफी मिडिया	termino	lg-nep
 rsc1153	Identification	termino	lg-fra
 rsc1159	Project	termino	lg-eng
 rsc1164	Relaciones	termino	lg-spa
 rsc1166	Resumen	termino	lg-spa
 rsc1169	Types de précision	termino	lg-fra
 rsc1174	New	termino	lg-eng
+rsc1179	Esborrar	termino	lg-cat
+rsc1191	publications_data	termino	lg-spa
+rsc75	मानिसहरू	termino	lg-nep
+rsc284	मृत्यु शहर	termino	lg-nep
+rsc423	जीवनी माइलस्टोनहरू	termino	lg-nep
+rsc167	अडियोभिजुअल	termino	lg-nep
+rsc1211	Redaktion	termino	lg-deu
+rsc29	छवि	termino	lg-nep
+rsc10	कब्जा	termino	lg-nep
+rsc398	मूल फाइल नाम	termino	lg-nep
+rsc1213	Llocs de publicació	termino	lg-cat
+rsc1217	New	termino	lg-eng
+rsc1219	Projecte	termino	lg-cat
+rsc235	सम्बन्धित	termino	lg-nep
+rsc351	सम्मेलनको नाम	termino	lg-nep
+rsc221	सार	termino	lg-nep
+rsc1226	Numéro / code	termino	lg-fra
+rsc165	कागजात	termino	lg-nep
+rsc1222	Identificación	termino	lg-spa
+rsc117	तपाईं छवि प्रयोग गर्न सक्नुहुन्छ?	termino	lg-nep
+rsc125	इमेल	termino	lg-nep
 rsc1154	Id	termino	lg-spa
 rsc1159	Projecte	termino	lg-cat
 rsc1164	Relations	termino	lg-eng
 rsc1166	Abstract	termino	lg-eng
 rsc1169	Tipi di precisione	termino	lg-ita
 rsc1174	Nou	termino	lg-cat
+rsc1179	Löschen	termino	lg-deu
+rsc1192	description	termino	lg-spa
+rsc76	परिचय	termino	lg-nep
+rsc498	Alt: जन्म सहर	termino	lg-nep
+rsc77	सम्पर्क गर्नुहोस्	termino	lg-nep
+rsc170	छवि	termino	lg-nep
+rsc1211	Éditorial	termino	lg-fra
+rsc30	विवरण	termino	lg-nep
+rsc47	सौजन्य प्रतिलिपि	termino	lg-nep
+rsc12	प्रक्रिया	termino	lg-nep
+rsc755	मिति	termino	lg-nep
+rsc1217	Nou	termino	lg-cat
+rsc1219	Projekt	termino	lg-deu
+rsc722	राज्य	termino	lg-nep
+rsc217	URL	termino	lg-nep
+rsc354	प्रविष्टि थप्नुहोस् - सम्मेलन नाम	termino	lg-nep
+rsc1225	Entidad	termino	lg-spa
+rsc161	कोड	termino	lg-nep
+rsc166	ट्रान्सक्रिप्शन	termino	lg-nep
+rsc1230	διαγράψετε	termino	lg-ell
+rsc126	फोन	termino	lg-nep
 rsc1154	Id	termino	lg-eng
 rsc1159	Projet	termino	lg-fra
 rsc1164	Relacions	termino	lg-cat
 rsc1166	Resum	termino	lg-cat
 rsc1170	Identificación	termino	lg-spa
 rsc1174	Neu	termino	lg-deu
+rsc1179	Cancellare	termino	lg-ita
+rsc1193	citation	termino	lg-spa
+rsc279	Publishable	termino	lg-eng
+rsc499	Alt: निवास शहर	termino	lg-nep
+rsc663	जानकारी प्राप्त गर्नुहोस्	termino	lg-nep
+rsc302	भेक्टर कागजात	termino	lg-nep
+rsc31	फोटो क्याप्शन	termino	lg-nep
+rsc44	कब्जाको मिति	termino	lg-nep
+rsc61	डिजिटल प्रशोधन	termino	lg-nep
+rsc1213	Orte der Veröffentlichung	termino	lg-deu
+rsc64	सम्पर्क गर्नुहोस्	termino	lg-nep
+rsc1219	σχέδιο	termino	lg-ell
+rsc138	टिपोलोजी	termino	lg-nep
+rsc395	अन्य मानिसहरु	termino	lg-nep
+rsc146	उपलब्धता र पहुँच	termino	lg-nep
+rsc148	परियोजना	termino	lg-nep
+rsc162	टिपोलोजी	termino	lg-nep
+rsc325	अभिलेखका लागि विकल्पहरू	termino	lg-nep
+rsc116	नाम	termino	lg-nep
+rsc127	ठेगाना	termino	lg-nep
 rsc1154	Id	termino	lg-cat
 rsc1159	Projekt	termino	lg-deu
 rsc1164	Beziehungen	termino	lg-deu
 rsc1166	Abstrakt	termino	lg-deu
 rsc1170	Identification	termino	lg-eng
 rsc1174	Nouveau	termino	lg-fra
+rsc1179	Supprimer	termino	lg-fra
+rsc1180	Nuevo	termino	lg-spa
+rsc1194	ref_publications_title	termino	lg-spa
+rsc279	प्रकाशन योग्य	termino	lg-nep
+rsc500	Alt: मृत्यु शहर	termino	lg-nep
+rsc666	सम्पर्क भाषा	termino	lg-nep
+rsc176	कागजात	termino	lg-nep
+rsc5	परिचय	termino	lg-nep
+rsc7	अडियोभिजुअल	termino	lg-nep
+rsc45	कब्जा गर्ने ठाउँ	termino	lg-nep
+rsc48	गुणस्तर व्यवस्थापन साक्षात्कार	termino	lg-nep
+rsc438	TL स्थिति	termino	lg-nep
+rsc1217	Neu	termino	lg-deu
+rsc1219	Projet	termino	lg-fra
+rsc139	लेखकत्व र जिम्मेवारी	termino	lg-nep
+rsc1222	Identification	termino	lg-eng
+rsc386	सङ्कलन कोड	termino	lg-nep
+rsc343	नोटहरू	termino	lg-nep
+rsc786	स्थिति	termino	lg-nep
+rsc1229	Progetto	termino	lg-ita
+rsc1230	Cancellare	termino	lg-ita
+rsc301	हुलाक कोड	termino	lg-nep
 rsc1154	Id	termino	lg-deu
 rsc1159	Έργο	termino	lg-ell
 rsc1164	Relazioni	termino	lg-ita
 rsc1166	Περίληψη	termino	lg-ell
 rsc1170	Identificació	termino	lg-cat
 rsc1174	Nuovo	termino	lg-ita
+rsc1180	New	termino	lg-eng
+rsc1195	ref_publications_authors	termino	lg-spa
+rsc97	छवि अधिकार	termino	lg-nep
+rsc548	जन्म ठेगाना	termino	lg-nep
+rsc104	सम्पर्क मिति	termino	lg-nep
+rsc1210	Abreviación	termino	lg-spa
+rsc20	प्रकाशन योग्य	termino	lg-nep
+rsc35	अडियोभिजुअल	termino	lg-nep
+rsc46	नगरपालिका	termino	lg-nep
+rsc752	मिति	termino	lg-nep
+rsc1213	Lieux de publication	termino	lg-fra
+rsc67	संस्था	termino	lg-nep
+rsc1219	Progetto	termino	lg-ita
+rsc349	व्यक्तिगत नाम	termino	lg-nep
+rsc1222	Identificació	termino	lg-cat
+rsc350	संस्थाको नाम	termino	lg-nep
+rsc358	विशिष्ट	termino	lg-nep
+rsc164	परियोजना	termino	lg-nep
+rsc1229	Projecte	termino	lg-cat
+rsc366	कानुनी फारम	termino	lg-nep
+rsc128	सम्पर्क व्यक्ति	termino	lg-nep
 rsc1039	Persona	termino	lg-spa
 rsc1154	Id	termino	lg-ell
 rsc1159	Progetto	termino	lg-ita
@@ -6403,6 +6652,27 @@ rsc1164	Σχέσεις	termino	lg-ell
 rsc1166	Résumé	termino	lg-fra
 rsc1170	Identifizierung	termino	lg-deu
 rsc1175	Borrar	termino	lg-spa
+rsc1180	Nou	termino	lg-cat
+rsc1196	ref_publications_url	termino	lg-spa
+rsc85	नाम	termino	lg-nep
+rsc549	बस्ने ठेगाना	termino	lg-nep
+rsc101	फोन	termino	lg-nep
+rsc202	3D कागजात	termino	lg-nep
+rsc21	कोड	termino	lg-nep
+rsc263	मौलिक भाषा	termino	lg-nep
+rsc53	कब्जा को अवलोकन	termino	lg-nep
+rsc156	स्थिति	termino	lg-nep
+rsc493	TL प्रमाणीकरण	termino	lg-nep
+rsc1217	νέος	termino	lg-ell
+rsc1220	Listado	termino	lg-spa
+rsc219	प्रकाशक	termino	lg-nep
+rsc1222	Identifizierung	termino	lg-deu
+rsc141	संस्करण	termino	lg-nep
+rsc1225	Entiy	termino	lg-eng
+rsc1226	Nummer / Code	termino	lg-deu
+rsc1229	σχέδιο	termino	lg-ell
+rsc1230	Supprimer	termino	lg-fra
+rsc907	भूमिका	termino	lg-nep
 rsc1039	Person	termino	lg-eng
 rsc1154	It	termino	lg-ita
 rsc1160	Listado	termino	lg-spa
@@ -6410,50 +6680,239 @@ rsc1164	Relations	termino	lg-fra
 rsc1166	Sintesi	termino	lg-ita
 rsc1170	Identification	termino	lg-fra
 rsc1175	Delete	termino	lg-eng
+rsc1180	New	termino	lg-deu
+rsc86	उपनाम	termino	lg-nep
+rsc519	जन्मस्थल	termino	lg-nep
+rsc102	इमेल	termino	lg-nep
+rsc420	जीवनी माइलस्टोनहरू	termino	lg-nep
+rsc179	स्कोर	termino	lg-nep
+rsc22	अघिल्लो कोड	termino	lg-nep
+rsc244	जानकारी	termino	lg-nep
+rsc49	पूर्व उत्पादन	termino	lg-nep
+rsc80	प्रमाणीकरण	termino	lg-nep
+rsc1213	Luoghi di pubblicazione	termino	lg-ita
+rsc1217	Nouveau	termino	lg-fra
+rsc1220	List	termino	lg-eng
+rsc224	प्रकाशन मिति	termino	lg-nep
+rsc130	सम्बन्धहरू	termino	lg-nep
+rsc218	मुहान	termino	lg-nep
+rsc1225	Entitat	termino	lg-cat
+rsc152	राज्य	termino	lg-nep
+rsc158	नयाँ	termino	lg-nep
+rsc121	संस्थाको प्रकार	termino	lg-nep
+rsc1056	सम्पर्क व्यक्ति डेटा फ्रेम	termino	lg-nep
+rsc1232	Cógigos en otras entidades	termino	lg-spa
 rsc1039	Person	termino	lg-deu
 rsc1155	Rol	termino	lg-spa
 rsc1160	List	termino	lg-eng
 rsc1170	Identificazione	termino	lg-ita
 rsc1175	Esborrar	termino	lg-cat
+rsc1180	Nouveau	termino	lg-fra
+rsc1182	Cita	termino	lg-spa
+rsc1197	ref_publications_place	termino	lg-spa
+rsc283	उपनाम (एकल/पहिली)	termino	lg-nep
+rsc536	मृत्युको प्रकार	termino	lg-nep
+rsc100	ठेगाना	termino	lg-nep
+rsc412	जीवनी	termino	lg-nep
+rsc1210	Abreviatura	termino	lg-cat
+rsc1212	Marco temporal	termino	lg-spa
+rsc36	वर्णन / ट्रान्सक्रिप्शन	termino	lg-nep
+rsc52	फोटोग्राफर	termino	lg-nep
+rsc1136	संस्करण	termino	lg-nep
+rsc1214	Identificación	termino	lg-spa
+rsc748	Fuentes externas	termino	lg-spa
+rsc1220	Llistat	termino	lg-cat
+rsc140	शीर्षक	termino	lg-nep
+rsc1222	αναγνώριση	termino	lg-ell
+rsc820	भाषा - नियन्त्रित छैन	termino	lg-nep
+rsc357	कागजात	termino	lg-nep
+rsc163	मिति	termino	lg-nep
+rsc1229	Projekt	termino	lg-deu
+rsc1231	Listado	termino	lg-spa
+rsc365	URI	termino	lg-nep
 rsc1039	Personne	termino	lg-fra
 rsc1155	Role	termino	lg-eng
 rsc1160	Llistat	termino	lg-cat
 rsc1171	Id	termino	lg-spa
 rsc1175	Löschen	termino	lg-deu
+rsc1180	Nuovo	termino	lg-ita
+rsc1182	Citation	termino	lg-eng
+rsc1198	ref_publications_magazine	termino	lg-spa
+rsc93	सेक्स	termino	lg-nep
+rsc537	चिहान	termino	lg-nep
+rsc300	हुलाक कोड	termino	lg-nep
+rsc413	विवरण	termino	lg-nep
+rsc1210	Abbreviation	termino	lg-eng
+rsc733	भर्ना मिति	termino	lg-nep
+rsc860	अनुक्रमणिका	termino	lg-nep
+rsc50	साक्षात्कारकर्ता	termino	lg-nep
+rsc1137	सम्पादन पर्यवेक्षक	termino	lg-nep
+rsc1214	Identification	termino	lg-eng
+rsc1217	Nuovo	termino	lg-ita
+rsc15	अधिकारको अन्त्य	termino	lg-nep
+rsc1221	Otras codificaciones	termino	lg-spa
+rsc1222	Identification	termino	lg-fra
+rsc821	शारीरिक विवरण	termino	lg-nep
+rsc1225	Entität	termino	lg-deu
+rsc731	शीर्षक	termino	lg-nep
+rsc157	सम्बन्ध सूची	termino	lg-nep
+rsc120	स्थापना वर्ष	termino	lg-nep
+rsc896	विवरण	termino	lg-nep
 rsc1039	Persona	termino	lg-ita
 rsc1155	Rôle	termino	lg-fra
 rsc1160	Liste	termino	lg-fra
 rsc1171	Id	termino	lg-eng
 rsc1175	Cancellare	termino	lg-ita
+rsc1181	Borrar	termino	lg-spa
+rsc1182	Cita	termino	lg-cat
+rsc1199	ref_publications_magazine_number	termino	lg-spa
+rsc1128	लिङ्ग	termino	lg-nep
+rsc497	विवरण	termino	lg-nep
+rsc103	सम्पर्क व्यक्ति	termino	lg-nep
+rsc518	Publishable	termino	lg-eng
+rsc332	ग्रन्थसूची सन्दर्भ	termino	lg-nep
+rsc1212	Marc temporal	termino	lg-cat
+rsc995	उपशीर्षकहरू	termino	lg-nep
+rsc51	क्यामेरा रेकर्डर	termino	lg-nep
+rsc1138	मिति	termino	lg-nep
+rsc1214	Identificació	termino	lg-cat
+rsc748	बाह्य स्रोतहरू	termino	lg-nep
+rsc70	लेखक	termino	lg-nep
+rsc225	समान शीर्षक	termino	lg-nep
+rsc679	बुबाहरू	termino	lg-nep
+rsc677	अन्तर्राष्ट्रिय मानक नम्बर	termino	lg-nep
+rsc136	तथ्याङ्क हेर्नुहोस्	termino	lg-nep
+rsc159	मेटाउन	termino	lg-nep
+rsc1227	Nuevo	termino	lg-spa
+rsc1231	List	termino	lg-eng
+rsc898	छविहरू	termino	lg-nep
 rsc1155	Rolle	termino	lg-deu
 rsc1160	Elenco	termino	lg-ita
 rsc1171	Id	termino	lg-cat
 rsc1175	Supprimer	termino	lg-fra
 rsc924	"	termino	lg-spa
+rsc1181	Delete	termino	lg-eng
+rsc1182	Zitat	termino	lg-deu
+rsc87	उपनाम	termino	lg-nep
+rsc94	पेशा	termino	lg-nep
+rsc220	नोटहरू	termino	lg-nep
+rsc518	प्रकाशन योग्य	termino	lg-nep
+rsc205	प्रकाशनहरू	termino	lg-nep
+rsc26	डेटिङ	termino	lg-nep
+rsc856	भेक्टर कागजात	termino	lg-nep
+rsc11	अडियोभिजुअल प्राविधिक डेटा	termino	lg-nep
+rsc1139	स्थिति	termino	lg-nep
+rsc1214	Identifizierung	termino	lg-deu
+rsc14	संरक्षण	termino	lg-nep
+rsc1220	Liste	termino	lg-deu
+rsc211	श्रृंखला / पत्रिका / संग्रह	termino	lg-nep
+rsc1222	Identificazione	termino	lg-ita
+rsc249	मानक संख्या को प्रकार	termino	lg-nep
+rsc1225	Entité	termino	lg-fra
+rsc1228	URL	termino	lg-spa
+rsc504	नवीनतम परिवर्तनहरू	termino	lg-nep
+rsc1231	Llistat	termino	lg-cat
+rsc899	भौगोलिक स्थान	termino	lg-nep
 rsc1155	Ruolo	termino	lg-ita
 rsc1160	Auflistung	termino	lg-deu
 rsc1165	Publicable	termino	lg-spa
 rsc1171	Id	termino	lg-deu
 rsc1176	Lista	termino	lg-spa
 rsc924	"	termino	lg-deu
+rsc1181	Esborrar	termino	lg-cat
+rsc1182	Citation	termino	lg-fra
+rsc1200	ref_publications_editor	termino	lg-spa
+rsc1127	राज्य	termino	lg-nep
+rsc95	काम कोटि / शीर्षक	termino	lg-nep
+rsc78	वृत्तचित्र स्रोतहरू	termino	lg-nep
+rsc908	माइलस्टोन	termino	lg-nep
+rsc1210	Abkürzung	termino	lg-deu
+rsc1212	Time frame	termino	lg-eng
+rsc855	भेक्टर	termino	lg-nep
+rsc55	TC अफसेट	termino	lg-nep
+rsc1140	प्रमाणीकरण	termino	lg-nep
+rsc1214	Identification	termino	lg-fra
+rsc1218	Borrar	termino	lg-spa
+rsc71	शोषणको अन्त्य	termino	lg-nep
+rsc1221	Other codifications	termino	lg-eng
+rsc1223	Id	termino	lg-spa
+rsc1224	Publicable	termino	lg-spa
+rsc134	नयाँ	termino	lg-nep
+rsc153	विवरण	termino	lg-nep
+rsc295	संस्थाहरू	termino	lg-nep
+rsc367	एक्रोनिम	termino	lg-nep
+rsc895	विवरण	termino	lg-nep
+rsc1232	Codes en altres entitats	termino	lg-cat
 rsc1155	Ρόλος	termino	lg-ell
 rsc1160	Λίστα	termino	lg-ell
 rsc1165	Publishable	termino	lg-eng
 rsc1167	Notas	termino	lg-spa
 rsc1171	Id	termino	lg-fra
 rsc1176	List	termino	lg-eng
+rsc1181	Löschen	termino	lg-deu
+rsc1182	Citazione	termino	lg-ita
+rsc1201	ref_publications_date	termino	lg-spa
+rsc474	अघिल्लो कोड	termino	lg-nep
+rsc872	अवस्था	termino	lg-nep
+rsc1142	बिब्लियोग्राफी	termino	lg-nep
+rsc909	अनुक्रमणिका	termino	lg-nep
+rsc684	संरक्षण	termino	lg-nep
+rsc1212	Temporal Frame	termino	lg-deu
+rsc857	विवरण	termino	lg-nep
+rsc58	आकार अनुपात	termino	lg-nep
+rsc62	लिखित / वर्णन गरिएको	termino	lg-nep
+rsc1214	Identificazione	termino	lg-ita
+rsc1218	Delete	termino	lg-eng
+rsc1220	Liste	termino	lg-fra
 rsc1156	Persona	termino	lg-spa
 rsc1161	Nuevo	termino	lg-spa
 rsc1165	Publicable	termino	lg-cat
 rsc1167	Remark	termino	lg-eng
 rsc1171	Id	termino	lg-ita
 rsc1176	Llistat	termino	lg-cat
+rsc1181	Supprimer	termino	lg-fra
+rsc1182	Παραπομπή	termino	lg-ell
+rsc1202	ref_publications_typology	termino	lg-spa
+rsc288	नागरिक स्थिति	termino	lg-nep
+rsc883	अवस्था प्रकारहरू	termino	lg-nep
+rsc105	URI	termino	lg-nep
+rsc415	समय सीमा	termino	lg-nep
+rsc1210	Abréviation	termino	lg-fra
+rsc23	शीर्षक	termino	lg-nep
+rsc8	कागजात	termino	lg-nep
+rsc57	मास्टर उपकरण	termino	lg-nep
+rsc400	गुणस्तर व्यवस्थापन ट्रान्सक्रिप्शन	termino	lg-nep
+rsc1215	Id	termino	lg-spa
+rsc69	मूल रीलको स्थिति	termino	lg-nep
 rsc1156	Person	termino	lg-eng
 rsc1161	New	termino	lg-eng
 rsc1165	Pubblicabile	termino	lg-ita
 rsc1167	Bemerkung	termino	lg-deu
 rsc1172	Tipo de precisión	termino	lg-spa
 rsc1176	Liste	termino	lg-deu
+rsc1181	Cancellare	termino	lg-ita
+rsc1183	Imagenes	termino	lg-spa
+rsc1203	ref_publications_title_colective	termino	lg-spa
+rsc89	जन्म मिति	termino	lg-nep
+rsc96	यो समुदाय वा समूह हो	termino	lg-nep
+rsc1024	सम्बन्धहरू	termino	lg-nep
+rsc472	नोटहरू	termino	lg-nep
+rsc1210	Abbreviazione	termino	lg-ita
+rsc19	राज्य	termino	lg-nep
+rsc37	कागजात	termino	lg-nep
+rsc54	अवधि	termino	lg-nep
+rsc753	मिति	termino	lg-nep
+rsc1215	Id	termino	lg-eng
+rsc1218	Löschen	termino	lg-deu
+rsc72	छवि को समाप्ति	termino	lg-nep
+rsc384	श्रृंखला / पत्रिका / संग्रह संख्या	termino	lg-nep
+rsc1223	Id	termino	lg-eng
+rsc147	मानक नम्बर	termino	lg-nep
+rsc135	मेटाउन	termino	lg-nep
+rsc1228	URL	termino	lg-eng
+rsc1227	Nou	termino	lg-cat
+rsc1231	Liste	termino	lg-deu
+rsc900	नक्सा	termino	lg-nep
 rsc1152	Referencias de personas	termino	lg-spa
 rsc1156	Persona	termino	lg-cat
 rsc1161	Nou	termino	lg-cat
@@ -6461,12 +6920,55 @@ rsc1165	Druckreif	termino	lg-deu
 rsc1167	Notes	termino	lg-fra
 rsc1172	Type of accuracy	termino	lg-eng
 rsc1176	Liste	termino	lg-fra
+rsc1183	Imatges	termino	lg-cat
+rsc1204	ref_publications_title_colective_alt	termino	lg-spa
+rsc282	मृत्यु मिति	termino	lg-nep
+rsc289	राजनीतिक आबद्धता	termino	lg-nep
+rsc1026	बुबाहरू	termino	lg-nep
+rsc417	विवरण	termino	lg-nep
+rsc996	वृत्तचित्र सङ्कलनका लागि परामर्श	termino	lg-nep
+rsc24	टाइपोलोजी	termino	lg-nep
+rsc38	विवरण	termino	lg-nep
+rsc59	रङ	termino	lg-nep
+rsc431	ट्रान्सक्रिप्शन स्थिति	termino	lg-nep
+rsc240	मास्टर प्रतिलिपि	termino	lg-nep
+rsc1220	Elenco	termino	lg-ita
+rsc223	पृष्ठहरू। शारीरिक विवरण	termino	lg-nep
+rsc1223	Id	termino	lg-cat
+rsc1224	Publishable	termino	lg-eng
+rsc1225	Entità	termino	lg-ita
+rsc1228	URL	termino	lg-cat
+rsc1227	New	termino	lg-eng
+rsc118	स्थान	termino	lg-nep
+rsc1029	सम्बन्धहरू	termino	lg-nep
 rsc1152	People references	termino	lg-eng
 rsc1156	Person	termino	lg-deu
 rsc1161	Neu	termino	lg-deu
 rsc1167	Note	termino	lg-ita
 rsc1172	Tipo de precisió	termino	lg-cat
 rsc1176	Elenco	termino	lg-ita
+rsc1183	Images	termino	lg-eng
+rsc1184	Nuevo	termino	lg-spa
+rsc1205	ref_publications_other_people_name	termino	lg-spa
+rsc660	बुवाको नाम	termino	lg-nep
+rsc290	सिन्डिकल सम्बद्धता	termino	lg-nep
+rsc1025	बच्चाहरु	termino	lg-nep
+rsc911	स्पेस फ्रेम	termino	lg-nep
+rsc1211	Editorial	termino	lg-spa
+rsc25	संग्रह / अभिलेख	termino	lg-nep
+rsc1130	3D कागजात	termino	lg-nep
+rsc60	मास्टर गुणस्तर	termino	lg-nep
+rsc285	ट्रान्सक्रिप्शन प्रमाणीकरण	termino	lg-nep
+rsc1215	Id	termino	lg-deu
+rsc1218	Supprimer	termino	lg-fra
+rsc73	सेसन ऐन	termino	lg-nep
+rsc1221	Altres codificacions	termino	lg-cat
+rsc1223	Id	termino	lg-deu
+rsc250	कानूनी निक्षेप	termino	lg-nep
+rsc227	Zotero आयात गर्नुहोस्	termino	lg-nep
+rsc1227	Neu	termino	lg-deu
+rsc1231	Liste	termino	lg-fra
+rsc1030	बुबा	termino	lg-nep
 rsc1152	References de persones	termino	lg-cat
 rsc1156	Πρόσωπο	termino	lg-ell
 rsc1161	Νέο	termino	lg-ell
@@ -6474,9 +6976,111 @@ rsc1165	Publiable	termino	lg-fra
 rsc1168	Precisión	termino	lg-spa
 rsc1172	Art der Genauigkeit	termino	lg-deu
 rsc1177	Altitud	termino	lg-spa
+rsc1183	Bilder	termino	lg-deu
+rsc1184	New	termino	lg-eng
+rsc661	आमाको नाम	termino	lg-nep
+rsc651	अन्य सम्बद्धता	termino	lg-nep
+rsc1027	वर्णनकर्ता	termino	lg-nep
+rsc416	स्थान	termino	lg-nep
+rsc204	Administration	termino	lg-eng
+rsc732	गुणस्तर	termino	lg-nep
+rsc201	3D फाइल	termino	lg-nep
+rsc56	शृङ्खला	termino	lg-nep
+rsc63	अनुक्रमित	termino	lg-nep
+rsc1215	Id	termino	lg-fra
+rsc1218	Cancellare	termino	lg-ita
+rsc74	सेसन कागजात	termino	lg-nep
+rsc678	सामूहिक काम	termino	lg-nep
+rsc680	बच्चाहरु	termino	lg-nep
+rsc1224	Publicable	termino	lg-cat
+rsc248	BIBTex आयात गर्नुहोस्	termino	lg-nep
+rsc731	Title	termino	lg-eng
+rsc1227	νέος	termino	lg-ell
+rsc119	स्थान	termino	lg-nep
+rsc1031	बच्चाहरु	termino	lg-nep
 rsc1152	Persönliche Referenzen	termino	lg-deu
 rsc1156	Persona	termino	lg-ita
 rsc1161	Nuovo	termino	lg-ita
 rsc1168	Accuracy	termino	lg-eng
 rsc1172	Type de précision	termino	lg-fra
 rsc1177	Altitude	termino	lg-eng
+rsc1183	εικόνες	termino	lg-ell
+rsc1206	ref_publications_other_people_role	termino	lg-spa
+rsc665	पति/पत्नी	termino	lg-nep
+rsc291	धर्म	termino	lg-nep
+rsc1028	अनुक्रमणिका	termino	lg-nep
+rsc418	परियोजना	termino	lg-nep
+rsc204	प्रशासन	termino	lg-nep
+rsc1212	Cadre temporel	termino	lg-fra
+rsc32	फाइल विकल्प	termino	lg-nep
+rsc252	प्राविधिक डाटा	termino	lg-nep
+rsc401	गुणस्तर व्यवस्थापन अनुक्रमणिका	termino	lg-nep
+rsc1215	Id	termino	lg-ita
+rsc241	मास्टरको मिति प्रतिलिपि गर्नुहोस्	termino	lg-nep
+rsc1074	नयाँ	termino	lg-nep
+rsc222	कापी	termino	lg-nep
+rsc1223	Id	termino	lg-ell
+rsc385	DOI	termino	lg-nep
+rsc1226	Número / código	termino	lg-spa
+rsc1228	URL	termino	lg-deu
+rsc1227	Nouveau	termino	lg-fra
+rsc1231	Elenco	termino	lg-ita
+rsc1032	वर्णनकर्ता	termino	lg-nep
+rsc1232	Codes in anderen Einrichtungen	termino	lg-deu
+rsc1232	Codes in other entities	termino	lg-eng
+rsc1232	Codes dans d'autres entités	termino	lg-fra
+rsc1232	Codici in altre entità	termino	lg-ita
+rsc1233	Tipologías de códigos	termino	lg-spa
+rsc1233	Tipologies de còdis	termino	lg-cat
+rsc1233	Typologies of codes	termino	lg-eng
+rsc1233	Typologien von Codes	termino	lg-deu
+rsc1233	Typologies de codes	termino	lg-fra
+rsc1233	Tipologie di codici	termino	lg-ita
+rsc1234	Identificación	termino	lg-spa
+rsc1234	Identification	termino	lg-eng
+rsc1234	Identificació	termino	lg-cat
+rsc1234	Identifikation	termino	lg-deu
+rsc1234	Identification	termino	lg-fra
+rsc1234	Identificazione	termino	lg-ita
+rsc1235	Id	termino	lg-spa
+rsc1235	Id	termino	lg-eng
+rsc1235	Id	termino	lg-cat
+rsc1235	Id	termino	lg-deu
+rsc1235	Id	termino	lg-fra
+rsc1235	Id	termino	lg-ita
+rsc1236	Tipo de código	termino	lg-spa
+rsc1236	Code type	termino	lg-eng
+rsc1236	Tipus de codi	termino	lg-cat
+rsc1236	Code Typ	termino	lg-deu
+rsc1236	Type de code	termino	lg-fra
+rsc1236	Tipo di codice	termino	lg-ita
+rsc1237	Nuevo	termino	lg-spa
+rsc1237	New	termino	lg-eng
+rsc1237	Nou	termino	lg-cat
+rsc1237	Nuovo	termino	lg-ita
+rsc1237	Neu	termino	lg-deu
+rsc1237	Nouveau	termino	lg-fra
+rsc1238	Borrar	termino	lg-spa
+rsc1238	Esborrar	termino	lg-cat
+rsc1238	Delete	termino	lg-eng
+rsc1238	Supprimer	termino	lg-fra
+rsc1238	Löschen	termino	lg-deu
+rsc1238	Cancellare	termino	lg-ita
+rsc1239	Proyecto	termino	lg-spa
+rsc1239	Project	termino	lg-cat
+rsc1239	Project	termino	lg-eng
+rsc1239	Projekt	termino	lg-deu
+rsc1239	Projet	termino	lg-fra
+rsc1239	Progetto	termino	lg-ita
+rsc1240	Lista	termino	lg-spa
+rsc1240	Llistat	termino	lg-cat
+rsc1240	List	termino	lg-eng
+rsc1240	Liste	termino	lg-deu
+rsc1240	Liste	termino	lg-fra
+rsc1240	Elenco	termino	lg-ita
+rsc1241	Tipología	termino	lg-spa
+rsc1241	Tipologia	termino	lg-cat
+rsc1241	Typology	termino	lg-eng
+rsc1241	Typologie	termino	lg-deu
+rsc1241	Typologie	termino	lg-fra
+rsc1241	Tipologia	termino	lg-ita

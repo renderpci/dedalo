@@ -20,6 +20,8 @@ mupreva2592	mupreva2579	dd1233	no	si	si	13	mupreva	si	[{"dd57":"mupreva2575"}]	{
 mupreva2647	mupreva2635	dd1231	no	si	si	30	mupreva	si	[{"dd592":"mupreva2635"}]	{\r\n  "data_to_be_used": "dato"\r\n}	\N
 mupreva2600	mupreva2579	dd1235	no	si	si	6	mupreva	si	[{"dd530":"mupreva2599"}]	{"varchar":500}	\N
 mupreva2594	mupreva2593	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva2608"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd749":"mupreva212"}]	{\r\n  "portal_link_open": false,\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {}\r\n    }\r\n  }\r\n}	\N
+mupreva2068	mupreva712	dd1747	no	si	si	1	mupreva	no	\N		\N
+mupreva1638	mupreva1631	dd1234	no	si	si	6	mupreva	si	[{"dd530":"mupreva1302"}]		\N
 mupreva2349	mupreva239	dd11	no	si	si	15	mupreva	no	[{"dd6":"mupreva2364"},{"dd9":"mupreva2366"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n         "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1457	mupreva1454	dd318	no	si	si	1	mupreva	si	\N		\N
 mupreva2435	mupreva2433	dd6	no	si	si	2	mupreva	no	\N	\N	\N
@@ -30,10 +32,22 @@ mupreva2357	mupreva2352	dd177	no	si	si	4	mupreva	no	\N	\N	\N
 mupreva2358	mupreva2351	dd6	no	si	si	4	mupreva	no	[{"dd626":"dd22"}]	\N	\N
 mupreva2465	mupreva2435	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva2436	mupreva2433	dd6	no	si	si	3	mupreva	no	\N	\N	\N
+mupreva1769	mupreva1752	dd1231	no	si	si	17	mupreva	si	[{"dd530":"mupreva566"}]		\N
 mupreva2749	mupreva1260	dd581	no	si	si	8	mupreva	no	\N	\N	\N
 mupreva2359	mupreva2358	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva2385	mupreva2384	dd8	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva2360	mupreva2359	dd9	no	si	si	1	mupreva	si	\N	\N	\N
+mupreva1923	mupreva861	dd1231	no	si	si	43	mupreva	si	[{"dd530":"mupreva593"}]	{\r\n"table":"espacios"\r\n}	\N
+mupreva2039	mupreva858	dd1231	no	si	si	18	mupreva	si	[{"dd530":"mupreva791"}]	{\r\n"table":"restauracion_imagenes"\r\n}	\N
+mupreva1902	mupreva861	dd1231	no	si	si	22	mupreva	si	[{"dd530":"mupreva577"}]		\N
+mupreva1639	mupreva1631	dd1231	no	si	si	7	mupreva	si	[{"dd530":"mupreva1264"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva1770	mupreva1752	dd1231	no	si	si	18	mupreva	si	[{"dd530":"mupreva1502"}]	{\r\n"table":"diapositivas"\r\n}	\N
+mupreva1924	mupreva861	dd1231	no	si	si	44	mupreva	si	[{"dd530":"mupreva593"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva826	mupreva850	dd1231	no	si	si	4	mupreva	si	[{"dd530":"mupreva652"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva1642	mupreva1631	dd1231	no	si	si	10	mupreva	si	[{"dd530":"mupreva1278"}]		\N
+mupreva2040	mupreva858	dd1231	no	si	si	19	mupreva	si	[{"dd530":"mupreva791"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva1903	mupreva861	dd1231	no	si	si	23	mupreva	si	[{"dd530":"mupreva578"}]		\N
+mupreva468	mupreva462	dd247	no	si	si	2	mupreva	no	\N		\N
 mupreva2386	mupreva2385	dd1747	no	si	si	1	mupreva	no	\N	\N	\N
 mupreva2487	mupreva2486	dd592	no	si	si	1	mupreva	no	[{"dd6":"mupreva2541"},{"dd530":"mupreva2544"},{"dd530":"mupreva2545"}]	{\r\n  "elements_list_mode": {\r\n    "mupreva2544": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "70%"\r\n    },\r\n    "mupreva2545": {\r\n      "mode": "edit_in_list",\r\n      "column_width": "30%"\r\n    }\r\n  },\r\n  "edit_view": "view_single_line",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "100%"\r\n      }\r\n    },\r\n    ".css_button_generic > span": {\r\n      "style": {\r\n        "display": "none"\r\n      }\r\n    }\r\n  },\r\n  "portal_link_open": false\r\n}	\N
 mupreva2437	mupreva2433	dd6	no	si	si	4	mupreva	no	\N	\N	\N
@@ -184,6 +198,8 @@ mupreva899	mupreva602	dd91	no	si	si	1	mupreva	si	[{"dd6":"mupreva159"},{"dd749":
 mupreva1031	mupreva852	dd1231	no	si	si	7	mupreva	si	[{"dd635":"mupreva208"}]		\N
 mupreva722	mupreva718	dd530	no	si	si	2	mupreva	no	[{"dd6":"mupreva530"},{"dd9":"mupreva533"}]		\N
 mupreva2011	mupreva858	dd1231	no	si	si	6	mupreva	si	[{"dd530":"mupreva777"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva1771	mupreva1752	dd1231	no	si	si	19	mupreva	si	[{"dd530":"mupreva1502"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
+mupreva1925	mupreva861	dd1231	no	si	si	45	mupreva	si	[{"dd530":"mupreva593"}]		\N
 mupreva956	mupreva849	dd1231	no	si	si	6	mupreva	si	[{"dd592":"mupreva207"}]		\N
 mupreva338	mupreva329	dd177	no	si	si	4	mupreva	no	\N		\N
 mupreva2201	mupreva2198	dd248	no	si	si	3	mupreva	si	[{"dd1747":"mupreva1224"}]		\N
@@ -744,6 +760,7 @@ mupreva1846	mupreva860	dd1231	no	si	si	13	mupreva	si	[{"dd530":"mupreva546"}]		\
 mupreva1086	mupreva866	dd1233	no	si	si	1	mupreva	si	[{"dd635":"mupreva304"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
 mupreva791	mupreva786	dd592	no	si	si	4	mupreva	no	[{"dd6":"mupreva123"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	{"dragable_connectWith": "mupreva790"}	\N
 mupreva821	mupreva801	dd1229	no	si	si	2	mupreva	si	[{"dd6":"mupreva162"}]		\N
+mupreva2041	mupreva858	dd1231	no	si	si	20	mupreva	si	[{"dd530":"mupreva791"}]		\N
 mupreva729	mupreva727	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva22"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]	{"dragable_connectWith": "mupreva728"}	\N
 mupreva739	mupreva549	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva710"},{"dd57":"mupreva733"},{"dd635":"mupreva713"},{"dd9":"mupreva714"},{"dd10":"mupreva715"},{"dd9":"mupreva716"},{"dd592":"mupreva728"}]		\N
 mupreva814	mupreva809	dd1231	no	si	si	9	mupreva	si	[{"dd9":"mupreva178"}]		\N
@@ -1067,6 +1084,7 @@ mupreva1956	mupreva855	dd1231	no	si	si	18	mupreva	si	[{"dd530":"mupreva1516"}]	{
 mupreva1930	mupreva861	dd1231	no	si	si	50	mupreva	si	[{"dd530":"mupreva598"}]		\N
 mupreva1573	mupreva865	dd1231	no	si	si	17	mupreva	si	[{"dd592":"mupreva1009"}]		\N
 mupreva2012	mupreva858	dd1231	no	si	si	7	mupreva	si	[{"dd530":"mupreva777"}]		\N
+mupreva1904	mupreva861	dd1231	no	si	si	24	mupreva	si	[{"dd530":"mupreva596"}]	{\r\n"table":"catalogo"\r\n}	\N
 mupreva1834	mupreva860	dd1233	no	si	si	1	mupreva	si	[{"dd530":"mupreva1355"}]	{\r\n    "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n    "data_to_be_used": "dato",\r\n    "enum": {\r\n        "1": "si",\r\n        "2": "no"\r\n    }\r\n}	\N
 mupreva1835	mupreva860	dd1231	no	si	si	2	mupreva	si	[{"dd530":"mupreva532"}]	{\r\n"table":"yacimientos"\r\n}	\N
 mupreva1836	mupreva860	dd1231	no	si	si	3	mupreva	si	[{"dd530":"mupreva532"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
@@ -1285,7 +1303,6 @@ mupreva967	mupreva856	dd1231	no	si	si	13	mupreva	si	[{"dd592":"mupreva753"}]	{\r
 mupreva969	mupreva856	dd1231	no	si	si	15	mupreva	si	[{"dd592":"mupreva753"}]		\N
 mupreva494	mupreva492	dd6	no	si	si	1	mupreva	no	\N		\N
 mupreva545	mupreva530	dd8	no	si	si	2	mupreva	no	\N		\N
-mupreva493	dd321	dd4	no	si	si	1	mupreva	no	\N		\N
 mupreva549	mupreva530	dd8	no	si	si	3	mupreva	no	\N		\N
 mupreva543	mupreva530	dd177	no	si	si	5	mupreva	no	\N		\N
 mupreva544	mupreva530	dd183	no	si	si	6	mupreva	no	\N		\N
@@ -1440,24 +1457,6 @@ mupreva1768	mupreva1752	dd1231	no	si	si	16	mupreva	si	[{"dd530":"mupreva566"}]	{
 mupreva1922	mupreva861	dd1231	no	si	si	42	mupreva	si	[{"dd530":"mupreva595"}]		\N
 mupreva1900	mupreva861	dd1231	no	si	si	20	mupreva	si	[{"dd530":"mupreva576"}]		\N
 mupreva2038	mupreva2023	dd1231	no	si	si	15	mupreva	si	[{"dd530":"mupreva1342"}]		\N
-mupreva2068	mupreva712	dd1747	no	si	si	1	mupreva	no	\N		\N
-mupreva1638	mupreva1631	dd1234	no	si	si	6	mupreva	si	[{"dd530":"mupreva1302"}]		\N
-mupreva1769	mupreva1752	dd1231	no	si	si	17	mupreva	si	[{"dd530":"mupreva566"}]		\N
-mupreva1923	mupreva861	dd1231	no	si	si	43	mupreva	si	[{"dd530":"mupreva593"}]	{\r\n"table":"espacios"\r\n}	\N
-mupreva2039	mupreva858	dd1231	no	si	si	18	mupreva	si	[{"dd530":"mupreva791"}]	{\r\n"table":"restauracion_imagenes"\r\n}	\N
-mupreva1902	mupreva861	dd1231	no	si	si	22	mupreva	si	[{"dd530":"mupreva577"}]		\N
-mupreva1639	mupreva1631	dd1231	no	si	si	7	mupreva	si	[{"dd530":"mupreva1264"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva1770	mupreva1752	dd1231	no	si	si	18	mupreva	si	[{"dd530":"mupreva1502"}]	{\r\n"table":"diapositivas"\r\n}	\N
-mupreva1924	mupreva861	dd1231	no	si	si	44	mupreva	si	[{"dd530":"mupreva593"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva826	mupreva850	dd1231	no	si	si	4	mupreva	si	[{"dd530":"mupreva652"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva1642	mupreva1631	dd1231	no	si	si	10	mupreva	si	[{"dd530":"mupreva1278"}]		\N
-mupreva2040	mupreva858	dd1231	no	si	si	19	mupreva	si	[{"dd530":"mupreva791"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva1903	mupreva861	dd1231	no	si	si	23	mupreva	si	[{"dd530":"mupreva578"}]		\N
-mupreva468	mupreva462	dd247	no	si	si	2	mupreva	no	\N		\N
-mupreva1771	mupreva1752	dd1231	no	si	si	19	mupreva	si	[{"dd530":"mupreva1502"}]	{\r\n    "data_to_be_used": "dato"\r\n}	\N
-mupreva1925	mupreva861	dd1231	no	si	si	45	mupreva	si	[{"dd530":"mupreva593"}]		\N
-mupreva2041	mupreva858	dd1231	no	si	si	20	mupreva	si	[{"dd530":"mupreva791"}]		\N
-mupreva1904	mupreva861	dd1231	no	si	si	24	mupreva	si	[{"dd530":"mupreva596"}]	{\r\n"table":"catalogo"\r\n}	\N
 mupreva1641	mupreva1631	dd1231	no	si	si	9	mupreva	si	[{"dd530":"mupreva1277"}]		\N
 mupreva1772	mupreva1752	dd1231	no	si	si	20	mupreva	si	[{"dd530":"mupreva1502"}]		\N
 mupreva1926	mupreva861	dd1231	no	si	si	46	mupreva	si	[{"dd530":"mupreva1551"}]		\N
@@ -2218,6 +2217,7 @@ mupreva2627	mupreva2622	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva667"},{"dd33
 mupreva2656	mupreva2392	dd97	no	si	si	1	mupreva	no	[{"dd6":"mupreva2384"},{"dd11":"mupreva2387"},{"dd43":"mupreva2388"},{"dd11":"mupreva2389"}]	\N	\N
 mupreva1541	mupreva1555	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva349"},{"dd9":"mupreva351"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "35%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2771	mupreva2635	dd581	no	si	si	17	mupreva	no	\N	\N	\N
+mupreva179	mupreva196	dd9	no	si	si	9	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2069	mupreva2635	dd524	no	si	si	13	mupreva	no	[{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd9":"mupreva216"},{"dd10":"mupreva217"},{"dd530":"mupreva220"},{"dd635":"mupreva219"},{"dd195":"dd196"}]		\N
 mupreva2767	mupreva2635	dd581	no	si	si	16	mupreva	no	\N	\N	\N
 mupreva2466	mupreva2465	dd1747	no	si	si	1	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".inverse"\r\n      ],\r\n      "style": {\r\n        "width": "8%",\r\n        "border-bottom-right-radius": "8px",\r\n        "background-color": "rgba(191, 51, 51, 0.8)"\r\n      }\r\n    },\r\n    ".css_label": {\r\n      "style": {\r\n        "color": "#ffffff"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2499,7 +2499,6 @@ mupreva2418	mupreva170	dd8	no	si	si	2	mupreva	no	\N	\N	\N
 mupreva181	mupreva196	dd635	no	si	si	13	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva186	mupreva196	dd9	no	si	si	18	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "10%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva176	mupreva196	dd9	no	si	si	24	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva179	mupreva196	dd9	no	si	si	9	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva177	mupreva196	dd530	no	si	si	17	mupreva	no	[{"dd6":"mupreva609"},{"dd9":"mupreva238"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva192	mupreva196	dd247	no	si	si	25	mupreva	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "40%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva190	mupreva196	dd9	no	si	si	23	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "15%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2531,6 +2530,7 @@ mupreva2404	mupreva196	dd43	no	si	si	22	mupreva	no	\N	{\r\n  "type": {\r\n    "f
 mupreva2179	mupreva501	dd530	no	si	si	3	mupreva	no	[{"dd6":"mupreva609"},{"dd9":"mupreva238"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "30%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva511	mupreva510	dd66	no	si	si	5	mupreva	no	\N		\N
 mupreva505	mupreva501	dd9	no	si	si	5	mupreva	si	\N	{"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"50%"}}}}	\N
+mupreva2239	mupreva2241	dd1743	no	si	si	1	mupreva	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_rdf",\r\n    "service": "nomisma"\r\n  }\r\n}	\N
 mupreva506	mupreva501	dd11	no	si	si	7	mupreva	no	[{"dd6":"peri1"},{"dd9":"hierarchy25"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva507	mupreva510	dd9	no	si	si	6	mupreva	no	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva508	mupreva510	dd318	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%",\r\n        "height": "730px"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2538,6 +2538,8 @@ mupreva1352	mupreva510	dd318	no	si	si	2	mupreva	si	\N	{\r\n  "css": {\r\n    ".w
 mupreva1351	mupreva510	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva512	mupreva510	dd592	no	si	si	8	mupreva	no	[{"dd6":"mupreva153"},{"dd57":"mupreva628"},{"dd9":"mupreva171"},{"dd9":"mupreva175"},{"dd9":"mupreva178"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2338	mupreva510	dd530	no	si	si	10	mupreva	no	[{"dd6":"mupreva451"},{"dd9":"mupreva455"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2726	mupreva494	dd581	no	si	si	13	mupreva	no	\N	\N	\N
+mupreva1381	mupreva87	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{ "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2245	mupreva2242	dd10	no	si	si	3	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva513	mupreva510	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva156"},{"dd9":"mupreva171"},{"dd57":"mupreva628"},{"dd1742":"mupreva631"},{"dd530":"mupreva174"},{"dd9":"mupreva178"},{"dd635":"mupreva181"},{"dd9":"mupreva191"},{"dd749":"mupreva193"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2244	mupreva2242	dd9	no	si	si	1	mupreva	si	\N	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "20%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2613,8 +2615,10 @@ mupreva546	mupreva531	dd592	no	si	si	9	mupreva	no	[{"dd6":"mupreva268"},{"dd9":"
 mupreva548	mupreva531	dd592	no	si	si	10	mupreva	no	[{"dd6":"mupreva20"},{"dd9":"mupreva203"},{"dd57":"mupreva202"},{"dd9":"mupreva205"},{"dd10":"mupreva217"},{"dd9":"mupreva216"},{"dd749":"mupreva212"}]		\N
 mupreva823	mupreva809	dd1231	no	si	si	19	mupreva	si	[{"dd530":"mupreva177"}]	{\r\n  "table": "entidades"\r\n}	\N
 mupreva428	mupreva417	dd177	no	si	si	3	mupreva	no	\N		\N
+mupreva2633	mupreva2622	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva20"},{"dd339":"mupreva732"},{"dd9":"mupreva696"},{"dd592":"mupreva706"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2703	mupreva1370	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd339":"mupreva1372"},{"dd530":"mupreva1373"},{"dd635":"mupreva1374"},{"dd635":"mupreva1375"}]	\N	\N
 mupreva853	mupreva801	dd1229	no	si	si	10	mupreva	si	[{"dd6":"mupreva21"}]	{\r\n  "check_publication_value": false\r\n}	\N
+mupreva91	mupreva86	dd177	no	si	si	5	mupreva	no	\N		\N
 mupreva2709	mupreva2405	dd91	no	si	si	5	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2407"},{"dd9":"mupreva2408"}]	\N	\N
 mupreva2715	mupreva1446	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva1448"}]	\N	\N
 mupreva2721	mupreva2489	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2491"},{"dd9":"mupreva2492"}]	\N	\N
@@ -2624,7 +2628,11 @@ mupreva2704	mupreva278	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mu
 mupreva2710	mupreva1458	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva1492"}]	\N	\N
 mupreva2716	mupreva221	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd9":"mupreva223"}]	\N	\N
 mupreva2722	mupreva2522	dd524	no	si	si	6	mupreva	si	[{"dd195":"dd196"},{"dd1747":"mupreva2524"},{"dd9":"mupreva2525"}]	\N	\N
+mupreva1230	mupreva494	dd58	no	si	si	12	mupreva	no	[{"dd9":"mupreva499"}]		\N
+mupreva2724	mupreva500	dd581	no	si	si	9	mupreva	no	\N	\N	\N
 mupreva636	mupreva635	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
+mupreva2725	mupreva530	dd581	no	si	si	8	mupreva	no	\N	\N	\N
+mupreva2190	mupreva2239	dd233	no	si	si	1	mupreva	si	null	{\r\n  "value": "<?xml version=\\"1.0\\" encoding=\\"utf-8\\" ?>"\r\n}	\N
 mupreva721	mupreva718	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ]\r\n}	\N
 mupreva1307	mupreva1306	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{ "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ]}	\N
 mupreva1516	mupreva1553	dd530	no	si	si	1	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2659,18 +2667,9 @@ mupreva2470	mupreva2465	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva500"},{"dd9"
 mupreva2457	mupreva2452	dd530	no	si	si	5	mupreva	no	[{"dd6":"mupreva500"},{"dd9":"mupreva505"}]	{\r\n  "source": {\r\n    "divisor": " | "\r\n  },\r\n  "search_list_add": [\r\n    "mupreva503"\r\n  ],\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva552	mupreva500	dd91	no	si	si	5	mupreva	no	[{"dd57":"mupreva502"},{"dd9":"mupreva505"},{"dd530":"mupreva503"},{"dd530":"mupreva506"},{"dd10":"mupreva508"},{"dd592":"mupreva514"}]		\N
 mupreva2078	mupreva120	dd1221	no	si	si	4	mupreva	no	\N	{\r\n"tool_name":"tool_import_images",\r\n"context_name":"files",\r\n"section_tipo":"mupreva1",\r\n"MAIN_SECTION_TIPO":"mupreva1",\r\n"MAIN_PORTAL_IDENTIFY_IMAGE":"mupreva151",\r\n"MAIN_PORTAL_ADITIONAL_IMAGES":"mupreva152",\r\n"RESOURCE_SECTION_TIPO":"mupreva120",\r\n"RESOURCE_COMPONENT_TIPO_IMAGE":"mupreva212",\r\n"RESOURCE_COMPONENT_TIPO_DIRECTORY":"mupreva214",\r\n"RESOURCE_COMPONENT_TIPO_FILENAME":"mupreva215",\r\n"RESOURCE_COMPONENT_TIPO_CODE":"mupreva203",\r\n"RESOURCE_COMPONENT_TIPO_CODE_OLD":"mupreva204",\r\n"RESOURCE_COMPONENT_TIPO_PROJECT":"mupreva210",\r\n"RESOURCE_COMPONENT_TIPO_AUTHOR":"mupreva753",\r\n"RESOURCE_COMPONENT_DATE_CAPTURE":"mupreva207",\r\n"process_script":"/extras/mupreva/tool_import_images/import_images_generic_modificada.php",\r\n"quality":"modificada",\r\n"initial_media_path":"/dibujos_catalogo",\r\n"aditional_path":"numero_to_local_path",\r\n"enable_target_id":false,\r\n"verify_file_name":true\r\n}	\N
-mupreva2633	mupreva2622	dd592	no	si	si	3	mupreva	no	[{"dd6":"mupreva20"},{"dd339":"mupreva732"},{"dd9":"mupreva696"},{"dd592":"mupreva706"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva91	mupreva86	dd177	no	si	si	5	mupreva	no	\N		\N
-mupreva1230	mupreva494	dd58	no	si	si	12	mupreva	no	[{"dd9":"mupreva499"}]		\N
-mupreva2724	mupreva500	dd581	no	si	si	9	mupreva	no	\N	\N	\N
-mupreva2725	mupreva530	dd581	no	si	si	8	mupreva	no	\N	\N	\N
-mupreva2190	mupreva2239	dd233	no	si	si	1	mupreva	si	null	{\r\n  "value": "<?xml version=\\"1.0\\" encoding=\\"utf-8\\" ?>"\r\n}	\N
 mupreva2751	mupreva2635	dd581	no	si	si	23	mupreva	no	\N	\N	\N
 mupreva2750	mupreva2635	dd581	no	si	si	25	mupreva	no	\N	\N	\N
 mupreva258	mupreva2579	dd1231	no	si	si	16	mupreva	no	[{"dd592":"mupreva2671"}]	{"data_to_be_used":"dato"}	\N
-mupreva2239	mupreva2241	dd1743	no	si	si	1	mupreva	si	\N	{\r\n  "diffusion": {\r\n    "class_name": "diffusion_rdf",\r\n    "service": "nomisma"\r\n  }\r\n}	\N
-mupreva2726	mupreva494	dd581	no	si	si	13	mupreva	no	\N	\N	\N
-mupreva1381	mupreva87	dd530	no	si	si	7	mupreva	no	[{"dd6":"mupreva162"},{"dd9":"mupreva232"},{"dd9":"mupreva233"}]	{ "source": {\r\n    "divisor": ", "\r\n  },\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2595	mupreva2635	dd524	no	si	si	4	mupreva	no	[{"dd195":"dd196"},{"dd1747":"mupreva1262"},{"dd339":"mupreva1263"},{"dd530":"mupreva1265"},{"dd9":"mupreva1274"},{"dd530":"mupreva1276"},{"dd10":"mupreva1284"},{"dd530":"mupreva1293"},{"dd530":"mupreva1294"},{"dd530":"mupreva1295"}]	\N	\N
 mupreva2766	mupreva2635	dd581	no	si	si	18	mupreva	no	\N	\N	\N
 mupreva2769	mupreva2635	dd581	no	si	si	19	mupreva	no	\N	\N	\N
@@ -2799,6 +2798,7 @@ mupreva607	mupreva597	dd592	no	si	si	2	mupreva	no	[{"dd6":"mupreva690"},{"dd57":
 mupreva1408	dd69	dd4	no	si	si	2	mupreva	no	\N		\N
 mupreva2618	mupreva2635	dd440	no	si	si	1	mupreva	si	\N	\N	\N
 mupreva33	dd3	dd17	no	si	si	13	mupreva	no	\N		\N
-mupreva2635	ts11	dd440	no	si	si	9	mupreva	no	null		null
-mupreva76	dd68	dd4	no	si	si	9	mupreva	si	\N		\N
+mupreva2635	ts11	dd440	no	si	si	7	mupreva	no	null		null
+mupreva76	dd68	dd4	no	si	si	10	mupreva	si	\N		\N
 mupreva19	dd14	dd4	no	si	si	15	mupreva	no	\N		\N
+mupreva493	dd321	dd4	no	si	si	2	mupreva	no	\N		\N

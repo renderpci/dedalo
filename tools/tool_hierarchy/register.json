@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 19,
-              "time": 65047778734,
-              "year": 2023,
-              "month": 11,
-              "minute": 25,
-              "second": 34
+              "day": 22,
+              "hour": 12,
+              "time": 65057517946,
+              "year": 2024,
+              "month": 2,
+              "minute": 45,
+              "second": 46
             }
           }
         ]
@@ -90,8 +90,23 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>El reemplaçament dels botons anteriors v5 activa \"Crea estructura\"</p>"
+        ],
+        "lg-deu": [
+          "<p>Ersatz für frühere v5-Tasten löst „Struktur erstellen“ aus</p>"
+        ],
+        "lg-ell": [
+          "<p>Αντικατάσταση για τα πρώην κουμπιά v5 ενεργοποιεί «Δημιουργία δομής»</p>"
+        ],
         "lg-eng": [
-          "<p>Replacement for former v5 buttons trigger 'Create sturcture'</p>"
+          "<p>Replacement for former v5 buttons trigger 'Create structure'</p>"
+        ],
+        "lg-nep": [
+          "<p>भूतपूर्व v5 बटनहरूको प्रतिस्थापन 'संरचना सिर्जना गर्नुहोस्' ट्रिगर गर्नुहोस्</p>"
+        ],
+        "lg-spa": [
+          "<p>Reemplazo para los botones anteriores de la v5 que activan 'Crear estructura'</p>"
         ]
       }
     },
@@ -116,6 +131,9 @@
         "lg-ita": [
           "Strumento di gerarchizzazione"
         ],
+        "lg-nep": [
+          "पदानुक्रम उपकरण"
+        ],
         "lg-por": [
           "Ferramenta de hierarquia"
         ],
@@ -136,7 +154,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.1"
+          "1.0.2"
         ]
       }
     },
@@ -332,6 +350,21 @@
               "lang": "lg-deu",
               "name": "absolute_sure",
               "value": "Bist du dir absolut sicher?"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "user_info",
+              "value": "यो कार्यले सन्दर्भमा आधारित नयाँ ओन्टोलजी उत्पन्न गर्दछ।"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "generate",
+              "value": "उत्पन्न गर्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "absolute_sure",
+              "value": "के तपाई पक्कै पक्का हुनुहुन्छ?"
             }
           ]
         ]
@@ -349,7 +382,7 @@
   "section_id": 15,
   "created_date": "2023-03-16 16:43:35",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 19:25:34",
+  "modified_date": "2024-02-22 12:45:46",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

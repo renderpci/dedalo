@@ -24,8 +24,8 @@ class component_external extends component_common {
 		// cache
 			static $data_from_remote_cache = [];
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
-			if (isset($data_from_remote_cache[$uid])) {
-				#debug_log(__METHOD__." Loaded from cache: $uid ".to_string(), logger::DEBUG);
+			if (array_key_exists($uid, $data_from_remote_cache)) {
+				// dump($data_from_remote_cache[$uid], ' ))) RETURN FROM CACHE ++ '.to_string($uid));
 				return $data_from_remote_cache[$uid];
 			}
 
@@ -59,9 +59,13 @@ class component_external extends component_common {
 					.' section_tipo: '. $section_tipo .PHP_EOL
 					.' section_id: '. $section_id .PHP_EOL
 					.' section_properties type: ' . gettype($section_properties) .PHP_EOL
-					.' section_properties: ' . json_encode($section_properties, JSON_PRETTY_PRINT)
+					.' section_properties: ' . to_string($section_properties) .PHP_EOL
+					// .' bt: ' . to_string( debug_backtrace() )
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					dump(debug_backtrace(), ' debug_backtrace() ++ '.to_string());
+				}
 				return null;
 			}
 
@@ -179,6 +183,9 @@ class component_external extends component_common {
 
 		// dato
 			$value = array_reduce($properties->fields_map, function($carry, $item) use($row_data){
+				if (empty($row_data)) {
+					return $carry;
+				}
 				if($item->local==='dato') {
 					$name = $item->remote;
 					if (isset($row_data->{$name})) {
@@ -206,7 +213,9 @@ class component_external extends component_common {
 						return $value;
 					}else{
 						debug_log(__METHOD__
-							." Error. Not found key: $name in row_data" . PHP_EOL
+							." Error. Not found key: '$name' in row_data" . PHP_EOL
+							.' name: ' .$name . PHP_EOL
+							.' row_data type: ' .gettype($row_data) . PHP_EOL
 							.' row_data: ' . to_string($row_data)
 							, logger::ERROR
 						);

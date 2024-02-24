@@ -1,5 +1,5 @@
 <?php
-// declare(strict_types=1);
+declare(strict_types=1);
 /**
  * CORE FUNCTIONS
  * Moved from core/base/core_functions.php to shared/core_functions.php
@@ -338,7 +338,7 @@ function curl_request(object $options) : object {
 					$msg .= "Error. Unauthorized code (status code: $httpcode)";
 					break;
 				case 400:
-					$msg .= "Error. Server has problems collect structure files (status code: $httpcode)";
+					$msg .= "Error. Bad Request. Server has problems connecting to file (status code: $httpcode)";
 					break;
 				default:
 					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
@@ -347,7 +347,8 @@ function curl_request(object $options) : object {
 			$debug_level = $httpcode===200 ? logger::WARNING : logger::ERROR;
 			debug_log(__METHOD__ . ' ' .$httpcode. ' : '. PHP_EOL
 				. ' url: ' . $url . PHP_EOL
-				. ' msg: ' .$msg
+				. ' msg: ' .$msg . PHP_EOL
+				. ' bt: ' . to_string( debug_backtrace()[0] )
 				, $debug_level
 			);
 
@@ -399,7 +400,7 @@ function curl_request(object $options) : object {
 * The delivered timestamp is monotonic and can not be adjusted.
 * @return float $time (nanoseconds)
 */
-function start_time() {
+function start_time() : int {
 
 	return hrtime(true); // nanoseconds
 }//end start_time
@@ -414,9 +415,9 @@ function start_time() {
 * 	possible values: ns|ms|sec|min
 * @param int $round = 3
 * 	Math total rounded to value
-* @return string
+* @return float $result
 */
-function exec_time_unit(float $start, string $unit='ms', int $round=3) : string {
+function exec_time_unit(float $start, string $unit='ms', int $round=3) : float {
 
 	// calculation is always in nanoseconds
 		$total_ns = start_time() - $start;
@@ -504,7 +505,7 @@ function to_string(mixed $var=null) : string {
 /**
 * GET_LAST_MODIFICATION_DATE
 * Get last modified file date in all Dedalo files
-* This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret))
+* This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret)
 * @return int|date
 */
 function get_last_modification_date(string $path, array $allowedExtensions=null, array $ar_exclude=['/acc/','/backups/']) {
@@ -669,7 +670,7 @@ function dedalo_decrypt_openssl(string $string_value, string $key=DEDALO_INFORMA
 
 	$output = openssl_decrypt(base64_decode($string_value), $encrypt_method, md5(md5($key)), 0, $iv);
 
-	if ( is_serialized($output) ) {
+	if ( $output!==false && is_serialized($output) ) {
 		return unserialize($output);
 	}else{
 		debug_log(__METHOD__
@@ -695,37 +696,6 @@ function is_serialized(string $str) : bool {
 
 
 /**
-* ENCRYPTION_MODE
-* Return current crypt mode to use looking current Dédalo version
-* @return string
-*/
-function encryption_mode() : string {
-
-	# Overwrites calculated mode. Useful for clean install
-	if (defined('ENCRYPTION_MODE')) {
-		return ENCRYPTION_MODE;
-	}
-
-	$current_version = get_current_version_in_db();
-
-	$min_subversion = 22; # real: 22 (see updates.php)
-	if( ($current_version[0] >= 4 && $current_version[1] >= 0 && $current_version[2] >= $min_subversion) ||
-		($current_version[0] >= 4 && $current_version[1] >= 5) ||
-		 $current_version[0] > 4
-	  ) {
-		return 'openssl';
-	}else{
-		debug_log(__METHOD__
-			." !! USING OLD CRYPT METHOD (mcrypt). Please use openssl "
-			, logger::WARNING
-		);
-		return 'mcrypt';
-	}
-}//end encryption_mode
-
-
-
-/**
 * Search for a key in an array, returning a path to the entry.
 *
 * @param $needle
@@ -736,9 +706,9 @@ function encryption_mode() : string {
 *   A list of keys to ignore.
 * @param $path
 *   The intermediate path. Internal use only.
-* @return
+* @return array|boolean
 *   The path to the parent of the first occurrence of the key, represented as an array where entries are consecutive keys.
-* by http://thereisamoduleforthat.com/content/dealing-deep-arrays-php
+* 	by http://thereisamoduleforthat.com/content/dealing-deep-arrays-php
 */
 function array_key_path(string $needle, array $haystack, array $forbidden=array(), array $path=array()) {
 
@@ -781,7 +751,9 @@ function array_key_path(string $needle, array $haystack, array $forbidden=array(
 
 /**
 * ARRAY_KEYS_RECURSIVE
-* Flat an array
+* Flat an array selecting keys
+* @param array $array
+* @return array $keys
 */
 function array_keys_recursive(array $array) : array {
 
@@ -803,6 +775,8 @@ function array_keys_recursive(array $array) : array {
 /**
 * ARRAY_FLATTEN
 * Convert multidimensional array to one level flat array
+* @param array $array
+* @return array $result
 */
 function array_flatten(array $array) : array {
 
@@ -823,13 +797,18 @@ function array_flatten(array $array) : array {
 /**
 * REARRANGE_ARRAY
 * Rearrange the array to your desired output
+* @param array $array
+* @param int $key
+* @return array $array
 */
-function rearrange_array($array, $key) {
+function rearrange_array(array $array, int $key) : array {
+
 	while ($key > 0) {
 		$temp = array_shift($array);
 		$array[] = $temp;
 		$key--;
 	}
+
 	return $array;
 }//end rearrange_array
 
@@ -862,6 +841,8 @@ function is_associative(array $inpt_arr) : bool {
 
 /**
 * SANITIZE_QUERY
+* @param string $strQuery
+* @return string $strQuery
 */
 function sanitize_query(string $strQuery) : string {
 
@@ -878,20 +859,21 @@ function sanitize_query(string $strQuery) : string {
 *
 * @return mixed $var_value
 */
-// function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mixed {
-function fix_cascade_config_var(string $var_name, mixed $var_default_value) { // 7.4 compatible
+function fix_cascade_config_var(string $var_name, mixed $var_default_value) : mixed {
 
 	switch (true) {
-		# REQUEST (GET/POST)
+		// request (get/post)
 		case !empty($_REQUEST[$var_name]) :
 			$var_value = trim( safe_xss($_REQUEST[$var_name]) );
-			$_SESSION['dedalo']['config'][$var_name]= $var_value; # Save in session too
+			$_SESSION['dedalo']['config'][$var_name] = $var_value; # Save in session too
 			break;
-		# SESSION
+
+		// session
 		case !empty($_SESSION['dedalo']['config'][$var_name]) :
 			$var_value = $_SESSION['dedalo']['config'][$var_name];
 			break;
-		# DEFAULT
+
+		// default
 		default:
 			$var_value = $var_default_value;
 			break;
@@ -904,11 +886,12 @@ function fix_cascade_config_var(string $var_name, mixed $var_default_value) { //
 
 /**
 * VERIFY_DEDALO_PREFIX_TIPOS
+* @param string $tipo = null
 * @return bool
 */
 function verify_dedalo_prefix_tipos(string $tipo=null) : bool {
 
-	return true; # Temporal hasta que se valore lo de los prefijos dinámicos de hierarchy
+	return true; // Temporary until the dynamic hierarchy prefixes are evaluated.
 
 	/*
 	$DEDALO_PREFIX_TIPOS = get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
@@ -931,12 +914,14 @@ function verify_dedalo_prefix_tipos(string $tipo=null) : bool {
 /**
 * SEARCH_STRING_IN_ARRAY
 * Search with preg_match a string match in array of strings
+* @param array $array
+* @param string $search_string
 * @return array $matches
 *	Array of coincidences about search string
 */
 function search_string_in_array(array $array, string $search_string) : array {
 
-	# Coverts string to "all" combinations of accents like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
+	// Coverts string to "all" combinations of accents like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
 	$string = add_accents($search_string);
 
 	$matches = array();
@@ -956,6 +941,7 @@ function search_string_in_array(array $array, string $search_string) : array {
 * ADD_ACCENTS
 * Converts string to lowercase string containing various combinations to simplify preg_match searches
 * like gàvia to g[aàáâãäå]v[iìíîï][aàáâãäå]
+* @param string $string
 * @return string
 */
 function add_accents(string $string) : string {
@@ -969,15 +955,18 @@ function add_accents(string $string) : string {
 
 /**
 * ARRAY_GET_BY_KEY
+* @param mixed $array
+* @param string|int $key
+* @return array $results
 */
-function array_get_by_key(array $array, $key) : array {
+function array_get_by_key(mixed $array, string|int $key) : array {
 
 	$results = array();
 	array_get_by_key_r($array, $key, $results);
 
 	return $results;
 }
-function array_get_by_key_r(array $array, $key, &$results) {
+function array_get_by_key_r(mixed $array, $key, &$results) {
 	if (!is_array($array)) {
 		return;
 	}
@@ -997,7 +986,7 @@ function array_get_by_key_r(array $array, $key, &$results) {
 // In order to simplify working with IP addresses (in binary) and their
 // netmasks, it is easier to ensure that the binary strings are padded
 // with zeros out to 32 characters - IP addresses are 32 bit numbers
-function decbin32($dec) {
+function decbin32(int $dec) : string {
 
   return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
 }
@@ -1181,32 +1170,32 @@ function str_lreplace(string $search, string $replace, string $subject) : string
 * @param object $sourceObject
 * @return object
 */
-function cast($destination, $sourceObject) : object {
+	// function cast($destination, $sourceObject) : object {
 
-	if (is_string($destination)) {
-		$destination = new $destination();
-	}
-	$sourceReflection		= new ReflectionObject($sourceObject);
-	$destinationReflection	= new ReflectionObject($destination);
-	$sourceProperties		= $sourceReflection->getProperties();
+	// 	if (is_string($destination)) {
+	// 		$destination = new $destination();
+	// 	}
+	// 	$sourceReflection		= new ReflectionObject($sourceObject);
+	// 	$destinationReflection	= new ReflectionObject($destination);
+	// 	$sourceProperties		= $sourceReflection->getProperties();
 
-	foreach ($sourceProperties as $sourceProperty) {
+	// 	foreach ($sourceProperties as $sourceProperty) {
 
-		$sourceProperty->setAccessible(true);
-		$name	= $sourceProperty->getName();
-		$value	= $sourceProperty->getValue($sourceObject);
+	// 		$sourceProperty->setAccessible(true);
+	// 		$name	= $sourceProperty->getName();
+	// 		$value	= $sourceProperty->getValue($sourceObject);
 
-		if ($destinationReflection->hasProperty($name)) {
-			$propDest = $destinationReflection->getProperty($name);
-			$propDest->setAccessible(true);
-			$propDest->setValue($destination,$value);
-		} else {
-			$destination->$name = $value;
-		}
-	}
+	// 		if ($destinationReflection->hasProperty($name)) {
+	// 			$propDest = $destinationReflection->getProperty($name);
+	// 			$propDest->setAccessible(true);
+	// 			$propDest->setValue($destination,$value);
+	// 		} else {
+	// 			$destination->$name = $value;
+	// 		}
+	// 	}
 
-	return $destination;
-}//end cast
+	// 	return $destination;
+	// }//end cast
 
 
 
@@ -1252,7 +1241,7 @@ function get_request_var(string $var_name) : mixed {
 * SAFE_XSS
 * @return mixed $value
 */
-function safe_xss($value) {
+function safe_xss(mixed $value) : mixed {
 
 	if (!empty($value) && is_string($value)) {
 
@@ -1325,6 +1314,11 @@ function session_start_manager(array $request_options) : bool {
 			$options->session_name			= false;
 			$options->prevent_session_lock	= false;
 			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+
+	// check already started session case
+		if(session_status()===PHP_SESSION_ACTIVE) {
+			return false;
+		}
 
 	// switch by save_handler
 	switch ($options->save_handler) {
@@ -1481,7 +1475,7 @@ function session_start_manager(array $request_options) : bool {
 * @param string $table
 * @return string|bool $table
 */
-function safe_table(string $table) {
+function safe_table(string $table) : string|bool {
 
 	preg_match("/^[a-zA-Z_]+$/", $table, $output_array);
 	if (empty($output_array[0])) {
@@ -1499,7 +1493,7 @@ function safe_table(string $table) {
 * @param string $lang
 * @return string|bool $lang
 */
-function safe_lang(string $lang) {
+function safe_lang(string $lang) : string|bool {
 
 	preg_match("/^lg-[a-z]{2,8}$/", $lang, $output_array);
 	if (empty($output_array[0])) {
@@ -1517,7 +1511,7 @@ function safe_lang(string $lang) {
 * @param string $tipo
 * @return string|bool $tipo
 */
-function safe_tipo(string $tipo) {
+function safe_tipo(string $tipo) : string|bool {
 
 	preg_match("/^[a-z]+[0-9]+$/", $tipo, $output_array);
 	if (empty($output_array[0])) {
@@ -1539,10 +1533,10 @@ function safe_tipo(string $tipo) {
 /**
 * SAFE_SECTION_ID
 * Remove extra malicious code
-* @param int|string $section_id
-* @return string|bool $section_id
+* @param string|int $section_id
+* @return string|int|bool $section_id
 */
-function safe_section_id( $section_id ) {
+function safe_section_id( string|int $section_id ) : string|int|bool {
 
 	preg_match("/^[0-9]+$/", (string)$section_id, $output_array);
 	if (empty($output_array[0])) {
@@ -1768,11 +1762,11 @@ function check_basic_system() : object {
 * ARRAY_FIND
 * Equivalent of JAVASCRIPT find
 * @param array $ar_value = null
-* @param function $n
+* @param callable $n
 * @return mixed
 * Return null when nothing is found
 */
-function array_find(array $ar_value=null, $fn) {
+function array_find(array $ar_value=null, callable $fn) : mixed {
 
 	if (is_array($ar_value)) {
 		// foreach ($ar_value as $x) {
@@ -1806,22 +1800,22 @@ function array_find(array $ar_value=null, $fn) {
 * Used to control session writes only
 * @return bool false | value mixed
 */
-function write_session_value(array $session_keys, $value) {
+	// function write_session_value(array $session_keys, $value) {
 
-	if(session_status()===PHP_SESSION_ACTIVE){
-		// write ready
-		// $result = $session = $value;
-		// $result = $_SESSION['dedalo'][$session_keys] = $value;
-		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);
+	// 	if(session_status()===PHP_SESSION_ACTIVE){
+	// 		// write ready
+	// 		// $result = $session = $value;
+	// 		// $result = $_SESSION['dedalo'][$session_keys] = $value;
+	// 		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);
 
-	}else{
+	// 	}else{
 
-		trigger_error( '!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_keys) . ' - value: '. json_encode($value) );
-		$result = false;
-	}
+	// 		trigger_error( '!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_keys) . ' - value: '. json_encode($value) );
+	// 		$result = false;
+	// 	}
 
-	return $result;
-}//end write_session_value
+	// 	return $result;
+	// }//end write_session_value
 
 
 
@@ -1830,33 +1824,39 @@ function write_session_value(array $session_keys, $value) {
 * Insert value into array using any number of keys sequence
 * like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
 */
-function insert_into(&$array, array $keys, $value) {
-	$last = array_pop($keys);
+	// function insert_into(&$array, array $keys, $value) {
+	// 	$last = array_pop($keys);
 
-	foreach($keys as $key) {
-		if(!array_key_exists($key, $array) ||
-			array_key_exists($key, $array) && !is_array($array[$key])) {
-				$array[$key] = array();
-		}
-		$array = &$array[$key];
-	}
-	$array[$last] = $value;
+	// 	foreach($keys as $key) {
+	// 		if(!array_key_exists($key, $array) ||
+	// 			array_key_exists($key, $array) && !is_array($array[$key])) {
+	// 				$array[$key] = array();
+	// 		}
+	// 		$array = &$array[$key];
+	// 	}
+	// 	$array[$last] = $value;
 
-	return $array;
-}//end insert_into
+	// 	return $array;
+	// }//end insert_into
 
 
 
 /**
 * GET_OBJECT_PROPERTY
 * Extract value from a object using dynamic path array
-* @return mixed
+* @param object $object
+* @param array $ar_property_path
+* @return object|null $object
 */
-function get_object_property(object $object, array $ar_property_path) {
+function get_object_property(object $object, array $ar_property_path) : mixed {
 
 	foreach ($ar_property_path as $property_name) {
+
 		// basic protection against bad path
-		if (!property_exists($object, $property_name)) return null;
+		if (!property_exists($object, $property_name)) {
+			return null;
+		}
+
 		// get the property
 		$property = $object->{$property_name};
 		// if it is not an object it has to be the end point
@@ -2119,6 +2119,65 @@ function get_file_extension(string $name, bool $lowercase=true) : string {
 
 	return $extension;
 }//end get_file_extension
+
+
+
+/**
+* GET_CLIENT_IP
+* Cascade client IP resolution from server vars
+* @return string $ip_address
+*/
+function get_client_ip() : string {
+
+	if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+		$ip_address = $_SERVER['HTTP_CLIENT_IP'];
+	}
+	else if(isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+		$ip_address = $_SERVER['HTTP_X_FORWARDED_FOR'];
+	}
+	else if(isset($_SERVER['HTTP_X_FORWARDED'])) {
+		$ip_address = $_SERVER['HTTP_X_FORWARDED'];
+	}
+	else if(isset($_SERVER['HTTP_FORWARDED_FOR'])) {
+		$ip_address = $_SERVER['HTTP_FORWARDED_FOR'];
+	}
+	else if(isset($_SERVER['HTTP_FORWARDED'])) {
+		$ip_address = $_SERVER['HTTP_FORWARDED'];
+	}
+	else if(isset($_SERVER['REMOTE_ADDR'])) {
+		$ip_address = $_SERVER['REMOTE_ADDR'];
+	}
+	else {
+		$ip_address = 'UNKNOWN';
+	}
+
+
+	return $ip_address;
+}//end get_client_ip
+
+
+
+/**
+* GET_COOKIE_PROPERTIES
+* @return object $cookie_properties
+* Calculate safe cookie properties to use on set/delete http cookies
+* @return object $cookie_properties
+*/
+function get_cookie_properties() : object {
+
+	// Cookie properties
+	$domain		= $_SERVER['SERVER_NAME'] ?? '';
+	$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? true : false;
+	$httponly	= true; // Not accessible for javascript, only for http/s requests
+
+	$cookie_properties = new stdClass();
+		$cookie_properties->domain		= $domain;
+		$cookie_properties->secure		= $secure;
+		$cookie_properties->httponly	= $httponly;
+
+
+	return $cookie_properties;
+}//end get_cookie_properties
 
 
 

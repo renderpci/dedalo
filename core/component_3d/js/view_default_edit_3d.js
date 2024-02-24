@@ -313,6 +313,35 @@ const get_content_value_read = (i, current_value, self) => {
 			inner_html		: 'Working in this view ' + self.view
 		})
 
+	// posterframe
+		const quality		= self.quality || self.context.features.quality
+		const data			= self.data || {}
+		const files_info	= current_value && current_value.files_info
+			? current_value.files_info
+			: []
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
+		if(file_info) {
+			// posterframe image
+			const posterframe_url = data.posterframe_url
+				? data.posterframe_url + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
+			content_value.posterframe = ui.create_dom_element({
+				element_type	: 'img',
+				class_name		: 'posterframe loading',
+				parent			: content_value
+			})
+			// image background color
+			content_value.posterframe.addEventListener('load', set_bg_color, false)
+			function set_bg_color() {
+				this.removeEventListener('load', set_bg_color, false)
+				if (content_value.posterframe.src!==page_globals.fallback_image) {
+					ui.set_background_image(this, content_value)
+				}
+			}
+			// set src url
+			content_value.posterframe.src = posterframe_url
+		}
+
 
 	return content_value
 }//end get_content_value_read
@@ -395,6 +424,7 @@ const get_buttons = (self) => {
 		const button_fullscreen = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button full_screen',
+			title			: get_label.full_screen || 'Full screen',
 			parent			: fragment
 		})
 		// button_fullscreen.addEventListener("mouseup", () =>{

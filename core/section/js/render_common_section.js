@@ -118,6 +118,16 @@ render_common_section.prototype.delete_record = async (options) => {
 				if (!confirm(get_label.sure)) {
 					return
 				}
+
+				// spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: body
+				})
+				body.classList.add('loading')
+				footer.classList.add('loading')
+
 				section.delete_section({
 					sqo							: sqo,
 					delete_mode					: 'delete_record',
@@ -139,6 +149,16 @@ render_common_section.prototype.delete_record = async (options) => {
 				if (!confirm(get_label.sure)) {
 					return
 				}
+
+				// spinner
+				const spinner = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: body
+				})
+				body.classList.add('loading')
+				footer.classList.add('loading')
+
 				section.delete_section({
 					sqo			: sqo,
 					delete_mode	: 'delete_data'

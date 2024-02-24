@@ -542,7 +542,6 @@ hierarchy45	General term	termino	lg-eng
 hierarchy46	Indexing list	termino	lg-eng
 hierarchy48	Order	termino	lg-eng
 hierarchy49	Children	termino	lg-eng
-hierarchy50	Documentary collections Consultation	termino	lg-eng
 hierarchy51	Thesaurus list	termino	lg-eng
 hierarchy53	Target thesaurus	termino	lg-eng
 hierarchy54	Project	termino	lg-eng
@@ -580,3 +579,50 @@ hierarchy26	Publishable	termino	lg-eng
 hierarchy26	Publiable	termino	lg-fra
 hierarchy62	Publishable	termino	lg-eng
 hierarchy62	Publiable	termino	lg-fra
+hierarchy20	थिसौरस	termino	lg-nep
+hierarchy21	परिचय	termino	lg-nep
+hierarchy26	प्रकाशन योग्य	termino	lg-nep
+hierarchy23	वर्णनकर्ता छ	termino	lg-nep
+hierarchy24	अनुक्रमणिका मा प्रयोग गर्न सकिन्छ	termino	lg-nep
+hierarchy41	आधिकारिक कोड	termino	lg-nep
+hierarchy27	मोडेल	termino	lg-nep
+hierarchy25	अवधि	termino	lg-nep
+hierarchy95	दृष्टान्त	termino	lg-nep
+hierarchy55	परियोजना	termino	lg-nep
+hierarchy28	स्कोप नोट	termino	lg-nep
+hierarchy99	परिभाषा	termino	lg-nep
+hierarchy102	छविहरू पहिचान गर्दै	termino	lg-nep
+hierarchy104	छविहरू	termino	lg-nep
+hierarchy64	बाह्य स्रोतहरू	termino	lg-nep
+hierarchy89	URI	termino	lg-nep
+hierarchy63	Geonames ID	termino	lg-nep
+hierarchy90	Geoname	termino	lg-nep
+hierarchy100	बिब्लियोग्राफी	termino	lg-nep
+hierarchy50	वृत्तचित्र संग्रह परामर्श	termino	lg-nep
+hierarchy50	Documentary collections consultation	termino	lg-eng
+hierarchy29	विवरण	termino	lg-nep
+hierarchy30	समय सीमा	termino	lg-nep
+hierarchy42	स्पेस फ्रेम	termino	lg-nep
+hierarchy92	स्थान	termino	lg-nep
+hierarchy31	भौगोलिक स्थान	termino	lg-nep
+hierarchy32	अनुक्रमणिका लागि निर्देशन	termino	lg-nep
+hierarchy33	अवलोकनहरू	termino	lg-nep
+hierarchy120	लेखकत्व	termino	lg-nep
+hierarchy34	सम्बन्धहरू	termino	lg-nep
+hierarchy36	बुबा	termino	lg-nep
+hierarchy49	बच्चाहरु	termino	lg-nep
+hierarchy35	सम्बन्धित सर्तहरू	termino	lg-nep
+hierarchy94	समकक्ष सर्तहरू	termino	lg-nep
+hierarchy40	अनुक्रमणिकाहरू	termino	lg-nep
+hierarchy117	मा परिवर्तन गर्नुहोस्	termino	lg-nep
+hierarchy91	संरचनाहरू	termino	lg-nep
+hierarchy93	पुस्तकालय	termino	lg-nep
+hierarchy38	नयाँ	termino	lg-nep
+hierarchy39	मेटाउन	termino	lg-nep
+hierarchy97	सम्बन्धहरू	termino	lg-nep
+hierarchy98	नवीनतम परिवर्तनहरू	termino	lg-nep
+hierarchy56	सर्तहरू	termino	lg-nep
+hierarchy57	मोडेलहरू	termino	lg-nep
+hierarchy1	पदानुक्रम	termino	lg-nep
+hierarchy11	नयाँ	termino	lg-nep
+hierarchy12	मेटाउन	termino	lg-nep

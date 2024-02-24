@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 14,
-              "time": 65045686327,
-              "year": 2023,
-              "month": 10,
-              "minute": 12,
-              "second": 7
+              "day": 22,
+              "hour": 12,
+              "time": 65057517743,
+              "year": 2024,
+              "month": 2,
+              "minute": 42,
+              "second": 23
             }
           }
         ]
@@ -100,11 +100,17 @@
         "lg-deu": [
           "<p>Auf Versionen von Änderungsverlaufsdaten zugreifen und diese abrufen</p>"
         ],
+        "lg-ell": [
+          "<p>Πρόσβαση και ανάκτηση εκδόσεων των δεδομένων ιστορικού αλλαγών</p>"
+        ],
         "lg-eng": [
           "<p>Access and retrieve versions of change history data</p>"
         ],
         "lg-fra": [
           "<p>Accéder et récupérer des versions des données de l'historique des modifications</p>"
+        ],
+        "lg-nep": [
+          "<p>परिवर्तन इतिहास डेटाको संस्करणहरू पहुँच र पुन: प्राप्त गर्नुहोस्</p>"
         ],
         "lg-spa": [
           "<p>Accede y recupera versiones de los datos del historial de cambios</p>"
@@ -113,8 +119,29 @@
     },
     "dd799": {
       "dato": {
+        "lg-cat": [
+          "Màquina del temps"
+        ],
+        "lg-deu": [
+          "Zeitmaschine"
+        ],
+        "lg-ell": [
+          "Μηχανή του χρόνου"
+        ],
         "lg-eng": [
           "Time machine"
+        ],
+        "lg-fra": [
+          "Machine à remonter le temps"
+        ],
+        "lg-ita": [
+          "Macchina del tempo"
+        ],
+        "lg-nep": [
+          "समय यन्त्र"
+        ],
+        "lg-por": [
+          "Máquina do tempo"
         ],
         "lg-spa": [
           "Máquina del tiempo"
@@ -131,7 +158,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -193,6 +220,86 @@
               "lang": "lg-ell",
               "name": "apply_and_save",
               "value": "εφαρμόστε και αποθηκεύστε"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "apply_and_save",
+              "value": "लागू गर्नुहोस् र बचत गर्नुहोस्"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "apply_and_save",
+              "value": "Bewerben und speichern"
+            },
+            {
+              "lang": "lg-por",
+              "name": "apply_and_save",
+              "value": "Aplique e salve"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "apply_and_save",
+              "value": "Postulez et enregistrez"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "apply_and_save",
+              "value": "Applica e salva"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "apply_and_save",
+              "value": ""
+            },
+            {
+              "lang": "lg-nep",
+              "name": "recover_section_alert",
+              "value": "के तपाइँ यो खण्ड पुनर्स्थापना गर्न निश्चित हुनुहुन्छ?"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "recover_section_alert",
+              "value": "Sei sicuro di voler ripristinare questa sezione?"
+            },
+            {
+              "lang": "lg-ara",
+              "name": "recover_section_alert",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "recover_section_alert",
+              "value": "Êtes-vous sûr de vouloir restaurer cette section ?"
+            },
+            {
+              "lang": "lg-por",
+              "name": "recover_section_alert",
+              "value": "Tem certeza de que deseja restaurar esta seção?"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "recover_section_alert",
+              "value": ""
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "recover_section_alert",
+              "value": ""
+            },
+            {
+              "lang": "lg-cat",
+              "name": "recover_section_alert",
+              "value": "Esteu segur que voleu restaurar aquesta secció?"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "recover_section_alert",
+              "value": "Είστε βέβαιοι ότι θέλετε να επαναφέρετε αυτήν την ενότητα;"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "recover_section_alert",
+              "value": "Möchten Sie diesen Abschnitt wirklich wiederherstellen?"
             }
           ]
         ]
@@ -210,7 +317,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2023-10-09 14:12:07",
+  "modified_date": "2024-02-22 12:42:23",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

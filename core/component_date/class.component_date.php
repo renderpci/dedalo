@@ -1651,11 +1651,11 @@ class component_date extends component_common {
 							case 'dmy':
 								// month and year : 04/2022
 								if($lenght === 2){
-									if(isset($ar_date_parts[1])){
-										$dd_date->set_month((int)$ar_date_parts[1]);
+									if(isset($ar_date_parts[0])){
+										$dd_date->set_month((int)$ar_date_parts[0]);
 									}
-									if(isset($ar_date_parts[2])){
-										$dd_date->set_year((int)$ar_date_parts[2]);
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_year((int)$ar_date_parts[1]);
 									}
 								}
 								// day, moth, year (other countries dates) : 25/04/2022
@@ -1674,12 +1674,14 @@ class component_date extends component_common {
 							case 'mdy':
 								// month and year (USA dates): 04/2022
 								if($lenght === 2){
-									if(isset($ar_date_parts[1])){
-										$dd_date->set_month((int)$ar_date_parts[1]);
-									}
-									if(isset($ar_date_parts[2])){
-										$dd_date->set_year((int)$ar_date_parts[2]);
-									}
+									// if(isset($ar_date_parts[0])){
+									// 	$dd_date->set_month((int)$ar_date_parts[0]);
+									// }
+									// if(isset($ar_date_parts[1])){
+									// 	$dd_date->set_year((int)$ar_date_parts[1]);
+									// }
+									// Do not resolve date in this case because day without month is not valid
+									$response->errors[] = 'Invalid mdy date format for current_date: ' . to_string($current_date);
 								}
 								// moth, day, year (USA dates) : 04/25/2022
 								elseif($lenght === 3){
@@ -1698,11 +1700,11 @@ class component_date extends component_common {
 							default:
 								// year and month  : 2022/04
 								if($lenght === 2){
-									if(isset($ar_date_parts[1])){
-										$dd_date->set_year((int)$ar_date_parts[1]);
+									if(isset($ar_date_parts[0])){
+										$dd_date->set_year((int)$ar_date_parts[0]);
 									}
-									if(isset($ar_date_parts[2])){
-										$dd_date->set_month((int)$ar_date_parts[2]);
+									if(isset($ar_date_parts[1])){
+										$dd_date->set_month((int)$ar_date_parts[1]);
 									}
 								}
 								// year, month, date (China, Korean, Japan, Iran dates) : 2022/04/25

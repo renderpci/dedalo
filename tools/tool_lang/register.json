@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 14,
-              "time": 65045685606,
-              "year": 2023,
-              "month": 10,
-              "minute": 0,
-              "second": 6
+              "day": 22,
+              "hour": 12,
+              "time": 65057518700,
+              "year": 2024,
+              "month": 2,
+              "minute": 58,
+              "second": 20
             }
           }
         ]
@@ -94,8 +94,17 @@
     },
     "dd612": {
       "dato": {
+        "lg-deu": [
+          "<p>Tool zum Übersetzen des Inhalts in andere Sprachen</p>"
+        ],
+        "lg-ell": [
+          "<p>Εργαλείο για τη μετάφραση του περιεχομένου σε άλλες γλώσσες</p>"
+        ],
         "lg-eng": [
-          "Tool for translate the content to another langs"
+          "<p>Tool for translate the content to other languages</p>"
+        ],
+        "lg-nep": [
+          "<p>अन्य भाषाहरूमा सामग्री अनुवाद गर्न उपकरण</p>"
         ],
         "lg-spa": [
           "Herramienta de traducción de contenido a otras lenguas"
@@ -109,6 +118,9 @@
         ],
         "lg-eng": [
           "Translation"
+        ],
+        "lg-nep": [
+          "अनुवाद"
         ],
         "lg-spa": [
           "Traducción"
@@ -165,7 +177,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -420,6 +432,31 @@
               "lang": "lg-spa",
               "name": "propagate_marks",
               "value": "Propagar marcas"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "automatic_translation",
+              "value": "स्वचालित अनुवाद"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "source_lang",
+              "value": "स्रोत भाषा"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "target_lang",
+              "value": "लक्षित भाषा"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "copy_to_target",
+              "value": "लक्ष्यमा प्रतिलिपि गर्नुहोस्"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "propagate_marks",
+              "value": "अंकहरू प्रचार गर्नुहोस्"
             }
           ]
         ]
@@ -437,7 +474,7 @@
   "section_id": 1,
   "created_date": "2019-11-05 16:06:56",
   "section_tipo": "dd1340",
-  "modified_date": "2023-10-09 14:00:06",
+  "modified_date": "2024-02-22 12:58:20",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

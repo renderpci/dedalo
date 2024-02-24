@@ -92,6 +92,14 @@ tool_common.prototype.init = async function(options) {
 						const caller_ddo		= url_data_object.caller_ddo
 						const tool_config		= url_data_object.tool_config
 
+						// debug
+							if(SHOW_DEBUG===true) {
+								console.log(')) tool common url_data_object:', url_data_object);
+							}
+
+						// set and build caller
+							self.caller = await get_instance( caller_ddo )
+
 						// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
 

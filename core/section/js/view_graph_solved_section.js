@@ -5,22 +5,26 @@
 
 
 // imports
-	import {get_section_records} from '../../section/js/section.js'
-	import {set_element_css} from '../../page/js/css.js'
+	// import {get_section_records} from '../../section/js/section.js'
+	// import {set_element_css} from '../../page/js/css.js'
 	import {when_in_dom} from '../../common/js/events.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {
-		create_source
-	} from '../../common/js/common.js'
+	import {create_source} from '../../common/js/common.js'
 	import {open_window, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	// import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
+	// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
+	// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
+	// - rollup -c
 	import * as d3 from '../../../lib/d3/d3-7.8.5/dist/d3.min.js'
 
-	// import * as d3 from 'https://cdn.jsdelivr.net/npm/d3@7/+esm' //'../../../lib/d3/dist/d3.v7.min.js'
 	import {
 		get_d3_data
 	} from './render_solved_section.js'
+
+
 
 /**
 * VIEW_GRAPH_SOLVED_SECTION
@@ -35,7 +39,7 @@ export const view_graph_solved_section = function() {
 
 /**
 * RENDER
-* Render node for use in edit
+* Render node for use in mode
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -48,7 +52,7 @@ view_graph_solved_section.render = async function(self, options) {
 	// graph_map
 	// set graph_map if it is defined in the properties of the section
 	// else use default configuration
-		self.graph_map =  (self.properties.graph_map)
+		self.graph_map = (self.properties.graph_map)
 			? self.properties.graph_map
 			: {
 				source		: 'nexus10',
@@ -62,10 +66,10 @@ view_graph_solved_section.render = async function(self, options) {
 	// from_map
 	// Used to show the name of the section caller
 	// name component is defined in ontology from_map property of the current section
-		self.from_map =  (self.properties.from_map)
+		self.from_map = (self.properties.from_map)
 			? self.properties.from_map
 			: {
-				name: "nexus48"
+				name : 'nexus48'
 			}
 
 	// right side
@@ -97,7 +101,8 @@ view_graph_solved_section.render = async function(self, options) {
 				const section_id	= url_vars.fsi
 				const tipo			= self.from_map.name
 
-				const component_name = instances.get_instance({
+				// component_name
+				instances.get_instance({
 					tipo			: tipo,
 					section_tipo	: section_tipo,
 					section_id		: section_id,
@@ -155,18 +160,16 @@ view_graph_solved_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
-	// const t0 = performance.now()
-
-	// const fragment = new DocumentFragment()
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode) // ,'nowrap','full_width'
-			  // content_data.appendChild(fragment)
+			  content_data.classList.add('content_data', self.mode)
 
+	// d3 data and graph
 		when_in_dom(content_data, ()=>{
 
 			// get d3 data
@@ -175,21 +178,15 @@ const get_content_data = async function(self) {
 					datum		: self.datum
 				})
 
+			// get d3 node
 				const d3_node = get_graph({
 					self 			: self,
 					content_data	: content_data,
 					data			: d3_data
 				})
-
+				// append node
 				content_data.appendChild(d3_node)
 		})
-
-
-	// debug
-		if(SHOW_DEVELOPER===true) {
-			// const total = (performance.now()-t0).toFixed(3)
-			// dd_console(`__Time [view_graph_solved_section.get_content_data]: ${total} ms`,'DEBUG', [ar_section_record, total/ar_section_record_length])
-		}
 
 
 	return content_data
@@ -197,8 +194,13 @@ const get_content_data = async function(self) {
 
 
 
-
-const get_graph = function(options){
+/**
+* GET_GRAPH
+* Render d3 graph node
+* @param object options
+* @return HTMLElement svg.node
+*/
+const get_graph = function(options) {
 
 	// vars
 	const content_data	= options.content_data
@@ -215,8 +217,8 @@ const get_graph = function(options){
 
 	// The force simulation mutates links and nodes, so create a copy
 	// so that re-evaluating this cell produces the same result.
-	const links			= data.links.map(d => ({...d}));
-	const nodes			= data.nodes.map(d => ({...d}));
+	const links	= data.links.map(d => ({...d}));
+	const nodes	= data.nodes.map(d => ({...d}));
 
 	// Duplicate nodes
 	// - Some nodes can be connected with the same target multiple times (duplicate the connection with different contexts),
@@ -537,7 +539,7 @@ const get_graph = function(options){
 					tipo			: p.tipo,
 					value			: source_value,
 					section_tipo	: p.from.section_tipo,
-					section_id		: p.from.section_id,
+					section_id		: p.from.section_id
 				})
 
 				self.request_config_object.sqo.limit = self.request_config_object.sqo.limit+1
@@ -650,7 +652,7 @@ const get_graph = function(options){
 				})
 				open_window({
 					url			: url,
-					name		: 'record_view_' + section_id,
+					name		: 'record_view_' + section_id
 				})
 		}
 
@@ -673,7 +675,7 @@ const get_graph = function(options){
 				})
 				open_window({
 					url			: url,
-					name		: 'record_view_' + section_id,
+					name		: 'record_view_' + section_id
 				})
 		}
 
@@ -727,12 +729,14 @@ const get_graph = function(options){
 		}
 
 	return svg.node();
-}
+}//end get_graph
 
 
 
 /**
 * GET_BUTTONS
+* Render section buttons
+* @param object self
 * @return HTMLElement buttons
 */
 const get_buttons = function(self) {
@@ -767,8 +771,10 @@ const get_buttons = function(self) {
 
 
 /**
-* render_left
-* @return HTMLElement node
+* RENDER_LEFT
+* Render left container and contents
+* @param object self
+* @return HTMLElement left_node
 */
 const render_left = async (self) => {
 
@@ -789,7 +795,7 @@ const render_left = async (self) => {
 			tipo			: source,
 			section_tipo	: self.section_tipo,
 			section_id		: 'tmp',
-			mode 			: 'list'
+			mode			: 'list'
 		})
 		return component.context
 	}
@@ -799,7 +805,6 @@ const render_left = async (self) => {
 	const rqo = request_config.find(el => el.api_engine === 'dedalo')
 
 	const sqo = rqo.sqo
-
 
 	// section_selector_container
 		const section_selector_container = ui.create_dom_element({
@@ -862,7 +867,13 @@ const render_left = async (self) => {
 
 
 
-const render_source_section = async function(options){
+/**
+* RENDER_SOURCE_SECTION
+* Render source section node
+* @param object options
+* @return HTMLElement section_node
+*/
+const render_source_section = async function(options) {
 
 	const section_tipo = options.section_tipo
 	const rqo = options.rqo
@@ -870,7 +881,7 @@ const render_source_section = async function(options){
 	const old_ddo_map = rqo.show.ddo_map.filter(el => el.section_tipo === section_tipo)
 
 	const ddo_map = old_ddo_map.map(el =>{
-			el.parent = section_tipo
+		el.parent = section_tipo
 		return el
 	})
 
@@ -887,7 +898,6 @@ const render_source_section = async function(options){
 				ddo_map : ddo_map
 			}
 		}]
-
 
 	const section_options = {
 		model			: 'section',
@@ -906,19 +916,22 @@ const render_source_section = async function(options){
 	section.rebuild_columns_map = rebuild_columns_map;
 
 	// view
-		section.view = 'base'
+	section.view = 'base'
 
+	// render
 	const section_node = await section.render()
 
+
 	return section_node
-}
+}//end render_source_section
+
 
 
 /**
 * REBUILD_COLUMNS_MAP
 * Adding control columns to the columns_map that will processed by section_recods
 * @param object self
-* @return obj columns_map
+* @return array columns_map
 */
 const rebuild_columns_map = async function(self) {
 
@@ -952,8 +965,8 @@ const rebuild_columns_map = async function(self) {
 		const base_columns_map = await self.columns_map
 		columns_map.push(...base_columns_map)
 
-
-	columns_map.push({
+	// columns_map
+		columns_map.push({
 			id			: 'drag',
 			label		: '',
 			tipo		: '', // used to sort only
@@ -962,12 +975,12 @@ const rebuild_columns_map = async function(self) {
 			callback	: view_graph_solved_section.render_column_drag
 		})
 
-
 	// fixed as calculated
 		self.fixed_columns_map = true
 
 	return columns_map
 }//end rebuild_columns_map
+
 
 
 /**
@@ -1035,7 +1048,7 @@ view_graph_solved_section.render_column_id = function(options) {
 * @param object options
 * @return DocumentFragment
 */
-view_graph_solved_section.render_column_drag = function(options){
+view_graph_solved_section.render_column_drag = function(options) {
 
 	// options
 		const self			= options.caller
@@ -1043,29 +1056,26 @@ view_graph_solved_section.render_column_drag = function(options){
 		const section_tipo	= options.section_tipo
 		const locator		= options.locator
 		const paginated_key	= options.paginated_key
+		const ar_instances	= options.ar_instances
 
 	const fragment = new DocumentFragment()
 
 	// button_drag
-		const button_drag = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button move icon grey',
 			parent			: fragment
 		})
 
-	const drag_container = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'drag_container',
-		parent 			: fragment
-	})
-		const drag_node = ui.create_dom_element({
+	// drag_container
+		const drag_container = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'drag_node draggable',
-			parent 			: drag_container
+			class_name		: 'drag_container',
+			parent 			: fragment
 		})
-
 		drag_container.draggable = true
-		drag_container.addEventListener('dragstart',function(e){on_dragstart(this, e, {
+		drag_container.addEventListener('dragstart', function(e){
+			on_dragstart(this, e, {
 				section_record_node	: drag_container,
 				paginated_key		: paginated_key,
 				total_records		: self.total,
@@ -1075,13 +1085,20 @@ view_graph_solved_section.render_column_drag = function(options){
 			})
 		})
 
-		for (var i = 0; i < options.ar_instances.length; i++) {
-			const instace_node = options.ar_instances[i].node.cloneNode(true)
+		const drag_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'drag_node draggable',
+			parent 			: drag_container
+		})
+
+		const ar_instances_length = ar_instances.length
+		for (let i = 0; i < ar_instances_length; i++) {
+			const instace_node = ar_instances[i].node.cloneNode(true)
 			drag_node.appendChild(instace_node)
 		}
 
 	return fragment
-}// end render_column_drag
+}//end render_column_drag
 
 
 
@@ -1117,7 +1134,6 @@ export const on_dragstart = function(node, event, options) {
 
 	return true
 }//end ondrag_start
-
 
 
 

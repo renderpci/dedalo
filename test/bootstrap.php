@@ -1,13 +1,17 @@
 <?php declare(strict_types=1);
 
 // require __DIR__ . '/../src/autoload.php';
-
 // require __DIR__ . '/autoload.php';
 
-// overwrite config SHOW_DEBUG
-define('SHOW_DEBUG', false);
-// TEST_USER_ID
-define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
+// SHOW_DEBUG. Overwrite config SHOW_DEBUG
+	define('SHOW_DEBUG', false);
+
+// TEST_USER_ID: [
+	// 	-1, // root development user
+	// 	1, // admin general (no projects)
+	// 	2 // regular user
+	// ]
+	define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 
 // config file
 	require_once dirname(dirname(__FILE__)) . '/config/config.php';
@@ -20,6 +24,12 @@ define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 // PHPUnit classes
 	// use PHPUnit\Framework\TestCase;
 	// use PHPUnit\Framework\Attributes\TestDox;
+
+// message CLI
+	$msg = "Dédalo testing using user id: ".TEST_USER_ID .' - SHOW_DEBUG: ' .to_string(SHOW_DEBUG) . ' - 😐';
+	fwrite(STDERR, PHP_EOL
+		. print_r($msg, TRUE) . PHP_EOL
+	);
 
 // require files
 	require_once 'components/data.php';

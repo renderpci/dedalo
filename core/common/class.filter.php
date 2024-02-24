@@ -1,7 +1,7 @@
 <?php
+declare(strict_types=1);
 /**
 * FILTER CLASS
-*
 *
 */
 abstract class filter {
@@ -299,7 +299,7 @@ abstract class filter {
 			}//end if ($is_global_admin===false)
 
 		// resolve label and parent
-			$ar_projects	= [];
+			$ar_projects = [];
 			foreach ($dato as $current_locator) {
 
 				$parent			= null;
@@ -365,7 +365,9 @@ abstract class filter {
 		// debug
 			if(SHOW_DEBUG===true) {
 				debug_log(__METHOD__
-					." Total time on calculate user_authorized_projects: ".exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id - from_component_tipo: $from_component_tipo"
+					." Total time on calculate user_authorized_projects: "
+					.exec_time_unit($start_time,'ms')." ms. ---- user_id: $user_id " . PHP_EOL
+					." from_component_tipo: $from_component_tipo"
 					, logger::DEBUG
 				);
 			}

@@ -50,7 +50,7 @@ export const view_mosaic_edit_portal = function() {
 * @param object options
 */
 view_mosaic_edit_portal.render = async function(self, options) {
-	
+
 	// options
 		const render_level 	= options.render_level || 'full'
 
@@ -228,7 +228,11 @@ view_mosaic_edit_portal.render = async function(self, options) {
 	// autocomplete
 		wrapper.addEventListener('click', function(e) {
 			e.stopPropagation()
-			activate_autocomplete(self, wrapper)
+			setTimeout(function(){
+				if (self.active) {
+					activate_autocomplete(self, wrapper)
+				}
+			}, 1)
 		})
 
 
@@ -333,7 +337,7 @@ const drag_and_drop = function(options) {
 
 	// options
 		const drag_node	= options.section_record_node
-	
+
 	// set properties/events
 		drag_node.draggable = true
 		drag_node.classList.add('draggable')
@@ -483,7 +487,7 @@ const render_hover_view = async function(self, hover_section_record) {
 			const event_id = `mosaic_show_${hover_section_record.id_base}_${hover_section_record.caller.section_tipo}_${hover_section_record.caller.section_id}`
 			event_manager.publish(event_id, this)
 		})
-		
+
 
 	return section_record_node
 }//end render_hover_view

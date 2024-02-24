@@ -650,6 +650,7 @@ const get_line_alternative_extensions = function(ar_quality, self) {
 					const button_download = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button download',
+						title			: get_label.download || 'Download',
 						parent			: cell_node
 					})
 					button_download.addEventListener('click', function(e) {
@@ -826,6 +827,7 @@ const get_line_file_download = function(ar_quality, self) {
 						const button_file_download = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button download',
+							title			: get_label.download || 'Download',
 							parent			: cell_node
 						})
 						button_file_download.addEventListener('click', function(e){

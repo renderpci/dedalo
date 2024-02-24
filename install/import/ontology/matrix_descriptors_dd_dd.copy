@@ -417,7 +417,6 @@ dd1093	dato	termino	lg-spa
 dd1094	Carga completada	termino	lg-spa
 dd1094	Caricamento completato	termino	lg-ita
 dd1094	Càrrega completada	termino	lg-cat
-dd1623	Select a search section.	termino	lg-eng
 dd1094	φόρτισης τελικού	termino	lg-ell
 dd1212	Cadre de l'affiche	termino	lg-fra
 dd1095	Eliminar archivo	termino	lg-spa
@@ -1052,10 +1051,7 @@ dd1361	Section map	termino	lg-spa
 dd1363	Error. Valor de tc offset buit	termino	lg-cat
 dd1363	Error. Valor de tc offset vacío	termino	lg-spa
 dd1355	Champs personnalisés	termino	lg-fra
-dd1364	bibliographic_references	termino	lg-spa
-dd1365	publication	termino	lg-spa
 dd1366	pages	termino	lg-spa
-dd1367	sheet	termino	lg-spa
 dd1368	reference	termino	lg-spa
 dd1369	publications_data	termino	lg-spa
 dd137	Privadas	termino	lg-spa
@@ -1112,6 +1108,8 @@ dd139	Filtro	termino	lg-spa
 dd1391	General	termino	lg-spa
 dd1392	Relaciones	termino	lg-spa
 dd1610	JSON-Ontologie importieren	termino	lg-deu
+dd1365	publication	termino	lg-spa
+dd1367	sheet	termino	lg-spa
 dd1393	Página URI path	termino	lg-spa
 dd1394	Página plantilla	termino	lg-spa
 dd1395	Página activo menu link	termino	lg-spa
@@ -1610,7 +1608,6 @@ dd197	Modificado por usuario	termino	lg-spa
 dd197	Modificat per l&#039;usuari	termino	lg-cat
 dd197	Modificato per utente	termino	lg-ita
 dd197	Τροποποιήθηκε από το χρήστη	termino	lg-ell
-dd198	button_search	termino	lg-spa
 dd199	Data de creació	termino	lg-cat
 dd199	Data della creazione	termino	lg-ita
 dd199	Fecha de creación	termino	lg-spa
@@ -1697,6 +1694,7 @@ dd217	extensión	termino	lg-spa
 dd217	επέκταση	termino	lg-ell
 dd218	Registres visualitzats	termino	lg-cat
 dd218	Registri visualizzati	termino	lg-ita
+dd198	component_dataframe	termino	lg-spa
 dd218	Registros visualizados	termino	lg-spa
 dd218	εμφανίζονται τα αρχεία	termino	lg-ell
 dd1611	Εγγραφή εργαλείου	termino	lg-ell
@@ -2733,7 +2731,6 @@ dd478	Αρχεία φίλτρο	termino	lg-ell
 dd479	component_filter_records	termino	lg-spa
 dd1716	Titre	termino	lg-fra
 dd48	Figlio	termino	lg-ita
-dd48	fill	termino	lg-cat
 dd48	Hijo	termino	lg-spa
 dd48	Γιος	termino	lg-ell
 dd480	Personas	termino	lg-spa
@@ -4683,14 +4680,12 @@ dd977	Valore della lista	termino	lg-ita
 dd490	Structure	termino	lg-fra
 dd948	Pubblicabile	termino	lg-ita
 dd948	Publicable	termino	lg-spa
-dd96	indexation	termino	lg-eng
 dd978	Relació d'aspecte	termino	lg-cat
 dd978	Relación de aspecto	termino	lg-spa
 dd978	Relazione dell&#039; aspetto	termino	lg-ita
 dd979	Elenco dei registri	termino	lg-ita
 dd979	Listado de registros	termino	lg-spa
 dd979	Llistat de registres	termino	lg-cat
-dd98	model	termino	lg-cat
 dd98	Modello	termino	lg-ita
 dd98	Modelo	termino	lg-spa
 dd98	Μοντέλο	termino	lg-ell
@@ -4715,6 +4710,7 @@ dd985	Standard del Colore Audiovisivo	termino	lg-ita
 dd986	Valor de la lista	termino	lg-spa
 dd986	Valor de la llista	termino	lg-cat
 dd986	Valore della lista	termino	lg-ita
+dd96	Indexation	termino	lg-eng
 dd987	Estándar del Color Audivosiual	termino	lg-spa
 dd987	Estàndard del Color Audivosiual	termino	lg-cat
 dd987	Standard del Colore Audiovisivo	termino	lg-ita
@@ -5346,10 +5342,6 @@ dd1192	ts_web	termino	lg-spa
 dd1628	Ολόκληρες λέξεις	termino	lg-ell
 dd1025	database_alias	termino	lg-spa
 dd1522	Usuario	termino	lg-spa
-dd1524	ref_publications_typology	termino	lg-spa
-dd1525	ref_publications_magazine_number	termino	lg-spa
-dd1526	ref_publications_title_colective	termino	lg-spa
-dd1527	ref_publications_title_colective_alt	termino	lg-spa
 dd1523	Totales	termino	lg-spa
 dd1521	Actividad de usuarios	termino	lg-spa
 dd1512	Web Dédalo demo	termino	lg-spa
@@ -5362,7 +5354,9 @@ dd1514	web_dedalo_demo_dev	termino	lg-spa
 dd1519	informant	termino	lg-spa
 dd1520	ts_anthropology	termino	lg-spa
 dd1629	Buscar y reemplazar	termino	lg-spa
-dd1528	ref_publications_other_people_role	termino	lg-spa
+dd1524	ref_publications_typology	termino	lg-spa
+dd1526	ref_publications_title_colective	termino	lg-spa
+dd1527	ref_publications_title_colective_alt	termino	lg-spa
 dd1531	Tipo	termino	lg-spa
 dd1531	It can be one of these values: year,month,day	obs	lg-spa
 dd1534	List	termino	lg-spa
@@ -5374,6 +5368,7 @@ dd1533	matrix_stats	termino	lg-spa
 dd1537	Actividad de usuario	termino	lg-spa
 dd1629	Find and replace	termino	lg-eng
 dd1529		obs	lg-spa
+dd1528	ref_publications_other_people_role	termino	lg-spa
 dd1529	Documentación de versión	termino	lg-spa
 dd1532	tm info	termino	lg-spa
 dd1543	Reglas de aplicación	termino	lg-spa
@@ -6881,8 +6876,6 @@ dd38	Name	termino	lg-eng
 dd40	Diffusion	termino	lg-eng
 dd41	List	termino	lg-eng
 dd42	Activity events	termino	lg-eng
-dd47	father	termino	lg-eng
-dd48	child	termino	lg-eng
 dd49	Project	termino	lg-eng
 dd51	Document	termino	lg-eng
 dd53	Person responsible for the project	termino	lg-eng
@@ -6899,10 +6892,8 @@ dd83	Value %	termino	lg-eng
 dd84	Publish	termino	lg-eng
 dd85	Menu	termino	lg-eng
 dd86	It will delete the selected tag in all languages and all the relationships and indexing associated with it	termino	lg-eng
-dd89	related	termino	lg-eng
 dd90	Investigation process	termino	lg-eng
 dd94	by user	termino	lg-eng
-dd98	model	termino	lg-eng
 dd99	Process	termino	lg-eng
 dd100	Thesaurus	termino	lg-eng
 dd101	Toponymy	termino	lg-eng
@@ -6939,7 +6930,6 @@ dd146	Apply and save	termino	lg-eng
 dd147	Components	termino	lg-eng
 dd150	Finish	termino	lg-eng
 dd151	Link	termino	lg-eng
-dd152	Find	termino	lg-eng
 dd153	Projects	termino	lg-eng
 dd154	General information	termino	lg-eng
 dd155	Project code	termino	lg-eng
@@ -6958,6 +6948,9 @@ dd170	Projects	termino	lg-eng
 dd171	Where	termino	lg-eng
 dd172	What	termino	lg-eng
 dd173	Created records	termino	lg-eng
+dd98	Model	termino	lg-eng
+dd48	Child	termino	lg-eng
+dd47	Father	termino	lg-eng
 dd175	Target directory	termino	lg-eng
 dd176	File name	termino	lg-eng
 dd178	Zotero file processed successfully	termino	lg-eng
@@ -7140,7 +7133,6 @@ dd406	Project	termino	lg-eng
 dd407	Image info.	termino	lg-eng
 dd408	Religions	termino	lg-eng
 dd409	Identification	termino	lg-eng
-dd410	Filter	termino	lg-eng
 dd411	Name	termino	lg-eng
 dd412	Foundation year	termino	lg-eng
 dd413	List	termino	lg-eng
@@ -7246,7 +7238,6 @@ dd537	a/v import	termino	lg-eng
 dd538	File import	termino	lg-eng
 dd539	Import images	termino	lg-eng
 dd540	Time Machine	termino	lg-eng
-dd541	Source and target langs can't be the same languague	termino	lg-eng
 dd542	Activity	termino	lg-eng
 dd543	Who	termino	lg-eng
 dd544	IP address	termino	lg-eng
@@ -7338,7 +7329,6 @@ dd663	Different from	termino	lg-eng
 dd664	Does not contain	termino	lg-eng
 dd665	Contains	termino	lg-eng
 dd666	Begins with	termino	lg-eng
-dd667	Finish with	termino	lg-eng
 dd668	Literal	termino	lg-eng
 dd669	Between	termino	lg-eng
 dd670	Sequence	termino	lg-eng
@@ -7518,7 +7508,6 @@ dd877	Filter	termino	lg-eng
 dd878	List	termino	lg-eng
 dd879	List value	termino	lg-eng
 dd880	Erase original tape quality	termino	lg-eng
-dd881	language	termino	lg-eng
 dd882	Professions	termino	lg-eng
 dd883	Professions	termino	lg-eng
 dd884	Profession	termino	lg-eng
@@ -8195,15 +8184,428 @@ dd1555	SVG	termino	lg-eng
 dd1635	bibliography_data	termino	lg-spa
 dd1637	bibliographic_references	termino	lg-spa
 dd1646	activities	termino	lg-spa
-dd1	Dédalo 2023-12-26T18:27:28+01:00 Benimamet	termino	lg-spa
+dd35	प्रक्रियाहरू	termino	lg-nep
 dd1631	RECYCLE DD +	termino	lg-spa
+dd100	थिसौरस	termino	lg-nep
+dd172	के	termino	lg-nep
+dd1624	अघिल्लो	termino	lg-nep
+dd168	स्थापना डाटा सही छ भनी प्रमाणित गर्नुहोस्। यदि तिनीहरू छैनन् भने, Dédalo डाटाबेस प्राथमिकताहरू (config_db.php) मा जानकारी सेट गर्नुहोस्।	termino	lg-nep
+dd1364	bibliographic_references	termino	lg-spa
+dd630	ग्राफहरू	termino	lg-nep
+dd171	कहाँ	termino	lg-nep
+dd698	अर्को	termino	lg-nep
+dd1036	सम्बन्ध थपियो	termino	lg-nep
+dd207	प्रणाली प्रशासन	termino	lg-nep
+dd173	रेकर्डहरू सिर्जना गरे	termino	lg-nep
+dd1625	प्रतिस्थापन गर्नुहोस्	termino	lg-nep
+dd661	खाली	termino	lg-nep
+dd770	विकास	termino	lg-nep
+dd175	लक्ष्य निर्देशिका	termino	lg-nep
+dd1626	सबै बदल्नुहोस्	termino	lg-nep
+dd417	वर्ष	termino	lg-nep
 dd82	matrix_activities	termino	lg-spa
+dd3	प्रसार	termino	lg-nep
+dd218	रेकर्डहरू ब्राउज गरिँदै	termino	lg-nep
+dd1613	नक्कल	termino	lg-nep
+dd667	Ends with	termino	lg-eng
 dd1647	matrix_nexus	termino	lg-spa
+dd355	सांस्कृतिक	termino	lg-nep
+dd64	हो होइन	termino	lg-nep
+dd729	मेटाउन	termino	lg-nep
+dd1095	फाइल मेटाउनुहोस्	termino	lg-nep
+dd424	हालको पदानुक्रम सक्रिय छैन र यसलाई उत्पन्न गर्न सम्भव छैन	termino	lg-nep
 dd1648	matrix_nexus_main	termino	lg-spa
+dd349	सामग्री	termino	lg-nep
+dd64	Ναι/Όχι	termino	lg-ell
+dd745	बन्द गर्नुहोस्	termino	lg-nep
+dd699	खोज्नुहोस्	termino	lg-nep
+dd541	Source and target langs can't be the same language	termino	lg-eng
+dd323	सामग्री	termino	lg-nep
+dd190	सूची मूल्य	termino	lg-nep
+dd152	Search	termino	lg-eng
+dd746	पुन: लोड गर्नुहोस्	termino	lg-nep
+dd697	बाहिर निस्कनु	termino	lg-nep
+dd1051	के तपाईँ निश्चित हुनुहुन्छ?	termino	lg-nep
+dd553	नवीनतम संस्करण संग जानकारी सिंक्रोनाइज गर्दै	termino	lg-nep
+dd190	Τιμή λίστας	termino	lg-ell
+dd152	खोज्नुहोस्	termino	lg-nep
+dd755	किबोर्ड कुञ्जी	termino	lg-nep
+dd696	लग - इन	termino	lg-nep
+dd388	सम्पर्क असफल। कृपया केहि सेकेन्ड पछि पृष्ठ पुन: लोड गर्नुहोस्	termino	lg-nep
+dd662	जस्तै	termino	lg-nep
+dd62	मूल्य	termino	lg-nep
+dd167	परियोजना	termino	lg-nep
+dd757	उपकरण	termino	lg-nep
+dd695	नयाँ	termino	lg-nep
+dd62	Αξία	termino	lg-ell
+dd854	इन्स्पेक्टर टगल गर्नुहोस्	termino	lg-nep
+dd758	हेर्नुहोस्	termino	lg-nep
+dd694	सम्पादन गर्नुहोस्	termino	lg-nep
+dd1711	DD/MM/YYYY वा DD/MM/YYYY-DD/MM/YYYY ढाँचाको मिति o दायरा	termino	lg-nep
+dd1363	Ops.. खाली tc अफसेट मान	termino	lg-nep
+dd410	Project	termino	lg-eng
+dd1078	कुल	termino	lg-nep
+dd777	थिसॉरस	termino	lg-nep
+dd693	सूची	termino	lg-nep
+dd401	के तपाइँ यो रेकर्ड मेटाउन निश्चित हुनुहुन्छ?	termino	lg-nep
+dd1744	कृपया, इन्भेन्टरीको खण्डबाट अनुक्रमणिका (जस्तै मौखिक इतिहास) र स्रोतबाट होइन	termino	lg-nep
+dd422	दिन	termino	lg-nep
+dd410	परियोजना	termino	lg-nep
+dd1079	जानकारी	termino	lg-nep
+dd778	रेकर्ड	termino	lg-nep
+dd1094	अपलोड पूरा भयो	termino	lg-nep
+dd402	तपाईं यो सामग्री हेर्न अधिकृत हुनुहुन्न	termino	lg-nep
+dd403	चेतावनी	termino	lg-nep
+dd617	यस क्षेत्रका लागि मानहरूको अधिकतम संख्या नाघिसकेको छ। सीमा =	termino	lg-nep
+dd1583	के तपाइँ यो नोट मेटाउन निश्चित हुनुहुन्छ?	termino	lg-nep
+dd881	Language	termino	lg-eng
+dd400	यहाँ पहुँच छैन	termino	lg-nep
+dd1091	कम्पोनेन्ट रिकभर गर्नुहोस्	termino	lg-nep
+dd552	कुनै रेकर्ड भेटिएन	termino	lg-nep
+dd721	वैकल्पिक क्षेत्र। शब्द सामान्यीकृत नभएसम्म प्रयोग नगर्नुहोस्। यसको सट्टा प्रयोग गर्नुहोस्: %s	termino	lg-nep
+dd881	भाषा	termino	lg-nep
+dd232	रेकर्ड सम्पादन गर्नुहोस्	termino	lg-nep
+dd1092	खण्ड पुन: प्राप्ति गर्नुहोस्	termino	lg-nep
+dd584	के तपाइँ पाठ अधिलेखन गर्न निश्चित हुनुहुन्छ?	termino	lg-nep
+dd779	राज्य	termino	lg-nep
+dd76	देखाउनु	termino	lg-nep
+dd738	फाइल साइज धेरै ठूलो छ	termino	lg-nep
+dd315	चेतावनी: प्रयोगकर्ता %s ले यो क्षेत्र प्रयोग गरिरहेको छ। कृपया, प्रयोगकर्ताले सम्पादन समाप्त गर्नको लागि पर्खनुहोस्।	termino	lg-nep
+dd756	खोल्नुहोस्	termino	lg-nep
+dd65	मर्मत अन्तर्गत प्रणाली। असुविधाको लागि माफ गर्नुहोस्	termino	lg-nep
+dd162	त्रुटि: प्रयोगकर्ता र पासवर्ड ठीक छ तर हालको प्रयोगकर्ता ठीकसँग कन्फिगर गरिएको छैन। कृपया यस प्रयोगकर्तालाई प्रोफाइल तोक्न प्रशासकलाई सम्पर्क गर्नुहोस्।	termino	lg-nep
+dd1525	ref_publications_magazine_number	termino	lg-spa
+dd747	कृपया पर्खनुहोस्..	termino	lg-nep
+dd657	पृष्ठमा जानुहोस्	termino	lg-nep
+dd1576	फेला परेका सबै रेकर्डहरू मेटिने छन्।	termino	lg-nep
+dd742	तपाईंले फाइल चयन गर्नुपर्छ	termino	lg-nep
+dd340	हराउने प्रक्रियामा क्षेत्र। यो क्षेत्र यससँग मर्ज हुन्छ: %s	termino	lg-nep
+dd737	अवैध विस्तार	termino	lg-nep
+dd658	रेकर्डमा जानुहोस्	termino	lg-nep
+dd165	त्रुटि: प्रयोगकर्ता र पासवर्ड ठीक छ तर हालको प्रयोगकर्ता ठीकसँग कन्फिगर गरिएको छैन। यस प्रयोगकर्ताका लागि अधिकृत परियोजनाहरू तोक्नका लागि कृपया प्रशासकलाई सम्पर्क गर्नुहोस्।	termino	lg-nep
+dd1623	Select a search section	termino	lg-eng
 dd195	area_graph	termino	lg-spa
 dd630	Grafos	termino	lg-spa
 dd630	Graphs	termino	lg-eng
+dd93	सिर्जना गरियो	termino	lg-nep
+dd715	बचत गर्न असफल!	termino	lg-nep
+dd743	यो पृष्ठ छोड्दा तपाईंले बचत नगरिएको डाटा गुमाउनु हुनेछ	termino	lg-nep
 dd630	Grafs	termino	lg-cat
+dd242	क्याटलग	termino	lg-nep
+dd94	प्रयोगकर्ता द्वारा	termino	lg-nep
+dd718	पृष्ठ	termino	lg-nep
+dd1059	त्रुटि प्रयोगकर्ता कोड Dédalo मा अवस्थित छैन। आफ्नो प्रशासकसँग सम्पर्क गर्नुहोस्।	termino	lg-nep
 dd630	Grafiken	termino	lg-deu
+dd69	गतिविधिहरू	termino	lg-nep
+dd104	चयन गरियो	termino	lg-nep
+dd720	लोड हुँदै...	termino	lg-nep
+dd873	मान पहिले नै अवस्थित छ	termino	lg-nep
+dd541	स्रोत र लक्ष्य भाषा एउटै भाषा हुन सक्दैन	termino	lg-nep
+dd420	वर्ष	termino	lg-nep
 dd630	Δίκτυα	termino	lg-ell
+dd222	प्रकाशन	termino	lg-nep
+dd105	परिमार्जित	termino	lg-nep
+dd1618	खाली चयन	termino	lg-nep
+dd1033	कृपया एउटा लक्षित भाषा चयन गर्नुहोस्	termino	lg-nep
 dd630	Réseaux	termino	lg-fra
+dd14	स्रोतहरू	termino	lg-nep
+dd166	परिमार्जित अभिलेखहरू	termino	lg-nep
+dd1619	स्तरहरू	termino	lg-nep
+dd663	भन्दा फरक	termino	lg-nep
+dd1240	ध्यान दिनुहोस्: यो मान परिवर्तन गरेर, लुकाइने क्षेत्रहरूमा समावेश सबै जानकारी मेटिनेछ। के तपाइँ जारी राख्न निश्चित हुनुहुन्छ?	termino	lg-nep
+dd1585	सुरक्षित नगरिएका परिवर्तनहरू खारेज गर्ने हो?	termino	lg-nep
+dd1586	त्रुटि: मिति ढाँचा अमान्य छ	termino	lg-nep
+dd1587	पठाउनका लागि चयन गरिएका इमेलहरू तपाईंको अपरेटिङ सिस्टमको अधिकतम सीमा नाघ्छन्, त्यसैले हामीले यो अधिकतम नाघ्ने प्याकेजहरू सिर्जना गर्न अगाडि बढेका छौं। इमेलहरू सिर्जना गर्न निम्न बटनहरूमा क्लिक गर्नुहोस्।	termino	lg-nep
+dd1608	आफ्नो मनपर्ने सुपरयुजर पासवर्ड टाइप गर्नुहोस् र पुन: टाइप गर्नुहोस् र यसलाई सुरक्षित स्थानमा राख्नुहोस्। 8 देखि 32 वर्णहरू सम्मिलित बलियो पासवर्ड प्रयोग गर्नुहोस्, कम्तिमा, एउटा ठूलो-केस अक्षर, एउटा सानो-केस अक्षर, र एउटा संख्या। क्रमिक क्रममा समान वर्णहरूलाई अनुमति छैन ('aa', '11', 'BB', आदि)। संख्यात्मक ('123', '345', आदि) वा वर्णमाला ('aBC', 'hIjK', आदि) क्रमलाई अनुमति छैन।	termino	lg-nep
+dd1623	खोज खण्ड चयन गर्नुहोस्	termino	lg-nep
+dd1640	कुनै ट्याग चयन गरिएको छैन। यदि तपाईंले जारी राख्नुभयो भने, सम्पूर्ण रेकर्ड अनुक्रमित हुनेछ।	termino	lg-nep
+dd660	यसमा जानकारी समावेश छ	termino	lg-nep
+dd664	समावेश गर्दैन	termino	lg-nep
+dd665	समावेश गर्दछ	termino	lg-nep
+dd666	बाट सुरु हुन्छ	termino	lg-nep
+dd667	संग समाप्त हुन्छ	termino	lg-nep
+dd668	शाब्दिक	termino	lg-nep
+dd669	बीचमा	termino	lg-nep
+dd670	अनुक्रम	termino	lg-nep
+dd671	भन्दा ठूलो वा बराबर	termino	lg-nep
+dd672	भन्दा कम वा बराबर	termino	lg-nep
+dd673	भन्दा ठुलो	termino	lg-nep
+dd674	भन्दा कम	termino	lg-nep
+dd713	शब्दहरू विभाजित गर्नुहोस्	termino	lg-nep
+dd1375	बच्चाहरु	termino	lg-nep
+dd1605	मुहान	termino	lg-nep
+dd1629	फेला पार्नुहोस् र बदल्नुहोस्	termino	lg-nep
+dd418	दिनहरू	termino	lg-nep
+dd419	महिना	termino	lg-nep
+dd421	महिना	termino	lg-nep
+dd717	शीर्षक	termino	lg-nep
+dd998	कागजातको पृष्ठ चयन गर्नुहोस्:	termino	lg-nep
+dd969	मूल्य दायरा बाहिर	termino	lg-nep
+dd1379	सन्दर्भहरू	termino	lg-nep
+dd1621	प्रकाशित गर्नुहोस्	termino	lg-nep
+dd1622	तपाईंले कम्तिमा एउटा परियोजना चयन गर्नुपर्छ	termino	lg-nep
+dd1019	खोज अपरेटरहरू	termino	lg-nep
+dd387	छोड्नुहोस्	termino	lg-nep
+dd1580	सबै रेकर्ड फेला पर्यो	termino	lg-nep
+dd397	पछाडि	termino	lg-nep
+dd399	हटाउनुहोस्	termino	lg-nep
+dd719	शुरुवात	termino	lg-nep
+dd582	पाठ चयन गर्नुहोस्	termino	lg-nep
+dd761	रद्द गर्नुहोस्	termino	lg-nep
+dd762	डाटा मात्र मेटाउनुहोस्	termino	lg-nep
+dd763	डाटा र रेकर्ड मेटाउनुहोस्	termino	lg-nep
+dd780	चयन गरिएको टुक्रा जोड्नुहोस्	termino	lg-nep
+dd781	चयनको साथ नयाँ टुक्रा सिर्जना गर्नुहोस्	termino	lg-nep
+dd830	लिङ्क मात्र मेटाउनुहोस्	termino	lg-nep
+dd831	स्रोत र सबै लिङ्कहरू मेटाउनुहोस्	termino	lg-nep
+dd1217	फिल्टर	termino	lg-nep
+dd1726	निवेदन गर्नु	termino	lg-nep
+dd1044	प्रति रेखा वर्णहरू	termino	lg-nep
+dd1727	प्रिन्ट पूर्वावलोकन	termino	lg-nep
+dd1734	सबै देखाऊ	termino	lg-nep
+dd1735	फिल्टर गरिएको देखाउनुहोस्	termino	lg-nep
+dd1737	टुक्रामा जानुहोस्	termino	lg-nep
+dd1736	बचत गर्नुहोस्	termino	lg-nep
+dd1738	क्यास अपडेट गर्नुहोस्	termino	lg-nep
+dd1113	फाइलहरू आयात गर्नुहोस्	termino	lg-nep
+dd644	परिवर्तनहरू	termino	lg-nep
+dd1023	कुनै फाइल छैन	termino	lg-nep
+dd1595	बटनहरू देखाउनुहोस्	termino	lg-nep
+dd1602	कापी	termino	lg-nep
+dd1606	बचत नगरिएका परिवर्तनहरू!	termino	lg-nep
+dd1607	डाटा परिमार्जन गरिएको छैन। बचत रद्द गरियो।	termino	lg-nep
+dd1639	फिल्टर हटाउनुहोस्	termino	lg-nep
+dd1645	प्रसार रेकर्डहरू मेटाउनुहोस्	termino	lg-nep
+dd1114	अवस्थित रेकर्ड हेर्नुहोस्	termino	lg-nep
+dd727	डाउनलोड गर्नुहोस्	termino	lg-nep
+dd730	निर्माण गर्नुहोस्	termino	lg-nep
+dd748	अपलोड पूरा भयो	termino	lg-nep
+dd753	घुसाउनुहोस्	termino	lg-nep
+dd803	पूर्ण	termino	lg-nep
+dd804	मोड	termino	lg-nep
+dd855	सूचीमा जानुहोस्	termino	lg-nep
+dd858	सर्तहरू	termino	lg-nep
+dd1022	बचत गरियो	termino	lg-nep
+dd588	कुल अनुच्छेदहरू	termino	lg-nep
+dd1034	अनुक्रमणिकाको लागि ट्याग चयन गर्नुहोस्	termino	lg-nep
+dd1035	नयाँ टुक्रा सिर्जना गर्न, केवल पाठ भाग चयन गर्नुहोस् र तलको नयाँ बटनमा क्लिक गर्नुहोस्	termino	lg-nep
+dd1077	अवधि	termino	lg-nep
+dd1126	समर्थित विस्तारहरू	termino	lg-nep
+dd590	सबै पुन: सिर्जना गर्नुहोस्	termino	lg-nep
+dd589	नयाँ मात्र	termino	lg-nep
+dd473	सम्बन्धहरू	termino	lg-nep
+dd618	हो	termino	lg-nep
+dd619	छैन	termino	lg-nep
+dd1612	मूल्य	termino	lg-nep
+dd1617	गतिविधि	termino	lg-nep
+dd700	बचत गर्नुहोस्	termino	lg-nep
+dd1080	डाउनलोड गर्नुहोस्	termino	lg-nep
+dd1081	नयाँ संस्करण	termino	lg-nep
+dd1090	अपलोड गर्नुहोस्	termino	lg-nep
+dd521	टुक्रा	termino	lg-nep
+dd474	उपकरणहरू	termino	lg-nep
+dd716	क्षेत्र:	termino	lg-nep
+dd1609	को	termino	lg-nep
+dd1249	X देखि Y को Z को रेकर्डहरू प्रदर्शन गरियो।	termino	lg-nep
+dd1627	मिलान मामला	termino	lg-nep
+dd1628	सम्पूर्ण शब्दहरू	termino	lg-nep
+dd1098	तथ्याङ्क	termino	lg-nep
+dd1097	गतिविधि समय	termino	lg-nep
+dd1638	स्थापना गर्नुहोस्	termino	lg-nep
+dd1356	तोड्नुहोस्	termino	lg-nep
+dd1358	ढाँचा	termino	lg-nep
+dd651	क्षेत्रहरू	termino	lg-nep
+dd319	ट्रान्सक्रिप्शन	termino	lg-nep
+dd334	विकल्पहरू	termino	lg-nep
+dd448	छाप्नुहोस्	termino	lg-nep
+dd649	प्रिसेटहरू खोज्नुहोस्	termino	lg-nep
+dd650	खोज विकल्प	termino	lg-nep
+dd652	र	termino	lg-nep
+dd653	वा	termino	lg-nep
+dd1069	कन्फिगरेसन	termino	lg-nep
+dd1359	सबै स्तम्भहरू सक्रिय गर्नुहोस्	termino	lg-nep
+dd1360	सबै स्तम्भहरू असक्षम गर्नुहोस्	termino	lg-nep
+dd970	उपकरण दर्ता गर्नुहोस्	termino	lg-nep
+dd1507	पदानुक्रम निर्यात गर्नुहोस्	termino	lg-nep
+dd1551	प्रयोगकर्ता प्रशासन	termino	lg-nep
+dd1643	कन्फिगरेसन जाँच गर्नुहोस्	termino	lg-nep
+dd874	क्यास अपडेट गर्नुहोस्	termino	lg-nep
+dd259	प्रविष्ट गर्नुहोस्	termino	lg-nep
+dd255	प्रयोगकर्ता नाम	termino	lg-nep
+dd256	पासवर्ड	termino	lg-nep
+dd257	इमेल	termino	lg-nep
+dd290	फाइल	termino	lg-nep
+dd789	अनुक्रमणिका	termino	lg-nep
+dd792	सम्बन्धहरू	termino	lg-nep
+dd84	प्रकाशित गर्नुहोस्	termino	lg-nep
+dd484	आयात गर्नुहोस्	termino	lg-nep
+dd398	खण्डहरू	termino	lg-nep
+dd776	खण्ड	termino	lg-nep
+dd706	पुन: प्राप्ति	termino	lg-nep
+dd707	रेकर्ड	termino	lg-nep
+dd725	फाइल	termino	lg-nep
+dd726	साइज	termino	lg-nep
+dd1615	मोडेल	termino	lg-nep
+dd1616	अनुवाद योग्य	termino	lg-nep
+dd1620	टाइप गर्नुहोस्	termino	lg-nep
+dd1614	कम्पोनेन्ट	termino	lg-nep
+dd336	अपडेट गर्नुहोस्	termino	lg-nep
+dd731	संस्करण	termino	lg-nep
+dd741	फाइल अपलोड गर्दा त्रुटि भयो	termino	lg-nep
+dd744	निर्देशिका अवस्थित छैन वा पहुँचयोग्य छैन	termino	lg-nep
+dd856	मोडेलहरू	termino	lg-nep
+dd857	पदानुक्रमहरू	termino	lg-nep
+dd1596	सम्बन्धहरू	termino	lg-nep
+dd200	प्रयोगकर्ता द्वारा बनाईएको	termino	lg-nep
+dd199	बनाएको मिति	termino	lg-nep
+dd197	प्रयोगकर्ता द्वारा परिमार्जित	termino	lg-nep
+dd201	परिमार्जन मिति	termino	lg-nep
+dd271	पहिलो प्रकाशन	termino	lg-nep
+dd1223	पछिल्लो प्रकाशन	termino	lg-nep
+dd1224	पहिलो प्रकाशन प्रयोगकर्ता	termino	lg-nep
+dd1225	पछिल्लो प्रकाशन प्रयोगकर्ता	termino	lg-nep
+dd1709	समय	termino	lg-nep
+dd150	समाप्त गर्नुहोस्	termino	lg-nep
+dd159	प्रमाणीकरण गरियो	termino	lg-nep
+dd161	समीक्षाको लागि	termino	lg-nep
+dd263	प्रोफाइलमा जानुहोस्	termino	lg-nep
+dd128	प्रयोगकर्ताहरू	termino	lg-nep
+dd234	प्रोफाइलहरू	termino	lg-nep
+dd153	परियोजनाहरू	termino	lg-nep
+dd542	गतिविधि	termino	lg-nep
+dd88	मर्मतसम्भार	termino	lg-nep
+dd68	मानहरूको सूची	termino	lg-nep
+dd32	लेआउट	termino	lg-nep
+dd1521	प्रयोगकर्ता गतिविधि	termino	lg-nep
+dd1324	दर्ता उपकरणहरू	termino	lg-nep
+dd996	उपकरण कन्फिगरेसन	termino	lg-nep
+dd346	खण्ड टिपो	termino	lg-nep
+dd451	अनुक्रमणिकाहरू	termino	lg-nep
+dd480	मानिसहरू	termino	lg-nep
+dd450	समय कोडहरू	termino	lg-nep
+dd453	अनुक्रमणिका जानकारी	termino	lg-nep
+dd454	रेखाहरू	termino	lg-nep
+dd455	मिति	termino	lg-nep
+dd456	नगरपालिका	termino	lg-nep
+dd457	अन्तर्वार्ता	termino	lg-nep
+dd1282	अडियोभिजुअल	termino	lg-nep
+dd765	अनुक्रमणिका	termino	lg-nep
+dd1572	नवीनतम परिवर्तनहरू	termino	lg-nep
+dd141	ऐतिहासिक	termino	lg-nep
+dd145	अब	termino	lg-nep
+dd146	लागू गर्नुहोस् र बचत गर्नुहोस्	termino	lg-nep
+dd793	समय यन्त्र	termino	lg-nep
+dd110	वास्तविक सामग्री	termino	lg-nep
+dd1546	घटक इतिहास	termino	lg-nep
+dd119	मानहरू बदल्नुहोस्	termino	lg-nep
+dd1649	Publicado	termino	lg-spa
+dd1649	Published	termino	lg-eng
+dd1649	Veröffentlicht	termino	lg-deu
+dd1649	Publié	termino	lg-fra
+dd1649	Pubblicato	termino	lg-ita
+dd1649	Publicat	termino	lg-cat
+dd1649	Publicado	termino	lg-por
+dd1649	Δημοσιευμένο	termino	lg-ell
+dd1649	प्रकाशित	termino	lg-nep
+dd608	अधिकतम	termino	lg-nep
+dd1066	मिनेट।	termino	lg-nep
+dd1062	वस्तुहरू	termino	lg-nep
+dd1064	औसत	termino	lg-nep
+dd184	पात्रो	termino	lg-nep
+dd1554	डिजिटलाइजेशन	termino	lg-nep
+dd1575	खण्डहरू मेटाउनुहोस्	termino	lg-nep
+dd243	स्वचालित ट्रान्सक्रिप्शन	termino	lg-nep
+dd794	ट्रान्सक्रिप्शन	termino	lg-nep
+dd449	ट्रान्सक्रिप्शन प्रिन्ट	termino	lg-nep
+dd1021	डाटा	termino	lg-nep
+dd1650	Inspector	termino	lg-spa
+dd1650	Επιθεωρητής	termino	lg-ell
+dd1650	Inspector	termino	lg-eng
+dd1650	Inspecteur	termino	lg-fra
+dd1650	Ispettore	termino	lg-ita
+dd1650	Inspetor	termino	lg-por
+dd1650	Inspector	termino	lg-cat
+dd1650	Inspektor	termino	lg-deu
+dd1650	इन्स्पेक्टर	termino	lg-nep
+dd1553	अनुवाद	termino	lg-nep
+dd1651	Traducción	termino	lg-spa
+dd1651	व्यापार	termino	lg-nep
+dd1651	Übersetzung	termino	lg-deu
+dd1651	Traducció	termino	lg-cat
+dd1651	Μετάφραση	termino	lg-ell
+dd1651	Traduzione	termino	lg-ita
+dd1651	Traduction	termino	lg-fra
+dd1651	Tradução	termino	lg-por
+dd1652	Nuevo	termino	lg-spa
+dd1652	Nou	termino	lg-cat
+dd1653	Borrar	termino	lg-spa
+dd1653	Esborrar	termino	lg-cat
+dd1653	Delete	termino	lg-eng
+dd1652	New	termino	lg-eng
+dd77	ओन्टोलजी	termino	lg-nep
+dd675	फिल्टर गर्नुहोस्	termino	lg-nep
+dd1500	ओन्टोलजी	termino	lg-nep
+dd1654	Pantalla completa	termino	lg-spa
+dd1654	Full screen	termino	lg-eng
+dd1654	पूर्ण स्क्रिन	termino	lg-nep
+dd1654	Ganzer Bildschirm	termino	lg-deu
+dd1654	ΠΛΗΡΗΣ ΟΘΟΝΗ	termino	lg-ell
+dd1654	Pantalla completa	termino	lg-cat
+dd1654	A schermo intero	termino	lg-ita
+dd1655	Cargando ficheros de Dédalo	termino	lg-spa
+dd1655	Loading Dédalo files	termino	lg-eng
+dd1655	Carregant fitxers Dédalo	termino	lg-cat
+dd1655	Dédalo फाइलहरू लोड गर्दै	termino	lg-nep
+dd1655	Laden von Dédalo-Dateien	termino	lg-deu
+dd1655	Φόρτωση αρχείων Dédalo	termino	lg-ell
+dd1655	Carregando arquivos Dédalo	termino	lg-por
+dd1655	Caricamento file Dédalo	termino	lg-ita
+dd1655	Chargement des fichiers Dédalo	termino	lg-fra
+dd1656	Ontología	termino	lg-spa
+dd1656	Ontology	termino	lg-eng
+dd1656	Ontologie	termino	lg-fra
+dd1656	Ontologia	termino	lg-ita
+dd1656	ओन्टोलजी	termino	lg-nep
+dd1656	Οντολογία	termino	lg-ell
+dd1656	Ontologia	termino	lg-por
+dd1656	Ontologie	termino	lg-deu
+dd1745	नाम	termino	lg-nep
+dd1740	फाइल पथ	termino	lg-nep
+dd277	सामान्य	termino	lg-nep
+dd278	मेटाइयो	termino	lg-nep
+dd279	समीक्षा गर्न	termino	lg-nep
+dd281	ट्यागहरू छुटेका छन्	termino	lg-nep
+dd495	लेबल मेट्ने हो?	termino	lg-nep
+dd275	कृपया नीलो ट्यागहरूको स्थिति समीक्षा गर्नुहोस् (संयोगवश मेटाइयो)	termino	lg-nep
+dd1604	मेटाइएका ट्यागहरू	termino	lg-nep
+dd151	लिङ्क	termino	lg-nep
+dd687	बाह्य लिङ्क	termino	lg-nep
+dd98	Model	termino	lg-cat
+dd98	मोडेल	termino	lg-nep
+dd96	अनुक्रमणिका	termino	lg-nep
+dd48	Fill	termino	lg-cat
+dd48	बच्चा	termino	lg-nep
+dd47	बुबा	termino	lg-nep
+dd89	Related	termino	lg-eng
+dd89	सम्बन्धित	termino	lg-nep
+dd85	मेनु	termino	lg-nep
+dd1590	स्थापना गर्नुहोस्	termino	lg-nep
+dd1657	Desarrollador	termino	lg-spa
+dd1657	Developer	termino	lg-eng
+dd1657	विकासकर्ता	termino	lg-nep
+dd1657	Desenvolupador	termino	lg-cat
+dd1657	Entwicklerin	termino	lg-deu
+dd1657	Desenvolvedor	termino	lg-por
+dd1657	Développeur	termino	lg-fra
+dd1657	Προγραμματιστής	termino	lg-ell
+dd1658	Instalado	termino	lg-spa
+dd1658	Installed	termino	lg-eng
+dd1658	Εγκατεστημένο	termino	lg-ell
+dd1658	Instal·lat	termino	lg-cat
+dd1658	Eingerichtet	termino	lg-deu
+dd1658	Installé	termino	lg-fra
+dd1658	Installato	termino	lg-ita
+dd1658	Instalado	termino	lg-por
+dd1658	स्थापना गरियो	termino	lg-nep
+dd1	Dédalo 2024-02-22T17:14:09+01:00 Benimamet	termino	lg-spa
+dd598	नयाँ	termino	lg-nep

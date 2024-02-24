@@ -7,11 +7,9 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
-@base_color : #1c1c1c;
+// local vars
+@tool_color : #1c1c1c;
 @text_color : #00e801;
-
-
 
 // wrapper_tool
 	.wrapper_tool.tool_tc {
@@ -47,11 +45,11 @@
 				.button_apply {
 					color: @text_color;
 					text-transform: capitalize;
-					background-color: @base_color;
-					border-color: darken(@base_color, 5%);
+					background-color: @tool_color;
+					border-color: darken(@tool_color, 5%);
 
 					&:focus {
-						border: 1.2px solid darken(@base_color, 8%) !important;
+						border: 1.2px solid darken(@tool_color, 8%) !important;
 						opacity: 0.7;
 						// color: #ffffff !important;
 					}
@@ -64,7 +62,7 @@
 
 // modal header tool modification
 	.tool_header.tool_tc {
-		background-color: @base_color;
+		background-color: @tool_color;
 		color: @text_color;
 
 		.button.white {

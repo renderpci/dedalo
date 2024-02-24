@@ -107,6 +107,7 @@ declare(strict_types=1);
 		switch ($format_columns) {
 
 			case 'av':
+
 				// tc info
 					$tag_in_pos		= $fragment_info->tag_in_pos  ?? 0;
 					$tag_out_pos	= $fragment_info->tag_out_pos ?? 0;
@@ -149,7 +150,7 @@ declare(strict_types=1);
 					$section_top_tipo	= $locator->section_top_tipo ?? null;
 					$section_top_id		= $locator->section_top_id ?? null;
 
-				// tool_context. This component have a 'tool_indexation' tool
+				// tool_indexation_context. This component have a 'tool_indexation' tool
 					$tool_indexation_context = array_find($tools, function($el){
 						return $el->name==='tool_indexation';
 					});
@@ -227,16 +228,44 @@ declare(strict_types=1);
 						]); // array value
 
 					// button_tool_transcription
-						// tool_context. Use the processes section here because component_text_area do not have 'tool_transcription' tool
-							$transcription_section = section::get_instance(
-								$section_id, // string|null section_id
-								'oh81' // string section_tipo
+
+						// tool_transcription_context. Use the processes section here because component_text_area do not have 'tool_transcription' tool
+							// $transcription_section = section::get_instance(
+							// 	$section_id, // string|null section_id
+							// 	'oh81' // string section_tool tipo
+							// );
+							// $transcription_section_context	= $transcription_section->get_structure_context( 1 );
+							// $transcription_section_tools	= $transcription_section_context->tools ?? [];
+							// $tool_transcription_context		= array_find($transcription_section_tools, function($el){
+							// 	return $el->name==='tool_transcription';
+							// });
+							// $transcription_section_properties = $transcription_section->get_properties();
+							// // add to tool context from section tool properties
+							// $tool_transcription_context->tool_config = $transcription_section_properties->tool_config->tool_transcription;
+							// $tool_transcription_context->tool_config->ddo_map = array_map(function($el){
+							// 	if (!isset($el->model)) {
+							// 		$el->model = RecordObj_dd::get_modelo_name_by_tipo($el->tipo,true);
+							// 	}
+							// 	return $el;
+							// }, $tool_transcription_context->tool_config->ddo_map);
+
+						// tool_transcription_context. Using related component av context (17-01-2024)
+							$component_av_tipo	= $this->get_related_component_av_tipo(); // 'rsc35';
+							$component_av_model	= RecordObj_dd::get_modelo_name_by_tipo($component_av_tipo,true);
+							$component_av		= component_common::get_instance(
+								$component_av_model, // string model
+								$component_av_tipo, // string tipo
+								$this->section_id, // string section_id
+								'list', // string mode
+								DEDALO_DATA_NOLAN, // string lang
+								$this->section_tipo // string section_tipo
 							);
-							$transcription_section_context	= $transcription_section->get_structure_context( 1 );
-							$transcription_section_tools	= $transcription_section_context->tools ?? [];
-							$tool_transcription_context		= array_find($transcription_section_tools, function($el){
+							$av_structure_context		= $component_av->get_structure_context( 1 );
+							$av_tools					= $av_structure_context->tools ?? [];
+							$tool_transcription_context	= array_find($av_tools, function($el){
 								return $el->name==='tool_transcription';
 							});
+
 						// cell
 						$data[] = new dd_grid_cell_object((object)[
 							'type'			=> 'column',
@@ -263,15 +292,6 @@ declare(strict_types=1);
 									],
 									'tool_context' 	=> $tool_transcription_context
 								]
-								// 'options'		=> (object)[
-								// 	'tool_name'			=> 'tool_transcription',
-								// 	'section_tipo'		=> $section_tipo,
-								// 	'section_id'		=> $section_id,
-								// 	'component_tipo'	=> $component_tipo,
-								// 	'tag_id'			=> $tag_id,
-								// 	'section_top_tipo'	=> $section_top_tipo,
-								// 	'section_top_id'	=> $section_top_id
-								// ]
 							]]
 						]]); // array value
 

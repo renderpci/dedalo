@@ -55,10 +55,9 @@ inspector.prototype.init = async function(options) {
 	self.id								= 'inspector_' + options.section_tipo
 	self.model							= 'inspector'
 	self.section_tipo					= options.section_tipo
-	self.section_id						= options.section_id
 	self.mode							= 'edit'
 	self.node							= null
-	self.caller							= options.caller
+	self.caller							= options.caller // section instance
 
 	self.actived_component				= null
 
@@ -83,8 +82,7 @@ inspector.prototype.init = async function(options) {
 				// component_history remove content id exists
 				load_component_history(self, null)
 				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.innerHTML	= self.caller.label
-				self.selection_info_node.caller		= self.caller
+				self.selection_info_node.update_label(self.caller)
 			}
 		// activate_component (when user focus it in DOM)
 			self.events_tokens.push(
@@ -93,8 +91,7 @@ inspector.prototype.init = async function(options) {
 			function fn_activate_component(actived_component) {
 				self.actived_component = actived_component
 				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.innerHTML	= actived_component.label
-				self.selection_info_node.caller		= actived_component
+				self.selection_info_node.update_label(actived_component)
 				// component_info. Render tipo, model, translatable, etc.
 				render_component_info(self, actived_component)
 				// component_history. Load component history changes list

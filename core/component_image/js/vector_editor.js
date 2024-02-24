@@ -608,6 +608,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				const save = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button tool save',
+					title			: get_label.save || 'Save',
 					parent			: buttons_container
 				})
 				save.addEventListener('mouseup', (e) =>{

@@ -386,7 +386,6 @@ const get_buttons = function(self) {
 								section_tipo	: self.section_tipo,
 								sqo				: delete_sqo
 							})
-
 							break;
 						}
 						// button_import and button_trigger cases for compatibility with v5 ontology
