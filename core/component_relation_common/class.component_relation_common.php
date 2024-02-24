@@ -804,10 +804,8 @@ class component_relation_common extends component_common {
 						$normalized_locator = new locator($locator_copy);
 
 					// Add. Check if locator already exists
-						$ar_properties = ($translatable==='si')
-							? ['section_id','section_tipo','type','tag_id','lang']
-							: ['section_id','section_tipo','type','tag_id'];
-						$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
+						$locator_properties_to_check = $this->get_locator_properties_to_check();
+						$found = locator::in_array_locator($locator_copy, $safe_dato, $locator_properties_to_check);
 						if ($found===false) {
 							$safe_dato[] = $normalized_locator;
 						}else{
@@ -842,6 +840,21 @@ class component_relation_common extends component_common {
 
 		return true;
 	}//end set_dato
+
+
+
+	/**
+	* GET_LOCATOR_PROPERTIES_TO_CHECK
+	* return the properties to be check to compare locators
+	* @return array $locator_properties_to_check
+	*/
+	public function get_locator_properties_to_check() {
+
+		return (RecordObj_dd::get_translatable($this->tipo))
+			? ['section_id','section_tipo','type','tag_id','lang']
+			: ['section_id','section_tipo','type','tag_id'];
+
+	}//end get_locator_properties_to_check
 
 
 
@@ -973,7 +986,7 @@ class component_relation_common extends component_common {
 	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=[] ) : bool {
+	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=['section_tipo','section_id','from_component_tipo','type'] ) : bool {
 
 		// empty case
 			if (empty($locator_to_remove)) {
@@ -1021,7 +1034,7 @@ class component_relation_common extends component_common {
 					$equal = locator::compare_locators(
 						$current_locator_obj,
 						$locator,
-						['section_tipo','section_id','from_component_tipo','type'],//$ar_properties, // array check properties
+						$ar_properties, // array check properties
 						['paginated_key'] // $ar_exclude_properties (prevent errors in accidental saved paginated_key cases)
 					);
 					if ($equal===true) {
