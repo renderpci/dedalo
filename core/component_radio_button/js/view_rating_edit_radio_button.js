@@ -202,7 +202,7 @@ const update_status = (options) => {
 	const value		= options.value
 
  	for (const node of children) {
-		if (value && value.section_id >= node.section_id) {
+		if (value && parseInt(value.section_id) >= parseInt(node.section_id)) {
 			node.classList.add('rated')
 		}
 		else{
