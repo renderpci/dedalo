@@ -1960,6 +1960,14 @@ abstract class common {
 					$full_ddo_map,
 					$request_config_object->show->ddo_map
 				);
+				// hide
+				// if request config has hide property defined, add his ddo_map to be resolved
+				if( isset($request_config_object->hide) && isset($request_config_object->hide->ddo_map)){
+					$full_ddo_map = array_merge(
+						$full_ddo_map,
+						$request_config_object->hide->ddo_map
+					);
+				}
 			}//end foreach ($request_config_dedalo as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
@@ -2190,6 +2198,9 @@ abstract class common {
 											$children_choose	= isset($request_config_object->choose)
 												? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
 												: null;
+											$children_hide		= isset($request_config_object->hide)
+												? get_children_recursive($request_config_object->hide->ddo_map, $dd_object)
+												: null;
 
 										// select the current api_engine
 											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
@@ -2216,6 +2227,15 @@ abstract class common {
 												}
 												$new_request_config_object->choose->ddo_map  = $children_choose;
 											}
+											if (!empty($children_hide)) {
+												if (empty($new_request_config_object->hide)) {
+													$new_request_config_object->hide = (object)[
+														'ddo_map' => []
+													];
+												}
+												$new_request_config_object->hide->ddo_map  = $children_hide;
+											}
+
 									}//end foreach ($request_config as $request_config_object)
 
 								// Inject the request_config inside the component
