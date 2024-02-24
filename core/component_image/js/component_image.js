@@ -95,9 +95,9 @@ component_image.prototype.init = async function(options) {
 		self.canvas_node			= null
 
 	// editor init vars
-		self.ar_layer_loaded		= []
+		self.ar_layers				= []
 		self.vector_tools_loaded	= false
-		self.current_paper			= null
+		// self.current_paper			= null
 		self.vector_editor			= null
 
 
@@ -160,11 +160,7 @@ component_image.prototype.get_lib_data = function() {
 
 	const lib_data = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
 		? self.data.value[0].lib_data
-		: [{
-			layer_id		: 1,
-			layer_data		: [],
-			user_layer_name	: 'layer_1'
-		  }]
+		: null
 
 
 	return lib_data
@@ -210,33 +206,36 @@ component_image.prototype.load_vector_editor = async function(options) {
 			self.vector_editor = new vector_editor()
 			await self.vector_editor.init_canvas(self)
 
-			self.vector_editor.init_tools(self)
-			self.vector_editor.render_tools_buttons(self)
+			// self.vector_editor.init_tools(self)
 
 			self.vector_tools_loaded = true
 		}
 
 	// load all layers if the data is empty it create the first layer
-		if(self.ar_layer_loaded.length < 1){
-			// add the data from instance to the ar_layer_loaded, it control the all project layers that will showed in the vector editor
-			self.ar_layer_loaded = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
+		if(self.ar_layers.length < 1){
+			// add the data from instance to the ar_layers, it control the all project layers that will showed in the vector editor
+			self.ar_layers = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
 				? self.data.value[0].lib_data
 				: [{
-					layer_id	: 0,
-					layer_data	: []
-				  }]
+					layer_id		: 0,
+					layer_data		: [],
+					layer_color		: '#ffffff55',
+					user_layer_name	: 'raster',
+					name 			: 'layer_0',
+					visible 		: true
+				}]
 			// load all layers into the vector editor, when open the vector editor for first time load all layers but don't activate it.
-			const ar_layer_length = self.ar_layer_loaded.length
-			for (let i = 0; i < ar_layer_length; i++) {
-				const layer = self.ar_layer_loaded[i]
-				self.vector_editor.load_layer(self, layer)
-			}
+			// const ar_layer_length = self.ar_layers.length
+			// for (let i = 0; i < ar_layer_length; i++) {
+			// 	const layer = self.ar_layers[i]
+			// 	self.vector_editor.load_layer(self, layer)
+			// }
 		}
 
 	switch(load) {
 		case ('full'):
 			// active the visibility of the layers
-			const ar_layer = self.ar_layer_loaded
+			const ar_layer = self.ar_layers
 			for (let i = 0; i < ar_layer.length; i++) {
 				const layer = ar_layer[i]
 				self.vector_editor.activate_layer(self, layer, load)
@@ -244,9 +243,9 @@ component_image.prototype.load_vector_editor = async function(options) {
 			break;
 
 		case ('layer'):
-			const loaded_layer	= self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
-			// if the layer is not in the ar_layer_loaded, it will be new layer (ex:comes form new tag)
-			// create new layer data with the new id and set to ar_layer_loaded
+			const loaded_layer	= self.ar_layers.find((item) => item.layer_id===layer_id)
+			// if the layer is not in the ar_layers, it will be new layer (ex:comes form new tag)
+			// create new layer data with the new id and set to ar_layers
 			const layer = (typeof (loaded_layer)!=='undefined')
 			? loaded_layer
 			: (function(){
@@ -254,9 +253,9 @@ component_image.prototype.load_vector_editor = async function(options) {
 					layer_id	: layer_id,
 					layer_data	: []
 				}
-				self.ar_layer_loaded.push(new_layer)
+				self.ar_layers.push(new_layer)
 				// load the layer (if it's a new layer or existed layer, the method load_layer will check the duplicates)
-				self.vector_editor.load_layer(self, new_layer)
+				// self.vector_editor.load_layer(self, new_layer)
 				return new_layer
 			  })()
 			// active the layer
@@ -353,14 +352,14 @@ component_image.prototype.delete_layer = function(layer) {
 
 	const self = this
 
-	self.ar_layer_loaded = self.ar_layer_loaded.filter(item => item.layer_id!==layer.layer_id)
+	self.ar_layers = self.ar_layers.filter(item => item.layer_id!==layer.layer_id)
 
 	// update the data in the instance previous to save
 		const value =  typeof(self.data.value[0])!=='undefined'
 			? clone(self.data.value[0])
 			: {}
 
-		value.lib_data = self.ar_layer_loaded
+		value.lib_data = self.ar_layers
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
@@ -385,11 +384,10 @@ component_image.prototype.update_draw_data = function() {
 
 	const self = this
 
-	const project					= self.current_paper.project
 	//remove the layer_ string in the name and parse to int
-	const layer_id					= project.activeLayer.data.layer_id
+	const layer_id					= project.activeLayer.layer_id
 
-	const current_layer				= self.ar_layer_loaded.find((item) => item.layer_id === layer_id)
+	const current_layer				= self.ar_layers.find((item) => item.layer_id === layer_id)
 	current_layer.layer_data		= project.activeLayer.exportJSON({asString:false})
 
 	// current_layer.layer_color	= project.activeLayer.selectedColor.toCSS()
@@ -399,7 +397,7 @@ component_image.prototype.update_draw_data = function() {
 	const value =  typeof(self.data.value[0])!=='undefined'
 		? clone(self.data.value[0])
 		: {}
-	value.lib_data		= self.ar_layer_loaded
+	value.lib_data		= self.ar_layers
 	value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
 
 	// set the changed_data for update the component data and send it to the server for change when save
