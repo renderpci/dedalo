@@ -684,11 +684,24 @@ component_common.prototype.update_datum = async function(new_datum) {
 				for (let i = new_data_length - 1; i >= 0; i--) {
 
 					const data_item			= new_data[i]
-					const ar_data_elements	= self.datum.data.filter(el =>
-						el.tipo===data_item.tipo &&
-						el.section_tipo===data_item.section_tipo &&
-						el.section_id==data_item.section_id
-					)
+
+					const ar_data_elements	= self.datum.data.filter( function(el) {
+						if( el.tipo===data_item.tipo &&
+							el.section_tipo===data_item.section_tipo &&
+							parseInt(el.section_id)===parseInt(data_item.section_id)
+							){
+							// if the new data provides by dataframe it will has section_id_key
+							// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
+							if(el.section_id_key){
+								return (
+									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
+									// && el.tipo_key				=== data_item.tipo_key
+								)
+							}
+							return true
+						}
+						return false
+					})
 
 					const ar_data_el_len = ar_data_elements.length
 					if (ar_data_el_len>0) {
