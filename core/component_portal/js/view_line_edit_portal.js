@@ -13,10 +13,8 @@
 		activate_autocomplete,
 		get_buttons,
 		render_references,
-		render_dataframe_table
 	} from './render_edit_component_portal.js'
-
-
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 /**
 * VIEW_LINE_EDIT_PORTAL
@@ -317,6 +315,17 @@ view_line_edit_portal.render_column_remove = function(options) {
 						? next_offset
 						: 0
 				}
+			// delete_dataframe_record
+				await delete_dataframe({
+					self			: self,
+					section_id		: self.section_id,
+					section_tipo	: self.section_tipo,
+					section_id_key	: section_id,
+					// tipo_key		: self.tipo,
+					paginated_key	: paginated_key,
+					row_key			: false,
+				})
+
 
 			// fire the unlink_record method
 			// Note that this function refresh current instance
