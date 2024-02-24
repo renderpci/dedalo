@@ -2319,7 +2319,7 @@ abstract class common {
 								$ar_final_subdata = [];
 								foreach ($element_json->data as $value_obj) {
 
-									$value_obj->row_section_id	= $section_id;
+									$value_obj->row_section_id	= $current_locator->section_id;
 									$value_obj->parent_tipo		= $this->tipo;
 
 									$ar_final_subdata[] = $value_obj;
