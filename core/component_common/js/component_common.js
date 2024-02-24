@@ -1497,4 +1497,86 @@ export const get_dataframe = async function(options) {
 	return component_dataframe
 }// end get_dataframe
 
+
+
+/**
+* DELETE_DATAFRAME
+* Remove section in delete_mode 'delete_dataframe'
+* @param object options
+* {
+*	section_id : section_id
+* }
+* @return bool delete_section_result
+*/
+export const delete_dataframe = async function(options) {
+
+	const self = options.self
+
+	// options
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const section_id_key	= options.section_id_key
+		// const tipo_key			= options.tipo_key
+		const paginated_key		= options.paginated_key || false
+		const row_key			= options.row_key || false
+
+	// ddo_dataframe.
+	// check if the show has any ddo that call to any dataframe section.
+		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.model==='component_dataframe')
+
+		if(!ddo_dataframe){
+			return false
+		}
+
+		const all_instances = instances.get_all_instances()
+		const component_dataframe = all_instances.find(el =>
+			el.model							=== 'component_dataframe'
+			&& el.tipo							=== ddo_dataframe.tipo
+			&& el.section_tipo					=== ddo_dataframe.section_tipo
+			&& parseInt(el.section_id)			=== parseInt(section_id)
+			&& parseInt(el.data.section_id_key)	=== parseInt(section_id_key)
+			// && el.data.tipo_key					=== tipo_key
+		)
+
+	if(!component_dataframe){
+		return false
+	}
+
+	// hard_delete
+	// delete the target section linked to the component
+	// REMOVED because time machine needs to show the previous state, so, never deletes it
+		// const hard_delete = (component_dataframe.context.properties.hard_delete)
+		// 	? component_dataframe.context.properties.hard_delete
+		// 	: false
+
+		// if(hard_delete){
+
+		// 	if(component_dataframe.data.value && component_dataframe.data.value.length >= 1){
+
+		// 		const value = component_dataframe.data.value
+		// 		const value_length = value.length
+		// 		for (let i = value_length - 1; i >= 0; i--) {
+		// 			const current_value = value[i]
+
+		// 			component_dataframe.delete_linked_record({
+		// 				section_id : current_value.section_id,
+		// 				section_tipo : current_value.section_tipo,
+		// 			})
+		// 		}
+		// 	}
+		// }
+
+	// soft delete (default)
+	// unlink the section, delete the locator from his data, but don't delete the target section
+		component_dataframe.unlink_record({
+			paginated_key	: row_key,
+			row_key			: row_key,
+			section_id		: section_id
+		})
+
+}//end delete_dataframe
+
+
+
+
 // @license-end
