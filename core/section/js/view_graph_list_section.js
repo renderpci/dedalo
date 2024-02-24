@@ -8,7 +8,7 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import * as instances from '../../common/js/instances.js'
-	import {clone, url_vars_to_object, object_to_url_vars} from '../../common/js/utils/index.js'
+	import {clone, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'

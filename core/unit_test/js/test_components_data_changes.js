@@ -77,6 +77,9 @@ describe("COMPONENTS DATA CHANGES", async function() {
 							})
 							// console.log('changed_data:', changed_data);
 							// console.log('--- response:', response);
+							if (!response.result) {
+								console.error('response error:', response);
+							}
 
 						// api_returned_value
 							const api_returned_value = response.result.data[0] && response.result.data[0].value

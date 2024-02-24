@@ -123,7 +123,7 @@ const get_value_element = (i, data, self) => {
 													&& item.type ==='total')
 				// console.log('state_total:', state_total.value, state_total);
 
-				if(situation_total.value > 0 || state_total.value > 0){
+				if(situation_total && (situation_total.value > 0 || state_total.value > 0)) {
 					// node for the column situation
 					const situation = ui.create_dom_element({
 						element_type	: 'span',

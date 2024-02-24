@@ -128,7 +128,11 @@ view_coins_mosaic_portal.render = async function(self, options) {
 	// autocomplete
 		wrapper.addEventListener('click', function(e) {
 			e.stopPropagation()
-			activate_autocomplete(self, wrapper)
+			setTimeout(function(){
+				if (self.active) {
+					activate_autocomplete(self, wrapper)
+				}
+			}, 1)
 		})
 
 

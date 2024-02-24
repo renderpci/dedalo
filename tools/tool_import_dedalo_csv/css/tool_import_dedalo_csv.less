@@ -6,9 +6,8 @@
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
-@tool_main_color: #17a2b8;
-
+// local vars
+@tool_color: #17a2b8;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -29,6 +28,10 @@
 		}
 
 		>.content_data {
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			// generic box
 			.container {
@@ -54,6 +57,14 @@
 
 						.button.csv {
 							font-size: 1.25rem;
+
+							font-size: 1.5rem;
+							background-color: #a6a6a6;
+							margin-right: 0.5rem;
+
+							&.active {
+								background-color: #0075ff;
+							}
 						}
 
 						.checkbox_label {
@@ -65,10 +76,24 @@
 							}
 						}
 
+						.arrow_right {
+						    -webkit-mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
+							mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
+							background-color: #8e8e90;
+							margin-left: 1rem;
+							padding: 0.5rem;
+							right: 0;
+							transform: rotate(-90deg);
+
+							&.active {
+								background-color: #0075ff;
+							}
+    					}
+
 						.section_tipo_label {
 							display: flex;
 							align-items: center;
-							margin-left: 2rem;
+							margin-left: 1rem;
 							color: #a0a0a0;
 
 							>input {
@@ -79,6 +104,18 @@
 								border: 1px solid #d1d1d1;
 								border-radius: 3px;
 							}
+
+							>.section_name {
+								display: inline-block;
+								margin-left: 0.5rem;
+							}
+
+							>.section_label {
+								display: inline-block;
+								margin-left: 0.5rem;
+								font-weight: 600;
+								color: #424242;
+							}
 						}
 
 						.button.delete {
@@ -87,10 +124,11 @@
 						}
 					}//end >.file_line
 
-					>.warning {
+					.warning {
 						background-color: #f76c1c;
 						color: #fff;
 						padding: 0.5rem;
+						border-radius: 3px;
 					}
 
 					.info_text {
@@ -123,7 +161,7 @@
 						}
 						>.columns_body {
 							display: grid;
-							grid-template-columns: minmax(4rem,7rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(7rem,auto);
+							grid-template-columns: minmax(5rem,10rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(7rem,auto);
 							// grid-gap: 0.5rem;
 
 							>.columns_mapper_line {
@@ -311,8 +349,8 @@
 					margin-left: 0.75rem;
 					margin-bottom: 0.5rem;
 
-					// background-color: @tool_main_color;
-					// border-color: darken(@tool_main_color, 5%);
+					// background-color: @tool_color;
+					// border-color: darken(@tool_color, 5%);
 				}
 
 				>label {
@@ -328,5 +366,5 @@
 
 // modal header tool modification
 	.tool_header.tool_import_dedalo_csv {
-		background-color: @tool_main_color;
+		background-color: @tool_color;
 	}

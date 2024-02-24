@@ -116,14 +116,15 @@ abstract class JSON_RecordDataBoundObject {
 		// cache
 		// Si se le pasa un query que ya ha sido recibido, no se conecta con la db y se le devuelve el resultado del query idéntico ya calculado
 		// que se guarda en un array estático
-		static $ar_JSON_RecordDataObject_load_query_cache;
+		static $ar_JSON_RecordDataObject_load_query_cache = [];
 
 		# CACHE RUN-IN
 		$use_cache = $this->use_cache;
 		if ($use_cache===true) {
 			throw new Exception("Error Processing Request. cache is activated. Don't use cache here!!!!!!!", 1);
 		}
-		if($use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery])) {	// USING CACHE RUN-IN
+		// if($use_cache===true && isset($ar_JSON_RecordDataObject_load_query_cache[$strQuery])) {	// USING CACHE RUN-IN
+		if ($use_cache===true && array_key_exists($strQuery, $ar_JSON_RecordDataObject_load_query_cache)) {
 
 			$dato = $ar_JSON_RecordDataObject_load_query_cache[$strQuery];
 
@@ -667,12 +668,13 @@ abstract class JSON_RecordDataBoundObject {
 		# CACHE : Static var
 		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTARÁ CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
 		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
-		static $ar_RecordDataObject_query_search_cache;
+		static $ar_RecordDataObject_query_search_cache = [];
 
 		# CACHE_MANAGER : Using external cache manager (like redis)
 		// $use_cache = false; # Experimental (cache true for search)
 		$use_cache = $this->use_cache; # Default use class value
-		if ($use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery])) {
+		// if ($use_cache===true && isset($ar_RecordDataObject_query_search_cache[$strQuery])) {
+		if ($use_cache===true && array_key_exists($strQuery, $ar_RecordDataObject_query_search_cache)) {
 
 			# DATA IS IN CACHE . Return value form memory
 

@@ -479,7 +479,7 @@ class component_input_text extends component_common {
 					// }
 					// $new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
 
-				# override
+				// override
 				$query_object = $new_query_json;
 				break;
 			# NOT EMPTY (in any project lang data)
@@ -490,7 +490,7 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= $q_clean;
 				$query_object->unaccent	= false;
 
-				$logical_operator ='$and';
+				$logical_operator = '$and';
 				$new_query_json = new stdClass;
 					$new_query_json->$logical_operator = [$query_object];
 
@@ -506,12 +506,15 @@ class component_input_text extends component_common {
 						$ar_query_object[] = $clone;
 					}
 
-					$logical_operator ='$or';
+					$logical_operator = '$or';
 					$langs_query_json = new stdClass;
 						$langs_query_json->$logical_operator = $ar_query_object;
 
-				# override
-				$query_object = [$new_query_json, $langs_query_json];
+				// override
+				$logical_operator = '$and';
+				$final_query_json = new stdClass;
+					$final_query_json->$logical_operator = [$new_query_json, $langs_query_json];
+				$query_object = $final_query_json;
 				break;
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
@@ -545,7 +548,7 @@ class component_input_text extends component_common {
 						$ar_query_object[] = $clone;
 					}
 					$query_object = new stdClass();
-					$query_object->$logical_operator = $ar_query_object;
+						$query_object->$logical_operator = $ar_query_object;
 				}
 				break;
 			# IS SIMILAR
@@ -615,7 +618,7 @@ class component_input_text extends component_common {
 				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
 				$query_object->unaccent	= true;
 				break;
-		}//end switch (true) {
+		}//end switch (true)
 
 
 		return $query_object;

@@ -1235,9 +1235,10 @@ final class Ffmpeg {
 		$start_time=start_time();
 
 		// cache
-			static $media_streams_cache;
+			static $media_streams_cache = [];
 			$key = $source_file;
-			if (isset($media_streams_cache[$key])) {
+			// if (isset($media_streams_cache[$key])) {
+			if (array_key_exists($key, $media_streams_cache)) {
 				return $media_streams_cache[$key];
 			}
 
@@ -1250,7 +1251,7 @@ final class Ffmpeg {
 
 		// debug
 			debug_log(__METHOD__
-				. ' media_streams calculation  exec time: '.exec_time_unit($start_time).' ms'
+				. ' media_streams calculation exec time: '.exec_time_unit($start_time).' ms'
 				, logger::DEBUG
 			);
 

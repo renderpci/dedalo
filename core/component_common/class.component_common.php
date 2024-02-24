@@ -2210,6 +2210,7 @@ abstract class component_common extends common {
 	}//end get_ar_list_of_values
 
 
+
 	/**
 	* GET_LIST_OF_VALUES
 	* Retrieves all records of the target section and creates an object with the literal and his locator of the value.
@@ -3091,7 +3092,7 @@ abstract class component_common extends common {
 
 				$this->permissions = 2; // Allow all users to search with section info components
 
-			}elseif ( strpos($this->section_id, 'search') === 0){
+			}elseif ( strpos((string)$this->section_id, 'search') === 0){
 
 				$this->permissions = 2;
 
@@ -4055,6 +4056,7 @@ abstract class component_common extends common {
 	* CONFORM_IMPORT_DATA
 	* @param string $import_value
 	* @param string $column_name
+	* 	like 'test145_dmy'
 	* @return object $response
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {

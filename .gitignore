@@ -141,7 +141,6 @@ core/common/css/structure.css
 # js langs
 # core/common/js/lang/*
 
-.phpintel
 .vscode
 libs_dev
 
@@ -161,3 +160,7 @@ Readme.html
 
 # tools to exclude
 tool_leaflet_special_tools
+
+# phpunit test
+phpunit-results.*
+/lab

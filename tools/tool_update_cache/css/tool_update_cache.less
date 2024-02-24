@@ -3,9 +3,11 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
+// local vars
 @tool_color: #62866a;
 
 // tool wrapper
@@ -14,6 +16,10 @@
 
 		>.content_data {
 			position: relative;
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 
 			.section_info {
 				display: flex;
@@ -87,9 +93,9 @@
 			}
 
 			.spinner {
+				position: absolute;
 				top: calc(50% - 1rem);
 				left: calc(50% - 3.2rem);
-				border-top-color: @tool_color;
 			}
 		}//end content_data
 	}//end wrapper_tool

@@ -294,7 +294,7 @@ const get_buttons = (self) => {
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
-				title			: 'Add new input field',
+				title			: get_label.new || 'Add new input field',
 				parent			: fragment
 			})
 			button_add.addEventListener('click', function(e) {

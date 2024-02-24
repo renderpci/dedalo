@@ -53,7 +53,6 @@
 			$permissions,
 			true // bool add_request_config
 		);
-
 		$context[] = $this->context;
 
 
@@ -91,7 +90,7 @@
 					$item = $this->get_data_item($value);
 						$item->parent_tipo			= $tipo;
 						$item->parent_section_id	= $section_id;
-						
+
 					$data[] = $item;
 					break;
 

@@ -1,9 +1,10 @@
 <?php
-// $global_start_time = hrtime(true);
+declare(strict_types=1);
+$global_start_time = hrtime(true);
 // PREVENT_SESSION_LOCK
 define('PREVENT_SESSION_LOCK', true);
 // CONFIG
-include dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
+include_once dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
 
 // close session to unlock php tread
 session_write_close();
@@ -145,7 +146,7 @@ session_write_close();
 					})();
 				}
 				$obj->php_version	= PHP_VERSION;
-				$obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+				// $obj->php_version .= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 				$obj->php_memory	= to_string(ini_get('memory_limit'));
 				if ( strpos(DEDALO_HOST, 'localhost')===0 ) {
 					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
@@ -209,7 +210,7 @@ session_write_close();
 window.page_globals=<?php
 	echo (SHOW_DEBUG===true)
 		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
 ?>;
 const <?php // plain_vars
 echo implode(',', array_map(function ($v, $k) {
@@ -227,7 +228,7 @@ if (!include DEDALO_CORE_PATH . $lang_path) {
 }
 // json_elements_data array
 // echo ';'.PHP_EOL.js::get_json_elements_data();
-// debug_log('exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);
-?>
+debug_log('environment exec_time: ' .exec_time_unit($global_start_time,'ms').' ms', logger::DEBUG);
+
 
 // @license-end

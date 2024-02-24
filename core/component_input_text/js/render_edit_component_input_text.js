@@ -102,11 +102,20 @@ export const keyup_handler = function(e, key, self) {
 					refresh			: false
 				})
 		}else{
+
+			const safe_value = self.context.properties?.validation
+				? self.validate(e.target.value)
+				: e.target.value || ''
+
+			if (e.target.value!=safe_value) {
+				e.target.value = safe_value
+			}
+
 			// change data
 				const changed_data_item = Object.freeze({
 					action	: 'update',
 					key		: key,
-					value	: e.target.value || ''
+					value	: safe_value
 				})
 
 			// fix instance changed_data

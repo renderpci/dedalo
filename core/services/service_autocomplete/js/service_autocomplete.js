@@ -6,7 +6,7 @@
 
 // imports
 	import {data_manager} from '../../../common/js/data_manager.js'
-	import {event_manager} from '../../../common/js/event_manager.js'
+	// import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {common, get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
@@ -441,7 +441,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 		// self.sqo					= rqo_search.sqo
 
 	// search_sections. Mandatory. Always are defined, in a custom ul/li list or as default using wrapper dataset 'search_sections'
-		const search_sections		= self.ar_search_section_tipo
+		const search_sections = self.ar_search_section_tipo
 
 		rqo_search.sqo.section_tipo	= search_sections
 
@@ -498,10 +498,10 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 	// empty filter_free values case. Nothing to search
 		if(rqo===null){
 			return {
-				result	: {
-					data :[]
+				result : {
+					data : []
 				},
-				msg		: 'Empty result'
+				msg	: 'Empty result'
 			}
 		}
 
@@ -510,7 +510,7 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 	// verify source is in list mode to allow lang fallback
 		const source	= rqo.source
-		source.mode			= 'list'
+		source.mode		= 'list'
 	// set the autocomplete to true, it will used to assign permissions to at least 1 in the target section and components.
 		source.autocomplete	= true
 
@@ -535,13 +535,14 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 
 /**
 * SPLIT_Q
-* @return array ar_q
+* @return string q
+* @return object result
 */
 service_autocomplete.prototype.split_q = function(q) {
 
 	const ar_q = []
 
-	const regex =  /[^|]+/g // /"[^"]+"|'[^']+'|[^|\s]+|[^\s|]+/ug;
+	const regex = /[^|]+/g // /"[^"]+"|'[^']+'|[^|\s]+|[^\s|]+/ug;
 	const str 	= q
 	let m;
 

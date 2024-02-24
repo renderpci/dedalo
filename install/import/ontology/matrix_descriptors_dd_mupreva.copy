@@ -950,10 +950,8 @@ mupreva152	Dibuixos	termino	lg-cat
 mupreva152	Dibujos	termino	lg-spa
 mupreva1520	Context	termino	lg-cat
 mupreva1520	Contexto	termino	lg-spa
-mupreva1521	Calle / Área/ Sector	termino	lg-spa
 mupreva1521	Carrer / Àrea / Sector	termino	lg-cat
 mupreva1522	UE	termino	lg-cat
-mupreva1522	UE	termino	lg-spa
 mupreva1523	Objecte	termino	lg-cat
 mupreva1523	Objeto	termino	lg-spa
 mupreva1524	Material	termino	lg-cat
@@ -963,16 +961,13 @@ mupreva1525	Tècnica	termino	lg-cat
 mupreva1526	Temas	termino	lg-spa
 mupreva1526	Temes	termino	lg-cat
 mupreva1527	Lloc de producció / Ceca	termino	lg-cat
-mupreva1527	Lugar de producción / Ceca	termino	lg-spa
 mupreva1528	Autenticidad	termino	lg-spa
 mupreva1528	Autenticitat	termino	lg-cat
 mupreva1529	Cultura / Tipo de producción	termino	lg-spa
 mupreva1529	Cultura / Tipus de producció	termino	lg-cat
 mupreva153	Publicaciones	termino	lg-spa
 mupreva153	Publicacions	termino	lg-cat
-mupreva1530	Estado / Autoridad	termino	lg-spa
 mupreva1530	Estat / Autoritat	termino	lg-cat
-mupreva1531	Referencia bibliográfica	termino	lg-spa
 mupreva1531	Referència bibliogràfica	termino	lg-cat
 mupreva1532	Període	termino	lg-cat
 mupreva1532	Periodo	termino	lg-spa
@@ -981,6 +976,9 @@ mupreva1533	Any d'inici <> fin	termino	lg-cat
 mupreva1534	Calidad	termino	lg-spa
 mupreva1534	Qualitat	termino	lg-cat
 mupreva1535	Datació	termino	lg-cat
+mupreva1530	Estado / Autoridad	termino	lg-spa
+mupreva1527	Lugar de producción / Ceca	termino	lg-spa
+mupreva1531	Referencia bibliográfica	termino	lg-spa
 mupreva1535	Datación	termino	lg-spa
 mupreva1536	view_mosaic	termino	lg-spa
 mupreva1537	Administració	termino	lg-cat
@@ -1856,7 +1854,6 @@ mupreva2183	Cerca	termino	lg-cat
 mupreva2184	publicacion_interna	termino	lg-spa
 mupreva2185	entidad_label	termino	lg-spa
 mupreva2186	Volume	termino	lg-cat
-mupreva2186	Volume	termino	lg-spa
 mupreva2187	Data d'informatizació	termino	lg-cat
 mupreva2187	Fecha de informatización	termino	lg-spa
 mupreva2188	Títol en nomisma	termino	lg-cat
@@ -4464,3 +4461,6 @@ mupreva998	titulo	termino	lg-spa
 mupreva999	tipologia	termino	lg-spa
 mupreva2618	b	termino	lg-spa
 mupreva2625	reciclar..	termino	lg-spa
+mupreva1522	UE	termino	lg-spa
+mupreva1521	Calle / Área/ Sector	termino	lg-spa
+mupreva2186	Volume	termino	lg-spa

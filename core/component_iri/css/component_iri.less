@@ -98,17 +98,7 @@
 
 	&.view_line {
 		display: block;
-	}
 
-	&.view_print {
-		.content_value {
-			>.title {
-				padding-right: 1rem;
-			}
-		}
-	}
-
-	&.view_line {
 		>.content_data {
 			display: contents;
 
@@ -117,6 +107,10 @@
 
 				>.input_value {
 					flex: 1 1 100%;
+
+					&.url {
+						padding-right: 0px;
+					}
 				}
 
 				.button.hidden_button {
@@ -126,6 +120,12 @@
 		}
 	}
 
-
+	&.view_print {
+		.content_value {
+			>.title {
+				padding-right: 1rem;
+			}
+		}
+	}
 
 }//end .component_iri

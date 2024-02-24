@@ -57,11 +57,11 @@ use DeepCopy\DeepCopy;
 use PHPUnit\Event;
 use PHPUnit\Event\NoPreviousThrowableException;
 use PHPUnit\Event\TestData\MoreThanOneDataSetFromDataProviderException;
-use PHPUnit\Event\TestData\NoDataSetFromDataProviderException;
 use PHPUnit\Framework\Constraint\Exception as ExceptionConstraint;
 use PHPUnit\Framework\Constraint\ExceptionCode;
 use PHPUnit\Framework\Constraint\ExceptionMessageIsOrContains;
 use PHPUnit\Framework\Constraint\ExceptionMessageMatchesRegularExpression;
+use PHPUnit\Framework\MockObject\Exception as MockObjectException;
 use PHPUnit\Framework\MockObject\Generator\Generator as MockGenerator;
 use PHPUnit\Framework\MockObject\MockBuilder;
 use PHPUnit\Framework\MockObject\MockObject;
@@ -471,7 +471,6 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      * @throws CodeCoverageException
      * @throws Exception
      * @throws MoreThanOneDataSetFromDataProviderException
-     * @throws NoDataSetFromDataProviderException
      * @throws NoPreviousThrowableException
      * @throws ProcessIsolationException
      * @throws StaticAnalysisCacheNotConfiguredException
@@ -734,7 +733,14 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
             }
         }
 
-        $this->mockObjects = [];
+        try {
+            $this->mockObjects = [];
+        } catch (Throwable $t) {
+            Event\Facade::emitter()->testErrored(
+                $this->valueObjectForEvents(),
+                Event\Code\ThrowableBuilder::from($t),
+            );
+        }
 
         // Tear down the fixture. An exception raised in tearDown() will be
         // caught and passed on when no exception was raised before.
@@ -1201,8 +1207,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return MockObject&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      * @throws NoPreviousThrowableException
      */
     protected function createMock(string $originalClassName): MockObject
@@ -1229,7 +1235,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     /**
      * @psalm-param list<class-string> $interfaces
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
+     * @throws MockObjectException
      */
     protected function createMockForIntersectionOfInterfaces(array $interfaces): MockObject
     {
@@ -1253,8 +1259,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return MockObject&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      * @throws NoPreviousThrowableException
      */
     protected function createConfiguredMock(string $originalClassName, array $configuration): MockObject
@@ -1279,8 +1285,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return MockObject&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      */
     protected function createPartialMock(string $originalClassName, array $methods): MockObject
     {
@@ -1309,8 +1315,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return MockObject&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5240
      */
@@ -1340,8 +1346,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return MockObject&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5241
      */
@@ -1371,7 +1377,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     /**
      * Creates a mock object based on the given WSDL file.
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
+     * @throws MockObjectException
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5242
      */
@@ -1427,8 +1433,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-param trait-string $traitName
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5243
      */
@@ -1457,7 +1463,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-param trait-string $traitName
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
+     * @throws MockObjectException
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5244
      */
@@ -2239,8 +2245,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return Stub&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      * @throws NoPreviousThrowableException
      */
     protected static function createStub(string $originalClassName): Stub
@@ -2265,7 +2271,7 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
     /**
      * @psalm-param list<class-string> $interfaces
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
+     * @throws MockObjectException
      */
     protected static function createStubForIntersectionOfInterfaces(array $interfaces): Stub
     {
@@ -2285,8 +2291,8 @@ abstract class TestCase extends Assert implements Reorderable, SelfDescribing, T
      *
      * @psalm-return Stub&RealInstanceType
      *
-     * @throws \PHPUnit\Framework\MockObject\Exception
      * @throws InvalidArgumentException
+     * @throws MockObjectException
      * @throws NoPreviousThrowableException
      */
     final protected static function createConfiguredStub(string $originalClassName, array $configuration): Stub

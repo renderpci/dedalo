@@ -36,6 +36,9 @@ export const component_select = function(){
 	this.tools
 
 	this.datum
+
+	// ui
+	this.minimum_width_px = 120 // integer pixels
 }//end component_select
 
 

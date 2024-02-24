@@ -70,6 +70,13 @@ const add_events = (wrapper, self) => {
 			// prevent bubble event to container element
 			return false
 		})
+	// click
+		wrapper.addEventListener('click', function(e){
+			e.stopPropagation()
+			//e.preventDefault()
+			// prevent bubble event to container element
+			return false
+		})
 
 
 	return true
@@ -130,7 +137,7 @@ const get_content_data = async function(self) {
 						inner_html		: get_label.show_all || 'Show all',
 						parent			: fragment
 					})
-					show_all_button.addEventListener('click', function(e) {
+					show_all_button.addEventListener('mousedown', function(e) {
 						e.stopPropagation()
 						// fix show_all_status (store the previous limit value to use wen reset)
 						self.show_all_status = {
@@ -156,7 +163,8 @@ const get_content_data = async function(self) {
 					parent			: paginator_div_links
 				})
 				if(page_number>1) {
-					paginator_first.addEventListener('mousedown',function(){
+					paginator_first.addEventListener('mousedown',function(e){
+						e.stopPropagation()
 						self.paginate(offset_first)
 					})
 				}else{
@@ -170,7 +178,8 @@ const get_content_data = async function(self) {
 					parent			: paginator_div_links
 				})
 				if(prev_page_offset>=0) {
-					paginator_prev.addEventListener('mousedown',function(){
+					paginator_prev.addEventListener('mousedown',function(e){
+						e.stopPropagation()
 						self.paginate(offset_prev)
 					})
 				}else{
@@ -184,7 +193,8 @@ const get_content_data = async function(self) {
 					parent			: paginator_div_links
 				})
 				if(next_page_offset<total) {
-					paginator_next.addEventListener('mousedown',function(){
+					paginator_next.addEventListener('mousedown',function(e){
+						e.stopPropagation()
 						self.paginate(offset_next)
 					})
 				}else{
@@ -198,7 +208,8 @@ const get_content_data = async function(self) {
 					parent			: paginator_div_links
 				})
 				if(page_number<total_pages) {
-					paginator_last.addEventListener('mousedown',function(){
+					paginator_last.addEventListener('mousedown',function(e){
+						e.stopPropagation()
 						self.paginate(offset_last)
 					})
 				}else{
@@ -228,7 +239,7 @@ const get_content_data = async function(self) {
 				inner_html		: get_label.reset || 'Reset',
 				parent			: fragment
 			})
-			reset_paginator_button.addEventListener('click', function(e) {
+			reset_paginator_button.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
 				// trigger show_all (publish a event listened by the section)
 				self.reset_paginator( self.show_all_status.limit )

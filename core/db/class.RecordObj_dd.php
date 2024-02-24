@@ -364,10 +364,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	public static function get_termino_by_tipo(string $terminoID, string $lang=null, bool $from_cache=false, bool $fallback=true) : ?string {
 
 		// cache
-			static $termino_by_tipo;
-			$cache_uid = $terminoID . '_' . $lang . (int)$fallback;
-			if (isset($termino_by_tipo[$cache_uid])) {
-				return $termino_by_tipo[$cache_uid];
+			static $termino_by_tipo_cache = [];
+			$cache_uid = $terminoID . '_' . $lang . '_' . (int)$fallback;
+			// if (isset($termino_by_tipo_cache[$cache_uid])) {
+			if (array_key_exists($cache_uid, $termino_by_tipo_cache)) {
+				return $termino_by_tipo_cache[$cache_uid];
 			}
 
 		// descriptor search
@@ -379,7 +380,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 			);
 
 		// cache
-			$termino_by_tipo[$cache_uid] = $result;
+			$termino_by_tipo_cache[$cache_uid] = $result;
 
 
 		return $result;
@@ -479,6 +480,15 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 			elseif ($model==='component_security_tools') {
 				$model='component_check_box';
+			}
+			elseif ($model==='component_dataframe') {
+				if (!class_exists('component_dataframe', false)) {
+					debug_log(__METHOD__
+						. " Your Ontology version do not support component_dataframe ! Ignored model resolution (used box elements)"
+						, logger::ERROR
+					);
+					$model='box elements';
+				}
 			}
 
 		return $model;

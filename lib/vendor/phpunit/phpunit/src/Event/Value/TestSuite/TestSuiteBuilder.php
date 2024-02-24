@@ -105,9 +105,9 @@ final class TestSuiteBuilder
     /**
      * @psalm-param list<Test> $tests
      */
-    private static function process(FrameworkTestSuite $testSuite, &$tests): void
+    private static function process(FrameworkTestSuite $testSuite, array &$tests): void
     {
-        foreach ($testSuite->tests() as $test) {
+        foreach ($testSuite->getIterator() as $test) {
             if ($test instanceof FrameworkTestSuite) {
                 self::process($test, $tests);
 

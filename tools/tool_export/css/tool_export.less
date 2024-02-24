@@ -11,9 +11,15 @@
 @tool_color : #7152a5;
 @tool_color_light : #faf9f9;
 
-
-// wrapper
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_export {
+
+		@media print {
+		    .tool_header, .no_print, .no_print * {
+		        display: none !important;
+		    }
+		}
 
 		>.content_data {
 			width: 100%;

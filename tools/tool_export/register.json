@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 13,
-              "time": 65047845471,
-              "year": 2023,
-              "month": 11,
-              "minute": 57,
-              "second": 51
+              "day": 22,
+              "hour": 12,
+              "time": 65057518074,
+              "year": 2024,
+              "month": 2,
+              "minute": 47,
+              "second": 54
             }
           }
         ]
@@ -90,8 +90,23 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>Exportació de dades a diferents formats, csv, excel, html, etc</p>"
+        ],
+        "lg-deu": [
+          "<p>Datenexport in verschiedene Formate, CSV, Excel, HTML usw</p>"
+        ],
+        "lg-ell": [
+          "<p>Εξαγωγή δεδομένων σε διαφορετικές μορφές, csv, excel, html κ.λπ</p>"
+        ],
         "lg-eng": [
           "Data export to different formats, csv, excel, html, etc"
+        ],
+        "lg-nep": [
+          "<p>विभिन्न ढाँचाहरूमा डाटा निर्यात, csv, एक्सेल, html, आदि</p>"
+        ],
+        "lg-spa": [
+          "<p>Exportación de datos a diferentes formatos, csv, excel, html, etc.</p>"
         ]
       }
     },
@@ -112,6 +127,9 @@
         ],
         "lg-ita": [
           "Esportazione"
+        ],
+        "lg-nep": [
+          "निर्यात गर्नुहोस्"
         ],
         "lg-por": [
           "Exportação"
@@ -134,7 +152,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -216,7 +234,7 @@
   "section_id": 16,
   "created_date": "2023-10-09 19:37:41",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-03 13:57:51",
+  "modified_date": "2024-02-22 12:47:54",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

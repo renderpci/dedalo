@@ -13,6 +13,7 @@ use const PHP_EOL;
 use function assert;
 use function class_exists;
 use function defined;
+use function error_clear_last;
 use function extension_loaded;
 use function get_include_path;
 use function hrtime;
@@ -26,7 +27,6 @@ use AssertionError;
 use PHPUnit\Event;
 use PHPUnit\Event\NoPreviousThrowableException;
 use PHPUnit\Event\TestData\MoreThanOneDataSetFromDataProviderException;
-use PHPUnit\Event\TestData\NoDataSetFromDataProviderException;
 use PHPUnit\Metadata\Api\CodeCoverage as CodeCoverageMetadataApi;
 use PHPUnit\Metadata\Parser\Registry as MetadataRegistry;
 use PHPUnit\Runner\CodeCoverage;
@@ -62,7 +62,6 @@ final class TestRunner
      * @throws \SebastianBergmann\CodeCoverage\InvalidArgumentException
      * @throws CodeCoverageException
      * @throws MoreThanOneDataSetFromDataProviderException
-     * @throws NoDataSetFromDataProviderException
      * @throws UnintentionallyCoveredCodeException
      */
     public function run(TestCase $test): void
@@ -83,6 +82,8 @@ final class TestRunner
         $incomplete = false;
         $risky      = false;
         $skipped    = false;
+
+        error_clear_last();
 
         if ($this->shouldErrorHandlerBeUsed($test)) {
             ErrorHandler::instance()->enable();

@@ -2459,6 +2459,7 @@ class component_relation_common extends component_common {
 	* @return array $ar_section_tipo
 	*/
 	public static function get_request_config_section_tipo(array $ar_section_tipo_sources, $retrieved_section_tipo=null) : array {
+		$start_time=start_time();
 
 		$ar_section_tipo = [];
 		foreach ($ar_section_tipo_sources as $source_item) {
@@ -2606,6 +2607,15 @@ class component_relation_common extends component_common {
 
 		// remove duplicates
 		$ar_section_tipo = array_unique($ar_section_tipo);
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				// dump($ar_section_tipo, ' ar_section_tipo ++ '.exec_time_unit($start_time,'ms').' ms');
+				// debug_log(
+				// 	'------- resolve request_config_section_tipo ------- '.exec_time_unit($start_time,'ms').' ms',
+				// 	logger::DEBUG
+				// );
+			}
 
 
 		return $ar_section_tipo;
@@ -2850,6 +2860,7 @@ class component_relation_common extends component_common {
 	*  sample JSON stringified array of locators:
 	*  [{"section_tipo":"ts1","section_id":"273","from_component_tipo":"hierarchy36"}]
 	* @param string $column_name
+	* 	like: 'hierarchy36' or 'hierarchy36_ts1'
 	* @return object $response
 	*/
 	public function conform_import_data(string $import_value, string $column_name) : object {

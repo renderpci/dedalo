@@ -411,20 +411,27 @@
 
 	// lang selectors
 		>.dedalo_aplication_langs_selector {
+			display: inline-block;
+			background-color: #2d2d2d;
 			height: auto;
 			max-width: 99.9%;
-			padding-bottom: 2px;
-			padding-right: 1rem;
+
+			padding-left: 0.6em;
+			padding-right: 1em;
+
 			color: #cccccc;
 			border: none;
 			cursor: pointer;
 			font-size: 1.05rem;
 
+			height: var(--menu_heigth);
+			line-height: var(--menu_heigth);
+
 			-webkit-appearance: none;
 			-moz-appearance: none;
 			appearance: none;
 
-			background: url('../../themes/default/select_invert.svg');
+			background-image: url('../../themes/default/select_invert.svg');
 			background-position: top 50% right 3px;
 			background-size: 7px 12px;
 			background-repeat: no-repeat;

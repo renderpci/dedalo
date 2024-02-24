@@ -33,6 +33,9 @@ export const component_filter = function(){
 	this.node			= null
 
 	this.tools			= null
+
+	// ui
+	this.minimum_width_px = 250 // integer pixels
 }//end component_filter
 
 

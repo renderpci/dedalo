@@ -3,16 +3,25 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
-
+// local vars
+@tool_color: #be0f1d;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_propagate_component_data {
 
 		>.content_data {
+
+			.spinner {
+				position: absolute;
+				border-top-color: @tool_color;
+				top: calc(50% - 1rem);
+				left: calc(50% - 3.2rem);
+			}
 
 			>.section_info {
 				display: flex;
@@ -92,5 +101,5 @@
 
 // modal header tool modification
 	.tool_header.tool_propagate_component_data {
-		background-color: #be0f1d;
+		background-color: @tool_color;
 	}

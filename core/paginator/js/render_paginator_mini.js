@@ -71,6 +71,13 @@ const add_events = (wrapper, self) => {
 			// prevent buble event to container element
 			return false
 		})
+	// click
+		wrapper.addEventListener('click', function(e){
+			e.stopPropagation()
+			//e.preventDefault()
+			// prevent buble event to container element
+			return false
+		})
 
 
 	return true

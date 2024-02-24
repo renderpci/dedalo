@@ -20,8 +20,8 @@ abstract class map extends stdClass {
 	*/
 	public static function resolve_geolocation( $term_id, $lang ) {
 
-		# Cahe resolved
-		$cache_key = $term_id.'_'.$lang;
+		# Cache resolved
+		$cache_key = $term_id .'_'. $lang;
 		static $resolved_geo = array();
 		if (isset($resolved_geo[$cache_key])) {
 			return $resolved_geo[$cache_key];
@@ -29,8 +29,8 @@ abstract class map extends stdClass {
 
 		# Get all thesaurus geo terms resolved
 		$options = new stdClass();
-			$options->ar_term_id 	= $term_id;
-			$options->lang 			= $lang;
+			$options->ar_term_id	= $term_id;
+			$options->lang			= $lang;
 
 		$rows_data = web_data::get_thesaurus_term($options);
 			#dump($rows_data, ' $rows_data ++ '.to_string($options));

@@ -52,7 +52,7 @@ class tool_export extends tool_common {
 
 		// fix sqo
 			// add filter from saved session if exists
-			$sqo_id = implode('_', ['section', $section_tipo]); // cache key sqo_id
+			$sqo_id = section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (!isset($sqo->filter)
 				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
 				&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter)
@@ -112,6 +112,8 @@ class tool_export extends tool_common {
 	* @return dd_grid object $result
 	*/
 	public static function get_export_grid(object $options) : object {
+
+		set_time_limit ( 10800 );  // 3 hours (60x60x3)
 
 		// response
 			$response = new stdClass();
@@ -173,9 +175,10 @@ class tool_export extends tool_common {
 		foreach ($records as $row) {
 
 			$ar_row_value = $this->get_grid_value($ar_ddo_map, $row);
-
 			// take the maximum number of rows (the rows can has 1, 2, 55 rows and we need the highest value, 55)
-			$row_count = max($ar_row_value->ar_row_count);
+			$row_count = !empty($ar_row_value->ar_row_count)
+				? max($ar_row_value->ar_row_count)
+				: 0;
 			// store the result to sum with the head rows
 			$rows_max_count[] = $row_count;
 

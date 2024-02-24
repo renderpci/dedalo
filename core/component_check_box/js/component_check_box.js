@@ -30,6 +30,9 @@ export const component_check_box = function(){
 	this.parent
 	this.node
 	this.id
+
+	// ui
+	this.minimum_width_px = 100 // integer pixels
 }//end component_check_box
 
 
@@ -176,6 +179,19 @@ component_check_box.prototype.change_handler = async function(options) {
 
 	return true
 }//end change_handler
+
+
+
+/**
+* FOCUS_FIRST_INPUT
+* Captures ui.component.activate calls
+* to prevent default behavior
+* @return bool
+*/
+component_check_box.prototype.focus_first_input = function() {
+
+	return true
+}//end focus_first_input
 
 
 

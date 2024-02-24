@@ -113,8 +113,8 @@ render_menu.prototype.edit = async function() {
 			const ontology_link = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'ontology top_item',
-				parent			: fragment,
-				text_content	: 'Ontology'
+				inner_html		: get_label.ontology || 'Ontology',
+				parent			: fragment
 			})
 			// set pointers
 			self.ontology_link = ontology_link

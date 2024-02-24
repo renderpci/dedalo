@@ -230,7 +230,8 @@ const get_content_value = (i, current_value, self) => {
 						tipo			: target_section_tipo,
 						id				: target_section_id,
 						mode			: 'edit',
-						menu			: false
+						menu			: false,
+						session_save	: false
 					})
 					open_window({
 						url		: url,
@@ -376,7 +377,6 @@ const get_buttons = (self) => {
 	// button edit (go to target section)
 		if(!is_inside_tool) {
 
-
 			for (let i = 0; i < target_sections_length; i++) {
 
 				const item = target_sections[i]
@@ -384,11 +384,11 @@ const get_buttons = (self) => {
 				// button edit
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
-						: item.label
+						: item.label || ''
 					const button_edit = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button pen',
-						title			: label,
+						title			: label.replace(/<\/?[^>]+(>|$)/g, ""),
 						parent			: fragment
 					})
 					button_edit.addEventListener('click', function(e){

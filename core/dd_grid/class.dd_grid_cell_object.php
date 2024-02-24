@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 *  DD_GRID_CELL_OBJECT
 *
@@ -108,7 +109,7 @@ class dd_grid_cell_object {
 
 	// string id. As "oh1_id" - the unique id of the column to identify data inside the same column
 	public $id;
-	// string class_list. As "caption bold"
+	// string class_list. CSS selector As "caption bold"
 	public $class_list;
 	// string type. row column - type of the element
 	public $type;
@@ -140,7 +141,7 @@ class dd_grid_cell_object {
 
 	// render_label
 	public $render_label;
-	// column.
+	// string|null column
 	public $column;
 	// array ar_columns_obj
 	public $ar_columns_obj;
@@ -176,10 +177,13 @@ class dd_grid_cell_object {
 			return;
 		}
 
-		# Nothing to do on construct (for now)
+		// Nothing to do on construct (for now)
 		if (!is_object($options)) {
-			// trigger_error("wrong data format. Object expected. Given: ".gettype($options));
-			debug_log("ERROR: wrong data format. Object expected. Given: ".gettype($options), logger::ERROR);
+			debug_log( __METHOD__
+				. " ERROR: wrong data format. Object expected. Given type: " . PHP_EOL
+				. ' options type: ' . gettype($options)
+				, logger::ERROR
+			);
 		}else{
 			// set all properties
 			foreach ($options as $key => $value) {
@@ -214,11 +218,22 @@ class dd_grid_cell_object {
 
 
 	/**
-	* SET_CLASS_LIST
-	* @param string $value
+	* SET_ID
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_class_list(string $value) : void {
+	public function set_id(?string $value) : void {
+		$this->id = $value;
+	}//end set_id
+
+
+
+	/**
+	* SET_CLASS_LIST
+	* @param string|null $value
+	* @return void
+	*/
+	public function set_class_list(?string $value) : void {
 		$this->class_list = $value;
 	}//end set_class_list
 
@@ -226,10 +241,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_TYPE
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_type(string $value) : void {
+	public function set_type(?string $value) : void {
 		$this->type = $value;
 	}//end set_class_list
 
@@ -237,10 +252,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_LABEL
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_label(string $value) : void {
+	public function set_label(?string $value) : void {
 		$this->label = $value;
 	}//end set_label
 
@@ -248,10 +263,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_ROW_COUNT
-	* @param int $value
+	* @param int|null $value
 	* @return void
 	*/
-	public function set_row_count(int $value) : void {
+	public function set_row_count(?int $value) : void {
 		$this->row_count = $value;
 	}//end set_row_count
 
@@ -259,10 +274,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_COLUMN_COUNT
-	* @param int $value
+	* @param int|null $value
 	* @return void
 	*/
-	public function set_column_count(int $value) {
+	public function set_column_count(?int $value) {
 		$this->column_count = $value;
 	}//end set_column_count
 
@@ -283,10 +298,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_COLUMN_LABELS
-	* @param array $value
+	* @param array|null $value
 	* @return void
 	*/
-	public function set_column_labels(array $value) : void  {
+	public function set_column_labels(?array $value) : void  {
 		$this->column_labels = $value;
 	}//end set_column_labels
 
@@ -294,10 +309,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_FIELDS_SEPARATOR
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_fields_separator(string $value) : void  {
+	public function set_fields_separator(?string $value) : void  {
 		$this->fields_separator = $value;
 	}//end set_fields_separator
 
@@ -305,10 +320,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_RECORDS_SEPARATOR
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_records_separator(string $value) : void  {
+	public function set_records_separator(?string $value) : void  {
 		$this->records_separator = $value;
 	}//end set_records_separator
 
@@ -316,10 +331,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_CELL_TYPE
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_cell_type(string $value) : void {
+	public function set_cell_type(?string $value) : void {
 		$this->cell_type = $value;
 	}//end set_cell_type
 
@@ -327,10 +342,10 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_ACTION
-	* @param string $value
+	* @param string|null $value
 	* @return void
 	*/
-	public function set_action(string $value) : void {
+	public function set_action(?string $value) : void {
 		$this->action = $value;
 	}//end set_action
 
@@ -349,7 +364,7 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_FALLBACK_VALUE
-	* @param array $value
+	* @param array|null $value
 	* @return void
 	*/
 	public function set_fallback_value(?array $value) : void {
@@ -361,7 +376,7 @@ class dd_grid_cell_object {
 	/**
 	* SET_DATA
 	* Optional raw data used by component_iri
-	* @param array $value
+	* @param array|null $value
 	* @return void
 	*/
 	public function set_data(?array $value) : void {
@@ -372,12 +387,23 @@ class dd_grid_cell_object {
 
 	/**
 	* SET_RENDER_LABEL
-	* @param bool $value
+	* @param bool|null $value
 	* @return void
 	*/
-	public function set_render_label(bool $value) : void {
+	public function set_render_label(?bool $value) : void {
 		$this->render_label = $value;
 	}//end set_render_label
+
+
+
+	/**
+	* SET_COLUMN
+	* @param string|null $value
+	* @return void
+	*/
+	public function set_column(?string $value) : void {
+		$this->column = $value;
+	}//end set_column
 
 
 

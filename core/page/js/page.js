@@ -89,7 +89,7 @@ page.prototype.init = async function(options) {
 			// options
 				const source			= user_navigation_options.source
 				const sqo				= user_navigation_options.sqo || null
-				const event_in_history	= user_navigation_options.event_in_history || false
+				const event_in_history	= user_navigation_options.event_in_history ?? false
 
 			// check_unsaved_data
 				const result = await check_unsaved_data({
@@ -216,11 +216,18 @@ page.prototype.init = async function(options) {
 								// const url = "?tipo="+ current_tipo + '&m=' + source.mode
 
 								// url search. Append section_id if exists
-									const url_vars = url_vars_to_object(location.search)
+									const current_url_vars = url_vars_to_object(location.search)
+									const url_vars = {} // url_vars_to_object(location.search)
 										  url_vars.tipo = current_tipo
 										  url_vars.mode = source.mode
 									if(source.mode==='list' && url_vars.id){
 										delete url_vars.id
+									}
+									if (typeof current_url_vars.menu!=='undefined') {
+										url_vars.menu = current_url_vars.menu
+									}
+									if (typeof current_url_vars.session_save!=='undefined') {
+										url_vars.session_save = current_url_vars.session_save
 									}
 									const url = '?' + object_to_url_vars(url_vars)
 
@@ -546,9 +553,8 @@ page.prototype.add_events = function() {
 
 				case evt.key==='Escape':
 					// inactive user activated component
-						if (ui.component.component_active) {
-							ui.component.deactivate(ui.component.component_active)
-							ui.component.component_active = null
+						if (page_globals.component_active) {
+							ui.component.deactivate(page_globals.component_active)
 						}
 					break;
 

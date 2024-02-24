@@ -77,7 +77,7 @@ $start_time=start_time();
 							$attributes 	= $samlResponse->getAttributes();
 							$code_attr_name = SAML_CONFIG['code'];
 							$code           = $attributes[$code_attr_name];
-							$client_ip 		= common::get_client_ip();
+							$client_ip 		= get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
 
 						// Login_SAML
@@ -167,7 +167,7 @@ $start_time=start_time();
 							$attributes 	= $samlResponse->getAttributes();
 							$code_attr_name = SAML_CONFIG['code'];
 							$code           = $attributes[$code_attr_name];
-							$client_ip 		= common::get_client_ip();
+							$client_ip 		= get_client_ip();
 							error_log("SAMLResponse code: ".print_r($code, true).", client_ip: ".print_r($client_ip, true));
 
 						// Login_SAML

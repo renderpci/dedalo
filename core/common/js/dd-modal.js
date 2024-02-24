@@ -46,10 +46,11 @@ class DDModal extends HTMLElement {
 
 			/* Modal Content */
 				.modal-content {
+					display: grid;
 					position: relative;
 					background-color: #fefefe;
 					margin: auto;
-					margin-top: 3.5vh;
+					top: 3.5vh;
 					padding: 0;
 					padding-bottom: 1.5rem;
 					width: 80%;
@@ -69,13 +70,18 @@ class DDModal extends HTMLElement {
 					animation-name: animatetop;
 					animation-duration: 0.4s;
 					*/
-					display: grid;
 					/*grid-template-rows: minmax(4rem, 4rem) auto minmax(4rem, 4rem);*/
 				}
 				@media screen and (max-width: 1024px) {
 					.modal-content {
 						width: 98%;
 					}
+				}
+				.modal-content.center {
+					position: absolute;
+					left: 50%;
+					top: 50%;
+					transform: translate(-50%, -50%);
 				}
 				.dragging {
 					cursor: move;
@@ -111,7 +117,7 @@ class DDModal extends HTMLElement {
 					cursor: pointer;
 				}
 
-			/* The Close Button */
+			/* Close Button */
 				.close_modal {
 					color: white;
 					font-size: 1.75rem;
@@ -269,6 +275,8 @@ class DDModal extends HTMLElement {
 		document.addEventListener('keyup', this.detect_key)
 		window.modal = this // fix modal in window for easy access to close
 
+		this.modal_content = this.shadowRoot.querySelector(".modal-content")
+
 		// draggable modal feature
 			const self = this
 
@@ -282,7 +290,14 @@ class DDModal extends HTMLElement {
 
 			// header is the drag area
 			const header = this.shadowRoot.querySelector(".modal-header")
-			header.addEventListener('mousedown', function(e) {
+			header.addEventListener('mousedown', (e) => {
+
+				// re-calculate the top style based on current position (centered case)
+					if (this.modal_content.classList.contains('center')) {
+						const modal_content_dimensions = this.modal_content.getBoundingClientRect()
+						this.modal_content.style.top = modal_content_dimensions.top + 'px'
+						this.modal_content.classList.remove('center')
+					}
 
 				const path = e.composedPath();
 
@@ -294,6 +309,7 @@ class DDModal extends HTMLElement {
 						clickedDragger = true;
 					}
 					else if (clickedDragger===true && path[i].classList.contains('draggable')) {
+
 						// draggable is set (all modal-content)
 						self.drag_data.target = path[i];
 						self.drag_data.target.classList.add('dragging');
@@ -312,11 +328,10 @@ class DDModal extends HTMLElement {
 			});
 
 			// mouseup
-				document.addEventListener('mouseup', this.mouseup)
+			document.addEventListener('mouseup', this.mouseup)
 
 			// mousemove
-				document.addEventListener('mousemove', this.mousemove)
-
+			document.addEventListener('mousemove', this.mousemove)
 	}
 	disconnectedCallback() {
 		// this.shadowRoot.querySelector("button").removeEventListener('click', this._showModal);
@@ -524,6 +539,7 @@ class DDModal extends HTMLElement {
 	*/
 	detect_key(e) {
 		if (e.keyCode===27 && window.modal) {
+			e.preventDefault()
 			window.modal._closeModal()
 			window.modal = null
 			return
@@ -540,7 +556,7 @@ class DDModal extends HTMLElement {
 		const self = window.modal
 
 		// no target case (mouse position changes but target is null or undefined)
-			if (!self.drag_data.target) {
+			if (!self.drag_data || !self.drag_data.target) {
 				return;
 			}
 

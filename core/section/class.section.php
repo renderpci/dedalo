@@ -1657,10 +1657,11 @@ class section extends common {
 		# AR_MODEL_NAME_REQUIRED cast 'ar_model_name_required' to array
 		$ar_model_name_required = (array)$ar_model_name_required;
 
-		static $cache_ar_children_tipo;
+		static $cache_ar_children_tipo = [];
 		$cache_uid = $section_tipo.'_'.serialize($ar_model_name_required).'_'.(int)$resolve_virtual.'_'.(int)$recursive;
 		if ($from_cache === true) {
-			if (isset($cache_ar_children_tipo[$cache_uid])) {
+			// if (isset($cache_ar_children_tipo[$cache_uid])) {
+			if (array_key_exists($cache_uid, $cache_ar_children_tipo)) {
 				return $cache_ar_children_tipo[$cache_uid];
 			}
 			// elseif (isset($_SESSION['dedalo']['config']['ar_children_tipo_by_modelo_name_in_section'][$cache_uid])) {
@@ -2950,6 +2951,16 @@ class section extends common {
 				return false;
 			}
 
+		// paginated_key. Remove possible property paginated_key if it exists
+			if (isset($locator->paginated_key)) {
+				debug_log(__METHOD__
+					. " Removing temporal property 'paginated_key' from locator " . PHP_EOL
+					. ' locator: ' . to_string($locator)
+					, logger::ERROR
+				);
+				unset($locator->paginated_key);
+			}
+
 		// relations. section relations data. Could be empty
 			$relations = $this->get_relations( $relations_container );
 			if (!empty($relations)) {
@@ -3171,8 +3182,9 @@ class section extends common {
 	public static function get_section_map( string $section_tipo ) : ?object {
 
 		// cache
-			static $section_map_cache;
-			if(isset($section_map_cache[$section_tipo])) {
+			static $section_map_cache = [];
+			// if(isset($section_map_cache[$section_tipo])) {
+			if (array_key_exists($section_tipo, $section_map_cache)) {
 				return $section_map_cache[$section_tipo];
 			}
 
@@ -3655,7 +3667,7 @@ class section extends common {
 										$note_model,
 										$current_ddo_tipo,
 										$note_section_id,
-										$mode,
+										'edit', // use edit mode to get full value
 										$ddo->lang ?? DEDALO_DATA_LANG,
 										$sqo->section_tipo
 									);
@@ -4313,7 +4325,9 @@ class section extends common {
 			if ($this->permissions<2 &&
 				$this->tipo===DEDALO_SECTION_USERS_TIPO &&
 				$this->section_id==$user_id) {
-				return 1;
+
+				$this->permissions = 1; // set to 1 to allow tool_user_admin access
+				return $this->permissions;
 			}
 
 		// maintains dedalo_activity_section_tipo < 2 to prevent edition
@@ -4331,6 +4345,27 @@ class section extends common {
 
 		return $this->permissions;
 	}//end get_permissions
+
+
+
+	/**
+	* BUILD_SQO_ID
+	* Unified way to compound sqo_id value
+	* This string is used as key for section session SQO
+	* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
+	* @param string $tipo
+	* 	section tipo like 'oh1'
+	* @param string $mode
+	* 	current section mode like 'list'
+	* @return string $sqo_id
+	* 	final sqo_id like 'section_oh1_list'
+	*/
+	public static function build_sqo_id(string $tipo, string $mode) {
+
+		$sqo_id = implode('_', ['section', $tipo, $mode]);
+
+		return $sqo_id;
+	}//end build_sqo_id
 
 
 

@@ -30,6 +30,9 @@ export const component_radio_button = function(){
 	this.data
 	this.parent
 	this.node
+
+	// ui
+	this.minimum_width_px = 90 // integer pixels
 }//end component_radio_button
 
 
@@ -84,6 +87,19 @@ component_radio_button.prototype.get_checked_value_label = function() {
 
 	return label
 }//end get_checked_value_label
+
+
+
+/**
+* FOCUS_FIRST_INPUT
+* Captures ui.component.activate calls
+* to prevent default behavior
+* @return bool
+*/
+component_radio_button.prototype.focus_first_input = function() {
+
+	return true
+}//end focus_first_input
 
 
 

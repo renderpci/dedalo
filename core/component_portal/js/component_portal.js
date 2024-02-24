@@ -1395,6 +1395,14 @@ component_portal.prototype.edit_record_handler = async function(options) {
 			})
 			return sections_tipo.includes(section_tipo)
 		})
+		if (!engine_request_config) {
+			// no engine is detected in request_config for section_tipo
+			if(SHOW_DEBUG===true) {
+				console.log(')) edit_record_handler - section_tipo:', section_tipo);
+				console.log(')) edit_record_handler - request_config:', request_config);
+			}
+			return
+		}
 
 	// short vars
 		let new_window
@@ -1409,7 +1417,7 @@ component_portal.prototype.edit_record_handler = async function(options) {
 			// open a new window from external source to view record
 			new_window	= open_window({
 				url		: url,
-				name	: 'zenon_' + section_id
+				name	: 'external_' + section_id
 			})
 
 		}else{

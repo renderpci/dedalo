@@ -150,11 +150,20 @@ final class component_filter_master_test extends TestCase {
 				. gettype($result)
 		);
 
-		$this->assertTrue(
-			$component->dato===[],
-			'expected [] : ' . PHP_EOL
-				. to_string($component->dato)
-		);
+		if (security::is_global_admin(TEST_USER_ID)) {
+			$this->assertTrue(
+				$component->dato===[],
+				'expected [] : ' . PHP_EOL
+					. to_string($component->dato)
+			);
+		}else{
+			$this->assertTrue(
+				count($component->dato)>0,
+				'expected > 0 : ' . PHP_EOL
+					. to_string($component->dato) . PHP_EOL
+					. count($component->dato)
+			);
+		}
 
 		// restore dato
 		$result	= $component->set_dato($old_dato);

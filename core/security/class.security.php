@@ -120,9 +120,12 @@ class security {
 
 		// access to list of values: public (matrix_list) and private (matrix_dd)
 			if ($permissions===0) {
-				$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
-				if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
-					$permissions = 1;
+				$model_name = RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
+				if ($model_name==='section') {
+					$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
+					if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
+						$permissions = 1;
+					}
 				}
 			}
 
@@ -386,11 +389,11 @@ class security {
 	/**
 	* IS_GLOBAL_ADMIN
 	* Test if received user is global admin
-	* @param $user_id
-	*	User id · int · can be the current logged user or not.
+	* @param int|null $user_id
+	*	User id · int|null · can be the current logged user or not.
 	* @return bool
 	*/
-	public static function is_global_admin(int $user_id) : bool {
+	public static function is_global_admin(?int $user_id) : bool {
 
 		// dedalo superuser case
 			if ($user_id===DEDALO_SUPERUSER) {
@@ -398,7 +401,7 @@ class security {
 			}
 
 		// empty user_id
-			if ($user_id<1) {
+			if (empty($user_id) || $user_id<1) {
 				return false;
 			}
 

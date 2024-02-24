@@ -186,9 +186,10 @@ class dd_cache {
 			$file_path = $base_path . '/' . $prefix . $file_name;
 
 		// cache
-			static $cache_from_file_cache;
+			static $cache_from_file_cache = [];
 			if ($use_cache===true) {
-				if (isset($cache_from_file_cache[$file_path])) {
+				// if (isset($cache_from_file_cache[$file_path])) {
+				if (array_key_exists($file_path, $cache_from_file_cache)) {
 					return $cache_from_file_cache[$file_path];
 				}
 			}

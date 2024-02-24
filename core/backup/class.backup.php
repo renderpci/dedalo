@@ -60,6 +60,11 @@ abstract class backup {
 						#throw new Exception(" Error on read or create backup directory. Permission denied");
 						$response->result	= false;
 						$response->msg		= "Error on read or create backup directory. Permission denied ".__METHOD__;
+						debug_log(__METHOD__
+							. " $response->msg " . PHP_EOL
+							. ' file_path: ' . to_string($file_path)
+							, logger::ERROR
+						);
 						return $response;
 					}
 					debug_log(__METHOD__
@@ -1450,7 +1455,7 @@ abstract class backup {
 				'post'				=> true,
 				'header'			=> false, // bool add header to result
 				'ssl_verifypeer'	=> false,
-				'timeout'			=> (60*4), // int seconds
+				'timeout'			=> (60*10), // int seconds
 				'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case

@@ -4,14 +4,21 @@
 * Loaded on tool init
 */
 
+// local vars
+@tool_color: #ce8e0c;
 
 
-// wrapper_tool
+// tool wrapper
+// Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_lang_multi {
 
 		// content_data
 		>.content_data {
 			padding-right: 1em;
+
+			.spinner {
+				border-top-color: @tool_color;
+			}
 		}
 
 		.top_container {
@@ -36,26 +43,25 @@
 		// components_container
 		.components_container {
 			display: grid;
-		    grid-template-columns: 1fr 1fr;
-		    grid-gap: 1em;
-		    //background-color: #D6F737;
+			grid-template-columns: 1fr 1fr;
+			grid-gap: 1em;
 
-		    .target_component_container {
-		    	min-height: 110px;
+			.target_component_container {
+				min-height: 110px;
 
-			    &.source {
-		    		border-bottom: 1px solid #f78a1c;
+				&.source {
+					border-bottom: 1px solid @tool_color;
 				}
 
-			    .target_component_title  {
-			    	padding: 0.5em;
-			    	padding-left: 0;
-			    }
+				.target_component_title  {
+					padding: 0.5em;
+					padding-left: 0;
+				}
 
-			    >.wrapper_component {
-			    	// background-color: #7094c3;
+				>.wrapper_component {
+					// background-color: #7094c3;
 					// min-height: 71.5px;
-			    }
+				}
 			}
 		}//end components_container
 	}//end wrapper_tool
@@ -64,5 +70,5 @@
 
 // modal header tool modification
 	.tool_header.tool_lang_multi {
-		// background-color: #47ff08;
+		background-color: @tool_color;
 	}

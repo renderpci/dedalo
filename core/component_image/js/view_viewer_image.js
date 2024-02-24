@@ -98,6 +98,7 @@ view_viewer_image.render = function(self, options) {
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary download hidden',
+			title			: get_label.download || 'Download',
 			// value		: ' ok ',
 			parent			: wrapper
 		})

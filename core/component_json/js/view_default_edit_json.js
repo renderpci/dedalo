@@ -260,9 +260,10 @@ const get_buttons = (self) => {
 
 	// button_fullscreen
 		const button_fullscreen = ui.create_dom_element({
-			element_type : 'span',
-			class_name	 : 'button full_screen',
-			parent 		 : fragment
+			element_type	: 'span',
+			class_name		: 'button full_screen',
+			title			: get_label.full_screen || 'Full screen',
+			parent			: fragment
 		})
 		button_fullscreen.addEventListener('click', function(e) {
 			e.stopPropagation()
@@ -271,10 +272,10 @@ const get_buttons = (self) => {
 
 	// button_download . Force automatic download of component data value
 		const button_download = ui.create_dom_element({
-			element_type : 'span',
-			class_name	 : 'button download',
-			title 		 : "Download data",
-			parent 		 : fragment
+			element_type	: 'span',
+			class_name		: 'button download',
+			title			: get_label.download || 'Download data',
+			parent			: fragment
 		})
 		button_download.addEventListener('click', function(e) {
 			e.stopPropagation()

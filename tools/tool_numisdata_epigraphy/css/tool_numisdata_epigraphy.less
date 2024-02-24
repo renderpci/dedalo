@@ -7,13 +7,13 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool: #fd7f26; // @color_orange_dedalo;
+@tool_color: #e37d4b; // @color_orange_dedalo;
 
 // column_id (section_tool list)
 	.column_section_id > .button_edit.list_tool_numisdata_epigraphy {
 
 		&:hover {
-			background-color: @color_bg_tool;
+			background-color: @tool_color;
 		}
 		>.icon {
 			-webkit-mask-image: url('../img/icon.svg');
@@ -127,6 +127,10 @@
 				// flex-direction: column-reverse;
 			}
 
+			.spinner {
+				border-top-color: @tool_color;
+			}
+
 			// left and right commons
 			.left_container,
 			.right_container {
@@ -187,7 +191,7 @@
 
 // tool_numismatic_epigraphy_icon
 	.tool_numisdata_epigraphy_icon {
-		background-color: @color_bg_tool;
+		background-color: @tool_color;
 		background-image: url('../../themes/default/icon_transcription_hover.svg');
 		// Adjust icon size
 		background-size: 18px !important;
@@ -195,6 +199,10 @@
 	    background-position-x: 6px !important;
 	}
 
+// modal and new window header tool modification
+	.tool_header.tool_numisdata_epigraphy {
+		background-color: @tool_color;
+	}
 
 
 /* HEADER

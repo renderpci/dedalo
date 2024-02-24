@@ -429,8 +429,8 @@ final class component_image_test extends TestCase {
 			);
 			if (!empty($result)) {
 				$this->assertTrue(
-					$result==='/core/themes/default/0.jpg',
-					'expected /core/themes/default/0.jpg : ' . PHP_EOL
+					$result===DEDALO_ROOT_WEB . '/core/themes/default/0.jpg',
+					'expected '.DEDALO_ROOT_WEB.'/core/themes/default/0.jpg : ' . PHP_EOL
 						. $result
 				);
 			}

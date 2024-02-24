@@ -387,7 +387,6 @@ oh28	Finished	termino	lg-eng
 oh29	Date of registration	termino	lg-eng
 oh30	Image rights	termino	lg-eng
 oh31	Other Information	termino	lg-eng
-oh32	Publication	termino	lg-eng
 oh33	Consent Of Image Rights	termino	lg-eng
 oh34	Consent Of Exploitation Rights	termino	lg-eng
 oh35	Consent document	termino	lg-eng
@@ -425,7 +424,6 @@ oh75	Año de realización	termino	lg-eng
 oh76	Person in charge	termino	lg-eng
 oh77	Courtesy copy	termino	lg-eng
 oh78	Caption (preproduction)	termino	lg-eng
-oh79	Estate	termino	lg-eng
 oh80	Oral History	termino	lg-eng
 oh81	Transcription	termino	lg-eng
 oh82	List	termino	lg-eng
@@ -539,3 +537,61 @@ oh96	Indexeur	termino	lg-fra
 oh98	Structuration des entretiens	termino	lg-fra
 oh99	Liste	termino	lg-fra
 oh128	activities	termino	lg-spa
+oh3	अन्तर्वार्ता	termino	lg-nep
+oh10	नयाँ	termino	lg-nep
+oh26	Bilder	termino	lg-deu
+oh24	सूचना दिनेहरू	termino	lg-nep
+oh11	मेटाउन	termino	lg-nep
+oh25	अडियोभिजुअल	termino	lg-nep
+oh12	तथ्याङ्क हेर्नुहोस्	termino	lg-nep
+oh94	ट्रान्सक्राइबर	termino	lg-nep
+oh79	Status	termino	lg-eng
+oh80	मौखिक इतिहास	termino	lg-nep
+oh96	अनुक्रमणिका	termino	lg-nep
+oh79	स्थिति	termino	lg-nep
+oh57	अडियोभिजुअल	termino	lg-nep
+oh13	अभिलेखहरू छाप्नुहोस्	termino	lg-nep
+oh81	ट्रान्सक्रिप्शन	termino	lg-nep
+oh64	प्रश्नावली	termino	lg-nep
+oh118	नवीनतम परिवर्तनहरू	termino	lg-nep
+oh83	अनुक्रमणिका	termino	lg-nep
+oh4	सम्बद्ध दस्तावेज	termino	lg-nep
+oh110	अवयव नक्सा	termino	lg-nep
+oh98	संरचना (अध्याय)	termino	lg-nep
+oh26	छविहरू	termino	lg-nep
+oh1	मौखिक इतिहास	termino	lg-nep
+oh27	बिब्लियोग्राफी	termino	lg-nep
+oh125	कागजातहरू	termino	lg-nep
+oh85	अनुवाद	termino	lg-nep
+oh2	परिचय	termino	lg-nep
+oh5	प्राविधिक जानकारी	termino	lg-nep
+oh32	Publishable	termino	lg-eng
+oh77	सौजन्य प्रतिलिपि	termino	lg-nep
+oh32	प्रकाशन योग्य	termino	lg-nep
+oh29	दर्ता मिति	termino	lg-nep
+oh14	कोड	termino	lg-nep
+oh28	समाप्त भयो	termino	lg-nep
+oh15	अघिल्लो कोड	termino	lg-nep
+oh76	मुख्य मान्छे	termino	lg-nep
+oh21	गुणस्तर	termino	lg-nep
+oh78	क्याप्शन (पूर्व उत्पादन)	termino	lg-nep
+oh17	छवि पहिचान गर्दै	termino	lg-nep
+oh30	छवि अधिकार	termino	lg-nep
+oh93	स्थिति समीक्षा गर्नुहोस्	termino	lg-nep
+oh33	छवि अधिकारको सहमति	termino	lg-nep
+oh95	कोष	termino	lg-nep
+oh34	शोषण अधिकारको सहमति	termino	lg-nep
+oh16	शीर्षक	termino	lg-nep
+oh35	सहमति कागजात	termino	lg-nep
+oh20	भाषा	termino	lg-nep
+oh36	सहमति कागजात	termino	lg-nep
+oh19	अन्तर्वार्ता नगरपालिका	termino	lg-nep
+oh31	अन्य जानकारी	termino	lg-nep
+oh18	अन्तर्वार्ता स्थल	termino	lg-nep
+oh37	अन्य जानकारी	termino	lg-nep
+oh23	सारांश	termino	lg-nep
+oh87	जानकारी	termino	lg-nep
+oh90	सम्बद्धता	termino	lg-nep
+oh38	अवलोकनहरू	termino	lg-nep
+oh22	परियोजना	termino	lg-nep
+oh39	व्यवस्थापन नोटहरू	termino	lg-nep

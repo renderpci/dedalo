@@ -554,7 +554,7 @@ export const render_files_loader = function() {
 		ui.create_dom_element({
 			element_type	: 'h2',
 			class_name		: 'loader_label',
-			inner_html		: 'Loading Dédalo files',
+			inner_html		: get_label.loading_dedalo_files || 'Loading Dédalo files',
 			parent			: fragment
 		})
 
