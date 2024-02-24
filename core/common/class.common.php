@@ -3062,6 +3062,13 @@ abstract class common {
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
 
+								// component dataframe when portal caller is in tm mode
+								// the component will be always in view of the portal caller (without events or functionality)
+								// see
+									if ($this->mode==='tm' && $current_ddo->model === 'component_dataframe') {
+										$current_ddo->view = $this->view;
+									}
+
 								// permissions check
 									if($model==='section') {
 										$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
@@ -3319,7 +3326,7 @@ abstract class common {
 									true, // bool recursive
 									false, // bool search_exact
 									false, // array|bool $ar_tipo_exclude_elements
-									['dataframe'] // ?array $ar_exclude_models
+									['component_dataframe'] // ?array $ar_exclude_models
 								);
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
