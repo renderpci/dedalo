@@ -589,7 +589,7 @@ export const ts_object = new function() {
 										ts_object.get_children(
 											link_children_element,
 											null, // object|null pagination
-											false // bool clean_children_container
+											true // bool clean_children_container
 										)
 										.then(function(){
 											// update parent arrow button
