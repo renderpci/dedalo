@@ -116,6 +116,13 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self, false)
+				}
+			})
 		// keyup event
 			input.addEventListener('keyup', function(e) {
 				// page unload event
