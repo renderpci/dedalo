@@ -10,7 +10,7 @@
 	import {view_text_input_text} from './view_text_input_text.js'
 	import {view_mini_input_text} from './view_mini_input_text.js'
 	import {view_colorpicker_edit_input_text} from './view_colorpicker_edit_input_text.js'
-
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -153,6 +153,20 @@ export const remove_handler = function(input, key, self) {
 			label			: current_value,
 			refresh			: true
 		})
+
+
+		if(self.properties.has_dataframe){
+			// delete_dataframe_record
+			delete_dataframe({
+				self			: self,
+				section_id		: self.section_id,
+				section_tipo	: self.section_tipo,
+				// tipo_key		: self.tipo,
+				section_id_key	: key,
+				paginated_key	: false,
+				row_key			: false
+			})
+		}
 
 
 	return response

@@ -15,7 +15,13 @@
 
 	if($options->get_context===true) { //  && $permissions>0
 
-		$add_rqo = isset($properties->unique) ? true : false;
+		$unique			= isset($properties->unique) ? $properties->unique : false;
+		$has_dataframe	= isset($properties->has_dataframe) ? $properties->has_dataframe : false;
+
+		$add_rqo = ($unique || $has_dataframe)
+			? true
+			: false;
+
 		switch ($options->context_type) {
 
 			case 'simple':
@@ -99,6 +105,34 @@
 					}
 			}
 
+		// dataframe. If it exists, calculate the subdatum
+			if ($has_dataframe===true && $mode!=='search') {
+
+				// locators (using value key as section_id)
+					$ar_locator	= [];
+					$safe_value	= !empty($value) ? $value : [null];
+					foreach ($safe_value as $key => $literal) {
+
+						$locator = new locator();
+							$locator->set_section_tipo($this->section_tipo);
+							$locator->set_section_id($key);
+						$ar_locator[] = $locator;
+					}
+
+				// subdatum
+					$subdatum = $this->get_subdatum($this->tipo, $ar_locator);
+
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata = $subdatum->data;
+					foreach ($ar_subdata as $sub_value) {
+						$data[] = $sub_value;
+					}
+			}
+
 		// data item
 			$item = $this->get_data_item($value);
 				$item->parent_tipo			= $this->get_tipo();
@@ -128,7 +162,6 @@
 				// restore the component lang to the original value
 				$this->set_lang($original_lang);
 			}
-
 
 		// $item->fallback_lang_applied	= $fallback_lang_applied ?? false;
 
