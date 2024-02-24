@@ -42,7 +42,6 @@
 	}//end if($options->get_context===true)
 
 
-
 // data
 	$data = [];
 
@@ -50,16 +49,17 @@
 
 		// value
 			switch($mode) {
-
 				case 'list':
 				case 'tm':
-					$value				= $this->get_list_value();
+					$value = $this->get_list_value();
 					break;
 
 				case 'edit':
+				// dataframe needs the dato and the datalist of the component when it's in tm mode to re-build his scenario
+				case 'tm_dataframe':
 				default:
 					$value				= $this->get_dato();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
 					break;
 			}
 
