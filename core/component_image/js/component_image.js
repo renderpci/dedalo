@@ -9,7 +9,7 @@
 	import {common} from '../../common/js/common.js'
 	import {clone, dd_console} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {vector_editor} from '../../component_image/js/vector_editor.js'
+	// import {vector_editor} from '../../component_image/js/vector_editor.js'
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
 	import {render_list_component_image} from '../../component_image/js/render_list_component_image.js'
 	import {render_search_component_image} from '../../component_image/js/render_search_component_image.js'
@@ -202,6 +202,30 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 	// vector_editor. load and init if not already loaded
 		if (self.vector_tools_loaded===false){
+
+			// load editor files and create a new vector_editor
+			// load files only when editor is really necessary
+			const load_editor_files = () => {
+				return new Promise(function(resolve){
+
+					if(self.node) {
+						self.node.classList.add('loading')
+					}
+
+					import('../../component_image/js/vector_editor.js')
+					.then(async function(module){
+
+						const vector_editor = module.vector_editor
+
+						if(self.node) {
+							self.node.classList.remove('loading')
+						}
+
+						resolve(vector_editor)
+					})
+				})
+			}
+			const vector_editor = await load_editor_files()
 
 			self.vector_editor = new vector_editor()
 			await self.vector_editor.init_canvas(self)
