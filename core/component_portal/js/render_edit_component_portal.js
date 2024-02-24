@@ -27,7 +27,7 @@
 		on_dragend,
 		on_drop
 	} from './drag_and_drop.js'
-
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -539,9 +539,13 @@ export const render_column_remove = function(options) {
 							section_id		: section_id
 						})
 
-						// delete_dataframe_record. if it is not dataframe it will be ignored
-						await self.delete_dataframe_record({
-							section_id : section_id
+						// delete_dataframe_record. if it is not dataframe it will be ignored						// delete_dataframe_record
+						delete_dataframe({
+							self			: self,
+							section_id		: self.section_id,
+							section_tipo	: self.section_tipo,
+							section_id_key	: section_id,
+							// tipo_key		: self.tipo
 						})
 
 						// refresh the component. Don't wait here
@@ -579,9 +583,12 @@ export const render_column_remove = function(options) {
 						section_id		: section_id
 					})
 
-					// delete_dataframe_record. if it is not dataframe it will be ignored
-					await self.delete_dataframe_record({
-						section_id : section_id
+					delete_dataframe({
+						self			: self,
+						section_id		: self.section_id,
+						section_tipo	: self.section_tipo,
+						section_id_key	: section_id,
+						// tipo_key		: self.tipo
 					})
 
 					// refresh the component. Don't wait here
@@ -746,7 +753,9 @@ export const get_buttons = (self) => {
 								body		: section_node
 							})
 							modal.on_close = function(){
-								self.refresh()
+								self.refresh().then(function(response){
+									event_manager.publish('add_row_'+ self.id)
+								})
 							}
 
 						// activate_first_component. Get the first ddo in ddo_map to be focused
