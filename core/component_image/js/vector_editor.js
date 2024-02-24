@@ -245,15 +245,7 @@ vector_editor.prototype.element_transition = function(win, elems) {
 				console.log("inkControlPoints:---false:");
 			}
 		}
-
-
-
 	}
-
-		console.log("current_mode:",current_mode);
-
-		console.log("stage.pathActions:",stage.pathActions);
-
 
 	// const point = path
 	// 	? path.pathActionsMethod.getNodePoint()
@@ -505,19 +497,6 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					activate_status(pointer)
 				})
 				buttons.push(pointer)
-
-			// transform
-				// const transform = ui.create_dom_element({
-				// 	element_type	: 'span',
-				// 	class_name 		: 'button pointer_alt pointer',
-				// 	parent 			: buttons_container
-				// })
-				// transform.addEventListener('mouseup', (e) =>{
-				// 	e.stopPropagation()
-				// 	this.transform()
-				// 	activate_status(transform)
-				// })
-				// buttons.push(transform)
 
 			// rectangle
 				const rectangle = ui.create_dom_element({
