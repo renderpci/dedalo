@@ -82,13 +82,13 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.image_definition = image_definition
 
 		const config = {
-			initFill: { color: 'FFFFFF', opacity: 1 },
-			initStroke: { color: '000000', opacity: 1, width: 1 },
-			text: { stroke_width: 0, font_size: 24, font_family: 'serif' },
-			initOpacity: 1,
-			// imgPath: '/src/editor/images',
-			dimensions: [ image_definition.width, image_definition.height ],
-			baseUnit: 'px'
+			initFill	: { color: 'FFFFFF', opacity: 1 },
+			initStroke	: { color: '000000', opacity: 1, width: 1 },
+			text		: { stroke_width: 0, font_size: 24, font_family: 'serif' },
+			initOpacity	: 1,
+			imgPath		: '../themes/default/icons',
+			dimensions	: [ image_definition.width, image_definition.height ],
+			baseUnit	: 'px'
 		}
 
 	// SvgCanvas
