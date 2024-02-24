@@ -234,7 +234,7 @@ export const ui = {
 							if (e.altKey) {
 								e.preventDefault()
 								// common.render_tree_data(instance, document.getElementById('debug'))
-								console.log('/// selected instance:', instance);
+								console.log(`/// selected instance ${instance.model}:`, instance);
 								return
 							}
 						}
@@ -711,7 +711,7 @@ export const ui = {
 		* @return bool
 		* 	If component is undefined or already active return false, else true
 		*/
-		activate : async (component) => {
+		activate : async (component, focus=true) => {
 
 			// component mandatory check
 				if (typeof component==='undefined') {
@@ -755,26 +755,28 @@ export const ui = {
 				}
 
 			// try to focus first input
-				if (typeof component.focus_first_input==='function') {
-					// custom function from component like component_text_area
-					component.focus_first_input()
-				}else{
-					// generic try of first input node
-					const first_input = component.node.content_data && component.node.content_data[0]
-						? component.node.content_data[0].querySelector('input, select')
-						: null;
-					if (first_input) {
-						setTimeout(function(){
-							if (component.active && first_input !== document.activeElement) {
+				if (focus===true) {
+					if (typeof component.focus_first_input==='function') {
+						// custom function from component like component_text_area
+						component.focus_first_input()
+					}else{
+						// generic try of first input node
+						const first_input = component.node.content_data && component.node.content_data[0]
+							? component.node.content_data[0].querySelector('input, select')
+							: null;
+						if (first_input) {
+							setTimeout(function(){
+								if (component.active && first_input !== document.activeElement) {
 
-								// check another focus elements like q_operator
-								if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-									return
+									// check another focus elements like q_operator
+									if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+										return
+									}
+
+									first_input.focus()
 								}
-
-								first_input.focus()
-							}
-						}, 25)
+							}, 25)
+						}
 					}
 				}
 
