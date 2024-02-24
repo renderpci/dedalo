@@ -341,6 +341,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 		// options
 			$tipo						= $save_options->time_machine_tipo ?? null;
 			$section_id					= $save_options->time_machine_section_id ?? null;
+			$section_id_key				= $save_options->time_machine_section_id_key ?? null;
 			$lang						= $save_options->time_machine_lang ?? null;
 			$time_machine_data			= $save_options->time_machine_data ?? null;
 			// saving from component cases
@@ -365,6 +366,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 				// "userID"			=> "userID", 		// integer
 				// "state"			=> "state",			// string char 32
 				// "dato"			=> "dato",			// jsonb format
+				// "section_id_key"	=> "section_id_key" // integer
 
 		// time_machine save before.
 		// This allow safe time machine save data not already saved (old imports case for example)
@@ -379,7 +381,8 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 					$lang, // string $lang
 					$section_tipo, // string section_tipo
 					0, // int limit
-					0 // int offset
+					0, // int offset
+					$section_id_key
 				);
 				if (!empty($tm_records)) {
 
@@ -441,6 +444,10 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// dato
 				if (!empty($time_machine_data)) {
 					$RecordObj_time_machine->set_dato( $time_machine_data );
+				}
+			// dato
+				if (isset($section_id_key)) {
+					$RecordObj_time_machine->set_section_id_key( $section_id_key );
 				}
 
 		// Save obj
