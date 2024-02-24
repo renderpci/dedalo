@@ -571,11 +571,11 @@ const render_column_original_copy = function(options){
 
 	// columns drag indication
 		const used_coin_class = used_coin
-			? 'used'
+			? ' used'
 			: ''
 		const drag_item  = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: "drag"+' '+used_coin_class,
+			class_name		: "drag"+used_coin_class,
 			parent			: fragment
 		})
 
