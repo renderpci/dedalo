@@ -1980,20 +1980,21 @@ abstract class common {
 
 				$section_id		= $current_locator->section_id;
 				$section_tipo	= $current_locator->section_tipo;
+				$section_id_key	= $current_locator->section_id;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
-				// but when the ddo define is_dataframe (used as sub section as data frame of the locator) get include it.
+				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
 				$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
 					return 	$ddo->section_tipo===$section_tipo ||
 							(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
-							(isset($ddo->is_dataframe) && $ddo->is_dataframe===true);
+							(isset($ddo->model) && $ddo->model === 'component_dataframe');
 				});
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
 					$ddo_start_time = start_time();
 					// use the locator section_tipo.
-					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
+					// when the ddo is a component_dataframe (used as sub section as data frame or semantic_node of the locator)
 					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
 					// Note: it's different of the multiple section_tipo as es1, fr1, etc that every locator define his own ddo compatibles.
 						// reference: oh24 -> old semantic_node
@@ -2005,15 +2006,44 @@ abstract class common {
 							// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 							continue;
 						}
+					// short vars
+						$current_tipo			= $dd_object->tipo;
+						$model = ( isset($dd_object->model) )
+							? $dd_object->model
+							: RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$view					= $dd_object->view ?? null;
 
-					// section_tipo
-						if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
+						// dataframe case
+						// dataframe ddo need to get section_tipo has it has defined
+						// dataframe store his data in the same section than main component,
+						// so, dataframe subdatum will be calculated with his own section_tipo definition
+						// and the section_id of the main component (instead the locator, dataframe is not in the target section)
+						if($model === 'component_dataframe'){
 							$section_tipo = is_array($dd_object->section_tipo)
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
+
+							$section_id_key	= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
+							$section_id		= $this->get_section_id(); // the section that call to component, not the component
+
 						}else{
+							// standard use of the locator to get data of the ddo
+							$section_id		= $current_locator->section_id;
 							$section_tipo	= $current_locator->section_tipo;
+							$section_id_key	= $current_locator->section_id;
 						}
+
+						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+						// if the component is a dataframe assign a possible suffix to be used
+						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
+							? '_dataframe'
+							: '';
+						// if the component or section is in tm mode propagate the mode to the ddo
+						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
+						// see radio_button case of the dataframe component of the numisdata161
+						$mode					= $this->mode==='tm'
+							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
+							: ($dd_object->mode ?? $this->get_mode());
 
 					// prevent resolve non children from path ddo, remove the non direct child,
 					// it will be calculated by his parent (in recursive loop)
@@ -2024,14 +2054,6 @@ abstract class common {
 							continue;
 						}
 
-					// short vars
-						$current_tipo			= $dd_object->tipo;
-						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode					= $this->mode==='tm'
-							? 'tm' // propagate tm mode from parent
-							: ($dd_object->mode ?? $this->get_mode());
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$view					= $dd_object->view ?? null;
 
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
@@ -2086,8 +2108,9 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_tipo'	=> $this->get_section_tipo(),
-										'section_id'	=> $this->get_section_id()
+										'section_id_key'	=> $section_id_key,
+										// 'tipo_key'			=> $this->tipo,
+										'section_tipo'		=> $this->get_section_tipo(),
 									  ]
 									: null;
 
