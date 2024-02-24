@@ -51,6 +51,7 @@ export const component_portal = function() {
 	this.node					= null
 	this.modal					= null
 	this.caller					= null
+	this.caller_dataframe		= null
 
 	self.standalone				= null
 
@@ -129,8 +130,11 @@ component_portal.prototype.init = async function(options) {
 		self.columns_map			= options.columns_map
 		self.add_component_info		= false
 
+	// caller_dataframe
+		self.caller_dataframe		= options.caller_dataframe
+
 	// request_config
-		self.request_config	= options.request_config || null
+		self.request_config			= options.request_config || null
 
 	// events subscribe
 		// initiator_link. Observes user click over list record_
@@ -724,6 +728,12 @@ component_portal.prototype.add_value = async function(value) {
 	// adds its own tipo as 'from_component_tipo' to the new locator
 		value.from_component_tipo = self.tipo
 
+	// dataframe case
+		if(self.model === 'component_dataframe'){
+			value.section_id_key	= self.data.section_id_key
+			// value.tipo_key			= self.data.tipo_key
+		}
+
 	// changed_data
 		const key			= self.total || 0
 		const changed_data	= [Object.freeze({
@@ -806,7 +816,6 @@ component_portal.prototype.add_value = async function(value) {
 
 	return true
 }//end add_value
-
 
 
 
@@ -1314,8 +1323,9 @@ component_portal.prototype.delete_linked_record = async function(options) {
 	const self = this
 
 	// options
-		const section_id	= options.section_id
-		const section_tipo	= options.section_tipo
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const caller_dataframe	= options.caller_dataframe || null
 
 	// create the instance of the section called by the row of the portal,
 	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
