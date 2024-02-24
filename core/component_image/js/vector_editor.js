@@ -6,20 +6,43 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import SvgCanvas from '../../../lib/svgedit/svgcanvas.js'
 	import '../../../lib/iro/dist/iro.min.js';
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
+	import {clone} from '../../common/js/utils/index.js'
 
 
 
 export const vector_editor = function() {
 
 	this.id
+
+	this.stage = null
 	// paper vars
-	this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-	this.currentSegment = this.mode = this.type = null
-	this.active_layer = null
-	this.active_fill_color = null
+	// this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
+	// this.currentSegment			= this.mode = this.type = null
+	this.active_layer			= null
+	this.active_fill_color		= '#ffffff55'
+	this.button_color_picker	= null
+	this.selected_element		= null
+	this.shortcuts = [
+		// Shortcuts not associated with buttons
+		{ key: 'tab', fn: () => { this.stage.cycleElement(0) } },
+		{ key: 'shift+tab', fn: () => { this.stage.cycleElement(1) } },
+		{
+			key: ['delete/backspace', true],
+			fn: () => {
+				// this.stage.deleteSelectedElements()
+				if (this.selected_element || this.multiselected) { this.stage.deleteSelectedElements() }
+			}
+		},
+		{ key: 'a', fn: () => { this.stage.selectAllInCurrentLayer() } },
+		{ key: 'alt+a', fn: () => { this.stage.selectAllInCurrentLayer() } },
+		{ key: 'alt+x', fn: () => { this.cutSelected() } },
+		{ key: 'alt+c', fn: () => { this.copySelected() } },
+		{ key: 'alt+v', fn: () => { this.pasteInCenter() } }
+	]
 
 	return true
 }//end component_image
@@ -34,67 +57,58 @@ export const vector_editor = function() {
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
-	// init with the DOM svg object
-		//object node with the save svg into the server
-		const object 	= self.object_node
-		// svg document inside the object tag
-		const svg_doc 	= object.contentDocument;
-		// Get one of the svg items by ID;
-		const image 	= svg_doc.querySelector('image')
-		// get the view box of the image inside the original svg
-		const img 		= image.getBBox();
 
-	// fix image size
-		self.img_height	= img.height
-		self.img_width	= img.width
+	// init with the DOM image_container
+	// get his size
+		const image_container		= self.image_container
+		const image_container_size	= image_container.getBoundingClientRect()
 
-	// fix image source (URI)
-		// we need the uri of the image inside svg,
-		// for select the attribute is necessary use the namespace of the attribute
-		// xlink:href ; namespace for xlink = http://www.w3.org/1999/xlink, atribute href
-		self.img_src = image.getAttributeNS('http://www.w3.org/1999/xlink','href')
+	// initial image node
+	// the image node will be deleted when konva will initiated
+	// get the image size and the source (see it in view_xxxx)
+	// calculate the ratio of the image, it will be fixed when is resized
+		const image			= image_container.image
+		const image_size	= image.getBoundingClientRect()
+		const image_url		= image.src
+		const image_ratio	= image_size.width / image_size.height
 
-	// set the self specific libraries and variables not defined by the generic init
-		// load dependencies js/css
-			const load_promises = []
-			// load paper js library
-			const lib_js_file = DEDALO_ROOT_WEB + '/lib/paper/dist/paper-full.min.js'
-			load_promises.push( common.prototype.load_script(lib_js_file) )
+	// image definition
+	// store the image size and source to update the image when is changed
+		const image_definition = {
+			src		: image_url,
+			width	: image_size.width,
+			height	: image_size.height
+		}
+		this.image_definition = image_definition
 
-			await Promise.all(load_promises)
+		const config = {
+			initFill: { color: 'FFFFFF', opacity: 1 },
+			initStroke: { color: '000000', opacity: 1, width: 1 },
+			text: { stroke_width: 0, font_size: 24, font_family: 'serif' },
+			initOpacity: 1,
+			// imgPath: '/src/editor/images',
+			dimensions: [ image_definition.width, image_definition.height ],
+			baseUnit: 'px'
+		}
 
-	// canvas. create the base canvas
-		self.canvas_node = ui.create_dom_element({
-			id				: self.id,
-			element_type	: 'canvas',
-			class_name		: 'canvas',
-			parent			: object.parentNode
-		})
-		// remove the original object node from dom
-			event_manager.unsubscribe(object.dataset.image_change_event)
-			object.remove()
+	// SvgCanvas
+	// create the SvgCanvas instance
+		const stage = new SvgCanvas( image_container, config)
+		stage.updateCanvas(image_definition.width, image_definition.height)
 
-		// set the resize of the canvas to be controlled by paper changes.
-			self.canvas_node.setAttribute('resize', true)
+		this.stage = stage
 
-		// size. get the current resized canvas size
-			const canvas_w	= self.canvas_node.clientWidth
-			const canvas_h	= self.canvas_node.clientHeight
+	// set the segment type to be square
+		stage.setSegType(4)
+	// set the color
+		stage.setColor('fill', this.active_fill_color)
 
-		// hidpi. Avoid double size on canvas,(don't used)
-			// canvas_node.setAttribute('hidpi','off')
-
-		// canvas -> active canvas_height = 432px (set in the instance)
-			// const context		= canvas_node.getContext('2d');
-			const ratio_canvas		= self.canvas_height / self.img_height
-			self.canvas_width		= ratio_canvas * self.img_width
-			self.canvas_node.height	= self.canvas_height
-			self.canvas_node.width	= self.canvas_width
-
-	// paper. create the paper instance
-		self.current_paper = new paper.PaperScope()
-		self.current_paper.setup(self.canvas_node);
-		//get the current resized canvas size
+	// Events listeners
+	// bind the selected event to our function that handles updates to the UI
+		this.stage.bind('selected', this.selected_changed.bind(this))
+		// this.stage.bind('mouseMove', this.element_transition.bind(this))
+		this.stage.bind('extensions_added', this.keyboard_shortcuts.bind(this))
+		this.stage.call('extensions_added')
 
 	// Paste svg clipboard to active layer
 		document.addEventListener('paste', fn_paste)
@@ -128,60 +142,185 @@ vector_editor.prototype.init_canvas = async function(self) {
 		};
 
 	// create the main layer
-		// main layer is the layer that define the area to be cropped.
-		const main_layer = new self.current_paper.Layer();
-			  main_layer.name = 'main';
+	// main layer is the layer that define the area to be cropped.
+	// // add the layer to the stage
+	// 	this.stage.add(main_layer);
+		image.classList.add('hide')
 
-		// create a rectangle with the canvas size to be used as crop reference.
-		const size = new self.current_paper.Size ({
-				width: (ratio_canvas * self.img_width) +2,
-				height: (self.canvas_height) +2
-			});
-		const top_left = new self.current_paper.Point(-1, -1)
+		this.load_data(self)
 
-			const main_canvas_area = new self.current_paper.Path.Rectangle({
-				point		: top_left,
-				size		: size,
-				strokeColor	: 'black'
-			});
-			self.current_paper.project.deselectAll();
-			main_canvas_area.name = 'main_area'
-
-	// subscription to the full_screen change event
-	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
-		self.events_tokens.push(
-			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
-		)
-		function full_screen_change (fullscreen_state) {
-			// when paper is in edit we set canvas to the original canvas size
-			if(!fullscreen_state){
-				self.canvas_node.height = self.canvas_height
-				self.canvas_node.width  = self.canvas_width
-			}
-
-			//get the current resized canvas size
-			//set the paper view size to the canvas size
-			self.current_paper.project.view.setViewSize(self.canvas_node.clientWidth, self.canvas_node.clientHeight)
-
-			// set the scaling ratio (1 for edit window, calculate when is in fullscreen)
-			const ratio = fullscreen_state === true
-				? (self.current_paper.view.size._height / self.canvas_height) * 0.8
-				: 1
-
-			// set the new scale ratio to paper view
-			self.current_paper.view.setScaling(ratio)
-
-			// move the scene to the center of the canvas
-			const delta_x =  self.canvas_width /2
-			const delta_y =  self.canvas_height /2
-			self.current_paper.view.setCenter(delta_x, delta_y)
-
-			return
-		}// end full_screen_change
-
+	// init the the interface
+		this.render_tools_buttons(self);
 
 	return true
 }//end init_canvas
+
+
+// called when we've selected a different element
+/**
+*
+* @param {external:Window} win
+* @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
+* @listens module:svgcanvas.SvgCanvas#event:selected
+* @fires module:svgcanvas.SvgCanvas#event:ext_selectedChanged
+* @returns {void}
+*/
+vector_editor.prototype.selected_changed = function(win, elems) {
+
+	const stage		= this.stage
+	const layer		= this.active_layer
+	this.selected_element = elems.length === 1 || !elems[1] ? elems[0] : null
+
+	this.set_color_picker()
+	// const path = stage.getPathObj()
+
+	// const drawnPath = stage.getDrawnPath()
+
+	// if(drawnPath){
+	// 	const seglist = drawnPath.pathSegList
+	// 	console.log("seglist:",seglist);
+	// }
+
+	// const current_mode = stage.getMode()
+
+	// if(current_mode==='pathedit'){
+	// 	const path_actions = stage.pathActions
+
+	// 	const node_point = path_actions.getNodePoint()
+	// 	document.onkeydown = function(e) {
+	// 		if (e.altKey) {
+	// 			path_actions.linkControlPoints(true)
+	// 			console.log("linkControlPoints:---true");
+	// 		}else{
+	// 			path_actions.linkControlPoints(false)
+	// 			console.log("inkControlPoints:---false:");
+	// 		}
+	// 	}
+
+
+
+	// }
+
+	// 	console.log("current_mode:",current_mode);
+
+	// 	console.log("stage.pathActions:",stage.pathActions);
+
+
+	// const point = path
+	// 	? path.pathActionsMethod.getNodePoint()
+	// 	: null
+		// console.log("stage.getSegType():",stage.setSegType());
+		// console.log("path:",stage.getSegData());
+
+}
+
+
+vector_editor.prototype.element_transition = function(win, elems) {
+
+	const stage		= this.stage
+	const layer		= this.active_layer
+	// this.selected_element = elems.length === 1 || !elems[1] ? elems[0] : null
+
+	const path = stage.getPathObj()
+
+	const drawnPath = stage.getDrawnPath()
+
+	if(drawnPath){
+		const seglist = drawnPath.pathSegList
+		console.log("seglist:",seglist);
+	}
+
+	const current_mode = stage.getMode()
+
+	if(current_mode==='pathedit'){
+		const path_actions = stage.pathActions
+
+		const node_point = path_actions.getNodePoint()
+		document.onkeydown = function(e) {
+			if (e.altKey) {
+				path_actions.linkControlPoints(true)
+				console.log("linkControlPoints:---true");
+			}else{
+				path_actions.linkControlPoints(false)
+				console.log("inkControlPoints:---false:");
+			}
+		}
+
+
+
+	}
+
+		console.log("current_mode:",current_mode);
+
+		console.log("stage.pathActions:",stage.pathActions);
+
+
+	// const point = path
+	// 	? path.pathActionsMethod.getNodePoint()
+	// 	: null
+		// console.log("stage.getSegType():",stage.setSegType());
+		// console.log("path:",stage.getSegData());
+
+}
+
+
+
+
+/**
+*
+* @param {external:Window} win
+* @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
+* @listens module:svgcanvas.SvgCanvas#event:selected
+* @fires module:svgcanvas.SvgCanvas#event:ext_selectedChanged
+* @returns {void}
+*/
+vector_editor.prototype.keyboard_shortcuts = function() {
+
+	this.extensionsAdded = true
+
+	const key_handler = {} // will contain the action for each pressed key
+
+	this.shortcuts.forEach(shortcut => {
+		// Bind function to shortcut key
+		if (shortcut.key) {
+			// Set shortcut based on options
+			let key_value = shortcut.key
+			let pd = false
+			if (Array.isArray(shortcut.key)) {
+				key_value = shortcut.key[0]
+				if (shortcut.key.length > 1) {
+					pd = shortcut.key[1]
+				}
+			}
+			key_value = String(key_value)
+			const { fn } = shortcut
+			key_value.split('/').forEach(key => {
+				key_handler[key] = { fn, pd }
+			})
+		}
+		return true
+	})
+	// register the keydown event
+	document.addEventListener('keydown', e => {
+
+		// only track keyboard shortcuts for the body containing the SVG-Editor
+		if (e.target.nodeName !== 'BODY') return
+		// normalize key
+		const key = `${e.altKey ? 'alt+' : ''}${e.shiftKey ? 'shift+' : ''}${e.metaKey ? 'meta+' : ''}${e.ctrlKey ? 'ctrl+' : ''}${e.key.toLowerCase()}`
+
+		// return if no shortcut defined for this key
+		if (!key_handler[key]) return
+		// launch associated handler and preventDefault if necessary
+
+		key_handler[key].fn()
+
+		if (key_handler[key].pd) {
+			e.preventDefault()
+		}
+	})
+}
+
+
 
 
 
@@ -190,505 +329,110 @@ vector_editor.prototype.init_canvas = async function(self) {
 * init paper tools
 * @return bool true
 */
-vector_editor.prototype.init_tools = function(self) {
+vector_editor.prototype.pointer = function() {
 
-	// paper. Current paper vars
-		const project	= self.current_paper.project
-		const Layer		= self.current_paper.Layer
-		const Color		= self.current_paper.Color
-		const Tool		= self.current_paper.Tool
-		const Point		= self.current_paper.Point
-		const Size		= self.current_paper.Size
-		const Path		= self.current_paper.Path
-		const Raster	= self.current_paper.Raster
+	const stage		= this.stage
+	const layer		= this.active_layer
 
-		this.active_fill_color = new Color({
-			hue			: 360,
-			saturation	: 1,
-			brightness	: 1,
-			alpha		: 0.3
-		});
+	stage.setMode('select')
 
-	// rectangle
-		this.rectangle = new Tool();
-			this.rectangle.onMouseDown = () => {
-				// Reset vars
-				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-				project.deselectAll();
-			}
-			this.rectangle.onMouseDrag = (event) => {
-				// deactivate the tool when the user try to create the path into raster layer
-				if(project.activeLayer.name === 'raster'|| project.activeLayer.name==='main') return;
-
-				const size = new Size ({
-					width	: event.point.x - event.downPoint.x,
-					height	: event.point.y - event.downPoint.y
-				});
-
-				const rectangle_path = new Path.Rectangle({
-					point		: event.downPoint,
-					size		: size,
-					fillColor	: this.active_fill_color,
-					strokeColor	: 'black'
-				});
-
-				// Remove this path on the next drag event:
-				rectangle_path.removeOnDrag();
-			}
-			this.rectangle.onMouseUp = () => {
-				if(project.activeLayer.name==='raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
-			}
-
-	// circle
-		this.circle = new Tool();
-			this.circle.onMouseDown = () => {
-				// Reset vars
-				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-				project.deselectAll();
-			}
-			this.circle.onMouseDrag = (event) => {
-				// deactivate the tool when the user try to create the path into raster layer
-				if(project.activeLayer.name==='raster' || project.activeLayer.name==='main') return;
-
-				const radio_delta = new Point({
-					x	: event.downPoint.x - event.point.x,
-					y	: event.downPoint.y - event.point.y
-				})
-
-				const circle_path = new Path.Circle({
-					center		: event.downPoint,
-					radius		: radio_delta.length,
-					fillColor	: this.active_fill_color,
-					strokeColor	: 'black'
-				})
-
-				// Remove this path on the next drag event:
-				circle_path.removeOnDrag()
-			}
-			this.circle.onMouseUp = () => {
-				if(project.activeLayer.name==='raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
-			}
-
-	// pointer
-		this.pointer = new Tool();
-			this.pointer.onMouseDown = (event) => {
-				// Reset vars
-				if (this.path != null) {
-					this.path.bounds.selected	= false
-					this.path.data.state		= null
-				}
-				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-				project.deselectAll()
-				//project.activeLayer.selected = false;
-				const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
-
-				if(SHOW_DEBUG===true) {
-					console.log('[init_tools] hitResult:', hitResult);
-				}
-				if (hitResult) {
-					//remove all behavior if the click is in the main_area rectangle, deselect all.
-					if(hitResult.item.name === 'main_area') return;
-					this.path = hitResult.item
-					switch(hitResult.type) {
-
-						case ('fill'):
-							project.deselectAll()
-							this.path.layer.activate()
-							this.active_layer = project.activeLayer
-							event_manager.publish('active_layer_'+self.id, this.active_layer)
-							this.set_color_picker(this.path)
-
-							if (event.modifiers.shift) {
-								hitResult.item.remove()
-							}
-
-							this.path.selected = true;
-							this.movePath = hitResult.type == 'fill'
-							break;
-
-						case ('pixel'):
-							project.deselectAll();
-							project.activeLayer.selected = false;
-							break;
-
-						case ('segment'):
-							project.deselectAll();
-
-							this.path.fullySelected = true;
-							this.segment = hitResult.segment;
-							if (event.modifiers.shift) {
-								hitResult.segment.remove();
-							}
-							if (event.modifiers.option) {
-								if(this.segment.hasHandles()){
-									hitResult.segment.clearHandles();
-								}
-								this.handle_sync	= hitResult.segment.handleIn;
-								this.handleIn		= hitResult.segment.handleIn;
-								this.handleOut		= hitResult.segment.handleOut;
-								this.segment		= '';
-							}
-							//segment = hitResult.segment
-							break;
-
-						case ('stroke'):
-							project.deselectAll()
-							this.path.fullySelected = true;
-							this.path.selected = true;
-							this.movePath = 'fill'
-							// const location = hitResult.location;
-							// this.segment = this.path.insert(location.index +1, event.point);
-							//path.smooth();
-							break;
-
-						case ('handle-in'):
-							this.handle = hitResult.segment.handleIn;
-							if (event.modifiers.option) {
-								this.handle_sync	= hitResult.segment.handleIn;
-								this.handleIn		= hitResult.segment.handleIn;
-								this.handleOut		= hitResult.segment.handleOut;
-								//this.handle		= '';
-							}
-							break;
-
-						case ('handle-out'):
-							this.handle = hitResult.segment.handleOut;
-							if (event.modifiers.option) {
-								this.handle_sync	= hitResult.segment.handleOut;
-								this.handleIn		= hitResult.segment.handleOut;
-								this.handleOut		= hitResult.segment.handleIn;
-								//this.handle		= '';
-							}
-							break;
-
-						default:
-							console.log('Ignored hitResult.type :', hitResult.type)
-							break;
-					}//end switch
-					//console.log(hitResult.type);
-				}
-				/*if (movePath)
-				project.activeLayer.addChild(hitResult.item);*/
-			}
-			this.pointer.onMouseDrag = (event) => {
-				if (this.handle){
-					this.handle.x += event.delta.x;
-					this.handle.y += event.delta.y;
-				}
-				if (this.handle_sync){
-					this.handleIn.x += event.delta.x;
-					this.handleIn.y += event.delta.y;
-					this.handleOut.x -= event.delta.x;
-					this.handleOut.y -= event.delta.y;
-				}
-				if (this.segment) {
-					this.segment.point.x = event.point.x;
-					this.segment.point.y = event.point.y;
-				}
-				if (this.movePath){
-					this.path.position.x += event.delta.x;
-					this.path.position.y += event.delta.y;
-				}
-			}
-			this.pointer.onKeyUp = (event) => {
-				if (event.key==='backspace' || event.key==='delete') {
-					const selected	= project.selectedItems;
-					const sec_len	= selected.length
-					for (let i = sec_len - 1; i >= 0; i--) {
-						selected[i].remove()
-						this.segment = this.path = null;
-					}
-				}
-			}
-			this.pointer.onMouseUp = () => {
-				// update the instance with the new layer information, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
-			}
-
-	// transform
-		this.transform = new Tool();
-			this.transform.onMouseDown = (event) => {
-				// Reset vars
-				if (this.path != null) {
-					this.path.bounds.selected	= false
-					this.path.data.state		= null
-				}
-				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-				//project.activeLayer.selected = false;
-				const hitResult = project.hitTest(event.point , { fill: true, stroke: true, segments: true, tolerance: 5, bounds: true });
-				if (hitResult) {
-					//remove all behavior if the click is in the main_area rectangle, deselect all.
-					if(hitResult.item.name === 'main_area') return;
-					this.path = hitResult.item
-
-					// the image can be resized only the parent layer
-						if(typeof hitResult.item.image != 'undefined'){
-							this.path = hitResult.item.layer
-							this.path.activate()
-							this.path.selected = true;
-
-						}else{
-							project.deselectAll()
-							this.set_color_picker(this.path)
-							this.path.layer.activate()
-							this.path.bounds.selected = true;
-						}
-
-					this.active_layer = project.activeLayer
-					event_manager.publish('active_layer_'+self.id, this.active_layer)
-
-					switch(hitResult.type) {
-						case ('bounds'):
-							// this.path.bounds.selected = true;
-							if (event.modifiers.option) {
-								this.path.data.state		= 'rotate'
-							}else{
-								this.path.data.state		= 'scale'
-								this.path.data.bounds		= this.path.bounds.clone();
-								this.path.data.scale_base	= event.point.subtract(this.path.bounds.center)
-							}
-							break;
-
-						case ('segment'):
-						case ('fill'):
-						case ('pixel'):
-							this.path.data.state			= 'move'
-							// this.path.bounds.selected	= true;
-							break;
-					}
-				}
-			}
-			this.transform.onMouseDrag = (event) => {
-				// if we select main layer or other forbidden paths, de-active the drag
-				if (this.path === null || this.path.data.state === null)return
-				if (this.path.data.state === 'scale'){
-					 // scale by distance from down point
-					const bounds = this.path.data.bounds;
-					// get the scale from current bounds center to the original bounds center
-					const scale = event.point.subtract(bounds.center).length / this.path.data.scale_base.length;
-					// create the points from top_left and botton_right
-					const top_left		= bounds.topLeft.subtract(bounds.center).multiply(scale);
-					const botton_right	= bounds.bottomRight.subtract(bounds.center).multiply(scale);
-					// create the new bounds
-					const new_bounds	= new self.current_paper.Rectangle(top_left.add(bounds.center), botton_right.add(bounds.center));
-					this.path.bounds	= new_bounds;
-
-					return;
-				}else if(this.path.data.state === 'rotate'){
-					// the last two points.
-					const center		= this.path.bounds.center;
-					const base			= new self.current_paper.Point(center.x - event.lastPoint.x, center.y - event.lastPoint.y)
-					const actual		= new self.current_paper.Point(center.x - event.point.x, center.y - event.point.y)
-
-					const angle			= actual.angle - base.angle
-					this.path.rotation	= angle;
-
-					return;
-				}else if (this.path.data.state === 'move'){
-					this.path.position.x += event.delta.x;
-					this.path.position.y += event.delta.y;
-
-				}
-			}
-			this.transform.onMouseUp = () => {
-				// update the instance with the new layer information, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
-			}
-
-	// vector
-		this.vector = new Tool()
-			this.vector.onMouseDown = (event) => {
-				// Reset vars
-				this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-
-				//project.activeLayer.selected = false;
-				const hitResult = project.hitTest(event.point, { fill: true, stroke: true, segments: true, tolerance: 5, handles: true });
-
-				if(SHOW_DEBUG===true) {
-					console.log("[init_tools] hitResult:",hitResult);
-					console.log("project.activeLayer.name:",project.activeLayer.name);
-				}
-				if (hitResult) {
-					//remove all behavior if the click is in the main_area rectangle or the raster layer, deselect all.
-					if(hitResult.item.name==='main_area' || project.activeLayer.name==='raster' || project.activeLayer.name==='main') return;
-					this.path = hitResult.item
-					switch(hitResult.type) {
-
-						case ('fill'):
-							project.deselectAll()
-							this.path.layer.activate()
-							this.active_layer = project.activeLayer
-							event_manager.publish('active_layer_'+self.id, this.active_layer)
-							this.set_color_picker(this.path)
-
-							if (event.modifiers.shift) {
-								hitResult.item.remove()
-							}
-
-							this.path.selected	= true;
-							this.movePath		= hitResult.type == 'fill'
-							this.new_path		= false
-							break;
-
-						case ('pixel'):
-							project.deselectAll();
-
-							if (!this.new_path) {
-								this.new_path = new Path({
-									strokeColor	: 'black',
-									fillColor	: this.active_fill_color
-								});
-								this.new_path.fullySelected	= true;
-								this.segment				= this.new_path.add(event.point);
-								// this.segment				= event.point
-							}else{
-								this.new_path.fullySelected	= true;
-								this.segment				= this.new_path.add(event.point);
-							}
-							if (event.modifiers.option) {
-								if(this.segment.hasHandles()){
-									this.segment.clearHandles();
-								}
-								this.handle_sync		= this.segment.handleIn;
-								this.handleIn			= this.segment.handleIn;
-								this.handleOut			= this.segment.handleOut;
-								this.segment.selected	= true;
-								this.segment			= '';
-							}
-							break;
-
-						case ('segment'):
-							project.deselectAll();
-
-							this.path.fullySelected	= true;
-							this.path.closed		= true;
-							this.new_path			= false
-							this.segment			= hitResult.segment;
-							if (event.modifiers.shift) {
-								hitResult.segment.remove();
-							}
-							if (event.modifiers.option) {
-								if(this.segment.hasHandles()){
-									hitResult.segment.clearHandles();
-								}
-								this.handle_sync	= hitResult.segment.handleIn;
-								this.handleIn		= hitResult.segment.handleIn;
-								this.handleOut		= hitResult.segment.handleOut;
-								this.segment		= '';
-							}
-							//segment = hitResult.segment
-							break;
-
-						case ('stroke'):
-							this.path.fullySelected	= true;
-							const location			= hitResult.location;
-							this.segment			= this.path.insert(location.index +1, event.point);
-							this.new_path			= false
-							// path.smooth();
-							break;
-
-						case ('handle-in'):
-							this.handle = hitResult.segment.handleIn;
-							if (event.modifiers.option) {
-								this.handle_sync	= hitResult.segment.handleIn;
-								this.handleIn		= hitResult.segment.handleIn;
-								this.handleOut		= hitResult.segment.handleOut;
-								//this.handle		= '';
-							}
-							break;
-
-						case ('handle-out'):
-							this.handle = hitResult.segment.handleOut;
-							if (event.modifiers.option) {
-								this.handle_sync	= hitResult.segment.handleOut;
-								this.handleIn		= hitResult.segment.handleOut;
-								this.handleOut		= hitResult.segment.handleIn;
-								//this.handle		= '';
-							}
-							break;
-
-						default:
-							console.log("Ignored hitResult.type :", hitResult.type)
-							break;
-					}//end switch
-					//console.log(hitResult.type);
-				}
-				/*if (movePath)
-				project.activeLayer.addChild(hitResult.item);*/
-			}
-			this.vector.onMouseDrag = (event) => {
-				if (this.handle){
-					this.handle.x += event.delta.x;
-					this.handle.y += event.delta.y;
-				}
-				if (this.handle_sync){
-					this.handleIn.x += event.delta.x;
-					this.handleIn.y += event.delta.y;
-					this.handleOut.x -= event.delta.x;
-					this.handleOut.y -= event.delta.y;
-				}
-				if (this.segment) {
-					this.segment.point.x = event.point.x;
-					this.segment.point.y = event.point.y;
-					//path.smooth();
-				}
-				if (this.movePath){
-					this.path.position.x += event.delta.x;
-					this.path.position.y += event.delta.y;
-				}
-			}
-			this.vector.onMouseUp = () => {
-				if(project.activeLayer.name==='raster' || project.activeLayer.name==='main') return;
-				// update the instance with the new layer information, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
-			}
-
-	// zoom
-		this.zoom = new Tool()
-		this.zoom.onMouseDown = () => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			project.deselectAll();
+	const selected_element	= stage.getSelectedElements()[0]
+	// when the pointer is selected check if has some selected
+	// to check if the element need to be converted to path
+	if(selected_element){
+		// get the element name to check if other than a path
+		// if yes (rec, ellipse, etc) need to be converted as path
+		// IMPORTANT; apple only one, convertToPath() method can disconnect control points if is applied twice
+		const element_name = selected_element.nodeName
+		if( !['image', 'text', 'path', 'g', 'use'].includes(element_name) ){
+			stage.convertToPath()
 		}
+	}
+}//end selector
 
-		this.zoom.onMouseDrag = (event) => {
-			//ratio of zoom
-			const zoom_factor = 0.03
-			// if the mouse is 0 get 1 else get the 1 or -1
-			const y = Math.sign(event.delta.y) === 0 ? 1 : Math.sign(event.delta.y)
-			// add to the zoom_fator to obtain the factor if y=1 get 1.03 else get 0.97
-			const ratio = Math.abs(zoom_factor + y)
-			// set the scale with the ratio and the mouse pointer
-			// main.scale(ratio, new Point(event.point.x, event.point.y))
-			project.view.scale(ratio, new Point(event.point.x, event.point.y))
-		}
 
-	// move
-		this.move = new Tool()
-		this.move.onMouseDown = () => {
-			// Reset vars
-			this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-			project.deselectAll();
-		}
 
-		this.move.onMouseDrag = (event) => {
-			// get the difference (delta) of the first click point and the current position of the mouse
-			const delta = event.downPoint.subtract(event.point)
-			// scroll the view to the position
-			project.view.scrollBy(delta)
-		}
+vector_editor.prototype.create_rectangle = function () {
 
-	return true
-}//end init_tools
+	const stage			= this.stage
+	const layer			= this.active_layer
+
+	// deselection any other selected
+	stage.clearSelection()
+
+	// control to draw in any other layer than raster
+	// raster layer can only content image
+	if(layer.layer_id===0){
+		return false
+	}
+	// get the layer color and add transparency
+	const color = layer.layer_color;
+
+
+	// set the color to draw new rectangle
+	stage.setColor('fill', color)
+
+	stage.setMode('rect')
+}
+
+
+vector_editor.prototype.create_circle = function () {
+
+	const stage			= this.stage
+	const layer			= this.active_layer
+
+	// deselection any other selected
+	stage.clearSelection()
+
+	// get the layer color and add transparency
+	const color = layer.layer_color;
+
+	// set the color to draw new rectangle
+	stage.setColor('fill', color)
+
+	stage.setMode('ellipse')
+}
+
+
+vector_editor.prototype.create_vector = function () {
+
+	const stage			= this.stage
+	const layer			= this.active_layer
+
+	// deselection any other selected
+	stage.clearSelection()
+
+	// get the layer color and add transparency
+	const color = layer.layer_color;
+
+	// set the color to draw new rectangle
+	stage.setColor('fill', color)
+
+	stage.setMode('path')
+
+
+	// path.linkControlPoints(linked)
+	// path.getNodePoint()
+
+	// const point = this.selected_element.getNodePoint()
+
+	// this.click()
+	// const segType = $id('seg_type')
+// console.log("point:",point);
+	 // segType.value = point.type
+// 	const path = stage.getPathObj()
+
+
+//       if (path) {
+
+//       }
+// console.log("e:----", this.selected_element);
+      // this.click(element, handler) => {
+      // 	console.log("e:----", e);
+      // }
+}
+
+
 
 
 
@@ -697,6 +441,9 @@ vector_editor.prototype.init_tools = function(self) {
 * @return bool
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
+
+	const stage			= this.stage
+	const layer			= this.active_layer
 
 	// check vector_editor_tools
 		if (!self.vector_editor_tools) {
@@ -743,34 +490,34 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					event_manager.subscribe('active_layer_'+self.id, change_layer)
 				)
 				function change_layer(active_layer) {
-					layer_selector_button.innerHTML = active_layer.data.layer_id
+					layer_selector_button.innerHTML = active_layer.layer_id
 				}
 
 			// pointer
 				const pointer = ui.create_dom_element({
 					element_type	: 'span',
-					class_name 		: 'button pointer_alt',
+					class_name 		: 'button pointer',
 					parent 			: buttons_container
 				})
 				pointer.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.pointer.activate()
+					this.pointer()
 					activate_status(pointer)
 				})
 				buttons.push(pointer)
 
 			// transform
-				const transform = ui.create_dom_element({
-					element_type	: 'span',
-					class_name 		: 'button pointer',
-					parent 			: buttons_container
-				})
-				transform.addEventListener('mouseup', (e) =>{
-					e.stopPropagation()
-					this.transform.activate()
-					activate_status(transform)
-				})
-				buttons.push(transform)
+				// const transform = ui.create_dom_element({
+				// 	element_type	: 'span',
+				// 	class_name 		: 'button pointer_alt pointer',
+				// 	parent 			: buttons_container
+				// })
+				// transform.addEventListener('mouseup', (e) =>{
+				// 	e.stopPropagation()
+				// 	this.transform()
+				// 	activate_status(transform)
+				// })
+				// buttons.push(transform)
 
 			// rectangle
 				const rectangle = ui.create_dom_element({
@@ -780,7 +527,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				rectangle.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.rectangle.activate()
+					this.create_rectangle()
 					activate_status(rectangle)
 				})
 				buttons.push(rectangle)
@@ -793,7 +540,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				circle.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.circle.activate()
+					this.create_circle()
 					activate_status(circle)
 				})
 				buttons.push(circle)
@@ -806,7 +553,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				vector.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.vector.activate()
+					this.create_vector()
 					activate_status(vector)
 				})
 				buttons.push(vector)
@@ -828,7 +575,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 						? 1(self.canvas_node.clientHeight / self.canvas_height) * 0.8
 						: 1
 
-					self.current_paper.view.setScaling(ratio)
+					// self.current_paper.view.setScaling(ratio)
 
 					const delta_x	= self.canvas_width / 2
 					const delta_y	= self.canvas_height / 2
@@ -866,16 +613,18 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				save.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
 
+					this.save_data(self)
+
 					self.node.classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
 					// update the instance with the new layer information, prepared to save
-					self.update_draw_data()
+					// self.update_draw_data()
 					// save all data layers
-					const changed_data = [self.data.changed_data]
-					self.change_value({
-						changed_data	: changed_data,
-						refresh			: false
-					})
+					// const changed_data = [self.data.changed_data]
+					// self.change_value({
+					// 	changed_data	: changed_data,
+					// 	refresh			: false
+					// })
 
 					activate_status(save)
 				})
@@ -924,18 +673,19 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					})
 				this.button_color_picker.addEventListener('mouseup', () =>{
 					color_wheel_contaniner.classList.toggle('hide')
+					this.color_picker.color.hexString = this.active_fill_color
 				})
 				// color:change event callback
 				// color:change callbacks receive the current color and a changes object
 				const color_selected = (color, changes) =>{
-					if(this.path !== null){
-						this.path.fillColor = color.hex8String
+					if(this.selected_element !== null){
+						stage.setColor('fill', color.hex8String)
+						// stage.setPaint('fill', color.hex8String)
 					}
-					this.active_fill_color = new self.current_paper.Color(color.hex8String)
 					this.button_color_picker.style.backgroundColor = color.hexString
 					// update the instance with the new layer information, prepared to save
 					// (but is not saved directly, the user need click in the save button)
-					self.update_draw_data()
+					// self.update_draw_data()
 					// event_manager.publish('color_change_'+this.active_layer.data.layer_id, color.hex8String)
 				}
 
@@ -955,8 +705,8 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 			}
 
 		// first load activate pointer
-			this.pointer.activate()
-			activate_status(pointer)
+			// this.pointer.activate()
+			// activate_status(pointer)
 
 	return true
 }//end render_tools_buttons
@@ -968,187 +718,274 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 * get the color of the current active layer to set to the color picker and the button color picker
 * @return void
 */
-vector_editor.prototype.set_color_picker = function(item) {
+vector_editor.prototype.set_color_picker = function() {
+
+	const stage			= this.stage
+	const layer			= this.active_layer
+
+	// check if the selected element is a image
+	// image doesn't has the fill attribute
+	const element_name = this.selected_element
+		? this.selected_element.nodeName
+		: ''
+	if( ['image', 'use'].includes(element_name) ){
+		return
+	}
 
 	// get the item selected color
-		this.active_fill_color = item.fillColor
-	// convert it to css nomenclature
-		const color = this.active_fill_color.toCSS()
-	// set the icon of color picker with the selected path color
-		this.button_color_picker.style.backgroundColor = color
-	// set the color picker with the selected path color
-		this.color_picker.color.rgbaString = color
+		this.active_fill_color = (this.selected_element)
+			? this.selected_element.getAttribute('fill')
+			: stage.getColor('fill')
+
+		if(this.button_color_picker){
+			// set the icon of color picker with the selected path color
+				this.button_color_picker.style.backgroundColor = this.active_fill_color
+			// set the color picker with the selected path color
+				this.color_picker.color.hexString = this.active_fill_color
+		}
+
 }//end set_color_picker
 
 
 
 /**
-* LOAD_LAYER
+* LOAD_DATA
 * get the layers loaded and show into window
-* @return bool true
+* @return object new_layer
 */
-vector_editor.prototype.load_layer = function(self, layer) {
+vector_editor.prototype.load_data = function(self) {
 
-	// current paper vars
-		const project	= self.current_paper.project
-		const Layer		= self.current_paper.Layer
-		const Color		= self.current_paper.Color
+	const stage				= this.stage
+	const drawing			= stage.getCurrentDrawing()
+	const image_definition 	= this.image_definition
 
-	// set the layer data
-		const layer_id		= layer.layer_id
-		const layer_data	= layer.layer_data
-		const layer_name	= layer_id === 0 ? 'raster' : 'layer_' +layer_id
+	const lib_data = self.get_lib_data()
 
-	// if the layer don't has layer_color, create a new layer color for selectors and handlers
-		const layer_color = typeof layer.layer_color !== 'undefined'
-			? layer.layer_color
-			: new Color({
-				hue			: 360 * Math.random(),
-				saturation	: 1,
-				brightness	: 1,
-				alpha		: 1
-			  }).toCSS()
+	if(lib_data){
+		self.ar_layers = lib_data
 
-		layer.layer_color = layer_color
+		const len = self.ar_layers.length
+		for (let i = 0; i < len; i++) {
+			const current_layer = self.ar_layers[i]
 
-	//layer import
-		if ( layer_data.indexOf('Layer')!=-1 ) {
-			const project_len = project.layers.length
-			for (let i = project_len - 1; i >= 0; i--) {
-				if (project.layers[i].name===layer_name){
-					project.layers[i].remove();
-						console.log("-> layer delete: ", layer_name);
-				}
+			//Check if the layer is the raster layer,
+			// raster layer use the main created layer by the svgcanvas
+			// but, rename it as layer_0
+			// if not, create new layer to import data
+			if(current_layer.layer_id > 0){
+				drawing.createLayer(current_layer.name)
+
+			}else{
+				stage.renameCurrentLayer('layer_0')
 			}
-			// import the layer to paper project
-			const current_layer = project.importJSON(layer_data)
-			// set the selected color to the layer_color
-			current_layer.selectedColor = layer_color;
-			// set the alpha of the color to 1... don't used, the user can change it.
-			// current_layer.selectedColor.alpha = 1
-			// set the id of Dédalo data
-			current_layer.data.layer_id			= layer_id
-			// set the user layer name to default layer_name (layer_2)
-			current_layer.data.user_layer_name	= layer_name
-			// set the layer_name to the current layer when don't match (old layer_name formats like 5_layer)
-			if(current_layer.name!==layer_name){
-				current_layer.name = layer_name
+			// data is storage without the layer group ('g' node)
+			// only transformations and paths will be loaded
+			const layer_data_len = current_layer.layer_data.length
+			for (let i = 0; i < layer_data_len; i++) {
+				const layer_data = current_layer.layer_data[i]
+				stage.addSVGElementsFromJson(layer_data)
 			}
-			current_layer.activate();
-			console.log("-> layer import: ", layer_name);
 
-		}else{
-			let create_new_current_layer = true
-			// Check if the layer is loaded, if the layer is loaded will be reused.
-			const project_len = project.layers.length
-			for (let i = project_len - 1; i >= 0; i--) {
-				if (project.layers[i].name===layer_name) {
-					const current_layer = project.layers[i];
-					current_layer.activate();
-					create_new_current_layer = false;
-					console.log("-> using existing current_layer: ", current_layer.name);
-					break;
-				}
-			}//end for
-			if (create_new_current_layer === true) {
-				const current_layer 	= new Layer()
-					// set the name to the paper layer name
-					current_layer.name					= layer_name
-					// set the id of Dédalo data
-					current_layer.data.layer_id			= layer_id
-					// set the user layer name to default layer_name (layer_2)
-					current_layer.data.user_layer_name 	= layer_name
-					// set the layer in the self.ar_layer_loaded the current layer name (layer_2)
-					layer.user_layer_name				= layer_name
-					// set the selectedColor for paper
-					current_layer.selectedColor			= layer_color
-					// set the user layer color in the data for save it.
-					current_layer.data.layer_color		= layer_color
-				current_layer.activate();
-				// create the raster layer
-					if(layer_id===0){
-						this.create_raster_layer(self)
-						// current_layer.applyMatrix = false
-					}
+			this.active_layer = current_layer
+		}
 
-				console.log("-> create new layer: " , current_layer);
-			}// end if
+	}else{
+		//empty data, create new image layer node
+		// svgcanvas create a Layer 1 by default, rename it to main
+		stage.renameCurrentLayer('layer_0')
+		// this.stage.createLayer()
+		this.active_layer = {
+			layer_id		: 0,
+			layer_data		: null,
+			layer_color		: '#ffffff55',
+			user_layer_name	: 'raster',
+			name 			: 'layer_0',
+			visible 		: true
+		}
 
-		}//end else
 
-		// set the global handle margin
-		project.options.handleSize = 8;
+	// image
+		// create new image node
+		const image_node	= new Image();
 
-		// subscribe the raster layer to change the quality of the image (original, 1.5MB,...)
-		if(layer_id===0){
-			// get the current raster item
-			const raster = project.activeLayer.firstChild
-			// subscription to the image quality change event
-			self.events_tokens.push(
-				event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
+		// create the img_elem in the top left position of canvas
+		const img_elem = stage.addSVGElementsFromJson({
+			element : "image",
+			attr : {
+				x		: 0,
+				y		: 0,
+				width	: image_definition.width,
+				height	: image_definition.height,
+				id		: 'main_image',
+				opacity	: 1,
+				style	: "pointer-events:inherit",
+			}
+		});
+
+		image_node.onload = () => {
+
+			// this.stage.setBackground( '#ffffff',image_node.src)
+
+			stage.setHref(img_elem, image_node.src);
+			// this.stage.moveSelectedToLayer('main')
+
+		};
+		image_node.src = image_definition.src
+
+		// when the image change his quality
+		// change the source of the image, load it and re-calculate his size.
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
+		)
+		function fn_img_quality_change (img_src) {
+			// change the value of the current raster element
+				image_node.src = img_src
+		}//end img_quality_change
+
+	// subscription to the full_screen change event
+	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
+		)
+		function full_screen_change (fullscreen_state) {
+
+			// re-calculate the image_contanier size
+			const image_container_size	= image_container.getBoundingClientRect()
+			// use the image_ratio to calculate the width in relation to new height and update the image definition
+			const width = image_container_size.height * image_ratio
+			image_definition.width	= width
+			image_definition.height	= image_container_size.height
+			// clean the selectors, they will not scaled well
+			stage.clearSelection()
+			// update the stage to new size
+			// set the canvas zoom to fit the new image container size
+			stage.setBBoxZoom(
+				'canvas',
+				image_definition.width,
+				image_definition.height
 			)
-			function fn_img_quality_change (img_src) {
-				// get the current raster layer bounds and save it for apply later
-					const layer_bounds = raster.layer.bounds
-				// change the value of the current raster element
-					raster.source = img_src
-					raster.onLoad = function() {
-						// new image ratio (1200 / new image height)
-						const ratio = self.img_view_height / raster.height
-						// scale the raster to new ratio
-						raster.setScaling(ratio)
-						// apply the original layer bounds to the new layer situation
-						raster.layer.bounds = layer_bounds
-				}// end onLoad
-			}//end img_quality_change
-		}//end if layer_id==0
+			// update the canvas with the new size (it use the previous zoom to set the canvas content)
+			const offset = stage.updateCanvas(
+				image_definition.width,
+				image_definition.height
+			)
 
-		// Bring the main layer with the crop reference to to top of the layers
-		const main_layer = project.layers['main']
-		main_layer.bringToFront()
-
-		// Send the raster layer to the back of the layers
-		const raster_layer = project.layers['raster']
-		raster_layer.sendToBack()
-
+			return
+		}// end full_screen_change
+	}
 
 	return true
-}//end load_layer
+}//end load_data
 
 
 
 /**
-* CREATE_RASTER_LAYER
-* get the layers loaded and show into window
-* @return object raster
+* GET_LAST_LAYER_ID
+* Get the last layer_id in the ar_layers
+* @param int last_layer_id
 */
-vector_editor.prototype.create_raster_layer = function(self) {
+vector_editor.prototype.get_last_layer_id = function(self) {
 
-	// fixed height for the image
-	// get the image height with fixed 1200px and set the view_width
-	// this fixed height is used for change the quality o the image and don't move the bounds of the image.
-		const ratio			= self.img_view_height / self.img_height
-		// const view_width	= ratio * self.img_width
+	const ar_layer_id	= self.ar_layers.map((item) => item.layer_id)
+	const last_layer_id	= Math.max(...ar_layer_id)
 
-	// scale raster layer
-	// get the ratio for the scale the project layer to fit to canvas view height
-	// used to fix the raster layer to the canvas height
-		const canvas_h		= self.canvas_node.clientHeight
-		const ratio_layer 	= canvas_h / self.img_view_height
+	return last_layer_id
+}//end get_last_layer_id
 
-	// create the image in the raster layer
-		const raster = new self.current_paper.Raster({
-			source		: self.img_src,
-			position	: self.current_paper.view.center,
-		});
 
-	// scale the image to fixed height: 1200px
-		raster.setScaling(ratio)
-	// also scale the layer of the raster to be exact to the canvas bounds.
-		raster.layer.scale(ratio_layer, self.current_paper.view.center)
 
-	return raster
-}//end create_raster_layer
+/**
+* ADD_LAYER
+* get the layers loaded and show into window
+* @return object new_layer
+*/
+vector_editor.prototype.add_layer = function(self) {
+
+	const stage				= this.stage
+	const drawing			= stage.getCurrentDrawing()
+
+	// deselection any other selected
+	stage.clearSelection()
+
+	// set the layer data
+		const last_layer_id	= this.get_last_layer_id(self)
+		const layer_id		= last_layer_id + 1
+
+		// const new_layer	= self.ar_layers.find((item) => item.layer_id===layer_id)
+		const layer_name	= 'layer_' + layer_id
+
+	// create a new layer color for selectors and handlers
+		const layer_color = Math.floor(Math.random()*16777215).toString(16).padStart(6, "0");
+
+	// create a new layer and add to the ar_layers array and set as active layer
+		const new_layer = {
+			layer_id		: layer_id,
+			layer_data		: null,
+			layer_color		: '#'+layer_color+'55',
+			user_layer_name	: layer_name,
+			name 			: layer_name,
+			visible 		: true
+		}
+		drawing.createLayer(layer_name)
+		self.ar_layers.push(new_layer)
+		this.active_layer = new_layer
+
+	return new_layer
+}//end add_layer
+
+
+
+/**
+* save_data
+* get the layers loaded and save it
+* @return object new_layer
+*/
+vector_editor.prototype.save_data = function(self) {
+
+	const stage				= this.stage
+	const drawing			= stage.getCurrentDrawing();
+
+	const all_layers = drawing.all_layers
+	const len = drawing.all_layers.length
+
+	for (var i = 0; i < all_layers.length; i++) {
+
+		// get the group of the layer, it's a 'g' node
+		// and get the JSON format of this
+		const group = all_layers[i].group_
+		const json = stage.getJsonFromSvgElements(group)
+
+		const layer_id = all_layers[i].name_
+		const current_layer = self.ar_layers.find(item => item.name===layer_id)
+		// remove the layer definition and all title nodes
+		// get only the elements, all layer info will be recreated in load process
+		current_layer.layer_data = json.children.filter(el => el.element !== 'title')
+	}
+
+	// update the data in the instance previous to save
+	const value =  typeof(self.data.value[0])!=='undefined'
+		? clone(self.data.value[0])
+		: {}
+	value.lib_data		= self.ar_layers
+	// value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
+
+	// set the changed_data for update the component data and send it to the server for change when save
+		const changed_data = {
+			action	: 'update',
+			key		: 0,
+			value	: value
+		}
+
+	// set the change_data to the instance
+		self.data.changed_data = changed_data
+
+	self.change_value({
+		changed_data	: [changed_data],
+		refresh			: false
+	})
+
+	return null
+}//end save_data
 
 
 
@@ -1158,37 +995,7 @@ vector_editor.prototype.create_raster_layer = function(self) {
 */
 vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 
-	// current paper
-		const project			= self.current_paper.project
-	// set the active layer and his visibility
-		// get the paper layer name
-		const name				= layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
-		// get the paper project layer
-		const new_active_layer	= project.layers[name]
-		// activate the new active layer
-		new_active_layer.activate()
-		// set the global active_layer with the new active layer
-		this.active_layer	= project.activeLayer
-		// publish the change
-		event_manager.publish('active_layer_'+self.id, this.active_layer)
-		if(load==='layer'){
-			const ar_layers = project.layers
-			for (let i = 0; i < ar_layers.length; i++) {
-				const current_layer = ar_layers[i]
-				// current_layer.name!=='raster'
-				// 	? current_layer.visible = false
-				// 	: current_layer.visible = true
-				current_layer.visible = current_layer.name==='raster'
-			}
-		}
-		// set the visibility of the layer
-		this.active_layer.visible = true
 
-
-		// redraw the project
-		project.view.draw();
-		// deselect all paths
-		project.deselectAll();
 
 	return true
 }//end activate_layer
@@ -1202,7 +1009,7 @@ vector_editor.prototype.activate_layer = function(self, layer, load='full') {
 vector_editor.prototype.render_layer_selector = function(self) {
 
 	// get the layers loaded in the image instance
-	const ar_layers = self.ar_layer_loaded
+	const ar_layers = self.ar_layers
 
 	const fragment = new DocumentFragment()
 
@@ -1214,11 +1021,11 @@ vector_editor.prototype.render_layer_selector = function(self) {
 		})
 		add_layer.addEventListener('click', () =>{
 			// add the data in the instance
-			const layer_id	= self.add_layer()
-			const new_layer	= self.ar_layer_loaded.find((item) => item.layer_id===layer_id)
+			const new_layer	= this.add_layer(self)
 			const layer_li	= this.render_layer_row(self, new_layer)
 			// layer_ul.appendChild(layer_li)
 			layer_ul.insertBefore(layer_li, layer_ul.firstChild)
+
 		})
 
 	// close button
@@ -1264,7 +1071,11 @@ vector_editor.prototype.render_layer_selector = function(self) {
 */
 vector_editor.prototype.render_layer_row = function(self, layer) {
 
-	const project = self.current_paper.project
+	const stage				= this.stage
+	const drawing			= stage.getCurrentDrawing()
+	// const currentLayerName	= drawing.getCurrentLayerName()
+	// const canvas_layers		= stage.getCurrentDrawing().getNumLayers()
+
 
 	// layer_container
 		const layer_li = ui.create_dom_element({
@@ -1272,24 +1083,20 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 			class_name		: 'li'
 		})
 		layer_li.addEventListener('click', () =>{
-			project.deselectAll()
-			// prevent the selection of the raster layer
-			// (it can't be selected and used in the same form that other layers)
-				if(layer.layer_id===0) {
-					return
-				}
+			stage.clearSelection()
 
 			// get the paper layer name
-			const name				= 'layer_'+layer.layer_id
-			const new_active_layer	= project.layers[name]
+			const name	= 'layer_'+layer.layer_id
+
+			// const new_active_layer	= project.layers[name]
 			 // if we don't has the layer loaded, we load now
-			if(typeof new_active_layer==='undefined'){
-				this.load_layer(self, layer)
-			}else{
-				new_active_layer.activate()
-				this.active_layer = project.activeLayer
-				event_manager.publish('active_layer_'+self.id, new_active_layer)
-			}
+			// if(typeof new_active_layer==='undefined'){
+			// 	this.load_layer(self, layer)
+			// }else{
+				// new_active_layer.activate()
+
+				event_manager.publish('active_layer_'+self.id, layer)
+			// }
 		})
 		// set the raster layer with specific class to remove css behavior (hover...)
 			if(layer.layer_id===0){
@@ -1297,7 +1104,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 			}
 
 		// set the active layer, remove the raster layer to the active option
-			if(layer.layer_id===this.active_layer.data.layer_id && layer.layer_id!=0) {
+			if(layer.layer_id===this.active_layer.layer_id && layer.layer_id!==0) {
 				layer_li.classList.add('active')
 			}else{
 				if (layer_li.classList.contains('active')) {
@@ -1310,8 +1117,10 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				event_manager.subscribe('active_layer_'+self.id, change_layer)
 			)
 			function change_layer(active_layer) {
-				if(layer.layer_id === active_layer.data.layer_id) {
+				if(layer.layer_id === active_layer.layer_id) {
 					layer_li.classList.add('active')
+					this.active_layer = active_layer
+					stage.setCurrentLayer(active_layer.name)
 				}else{
 					if (layer_li.classList.contains('active')) {
 						layer_li.classList.remove('active')
@@ -1322,39 +1131,35 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 		// layer_icon
 			const layer_icon = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'button eye layer_icon',
+				class_name		: 'button eye layer_icon active',
 				parent			: layer_li,
 				text_node		: layer.layer_icon
 			})
 			// select the layer in paper, if the layer is the raster we change the selector name
 			const name			= layer.layer_id===0 ? 'raster': 'layer_'+layer.layer_id
-			const viewed_layer	= project.layers[name]
-			// toggle the class active to the icon
-			typeof viewed_layer !== 'undefined' && layer.layer_id === viewed_layer.data.layer_id
-				? layer_icon.classList.add('active')
-				: layer_icon.classList.remove('active')
+			const viewed_layer	= drawing.getLayerName(layer.layer_id)
 
 			layer_icon.addEventListener('click', () =>{
 				// get the name of the layer, if the layer is the raster we change the selector name
-				 const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
-				 const viewed_layer = project.layers[name]
-				 // if we don't has the layer loaded, we load now
-				if(typeof viewed_layer==='undefined'){
-					this.load_layer(self,layer)
-					layer_icon.classList.add('active')
-					this.active_layer = viewed_layer
-				}else{
-					// change the visibility state of the paper layer and icon
-					if(viewed_layer.visible === true){
-						this.active_layer		= ''
-						viewed_layer.visible	= false
+				const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
+				const viewed_layer = drawing.getLayerName(layer.layer_id)
+
+				// get the transparency
+				const transparency = layer.layer_id === 0 ? 0.5 : 0;
+				// }else{
+					// change the visibility state of the svgcanvas layer and icon
+					if(layer.visible === true){
+						this.active_layer	= ''
+						layer.visible		= false
+						drawing.setLayerOpacity(viewed_layer, transparency)
 						layer_icon.classList.remove('active')
 					}else{
-						viewed_layer.visible	= true
-						this.active_layer		= viewed_layer
+						layer.visible		= true
+						this.active_layer	= viewed_layer
+						drawing.setLayerOpacity(viewed_layer, 1.0)
 						layer_icon.classList.add('active')
 					}
-				}
+				// }
 			}) //end click event
 
 		// layer_id
@@ -1382,11 +1187,8 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				user_layer_name.contentEditable = false
 				// get the name of the layer, if the layer is the raster we change the selector name
 				const name = layer.layer_id === 0 ? 'raster': 'layer_'+layer.layer_id
-				const viewed_layer = project.layers[name]
-				viewed_layer.data.user_layer_name = user_layer_name.innerText
-				// update the data into the instance, prepared to save
-				// (but is not saved directly, the user need click in the save button)
-				self.update_draw_data()
+				const viewed_layer		= drawing.getLayerName(layer.layer_id)
+				layer.user_layer_name	= user_layer_name.innerText
 			})
 			// if the user press return key = 13, we blur the text box
 			user_layer_name.addEventListener('keydown', (e) =>{
@@ -1432,43 +1234,32 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 							parent			: footer
 						})
 						button_delete.addEventListener("click", function(){
+							console.log('layer:----->', layer);
+							const viewed_layer		= drawing.setCurrentLayer(layer.name)
+							// remove the layer in svgcanvas project
+							stage.deleteCurrentLayer()
 
-							// get the layer in paper, we change the name if the layer is the raster layer
-								const name = (layer.layer_id==0)
-									? 'raster'
-									: 'layer_' + layer.layer_id
+							//check if the user want remove transformations in raster or remove path layer
+							if(layer.layer_id==0){
+								// create new empty raster layer
 
-								const delete_layer = project.layers[name]
+								this.load_data(self)
+								// const new_raster_layer	= {
+								// 	layer_id	: 0
+								// }
 
-								// remove the layer in paper project
-								delete_layer.remove()
+							}else{
+								//the user want remove one path layer
+								// remove the data in the instance
+									// self.delete_layer(layer)
+									self.ar_layers = self.ar_layers.filter(item => item.layer_id!==layer.layer_id)
 
-								//check if the user want remove transformations in raster or remove path layer
-								if(layer.layer_id==0){
-									// create new empty raster layer
-									const new_raster_layer	= {
-										layer_id	: 0,
-										layer_data	: []
-									}
-									// load new raster layer into paper
-									self.vector_editor.load_layer(self, new_raster_layer)
-									// active the raster layer in the project
-									project.layers['raster'].activate()
-									// update the instance with the new layer information, prepared to save
-									// (but is not saved directly, the user need click in the save button)
-									self.update_draw_data()
-
-								}else{
-									//the user want remove one path layer
-									// remove the data in the instance
-										self.delete_layer(layer)
-									//remove the layer node
-										layer_li.remove()
-									// active the raster layer in the project
-									// it will by used for the next action in the vector editor
-									// if don't active one layer, paper can't save the changes (it has one delete layer active)
-										project.layers['raster'].activate()
-								}
+								//remove the layer node
+									layer_li.remove()
+								// active the raster layer in the project
+								// it will by used for the next action in the vector editor
+								// if don't active one layer, paper can't save the changes (it has one delete layer active)
+							}
 
 							// close modal
 								modal.on_close()
@@ -1496,8 +1287,8 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				: 'black'
 			// if the user do a double click into the color icon will be assigned the current color in the color picker
 			layer_color.addEventListener("dblclick", () =>{
-				layer_color.style.backgroundColor = this.active_fill_color.toCSS()
-				layer.layer_color = this.active_fill_color.toCSS()
+				layer_color.style.backgroundColor = this.active_fill_color
+				layer.layer_color = this.active_fill_color
 			})
 
 
