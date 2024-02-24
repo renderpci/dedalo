@@ -295,7 +295,7 @@ const render_activity_info = function(self) {
 
 /**
 * GET_ORDERED_COINS
-* This is used to build the ordered coins node ans assign the drop
+* This is used to build the ordered coins node and assign the drop
 * @param object self
 * 	instance of current tool
 * @return HTMLElement activity_info_body
@@ -318,24 +318,30 @@ const get_ordered_coins = async function(self){
 
 	await self.ordered_coins.destroy(false, true, true) // instance=false, delete_dependencies=true, remove_dom=true
 	await self.ordered_coins.build(true)
-	self.ordered_coins.show_interface.button_add = true
-	self.ordered_coins.show_interface.show_autocomplete = false
+	self.ordered_coins.show_interface.button_add		= true
+	self.ordered_coins.show_interface.show_autocomplete	= false
+
+
 	const ordered_coins_node = await self.ordered_coins.render()
 	coins_container.appendChild(ordered_coins_node)
 
-	// listen the portal refreshed in other window ans assign the drop events to refreshed nodes
-	self.events_tokens.push(
-		event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
-	)
-	function assing_drop(options) {
+	// listen the portal refreshed in other window and assign the drop events to refreshed nodes
+	// self.ordered_coins.events_tokens.push(
+	// 	event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
+	// )
+	// self.ordered_coins.events_tokens.push(
+	// 	event_manager.subscribe('add_row_'+ self.ordered_coins.id, assing_drop)
+	// )
 
-		drop({
-			self : self
-		})
-	}
+	// function assing_drop(options) {
+
+	// 	drop({
+	// 		self : self
+	// 	})
+	// }
 
 
-	drop({
+	render_tool_numisdata_order_coins.prototype.drop({
 		self : self
 	})
 }//end get_ordered_coins
@@ -349,11 +355,10 @@ const get_ordered_coins = async function(self){
 * @param object self
 * 	instance of current tool
 */
-const drop = function (options) {
+render_tool_numisdata_order_coins.prototype.drop = function (options) {
 
 	const self			= options.self
 	const ar_drop_nodes = self.ordered_coins.node.querySelectorAll('.column_numisdata9')
-
 
 	const drop_zones_len = ar_drop_nodes.length
 
@@ -400,10 +405,19 @@ const drop = function (options) {
 							caller 	: current_node.component_instance,
 							locator : data_parse.locator
 						}).then( response =>{
-
 							get_ordered_coins(self)
+
+							// change the drag icon to show as used
+							const draged_section_record = self.coins.ar_instances.find(el =>
+								el.section_id === data_parse.locator.section_id
+								&& el.section_tipo === data_parse.locator.section_tipo
+								&& el.id_variant !== 'hover'
+							)
+							// select the drag node and add the class used
+							if(draged_section_record){
+								draged_section_record.node.querySelector('#col_original .drag').classList.add('used')
 							}
-						)
+						})
 				},false)
 	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
 
