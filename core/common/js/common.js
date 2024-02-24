@@ -851,14 +851,17 @@ export const create_source = function (self, action) {
 		}
 
 	// caller_dataframe
-		if(self.caller && self.caller.model==='section_record'){
-			if(self.caller.caller){
-				source.caller_dataframe = {
-					section_tipo	: self.caller.caller.section_tipo,
-					section_id		: self.caller.caller.section_id
+		if(self.model==='component_dataframe'){
+			source.caller_dataframe = self.caller_dataframe
+				? self.caller_dataframe
+				: {
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					section_id_key	: self.data.section_id_key,
+					// tipo_key		: self.data.tipo_key
 				}
-			}
 		}
+
 
 	// properties
 		if (self.properties) {
