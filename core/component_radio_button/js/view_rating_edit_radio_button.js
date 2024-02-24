@@ -73,6 +73,9 @@ const get_content_data_edit = function(self) {
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
 
+	// sort datalist by section_id
+		datalist.sort((a, b) => (parseInt(a.section_id) > parseInt(b.section_id)) ? 1 : -1)
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
