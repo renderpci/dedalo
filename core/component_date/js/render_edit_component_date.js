@@ -269,7 +269,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					ui.component.activate(self)
+					ui.component.activate(self, false)
 				}
 			})
 		// keydown event. Prevent to fire page events like open search panel
