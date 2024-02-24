@@ -335,68 +335,21 @@ class section extends common {
 			}
 
 		// data is loaded once
-			// dataframe case, the section doesn't has his own data in DDBB
-			if (   $this->source==='caller_section'
-				&& !empty($this->caller_dataframe)
-				&& strpos((string)$this->caller_dataframe->section_id, 'search')===false // ignore when in search scenario like section_id 'search_45'
-				) {
-
-				// create the section of the caller
-					$caller_section	= section::get_instance(
-						$this->caller_dataframe->section_id,
-						$this->caller_dataframe->section_tipo,
-						$this->mode,
+			// JSON_RecordObj_matrix
+				$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
+				$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
+					? $this->JSON_RecordObj_matrix
+					: JSON_RecordObj_matrix::get_instance(
+						$matrix_table,
+						(int)$this->section_id, // int section_id
+						$this->tipo, // string section tipo
 						true // bool cache
 					);
+				$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
 
-				// get the data of the caller section from database
-					$caller_dato = $caller_section->get_dato();
+			// load dato from db
+				$dato = $JSON_RecordObj_matrix->get_dato();
 
-				// if the caller_dato doesn't has relations log the error and return empty object. (it can happen in time machine situations)
-					if(!isset($caller_dato->relations)){
-						debug_log(__METHOD__
-							." Ignored caller_dataframe section without relations! " .PHP_EOL
-							.' caller_dataframe->section_tipo:' . $this->caller_dataframe->section_tipo .PHP_EOL
-							.' caller_dataframe->section_id:' . $this->caller_dataframe->section_id
-							, logger::ERROR
-						);
-						return new stdClass();
-					}
-
-				// relations. Get the data with matching the section_id of the current section with the section_id_key of the data of the caller
-				// section_id === section_id_key
-				// 4 === 4
-					$section_id_key		= (int)$this->section_id;
-					$filtered_relations	= array_filter($caller_dato->relations, function($el) use ($section_id_key){
-						return isset($el->section_id_key) && $el->section_id_key===$section_id_key;
-					});
-
-				// dato. Create the final data with filtered values and empty components (literals are not compatible for now)
-					$new_section_dato = new stdClass();
-						$new_section_dato->relations	= array_values($filtered_relations);
-						$new_section_dato->components	= new stdClass();
-
-				$dato = $new_section_dato;
-
-			}else{
-
-				// default case
-
-				// JSON_RecordObj_matrix
-					$matrix_table			= common::get_matrix_table_from_tipo($this->tipo);
-					$JSON_RecordObj_matrix	= isset($this->JSON_RecordObj_matrix)
-						? $this->JSON_RecordObj_matrix
-						: JSON_RecordObj_matrix::get_instance(
-							$matrix_table,
-							(int)$this->section_id, // int section_id
-							$this->tipo, // string section tipo
-							true // bool cache
-						);
-					$this->JSON_RecordObj_matrix = $JSON_RecordObj_matrix;
-
-				// load dato from db
-					$dato = $JSON_RecordObj_matrix->get_dato();
-			}
 
 		// fix dato (force object)
 			$this->dato = (object)$dato;
@@ -666,7 +619,6 @@ class section extends common {
 						$component_global_dato->dato = new stdClass();
 						// $component_global_dato->valor		= new stdClass();
 						// $component_global_dato->valor_list	= new stdClass();
-						// $component_global_dato->dataframe	= new stdClass();
 			}
 
 		// component_lang
@@ -768,64 +720,18 @@ class section extends common {
 			$component_tipo	= $component_obj->get_tipo();
 			$component_dato	= $component_obj->get_dato_full();
 
-		// caller_section case
-		// used for dataframe
-		// dataframe sections doesn't has data in database it get data from the caller section
-			if ($this->source==='caller_section' && !empty($this->caller_dataframe)) {
-				// create the caller section that has data in DDBB
-				$caller_section	= section::get_instance(
-					$this->caller_dataframe->section_id,
-					$this->caller_dataframe->section_tipo,
-					$this->mode,
-					true
-				);
-				// get the full relations data
-				$relations_dato	= $caller_section->get_relations( 'relations' );
-
-				// 1 remove old locators (all) of the component with current section_id_key
-				// the component could has other locators with different section_id_key that will be preserved.
-					$cleaned_locators	= [];
-					$section_id_key		= (int)$this->section_id;
-					foreach ($relations_dato as $current_locator) {
-						if (   (isset($current_locator->from_component_tipo) && $current_locator->from_component_tipo===$component_tipo)
-							&& (isset($current_locator->section_id_key) && $current_locator->section_id_key===$section_id_key)
-							){
-							// nothing to do (do not store this locator)
-						}else{
-							$cleaned_locators[] = $current_locator;
-						}
-					}
-
-				// add current dato
-				// if the component has locators, it will be added, else nothing to add
-					if (!empty($component_dato)) {
-						foreach ($component_dato as $current_locator) {
-							$current_locator->section_id_key = $section_id_key;
-							$cleaned_locators[] = $current_locator;
-						}
-					}
-
-				// Update section dato relations on finish
-					$caller_section->dato->relations = $cleaned_locators;
-
-				// save
-					$caller_section->Save();
-
-				// get the saved data of the component to be returned.
-					$fixed_component_dato = array_values(
-						array_filter($caller_section->dato->relations, function($el) use($component_tipo) {
-							return isset($el->from_component_tipo) && $el->from_component_tipo===$component_tipo;
-						})
-					);
-
-				return $fixed_component_dato;
-			}
+		$options = new stdClass();
+			$options->component_tipo		= $component_tipo;
+			$options->relations_container	= 'relations';
+			$options->model					= $component_obj->get_model();
+			$options->caller_dataframe		= $component_obj->get_caller_dataframe();
 
 		// Remove all previous locators of current component tipo
-		$this->remove_relations_from_component_tipo( $component_tipo, 'relations' );
+		$this->remove_relations_from_component_tipo( $options );
 
 		// Remove all existing search locators of current component tipo
-		$this->remove_relations_from_component_tipo( $component_tipo, 'relations_search' );
+		$options->relations_container	= 'relations_search';
+		$this->remove_relations_from_component_tipo( $options );
 
 		// add locators
 		if (!empty($component_dato)) {
@@ -973,23 +879,6 @@ class section extends common {
 				$_SESSION['dedalo']['section_temp_data'][$temp_data_uid] = json_decode( json_encode($section_temp_data) );
 
 				return $this->section_id;
-			}
-
-		// caller_section. When the section get data from other section (his source is the caller section instead DDBB)
-			if($this->source==='caller_section') {
-
-				// time machine. Save component data only
-					$JSON_RecordObj_matrix = JSON_RecordObj_matrix::get_instance(
-						'dataframe', // string matrix_table (fake table)
-						(int)$this->section_id, // int section_id
-						$tipo, // string section_tipo
-						true // bool cache
-					);
-					$JSON_RecordObj_matrix->save_time_machine($options);
-
-				return !empty($this->section_id)
-					? $this->section_id
-					: null;
 			}
 
 		// matrix table. Note that this function fallback to real section if virtual section don't have table defined
@@ -1623,50 +1512,6 @@ class section extends common {
 						$this->Save();
 
 					$logger_msg = "Deleted section and children data";
-					break;
-
-				case 'delete_dataframe' :
-					// delete the section with dataframe data.
-					// this section doesn't has data in DDBB and need to load and delete data from caller section.
-					if($this->source==='caller_section' && !empty($this->caller_dataframe)) {
-						// create the caller section and get his relations data
-						$caller_section	= section::get_instance(
-							$this->caller_dataframe->section_id,
-							$this->caller_dataframe->section_tipo,
-							$this->mode,
-							true
-						);
-						$relations_dato	= $caller_section->get_relations( 'relations' );
-
-						// 1 remove old locators (all) of the component with current section_id_key
-						// the component could has other locators with different section_id_key that will be preserved.
-							$cleaned_locators	= [];
-							$section_id_key		= (int)$this->section_id;
-							foreach ($relations_dato as $current_locator) {
-								if ( isset($current_locator->section_id_key) && $current_locator->section_id_key===$section_id_key ){
-									//nothing to do, doesn't stored this locator (it will be deleted)
-								}else{
-									// add the locators than not match.
-									$cleaned_locators[] = $current_locator;
-								}
-							}
-
-						// Update section dato relations on finish
-							$caller_section->dato->relations = $cleaned_locators;
-
-						// save
-							$caller_section->Save();
-
-						$logger_msg = "DEBUG INFO ".__METHOD__." Deleted dataframe section. delete_mode $delete_mode";
-
-					}else{
-
-						debug_log(__METHOD__
-							." Dataframe section has not defined source property (delete_dataframe)"
-							, logger::ERROR
-						);
-						return false;
-					}
 					break;
 
 				default:
