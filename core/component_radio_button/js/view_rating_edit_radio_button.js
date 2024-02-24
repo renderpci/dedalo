@@ -127,7 +127,8 @@ const get_content_value = (i, datalist_item, self) => {
 			element_type	: 'input',
 			type			: 'radio',
 			name			: self.id,
-			parent 			: content_value
+			title			: label,
+			parent			: content_value
 		})
 		input.addEventListener('change', function() {
 
@@ -150,7 +151,6 @@ const get_content_value = (i, datalist_item, self) => {
 				content_data	: self.node.content_data,
 				value			: self.data.value[0] || {}
 			})
-
 		})//end change event
 
 		// permissions. Set disabled on low permissions
