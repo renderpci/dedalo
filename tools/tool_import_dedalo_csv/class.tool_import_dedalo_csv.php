@@ -961,7 +961,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 
 						// conform imported value with every component rules.
-							$conform_import_data_response = $component->conform_import_data($value, $component_tipo);
+							$conform_import_data_response = $component->conform_import_data($value, $column_map->column_name);
 							// if the component has errors, include it into failed rows
 							if(!empty($conform_import_data_response->errors)){
 								foreach ($conform_import_data_response->errors as $current_error) {
