@@ -26,12 +26,19 @@
 
 				// button over each text input (right)
 				.button.remove {
-					position: absolute;
-					right: 0.5em;
-					top: 0.5em;
-					z-index: 1;
+					// position: absolute;
+					// right: 0.5em;
+					// top: 0.5em;
+					// z-index: 1;
+
+					margin-top: 0.5em;
 				}
 
+				&.has_dataframe {
+					.button.remove {
+						// not used
+					}
+				}
 
 				.transliterate_value {
 					padding-top: 0.5rem;
