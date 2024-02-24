@@ -4192,7 +4192,7 @@ abstract class common {
 				];
 
 				// target section tipo add
-					if ($model==='component_portal') {
+					if ($model==='component_portal' || $model==='component_dataframe') {
 						$ddo = reset($item_context);
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						$ddo->target_section_tipo = $target_section_tipo;
