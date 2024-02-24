@@ -6,6 +6,65 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=610; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 1;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 6;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+
+		// Change the tipo column definition id matrix_counter
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				ALTER TABLE \"matrix_counter\"
+				ALTER \"tipo\" TYPE character varying(128),
+				ALTER \"tipo\" DROP DEFAULT,
+				ALTER \"tipo\" SET NOT NULL;
+			");
+
+		// add the section_id_key to matrix_time_machine
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				ALTER TABLE \"matrix_time_machine\"
+					ADD COLUMN IF NOT EXISTS \"section_id_key\" integer NULL;
+			");
+		// create new index into time_machine table to include section_id_key
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
+			");
+
+		// Add the matrix_dataframe table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_dataframe
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_dataframe_id_seq;
+				ALTER TABLE public.matrix_dataframe ALTER COLUMN id SET DEFAULT nextval('matrix_dataframe_id_seq'::regclass);
+			");
+
+	// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Remove unused section data and update/clean some properties";
+				$script_obj->script_class	= "data_v5_to_v6";
+				$script_obj->script_method	= "clean_section_and_component_dato";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
 
 $v=606; #####################################################################################
 $updates->$v = new stdClass();

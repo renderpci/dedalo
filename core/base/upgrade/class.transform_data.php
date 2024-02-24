@@ -339,4 +339,177 @@ class transform_data {
 
 
 
+	/**
+	* UPDATE_DATAFRAME_TO_V6_1
+	* @return
+	*/
+	public static function update_dataframe_to_v6_1() {
+
+		$ar_tables = [
+			// 'new_matrix'
+			'matrix',
+			// 'matrix_activities',
+			// 'matrix_dataframe',
+			// 'matrix_dd',
+			// 'matrix_hierarchy',
+			// 'matrix_hierarchy_main',
+			// 'matrix_indexations',
+			// 'matrix_langs',
+			// 'matrix_layout',
+			// 'matrix_layout_dd',
+			// 'matrix_list',
+			// 'matrix_notes',
+			// 'matrix_profiles',
+			// 'matrix_projects',
+			// 'matrix_structurations',
+			// 'matrix_tools',
+			// 'matrix_users',
+			// 'matrix_stats'
+		];
+		$action = 'fix_dataframe_action';
+
+		update::convert_table_data($ar_tables, $action);
+
+	}//end update_dataframe_to_v6_1
+
+
+
+	/**
+	* FIX_DATAFRAME_ACTION
+	* Updates dataframe matrix and time machine data
+	* @param object|null $datos
+	* @return object|null $datos
+	*/
+	public static function fix_dataframe_action(?object $datos) : ?object {
+
+		// oh1 / empty relations cases
+			if($datos->section_tipo === 'oh1' || empty($datos->relations)){
+				return null;
+			}
+
+		$target_section_tipo	= 'dd562'; // Dataframe active
+		$ratting_tipo			= 'dd566'; // Weight
+
+		$dataframe_to_save = false;
+		foreach ($datos->relations as $locator) {
+
+			if(isset($locator->section_id_key)){
+
+				$dataframe_to_save = true;
+
+				// section
+					$section = section::get_instance(
+						null, // string|null section_id
+						$target_section_tipo // string section_tipo
+					);
+					$new_target_section_id	= $section->Save();
+					$locator->section_id	= $new_target_section_id;
+
+				// time machine data update
+					self::fix_dataframe_tm(
+						$datos->section_id,
+						$datos->section_tipo,
+						$locator->from_component_tipo,
+						$locator->section_id_key,
+						$new_target_section_id
+					);
+
+				// ratting component update
+					$component_rating = component_common::get_instance(
+						'component_radio_button', // string model
+						$ratting_tipo, // string tipo
+						$new_target_section_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						$target_section_tipo // string section_tipo
+					);
+
+					$dato = new locator();
+						$dato->set_section_tipo('dd500');
+						$dato->set_section_id('1');
+
+					$component_rating->set_dato([$dato]);
+					$component_rating->Save();
+			}
+		}//end foreach ($datos->relations as $locator)
+
+		// no changes case
+			if($dataframe_to_save === false){
+				return null;
+			}
+
+
+		return $datos;
+	}//end fix_dataframe_action
+
+
+
+	/**
+	* FIX_DATAFRAME_TM
+	* Updates time_machine rows for current element
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param string $component_tipo
+	* @param string|int $section_id_key
+	* @param string|int $new_target_section_id
+	*
+	* @return array|null $tm_ar_changed
+	*/
+	public function fix_dataframe_tm(string|int $section_id, string $section_tipo, string $component_tipo, string|int $section_id_key, string|int $new_target_section_id) : array {
+
+		$tm_ar_changed = [];
+
+		$strQuery = "
+			SELECT * FROM matrix_time_machine
+			WHERE section_id = '$section_id'
+			-- AND section_tipo = '$section_tipo'
+			AND tipo = '$component_tipo'
+			ORDER BY id ASC
+		";
+		$result = JSON_RecordDataBoundObject::search_free($strQuery);
+		// query error case
+		if($result===false){
+			return $tm_ar_changed;
+		}
+		// empty records case
+		$n_rows = pg_num_rows($result);
+		if ($n_rows<1) {
+			return $tm_ar_changed;
+		}
+
+		while($row = pg_fetch_assoc($result)) {
+
+			$id			= $row['id'];
+			$section_id	= $row['section_id'];
+			$dato		= json_decode($row['dato']);
+
+			if (isset($dato[0])) {
+				$dato[0]->section_id = $new_target_section_id;
+			}
+
+			// data_encoded : JSON ENCODE ALWAYS !!!
+			$data_encoded = json_handler::encode($dato);
+			// prevent null encoded errors
+			$safe_data = str_replace(['\\u0000','\u0000'], ' ', $data_encoded);
+
+			$strQuery2	= "UPDATE matrix_time_machine SET dato = $1, section_id_key = $2 WHERE id = $3 ";
+			$result2	= pg_query_params(DBi::_getConnection(), $strQuery2, [$safe_data, $section_id, $id]);
+			if($result2===false) {
+				$msg = "Failed Update section_data $id";
+				debug_log(__METHOD__
+					." ERROR: $msg ". PHP_EOL
+					.' strQuery: ' . $strQuery
+					, logger::ERROR
+				);
+				continue;
+			}
+
+			$tm_ar_changed[] = $id;
+		}
+
+		return $tm_ar_changed;
+	}//end fix_dataframe_tm
+
+
+
 }//end class transform_data
