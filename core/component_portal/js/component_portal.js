@@ -1345,72 +1345,14 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 	// call to the section and delete it
 		const delete_section_result = section.delete_section({
-			sqo			: sqo,
-			delete_mode	: 'delete_record'
-		})
-
-
-	return delete_section_result
-}//end delete_linked_record
-
-
-
-/**
-* DELETE_DATAFRAME_RECORD
-* Remove section in delete_mode 'delete_dataframe'
-* @param object options
-* {
-*	section_id : section_id
-* }
-* @return bool delete_section_result
-*/
-component_portal.prototype.delete_dataframe_record = async function(options) {
-
-	const self = this
-
-	// options
-		const section_id = options.section_id
-
-	// ddo_dataframe.
-	// check if the show has any ddo that call to any dataframe section.
-		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.is_dataframe===true)
-		if(!ddo_dataframe){
-			return false
-		}
-
-	// create the instance of the section called by the row of the portal,
-	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
-		const instance_options = {
-			model			: 'section',
-			tipo			: ddo_dataframe.section_tipo,
-			section_tipo	: ddo_dataframe.section_tipo,
-			section_id		: section_id,
-			mode			: 'list',
-			lang			: self.lang,
-			caller			: self,
-			inspector		: false,
-			filter			: false
-		}
-	// get the instance
-		const section =	await get_instance(instance_options)
-
-	// caller_dataframe
-		const caller_dataframe = (self.caller && self.caller.model==='section_record' && self.caller.caller)
-			? {
-				section_tipo	: self.caller.caller.section_tipo,
-				section_id		: self.caller.caller.section_id
-			  }
-			: null
-
-	// call to the section and delete it
-		const delete_section_result = await section.delete_section({
-			delete_mode			: 'delete_dataframe',
+			sqo					: sqo,
+			delete_mode			: 'delete_record',
 			caller_dataframe	: caller_dataframe
 		})
 
 
 	return delete_section_result
-}//end delete_dataframe_record
+}//end delete_linked_record
 
 
 
