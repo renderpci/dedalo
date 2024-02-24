@@ -85,7 +85,7 @@ export const get_content_data = function(self) {
 			// set the pointer
 			content_data[i] = input_element_node
 		}
-		
+
 
 	return content_data
 }//end get_content_data
@@ -126,7 +126,7 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					ui.component.activate(self)
+					ui.component.activate(self, false)
 				}
 			})
 		// keyup event
@@ -204,7 +204,7 @@ const get_content_value_read = (i, current_value, self) => {
 			class_name		: 'content_value read_only',
 			inner_html		: current_value
 		})
-		
+
 
 	return content_value
 }//end get_content_value_read
