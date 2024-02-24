@@ -1724,6 +1724,18 @@ abstract class common {
 						// search operators info (tool tips)
 						$dd_object->search_operators_info	= $this->search_operators_info();
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
+					}else{
+
+						$new_dataframe = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$this->tipo,
+							'component_dataframe',
+							'children',
+							true
+						);
+
+						$dd_object->new_dataframe = (!empty($new_dataframe))
+							? $new_dataframe[0]
+							: null;
 					}
 
 				}else if($model==='section') {
