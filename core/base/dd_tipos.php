@@ -142,11 +142,6 @@ define('DEDALO_RELATION_TYPE_RELATED_TIPO',				'dd89');
 	define('DEDALO_RELATION_TYPE_RELATED_MULTIDIRECTIONAL_TIPO','dd621');
 	// define('DEDALO_RELATION_TYPE_RECORD_TIPO', 'ddXXX'); // working here
 
-// Data frames types
-define('DEDALO_DATAFRAME_TYPE_UNCERTAINTY',				'dd558');
-define('DEDALO_DATAFRAME_TYPE_TIME',					'dd559');
-define('DEDALO_DATAFRAME_TYPE_SPACE',					'dd560');
-
 // Notes
 define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
 define('DEDALO_NOTES_TEXT_TIPO',						'rsc329');
