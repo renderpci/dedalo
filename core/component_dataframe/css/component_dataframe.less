@@ -1,0 +1,67 @@
+/**
+* component_dataframe
+*
+* Included from main.less file
+*/
+.component_dataframe, .component_dataframe_mini {
+
+	// &.view_default, &.view_text {
+		>.content_data {
+			display: flex;
+			align-content: center;
+			padding: 0px;
+
+			// height: 2rem;
+
+			>.content_value {
+				height: 2rem;
+				width: 2rem;
+				display: flex;
+				align-items: center;
+    			justify-content: center;
+				text-align: center;
+
+				>.button {
+					width: 1.3rem;
+					height: 1.3rem;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					cursor: pointer;
+
+					&:hover {
+						// background-color: @color_grey_light;
+					}
+					&:active {
+						opacity: 0.4;
+					}
+
+					// button activate specifics
+					&.activate {
+						border-radius: 50%;
+						background-color: white;
+						font-weight: 500;
+						font-size: 1.1rem;
+					}
+
+					// button add specifics
+					&.add {
+						// width: 1.1rem;
+						// height: 1.1rem;
+					}
+				}//end .button
+			}//end .content_value
+
+		}
+	// }//end view_default
+
+
+	&.component_dataframe_mini {
+		>.content_data {
+			display: inline-flex !important;
+		}
+	}
+
+
+
+}//end component_dataframe
