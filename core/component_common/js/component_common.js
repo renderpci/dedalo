@@ -193,6 +193,19 @@ component_common.prototype.build = async function(autoload=false) {
 		// changed_data. Set as empty array always
 		self.data.changed_data = []
 
+	// request_config_object
+		if (!self.context) {
+			// request_config_object. get the request_config_object from request_config
+			self.request_config_object = self.request_config
+				? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+				: {}
+		}else{
+			// request_config_object. get the request_config_object from context
+			self.request_config_object = self.context && self.context.request_config
+				? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+				: {}
+		}
+
 	// load data on auto-load true
 	// when the auto-load if false the data will be injected by the caller (as section_record or others)
 		if (autoload===true) {
