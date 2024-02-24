@@ -424,15 +424,30 @@ class component_relation_common extends component_common {
 				// set the path that will be used to create the column_obj id
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
+				// if the component has a dataframe component, create his caller_dataframe to related with the locator
+				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
+					? (object)[
+						'section_tipo'		=> $ddo->section_tipo,
+						'section_id_key'	=> $locator->section_id,
+					]
+					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				// create the component with the ddo definition
+				// dataframe case: the data of the component_dataframe is inside the same section than the caller, so, his section_tipo and section_id need to be the same as the main component
 				$current_component		= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
-					$locator->section_id,
+					($ddo->model === 'component_dataframe')
+						? $this->section_id
+						: $locator->section_id,
 					$this->mode,
 					$current_lang,
-					$locator->section_tipo
+					($ddo->model === 'component_dataframe')
+						? $this->section_tipo
+						: $locator->section_tipo,
+					true,
+					$caller_dataframe
 				);
 
 				// set the locator to the new component, it will used in the next loop
