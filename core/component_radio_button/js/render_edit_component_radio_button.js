@@ -322,7 +322,9 @@ export const get_buttons = (self) => {
 				class_name		: 'button reset',
 				parent			: fragment
 			})
-			reset_button.addEventListener('click', function() {
+			reset_button.addEventListener('click', function(e) {
+				e.stopPropagation()
+
 				// force possible input change before remove
 				document.activeElement.blur()
 
