@@ -922,7 +922,7 @@ export const get_buttons = (self) => {
 					})()
 					return
 			}
-			button_link.addEventListener('click', fn_link)
+			button_link.addEventListener('mousedown', fn_link)
 		}//end button_link
 
 	// button_open_section_list (button_add)
@@ -966,7 +966,7 @@ export const get_buttons = (self) => {
 							}
 						})
 				}//end fn_click
-				button_open_section_list.addEventListener('click', fn_click)
+				button_open_section_list.addEventListener('mousedown', fn_click)
 			}
 		}
 
