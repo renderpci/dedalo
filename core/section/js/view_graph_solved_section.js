@@ -18,7 +18,7 @@
 	// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
 	// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
 	// - rollup -c
-	import * as d3 from '../../../lib/d3/d3-7.8.5/dist/d3.min.js'
+	// import * as d3 from '../../../lib/d3/d3-7.8.5/dist/d3.min.js'
 
 	import {
 		get_d3_data
@@ -170,7 +170,7 @@ const get_content_data = async function(self) {
 			  content_data.classList.add('content_data', self.mode)
 
 	// d3 data and graph
-		when_in_dom(content_data, ()=>{
+		when_in_dom(content_data, async ()=>{
 
 			// get d3 data
 				const d3_data = get_d3_data({
@@ -179,7 +179,7 @@ const get_content_data = async function(self) {
 				})
 
 			// get d3 node
-				const d3_node = get_graph({
+				const d3_node = await get_graph({
 					self 			: self,
 					content_data	: content_data,
 					data			: d3_data
@@ -200,9 +200,9 @@ const get_content_data = async function(self) {
 * @param object options
 * @return HTMLElement svg.node
 */
-const get_graph = function(options) {
+const get_graph = async function(options) {
 
-	// vars
+	// options
 	const content_data	= options.content_data
 	const data			= options.data
 	const self			= options.self
@@ -211,6 +211,32 @@ const get_graph = function(options) {
 	const size		= content_data.getBoundingClientRect()
 	const width		= size.width;
 	const height	= size.height;
+
+	// load lib files
+	// load files only when is really necessary
+		const load_lib_files = () => {
+			return new Promise(function(resolve){
+
+				if(self.node) {
+					self.node.classList.add('loading')
+				}
+
+				// D3. Note that to compile d3 using rollup, proceed as follows from the terminal:
+				// - cd '/mylocalpath/v6/master_dedalo/lib/d3/d3-7.8.5'
+				// - rollup -c
+
+				import('../../../lib/d3/d3-7.8.5/dist/d3.min.js')
+				.then(async function(module){
+
+					if(self.node) {
+						self.node.classList.remove('loading')
+					}
+
+					resolve(module)
+				})
+			})
+		}
+		const d3 = await load_lib_files()
 
 	// Specify the color scale.
 	const color = d3.scaleOrdinal(d3.schemeCategory10);
