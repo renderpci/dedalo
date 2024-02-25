@@ -136,4 +136,24 @@ const t0 = performance.now()
 
 
 
+	// scroll window. Improve performance in browser scroll
+		let lastScrollY, scheduledAnimationFrame
+		const readAndUpdatePage = (e) => {
+		}
+		function onScroll (evt) {
+
+			// Store the scroll value for laterz.
+			lastScrollY = window.scrollY;
+
+			// Prevent multiple rAF callbacks.
+			if (scheduledAnimationFrame)
+			return;
+
+			scheduledAnimationFrame = true;
+			requestAnimationFrame(readAndUpdatePage);
+		}
+		window.addEventListener('scroll', onScroll);
+
+
+
 // @license-end
