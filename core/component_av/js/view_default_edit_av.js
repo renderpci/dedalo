@@ -133,6 +133,7 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'posterframe',
 			parent			: content_value
 		})
+		posterframe.setAttribute('height', 392)
 		posterframe.addEventListener('error', function(e) {
 			if (posterframe.src!==page_globals.fallback_image) {
 				posterframe.src = page_globals.fallback_image
@@ -261,6 +262,7 @@ const build_video_node = (posterframe_url) => {
 		video.controls	= true
 		video.classList.add('posterframe')
 		video.setAttribute('tabindex', 0)
+		video.setAttribute('height', 392)
 		video.appendChild(source)
 
 	// keyup event

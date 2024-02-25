@@ -142,6 +142,7 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'posterframe loading',
 				parent			: content_value
 			})
+			content_value.posterframe.setAttribute('height', 392)
 			// image background color
 			content_value.posterframe.addEventListener('load', set_bg_color, false)
 			function set_bg_color() {
