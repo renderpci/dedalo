@@ -13,13 +13,14 @@
 
 .menu {
 	// vars
-	--menu_heigth: 2rem;
+	// --menu_heigth: 2em;
+	--menu_heigth: 2.2rem;
 
 	// position: fixed;
 	position: -webkit-sticky;
 	position: sticky;
 	top: 0px;
-	left:0px;
+	left: 0px;
 	display: flex;
 	flex-wrap: wrap;
 	align-items: center;
@@ -61,26 +62,12 @@
 
 
 
-	// placeholder. Preserve the height space while menu is loading
-		&.container_placeholder {
-			height: 56.625px;
-			display: flex;
-			align-items: center;
-
-			>.spinner {
-				top: 21%;
-				left: 0.75rem;
-			}
-		}
-
-
-
 	// top_item shared items
 		>.top_item {
 			min-height: var(--menu_heigth);
 			line-height: var(--menu_heigth);
-			font-size: 1.1em;
-			margin-left: 1em;
+			font-size: 1.1rem;
+			margin-left: 1rem;
 		}
 
 
@@ -280,7 +267,7 @@
 
 				position: absolute;
 				right: 8px;
-				top: 9px;
+				top: 12px;
 				pointer-events: none;
 			}
 
@@ -361,7 +348,7 @@
 						border-left: 5px solid #9d9d9d;
 						position: absolute;
 						right: 8px;
-						top: 9px;
+						top: 12px;
 						pointer-events: none;
 					}
 
@@ -468,9 +455,9 @@
 	// section label. Current section name
 		>.section_label {
 			cursor: pointer;
-			margin-right: 1em;
-			padding-top: 1px;
+			margin-right: 1rem;
 			user-select: none;
+
 
 			@media screen and (max-width: @width_break_point_0) { // 1024px
 				font-size: 1rem;
