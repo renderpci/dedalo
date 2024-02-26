@@ -174,6 +174,7 @@ const get_content_data = async function(self) {
 						container			: content_data,
 						preserve_content	: true,
 						label				: current_context.label || current_context.model,
+						model				: current_context.model,
 						callback			: async () => {
 							// instance
 							const current_instance = await instantiate_page_element(

@@ -3192,6 +3192,7 @@ export const ui = {
 			const preserve_content	= options.preserve_content || false
 			const replace_container = options.replace_container || false
 			const label				= options.label || ''
+			const model				= options.model || null
 			const callback			= options.callback
 			const style				= options.style
 
@@ -3202,10 +3203,15 @@ export const ui = {
 				}
 			}
 
+		// placeholder_class
+			const placeholder_class = model
+				? ' ' + model + '_placeholder'
+				: ''
+
 		// container_placeholder
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'container container_placeholder ' + label,
+				class_name		: 'container container_placeholder' + placeholder_class,
 				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
 				parent			: container
 			})
