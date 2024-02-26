@@ -44,6 +44,11 @@ All ontology updates will be backup into the directory:
 
 > ../backups/ontology
 
+!!! warning "Legacy Ontology versions considerations"
+    Since 26-02-2024, master server returns freeze versions for the previous Dédalo code versions calls:   
+    `>=6.1 -> Ontology (live) version path: / `  
+    `Others -> Ontology (freeze) version path: /5 `
+    
 ### doing the update process manually
 
 Ontology is save tld by tld and you can update it coping the files located [here](https://github.com/renderpci/dedalo/tree/V5.8.0/install/import/ontology).
