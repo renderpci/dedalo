@@ -287,6 +287,17 @@ final class dd_utils_api {
 				$response->result	= true;
 				$response->msg		= 'OK. Request done ['.__METHOD__.']';
 
+		// dedalo_data_lang_sync
+			if (defined('DEDALO_DATA_LANG_SYNC') && DEDALO_DATA_LANG_SYNC===true) {
+				if (!empty($dedalo_application_lang)) {
+					// data_lang from application_lang
+					$dedalo_data_lang = $dedalo_application_lang;
+				}else if (!empty($dedalo_data_lang)) {
+					// application_lang from data_lang
+					$dedalo_application_lang = $dedalo_data_lang;
+				}
+			}
+
 		// dedalo_data_lang
 			if (!empty($dedalo_data_lang)) {
 				$dedalo_data_lang = trim( safe_xss($dedalo_data_lang) );
