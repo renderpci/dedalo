@@ -102,7 +102,12 @@ menu.prototype.build = async function(autoload=true) {
 	// autoload
 		if (autoload===true) {
 
-			const menu_cache_data = await data_manager.get_local_db_data(self.id, 'data')
+			const local_db_id = self.build_local_db_id()
+			// try to get existing local DB data
+			const menu_cache_data = await data_manager.get_local_db_data(
+				local_db_id,
+				'data'
+			)
 
 			if(menu_cache_data){
 
@@ -140,8 +145,8 @@ menu.prototype.build = async function(autoload=true) {
 
 				// cache
 					const menu_cache_data = {
-						id		: self.id,
-						value	: self.datum
+						id		: local_db_id, // id
+						value	: self.datum // value
 					}
 					data_manager.set_local_db_data(
 						menu_cache_data,
@@ -220,11 +225,10 @@ menu.prototype.delete_menu_local_db_data = async function() {
 		const langs			= page_globals.dedalo_application_langs
 		const langs_length	= langs.length
 		for (let i = 0; i < langs_length; i++) {
-			const lang	= langs[i].value
-			const regex	= /lg-[a-z]{2,5}$/
-			const id	= self.id.replace(regex, lang)
+			const lang			= langs[i].value
+			const local_db_id	= self.build_local_db_id(lang)
 			await data_manager.delete_local_db_data(
-				id,
+				local_db_id,
 				'data'
 			)
 		}
@@ -256,6 +260,23 @@ menu.prototype.open_tool_user_admin_handler = function(e) {
 			caller			: self
 		})
 }//end open_tool_user_admin_handler
+
+
+
+/**
+* BUILD_LOCAL_DB_ID
+* Unifies function to build the id of the stored local DB value
+* It used one for each language as menu_dd85_lg-nep
+* @param string lang
+* 	Optional. Default page_globals.dedalo_application_lang fallback
+* @return void
+*/
+menu.prototype.build_local_db_id = function(lang) {
+
+	const self = this
+
+	return self.model + '_' + self.tipo + '_' + (lang || page_globals.dedalo_application_lang)
+}//end build_local_db_id
 
 
 
