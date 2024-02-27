@@ -29,7 +29,7 @@ use PHPUnit\TextUI\XmlConfiguration\Logging\Logging;
  *
  * @psalm-immutable
  */
-final class DefaultConfiguration extends Configuration
+final readonly class DefaultConfiguration extends Configuration
 {
     public static function create(): self
     {
@@ -54,11 +54,6 @@ final class DefaultConfiguration extends Configuration
                 false,
             ),
             new CodeCoverage(
-                null,
-                CodeCoverageFilterDirectoryCollection::fromArray([]),
-                FileCollection::fromArray([]),
-                CodeCoverageFilterDirectoryCollection::fromArray([]),
-                FileCollection::fromArray([]),
                 false,
                 true,
                 false,
@@ -97,7 +92,6 @@ final class DefaultConfiguration extends Configuration
             new PHPUnit(
                 null,
                 true,
-                null,
                 80,
                 \PHPUnit\TextUI\Configuration\Configuration::COLOR_DEFAULT,
                 false,
@@ -140,7 +134,6 @@ final class DefaultConfiguration extends Configuration
                 null,
                 TestSuiteSorter::ORDER_DEFAULT,
                 true,
-                false,
                 false,
                 false,
                 false,
