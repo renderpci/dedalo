@@ -31,6 +31,8 @@ The [rdfInterfaceTests](https://github.com/sweetrdf/rdfInterfaceTests) provides 
 If you are using EasyRdf, you are likely to find the rdfInterface API quite strange and difficult to understand.\
 [This document](EasyRdfReadme.md) should help.
 
+There's also an [rdfInterface2easyRdf](https://github.com/sweetrdf/rdfInterface2easyRdf) library which provides conversion routines between rdfInterface and EasyRdf (in both directions).
+
 ## Design decisions
 
 ### Inspirations

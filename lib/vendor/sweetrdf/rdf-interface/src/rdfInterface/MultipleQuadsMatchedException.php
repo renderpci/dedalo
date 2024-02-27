@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 zozlak.
+ * Copyright 2023 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,14 +27,12 @@
 namespace rdfInterface;
 
 /**
+ * Specialization of the \UnexpectedValueException indicating multiple quads
+ * match while accessing a DatasetInterface object using the ArrayAccess syntax
+ * ($dataset[offset])
  *
  * @author zozlak
  */
-interface DatasetCompareInterface extends DatasetInterface {
-
-    public function every(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter): bool;
-
-    public function none(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter): bool;
-
-    public function any(QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter): bool;
+class MultipleQuadsMatchedException extends \RuntimeException {
+    
 }
