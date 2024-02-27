@@ -45,9 +45,10 @@ All ontology updates will be backup into the directory:
 > ../backups/ontology
 
 !!! warning "Legacy Ontology versions considerations"
-    Since 26-02-2024, master server returns freeze versions for the previous Dédalo code versions calls:   
-    `>=6.1 -> Ontology (live) version path: / `  
-    `Others -> Ontology (freeze) version path: /5 `
+    Since 26-02-2024, master server returns freeze versions for the v6.0.x Dédalo code versions calls:   
+    `6.0.x -> Ontology (freeze) version path: /6.0 `  
+    `Others -> Ontology (live) version path: / `  
+    This is because the new component_dataframe definition is compatible with version 5 and >=6.1 but NOT with v6.0.x
     
 ### doing the update process manually
 
