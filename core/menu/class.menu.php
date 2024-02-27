@@ -25,7 +25,7 @@ class menu extends common {
 
 		$this->id			= null;
 		$this->tipo			= 'dd85'; // string class menu (dd85)
-		$this->lang			= DEDALO_DATA_LANG;
+		$this->lang			= DEDALO_APPLICATION_LANG;
 		$this->mode			= $mode;
 		$this->section_tipo	= DEDALO_ROOT_TIPO; // 'dd1';
 

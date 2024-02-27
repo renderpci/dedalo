@@ -69,8 +69,8 @@ class component_security_access extends component_common {
 			$use_cache = defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']);
 			if ($use_cache===true) {
 
-				// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
-					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
+				// cache_file_name. Like 'cache_tree_'.DEDALO_APPLICATION_LANG.'.json'
+					$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 
 				// cache from file. (!) This file is generated in background on every user login
 					$contents = dd_cache::cache_from_file((object)[
@@ -339,7 +339,7 @@ class component_security_access extends component_common {
 					'tipo'			=> $element_tipo,
 					'section_tipo'	=> $tipo,
 					'model'			=> RecordObj_dd::get_modelo_name_by_tipo($element_tipo, true),
-					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_DATA_LANG, true, true),
+					'label'			=> RecordObj_dd::get_termino_by_tipo($element_tipo, DEDALO_APPLICATION_LANG, true, true),
 					'parent'		=> $tipo
 				];
 				$ar_elements[] = $item;
