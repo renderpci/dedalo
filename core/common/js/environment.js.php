@@ -93,6 +93,7 @@ session_write_close();
 			$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
 			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
 			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
+			$obj->dedalo_data_lang_selector			= defined('DEDALO_DATA_LANG_SELECTOR') ? DEDALO_DATA_LANG_SELECTOR : true;
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
 			$obj->dedalo_application_langs			= (function(){
 				$result = [];

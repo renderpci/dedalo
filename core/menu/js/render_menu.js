@@ -167,26 +167,29 @@ render_menu.prototype.edit = async function() {
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
 	// data lang selector
-		const lang_datalist_data = lang_datalist.map(item =>{
-			return {
-				label	: (get_label.data || 'data') + ': ' + item.label,
-				value	: item.value
-			}
-		})
-		const dedalo_data_langs_selector = ui.build_select_lang({
-			langs		: lang_datalist_data,
-			action		: function(e) {
-				// executed on change event
-				e.preventDefault()
-				change_lang({
-					lang_type	: 'dedalo_data_lang',
-					lang_value	: this.value
-				})
-			},
-			selected	: page_globals.dedalo_data_lang,
-			class_name	: 'reset_input dedalo_aplication_langs_selector data top_item'
-		})
-		fragment.appendChild(dedalo_data_langs_selector)
+		const show_data_lang_selector = page_globals.dedalo_data_lang_selector ?? false
+		if (show_data_lang_selector) {
+			const lang_datalist_data = lang_datalist.map(item =>{
+				return {
+					label	: (get_label.data || 'data') + ': ' + item.label,
+					value	: item.value
+				}
+			})
+			const dedalo_data_langs_selector = ui.build_select_lang({
+				langs		: lang_datalist_data,
+				action		: function(e) {
+					// executed on change event
+					e.preventDefault()
+					change_lang({
+						lang_type	: 'dedalo_data_lang',
+						lang_value	: this.value
+					})
+				},
+				selected	: page_globals.dedalo_data_lang,
+				class_name	: 'reset_input dedalo_aplication_langs_selector data top_item'
+			})
+			fragment.appendChild(dedalo_data_langs_selector)
+		}
 
 	// menu_spacer
 		const menu_spacer = ui.create_dom_element({
