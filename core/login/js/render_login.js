@@ -103,7 +103,6 @@ const get_content_data = function(self) {
 								action	: 'change_lang',
 								dd_api	: 'dd_utils_api',
 								options	: {
-									dedalo_data_lang		: lang,
 									dedalo_application_lang	: lang
 								}
 							}
