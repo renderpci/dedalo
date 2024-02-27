@@ -107,7 +107,7 @@ session_write_close();
 				return $result;
 			})();
 			$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
-				return (object)[
+				return [
 					'label'	=> lang::get_name_from_code($current_lang),
 					'value'	=> $current_lang
 				];
