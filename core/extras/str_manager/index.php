@@ -64,13 +64,17 @@ session_write_close();
 		// Others case. Use default active version path
 		$version_path = '';
 	}
-	error_log('Update Ontology version_path: ' . PHP_EOL . to_string($version_path));
+	error_log('Update Ontology version_path: ' . to_string($version_path));
+	error_log('Update Ontology selected_obj: ' . to_string($selected_obj));
 
 // file info
 	$file_name 	= $selected_obj->name;
-	$file_path 	= str_replace('/str_data', $version_path . '/str_data', $selected_obj->path) .'/'. $selected_obj->name;
+	$file_path 	= ($selected_obj->name==='dedalo4_development_str.custom.backup')
+		? $selected_obj->path . $version_path . '/'. $selected_obj->name
+		: str_replace('/str_data', $version_path . '/str_data', $selected_obj->path) .'/'. $selected_obj->name;
+	// $file_path 	= str_replace('/str_data', $version_path . '/str_data', $selected_obj->path) .'/'. $selected_obj->name;
 	// debug
-		error_log('file_path: ' . $file_path);
+		error_log('Update Ontology file_path: ' . $file_path);
 
 // check file
 	$file_found = file_exists($file_path);
