@@ -18,12 +18,12 @@ use LibXMLError;
  *
  * @psalm-immutable
  */
-final class ValidationResult
+final readonly class ValidationResult
 {
     /**
      * @psalm-var array<int,list<string>>
      */
-    private readonly array $validationErrors;
+    private array $validationErrors;
 
     /**
      * @psalm-param array<int,LibXMLError> $errors

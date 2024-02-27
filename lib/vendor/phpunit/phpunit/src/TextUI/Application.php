@@ -27,12 +27,12 @@ use PHPUnit\Logging\TeamCity\TeamCityLogger;
 use PHPUnit\Logging\TestDox\HtmlRenderer as TestDoxHtmlRenderer;
 use PHPUnit\Logging\TestDox\PlainTextRenderer as TestDoxTextRenderer;
 use PHPUnit\Logging\TestDox\TestResultCollector as TestDoxResultCollector;
-use PHPUnit\Metadata\Api\CodeCoverage as CodeCoverageMetadataApi;
 use PHPUnit\Runner\Baseline\CannotLoadBaselineException;
 use PHPUnit\Runner\Baseline\Generator as BaselineGenerator;
 use PHPUnit\Runner\Baseline\Reader;
 use PHPUnit\Runner\Baseline\Writer;
 use PHPUnit\Runner\CodeCoverage;
+use PHPUnit\Runner\DeprecationCollector\Facade as DeprecationCollector;
 use PHPUnit\Runner\ErrorHandler;
 use PHPUnit\Runner\Extension\ExtensionBootstrapper;
 use PHPUnit\Runner\Extension\Facade as ExtensionFacade;
@@ -52,6 +52,7 @@ use PHPUnit\TextUI\CliArguments\XmlConfigurationFileFinder;
 use PHPUnit\TextUI\Command\AtLeastVersionCommand;
 use PHPUnit\TextUI\Command\GenerateConfigurationCommand;
 use PHPUnit\TextUI\Command\ListGroupsCommand;
+use PHPUnit\TextUI\Command\ListTestFilesCommand;
 use PHPUnit\TextUI\Command\ListTestsAsTextCommand;
 use PHPUnit\TextUI\Command\ListTestsAsXmlCommand;
 use PHPUnit\TextUI\Command\ListTestSuitesCommand;
@@ -78,7 +79,7 @@ use Throwable;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Application
+final readonly class Application
 {
     public function run(array $argv): int
     {
@@ -115,7 +116,6 @@ final class Application
             $extensionReplacesOutput                 = false;
             $extensionReplacesProgressOutput         = false;
             $extensionReplacesResultOutput           = false;
-            $extensionRequiresExportOfObjects        = false;
 
             if (!$configuration->noExtensions()) {
                 if ($configuration->hasPharExtensionDirectory()) {
@@ -129,11 +129,6 @@ final class Application
                 $extensionReplacesOutput                 = $bootstrappedExtensions['replacesOutput'];
                 $extensionReplacesProgressOutput         = $bootstrappedExtensions['replacesProgressOutput'];
                 $extensionReplacesResultOutput           = $bootstrappedExtensions['replacesResultOutput'];
-                $extensionRequiresExportOfObjects        = $bootstrappedExtensions['requiresExportOfObjects'];
-            }
-
-            if ($extensionRequiresExportOfObjects) {
-                EventFacade::emitter()->exportObjects();
             }
 
             CodeCoverage::instance()->init(
@@ -141,12 +136,6 @@ final class Application
                 CodeCoverageFilterRegistry::instance(),
                 $extensionRequiresCodeCoverageCollection,
             );
-
-            if (CodeCoverage::instance()->isActive()) {
-                CodeCoverage::instance()->ignoreLines(
-                    (new CodeCoverageMetadataApi)->linesToBeIgnored($testSuite),
-                );
-            }
 
             $printer = OutputFacade::init(
                 $configuration,
@@ -176,6 +165,7 @@ final class Application
             $testDoxResultCollector = $this->testDoxResultCollector($configuration);
 
             TestResultFacade::init();
+            DeprecationCollector::init();
 
             $resultCache = $this->initializeTestResultCache($configuration);
 
@@ -225,7 +215,7 @@ final class Application
 
             $result = TestResultFacade::result();
 
-            if (!$extensionReplacesResultOutput) {
+            if (!$extensionReplacesResultOutput && !$configuration->debug()) {
                 OutputFacade::printResult($result, $testDoxResult, $duration);
             }
 
@@ -332,7 +322,7 @@ final class Application
 
     private function loadXmlConfiguration(false|string $configurationFile): XmlConfiguration
     {
-        if (!$configurationFile) {
+        if ($configurationFile === false) {
             return DefaultConfiguration::create();
         }
 
@@ -353,7 +343,7 @@ final class Application
     }
 
     /**
-     * @psalm-return array{requiresCodeCoverageCollection: bool, replacesOutput: bool, replacesProgressOutput: bool, replacesResultOutput: bool, requiresExportOfObjects: bool}
+     * @psalm-return array{requiresCodeCoverageCollection: bool, replacesOutput: bool, replacesProgressOutput: bool, replacesResultOutput: bool}
      */
     private function bootstrapExtensions(Configuration $configuration): array
     {
@@ -376,7 +366,6 @@ final class Application
             'replacesOutput'                 => $facade->replacesOutput(),
             'replacesProgressOutput'         => $facade->replacesProgressOutput(),
             'replacesResultOutput'           => $facade->replacesResultOutput(),
-            'requiresExportOfObjects'        => $facade->requiresExportOfObjects(),
         ];
     }
 
@@ -387,7 +376,7 @@ final class Application
         }
 
         if ($cliConfiguration->migrateConfiguration()) {
-            if (!$configurationFile) {
+            if ($configurationFile === false) {
                 $this->exitWithErrorMessage('No configuration file found to migrate');
             }
 
@@ -428,6 +417,10 @@ final class Application
                     $testSuite,
                 ),
             );
+        }
+
+        if ($cliConfiguration->listTestFiles()) {
+            $this->execute(new ListTestFilesCommand($testSuite));
         }
     }
 
@@ -540,8 +533,6 @@ final class Application
                     true,
                 ),
             );
-
-            EventFacade::emitter()->exportObjects();
         }
 
         if ($configuration->hasLogfileJunit()) {
