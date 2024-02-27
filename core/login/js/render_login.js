@@ -196,7 +196,7 @@ const get_content_data = function(self) {
 				parent			: button_enter
 			})
 		// event click
-		button_enter.addEventListener('click', fn_submit)
+		button_enter.addEventListener('mousedown', fn_submit)
 		function fn_submit(e) {
 			e.stopPropagation()
 			e.preventDefault()
