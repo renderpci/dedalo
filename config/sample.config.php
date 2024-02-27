@@ -249,7 +249,12 @@
 		'lg-spa'	=> 'Castellano',
 		'lg-cat'	=> 'Català',
 		'lg-eus'	=> 'Euskara',
-		'lg-fra'	=> 'French'
+		'lg-fra'	=> 'Français',
+		'lg-por'	=> 'Português',
+		'lg-deu'	=> 'Deutsch',
+		'lg-ita'	=> 'Italiano',
+		'lg-ell'	=> 'Ελληνικά',
+		'lg-nep'	=> 'नेपाली'
 	]);
 	// dedalo_application_langs_default
 	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
