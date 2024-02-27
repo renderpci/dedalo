@@ -265,6 +265,8 @@
 	define('DEDALO_DATA_LANG',					fix_cascade_config_var('dedalo_data_lang',DEDALO_DATA_LANG_DEFAULT));
 	// dedalo_data_lang_selector. Show/hide menu data lang selector. bool default true
 	define('DEDALO_DATA_LANG_SELECTOR',			true);
+	// dedalo_data_lang_sync. When set to ' true', it forces to keep DEDALO_APPLICATION_LANG and DEDALO_DATA_LANG synchronized.
+	define('DEDALO_DATA_LANG_SYNC',				false);
 	// dedalo_data_nolan. string default 'lg-nolan'. Do not change this
 	define('DEDALO_DATA_NOLAN',					'lg-nolan');
 	// Projects langs
