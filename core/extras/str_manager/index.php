@@ -9,7 +9,7 @@ require_once( DEDALO_CORE_PATH . '/backup/class.backup.php');
 
 session_write_close();
 
-// DATA . The only one var received is a json encoded var called "data"
+// DATA . The only one var received is a JSON encoded var called "data"
 	$data = json_decode($_REQUEST['data']);
 
 // CODE auth. Check valid code match, received with config defined STRUCTURE_SERVER_CODE
@@ -21,13 +21,13 @@ session_write_close();
 
 // Check connection only
 	if (property_exists($data, "check_connection")) {
-		http_response_code(200); // Ok
+		http_response_code(200); // OK
 		exit();
 	}
 
 // SELECTED_OBJ. Get local str files info (paths, names, etc.) to find the requested
-	$selected_obj  = null;
-	$all_str_files = backup::collect_all_str_files();
+	$selected_obj	= null;
+	$all_str_files	= backup::collect_all_str_files();
 	foreach ($all_str_files as $key => $obj) {
 		if ($data->name === $obj->name) {
 			$selected_obj = $all_str_files[$key];
