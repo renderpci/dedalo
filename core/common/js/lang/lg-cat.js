@@ -447,6 +447,7 @@
     "acabado": "Acabat",
     "component_history": "Històric del component",
     "build_install_version": "Construir una versió d'instal·lació",
+    "update_data_version": "Actualitzar la versió de la dada",
     "delete_diffusion_records": "Esborrar registres de difusió",
     "update": "Actualitzar",
     "days": "dies",

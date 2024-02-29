@@ -447,6 +447,7 @@
     "acabado": "Finish",
     "component_history": "Component history",
     "build_install_version": "Build install version",
+    "update_data_version": "Update data version",
     "delete_diffusion_records": "Delete diffusion records",
     "update": "Update",
     "days": "days",

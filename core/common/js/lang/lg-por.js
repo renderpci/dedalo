@@ -447,6 +447,7 @@
     "acabado": "<mark>Acabado<\/mark>",
     "component_history": "<mark>Historial del componente<\/mark>",
     "build_install_version": "Crie uma versão de instalação",
+    "update_data_version": "Atualizar versão dos dados",
     "delete_diffusion_records": "Eliminar registos de difusão",
     "update": "<mark>Actualizar<\/mark>",
     "days": "<mark>días<\/mark>",

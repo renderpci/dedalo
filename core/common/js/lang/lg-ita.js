@@ -447,6 +447,7 @@
     "acabado": "Terminato",
     "component_history": "<mark>Historial del componente<\/mark>",
     "build_install_version": "Crea una versione di installazione",
+    "update_data_version": "Aggiorna la versione dei dati",
     "delete_diffusion_records": "Cancellare i record di diffusione",
     "update": "Aggiornare",
     "days": "Giorni",
