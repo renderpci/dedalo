@@ -13,7 +13,6 @@ use PHPUnit\Event\Code\ClassMethod;
 use PHPUnit\Event\Code\ComparisonFailure;
 use PHPUnit\Event\Code\Throwable;
 use PHPUnit\Event\TestSuite\TestSuite;
-use PHPUnit\Framework\Constraint;
 use PHPUnit\TextUI\Configuration\Configuration;
 
 /**
@@ -21,16 +20,6 @@ use PHPUnit\TextUI\Configuration\Configuration;
  */
 interface Emitter
 {
-    /**
-     * @deprecated
-     */
-    public function exportObjects(): void;
-
-    /**
-     * @deprecated
-     */
-    public function exportsObjects(): bool;
-
     public function applicationStarted(): void;
 
     public function testRunnerStarted(): void;
@@ -116,16 +105,6 @@ interface Emitter
     public function testRegisteredComparator(string $className): void;
 
     /**
-     * @deprecated
-     */
-    public function testAssertionSucceeded(mixed $value, Constraint\Constraint $constraint, string $message): void;
-
-    /**
-     * @deprecated
-     */
-    public function testAssertionFailed(mixed $value, Constraint\Constraint $constraint, string $message): void;
-
-    /**
      * @psalm-param class-string $className
      */
     public function testCreatedMockObject(string $className): void;
@@ -192,7 +171,7 @@ interface Emitter
     /**
      * @psalm-param non-empty-string $message
      */
-    public function testTriggeredPhpunitDeprecation(Code\Test $test, string $message): void;
+    public function testTriggeredPhpunitDeprecation(?Code\Test $test, string $message): void;
 
     /**
      * @psalm-param non-empty-string $message

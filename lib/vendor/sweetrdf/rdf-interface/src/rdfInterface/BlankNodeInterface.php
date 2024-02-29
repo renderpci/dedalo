@@ -31,6 +31,5 @@ namespace rdfInterface;
  * @author zozlak
  */
 interface BlankNodeInterface extends TermInterface, TermCompareInterface {
-
-    public function __construct(?string $id = null);
+    
 }

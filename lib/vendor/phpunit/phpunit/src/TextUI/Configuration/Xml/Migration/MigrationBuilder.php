@@ -14,7 +14,7 @@ use function version_compare;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class MigrationBuilder
+final readonly class MigrationBuilder
 {
     private const AVAILABLE_MIGRATIONS = [
         '8.5' => [
@@ -60,6 +60,10 @@ final class MigrationBuilder
 
         '10.0' => [
             MoveCoverageDirectoriesToSource::class,
+        ],
+
+        '10.5' => [
+            RemoveRegisterMockObjectsFromTestArgumentsRecursivelyAttribute::class,
         ],
     ];
 

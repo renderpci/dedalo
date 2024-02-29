@@ -222,7 +222,8 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('mouseup', function() {
+			button_add_input.addEventListener('mouseup', function(e) {
+				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',

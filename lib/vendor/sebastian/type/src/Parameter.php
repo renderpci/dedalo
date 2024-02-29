@@ -9,7 +9,7 @@
  */
 namespace SebastianBergmann\Type;
 
-final class Parameter
+final readonly class Parameter
 {
     /**
      * @psalm-var non-empty-string
@@ -26,6 +26,9 @@ final class Parameter
         $this->type = $type;
     }
 
+    /**
+     * @psalm-return non-empty-string
+     */
     public function name(): string
     {
         return $this->name;

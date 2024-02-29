@@ -9,6 +9,7 @@
  */
 namespace SebastianBergmann\Type;
 
+use function assert;
 use function count;
 use function implode;
 use function sort;
@@ -42,11 +43,17 @@ final class UnionType extends Type
         return false;
     }
 
+    /**
+     * @psalm-return non-empty-string
+     */
     public function asString(): string
     {
         return $this->name();
     }
 
+    /**
+     * @psalm-return non-empty-string
+     */
     public function name(): string
     {
         $types = [];
@@ -63,7 +70,11 @@ final class UnionType extends Type
 
         sort($types);
 
-        return implode('|', $types);
+        $name = implode('|', $types);
+
+        assert(!empty($name));
+
+        return $name;
     }
 
     public function allowsNull(): bool
@@ -111,7 +122,7 @@ final class UnionType extends Type
     {
         if (count($types) < 2) {
             throw new RuntimeException(
-                'A union type must be composed of at least two types'
+                'A union type must be composed of at least two types',
             );
         }
     }
@@ -124,13 +135,13 @@ final class UnionType extends Type
         foreach ($types as $type) {
             if ($type instanceof UnknownType) {
                 throw new RuntimeException(
-                    'A union type must not be composed of an unknown type'
+                    'A union type must not be composed of an unknown type',
                 );
             }
 
             if ($type instanceof VoidType) {
                 throw new RuntimeException(
-                    'A union type must not be composed of a void type'
+                    'A union type must not be composed of a void type',
                 );
             }
         }

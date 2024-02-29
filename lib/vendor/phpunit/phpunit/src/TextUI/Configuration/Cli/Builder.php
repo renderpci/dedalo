@@ -24,7 +24,7 @@ use SebastianBergmann\CliParser\Parser as CliParser;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Builder
+final readonly class Builder
 {
     private const LONG_OPTIONS = [
         'atleast-version=',
@@ -32,12 +32,10 @@ final class Builder
         'cache-result',
         'do-not-cache-result',
         'cache-directory=',
-        'cache-result-file=',
         'check-version',
         'colors==',
         'columns=',
         'configuration=',
-        'coverage-cache=',
         'warm-coverage-cache',
         'coverage-filter=',
         'coverage-clover=',
@@ -59,6 +57,7 @@ final class Builder
         'enforce-time-limit',
         'exclude-group=',
         'filter=',
+        'exclude-filter=',
         'generate-baseline=',
         'use-baseline=',
         'ignore-baseline',
@@ -73,6 +72,7 @@ final class Builder
         'include-path=',
         'list-groups',
         'list-suites',
+        'list-test-files',
         'list-tests',
         'list-tests-xml=',
         'log-junit=',
@@ -153,12 +153,10 @@ final class Builder
         $bootstrap                         = null;
         $cacheDirectory                    = null;
         $cacheResult                       = null;
-        $cacheResultFile                   = null;
         $checkVersion                      = false;
         $colors                            = null;
         $columns                           = null;
         $configuration                     = null;
-        $coverageCacheDirectory            = null;
         $warmCoverageCache                 = false;
         $coverageFilter                    = null;
         $coverageClover                    = null;
@@ -201,6 +199,7 @@ final class Builder
         $stopOnSkipped                     = null;
         $stopOnWarning                     = null;
         $filter                            = null;
+        $excludeFilter                     = null;
         $generateBaseline                  = null;
         $useBaseline                       = null;
         $ignoreBaseline                    = false;
@@ -215,6 +214,7 @@ final class Builder
         $junitLogfile                      = null;
         $listGroups                        = false;
         $listSuites                        = false;
+        $listTestFiles                     = false;
         $listTests                         = false;
         $listTestsXml                      = null;
         $noCoverage                        = null;
@@ -271,11 +271,6 @@ final class Builder
 
                     break;
 
-                case '--cache-result-file':
-                    $cacheResultFile = $option[1];
-
-                    break;
-
                 case '--columns':
                     if (is_numeric($option[1])) {
                         $columns = (int) $option[1];
@@ -288,11 +283,6 @@ final class Builder
                 case 'c':
                 case '--configuration':
                     $configuration = $option[1];
-
-                    break;
-
-                case '--coverage-cache':
-                    $coverageCacheDirectory = $option[1];
 
                     break;
 
@@ -368,6 +358,11 @@ final class Builder
 
                 case '--filter':
                     $filter = $option[1];
+
+                    break;
+
+                case '--exclude-filter':
+                    $excludeFilter = $option[1];
 
                     break;
 
@@ -451,6 +446,11 @@ final class Builder
 
                 case '--list-suites':
                     $listSuites = true;
+
+                    break;
+
+                case '--list-test-files':
+                    $listTestFiles = true;
 
                     break;
 
@@ -806,9 +806,9 @@ final class Builder
                     break;
 
                 case '--log-events-text':
-                    $logEventsText = Filesystem::resolvePathOrStream($option[1]);
+                    $logEventsText = Filesystem::resolveStreamOrFile($option[1]);
 
-                    if (!$logEventsText) {
+                    if ($logEventsText === false) {
                         throw new Exception(
                             sprintf(
                                 'The path "%s" specified for the --log-events-text option could not be resolved',
@@ -820,9 +820,9 @@ final class Builder
                     break;
 
                 case '--log-events-verbose-text':
-                    $logEventsVerboseText = Filesystem::resolvePathOrStream($option[1]);
+                    $logEventsVerboseText = Filesystem::resolveStreamOrFile($option[1]);
 
-                    if (!$logEventsVerboseText) {
+                    if ($logEventsVerboseText === false) {
                         throw new Exception(
                             sprintf(
                                 'The path "%s" specified for the --log-events-verbose-text option could not be resolved',
@@ -857,7 +857,6 @@ final class Builder
             $bootstrap,
             $cacheDirectory,
             $cacheResult,
-            $cacheResultFile,
             $checkVersion,
             $colors,
             $columns,
@@ -872,7 +871,6 @@ final class Builder
             $coverageTextShowOnlySummary,
             $coverageXml,
             $pathCoverage,
-            $coverageCacheDirectory,
             $warmCoverageCache,
             $defaultTimeLimit,
             $disableCodeCoverageIgnore,
@@ -898,6 +896,7 @@ final class Builder
             $stopOnSkipped,
             $stopOnWarning,
             $filter,
+            $excludeFilter,
             $generateBaseline,
             $useBaseline,
             $ignoreBaseline,
@@ -912,6 +911,7 @@ final class Builder
             $junitLogfile,
             $listGroups,
             $listSuites,
+            $listTestFiles,
             $listTests,
             $listTestsXml,
             $noCoverage,
