@@ -3,7 +3,7 @@
 /*
  * The MIT License
  *
- * Copyright 2021 zozlak.
+ * Copyright 2024 zozlak.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -27,28 +27,22 @@
 namespace rdfInterface;
 
 /**
- * Immutable edge processing methods
+ * Interface used to allow adding quads without subject to a DatasetNode
  *
  * @author zozlak
  */
-interface DatasetMapReduceInterface extends DatasetInterface {
+interface QuadNoSubjectInterface {
+
+    public function getPredicate(): NamedNodeInterface;
+
+    public function getObject(): TermInterface;
 
     /**
+     * Null is not allowed to deal with the ambiguity between DefaultGraph and
+     * null which mean the same (although it should be noted that all quads in
+     * NamedNode/BlankNode graphs also belong to the DefaultGraph).
      * 
-     * @param callable $fn function applied to every quad with signature `fn(quad, dataset)`
-     * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable $filter
-     * @return DatasetMapReduceInterface
+     * @return NamedNodeInterface|BlankNodeInterface|DefaultGraphInterface
      */
-    public function map(callable $fn,
-                        QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter = null): DatasetMapReduceInterface;
-
-    /**
-     * @param callable $fn aggregate function with signature `fn(accumulator, quad, dataset)`
-     *   applied on each quad and returns last callback result
-     * @param mixed $initialValue
-     * @param QuadCompareInterface|QuadIteratorInterface|QuadIteratorAggregateInterface|callable $filter
-     * @return mixed
-     */
-    public function reduce(callable $fn, $initialValue = null,
-                           QuadCompareInterface | QuadIteratorInterface | QuadIteratorAggregateInterface | callable $filter = null): mixed;
+    public function getGraph(): NamedNodeInterface | BlankNodeInterface | DefaultGraphInterface;
 }

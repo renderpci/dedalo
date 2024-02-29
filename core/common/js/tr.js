@@ -149,11 +149,11 @@ export const tr = {
 
 		// INDEX IN
 			const pattern_indexIn = tr.get_mark_pattern('indexIn'); // id,state,label,data
-			text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_indexIn, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="34" height="15" class="index" data-type="indexIn" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// INDEX OUT
 			const pattern_indexOut = tr.get_mark_pattern('indexOut');
-			text = text.replace(pattern_indexOut, `<img id="[/\$2-$3-$4-$6]" src="${tag_url}[/\$2-$3-$4-$6]" class="index" data-type="indexOut" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_indexOut, `<img id="[/\$2-$3-$4-$6]" src="${tag_url}[/\$2-$3-$4-$6]" width="34" height="15" class="index" data-type="indexOut" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// REFERENCE IN
 			const pattern_referenceIn = tr.get_mark_pattern('referenceIn');
@@ -165,7 +165,7 @@ export const tr = {
 
 		// TC. [TC_00:00:25.091_TC]
 			const pattern_tc = tr.get_mark_pattern('tc');
-			text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}$1" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
+			text = text.replace(pattern_tc, `<img id="$1" src="${tag_url}$1" width="82" height="15" class="tc" data-type="tc" data-tag_id="$1" data-state="n" data-label="$2" data-data="$2">`);
 
 		// SVG
 			const pattern_svg = tr.get_mark_pattern('svg');
@@ -185,15 +185,15 @@ export const tr = {
 
 		// PERSON
 			const pattern_person = tr.get_mark_pattern('person');
-			text = text.replace(pattern_person, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="person" data-type="person" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$6">`);
+			text = text.replace(pattern_person, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" width="72" height="15" class="person" data-type="person" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$6">`);
 
 		// NOTE
 			const pattern_note = tr.get_mark_pattern('note');
-			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_note, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="22" height="15" class="note" data-type="note" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// LANG
 			const pattern_lang = tr.get_mark_pattern('lang');
-			text = text.replace(pattern_lang, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="lang" data-type="lang" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_lang, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="50" height="15" class="lang" data-type="lang" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		return text
 	}//end add_tag_img_on_the_fly

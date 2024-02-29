@@ -29,15 +29,17 @@ use PHPUnit\Util\Color;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class ResultPrinter
+final readonly class ResultPrinter
 {
-    private readonly Printer $printer;
-    private readonly bool $colors;
+    private Printer $printer;
+    private bool $colors;
+    private int $columns;
 
-    public function __construct(Printer $printer, bool $colors)
+    public function __construct(Printer $printer, bool $colors, int $columns)
     {
         $this->printer = $printer;
         $this->colors  = $colors;
+        $this->columns = $columns;
     }
 
     /**
@@ -226,7 +228,8 @@ final class ResultPrinter
         $diff    = implode(PHP_EOL, $diff);
 
         if (!empty($message)) {
-            $message = Color::colorizeTextBox($style, $message);
+            // Testdox output has a left-margin of 5; keep right-margin to prevent terminal scrolling
+            $message = Color::colorizeTextBox($style, $message, $this->columns - 7);
         }
 
         return [

@@ -169,7 +169,7 @@ const get_content_data = async function(self) {
 				// console.log('numisdata1017 value:', value.filter(el => el.tipo==='numisdata1017'));
 
 			// tree_nodes. create nodes and add to tree_object
-				const tree_nodes = await render_tree_items(
+				const tree_nodes = render_tree_items(
 					root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
 					datalist, // array of objects. Full items list
 					value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]

@@ -17,7 +17,7 @@ use function realpath;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class XmlConfigurationFileFinder
+final readonly class XmlConfigurationFileFinder
 {
     public function find(Configuration $configuration): false|string
     {
@@ -27,7 +27,7 @@ final class XmlConfigurationFileFinder
             if (is_dir($configuration->configurationFile())) {
                 $candidate = $this->configurationFileInDirectory($configuration->configurationFile());
 
-                if ($candidate) {
+                if ($candidate !== false) {
                     return $candidate;
                 }
 
@@ -40,7 +40,7 @@ final class XmlConfigurationFileFinder
         if ($useDefaultConfiguration) {
             $candidate = $this->configurationFileInDirectory(getcwd());
 
-            if ($candidate) {
+            if ($candidate !== false) {
                 return $candidate;
             }
         }

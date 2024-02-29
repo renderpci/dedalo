@@ -1444,9 +1444,10 @@ abstract class backup {
 
 		// curl request
 			$data = (object)[
-				'code'	=> STRUCTURE_SERVER_CODE,
-				'type'	=> $obj->type,
-				'name'	=> $obj->name
+				'code'				=> STRUCTURE_SERVER_CODE,
+				'type'				=> $obj->type,
+				'name'				=> $obj->name,
+				'dedalo_version'	=> DEDALO_VERSION
 			];
 			$data_string = "data=" . json_encode($data);
 			// request

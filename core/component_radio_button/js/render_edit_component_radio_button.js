@@ -292,7 +292,7 @@ export const get_buttons = (self) => {
 						title			: label,
 						parent			: fragment
 					})
-					button_edit.addEventListener('click', function(e){
+					button_edit.addEventListener('mousedown', function(e){
 						e.stopPropagation()
 
 						// open a new window
@@ -322,7 +322,9 @@ export const get_buttons = (self) => {
 				class_name		: 'button reset',
 				parent			: fragment
 			})
-			reset_button.addEventListener('click', function() {
+			reset_button.addEventListener('click', function(e) {
+				e.stopPropagation()
+
 				// force possible input change before remove
 				document.activeElement.blur()
 

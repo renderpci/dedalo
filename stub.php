@@ -34,6 +34,7 @@ define('DEDALO_EXTRAS_PATH', '');
 define('DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS', '');
 define('MYSQL_DB_BIN_PATH', '');
 define('DEDALO_PUBLICATION_CLEAN_URL', '');
+define('DEDALO_DATA_LANG_SYNC', '');
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};

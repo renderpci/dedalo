@@ -175,9 +175,11 @@ final class Help
                 ['arg' => '--exclude-group <name>', 'desc' => 'Exclude tests from the specified group(s)'],
                 ['arg' => '--covers <name>', 'desc' => 'Only run tests that intend to cover <name>'],
                 ['arg' => '--uses <name>', 'desc' => 'Only run tests that intend to use <name>'],
+                ['arg' => '--list-test-files', 'desc' => 'List available test files'],
                 ['arg' => '--list-tests', 'desc' => 'List available tests'],
                 ['arg' => '--list-tests-xml <file>', 'desc' => 'List available tests in XML format'],
                 ['arg' => '--filter <pattern>', 'desc' => 'Filter which tests to run'],
+                ['arg' => '--exclude-filter <pattern>', 'desc' => 'Exclude tests for the specified filter pattern'],
                 ['arg' => '--test-suffix <suffixes>', 'desc' => 'Only search for test in files with specified suffix(es). Default: Test.php,.phpt'],
             ],
 
@@ -288,7 +290,7 @@ final class Help
             ['arg' => '-h|--help', 'desc' => 'Prints this usage information'],
             ['arg' => '--version', 'desc' => 'Prints the version and exits'],
             ['arg' => '--atleast-version <min>', 'desc' => 'Checks that version is greater than <min> and exits'],
-            ['arg' => '--check-version', 'desc' => 'Check whether PHPUnit is the latest version and exits'],
+            ['arg' => '--check-version', 'desc' => 'Checks whether PHPUnit is the latest version and exits'],
         ];
 
         return $elements;

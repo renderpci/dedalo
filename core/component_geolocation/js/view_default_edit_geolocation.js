@@ -35,7 +35,7 @@ view_default_edit_geolocation.render = async function(self, options) {
 		const render_level = options.render_level || 'full'
 
 	// content_data
-		const content_data = await get_content_data(self)
+		const content_data = get_content_data(self)
 		if (render_level==='content') {
 			return content_data
 		}
@@ -68,7 +68,7 @@ view_default_edit_geolocation.render = async function(self, options) {
 * @param object self
 * @return HTMLElement content_data
 */
-export const get_content_data = async function(self) {
+export const get_content_data = function(self) {
 
 	// short vars
 		const data	= self.data || {}
@@ -82,15 +82,20 @@ export const get_content_data = async function(self) {
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
 
-			// value
-			const value_item = inputs_value[i] || self.default_value[0]
+			// used setTimeout to force new separate task
+			setTimeout(function(){
 
-			const input_element_node = (self.permissions===1)
-				? get_content_value_read(i, value_item, self)
-				: get_content_value(i, value_item, self)
-			content_data.appendChild(input_element_node)
-			// set the pointer
-			content_data[i] = input_element_node
+				// value
+				const value_item = inputs_value[i] || self.default_value[0]
+
+				const input_element_node = (self.permissions===1)
+					? get_content_value_read(i, value_item, self)
+					: get_content_value(i, value_item, self)
+				content_data.appendChild(input_element_node)
+				// set the pointer
+				content_data[i] = input_element_node
+
+			}, 0)
 		}
 
 	return content_data
