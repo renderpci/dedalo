@@ -7,6 +7,9 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
+	import {
+		clone
+	} from '../../common/js/utils/index.js'
 
 
 
@@ -90,18 +93,27 @@ const render_menu_node = (item, datalist) => {
 					this.classList.add('active')
 				}
 			}else{
+
+				// safe_item. Clone menu item before use it
+					const safe_item = clone(item)
+
+				// swap_tipo
+					if (safe_item.config && safe_item.config.swap_tipo) {
+						safe_item.tipo = safe_item.config.swap_tipo
+					}
+
 				// navigate
 				event_manager.publish('user_navigation', {
 					source : {
-						tipo	: item.tipo,
-						model	: item.model,
+						tipo	: safe_item.tipo,
+						model	: safe_item.model,
 						mode	: 'list',
 						// this config comes from properties (used by section_tool to define the config of the section that its called)
-						config	: item.config || null
+						config	: safe_item.config || null
 					}
 				})
 			}
-		}
+		}//end fn_touch
 
 	// children
 		const children = datalist.filter(el => el.parent===item.tipo)
