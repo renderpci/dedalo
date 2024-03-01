@@ -733,6 +733,14 @@ class update {
 		// Maximum execution time
 		set_time_limit(0);
 
+		// called_class extends current class
+			$called_class = get_called_class();
+			if (strpos($action, '::')!==false) {
+				$parts			= explode('::', $action);
+				$called_class	= $parts[0];
+				$action			= $parts[1];
+			}
+
 		foreach ($ar_tables as $table) {
 
 			debug_log(__METHOD__ . PHP_EOL
@@ -792,10 +800,7 @@ class update {
 
 					if (!empty($datos)) {
 
-						self::check_section_data($id, $table, $section_id, $section_tipo, $datos);
-
-						// called_class extends current class
-						$called_class = get_called_class();
+						update::check_section_data($id, $table, $section_id, $section_tipo, $datos);
 
 						$section_data = $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
 						if($section_data===null){
