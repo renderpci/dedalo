@@ -8,6 +8,9 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {
+		clone
+	} from '../../common/js/utils/index.js'
 
 
 
@@ -298,12 +301,19 @@ const render_item_hierarchy = (options) => {
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener('click', fn_click)
 			async function fn_click(e) {
-				// e.stopPropagation()
 
 				// nonactive menu case
 				if (self.menu_active===false) {
 					return false
-				}//end if self.menu_active
+				}
+
+				// safe_item. Clone menu item before use it
+					const safe_item = clone(item)
+
+				// swap_tipo
+					if (safe_item.config && safe_item.config.swap_tipo) {
+						safe_item.tipo = safe_item.config.swap_tipo
+					}
 
 				if (e.altKey===true) {
 					// open in new tab
@@ -316,7 +326,7 @@ const render_item_hierarchy = (options) => {
 					// SQO
 						// get the saved sqo to reuse into the load
 						// if sqo is not saved into local database, sqo will be null
-						const session_key = item.model + '_' + item.tipo + '_list'
+						const session_key = safe_item.model + '_' + safe_item.tipo + '_list'
 
 						// get the sqo in local db, it could be saved previously by section or area
 						const saved_sqo	= await data_manager.get_local_db_data(
@@ -334,19 +344,19 @@ const render_item_hierarchy = (options) => {
 						if(sqo){
 							sqo.section_tipo = [{
 								type : 'ddo',
-								tipo : item.tipo,
-								model: item.model
+								tipo : safe_item.tipo,
+								model: safe_item.model
 							}]
 						}
 
 					// navigate
 					event_manager.publish('user_navigation', {
 						source : {
-							tipo	: item.tipo,
-							model	: item.model,
+							tipo	: safe_item.tipo,
+							model	: safe_item.model,
 							mode	: 'list',
 							// this config comes from properties (used by section_tool to define the config of the section that its called)
-							config	: item.config || null
+							config	: safe_item.config || null
 						},
 						sqo : sqo
 					})
