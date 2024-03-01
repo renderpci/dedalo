@@ -10,7 +10,10 @@
 	import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import {render_column_remove} from './render_edit_component_portal.js'
+	import {
+		render_column_remove,
+		activate_autocomplete,
+	} from './render_edit_component_portal.js'
 
 
 
@@ -104,7 +107,14 @@ export const add_events = function(self, wrapper) {
 	// click delegated
 		wrapper.addEventListener('click', fn_wrapper_click)
 		function fn_wrapper_click(e){
-			e.stopPropagation() // Prevent to activate autocomplete behind
+			e.stopPropagation()
+			
+			// active autocomplete
+			setTimeout(function(){
+				if (self.active) {
+					activate_autocomplete(self, wrapper)
+				}
+			}, 1)
 
 			// remove row
 				if(e.target.matches('.button.remove')) {

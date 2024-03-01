@@ -447,6 +447,7 @@
     "acabado": "τελικού",
     "component_history": "Ιστορικό συστατικών",
     "build_install_version": "Δημιουργήστε μια έκδοση εγκατάστασης",
+    "update_data_version": "<mark>Actualizar la versión del dato<\/mark>",
     "delete_diffusion_records": "Διαγραφή εγγραφών διάχυσης",
     "update": "επικαιροποίηση",
     "days": "ημέρες",
