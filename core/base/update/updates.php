@@ -215,10 +215,6 @@ $updates->$v = new stdClass();
 			");
 
 
-
-
-
-
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
