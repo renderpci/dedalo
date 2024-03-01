@@ -1,7 +1,7 @@
 <?php
 /**
 * UPDATE
-* Manage Dédalo data updates defined in updates.ph file
+* Manage Dédalo data updates defined in file updates.php
 */
 class update {
 
@@ -65,8 +65,8 @@ class update {
 	public static function update_version() : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		// short vars
 			$updates			= update::get_updates();
@@ -719,7 +719,6 @@ class update {
 
 
 
-
 	/**
 	* CONVERT_TABLE_DATA
 	* Get all data from required tables and apply the action required to every row
@@ -732,6 +731,14 @@ class update {
 
 		// Maximum execution time
 		set_time_limit(0);
+
+		// called_class extends current class
+			$called_class = get_called_class();
+			if (strpos($action, '::')!==false) {
+				$parts			= explode('::', $action);
+				$called_class	= $parts[0];
+				$action			= $parts[1];
+			}
 
 		foreach ($ar_tables as $table) {
 
@@ -769,7 +776,7 @@ class update {
 			$i_ref = 0; $start_time = start_time();
 			for ($i=$min; $i<=$max; $i++) {
 
-				$strQuery	= "SELECT id, datos FROM $table WHERE id = $i ORDER BY id ASC";
+				$strQuery	= "SELECT * FROM $table WHERE id = $i ORDER BY id ASC";
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 				if($result===false) {
 					$msg = "Failed Search id $i. Data is not found.";
@@ -792,10 +799,7 @@ class update {
 
 					if (!empty($datos)) {
 
-						self::check_section_data($id, $table, $section_id, $section_tipo, $datos);
-
-						// called_class extends current class
-						$called_class = get_called_class();
+						update::check_section_data($id, $table, $section_id, $section_tipo, $datos);
 
 						$section_data = $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
 						if($section_data===null){
@@ -858,10 +862,18 @@ class update {
 
 	/**
 	* CHECK_SECTION_DATA
-	* check the section data in JSON
-	* @return
+	* check the section data in JSON for missing properties
+	* like section_tipo, section_id, created_date, created_by_userID
+	* @param string|int id
+	* @param string $table
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param object &$datos
+	* 	Passed by reference !
+	* @return bool $section_to_save
+	* 	If true, an update of the database will be performed
 	*/
-	public static function check_section_data($id, $table, $section_id, $section_tipo, &$datos) {
+	public static function check_section_data(string|int $id, string $table, string|int $section_id, string $section_tipo, object &$datos) : bool {
 
 		$section_to_save = false;
 
@@ -869,53 +881,59 @@ class update {
 			$datos->section_id = $section_id;
 			$section_to_save = true;
 		}
+
 		if(!isset($datos->section_tipo)){
 			$datos->section_tipo = $section_tipo;
 			$section_to_save = true;
 		}
-		if(!isset($datos->created_date) || !isset($datos->created_by_userID)){
 
-			$tm_data = [];
+		if(!isset($datos->created_date) || !isset($datos->created_by_userID)) {
 
 			$tm_strQuery = "
-				SELECT * FROM matrix_time_machine
+				SELECT \"timestamp\", \"userID\" FROM matrix_time_machine
 				WHERE section_id = '$section_id'
 				AND section_tipo = '$section_tipo'
 				ORDER BY \"timestamp\" ASC
 				LIMIT 1
 			";
 			$result = JSON_RecordDataBoundObject::search_free($tm_strQuery);
-
 			// query error case
-			if($result===false){
-				$tm_data = null;
-			}
-			// empty records case
-			if($tm_data!==null){
+			if($result!==false) {
+
+				// num_rows. Empty case
 				$n_rows = pg_num_rows($result);
-				if ($n_rows<1) {
-					$tm_data = null;
-				}
+				if ($n_rows>0) {
 
-				if($tm_data!==null){
-					$rows		= pg_fetch_assoc($result);
-					$tm_data	= reset($rows);
-					if(!isset($datos->created_date)){
-						$datos->created_date = $tm_data->timestamp;
+					// get columns
+					while($rows = pg_fetch_assoc($result)) {
+						$timestamp	= $rows['timestamp'];
+						$userID		= $rows['userID'];
+					}
+
+					debug_log(__METHOD__
+						. " Getting row from time_machine DB " . PHP_EOL
+						. ' timestamp: ' . to_string($timestamp) . PHP_EOL
+						. ' userID: ' . to_string($userID)
+						, logger::WARNING
+					);
+
+					if(!isset($datos->created_date)) {
+						$datos->created_date = $timestamp;
 						$section_to_save = true;
 					}
 
-					if(!isset($datos->created_by_userID)){
-						$datos->created_by_userID = $tm_data->userID;
+					if(!isset($datos->created_by_userID)) {
+						$datos->created_by_userID = $userID;
 						$section_to_save = true;
 					}
-				}
-			}
-		}
+				}//end if ($n_rows>0)
+			}//end if($result!==false)
+		}//end if(!isset($datos->created_date) || !isset($datos->created_by_userID))
 
-		if($section_to_save === true){
+		// save section if changes are made
+		if($section_to_save === true) {
 
-			$section_data_encoded	= json_encode($datos);
+			$section_data_encoded = json_handler::encode($datos);
 
 			$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
 			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
@@ -930,11 +948,13 @@ class update {
 			$msg = "Changed section_data section_id: $section_id of $section_tipo in table: $table to add some missing values";
 			debug_log(__METHOD__
 				." ERROR: $msg "
-				, logger::ERROR
+				, logger::WARNING
 			);
 		}
 
+		return $section_to_save;
 	}//end check_section_data
+
 
 
 }//end update class
