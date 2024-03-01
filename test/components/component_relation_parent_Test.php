@@ -610,7 +610,12 @@ final class component_relation_parent_test extends TestCase {
 
 		$result = component_relation_parent::get_parents(
 			$section_id,
-			self::$section_tipo
+			self::$section_tipo,
+			null,
+			null,
+			(object)[
+				'search_in_main_hierarchy' => true
+			]
 		);
 
 		$this->assertTrue(
@@ -633,7 +638,9 @@ final class component_relation_parent_test extends TestCase {
 		$result = component_relation_parent::get_parents_recursive(
 			$section_id,
 			self::$section_tipo,
-			// self::$tipo
+			(object)[
+				'skip_root' => false
+			]
 		);
 
 		$this->assertTrue(

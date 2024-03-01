@@ -1252,13 +1252,14 @@ class component_relation_common extends component_common {
 					$ar_current_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
 				}
 
-				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
-				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
-				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
-				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);
-				#$n_ar_parents = count($ar_parents);
-					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
-
+				// parents_recursive
+				$ar_parents = component_relation_parent::get_parents_recursive(
+					$locator->section_id,
+					$locator->section_tipo,
+					(object)[
+						'skip_root' => true
+					]
+				);
 				foreach ($ar_parents as $current_locator) {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
@@ -1309,7 +1310,10 @@ class component_relation_common extends component_common {
 				$section_id,
 				$section_tipo,
 				null, // string|null from_component_tipo
-				$ar_tables
+				$ar_tables,
+				(object)[
+					'search_in_main_hierarchy' => true
+				]
 			);
 
 		// parents to remove
@@ -2104,7 +2108,9 @@ class component_relation_common extends component_common {
 				$parents_recursive = component_relation_parent::get_parents_recursive(
 					$section_id, // string section_id
 					$section_tipo, // string section_tipo
-					true, // bool skip_root
+					(object)[
+						'skip_root' => true
+					]
 				);
 
 				foreach ($parents_recursive as $parent_locator) {

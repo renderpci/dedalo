@@ -40,22 +40,22 @@ export const ts_object = new function() {
 	/**
 	* INIT
 	* Fix important vars for current object
+	* (!) Disabled (01-03-2024) because it is not used as instance and nobody calls here !
 	*/
-	this.init = function() {
+		// this.init = function() {
 
-		const self = this
+		// 	const self = this
 
-		// const url_vars = get_current_url_vars()
-		const url_vars = url_vars_to_object(window.location.search)
+		// 	// const url_vars = get_current_url_vars()
+		// 	const url_vars = url_vars_to_object(window.location.search)
 
-		// THESAURUS_MODE
-		this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
-		// component_name Caller component name for relations
-		this.component_name = url_vars.component_name || null
+		// 	// THESAURUS_MODE: relation|default
+		// 	this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
+		// 	// component_name Caller component name for relations
+		// 	this.component_name = url_vars.component_name || null
 
-
-		return true
-	}//end init
+		// 	return true
+		// }//end init
 
 
 
@@ -69,12 +69,14 @@ export const ts_object = new function() {
 	this.get_children = function(children_element, pagination, clean_children_container) {
 
 		// short vars
-			const tipo 					= children_element.dataset.tipo
-			const wrap 					= children_element.parentNode.parentNode
-			const parent_section_id 	= wrap.dataset.section_id
-			const parent_section_tipo 	= wrap.dataset.section_tipo
-			const node_type 			= wrap.dataset.node_type || null
-			const target_section_tipo 	= wrap.dataset.target_section_tipo
+			const tipo					= children_element.dataset.tipo
+			const wrap					= children_element.parentNode.parentNode
+			const parent_section_id		= wrap.dataset.section_id
+			const parent_section_tipo	= wrap.dataset.section_tipo
+			const node_type				= wrap.dataset.node_type || null
+			const target_section_tipo	= wrap.dataset.target_section_tipo
+			const caller				= this.caller
+			const thesaurus_view_mode	= caller.thesaurus_view_mode
 
 		// check vars
 			if (!parent_section_tipo || typeof parent_section_tipo==="undefined") {
@@ -111,7 +113,6 @@ export const ts_object = new function() {
 				return Promise.resolve(false);
 			}
 
-
 		return new Promise(function(resolve){
 
 			// API call
@@ -123,10 +124,14 @@ export const ts_object = new function() {
 						section_id		: parent_section_id,
 						section_tipo	: parent_section_tipo,
 						node_type		: node_type,
-						tipo			: tipo
+						tipo			: tipo,
+						build_options : {
+							terms_are_model : self.thesaurus_view_mode==='model'
+						}
 					},
 					options : {
-						pagination : pagination
+						pagination			: pagination,
+						thesaurus_view_mode	: thesaurus_view_mode
 					}
 				}
 				data_manager.request({

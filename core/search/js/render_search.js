@@ -427,7 +427,7 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: reset_group
 
 		})
-		reset_button.addEventListener('click', async function(e){
+		reset_button.addEventListener('mousedown', async function(e){
 			e.stopPropagation()
 
 			const ar_promises			= []
@@ -456,7 +456,7 @@ render_search.prototype.render_search_buttons = function(){
 			inner_html		: get_label.show_all || 'Show all',
 			parent			: reset_group
 		})
-		show_all_button.addEventListener('click', function(e){
+		show_all_button.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 			self.show_all(this)
 			// Close search div
@@ -470,7 +470,7 @@ render_search.prototype.render_search_buttons = function(){
 			inner_html		: get_label.apply || 'Apply',
 			parent			: search_buttons_container
 		})
-		submit_button.addEventListener('click', function(e){
+		submit_button.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
 				document.activeElement.blur()

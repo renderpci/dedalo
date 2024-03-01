@@ -4253,7 +4253,15 @@ class section extends common {
 				$ar_parent_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['component_relation_parent'], true, true, true, true, false);
 				if (!empty($ar_parent_tipo)) {
 					// calls to current section as child from another sections
-					$parents_data = component_relation_parent::get_parents($this->get_section_id(), $section_tipo);
+					$parents_data = component_relation_parent::get_parents(
+						$this->get_section_id(),
+						$section_tipo,
+						null, // from_component_tipo
+						null, // ar_tables
+						(object)[
+							'search_in_main_hierarchy' => true
+						]
+					);
 					if (!empty($parents_data)) {
 
 						$current_tipo	= $ar_parent_tipo[0];

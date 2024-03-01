@@ -7,7 +7,7 @@
 // imports
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	import {pause} from '../../common/js/utils/index.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {render_menu} from './render_menu.js'

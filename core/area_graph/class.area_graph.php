@@ -456,13 +456,16 @@ class area_graph extends area_common {
 
 		# ar_path_mix . Calculate full path of each result
 			$ar_path_mix = array();
-			foreach ($ar_records as $key => $row) {
+			foreach ($ar_records as $row) {
 
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
 
-				$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
-					#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
+				$ar_parents = component_relation_parent::get_parents_recursive(
+					$section_id,
+					$section_tipo,
+					null // options
+				);
 
 				$locator = new locator();
 					$locator->set_section_tipo($section_tipo);
