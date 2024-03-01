@@ -366,7 +366,7 @@ class transform_data {
 			// 'matrix_users',
 			// 'matrix_stats'
 		];
-		$action = 'fix_dataframe_action';
+		$action = 'transform_data::fix_dataframe_action';
 
 		update::convert_table_data($ar_tables, $action);
 
