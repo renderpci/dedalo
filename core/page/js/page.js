@@ -223,12 +223,23 @@ page.prototype.init = async function(options) {
 									if(source.mode==='list' && url_vars.id){
 										delete url_vars.id
 									}
-									if (typeof current_url_vars.menu!=='undefined') {
-										url_vars.menu = current_url_vars.menu
+									// source.config.url_vars add if they exists
+									// used by menu thesaurus_view_mode
+									if (source.config?.url_vars) {
+										for (const property in source.config.url_vars) {
+											url_vars[property] = source.config.url_vars[property]
+										}
 									}
-									if (typeof current_url_vars.session_save!=='undefined') {
-										url_vars.session_save = current_url_vars.session_save
-									}
+									// preserve URL vars
+									const preserve_url_vars = [
+										'menu',
+										'session_save'
+									]
+									preserve_url_vars.forEach(name => {
+										if (typeof current_url_vars[name]!=='undefined') {
+											url_vars[name] = current_url_vars[name]
+										}
+									})
 									const url = '?' + object_to_url_vars(url_vars)
 
 							// browser navigation update
@@ -507,7 +518,7 @@ page.prototype.add_events = function() {
 		// note that navigation calls generate a history of event state, and when user click's on back button,
 		// the browser get this event form history with the state info stored previously
 		window.onpopstate = function(event) {
-			if (event.state) {
+			if (event.state && event.state.user_navigation_options) {
 				// get previously stored state data
 				const new_user_navigation_options = event.state.user_navigation_options
 				// mark as already used in history
@@ -664,10 +675,14 @@ export const instantiate_page_element = async function(self, source) {
 				instance_options.id_variant = page_globals.user_id
 			}
 
-		// config. Used by section tools
-			if (config && config.source_section_tipo) {
-				instance_options.id_variant	= config.source_section_tipo
-				instance_options.config		= config
+		// config. Used by section tools, area_thesaurus model
+			if (config) {
+				// init adding param config
+				instance_options.config	= config
+				// section tools id_variant
+				if (config.source_section_tipo) {
+					instance_options.id_variant	= config.source_section_tipo
+				}
 			}
 
 		// request_config

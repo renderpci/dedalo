@@ -41,13 +41,14 @@ final class dd_ts_api {
 			$response->error	= null;
 
 		// short vars
-			$source			= $rqo->source;
-			$section_tipo	= $source->section_tipo;
-			$section_id		= $source->section_id;
-			$node_type		= $source->node_type;
-			$tipo			= $source->tipo;
-			$options		= $rqo->options;
-			$pagination		= $options->pagination ?? null;
+			$source					= $rqo->source;
+			$section_tipo			= $source->section_tipo;
+			$section_id				= $source->section_id;
+			$node_type				= $source->node_type;
+			$tipo					= $source->tipo;
+			$options				= $rqo->options;
+			$pagination				= $options->pagination ?? null;
+			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
 
 		// children
 			if($node_type==='hierarchy_node') {
@@ -91,11 +92,11 @@ final class dd_ts_api {
 					$children		= $dato_paginated;
 			}
 
-		// model
+		// thesaurus_view_mode
 			$options = new stdClass();
-			if (isset($_SESSION['dedalo']['config']['thesaurus_view_mode']) && $_SESSION['dedalo']['config']['thesaurus_view_mode']==='model') {
-				$options->model = true;
-			}
+			$options->model = $thesaurus_view_mode==='model'
+				? true
+				: false; // get from URL as thesaurus_view_mode=model
 
 		try {
 
