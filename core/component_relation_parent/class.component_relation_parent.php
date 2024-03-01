@@ -359,7 +359,10 @@ class component_relation_parent extends component_relation_common {
 				$parents = self::get_parents_recursive(
 					$section_id,
 					$section_tipo,
-					true // bool skip_root
+					(object)[
+						'skip_root' => true,
+						'search_in_main_hierarchy' => true
+					]
 				);
 
 			// new_dato
@@ -641,7 +644,11 @@ class component_relation_parent extends component_relation_common {
 					component_relation_parent::get_parents(
 						$this->section_id,
 						$this->section_tipo,
-						$children_component_tipo
+						$children_component_tipo,
+						null,
+						(object)[
+							'search_in_main_hierarchy' => true
+						]
 					)
 				);
 			}
@@ -715,14 +722,28 @@ class component_relation_parent extends component_relation_common {
 	*	Optional. Previously calculated from structure using current section tipo info or calculated inside from section_tipo
 	* @param array $ar_tables
 	*	Optional. If set, union tables search is made over all tables received
-	*
+	* @param object|null $options
+	*	Optional parameter to enable additional calculations like hierarchy section search for parents (Thesaurus case)
 	* @return array $parents
 	*	Array of stClass objects with properties: section_tipo, section_id, component_tipo
 	*/
-	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null) : array {
+	public static function get_parents(int|string $section_id, string $section_tipo, ?string $from_component_tipo=null, ?array $ar_tables=null, object $options=null) : array {
 		$start_time=start_time();
 
-		$parents = [];
+		// options
+			// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
+			$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
+			// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
+			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
+
+			// debug
+				// if ($search_in_main_hierarchy===false) {
+				// 	$bt = debug_backtrace();
+				// 	dump($bt[1], ' bt[1] ++ '.to_string($options));
+				// }
+
+		// parents array container
+			$parents = [];
 
 		// hierarchy1 case (root)
 			if ($section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
@@ -730,7 +751,7 @@ class component_relation_parent extends component_relation_common {
 			}
 
 		// from_component_tipo filter option
-			$filter ='';
+			$filter = '';
 			if (!is_null($from_component_tipo)) {
 				/*
 					# Locate current section component parent tipo
@@ -775,13 +796,12 @@ class component_relation_parent extends component_relation_common {
 				$strQuery .= implode(" UNION ALL ", $ar_query);
 			}
 
-		// Add hierarchy main parents
+		// search_in_main_hierarchy. Add hierarchy main parents
 		// By default, only self section is searched. When in case parent is a hierarchy (like 'hierarchy256')
-		// we need search too in main_hierarchy table the "target" parent
-			$search_in_main_hierarchy = true;
+		// we also need to search in main_hierarchy table the "target" parent
+			// $search_in_main_hierarchy = true;
 			if($search_in_main_hierarchy===true) {
-				$main_from_component_tipo = DEDALO_HIERARCHY_CHILDREN_TIPO;
-				$main_filter	= ",\"from_component_tipo\":\"$main_from_component_tipo\"";
+				$main_filter	= ",\"from_component_tipo\":\"$hierarchy_from_component_tipo\"";
 				$main_compare	= "{\"section_tipo\":\"$section_tipo\",\"section_id\":\"$section_id\",\"type\":\"$type\"".$main_filter."}";
 				$sql_where		= "datos#>'{relations}' @> '[$main_compare]'::jsonb";
 				$table			= hierarchy::$table;
@@ -896,22 +916,36 @@ class component_relation_parent extends component_relation_common {
 	* Iterate recursively all parents of current term
 	* @param int|string $section_id
 	* @param string $section_tipo
-	* @param bool $skip_root = true
+	* @param object|null $options
 	* @param array $parents_recursive = []
 	* 	Accumulates results to allow check for duplicates
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive(int|string $section_id, string $section_tipo, bool $skip_root=true, array $parents_recursive=[]) : array {
+	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?object $options, array $parents_recursive=[]) : array {
+
+		// options
+			// skip_root. Allows you to avoid including the root term as a parent
+			$skip_root = $options->skip_root ?? false;
+			// search_in_main_hierarchy. Enable to add parents from hierarchy section (hierarchy1)
+			$search_in_main_hierarchy = $options->search_in_main_hierarchy ?? false;
+			// hierarchy_from_component_tipo. When 'search_in_main_hierarchy' is true, it allows to select the component_reation_children component to be searched.
+			$hierarchy_from_component_tipo = $options->hierarchy_from_component_tipo ?? DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		// cache key_resolve
 			static $parents_recursive_resolved = [];
-			$key_resolve = $section_tipo.'_'.$section_id.'_'.(int)$skip_root;
+			$key_resolve = $section_tipo.'_'.$section_id.'_'.(int)$skip_root.'_'.(int)$search_in_main_hierarchy.'_'.(int)$hierarchy_from_component_tipo;
 			if (isset($parents_recursive_resolved[$key_resolve])) {
 				return $parents_recursive_resolved[$key_resolve];
 			}
 
 		// parents
-		$ar_parents = component_relation_parent::get_parents($section_id, $section_tipo);
+		$ar_parents = component_relation_parent::get_parents(
+			$section_id,
+			$section_tipo,
+			null, // from_component_tipo
+			null, // ar_tables
+			$options // object options
+		);
 		if (!empty($ar_parents)) {
 			foreach ($ar_parents as $current_locator) {
 
@@ -947,7 +981,7 @@ class component_relation_parent extends component_relation_common {
 					$parent_parents_recursive = component_relation_parent::get_parents_recursive(
 						$current_locator->section_id,
 						$current_locator->section_tipo,
-						$skip_root,
+						$options,
 						$parents_recursive
 					);
 					if (!empty($parent_parents_recursive)) {
