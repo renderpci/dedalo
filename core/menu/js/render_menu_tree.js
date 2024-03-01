@@ -363,7 +363,7 @@ const render_item_hierarchy = (options) => {
 				}
 
 				return true
-			}//end link.addEventListener("click")
+			}//end fn_click
 
 	// children_item. recursive generation of children nodes of the current li node.
 		const children_item	= datalist.find(children_item => children_item.parent===item.tipo)

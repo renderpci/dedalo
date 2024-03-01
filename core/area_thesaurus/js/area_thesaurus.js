@@ -79,7 +79,7 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
-* @pram object options
+* @param object options
 * @return bool
 */
 area_thesaurus.prototype.init = async function(options) {
@@ -139,8 +139,10 @@ area_thesaurus.prototype.init = async function(options) {
 				})
 		}
 
-	// linker
+	// URL vars
 		const url_vars = url_vars_to_object(window.location.search)
+
+	// linker
 		// linker. Get component caller id from url (needed to link terms for DS callers)
 		if (url_vars.initiator) {
 			const caller_id = JSON.parse(url_vars.initiator)
@@ -285,7 +287,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		// // fix initiator
 		// 	self.initiator = JSON.parse(initiator)
 
-	// filter
+	// search filter
 		if (!self.filter) {
 			self.filter = new search()
 			self.filter.init({
@@ -346,9 +348,9 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	const self = this
 
-	const sections_selector_data	= self.data.find(item => item.tipo===self.tipo)
-	const sections_selector_value	= sections_selector_data
-		? sections_selector_data.value
+	const area_data = self.data.find(item => item.tipo===self.tipo)
+	const sections_selector_value = area_data
+		? area_data.value
 		: null
 
 	return sections_selector_value
@@ -395,7 +397,7 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 
 	return true
-}//end get_sections_selector_data
+}//end navigate
 
 
 

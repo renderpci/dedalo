@@ -41,11 +41,11 @@ export const render_menu = (options) => {
 
 	// ontology button
 	if (self.ontology_link) {
-		const clone = self.ontology_link.cloneNode(true);
-		clone.classList.remove('top_item')
-		clone.classList.add('menu_mobile_item')
-		clone.addEventListener('click', self.open_ontology)
-		wrapper.append(clone)
+		const cloned_node = self.ontology_link.cloneNode(true);
+		cloned_node.classList.remove('top_item')
+		cloned_node.classList.add('menu_mobile_item')
+		cloned_node.addEventListener('click', self.open_ontology)
+		wrapper.append(cloned_node)
 	}
 
 

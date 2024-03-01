@@ -93,7 +93,7 @@
 
 		// properties
 			if (!empty($properties) && $properties->action==='search') {
-				// search rows
+				// search rows. Calling from dd_core_api:read -> get_data
 				$result = $this->search_thesaurus( $properties->sqo );
 				$item->ts_search = $result;
 			}
@@ -101,8 +101,7 @@
 		// subdata add
 			$data[] = $item;
 
-	}// end if $permissions > 0
-
+	}//end if $options->get_data===true && $permissions>0
 
 
 
