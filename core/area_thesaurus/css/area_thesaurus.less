@@ -43,6 +43,28 @@
 			>.thesaurus_type_block {
 				padding: 0px;
 
+				&.model {
+					// background-color: #fff9f1;
+
+					>.typology_name {
+						background-color: #f59e3d;
+						color: white;
+						&::before {
+							content: " [M] ";
+						}
+						&:after {
+							background-color: white;
+						}
+						&:hover {
+							background-color: darken(#f59e3d, 10%);
+						}
+					}
+
+					.term_text, mark {
+						color: darken(#f59e3d, 18%) !important;
+					}
+				}
+
 				// typology_name like 'Toponymy'
 				>.typology_name {
 					background-color: rgba(230, 230, 230, 0.88);
