@@ -58,6 +58,8 @@ class ts_object {
 	/**
 	* GET_AR_ELEMENTS
 	* Get elements from section_list_thesaurus -> properties
+	* @param string $section_tipo
+	* @param boolean|null $model = false
 	* @return array $ar_elements
 	*/
 	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
@@ -104,7 +106,7 @@ class ts_object {
 				}
 			}//end if (!isset($ar_children[0]))
 
-		// If element exists (section_list_thesaurus) we get element 'properties' json value as array
+		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
 			if ( !empty($ar_properties) ) {
 
 				// DES

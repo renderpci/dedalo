@@ -507,18 +507,19 @@ class area_thesaurus extends area_common {
 				$ar_path_mix[] = $ar_path;
 			}
 
-		# AR_DATA_COMBINED
+		// AR_DATA_COMBINED
 			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-				#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
-		$result = self::walk_hierarchy_data($ar_data_combined);
+		// result. Walk ar_data
+			$result = self::walk_hierarchy_data($ar_data_combined);
 
-		$total_records = count($ar_records);
+		// total_records count
+			$total_records = count($ar_records);
 
 		// response
-			$response->msg 	  	= "Records found: $total_records";
-			$response->result 	= $result;
-			$response->total  	= $total_records;
+			$response->msg		= 'Records found: ' . $total_records;
+			$response->result	= $result;
+			$response->total	= $total_records;
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -527,7 +528,7 @@ class area_thesaurus extends area_common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end search_thesaurus
 
 

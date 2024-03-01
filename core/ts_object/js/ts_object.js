@@ -40,22 +40,22 @@ export const ts_object = new function() {
 	/**
 	* INIT
 	* Fix important vars for current object
+	* (!) Disabled (01-03-2024) because it is not used as instance and nobody calls here !
 	*/
-	this.init = function() {
+		// this.init = function() {
 
-		const self = this
+		// 	const self = this
 
-		// const url_vars = get_current_url_vars()
-		const url_vars = url_vars_to_object(window.location.search)
+		// 	// const url_vars = get_current_url_vars()
+		// 	const url_vars = url_vars_to_object(window.location.search)
 
-		// THESAURUS_MODE
-		this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
-		// component_name Caller component name for relations
-		this.component_name = url_vars.component_name || null
+		// 	// THESAURUS_MODE: relation|default
+		// 	this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
+		// 	// component_name Caller component name for relations
+		// 	this.component_name = url_vars.component_name || null
 
-
-		return true
-	}//end init
+		// 	return true
+		// }//end init
 
 
 
@@ -112,7 +112,6 @@ export const ts_object = new function() {
 				alert("[ts_object.get_children] Error on select children_container");
 				return Promise.resolve(false);
 			}
-
 
 		return new Promise(function(resolve){
 

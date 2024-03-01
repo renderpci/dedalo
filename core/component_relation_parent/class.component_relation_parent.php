@@ -831,12 +831,13 @@ class component_relation_parent extends component_relation_common {
 				);
 			}else{
 
-				if(SHOW_DEVELOPER===true) {
-					$exec_time = exec_time_unit($start_time,'ms');
-					if (!empty(dd_core_api::$rqo)) {
-						dd_core_api::$sql_query_search[] = '-- [get_parents] TIME ms: '. $exec_time . PHP_EOL . $strQuery;
+				// debug
+					if(SHOW_DEVELOPER===true) {
+						$exec_time = exec_time_unit($start_time,'ms');
+						if (!empty(dd_core_api::$rqo)) {
+							dd_core_api::$sql_query_search[] = '-- [get_parents] TIME ms: '. $exec_time . PHP_EOL . $strQuery;
+						}
 					}
-				}
 
 				while ($row = pg_fetch_object($result)) {
 
