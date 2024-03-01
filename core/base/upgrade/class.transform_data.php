@@ -382,13 +382,13 @@ class transform_data {
 	*/
 	public static function fix_dataframe_action(?object $datos) : ?object {
 
-		// oh1 / empty relations cases
-			if($datos->section_tipo === 'oh1' || empty($datos->relations)){
+		//  empty relations cases
+			if(empty($datos->relations)){
 				return null;
 			}
 
-		$target_section_tipo	= 'dd562'; // Dataframe active
-		$ratting_tipo			= 'dd566'; // Weight
+		$target_section_tipo	= 'rsc1242'; // Dataframe active
+		$ratting_tipo			= 'rsc1246'; // Weight
 
 		$dataframe_to_save = false;
 		foreach ($datos->relations as $locator) {
@@ -397,39 +397,74 @@ class transform_data {
 
 				$dataframe_to_save = true;
 
+				$old_locator = clone $locator;
+
 				// section
+				$create_new_rating_section = function() use ($target_section_tipo){
 					$section = section::get_instance(
 						null, // string|null section_id
 						$target_section_tipo // string section_tipo
 					);
-					$new_target_section_id	= $section->Save();
-					$locator->section_id	= $new_target_section_id;
+					$new_target_section_id			= $section->Save();
+
+					return $new_target_section_id;
+				};
+
+
+					switch ($locator->from_component_tipo) {
+						case 'numisdata885':
+							$locator->section_id			= $create_new_rating_section();
+							$locator->section_section_tipo	= $target_section_tipo;
+							$locator->from_component_tipo	= 'numisdata1447';
+							break;
+						case 'numisdata1017':
+							$locator->section_id			= $create_new_rating_section();
+							$locator->section_section_tipo	= $target_section_tipo;
+							$locator->from_component_tipo	= 'numisdata1448';
+							break;
+
+						case 'numisdata865':
+							$locator->section_id			= $create_new_rating_section();
+							$locator->section_section_tipo	= $target_section_tipo;
+							$locator->from_component_tipo	= 'numisdata1449';
+							break;
+
+						case 'oh126':
+							$locator->from_component_tipo = 'oh115';
+							break;
+
+						case 'rsc1057':
+							$locator->from_component_tipo = 'rsc1265';
+							break;
+
+						default:
+							break;
+					}
 
 				// time machine data update
-					self::fix_dataframe_tm(
-						$datos->section_id,
-						$datos->section_tipo,
-						$locator->from_component_tipo,
-						$locator->section_id_key,
-						$new_target_section_id
-					);
+					// self::fix_dataframe_tm(
+					// 	$datos->section_id,
+					// 	$datos->section_tipo,
+					// 	$old_locator,
+					// 	$locator
+					// );
 
-				// ratting component update
-					$component_rating = component_common::get_instance(
-						'component_radio_button', // string model
-						$ratting_tipo, // string tipo
-						$new_target_section_id, // string section_id
-						'list', // string mode
-						DEDALO_DATA_NOLAN, // string lang
-						$target_section_tipo // string section_tipo
-					);
+				// // ratting component update
+				// 	$component_rating = component_common::get_instance(
+				// 		'component_radio_button', // string model
+				// 		$ratting_tipo, // string tipo
+				// 		$new_target_section_id, // string section_id
+				// 		'list', // string mode
+				// 		DEDALO_DATA_NOLAN, // string lang
+				// 		$target_section_tipo // string section_tipo
+				// 	);
 
-					$dato = new locator();
-						$dato->set_section_tipo('dd500');
-						$dato->set_section_id('1');
+				// 	$dato = new locator();
+				// 		$dato->set_section_tipo('dd500');
+				// 		$dato->set_section_id('1');
 
-					$component_rating->set_dato([$dato]);
-					$component_rating->Save();
+				// 	$component_rating->set_dato([$dato]);
+				// 	$component_rating->Save();
 			}
 		}//end foreach ($datos->relations as $locator)
 
@@ -455,14 +490,18 @@ class transform_data {
 	*
 	* @return array|null $tm_ar_changed
 	*/
-	public function fix_dataframe_tm(string|int $section_id, string $section_tipo, string $component_tipo, string|int $section_id_key, string|int $new_target_section_id) : array {
+	public function fix_dataframe_tm(string|int $section_id, string $section_tipo, $old_locator, $locator) : array {
 
 		$tm_ar_changed = [];
+
+		$component_tipo			= (string) $old_locator->from_component_tipo;
+		$section_id_key			= (int) $old_locator->section_id_key;
+		$new_target_section_id	= (int) $locator->section_id;
 
 		$strQuery = "
 			SELECT * FROM matrix_time_machine
 			WHERE section_id = '$section_id'
-			-- AND section_tipo = '$section_tipo'
+			AND section_tipo = '$section_tipo'
 			AND tipo = '$component_tipo'
 			ORDER BY id ASC
 		";
