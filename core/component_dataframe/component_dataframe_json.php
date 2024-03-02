@@ -11,6 +11,16 @@
 	$tipo				= $this->get_tipo();
 	$properties			= $this->get_properties() ?? new stdClass();
 	$caller_dataframe	= $this->get_caller_dataframe();
+	// debug. Check caller_dataframe
+	if (empty($caller_dataframe) || !isset($caller_dataframe->section_id_key)) {
+		$bt = debug_backtrace();
+		dump($bt, ' bt ++ '.to_string($this->tipo));
+		debug_log(__METHOD__
+			. " Mandatory caller_dataframe not found " . PHP_EOL
+			. ' debug_backtrace 1 : ' . PHP_EOL . to_string($bt[1])
+			, logger::ERROR
+		);
+	}
 
 // context
 // data
@@ -24,7 +34,7 @@
 		);
 
 		// $this->context->view = 'dataframe';
-		
+
 		$context[] = $this->context;
 
 	if($permissions>0) {
@@ -45,7 +55,7 @@
 					$item = $this->get_data_item($value);
 						$item->parent_tipo			= $tipo;
 						$item->parent_section_id	= $section_id;
-						
+
 					$data[] = $item;
 					break;
 
@@ -68,37 +78,36 @@
 
 		// data
 
-				// data item (list mode result don't include self data, only subdata)
-					$item = $this->get_data_item($value);
-						$item->parent_tipo			= $tipo;
-						$item->parent_section_id	= $section_id;
-						// fix pagination vars
-							$pagination = new stdClass();
-								$pagination->total	= count($dato);
-								$pagination->limit	= $limit;
-								$pagination->offset	= $offset;
+			// data item (list mode result don't include self data, only subdata)
+			$item = $this->get_data_item($value);
+				$item->parent_tipo			= $tipo;
+				$item->parent_section_id	= $section_id;
+				// fix pagination vars
+				$item->pagination = (object)[
+					'total'		=> count($dato),
+					'limit'		=> $limit,
+					'offset'	=> $offset
+				];
+				// specific properties for dataframe
+				$item->section_id_key	= $caller_dataframe->section_id_key;
+				// $item->tipo_key		= $caller_dataframe->tipo_key;
 
-						$item->pagination = $pagination;
-						// specific properties for dataframe
-						$item->section_id_key	= $caller_dataframe->section_id_key;
-						// $item->tipo_key			= $caller_dataframe->tipo_key;
+			$data[] = $item;
 
-
-					$data[] = $item;
+			// solved mode
 			if (!empty($dato) && $mode!='solved') {
 				// subdatum
-					$subdatum = $this->get_subdatum($tipo, $value);
+				$subdatum = $this->get_subdatum($tipo, $value);
 
-					$ar_subcontext = $subdatum->context;
-					foreach ($ar_subcontext as $current_context) {
-						$context[] = $current_context;
-					}
+				$ar_subcontext = $subdatum->context;
+				foreach ($ar_subcontext as $current_context) {
+					$context[] = $current_context;
+				}
 
-					$ar_subdata = $subdatum->data;
-					foreach ($ar_subdata as $sub_value) {
-						$data[] = $sub_value;
-					}
-
+				$ar_subdata = $subdatum->data;
+				foreach ($ar_subdata as $sub_value) {
+					$data[] = $sub_value;
+				}
 			}//end if (!empty($dato))
 		// }// end get_data
 	}//end if $options->get_data===true && $permissions>0
