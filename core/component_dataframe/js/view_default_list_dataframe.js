@@ -108,7 +108,8 @@ const render_content_value = function(options) {
 			text_content 	:  self.properties.label || '?',
 			parent			: content_value
 		})
-		button_activate.addEventListener('click', function(e) {
+		button_activate.addEventListener('mousedown', fn_mousedown)
+		function fn_mousedown(e) {
 			e.stopPropagation()
 
 			// debug selecting instance case
@@ -136,7 +137,7 @@ const render_content_value = function(options) {
 				// open modal
 				open_target_section(self)
 			}
-		})
+		}//end fn_mousedown
 
 		if(value.length >= 1) {
 
@@ -201,19 +202,14 @@ const open_target_section = async function (self) {
 		const section_tipo	= last_value.section_tipo
 		const section_id	= last_value.section_id
 
-	// section. Create the target section instance
-		const section = await get_instance({
-			model			: 'section',
-			mode			: 'edit',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			inspector		: false,
-			session_save	: false,
-			session_key		: 'section_' + section_tipo + '_' + self.tipo
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body block',
+			style			: {
+				height : '34rem'
+			}
 		})
-		await section.build(true)
-		const section_node = await section.render()
 
 	// header
 		const header = self.target_section[0].label // (get_label.new || 'New section') +
@@ -270,8 +266,33 @@ const open_target_section = async function (self) {
 	// modal. Create a modal to attach the section node
 		const modal = ui.attach_to_modal({
 			header		: header,
-			body		: section_node,
-			footer		: footer_container
+			body		: body,
+			footer		: footer_container,
+			callback : () => {
+				ui.load_item_with_spinner({
+					container	: body,
+					label		: 'section',
+					callback	: async () => {
+
+						// section. Create the target section instance
+						const section = await get_instance({
+							model			: 'section',
+							mode			: 'edit',
+							tipo			: section_tipo,
+							section_tipo	: section_tipo,
+							section_id		: section_id,
+							inspector		: false,
+							session_save	: false,
+							session_key		: 'section_' + section_tipo + '_' + self.tipo
+						})
+						await section.build(true)
+						const section_node = await section.render()
+						// body.appendChild(section_node)
+						// body.replaceWith(section_node);
+						return section_node
+					}
+				})
+			}
 		})
 		modal.on_close = function(){
 			self.refresh({
