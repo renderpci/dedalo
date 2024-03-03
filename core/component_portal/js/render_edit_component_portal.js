@@ -160,7 +160,7 @@ export const render_column_id = function(options) {
 				}
 			})
 		});
-		button_edit.addEventListener('click', function(e){
+		button_edit.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 
 			// if the user click with right mouse button stop
