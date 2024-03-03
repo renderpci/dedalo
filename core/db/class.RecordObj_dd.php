@@ -481,6 +481,9 @@ class RecordObj_dd extends RecordDataBoundObject {
 			elseif ($model==='component_security_tools') {
 				$model='component_check_box';
 			}
+			elseif ($model==='dataframe') {
+				$model='box elements';
+			}
 
 		return $model;
 	}//end get_modelo_name
