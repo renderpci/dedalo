@@ -331,13 +331,9 @@ const get_content_value = (i, current_value, self) => {
 						}
 					})
 					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('click', fn_click_init)
+					content_value.removeEventListener('mousedown', fn_click_init)
 				}//end fn_click_init
-				content_value.addEventListener('click', fn_click_init)
-				// mousedown event. Capture event propagation
-				content_value.addEventListener('mousedown', (e) => {
-					e.stopPropagation()
-				})
+				content_value.addEventListener('mousedown', fn_click_init)
 			}
 		}//end if (self.show_interface.read_only!==true)
 
