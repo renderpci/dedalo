@@ -342,7 +342,7 @@
     "seleccione_fotograma": "Sélectionnez le cadre dans le lecteur et appuyez sur 'CREATE POSTERFRAME' pour créer un cadre à partir de la vidéo.",
     "cancel": "Annuler",
     "reload": "Recharge",
-    "registros_mostrados": "Registres affichés de X à Y de Z.",
+    "registros_mostrados": "Registres affichés de X à Y de Z",
     "replace": "Remplacer ",
     "replace_all": "Tout remplacer",
     "match_case": "Lettres majuscules et minuscules assorties",

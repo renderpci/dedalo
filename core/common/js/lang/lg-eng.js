@@ -342,7 +342,7 @@
     "seleccione_fotograma": "Select frame in player and click button MAKE POSTERFRAME to generate new posterframe image from video",
     "cancel": "Cancel",
     "reload": "Reload",
-    "registros_mostrados": "Displayed records from X to Y of Z.",
+    "registros_mostrados": "Displayed records from X to Y of Z",
     "replace": "Replace",
     "replace_all": "Replace all",
     "match_case": "Match case",

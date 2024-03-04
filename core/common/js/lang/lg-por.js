@@ -342,7 +342,7 @@
     "seleccione_fotograma": "<mark>Seleccione fotograma en el reproductor y pulse «CREAR POSTERFRAME» para crear un fotograma a partir del video<\/mark>",
     "cancel": "<mark>Cancelar<\/mark>",
     "reload": "<mark>Recargar<\/mark>",
-    "registros_mostrados": "<mark>Registros mostrados de X a Y de Z.<\/mark>",
+    "registros_mostrados": "<mark>Registros mostrados de X a Y de Z<\/mark>",
     "replace": "<mark>Reemplazar<\/mark>",
     "replace_all": "<mark>Reemplazar todos<\/mark>",
     "match_case": "<mark>Coincidir mayúsculas y minúsculas<\/mark>",
