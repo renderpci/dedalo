@@ -342,7 +342,7 @@
     "seleccione_fotograma": "Seleccioneu fotograma en el reproductor i faci clic a «CREAR POSTERFRAME» per crear un fotograma a partir del vídeo",
     "cancel": "Cancel·lar",
     "reload": "Recarregar",
-    "registros_mostrados": "Registres mostrats de X a Y de Z.",
+    "registros_mostrados": "Registres mostrats de X a Y de Z",
     "replace": "Substitueix",
     "replace_all": "Reemplaçar-los tots",
     "match_case": "Coincidir majúscules i minúscules",

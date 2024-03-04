@@ -342,7 +342,7 @@
     "seleccione_fotograma": "Wählen Sie Standbild im Player und drücken Sie 'POSTERFRAME ERSTELLEN' um ein Standbild aus dem Video zu erstellen",
     "cancel": "Abbrechen",
     "reload": "Aufladen",
-    "registros_mostrados": "Dargestellte Einträge von X bis Y aus Z.",
+    "registros_mostrados": "Dargestellte Einträge von X bis Y aus Z",
     "replace": "Ersetzen",
     "replace_all": "Alles ersetzen",
     "match_case": "Groß- und Kleinschreibung beachten",

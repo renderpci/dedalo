@@ -342,7 +342,7 @@
     "seleccione_fotograma": "Επιλέξτε καρέ στο παίκτη και πατήστε Create POSTERFRAME για να δημιουργήσετε ένα καρέ από το βίντεο",
     "cancel": "ακυρώσει",
     "reload": "επαναφόρτωση",
-    "registros_mostrados": "Οι καταχωρητές που εμφανίζονται από το Χ έως το Υ του Z.",
+    "registros_mostrados": "Οι καταχωρητές που εμφανίζονται από το Χ έως το Υ του Z",
     "replace": "<mark>Reemplazar<\/mark>",
     "replace_all": "αντικαταστήστε όλα",
     "match_case": "διάκριση πεζών-κεφαλαίων",

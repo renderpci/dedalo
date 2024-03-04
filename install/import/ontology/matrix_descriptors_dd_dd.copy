@@ -614,7 +614,6 @@ dd1187	Cancellare	termino	lg-ita
 dd1248	Page sélectionnable entre ${page_in} et ${page_out}. Nombre total de pages : ${total_pages}.	termino	lg-fra
 dd1188	Tipologia	termino	lg-ita
 dd1188	Tipología	termino	lg-spa
-dd1249	Registres affichés de X à Y de Z.	termino	lg-fra
 dd1189	Modificadores	termino	lg-spa
 dd1189	Modificatori	termino	lg-ita
 dd1250	Outil de tri	termino	lg-fra
@@ -773,10 +772,6 @@ dd1292	Liste de relations	termino	lg-fra
 dd1247	view	termino	lg-spa
 dd1247	Visor	termino	lg-cat
 dd130	Liste des enregistrements	termino	lg-fra
-dd1249	Registres mostrats de X a Y de Z.	termino	lg-cat
-dd1249	Registri mostrati da X a Y di Z.	termino	lg-ita
-dd1249	Registros mostrados de X a Y de Z.	termino	lg-spa
-dd1249	Οι καταχωρητές που εμφανίζονται από το Χ έως το Υ του Z.	termino	lg-ell
 dd125	section_tool	termino	lg-spa
 dd1250	Eina d&#039;ordenació	termino	lg-cat
 dd1250	Herramienta de ordenación	termino	lg-spa
@@ -796,6 +791,8 @@ dd126	Expedient	termino	lg-cat
 dd126	Expediente	termino	lg-spa
 dd126	ρεκόρ	termino	lg-ell
 dd1260	publication	termino	lg-spa
+dd1249	Registres mostrats de X a Y de Z	termino	lg-cat
+dd1249	Registri mostrati da X a Y di Z	termino	lg-ita
 dd1261	name	termino	lg-spa
 dd1262	site	termino	lg-spa
 dd1263	descripton	termino	lg-spa
@@ -2299,7 +2296,6 @@ dd370	Esborrar	termino	lg-cat
 dd370	διαγράψετε	termino	lg-ell
 dd371	Progetto	termino	lg-ita
 dd371	Projece	termino	lg-cat
-dd1608	Tapez et retapez le mot de passe superutilisateur souhaité et conservez-le en lieu sûr. Utilisez un mot de passe fort de 8 à 32 caractères contenant au moins une lettre majuscule, une lettre minuscule et un chiffre. Les caractères identiques dans l'ordre séquentiel ('aa', '11', 'BB', etc.) ne sont pas autorisés. L'ordre numérique ("123", "345", etc.) et l'ordre alphabétique ("aBC", "hIjK", etc.) ne sont pas autorisés.	termino	lg-fra
 dd371	Proyecto	termino	lg-spa
 dd371	σχέδιο	termino	lg-ell
 dd372	Partidos políticos	termino	lg-spa
@@ -3608,7 +3604,6 @@ dd695	νέος	termino	lg-ell
 dd696	Entrada	termino	lg-cat
 dd696	Entrada	termino	lg-spa
 dd696	Entrata	termino	lg-ita
-dd285	Ajoutez le fichier BIBTex et les fichiers PDF correspondants à partir de votre disque dur. Une fois le fichier téléchargé, sélectionnez "Importer des fichiers".	termino	lg-fra
 dd696	εγγραφή	termino	lg-ell
 dd697	Eixida	termino	lg-cat
 dd286	éléments actifs	termino	lg-fra
@@ -3671,7 +3666,6 @@ dd716	Campo:	termino	lg-ita
 dd716	campo:	termino	lg-spa
 dd290	Télécharger	termino	lg-fra
 dd716	αγρός:	termino	lg-ell
-dd291	Pour conserver vos modifications, NE FERMEZ PAS CETTE FENÊTRE. Connectez-vous à une autre fenêtre de navigateur, puis revenez à cette fenêtre et enregistrez le contenu (en appuyant sur le bouton "Enregistrer").	termino	lg-fra
 dd717	Títol	termino	lg-cat
 dd717	Titolo	termino	lg-ita
 dd717	Título	termino	lg-spa
@@ -4977,7 +4971,6 @@ dd731	Version	termino	lg-fra
 dd732	Actif	termino	lg-fra
 dd733	!	termino	lg-fra
 dd734	Traitement	termino	lg-fra
-dd735	Sélectionnez le cadre dans le lecteur et appuyez sur "CREATE POSTERFRAME" pour créer un cadre à partir de la vidéo.	termino	lg-fra
 dd736	Créer	termino	lg-fra
 dd737	Extension non valide	termino	lg-fra
 dd738	La taille du fichier est trop importante	termino	lg-fra
@@ -5205,7 +5198,6 @@ dd938	Types de données	termino	lg-fra
 dd939	Information générale	termino	lg-fra
 dd94	par utilisateur	termino	lg-fra
 dd940	Id	termino	lg-fra
-dd941	Ajoutez le fichier JSON de Zotero et les fichiers PDF correspondants depuis votre disque dur. Une fois le fichier téléchargé, sélectionnez "Importer des fichiers".	termino	lg-fra
 dd1621	Publicar	termino	lg-cat
 dd942	Type d'association / de groupe	termino	lg-fra
 dd943	Valeur de la liste	termino	lg-fra
@@ -5573,7 +5565,6 @@ dd1031	Projekt	termino	lg-deu
 dd1032	Beschreibung	termino	lg-deu
 dd1033	Wählen Sie eine Zielsprache	termino	lg-deu
 dd1034	Wählen Sie ein Label zum Indexieren	termino	lg-deu
-dd1035	Um einen neuen Auszug zu erstellen, wählen Sie eine Textstelle an und klicken Sie unten auf "Neuer Auszug".	termino	lg-deu
 dd1036	Beziehung hinzugefügt	termino	lg-deu
 dd1037	Typ des Dienstes	termino	lg-deu
 dd1038	Liste	termino	lg-deu
@@ -5714,7 +5705,6 @@ dd1244	Visualisierungskonfigurationen	termino	lg-deu
 dd1245	Liste	termino	lg-deu
 dd1246	Modus	termino	lg-deu
 dd1248	Seite wählbar zwischen ${page_in} und ${page_out}. Totale Seiten: ${total_pages}.	termino	lg-deu
-dd1249	Dargestellte Einträge von X bis Y aus Z.	termino	lg-deu
 dd1250	Sortierwerkzeug	termino	lg-deu
 dd1251	Liste der Beziehungen	termino	lg-deu
 dd1252	Liste Beziehungen	termino	lg-deu
@@ -6077,7 +6067,6 @@ dd280	und Text speichern	termino	lg-deu
 dd281	Verlorene Labels	termino	lg-deu
 dd282	Kopfzeilen anpassen	termino	lg-deu
 dd284	BibTex-Datei erfolgreich verarbeitet	termino	lg-deu
-dd285	Fügen Sie die BIBTex-Datei und die zugehörigen PDF-Dateien von Ihrer Festplatte hinzu. Sobald sie geladen sind, wählen Sie "Dateien importieren".	termino	lg-deu
 dd286	Aktive Elemente	termino	lg-deu
 dd287	Vorlage speichern	termino	lg-deu
 dd288	Inaktive Elemente	termino	lg-deu
@@ -6469,7 +6458,6 @@ dd731	Version	termino	lg-deu
 dd732	Aktiv	termino	lg-deu
 dd733	!	termino	lg-deu
 dd734	Wird verarbeitet	termino	lg-deu
-dd735	Wählen Sie Standbild im Player und drücken Sie "POSTERFRAME ERSTELLEN" um ein Standbild aus dem Video zu erstellen	termino	lg-deu
 dd736	Erstellen	termino	lg-deu
 dd737	Ungültige Erweiterung	termino	lg-deu
 dd738	Die Datei ist zu gross.	termino	lg-deu
@@ -6678,7 +6666,6 @@ dd938	Typen von Daten	termino	lg-deu
 dd939	Allgemeine Informationen	termino	lg-deu
 dd94	Durch den Benutzer	termino	lg-deu
 dd940	Id	termino	lg-deu
-dd941	Fügen Sie die JSON-Datei von Zotero und die zugehörigen PDF-Dateien von Ihrer Festplatte hinzu. Sobald sie geladen sind, wählen Sie "Dateien importieren".	termino	lg-deu
 dd942	Typ der Verbindung / Gruppe	termino	lg-deu
 dd943	Wert aus der Liste	termino	lg-deu
 dd944	Typ der Verbindung / Gruppe	termino	lg-deu
@@ -6812,7 +6799,6 @@ dd1031	Projet	termino	lg-fra
 dd1032	Description	termino	lg-fra
 dd1033	Sélectionner une langue de destination	termino	lg-fra
 dd1034	Sélectionner une étiquette à indexer	termino	lg-fra
-dd1035	Pour créer un nouveau fragment, il suffit de sélectionner une partie du texte et de cliquer sur "Nouveau fragment" ci-dessous.	termino	lg-fra
 dd1036	Rapport ajouté	termino	lg-fra
 dd565	Activo	termino	lg-spa
 dd1600	Id	termino	lg-spa
@@ -7767,7 +7753,6 @@ dd1245	List	termino	lg-eng
 dd1246	mode	termino	lg-eng
 dd1247	View	termino	lg-eng
 dd1248	Choose page between ${page_in} and ${page_out}. Total pages: ${total_pages}.	termino	lg-eng
-dd1249	Displayed records from X to Y of Z.	termino	lg-eng
 dd1250	Sorting tool	termino	lg-eng
 dd1251	Relation list	termino	lg-eng
 dd1252	Relation list	termino	lg-eng
@@ -8607,5 +8592,20 @@ dd1658	Installé	termino	lg-fra
 dd1658	Installato	termino	lg-ita
 dd1658	Instalado	termino	lg-por
 dd1658	स्थापना गरियो	termino	lg-nep
-dd1	Dédalo 2024-02-22T17:14:09+01:00 Benimamet	termino	lg-spa
 dd598	नयाँ	termino	lg-nep
+dd1608	Tapez et retapez le mot de passe superutilisateur souhaité et conservez-le en lieu sûr. Utilisez un mot de passe fort de 8 à 32 caractères contenant au moins une lettre majuscule, une lettre minuscule et un chiffre. Les caractères identiques dans l'ordre séquentiel ('aa', '11', 'BB', etc.) ne sont pas autorisés. L'ordre numérique ('123', '345', etc.) et l'ordre alphabétique ('aBC', 'hIjK', etc.) ne sont pas autorisés.	termino	lg-fra
+dd285	Ajoutez le fichier BIBTex et les fichiers PDF correspondants à partir de votre disque dur. Une fois le fichier téléchargé, sélectionnez 'Importer des fichiers'.	termino	lg-fra
+dd291	Pour conserver vos modifications, NE FERMEZ PAS CETTE FENÊTRE. Connectez-vous à une autre fenêtre de navigateur, puis revenez à cette fenêtre et enregistrez le contenu (en appuyant sur le bouton 'Enregistrer').	termino	lg-fra
+dd735	Sélectionnez le cadre dans le lecteur et appuyez sur 'CREATE POSTERFRAME' pour créer un cadre à partir de la vidéo.	termino	lg-fra
+dd941	Ajoutez le fichier JSON de Zotero et les fichiers PDF correspondants depuis votre disque dur. Une fois le fichier téléchargé, sélectionnez 'Importer des fichiers'.	termino	lg-fra
+dd1035	Um einen neuen Auszug zu erstellen, wählen Sie eine Textstelle an und klicken Sie unten auf 'Neuer Auszug'.	termino	lg-deu
+dd285	Fügen Sie die BIBTex-Datei und die zugehörigen PDF-Dateien von Ihrer Festplatte hinzu. Sobald sie geladen sind, wählen Sie 'Dateien importieren'.	termino	lg-deu
+dd735	Wählen Sie Standbild im Player und drücken Sie 'POSTERFRAME ERSTELLEN' um ein Standbild aus dem Video zu erstellen	termino	lg-deu
+dd941	Fügen Sie die JSON-Datei von Zotero und die zugehörigen PDF-Dateien von Ihrer Festplatte hinzu. Sobald sie geladen sind, wählen Sie 'Dateien importieren'.	termino	lg-deu
+dd1035	Pour créer un nouveau fragment, il suffit de sélectionner une partie du texte et de cliquer sur 'Nouveau fragment' ci-dessous.	termino	lg-fra
+dd1249	Registros mostrados de X a Y de Z	termino	lg-spa
+dd1249	Registres affichés de X à Y de Z	termino	lg-fra
+dd1249	Οι καταχωρητές που εμφανίζονται από το Χ έως το Υ του Z	termino	lg-ell
+dd1249	Dargestellte Einträge von X bis Y aus Z	termino	lg-deu
+dd1249	Displayed records from X to Y of Z	termino	lg-eng
+dd1	Dédalo 2024-03-04T09:41:33+01:00 Benimamet	termino	lg-spa
