@@ -397,7 +397,8 @@ const get_tag_info = function(self) {
 				class_name		: 'button remove',
 				parent			: wrap_delete_tag
 			})
-			button_delete.addEventListener('click', function(){
+			button_delete.addEventListener('click', function(e) {
+				e.stopPropagation()
 
 				// delete_tag
 				self.delete_tag(tag_id)
@@ -420,7 +421,7 @@ const get_tag_info = function(self) {
 			})
 
 	// active values
-		self.active_value('tag_id', function(value){
+		self.active_value('tag_id', function(value) {
 
 			tag_id							= value // update current tag_id var (let)
 			fragment_id_tag_id.textContent	= value // update fragment label
@@ -432,7 +433,7 @@ const get_tag_info = function(self) {
 
 				}
 		})
-		self.active_value('state', function(value){
+		self.active_value('state', function(value) {
 
 			// fix selector value
 				tag_state_selector.value = value
