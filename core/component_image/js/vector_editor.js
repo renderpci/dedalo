@@ -715,21 +715,39 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				buttons.push(zoom)
 
 			// move
-				const move = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button tool move',
-					parent			: buttons_container
-				})
-				move.addEventListener('mouseup', () =>{
-					this.move.activate()
-					activate_status(move)
-				})
-				move.addEventListener('dblclick', () =>{
-					const delta_x	= self.canvas_width /2
-					const delta_y	= self.canvas_height /2
-					self.current_paper.view.setCenter(delta_x, delta_y)
-				})
-				buttons.push(move)
+				// const move = ui.create_dom_element({
+				// 	element_type	: 'span',
+				// 	class_name		: 'button tool move',
+				// 	parent			: buttons_container
+				// })
+				// move.addEventListener('mouseup', async () =>{
+				// 	// stage.mergeAllLayers();
+				// 	const svg_data = stage.getSvgContent()  //getSvgString
+				// 	console.log("svg_data:",svg_data);
+
+				// 	const imgType = 'JPEG'
+				// 	const quality = parseFloat(1)
+
+				// 	const image = await stage.rasterExport(
+				// 		imgType,
+				// 		quality,
+				// 		'export' //'v6 rsc170 imagen'//this.editor.exportWindowName
+				// 	)
+
+
+				// 	// this.move.activate()
+				// 	// activate_status(move)
+				// })
+				// move.addEventListener('dblclick', () =>{
+
+				// 	const svg_data = stage.getSvgContent()  //getSvgString
+				// 		console.log("svg_data:",svg_data);
+
+				// 	// const delta_x	= self.canvas_width /2
+				// 	// const delta_y	= self.canvas_height /2
+				// 	// self.current_paper.view.setCenter(delta_x, delta_y)
+				// })
+				// buttons.push(move)
 
 			// save
 				const save = ui.create_dom_element({
