@@ -132,6 +132,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.stage.bind('selected', this.selected_changed.bind(this))
 		// this.stage.bind('mouseMove', this.element_transition.bind(this))
 		this.stage.bind('extensions_added', this.keyboard_shortcuts.bind(this))
+		this.stage.bind('zoomed', this.zoom_changed.bind(this))
 		this.stage.call('extensions_added')
 
 	// paste event. Paste svg clipboard to active layer
