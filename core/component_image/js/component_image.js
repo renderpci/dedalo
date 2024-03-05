@@ -446,5 +446,24 @@ component_image.prototype.update_draw_data = function() {
 }//end update_draw_data
 
 
+/**
+* GET_DEFAULT_FILE_INFO
+*
+* @param int key
+* @return object|null default_file_info
+*/
+component_image.prototype.get_default_file_info = function(key=0) {
+
+	const self = this
+
+	const default_quality = self.context.features.default_quality
+
+	const default_file_info = (default_quality && self.data.value[key])
+		? self.data.value[key].files_info.find(el => el.quality === default_quality)
+		: null
+
+	return default_file_info
+}//end get_default_file_info
+
 
 // @license-end
