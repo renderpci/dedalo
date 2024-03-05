@@ -22,11 +22,17 @@ $updates->$v = new stdClass();
 	// alert
 		$alert					= new stdClass();
 		$alert->notification	= 'V '.$v;
+
 		$alert->command			= '
-			WARNING!
-			<br>Before run this update, make sure that your current ontology is updated to the latest version!
-			<br>Check if the ontology is > of: <b>2024-03-01</b>
-			<br>and logout and login to be ensure that the ontology is active.</b>
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>Check if your Ontology is >= of: <b>2024-03-01</b>
+			<br>
+			<br>
+			<br>This update will change some of your data, <b>ensure that you have a backup before apply it!</b>
+			<br>Data changes:
+			<br>- Uncertainty and roles dataframes of: numisdata30, numisdata34, numisdata161, oh24, rsc128
+			<br>- Paperjs lib_data of rsc29
 		';
 		$updates->$v->alert_update[] = $alert;
 
@@ -219,14 +225,22 @@ $updates->$v = new stdClass();
 				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'be2';
 			");
 
-
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
-				$script_obj->info			= "Remove unused section data and update/clean some properties";
+				$script_obj->info			= "Remove old dataframe data and update to new model";
 				$script_obj->script_class	= "transform_data";
 				$script_obj->script_method	= "update_dataframe_to_v6_1";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Removes Paper libdata from component_image (rsc29)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_paper_lib_data";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
