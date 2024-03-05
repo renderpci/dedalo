@@ -627,10 +627,14 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 */
 tool_indexation.prototype.active_value = function(name, callback) {
 
+	const self = this
+
 	self.active_elements = self.active_elements || []
 
 	// check already exists in list of active_elements
-		const found = self.active_elements.find(el => el.name===name && el.callback===callback)
+		const found = self.active_elements.find(el => {
+			return el.name===name && el.callback===callback
+		})
 		if (found) {
 			console.warn("Skip already added active value name:", name);
 			return false
@@ -644,7 +648,7 @@ tool_indexation.prototype.active_value = function(name, callback) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.warn("self.active_elements added one:", name, self.active_elements);
+			console.warn("self.active_elements added new one:", name, self.active_elements);
 		}
 
 	return true
@@ -669,7 +673,10 @@ tool_indexation.prototype.active_value = function(name, callback) {
 */
 tool_indexation.prototype.update_active_values = function(values) {
 
-	for (let i = 0; i < values.length; i++) {
+	const self = this
+
+	const values_length = values.length
+	for (let i = 0; i < values_length; i++) {
 
 		const item = values[i]
 
