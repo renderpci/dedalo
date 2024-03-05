@@ -579,9 +579,9 @@ section.prototype.build = async function(autoload=false) {
 				}
 
 			// count rows
-				if (!self.total) {
-					self.get_total()
-				}
+				// if (!self.total) {
+				// 	self.get_total()
+				// }
 
 			// set_local_db_data updated rqo
 				// const rqo = self.rqo
