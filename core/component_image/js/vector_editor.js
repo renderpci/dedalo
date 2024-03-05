@@ -940,17 +940,28 @@ vector_editor.prototype.load_data = function(self) {
 			// but, rename it as layer_0
 			// if not, create new layer to import data
 			if(current_layer.layer_id > 0){
-				drawing.createLayer(current_layer.name)
+				const created_layer = drawing.createLayer(current_layer.name)
+				created_layer.id = current_layer.name
 
 			}else{
 				stage.renameCurrentLayer('layer_0')
+				const image_layer = drawing.getCurrentLayer()
+				image_layer.id = current_layer.name
 			}
 			// data is storage without the layer group ('g' node)
 			// only transformations and paths will be loaded
+			if(!current_layer.layer_data){
+				continue;
+			}
 			const layer_data_len = current_layer.layer_data.length
 			for (let i = 0; i < layer_data_len; i++) {
 				const layer_data = current_layer.layer_data[i]
-				stage.addSVGElementsFromJson(layer_data)
+				const element = stage.addSVGElementsFromJson(layer_data)
+
+				if(current_layer.layer_id === 0 && layer_data.element=== 'image'){
+					image_definition.src		= element.getAttribute('xlink:href')
+					image_definition.image_node	= element
+				}
 			}
 
 			this.active_layer = current_layer
@@ -960,6 +971,9 @@ vector_editor.prototype.load_data = function(self) {
 		//empty data, create new image layer node
 		// svgcanvas create a Layer 1 by default, rename it to main
 		stage.renameCurrentLayer('layer_0')
+		const image_layer = drawing.getCurrentLayer()
+		image_layer.id = 'layer_0'
+
 		// this.stage.createLayer()
 		this.active_layer = {
 			layer_id		: 0,
@@ -1055,7 +1069,10 @@ vector_editor.prototype.add_layer = function(self) {
 			name 			: layer_name,
 			visible 		: true
 		}
-		drawing.createLayer(layer_name)
+		const created_layer = drawing.createLayer(layer_name)
+
+		created_layer.id = layer_name
+
 		self.ar_layers.push(new_layer)
 		this.active_layer = new_layer
 
