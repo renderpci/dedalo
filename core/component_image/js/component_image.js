@@ -244,7 +244,8 @@ component_image.prototype.load_vector_editor = async function() {
 				: [{
 					layer_id		: 0,
 					layer_data		: [],
-					layer_color		: '#ffffff55',
+					layer_color		: '#ffffff',
+					layer_opacity	: 0.3,
 					user_layer_name	: 'raster',
 					name 			: 'layer_0',
 					visible 		: true
