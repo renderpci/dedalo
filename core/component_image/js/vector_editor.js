@@ -227,7 +227,7 @@ vector_editor.prototype.element_transition = function(win, elems) {
 
 	if(drawnPath){
 		const seglist = drawnPath.pathSegList
-		console.log("seglist:",seglist);
+
 	}
 
 	const current_mode = stage.getMode()
@@ -252,14 +252,11 @@ vector_editor.prototype.element_transition = function(win, elems) {
 	// 	: null
 		// console.log("stage.getSegType():",stage.setSegType());
 		// console.log("path:",stage.getSegData());
-
 }
 
 
-
-
 /**
-*
+* KEYBOARD_SHORTCUTS
 * @param {external:Window} win
 * @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
 * @listens module:svgcanvas.SvgCanvas#event:selected
@@ -313,9 +310,6 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 }
 
 
-
-
-
 /**
 * INIT_TOOLS
 * init paper tools
@@ -329,6 +323,7 @@ vector_editor.prototype.pointer = function() {
 	stage.setMode('select')
 
 	const selected_element	= stage.getSelectedElements()[0]
+
 	// when the pointer is selected check if has some selected
 	// to check if the element need to be converted to path
 	if(selected_element){
@@ -419,9 +414,9 @@ vector_editor.prototype.create_vector = function () {
 
 //       }
 // console.log("e:----", this.selected_element);
-      // this.click(element, handler) => {
-      // 	console.log("e:----", e);
-      // }
+	  // this.click(element, handler) => {
+	  // 	console.log("e:----", e);
+	  // }
 }
 
 
@@ -1076,10 +1071,25 @@ vector_editor.prototype.save_data = function(self) {
 
 /**
 * ACTIVATE_LAYER
-* @return bool true
+* @param int layer_id
 */
-vector_editor.prototype.activate_layer = function(self, layer, load='full') {
+vector_editor.prototype.activate_layer = function(layer_id) {
 
+	const stage		= this.stage
+	const drawing	= stage.getCurrentDrawing()
+
+	const canvas_layers	= stage.getCurrentDrawing().getNumLayers()
+
+	for (let i = canvas_layers - 1; i >= 0; i--) {
+
+		if(i === 0){
+			continue;
+		}
+		const opacity = (i === layer_id) ? 1.0 : 0
+		const viewed_layer	= drawing.getLayerName(i)
+		this.active_layer	= viewed_layer
+		drawing.setLayerOpacity(viewed_layer, opacity)
+	}
 
 
 	return true

@@ -302,13 +302,16 @@ component_image.prototype.load_vector_editor = async function() {
 * @param object options
 * @return bool true
 */
-component_image.prototype.load_tag_into_vector_editor = function(options) {
+component_image.prototype.load_tag_into_vector_editor = async function(options) {
 
 	const self = this
 
 	// options
 		const tag = options.tag
 
+	if(!self.vector_editor){
+		await self.load_vector_editor()
+	}
 	// convert the tag to 'real' object for manage it
 	try {
 
@@ -316,31 +319,13 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 		const ar_layer_id_length	= ar_layer_id.length
 		for (let i = 0; i < ar_layer_id_length; i++) {
 
-			self.load_vector_editor({
-				load		: 'layer',
-				layer_id	: parseInt(ar_layer_id[i])
-			})
+			const layer_id	= parseInt(ar_layer_id[i])
+			self.vector_editor.activate_layer(layer_id)
 		}
 	} catch (error) {
 		console.error(error)
 		console.log("tag.data:", tag.data);
 	}
-
-
-	// TAG WAY
-		// MODE : Only allow mode 'tool_transcription'
-		//if(page_globals.mode!=='tool_transcription') return null;
-
-		// ATENTION THE NAME OF THE TAG (1) CHANGE INTO (1_LAYER) FOR COMPATIBILITY WITH PAPER LAYER NAME
-		// WHEN SAVE THE LAYER TAG IT IS REMOVE TO ORIGINAL TAG NAME OF DÉDALO. "draw-n-1-data"
-		// BUT THE LAYER NAME ALWAYS ARE "1_layer"
-
-		// call the generic common tool init with the tag
-			// self.ar_tag_loaded.push(tag)
-			// const data 	 	= tag.data.replace(/'/g, '"')
-			// const layer_id 	= tag.tag_id +'_layer';
-			// self.vector_editor.load_layer(self, data, layer_id)
-
 
 	return true
 }//end load_tag_into_vector_editor
