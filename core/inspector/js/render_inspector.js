@@ -131,7 +131,7 @@ const get_content_data = function(self) {
 				title			: get_label.find || "Search",
 				parent			: buttons_container
 			})
-			button_search.addEventListener('click', function(e){
+			button_search.addEventListener('mousedown', function(e){
 				e.stopPropagation()
 				event_manager.publish('toggle_search_panel_' + self.caller.id)
 			})
@@ -198,7 +198,7 @@ const get_content_data = function(self) {
 					title			: get_label.diffusion || 'Diffusion',
 					parent			: buttons_container
 				})
-				button_diffusion.addEventListener('click', (e) => {
+				button_diffusion.addEventListener('mousedown', (e) => {
 					e.stopPropagation()
 					// open_tool (tool_common)
 					open_tool({
@@ -229,7 +229,7 @@ const get_content_data = function(self) {
 						title			: tool_context.label,
 						parent			: tools_container
 					})
-					button_tool.addEventListener('click', function(e){
+					button_tool.addEventListener('mousedown', function(e){
 						e.stopPropagation()
 						// open_tool (tool_common)
 							open_tool({
@@ -324,6 +324,7 @@ const get_content_data = function(self) {
 					parent			: buttons_bottom_container
 				})
 				const fn_register = function(e) {
+					e.stopPropagation()
 					e.preventDefault()
 
 					const file_name = 'register.json'
@@ -500,7 +501,8 @@ export const render_section_info = function(self) {
 				title			: 'Documentation',
 				parent			: tipo_info
 			})
-			docu_link.addEventListener('click', function(){
+			docu_link.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
 				open_ontology_window(section_tipo)
 			})
 		// local_ontology
@@ -511,7 +513,7 @@ export const render_section_info = function(self) {
 					title			: 'Local Ontology',
 					parent			: tipo_info
 				})
-				local_ontology.addEventListener('click', function(e){
+				local_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + section_tipo
 					open_ontology_window(section_tipo, custom_url)
@@ -525,7 +527,7 @@ export const render_section_info = function(self) {
 					title			: 'Master Ontology',
 					parent			: tipo_info
 				})
-				master_ontology.addEventListener('click', function(e){
+				master_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + section_tipo
 					open_ontology_window(section_tipo, custom_url)
@@ -539,7 +541,7 @@ export const render_section_info = function(self) {
 					title			: 'Local Ontology tree search',
 					parent			: tipo_info
 				})
-				local_ontology_search.addEventListener('click', function(e){
+				local_ontology_search.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${section_tipo}&accion=searchTSform`
 					open_ontology_window(section_tipo, custom_url)
@@ -743,7 +745,7 @@ export const render_component_info = function(self, component) {
 				title			: 'Documentation',
 				parent			: tipo_info
 			})
-			docu_link.addEventListener('click', function(e){
+			docu_link.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
 				open_ontology_window(tipo)
 			})
@@ -755,7 +757,7 @@ export const render_component_info = function(self, component) {
 					title			: 'Local Ontology',
 					parent			: tipo_info
 				})
-				local_ontology.addEventListener('click', function(e){
+				local_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
 					open_ontology_window(tipo, custom_url)
@@ -769,7 +771,7 @@ export const render_component_info = function(self, component) {
 					title			: 'Master Ontology',
 					parent			: tipo_info
 				})
-				master_ontology.addEventListener('click', function(e){
+				master_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
 					open_ontology_window(tipo, custom_url)
@@ -783,7 +785,7 @@ export const render_component_info = function(self, component) {
 					title			: 'Local Ontology tree search',
 					parent			: tipo_info
 				})
-				local_ontology_search.addEventListener('click', function(e){
+				local_ontology_search.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
 					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
 					open_ontology_window(tipo, custom_url)
@@ -867,7 +869,8 @@ export const render_component_info = function(self, component) {
 				inner_html		: get_label.copy || 'Copy',
 				parent			: value_node
 			})
-			button_value_copy_node.addEventListener("click", function(){
+			button_value_copy_node.addEventListener('click', function(e) {
+				e.stopPropagation()
 				navigator.clipboard.writeText( JSON.stringify(component.data.value) )
 			})
 		}, 50)

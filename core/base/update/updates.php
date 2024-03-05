@@ -6,6 +6,245 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=610; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 1;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 0;
+	$updates->$v->update_from_minor		= 6;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= '
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>Check if your Ontology is >= of: <b>2024-03-01</b>
+			<br>
+			<br>
+			<br>This update will change some of your data, <b>ensure that you have a backup before apply it!</b>
+			<br>Data changes:
+			<br>- Uncertainty and roles dataframes of: numisdata30, numisdata34, numisdata161, oh24, rsc128
+			<br>- Paperjs lib_data of rsc29
+		';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+
+		// Change the tipo column definition id matrix_counter
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				ALTER TABLE \"matrix_counter\"
+				ALTER \"tipo\" TYPE character varying(128),
+				ALTER \"tipo\" DROP DEFAULT,
+				ALTER \"tipo\" SET NOT NULL;
+			");
+
+		// add the section_id_key to matrix_time_machine
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				ALTER TABLE \"matrix_time_machine\"
+					ADD COLUMN IF NOT EXISTS \"section_id_key\" integer NULL;
+			");
+		// create new index into time_machine table to include section_id_key
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
+			");
+
+		// Add the matrix_dataframe table
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE TABLE IF NOT EXISTS public.matrix_dataframe
+				(LIKE public.matrix INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES INCLUDING STORAGE INCLUDING COMMENTS)
+				WITH (OIDS = FALSE);
+				CREATE SEQUENCE IF NOT EXISTS matrix_dataframe_id_seq;
+				ALTER TABLE public.matrix_dataframe ALTER COLUMN id SET DEFAULT nextval('matrix_dataframe_id_seq'::regclass);
+			");
+
+		// move the models and toponomy terms to hierarchy tld
+		// move all countries model sections to hierarchy122
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy121' WHERE \"parent\" = 'dd101';
+				UPDATE \"jer_dd\" SET \"parent\" = 'ts11' WHERE \"terminoID\" = 'dd101';
+
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pt2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'fr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pl2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ua2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ma2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'es2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'au2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ba2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'lv2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'xk2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sv2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'yu2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cu2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ro2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cl2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'us2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'at2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'eg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'uy2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tj2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'de2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ee2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ru2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'al2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'by2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ie2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'eh2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sa2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'th2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ye2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ge2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'lu2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ly2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mk2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'rs2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ch2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'nl2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'se2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'fi2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'it2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'hr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'hu2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'co2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tm2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bi2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'il2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'md2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bh2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'kz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ci2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'dj2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'er2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'in2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gq2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'iq2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ir2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'jo2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'kh2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'kw2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ml2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mw2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'na2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ni2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ps2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'qa2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'st2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tv2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ws2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'af2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'me2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mx2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gt2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'dk2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bj2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bo2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'br2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bw2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gm2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cm2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ec2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'id2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'et2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'hn2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'la2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mm2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'mr2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'my2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ne2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'np2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'om2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pa2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ph2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pk2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'rw2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sb2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sn2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'td2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'tn2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 've2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ug2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'za2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'zm2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'no2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'li2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'nz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ad2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'dz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'am2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'az2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'bg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ca2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'kg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'lt2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sk2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'si2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gb2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'uz2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ao2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ar2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cd2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cg2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'cy2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'fj2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ga2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'gn2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'jp2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ke2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ki2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'lb2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'ng2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'pe2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'py2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sd2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'so2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'sy2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'to2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'vn2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'vu2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'zw2';
+				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'be2';
+			");
+
+	// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Remove old dataframe data and update to new model";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_dataframe_to_v6_1";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Removes Paper libdata from component_image (rsc29)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_paper_lib_data";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+
 
 $v=606; #####################################################################################
 $updates->$v = new stdClass();

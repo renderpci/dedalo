@@ -184,10 +184,12 @@ paginator.prototype.destroy = async function() {
 /**
 * GET_TOTAL
 * Exec a async API call to count the current sqo records
+* Total is calculated in the caller
 * @return int total
 */
 paginator.loading_total_status = null
 paginator.prototype.get_total = async function() {
+	// const t0 = performance.now()
 
 	const self = this
 
@@ -196,7 +198,7 @@ paginator.prototype.get_total = async function() {
 			return new Promise(function(resolve){
 				setTimeout(function(){
 					resolve( self.get_total() )
-				}, 100)
+				}, 60)
 			})
 		}
 
@@ -211,6 +213,7 @@ paginator.prototype.get_total = async function() {
 
 	paginator.loading_total_status = 'resolved'
 
+	// console.log("))) __Time to get_total", self.caller.model, self.caller.tipo, "(ms):", performance.now()-t0);
 
 	return total
 }//end get_total

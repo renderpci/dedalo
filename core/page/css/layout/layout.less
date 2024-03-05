@@ -18,6 +18,7 @@
 	}
 // hilite static
 	.hilite_element {
+		will-change: transform; // @see https://developer.mozilla.org/en-US/docs/Web/CSS/will-change
 		transition: background-color 600ms linear;
 		background-color: #ffdca9;
 		.label {
@@ -617,9 +618,9 @@
 			width: 100%;
 		}
 
-		.spinner {
+		.spinner_modal {
 			position: relative;
-    		margin: 1rem;
+			margin: 1rem;
 		}
 
 		.header {
@@ -757,9 +758,7 @@
 				display: block;
 				padding: 1rem;
 			}
-
-
-		}
+		}//end .body
 
 		.iframe_container {
 			// background-color: #96FD53;
@@ -792,13 +791,10 @@
 			button {
 				margin-bottom: 1rem;
 				margin-left: 0.5rem;
-
-
 			}
 			button:first-of-type {
 				margin-left: 0rem;
 			}
-
 
 			&.content {
 				padding: 1.5rem;
@@ -808,6 +804,14 @@
 				padding-bottom: 0px;
 			}
 
+			// default text align is right
+			// overwrite it using this selectors:
+			&.center {
+				text-align: center;
+			}
+			&.left {
+				text-align: left;
+			}
 			&.distribute {
 				display: flex;
 				justify-content: space-between;

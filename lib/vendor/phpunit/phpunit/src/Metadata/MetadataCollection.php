@@ -22,12 +22,12 @@ use IteratorAggregate;
  *
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
  */
-final class MetadataCollection implements Countable, IteratorAggregate
+final readonly class MetadataCollection implements Countable, IteratorAggregate
 {
     /**
      * @psalm-var list<Metadata>
      */
-    private readonly array $metadata;
+    private array $metadata;
 
     /**
      * @psalm-param list<Metadata> $metadata
@@ -301,40 +301,14 @@ final class MetadataCollection implements Countable, IteratorAggregate
     }
 
     /**
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5513
+     * @internal This method is not covered by the backward compatibility promise for PHPUnit
      */
-    public function isIgnoreClassForCodeCoverage(): self
+    public function isIgnorePhpunitDeprecations(): self
     {
         return new self(
             ...array_filter(
                 $this->metadata,
-                static fn (Metadata $metadata): bool => $metadata->isIgnoreClassForCodeCoverage(),
-            ),
-        );
-    }
-
-    /**
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5513
-     */
-    public function isIgnoreMethodForCodeCoverage(): self
-    {
-        return new self(
-            ...array_filter(
-                $this->metadata,
-                static fn (Metadata $metadata): bool => $metadata->isIgnoreMethodForCodeCoverage(),
-            ),
-        );
-    }
-
-    /**
-     * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5513
-     */
-    public function isIgnoreFunctionForCodeCoverage(): self
-    {
-        return new self(
-            ...array_filter(
-                $this->metadata,
-                static fn (Metadata $metadata): bool => $metadata->isIgnoreFunctionForCodeCoverage(),
+                static fn (Metadata $metadata): bool => $metadata->isIgnorePhpunitDeprecations(),
             ),
         );
     }

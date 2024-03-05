@@ -9,9 +9,9 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {common, create_source} from '../../common/js/common.js'
-	import {component_common} from '../../component_common/js/component_common.js'
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
+	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_text_area} from './render_edit_component_text_area.js'
 	import {render_list_component_text_area} from './render_list_component_text_area.js'
 	import {render_search_component_text_area} from './render_search_component_text_area.js'
@@ -1345,7 +1345,6 @@ component_text_area.prototype.focus_first_input = function() {
 
 	return true
 }//end focus_first_input
-
 
 
 

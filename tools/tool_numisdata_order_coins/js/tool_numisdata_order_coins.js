@@ -110,6 +110,23 @@ tool_numisdata_order_coins.prototype.build = async function(autoload=false) {
 				continue;
 			}
 			self[role] = self.ar_instances.find(el => el.tipo===ddo.tipo)
+
+			if(role === 'ordered_coins'){
+				// add events to assign drop event when the portal change or external window close
+				self.ordered_coins.events_tokens.push(
+					event_manager.subscribe('window_bur_'+ self.ordered_coins.id, assing_drop)
+				)
+				self.ordered_coins.events_tokens.push(
+					event_manager.subscribe('add_row_'+ self.ordered_coins.id, assing_drop)
+				)
+
+				function assing_drop(options) {
+
+					render_tool_numisdata_order_coins.prototype.drop({
+						self : self
+					})
+				}
+			}
 		}
 
 		// relation_list. load_relation_list. Get the relation list.
@@ -266,6 +283,10 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 
 	return true
 }//end set_original_copy
+
+
+
+
 
 
 

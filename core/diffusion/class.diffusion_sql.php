@@ -1608,7 +1608,10 @@ class diffusion_sql extends diffusion  {
 					$parents_recursive = component_relation_parent::get_parents_recursive(
 						$section_id,
 						$section_tipo,
-						true
+						(object)[
+							'skip_root' => true,
+							'search_in_main_hierarchy' => true
+						]
 					);
 					foreach ($parents_recursive as $parents_recursive_locator) {
 
@@ -3155,7 +3158,14 @@ class diffusion_sql extends diffusion  {
 			// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
 				if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 					// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-					$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+					$ar_parents = component_relation_parent::get_parents_recursive(
+						$current_locator->section_id,
+						$current_locator->section_tipo,
+						(object)[
+							'skip_root' => true,
+							'search_in_main_hierarchy' => true
+						]
+					);
 					foreach ($ar_parents as $parent_locator) {
 						$value[] = (string)$parent_locator->section_id;
 					}
@@ -3276,8 +3286,11 @@ class diffusion_sql extends diffusion  {
 						}
 					}
 				}
-				if($use_parent===true){
-					$ar_parents = component_relation_parent::get_parents($current_locator->section_id, $current_locator->section_tipo);
+				if($use_parent===true) {
+					$ar_parents = component_relation_parent::get_parents(
+						$current_locator->section_id,
+						$current_locator->section_tipo
+					);
 					$current_locator = $ar_parents[0];
 				}
 
@@ -3292,7 +3305,14 @@ class diffusion_sql extends diffusion  {
 					if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 						# calculate parents and add to dato
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+						$ar_parents = component_relation_parent::get_parents_recursive(
+							$current_locator->section_id,
+							$current_locator->section_tipo,
+							(object)[
+								'skip_root' => true,
+								'search_in_main_hierarchy' => true
+							]
+						);
 						foreach ($ar_parents as $parent_locator) {
 							$terminoID[] = $parent_locator->section_tipo .'_'. $parent_locator->section_id;
 						}
@@ -3353,19 +3373,29 @@ class diffusion_sql extends diffusion  {
 						}
 					}
 				}
-				if($use_parent===true){
-					$ar_parents = component_relation_parent::get_parents($current_locator->section_id, $current_locator->section_tipo);
+				if($use_parent===true) {
+					$ar_parents = component_relation_parent::get_parents(
+						$current_locator->section_id,
+						$current_locator->section_tipo
+					);
 					$current_locator = $ar_parents[0];
 				}
 
 				$section_tipo[] = $current_locator->section_tipo;
 
 				// add parents option
-				// if defined in propeerties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
+				// if defined in properties, get current locator parents recursively and add it to current value (like municipality, region, country hierarchy)
 					if (isset($options->properties->process_dato_arguments->custom_arguments->add_parents) && $options->properties->process_dato_arguments->custom_arguments->add_parents===true) {
 						# calculate parents and add to dato
 						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-						$ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
+						$ar_parents = component_relation_parent::get_parents_recursive(
+							$current_locator->section_id,
+							$current_locator->section_tipo,
+							(object)[
+								'skip_root' => true,
+								'search_in_main_hierarchy' => true
+							]
+						);
 						foreach ($ar_parents as $parent_locator) {
 							$section_tipo[] = $parent_locator->section_tipo;
 						}

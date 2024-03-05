@@ -72,7 +72,8 @@ render_paginator.prototype.edit = async function(options) {
 */
 const get_content_data = async function(self) {
 
-	await self.get_total()
+	// total
+		await self.get_total()
 
 	// short vars
 		const total				= self.caller.total

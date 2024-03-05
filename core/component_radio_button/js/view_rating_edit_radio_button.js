@@ -73,6 +73,9 @@ const get_content_data_edit = function(self) {
 		const datalist			= data.datalist || []
 		const datalist_length	= datalist.length
 
+	// sort datalist by section_id
+		datalist.sort((a, b) => (parseInt(a.section_id) > parseInt(b.section_id)) ? 1 : -1)
+
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
@@ -124,7 +127,8 @@ const get_content_value = (i, datalist_item, self) => {
 			element_type	: 'input',
 			type			: 'radio',
 			name			: self.id,
-			parent 			: content_value
+			title			: label,
+			parent			: content_value
 		})
 		input.addEventListener('change', function() {
 
@@ -147,7 +151,6 @@ const get_content_value = (i, datalist_item, self) => {
 				content_data	: self.node.content_data,
 				value			: self.data.value[0] || {}
 			})
-
 		})//end change event
 
 		// permissions. Set disabled on low permissions
@@ -202,7 +205,7 @@ const update_status = (options) => {
 	const value		= options.value
 
  	for (const node of children) {
-		if (value && value.section_id >= node.section_id) {
+		if (value && parseInt(value.section_id) >= parseInt(node.section_id)) {
 			node.classList.add('rated')
 		}
 		else{

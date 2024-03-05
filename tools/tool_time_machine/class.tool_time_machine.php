@@ -29,6 +29,10 @@ class tool_time_machine extends tool_common {
 				$options->lang				= $request_options->lang ?? null;
 				$options->matrix_id			= $request_options->matrix_id ?? null;
 				$options->caller_dataframe	= $request_options->caller_dataframe ?? null;
+				$options->has_dataframe		= $request_options->has_dataframe ?? null;
+				$options->ddo_map			= $request_options->ddo_map ?? null;
+				$options->source_data		= $request_options->source_data ?? null;
+				$options->dataframe_data	= $request_options->dataframe_data ?? null;
 
 		// short vars
 			$section_tipo		= $options->section_tipo;
@@ -38,10 +42,21 @@ class tool_time_machine extends tool_common {
 			$matrix_id			= $options->matrix_id;
 			$model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$caller_dataframe	= $options->caller_dataframe;
+			$has_dataframe		= $options->has_dataframe;
+			$ddo_map			= $options->ddo_map;
+			$source_data		= $options->source_data;
+			$dataframe_data		= $options->dataframe_data;
 
 		// data. extract data from matrix_time_machine table
 			$RecordObj_time_machine	= new RecordObj_time_machine($matrix_id);
-			$dato_time_machine		= $RecordObj_time_machine->get_dato();
+
+			// main component with dataframe
+			// if main component has a dataframe, his data is calculated at API build_json_rows() action search
+			// it was contaminated with his dataframe and his record in time_machine table should not has the data to be restored
+			// in those cases uses the data sent by the client.
+			$dato_time_machine		= ( $has_dataframe && $has_dataframe===true )
+				? $source_data->value
+				: $RecordObj_time_machine->get_dato();
 
 		// apply time machine data to element and save
 			switch (true) {
@@ -118,7 +133,7 @@ class tool_time_machine extends tool_common {
 							$model,
 							$tipo,
 							$section_id,
-							'edit',
+							'list', // the component always in list because the edit could fire a save with the dato_default
 							$lang,
 							$section_tipo,
 							false
@@ -134,6 +149,50 @@ class tool_time_machine extends tool_common {
 
 					// Save the component with a new updated data from time machine
 						$result = $element->Save();
+
+					// dataframe
+						// check if the main component has a dataframe to save his data too
+						if($has_dataframe === true){
+							$dataframe_ddo = $ddo_map->dataframe_ddo;
+							// delete all data of the dataframe
+							// it will delete all section_id_key
+							// create the dataframe component
+								$dataframe_component_to_delete = component_common::get_instance(
+									$dataframe_ddo->model,
+									$dataframe_ddo->tipo,
+									$section_id,
+									'list',
+									DEDALO_DATA_NOLAN,
+									$dataframe_ddo->section_tipo
+								);
+								$dataframe_component_to_delete->empy_full_data_associated_to_main_component();
+							foreach ($dataframe_data as $key => $current_dataframe_data) {
+
+								if($current_dataframe_data === null || empty($current_dataframe_data->value) ){
+									continue;
+								}
+								// create new caller_dataframe with the current data
+								$caller_dataframe = new stdClass();
+									$caller_dataframe->section_id_key	= $current_dataframe_data->section_id_key;
+									$caller_dataframe->section_tipo		= $current_dataframe_data->section_tipo;
+								// // create the dataframe component
+								$dataframe_component = component_common::get_instance(
+									$dataframe_ddo->model,
+									$dataframe_ddo->tipo,
+									$section_id,
+									'list', // the component always in tm because the edit could fire a save with the dato_default
+									$lang,
+									$dataframe_ddo->section_tipo,
+									true,
+									$caller_dataframe
+								);
+
+								$dataframe_component->set_dato( $current_dataframe_data->value );
+
+								$dataframe_result = $dataframe_component->Save();
+							}// end foreach ($dataframe_data as $key => $current_dataframe_data)
+						}// end if($has_dataframe === true)
+
 
 					// LOGGER ACTIVITY
 						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);

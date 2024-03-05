@@ -448,7 +448,8 @@ final class dd_api_Test extends TestCase {
 				        "lang": "lg-eng",
 				        "caller_dataframe": {
 				            "section_tipo": "test3",
-				            "section_id": "1"
+				            "section_id": "1",
+				            "section_id_key": 1
 				        },
 				        "properties": {}
 				    }

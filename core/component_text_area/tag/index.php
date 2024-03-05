@@ -86,10 +86,12 @@ $text = strip_tags($text, '');
 			# mode [draw-n-1-data:***]
 			$state 		= substr($text,6,1);
 
-			// echo "state-------------------".$state;
 			$last_minus = strrpos($text, '-');
-			$ar_parts 	= explode('-', $text);
-			$text 		= $ar_parts[2];
+			// $ar_parts 	= explode('-', $text);
+			$pattern		= "/\[(draw)-([a-z])-([0-9]{1,6})-(.{0,22})\]/";
+			preg_match($pattern, $text, $matches);
+
+			$text 		= $matches[4];
 			$imgBase 	= $tag_image_dir."/draw-{$state}-x2.png";
 			break;
 		case (strpos($text,'[geo-')!==false):

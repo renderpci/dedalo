@@ -14,12 +14,12 @@ namespace PHPUnit\TextUI\XmlConfiguration;
  *
  * @psalm-immutable
  */
-final class SuccessfulSchemaDetectionResult extends SchemaDetectionResult
+final readonly class SuccessfulSchemaDetectionResult extends SchemaDetectionResult
 {
     /**
      * @psalm-var non-empty-string
      */
-    private readonly string $version;
+    private string $version;
 
     /**
      * @psalm-param non-empty-string $version

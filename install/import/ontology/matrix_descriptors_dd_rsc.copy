@@ -6409,7 +6409,6 @@ rsc1158	Indexierung	termino	lg-deu
 rsc1163	Letzte Änderungen	termino	lg-deu
 rsc1168	Precisió	termino	lg-cat
 rsc1173	Projet	termino	lg-fra
-rsc924	"	termino	lg-fra
 rsc1178	Nouveau	termino	lg-fra
 rsc1187	publication	termino	lg-spa
 rsc90	राष्ट्रियता	termino	lg-nep
@@ -6437,7 +6436,6 @@ rsc1158	Ευρετηρίαση	termino	lg-ell
 rsc1163	Τελευταίες αλλαγές	termino	lg-ell
 rsc1169	Tipos de precisión	termino	lg-spa
 rsc1173	Project	termino	lg-eng
-rsc924	"	termino	lg-ita
 rsc1178	Nuovo	termino	lg-ita
 rsc1188	pages	termino	lg-spa
 rsc88	छवि	termino	lg-nep
@@ -6464,7 +6462,6 @@ rsc1158	Indexation	termino	lg-fra
 rsc1163	Derniers changements	termino	lg-fra
 rsc1169	Types of accuracy	termino	lg-eng
 rsc1173	Progetto	termino	lg-ita
-rsc924	"	termino	lg-cat
 rsc1179	Borrar	termino	lg-spa
 rsc1189	sheet	termino	lg-spa
 rsc91	जन्मेको सहर	termino	lg-nep
@@ -6485,6 +6482,7 @@ rsc151	कागजात	termino	lg-nep
 rsc1230	Esborrar	termino	lg-cat
 rsc123	परियोजना	termino	lg-nep
 rsc109	नवीनतम परिवर्तनहरू	termino	lg-nep
+rsc924	"	termino	lg-cat
 rsc1153	ταυτοποίηση	termino	lg-ell
 rsc1159	Proyecto	termino	lg-spa
 rsc1163	Ultime modifiche	termino	lg-ita
@@ -6790,7 +6788,6 @@ rsc1155	Rolle	termino	lg-deu
 rsc1160	Elenco	termino	lg-ita
 rsc1171	Id	termino	lg-cat
 rsc1175	Supprimer	termino	lg-fra
-rsc924	"	termino	lg-spa
 rsc1181	Delete	termino	lg-eng
 rsc1182	Zitat	termino	lg-deu
 rsc87	उपनाम	termino	lg-nep
@@ -7084,3 +7081,264 @@ rsc1241	Typology	termino	lg-eng
 rsc1241	Typologie	termino	lg-deu
 rsc1241	Typologie	termino	lg-fra
 rsc1241	Tipologia	termino	lg-ita
+rsc1254	Liste Beziehungen	termino	lg-deu
+rsc1254	σχέση	termino	lg-ell
+rsc1242	Marco de dato | Incertidumbre	termino	lg-spa
+rsc1242	Data frame | Uncertainty	termino	lg-eng
+rsc1242	Cadre de données | Incertitude	termino	lg-fra
+rsc1242	Quadro dati | Incertezza	termino	lg-ita
+rsc1242	Marc de dada | Incerteça	termino	lg-eus
+rsc1242	Datenrahmen | Ungewissheit	termino	lg-deu
+rsc1242	Πλαίσιο δεδομένων | Αβεβαιότητα	termino	lg-ell
+rsc1243	Identificación	termino	lg-spa
+rsc1243	Identificació	termino	lg-cat
+rsc1243	Identificazione	termino	lg-ita
+rsc1243	αναγνώριση	termino	lg-ell
+rsc1243	Identification	termino	lg-fra
+rsc1243	Identifizierung	termino	lg-deu
+rsc1243	Identification	termino	lg-eng
+rsc1244	Id	termino	lg-spa
+rsc1244	Id	termino	lg-eng
+rsc1244	Id	termino	lg-cat
+rsc1244	Id	termino	lg-deu
+rsc1244	Id	termino	lg-ell
+rsc1244	Id	termino	lg-fra
+rsc1244	Id	termino	lg-ita
+rsc1245	Publicable	termino	lg-spa
+rsc1245	Publicable	termino	lg-cat
+rsc1245	Pubblicabile	termino	lg-ita
+rsc1245	Veröffentlichbar	termino	lg-deu
+rsc1245	Publishable	termino	lg-eng
+rsc1245	Δημοσιεύσιμο	termino	lg-ell
+rsc1245	Publiable	termino	lg-fra
+rsc1246	Valoración	termino	lg-spa
+rsc1246	Valoració	termino	lg-cat
+rsc1246	Rating	termino	lg-eng
+rsc1246	Évaluation	termino	lg-fra
+rsc1246	Bewertung	termino	lg-deu
+rsc1246	Valutazione	termino	lg-ita
+rsc1246	Αποτίμηση	termino	lg-ell
+rsc1247	Causa	termino	lg-spa
+rsc1247	Causa	termino	lg-cat
+rsc1247	Cause	termino	lg-eng
+rsc1247	Cause	termino	lg-fra
+rsc1247	Ursache	termino	lg-deu
+rsc1247	Causa	termino	lg-ita
+rsc1248	Notas	termino	lg-spa
+rsc1248	Notes	termino	lg-cat
+rsc1248	Notes	termino	lg-eng
+rsc1248	Σημειώσεις	termino	lg-ell
+rsc1248	Notes	termino	lg-fra
+rsc1248	Note	termino	lg-ita
+rsc1249	Proyecto	termino	lg-spa
+rsc1249	Progetto	termino	lg-ita
+rsc1249	Projecte	termino	lg-cat
+rsc1249	Project	termino	lg-eng
+rsc1249	Projekt	termino	lg-deu
+rsc1249	Projet	termino	lg-fra
+rsc1249	Έργο	termino	lg-ell
+rsc1250	Nuevo	termino	lg-spa
+rsc1250	New	termino	lg-eng
+rsc1250	Nou	termino	lg-cat
+rsc1250	Neu	termino	lg-deu
+rsc1250	Νέο	termino	lg-ell
+rsc1250	Nouveau	termino	lg-fra
+rsc1250	Nuovo	termino	lg-ita
+rsc1251	Borrar	termino	lg-spa
+rsc1251	Delete	termino	lg-eng
+rsc1251	Esborrar	termino	lg-cat
+rsc1251	Cancellare	termino	lg-ita
+rsc1251	Löschen	termino	lg-deu
+rsc1251	Διαγραφή	termino	lg-ell
+rsc1251	Supprimer	termino	lg-fra
+rsc1252	Listado	termino	lg-spa
+rsc1252	List	termino	lg-eng
+rsc1252	Llistat	termino	lg-cat
+rsc1252	Liste	termino	lg-fra
+rsc1252	Liste	termino	lg-deu
+rsc1252	Elenco	termino	lg-ita
+rsc1252	Λίστα	termino	lg-ell
+rsc1253	Últimos cambios	termino	lg-spa
+rsc1253	Darrers canvis	termino	lg-cat
+rsc1253	Ultime modifiche	termino	lg-ita
+rsc1253	Τελευταίες αλλαγές	termino	lg-ell
+rsc1253	Letzte Änderungen	termino	lg-deu
+rsc1253	Latest changes	termino	lg-eng
+rsc1253	Dernières modifications	termino	lg-fra
+rsc1254	Listado relaciones	termino	lg-spa
+rsc1254	Relation List	termino	lg-eng
+rsc1254	Llistat relacions	termino	lg-cat
+rsc1254	Liste de relations	termino	lg-fra
+rsc1255	Marcos de datos	termino	lg-spa
+rsc1255	Data frames	termino	lg-eng
+rsc1255	Marcs de dades	termino	lg-cat
+rsc1255	Datenrahmen	termino	lg-deu
+rsc1255	Πλαίσια δεδομένων	termino	lg-ell
+rsc1255	Trames de données	termino	lg-fra
+rsc1255	Cornici di dati	termino	lg-ita
+rsc1256	Niveles de valoración	termino	lg-spa
+rsc1256	Levels of valuation	termino	lg-eng
+rsc1256	Nivells de valoració	termino	lg-cat
+rsc1256	Bewertungsebenen	termino	lg-deu
+rsc1256	Niveaux d'évaluation	termino	lg-fra
+rsc1256	Livelli di valutazione	termino	lg-ita
+rsc1257	Identificación	termino	lg-spa
+rsc1257	Indentificaction	termino	lg-eng
+rsc1257	Identificació	termino	lg-cat
+rsc1257	Identifizierung	termino	lg-deu
+rsc1257	Indentification	termino	lg-fra
+rsc1257	Indentificazione	termino	lg-ita
+rsc1258	Id	termino	lg-spa
+rsc1258	Id	termino	lg-eng
+rsc1258	Id	termino	lg-cat
+rsc1258	Id	termino	lg-deu
+rsc1258	Id	termino	lg-ell
+rsc1258	Id	termino	lg-fra
+rsc1258	Id	termino	lg-ita
+rsc1259	Valoración	termino	lg-spa
+rsc1259	Valuation	termino	lg-eng
+rsc1259	Valoració	termino	lg-cat
+rsc1259	Bewertung	termino	lg-deu
+rsc1259	Αποτίμηση	termino	lg-ell
+rsc1259	Évaluation	termino	lg-fra
+rsc1259	Valutazione	termino	lg-ita
+rsc1260	Color	termino	lg-spa
+rsc1260	Color	termino	lg-cat
+rsc1260	Colour	termino	lg-eng
+rsc1260	Χρώμα	termino	lg-ell
+rsc1260	Farbe	termino	lg-deu
+rsc1260	Couleur	termino	lg-fra
+rsc1260	Colore	termino	lg-ita
+rsc1261	Proyecto	termino	lg-spa
+rsc1261	Project	termino	lg-eng
+rsc1261	Projecte	termino	lg-cat
+rsc1261	Projeck	termino	lg-deu
+rsc1261	Progetto	termino	lg-ita
+rsc1261	Projet	termino	lg-fra
+rsc1261	Progetto	termino	lg-ell
+rsc1262	Nuevo	termino	lg-spa
+rsc1262	New	termino	lg-eng
+rsc1262	Nou	termino	lg-cat
+rsc1262	Neu	termino	lg-deu
+rsc1262	Nuovo	termino	lg-ita
+rsc1262	Nouveau	termino	lg-fra
+rsc1262	Νέο	termino	lg-ell
+rsc1263	Borrar	termino	lg-spa
+rsc1263	Delete	termino	lg-eng
+rsc1263	Esborrar	termino	lg-cat
+rsc1263	Supprimer	termino	lg-fra
+rsc1263	Cancellare	termino	lg-ita
+rsc1263	Löschen	termino	lg-deu
+rsc1263	Διαγραφή	termino	lg-ell
+rsc1264	Llistado	termino	lg-spa
+rsc1264	List	termino	lg-eng
+rsc1264	Llistat	termino	lg-cat
+rsc1264	List	termino	lg-deu
+rsc1264	Liste	termino	lg-fra
+rsc1264	Elenco	termino	lg-ita
+rsc1265	Rol	termino	lg-spa
+rsc1265	Rol	termino	lg-cat
+rsc1265	Role	termino	lg-eng
+rsc1265	Rolle	termino	lg-deu
+rsc1265	Ρόλος	termino	lg-ell
+rsc1265	Rôle	termino	lg-fra
+rsc1265	Ruolo	termino	lg-ita
+rsc924	"	termino	lg-spa
+rsc924	"	termino	lg-fra
+rsc924	"	termino	lg-ita
+rsc1266	Nuevo	termino	lg-spa
+rsc1266	New	termino	lg-eng
+rsc1266	Nou	termino	lg-cat
+rsc1266	Neu	termino	lg-deu
+rsc1266	Nouveau	termino	lg-fra
+rsc1266	Nuovo	termino	lg-ita
+rsc1267	Borrar	termino	lg-spa
+rsc1267	Delete	termino	lg-eng
+rsc1267	Esborrar	termino	lg-cat
+rsc1267	Löschen	termino	lg-deu
+rsc1267	Supprimer	termino	lg-fra
+rsc1267	Cancellare	termino	lg-ita
+rsc1268	Nuevo	termino	lg-spa
+rsc1268	New	termino	lg-eng
+rsc1268	Nou	termino	lg-cat
+rsc1268	Neu	termino	lg-deu
+rsc1268	Nouveau	termino	lg-fra
+rsc1268	Nuovo	termino	lg-ita
+rsc1269	Nuevo	termino	lg-spa
+rsc1269	New	termino	lg-eng
+rsc1269	Nou	termino	lg-cat
+rsc1269	Neu	termino	lg-deu
+rsc1269	Nouveau	termino	lg-fra
+rsc1269	Nuovo	termino	lg-ita
+rsc1270	Nuevo	termino	lg-spa
+rsc1270	New	termino	lg-eng
+rsc1270	Neu	termino	lg-deu
+rsc1270	Nouveau	termino	lg-fra
+rsc1270	Nuovo	termino	lg-ita
+rsc1270	Nou	termino	lg-cat
+rsc1271	Nuevo	termino	lg-spa
+rsc1271	New	termino	lg-eng
+rsc1271	Nou	termino	lg-cat
+rsc1271	Neu	termino	lg-deu
+rsc1271	Nouveau	termino	lg-fra
+rsc1271	Nuovo	termino	lg-ita
+rsc1272	Nuevo	termino	lg-spa
+rsc1272	New	termino	lg-eng
+rsc1272	Nou	termino	lg-cat
+rsc1272	Neu	termino	lg-deu
+rsc1272	Nouveau	termino	lg-fra
+rsc1272	Nuovo	termino	lg-ita
+rsc1273	Borrar	termino	lg-spa
+rsc1273	Delete	termino	lg-eng
+rsc1273	Esborrar	termino	lg-cat
+rsc1273	Löschen	termino	lg-deu
+rsc1273	Supprimer	termino	lg-fra
+rsc1273	Cancellare	termino	lg-ita
+rsc1274	Borrar	termino	lg-spa
+rsc1274	Delete	termino	lg-eng
+rsc1274	Esborrar	termino	lg-cat
+rsc1274	Löschen	termino	lg-deu
+rsc1274	Supprimer	termino	lg-fra
+rsc1274	Cancellare	termino	lg-ita
+rsc1275	Borrar	termino	lg-spa
+rsc1275	Delete	termino	lg-eng
+rsc1275	Esborrar	termino	lg-cat
+rsc1275	Löschen	termino	lg-deu
+rsc1275	Supprimer	termino	lg-fra
+rsc1275	Cancellare	termino	lg-ita
+rsc1276	Borrar	termino	lg-spa
+rsc1276	Delete	termino	lg-eng
+rsc1276	Esborrar	termino	lg-cat
+rsc1276	Löschen	termino	lg-deu
+rsc1276	Supprimer	termino	lg-fra
+rsc1276	Cancellare	termino	lg-ita
+rsc1277	Borrar	termino	lg-spa
+rsc1277	Delete	termino	lg-eng
+rsc1277	Esborrar	termino	lg-cat
+rsc1277	Löschen	termino	lg-deu
+rsc1277	Supprimer	termino	lg-fra
+rsc1277	Cancellare	termino	lg-ita
+rsc1278	Listado	termino	lg-spa
+rsc1278	List	termino	lg-eng
+rsc1278	Llistat	termino	lg-cat
+rsc1278	Liste	termino	lg-deu
+rsc1278	Liste	termino	lg-fra
+rsc1278	Elenco	termino	lg-ita
+rsc1279	Listado	termino	lg-spa
+rsc1279	List	termino	lg-eng
+rsc1279	Llistat	termino	lg-cat
+rsc1279	Liste	termino	lg-deu
+rsc1279	Liste	termino	lg-fra
+rsc1279	Elenco	termino	lg-ita
+rsc1280	Id	termino	lg-spa
+rsc1280	Id	termino	lg-eng
+rsc1280	Id	termino	lg-cat
+rsc1280	Id	termino	lg-deu
+rsc1280	Id	termino	lg-fra
+rsc1280	Id	termino	lg-ita
+rsc1281	Listado	termino	lg-spa
+rsc1281	List	termino	lg-eng
+rsc1281	Llistat	termino	lg-cat
+rsc1281	Liste	termino	lg-deu
+rsc1281	Liste	termino	lg-fra
+rsc1281	Elenco	termino	lg-ita

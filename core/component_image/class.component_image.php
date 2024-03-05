@@ -55,7 +55,7 @@ class component_image extends component_media_common {
 				if(isset($dato_item->svg_file_data)) {
 					$this->create_svg_file($dato_item->svg_file_data);
 					// remove property, its only temporal
-					unset($dato_item->svg_file_data);
+					// unset($dato_item->svg_file_data);
 				}
 			}
 		}

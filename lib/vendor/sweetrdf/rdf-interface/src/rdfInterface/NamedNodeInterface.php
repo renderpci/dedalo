@@ -31,6 +31,5 @@ namespace rdfInterface;
  * @author zozlak
  */
 interface NamedNodeInterface extends TermInterface, TermCompareInterface {
-
-    public function __construct(string $iri);
+    
 }

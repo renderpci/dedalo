@@ -101,7 +101,8 @@ view_default_list_section.render = async function(self, options) {
 			})
 			self.paginator.build()
 			.then(function(){
-				self.paginator.render().then(paginator_wrapper =>{
+				self.paginator.render()
+				.then(paginator_wrapper =>{
 					paginator_container.appendChild(paginator_wrapper)
 				})
 			})

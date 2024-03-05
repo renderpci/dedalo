@@ -55,14 +55,14 @@ class component_relation_common extends component_common {
 	/**
 	* __CONSTRUCT
 	* @param string $tipo = null
-	* @param string|null $parent = null
+	* @param string|null $section_id = null
 	* @param string $mode = 'list'
 	* @param string $lang = null
 	* @param string $section_tipo = null
 	*
 	* @return bool
 	*/
-	protected function __construct(string $tipo=null, $parent=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
+	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
 		// lang. translatable conditioned
 			$translatable = RecordObj_dd::get_translatable($tipo);
@@ -105,7 +105,7 @@ class component_relation_common extends component_common {
 					: $this->default_relation_type_rel;
 
 		// Build the component normally
-			parent::__construct($tipo, $parent, $mode, $lang, $section_tipo, $cache);
+			parent::__construct($tipo, $section_id, $mode, $lang, $section_tipo, $cache);
 	}//end __construct
 
 
@@ -424,15 +424,30 @@ class component_relation_common extends component_common {
 				// set the path that will be used to create the column_obj id
 				$current_path			= $locator->section_tipo.'_'.$ddo->tipo;
 				$translatable			= RecordObj_dd::get_translatable($ddo->tipo);
+				// if the component has a dataframe component, create his caller_dataframe to related with the locator
+				$caller_dataframe 		= ($ddo->model === 'component_dataframe')
+					? (object)[
+						'section_tipo'		=> $ddo->section_tipo,
+						'section_id_key'	=> $locator->section_id,
+					]
+					: null;
 				$current_lang			= $translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 				$component_model		= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+				// create the component with the ddo definition
+				// dataframe case: the data of the component_dataframe is inside the same section than the caller, so, his section_tipo and section_id need to be the same as the main component
 				$current_component		= component_common::get_instance(
 					$component_model,
 					$ddo->tipo,
-					$locator->section_id,
+					($ddo->model === 'component_dataframe')
+						? $this->section_id
+						: $locator->section_id,
 					$this->mode,
 					$current_lang,
-					$locator->section_tipo
+					($ddo->model === 'component_dataframe')
+						? $this->section_tipo
+						: $locator->section_tipo,
+					true,
+					$caller_dataframe
 				);
 
 				// set the locator to the new component, it will used in the next loop
@@ -789,10 +804,8 @@ class component_relation_common extends component_common {
 						$normalized_locator = new locator($locator_copy);
 
 					// Add. Check if locator already exists
-						$ar_properties = ($translatable==='si')
-							? ['section_id','section_tipo','type','tag_id','lang']
-							: ['section_id','section_tipo','type','tag_id'];
-						$found = locator::in_array_locator($locator_copy, $safe_dato, $ar_properties);
+						$locator_properties_to_check = $this->get_locator_properties_to_check();
+						$found = locator::in_array_locator($locator_copy, $safe_dato, $locator_properties_to_check);
 						if ($found===false) {
 							$safe_dato[] = $normalized_locator;
 						}else{
@@ -827,6 +840,21 @@ class component_relation_common extends component_common {
 
 		return true;
 	}//end set_dato
+
+
+
+	/**
+	* GET_LOCATOR_PROPERTIES_TO_CHECK
+	* return the properties to be check to compare locators
+	* @return array $locator_properties_to_check
+	*/
+	public function get_locator_properties_to_check() {
+
+		return (RecordObj_dd::get_translatable($this->tipo))
+			? ['section_id','section_tipo','type','tag_id','lang']
+			: ['section_id','section_tipo','type','tag_id'];
+
+	}//end get_locator_properties_to_check
 
 
 
@@ -958,7 +986,7 @@ class component_relation_common extends component_common {
 	* @param array $ar_properties = []
 	* @return bool
 	*/
-	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=[] ) : bool {
+	public function remove_locator_from_dato( object $locator_to_remove, array $ar_properties=['section_tipo','section_id','from_component_tipo','type'] ) : bool {
 
 		// empty case
 			if (empty($locator_to_remove)) {
@@ -1006,7 +1034,7 @@ class component_relation_common extends component_common {
 					$equal = locator::compare_locators(
 						$current_locator_obj,
 						$locator,
-						['section_tipo','section_id','from_component_tipo','type'],//$ar_properties, // array check properties
+						$ar_properties, // array check properties
 						['paginated_key'] // $ar_exclude_properties (prevent errors in accidental saved paginated_key cases)
 					);
 					if ($equal===true) {
@@ -1101,6 +1129,17 @@ class component_relation_common extends component_common {
 
 		// relations table links update (default is true)
 			if ($this->save_to_database_relations===true) {
+				// Dataframe
+				// When the component is a dataframe it get only the section_id_key
+				// but to save in relations will need the full data (all locators of the component) to replace relations rows
+				// so remove the caller_dataframe for the component and all caches (dato_resolved and bl_loaded_matrix_data)
+				// to get the full data of the component.
+				if(get_called_class() === 'component_dataframe'){
+					$current_caller_dataframe		= $this->get_caller_dataframe();
+					$this->caller_dataframe			= null;
+					$this->dato_resolved			= null;
+					$this->bl_loaded_matrix_data	= false;
+				}
 
 				$current_dato = $this->get_dato_full();
 
@@ -1111,6 +1150,15 @@ class component_relation_common extends component_common {
 					$relation_options->ar_locators			= $current_dato;
 
 				search::propagate_component_dato_to_relations_table($relation_options);
+
+				// Dataframe
+				// restores the caller dataframe of the component
+				// and delete his data caches to be re-calculated for other calls with the caller_dataframe
+				if(get_called_class() === 'component_dataframe'){
+					$this->caller_dataframe			= $current_caller_dataframe;
+					$this->dato_resolved			= null;
+					$this->bl_loaded_matrix_data	= false;
+				}
 			}
 
 		// save_to_database. Optional stop the save process to delay ddbb access
@@ -1204,13 +1252,14 @@ class component_relation_common extends component_common {
 					$ar_current_values[] = ts_object::get_term_by_locator( $locator, $lang, true );
 				}
 
-				#$ar_parents = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo);
-				# NOTE: get_parents_recursive is disabled because generate some problems to fix. For now we use only first parent
-				#$ar_parents	= component_relation_parent::get_parents($locator->section_id, $locator->section_tipo);
-				$ar_parents   = component_relation_parent::get_parents_recursive($locator->section_id, $locator->section_tipo, $skip_root=true);
-				#$n_ar_parents = count($ar_parents);
-					#dump($ar_parents, ' ar_parents ++ '.to_string($locator)); die();
-
+				// parents_recursive
+				$ar_parents = component_relation_parent::get_parents_recursive(
+					$locator->section_id,
+					$locator->section_tipo,
+					(object)[
+						'skip_root' => true
+					]
+				);
 				foreach ($ar_parents as $current_locator) {
 
 					$current_value = ts_object::get_term_by_locator( $current_locator, $lang, true );
@@ -1261,7 +1310,10 @@ class component_relation_common extends component_common {
 				$section_id,
 				$section_tipo,
 				null, // string|null from_component_tipo
-				$ar_tables
+				$ar_tables,
+				(object)[
+					'search_in_main_hierarchy' => true
+				]
 			);
 
 		// parents to remove
@@ -2056,7 +2108,9 @@ class component_relation_common extends component_common {
 				$parents_recursive = component_relation_parent::get_parents_recursive(
 					$section_id, // string section_id
 					$section_tipo, // string section_tipo
-					true, // bool skip_root
+					(object)[
+						'skip_root' => true
+					]
 				);
 
 				foreach ($parents_recursive as $parent_locator) {

@@ -193,6 +193,19 @@ component_common.prototype.build = async function(autoload=false) {
 		// changed_data. Set as empty array always
 		self.data.changed_data = []
 
+	// request_config_object
+		if (!self.context) {
+			// request_config_object. get the request_config_object from request_config
+			self.request_config_object = self.request_config
+				? self.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+				: {}
+		}else{
+			// request_config_object. get the request_config_object from context
+			self.request_config_object = self.context && self.context.request_config
+				? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
+				: {}
+		}
+
 	// load data on auto-load true
 	// when the auto-load if false the data will be injected by the caller (as section_record or others)
 		if (autoload===true) {
@@ -684,11 +697,24 @@ component_common.prototype.update_datum = async function(new_datum) {
 				for (let i = new_data_length - 1; i >= 0; i--) {
 
 					const data_item			= new_data[i]
-					const ar_data_elements	= self.datum.data.filter(el =>
-						el.tipo===data_item.tipo &&
-						el.section_tipo===data_item.section_tipo &&
-						el.section_id==data_item.section_id
-					)
+
+					const ar_data_elements	= self.datum.data.filter( function(el) {
+						if( el.tipo===data_item.tipo &&
+							el.section_tipo===data_item.section_tipo &&
+							parseInt(el.section_id)===parseInt(data_item.section_id)
+							){
+							// if the new data provides by dataframe it will has section_id_key
+							// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
+							if(el.section_id_key){
+								return (
+									parseInt(el.section_id_key)	=== parseInt(data_item.section_id_key)
+									// && el.tipo_key				=== data_item.tipo_key
+								)
+							}
+							return true
+						}
+						return false
+					})
 
 					const ar_data_el_len = ar_data_elements.length
 					if (ar_data_el_len>0) {
@@ -1412,6 +1438,174 @@ export const deactivate_components = function(e) {
 			check_unsaved_data()
 	}
 }//end deactivate_components
+
+
+/**
+* GET_DATAFRAME
+* Check if the component has a component_dataframe in his own rqo
+* if it has a dataframe, create the component, and inject his context and data
+* @return object | null component_dataframe
+*/
+export const get_dataframe = async function(options) {
+
+	const self = options.self
+
+	const section_id		= options.section_id
+	const section_tipo		= options.section_tipo
+	// const tipo_key			= options.tipo_key
+	const section_id_key	= options.section_id_key
+	const view				= options.view
+
+	const request_config = self.context.request_config || null
+
+	const original_dataframe_ddo = request_config
+		? request_config[0].show.ddo_map.find(el => el.model === 'component_dataframe')
+		: null
+
+	if(!original_dataframe_ddo){
+		return null
+	}
+
+	const instance_options = clone(original_dataframe_ddo)
+	instance_options.section_id	= section_id
+	instance_options.id_variant	= `${instance_options.tipo}_${section_id}_${self.section_tipo}_${self.section_id}_${section_id_key}`
+	instance_options.standalone	= false
+
+	const component_dataframe = await instances.get_instance(instance_options)
+	// get his data from datum
+	// it get data from datum as section_record does (see section_record get_component_data() for portals)
+	const data = self.datum.data.find( function(el) {
+		if( el.tipo							=== component_dataframe.tipo
+			&& el.section_tipo				=== component_dataframe.section_tipo
+			&& parseInt(el.section_id)		=== parseInt(component_dataframe.section_id)
+			){
+				// time machine case
+				if( el.matrix_id && self.matrix_id){
+					return (
+						parseInt(el.matrix_id)			=== parseInt(self.matrix_id)
+						// && el.tipo_key					=== tipo_key
+						&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
+					)
+				}
+				// normal case
+				if( !self.matrix_id ){
+					return (
+						 parseInt(el.section_id_key)	=== parseInt(section_id_key)
+						// && el.tipo_key						=== tipo_key
+
+					)
+				}
+			}
+		return false
+	})
+	const context = self.datum.context.find( el =>
+		el.tipo				=== component_dataframe.tipo
+		&& el.section_tipo	=== component_dataframe.section_tipo
+	)
+
+	// get view from options, in not defined get from ddo, if not defined apply "dataframe"
+	context.view = (view)
+		? view
+		: instance_options.view
+			? instance_options.view
+			: 'default'
+
+	const dataframe_data = data
+		? data
+		: {
+			// tipo_key		: tipo_key,
+			section_id_key	: section_id_key
+		}
+
+	component_dataframe.data	= dataframe_data
+	component_dataframe.context	= context
+	component_dataframe.datum	= self.datum
+	component_dataframe.caller	= self
+
+	await component_dataframe.build(false)
+
+	return component_dataframe
+}// end get_dataframe
+
+
+
+/**
+* DELETE_DATAFRAME
+* Remove section in delete_mode 'delete_dataframe'
+* @param object options
+* {
+*	section_id : section_id
+* }
+* @return bool delete_section_result
+*/
+export const delete_dataframe = async function(options) {
+
+	const self = options.self
+
+	// options
+		const section_id		= options.section_id
+		const section_tipo		= options.section_tipo
+		const section_id_key	= options.section_id_key
+		// const tipo_key			= options.tipo_key
+		const paginated_key		= options.paginated_key || false
+		const row_key			= options.row_key || false
+
+	// ddo_dataframe.
+	// check if the show has any ddo that call to any dataframe section.
+		const ddo_dataframe = self.request_config_object.show.ddo_map.find(el => el.model==='component_dataframe')
+
+		if(!ddo_dataframe){
+			return false
+		}
+
+		const all_instances = instances.get_all_instances()
+		const component_dataframe = all_instances.find(el =>
+			el.model							=== 'component_dataframe'
+			&& el.tipo							=== ddo_dataframe.tipo
+			&& el.section_tipo					=== ddo_dataframe.section_tipo
+			&& parseInt(el.section_id)			=== parseInt(section_id)
+			&& parseInt(el.data.section_id_key)	=== parseInt(section_id_key)
+			// && el.data.tipo_key					=== tipo_key
+		)
+
+	if(!component_dataframe){
+		return false
+	}
+
+	// hard_delete
+	// delete the target section linked to the component
+	// REMOVED because time machine needs to show the previous state, so, never deletes it
+		// const hard_delete = (component_dataframe.context.properties.hard_delete)
+		// 	? component_dataframe.context.properties.hard_delete
+		// 	: false
+
+		// if(hard_delete){
+
+		// 	if(component_dataframe.data.value && component_dataframe.data.value.length >= 1){
+
+		// 		const value = component_dataframe.data.value
+		// 		const value_length = value.length
+		// 		for (let i = value_length - 1; i >= 0; i--) {
+		// 			const current_value = value[i]
+
+		// 			component_dataframe.delete_linked_record({
+		// 				section_id : current_value.section_id,
+		// 				section_tipo : current_value.section_tipo,
+		// 			})
+		// 		}
+		// 	}
+		// }
+
+	// soft delete (default)
+	// unlink the section, delete the locator from his data, but don't delete the target section
+		component_dataframe.unlink_record({
+			paginated_key	: row_key,
+			row_key			: row_key,
+			section_id		: section_id
+		})
+
+}//end delete_dataframe
+
 
 
 

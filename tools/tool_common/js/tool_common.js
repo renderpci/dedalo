@@ -103,6 +103,9 @@ tool_common.prototype.init = async function(options) {
 						// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
 
+						// set and build caller
+							self.caller = await get_instance( caller_ddo )
+
 						// set current tool as caller
 							self.caller.caller = self
 
@@ -159,13 +162,16 @@ tool_common.prototype.init = async function(options) {
 						// fallback
 							self.tool_config = {
 								ddo_map : [{
-									tipo			: self.caller.tipo,
-									section_tipo	: self.caller.section_tipo,
-									section_id		: self.caller.section_id,
-									model			: self.caller.model,
-									mode			: self.caller.mode, //'edit',
-									lang			: self.caller.lang,
-									role			: 'main_element'
+									tipo				: self.caller.tipo,
+									section_tipo		: self.caller.section_tipo,
+									section_id			: self.caller.section_id,
+									model				: self.caller.model,
+									mode				: self.caller.mode, //'edit',
+									lang				: self.caller.lang,
+									role				: 'main_element',
+									caller_dataframe	: (self.caller.model==='component_dataframe')
+										? self.caller_dataframe
+										: null
 								}]
 							}
 							if(SHOW_DEBUG===true) {
@@ -267,16 +273,17 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 							}
 
 						const element_options = {
-							model			: el.model,
-							mode			: el.mode,
-							tipo			: el.tipo,
-							section_tipo	: el.section_tipo,
-							section_id		: el.section_id,
-							lang			: current_el_lang,
-							type			: el.type,
-							properties 		: el.properties || null,
-							id_variant		: self.model,  // id_variant prevents id conflicts
-							caller			: self // set tool as caller of the component :-)
+							model				: el.model,
+							mode				: el.mode,
+							tipo				: el.tipo,
+							section_tipo		: el.section_tipo,
+							section_id			: el.section_id,
+							lang				: current_el_lang,
+							type				: el.type,
+							properties			: el.properties || null,
+							id_variant			: self.model,  // id_variant prevents id conflicts
+							caller				: self, // set tool as caller of the component :-)
+							caller_dataframe	: el.caller_dataframe || null
 						}
 
 						// init and build instance
@@ -400,7 +407,7 @@ tool_common.prototype.render = async function(options={}) {
 export const load_component = async function(options) {
 
 	// options
-		const self 					= options.self
+		const self					= options.self
 		const model					= options.model
 		const mode					= options.mode
 		const tipo					= options.tipo
@@ -413,19 +420,20 @@ export const load_component = async function(options) {
 		const data_source			= options.data_source || null
 		const id_variant			= options.id_variant || self.model
 		const to_delete_instances	= options.to_delete_instances
+		const caller_dataframe		= options.caller_dataframe || null
 
 	// component instance_options
 		const instance_options = {
-			model			: model,
-			mode			: mode,
-			tipo			: tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			lang			: lang,
-			section_lang	: section_lang,
-			type			: type,
-			id_variant		: id_variant, // id_variant prevents id conflicts
-			caller			: self // set current tool as component caller (to check if component is inside tool or not)
+			model				: model,
+			mode				: mode,
+			tipo				: tipo,
+			section_tipo		: section_tipo,
+			section_id			: section_id,
+			lang				: lang,
+			section_lang		: section_lang,
+			type				: type,
+			id_variant			: id_variant, // id_variant prevents id conflicts
+			caller				: self // set current tool as component caller (to check if component is inside tool or not)
 		}
 
 		if (matrix_id) {
@@ -434,6 +442,10 @@ export const load_component = async function(options) {
 
 		if (data_source) {
 			instance_options.data_source = data_source
+		}
+
+		if (caller_dataframe) {
+			instance_options.caller_dataframe = caller_dataframe
 		}
 
 	// get instance and init
@@ -681,14 +693,12 @@ const view_window = async function(options) {
 		}
 
 	// caller_dataframe . Used for dataframe
-		if (caller.context && caller.context.is_dataframe) {
-			if(caller.caller && caller.caller.model==='section_record'){
-				if(caller.caller.caller){
-					caller_ddo.caller_dataframe = {
-						section_tipo	: caller.caller.caller.section_tipo,
-						section_id		: caller.caller.caller.section_id
-					}
-				}
+		if(caller.model==='component_dataframe'){
+			caller_ddo.caller_dataframe = {
+				section_tipo	: caller.section_tipo,
+				section_id		: caller.section_id,
+				section_id_key	: caller.data.section_id_key,
+				// tipo_key		: caller.data.tipo_key
 			}
 		}
 
@@ -760,8 +770,6 @@ const view_window = async function(options) {
 				}
 		}
 		window.addEventListener('focus', fn_refresh_caller)
-
-
 
 	// close tool_window
 		// tool_window.addEventListener('close', fn_onclose, true);

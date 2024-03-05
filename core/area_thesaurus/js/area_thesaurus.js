@@ -53,8 +53,10 @@ export const area_thesaurus = function() {
 		terms_are_model : false //false = the terms are descriptors terms // true = the terms are models (context model of the terms)
 	}
 
-	// display mode: 'default' | 'relation'
+	// display mode: string 'default|relation'
 	this.thesaurus_mode
+	// thesaurus_view_mode: string 'default|model'. Used to allow manage models
+	this.thesaurus_view_mode
 }//end area_thesaurus
 
 
@@ -77,7 +79,7 @@ export const area_thesaurus = function() {
 
 /**
 * INIT
-* @pram object options
+* @param object options
 * @return bool
 */
 area_thesaurus.prototype.init = async function(options) {
@@ -137,8 +139,10 @@ area_thesaurus.prototype.init = async function(options) {
 				})
 		}
 
-	// linker
+	// URL vars
 		const url_vars = url_vars_to_object(window.location.search)
+
+	// linker
 		// linker. Get component caller id from url (needed to link terms for DS callers)
 		if (url_vars.initiator) {
 			const caller_id = JSON.parse(url_vars.initiator)
@@ -148,6 +152,10 @@ area_thesaurus.prototype.init = async function(options) {
 			}
 		}
 
+	// thesaurus_view_mode: model|default|null
+		self.thesaurus_view_mode = options.config?.thesaurus_view_mode // init options case
+			|| url_vars.thesaurus_view_mode // page reload case
+			|| null
 
 
 	return common_init
@@ -189,6 +197,11 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 			const action	= 'get_data'
 			const add_show	= false
 			self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, action, add_show)
+
+			// self.thesaurus_view_mode
+			self.rqo.source.build_options = {
+				terms_are_model : (self.thesaurus_view_mode==='model')
+			}
 		}
 		await generate_rqo()
 
@@ -274,7 +287,7 @@ area_thesaurus.prototype.build = async function(autoload=true) {
 		// // fix initiator
 		// 	self.initiator = JSON.parse(initiator)
 
-	// filter
+	// search filter
 		if (!self.filter) {
 			self.filter = new search()
 			self.filter.init({
@@ -335,9 +348,9 @@ area_thesaurus.prototype.get_sections_selector_data = function() {
 
 	const self = this
 
-	const sections_selector_data	= self.data.find(item => item.tipo===self.tipo)
-	const sections_selector_value	= sections_selector_data
-		? sections_selector_data.value
+	const area_data = self.data.find(item => item.tipo===self.tipo)
+	const sections_selector_value = area_data
+		? area_data.value
 		: null
 
 	return sections_selector_value
@@ -384,7 +397,7 @@ area_thesaurus.prototype.navigate = async function(options) {
 
 
 	return true
-}//end get_sections_selector_data
+}//end navigate
 
 
 

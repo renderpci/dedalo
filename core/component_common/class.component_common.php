@@ -20,11 +20,11 @@ abstract class component_common extends common {
 		// string section_tipo. Component's section tipo
 		public $section_tipo;
 		public $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
-		// protected $dato;					// object dato (JSON encoded in db)
+		// protected $dato;				// object dato (JSON encoded in db)
 		public $valor;					// string usually dato
 		public $dataframe;				// object dataframe
-		public $version_date;				// date normally resolved from time machine and assigned to current component
-		public $locator;					// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
+		public $version_date;			// date normally resolved from time machine and assigned to current component
+		public $locator;				// full locator used to instance the component, the instance only use section_tipo,component_tipo,mode,lang of the locator but we need the full locator to use properties as tag_id, top_tipo, etc.
 		public $required;				// field is required . Valorar de usar 'Usable en Indexación' (tesauro) para gestionar esta variable
 		public $debugger;				// info for admin
 		// ar_tools_name. Default list of tools for every component. Override if component don't need this minimum tools
@@ -281,7 +281,7 @@ abstract class component_common extends common {
 							// debug_log(__METHOD__." ERROR: debug_backtrace ".to_string( debug_backtrace() ), logger::DEBUG);
 							// trigger_error("ERROR - Error Processing Request. Direct call to resource section_tipo");
 							#throw new Exception("Error Processing Request. Direct call to resource section_tipo ($section_tipo) is not legal", 1);
-						}else if(strpos($mode, 'dataframe')===false){
+						}else{
 							$ar_modified_section_tipos = array_map(function($item){
 								return $item['tipo'];
 							}, section::get_modified_section_tipos());
@@ -375,7 +375,8 @@ abstract class component_common extends common {
 			// find current instance in cache
 				$cache_key = implode('_', [$tipo, $section_tipo, $section_id, $lang, $mode]);
 				if(isset($caller_dataframe)) {
-					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id;
+					// $cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->tipo_key.'_'.$caller_dataframe->section_id_key;
+					$cache_key .= '_'.$caller_dataframe->section_tipo.'_'.$caller_dataframe->section_id_key;
 				}
 				if ( !isset(self::$ar_component_instances[$cache_key]) ) {
 					// instance new component
@@ -3104,16 +3105,6 @@ abstract class component_common extends common {
 
 			// permissions_section_tipo
 				$permissions_section_tipo = $this->get_section_tipo(); // default
-
-				// On dataframe case, permissions of dataframe components are saved with caller dataframe section (see oh126)
-					if(isset($this->caller_dataframe) && isset($this->caller_dataframe->section_tipo)) {
-						$RecordObj_dd		= new RecordObj_dd( $this->get_section_tipo() );
-						$section_properties	= $RecordObj_dd->get_properties();
-						if (isset($section_properties->source) && $section_properties->source==='caller_section') {
-							// overwrite section tipo to calculate permissions
-							$permissions_section_tipo = $this->caller_dataframe->section_tipo;
-						}
-					}
 
 			// permissions
 				$this->permissions = common::get_permissions($permissions_section_tipo, $this->tipo);

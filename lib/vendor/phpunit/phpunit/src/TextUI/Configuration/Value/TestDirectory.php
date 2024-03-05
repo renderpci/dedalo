@@ -16,27 +16,34 @@ use PHPUnit\Util\VersionComparisonOperator;
  *
  * @psalm-immutable
  */
-final class TestDirectory
+final readonly class TestDirectory
 {
     /**
      * @psalm-var non-empty-string
      */
-    private readonly string $path;
-    private readonly string $prefix;
-    private readonly string $suffix;
-    private readonly string $phpVersion;
-    private readonly VersionComparisonOperator $phpVersionOperator;
+    private string $path;
+    private string $prefix;
+    private string $suffix;
+    private string $phpVersion;
+    private VersionComparisonOperator $phpVersionOperator;
+
+    /**
+     * @psalm-var list<non-empty-string>
+     */
+    private array $groups;
 
     /**
      * @psalm-param non-empty-string $path
+     * @psalm-param list<non-empty-string> $groups
      */
-    public function __construct(string $path, string $prefix, string $suffix, string $phpVersion, VersionComparisonOperator $phpVersionOperator)
+    public function __construct(string $path, string $prefix, string $suffix, string $phpVersion, VersionComparisonOperator $phpVersionOperator, array $groups)
     {
         $this->path               = $path;
         $this->prefix             = $prefix;
         $this->suffix             = $suffix;
         $this->phpVersion         = $phpVersion;
         $this->phpVersionOperator = $phpVersionOperator;
+        $this->groups             = $groups;
     }
 
     /**
@@ -65,5 +72,13 @@ final class TestDirectory
     public function phpVersionOperator(): VersionComparisonOperator
     {
         return $this->phpVersionOperator;
+    }
+
+    /**
+     * @psalm-return list<non-empty-string>
+     */
+    public function groups(): array
+    {
+        return $this->groups;
     }
 }

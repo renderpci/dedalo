@@ -33,7 +33,39 @@
 
 			// image container
 			>.content_value {
+				.image_container{
+					// visibility: hidden;
+					height: 100%;
+					// height: auto;
+					max-height: 100%;
+					// width: 100%;
+					width: 100%;
+					position: relative;
+					display: flex;
+					justify-content: center;
 
+					.img  {
+						// visibility: hidden;
+						height: 100%;
+						// height: auto;
+						max-height: 100%;
+						// width: 100%;
+						max-width: 100%;
+						object-fit: contain;
+
+						// on focus adds a soft shadow and outline
+						&:focus {
+							.hilite_mixin(-1px);
+						}
+
+						body {
+							display: flex;
+							overflow: hidden;
+							justify-content: center;
+						}
+					}
+
+				}
 				// moved to layout.less.media_wrapper.edit
 					// display: flex;
 					// align-items: center;

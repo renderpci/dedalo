@@ -331,13 +331,9 @@ const get_content_value = (i, current_value, self) => {
 						}
 					})
 					// once only. Remove event to prevent duplicates
-					content_value.removeEventListener('click', fn_click_init)
+					content_value.removeEventListener('mousedown', fn_click_init)
 				}//end fn_click_init
-				content_value.addEventListener('click', fn_click_init)
-				// mousedown event. Capture event propagation
-				content_value.addEventListener('mousedown', (e) => {
-					e.stopPropagation()
-				})
+				content_value.addEventListener('mousedown', fn_click_init)
 			}
 		}//end if (self.show_interface.read_only!==true)
 
@@ -1030,8 +1026,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 		add_layer.addEventListener('click', (e) =>{
 			e.preventDefault()
 			e.stopPropagation()
-
-			data_tag.data = '[' + data_tag.last_layer_id + ']'
+			data_tag.data = [data_tag.last_layer_id]
 			const tag 	= self.build_view_tag_obj(data_tag, tag_id)
 			text_editor.set_content(tag)
 			layer_selector.remove()
@@ -1073,8 +1068,8 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			})
 			layer_li.addEventListener('click', (e) =>{
 				e.preventDefault()
-
-				data_tag.data = '[' + layer.layer_id + ']'
+				data_tag.label = layer.layer_id
+				data_tag.data = [layer.layer_id]
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
 				text_editor.set_content(tag)
 				layer_selector.remove()
@@ -1213,7 +1208,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 		}
 		const data		= body_input.value - (offset -1)
 		data_tag.label	= body_input.value
-		data_tag.data	= '[' + data + ']'
+		data_tag.data	= [data]
 		const tag		= self.build_view_tag_obj(data_tag, tag_id)
 		text_editor.set_content(tag)
 		modal.remove()

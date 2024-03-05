@@ -76,7 +76,7 @@ use SebastianBergmann\CodeCoverage\Report\Thresholds;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Loader
+final readonly class Loader
 {
     /**
      * @throws Exception
@@ -300,7 +300,6 @@ final class Loader
 
     private function codeCoverage(string $filename, DOMXPath $xpath): CodeCoverage
     {
-        $cacheDirectory            = null;
         $pathCoverage              = false;
         $includeUncoveredFiles     = true;
         $ignoreDeprecatedCodeUnits = false;
@@ -309,14 +308,6 @@ final class Loader
         $element = $this->element($xpath, 'coverage');
 
         if ($element) {
-            $cacheDirectory = $this->getStringAttribute($element, 'cacheDirectory');
-
-            if ($cacheDirectory !== null) {
-                $cacheDirectory = new Directory(
-                    $this->toAbsolutePath($filename, $cacheDirectory),
-                );
-            }
-
             $pathCoverage = $this->getBooleanAttribute(
                 $element,
                 'pathCoverage',
@@ -455,11 +446,6 @@ final class Loader
         }
 
         return new CodeCoverage(
-            $cacheDirectory,
-            $this->readFilterDirectories($filename, $xpath, 'coverage/include/directory'),
-            $this->readFilterFiles($filename, $xpath, 'coverage/include/file'),
-            $this->readFilterDirectories($filename, $xpath, 'coverage/exclude/directory'),
-            $this->readFilterFiles($filename, $xpath, 'coverage/exclude/file'),
             $pathCoverage,
             $includeUncoveredFiles,
             $ignoreDeprecatedCodeUnits,
@@ -474,7 +460,7 @@ final class Loader
         );
     }
 
-    private function getBoolean(string $value, bool|string $default): bool|string
+    private function getBoolean(string $value, bool $default): bool
     {
         if (strtolower($value) === 'false') {
             return false;
@@ -485,6 +471,19 @@ final class Loader
         }
 
         return $default;
+    }
+
+    private function getValue(string $value): bool|string
+    {
+        if (strtolower($value) === 'false') {
+            return false;
+        }
+
+        if (strtolower($value) === 'true') {
+            return true;
+        }
+
+        return $value;
     }
 
     private function readFilterDirectories(string $filename, DOMXPath $xpath, string $query): FilterDirectoryCollection
@@ -556,7 +555,7 @@ final class Loader
             return $default;
         }
 
-        return (bool) $this->getBoolean(
+        return $this->getBoolean(
             $element->getAttribute($attribute),
             false,
         );
@@ -635,7 +634,7 @@ final class Loader
 
             $constants[] = new Constant(
                 $const->getAttribute('name'),
-                $this->getBoolean($value, $value),
+                $this->getValue($value),
             );
         }
 
@@ -660,7 +659,7 @@ final class Loader
                 $verbatim = false;
 
                 if ($var->hasAttribute('force')) {
-                    $force = (bool) $this->getBoolean($var->getAttribute('force'), false);
+                    $force = $this->getBoolean($var->getAttribute('force'), false);
                 }
 
                 if ($var->hasAttribute('verbatim')) {
@@ -668,7 +667,7 @@ final class Loader
                 }
 
                 if (!$verbatim) {
-                    $value = $this->getBoolean($value, $value);
+                    $value = $this->getValue($value);
                 }
 
                 $variables[$array][] = new Variable($name, $value, $force);
@@ -750,12 +749,6 @@ final class Loader
             $cacheDirectory = $this->toAbsolutePath($filename, $cacheDirectory);
         }
 
-        $cacheResultFile = $this->getStringAttribute($document->documentElement, 'cacheResultFile');
-
-        if ($cacheResultFile !== null) {
-            $cacheResultFile = $this->toAbsolutePath($filename, $cacheResultFile);
-        }
-
         $bootstrap = $this->getStringAttribute($document->documentElement, 'bootstrap');
 
         if ($bootstrap !== null) {
@@ -772,30 +765,23 @@ final class Loader
 
         if ($document->documentElement->hasAttribute('backupStaticProperties')) {
             $backupStaticProperties = $this->getBooleanAttribute($document->documentElement, 'backupStaticProperties', false);
-        } elseif ($document->documentElement->hasAttribute('backupStaticAttributes')) {
-            $backupStaticProperties = $this->getBooleanAttribute($document->documentElement, 'backupStaticAttributes', false);
         }
 
         $requireCoverageMetadata = false;
 
         if ($document->documentElement->hasAttribute('requireCoverageMetadata')) {
             $requireCoverageMetadata = $this->getBooleanAttribute($document->documentElement, 'requireCoverageMetadata', false);
-        } elseif ($document->documentElement->hasAttribute('forceCoversAnnotation')) {
-            $requireCoverageMetadata = $this->getBooleanAttribute($document->documentElement, 'forceCoversAnnotation', false);
         }
 
         $beStrictAboutCoverageMetadata = false;
 
         if ($document->documentElement->hasAttribute('beStrictAboutCoverageMetadata')) {
             $beStrictAboutCoverageMetadata = $this->getBooleanAttribute($document->documentElement, 'beStrictAboutCoverageMetadata', false);
-        } elseif ($document->documentElement->hasAttribute('forceCoversAnnotation')) {
-            $beStrictAboutCoverageMetadata = $this->getBooleanAttribute($document->documentElement, 'beStrictAboutCoversAnnotation', false);
         }
 
         return new PHPUnit(
             $cacheDirectory,
             $this->getBooleanAttribute($document->documentElement, 'cacheResult', true),
-            $cacheResultFile,
             $this->getColumns($document),
             $this->getColors($document),
             $this->getBooleanAttribute($document->documentElement, 'stderr', false),
@@ -841,7 +827,6 @@ final class Loader
             $defectsFirst,
             $this->getBooleanAttribute($document->documentElement, 'backupGlobals', false),
             $backupStaticProperties,
-            $this->getBooleanAttribute($document->documentElement, 'registerMockObjectsFromTestArgumentsRecursively', false),
             $this->getBooleanAttribute($document->documentElement, 'testdox', false),
             $this->getBooleanAttribute($document->documentElement, 'controlGarbageCollector', false),
             $this->getIntegerAttribute($document->documentElement, 'numberOfTestsBeforeGarbageCollection', 100),
@@ -930,12 +915,27 @@ final class Loader
                     $phpVersionOperator = new VersionComparisonOperator($directoryNode->getAttribute('phpVersionOperator'));
                 }
 
+                $groups = [];
+
+                if ($directoryNode->hasAttribute('groups')) {
+                    foreach (explode(',', $directoryNode->getAttribute('groups')) as $group) {
+                        $group = trim($group);
+
+                        if (empty($group)) {
+                            continue;
+                        }
+
+                        $groups[] = $group;
+                    }
+                }
+
                 $directories[] = new TestDirectory(
                     $this->toAbsolutePath($filename, $directory),
                     $prefix,
                     $suffix,
                     $phpVersion,
                     $phpVersionOperator,
+                    $groups,
                 );
             }
 
@@ -962,10 +962,25 @@ final class Loader
                     $phpVersionOperator = new VersionComparisonOperator($fileNode->getAttribute('phpVersionOperator'));
                 }
 
+                $groups = [];
+
+                if ($fileNode->hasAttribute('groups')) {
+                    foreach (explode(',', $fileNode->getAttribute('groups')) as $group) {
+                        $group = trim($group);
+
+                        if (empty($group)) {
+                            continue;
+                        }
+
+                        $groups[] = $group;
+                    }
+                }
+
                 $files[] = new TestFile(
                     $this->toAbsolutePath($filename, $file),
                     $phpVersion,
                     $phpVersionOperator,
+                    $groups,
                 );
             }
 

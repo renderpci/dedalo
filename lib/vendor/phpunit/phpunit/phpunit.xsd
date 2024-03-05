@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:annotation>
         <xs:documentation source="https://phpunit.de/documentation.html">
-            This Schema file defines the rules by which the XML configuration file of PHPUnit 10.5 may be structured.
+            This Schema file defines the rules by which the XML configuration file of PHPUnit 11.0 may be structured.
         </xs:documentation>
         <xs:appinfo source="https://phpunit.de/documentation.html"/>
     </xs:annotation>
@@ -207,7 +207,6 @@
         <xs:attribute name="testdox" type="xs:boolean" default="false"/>
         <xs:attribute name="stderr" type="xs:boolean" default="false"/>
         <xs:attribute name="reverseDefectList" type="xs:boolean" default="false"/>
-        <xs:attribute name="registerMockObjectsFromTestArgumentsRecursively" type="xs:boolean" default="false"/>
         <xs:attribute name="extensionsDirectory" type="xs:anyURI"/>
         <xs:attribute name="executionOrder" type="executionOrderType" default="default"/>
         <xs:attribute name="resolveDependencies" type="xs:boolean" default="true"/>
@@ -260,6 +259,7 @@
                 <xs:attribute type="xs:string" name="prefix" default=""/>
                 <xs:attribute type="xs:string" name="suffix" default="Test.php"/>
                 <xs:attributeGroup ref="phpVersionGroup"/>
+                <xs:attribute type="xs:string" name="groups"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
@@ -267,6 +267,7 @@
         <xs:simpleContent>
             <xs:extension base="xs:anyURI">
                 <xs:attributeGroup ref="phpVersionGroup"/>
+                <xs:attribute type="xs:string" name="groups"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>

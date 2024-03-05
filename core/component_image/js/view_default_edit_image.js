@@ -117,7 +117,7 @@ const get_content_value = function(i, value, self) {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value media_content_value'
+			class_name		: 'content_value media_content_value sgv_editor'
 		})
 
 	// external_source case. render the image when the source is external, image from URI
@@ -132,7 +132,8 @@ const get_content_value = function(i, value, self) {
 		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 
 	// render image node
-		const image_node = render_image_node(self, file_info, content_value)
+		self.image_container = render_image_node(self, file_info, content_value)
+		const image_node = self.image_container
 		content_value.appendChild(image_node)
 
 	// quality_selector
@@ -291,25 +292,32 @@ const render_image_node = function(self, file_info, content_value) {
 				: page_globals.fallback_image
 
 	// image. (!) Only to get background color and apply to li node
-		const bg_reference_image_url = url // || page_globals.fallback_image
-		const image = ui.create_dom_element({
-			element_type	: 'img',
-			class_name 		: 'hide'
+		const image_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'image_container work_area'
 		})
-		// image background color
-			image.addEventListener('load', set_bg_color, false)
-			function set_bg_color() {
-				this.removeEventListener('load', set_bg_color, false)
-				// ui.set_background_image(this, content_value)
-				image.classList.remove('hide')
-			}
-		// error
-			image.addEventListener('error', function(){
-				// console.warn('Error on load image:', bg_reference_image_url, image);
-				svg_fallback(object_node)
-			}, false)
-		image.src = bg_reference_image_url
 
+		// const bg_reference_image_url = url // || page_globals.fallback_image
+		// const image = ui.create_dom_element({
+		// 	element_type	: 'img',
+		// 	class_name 		: 'img',
+		// 	// parent 			: image_container
+		// })
+		// // image background color
+		// 	image.addEventListener('load', set_bg_color, false)
+		// 	function set_bg_color() {
+		// 		this.removeEventListener('load', set_bg_color, false)
+		// 		// ui.set_background_image(this, content_value)
+		// 		image.classList.remove('hide')
+		// 	}
+		// // error
+		// 	image.addEventListener('error', function(){
+		// 		// console.warn('Error on load image:', bg_reference_image_url, image);
+		// 		svg_fallback(object_node)
+		// 	}, false)
+		// image.src = bg_reference_image_url
+
+		// image_container.image = image
 
 	// fallback to default svg file
 		function svg_fallback(object_node) {
@@ -337,8 +345,12 @@ const render_image_node = function(self, file_info, content_value) {
 	// object_node <object type="image/svg+xml" data="image.svg"></object>
 		const object_node = ui.create_dom_element({
 			element_type	: 'object',
-			class_name		: 'image'
+			class_name		: 'image',
+			parent 			: image_container
 		})
+		object_node.url			= url
+		image_container.object_node	= object_node
+
 		object_node.type = "image/svg+xml"
 		// set pointer
 		self.object_node = object_node
@@ -373,7 +385,7 @@ const render_image_node = function(self, file_info, content_value) {
 	// change event
 		const image_change_event = event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
 		self.events_tokens.push(image_change_event)
-		object_node.dataset.image_change_event = image_change_event // string like 'event_167'
+		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
 		async function fn_img_quality_change (img_src) {
 
 			self.img_src = img_src
@@ -416,7 +428,7 @@ const render_image_node = function(self, file_info, content_value) {
 		}
 
 
-	return object_node
+	return image_container
 }//end render_image_node
 
 
@@ -445,14 +457,17 @@ const get_buttons = (self) => {
 		// button_fullscreen.addEventListener('mouseup', () =>{
 		// 	self.node.classList.toggle('fullscreen')
 		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
+			// event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// })
 		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node)
+			ui.enter_fullscreen(self.node,()=>{
+				event_manager.publish('full_screen_'+self.id, false)
+			})
+			event_manager.publish('full_screen_'+self.id, true)
 		})
 
 	// buttons tools
-		if( self.show_interface.tools === true){
+		if( self.show_interface.tools === true) {
 			ui.add_tools(self, fragment)
 		}
 
@@ -466,7 +481,7 @@ const get_buttons = (self) => {
 		vector_editor.addEventListener('mouseup', () => {
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
-				self.load_vector_editor({load:'full'})
+				self.load_vector_editor()
 			}
 			// set wrapper as wide mode (100%)
 				// self.node.classList.add('wide')
