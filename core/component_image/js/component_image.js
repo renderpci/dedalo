@@ -157,8 +157,11 @@ component_image.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
-		? self.data.value[0].lib_data
+	const data	= self.data || {}
+	const value	= data.value || []
+
+	const lib_data = typeof value[0]!=='undefined' && value[0].lib_data
+		? value[0].lib_data
 		: null
 
 
@@ -195,9 +198,12 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 	const self = this
 
+	const data	= self.data || {}
+	const value	= data.value || []
+
 	// options
-		const load		= options.load || 'full'
-		const layer_id	= options.layer_id || null
+		// const load		= options.load || 'full'
+		// const layer_id	= options.layer_id || null
 
 	// vector_editor. load and init if not already loaded
 		if (self.vector_tools_loaded===false){
