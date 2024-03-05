@@ -239,8 +239,8 @@ component_image.prototype.load_vector_editor = async function() {
 	// load all layers if the data is empty it create the first layer
 		if(self.ar_layers.length < 1){
 			// add the data from instance to the ar_layers, it control the all project layers that will showed in the vector editor
-			self.ar_layers = typeof self.data.value[0]!=='undefined' && self.data.value[0].lib_data
-				? self.data.value[0].lib_data
+			self.ar_layers = typeof value[0]!=='undefined' && value[0].lib_data
+				? value[0].lib_data
 				: [{
 					layer_id		: 0,
 					layer_data		: [],
