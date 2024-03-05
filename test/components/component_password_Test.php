@@ -96,6 +96,7 @@ final class component_password_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
+		// encrypted data
 		$old_dato = $component->get_dato();
 
 		$dato	= null;
@@ -133,10 +134,13 @@ final class component_password_test extends TestCase {
 			);
 
 		// restore dato
-			$result	= $component->set_dato($old_dato);
+			$old_dato_decoded = array_map(function($el){
+				return dedalo_decrypt_openssl($el);
+			}, $old_dato);
+			$result = $component->set_dato($old_dato_decoded);
 
 			$this->assertTrue(
-				json_encode($component->dato)===json_encode($old_dato),
+				json_encode($component->dato)===json_encode($old_dato_decoded),
 				'expected [] : ' . PHP_EOL
 					. to_string($component->dato)
 			);
