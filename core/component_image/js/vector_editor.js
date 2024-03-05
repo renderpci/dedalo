@@ -5,11 +5,11 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 	import SvgCanvas from '../../../lib/svgedit/svgcanvas.js'
 	import '../../../lib/iro/dist/iro.min.js';
+	import {ui} from '../../common/js/ui.js'
+	// import {common} from '../../common/js/common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 
 
@@ -23,7 +23,8 @@ export const vector_editor = function() {
 	// this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
 	// this.currentSegment			= this.mode = this.type = null
 	this.active_layer			= null
-	this.active_fill_color		= '#ffffff55'
+	this.active_fill_color		= '#ffffff'
+	this.active_opacity			= 0.3
 	this.button_color_picker	= null
 	this.selected_element		= null
 	this.shortcuts = [
@@ -44,6 +45,7 @@ export const vector_editor = function() {
 		{ key: 'alt+v', fn: () => { this.pasteInCenter() } }
 	]
 
+
 	return true
 }//end component_image
 
@@ -52,32 +54,56 @@ export const vector_editor = function() {
 /**
 * INIT_CANVAS
 * @param instance self
+* 	component_image instance
 * @return promise
 * 	bool true
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
-
-	// init with the DOM image_container
+	// init with the DOM image_container (work_area)
 	// get his size
-		const image_container		= self.image_container
-		const image_container_size	= image_container.getBoundingClientRect()
+		this.image_container			= self.image_container
+		// const image_container_size	= image_container.getBoundingClientRect()
+		// active_editor set style
+		this.image_container.classList.add('active_editor')
+
+	// init a empty canvas to be used to test if the browser support it
+
+		ui.create_dom_element({
+			element_type	: 'canvas',
+			parent 			: this.image_container.parentNode
+		})
 
 	// initial image node
 	// the image node will be deleted when konva will initiated
 	// get the image size and the source (see it in view_xxxx)
 	// calculate the ratio of the image, it will be fixed when is resized
-		const image			= image_container.image
-		const image_size	= image.getBoundingClientRect()
-		const image_url		= image.src
+		const object_node	= this.image_container.object_node
+		const image_size	= object_node.getBoundingClientRect()
+		const image_url		= object_node.url
 		const image_ratio	= image_size.width / image_size.height
+
+	// initial svg_canvas node
+		const svg_canvas = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'svg_canvas',
+			parent 			: this.image_container
+		})
+		// set the size of the node to the user screen (the max space to be used to work)
+		svg_canvas.style.width	= window.screen.width +'px'
+		svg_canvas.style.height	= window.screen.height +'px'
+
+		this.svg_canvas			= svg_canvas
+		const svg_canvas_size	= svg_canvas.getBoundingClientRect()
 
 	// image definition
 	// store the image size and source to update the image when is changed
 		const image_definition = {
-			src		: image_url,
-			width	: image_size.width,
-			height	: image_size.height
+			src			: image_url,
+			width		: image_size.width,
+			height		: image_size.height,
+			image_ratio	: image_size.width / image_size.height,
+			image_node	: null,
 		}
 		this.image_definition = image_definition
 
@@ -93,8 +119,8 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// SvgCanvas
 	// create the SvgCanvas instance
-		const stage = new SvgCanvas( image_container, config)
-		stage.updateCanvas(image_definition.width, image_definition.height)
+		const stage = new SvgCanvas( svg_canvas, config)
+		stage.updateCanvas(svg_canvas_size.width, svg_canvas_size.height)
 
 		this.stage = stage
 
@@ -108,9 +134,12 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.stage.bind('selected', this.selected_changed.bind(this))
 		// this.stage.bind('mouseMove', this.element_transition.bind(this))
 		this.stage.bind('extensions_added', this.keyboard_shortcuts.bind(this))
+		this.stage.bind('zoomed', this.zoom_changed.bind(this))
 		this.stage.call('extensions_added')
+		this.stage.bind('exported', this.export_handler.bind(this));
+		// this.stage.bind('changed', this.changed.bind(this));
 
-	// Paste svg clipboard to active layer
+	// paste event. Paste svg clipboard to active layer
 		document.addEventListener('paste', fn_paste)
 		function fn_paste(event) {
 			// get the clipboard data
@@ -128,6 +157,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 					// pasted_svg.remove();
 			}
 		}
+
 	// copy event
 		document.addEventListener('copy', fn_copy)
 		function fn_copy(event) {
@@ -145,12 +175,34 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// main layer is the layer that define the area to be cropped.
 	// // add the layer to the stage
 	// 	this.stage.add(main_layer);
-		image.classList.add('hide')
+		// object_node.classList.add('hide')
+		object_node.remove();
 
+	// load data
 		this.load_data(self)
+
+	// update canvas to fit it into the space
+		this.update_canvas();
 
 	// init the the interface
 		this.render_tools_buttons(self);
+
+	// subscription to the full_screen change event
+	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id,  this.update_canvas.bind(this))
+		)
+
+	// when the image change his quality
+	// change the source of the image, load it and re-calculate his size.
+		self.events_tokens.push(
+			event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
+		)
+		function fn_img_quality_change(img_src) {
+			image_definition.src = img_src
+			stage.setHref(image_definition.image_node, img_src);
+		}//end img_quality_change
+
 
 	return true
 }//end init_canvas
@@ -227,7 +279,7 @@ vector_editor.prototype.element_transition = function(win, elems) {
 
 	if(drawnPath){
 		const seglist = drawnPath.pathSegList
-		console.log("seglist:",seglist);
+
 	}
 
 	const current_mode = stage.getMode()
@@ -252,14 +304,11 @@ vector_editor.prototype.element_transition = function(win, elems) {
 	// 	: null
 		// console.log("stage.getSegType():",stage.setSegType());
 		// console.log("path:",stage.getSegData());
-
 }
 
 
-
-
 /**
-*
+* KEYBOARD_SHORTCUTS
 * @param {external:Window} win
 * @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
 * @listens module:svgcanvas.SvgCanvas#event:selected
@@ -313,9 +362,6 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 }
 
 
-
-
-
 /**
 * INIT_TOOLS
 * init paper tools
@@ -329,6 +375,7 @@ vector_editor.prototype.pointer = function() {
 	stage.setMode('select')
 
 	const selected_element	= stage.getSelectedElements()[0]
+
 	// when the pointer is selected check if has some selected
 	// to check if the element need to be converted to path
 	if(selected_element){
@@ -358,11 +405,9 @@ vector_editor.prototype.create_rectangle = function () {
 		return false
 	}
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('rect')
 }
@@ -377,10 +422,9 @@ vector_editor.prototype.create_circle = function () {
 	stage.clearSelection()
 
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('ellipse')
 }
@@ -395,10 +439,9 @@ vector_editor.prototype.create_vector = function () {
 	stage.clearSelection()
 
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('path')
 
@@ -419,13 +462,122 @@ vector_editor.prototype.create_vector = function () {
 
 //       }
 // console.log("e:----", this.selected_element);
-      // this.click(element, handler) => {
-      // 	console.log("e:----", e);
-      // }
+	  // this.click(element, handler) => {
+	  // 	console.log("e:----", e);
+	  // }
 }
 
 
+vector_editor.prototype.activate_zoom = function () {
 
+	const stage			= this.stage
+	stage.setMode('zoom');
+
+}
+
+/**
+ * ZOOM_CHANGED
+ * @function module:svgcanvas.SvgCanvas#zoom_changed
+ * @param {external:Window} win
+ * @param {module:svgcanvas.SvgCanvas#event:zoomed} bbox
+ * @param {boolean} autoCenter
+ * @listens module:svgcanvas.SvgCanvas#event:zoomed
+ * @returns {void}
+*/
+vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
+
+	const stage					= this.stage
+	const image_container		= this.image_container
+	const image_container_size	= this.image_container.getBoundingClientRect()
+	const svg_canvas_size		= this.svg_canvas.getBoundingClientRect()
+
+	// const w = parseFloat(getComputedStyle(image_container, null).width.replace('px', ''))
+	// const h = parseFloat(getComputedStyle(image_container, null).height.replace('px', ''))
+
+	const w = image_container_size.width // svg_canvas_size.width
+	const h = image_container_size.height // svg_canvas_size.height
+
+	const zInfo = stage.setBBoxZoom( bbox, w, h )
+	if (!zInfo) {
+		return
+	}
+	const zoomlevel = ( zInfo.zoom < 0.001 ) ? 0.1 : zInfo.zoom;
+	const bb = zInfo.bbox
+
+	const zoom = stage.getZoom()
+	const new_w = Math.max(w, stage.contentW * zoom )
+	const new_h = Math.max(h, stage.contentH * zoom )
+
+	const offset = stage.updateCanvas( new_w, new_h	)
+
+
+	this.image_container.style.width = new_w + 'px'
+	this.image_container.style.height = new_h + 'px'
+
+
+	const newCtr = {
+		x: bb.x * zoomlevel + (bb.width * zoomlevel) / 2,
+		y: bb.y * zoomlevel + (bb.height * zoomlevel) / 2
+	}
+
+	newCtr.x += offset.x
+	newCtr.y += offset.y
+
+	image_container.scrollLeft	= newCtr.x - w / 2
+	image_container.scrollTop	= newCtr.y - h / 2
+	image_container.scroll()
+
+}
+
+
+/**
+* UPDATE_CANVAS
+* Fit the canvas and image to the space
+*/
+vector_editor.prototype.update_canvas = function(){
+
+	const stage	= this.stage
+	const zoom	= stage.getZoom()
+
+	const image_definition		= this.image_definition
+	const image_ratio			= image_definition.image_ratio
+
+	const image_container_size	= this.image_container.getBoundingClientRect()
+	const svg_canvas_size		= this.svg_canvas.getBoundingClientRect()
+
+	// re-calculate the image_contanier size
+	// const image_container_size	= image_container.getBoundingClientRect()
+	// use the image_ratio to calculate the width in relation to new height and update the image definition
+	const width = image_container_size.height * image_ratio
+	image_definition.width	= width
+	image_definition.height	= image_container_size.height
+	// clean the selectors, they will not scaled well
+	stage.clearSelection()
+	// update the stage to new size
+	// set the canvas zoom to fit the new image container size
+	stage.setBBoxZoom(
+		'canvas',
+		image_definition.width,
+		image_definition.height
+	)
+	// update the canvas with the new size (it use the previous zoom to set the canvas content)
+	const offset = stage.updateCanvas(
+		image_definition.width,
+		image_definition.height
+	)
+
+	const w = Math.max(svg_canvas_size.width, stage.contentW * zoom )
+	const h = Math.max(svg_canvas_size.height, stage.contentH * zoom )
+
+	const scroll_X = w / 2 - image_container_size.width / 2
+	const scroll_Y = h / 2 - image_container_size.height / 2
+
+	this.image_container.scrollLeft = scroll_X
+	this.image_container.scrollTop = scroll_Y
+
+	stage.updateCanvas(w, h)
+
+}
 
 
 /**
@@ -434,8 +586,9 @@ vector_editor.prototype.create_vector = function () {
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
-	const stage			= this.stage
-	const layer			= this.active_layer
+	const stage				= this.stage
+	const layer				= this.active_layer
+	const image_definition	= this.image_definition
 
 	// check vector_editor_tools
 		if (!self.vector_editor_tools) {
@@ -545,20 +698,16 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				zoom.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.zoom.activate()
+					this.activate_zoom()
 					activate_status(zoom)
 				})
 				zoom.addEventListener('dblclick', () =>{
 
-					const ratio = self.node.classList.contains('fullscreen')
-						? 1(self.canvas_node.clientHeight / self.canvas_height) * 0.8
-						: 1
-
-					// self.current_paper.view.setScaling(ratio)
-
-					const delta_x	= self.canvas_width / 2
-					const delta_y	= self.canvas_height / 2
-					self.current_paper.view.setCenter(delta_x, delta_y)
+					// const resolution	= stage.getResolution()
+					const multiplier	= 1
+					stage.setCurrentZoom(multiplier)
+					// this.updateCanvas(true)
+					this.update_canvas()
 				})
 
 				// zoom.addEventListener('wheel', (e) =>{
@@ -567,21 +716,39 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				buttons.push(zoom)
 
 			// move
-				const move = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button tool move',
-					parent			: buttons_container
-				})
-				move.addEventListener('mouseup', () =>{
-					this.move.activate()
-					activate_status(move)
-				})
-				move.addEventListener('dblclick', () =>{
-					const delta_x	= self.canvas_width /2
-					const delta_y	= self.canvas_height /2
-					self.current_paper.view.setCenter(delta_x, delta_y)
-				})
-				buttons.push(move)
+				// const move = ui.create_dom_element({
+				// 	element_type	: 'span',
+				// 	class_name		: 'button tool move',
+				// 	parent			: buttons_container
+				// })
+				// move.addEventListener('mouseup', async () =>{
+				// 	// stage.mergeAllLayers();
+				// 	const svg_data = stage.getSvgContent()  //getSvgString
+				// 	console.log("svg_data:",svg_data);
+
+				// 	const imgType = 'JPEG'
+				// 	const quality = parseFloat(1)
+
+				// 	const image = await stage.rasterExport(
+				// 		imgType,
+				// 		quality,
+				// 		'export' //'v6 rsc170 imagen'//this.editor.exportWindowName
+				// 	)
+
+
+				// 	// this.move.activate()
+				// 	// activate_status(move)
+				// })
+				// move.addEventListener('dblclick', () =>{
+
+				// 	const svg_data = stage.getSvgContent()  //getSvgString
+				// 		console.log("svg_data:",svg_data);
+
+				// 	// const delta_x	= self.canvas_width /2
+				// 	// const delta_y	= self.canvas_height /2
+				// 	// self.current_paper.view.setCenter(delta_x, delta_y)
+				// })
+				// buttons.push(move)
 
 			// save
 				const save = ui.create_dom_element({
@@ -590,22 +757,26 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					title			: get_label.save || 'Save',
 					parent			: buttons_container
 				})
-				save.addEventListener('mouseup', (e) =>{
+				save.addEventListener('mouseup', async (e) =>{
 					e.stopPropagation()
 
-					this.save_data(self)
+					// clone the actual image source (it could be different of the default quality)
+					const original_source = clone(image_definition.src)
 
+					// get the default quality file info and set to the image
+					const default_file_info = self.get_default_file_info(0);
+					const img_src = DEDALO_MEDIA_URL + default_file_info.file_path
+					event_manager.publish('image_quality_change_'+self.id, img_src)
+					// close the fullscreen to show full component
 					self.node.classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
-					// update the instance with the new layer information, prepared to save
-					// self.update_draw_data()
-					// save all data layers
-					// const changed_data = [self.data.changed_data]
-					// self.change_value({
-					// 	changed_data	: changed_data,
-					// 	refresh			: false
-					// })
+					// save the layers with the default image quality
+					await this.save_data(self)
+					// restore the original quality selected
+					if(original_source !== img_src){
 
+						event_manager.publish('image_quality_change_'+self.id, original_source)
+					}
 					activate_status(save)
 				})
 				buttons.push(save)
@@ -653,16 +824,19 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					})
 				this.button_color_picker.addEventListener('mouseup', () =>{
 					color_wheel_contaniner.classList.toggle('hide')
-					this.color_picker.color.hexString = this.active_fill_color
+					this.color_picker.color.hexString	= this.active_fill_color
+					this.color_picker.color.alpha		= this.active_opacity
 				})
 				// color:change event callback
 				// color:change callbacks receive the current color and a changes object
 				const color_selected = (color, changes) =>{
 					if(this.selected_element !== null){
-						stage.setColor('fill', color.hex8String)
+						stage.setColor('fill', color.hexString)
+						stage.setOpacity(color.alpha)
 						// stage.setPaint('fill', color.hex8String)
 					}
-					this.button_color_picker.style.backgroundColor = color.hexString
+					this.button_color_picker.style.backgroundColor	= color.hexString
+					this.button_color_picker.style.opacity			= color.alpha
 					// update the instance with the new layer information, prepared to save
 					// (but is not saved directly, the user need click in the save button)
 					// self.update_draw_data()
@@ -693,6 +867,15 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 
 
 
+vector_editor.prototype.export_handler = function(win, data){
+	const {
+		issues,
+		WindowName
+	} = data;
+   const exportWindow = window.open('', WindowName);
+   exportWindow.location.href = data.bloburl || data.datauri;
+}
+
 /**
 * SET_COLOR_PICKER
 * get the color of the current active layer to set to the color picker and the button color picker
@@ -716,12 +899,16 @@ vector_editor.prototype.set_color_picker = function() {
 		this.active_fill_color = (this.selected_element)
 			? this.selected_element.getAttribute('fill')
 			: stage.getColor('fill')
+		this.active_opacity = (this.selected_element)
+			? this.selected_element.getAttribute('opacity')
+			: stage.getOpacity()
 
 		if(this.button_color_picker){
 			// set the icon of color picker with the selected path color
 				this.button_color_picker.style.backgroundColor = this.active_fill_color
 			// set the color picker with the selected path color
-				this.color_picker.color.hexString = this.active_fill_color
+				this.color_picker.color.hexString	= this.active_fill_color
+				this.color_picker.color.alpha		= this.active_opacity
 		}
 
 }//end set_color_picker
@@ -753,17 +940,28 @@ vector_editor.prototype.load_data = function(self) {
 			// but, rename it as layer_0
 			// if not, create new layer to import data
 			if(current_layer.layer_id > 0){
-				drawing.createLayer(current_layer.name)
+				const created_layer = drawing.createLayer(current_layer.name)
+				created_layer.id = current_layer.name
 
 			}else{
 				stage.renameCurrentLayer('layer_0')
+				const image_layer = drawing.getCurrentLayer()
+				image_layer.id = current_layer.name
 			}
 			// data is storage without the layer group ('g' node)
 			// only transformations and paths will be loaded
+			if(!current_layer.layer_data){
+				continue;
+			}
 			const layer_data_len = current_layer.layer_data.length
 			for (let i = 0; i < layer_data_len; i++) {
 				const layer_data = current_layer.layer_data[i]
-				stage.addSVGElementsFromJson(layer_data)
+				const element = stage.addSVGElementsFromJson(layer_data)
+
+				if(current_layer.layer_id === 0 && layer_data.element=== 'image'){
+					image_definition.src		= element.getAttribute('xlink:href')
+					image_definition.image_node	= element
+				}
 			}
 
 			this.active_layer = current_layer
@@ -773,18 +971,22 @@ vector_editor.prototype.load_data = function(self) {
 		//empty data, create new image layer node
 		// svgcanvas create a Layer 1 by default, rename it to main
 		stage.renameCurrentLayer('layer_0')
+		const image_layer = drawing.getCurrentLayer()
+		image_layer.id = 'layer_0'
+
 		// this.stage.createLayer()
 		this.active_layer = {
 			layer_id		: 0,
 			layer_data		: null,
-			layer_color		: '#ffffff55',
+			layer_color		: '#ffffff',
+			layer_opacity	: 1,
 			user_layer_name	: 'raster',
 			name 			: 'layer_0',
 			visible 		: true
 		}
 
 
-	// image
+		// image
 		// create new image node
 		const image_node	= new Image();
 
@@ -810,48 +1012,8 @@ vector_editor.prototype.load_data = function(self) {
 			// this.stage.moveSelectedToLayer('main')
 
 		};
-		image_node.src = image_definition.src
-
-		// when the image change his quality
-		// change the source of the image, load it and re-calculate his size.
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		)
-		function fn_img_quality_change (img_src) {
-			// change the value of the current raster element
-				image_node.src = img_src
-		}//end img_quality_change
-
-	// subscription to the full_screen change event
-	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
-		self.events_tokens.push(
-			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
-		)
-		function full_screen_change (fullscreen_state) {
-
-			// re-calculate the image_contanier size
-			const image_container_size	= image_container.getBoundingClientRect()
-			// use the image_ratio to calculate the width in relation to new height and update the image definition
-			const width = image_container_size.height * image_ratio
-			image_definition.width	= width
-			image_definition.height	= image_container_size.height
-			// clean the selectors, they will not scaled well
-			stage.clearSelection()
-			// update the stage to new size
-			// set the canvas zoom to fit the new image container size
-			stage.setBBoxZoom(
-				'canvas',
-				image_definition.width,
-				image_definition.height
-			)
-			// update the canvas with the new size (it use the previous zoom to set the canvas content)
-			const offset = stage.updateCanvas(
-				image_definition.width,
-				image_definition.height
-			)
-
-			return
-		}// end full_screen_change
+		image_node.src				= image_definition.src
+		image_definition.image_node	= img_elem
 	}
 
 	return true
@@ -901,12 +1063,16 @@ vector_editor.prototype.add_layer = function(self) {
 		const new_layer = {
 			layer_id		: layer_id,
 			layer_data		: null,
-			layer_color		: '#'+layer_color+'55',
+			layer_color		: '#'+layer_color,
+			layer_opacity 	: 0.3,
 			user_layer_name	: layer_name,
 			name 			: layer_name,
 			visible 		: true
 		}
-		drawing.createLayer(layer_name)
+		const created_layer = drawing.createLayer(layer_name)
+
+		created_layer.id = layer_name
+
 		self.ar_layers.push(new_layer)
 		this.active_layer = new_layer
 
@@ -920,7 +1086,7 @@ vector_editor.prototype.add_layer = function(self) {
 * get the layers loaded and save it
 * @return object new_layer
 */
-vector_editor.prototype.save_data = function(self) {
+vector_editor.prototype.save_data = async function(self) {
 
 	const stage				= this.stage
 	const drawing			= stage.getCurrentDrawing();
@@ -947,7 +1113,7 @@ vector_editor.prototype.save_data = function(self) {
 		? clone(self.data.value[0])
 		: {}
 	value.lib_data		= self.ar_layers
-	// value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
+	value.svg_file_data	= stage.getSvgString()
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
@@ -959,25 +1125,38 @@ vector_editor.prototype.save_data = function(self) {
 	// set the change_data to the instance
 		self.data.changed_data = changed_data
 
-	self.change_value({
+	return self.change_value({
 		changed_data	: [changed_data],
 		refresh			: false
 	})
 
-	return null
 }//end save_data
 
 
 
 /**
 * ACTIVATE_LAYER
-* @return bool true
+* @param int layer_id
 */
-vector_editor.prototype.activate_layer = function(self, layer, load='full') {
+vector_editor.prototype.activate_layer = function(layer_id) {
+
+	const stage		= this.stage
+	const drawing	= stage.getCurrentDrawing()
+
+	const canvas_layers	= stage.getCurrentDrawing().getNumLayers()
+
+	for (let i = canvas_layers - 1; i >= 0; i--) {
+
+		if(i === 0){
+			continue;
+		}
+		const opacity = (i === layer_id) ? 1.0 : 0
+		const viewed_layer	= drawing.getLayerName(i)
+		this.active_layer	= viewed_layer
+		drawing.setLayerOpacity(viewed_layer, opacity)
+	}
 
 
-
-	return true
 }//end activate_layer
 
 
@@ -1214,7 +1393,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 							parent			: footer
 						})
 						button_delete.addEventListener("click", function(){
-							console.log('layer:----->', layer);
+
 							const viewed_layer		= drawing.setCurrentLayer(layer.name)
 							// remove the layer in svgcanvas project
 							stage.deleteCurrentLayer()
