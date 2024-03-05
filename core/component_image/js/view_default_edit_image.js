@@ -477,7 +477,7 @@ const get_buttons = (self) => {
 		vector_editor.addEventListener('mouseup', () => {
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
-				self.load_vector_editor({load:'full'})
+				self.load_vector_editor()
 			}
 			// set wrapper as wide mode (100%)
 				// self.node.classList.add('wide')
