@@ -194,7 +194,7 @@ component_image.prototype.get_last_layer_id = function() {
 * @param object options
 * @return bool true
 */
-component_image.prototype.load_vector_editor = async function(options) {
+component_image.prototype.load_vector_editor = async function() {
 
 	const self = this
 
@@ -206,7 +206,7 @@ component_image.prototype.load_vector_editor = async function(options) {
 		// const layer_id	= options.layer_id || null
 
 	// vector_editor. load and init if not already loaded
-		if (self.vector_tools_loaded===false){
+		if (!self.vector_editor){
 
 			// load editor files and create a new vector_editor
 			// load files only when editor is really necessary
@@ -234,10 +234,6 @@ component_image.prototype.load_vector_editor = async function(options) {
 
 			self.vector_editor = new vector_editor()
 			await self.vector_editor.init_canvas(self)
-
-			// self.vector_editor.init_tools(self)
-
-			self.vector_tools_loaded = true
 		}
 
 	// load all layers if the data is empty it create the first layer
