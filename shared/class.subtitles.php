@@ -309,7 +309,10 @@ abstract class subtitles {
 		$length	= count($ar_fragments_formated);
 
 		for ($i=0; $i < $length	; $i++) {
+		// foreach ($ar_fragments_formated as $key => $ar_value) {
+			
 			$ar_value	= $ar_fragments_formated[$i];
+
 
 			$tcin		= $ar_value['tcin'];
 			$tcout		= $ar_value['tcout'];
