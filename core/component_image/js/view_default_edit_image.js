@@ -117,7 +117,7 @@ const get_content_value = function(i, value, self) {
 	// content_value
 		const content_value = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'content_value media_content_value'
+			class_name		: 'content_value media_content_value sgv_editor'
 		})
 
 	// external_source case. render the image when the source is external, image from URI
@@ -294,7 +294,7 @@ const render_image_node = function(self, file_info, content_value) {
 	// image. (!) Only to get background color and apply to li node
 		const image_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'image_container'
+			class_name 		: 'image_container work_area'
 		})
 
 		const bg_reference_image_url = url // || page_globals.fallback_image
