@@ -976,48 +976,8 @@ vector_editor.prototype.load_data = function(self) {
 			// this.stage.moveSelectedToLayer('main')
 
 		};
-		image_node.src = image_definition.src
-
-		// when the image change his quality
-		// change the source of the image, load it and re-calculate his size.
-		self.events_tokens.push(
-			event_manager.subscribe('image_quality_change_'+self.id, fn_img_quality_change)
-		)
-		function fn_img_quality_change (img_src) {
-			// change the value of the current raster element
-				image_node.src = img_src
-		}//end img_quality_change
-
-	// subscription to the full_screen change event
-	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
-		self.events_tokens.push(
-			event_manager.subscribe('full_screen_'+self.id,  full_screen_change)
-		)
-		function full_screen_change (fullscreen_state) {
-
-			// re-calculate the image_contanier size
-			const image_container_size	= image_container.getBoundingClientRect()
-			// use the image_ratio to calculate the width in relation to new height and update the image definition
-			const width = image_container_size.height * image_ratio
-			image_definition.width	= width
-			image_definition.height	= image_container_size.height
-			// clean the selectors, they will not scaled well
-			stage.clearSelection()
-			// update the stage to new size
-			// set the canvas zoom to fit the new image container size
-			stage.setBBoxZoom(
-				'canvas',
-				image_definition.width,
-				image_definition.height
-			)
-			// update the canvas with the new size (it use the previous zoom to set the canvas content)
-			const offset = stage.updateCanvas(
-				image_definition.width,
-				image_definition.height
-			)
-
-			return
-		}// end full_screen_change
+		image_node.src				= image_definition.src
+		image_definition.image_node	= img_elem
 	}
 
 	return true
