@@ -5,11 +5,11 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 	import SvgCanvas from '../../../lib/svgedit/svgcanvas.js'
 	import '../../../lib/iro/dist/iro.min.js';
+	import {ui} from '../../common/js/ui.js'
+	// import {common} from '../../common/js/common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 
 
