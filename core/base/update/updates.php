@@ -22,7 +22,12 @@ $updates->$v = new stdClass();
 	// alert
 		$alert					= new stdClass();
 		$alert->notification	= 'V '.$v;
-		$alert->command			= '';
+		$alert->command			= '
+			WARNING!
+			<br>Before run this update, make sure that your current ontology is updated to the latest version!
+			<br>Check if the ontology is > of: <b>2024-03-01</b>
+			<br>and logout and login to be ensure that the ontology is active.</b>
+		';
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
