@@ -425,8 +425,66 @@ vector_editor.prototype.create_vector = function () {
 }
 
 
+vector_editor.prototype.activate_zoom = function () {
+
+	const stage			= this.stage
+	stage.setMode('zoom');
+
+}
+
+/**
+ * ZOOM_CHANGED
+ * @function module:svgcanvas.SvgCanvas#zoom_changed
+ * @param {external:Window} win
+ * @param {module:svgcanvas.SvgCanvas#event:zoomed} bbox
+ * @param {boolean} autoCenter
+ * @listens module:svgcanvas.SvgCanvas#event:zoomed
+ * @returns {void}
+*/
+vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
+
+	const stage					= this.stage
+	const image_container		= this.image_container
+	const image_container_size	= this.image_container.getBoundingClientRect()
+	const svg_canvas_size		= this.svg_canvas.getBoundingClientRect()
+
+	// const w = parseFloat(getComputedStyle(image_container, null).width.replace('px', ''))
+	// const h = parseFloat(getComputedStyle(image_container, null).height.replace('px', ''))
+
+	const w = image_container_size.width // svg_canvas_size.width
+	const h = image_container_size.height // svg_canvas_size.height
+
+	const zInfo = stage.setBBoxZoom( bbox, w, h )
+	if (!zInfo) {
+		return
+	}
+	const zoomlevel = ( zInfo.zoom < 0.001 ) ? 0.1 : zInfo.zoom;
+	const bb = zInfo.bbox
+
+	const zoom = stage.getZoom()
+	const new_w = Math.max(w, stage.contentW * zoom )
+	const new_h = Math.max(h, stage.contentH * zoom )
+
+	const offset = stage.updateCanvas( new_w, new_h	)
 
 
+	this.image_container.style.width = new_w + 'px'
+	this.image_container.style.height = new_h + 'px'
+
+
+	const newCtr = {
+		x: bb.x * zoomlevel + (bb.width * zoomlevel) / 2,
+		y: bb.y * zoomlevel + (bb.height * zoomlevel) / 2
+	}
+
+	newCtr.x += offset.x
+	newCtr.y += offset.y
+
+	image_container.scrollLeft	= newCtr.x - w / 2
+	image_container.scrollTop	= newCtr.y - h / 2
+	image_container.scroll()
+
+}
 
 /**
 * RENDER_TOOLS_BUTTONS
@@ -545,20 +603,16 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				})
 				zoom.addEventListener('mouseup', (e) =>{
 					e.stopPropagation()
-					this.zoom.activate()
+					this.activate_zoom()
 					activate_status(zoom)
 				})
 				zoom.addEventListener('dblclick', () =>{
 
-					const ratio = self.node.classList.contains('fullscreen')
-						? 1(self.canvas_node.clientHeight / self.canvas_height) * 0.8
-						: 1
-
-					// self.current_paper.view.setScaling(ratio)
-
-					const delta_x	= self.canvas_width / 2
-					const delta_y	= self.canvas_height / 2
-					self.current_paper.view.setCenter(delta_x, delta_y)
+					// const resolution	= stage.getResolution()
+					const multiplier	= 1
+					stage.setCurrentZoom(multiplier)
+					// this.updateCanvas(true)
+					this.update_canvas()
 				})
 
 				// zoom.addEventListener('wheel', (e) =>{
