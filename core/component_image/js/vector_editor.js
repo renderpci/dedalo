@@ -134,6 +134,8 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.stage.bind('extensions_added', this.keyboard_shortcuts.bind(this))
 		this.stage.bind('zoomed', this.zoom_changed.bind(this))
 		this.stage.call('extensions_added')
+		this.stage.bind('exported', this.export_handler.bind(this));
+		// this.stage.bind('changed', this.changed.bind(this));
 
 	// paste event. Paste svg clipboard to active layer
 		document.addEventListener('paste', fn_paste)
@@ -859,6 +861,15 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 
 
 
+vector_editor.prototype.export_handler = function(win, data){
+	const {
+		issues,
+		WindowName
+	} = data;
+   const exportWindow = window.open('', WindowName);
+   exportWindow.location.href = data.bloburl || data.datauri;
+}
+
 /**
 * SET_COLOR_PICKER
 * get the color of the current active layer to set to the color picker and the button color picker
@@ -1118,7 +1129,6 @@ vector_editor.prototype.activate_layer = function(layer_id) {
 	}
 
 
-	return true
 }//end activate_layer
 
 
@@ -1355,7 +1365,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 							parent			: footer
 						})
 						button_delete.addEventListener("click", function(){
-							console.log('layer:----->', layer);
+
 							const viewed_layer		= drawing.setCurrentLayer(layer.name)
 							// remove the layer in svgcanvas project
 							stage.deleteCurrentLayer()
