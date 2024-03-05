@@ -331,7 +331,8 @@
 							<input type="hidden" name="parentInicial" value="<?php echo $parent ?>" >
 							<input type="hidden" name="nHijos" value="<?php echo $nHijos ?>">
 							<input type="button" id="submit_button" name="Submit" value="  <?php echo $modificar_title ?>  " class="SubmitButon" onClick="edit_ts(document.getElementById('form1'), event);">
-							<input name="export" type="button" value=" Export " onClick="export_ontology('<?php echo $terminoID ?>');">
+							<input name="export" type="button" value=" Export JSON " onClick="export_ontology(this, '<?php echo $terminoID ?>');">
+							<input name="export" type="button" value=" Export CSV " onClick="export_ontology_csv(this, '<?php echo $terminoID ?>');">
 						</div><!-- /form_buttons -->
 					</td>
 				</tr>
