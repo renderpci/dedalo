@@ -586,8 +586,9 @@ vector_editor.prototype.update_canvas = function(){
 */
 vector_editor.prototype.render_tools_buttons = function(self) {
 
-	const stage			= this.stage
-	const layer			= this.active_layer
+	const stage				= this.stage
+	const layer				= this.active_layer
+	const image_definition	= this.image_definition
 
 	// check vector_editor_tools
 		if (!self.vector_editor_tools) {
@@ -756,22 +757,26 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					title			: get_label.save || 'Save',
 					parent			: buttons_container
 				})
-				save.addEventListener('mouseup', (e) =>{
+				save.addEventListener('mouseup', async (e) =>{
 					e.stopPropagation()
 
-					this.save_data(self)
+					// clone the actual image source (it could be different of the default quality)
+					const original_source = clone(image_definition.src)
 
+					// get the default quality file info and set to the image
+					const default_file_info = self.get_default_file_info(0);
+					const img_src = DEDALO_MEDIA_URL + default_file_info.file_path
+					event_manager.publish('image_quality_change_'+self.id, img_src)
+					// close the fullscreen to show full component
 					self.node.classList.remove('fullscreen')
 					event_manager.publish('full_screen_'+self.id, false)
-					// update the instance with the new layer information, prepared to save
-					// self.update_draw_data()
-					// save all data layers
-					// const changed_data = [self.data.changed_data]
-					// self.change_value({
-					// 	changed_data	: changed_data,
-					// 	refresh			: false
-					// })
+					// save the layers with the default image quality
+					await this.save_data(self)
+					// restore the original quality selected
+					if(original_source !== img_src){
 
+						event_manager.publish('image_quality_change_'+self.id, original_source)
+					}
 					activate_status(save)
 				})
 				buttons.push(save)
@@ -1064,7 +1069,7 @@ vector_editor.prototype.add_layer = function(self) {
 * get the layers loaded and save it
 * @return object new_layer
 */
-vector_editor.prototype.save_data = function(self) {
+vector_editor.prototype.save_data = async function(self) {
 
 	const stage				= this.stage
 	const drawing			= stage.getCurrentDrawing();
@@ -1091,7 +1096,7 @@ vector_editor.prototype.save_data = function(self) {
 		? clone(self.data.value[0])
 		: {}
 	value.lib_data		= self.ar_layers
-	// value.svg_file_data	= project.exportSVG({asString:true,embedImages:false})
+	value.svg_file_data	= stage.getSvgString()
 
 	// set the changed_data for update the component data and send it to the server for change when save
 		const changed_data = {
@@ -1103,12 +1108,11 @@ vector_editor.prototype.save_data = function(self) {
 	// set the change_data to the instance
 		self.data.changed_data = changed_data
 
-	self.change_value({
+	return self.change_value({
 		changed_data	: [changed_data],
 		refresh			: false
 	})
 
-	return null
 }//end save_data
 
 
