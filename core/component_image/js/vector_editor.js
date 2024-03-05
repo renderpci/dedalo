@@ -52,32 +52,56 @@ export const vector_editor = function() {
 /**
 * INIT_CANVAS
 * @param instance self
+* 	component_image instance
 * @return promise
 * 	bool true
 */
 vector_editor.prototype.init_canvas = async function(self) {
 
-
-	// init with the DOM image_container
+	// init with the DOM image_container (work_area)
 	// get his size
-		const image_container		= self.image_container
-		const image_container_size	= image_container.getBoundingClientRect()
+		this.image_container			= self.image_container
+		// const image_container_size	= image_container.getBoundingClientRect()
+		// active_editor set style
+		this.image_container.classList.add('active_editor')
+
+	// init a empty canvas to be used to test if the browser support it
+
+		ui.create_dom_element({
+			element_type	: 'canvas',
+			parent 			: this.image_container.parentNode
+		})
 
 	// initial image node
 	// the image node will be deleted when konva will initiated
 	// get the image size and the source (see it in view_xxxx)
 	// calculate the ratio of the image, it will be fixed when is resized
-		const image			= image_container.image
-		const image_size	= image.getBoundingClientRect()
-		const image_url		= image.src
+		const object_node	= this.image_container.object_node
+		const image_size	= object_node.getBoundingClientRect()
+		const image_url		= object_node.url
 		const image_ratio	= image_size.width / image_size.height
+
+	// initial svg_canvas node
+		const svg_canvas = ui.create_dom_element({
+			element_type	: 'div',
+			class_name 		: 'svg_canvas',
+			parent 			: this.image_container
+		})
+		// set the size of the node to the user screen (the max space to be used to work)
+		svg_canvas.style.width	= window.screen.width +'px'
+		svg_canvas.style.height	= window.screen.height +'px'
+
+		this.svg_canvas			= svg_canvas
+		const svg_canvas_size	= svg_canvas.getBoundingClientRect()
 
 	// image definition
 	// store the image size and source to update the image when is changed
 		const image_definition = {
-			src		: image_url,
-			width	: image_size.width,
-			height	: image_size.height
+			src			: image_url,
+			width		: image_size.width,
+			height		: image_size.height,
+			image_ratio	: image_size.width / image_size.height,
+			image_node	: null,
 		}
 		this.image_definition = image_definition
 
@@ -93,8 +117,8 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// SvgCanvas
 	// create the SvgCanvas instance
-		const stage = new SvgCanvas( image_container, config)
-		stage.updateCanvas(image_definition.width, image_definition.height)
+		const stage = new SvgCanvas( svg_canvas, config)
+		stage.updateCanvas(svg_canvas_size.width, svg_canvas_size.height)
 
 		this.stage = stage
 
@@ -110,7 +134,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.stage.bind('extensions_added', this.keyboard_shortcuts.bind(this))
 		this.stage.call('extensions_added')
 
-	// Paste svg clipboard to active layer
+	// paste event. Paste svg clipboard to active layer
 		document.addEventListener('paste', fn_paste)
 		function fn_paste(event) {
 			// get the clipboard data
@@ -128,6 +152,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 					// pasted_svg.remove();
 			}
 		}
+
 	// copy event
 		document.addEventListener('copy', fn_copy)
 		function fn_copy(event) {
@@ -145,9 +170,14 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// main layer is the layer that define the area to be cropped.
 	// // add the layer to the stage
 	// 	this.stage.add(main_layer);
-		image.classList.add('hide')
+		// object_node.classList.add('hide')
+		object_node.remove();
 
+	// load data
 		this.load_data(self)
+
+	// update canvas to fit it into the space
+		this.update_canvas();
 
 	// init the the interface
 		this.render_tools_buttons(self);
