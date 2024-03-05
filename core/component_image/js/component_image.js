@@ -96,7 +96,6 @@ component_image.prototype.init = async function(options) {
 
 	// editor init vars
 		self.ar_layers				= []
-		self.vector_tools_loaded	= false
 		// self.current_paper			= null
 		self.vector_editor			= null
 
@@ -256,39 +255,39 @@ component_image.prototype.load_vector_editor = async function(options) {
 			// }
 		}
 
-	switch(load) {
-		case ('full'):
-			// active the visibility of the layers
-			const ar_layer = self.ar_layers
-			for (let i = 0; i < ar_layer.length; i++) {
-				const layer = ar_layer[i]
-				self.vector_editor.activate_layer(self, layer, load)
-			}
-			break;
+	// switch(load) {
+	// 	case ('full'):
+	// 		// active the visibility of the layers
+	// 		const ar_layer = self.ar_layers
+	// 		for (let i = 0; i < ar_layer.length; i++) {
+	// 			const layer = ar_layer[i]
+	// 			self.vector_editor.activate_layer(self, layer, load)
+	// 		}
+	// 		break;
 
-		case ('layer'):
-			const loaded_layer	= self.ar_layers.find((item) => item.layer_id===layer_id)
-			// if the layer is not in the ar_layers, it will be new layer (ex:comes form new tag)
-			// create new layer data with the new id and set to ar_layers
-			const layer = (typeof (loaded_layer)!=='undefined')
-			? loaded_layer
-			: (function(){
-				const new_layer = {
-					layer_id	: layer_id,
-					layer_data	: []
-				}
-				self.ar_layers.push(new_layer)
-				// load the layer (if it's a new layer or existed layer, the method load_layer will check the duplicates)
-				// self.vector_editor.load_layer(self, new_layer)
-				return new_layer
-			  })()
-			// active the layer
-			self.vector_editor.activate_layer(self, layer, load)
-			break;
+	// 	case ('layer'):
+	// 		const loaded_layer	= self.ar_layers.find((item) => item.layer_id===layer_id)
+	// 		// if the layer is not in the ar_layers, it will be new layer (ex:comes form new tag)
+	// 		// create new layer data with the new id and set to ar_layers
+	// 		const layer = (typeof (loaded_layer)!=='undefined')
+	// 		? loaded_layer
+	// 		: (function(){
+	// 			const new_layer = {
+	// 				layer_id	: layer_id,
+	// 				layer_data	: []
+	// 			}
+	// 			self.ar_layers.push(new_layer)
+	// 			// load the layer (if it's a new layer or existed layer, the method load_layer will check the duplicates)
+	// 			// self.vector_editor.load_layer(self, new_layer)
+	// 			return new_layer
+	// 		  })()
+	// 		// active the layer
+	// 		self.vector_editor.activate_layer(self, layer, load)
+	// 		break;
 
-		default:
-			break;
-	}//end switch
+	// 	default:
+	// 		break;
+	// }//end switch
 
 	return true
 }//end load_vector_editor
@@ -346,57 +345,57 @@ component_image.prototype.load_tag_into_vector_editor = function(options) {
 
 
 
-/**
-* ADD_LAYER
-* @return int layer_id
-*/
-component_image.prototype.add_layer = function() {
+// /**
+// * ADD_LAYER
+// * @return int layer_id
+// */
+// component_image.prototype.add_layer = function() {
 
-	const self = this
+// 	const self = this
 
-	const last_layer_id	= self.get_last_layer_id()
-	const layer_id		= last_layer_id + 1
+// 	const last_layer_id	= self.get_last_layer_id()
+// 	const layer_id		= last_layer_id + 1
 
-	self.load_vector_editor({
-		load		: 'layer',
-		layer_id	: layer_id
-	})
+// 	self.load_vector_editor({
+// 		load		: 'layer',
+// 		layer_id	: layer_id
+// 	})
 
-	return layer_id
-}//end get_last_layer_id
+// 	return layer_id
+// }//end get_last_layer_id
 
 
 
-/**
-* DELETE_LAYER
-* @param object layer
-* @return bool true
-*/
-component_image.prototype.delete_layer = function(layer) {
+// /**
+// * DELETE_LAYER
+// * @param object layer
+// * @return bool true
+// */
+// component_image.prototype.delete_layer = function(layer) {
 
-	const self = this
+// 	const self = this
 
-	self.ar_layers = self.ar_layers.filter(item => item.layer_id!==layer.layer_id)
+// 	self.ar_layers = self.ar_layers.filter(item => item.layer_id!==layer.layer_id)
 
-	// update the data in the instance previous to save
-		const value =  typeof(self.data.value[0])!=='undefined'
-			? clone(self.data.value[0])
-			: {}
+// 	// update the data in the instance previous to save
+// 		const value =  typeof(self.data.value[0])!=='undefined'
+// 			? clone(self.data.value[0])
+// 			: {}
 
-		value.lib_data = self.ar_layers
+// 		value.lib_data = self.ar_layers
 
-	// set the changed_data for update the component data and send it to the server for change when save
-		const changed_data = {
-			action	: 'update',
-			key		: 0,
-			value	: value
-		}
+// 	// set the changed_data for update the component data and send it to the server for change when save
+// 		const changed_data = {
+// 			action	: 'update',
+// 			key		: 0,
+// 			value	: value
+// 		}
 
-	// set the change_data to the instance
-		self.data.changed_data = changed_data
+// 	// set the change_data to the instance
+// 		self.data.changed_data = changed_data
 
-	return true
-}//end delete_layer
+// 	return true
+// }//end delete_layer
 
 
 
