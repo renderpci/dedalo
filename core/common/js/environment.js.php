@@ -93,6 +93,8 @@ session_write_close();
 			$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
 			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
 			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
+			$obj->dedalo_data_lang_selector			= defined('DEDALO_DATA_LANG_SELECTOR') ? DEDALO_DATA_LANG_SELECTOR : true;
+			$obj->dedalo_data_lang_sync				= defined('DEDALO_DATA_LANG_SYNC') ? DEDALO_DATA_LANG_SYNC : false;
 			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
 			$obj->dedalo_application_langs			= (function(){
 				$result = [];
@@ -105,7 +107,7 @@ session_write_close();
 				return $result;
 			})();
 			$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
-				return (object)[
+				return [
 					'label'	=> lang::get_name_from_code($current_lang),
 					'value'	=> $current_lang
 				];

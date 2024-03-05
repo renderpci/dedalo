@@ -313,7 +313,11 @@ const render_column_id = function(options) {
 						section_id	: section_id,
 						matrix_id	: matrix_id,
 						date		: modification_date || null,
-						mode		: 'tm'
+						mode		: 'tm',
+						caller 		: options
+					}
+					if(service_time_machine.config.caller_dataframe){
+						data.caller_dataframe = service_time_machine.config.caller_dataframe
 					}
 					event_manager.publish('tm_edit_record', data)
 					const dom_buttons_view = document.querySelectorAll('.button_view')

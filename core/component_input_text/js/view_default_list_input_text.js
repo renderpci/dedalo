@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
+	import {get_dataframe} from '../../component_common/js/component_common.js'
 
 
 
@@ -44,12 +45,10 @@ view_default_list_input_text.render = async function(self, options) {
 			? ' (' + self.data.transliterate_value + ')'
 			: ''
 
-		const value_string = fallback.join(self.context.fields_separator) + transliterate_value
+		// const value_string = fallback.join(self.context.fields_separator) + transliterate_value
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
-		})
+		const wrapper = ui.component.build_wrapper_list(self)
 		if (self.show_interface.read_only!==true) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
@@ -73,6 +72,44 @@ view_default_list_input_text.render = async function(self, options) {
 					})
 				}
 			})
+		}
+
+		for (var i = 0; i < fallback.length; i++) {
+			const value_string = fallback[i] + transliterate_value
+
+			const content_value = ui.create_dom_element({
+				element_type	: 'span',
+				inner_html		: value_string,
+				parent			: wrapper
+			})
+
+			// component_dataframe
+			if(self.properties.has_dataframe){
+				content_value.classList.add('has_dataframe')
+
+				const component_dataframe = await get_dataframe({
+					self			: self,
+					section_id		: self.section_id,
+					section_tipo	: self.section_tipo,
+					// tipo_key		: self.tipo,
+					section_id_key	: i
+				})
+					if(component_dataframe){
+						self.ar_instances.push(component_dataframe)
+						const dataframe_node = await component_dataframe.render()
+						content_value.appendChild(dataframe_node)
+					}
+			}
+
+			if( i !== value.length -1 ){
+				// separator
+				const fields_separator = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: self.context.fields_separator,
+					parent			: content_value
+				})
+			}
+
 		}
 
 

@@ -27,7 +27,7 @@
 		on_dragend,
 		on_drop
 	} from './drag_and_drop.js'
-
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -160,7 +160,7 @@ export const render_column_id = function(options) {
 				}
 			})
 		});
-		button_edit.addEventListener('click', function(e){
+		button_edit.addEventListener('mousedown', function(e){
 			e.stopPropagation()
 
 			// if the user click with right mouse button stop
@@ -610,8 +610,12 @@ export const render_column_remove = function(options) {
 						})
 
 						// delete_dataframe_record. if it is not dataframe it will be ignored
-						await self.delete_dataframe_record({
-							section_id : section_id
+						delete_dataframe({
+							self			: self,
+							section_id		: self.section_id,
+							section_tipo	: self.section_tipo,
+							section_id_key	: section_id,
+							// tipo_key		: self.tipo
 						})
 
 						// refresh the component. Don't wait here
@@ -802,7 +806,9 @@ export const get_buttons = (self) => {
 								body		: section_node
 							})
 							modal.on_close = function(){
-								self.refresh()
+								self.refresh().then(function(response){
+									event_manager.publish('add_row_'+ self.id)
+								})
 							}
 
 						// activate_first_component. Get the first ddo in ddo_map to be focused
@@ -916,7 +922,7 @@ export const get_buttons = (self) => {
 					})()
 					return
 			}
-			button_link.addEventListener('click', fn_link)
+			button_link.addEventListener('mousedown', fn_link)
 		}//end button_link
 
 	// button_open_section_list (button_add)
@@ -960,7 +966,7 @@ export const get_buttons = (self) => {
 							}
 						})
 				}//end fn_click
-				button_open_section_list.addEventListener('click', fn_click)
+				button_open_section_list.addEventListener('mousedown', fn_click)
 			}
 		}
 
@@ -1146,61 +1152,6 @@ export const render_references = function(ar_references) {
 	return fragment
 }//end render_references
 
-
-
-/**
-* RENDER_DATAFRAME_TABLE
-* Render column_remove node
-* Shared across views
-* @param object options
-* @return DocumentFragment
-*/
-export const render_dataframe_table = async function(options) {
-
-	// options
-		const self = options.self
-
-	// DocumentFragment
-		const fragment = new DocumentFragment()
-
-	// ddo_map
-		const ddo_map			= self.request_config_object.show.ddo_map || []
-		const column_dataframe	= ddo_map.find(el => el.is_dataframe===true)
-		if (!column_dataframe) {
-			return fragment
-		}
-		const section_tipo	= column_dataframe.section_tipo
-
-	// data
-		const data_item		= self.datum.data.find(el => el.section_tipo===section_tipo)
-		const section_id	= data_item.section_id
-
-	// section
-		const section = await get_instance({
-			model			: 'section',
-			mode			: 'list',
-			tipo			: section_tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id
-		})
-		await section.build(true)
-		const section_node = await section.render()
-
-	// body
-		const body = ui.create_dom_element({ // string case. auto-create the body node
-			element_type	: 'div',
-			class_name		: 'body content'
-		})
-		body.appendChild(section_node)
-
-		ui.attach_to_modal({
-			header : 'Dataframe',
-			body : body
-		})
-
-
-	return fragment
-}//end render_dataframe_table
 
 
 

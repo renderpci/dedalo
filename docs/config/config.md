@@ -960,6 +960,23 @@ define('DEDALO_DATA_LANG_SELECTOR', true);
 
 ---
 
+### Defining data language sync
+
+./dedalo/config/config.php
+
+DEDALO_DATA_LANG_SYNC `bool`
+
+Defines whether the application language and data language selection remain synchronized.
+
+When set to ' true', it forces to keep DEDALO_APPLICATION_LANG and DEDALO_DATA_LANG synchronized across changes.
+The default value is 'false', which allows the application language and data language to be selected independently.
+
+```php
+define('DEDALO_DATA_LANG_SYNC', false);
+```
+
+---
+
 ### Defining data without language (no lang)
 
 ./dedalo/config/config.php

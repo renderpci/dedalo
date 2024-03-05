@@ -122,7 +122,7 @@ render_common_section.prototype.delete_record = async (options) => {
 				// spinner
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'spinner',
+					class_name		: 'spinner_modal',
 					parent			: body
 				})
 				body.classList.add('loading')

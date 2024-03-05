@@ -447,6 +447,7 @@
     "acabado": "समाप्त गर्नुहोस्",
     "component_history": "घटक इतिहास",
     "build_install_version": "<mark>Construir una versión de instalación<\/mark>",
+    "update_data_version": "<mark>Actualizar la versión del dato<\/mark>",
     "delete_diffusion_records": "प्रसार रेकर्डहरू मेटाउनुहोस्",
     "update": "अपडेट गर्नुहोस्",
     "days": "दिनहरू",

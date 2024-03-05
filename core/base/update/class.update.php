@@ -1,7 +1,7 @@
 <?php
 /**
 * UPDATE
-* Manage Dédalo data updates defined in updates.ph file
+* Manage Dédalo data updates defined in file updates.php
 */
 class update {
 
@@ -65,8 +65,8 @@ class update {
 	public static function update_version() : object {
 
 		$response = new stdClass();
-			$response->result 	= false;
-			$response->msg 		= '';
+			$response->result	= false;
+			$response->msg		= '';
 
 		// short vars
 			$updates			= update::get_updates();
@@ -716,6 +716,244 @@ class update {
 
 		return true;
 	}//end update_dedalo_data_version
+
+
+
+	/**
+	* CONVERT_TABLE_DATA
+	* Get all data from required tables and apply the action required to every row
+	* @param array $ar_tables
+	* @param string $action
+	* @return bool
+	* 	true
+	*/
+	public static function convert_table_data(array $ar_tables, string $action) : bool {
+
+		// Maximum execution time
+		set_time_limit(0);
+
+		// called_class extends current class
+			$called_class = get_called_class();
+			if (strpos($action, '::')!==false) {
+				$parts			= explode('::', $action);
+				$called_class	= $parts[0];
+				$action			= $parts[1];
+			}
+
+		foreach ($ar_tables as $table) {
+
+			debug_log(__METHOD__ . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				. " CONVERTING ... " . PHP_EOL
+				. " convert_table_data - table: $table " . PHP_EOL
+				. " convert_table_data - action: $action " . PHP_EOL
+				. " convert_table_data memory usage: " . dd_memory_usage() . PHP_EOL
+				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+				, logger::WARNING
+			);
+
+			// Get last id in the table
+			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			$rows		= pg_fetch_assoc($result);
+			if (!$rows) {
+				continue;
+			}
+			$max = $rows['id'];
+
+			// Get first id in the table
+			$min_strQuery	= "SELECT id FROM $table ORDER BY id LIMIT 1 ";
+			$min_result		= JSON_RecordDataBoundObject::search_free($min_strQuery);
+			$min_rows		= pg_fetch_assoc($min_result);
+			if (!$min_rows) {
+				continue;
+			}
+			$min = $min_rows['id'];
+
+			//$min = 1;
+
+			// iterate from 1 to last id
+			$i_ref = 0; $start_time = start_time();
+			for ($i=$min; $i<=$max; $i++) {
+
+				$strQuery	= "SELECT * FROM $table WHERE id = $i ORDER BY id ASC";
+				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+				if($result===false) {
+					$msg = "Failed Search id $i. Data is not found.";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					continue;
+				}
+				$n_rows = pg_num_rows($result);
+
+				if ($n_rows<1) continue;
+
+				while($row = pg_fetch_assoc($result)) {
+
+					$id				= $row['id'];
+					$section_id		= $row['section_id'];
+					$section_tipo	= $row['section_tipo'];
+					$datos			= json_handler::decode($row['datos']);
+
+					if (!empty($datos)) {
+
+						update::check_section_data($id, $table, $section_id, $section_tipo, $datos);
+
+						$section_data = $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
+						if($section_data===null){
+							continue;
+						}
+						$section_data_encoded	= json_encode($section_data);
+
+						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+						if($result===false) {
+							$msg = "Failed Update section_data $i";
+							debug_log(__METHOD__
+								." ERROR: $msg "
+								, logger::ERROR
+							);
+							continue;
+						}
+					}else{
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: $table - $id "
+							, logger::ERROR
+						);
+					}
+				}
+
+				// log info each 1000
+					if ($i_ref===0) {
+						debug_log(__METHOD__
+							. " Partial update of section data table: $table - id: $id - total: $max - time min: ".exec_time_unit($start_time,'min')
+							, logger::DEBUG
+						);
+
+						// clean vars
+						// unset($result);
+						// let GC do the memory job
+						time_nanosleep(0, 5000); // Slept for 5000 nanoseconds
+						// Forces collection of any existing garbage cycles
+						gc_collect_cycles();
+					}
+
+				// reset counter
+					$i_ref++;
+					if ($i_ref > 1001) {
+						$i_ref = 0;
+					}
+			}
+			#break; // stop now
+
+			// let GC do the memory job
+			sleep(1);
+			// Forces collection of any existing garbage cycles
+			gc_collect_cycles();
+		}//end foreach ($ar_tables as $key => $table)
+
+
+		return true;
+	}//end convert_table_data
+
+
+
+	/**
+	* CHECK_SECTION_DATA
+	* check the section data in JSON for missing properties
+	* like section_tipo, section_id, created_date, created_by_userID
+	* @param string|int id
+	* @param string $table
+	* @param string|int $section_id
+	* @param string $section_tipo
+	* @param object &$datos
+	* 	Passed by reference !
+	* @return bool $section_to_save
+	* 	If true, an update of the database will be performed
+	*/
+	public static function check_section_data(string|int $id, string $table, string|int $section_id, string $section_tipo, object &$datos) : bool {
+
+		$section_to_save = false;
+
+		if(!isset($datos->section_id)){
+			$datos->section_id = $section_id;
+			$section_to_save = true;
+		}
+
+		if(!isset($datos->section_tipo)){
+			$datos->section_tipo = $section_tipo;
+			$section_to_save = true;
+		}
+
+		if(!isset($datos->created_date) || !isset($datos->created_by_userID)) {
+
+			$tm_strQuery = "
+				SELECT \"timestamp\", \"userID\" FROM matrix_time_machine
+				WHERE section_id = '$section_id'
+				AND section_tipo = '$section_tipo'
+				ORDER BY \"timestamp\" ASC
+				LIMIT 1
+			";
+			$result = JSON_RecordDataBoundObject::search_free($tm_strQuery);
+			// query error case
+			if($result!==false) {
+
+				// num_rows. Empty case
+				$n_rows = pg_num_rows($result);
+				if ($n_rows>0) {
+
+					// get columns
+					while($rows = pg_fetch_assoc($result)) {
+						$timestamp	= $rows['timestamp'];
+						$userID		= $rows['userID'];
+					}
+
+					debug_log(__METHOD__
+						. " Getting row from time_machine DB " . PHP_EOL
+						. ' timestamp: ' . to_string($timestamp) . PHP_EOL
+						. ' userID: ' . to_string($userID)
+						, logger::WARNING
+					);
+
+					if(!isset($datos->created_date)) {
+						$datos->created_date = $timestamp;
+						$section_to_save = true;
+					}
+
+					if(!isset($datos->created_by_userID)) {
+						$datos->created_by_userID = $userID;
+						$section_to_save = true;
+					}
+				}//end if ($n_rows>0)
+			}//end if($result!==false)
+		}//end if(!isset($datos->created_date) || !isset($datos->created_by_userID))
+
+		// save section if changes are made
+		if($section_to_save === true) {
+
+			$section_data_encoded = json_handler::encode($datos);
+
+			$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+			$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+			if($result===false) {
+				$msg = "Failed Update section_data section_id: $section_id of $section_tipo in table: $table ";
+				debug_log(__METHOD__
+					." ERROR: $msg "
+					, logger::ERROR
+				);
+			}
+
+			$msg = "Changed section_data section_id: $section_id of $section_tipo in table: $table to add some missing values";
+			debug_log(__METHOD__
+				." ERROR: $msg "
+				, logger::WARNING
+			);
+		}
+
+		return $section_to_save;
+	}//end check_section_data
 
 
 

@@ -10,7 +10,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {keyup_handler, remove_handler} from './render_edit_component_input_text.js'
-
+	import {get_dataframe} from '../../component_common/js/component_common.js'
 
 
 /**
@@ -138,7 +138,7 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					ui.component.activate(self)
+					ui.component.activate(self, false)
 				}
 			})
 		// keyup event
@@ -215,6 +215,31 @@ const get_content_value = (i, current_value, self) => {
 			})
 		}// end if(mode)
 
+
+	// component_dataframe
+		if(self.properties.has_dataframe){
+
+			content_value.classList.add('has_dataframe')
+
+			get_dataframe({
+				self			: self,
+				section_id		: self.section_id,
+				section_tipo	: self.section_tipo,
+				// tipo_key		: self.tipo,
+				section_id_key	: i,
+				view 			: self.view
+			})
+			.then(async function(component_dataframe){
+
+				if(component_dataframe){
+
+					self.ar_instances.push(component_dataframe)
+					const dataframe_node = await component_dataframe.render()
+
+					content_value.appendChild(dataframe_node)
+				}
+			})
+		}
 
 	return content_value
 }//end get_content_value

@@ -338,7 +338,7 @@ export const get_buttons = (self) => {
 						title			: label,
 						parent			: fragment
 					})
-					button_edit.addEventListener('click', function(e){
+					button_edit.addEventListener('mousedown', function(e){
 						e.stopPropagation()
 
 						// open a new window
@@ -369,7 +369,8 @@ export const get_buttons = (self) => {
 				class_name		: 'button reset',
 				parent			: fragment
 			})
-			button_reset.addEventListener('click', function() {
+			button_reset.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
 
 				if (self.data.value.length===0) {
 					return true

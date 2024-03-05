@@ -151,9 +151,15 @@ render_menu.prototype.edit = async function() {
 	// application lang selector
 		const lang_datalist = page_globals.dedalo_application_langs
 		const dedalo_aplication_langs_selector = ui.build_select_lang({
-			// id		: 'dd_app_lang',
 			langs		: lang_datalist,
-			action		: change_lang,
+			action		: function(e) {
+				// executed on change event
+				e.preventDefault()
+				change_lang({
+					lang_type	: 'dedalo_application_lang',
+					lang_value	: this.value
+				})
+			},
 			selected	: page_globals.dedalo_application_lang,
 			class_name	: 'reset_input dedalo_aplication_langs_selector top_item'
 		})
@@ -161,20 +167,29 @@ render_menu.prototype.edit = async function() {
 		fragment.appendChild(dedalo_aplication_langs_selector)
 
 	// data lang selector
-		const lang_datalist_data = lang_datalist.map(item =>{
-			return {
-				label	: (get_label.data || 'data') + ': ' + item.label,
-				value	: item.value
-			}
-		})
-		const dedalo_data_langs_selector = ui.build_select_lang({
-			// id		: 'dd_data_lang',
-			langs		: lang_datalist_data,
-			action		: change_lang,
-			selected	: page_globals.dedalo_data_lang,
-			class_name	: 'reset_input dedalo_aplication_langs_selector data top_item'
-		})
-		fragment.appendChild(dedalo_data_langs_selector)
+		const show_data_lang_selector = page_globals.dedalo_data_lang_selector ?? false
+		if (show_data_lang_selector) {
+			const lang_datalist_data = lang_datalist.map(item =>{
+				return {
+					label	: (get_label.data || 'data') + ': ' + item.label,
+					value	: item.value
+				}
+			})
+			const dedalo_data_langs_selector = ui.build_select_lang({
+				langs		: lang_datalist_data,
+				action		: function(e) {
+					// executed on change event
+					e.preventDefault()
+					change_lang({
+						lang_type	: 'dedalo_data_lang',
+						lang_value	: this.value
+					})
+				},
+				selected	: page_globals.dedalo_data_lang,
+				class_name	: 'reset_input dedalo_aplication_langs_selector data top_item'
+			})
+			fragment.appendChild(dedalo_data_langs_selector)
+		}
 
 	// menu_spacer
 		const menu_spacer = ui.create_dom_element({
@@ -328,22 +343,25 @@ const render_debug_info_bar = (self) => {
 /**
 * CHANGE_LANG
 * Exec API request of selected lang (e.target.value)
-* @param event e
+* @param object options
+* 	{
+* 		lang_type	: 'dedalo_data_lang',
+*		lang_value	: 'lg-spa'
+* 	}
 * @return promise
 * 	API request response
 */
-const change_lang = async function(e) {
-	e.stopPropagation()
-	e.preventDefault()
+const change_lang = async function(options) {
+
+	// options
+		const lang_type		= options.lang_type
+		const lang_value	= options.lang_value
 
 	// set page style as loading
 		const main = document.getElementById('main')
 		if (main) {
 			main.classList.add('loading')
 		}
-
-	// current_lang value
-		const current_lang = e.target.value
 
 	// api call
 		const api_response = await data_manager.request({
@@ -352,8 +370,7 @@ const change_lang = async function(e) {
 				action	: 'change_lang',
 				dd_api	: 'dd_utils_api',
 				options	: {
-					dedalo_data_lang		: current_lang,
-					dedalo_application_lang	: e.target.id==='dd_data_lang' ? null : current_lang
+					[lang_type] : lang_value
 				}
 			}
 		})
@@ -361,7 +378,7 @@ const change_lang = async function(e) {
 	// reload window
 		window.location.reload(false);
 
-	//event_manager.publish('user_navigation', {lang: current_lang})
+	// event_manager.publish('user_navigation', {lang: current_lang})
 
 	return api_response
 }//end change_lang

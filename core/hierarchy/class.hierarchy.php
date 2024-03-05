@@ -219,7 +219,7 @@ class hierarchy {
 
 		// virtual section . Thesaurus term
 			$current_parent = ($is_toponymy===true)
-				? 'dd101'
+				? 'hierarchy121'
 				: DEDALO_THESAURUS_VIRTUALS_AREA_TIPO;
 
 			$default_section_tipo_term  = self::get_default_section_tipo_term($tld2);
@@ -251,12 +251,16 @@ class hierarchy {
 		// only for thesaurus alias (hierarchy20)
 		if ($real_section_tipo===DEDALO_THESAURUS_SECTION_TIPO) {
 
+			$current_model_parent = ($is_toponymy===true)
+				? 'hierarchy122'
+				: DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;
+
 			// virtual section model . model term
 				$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
 
 				$options = new stdClass();
 					$options->terminoID		= $default_section_tipo_model;	// $tld2.'2';
-					$options->parent		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	// 'dd101';
+					$options->parent		= $current_model_parent;	// 'dd101';
 					$options->modelo		= 'dd6';
 					$options->esmodelo		= 'no';
 					$options->esdescriptor	= 'si';

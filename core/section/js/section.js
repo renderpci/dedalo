@@ -919,8 +919,9 @@ export const get_section_records = async function(options) {
 						: tag_id_add
 				}
 
+		// matrix_id. time machine matrix_id
 			// time machine options
-				if (self.model==='service_time_machine') {
+				if (self.model==='service_time_machine' || self.matrix_id) {
 					instance_options.matrix_id = locator.matrix_id || self.matrix_id
 					// // instance_options.matrix_id = (self.model==='section')
 					// instance_options.matrix_id = (self.model==='service_time_machine')

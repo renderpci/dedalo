@@ -85,12 +85,15 @@ const get_content_data_edit = function(self) {
 		const inputs_value	= (value.length>0) ? value : [null] // force one empty input at least
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
-			const content_value = (self.permissions===1)
-				? get_content_value(i, inputs_value[i], self)
-				: get_content_value(i, inputs_value[i], self)
-			content_data.appendChild(content_value)
-			// set pointer
-			content_data[i] = content_value
+			// used setTimeout to force new separate task
+			setTimeout(function(){
+				const content_value = (self.permissions===1)
+					? get_content_value(i, inputs_value[i], self)
+					: get_content_value(i, inputs_value[i], self)
+				content_data.appendChild(content_value)
+				// set pointer
+				content_data[i] = content_value
+			}, 0)
 		}
 
 
@@ -130,6 +133,7 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'posterframe',
 			parent			: content_value
 		})
+		posterframe.setAttribute('height', 392)
 		posterframe.addEventListener('error', function(e) {
 			if (posterframe.src!==page_globals.fallback_image) {
 				posterframe.src = page_globals.fallback_image
@@ -258,6 +262,7 @@ const build_video_node = (posterframe_url) => {
 		video.controls	= true
 		video.classList.add('posterframe')
 		video.setAttribute('tabindex', 0)
+		video.setAttribute('height', 392)
 		video.appendChild(source)
 
 	// keyup event

@@ -1,0 +1,10 @@
+/**
+* component_dataframe
+*
+* Included from main.less file
+*/
+.component_dataframe {
+  background-color: #50f9af;
+  width: 3rem;
+  overflow: hidden;
+}

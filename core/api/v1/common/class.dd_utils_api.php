@@ -279,13 +279,24 @@ final class dd_utils_api {
 
 		// options
 			$options					= $rqo->options;
-			$dedalo_data_lang			= $options->dedalo_data_lang ?? null;
-			$dedalo_application_lang	= $options->dedalo_application_lang ?? null;
+			$dedalo_data_lang			= $options->dedalo_data_lang ?? null; // DEDALO_DATA_LANG;
+			$dedalo_application_lang	= $options->dedalo_application_lang ?? null; // DEDALO_APPLICATION_LANG;
 
 		// response
 			$response = new stdClass();
 				$response->result	= true;
 				$response->msg		= 'OK. Request done ['.__METHOD__.']';
+
+		// dedalo_data_lang_sync
+			if (defined('DEDALO_DATA_LANG_SYNC') && DEDALO_DATA_LANG_SYNC===true) {
+				if (!empty($dedalo_application_lang)) {
+					// data_lang from application_lang
+					$dedalo_data_lang = $dedalo_application_lang;
+				}else if (!empty($dedalo_data_lang)) {
+					// application_lang from data_lang
+					$dedalo_application_lang = $dedalo_data_lang;
+				}
+			}
 
 		// dedalo_data_lang
 			if (!empty($dedalo_data_lang)) {
@@ -311,7 +322,9 @@ final class dd_utils_api {
 			// or, when current lang is not cached yet (on user change data lang in menu)
 			// cache_file_name. Like 'cache_tree_'.DEDALO_DATA_LANG.'.json'
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path']) && login::is_logged()===true) {
-				$cache_file_name = component_security_access::get_cache_tree_file_name($dedalo_data_lang);
+				$cache_file_name = component_security_access::get_cache_tree_file_name(
+					$dedalo_application_lang ?? DEDALO_APPLICATION_LANG
+				);
 				// check if cache file already exists
 				$cache_file_exists = dd_cache::cache_file_exists((object)[
 					'file_name' => $cache_file_name

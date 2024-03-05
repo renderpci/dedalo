@@ -26,12 +26,38 @@
 
 namespace rdfInterface;
 
+use Iterator;
+use IteratorAggregate;
+
 /**
  *
  * @author zozlak
  * @extends \Iterator<int, TermInterface>
  */
-interface TermIteratorInterface extends \Iterator {
+interface TermIteratorInterface extends Iterator {
 
     public function current(): TermInterface | null;
+
+    public function contains(TermCompareInterface $term): bool;
+
+    /**
+     * 
+     * @param array<TermInterface>|Iterator<TermInterface>|IteratorAggregate<TermInterface>|TermInterface $terms
+     * @return self
+     */
+    public function skip(array | Iterator | IteratorAggregate | TermInterface $terms): self;
+
+    /**
+     * 
+     * @param array<TermInterface>|Iterator<TermInterface>|IteratorAggregate<TermInterface>|TermInterface $terms
+     * @return self
+     */
+    public function intersect(array | Iterator | IteratorAggregate | TermInterface $terms): self;
+
+    /**
+     * Extracts values of all terms and returns them as an array.
+     * 
+     * @return array<string>
+     */
+    public function getValues(): array;
 }

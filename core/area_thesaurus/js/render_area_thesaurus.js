@@ -35,7 +35,8 @@ render_area_thesaurus.prototype.list = async function(options) {
 		const render_level = options.render_level || 'full'
 
 	// ts_object. Is a global page var
-		// set mode. Note that ts_object is NOT an instance
+		// set thesaurus_mode. Note that ts_object is NOT an instance
+		// values: relation|default
 		self.ts_object.thesaurus_mode = self.context?.thesaurus_mode || null
 		// caller set
 		self.ts_object.caller = self
@@ -157,9 +158,12 @@ const render_content_data = function(self) {
 			const typology_item = typology_nodes[i]
 
 			// thesaurus_type_block li
+				const add_css = self.thesaurus_view_mode==='model'
+					? ' model'
+					: ''
 				const li = ui.create_dom_element({
 					element_type	: 'li',
-					class_name		: 'thesaurus_type_block',
+					class_name		: 'thesaurus_type_block' + add_css,
 					parent			: ul
 				})
 
@@ -211,11 +215,11 @@ const render_content_data = function(self) {
 							element_type	: 'div',
 							class_name		: 'wrap_ts_object hierarchy_root_node',
 							dataset			: {
-												node_type			: 'hierarchy_node',
-												section_tipo		: hierarchy_sections_item.section_tipo,
-												section_id			: hierarchy_sections_item.section_id,
-												target_section_tipo	: hierarchy_sections_item.target_section_tipo
-											  },
+								node_type			: 'hierarchy_node',
+								section_tipo		: hierarchy_sections_item.section_tipo,
+								section_id			: hierarchy_sections_item.section_id,
+								target_section_tipo	: hierarchy_sections_item.target_section_tipo
+							},
 							parent			: typology_container
 						})
 
@@ -224,9 +228,9 @@ const render_content_data = function(self) {
 							element_type	: 'div',
 							class_name		:'children_container',
 							dataset			: {
-												section_id	: hierarchy_sections_item.section_id,
-												role		: 'children_container'
-											  },
+								section_id	: hierarchy_sections_item.section_id,
+								role		: 'children_container'
+							},
 							parent			: hierarchy_wrapper
 						})
 
@@ -239,13 +243,15 @@ const render_content_data = function(self) {
 						// link_children
 						const link_children = ui.create_dom_element({
 							element_type	: 'div',
-							dataset			: {tipo : hierarchy_sections_item.children_tipo},
+							dataset			: {
+								tipo : hierarchy_sections_item.children_tipo
+							},
 							parent			: hierarchy_elements_container
 						})
 
 					// ts_object Get from API and render element
 						self.ts_object.get_children(link_children)
-						.then(function(response){
+						.then(()=>{
 							hierarchy_elements_container.remove()
 						})
 				}
