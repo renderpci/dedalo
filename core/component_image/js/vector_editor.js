@@ -23,7 +23,8 @@ export const vector_editor = function() {
 	// this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
 	// this.currentSegment			= this.mode = this.type = null
 	this.active_layer			= null
-	this.active_fill_color		= '#ffffff55'
+	this.active_fill_color		= '#ffffff'
+	this.active_opacity			= 0.3
 	this.button_color_picker	= null
 	this.selected_element		= null
 	this.shortcuts = [
@@ -43,6 +44,7 @@ export const vector_editor = function() {
 		{ key: 'alt+c', fn: () => { this.copySelected() } },
 		{ key: 'alt+v', fn: () => { this.pasteInCenter() } }
 	]
+
 
 	return true
 }//end component_image
@@ -403,11 +405,9 @@ vector_editor.prototype.create_rectangle = function () {
 		return false
 	}
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('rect')
 }
@@ -422,10 +422,9 @@ vector_editor.prototype.create_circle = function () {
 	stage.clearSelection()
 
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('ellipse')
 }
@@ -440,10 +439,9 @@ vector_editor.prototype.create_vector = function () {
 	stage.clearSelection()
 
 	// get the layer color and add transparency
-	const color = layer.layer_color;
-
 	// set the color to draw new rectangle
-	stage.setColor('fill', color)
+	stage.setColor('fill', layer.layer_color)
+	stage.setOpacity(0.3)
 
 	stage.setMode('path')
 
@@ -821,16 +819,19 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 					})
 				this.button_color_picker.addEventListener('mouseup', () =>{
 					color_wheel_contaniner.classList.toggle('hide')
-					this.color_picker.color.hexString = this.active_fill_color
+					this.color_picker.color.hexString	= this.active_fill_color
+					this.color_picker.color.alpha		= this.active_opacity
 				})
 				// color:change event callback
 				// color:change callbacks receive the current color and a changes object
 				const color_selected = (color, changes) =>{
 					if(this.selected_element !== null){
-						stage.setColor('fill', color.hex8String)
+						stage.setColor('fill', color.hexString)
+						stage.setOpacity(color.alpha)
 						// stage.setPaint('fill', color.hex8String)
 					}
-					this.button_color_picker.style.backgroundColor = color.hexString
+					this.button_color_picker.style.backgroundColor	= color.hexString
+					this.button_color_picker.style.opacity			= color.alpha
 					// update the instance with the new layer information, prepared to save
 					// (but is not saved directly, the user need click in the save button)
 					// self.update_draw_data()
@@ -893,12 +894,16 @@ vector_editor.prototype.set_color_picker = function() {
 		this.active_fill_color = (this.selected_element)
 			? this.selected_element.getAttribute('fill')
 			: stage.getColor('fill')
+		this.active_opacity = (this.selected_element)
+			? this.selected_element.getAttribute('opacity')
+			: stage.getOpacity()
 
 		if(this.button_color_picker){
 			// set the icon of color picker with the selected path color
 				this.button_color_picker.style.backgroundColor = this.active_fill_color
 			// set the color picker with the selected path color
-				this.color_picker.color.hexString = this.active_fill_color
+				this.color_picker.color.hexString	= this.active_fill_color
+				this.color_picker.color.alpha		= this.active_opacity
 		}
 
 }//end set_color_picker
@@ -954,14 +959,15 @@ vector_editor.prototype.load_data = function(self) {
 		this.active_layer = {
 			layer_id		: 0,
 			layer_data		: null,
-			layer_color		: '#ffffff55',
+			layer_color		: '#ffffff',
+			layer_opacity	: 1,
 			user_layer_name	: 'raster',
 			name 			: 'layer_0',
 			visible 		: true
 		}
 
 
-	// image
+		// image
 		// create new image node
 		const image_node	= new Image();
 
@@ -1038,7 +1044,8 @@ vector_editor.prototype.add_layer = function(self) {
 		const new_layer = {
 			layer_id		: layer_id,
 			layer_data		: null,
-			layer_color		: '#'+layer_color+'55',
+			layer_color		: '#'+layer_color,
+			layer_opacity 	: 0.3,
 			user_layer_name	: layer_name,
 			name 			: layer_name,
 			visible 		: true
