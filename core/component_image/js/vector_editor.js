@@ -182,6 +182,11 @@ vector_editor.prototype.init_canvas = async function(self) {
 	// init the the interface
 		this.render_tools_buttons(self);
 
+	// subscription to the full_screen change event
+	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
+		self.events_tokens.push(
+			event_manager.subscribe('full_screen_'+self.id,  this.update_canvas.bind(this))
+		)
 	return true
 }//end init_canvas
 
