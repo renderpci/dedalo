@@ -486,6 +486,57 @@ vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
 
 }
 
+
+/**
+* UPDATE_CANVAS
+* Fit the canvas and image to the space
+*/
+vector_editor.prototype.update_canvas = function(){
+
+	const stage	= this.stage
+	const zoom	= stage.getZoom()
+
+	const image_definition		= this.image_definition
+	const image_ratio			= image_definition.image_ratio
+
+	const image_container_size	= this.image_container.getBoundingClientRect()
+	const svg_canvas_size		= this.svg_canvas.getBoundingClientRect()
+
+	// re-calculate the image_contanier size
+	// const image_container_size	= image_container.getBoundingClientRect()
+	// use the image_ratio to calculate the width in relation to new height and update the image definition
+	const width = image_container_size.height * image_ratio
+	image_definition.width	= width
+	image_definition.height	= image_container_size.height
+	// clean the selectors, they will not scaled well
+	stage.clearSelection()
+	// update the stage to new size
+	// set the canvas zoom to fit the new image container size
+	stage.setBBoxZoom(
+		'canvas',
+		image_definition.width,
+		image_definition.height
+	)
+	// update the canvas with the new size (it use the previous zoom to set the canvas content)
+	const offset = stage.updateCanvas(
+		image_definition.width,
+		image_definition.height
+	)
+
+	const w = Math.max(svg_canvas_size.width, stage.contentW * zoom )
+	const h = Math.max(svg_canvas_size.height, stage.contentH * zoom )
+
+	const scroll_X = w / 2 - image_container_size.width / 2
+	const scroll_Y = h / 2 - image_container_size.height / 2
+
+	this.image_container.scrollLeft = scroll_X
+	this.image_container.scrollTop = scroll_Y
+
+	stage.updateCanvas(w, h)
+
+}
+
+
 /**
 * RENDER_TOOLS_BUTTONS
 * @return bool
