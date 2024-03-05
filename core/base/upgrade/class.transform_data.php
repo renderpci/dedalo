@@ -341,9 +341,9 @@ class transform_data {
 
 	/**
 	* UPDATE_DATAFRAME_TO_V6_1
-	* @return
+	* @return bool
 	*/
-	public static function update_dataframe_to_v6_1() {
+	public static function update_dataframe_to_v6_1() : bool {
 
 		$ar_tables = [
 			// 'new_matrix'
@@ -370,6 +370,7 @@ class transform_data {
 
 		update::convert_table_data($ar_tables, $action);
 
+		return true;
 	}//end update_dataframe_to_v6_1
 
 
@@ -555,6 +556,77 @@ class transform_data {
 
 		return $tm_ar_changed;
 	}//end fix_dataframe_tm
+
+
+
+	/**
+	* UPDATE_PAPER_LIB_DATA
+	* Removes Paper libdata from component_image (rsc29)
+	* @return bool
+	*/
+	public static function update_paper_lib_data() : bool {
+
+		$ar_tables = [
+			'matrix'
+		];
+		$action = 'transform_data::remove_paper_lib_data_rsc29';
+
+		update::convert_table_data($ar_tables, $action);
+
+		return true;
+	}//end update_paper_lib_data
+
+
+
+	/**
+	* REMOVE_PAPER_LIB_DATA_RSC29
+	* Removes Paper libdata from component_image (rsc29)
+	* @param object|null $datos
+	* @return object|null $datos
+	*  If null is returned, no changes will made
+	*/
+	public static function remove_paper_lib_data_rsc29(?object $datos) : ?object {
+
+		// fixed tipos
+			$section_tipo	= 'rsc170'; // resources images
+			$component_tipo	= 'rsc29'; // component_image
+
+		// filter section_tipo
+			if ($datos->section_tipo!==$section_tipo) {
+				return null;
+			}
+
+		// empty relations cases
+			if (empty($datos->components)) {
+				return null;
+			}
+
+		// check value
+			$lang = 'lg-nolan';
+			if (	!isset($datos->components->{$component_tipo})
+				 || !isset($datos->components->{$component_tipo}->dato)
+				 || !isset($datos->components->{$component_tipo}->dato->{$lang})
+				 || !isset($datos->components->{$component_tipo}->dato->{$lang}[0])
+				 || !isset($datos->components->{$component_tipo}->dato->{$lang}[0]->lib_data)
+				) {
+				return null;
+			}
+
+		// remove property if present
+			unset($datos->components->{$component_tipo}->dato->{$lang}[0]->lib_data);
+
+		// log
+			debug_log(__METHOD__
+				. ' Updating record ' . PHP_EOL
+				. ' section_tipo: ' . $datos->section_tipo . PHP_EOL
+				. ' section_id: ' . $datos->section_id . PHP_EOL
+				. ' component ' . $component_tipo .' : ' . to_string($datos->components->{$component_tipo}->dato->{$lang}[0])
+				, logger::WARNING
+			);
+
+
+		return $datos;
+	}//end remove_paper_lib_data_rsc29
 
 
 
