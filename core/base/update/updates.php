@@ -22,7 +22,11 @@ $updates->$v = new stdClass();
 	// alert
 		$alert					= new stdClass();
 		$alert->notification	= 'V '.$v;
-		$alert->command			= '';
+		$alert->command			= '<h1>🧐 Before apply this update: </h1> <br><br>
+		1 - Update Dédalo code to version >=6.1 <br>
+		2 - Update Ontology <br>
+		3 - After previous steps are concluded in the order given, you can apply this update
+		';
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
@@ -214,7 +218,6 @@ $updates->$v = new stdClass();
 				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'be2';
 			");
 
-
 	// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
@@ -222,6 +225,15 @@ $updates->$v = new stdClass();
 				$script_obj->info			= "Remove unused section data and update/clean some properties";
 				$script_obj->script_class	= "transform_data";
 				$script_obj->script_method	= "update_dataframe_to_v6_1";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Removes Paper libdata from component_image (rsc29)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_paper_lib_data";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
