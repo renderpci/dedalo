@@ -1068,7 +1068,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			})
 			layer_li.addEventListener('click', (e) =>{
 				e.preventDefault()
-
+				data_tag.label = layer.layer_id
 				data_tag.data = [layer.layer_id]
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
 				text_editor.set_content(tag)
