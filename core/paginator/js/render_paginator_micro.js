@@ -86,17 +86,15 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
-	await self.get_total()
+	// total
+		const total = await self.get_total()
 
 	// build vars
-		const total				= self.caller.total
-		// const limit			= self.get_limit()
-		// const offset			= self.get_offset()
-
 		const total_pages		= self.total_pages
 		const page_number		= self.page_number
 		const prev_page_offset	= self.prev_page_offset
@@ -232,7 +230,7 @@ const get_content_data = async function(self) {
 		}
 
 	// reset paginator
-		 if(self.show_all_status) {
+		if(self.show_all_status) {
 			const reset_paginator_button = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'reset_paginator_button',
