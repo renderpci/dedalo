@@ -253,7 +253,7 @@ const get_content_data = async function(self) {
 			const locale = 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
 			const total_pages_node	= ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'page_info',
+				class_name		: 'page_info inactive',
 				inner_html		: ` Loading data ...  `,
 				parent			: paginator_info
 			})
@@ -261,6 +261,7 @@ const get_content_data = async function(self) {
 			const update_total_pages = (value) => {
 				const total_pages_label	= new Intl.NumberFormat(locale, {}).format(value);
 				total_pages_node.innerHTML = (get_label.of || 'of') + ` ${total_pages_label}`
+				total_pages_node.classList.remove('inactive')
 			}
 			active_values.push({
 				name		: 'total_pages',

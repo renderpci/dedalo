@@ -74,7 +74,9 @@ view_default_list_input_text.render = async function(self, options) {
 			})
 		}
 
-		for (var i = 0; i < fallback.length; i++) {
+		const fallback_length = fallback.length
+		for (let i = 0; i < fallback_length; i++) {
+
 			const value_string = fallback[i] + transliterate_value
 
 			const content_value = ui.create_dom_element({
@@ -84,32 +86,37 @@ view_default_list_input_text.render = async function(self, options) {
 			})
 
 			// component_dataframe
-			if(self.properties.has_dataframe){
-				content_value.classList.add('has_dataframe')
+				if(self.properties.has_dataframe) {
 
-				const component_dataframe = await get_dataframe({
-					self			: self,
-					section_id		: self.section_id,
-					section_tipo	: self.section_tipo,
-					// tipo_key		: self.tipo,
-					section_id_key	: i
-				})
-					if(component_dataframe){
+					content_value.classList.add('has_dataframe')
+
+					const component_dataframe = await get_dataframe({
+						self			: self,
+						section_id		: self.section_id,
+						section_tipo	: self.section_tipo,
+						// tipo_key		: self.tipo,
+						section_id_key	: i
+					})
+					if(component_dataframe) {
+						// add dataframe to existing component instances
 						self.ar_instances.push(component_dataframe)
-						const dataframe_node = await component_dataframe.render()
-						content_value.appendChild(dataframe_node)
+						// render dataframe
+						component_dataframe.render()
+						.then(function(dataframe_node){
+							content_value.appendChild(dataframe_node)
+						})
 					}
-			}
+				}
 
-			if( i !== value.length -1 ){
-				// separator
-				const fields_separator = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: self.context.fields_separator,
-					parent			: content_value
-				})
-			}
-
+			// separator
+				if( i < value.length -1 ) {
+					// separator
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: self.context.fields_separator,
+						parent			: content_value
+					})
+				}
 		}
 
 

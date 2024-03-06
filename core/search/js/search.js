@@ -936,7 +936,7 @@ search.prototype.update_state = async function(options) {
 				// paginator_node (could exist or not --area_thesaurus case--)
 					const paginator_node = caller_instance?.paginator?.node || null
 					if (paginator_node) {
-						paginator_node.classList.add('hide')
+						paginator_node.classList.add('loading')
 					}
 
 				// section. refresh current section and set history navigation
@@ -952,9 +952,9 @@ search.prototype.update_state = async function(options) {
 							if (paginator_node) {
 								// caller_instance.paginator.refresh()
 								// .then(function(){
-								// 	paginator_node.classList.remove('hide')
+								// 	paginator_node.classList.remove('loading')
 								// })
-								paginator_node.classList.remove('hide')
+								paginator_node.classList.remove('loading')
 							}
 					})
 

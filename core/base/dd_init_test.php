@@ -243,6 +243,7 @@
 // MEDIA AV QUALITY FOLDERS
 	$ar_folder = DEDALO_AV_AR_QUALITY;
 	$ar_folder[] = 'posterframe'; // append posterframe as quality only to force iterate it
+	$ar_folder[] = 'subtitles'; // append subtitles as quality only to force iterate it
 	foreach ($ar_folder as $quality) {
 		$folder_path = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality;
 		if( !is_dir($folder_path) ) {
