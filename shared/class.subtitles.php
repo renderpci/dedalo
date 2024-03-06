@@ -86,6 +86,7 @@ abstract class subtitles {
 				$clean_sourceText				= subtitles::clean_text_for_subtitles($options->sourceText);
 			}
 
+
 		// Global char time in seconds (float)
 			subtitles::$charTime = subtitles::calculate_global_char_time(
 				$clean_sourceText_unrestricted,
@@ -94,6 +95,7 @@ abstract class subtitles {
 
 		// Calculate ar_lines
 			$ar_lines = subtitles::get_ar_lines($clean_sourceText);
+
 
 		// Fragment subtitles
 			if ($options->tc_in_secs!==false || $options->tc_out_secs!==false) {
@@ -319,6 +321,7 @@ abstract class subtitles {
 			}//end if(!preg_match($tcPattern, $value))
 		}//end foreach ($ar_fragments as $key => $value)
 
+
 		// ar_fragments
 			$ar_final	= array();
 			$length		= count($ar_fragments_formated);
@@ -401,7 +404,7 @@ abstract class subtitles {
 			$i=0;
 			do{
 				// First line
-				$current_line = mb_substr( $text, $refPos, $maxCharLine );
+				$current_line = mb_substr( $text, $refPos, $maxCharLine);
 
 				// search a blank space from end to begin . If n char of line < maxCharLine, this is the last line.
 				$line_length = subtitles::text_lenght($current_line);
@@ -570,7 +573,9 @@ abstract class subtitles {
 		$string = str_replace('</em>', '</i>', $string);
 		// $string = str_replace('<u>', '<u>', $string); # to implemented! now is a style with span
 		// $string = str_replace('</u>', '</u>', $string);
-		$string = str_replace(['&nbsp;'], [' '], $string);
+		$string = str_replace(['&nbsp;'], ' ', $string);
+		// remove UNICODE non-break character
+		$string = preg_replace( "~\x{00a0}~siu", " ", $string );
 
 		$options = new stdClass();
 			$options->deleteTC = false;
@@ -649,7 +654,7 @@ abstract class subtitles {
 	*/
 	public static function text_lenght(string $text) : int {
 
-		$text_lenght = mb_strlen($text, '8bit');
+		$text_lenght = mb_strlen($text);
 
 		return $text_lenght;
 	}//end text_lenght
