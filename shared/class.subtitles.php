@@ -66,8 +66,14 @@ abstract class subtitles {
 			$ar_mandatory = array('sourceText','maxCharLine');
 			foreach ($ar_mandatory as $value) {
 				if (empty($options->$value)) {
-					trigger_error("Unable build_subtitles_text. Few vars ($value)");
-					return false;
+					// trigger_error("Unable build_subtitles_text. Few vars ($value)");
+					$response->msg .= " Unable build_subtitles_text. Var '$value' is mandatory!";
+					debug_log(__METHOD__
+						. "  $response->msg " . PHP_EOL
+						. to_string()
+						, logger::DEBUG
+					);
+					return $response;
 				}
 			}
 			#$options->sourceText = $options->sourceText_unrestricted;
