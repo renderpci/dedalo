@@ -280,8 +280,6 @@ tool_transcription.prototype.build_subtitles = async function() {
 
 
 
-
-
 /**
 * AUTOMATIC_TRANSCRIPTION
 * Call the API to transcribe the audiovisual component with the source lang
