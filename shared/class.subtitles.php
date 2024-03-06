@@ -329,9 +329,9 @@ abstract class subtitles {
 				$tcin			= $ar_value['tcin'];
 				$tcout			= $ar_value['tcout'];
 				$text			= $ar_value['text'];
-				$is_last_Line	= ($i === $length-1) ? true : false;
+				// $is_last_Line	= ($i === $length-1) ? true : false;
 
-				$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout, $is_last_Line);
+				$ar_final[] = subtitles::fragment_split($text, $tcin, $tcout);
 			}//end for ($i=0; $i < $length	; $i++)
 
 		// Plain formatted array
@@ -359,7 +359,7 @@ abstract class subtitles {
 	* 	(tc tag like [TC_00:01:02_TC])
 	* @return array $ar_lines
 	*/
-	public static function fragment_split(string $text, ?string $tcin, ?string $tcout, bool $is_last_Line=false) : array {
+	public static function fragment_split(string $text, ?string $tcin, ?string $tcout) : array {
 
 		// empty case
 			if (empty($text)) {
@@ -369,7 +369,7 @@ abstract class subtitles {
 		// short vars
 			$siguiente_linea_add_b	= '';
 			$siguiente_linea_add_i	= '';
-			// $is_last_Line			= false;
+			$is_last_Line			= false;
 			$ar_lines				= array();
 			$refPos					= 0;
 			$offsetSecs				= OptimizeTC::TC2seg($tcin);
@@ -414,7 +414,7 @@ abstract class subtitles {
 					// }
 
 				// spacePos
-					if($is_last_Line === true || $line_length <= $maxCharLine) {
+					if( $line_length < $maxCharLine ) {
 
 						$spacePos		= $line_length;
 						$is_last_Line	= true;
