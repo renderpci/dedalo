@@ -407,8 +407,11 @@ class tool_transcription extends tool_common {
 			);
 			$dato			= $component_text_area->get_dato();
 			$text			= $dato[$key] ?? '';
-			// $source_text	= TR::deleteMarks($text);
 			$source_text	= trim($text);
+			if (empty($source_text)) {
+				$response->msg = 'Warning. Empty component value!';
+				return $response;
+			}
 
 		// component_av
 			$component_av_tipo	= $component_text_area->get_related_component_av_tipo();
