@@ -235,7 +235,7 @@ export const ui = {
 							if (e.altKey) {
 								e.preventDefault()
 								// common.render_tree_data(instance, document.getElementById('debug'))
-								console.log('/// selected instance:', instance);
+								console.log(`/// selected instance ${instance.model}:`, instance);
 								return
 							}
 						}
@@ -712,7 +712,7 @@ export const ui = {
 		* @return bool
 		* 	If component is undefined or already active return false, else true
 		*/
-		activate : async (component) => {
+		activate : async (component, focus=true) => {
 
 			// component mandatory check
 				if (typeof component==='undefined') {
@@ -756,26 +756,28 @@ export const ui = {
 				}
 
 			// try to focus first input
-				if (typeof component.focus_first_input==='function') {
-					// custom function from component like component_text_area
-					component.focus_first_input()
-				}else{
-					// generic try of first input node
-					const first_input = component.node.content_data && component.node.content_data[0]
-						? component.node.content_data[0].querySelector('input, select')
-						: null;
-					if (first_input) {
-						setTimeout(function(){
-							if (component.active && first_input !== document.activeElement) {
+				if (focus===true) {
+					if (typeof component.focus_first_input==='function') {
+						// custom function from component like component_text_area
+						component.focus_first_input()
+					}else{
+						// generic try of first input node
+						const first_input = component.node.content_data && component.node.content_data[0]
+							? component.node.content_data[0].querySelector('input, select')
+							: null;
+						if (first_input) {
+							setTimeout(function(){
+								if (component.active && first_input !== document.activeElement) {
 
-								// check another focus elements like q_operator
-								if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-									return
+									// check another focus elements like q_operator
+									if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+										return
+									}
+
+									first_input.focus()
 								}
-
-								first_input.focus()
-							}
-						}, 25)
+							}, 25)
+						}
 					}
 				}
 
@@ -2144,7 +2146,7 @@ export const ui = {
 	attach_to_modal : (options) => {
 
 		// options
-			const header	= options.header
+			const header = options.header
 				? (typeof options.header==='string')
 					? ui.create_dom_element({ // string case. auto-create the header node
 						element_type	: 'div',
@@ -2153,7 +2155,7 @@ export const ui = {
 					  })
 					: options.header // DOM node
 				: null
-			const body	= options.body
+			const body = options.body
 				? (typeof options.body==='string')
 					? ui.create_dom_element({ // string case. auto-create the body node
 						element_type	: 'div',
@@ -2162,7 +2164,7 @@ export const ui = {
 					  })
 					: options.body // DOM node
 				: null
-			const footer	= options.footer
+			const footer = options.footer
 				? (typeof options.footer==='string')
 					? ui.create_dom_element({ // string case. auto-create the footer node
 						element_type	: 'div',
@@ -2329,7 +2331,8 @@ export const ui = {
 				'component_publication',
 				'component_info',
 				'component_radio_button',
-				'component_section_id'
+				'component_section_id',
+				'component_dataframe'
 			]
 
 		// short vars
@@ -2340,8 +2343,7 @@ export const ui = {
 		// first_ddo
 			const first_ddo = ddo_map.find(el =>
 				el.model.indexOf('component_')!==-1 &&
-				!avoid_models.includes(el.model) &&
-				!el.is_dataframe
+				!avoid_models.includes(el.model)
 			)
 			if (!first_ddo) {
 				if(SHOW_DEBUG===true) {
@@ -3074,7 +3076,7 @@ export const ui = {
 	* 	Usually the component wrapper
 	* @return bool
 	*/
-	enter_fullscreen : function(node) {
+	enter_fullscreen : function(node, exit_callback) {
 
 		// check if node is inside modal
 		// Remove dd-modal class list 'center' in this case
@@ -3110,6 +3112,9 @@ export const ui = {
 			node.classList.remove('fullscreen')
 			menu_wrapper.classList.remove('hide')
 			exit_button.remove()
+			if(exit_callback){
+				exit_callback()
+			}
 		})
 
 		// set exit event
@@ -3123,6 +3128,9 @@ export const ui = {
 					menu_wrapper.classList.remove('hide')
 				}
 				exit_button.remove()
+				if(exit_callback){
+					exit_callback()
+				}
 			}
 		}
 
@@ -3184,6 +3192,7 @@ export const ui = {
 			const preserve_content	= options.preserve_content || false
 			const replace_container = options.replace_container || false
 			const label				= options.label || ''
+			const model				= options.model || null
 			const callback			= options.callback
 			const style				= options.style
 
@@ -3194,10 +3203,15 @@ export const ui = {
 				}
 			}
 
+		// placeholder_class
+			const placeholder_class = model
+				? ' ' + model + '_placeholder'
+				: ''
+
 		// container_placeholder
 			const container_placeholder = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'container container_placeholder ' + label,
+				class_name		: 'container container_placeholder' + placeholder_class,
 				inner_html		: (get_label.loading || 'Loading') + ' ' + label,
 				parent			: container
 			})
@@ -3230,6 +3244,56 @@ export const ui = {
 
 		return result_node
 	},//end load_item_with_spinner
+
+
+
+	/**
+	* GET_TEXT_COLOR
+	* Calculate dynamic text color based on background
+	* Always return a black or white color, the most
+	* appropriated in current case for good visibility
+	* @see https://wunnle.com/dynamic-text-color-based-on-background
+	* @return string text_color
+	* 	"#ffffff" | "#000000"
+	*/
+	get_text_color : function(background_color) {
+
+		function getRGB(c) {
+		  return parseInt(c, 16) || c;
+		}
+
+		function getsRGB(c) {
+		  return getRGB(c) / 255 <= 0.03928
+			? getRGB(c) / 255 / 12.92
+			: Math.pow((getRGB(c) / 255 + 0.055) / 1.055, 2.4);
+		}
+
+		function getLuminance(hexColor) {
+		  return (
+			0.2126 * getsRGB(hexColor.substr(1, 2)) +
+			0.7152 * getsRGB(hexColor.substr(3, 2)) +
+			0.0722 * getsRGB(hexColor.substr(-2))
+		  );
+		}
+
+		function getContrast(f, b) {
+		  const L1 = getLuminance(f);
+		  const L2 = getLuminance(b);
+		  return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+		}
+
+		function getTextColor(bgColor) {
+		  const whiteContrast = getContrast(bgColor, "#ffffff");
+		  const blackContrast = getContrast(bgColor, "#000000");
+
+		  return whiteContrast > blackContrast ? "#ffffff" : "#000000";
+		}
+
+		const text_color = getTextColor(background_color)
+
+
+		return text_color;
+	},//end get_text_color
 
 
 

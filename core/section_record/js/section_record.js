@@ -207,6 +207,13 @@ const build_instance = async (self, context, section_id, current_data, column_id
 				instance_options.column_id = column_id
 			}
 
+		// dataframe
+			instance_options.id_variant = (instance_options.model==='component_dataframe')
+				// ? `${section_record_id_variant}_${current_data.tipo_key}_${current_data.section_id_key}`
+				? `${section_record_id_variant}_${current_data.section_id_key}`
+				: instance_options.id_variant
+
+
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
 		const current_instance = await instances.get_instance(instance_options)
 		if(!current_instance || typeof current_instance.build!=='function'){
@@ -261,10 +268,19 @@ section_record.prototype.get_ar_instances_edit = async function() {
 		// const items = (mode==="list")
 		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===tipo && el.mode===mode)
 		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===tipo && el.mode===mode)
-		const items = self.datum.context.filter(el => el.section_tipo===section_tipo
-											 && el.parent===tipo
-											 && (el.type==='component' || el.type==='grouper')
-											 && el.mode===mode)
+
+		const items = (self.caller.model === 'section')
+			? self.datum.context.filter(el =>
+				el.section_tipo===section_tipo
+				&& el.parent===tipo
+				&& (el.type==='component' || el.type==='grouper')
+				&& el.model!=='component_dataframe' //
+				&& el.mode===mode)
+			: self.datum.context.filter(el =>
+				el.section_tipo===section_tipo
+				&& el.parent===tipo
+				&& (el.type==='component' || el.type==='grouper')
+				&& el.mode===mode)
 
 	// instances
 		const ar_promises	= []
@@ -282,7 +298,14 @@ section_record.prototype.get_ar_instances_edit = async function() {
 				const current_promise = new Promise(function(resolve){
 
 					const current_context	= items[i]
-					const current_data		= self.get_component_data(current_context, current_context.section_tipo, section_id)
+
+					const current_data		= self.get_component_data({
+						ddo				: current_context,
+						section_tipo	: current_context.section_tipo,
+						section_id		: (current_context.model==='component_dataframe')
+							? self.caller.section_id
+							: self.section_id
+					})
 
 					build_instance(
 						self,
@@ -334,9 +357,10 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 		// const mode			= self.mode
 		// const tipo			= self.tipo
 		// const section_tipo	= self.section_tipo
-		const section_id		= self.section_id
-		const matrix_id			= self.matrix_id // time machine case only
-		const columns_map		= await self.columns_map || []
+		// const section_id	= self.section_id
+
+		const matrix_id		= self.matrix_id // time machine case only
+		const columns_map	= await self.columns_map || []
 
 	// request config
 	// get the request_config with all ddo, it will be use to create the instances
@@ -371,15 +395,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 					for (let k = 0; k < ar_first_level_ddo_len; k++) {
 
 						const current_ddo = ar_first_level_ddo[k]
-						// By default section_tipo will be the section_tipo of the locator
-						// but when ddo define is_dataframe (subsection to use as data_frame)
-						// the section_tipo need to be the section_tipo of the ddo
-						// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
-						// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
-						// the locator that conform the section_record
-						const section_tipo = (current_ddo.is_dataframe)
-							? current_ddo.section_tipo
-							: self.section_tipo
+
 						// if the ddo has column_id (normally all component have it, you can see it in common.js get_columns() method)
 						if(current_ddo.column_id && current_ddo.column_id===current_column.id){
 
@@ -392,13 +408,27 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							// add to the ddo to the column
 								ar_column_ddo.push(current_ddo)
 
+								// NOTE: about component_dataframe
+								// By default section_tipo will be the section_tipo of the locator
+								// but when ddo is a componet_dataframe (subsection to use as data_frame)
+								// the section_tipo need to be the section_tipo of the ddo
+								// (section_tipo has not really record in DDBB and his totally dependent of the caller locator section_id)
+								// Note: it's not the scenario of multiple section_tipo as fr1, es1 when section_record it depends of
+								// the locator that conform the section_record
+								const section_tipo		= (current_ddo.model==='component_dataframe')
+									? current_ddo.section_tipo
+									: self.section_tipo
+								const section_id		= (current_ddo.model==='component_dataframe')
+									? self.caller.section_id
+									: self.section_id
+
 							// current_data. get the component data to assign to it and create the instance
-								const current_data = self.get_component_data(
-									current_ddo,
-									section_tipo,
-									section_id,
-									matrix_id
-								)
+								const current_data = self.get_component_data({
+									ddo				: current_ddo,
+									section_tipo	: section_tipo,
+									section_id		: section_id,
+									matrix_id		: matrix_id
+								})
 
 							// unify section_tipo as array, to get context when component is inside a virtual section
 							// sometimes it will need to be compatible in multiple sections (array > 1) as toponymy sections (es1, fr1, etc)
@@ -509,10 +539,6 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 										new_context.mode = current_ddo.with_value.mode
 									}
 								}
-								// set is_dataframe property to be used by tools or other components
-								if(current_ddo.is_dataframe){
-									new_context.is_dataframe = current_ddo.is_dataframe
-								}
 
 							// instance create and set
 								const instance_data = current_ddo.model==='dd_grid'
@@ -554,9 +580,20 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 * @return object|null component_data
 * 	If no component data is found, a special component data for empty cases is created
 */
-section_record.prototype.get_component_data = function(ddo, section_tipo, section_id, matrix_id=null) {
+section_record.prototype.get_component_data = function(options) {
 
 	const self = this
+
+	const ddo				= options.ddo
+	const section_tipo		= options.section_tipo
+	const section_id		= options.section_id
+	const section_id_key	= (ddo.caller_dataframe)
+		? ddo.caller_dataframe.section_id_key
+		: self.section_id
+	const matrix_id			= options.matrix_id || null
+	// const tipo_key 			= (ddo.caller_dataframe)
+	// 	? ddo.caller_dataframe.tipo_key
+	// 	: self.tipo
 
 	// prevent no data elements find
 		if (ddo.model==='section_group') {
@@ -565,10 +602,26 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 	// component_data. Find in datum: tipo, section_tipo, section_id
 		const component_data = self.datum.data.find(function(el) {
-			if (el.tipo===ddo.tipo && // match tipo
-				parseInt(el.section_id)===parseInt(section_id) && // match section_id
-				el.section_tipo===section_tipo // match section_tipo
+
+			if( el.tipo 					=== ddo.tipo // match tipo
+				&& parseInt(el.section_id)	=== parseInt(section_id)  // match section_id
+				&& el.section_tipo			=== section_tipo // match section_tipo
 				) {
+
+				// time machine case
+				if (el.matrix_id && matrix_id) {
+
+					if (ddo.model==='component_dataframe') {
+						// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+						return (
+							parseInt(el.matrix_id)			=== parseInt(matrix_id)
+							&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
+							// && el.tipo_key					=== tipo_key
+						)
+					}
+					// console.error("match matrix_id:", el.matrix_id);
+					return parseInt(el.matrix_id)===parseInt(matrix_id)
+				}
 
 				// dataframe case
 				// if ddo is inside a dataframe get his data matching row_section_id of ddo with the section_id of the caller and his own section_tipo and section_id
@@ -576,18 +629,11 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				// has a dataframe with section_tipo = numisdata_1016 and section_id_8
 				// the match for components inside numisdata_1016 has to be ddo row_section_id === caller (portal) section_id
 				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
-				if (ddo.is_dataframe && el.row_section_id) {
+
+				if (ddo.model==='component_dataframe') {
 					// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
-
-					// (Changed 15-06-2023 by Paco to allow add terms viewing dataframe elements, -saving sequence-)
-					return parseInt(el.row_section_id)===parseInt(self.caller.section_id) // portal calling trough section
-						|| parseInt(el.row_section_id)===parseInt(self.section_id) // portal calling self alone
-				}
-
-				// time machine case
-				if (el.matrix_id && matrix_id) {
-					// console.error("match matrix_id:", el.matrix_id);
-					return parseInt(el.matrix_id)===parseInt(matrix_id)
+					return parseInt(el.section_id_key)===parseInt(section_id_key)
+						// && el.tipo_key===tipo_key
 				}
 
 				return true
@@ -609,11 +655,9 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 
 	// undefined case. If the current item don't has data will be instantiated with the current section_id
 		if(!component_data) {
-			// console.log('returning auto empty data for ddo:', ddo);
-			// console.log('self.datum.data:', self.datum.data);
 
 			// empty component data build
-			return {
+			const empty_data = {
 				tipo			: ddo.tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id,
@@ -621,6 +665,12 @@ section_record.prototype.get_component_data = function(ddo, section_tipo, sectio
 				value			: [],
 				fallback_value	: ['']
 			}
+
+			if (ddo.model==='component_dataframe') {
+				empty_data.section_id_key	= section_id_key
+				// empty_data.tipo_key			= tipo_key
+			}
+			return empty_data
 		}
 
 	return component_data

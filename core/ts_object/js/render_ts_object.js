@@ -92,7 +92,7 @@ export const render_ts_line = function(options) {
 						data_set		: children_dataset,
 						parent			: fragment
 					})
-					element_link_children.addEventListener('click', (e)=>{
+					element_link_children.addEventListener('mousedown', (e)=>{
 						e.stopPropagation()
 						self.toggle_view_children(element_link_children, e)
 					})
@@ -675,7 +675,7 @@ const render_id_column = function(options) {
 					title_label		: 'edit',
 					parent			: id_column_content
 				})
-				link_edit.addEventListener('click', (e)=>{
+				link_edit.addEventListener('mousedown', (e)=>{
 					e.stopPropagation()
 					self.edit(
 						link_edit,

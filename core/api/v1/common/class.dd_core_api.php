@@ -845,18 +845,15 @@ final class dd_core_api {
 		// options
 			$options = $rqo->options ?? null;
 
-		// permissions check (section self)
-			$permissions = ($delete_mode==='delete_dataframe')
-				? common::get_permissions($caller_dataframe->section_tipo, $section_tipo)
-				: common::get_permissions($section_tipo, $section_tipo);
+		// permissions check
+			$permissions = common::get_permissions($section_tipo, $section_tipo);
+
 			debug_log(__METHOD__
 				." to delete section. Permissions: $permissions ".to_string($section_tipo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {
-				$msg = ($delete_mode==='delete_dataframe')
-					? '[2] Insufficient permissions to delete dataframe (delete mode: '.$delete_mode.'): '.$permissions
-					: '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
+				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
 				$response->error = 2;
 				$response->msg 	.= $msg;
 				debug_log(__METHOD__
@@ -864,78 +861,6 @@ final class dd_core_api {
 					.' rqo: '.to_string($rqo)
 					, logger::ERROR
 				);
-				return $response;
-			}
-
-		// permissions (button delete). Ignore this check in delete_mode 'delete_dataframe'
-			if ($delete_mode!=='delete_dataframe') {
-				$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-					$section_tipo,
-					['button_delete'],
-					true, // bool from_cache
-					true, // bool resolve_virtual
-					true, // bool recursive
-					true, // bool search_exact
-					false // array|bool $ar_tipo_exclude_elements
-				);
-				if (!isset($ar_button_delete[0])) {
-					$msg = '[2] This section '.$section_tipo.' does not have a button delete. Unable to calculate delete permissions';
-					$response->error = 2;
-					$response->msg 	.= $msg;
-					debug_log(__METHOD__
-						." $response->msg " . PHP_EOL
-						.' rqo: '.to_string($rqo)
-						, logger::ERROR
-					);
-					return $response;
-				}
-				$button_delete_permissions = isset($ar_button_delete[0])
-					? common::get_permissions($section_tipo, $ar_button_delete[0])
-					: 0;
-				if ($button_delete_permissions<2) {
-					$msg = '[2] Insufficient button_delete_permissions to delete record (delete mode: '.$delete_mode.'): '.$button_delete_permissions;
-					$response->error = 2;
-					$response->msg 	.= $msg;
-					debug_log(__METHOD__
-						." $response->msg " . PHP_EOL
-						.' rqo: '.to_string($rqo)
-						, logger::ERROR
-					);
-					return $response;
-				}
-			}
-
-		// dataframe section case
-			if ($delete_mode==='delete_dataframe' && !empty($section_id)) {
-				$section = section::get_instance(
-					$section_id,
-					$section_tipo,
-					'list',
-					false,
-					$caller_dataframe
-				);
-				$deleted 	= $section->Delete($delete_mode);
-
-				if ($deleted!==true) {
-					$errors[] = (object)[
-						'section_tipo'	=> $section_tipo,
-						'section_id'	=> $section_id
-					];
-				}
-
-				$response->result		= [$section_id];
-				$response->error		= !empty($errors) ? $errors : null;
-				$response->delete_mode	= $delete_mode;
-				$response->msg			= !empty($errors)
-					? 'Some errors occurred when delete sections. delete_mode:' . $delete_mode
-					: 'OK. Request done successfully.';
-
-				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
-					.' rqo: '.to_string($rqo)
-					, logger::WARNING
-				);
-
 				return $response;
 			}
 
@@ -1008,7 +933,7 @@ final class dd_core_api {
 					: true; // default is true
 
 				// Delete method
-				$section 	= section::get_instance($current_section_id, $current_section_tipo);
+				$section 	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
 				$deleted 	= $section->Delete($delete_mode, $delete_diffusion_records);
 				if ($deleted!==true) {
 					$errors[] = (object)[
@@ -1862,19 +1787,121 @@ final class dd_core_api {
 						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
 						// }
 
-					// prevent edit mode set limit greater than 1
-						if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
-							$sqo->limit = 1;
-						}
 
-					// sections instance
-						$element = sections::get_instance(
-							null, // ?array $ar_locators
-							$sqo, // object $search_query_object = null
-							$tipo, // string $caller_tipo = null
-							$mode, // string $mode = 'list'
-							$lang // string $lang = DEDALO_DATA_NOLAN
-						);
+					// check if the search has a dataframe associated (time_machine of the component with dataframe)
+					// when the component has a dataframe need to be re_created using his own data with the dataframe data
+					// it will be showed as an unique component, the main component and his dataframe
+						if( $ddo_source->mode === 'tm'
+							&& isset($ddo_source->has_dataframe)
+							&& $ddo_source->has_dataframe=== true ){
+
+							$original_limit		= $sqo->limit;
+							$original_offset	= $sqo->offset;
+							// set the limit and offset to 0 to search all data in time_machine
+							$sqo->limit = 0;
+							$sqo->offset = 0;
+							$full_data = [];
+							// 1 first get the data of the main component
+							// using the sqo sent by the client
+								$source_sections  = sections::get_instance(
+									null, // ?array $ar_locators
+									$sqo, // object $search_query_object = null
+									$tipo, //  string $caller_tipo = null
+									$mode, // string $mode = 'list'
+									$lang // string $lang = DEDALO_DATA_NOLAN
+								);
+							$full_data = array_merge($full_data, $source_sections->get_dato());
+
+							// 2 get the data of his dataframe
+							$original_ddo = array_find($rqo->show->ddo_map, function($item){
+								return isset($item->has_dataframe) && $item->has_dataframe===true;
+							});
+							if( isset($original_ddo->dataframe_ddo) ){
+								$dataframe_ddo = $original_ddo->dataframe_ddo;
+								// clone the $sqo to change without changes the original
+								// the sqo will be set with the dataframe tipo and lg-nolan as lang
+								// dataframe always are portals.
+								$dataframe_sqo = json_decode(json_encode($sqo));
+								foreach ($dataframe_sqo->filter_by_locators as $current_filter_by_locator) {
+										$current_filter_by_locator->tipo = $dataframe_ddo->tipo;
+										$current_filter_by_locator->lang = DEDALO_DATA_NOLAN;
+								}
+
+								// get the data of the dataframe component
+								// using the sqo sent by the client
+									$dataframe_sections = sections::get_instance(
+										null, // ?array $ar_locators
+										$dataframe_sqo, // object $search_query_object = null
+										$tipo, //  string $caller_tipo = null
+										$mode, // string $mode = 'list'
+										$lang // string $lang = DEDALO_DATA_NOLAN
+									);
+								$full_data = array_merge($full_data, $dataframe_sections->get_dato());
+							}
+							// order the full data ASC by date
+							usort($full_data, function($a, $b) {
+								return strtotime($a->timestamp) - strtotime($b->timestamp);
+							});
+
+							// 3 mix the both data into one
+							// the source_data will be the data of the main component
+							// dataframe_data will be the data of the dataframe
+							// when the source_data changes will be set with the previous dataframe_data
+							// when the dataframe changes it will be set with previous source_data
+							// dataframe_data has a array wiht the key of his section_id_key, it will
+							// used to identify the value associated to the source_data and recreate it
+							$source_data	= null;
+							$dataframe_data	= [null];
+							foreach ($full_data as $current_data) {
+								if($current_data->tipo === $original_ddo->tipo ){
+									$source_data = $current_data->dato;
+								}
+								if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
+									$dataframe_data[$current_data->section_id_key] = $current_data->dato;
+								}
+								$current_data->dato				= $source_data;
+								$current_data->dataframe_data	= $dataframe_data;
+								$current_data->tipo				= $original_ddo->tipo;
+								$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
+							}
+
+							// order the full data DESC by date
+							usort($full_data, function($a, $b) {
+								return strtotime($b->timestamp) - strtotime($a->timestamp);
+							});
+
+							// remove paginated rows as original sqo set
+							$offset	= (int)$original_offset;
+							$limit	= (int)$original_limit;
+
+							$sqo->limit = $original_limit;
+							$full_data = array_slice($full_data, $offset, $limit);
+
+							// 3 get the data of the main component with the full data
+								$element  = sections::get_instance(
+									null, // ?array $ar_locators
+									$sqo, // object $search_query_object = null
+									$tipo, //  string $caller_tipo = null
+									$mode, // string $mode = 'list'
+									$lang // string $lang = DEDALO_DATA_NOLAN
+								);
+								$element->set_dato( $full_data );
+						}else{
+
+							// prevent edit mode set limit greater than 1
+								if ($model==='section' && $mode==='edit' && (!isset($sqo->limit) || (int)$sqo->limit > 1)) {
+									$sqo->limit = 1;
+								}
+
+							// sections instance
+								$element = sections::get_instance(
+									null, // ?array $ar_locators
+									$sqo, // object $search_query_object = null
+									$tipo, // string $caller_tipo = null
+									$mode, // string $mode = 'list'
+									$lang // string $lang = DEDALO_DATA_NOLAN
+								);
+						}
 
 					// autocomplete. Set the autocomplete status into sections to set correct permissions
 					// search with autocomplete need access, at least with read, to target data,
@@ -1950,6 +1977,7 @@ final class dd_core_api {
 								, logger::WARNING
 							);
 						}else{
+
 							// component
 								$element = component_common::get_instance(
 									$model,

@@ -14,7 +14,7 @@ namespace PHPUnit\Framework\TestStatus;
  *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Success extends Known
+final readonly class Success extends Known
 {
     /**
      * @psalm-assert-if-true Success $this

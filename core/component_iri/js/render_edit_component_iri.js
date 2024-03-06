@@ -152,7 +152,7 @@ const get_content_value = (i, current_value, self) => {
 					input_title.addEventListener('focus', function() {
 						// force activate on input focus (tabulating case)
 						if (!self.active) {
-							ui.component.activate(self)
+							ui.component.activate(self, false)
 						}
 					})
 				// click event
@@ -203,7 +203,7 @@ const get_content_value = (i, current_value, self) => {
 			input_iri.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
-					ui.component.activate(self)
+					ui.component.activate(self, false)
 				}
 			})
 

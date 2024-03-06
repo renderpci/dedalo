@@ -17,14 +17,14 @@
 		switch ($options->context_type) {
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
-				$item_context = $this->get_structure_context_simple($permissions);
+				$item_context = $this->get_structure_context_simple($permissions,true);
 				break;
 
 			default:
 				// item_context
 					$item_context = $this->get_structure_context(
 						$permissions,
-						false // add_request_config
+						true // add_request_config
 					);
 
 				// target_sections add
@@ -42,7 +42,6 @@
 	}//end if($options->get_context===true)
 
 
-
 // data
 	$data = [];
 
@@ -50,16 +49,17 @@
 
 		// value
 			switch($mode) {
-
 				case 'list':
 				case 'tm':
-					$value				= $this->get_list_value();
+					$value = $this->get_list_value();
 					break;
 
 				case 'edit':
+				// dataframe needs the dato and the datalist of the component when it's in tm mode to re-build his scenario
+				case 'tm_dataframe':
 				default:
 					$value				= $this->get_dato();
-					$ar_list_of_values	= $this->get_ar_list_of_values();
+					$ar_list_of_values	= $this->get_list_of_values(DEDALO_DATA_LANG);
 					break;
 			}
 
@@ -69,9 +69,7 @@
 			// datalist add if exits
 			if (isset($ar_list_of_values) && isset($ar_list_of_values->result)) {
 				$datalist = $ar_list_of_values->result;
-				usort($datalist, function($a, $b) {
-					return strcmp($a->label, $b->label);
-				});
+
 				$item->datalist = $datalist;
 			}
 

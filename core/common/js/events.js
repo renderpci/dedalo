@@ -13,7 +13,7 @@ import {event_manager} from './event_manager.js'
 /**
 * unsaved_data set default
 */
-if (typeof window.unsaved_data==='undefined') {
+if (typeof window!=='undefined' && typeof window.unsaved_data==='undefined') {
 	window.unsaved_data = false
 }
 

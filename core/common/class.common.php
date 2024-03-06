@@ -1665,6 +1665,18 @@ abstract class common {
 						// search operators info (tool tips)
 						$dd_object->search_operators_info	= $this->search_operators_info();
 						$dd_object->search_options_title	= search::search_options_title($dd_object->search_operators_info);
+					}else{
+
+						$new_dataframe = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$this->tipo,
+							'component_dataframe',
+							'children',
+							true
+						);
+
+						$dd_object->new_dataframe = (!empty($new_dataframe))
+							? $new_dataframe[0]
+							: null;
 					}
 
 				}else if($model==='section') {
@@ -1889,6 +1901,14 @@ abstract class common {
 					$full_ddo_map,
 					$request_config_object->show->ddo_map
 				);
+				// hide
+				// if request config has hide property defined, add his ddo_map to be resolved
+				if( isset($request_config_object->hide) && isset($request_config_object->hide->ddo_map)){
+					$full_ddo_map = array_merge(
+						$full_ddo_map,
+						$request_config_object->hide->ddo_map
+					);
+				}
 			}//end foreach ($request_config_dedalo as $request_config_object)
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$full_ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
@@ -1909,20 +1929,21 @@ abstract class common {
 
 				$section_id		= $current_locator->section_id;
 				$section_tipo	= $current_locator->section_tipo;
+				$section_id_key	= $current_locator->section_id;
 
 				// get only the direct ddos that are compatible with the current locator. His section_tipo is the same that the current locator.
-				// but when the ddo define is_dataframe (used as sub section as data frame of the locator) get include it.
+				// but when the ddo is a component_dataframe (used as sub section as data frame of the locator) get include it.
 				$ar_ddo = array_filter($full_ddo_map, function($ddo) use($section_tipo){
 					return 	$ddo->section_tipo===$section_tipo ||
 							(is_array($ddo->section_tipo) && in_array($section_tipo, $ddo->section_tipo)) ||
-							(isset($ddo->is_dataframe) && $ddo->is_dataframe===true);
+							(isset($ddo->model) && $ddo->model === 'component_dataframe');
 				});
 
 				// ar_ddo iterate
 				foreach($ar_ddo as $dd_object) {
 					$ddo_start_time = start_time();
 					// use the locator section_tipo.
-					// when the ddo define is_dataframe (used as sub section as data frame or semantic_node of the locator)
+					// when the ddo is a component_dataframe (used as sub section as data frame or semantic_node of the locator)
 					// use his own section_tipo, it's totally dependent of the section_id of the locator and it's compatible.
 					// Note: it's different of the multiple section_tipo as es1, fr1, etc that every locator define his own ddo compatibles.
 						// reference: oh24 -> old semantic_node
@@ -1934,15 +1955,44 @@ abstract class common {
 							// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 							continue;
 						}
+					// short vars
+						$current_tipo			= $dd_object->tipo;
+						$model = ( isset($dd_object->model) )
+							? $dd_object->model
+							: RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+						$view					= $dd_object->view ?? null;
 
-					// section_tipo
-						if(isset($dd_object->is_dataframe) && $dd_object->is_dataframe===true){
+						// dataframe case
+						// dataframe ddo need to get section_tipo has it has defined
+						// dataframe store his data in the same section than main component,
+						// so, dataframe subdatum will be calculated with his own section_tipo definition
+						// and the section_id of the main component (instead the locator, dataframe is not in the target section)
+						if($model === 'component_dataframe'){
 							$section_tipo = is_array($dd_object->section_tipo)
 								? reset($dd_object->section_tipo)
 								: $dd_object->section_tipo;
+
+							$section_id_key	= $current_locator->section_id; // section_id_key link the dataframe data to the main locator
+							$section_id		= $this->get_section_id(); // the section that call to component, not the component
+
 						}else{
+							// standard use of the locator to get data of the ddo
+							$section_id		= $current_locator->section_id;
 							$section_tipo	= $current_locator->section_tipo;
+							$section_id_key	= $current_locator->section_id;
 						}
+
+						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+						// if the component is a dataframe assign a possible suffix to be used
+						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
+							? '_dataframe'
+							: '';
+						// if the component or section is in tm mode propagate the mode to the ddo
+						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
+						// see radio_button case of the dataframe component of the numisdata161
+						$mode					= $this->mode==='tm'
+							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
+							: ($dd_object->mode ?? $this->get_mode());
 
 					// prevent resolve non children from path ddo, remove the non direct child,
 					// it will be calculated by his parent (in recursive loop)
@@ -1953,14 +2003,6 @@ abstract class common {
 							continue;
 						}
 
-					// short vars
-						$current_tipo			= $dd_object->tipo;
-						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
-						$mode					= $this->mode==='tm'
-							? 'tm' // propagate tm mode from parent
-							: ($dd_object->mode ?? $this->get_mode());
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$view					= $dd_object->view ?? null;
 
 					// ar_subcontext_calculated
 						// $cid = $current_section_tipo . '_' . $section_id . '_' . $current_tipo;
@@ -2015,8 +2057,9 @@ abstract class common {
 								// caller_dataframe cases
 								$caller_dataframe = (strpos($source_model, 'component_')===0)
 									? (object)[
-										'section_tipo'	=> $this->get_section_tipo(),
-										'section_id'	=> $this->get_section_id()
+										'section_id_key'	=> $section_id_key,
+										// 'tipo_key'			=> $this->tipo,
+										'section_tipo'		=> $this->get_section_tipo(),
 									  ]
 									: null;
 
@@ -2096,6 +2139,9 @@ abstract class common {
 											$children_choose	= isset($request_config_object->choose)
 												? get_children_recursive($request_config_object->choose->ddo_map, $dd_object)
 												: null;
+											$children_hide		= isset($request_config_object->hide)
+												? get_children_recursive($request_config_object->hide->ddo_map, $dd_object)
+												: null;
 
 										// select the current api_engine
 											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
@@ -2122,6 +2168,15 @@ abstract class common {
 												}
 												$new_request_config_object->choose->ddo_map  = $children_choose;
 											}
+											if (!empty($children_hide)) {
+												if (empty($new_request_config_object->hide)) {
+													$new_request_config_object->hide = (object)[
+														'ddo_map' => []
+													];
+												}
+												$new_request_config_object->hide->ddo_map  = $children_hide;
+											}
+
 									}//end foreach ($request_config as $request_config_object)
 
 								// Inject the request_config inside the component
@@ -2205,7 +2260,7 @@ abstract class common {
 								$ar_final_subdata = [];
 								foreach ($element_json->data as $value_obj) {
 
-									$value_obj->row_section_id	= $section_id;
+									$value_obj->row_section_id	= $current_locator->section_id;
 									$value_obj->parent_tipo		= $this->tipo;
 
 									$ar_final_subdata[] = $value_obj;
@@ -3021,6 +3076,13 @@ abstract class common {
 										$current_ddo->permissions	= common::get_permissions($current_ddo->section_tipo, $current_ddo->tipo);
 									}
 
+								// component dataframe when portal caller is in tm mode
+								// the component will be always in view of the portal caller (without events or functionality)
+								// see
+									if ($this->mode==='tm' && $current_ddo->model === 'component_dataframe') {
+										$current_ddo->view = $this->view;
+									}
+
 								// permissions check
 									if($model==='section') {
 										$check_section_tipo = is_array($current_ddo->section_tipo) ? reset($current_ddo->section_tipo) : $current_ddo->section_tipo;
@@ -3278,7 +3340,7 @@ abstract class common {
 									true, // bool recursive
 									false, // bool search_exact
 									false, // array|bool $ar_tipo_exclude_elements
-									['dataframe'] // ?array $ar_exclude_models
+									['component_dataframe'] // ?array $ar_exclude_models
 								);
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
@@ -4006,6 +4068,7 @@ abstract class common {
 				'component_password',
 				// 'component_filter_records',
 				'component_image',
+				'component_3d',
 				'component_av',
 				'component_pdf',
 				'component_security_administrator',
@@ -4186,7 +4249,7 @@ abstract class common {
 				];
 
 				// target section tipo add
-					if ($model==='component_portal') {
+					if ($model==='component_portal' || $model==='component_dataframe') {
 						$ddo = reset($item_context);
 						$target_section_tipo = $element->get_ar_target_section_tipo();
 						$ddo->target_section_tipo = $target_section_tipo;

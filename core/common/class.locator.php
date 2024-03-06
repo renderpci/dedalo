@@ -15,6 +15,7 @@ declare(strict_types=1);
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
 * 		$locator->type					= (string)$type;
 *		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
+*		$locator->tipo_key				= (string)$tipo_key; // dataframe tipo of the main component (component that has dataframe)
 *
 *	Note that properties could exists or not (they are created on the fly). Final result object only contain set properties and locator object could be empty or partially set.
 *	For example, component portal only use section_tipo an section_id in many cases.
@@ -34,6 +35,7 @@ class locator extends stdClass {
 		private $tag_id;
 		private $tag_component_tipo;
 		private $section_id_key;
+		private $tipo_key;
 	*/
 
 	# Mandatory and protected (use set/get to access)
@@ -393,11 +395,12 @@ class locator extends stdClass {
 
 	/**
 	* SET_SECTION_ID_KEY
-	* @param int $value
+	* @param int|string $value
 	* @return bool
 	*/
-	public function set_section_id_key(int $value) : bool {
-		if($value < 0) {
+	public function set_section_id_key(int|string $value) : bool {
+
+		if((int)$value < 0) {
 			debug_log(__METHOD__
 				. ' Invalid section_id_key (only integer are allowed)' . PHP_EOL
 				. ' value: ' . to_string($value)
@@ -405,11 +408,22 @@ class locator extends stdClass {
 			);
 			throw new Exception("Error Processing Request. Invalid section_id_key: $value", 1);
 		}
-		$this->section_id_key = $value;
+		$this->section_id_key = (int)$value;
 
 		return true;
 	}//end set_section_id_key
 
+
+	/**
+	* SET_TIPO_KEY
+	* @return
+	*/
+	public function set_tipo_key(string $value) {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			throw new Exception("Error Processing Request. Invalid tipo_key: $value", 1);
+		}
+		$this->tipo_key = $value;
+	}//end set_tipo_key
 
 
 	/**

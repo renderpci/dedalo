@@ -10,8 +10,8 @@
 	import {common} from '../../../common/js/common.js'
 	// import {set_before_unload} from '../../../common/js/events.js';
 	import {clone} from '../../../common/js/utils/index.js'
-	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
+	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
 
@@ -74,6 +74,7 @@ export const service_ckeditor = function() {
 
 		// load ckeditor files if not already loaded
 			if(typeof ckeditor==='undefined'){
+				const t0 = performance.now()
 
 				// load dependencies
 					const load_promises = []
@@ -85,21 +86,26 @@ export const service_ckeditor = function() {
 					)
 
 				// load and set JSON langs file
-					load_promises.push(
-						new Promise(function(resolve){
-							data_manager.request({
-								url		: '../common/js/lang.json',
-								method	: 'GET'
+					if (!window['json_langs']) {
+						load_promises.push(
+							new Promise(function(resolve){
+								data_manager.request({
+									url		: '../common/js/lang.json',
+									method	: 'GET'
+								})
+								.then(function(response){
+									// set json_langs
+									window['json_langs'] = response
+									resolve(response)
+								})
 							})
-							.then(function(response){
-								// set json_langs
-								// self.json_langs = response
-								window['json_langs'] = response
-								resolve(response)
-							})
-						})
-					)
+						)
+					}
 					await Promise.all(load_promises)
+
+				if(SHOW_DEBUG===true) {
+					// console.log('ckeditor load editor and langs: ',  Math.round(performance.now()-t0), self.caller.id);
+				}
 			}
 
 		// set json_langs (loaded once and set to global var)
@@ -1924,10 +1930,6 @@ export const service_ckeditor = function() {
 			console.error( error );
 		});
 	}//end destroy
-
-
-
-
 
 
 

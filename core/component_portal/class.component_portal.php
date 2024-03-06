@@ -401,7 +401,11 @@ class component_portal extends component_relation_common {
 								'list', // string mode
 								false // bool bool
 							);
-							$section_to_save->remove_relations_from_component_tipo( $options->tipo , 'relations' );
+							$remove_options = new stdClass();
+								$remove_options->component_tipo			= $options->tipo;
+								$remove_options->relations_container	= 'relations';
+
+							$section_to_save->remove_relations_from_component_tipo( $remove_options );
 							foreach ($ar_locators as $current_locator) {
 								$section_to_save->add_relation($current_locator);
 							}

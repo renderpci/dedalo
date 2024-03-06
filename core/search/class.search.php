@@ -1966,6 +1966,18 @@ class search {
 					}
 				}
 
+			// section_id_key (int). time machine case (column 'matrix_id' exists and is used)
+				if (property_exists($current_locator, 'section_id_key') && !empty($current_locator->section_id_key)) {
+					if ($this->matrix_table==='matrix_time_machine') {
+						$ar_current[] = $table.'.section_id_key='.$current_locator->section_id_key;
+					}else{
+						debug_log(__METHOD__
+							." Ignored property 'matrix_id' in locator because is only allowed in time machine table."
+							, logger::WARNING
+						);
+					}
+				}
+
 			$ar_parts[] = '(' . implode(' AND ', $ar_current) . ')';
 		}
 

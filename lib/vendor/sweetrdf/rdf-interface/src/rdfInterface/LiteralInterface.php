@@ -40,52 +40,6 @@ interface LiteralInterface extends TermInterface, TermCompareInterface {
     public const CAST_DATATYPE     = 2;
 
     /**
-     * Creates a new literal.
-     * 
-     * If the $datatype is null or empty, it must be set according to the
-     * $value and $lang parameter values:
-     * 
-     * - if $lang is not empty, the $datatype must be set to
-     *   `http://www.w3.org/1999/02/22-rdf-syntax-ns#langString`
-     * - if $lang is empty or null, the $datatype depends on the PHP type of the
-     *   $value parameter:
-     *     * bool - `http://www.w3.org/2001/XMLSchema#boolean`
-     *     * int - `http://www.w3.org/2001/XMLSchema#integer`
-     *     * float - `http://www.w3.org/2001/XMLSchema#decimal`
-     *     * string - `http://www.w3.org/2001/XMLSchema#string`
-     *     * Stringable object - `http://www.w3.org/2001/XMLSchema#string` or
-     *       any other more precise XSD datatype if the implementation is able 
-     *       to derive it from the object class
-     * 
-     * The created literal must have valid combination of datatype and lang tag
-     * (meaning the datatype is rdf:langString if and only if the literal has 
-     * a lang tag). It's up to the implementation how to assure it. Both throwing
-     * an exception and one of $lang/$datatype taking precedense over the other
-     * are considered valid solutions. Of course the implementation behavior
-     * should be documented.
-     * 
-     * See https://www.w3.org/TR/rdf11-concepts/#section-Graph-Literal for 
-     * a reference.
-     * 
-     * @param int|float|string|bool|Stringable $value Literal's value.
-     *   Only values which can be casted to a string are allowed so it's clear
-     *   how to obtain literal's value lexical form (see the RDF specification
-     *   mentioned above). The lexical forms of scalar values must be created 
-     *   (returned by the getValue() method) in a way that back-casting them
-     *   to the scalar type gives an equal value (probably the only tricky case
-     *   here is boolean `false`).
-     * @param string|null $lang Literal's lang tag. If null or empty string, the literal
-     *   is assumed not to have a lang tag (as an empty lang tag is not allowed in RDF).
-     * @param string|null $datatype Literal's datatype. If it's null, the datatype 
-     *   must be assigned according to the $lang and $value parameter values.
-     *   The detailed procedure is described above.
-     */
-    public function __construct(
-        int | float | string | bool | Stringable $value, ?string $lang = null,
-        ?string $datatype = RDF::XSD_STRING
-    );
-
-    /**
      * Returns literal's value.
      * 
      * Separate cast options are needed as the RDF specification defines a few
@@ -123,7 +77,6 @@ interface LiteralInterface extends TermInterface, TermCompareInterface {
      * without lang tag and without datatype specified explicitely.
      * 
      * @return string
-     * @see __construct()
      */
     public function getDatatype(): string;
 
@@ -137,7 +90,6 @@ interface LiteralInterface extends TermInterface, TermCompareInterface {
      * 
      * @param int|float|string|bool|Stringable $value
      * @return LiteralInterface
-     * @see __construct()
      */
     public function withValue(int | float | string | bool | Stringable $value): LiteralInterface;
 

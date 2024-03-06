@@ -434,6 +434,16 @@ final class dd_area_maintenance_api {
 				$aditional 	= ''; // $is_preview===true ? ' --dry-run ' : '';
 				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
 				$output		= shell_exec($command);
+				if ($output===null) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
+					debug_log(__METHOD__
+						. $response->msg  . PHP_EOL
+						. ' command: ' . to_string($command) . PHP_EOL
+						. ' output: ' . to_string($output)
+						, logger::ERROR
+					);
+					return $response;
+				}
 				$result->rsync = [
 					"command: " . $command,
 					"output: "  . str_replace(["\n","\r"], '<br>', $output),

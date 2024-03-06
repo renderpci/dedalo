@@ -27,34 +27,22 @@
 namespace rdfInterface;
 
 /**
- * Extends Term because of RDF*
- *
- * Remarks:
- * - getValue() should throw an error
- * - null return types in getSubject(), getPredicate() and getObject() make it
- *   possible for QuadTemplate to extend this interface
- *
  * @author zozlak
  */
 interface QuadInterface extends TermInterface, QuadCompareInterface {
-
-    /**
-     *
-     * @param TermInterface $subject
-     * @param NamedNodeInterface $predicate
-     * @param TermInterface $object
-     * @param NamedNodeInterface|BlankNodeInterface|DefaultGraphInterface|null $graph
-     */
-    public function __construct(
-        TermInterface $subject, NamedNodeInterface $predicate, TermInterface $object,
-        NamedNodeInterface | BlankNodeInterface | DefaultGraphInterface | null $graph = null
-    );
 
     public function getSubject(): TermInterface;
 
     public function getPredicate(): NamedNodeInterface;
 
     public function getObject(): TermInterface;
+
+    /**
+     * Should always throw the \BadMethodCallException
+     * 
+     * @throws \BadMethodCallException
+     */
+    public function getValue(): mixed;
 
     /**
      * Null is not allowed to deal with the ambiguity between DefaultGraph and

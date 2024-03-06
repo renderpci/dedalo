@@ -58,6 +58,8 @@ class ts_object {
 	/**
 	* GET_AR_ELEMENTS
 	* Get elements from section_list_thesaurus -> properties
+	* @param string $section_tipo
+	* @param boolean|null $model = false
 	* @return array $ar_elements
 	*/
 	public static function get_ar_elements( string $section_tipo, ?bool $model=false ) : array {
@@ -104,7 +106,7 @@ class ts_object {
 				}
 			}//end if (!isset($ar_children[0]))
 
-		// If element exists (section_list_thesaurus) we get element 'properties' json value as array
+		// If element exists (section_list_thesaurus) we get element 'properties' JSON value as array
 			if ( !empty($ar_properties) ) {
 
 				// DES
@@ -163,25 +165,28 @@ class ts_object {
 					// }
 					// debug_log(__METHOD__." ar_elements ".to_string($ar_elements), logger::DEBUG);
 
-				foreach ($ar_properties as $key => $value_obj) {
+				foreach ($ar_properties as $value_obj) {
 
 					// link_children. optional model variations
-						if (!isset($model) && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
-							unset($ar_properties[$key]);
-						}else if (isset($model) && $model===true) {
+						if ($model===false && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
+							// unset($ar_properties[$key]);
+							continue;
+						}else if ($model===true) {
 							if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
-								unset($ar_properties[$key]);
+								// unset($ar_properties[$key]);
+								continue;
 							}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
 								$value_obj->type = 'link_children';
 							}
 						}
+						if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
+							$value_obj->type = 'link_children';
+						}
 
-					if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
-						$value_obj->type = 'link_children';
-					}
-
+					// add
+					$ar_elements[] = $value_obj;
 				}//end foreach ($ar_properties as $key => $value_obj)
-				$ar_elements = array_values($ar_properties);
+				// $ar_elements = array_values($ar_properties);
 			}
 
 
@@ -210,8 +215,8 @@ class ts_object {
 			$child_data->permissions_structuration	= $this->get_permissions_element('component_relation_struct');
 			$child_data->ar_elements				= [];
 
-		// model
-			$model = $this->options->model ?? null; // options are fixed on construct the class
+		// model boolean
+			$model = $this->options->model ?? null; // options are set when building the class
 
 		// short vars
 			$separator = ' ';

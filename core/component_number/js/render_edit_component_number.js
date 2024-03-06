@@ -116,6 +116,13 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self, false)
+				}
+			})
 		// keyup event
 			input.addEventListener('keyup', function(e) {
 				// page unload event
@@ -215,7 +222,8 @@ export const get_buttons = (self) => {
 				class_name		: 'button add',
 				parent			: fragment
 			})
-			button_add_input.addEventListener('mouseup', function() {
+			button_add_input.addEventListener('mouseup', function(e) {
+				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',

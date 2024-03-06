@@ -25,7 +25,7 @@ class menu extends common {
 
 		$this->id			= null;
 		$this->tipo			= 'dd85'; // string class menu (dd85)
-		$this->lang			= DEDALO_DATA_LANG;
+		$this->lang			= DEDALO_APPLICATION_LANG;
 		$this->mode			= $mode;
 		$this->section_tipo	= DEDALO_ROOT_TIPO; // 'dd1';
 
@@ -130,12 +130,13 @@ class menu extends common {
 						'label'		=> $current_area->label
 					];
 
-				// section_tool case
-					if($current_area->model==='section_tool') {
+				// custom config cases
+					switch (true) {
 
-						$properties	= $current_area->properties;
+						case $current_area->model==='section_tool': // section_tool case
+							$properties	= $current_area->properties;
 
-						// tool_context
+							// tool_context
 							$tool_name = isset($properties->tool_config) && is_object($properties->tool_config)
 								? array_key_first(get_object_vars($properties->tool_config)) // ? key($properties->tool_config) // deprecated PHP>=8.1
 								: false;
@@ -151,7 +152,7 @@ class menu extends common {
 										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
 										, logger::WARNING
 									);
-									continue;
+									continue 2;
 								}else{
 
 									$tool_config	= $properties->tool_config->{$tool_name} ?? false;
@@ -164,7 +165,36 @@ class menu extends common {
 									$datalist_item->config->tool_context = $tool_context;
 								}
 							}
-					}//end if($current_area->model==='section_tool')
+							break;
+
+						case $current_area->tipo===DEDALO_THESAURUS_VIRTUALS_AREA_TIPO: // thesaurus terms case
+							// overwrite properties
+							$datalist_item->model = 'area_thesaurus';
+							// custom config
+							$datalist_item->config = (object)[
+								// swap_tipo. Is used by JS menu parser to change current item tipo on the fly
+								'swap_tipo' => DEDALO_THESAURUS_TIPO // dd100
+							];
+							break;
+
+						case $current_area->tipo===DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO: // thesaurus models case
+							// overwrite properties
+							$datalist_item->model = 'area_thesaurus';
+							// custom config
+							$datalist_item->config = (object)[
+								'thesaurus_view_mode' => 'model',
+								// swap_tipo. Is used by JS menu parser to change current item tipo on the fly
+								'swap_tipo' => DEDALO_THESAURUS_TIPO, // dd100
+								'url_vars' => [
+									'thesaurus_view_mode' => 'model'
+								]
+							];
+							break;
+
+						default:
+							// Nothing to do
+							break;
+					}
 
 				// add
 					$tree_datalist[] = $datalist_item;

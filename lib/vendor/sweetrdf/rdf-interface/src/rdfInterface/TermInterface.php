@@ -31,11 +31,7 @@ namespace rdfInterface;
  *
  * @author zozlak
  */
-interface TermInterface {
-
-    public function __toString(): string;
+interface TermInterface extends TermCompareInterface {
 
     public function getValue(): mixed;
-
-    public function equals(TermInterface $term): bool;
 }

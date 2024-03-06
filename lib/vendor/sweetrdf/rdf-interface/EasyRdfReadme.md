@@ -5,22 +5,31 @@ There are a few fundamental differences between the EasyRdf and the rdfInterface
 * EasyRdf is a single library doing it all. It provides parsers, serializers, implementation of RDF terms (`EasyRdf\Literal` and `EasyRdf\Resource`), RDF dataset (`EasyRdf\Graph`), SPARQL client, etc.
   What's convenient about it is that you install one package and you are ready to go. But it also makes it less flexible and difficult to modernize, especially in the long term.  
   RdfInterface took a different approach. It's an ecosystem of (rather small) libraries which can work with each other because they implement a common interfaces defined in this repository.
-  In the rdfInterface ecosystem you have a separate library for parsing/serializaing RDF ([quickRdfIo](https://github.com/sweetrdf/quickRdfIo)), separate libraries implementing RDF terms and dataset (you can choose between [simpleRdf](https://github.com/sweetrdf/simpleRdf) and [quickRdf](https://github.com/sweetrdf/quickRdf)), separate one providing so-called term templates ([termTemplates](https://github.com/sweetrdf/termTemplates)), etc. It is very important that it's easy to extend the ecosystem with new libraries implementing new features or implementing already available features in a better way.  
+  In the rdfInterface ecosystem you have a separate library for parsing/serializaing RDF ([quickRdfIo](https://github.com/sweetrdf/quickRdfIo)), 
+  separate libraries implementing RDF terms and dataset
+  (you can choose between [simpleRdf](https://github.com/sweetrdf/simpleRdf) and [quickRdf](https://github.com/sweetrdf/quickRdf)), 
+  separate one providing so-called term templates ([termTemplates](https://github.com/sweetrdf/termTemplates)), etc.
+  It is very important that it's easy to extend the ecosystem with new libraries implementing new features or implementing already available features in a better way.  
     *  All in all it means with rdfInterface you will need to type `composer require` a few times instead of only once.
-* EasyRdf's dataset API is graph node-centric. You fetch the node (`EasyRdf\Resource`) you are interested in from the graph and then deal with node's predicate values (being `EasyRdf\Resource` or `EasyRdf\Literal`). EasyRdf has no data structure representing graph's edge.  
+* EasyRdf's dataset API is graph-node-centric.
+  First you fetch the node (`EasyRdf\Resource`) you are interested in from the graph
+  and then deal with node's predicate values (being `EasyRdf\Resource` or `EasyRdf\Literal`).
+  EasyRdf has no data structure representing graph's edge.  
   In the contrary RdfInterface's dataset API is edge-centric. You always add/delete/filter/iterate trough graph edges.  
-    * It means the same graph operations are expresses in slightly different way in EasyRdf and rdfInterface.
+    * It means the same graph operations are expressesed in slightly different way in EasyRdf and rdfInterface.
       The [Basic task](#basic-tasks) section below provides a comparison of some sample task.
-    * It's hard to tell that one approach is better than the other. All in all it's quite subjective and comes down to personal taste and habits.
+    * It's hard to tell that one approach is better than the other.
+      All in all it's quite subjective and comes down to personal taste and habits.
       Anyway I hope you'll see some advantages brought by the approach introduced by the rdfInterface.
-* EasyRdf is weak-typed. It allows to refer to predicates and named nodes using strings containing their (shortened or fully-qualified) URIs.
-  Literals can be represented by just strings.
+* EasyRdf is weak-typed.
+  It allows to refer to predicates and named nodes using strings containing their (shortened or fully-qualified) URIs and literals can be represented by just strings.
   When it comes to predicates it even supports a rudimentaty SPARQL paths-like syntax.  
-  RdfInterface doesn't allow that. RdfInterface enforces strict typing - named node/predicate has to be an `rdfInterface\NamedNode` object, literal has to be an `rdfInterface\Literal` object, etc.
+  RdfInterface doesn't allow that.
+  RdfInterface enforces strict typing - named node/predicate has to be an `rdfInterface\NamedNode` object, literal has to be an `rdfInterface\Literal` object, etc.
     * I'm pretty sure you will find rdfInterface behavior annoying.
       It may feel like introducing a lot of unnecessary boilerplate code.
       While I agree it makes the syntax longer, it's for a reason.
-      There are many corner cases where the syntax used by the EasyRdf is intrinsically ambigous.
+      There are many corner cases where the syntax used by the EasyRdf is intrinsically ambiguous.
       Strict typing assures there are no such ambiguities in the rdfInterface API.
       It also makes it easy to add new extensions.
 * If you are used to using shortened URIs in EasyRdf you might be surprised it's not possible in RdfInterface.\
@@ -40,18 +49,20 @@ $graph->parse('RDF DATA GO HERE');
 rdfInterface
 
 ```php
-$parser = new \quickRdfIo\TriGParser(new \quickRdf\DataFactory());
+$iterator = quickRdfIo\Util::parse('RDF DATA GO HERE', new \quickRdf\DataFactory());
 $dataset = new \quickRdf\Dataset();
-$dataset->add($parser->parse('RDF DATA GO HERE'));
+$dataset->add($iterator);
 ```
 
-RdfInterface syntax is longer and more verbose (we explicitly specify three classes instead of only one) but it decouples the parser and the dataset. It means we can freely mix a parser, a terms factory and a dataset implementations (of course until all of them are rdfInterface-compliant).
+RdfInterface syntax is a little longer and more verbose but it decouples the parser and the dataset.
+It means we can freely mix a parser, a terms factory and a dataset implementations (of course until all of them are rdfInterface-compliant).
 
 EasyRdf provides us with a shorter syntax at the cost of limiting us to parsers embedded into the EasyRdf.
 
 ### Iterating over all triples matching a given criteria
 
-EasyRdf provides no universal search API so the actual code depends a lot on what we do so we need to pick specific tasks.
+EasyRdf provides no universal search API so the actual code depends a lot on what we do.
+Let's go trough most common tasks.
 
 * Iterating the whole graph.\
   EasyRdf
@@ -86,8 +97,8 @@ EasyRdf provides no universal search API so the actual code depends a lot on wha
   use termTemplates\QuadTemplate as QT;
   foreach ($dataset->listSubjects() as $subject) {
       foreach ($dataset->listPredicates(new QT($subject)) as $predicate) {
-          foreach ($dataset->copy(new QT($subject, $predicate)) as $edge) {
-              echo "$edge\n";
+          foreach ($dataset->listObjects(new QT($subject, $predicate)) as $object) {
+              echo "$subject $predicate $object\n";
           }
       }
   }
@@ -95,14 +106,14 @@ EasyRdf provides no universal search API so the actual code depends a lot on wha
 * Fetching all literals in a given `$language` of a given `$predicate` for a given `$subject`.\
   EasyRdf
   ```php
-  $values = $graph->resource($subject)->allLiterals($predicate, $language);
+  $graph->resource($subject)->allLiterals($predicate, $language);
   ```
   rdfInterface
   ```php
   use termTemplates\QuadTemplate as QT;
   use termTemplates\LiteralTemplate as LT;
   $template = new QT($subject, $predicate, new LT(lang: $language));
-  $values = $dataset->copy($template)->listObjects();
+  $dataset->copy($template)->listObjects();
   ```
 * Fetching a given `$predicate` value in a given `$language` for a given `$subject` with a fallback `$default` value.\
   EasyRdf
@@ -115,10 +126,7 @@ EasyRdf provides no universal search API so the actual code depends a lot on wha
   use termTemplates\QuadTemplate as QT;
   use termTemplates\LiteralTemplate as LT;
   $template = new QT($subject, $predicate, new LT(lang: $language));
-  $value = $dataset->copy($template)->current()?->getObject()->getValue() ?? $default;
-  // the previous line can be also simplified with the DatasetExtractors class:
-  use termTemplates\DatasetExtractors as DE;
-  $value = DE::getObjectValue($dataset, $template) ?? $default;
+  $value = $dataset->listObjects($template)->getValues()[0] ?? $default;
   ```
 * Checking if there is any triple of a given `$subject` having given `$predicate` literal value tagged with a language (any).\
   EasyRdf
@@ -159,7 +167,7 @@ EasyRdf provides no universal search API so the actual code depends a lot on wha
   rdfInterface
   ```php
   use termTemplates\QuadTemplate as QT;
-  $subjects = $dataset->copy(new QT(null, null, $object))->listSubjects();
+  $subjects = $dataset->copy(new QT(object: $object))->listSubjects();
   ```
 * Searching for all subjects with a given `$predicate` literal value greater than `$value` (comparing as numbers).\
   EasyRdf
@@ -184,12 +192,17 @@ EasyRdf provides no universal search API so the actual code depends a lot on wha
   ```
 
 EasyRdf syntax is longer or shorter depending on the task.
-What is for sure is it varies quite a lot and when it comes to more complex searches it requires you to write your own filtering loops.
+When it comes to more complex searches, it requires you to write your own filtering loops.
 
-There is also an annoying inconsistency in fully qualified URI predicates treatment in EasyRdf. Some methods expect them to be quoted with `<>` (e.g. `\EeayRdf\Resource::get()` and related methods) while some expect them not to be quoted with `<>` (e.g. `\EeayRdf\Graph::resourcesMatching()`).
+There is also an annoying inconsistency in fully qualified URI predicates treatment in EasyRdf.
+Some methods expect them to be quoted with `<>` (e.g. `\EeayRdf\Resource::get()` and related methods) 
+while some expect them not to be quoted with `<>` (e.g. `\EeayRdf\Graph::resourcesMatching()`).
 
-In rdfInterface you search always in the same way - use `Dataset::copy()` with a `QuadTemplate` describing your search criteria.
-There are many helper classes allowing to apply various filters including more fancy ones like regular expression matching or numeric comparisons (see the [termTemplates](https://github.com/sweetrdf/termTemplates) library).
+In rdfInterface you search always in the same way - use `Dataset::copy()` or `Dataset::getIterator()` with a `QuadTemplate` describing your search criteria
+(you can also use a callable which will be given a quad and should return true for a match).
+There is also a shorthand `[0]` syntax for getting just any matching quad.
+There are many helper classes allowing to apply various filters including more fancy ones like regular expression matching or numeric comparisons 
+(see the [termTemplates](https://github.com/sweetrdf/termTemplates) library).
 
 ### Adding new triples
 
@@ -210,7 +223,8 @@ $dataset->add(DF::quad($subject, $predicate, DF::namedNode($object)));
 $dataset->add(DF::quad($subject, $predicate, DF::literal($value, $lang)));
 ```
 
-EasyRdf syntax is definitely more compact. rdfInterface pays for strict typing here and there is no workaround for that.
+EasyRdf syntax is definitely more compact.
+RdfInterface requires more typing due to strong typing and there is no way around it.
 
 ### Modyfying given triple values
 
@@ -223,11 +237,17 @@ EasyRdf syntax is definitely more compact. rdfInterface pays for strict typing h
   rdfInterface
   ```php
   use quickRdf\DataFactory as DF;
+  use termTemplates\QuadTemplate as QT;
 
   $dataset[DF::Quad($subject, $predicate, $object)] = DF::Quad($subject, $predicate, $newObject);
   // or
   $dataset->delete(DF::Quad($subject, $predicate, $object));
   $dataset->add(DF::Quad($subject, $predicate, $newObject));
+  // or
+  $dataset->forEach(
+    fn($x) => $x->withObject($newObject),
+    new QT($subject, $predicate, $object)
+  )
   ```
 * Multiplying all literal values of a given `$predicate` by 2:\
   EasyRdf
@@ -248,7 +268,7 @@ EasyRdf syntax is definitely more compact. rdfInterface pays for strict typing h
           $literal = $edge->getObject();
           return $edge->withObject($literal->withValue($literal->getValue() * 2));
       },
-      new QT(null, $predicate)
+      new QT(predicate: $predicate)
   );
   // or
   foreach ($dataset->copy(new QT(null, $predicate)) as $edge) {
@@ -355,13 +375,14 @@ Not much difference really.
 * Perform any set operation on two datasets.\
   EasyRdf provides no methods to perform graph union, difference or intersection.
   And implementing these operations using EasyRdf's API is quite troublesome (to be honest I'm to lazy to prepare a snippet).  
-  RdfInterface provides `Dataset::add()`, `Dataset::delete()` and `Dataset::deleteExcept()` for in-place set operations and `Dataset::union()`, `Dataset::copyExcept()`, `Dataset::copy()` and `Dataset::xor()` for immutable set operations.
+  RdfInterface provides `Dataset::add()`, `Dataset::delete()` and `Dataset::deleteExcept()` for in-place set operations 
+  and `Dataset::union()`, `Dataset::copyExcept()`, `Dataset::copy()` and `Dataset::xor()` for immutable set operations.
 
 ## Fundamental EasyRdf limitations addressed by the rdfInterface
 
 * EasyRdf data model is limited to triples.\
   EasyRdf can only handle triples and its internal architecture makes it really difficult to change it.
-  Leaving no hope for quads and no hope for the [RDF-star](https://w3c.github.io/rdf-star/).\
+  It Leaves no hope for quads support and therefore no hope for the [RDF-star](https://w3c.github.io/rdf-star/).\
   RdfInterface natively supports quads and can be easily extended to RDF-star.
   In fact [simpleRdf](https://github.com/sweetrdf/simpleRdf/) and [quickRdf](https://github.com/sweetrdf/quickRdf) already handle quads having quads as subjects and/or objects,
   [quickRdfIO](https://github.com/sweetrdf/quickRdfIo) can parse and serialize n-triples-star
@@ -371,7 +392,8 @@ Not much difference really.
 
 * High-level classes for most common RDF structures like collections and containers.
 * Automatic mapping of RDF date/time literals to PHP date/time objects.\
-  Maybe someone at some point will provide a `rdfInterface\Literal` implementation capable of doing that (it's not a rocket science) but here and now there is no such implementation available.
+  Maybe someone at some point will provide a `rdfInterface\Literal` implementation capable of doing that
+  (it's not a rocket science) but here and now there is no such implementation available.
 * Use shortened URIs all around.\
   It's not a bug, it's a feature.
   Using shortened URIs is broken by design.

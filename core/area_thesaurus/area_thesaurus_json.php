@@ -45,10 +45,16 @@
 	if($options->get_data===true && $permissions>0){
 
 		// hierarchy_sections - get the hierarchy configuration nodes to build the root terms
+
+			// properties optional values
 			$hierarchy_types_filter		= $properties->hierarchy_types ?? null;
 			$hierarchy_sections_filter	= $properties->hierarchy_sections ?? null;
-			$terms_are_model			= $this->build_options->terms_are_model ?? false;
-			$hierarchy_sections			= $this->get_hierarchy_sections(
+
+			// terms_are_model. This value comes from rqo->source->build_options->terms_are_model
+			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
+			$terms_are_model = $this->build_options->terms_are_model ?? false;
+
+			$hierarchy_sections = $this->get_hierarchy_sections(
 				$hierarchy_types_filter, // hierarchy_types_filter
 				$hierarchy_sections_filter, // hierarchy_sections_filter
 				$terms_are_model // terms_are_model bool
@@ -87,7 +93,7 @@
 
 		// properties
 			if (!empty($properties) && $properties->action==='search') {
-				// search rows
+				// search rows. Calling from dd_core_api:read -> get_data
 				$result = $this->search_thesaurus( $properties->sqo );
 				$item->ts_search = $result;
 			}
@@ -95,8 +101,7 @@
 		// subdata add
 			$data[] = $item;
 
-	}// end if $permissions > 0
-
+	}//end if $options->get_data===true && $permissions>0
 
 
 

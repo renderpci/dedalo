@@ -2,6 +2,15 @@
 
 All notable changes are documented in this file using the [Keep a CHANGELOG](http://keepachangelog.com/) principles.
 
+## [6.0.0] - 2024-02-02
+
+### Removed
+
+* `SebastianBergmann\Diff\Chunk::getStart()`, `SebastianBergmann\Diff\Chunk::getStartRange()`, `SebastianBergmann\Diff\Chunk::getEnd()`, `SebastianBergmann\Diff\Chunk::getEndRange()`, and `SebastianBergmann\Diff\Chunk::getLines()`
+* `SebastianBergmann\Diff\Diff::getFrom()`, `SebastianBergmann\Diff\Diff::getTo()`, and `SebastianBergmann\Diff\Diff::getChunks()`
+* `SebastianBergmann\Diff\Line::getContent()` and `SebastianBergmann\Diff\Diff::getType()`
+* Removed support for PHP 8.1
+
 ## [5.1.0] - 2023-12-22
 
 ### Added
@@ -124,6 +133,7 @@ All notable changes are documented in this file using the [Keep a CHANGELOG](htt
 
 * This component is no longer supported on PHP 5.6
 
+[6.0.0]: https://github.com/sebastianbergmann/diff/compare/5.1...6.0.0
 [5.1.0]: https://github.com/sebastianbergmann/diff/compare/5.0.3...5.1.0
 [5.0.3]: https://github.com/sebastianbergmann/diff/compare/5.0.2...5.0.3
 [5.0.2]: https://github.com/sebastianbergmann/diff/compare/5.0.1...5.0.2

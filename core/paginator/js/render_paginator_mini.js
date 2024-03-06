@@ -87,17 +87,15 @@ const add_events = (wrapper, self) => {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
 
-	await self.get_total()
+	// total
+		const total = await self.get_total()
 
 	// build vars
-		const total				= self.caller.total
-		// const limit			= self.get_limit()
-		// const offset			= self.get_offset()
-
 		const total_pages		= self.total_pages
 		const page_number		= self.page_number
 		const prev_page_offset	= self.prev_page_offset
@@ -139,7 +137,8 @@ const get_content_data = async function(self) {
 				parent			: paginator_div_links
 			})
 			if(page_number>1) {
-				paginator_first.addEventListener('mousedown',function(){
+				paginator_first.addEventListener('mousedown', (e) =>{
+					e.stopPropagation()
 					self.paginate(offset_first)
 				})
 			}else{

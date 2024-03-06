@@ -74,7 +74,8 @@ view_mosaic_edit_portal.render = async function(self, options) {
 					class_name		: 'button close close_alt_list_body',
 					parent 			: alt_list_body
 				})
-				close_alt_list_body.addEventListener('click', function(){
+				close_alt_list_body.addEventListener('click', function(e){
+					e.stopPropagation()
 					alt_list_body.classList.add('display_none')
 				})
 

@@ -9,8 +9,9 @@
  */
 namespace PHPUnit\Util;
 
+use function basename;
+use function dirname;
 use function is_dir;
-use function is_string;
 use function mkdir;
 use function realpath;
 use function str_starts_with;
@@ -18,7 +19,7 @@ use function str_starts_with;
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Filesystem
+final readonly class Filesystem
 {
     public static function createDirectory(string $directory): bool
     {
@@ -30,16 +31,16 @@ final class Filesystem
      *
      * @return false|non-empty-string
      */
-    public static function resolvePathOrStream(string $path): false|string
+    public static function resolveStreamOrFile(string $path): false|string
     {
         if (str_starts_with($path, 'php://') || str_starts_with($path, 'socket://')) {
             return $path;
         }
 
-        $path = realpath($path);
+        $directory = dirname($path);
 
-        if (is_string($path) && !empty($path)) {
-            return $path;
+        if (is_dir($directory)) {
+            return realpath($directory) . DIRECTORY_SEPARATOR . basename($path);
         }
 
         return false;

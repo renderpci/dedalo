@@ -18,6 +18,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $timestamp;
 	protected $userID;
 	protected $state;
+	protected $section_id_key; // used by comopnent_dataframe
 
 	public $dato;
 
@@ -49,16 +50,17 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected function defineRelationMap() {
 		return (array(
 			# db field name		# property name
-			'id'			=> 'ID',			// integer
-			#'id_matrix'	=> 'id_matrix',		// integer
-			'section_id'	=> 'section_id',	// integer
-			'section_tipo'	=> 'section_tipo',	// string varchar 32
-			'tipo'			=> 'tipo',			// string varchar 32
-			'lang'			=> 'lang',			// string 16
-			'timestamp'		=> 'timestamp',		// timestamp standard db format
-			'userID'		=> 'userID',		// integer
-			'state'			=> 'state',			// string char 32
-			'dato'			=> 'dato'			// jsonb format
+			'id'				=> 'ID',			// integer
+			#'id_matrix'		=> 'id_matrix',		// integer
+			'section_id'		=> 'section_id',	// integer
+			'section_tipo'		=> 'section_tipo',	// string varchar 32
+			'tipo'				=> 'tipo',			// string varchar 32
+			'lang'				=> 'lang',			// string 16
+			'timestamp'			=> 'timestamp',		// timestamp standard db format
+			'userID'			=> 'userID',		// integer
+			'state'				=> 'state',			// string char 32
+			'dato'				=> 'dato',			// jsonb format
+			'section_id_key'	=> 'section_id_key'	// integer
 		));
 	}//end defineRelationMap
 
@@ -88,9 +90,10 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* @param string $section_tipo = null
 	* @param int $limit = 10
 	* @param int $offset = 0
+	* @param int $section_id_key = 0
 	* @return array $ar_id
 	*/
-	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0) : array {
+	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0, int $section_id_key=null) : array {
 
 		/// Temporal !!!
 		#$limit = 1000000;
@@ -102,6 +105,9 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		$arguments['tipo']			= $tipo;
 		$arguments['section_id']	= (int)$parent;
 		$arguments['section_tipo']	= $section_tipo;
+		if(isset($section_id_key)){
+			$arguments['section_id_key']	= $section_id_key;
+		}
 		if(!empty($lang))
 		$arguments['lang']			= $lang;
 		if(!empty($limit))

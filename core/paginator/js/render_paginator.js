@@ -68,26 +68,10 @@ render_paginator.prototype.edit = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
-
-	await self.get_total()
-
-	// short vars
-		const total				= self.caller.total
-		// const limit			= self.get_limit()
-		// const offset			= self.get_offset()
-		const total_pages		= self.total_pages
-		const page_number		= self.page_number
-		const prev_page_offset	= self.prev_page_offset
-		const next_page_offset	= self.next_page_offset
-		const page_row_begin	= self.page_row_begin
-		const page_row_end		= self.page_row_end
-		const offset_first		= self.offset_first
-		const offset_prev		= self.offset_prev
-		const offset_next		= self.offset_next
-		const offset_last		= self.offset_last
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -95,14 +79,9 @@ const get_content_data = async function(self) {
 			// console.log(`++++++++++++++++++++++ total_pages: ${total_pages}, page_number: ${page_number}, offset_first: ${offset_first}, model: ${self.caller.model} `);
 		}
 
-	// display none with empty case, or when pages are <2
-		// if (!total_pages || total_pages<2) {
-		// 	const wrap_rows_paginator = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name		: 'content_data paginator display_none ' +total_pages
-		// 	})
-		// 	return wrap_rows_paginator
-		// }
+	// active_values. Storage functions to be called when the total count is available
+	// This allows scaffolding to be rendered before getting the result from the DB.
+		const active_values = []
 
 	// DOM fragment
 		const fragment = new DocumentFragment()
@@ -117,66 +96,94 @@ const get_content_data = async function(self) {
 		// btn paginator_first
 			const paginator_first = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'btn paginator_first_icon',
+				class_name		: 'btn paginator_first_icon inactive',
 				parent			: paginator_div_links
 			})
-			if(page_number>1) {
-				paginator_first.addEventListener('mousedown',function(e) {
-					e.stopPropagation()
-					e.preventDefault()
-					self.paginate(offset_first)
-				})
-			}else{
-				paginator_first.classList.add('inactive')
+			// active_value
+			const update_offset_first = (value) => {
+				if(self.page_number>1) {
+					paginator_first.classList.remove('inactive')
+					paginator_first.addEventListener('mousedown', function(e) {
+						e.stopPropagation()
+						self.paginate(value)
+					})
+				}else{
+					paginator_first.classList.add('inactive')
+				}
 			}
+			active_values.push({
+				name		: 'offset_first',
+				callback	: update_offset_first
+			})
 
 		// btn paginator_prev
 			const paginator_prev = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'btn paginator_prev_icon',
+				class_name		: 'btn paginator_prev_icon inactive',
 				parent			: paginator_div_links
 			})
-			if(prev_page_offset>=0) {
-				paginator_prev.addEventListener('mousedown',function(e) {
-					e.stopPropagation()
-					e.preventDefault()
-					self.paginate(offset_prev)
-				})
-			}else{
-				paginator_prev.classList.add('inactive')
+			// active_value
+			const update_offset_prev = (value) => {
+				if(self.prev_page_offset>=0) {
+					paginator_prev.classList.remove('inactive')
+					paginator_prev.addEventListener('mousedown', function(e) {
+						e.stopPropagation()
+						self.paginate(value)
+					})
+				}else{
+					paginator_prev.classList.add('inactive')
+				}
 			}
+			active_values.push({
+				name		: 'offset_prev',
+				callback	: update_offset_prev
+			})
 
 		// btn paginator_next
 			const paginator_next = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'btn paginator_next_icon',
+				class_name		: 'btn paginator_next_icon inactive',
 				parent			: paginator_div_links
 			})
-			if(next_page_offset<total) {
-				paginator_next.addEventListener('mousedown',function(e) {
-					e.stopPropagation()
-					e.preventDefault()
-					self.paginate(offset_next)
-				})
-			}else{
-				paginator_next.classList.add('inactive')
+			// active_value
+			const update_offset_next = (value) => {
+				if(self.next_page_offset<self.total) {
+					paginator_next.classList.remove('inactive')
+					paginator_next.addEventListener('mousedown', function(e) {
+						e.stopPropagation()
+						self.paginate(value)
+					})
+				}else{
+					paginator_next.classList.add('inactive')
+				}
 			}
+			active_values.push({
+				name		: 'offset_next',
+				callback	: update_offset_next
+			})
 
 		// btn paginator_last
 			const paginator_last = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'btn paginator_last_icon',
+				class_name		: 'btn paginator_last_icon inactive',
 				parent			: paginator_div_links
 			})
-			if(page_number<total_pages) {
-				paginator_last.addEventListener('mousedown',function(e) {
-					e.stopPropagation()
-					e.preventDefault()
-					self.paginate(offset_last)
-				})
-			}else{
-				paginator_last.classList.add('inactive')
+			// active_value
+			const update_offset_last = (value) => {
+				if(self.page_number<self.total_pages) {
+					paginator_last.classList.remove('inactive')
+					paginator_last.addEventListener('mousedown', function(e) {
+						e.stopPropagation()
+						self.paginate(value)
+					})
+				}else{
+					paginator_last.classList.add('inactive')
+				}
 			}
+			active_values.push({
+				name		: 'offset_last',
+				callback	: update_offset_last
+			})
 
 	// paginator_info
 		const paginator_info = ui.create_dom_element({
@@ -184,13 +191,6 @@ const get_content_data = async function(self) {
 			class_name		: 'paginator_info',
 			parent			: fragment
 		})
-
-		// const page_info = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'page_info',
-		// 	inner_html		: (get_label.page || 'Page') + ` ${page_number} ` + (get_label.of || 'of') + ` ${total_pages} `,
-		// 	parent			: paginator_info
-		// })
 
 		// page_info
 			ui.create_dom_element({
@@ -206,13 +206,13 @@ const get_content_data = async function(self) {
 					type			: 'number',
 					class_name		: 'input_go_to_page',
 					title			: get_label.go_to_page,
-					placeholder		: page_number,
+					// placeholder	: 1,
 					parent			: paginator_info
 				})
 				// NOTE: this event could open/close filter because page has a global keyup listener
 				// see page.js add_events to prevent double fire
 				input_go_to_page.addEventListener('keyup', function(e) {
-					event.stopPropagation();
+					e.stopPropagation();
 					e.preventDefault()
 					if (e.key==='Enter' && input_go_to_page.value.length>0) {
 						const page		= parseInt(input_go_to_page.value)
@@ -239,39 +239,64 @@ const get_content_data = async function(self) {
 						fit_input_go_to_page_to_value(input_go_to_page, this.value)
 					}
 				})
-				fit_input_go_to_page_to_value(input_go_to_page, page_number)
+				// active_value
+				const update_page_number = (value) => {
+					input_go_to_page.placeholder = value
+					fit_input_go_to_page_to_value(input_go_to_page, value)
+				}
+				active_values.push({
+					name		: 'page_number',
+					callback	: update_page_number
+				})
 
 			// page_info label
-			const locale			= 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
-			const total_pages_label	= new Intl.NumberFormat(locale, {}).format(total_pages);
-			ui.create_dom_element({
+			const locale = 'es-ES' // (page_globals.locale ?? 'es-CL').replace('_', '-')
+			const total_pages_node	= ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'page_info',
-				inner_html		: (get_label.of || 'of') + ` ${total_pages_label}`,
+				class_name		: 'page_info inactive',
+				inner_html		: ` Loading data ...  `,
 				parent			: paginator_info
+			})
+			// active_value
+			const update_total_pages = (value) => {
+				const total_pages_label	= new Intl.NumberFormat(locale, {}).format(value);
+				total_pages_node.innerHTML = (get_label.of || 'of') + ` ${total_pages_label}`
+				total_pages_node.classList.remove('inactive')
+			}
+			active_values.push({
+				name		: 'total_pages',
+				callback	: update_total_pages
 			})
 
 		// displayed_records (hidden on edit mode) // page_globals.locale
-			const total_label = new Intl.NumberFormat(locale, {}).format(total);
-			// displayed_records_label . Using legacy format label from v5 in PHP
-			const displayed_records_label = get_label.registros_mostrados
-				? (() => {
-					// ref: Registros mostrados de X a Y de Z.
-					const map = {
-						X	: page_row_begin,
-						Y	: page_row_end,
-						Z	: total_label
-					};
-					return get_label.registros_mostrados.replace(/X|Y|Z/g, (matched)=> {
-						return map[matched];
-					})
-			      })()
-			     : `Showing ${page_row_begin}-${page_row_end} of ${total_label}`
-			ui.create_dom_element({
+			const displayed_records_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'displayed_records',
-				inner_html		: displayed_records_label,
+				// inner_html	: displayed_records_label,
 				parent			: paginator_info
+			})
+			// active_value
+			const update_total = (value) => {
+				const total_label = new Intl.NumberFormat(locale, {}).format(value);
+				// displayed_records_label . Using legacy format label from v5 in PHP
+				const displayed_records_label = get_label.registros_mostrados
+					? (() => {
+						// ref: Registros mostrados de X a Y de Z.
+						const map = {
+							X	: self.page_row_begin,
+							Y	: self.page_row_end,
+							Z	: total_label
+						};
+						return get_label.registros_mostrados.replace(/X|Y|Z/g, (matched)=> {
+							return map[matched];
+						})
+				      })()
+				     : `Showing ${page_row_begin}-${page_row_end} of ${total_label}`
+				displayed_records_node.innerHTML = displayed_records_label
+			}
+			active_values.push({
+				name		: 'total',
+				callback	: update_total
 			})
 
 	// content_data
@@ -280,6 +305,20 @@ const get_content_data = async function(self) {
 			class_name		: 'content_data paginator css_rows_paginator_content'
 		})
 		content_data.appendChild(fragment)
+
+	// total. get from DDBB
+		self.get_total()
+		.then(() => {
+			// fire all active_values functions
+			const active_values_length = active_values.length
+			for (let i = 0; i < active_values_length; i++) {
+				const item = active_values[i]
+				// value is from self assigned vars like 'self.total'
+				const value = self[item.name]
+				// execute function passing selected value as param
+				item.callback(value)
+			}
+		})
 
 
 	return content_data

@@ -14,9 +14,9 @@ use function sprintf;
 use function str_contains;
 use function trim;
 use PHPUnit\Framework\ExpectationFailedException;
-use PHPUnit\Util\Exporter;
 use SebastianBergmann\Comparator\ComparisonFailure;
 use SebastianBergmann\Comparator\Factory as ComparatorFactory;
+use SebastianBergmann\Exporter\Exporter;
 
 /**
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -24,16 +24,10 @@ use SebastianBergmann\Comparator\Factory as ComparatorFactory;
 final class IsEqual extends Constraint
 {
     private readonly mixed $value;
-    private readonly float $delta;
-    private readonly bool $canonicalize;
-    private readonly bool $ignoreCase;
 
-    public function __construct(mixed $value, float $delta = 0.0, bool $canonicalize = false, bool $ignoreCase = false)
+    public function __construct(mixed $value)
     {
-        $this->value        = $value;
-        $this->delta        = $delta;
-        $this->canonicalize = $canonicalize;
-        $this->ignoreCase   = $ignoreCase;
+        $this->value = $value;
     }
 
     /**
@@ -68,9 +62,6 @@ final class IsEqual extends Constraint
             $comparator->assertEquals(
                 $this->value,
                 $other,
-                $this->delta,
-                $this->canonicalize,
-                $this->ignoreCase,
             );
         } catch (ComparisonFailure $f) {
             if ($returnResult) {
@@ -89,7 +80,7 @@ final class IsEqual extends Constraint
     /**
      * Returns a string representation of the constraint.
      */
-    public function toString(bool $exportObjects = false): string
+    public function toString(): string
     {
         $delta = '';
 
@@ -104,16 +95,9 @@ final class IsEqual extends Constraint
             );
         }
 
-        if ($this->delta != 0) {
-            $delta = sprintf(
-                ' with delta <%F>',
-                $this->delta,
-            );
-        }
-
         return sprintf(
             'is equal to %s%s',
-            Exporter::export($this->value, $exportObjects),
+            (new Exporter)->export($this->value),
             $delta,
         );
     }
