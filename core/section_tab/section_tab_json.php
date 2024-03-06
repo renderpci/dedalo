@@ -51,7 +51,7 @@
 						}
 						$current_context->children[] = (object)[
 							'tipo'	=> $child_tipo,
-							'label'	=> RecordObj_dd::get_termino_by_tipo($child_tipo)
+							'label'	=> RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_APPLICATION_LANG)
 						];
 					}
 			}

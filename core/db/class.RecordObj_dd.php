@@ -310,7 +310,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	/**
 	* GET_DESCRIPTOR_DATO_BY_TIPO
-	* Get termino dato by tipO ('termino','def','obs') static version
+	* Get termino dato by tipo ('termino','def','obs') static version
 	* @param string $terminoID
 	* @param string $lang = null
 	* @param string $tipo
