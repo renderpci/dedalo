@@ -388,61 +388,61 @@ class tool_transcription extends tool_common {
 # Implemented as a recursive descent parser based on a simple state machine
 # copyright 2005 Maarten Meijer
 # This cries out for a C-implementation to be included in PHP core
-function valid_utf8(string $string) : bool {
-	$len = strlen($string);
-	$i = 0;
-	while( $i < $len ) {
-		$char = ord(substr($string, $i++, 1));
-		if(valid_1byte($char)) {    // continue
-			continue;
-		} else if(valid_2byte($char)) { // check 1 byte
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-		} else if(valid_3byte($char)) { // check 2 bytes
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-		} else if(valid_4byte($char)) { // check 3 bytes
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-			if(!valid_nextbyte(ord(substr($string, $i++, 1))))
-				return false;
-		} // goto next char
+	function valid_utf8(string $string) : bool {
+		$len = strlen($string);
+		$i = 0;
+		while( $i < $len ) {
+			$char = ord(substr($string, $i++, 1));
+			if(valid_1byte($char)) {    // continue
+				continue;
+			} else if(valid_2byte($char)) { // check 1 byte
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+			} else if(valid_3byte($char)) { // check 2 bytes
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+			} else if(valid_4byte($char)) { // check 3 bytes
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+				if(!valid_nextbyte(ord(substr($string, $i++, 1))))
+					return false;
+			} // goto next char
+		}
+		return true; // done
 	}
-	return true; // done
-}
-function valid_1byte($char) : bool {
-	if(!is_int($char)) return false;
-	return ($char & 0x80) == 0x00;
-}
-function valid_2byte($char) : bool {
-	if(!is_int($char)) return false;
-	return ($char & 0xE0) == 0xC0;
-}
-function valid_3byte($char) : bool {
-	if(!is_int($char)) return false;
-	return ($char & 0xF0) == 0xE0;
-}
-function valid_4byte($char) : bool {
-	if(!is_int($char)) return false;
-	return ($char & 0xF8) == 0xF0;
-}
-function valid_nextbyte($char) : bool {
-	if(!is_int($char)) return false;
-	return ($char & 0xC0) == 0x80;
-}
-# UTF8_CLEAN
-function utf8_clean(string $string, bool $control=false) : string {
-    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
-    return $string;
+	function valid_1byte($char) : bool {
+		if(!is_int($char)) return false;
+		return ($char & 0x80) == 0x00;
+	}
+	function valid_2byte($char) : bool {
+		if(!is_int($char)) return false;
+		return ($char & 0xE0) == 0xC0;
+	}
+	function valid_3byte($char) : bool {
+		if(!is_int($char)) return false;
+		return ($char & 0xF0) == 0xE0;
+	}
+	function valid_4byte($char) : bool {
+		if(!is_int($char)) return false;
+		return ($char & 0xF8) == 0xF0;
+	}
+	function valid_nextbyte($char) : bool {
+		if(!is_int($char)) return false;
+		return ($char & 0xC0) == 0x80;
+	}
+	# UTF8_CLEAN
+	function utf8_clean(string $string, bool $control=false) : string {
+	    $string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
+	    return $string;
 
-    if ($control === true)
-    {
-        return preg_replace('~\p{C}+~u', '', $string);
-    }
+	    if ($control === true)
+	    {
+	        return preg_replace('~\p{C}+~u', '', $string);
+	    }
 
-    return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
-}
+	    return preg_replace(array('~\r\n?~', '~[^\P{C}\t\n]+~u'), array("\n", ''), $string);
+	}
