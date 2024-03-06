@@ -109,7 +109,8 @@ session_write_close();
 			$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
 				return [
 					'label'	=> lang::get_name_from_code($current_lang),
-					'value'	=> $current_lang
+					'value'	=> $current_lang,
+					'tld2'	=> lang::get_alpha2_from_code($current_lang)
 				];
 			}, DEDALO_PROJECTS_DEFAULT_LANGS);
 			// quality defaults

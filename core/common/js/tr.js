@@ -169,19 +169,19 @@ export const tr = {
 
 		// SVG
 			const pattern_svg = tr.get_mark_pattern('svg');
-			text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_svg, `<img id="[$2-$3-$4-$6]" src="${tag_url}$7" height="15" class="svg" data-type="svg" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// DRAW
 			const pattern_draw = tr.get_mark_pattern('draw');
-			text = text.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_draw, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="38" height="15" class="draw" data-type="draw" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// GEO
 			const pattern_geo = tr.get_mark_pattern('geo');
-			text = text.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
+			text = text.replace(pattern_geo, `<img id="[$2-$3-$4-$6]" src="${tag_url}[$2-$3-$4-$6]" width="38" height="15" class="geo" data-type="geo" data-tag_id="$4" data-state="$3" data-label="$6" data-data="$7">`);
 
 		// PAGE
 			const pattern_page = tr.get_mark_pattern('page');
-			text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
+			text = text.replace(pattern_page, `<img id="[$2-$3-$4-$5]" src="${tag_url}[$2-$3-$4-$5]" width="38" height="15" class="page" data-type="page" data-tag_id="$4" data-state="$3" data-label="$5" data-data="$7">`);
 
 		// PERSON
 			const pattern_person = tr.get_mark_pattern('person');

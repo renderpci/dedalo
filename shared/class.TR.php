@@ -397,77 +397,81 @@ abstract class TR {
 
 	/**
 	* DELETEMARKS
-	* clean text to translate
+	* clean text to translate/subtitles
+	* @param object $options
 	* @return string $string
 	*/
-	public static function deleteMarks(string $string, object $request_options=null) : string {
+	public static function deleteMarks(string $string, object $options=null) : string {
 
-		$options = new stdClass();
-			$options->deleteTC			= true;
-			$options->deleteIndex		= true;
-			$options->deleteSvg			= true;
-			$options->deleteDraw		= true;
-			$options->deleteGeo			= true;
-			$options->delete_page		= true;
-			$options->delete_person		= true;
-			$options->delete_note		= true;
-			$options->delete_reference	= true;
-			if (is_object($request_options)) {
-				foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-			}
+		// options
+			$deleteTC			= $options->deleteTC ?? true;
+			$deleteIndex		= $options->deleteIndex ?? true;
+			$deleteSvg			= $options->deleteSvg ?? true;
+			$deleteDraw			= $options->deleteDraw ?? true;
+			$deleteGeo			= $options->deleteGeo ?? true;
+			$delete_page		= $options->delete_page ?? true;
+			$delete_person		= $options->delete_person ?? true;
+			$delete_note		= $options->delete_note ?? true;
+			$delete_reference	= $options->delete_reference ?? true;
+			$delete_lang		= $options->delete_lang ?? true;
 
-
-		# TC clear
-		if($options->deleteTC===true) {
+		// TC clear
+		if($deleteTC===true) {
 			$pattern = TR::get_mark_pattern('tc');
 			$string = preg_replace($pattern, '', $string);	// delete TC tag
 		}
 
-		# Index clear
-		if($options->deleteIndex===true) {
+		// Index clear
+		if($deleteIndex===true) {
 			$pattern 	= TR::get_mark_pattern('index');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Svg clear
-		if($options->deleteSvg===true) {
+		// Svg clear
+		if($deleteSvg===true) {
 			$pattern 	= TR::get_mark_pattern('svg');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Draw clear
-		if($options->deleteDraw===true) {
+		// Draw clear
+		if($deleteDraw===true) {
 			$pattern 	= TR::get_mark_pattern('draw');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Geo clear
-		if($options->deleteGeo===true) {
+		// Geo clear
+		if($deleteGeo===true) {
 			$pattern 	= TR::get_mark_pattern('geo');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Page clear
-		if($options->delete_page===true) {
+		// Page clear
+		if($delete_page===true) {
 			$pattern 	= TR::get_mark_pattern('page');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Person clear
-		if($options->delete_person===true) {
+		// Person clear
+		if($delete_person===true) {
 			$pattern 	= TR::get_mark_pattern('person');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# Note clear
-		if($options->delete_note===true) {
+		// Note clear
+		if($delete_note===true) {
 			$pattern 	= TR::get_mark_pattern('note');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 
-		# references clear
-		if($options->delete_reference===true) {
+		// references clear
+		if($delete_reference===true) {
 			$pattern 	= TR::get_mark_pattern('reference');
+			$string 	= preg_replace($pattern, '', $string);
+		}
+
+		// lang clear
+		if($delete_lang===true) {
+			$pattern 	= TR::get_mark_pattern('lang');
 			$string 	= preg_replace($pattern, '', $string);
 		}
 

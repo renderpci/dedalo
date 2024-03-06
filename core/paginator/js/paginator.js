@@ -109,47 +109,14 @@ paginator.prototype.build = async function() {
 	// status update
 		self.status = 'building'
 
-	// short vars
-		const total				= await self.get_total();
-		const limit				= self.get_limit()
-		const offset			= self.get_offset()
-
-	// pages fix vars
-		self.total				= total
-		self.limit				= limit
-		self.total_pages		= limit>0 ? Math.ceil(total / limit) : 0
-		self.page_number		= self.get_page_number(limit, offset)
-		self.prev_page_offset	= offset - limit
-		self.next_page_offset	= offset + limit
-
-		self.page_row_begin		= (total===0) ? 0 : offset + 1;
-		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
-
-	// offset fix
-		self.offset				= offset;
-		self.offset_first		= 0;
-		self.offset_prev		= (offset>limit) ? offset - limit : 0
-		self.offset_next		= offset + limit
-		self.offset_last		= limit * (self.total_pages -1)
-
-	// permissions from caller
-		self.permissions 		= self.caller.permissions
-
-	// debug
-		// if(SHOW_DEBUG===true) {
-		// 	// console.log("paginator [build] self:",self);
-		// 	// console.log("paginator total:",total);
-		// 	const time = performance.now()-t0
-		// 	if (time>2) {
-		// 		console.log("__Time to build [paginator.build]:", self.model, self.caller.model, self.caller.tipo, time);
-		// 	}
-		// }
+	// permissions. Inherits permissions from the caller
+		self.permissions = self.caller.permissions
 
 	// status update
 		self.status = 'built'
 
 	// event publish
-		event_manager.publish('built_'+self.id)
+		event_manager.publish('built_' + self.id)
 
 
 	return true
@@ -198,7 +165,7 @@ paginator.prototype.get_total = async function() {
 			return new Promise(function(resolve){
 				setTimeout(function(){
 					resolve( self.get_total() )
-				}, 60)
+				}, 50)
 			})
 		}
 
@@ -213,7 +180,32 @@ paginator.prototype.get_total = async function() {
 
 	paginator.loading_total_status = 'resolved'
 
-	// console.log("))) __Time to get_total", self.caller.model, self.caller.tipo, "(ms):", performance.now()-t0);
+
+	// short vars
+		const limit				= self.get_limit()
+		const offset			= self.get_offset()
+
+	// pages fix vars
+		self.total				= total
+		self.limit				= limit
+		self.total_pages		= limit>0 ? Math.ceil(total / limit) : 0
+		self.page_number		= self.get_page_number(limit, offset)
+		self.prev_page_offset	= offset - limit
+		self.next_page_offset	= offset + limit
+
+		self.page_row_begin		= (total===0) ? 0 : offset + 1;
+		self.page_row_end		= self.get_page_row_end(self.page_row_begin, limit, total);
+
+	// offset fix
+		self.offset				= offset;
+		self.offset_first		= 0;
+		self.offset_prev		= (offset>limit) ? offset - limit : 0
+		self.offset_next		= offset + limit
+		self.offset_last		= limit * (self.total_pages -1)
+
+	// debug
+		// console.log("))) __Time to get_total", self.caller.model, self.caller.tipo, "(ms):", performance.now()-t0);
+
 
 	return total
 }//end get_total
@@ -298,7 +290,6 @@ paginator.prototype.paginate = async function(offset) {
 
 	return true
 }//end paginate
-
 
 
 
