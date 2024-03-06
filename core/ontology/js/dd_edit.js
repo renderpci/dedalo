@@ -1,4 +1,3 @@
-// @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
 /*global page_globals, SHOW_DEBUG, data_manager, terminoID, id */
 /*eslint no-undef: "error"*/
 
@@ -661,8 +660,14 @@ const add_new_lang = function(select_obj) {
 
 /**
 * EXPORT_ONTOLOGY
+* Get current term and recursive children as JSON object file
+* @param HTMLElement button
+* @param string terminoID
+* @return promise
 */
-const export_ontology = function(terminoID) {
+const export_ontology = function(button, terminoID) {
+
+	button.classList.add('loading')
 
 	const data = {
 		mode 		: 'export_ontology',
@@ -670,7 +675,7 @@ const export_ontology = function(terminoID) {
 	}
 
 	// AJAX CALL
-	$.ajax({
+	return $.ajax({
 		url		: descriptors_trigger,
 		data	: data,
 		type	: "POST"
@@ -683,59 +688,241 @@ const export_ontology = function(terminoID) {
 		}
 
 		const link_obj = build_download_data_link({
-			obj_to_save : received_data,
-			data_type   : 'json',
-			file_name   : 'ontology_' + terminoID
+			obj_to_save	: received_data,
+			data_type	: 'json',
+			file_name	: 'ontology_' + terminoID,
+			mime_type	: 'application/json'
 		})
 		link_obj.click()
+
+		button.classList.remove('loading')
 	})
 	.fail( function(jqXHR, textStatus) {
+		button.classList.remove('loading')
 		console.log("Error:",textStatus);
 		alert("Error on export_ontology");
 	})
 	.always(function() {
 
 	});//fin $.ajax
-
-	return true
 }//end export_ontology
 
 
 
 /**
+* EXPORT_ONTOLOGY_CSV
+* Get current term and recursive children as CSV file
+* @param HTMLElement button
+* @param string terminoID
+* @return promise
+*/
+const export_ontology_csv = function(button, terminoID) {
+
+	// columns base
+		const columns = [
+			'tipo',
+			'model',
+			'lg-spa', // add always Spanish
+			// 'lg-eng',
+			// 'lg-deu',
+			// 'lg-fra',
+			// 'lg-ita',
+			// 'lg-ell',
+			// 'lg-nep'
+		]
+
+	// get available langs list from lang selector
+		let prompt_value = localStorage.getItem("export_csv_prompt_value");
+		if (!prompt_value) {
+
+			const langs_selector	= document.getElementById('SelectLangList')
+			const option_values		= [...langs_selector.options].map(o => o.value)
+			const langs				= []
+			for (let i = 1; i < option_values.length; i++) {
+				const lang = option_values[i].trim()
+				if (lang.indexOf('lg-')===0 && lang!=='lg-spa') {
+					langs.push(lang)
+				}
+			}
+			prompt_value = langs.join(',')
+		}
+
+	// prompt user for output langs
+		const langs_string = prompt('Select output langs', prompt_value)
+		console.log('langs_string:', langs_string);
+		if (!langs_string) {
+			// user cancel action case
+			return
+		}
+		// save user selection
+		localStorage.setItem("export_csv_prompt_value", langs_string);
+
+		// add selection to columns array
+		const langs_selection = langs_string.split(',')
+		columns.push(...langs_selection)
+		console.log('Final columns:', columns);
+
+	button.classList.add('loading')
+
+	// AJAX CALL
+	return $.ajax({
+		url		: descriptors_trigger,
+		type	: "POST",
+		data	: {
+			mode		: 'export_ontology',
+			terminoID	: terminoID
+		}
+	})
+	.done(function(received_data) {
+		//console.log("received_data:",received_data);
+
+		if (typeof received_data === 'string' || received_data instanceof String) {
+			received_data = JSON.parse(received_data)
+		}
+
+		const csv_string = convert_json_to_csv(
+			received_data,
+			columns
+		)
+		// console.log('csv_string:', csv_string);
+
+		const link_obj = build_download_data_link({
+			obj_to_save	: csv_string,
+			data_type	: 'csv',
+			file_name	: 'ontology_' + terminoID,
+			mime_type	: 'text/csv'
+		})
+		link_obj.click()
+
+		button.classList.remove('loading')
+	})
+	.fail( function(jqXHR, textStatus) {
+		button.classList.remove('loading')
+		console.log("Error:",textStatus);
+		alert("Error on export_ontology_csv");
+	})
+	.always(function() {
+
+	});//fin $.ajax
+}//end export_ontology_csv
+
+
+
+/**
+* CONVERT_JSON_TO_CSV
+* Converts data from export_ontology_csv
+* @param object data
+* @array columns
+* @return string csv_string
+*/
+const convert_json_to_csv = function(data, columns) {
+
+	const format_value = function(value) {
+		const safe_value = value.map(el => {
+			return el.replace(/"/g, '""')
+		})
+		return '"' + safe_value.join('","') + '"'
+		// return value.join(',')
+	}
+
+	const csv_items = []
+
+	const data_length = data.length
+	for (let i = 0; i < data_length; i++) {
+
+		// header
+		if(i===0) {
+		  csv_items.push(
+			format_value(columns)
+		  )
+		}
+
+		// data item
+		const item = data[i]
+
+		const row = []
+
+		// columns
+		columns.forEach(column => {
+			switch(true) {
+			  case (column==='tipo'):
+				// tipo
+				row.push(item.tipo)
+				break;
+			  case (column.indexOf('lg-')===0):
+				// lang
+				const element = item.descriptors.find(el => el.lang===column && el.type==='term')
+				const value = element
+				  ? element.value
+				  : ''
+				row.push(value)
+				break;
+			  default: {
+				const value = item[column] || ''
+				row.push(value)
+				break;
+			  }
+			}
+		})
+		csv_items.push(
+			format_value(row)
+		)
+	}//end for
+
+	// data_container DOM print
+	const csv_string = csv_items.join('\n')
+
+
+	return csv_string
+}//end convert_json_to_csv
+
+
+
+/**
 * BUILD_DOWNLOAD_DATA_LINK
+* @param object options
+* @return HTMLElement link_obj
 */
 const build_download_data_link = function(options) {
 
-	const self = this
-
 	// Options vars
-	const obj_to_save 	= options.obj_to_save
-	const data_type 	= options.data_type || 'json'
-	const file_name 	= options.file_name || 'download_file'
+	const obj_to_save	= options.obj_to_save
+	const data_type		= options.data_type || 'json'
+	const file_name		= options.file_name || 'download_file'
+	const mime_type		= options.mime_type || 'application/json'
 
 	// Label
 	const label = file_name
-	// Mime
-	const mime_type = 'application/json'
+
+	// content
+	let content
+	switch (data_type) {
+		case 'csv':
+			content = [obj_to_save]
+			break;
+
+		case 'json':
+		default:
+			content = [JSON.stringify(obj_to_save, null, 2)]
+			break;
+	}
+
 	// Blob data
-	const data = new Blob([JSON.stringify(obj_to_save, null, 2)], {
-			type: mime_type,
-		name: 'file.json'
+	const data = new Blob(content, {
+		type	: mime_type,
+		name	: 'file.' + data_type
 	})
 
 	// Build href from data
 	const href = URL.createObjectURL(data)
 
 	// link_obj
-	const link_obj = document.createElement("a")
-		link_obj.href 	   = href
-		link_obj.download  = file_name
+	const link_obj		= document.createElement("a")
+	link_obj.href		= href
+	link_obj.download	= file_name
 
 
 	return link_obj
 }//end build_download_data_link
 
 
-
-// @license-end
