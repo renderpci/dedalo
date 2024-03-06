@@ -374,6 +374,117 @@ class tool_transcription extends tool_common {
 
 
 
+	/**
+	* BUILD_SUBTITLES_FILE
+	* Generates and write the subtitles text from current component value
+	* @param object $options
+	* @return object $response
+	*/
+	public static function build_subtitles_file(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$component_tipo	= $options->component_tipo;
+			$section_tipo	= $options->section_tipo;
+			$section_id		= $options->section_id;
+			$lang			= $options->lang;
+			$key			= $options->key ?? 0; // fixed component dato key as zero
+			$max_charline	= $options->max_charline;
+
+		// component_text_area
+		// Source text . Get source text from component (source_lang)
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+			$component_text_area	= component_common::get_instance(
+				$model,
+				$component_tipo,
+				$section_id,
+				'list',
+				$lang,
+				$section_tipo
+			);
+			$dato			= $component_text_area->get_dato();
+			$text			= $dato[$key] ?? '';
+			// $source_text	= TR::deleteMarks($text);
+			$source_text	= trim($text);
+
+		// component_av
+			$component_av_tipo	= $component_text_area->get_related_component_av_tipo();
+			$model				= RecordObj_dd::get_modelo_name_by_tipo($component_av_tipo, true);
+			$component_av		= component_common::get_instance(
+				$model,
+				$component_av_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$duration		= $component_av->get_duration(); // seconds
+			$total_ms		= (int)round($duration * 1000);
+			$subtitles_path	= $component_av->get_subtitles_path($lang);
+			$subtitles_url	= $component_av->get_subtitles_url($lang);
+
+		// debug
+			debug_log(__METHOD__
+				. " launching build_subtitles_text with params:" . PHP_EOL
+				. ' max_charline: ' . to_string($max_charline) . PHP_EOL
+				. ' total_ms: ' . to_string($total_ms) . PHP_EOL
+				. ' source_text: ' . substr($source_text, 0, 256) . ' ..'
+				, logger::DEBUG
+			);
+
+		// class subtitles
+			include_once( DEDALO_SHARED_PATH . '/class.subtitles.php');
+
+		// build_subtitles_text exec
+			$subtitles_response = subtitles::build_subtitles_text((object)[
+				'sourceText'	=> $source_text,
+				'maxCharLine'	=> $max_charline,
+				'total_ms'		=> $total_ms
+			]);
+			if ($subtitles_response->result===false) {
+				$response->msg .= PHP_EOL . $subtitles_response->msg ?? 'Unknown error on build_subtitles_text';
+				return $response;
+			}
+
+		// check target folder
+			$target_folder = pathinfo($subtitles_path)['dirname'];
+			if (!is_dir($target_folder)) {
+				// create the directory
+				$response->msg .= PHP_EOL . 'Error: subtitles dir do not exists!';
+				debug_log(__METHOD__
+					. $response->msg . PHP_EOL
+					. ' subtitles dir: ' . to_string($target_folder)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+		// save to file
+			$content = $subtitles_response->result ?? '';
+			if( !file_put_contents($subtitles_path, $content) ) {
+				$response->msg .= PHP_EOL . 'Error writing subtitles file';
+				debug_log(__METHOD__
+					. $response->msg . PHP_EOL
+					. ' subtitles_path: ' . to_string($subtitles_path)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+		// all is OK
+			$response->result	= true;
+			$response->url		= $subtitles_url;
+			$response->msg		= 'OK. Request done successfully';
+
+
+		return $response;
+	}//end build_subtitles_file
+
+
+
 }//end class tool_transcription
 
 
