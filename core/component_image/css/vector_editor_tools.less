@@ -4,14 +4,51 @@
 * Included from component_image.less file
 */
 
+.sgv_editor.content_value {
 
+	display: grid;
+
+	* {
+		transform-origin: 0 0;
+	}
+
+	.work_area.active_editor {
+		overflow: scroll;
+		text-align: center;
+		display: block ;
+		background-color: #A0A0A0;
+		vertical-align: middle;
+
+		.svg_canvas {
+			text-align: center;
+			vertical-align: middle;
+			display: inline-block;
+			line-height: normal;
+
+			#svgroot {
+				user-select: none;
+				position: absolute;
+				top: 0;
+				left: 0;
+			}
+		}
+	}
+}
+
+.wrapper_component.component_image.fullscreen {
+	.vector_editor_tools {
+		margin-top: 1.82rem;
+		right: 0px;
+	}
+}
 
 .vector_editor_tools {
 	background-color: @color_orange_dedalo;
 	width: 2.25rem;
 	text-align: center;
 	position: absolute;
-	right: 0px;
+	// right: 0px;
+	right: -2.25rem;
 
 	>.button {
 		background-color: #ffffff;
@@ -78,7 +115,7 @@
 		top: 0px;
 
 		>.layer_selector {
-			width: 11em;
+			width: 12em;
 			background-color: @color_orange_dedalo;
 			position: absolute;
 			right: 0px;
@@ -157,9 +194,14 @@
 
 					}
 					.user_layer_name {
-						color: #555555;
-						font-size: 0.96rem;
-						font-weight: normal;
+						color		: #555555;
+						font-size	: 0.96rem;
+						font-weight	: normal;
+						width		: 100%;
+						height		: 100%;
+						display		: flex;
+						align-items	: center;
+						overflow	: auto;
 					}
 					.layer_delete {
 						// .fn_build_button('trash_light.svg', black, 1);

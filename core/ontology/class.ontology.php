@@ -177,7 +177,12 @@ class ontology {
 
 			// get termino by tipo with fallback
 			if ($options->label===true) {
-				$item->label = RecordObj_dd::get_termino_by_tipo($tipo, DEDALO_APPLICATION_LANG, true, true); // $terminoID, $lang=NULL, $from_cache=false, $fallback=true
+				$item->label = RecordObj_dd::get_termino_by_tipo(
+					$tipo, // string terminoID
+					DEDALO_APPLICATION_LANG, // string lang
+					true, // bool from_cache
+					true // bool do fallback
+				);
 			}
 
 		return $item;

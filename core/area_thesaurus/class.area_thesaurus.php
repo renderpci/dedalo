@@ -66,6 +66,8 @@ class area_thesaurus extends area_common {
 	* @param array $hierarchy_types_filter = null
 	* @param array $hierarchy_sections_filter = null
 	* @param bool $terms_are_model = false
+	* 	This param comes from rqo->source->build_options->terms_are_model sent by the client from
+	* 	area_thesaurus when building and self.thesaurus_view_mode==='model'
 	* @return array $ar_items
 	*/
 	public function get_hierarchy_sections(array $hierarchy_types_filter=null, array $hierarchy_sections_filter=null, bool $terms_are_model=false) : array {
@@ -461,24 +463,39 @@ class area_thesaurus extends area_common {
 	public function search_thesaurus(object $search_query_object) : object {
 		$start_time = start_time();
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= '';
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= '';
 
-		# Search records
+		// terms_are_model. This value comes from rqo->source->build_options->terms_are_model
+			// sent by the client from area_thesaurus when building and self.thesaurus_view_mode==='model'
+			$terms_are_model				= $this->build_options->terms_are_model ?? false;
+			$hierarchy_from_component_tipo	= $terms_are_model
+				? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO
+				: DEDALO_HIERARCHY_CHILDREN_TIPO;
+
+		// Search records
 			$search			= search::get_instance($search_query_object);
 			$search_result	= $search->search();
 			$ar_records		= $search_result->ar_records;
 
-		# ar_path_mix . Calculate full path of each result
+		// ar_path_mix . Calculate full path of each result
 			$ar_path_mix = array();
-			foreach ($ar_records as $key => $row) {
+			foreach ($ar_records as $row) {
 
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
 
-				$ar_parents = component_relation_parent::get_parents_recursive($section_id, $section_tipo, false);
-					#dump($ar_parents, ' ar_parents ++ '.to_string("$section_id, $section_tipo")); die();
+				$ar_parents = component_relation_parent::get_parents_recursive(
+					$section_id,
+					$section_tipo,
+					(object)[
+						'skip_root'						=> false,
+						'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo,
+						'search_in_main_hierarchy'		=> true
+					]
+				);
 
 				$locator = new locator();
 					$locator->set_section_tipo($section_tipo);
@@ -490,18 +507,19 @@ class area_thesaurus extends area_common {
 				$ar_path_mix[] = $ar_path;
 			}
 
-		# AR_DATA_COMBINED
+		// AR_DATA_COMBINED
 			$ar_data_combined = $this->combine_ar_data($ar_path_mix);
-				#dump($ar_data_combined, ' ar_data_combined ++ '.to_string());
 
-		$result = self::walk_hierarchy_data($ar_data_combined);
+		// result. Walk ar_data
+			$result = self::walk_hierarchy_data($ar_data_combined);
 
-		$total_records = count($ar_records);
+		// total_records count
+			$total_records = count($ar_records);
 
 		// response
-			$response->msg 	  	= "Records found: $total_records";
-			$response->result 	= $result;
-			$response->total  	= $total_records;
+			$response->msg		= 'Records found: ' . $total_records;
+			$response->result	= $result;
+			$response->total	= $total_records;
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -510,7 +528,7 @@ class area_thesaurus extends area_common {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end search_thesaurus
 
 

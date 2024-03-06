@@ -12,6 +12,9 @@
 	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {view_line_list_portal} from './view_line_list_portal.js'
 
+	// dataframe
+	import {view_default_list_dataframe} from '../../component_dataframe/js/view_default_list_dataframe.js'
+	import {view_mini_list_dataframe} from '../../component_dataframe/js/view_mini_list_dataframe.js'
 
 
 /**
@@ -35,7 +38,16 @@ render_list_component_portal.prototype.list = async function(options) {
 	const self = this
 
 	// view
-		const view	= self.context.view || 'default'
+		// used the prefix dataframe for component_dataframes view
+		const dataframe	= (self.model === 'component_dataframe')
+			? 'dataframe_'
+			: ''
+
+		// get the view define in context if is not set use default
+		const view	= self.context.view
+			? `${dataframe}${self.context.view}`
+			: 'default'
+
 
 	switch(view) {
 
@@ -47,6 +59,13 @@ render_list_component_portal.prototype.list = async function(options) {
 
 		case 'text':
 			return view_text_list_portal.render(self, options)
+
+		case 'dataframe_default':
+			return view_default_list_dataframe.render(self, options)
+
+		case 'dataframe_text':
+		case 'dataframe_mini':
+			return view_mini_list_dataframe.render(self, options)
 
 		case 'default':
 		default:

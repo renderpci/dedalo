@@ -851,14 +851,17 @@ export const create_source = function (self, action) {
 		}
 
 	// caller_dataframe
-		if(self.caller && self.caller.model==='section_record'){
-			if(self.caller.caller){
-				source.caller_dataframe = {
-					section_tipo	: self.caller.caller.section_tipo,
-					section_id		: self.caller.caller.section_id
+		if(self.model==='component_dataframe'){
+			source.caller_dataframe = self.caller_dataframe
+				? self.caller_dataframe
+				: {
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					section_id_key	: self.data.section_id_key,
+					// tipo_key		: self.data.tipo_key
 				}
-			}
 		}
+
 
 	// properties
 		if (self.properties) {
@@ -1689,7 +1692,7 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 					const new_path = []
 					ddo: for (let j = current_path_length - 1; j >= 0; j--) {
 						// Dataframe nodes are outside the portal sqo (it has his own sqo) and need to be excluded
-						if(current_path[j].is_dataframe && current_path[j].is_dataframe===true){continue paths}
+						if(current_path[j].model==='component_dataframe'){continue paths}
 						// create a copy of the current ddo, it ensure that the original path is not touched
 						const current_ddo = clone(current_path[j])
 						current_ddo.mode = 'list' // enable lang fallback value

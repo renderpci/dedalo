@@ -14,7 +14,7 @@ namespace PHPUnit\Framework\TestStatus;
  *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class Skipped extends Known
+final readonly class Skipped extends Known
 {
     /**
      * @psalm-assert-if-true Skipped $this

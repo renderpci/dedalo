@@ -18,11 +18,11 @@ use PHPUnit\Framework\TestStatus\TestStatus;
  *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class TestResult
+final readonly class TestResult
 {
-    private readonly TestMethod $test;
-    private readonly TestStatus $status;
-    private readonly ?Throwable $throwable;
+    private TestMethod $test;
+    private TestStatus $status;
+    private ?Throwable $throwable;
 
     public function __construct(TestMethod $test, TestStatus $status, ?Throwable $throwable)
     {

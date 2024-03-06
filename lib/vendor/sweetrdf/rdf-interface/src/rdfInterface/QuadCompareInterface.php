@@ -37,15 +37,13 @@ namespace rdfInterface;
  * 
  * @author zozlak
  */
-interface QuadCompareInterface extends TermCompareInterface {
+interface QuadCompareInterface extends TermCompareInterface, \Stringable {
 
-    public function __toString(): string;
+    public function getSubject(): TermCompareInterface | null;
 
-    public function getSubject(): TermInterface | TermCompareInterface | null;
+    public function getPredicate(): TermCompareInterface | null;
 
-    public function getPredicate(): TermInterface | TermCompareInterface | null;
+    public function getObject(): TermCompareInterface | null;
 
-    public function getObject(): TermInterface | TermCompareInterface | null;
-
-    public function getGraph(): TermInterface | TermCompareInterface | null;
+    public function getGraph(): TermCompareInterface | null;
 }

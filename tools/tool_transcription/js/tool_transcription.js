@@ -257,28 +257,60 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 
 
 /**
-* BUILD_SUBTITLES
+* BUILD_SUBTITLES_FILE
+* Call to API to calculate current subtitles from the transcription
+* and save it to a normalized file path like '/httpdocs/dedalo/media/av/subtitles/rsc35_rsc167_1_lg-spa.vtt'
+* @see Note that component_av (in view 'player') is subscribed to event 'updated_subtitles_file_' + self.id
+* and must be publish the change to force the load of new file in the player captions track
+* @return promise
+* 	{
+* 		result : bool,
+* 		url: string,
+* 		msg: string
+* 	}
 */
-tool_transcription.prototype.build_subtitles = async function() {
+tool_transcription.prototype.build_subtitles_file = async function() {
 
-	const component_text_area = self.transcription_component
+	const self = this
 
-	// get instance and init
-		self.service_subtitles = await get_instance({
-			model				: 'service_subtitles',
-			mode				: 'edit',
-			caller				: self,
-			component_text_area : component_text_area
+	// short vars
+		const component_text_area	= self.transcription_component // component_text_area instance
+		const lang					= component_text_area.data.lang // !important : get from data, not from context
+		const max_charline			= self.characters_per_line // fixed from input 'input_characters_per_line'
+
+	// source. Note that second argument is the name of the function is the action that not has utility here
+		const source = create_source(self, 'build_subtitles_file')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				component_tipo	: component_text_area.tipo,
+				section_tipo	: component_text_area.section_tipo,
+				section_id		: component_text_area.section_id,
+				lang			: lang,
+				max_charline	: max_charline,
+				key				: 0	// fixed component dato key as zero
+			}
+		}
+
+	// call to the API, fetch data and get response
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			body : rqo
 		})
+		.then(function(response){
+			if(SHOW_DEVELOPER===true) {
+				dd_console("-> build_subtitles_file API response:",'DEBUG', response);
+			}
 
-	self.ar_instances.push(self.service_subtitles)
-
-	await self.service_subtitles.build()
-
-	// ....
-}// end build_subtitles
-
-
+			resolve(response)
+		})
+	});
+}//end build_subtitles_file
 
 
 

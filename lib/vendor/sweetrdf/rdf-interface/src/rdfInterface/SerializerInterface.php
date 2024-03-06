@@ -26,6 +26,8 @@
 
 namespace rdfInterface;
 
+use Traversable;
+
 /**
  *
  * @author zozlak
@@ -34,19 +36,23 @@ interface SerializerInterface {
 
     public function __construct();
 
-    public function serialize(QuadIteratorInterface | QuadIteratorAggregateInterface $graph,
+    /**
+     * 
+     * @param Traversable<QuadInterface>|array<QuadInterface> $graph
+     * @param RdfNamespaceInterface|null $nmsp
+     * @return string
+     */
+    public function serialize(Traversable | array $graph,
                               ?RdfNamespaceInterface $nmsp = null): string;
 
     /**
      *
      * @param resource | \Psr\Http\Message\StreamInterface $output
-     * @param QuadIteratorInterface|QuadIteratorAggregateInterface $graph
+     * @param Traversable<QuadInterface>|array<QuadInterface> $graph
      * @param RdfNamespaceInterface|null $nmsp
      * @return void
      */
-    public function serializeStream(
-        mixed $output,
-        QuadIteratorInterface | QuadIteratorAggregateInterface $graph,
-        RdfNamespaceInterface | null $nmsp = null
+    public function serializeStream(mixed $output, Traversable | array $graph,
+                                    RdfNamespaceInterface | null $nmsp = null
     ): void;
 }

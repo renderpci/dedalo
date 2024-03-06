@@ -139,14 +139,60 @@ export const get_content_data_player = function(options) {
 				}else{
 					const subtitles	= self.data.subtitles
 					if(subtitles && subtitles.subtitles_url) {
-						const subtitles_track = document.createElement('track')
-						subtitles_track.type	= 'text/vtt'
-						subtitles_track.label	= subtitles.lang_name
-						subtitles_track.srclang	= subtitles.lang
+
+						const subtitles_track	= document.createElement('track')
+						// subtitles_track.type	= 'text/vtt'
+						subtitles_track.kind	= 'captions'
 						subtitles_track.src		= subtitles.subtitles_url
+						subtitles_track.srclang	= subtitles.lang
+						subtitles_track.label	= subtitles.lang_name
 						subtitles_track.default	= true
 						// Add new track to video
-							video.appendChild(subtitles_track)
+						video.appendChild(subtitles_track)
+
+						// update_subtitles event
+						// (this event is fired, among others, by tool_transcription on update subtitles file)
+						const fn_update_subtitles = (options={}) => {
+
+							// options (non mandatory)
+								const lang	= options.lang || self.lang
+								const url	= options.url || subtitles.subtitles_url
+
+							// lang_tld2
+								const lang_item = page_globals.dedalo_projects_default_langs.find(
+									el => el.value===lang
+								)
+								const lang_tld2 = lang_item ? lang_item.tld2 : null
+								if (!lang_tld2) {
+									console.log(
+										'Unable to find lang in page_globals:',
+										options.lang,
+										page_globals.dedalo_projects_default_langs
+									);
+									return
+								}
+
+							// URL src replace
+								const new_url = subtitles_track.srclang!==lang_tld2
+									? url.replace(/(lg-[a-z]{2,})/, lang)
+									: subtitles_track.src
+								const non_cache_url = new_url.split('?')[0] + '?t=' + (new Date()).getTime()
+								// apply source url
+								subtitles_track.src	= non_cache_url
+
+							// lang info update
+								if (subtitles_track.srclang!==lang_tld2) {
+									subtitles_track.srclang	= lang_tld2
+									subtitles_track.label	= lang_item.label
+								}
+
+							if(SHOW_DEBUG===true) {
+								console.log('Changed subtitles track src:', lang_tld2, subtitles_track.src);
+							}
+						}
+						self.events_tokens.push(
+							event_manager.subscribe('updated_subtitles_file_' + self.id, fn_update_subtitles)
+						)
 					}
 				}
 

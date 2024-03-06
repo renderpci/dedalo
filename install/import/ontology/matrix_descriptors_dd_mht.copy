@@ -75,7 +75,6 @@ mht150	template_map	termino	lg-spa
 mht151	Video	termino	lg-spa
 mht152	PDF	termino	lg-spa
 mht153	In menu	termino	lg-spa
-mht154	publications	termino	lg-spa
 mht155	global_search	termino	lg-spa
 mht16	interview	termino	lg-spa
 mht17	dating	termino	lg-spa
@@ -366,3 +365,5 @@ mht173	Proyecto	termino	lg-spa
 mht174	probability	termino	lg-spa
 mht95	bibliographic_references	termino	lg-spa
 mht65	publications	termino	lg-spa
+mht154	publications	termino	lg-spa
+mht175	publications	termino	lg-spa

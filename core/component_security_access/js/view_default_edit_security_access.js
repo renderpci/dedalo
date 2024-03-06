@@ -169,7 +169,7 @@ const get_content_data = async function(self) {
 				// console.log('numisdata1017 value:', value.filter(el => el.tipo==='numisdata1017'));
 
 			// tree_nodes. create nodes and add to tree_object
-				const tree_nodes = await render_tree_items(
+				const tree_nodes = render_tree_items(
 					root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
 					datalist, // array of objects. Full items list
 					value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]
@@ -302,18 +302,6 @@ const render_area_item = function(item, datalist, value, self) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
-		// add children subsections (dataframe cases)
-		if (item.model==='section') {
-			const direct_children_length = direct_children.length
-			for (let i = 0; i < direct_children_length; i++) {
-				const item = direct_children[i]
-				if (item.model==='section') {
-					const sub_children = datalist.filter(el => el.parent===item.tipo)
-					// console.log('sub_children:', item.tipo, sub_children);
-					direct_children.push(...sub_children)
-				}
-			}
-		}
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)
@@ -974,18 +962,6 @@ const render_area_item_read = function(item, datalist, value) {
 		const direct_children		= item.model==='section'
 			? datalist.filter(el => el.section_tipo===tipo && el.tipo!==tipo)
 			: datalist.filter(el => el.parent===tipo)
-		// add children subsections (dataframe cases)
-		if (item.model==='section') {
-			const direct_children_length = direct_children.length
-			for (let i = 0; i < direct_children_length; i++) {
-				const item = direct_children[i]
-				if (item.model==='section') {
-					const sub_children = datalist.filter(el => el.parent===item.tipo)
-					// console.log('sub_children:', item.tipo, sub_children);
-					direct_children.push(...sub_children)
-				}
-			}
-		}
 
 	// item_value. get the current item value
 		const item_value	= value.find(el => el.section_tipo===section_tipo && el.tipo===tipo)

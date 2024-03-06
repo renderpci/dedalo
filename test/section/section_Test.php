@@ -2139,11 +2139,12 @@ final class section_test extends TestCase {
 			$locator
 		);
 
+		$options = new stdClass();
+			$options->component_tipo		= 'test80';
+			$options->relations_container	= 'relations';
+
 		// Note that section is not saved
-		$result = $section->remove_relations_from_component_tipo(
-			'test80',
-			'relations'
-		);
+		$result = $section->remove_relations_from_component_tipo( $options );
 
 		$this->assertTrue(
 			count($result)>0,
