@@ -273,10 +273,20 @@
 					// 	.fn_build_button('eraser.svg', white, 1)
 					// }
 
+					.error {
+						margin-top: 0.5rem;
+						margin-bottom: 0.5rem;
+						border-radius: 4px;
+						padding: 1rem;
+						line-height: 1.3rem;
+						font-size: 1rem;
+					}
+
 					.eraser {
 						position: absolute;
 						right: 0px;
 						top: 0px;
+						z-index: 1;
 					}
 				}//end .body_response
 			}//end .widget_body
@@ -285,6 +295,11 @@
 			// generic styles
 			.info_text {
 				line-height: 1.5rem;
+
+				&.light {
+					opacity: 0.6;
+					margin-left: 1rem;
+				}
 			}
 			.comment {
 				color: #7f7f7f;
@@ -300,8 +315,7 @@
 						opacity: 0.5;
 					}
 				}
-			}
-
+			}//end make_backup
 
 			&#sqo_test_environment, &#dedalo_api_test_environment {
 				flex: 1 1 100%;
