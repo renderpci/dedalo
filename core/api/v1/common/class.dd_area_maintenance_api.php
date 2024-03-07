@@ -86,7 +86,7 @@ final class dd_area_maintenance_api {
 			}
 
 		// generate_relations_table_data
-		$response = area_development::generate_relations_table_data($tables);
+		$response = area_maintenance::generate_relations_table_data($tables);
 
 
 		return $response;
