@@ -67,7 +67,9 @@ render_update_code.prototype.list = async function(options) {
 const get_content_data_edit = async function(self) {
 
 	// short vars
-		const value = self.value || {}
+		const value								= self.value || {}
+		const dedalo_source_version_url			= value.dedalo_source_version_url
+		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -75,11 +77,28 @@ const get_content_data_edit = async function(self) {
 		})
 
 	// info
-		const text = `Current version: <b>${page_globals.dedalo_version}</b><br>Current build: <b>${page_globals.dedalo_build}</b>`
-		const info = ui.create_dom_element({
+		const text = `Current version: <b>${page_globals.dedalo_version}</b><br>
+					  Current build: <b>${page_globals.dedalo_build}</b>`
+		ui.create_dom_element({
 			element_type	: 'div',
 			inner_html		: text,
 			class_name		: 'info_text',
+			parent			: content_data
+		})
+
+		// dedalo_source_version_url
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'dedalo_source_version_url: ' + dedalo_source_version_url,
+			class_name		: 'info_text light',
+			parent			: content_data
+		})
+
+		// dedalo_source_version_local_dir
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'dedalo_source_version_local_dir: ' + dedalo_source_version_local_dir,
+			class_name		: 'info_text light',
 			parent			: content_data
 		})
 
