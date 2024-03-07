@@ -160,7 +160,7 @@ self.onmessage = async function(e) {
 					}
 				})
 				.catch((error) => {
-					console.error('Error on load file:', error);
+					console.error('Error on load file:', item.url, error);
 				})
 			)
 		}

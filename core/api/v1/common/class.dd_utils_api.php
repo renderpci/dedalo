@@ -1226,40 +1226,59 @@ final class dd_utils_api {
 
 		// get files
 			$files = [];
-			// css
-			$files[] = (object)[
-				'type'	=> 'css',
-				'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
-			];
-			// js
-			$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
-				// remove self base directory from file path
-				$file = str_replace(DEDALO_CORE_PATH, '', $el);
-				if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
-					return null; // item does not will be added to the result
-				}
-				return DEDALO_CORE_URL . '' . $file;
-			});
-			foreach ($core_js_files as $url) {
+
+			// CORE
+				// css
 				$files[] = (object)[
-					'type'	=> 'js',
-					'url'	=>  $url
+					'type'	=> 'css',
+					'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
 				];
-			}
-			$tools_js_files	= self::get_dir_files(DEDALO_TOOLS_PATH, ['js','css'], function(string $el) : ?string {
-				// remove self base directory from file path
-				$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
-				if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
-					return null; // item does not will be added to the result
+				// js
+				$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
+					// remove self base directory from file path
+					$file = str_replace(DEDALO_CORE_PATH, '', $el);
+					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+						return null; // item does not will be added to the result
+					}
+					return DEDALO_CORE_URL . '' . $file;
+				});
+				foreach ($core_js_files as $url) {
+					$files[] = (object)[
+						'type'	=> 'js',
+						'url'	=>  $url
+					];
 				}
-				return DEDALO_TOOLS_URL . '' . $file;
-			});
-			foreach ($tools_js_files as $file_url) {
-				$files[] = (object)[
-					'type'	=> 'js',
-					'url'	=>  $file_url
-				];
-			}
+
+			// TOOLS
+				$tools_js_files	= self::get_dir_files(DEDALO_TOOLS_PATH, ['js','css'], function(string $el) : ?string {
+					// remove self base directory from file path
+					$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
+
+					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+						return null; // item does not will be added to the result
+					}
+
+					// tool first level dir
+					// Sample:
+					// [
+					// 	"",
+					// 	"tool_user_admin",
+					// 	"js",
+					// 	"render_tool_user_admin.js"
+					// ]
+					$ar_levels = explode('/', $file);
+					if ($ar_levels[2]!=='js' && $ar_levels[2]!=='css') {
+						return null; // item does not will be added to the result
+					}
+
+					return DEDALO_TOOLS_URL . '' . $file;
+				});
+				foreach ($tools_js_files as $file_url) {
+					$files[] = (object)[
+						'type'	=> 'js',
+						'url'	=>  $file_url
+					];
+				}
 
 		// response
 			$response->result = $files;
