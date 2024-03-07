@@ -1,7 +1,8 @@
 <?php
+// declare(strict*_types=1);
 // include_once DEDALO_CORE_PATH . '/common/class.exec_.php';
 // include_once DEDALO_CORE_PATH . '/common/class.Thread.php';
-/*
+/**
 * CLASS BACKUP
 *
 *
@@ -357,6 +358,10 @@ abstract class backup {
 	* Previously, existing records whit current tld are deleted
 	* Delete is made as regular php query to database
 	* Copy is made using psql daemon
+	* @param string $table
+	* @param string $path_file
+	* @param string $tld = null
+	*
 	* @return string $res
 	*/
 	public static function copy_from_file(string $table, string $path_file, string $tld=null) : string {
@@ -364,7 +369,13 @@ abstract class backup {
 		$res='';
 
 		if (!file_exists($path_file)) {
-			throw new Exception("Error Processing Request. File $path_file not found", 1);
+			// throw new Exception("Error Processing Request. File $path_file not found", 1);
+			debug_log(__METHOD__
+				. " Error Processing Request. File not found " . PHP_EOL
+				. ' path_file: ' . to_string($path_file)
+				, logger::ERROR
+			);
+			return '';
 		}
 
 		$command_history = array();
@@ -718,12 +729,18 @@ abstract class backup {
 	* @param bool $check_server = true
 	* @param array $dedalo_prefix_tipos = null
 	* @return object $response
+	* {
+	* 	result: bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
 	*/
 	public static function import_structure(string $db_name='dedalo4_development_str.custom', bool $check_server=true, array $dedalo_prefix_tipos=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= '';
+			$response->errors	= [];
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
@@ -742,6 +759,7 @@ abstract class backup {
 				// error
 				$response->msg 		.= $system_config_verify->msg;
 				$response->result 	= false;
+				$response->errors[]	= $system_config_verify->msg;
 				return (object)$response;
 			}
 
@@ -762,11 +780,12 @@ abstract class backup {
 					}
 				}
 				if (!isset($mysqlImportFilename)) {
-					$response->msg 		.= " Error on get main_file name from all_str_files ";
+					$response->msg .= " Error getting main_file name from all_str_files ";
 					if(SHOW_DEBUG===true) {
-						$response->msg 		.= "<pre>".print_r($all_str_files,true)."</pre>";
+						$response->msg .= "<pre>".print_r($all_str_files,true)."</pre>";
 					}
-					$response->result 	= false;
+					$response->result	= false;
+					$response->errors[]	= "Error getting main_file name from all_str_files ";
 					return (object)$response;
 				}
 			}else{
@@ -775,10 +794,10 @@ abstract class backup {
 				$mysqlImportFilename = $file_path .'/'. $db_name . ".backup";
 			}
 
-
 		if (!file_exists($mysqlImportFilename)) {
-			$response->msg 		.= "<div class=\"error\">Error: source file not found : $mysqlImportFilename</div>";
+			$response->msg 		.= "Error: source file not found : $mysqlImportFilename";
 			$response->result 	= false;
+			$response->errors[]	= "Error: source file not found : $mysqlImportFilename";
 			return (object)$response;
 		}
 
@@ -816,6 +835,10 @@ abstract class backup {
 					if ($res_str_tables_data_from_files->result===false) {
 						$response->result 	 = false;
 						$response->msg 		.= $res_str_tables_data_from_files->msg;
+						$response->errors[]	= 'Error during load_dedalo_str_tables_data_from_files: ';
+						foreach ($res_str_tables_data_from_files->errors as $current_error) {
+							$response->errors[]	= $current_error;
+						}
 						return (object)$response;
 					}else{
 						$response->msg 		.= $res_str_tables_data_from_files->msg;
@@ -842,6 +865,7 @@ abstract class backup {
 				$res_html .= '</div>';
 				$response->result 	 = false;
 				$response->msg 		.= $res_html;
+				$response->errors[]	= 'Error during import (pg_restore)';
 				return (object)$response;
 				break;
 
@@ -857,11 +881,13 @@ abstract class backup {
 				$res_html .= '</div>';
 				$response->result 	 = false;
 				$response->msg 		.= $res_html;
+				$response->errors[]	= 'Error during command execution. code: ' . $worked_result;
 				return (object)$response;
 		}
 
 		if ($response->result===false) {
-			$response->msg = 'Error. Request failed '.__METHOD__ ." <br> ".$response->msg;
+			$response->msg		= 'Error. Request failed '.__METHOD__ ." <br> ".$response->msg;
+			$response->errors[]	= $response->msg;
 		}
 
 
@@ -875,8 +901,13 @@ abstract class backup {
 	* Load data from every tld element file. Files are saved as PostgreSQL 'copy' in various locations.
 	* Core load 'dd','rsc'
 	* Extras load extras folder 'str_data' dir data (filtered by config:DEDALO_PREFIX_TIPOS)
-	* @return array $ar_response with array of generated messages on run method
 	* NOTE: Sequences and list of values are NOT loaded, only str tables without sequences
+	* @return object $response
+	* {
+	* 	result: bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
 	*/
 	public static function load_dedalo_str_tables_data_from_files() : object {
 
@@ -884,6 +915,7 @@ abstract class backup {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= '';
+				$response->errors	= [];
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
@@ -905,7 +937,7 @@ abstract class backup {
 				." WARNING: DEDALO_EXTRAS_PATH is not defined. Using default.. "
 				, logger::WARNING
 			);
-			$response->msg .= '<div class="warning">Please, define DEDALO_EXTRAS_PATH in your config ASAP</div>';
+			$response->msg .= 'Please, define DEDALO_EXTRAS_PATH in your config ASAP';
 		}
 
 		if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
@@ -932,7 +964,6 @@ abstract class backup {
 					$file_name	= $table .'_'.$tld.'.copy';
 					$path_file 	= $path.'/'.$file_name;
 					$res1 		= backup::copy_from_file($table, $path_file, $tld);
-
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
@@ -941,8 +972,9 @@ abstract class backup {
 							$msg .= "<pre>".print_r($res1,true)."</pre>";
 						}
 
-						$response->result 	 = false;
-						$response->msg 		.= $msg;
+						$response->result	= false;
+						$response->msg		.= $msg;
+						$response->errors[]	= "Error on import $table {$tld}";
 						return $response;
 					}
 
@@ -952,7 +984,6 @@ abstract class backup {
 					$tld 		= $current_tld;
 					$path_file 	= $path.'/'.$table .'_'.$tld.'.copy';
 					$res2 		= backup::copy_from_file($table, $path_file, $tld);
-
 					if (empty($res2)) {
 						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
 						debug_log(__METHOD__." $msg ".to_string($res2), logger::ERROR);
@@ -961,8 +992,9 @@ abstract class backup {
 							$msg .= "<pre>".print_r($res2,true)."</pre>";
 						}
 
-						$response->result 	 = false;
-						$response->msg 		.= $msg;
+						$response->result	= false;
+						$response->msg		.= $msg;
+						$response->errors[]	= "Error on import $table {$tld}";
 						return $response;
 					}
 					if(SHOW_DEBUG===true) {
@@ -992,8 +1024,9 @@ abstract class backup {
 					$msg .= "<pre>".print_r($res3,true)."</pre>";
 				}
 
-				$response->result 	 = false;
-				$response->msg 		.= $msg;
+				$response->result	= false;
+				$response->msg		.= $msg;
+				$response->errors[]	= "Error on import $table";
 				return $response;
 			}
 			if(SHOW_DEBUG===true) {
@@ -1082,7 +1115,6 @@ abstract class backup {
 					$tld		= $obj->tld;
 					$path_file	= $obj->path .'/'. $obj->name;
 					$res1		= backup::copy_from_file($table, $path_file, $tld);
-
 					if (empty($res1)) {
 						$msg .= "<br>Error on import $table {$tld} . copy_from_file $path_file";
 						debug_log(__METHOD__
@@ -1094,6 +1126,7 @@ abstract class backup {
 
 						$response->result	= false;
 						$response->msg		.= $msg;
+						$response->errors[]	= "Error on import $table {$tld}";
 						return $response;
 					}
 
@@ -1116,8 +1149,9 @@ abstract class backup {
 				$table 	 ='jer_dd';
 				$consolide_sequence = (object)self::consolide_sequence($table);
 				if ($consolide_sequence->result===false) {
-					$response->result 	 = false;
-					$response->msg 		.= $consolide_sequence->msg;
+					$response->result	= false;
+					$response->msg		.= $consolide_sequence->msg;
+					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolide_sequence->msg ?? '');
 					return $response;
 				}else{
 					$msg .= $consolide_sequence->msg;
@@ -1129,6 +1163,7 @@ abstract class backup {
 				if ($consolide_sequence->result===false) {
 					$response->result 	 = false;
 					$response->msg 		.= $consolide_sequence->msg;
+					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolide_sequence->msg ?? '');
 					return $response;
 				}else{
 					$msg .= $consolide_sequence->msg;
@@ -1461,16 +1496,36 @@ abstract class backup {
 					? SERVER_PROXY // from Dédalo config file
 					: false // default case
 			]);
-			$result = $response->result;
+			$data = $response->result;
+
+		// errors
+			// sample of failed download
+			// {
+			// 	"result": "",
+			// 	"msg": "Error. Bad Request. Server has problems connecting to file (status code: 400)",
+			// 	"error": false,
+			// 	"code": 400
+			// }
+			if ($response->code!=200) {
+				// error connecting to master server
+				// Do not add debug error here because it is already handled by curl_request
+				return false;
+			}
+			if (empty($data)) {
+				// received data is empty (possibly a master server problem dealing with the request)
+				debug_log(__METHOD__
+					. " Empty result from download ontology file request " . PHP_EOL
+					. ' response: ' .to_string($response) . PHP_EOL
+					. ' obj param: ' . to_string($obj)
+					, logger::ERROR
+				);
+				return false;
+			}
 
 		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	$fist_line = strtok($result, "\n\r");
-			// 	debug_log(__METHOD__." download type:$obj->type - name:$obj->name result fist_line: \n".to_string($fist_line), logger::DEBUG);
-			// }
 			debug_log(__METHOD__
 				. " >>> Downloaded remote data from $obj->name - "
-				. 'result type: ' . gettype($result) . ' - '
+				. 'result type: ' . gettype($data) . ' - '
 				. exec_time_unit($start_time,'ms').' ms'
 				, logger::DEBUG
 			);
@@ -1496,17 +1551,16 @@ abstract class backup {
 			unlink($target_dir .'/'. $obj->name);
 		}
 
-		# Write downloaded file to local directory
-		file_put_contents($target_dir .'/'. $obj->name, $result);
-
-		if(SHOW_DEBUG===true) {
-			// $fist_line	= strtok($result, "\n\r");
-			// $fist_line	= str_replace(['\n','\N','\r','\t','  '], ' ', $fist_line);
-			// $fist_line	= preg_replace('/\s+/', ' ', $fist_line);
-			// $total		= exec_time_unit($start_time,'ms')." ms";
-			// debug_log(__METHOD__.PHP_EOL."Get remote and write str data type: $obj->type - name: $obj->name in: $total \n".substr($fist_line, 0, 250), logger::DEBUG);
-			// // Clean memory footprint
-			// unset($fist_line); strtok('', '');
+		// Write downloaded file to local directory
+		$write = file_put_contents($target_dir .'/'. $obj->name, $data);
+		if ($write===false) {
+			debug_log(__METHOD__
+				. " Error writing downloaded ontology file " . PHP_EOL
+				. ' path: ' .to_string($target_dir .'/'. $obj->name) . PHP_EOL
+				. ' obj param: ' . to_string($obj)
+				, logger::ERROR
+			);
+			return false;
 		}
 
 
@@ -1890,6 +1944,7 @@ abstract class backup {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= ''; // 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// Remote server check
 			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
@@ -1922,6 +1977,7 @@ abstract class backup {
 						// error
 						$response->msg		= 'Error. Request failed 1 ['.__FUNCTION__.'] ' . $remote_server_response->msg;
 						$response->result	= false;
+						$response->errors[]	= $response->msg;
 						return $response;
 					}
 			}
@@ -1932,7 +1988,8 @@ abstract class backup {
 			if ($res_export_structure->result===false) {
 
 				// error on export current DDBB
-				$response->msg = 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				$response->errors[]	= $response->msg;
 				return $response;
 
 			}else{
@@ -1948,10 +2005,11 @@ abstract class backup {
 				true, // bool check_server
 				$dedalo_prefix_tipos
 			);
+
 			if ($import_structure_response->result===false) {
-					dump($import_structure_response, ' import_structure_response ++ '.to_string());
 				// error on import current DDBB
-				$response->msg = 'Error. Request failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+				$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+				$response->errors	= array_merge($response->errors, $import_structure_response->errors);
 				return $response;
 
 			}else{
@@ -1975,7 +2033,10 @@ abstract class backup {
 				// debug_log(__METHOD__." >>> Writing file $lang => $label ", logger::DEBUG);
 
 				// direct
-					backup::write_lang_file($lang);
+					$write_file = backup::write_lang_file($lang);
+					if ($write_file===false) {
+						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
+					}
 
 				// thread . Use above Thread class @see https://www.php.net/manual/en/language.fibers.php
 					// Thread::register(
