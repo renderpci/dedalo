@@ -1,0 +1,366 @@
+{
+  "label": "Desarrollo de herramientas",
+  "relations": [
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd200"
+    },
+    {
+      "type": "dd675",
+      "section_id": "1",
+      "section_tipo": "dd153",
+      "from_component_tipo": "dd1337"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1331"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1332"
+    },
+    {
+      "type": "dd151",
+      "section_id": "2",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1333"
+    },
+    {
+      "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
+      "section_id": "20",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
+    },
+    {
+      "type": "dd151",
+      "section_id": "-1",
+      "section_tipo": "dd128",
+      "from_component_tipo": "dd197"
+    }
+  ],
+  "components": {
+    "dd199": {
+      "inf": "created_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 7,
+              "hour": 17,
+              "time": 65058916847,
+              "year": 2024,
+              "month": 3,
+              "minute": 20,
+              "second": 47
+            }
+          }
+        ]
+      }
+    },
+    "dd201": {
+      "inf": "modified_date [component_date]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "start": {
+              "day": 8,
+              "hour": 17,
+              "time": 65059003898,
+              "year": 2024,
+              "month": 3,
+              "minute": 31,
+              "second": 38
+            }
+          }
+        ]
+      }
+    },
+    "dd612": {
+      "inf": "Descripción [component_text_area]",
+      "dato": {
+        "lg-eng": [
+          "<p>Manage image rotation precisely</p>"
+        ],
+        "lg-spa": [
+          "<p>Gestiona la rotación de imágenes con precisión</p>"
+        ]
+      }
+    },
+    "dd799": {
+      "inf": "Etiqueta [component_input_text]",
+      "dato": {
+        "lg-cat": [
+          "Eina de rotació d'imatge"
+        ],
+        "lg-deu": [
+          "Bildrotationswerkzeug"
+        ],
+        "lg-ell": [
+          "Εργαλείο περιστροφής εικόνας"
+        ],
+        "lg-eng": [
+          "Tool image rotation"
+        ],
+        "lg-fra": [
+          "Outil de rotation d'image"
+        ],
+        "lg-ita": [
+          "Strumento di rotazione delle immagini"
+        ],
+        "lg-nep": [
+          "छवि घुमाउने उपकरण"
+        ],
+        "lg-por": [
+          "Ferramenta de rotação de imagem"
+        ],
+        "lg-spa": [
+          "Herramienta de rotación de imagen"
+        ]
+      }
+    },
+    "dd999": {
+      "inf": "Configuración [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {}
+        ]
+      }
+    },
+    "dd1326": {
+      "inf": "Nombre de la herramienta [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "tool_image_rotation"
+        ]
+      }
+    },
+    "dd1327": {
+      "inf": "Versión [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "1.0.0"
+        ]
+      }
+    },
+    "dd1328": {
+      "inf": "Versión Dédalo mínima [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "6.1.0"
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "rotation",
+              "value": "Rotation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "rotation",
+              "value": "Rotación"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "rotation",
+              "value": "Rotació"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "rotation",
+              "value": "Rotació"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "rotation",
+              "value": "Rotation"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "rotation",
+              "value": "Rotazione"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "rotation",
+              "value": "Drehung"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "rotation",
+              "value": "Περιστροφή"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "rotation",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "degrees",
+              "value": "Degrees"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "degrees",
+              "value": "Grados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "degrees",
+              "value": "Graus"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "degrees",
+              "value": "Graus"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "degrees",
+              "value": "Degrés"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "degrees",
+              "value": "Gradi"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "degrees",
+              "value": "Πτυχία"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "degrees",
+              "value": "Grades"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "degrees",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "transparent",
+              "value": "Transparente"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "transparent",
+              "value": "Trasparente"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "transparent",
+              "value": "Διαφανές"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "transparent",
+              "value": ""
+            },
+            {
+              "lang": "lg-eng",
+              "name": "bk_colour",
+              "value": "Background colour"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "bk_colour",
+              "value": "Color de fondo"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "bk_colour",
+              "value": "Color de fons"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "bk_colour",
+              "value": "Color de fons"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "bk_colour",
+              "value": "Couleur de fond"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "bk_colour",
+              "value": "Colore di sfondo"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "bk_colour",
+              "value": "Χρώμα φόντου"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "bk_colour",
+              "value": "Hintergrundfarbe"
+            }
+          ]
+        ]
+      }
+    },
+    "dd1644": {
+      "inf": "Desarollador [component_input_text]",
+      "dato": {
+        "lg-nolan": [
+          "Dédalo team"
+        ]
+      }
+    }
+  },
+  "section_id": 29,
+  "created_date": "2024-03-07 17:20:47",
+  "section_tipo": "dd1340",
+  "modified_date": "2024-03-08 17:31:38",
+  "diffusion_info": null,
+  "created_by_userID": -1,
+  "section_real_tipo": "dd73",
+  "modified_by_userID": -1
+}

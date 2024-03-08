@@ -486,9 +486,18 @@ final class ImageMagick {
 		$alpha				= $options->alpha ?? false;
 
 		// command
-			$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
-			$result		= shell_exec($command);
+			if($rotation_mode === 'free'){
+				$color = isset($background_color)
+					? "-virtual-pixel background -background '$background_color' -interpolate Mesh"
+					: '';
+				// if alpha is set and true replace the background color to transparent
+				if(isset($alpha) && $alpha === true){
+					$color =  "-alpha set -virtual-pixel transparent -interpolate Mesh";
+				};
+				$command	= MAGICK_PATH ."convert '$source' $color -distort SRT $degrees '$target'";
+			}else{
 				$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
+			}
 
 			$result = shell_exec($command);
 
