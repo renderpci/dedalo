@@ -164,6 +164,7 @@ class tool_media_versions extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// options
 			$tipo			= $options->tipo;
@@ -183,17 +184,35 @@ class tool_media_versions extends tool_common {
 				$section_tipo
 			);
 
-			$command_result = $component->rotate($degrees, $quality);
+		$dato		= $component->get_dato()[0];
+		$files_info	= $dato->files_info ?? [];
+		// $value
+
+		$result = true;
+		foreach ($files_info as $value) {
+
+			if($value->quality === $quality){
+
+				$rotation_options = new stdClass();
+					$rotation_options->quality			= $value->quality;
+					$rotation_options->extension		= $value->extension;
+					$rotation_options->degrees			= $degrees;
+					$rotation_options->rotation_mode	= 'right_angles';
+
+				// result boolean
+				$command_result = $component->rotate($rotation_options);
+				if (!empty($command_result)){
+					$result				= false;
+					$response->errors[]	= $command_result;
+				}
+			}
+		}
 
 		// response
-			if (empty($command_result)) {
-				// success
-				$response->result	= true;
-				$response->msg		= 'Success. Request done';
-			}else{
-				$response->msg		.= PHP_EOL . ' Error on rotate file. '.to_string($command_result);
-			}
-
+		$response->result	= $result;
+		$response->msg		= ($result === true)
+			? 'Success. Request done.'
+			: 'Error on rotate file.';
 
 		return (object)$response;
 	}//end rotate

@@ -464,25 +464,35 @@ final class ImageMagick {
 	/**
 	* ROTATE
 	* 	Rotate and save source image to target (self or other)
-	* @param string $source
-	* @param string $degrees
-	* @param bool $target = false
+	* @param object $options
+	* {
+	*	"tipo"				: "rsc29", 		// string
+	*	"section_tipo"		: "rsc170", 	// string
+	*	"section_id"		: "1",			// string
+	*	"rotation_degrees"	: "60.49", 		// sting
+	*	"background_color"	: "#ffffff", 	// string
+	*	"alpha"				: false 		// bool; true || false
+	* }
 	*
 	* @return string|null $result
 	*/
-	public static function rotate( string $source, $degrees, $target=false ) : ?string {
+	public static function rotate( object $options ) : ?string {
 
-		// fallback target to source (overwrite file)
-			$target = $target
-				? $target
-				: $source;
+		$source				= $options->source;
+		$target				= $options->target;
+		$degrees			= $options->degrees;
+		$rotation_mode		= $options->rotation_mode ?? 'right_angles'; // right_angles || free
+		$background_color	= $options->background_color ?? null;
+		$alpha				= $options->alpha ?? false;
 
 		// command
 			$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
 			$result		= shell_exec($command);
+				$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
+
+			$result = shell_exec($command);
 
 		debug_log(__METHOD__." Exec Command:" . PHP_EOL . $command, logger::DEBUG);
-
 
 		return $result;
 	}//end rotate
