@@ -1426,6 +1426,12 @@ export const deactivate_components = function(e) {
 						}
 					}
 				})
+				.then(function(api_response) {
+					// update page_globals
+					page_globals.dedalo_notification = api_response.dedalo_notification || null
+					// dedalo_notification from config file
+					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+				})
 			}
 
 		// deactivate
