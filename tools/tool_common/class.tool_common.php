@@ -107,7 +107,7 @@ class tool_common {
 
 		// label. (JSON list) Try match current lang else use the first lang value
 			$tool_label = array_find($tool_object->label, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
+				return $el->lang===DEDALO_APPLICATION_LANG;
 			})->value ?? reset($tool_object->label)->value;
 
 		// developer
@@ -120,7 +120,7 @@ class tool_common {
 
 		// description. (text_area) Try match current lang else use the first lang value
 			$description = array_find((array)$tool_object->description, function($el){
-				return $el->lang===DEDALO_DATA_LANG;
+				return $el->lang===DEDALO_APPLICATION_LANG;
 			})->value[0] ?? reset($tool_object->description)->value[0];
 
 		// labels. take care of empty objects like '{}'
@@ -148,7 +148,7 @@ class tool_common {
 								);
 							}
 
-							if ($item->lang===DEDALO_DATA_LANG) {
+							if ($item->lang===DEDALO_APPLICATION_LANG) {
 								$labels[$label_name] = $item;
 								continue 2;
 							}
@@ -156,7 +156,7 @@ class tool_common {
 
 						// fallback lang. Get the first one as fallback value setting as lang current lang
 						$fallback_label = reset($all_langs_label);
-						$fallback_label->lang = DEDALO_DATA_LANG; // inject current lang to prevent find errors
+						$fallback_label->lang = DEDALO_APPLICATION_LANG; // inject current lang to prevent find errors
 						$labels[$label_name] = $fallback_label;
 					}
 				}
@@ -184,7 +184,7 @@ class tool_common {
 			}
 
 		// lang
-			$lang = DEDALO_DATA_LANG;
+			$lang = DEDALO_APPLICATION_LANG;
 
 		// css
 			$css = (object)[

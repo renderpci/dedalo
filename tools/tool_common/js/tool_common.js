@@ -807,7 +807,8 @@ const get_tool_label = function(label_name, ...rest) {
 	if (tool_labels.length>0) {
 
 		// current lang try
-			const found = tool_labels.find(el => el.name===label_name && el.lang===self.lang)
+			const found = tool_labels.find(el => el.name===label_name && el.lang===page_globals.dedalo_application_lang)
+
 			if (found) {
 				return printf(found.value, ...rest)
 				// return found.value
