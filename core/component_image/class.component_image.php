@@ -1831,13 +1831,38 @@ class component_image extends component_media_common {
 	* @return string $result
 	*
 	*/
-	public function rotate($degrees, ?string $quality=null) : ?string {
+	public function rotate( $options) : ?string {
 
-		$source = $this->get_media_filepath($quality);
+		$quality			= $options->quality ?? null;
+		$extension			= $options->extension ?? null;
+		$degrees			= $options->degrees;
+		$rotation_mode		= $options->rotation_mode ?? 'right_angles'; // right_angles || free
+		$background_color	= $options->background_color ?? null;
+		$alpha				= $options->alpha ?? false;
 
-		$result = ImageMagick::rotate($source, $degrees);
 
-		return $result;
+		$alpha =($alpha && $extension === 'jpg')
+			? false
+			: $alpha;
+
+
+		// get the source file path
+		$source = $this->get_media_filepath($quality, $extension);
+
+		// fallback target to source (overwrite file)
+		$target = $source;
+
+		$rotation_options = new stdClass();
+			$rotation_options->source			= $source;
+			$rotation_options->target			= $target;
+			$rotation_options->degrees			= $degrees;
+			$rotation_options->rotation_mode	= $rotation_mode;
+			$rotation_options->background_color	= $background_color;
+			$rotation_options->alpha			= $alpha;
+
+		$command_result = ImageMagick::rotate($rotation_options);
+
+		return $command_result;
 	}//end rotate
 
 
