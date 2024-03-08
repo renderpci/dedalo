@@ -1168,6 +1168,23 @@ final class dd_utils_api {
 	*	    }
 	*	}
 	* @return object $response
+	* 	Sample:
+	* 	{
+	*	    "result": true,
+	*	    "msg": "Updated db lock elements",
+	*	    "dato": [
+	*	        {
+	*	            "date": "2024-03-08 09:30:10",
+	*	            "action": "focus",
+	*	            "user_id": null,
+	*	            "section_id": "1",
+	*	            "section_tipo": "test3",
+	*	            "full_username": "Unknown",
+	*	            "component_tipo": "test94"
+	*	        }
+	*	    ],
+	*	    "in_use": false
+	*	}
 	*/
 	public static function update_lock_components_state(object $rqo) : object {
 
@@ -1199,7 +1216,12 @@ final class dd_utils_api {
 				$event_element->date			= date("Y-m-d H:i:s");
 
 		// response
-			$response = (object)lock_components::update_lock_components_state( $event_element );
+			$response = lock_components::update_lock_components_state( $event_element );
+
+		// dedalo_notification (from config)
+			$response->dedalo_notification = (defined('DEDALO_NOTIFICATION'))
+				? DEDALO_NOTIFICATION
+				: null;
 
 
 		return $response;

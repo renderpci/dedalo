@@ -298,24 +298,48 @@
 
 	// fade out animation
 	.fade-out {
-		animation: fade 1s;
-		-webkit-animation: fade 1s;
-		-moz-animation: fade 1s;
+		--speed: 1s;
+		animation: anim_fade_out var(--speed);
+		-webkit-animation: anim_fade_out var(--speed);
+		-moz-animation: anim_fade_out var(--speed);
 	}
 
 	/* Animate opacity */
-	@keyframes fade {
+	@keyframes anim_fade_out {
 		from { opacity: 1 }
 		to { opacity: 0 }
 	}
-	@-moz-keyframes fade {
+	@-moz-keyframes anim_fade_out {
 		from { opacity: 1 }
 		to { opacity: 0 }
 	}
-	@-webkit-keyframes fade {
+	@-webkit-keyframes anim_fade_out {
 		from { opacity: 1 }
 		to { opacity: 0 }
 	}
+
+	// fade in animation
+	.fade-in {
+		--speed: 1s;
+		animation: anim_fade_in var(--speed);
+		-webkit-animation: anim_fade_in var(--speed);
+		-moz-animation: anim_fade_in var(--speed);
+	}
+
+	/* Animate opacity */
+	@keyframes anim_fade_in {
+		from { opacity: 0 }
+		to { opacity: 1 }
+	}
+	@-moz-keyframes anim_fade_in {
+		from { opacity: 0 }
+		to { opacity: 1 }
+	}
+	@-webkit-keyframes anim_fade_in {
+		from { opacity: 0 }
+		to { opacity: 1 }
+	}
+
 
 	.no_access {
 		display: inline-block;

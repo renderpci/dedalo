@@ -132,6 +132,7 @@ session_write_close();
 			$obj->locale						= DEDALO_LOCALE;
 			$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 			$obj->component_active				= null;
+			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null;
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
@@ -175,7 +176,6 @@ session_write_close();
 		'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
 		'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
 		'DEDALO_MAINTENANCE_MODE'			=> defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null,
-		'DEDALO_NOTIFICATION'				=> defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null,
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
 			// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
@@ -210,13 +210,12 @@ session_write_close();
 
 "use strict";
 // page_globals. Set var to window to allow easy access from opened windows
-window.page_globals=<?php
-	echo (SHOW_DEBUG===true)
-		? json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-		: json_encode($page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT);
-?>;
-const <?php // plain_vars
-echo implode(',', array_map(function ($v, $k) {
+window.page_globals=<?php echo json_encode(
+	$page_globals, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT
+);?>;
+<?php
+// plain_vars
+echo 'const ' . implode(',', array_map(function ($v, $k) {
 	return sprintf('%s=%s', $k, json_encode($v, JSON_UNESCAPED_SLASHES));
 }, $plain_vars, array_keys($plain_vars))) .';'. PHP_EOL;
 // Lang labels
