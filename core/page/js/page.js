@@ -20,7 +20,7 @@
 		JSON_parse_safely,
 		object_to_url_vars
 	} from '../../common/js/utils/index.js'
-	import {render_page} from './render_page.js'
+	import {render_page, render_notification_msg} from './render_page.js'
 
 
 
@@ -38,6 +38,7 @@ export const page = function () {
 	this.context
 	this.status
 	this.events_tokens
+	this.last_dedalo_notification // object
 }//end page
 
 
@@ -260,6 +261,30 @@ page.prototype.init = async function(options) {
 					// loading css remove
 						if (container) { container.classList.remove('loading') }
 
+					// clean previous locks of current user in current section
+						setTimeout(()=>{
+							data_manager.request({
+								use_worker	: true,
+								body		: {
+									dd_api	: 'dd_utils_api',
+									action	: 'update_lock_components_state',
+									options	: {
+										component_tipo	: null,
+										section_tipo	: source.section_tipo || source.tipo,
+										section_id		: null,
+										action			: 'delete_user_section_locks' // delete_user_section_locks | blur | focus
+									}
+								}
+							})
+							.then(function(api_response){
+								// dedalo_notification from config file
+								// update page_globals
+								page_globals.dedalo_notification = api_response.dedalo_notification || null
+								// dedalo_notification from config file
+								event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+							})
+						}, 0)
+
 
 					resolve(new_page_element_instance.id)
 				})
@@ -328,9 +353,25 @@ page.prototype.init = async function(options) {
 								size	: 'small'
 							})
 					}
+
+					// dedalo_notification from config file
+					// update page_globals
+					page_globals.dedalo_notification = api_response.dedalo_notification || null
+					// dedalo_notification from config file
+					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 				})
 			}
-		}//end fn_user_navigation
+		}//end fn_activate_component
+
+	// dedalo_notification
+		const fn_dedalo_notification = (data) => {
+			setTimeout(()=>{
+				render_notification_msg(self, data)
+			}, 0)
+		}
+		self.events_tokens.push(
+			event_manager.subscribe('dedalo_notification', fn_dedalo_notification)
+		)
 
 	// observe tool calls
 		// load_tool

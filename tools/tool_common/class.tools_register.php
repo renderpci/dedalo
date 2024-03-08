@@ -186,8 +186,27 @@ class tools_register {
 									: 'This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
 								debug_log(__METHOD__
 									. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
-									. $msg
+									. ' ' . $msg
 									, logger::ERROR);
+								continue;
+							}
+
+						// check register file is well formed
+							if (!isset($current_tool_section_data->relations) || !isset($current_tool_section_data->components)) {
+								$msg = 'Error. '.$basename.' Bad formed file! This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+								debug_log(__METHOD__
+									. " Error. tool register file" . PHP_EOL
+									. ' ' . $msg
+									, logger::ERROR);
+
+								// info_file_processed. Added info
+								$info_file_processed_item = array_find($info_file_processed, function($el) use($basename){
+									return ($el->name===$basename || substr($el->dir, 1)===$basename);
+								});
+								if ($info_file_processed_item!==null) {
+									$info_file_processed_item->errors	= [$msg];
+									$info_file_processed_item->imported	= false;
+								}
 								continue;
 							}
 
@@ -241,6 +260,7 @@ class tools_register {
 							if ($info_file_processed_item!==null) {
 								$info_file_processed_item->existing_tool	= $current_section_id==$created_section_id;
 								$info_file_processed_item->section_id		= $created_section_id;
+								$info_file_processed_item->imported			= true;
 							}
 
 						// save new record with serialized section_id

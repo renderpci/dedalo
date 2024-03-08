@@ -313,6 +313,16 @@ export const print_response = (container, api_response) => {
 			}
 		})
 
+	// errors
+		if (api_response.errors && api_response.errors.length) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'error',
+				parent			: container,
+				inner_html		: api_response.errors.join('<br>')
+			})
+		}
+
 	// msg
 		const api_msg = api_response && api_response.msg
 			? Array.isArray(api_response.msg)

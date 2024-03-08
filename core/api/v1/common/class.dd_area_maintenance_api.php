@@ -86,7 +86,7 @@ final class dd_area_maintenance_api {
 			}
 
 		// generate_relations_table_data
-		$response = area_development::generate_relations_table_data($tables);
+		$response = area_maintenance::generate_relations_table_data($tables);
 
 
 		return $response;
@@ -145,7 +145,19 @@ final class dd_area_maintenance_api {
 
 
 		$response->result	= tools_register::import_tools();
-		$response->msg		= 'OK. Request done';
+		$response->msg		= 'OK. Request done successfully';
+
+		// check results errors
+		$errors = [];
+		if (!empty($response->result)) {
+			foreach ($response->result as $item) {
+				if (!empty($item->errors)) {
+					$errors = array_merge($errors, (array)$item->errors);
+				}
+			}
+			$response->msg = 'Warning. Request done with errors';
+		}
+		$response->errors = $errors;
 
 
 		return $response;

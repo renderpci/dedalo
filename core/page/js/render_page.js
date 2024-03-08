@@ -49,11 +49,12 @@ render_page.prototype.edit = async function(options) {
 		wrapper.appendChild(content_data)
 		// set pointers
 		wrapper.content_data = content_data
+		// fix node before finish render to allow select by render_notification_msg
+		self.node = wrapper
 
 	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
-		if(DEDALO_NOTIFICATION && page_globals.is_logged===true){
-			const notification_container = render_notification_msg()
-			wrapper.prepend(notification_container)
+		if(page_globals.dedalo_notification && page_globals.is_logged===true) {
+			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 		}
 
 	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
@@ -249,29 +250,84 @@ const render_maintenance_msg = function() {
 /**
 * RENDER_NOTIFICATION_MSG
 * Render HTML from environment.js.php notification data
-* @return HTMLElement notification_container
+* @param object dedalo_notification
+* 	Sample
+* 	{
+* 		msg: "Testing the notification system",
+        class_name: "warning"
+* 	}
+* (!) DEDALO_NOTIFICATION is defined in 'environment.js.php' or
+* could be received from update_lock_components_state event
+* @return HTMLElement|null notification_msg
 */
-const render_notification_msg = function() {
+export const render_notification_msg = function( self, dedalo_notification ) {
 
-	const msg			= DEDALO_NOTIFICATION.msg || 'Unknown notification'
-	const class_name	= DEDALO_NOTIFICATION.class_name || ''
+	const wrapper = self.node
+
+	// empty case
+		if (!dedalo_notification) {
+			if (wrapper.notification_container) {
+				wrapper.notification_container.remove() // remove node
+				wrapper.notification_container = null // set pointer
+			}
+			// fix to compare with next requests
+			self.last_dedalo_notification = null
+			if(SHOW_DEBUG===true) {
+				console.warn(')))))))))))))))))) Removed wrapper.notification_container:', dedalo_notification);;
+			}
+			return null
+		}
+
+
+	// check for real changes. If is the same value, ignore it
+		if (self.last_dedalo_notification &&
+			self.last_dedalo_notification.msg===dedalo_notification.msg &&
+			self.last_dedalo_notification.class_name===dedalo_notification.class_name
+			) {
+			if(SHOW_DEBUG===true) {
+				console.warn(')))))))))))))))))) Ignored dedalo_notification unchanged:', dedalo_notification);
+			}
+			return null
+		}
 
 	// notification_container
-	const notification_container = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'notification_container'
-	})
+		if (!wrapper.notification_container) {
+			// create a new one
+			wrapper.notification_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'notification_container'
+			})
+			// prepend to main node
+			wrapper.prepend(wrapper.notification_container)
+		}else{
+			// clean already existing container
+			while (wrapper.notification_container.firstChild) {
+				wrapper.notification_container.removeChild(wrapper.notification_container.firstChild);
+			}
+		}
+
+	// dedalo_notification
+		const msg			= dedalo_notification.msg || 'Unknown notification'
+		const class_name	= dedalo_notification.class_name || ''
 
 	// notification_msg
-	const notification_msg = ui.create_dom_element({
-		element_type	: 'span',
-		class_name		: 'notification_msg ' + class_name,
-		inner_html		: msg,
-		parent			: notification_container
-	})
+		const notification_msg = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'notification_msg ' + class_name,
+			inner_html		: msg,
+			parent			: wrapper.notification_container
+		})
+		// css animation fade
+		setTimeout(()=>{
+			notification_msg.style.setProperty('--speed', '1s');
+			notification_msg.classList.add('fade-in')
+		}, 0)
+
+	// fix to compare with next requests
+	self.last_dedalo_notification = dedalo_notification
 
 
-	return notification_container
+	return notification_msg
 }//end render_notification_msg
 
 
