@@ -66,7 +66,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
    1. Install PHP
 
       Usually Dédalo use the last version of PHP.
-      To get the last PHP version you will need to install PPA repository.
+      To get the latest version of PHP you will need to install the PPA repository.
 
       ```shell
       sudo apt install ca-certificates apt-transport-https software-properties-common lsb-release
@@ -166,15 +166,17 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 3. Download Dédalo and place it under the httpdocs directory of the web server.
 
    ```shell
-   wget https://github.com/renderpci/dedalo/archive/master.zip
+   sudo wget https://github.com/renderpci/dedalo/archive/master.zip
    ```
 
    Unzip and rename it
 
    ```shell
-   unzip master.zip
-   mv dedalo-master dedalo
+   sudo unzip master.zip
+   sudo mv dedalo-master dedalo
    ```
+
+   Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.
 
 4. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
 
