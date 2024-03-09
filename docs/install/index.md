@@ -66,24 +66,24 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
    1. Install PHP
 
       ```shell
-      apt install php8.2 php8.2-cli php8.2-common php8.2-mysql php8.2-pgsql php8.2-gd php8.2-mbstring php8.2-xml php8.2-pspell php8.2-tidy php8.2-bcmath php8.2-imap php8.2-soap php8.2-opcache php8.2-fpm php8.2-zip php8.2-curl
+      sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
       ```
 
    2. Install Apache and activate the modules.
 
       ```shell
-      apt install apache2 libapache2-mod-fcgid
+      sudo apt install apache2 libapache2-mod-fcgid
       ```
 
       Active modules
 
       ```shell
-      a2enconf php8.2-fpm
-      a2enmod actions fcgid alias proxy_fcgi
-      a2enmod ssl
-      a2enmod headers
-      a2enmod http2
-      a2enmod rewrite
+      sudo a2enconf php8.3-fpm
+      sudo a2enmod actions fcgid alias proxy_fcgi
+      sudo a2enmod ssl
+      sudo a2enmod headers
+      sudo a2enmod http2
+      sudo a2enmod rewrite
       ```
 
    3. Install PostgreSQL
@@ -91,15 +91,15 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       Get the official repository:
 
       ```shell
-      sh -c 'echo "deb http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+      sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
       wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
       ```
 
       Install it.
 
       ```shell
-      apt-get update
-      apt-get -y install postgresql
+      sudo apt-get update
+      sudo apt-get -y install postgresql
       ```
 
    4. Install MariaDB or MySQL
@@ -107,40 +107,42 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       Get the repository of the LTS version
 
       ```shell
-      apt-get install apt-transport-https curl
-      curl -o /etc/apt/trusted.gpg.d/mariadb_release_signing_key.asc 'https://mariadb.org/mariadb_release_signing_key.asc'
-      sh -c "echo 'deb https://mirrors.n-ix.net/mariadb/repo/10.11/ubuntu jammy main' >>/etc/apt/sources.list"
+      sudo apt install wget apt-transport-https
+      wget https://r.mariadb.com/downloads/mariadb_repo_setup
+      echo "30d2a05509d1c129dd7dd8430507e6a7729a4854ea10c9dcf6be88964f3fdc25  mariadb_repo_setup" | sha256sum -c -
+      chmod +x mariadb_repo_setup
+      sudo ./mariadb_repo_setup
       ```
 
       Install it.
 
       ```shell
-      apt-get update
-      apt-get install mariadb-server
+      sudo apt-get update
+      sudo apt-get install mariadb-server
       ```
 
       Run the secure installation to remove default configuration.
 
       ```shell
-      mysql_secure_installation
+      mariadb_secure_installation
       ```
 
    5. Install ffmpeg
 
       ```shell
-      apt install ffmpeg
+      sudo apt install ffmpeg
       ```
 
    6. Install ImageMagick
 
       ```shell
-      apt install imagemagick
+      sudo apt install imagemagick
       ```
 
    7. Install PDF tools
 
       ```shell
-      apt install poppler-utils
+      sudo apt install poppler-utils
       ```
 
       > Optional: if you want you can use xpdf utils instead poppler.
@@ -148,7 +150,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       ```shell
       wget https://dl.xpdfreader.com/xpdf-tools-linux-4.04.tar.gz
       tar xpvf  xpdf-tools-linux-4.03.tar.gz
-      mv pdf* /usr/local/bin
+      sudo mv pdf* /usr/local/bin
       ```
 
 3. Download Dédalo and place it under the httpdocs directory of the web server.
