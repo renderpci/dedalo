@@ -63,206 +63,206 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 
 1. Download official LTS version of [Ubuntu Server](https://ubuntu.com/download/server).
 2. Install Ubuntu Server and all dependencies.
-   1. Install PHP
+    1. Install PHP
 
-      Usually Dédalo use the last version of PHP.
-      To get the latest version of PHP you will need to install the PPA repository.
+        Usually Dédalo use the last version of PHP.
+        To get the latest version of PHP you will need to install the PPA repository.
 
-      ```shell
-      sudo apt install ca-certificates apt-transport-https software-properties-common lsb-release
-      sudo add-apt-repository ppa:ondrej/php
-      sudo apt update
-      ```
-      Install PHP 8.3
+        ```shell
+        sudo apt install ca-certificates apt-transport-https software-properties-common lsb-release
+        sudo add-apt-repository ppa:ondrej/php
+        sudo apt update
+        ```
+        Install PHP 8.3
 
-      ```shell
-      sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
-      ```
+        ```shell
+        sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
+        ```
 
-   2. Install Apache and activate the modules.
+    2. Install Apache and activate the modules.
 
-      ```shell
-      sudo apt install apache2 libapache2-mod-fcgid
-      ```
+        ```shell
+        sudo apt install apache2 libapache2-mod-fcgid
+        ```
 
-      Active modules
+        Active modules
 
-      ```shell
-      sudo a2enconf php8.3-fpm
-      sudo a2enmod actions fcgid alias proxy_fcgi
-      sudo a2enmod ssl
-      sudo a2enmod headers
-      sudo a2enmod http2
-      sudo a2enmod rewrite
-      ```
+        ```shell
+        sudo a2enconf php8.3-fpm
+        sudo a2enmod actions fcgid alias proxy_fcgi
+        sudo a2enmod ssl
+        sudo a2enmod headers
+        sudo a2enmod http2
+        sudo a2enmod rewrite
+        ```
 
-   3. Install PostgreSQL
+    3. Install PostgreSQL
 
-      Get the official repository:
+        Get the official repository:
 
-      ```shell
-      sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
-      wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
-      ```
+        ```shell
+        sudo sh -c 'echo "deb https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+        wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+        ```
 
-      Install it.
+        Install it.
 
-      ```shell
-      sudo apt-get update
-      sudo apt-get -y install postgresql
-      ```
+        ```shell
+        sudo apt-get update
+        sudo apt-get -y install postgresql
+        ```
 
-   4. Install MariaDB or MySQL
+    4. Install MariaDB or MySQL
 
-      Get the repository of the LTS version
+        Get the repository of the LTS version
 
-      ```shell
-      sudo apt install wget apt-transport-https
-      wget https://r.mariadb.com/downloads/mariadb_repo_setup
-      echo "30d2a05509d1c129dd7dd8430507e6a7729a4854ea10c9dcf6be88964f3fdc25  mariadb_repo_setup" | sha256sum -c -
-      chmod +x mariadb_repo_setup
-      sudo ./mariadb_repo_setup
-      ```
+        ```shell
+        sudo apt install wget apt-transport-https
+        wget https://r.mariadb.com/downloads/mariadb_repo_setup
+        echo "30d2a05509d1c129dd7dd8430507e6a7729a4854ea10c9dcf6be88964f3fdc25  mariadb_repo_setup" | sha256sum -c -
+        chmod +x mariadb_repo_setup
+        sudo ./mariadb_repo_setup
+        ```
 
-      Install it.
+        Install it.
 
-      ```shell
-      sudo apt-get update
-      sudo apt-get install mariadb-server
-      ```
+        ```shell
+        sudo apt-get update
+        sudo apt-get install mariadb-server
+        ```
 
-      Run the secure installation to remove default configuration.
+        Run the secure installation to remove default configuration.
 
-      ```shell
-      sudo mariadb-secure-installation
-      ```
+        ```shell
+        sudo mariadb-secure-installation
+        ```
 
-   5. Install ffmpeg
+    5. Install ffmpeg
 
-      ```shell
-      sudo apt install ffmpeg
-      ```
+        ```shell
+        sudo apt install ffmpeg
+        ```
 
-   6. Install ImageMagick
+    6. Install ImageMagick
 
-      ```shell
-      sudo apt install imagemagick
-      ```
+        ```shell
+        sudo apt install imagemagick
+        ```
 
-   7. Install PDF tools
+    7. Install PDF tools
 
-      ```shell
-      sudo apt install poppler-utils
-      ```
+        ```shell
+        sudo apt install poppler-utils
+        ```
 
-      > Optional: if you want you can use xpdf utils instead poppler.
+        > Optional: if you want you can use xpdf utils instead poppler.
 
-      ```shell
-      wget https://dl.xpdfreader.com/xpdf-tools-linux-4.04.tar.gz
-      tar xpvf  xpdf-tools-linux-4.03.tar.gz
-      sudo mv pdf* /usr/local/bin
-      ```
+        ```shell
+        wget https://dl.xpdfreader.com/xpdf-tools-linux-4.04.tar.gz
+        tar xpvf  xpdf-tools-linux-4.03.tar.gz
+        sudo mv pdf* /usr/local/bin
+        ```
 
 3. Download Dédalo and place it under the httpdocs directory of the web server.
 
-   ```shell
-   sudo wget https://github.com/renderpci/dedalo/archive/master.zip
-   ```
+    ```shell
+    sudo wget https://github.com/renderpci/dedalo/archive/master.zip
+    ```
 
-   Unzip and rename it
+    Unzip and rename it
 
-   ```shell
-   sudo unzip master.zip
-   sudo mv dedalo-master dedalo
-   ```
+    ```shell
+    sudo unzip master.zip
+    sudo mv dedalo-master dedalo
+    ```
 
-   Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.
+    Set the permissions of the 'dedalo' directory according to your Apache and PHP-FPM settings.
 
 4. Create a database in PostgreSQL named `dedalo_xx` (you can change the `xx` as you please).
 
-   1. Enter into `psql`:
+    1. Enter into `psql`:
 
-      ```shell
-      sudo su - postgres
-      psql
-      ```
+        ```shell
+        sudo su - postgres
+        psql
+        ```
 
-   2. Create a Dédalo user:
+    2. Create a Dédalo user:
 
-      ```sql
-      CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
-      ```
+        ```sql
+        CREATE USER dedalo_user PASSWORD 'My_super_Secret_pw';
+        ```
 
-   3. Create a Dédalo database and comment it:
+    3. Create a Dédalo database and comment it:
 
-      ```sql
-      CREATE DATABASE dedalo_xxx
-      WITH ENCODING='UTF8'
-      OWNER=dedalo_user
-      CONNECTION LIMIT=-1
-      TABLESPACE=pg_default;
-      ```
+        ```sql
+        CREATE DATABASE dedalo_xxx
+        WITH ENCODING='UTF8'
+        OWNER=dedalo_user
+        CONNECTION LIMIT=-1
+        TABLESPACE=pg_default;
+        ```
 
-      ```sql
-      COMMENT ON DATABASE dedalo_xxx
-      IS 'Dédalo: Cultural Heritage and Memory management system';
-      ```
+        ```sql
+        COMMENT ON DATABASE dedalo_xxx
+        IS 'Dédalo: Cultural Heritage and Memory management system';
+        ```
 
-   4. Exit form `psql` and postgres user:
+    4. Exit form `psql` and postgres user:
 
-      ```shell
-      \q
-      exit
-      ```
+          ```shell
+          \q
+          exit
+          ```
 
-   5. Create '.pgpass' file, it will be used to create backups or update ontology.
+    5. Create '.pgpass' file, it will be used to create backups or update ontology.
 
-      !!! note "about `.pgpass` file"
-         Dédalo use default `.pgpass` access to postgreSQL command tools.
-         Note that `.pgpass` file has your postgreSQL credentials to access your database.
-         Please read the [PostgreSQL documentation about this file.](https://www.postgresql.org/docs/current/libpq-pgpass.html)
+        !!! note "about `.pgpass` file"
+            Dédalo use default `.pgpass` access to postgreSQL command tools.
+            Note that `.pgpass` file has your postgreSQL credentials to access your database.
+            Please read the [PostgreSQL documentation about this file.](https://www.postgresql.org/docs/current/libpq-pgpass.html)
 
-      ```shell
-      nano .pgpass
-      chmod 0600 ~/.pgpass
-      ```
+        ```shell
+        nano .pgpass
+        chmod 0600 ~/.pgpass
+        ```
 
 5. Configuration.
-   Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
+    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
-   1. Rename `sample.config.php` to `config.php`.
+    1. Rename `sample.config.php` to `config.php`.
 
-      ```shell
-      cd [...]/dedalo/config/
-      mv sample.config.php config.php
-      ```
+        ```shell
+        cd [...]/dedalo/config/
+        mv sample.config.php config.php
+        ```
 
-   2. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths. Read the [configuration](../config/config.md) documentation.
+    2. Modify `[...]/dedalo/config/config.php` as you need. Usually, this involves the `DEDALO_ENTITY` string and the OS library paths. Read the [configuration](../config/config.md) documentation.
 
-   3. Rename `sample.config_db.php` to `config_db.php`.
+    3. Rename `sample.config_db.php` to `config_db.php`.
 
-      ```shell
-      cd [...]/dedalo/config/
-      mv sample.config_db.php config_db.php
-      ```
+        ```shell
+        cd [...]/dedalo/config/
+        mv sample.config_db.php config_db.php
+        ```
 
-   4. Modify `[...]/dedalo/config/config_db.php` with your database configuration. Read the database [configuration](../config/config_db.md) documentation.
+    4. Modify `[...]/dedalo/config/config_db.php` with your database configuration. Read the database [configuration](../config/config_db.md) documentation.
 
-   5. Rename `sample.config_core.php` to `config_core.php`.
+    5. Rename `sample.config_core.php` to `config_core.php`.
 
-      ```shell
-      cd [...]/dedalo/config/
-      mv sample.config_core.php config_core.php
-      ```
+        ```shell
+        cd [...]/dedalo/config/
+        mv sample.config_core.php config_core.php
+        ```
 
-   6. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
+    6. Rename `[...]/dedalo/config/sample.config_areas.php` to `[...]/dedalo/config/config_areas.php`.
 
-      ```shell
-      cd [...]/dedalo/config/
-      mv sample.config_areas.php config_areas.php
-      ```
+        ```shell
+        cd [...]/dedalo/config/
+        mv sample.config_areas.php config_areas.php
+        ```
 
-   7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
+    7. Modify `[...]/dedalo/config/config_areas.php` with your areas configuration. Read the areas [configuration](../config/config_areas.md) documentation.
 
 6. Open Dédalo in the browser.
 7. Follow the instructions.
