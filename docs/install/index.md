@@ -65,6 +65,16 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 2. Install Ubuntu Server and all dependencies.
    1. Install PHP
 
+      Usually Dédalo use the last version of PHP.
+      To get the last PHP version you will need to install PPA repository.
+
+      ```shell
+      sudo apt install ca-certificates apt-transport-https software-properties-common lsb-release
+      sudo add-apt-repository ppa:ondrej/php
+      sudo apt update
+      ```
+      Install PHP 8.3
+
       ```shell
       sudo apt install php8.3 php8.3-cli php8.3-common php8.3-mysql php8.3-pgsql php8.3-gd php8.3-mbstring php8.3-xml php8.3-pspell php8.3-tidy php8.3-bcmath php8.3-imap php8.3-soap php8.3-opcache php8.3-fpm php8.3-zip php8.3-curl
       ```
