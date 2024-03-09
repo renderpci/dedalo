@@ -38,7 +38,7 @@ define('DEDALO_DB_MANAGEMENT',			true);
 // MYSQL (PUBLIC DATA)
 // MySQL connection for publication
 // MYSQL_DEDALO_HOSTNAME_CONN: string|null 'hostname' . Ex. 'localhost', '127.0.0.1' etc.
-define('MYSQL_DEDALO_HOSTNAME_CONN',	'hostname');
+define('MYSQL_DEDALO_HOSTNAME_CONN',	'localhost');
 // MYSQL_DEDALO_USERNAME_CONN: string 'username'
 define('MYSQL_DEDALO_USERNAME_CONN',	'username');
 // MYSQL_DEDALO_PASSWORD_CONN: string 'password'
