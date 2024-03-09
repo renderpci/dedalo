@@ -24,6 +24,9 @@
 // user_id
 	$user_id = (int)$data['user_id'];
 
+// lang
+	$lang = $data['lang'];
+
 // session_id. Is used mainly to verify that user is logged or not.
 	// get current session id and force new session name as equal
 	$session_id = $data['session_id'];
@@ -39,7 +42,7 @@
 	// session_write_close();
 
 // actions to run
-	$datalist = component_security_access::calculate_tree($user_id);
+	$datalist = component_security_access::calculate_tree($user_id, $lang);
 
 // write result to file as text
 	echo json_encode($datalist);
