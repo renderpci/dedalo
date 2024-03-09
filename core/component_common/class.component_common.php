@@ -4122,4 +4122,36 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_ONTLOGY_INFO
+	* Get the component information (former 'def', now 'Definition') from the Ontology
+	* for current component term_id
+	* @return string|null $ontlogy_info
+	*/
+	public function get_ontlogy_info() : ?string {
+
+		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
+
+		$section_id = ontology::get_section_id_by_term_id($this->tipo);
+
+		$component_tipo	= ONTOLOGY_SECTION_TIPOS['definition']; // expected dd1478
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_text_area
+		$component		= component_common::get_instance(
+			$model,
+			$component_tipo,
+			$section_id,
+			'list',
+			DEDALO_APPLICATION_LANG,
+			$section_tipo
+		);
+		$dato = $component->get_dato();
+
+		$ontlogy_info = $dato[0] ?? null;
+
+
+		return $ontlogy_info;
+	}//end get_ontlogy_info
+
+
+
 }//end class component_common
