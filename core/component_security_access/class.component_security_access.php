@@ -476,7 +476,7 @@ class component_security_access extends component_common {
 	* @param int $user_id
 	* @return array $datalist
 	*/
-	public static function calculate_tree(int $user_id) : array {
+	public static function calculate_tree(int $user_id, string $lang) : array {
 		$start_time = start_time();
 
 		// profile_section_id
@@ -500,7 +500,7 @@ class component_security_access extends component_common {
 		// $fiber = new Fiber(function() use($section_id, $user_id, $start_time) : array {
 
 			debug_log(__METHOD__
-				. " (1 start) user_id: " .$user_id. ' ('.DEDALO_APPLICATION_LANG.')'
+				. " (1 start) user_id: " .$user_id. ' ('.$lang.')'
 				. ' ))) launching datalist ///////////////////////////////////////////////////// '
 				, logger::WARNING
 			);
@@ -513,7 +513,7 @@ class component_security_access extends component_common {
 				$tipo, // string tipo
 				$section_id, // string|null section_id
 				'list', // string mode
-				DEDALO_DATA_LANG, // string lang
+				$lang, // string lang
 				$section_tipo, // string section_tipo
 				false
 			);
@@ -521,8 +521,8 @@ class component_security_access extends component_common {
 
 			// Fiber::suspend();
 			debug_log(__METHOD__
-				. " (2 end) count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
-				. ' ))) finished calculation datalist /////////////////////////////////////// '
+				. " (2 end) lang: $lang, count: " . count($datalist) .' '. exec_time_unit($start_time).' ms'
+				. ' ))) finished calculation datalist ////////////////////////// '
 				, logger::WARNING
 			);
 

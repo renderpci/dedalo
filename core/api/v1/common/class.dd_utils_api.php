@@ -340,7 +340,8 @@ final class dd_utils_api {
 						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 						'data'			=> (object)[
 							'session_id'	=> session_id(),
-							'user_id'		=> get_user_id()
+							'user_id'		=> get_user_id(),
+							'lang'			=> $dedalo_application_lang ?? DEDALO_APPLICATION_LANG
 						],
 						'file_name'		=> $cache_file_name,
 						'wait'			=> false

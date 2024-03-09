@@ -75,12 +75,13 @@ final class login_test extends TestCase {
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
-				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 				dd_cache::process_and_cache_to_file((object)[
 					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 					'data'			=> (object)[
 						'session_id'	=> session_id(),
-						'user_id'		=> $user_id
+						'user_id'		=> $user_id,
+						'lang'			=> DEDALO_APPLICATION_LANG
 					],
 					'file_name'		=> $cache_file_name,
 					'wait'			=> false
