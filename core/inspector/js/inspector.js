@@ -69,6 +69,8 @@ inspector.prototype.init = async function(options) {
 	self.element_info_container			= null
 	self.component_history_container	= null
 
+	self.last_docu_type = null
+
 	// events
 		// render_ section
 			self.events_tokens.push(
@@ -100,10 +102,32 @@ inspector.prototype.init = async function(options) {
 				if(SHOW_DEVELOPER===true) {
 					setTimeout(function(){
 						if (window.docu_window && !window.docu_window.closed) {
-							const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + actived_component.tipo
-							open_ontology_window(actived_component.tipo, custom_url, false)
+							const tipo	= actived_component.tipo
+							let url		= null
+							switch (self.last_docu_type) {
+								case 'docu_link': // web dedalo/ontology
+									url = 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
+									break;
+								case 'local_ontology':
+									url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
+									break;
+								case 'local_ontology_search':
+									url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
+									break;
+								case 'master_ontology':
+									url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
+									break;
+							}
+							if (url) {
+								open_ontology_window(
+									self,
+									url,
+									self.last_docu_type,
+									false // focus bool
+								)
+							}
 						}
-					}, 5)
+					}, 1)
 				}
 			}
 		// save. When selected component is saved, update component_history, time_machine_list and activity_info
