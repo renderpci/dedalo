@@ -13,7 +13,7 @@ function get_elements() : array {
 		$section_tipo	= 'test3';
 		$section_id		= 1;
 		$mode			= 'edit';
-		$lang			= 'lg-eng';
+		$lang			= DEDALO_DATA_LANG; // 'lg-eng';
 		// $permissions	= 2;
 
 	$elements = [

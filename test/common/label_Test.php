@@ -73,8 +73,19 @@ final class label_test extends TestCase {
 	*/
 	public function test_get_var_from_label() {
 
+		switch (DEDALO_DATA_LANG) {
+			case 'lg-spa':
+				$name = 'Salir';
+				break;
+
+			case 'lg-eng':
+			default:
+				$name = 'Quit';
+				break;
+		}
+
 		$result = label::get_var_from_label(
-			'Quit'
+			$name
 		);
 
 		$this->assertTrue(
@@ -86,9 +97,10 @@ final class label_test extends TestCase {
 		$eq = $result==='salir';
 		$this->assertTrue(
 			$eq,
-			'expected true : ' . PHP_EOL
-				. to_string($result) . PHP_EOL
-				. to_string($eq)
+			'expected true $result===\'salir\' : ' . PHP_EOL
+				. 'result: ' . to_string($result) . PHP_EOL
+				. 'compare: ' . to_string('salir') . PHP_EOL
+				. 'eq: ' . to_string($eq)
 		);
 	}//end test_get_var_from_label
 
