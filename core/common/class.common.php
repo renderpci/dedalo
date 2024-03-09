@@ -1677,6 +1677,9 @@ abstract class common {
 						$dd_object->new_dataframe = (!empty($new_dataframe))
 							? $new_dataframe[0]
 							: null;
+
+						// component info from Ontology (!) For now it is not used because it affects speed.
+						// $dd_object->ontology_info = $this->get_ontlogy_info();
 					}
 
 				}else if($model==='section') {
