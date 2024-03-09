@@ -490,63 +490,28 @@ export const render_section_info = function(self) {
 		// value
 			const tipo_info = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'value',
+				class_name		: 'value bold',
 				inner_html		: section_tipo,
 				parent			: fragment
 			})
-		// docu_link
-			const docu_link = ui.create_dom_element({
-				element_type	: 'a',
-				class_name		: 'button link',
-				title			: 'Documentation',
-				parent			: tipo_info
+
+	// info
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: 'info',
+				parent			: fragment
 			})
-			docu_link.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				open_ontology_window(section_tipo)
+		// value
+			const info_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				parent			: fragment
 			})
-		// local_ontology
-			if (SHOW_DEVELOPER===true) {
-				const local_ontology = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button pen',
-					title			: 'Local Ontology',
-					parent			: tipo_info
-				})
-				local_ontology.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + section_tipo
-					open_ontology_window(section_tipo, custom_url)
-				})
-			}
-		// master_ontology
-			if (SHOW_DEVELOPER===true) {
-				const master_ontology = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button edit',
-					title			: 'Master Ontology',
-					parent			: tipo_info
-				})
-				master_ontology.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + section_tipo
-					open_ontology_window(section_tipo, custom_url)
-				})
-			}
-		// local ontology tree search
-			if (SHOW_DEVELOPER===true) {
-				const local_ontology_search = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button tree',
-					title			: 'Local Ontology tree search',
-					parent			: tipo_info
-				})
-				local_ontology_search.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${section_tipo}&accion=searchTSform`
-					open_ontology_window(section_tipo, custom_url)
-				})
-			}
+			// render_docu_links
+			const docu_links = render_docu_links(self, section_tipo)
+			info_container.appendChild(docu_links)
 
 	// model
 		// label
@@ -663,7 +628,6 @@ export const render_section_info = function(self) {
 			parent			: fragment
 		})
 
-
 	// clean and set container
 		while (container.firstChild) {
 			container.removeChild(container.firstChild);
@@ -691,14 +655,15 @@ export const render_component_info = function(self, component) {
 
 	// values from caller (section)
 		const tipo			= component.tipo
-		const label			= component.label
+		// const label		= component.label
 		const model			= component.model
 		const mode			= component.mode
 		const view			= component.view || 'default'
 		const translatable	= component.context.translatable
 			? JSON.stringify(component.context.translatable)
 			: 'no'
-		// const value			= component.data && component.data.value
+		// const ontology_info = component.context.ontology_info || ''
+		// const value		= component.data && component.data.value
 		// 	? JSON.stringify(component.data.value, null, 1)
 		// 	: ''
 
@@ -734,20 +699,45 @@ export const render_component_info = function(self, component) {
 		// value
 			const tipo_info = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'value',
+				class_name		: 'value bold',
 				inner_html		: tipo,
 				parent			: fragment
 			})
+
+	// info
+		// label
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'key',
+				inner_html		: 'info',
+				parent			: fragment
+			})
+		// value
+			const info_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'value',
+				parent			: fragment
+			})
+			// render_docu_links
+			const docu_links = render_docu_links(self, tipo)
+			info_container.appendChild(docu_links)
+
+		/*
 		// docu_link. Link to dedalo.dev Ontology info
 			const docu_link = ui.create_dom_element({
 				element_type	: 'a',
 				class_name		: 'button link',
 				title			: 'Documentation',
-				parent			: tipo_info
+				parent			: info_container
 			})
 			docu_link.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				open_ontology_window(tipo)
+				open_ontology_window(
+					self,
+					tipo,
+					'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang,
+					'docu_link'
+				)
 			})
 		// local_ontology
 			if (SHOW_DEVELOPER===true) {
@@ -755,12 +745,16 @@ export const render_component_info = function(self, component) {
 					element_type	: 'a',
 					class_name		: 'button pen',
 					title			: 'Local Ontology',
-					parent			: tipo_info
+					parent			: info_container
 				})
 				local_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
-					const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo
-					open_ontology_window(tipo, custom_url)
+					open_ontology_window(
+						self,
+						tipo,
+						DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo,
+						'local_ontology'
+					)
 				})
 			}
 		// master_ontology
@@ -769,12 +763,16 @@ export const render_component_info = function(self, component) {
 					element_type	: 'a',
 					class_name		: 'button edit',
 					title			: 'Master Ontology',
-					parent			: tipo_info
+					parent			: info_container
 				})
 				master_ontology.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
-					const custom_url = 'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo
-					open_ontology_window(tipo, custom_url)
+					open_ontology_window(
+						self,
+						tipo,
+						'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo,
+						'master_ontology'
+					)
 				})
 			}
 		// local ontology tree search
@@ -783,14 +781,19 @@ export const render_component_info = function(self, component) {
 					element_type	: 'a',
 					class_name		: 'button tree',
 					title			: 'Local Ontology tree search',
-					parent			: tipo_info
+					parent			: info_container
 				})
 				local_ontology_search.addEventListener('mousedown', function(e) {
 					e.stopPropagation()
-					const custom_url = DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`
-					open_ontology_window(tipo, custom_url)
+					open_ontology_window(
+						self,
+						tipo,
+						DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
+						'local_ontology_search'
+					)
 				})
 			}
+		*/
 
 	// model
 		// label
@@ -839,6 +842,22 @@ export const render_component_info = function(self, component) {
 			inner_html		: view + ' - ' + mode,
 			parent			: fragment
 		})
+
+	// ontology info
+		// // label
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'key',
+		// 	inner_html		: 'Info',
+		// 	parent			: fragment
+		// })
+		// // value
+		// ui.create_dom_element({
+		// 	element_type	: 'span',
+		// 	class_name		: 'value',
+		// 	inner_html		: ontology_info,
+		// 	parent			: fragment
+		// })
 
 	// value
 		// label
@@ -1588,39 +1607,129 @@ export const load_activity_info = async function(self, options) {
 /**
 * OPEN_ONTOLOGY_WINDOW
 * Opens Dédalo Ontology page in a new window
-* @param string tipo
-* @param string|null custom_url
+* @param object self
+* @param string url
+* @param string docu_type
 * @param bool focus = true
 * @return bool
 */
-export const open_ontology_window = function(tipo, custom_url, focus=true) {
+export const open_ontology_window = function(self, url, docu_type, focus=false) {
 
+	// fix docu_type (used in inspector.init event 'fn_activate_component')
+	self.last_docu_type = docu_type
+
+	// docu_window
 	window.docu_window = window.docu_window || null
 
-	// case online documentation window https://dedalo.dev/ontology
-
-	const url = custom_url
-		? custom_url
-		: 'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang
-
 	if (window.docu_window && !window.docu_window.closed) {
+		// recycle current already existing window
 		window.docu_window.location = url
 		if (focus===true) {
 			window.docu_window.focus()
 		}
 	}else{
+		// create a window from scratch
 		const window_width	= 1001
 		const screen_width	= window.screen.width
 		const screen_height	= window.screen.height
+		const left = screen_width - window_width
 		window.docu_window	= window.open(
 			url,
 			'docu_window',
-			`left=${screen_width-window_width},top=0,width=${window_width},height=${screen_height}`
+			`left=${left},top=0,width=${window_width},height=${screen_height}`
 		)
 	}
 
+
 	return true
 }//end open_ontology_window
+
+
+
+/**
+* RENDER_DOCU_LINKS
+* Opens Dédalo Ontology page in a new window
+* @param object self
+* @param string tipo
+* @return DocumentFragment fragment
+*/
+const render_docu_links = function(self, tipo) {
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
+
+	// docu_link
+		const docu_link = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'button link',
+			title			: 'Documentation',
+			parent			: fragment
+		})
+		docu_link.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+			open_ontology_window(
+				self,
+				'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang,
+				'docu_link'
+			)
+		})
+
+	if (SHOW_DEVELOPER===true) {
+
+		// local_ontology
+			const local_ontology = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button pen',
+				title			: 'Local Ontology',
+				parent			: fragment
+			})
+			local_ontology.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				open_ontology_window(
+					self,
+					DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo,
+					'local_ontology'
+				)
+			})
+
+
+		// local ontology tree search
+			const local_ontology_search = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button tree',
+				title			: 'Local Ontology tree search',
+				parent			: fragment
+			})
+			local_ontology_search.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				open_ontology_window(
+					self,
+					DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
+					'local_ontology_search'
+				)
+			})
+
+		// master_ontology
+			const master_ontology = ui.create_dom_element({
+				element_type	: 'a',
+				class_name		: 'button edit',
+				title			: 'Master Ontology',
+				parent			: fragment
+			})
+			master_ontology.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				open_ontology_window(
+					self,
+					'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo,
+					'master_ontology'
+				)
+			})
+
+	}//end if (SHOW_DEVELOPER===true)
+
+
+	return fragment
+}//end render_docu_links
 
 
 

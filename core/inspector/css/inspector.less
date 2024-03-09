@@ -100,13 +100,20 @@
 				margin-bottom: 0.25rem;
 				font-size: 0.88rem;
 
-				.link, .pen, .edit, .tree {
+				.link, .pen, .tree, .edit, {
 					background-color: @color_orange_dedalo;
-					margin-left: 0.33rem;
+					// margin-left: 0.33rem;
+					margin-right: 0.5rem;
 				}
 
-				.link {
-					margin-left: 0.5rem;
+				// .link {
+				// 	margin-left: 0.5rem;
+				// }
+
+				.button {
+					&:active {
+						opacity: 0.3;
+					}
 				}
 
 				.key {
@@ -141,6 +148,11 @@
 						button{
 							align-self: center;
 						}
+					}
+
+					&.bold {
+						font-size: 0.9rem;
+						font-weight: 600;
 					}
 				}
 			}
@@ -232,7 +244,6 @@
 						background-color: @color_grey_dark;
 					}
 
-
 					&.error {
 
 					}
@@ -261,7 +272,6 @@
 					margin-top: 0.25rem;
 				}
 			}
-
 
 		// select {
 		// 	width: 87px;
@@ -293,7 +303,7 @@
 		// 	float: left;
 		// 	margin-left: 2px;
 		// }
-	}
+	}//end .inspector_content_data
 
 
 	.css_section_group_content {
