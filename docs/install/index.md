@@ -183,7 +183,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
    1. Enter into `psql`:
 
       ```shell
-      su - postgres
+      sudo su - postgres
       psql
       ```
 
