@@ -134,7 +134,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       Run the secure installation to remove default configuration.
 
       ```shell
-      mariadb_secure_installation
+      mariadb-secure-installation
       ```
 
    5. Install ffmpeg
