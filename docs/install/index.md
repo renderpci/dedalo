@@ -215,6 +215,18 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
       exit
       ```
 
+   5. Create '.pgpass' file, it will be used to create backups or update ontology.
+
+      !!! note "about `.pgpass` file"
+         Dédalo use default `.pgpass` access to postgreSQL command tools.
+         Note that `.pgpass` file has your postgreSQL credentials to access your database.
+         Please read the [PostgreSQL documentation about this file.](https://www.postgresql.org/docs/current/libpq-pgpass.html)
+
+      ```shell
+      nano .pgpass
+      chmod 0600 ~/.pgpass
+      ```
+
 5. Configuration.
    Before changing the config files you will need copy/rename the sample config files removing the word "sample", you can rename or copy this files. Please read the [configuration](../config/index.md) documentation for further explanation on this.
 
