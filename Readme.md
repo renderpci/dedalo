@@ -13,9 +13,11 @@
 | numisdata | production | 100% | 100% | 100% |  All definitions are ready |
 | isad | production | 100% | 100% | 100% | All definitions are ready |
 | ich | production | 100% | 100% | 100%  | All definitions are ready |
+| tch | beta | 60% | 60% | 60%  | Install and test it, but don't use in production |
+| tchi | alpha | 50% | 50% | 50%  | Install and test it, but don't use in production |
 | dmm | alpha | 0% | 0% | 0% |  |
 | mdcat | alpha | 0% | 0% |0%  |  |
-| tch | alpha | 50% | 50% |60%  |  |
+
 
 ## 1. What is Dédalo?
 
