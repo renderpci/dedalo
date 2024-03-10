@@ -7057,8 +7057,6 @@ mdcat1744	Situació de l’expedient	termino	lg-cat
 mdcat1744	Situación del expediente	termino	lg-spa
 mdcat1754	Situació de l’ampliació	termino	lg-cat
 mdcat1593	Data incorporació al mapa	termino	lg-cat
-mdcat3716	Antropología	termino	lg-spa
-mdcat3716	Antropologia	termino	lg-cat
 mdcat3717	Genètica	termino	lg-cat
 mdcat3717	Genética	termino	lg-spa
 mdcat3718	Núm muestras	termino	lg-spa
@@ -7079,6 +7077,7 @@ mdcat3726	Mapa de fosas	termino	lg-spa
 mdcat3726	Mapa de fosses	termino	lg-cat
 mdcat3729	Id	termino	lg-spa
 mdcat3729	Id	termino	lg-cat
+mdcat3716	Arqueologia - Antropologia	termino	lg-cat
 mdcat3730	Identificación de la persona	termino	lg-spa
 mdcat3730	Identificació de la persona	termino	lg-cat
 mdcat3731	Memòria individu	termino	lg-cat
@@ -8030,10 +8029,9 @@ mdcat4292	Nuevo	termino	lg-spa
 mdcat4292	Nou	termino	lg-cat
 mdcat4293	Empresa	termino	lg-spa
 mdcat4293	Empresa	termino	lg-cat
-mdcat4281	Estatura mín. cm.	termino	lg-spa
-mdcat4281	Estaura mín. cm.	termino	lg-cat
 mdcat4294	Estatura máx. cm.	termino	lg-spa
 mdcat4294	Estatura máx. cm.	termino	lg-cat
+mdcat4281	Estatura av.| mín. cm.	termino	lg-cat
 mdcat3778	Tipo	termino	lg-spa
 mdcat4296	Individuos exhumados tipo	termino	lg-spa
 mdcat4296	Individus exhumats tipus	termino	lg-cat
@@ -13047,7 +13045,6 @@ mdcat3710	Consultation finished	termino	lg-eng
 mdcat3711	Query Status	termino	lg-eng
 mdcat1706	DEMOCRATIC MEMORIAL	termino	lg-eng
 mdcat3715	Property	termino	lg-eng
-mdcat3716	Anthropology	termino	lg-eng
 mdcat3717	Genetics	termino	lg-eng
 mdcat3718	Num samples	termino	lg-eng
 mdcat3719	Extraction date	termino	lg-eng
@@ -13424,7 +13421,6 @@ mdcat4271	Publication	termino	lg-eng
 mdcat4277	Grave Id	termino	lg-eng
 mdcat4278	Code	termino	lg-eng
 mdcat4279	Audio guides	termino	lg-eng
-mdcat4281	Min height cm.	termino	lg-eng
 mdcat4282	Bibliographic references	termino	lg-eng
 mdcat4285	Alvah Bessie Program	termino	lg-eng
 mdcat4286	Alvah Bessie Program	termino	lg-eng
@@ -13602,7 +13598,6 @@ mdcat3709	Date d'envoi / de réception	termino	lg-fra
 mdcat3710	Consultation terminée	termino	lg-fra
 mdcat3711	Statut des demandes de renseignements	termino	lg-fra
 mdcat3715	Propriété	termino	lg-fra
-mdcat3716	Anthropologie	termino	lg-fra
 mdcat3717	Génétique 	termino	lg-fra
 mdcat3718	Numéro d'échantillon	termino	lg-fra
 mdcat3719	Date d'extraction	termino	lg-fra
@@ -14440,7 +14435,6 @@ mdcat952	Liste	termino	lg-fra
 mdcat953	Nouveau	termino	lg-fra
 mdcat954	Supprimer	termino	lg-fra
 mdcat955	Références bibliographiques	termino	lg-fra
-mdcat956	Le symbole "aujourd'hui"	termino	lg-fra
 mdcat957	Utilisation actuelle de l'espace	termino	lg-fra
 mdcat958	Utilisations actuelles	termino	lg-fra
 mdcat959	Identification	termino	lg-fra
@@ -14624,9 +14618,7 @@ mdcat3346	Indexation	termino	lg-eng
 mdcat4474	Fecha	termino	lg-spa
 mdcat3346	Indexation	termino	lg-fra
 mdcat4474	Data	termino	lg-cat
-mdcat4486	Indexación	termino	lg-spa
 mdcat4475	Notas	termino	lg-spa
-mdcat4486	Indexació	termino	lg-cat
 mdcat4475	Notes	termino	lg-eng
 mdcat4487	Indexación	termino	lg-spa
 mdcat4476	Documento	termino	lg-spa
@@ -14659,3 +14651,35 @@ mdcat4485	localització	termino	lg-cat
 mdcat4422	Comunicacions amb els sol·licitants	termino	lg-cat
 mdcat4484	Comunicacions amb els sol·licitants	termino	lg-cat
 mdcat4485	Location	termino	lg-eng
+mdcat3716	Antropología - Antropología	termino	lg-spa
+mdcat3716	Anthropology - Anthropology	termino	lg-eng
+mdcat3716	Anthropologie - Anthropologie	termino	lg-fra
+mdcat4488	Lugar de resistencia	termino	lg-spa
+mdcat4488	lloc de resistència	termino	lg-cat
+mdcat4486	Tipus de notificació	termino	lg-cat
+mdcat4486	Tipo de notificación	termino	lg-spa
+mdcat4489	Tipos de notificaciones	termino	lg-spa
+mdcat4489	Tipus de notificacions	termino	lg-cat
+mdcat4490	Identificación	termino	lg-spa
+mdcat4490	Identification	termino	lg-eng
+mdcat4490	Identificació	termino	lg-cat
+mdcat4491	Id	termino	lg-spa
+mdcat4491	Id	termino	lg-eng
+mdcat4491	Id	termino	lg-eus
+mdcat4492	Tipo de notificación	termino	lg-spa
+mdcat4492	Tipus de notificació	termino	lg-cat
+mdcat4493	Proyecto	termino	lg-spa
+mdcat4493	Projecte	termino	lg-cat
+mdcat4494	Nuevo	termino	lg-spa
+mdcat4494	Nou	termino	lg-cat
+mdcat4495	Borrar	termino	lg-spa
+mdcat4495	Esborrar	termino	lg-cat
+mdcat4496	Listado	termino	lg-spa
+mdcat4496	Llistat	termino	lg-cat
+mdcat4497	Cierre	termino	lg-spa
+mdcat4497	Tancament	termino	lg-cat
+mdcat4497	Closure	termino	lg-eng
+mdcat4497	Fermeture	termino	lg-fra
+mdcat4281	Estatura av.|mín. cm.	termino	lg-spa
+mdcat4281	Av.|min. height cm.	termino	lg-eng
+mdcat956	Le symbole 'aujourd'hui'	termino	lg-fra
