@@ -5,6 +5,8 @@ It use the MPEG-4 Part 12, ISO/IEC 14496-12:2022 definition to find the in and o
 
 ## To install
 
+You can get the module in `/dedalo/install/http_modules/mod_h264_streaming-3.0.0` directory, get the correct version for your server platform, or compile it by your self.
+
 ### Ubuntu/Debian
 
 1. Copy *mod_dedalo_h264_streaming.so* to modules:
