@@ -22,6 +22,7 @@ class time_machine_v5_to_v6 {
 
 	/**
 	* CONVERT_TABLE_DATA
+	* @param array $ar_tables
 	* @return bool true
 	*/
 	public static function convert_table_data(array $ar_tables) : bool {
@@ -215,4 +216,6 @@ class time_machine_v5_to_v6 {
 		return true;
 	}//end convert_table_data
 
-}//end class
+
+
+}//end class time_machine_v5_to_v6

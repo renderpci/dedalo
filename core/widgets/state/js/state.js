@@ -5,7 +5,7 @@
 
 
 // imports
-	import {widget_common} from '../../widget_common/widget_common.js'
+	import {widget_common} from '../../widget_common/js/widget_common.js'
 	import {render_edit_state} from '../js/render_edit_state.js'
 	import {render_list_state} from '../js/render_list_state.js'
 

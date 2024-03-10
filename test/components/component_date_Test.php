@@ -333,9 +333,19 @@ final class component_date_Test extends TestCase {
 					. gettype($result)
 			);
 			// 2011 years 2 months 8 days
+			switch (DEDALO_DATA_LANG) {
+				case 'lg-spa':
+					$compare = '2011 años 2 meses 8 días';
+					break;
+
+				case 'lg-eng':
+				default:
+					$compare = '2011 years 2 months 8 days';
+					break;
+			}
 			$this->assertTrue(
-				$result==='2011 years 2 months 8 days',
-				'expected 2011 years 2 months 8 days : ' . PHP_EOL
+				$result===$compare,
+				'expected '.$compare.' : ' . PHP_EOL
 					. to_string($result)
 			);
 

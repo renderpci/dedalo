@@ -1940,14 +1940,30 @@ final class search_test extends TestCase {
 			'expected true (type===array) and received type: ' .$type
 		);
 
-		$value = json_decode('[
-			{
-				"name": "Name",
-				"model": "component_input_text",
-				"section_tipo": "rsc194",
-				"component_tipo": "rsc85"
-			}
-		]');
+		switch (DEDALO_DATA_LANG) {
+			case 'lg-spa':
+				$value = json_decode('[
+					{
+						"name": "Nombre",
+						"model": "component_input_text",
+						"section_tipo": "rsc194",
+						"component_tipo": "rsc85"
+					}
+				]');
+				break;
+
+			case 'lg-eng':
+			default:
+				$value = json_decode('[
+					{
+						"name": "Name",
+						"model": "component_input_text",
+						"section_tipo": "rsc194",
+						"component_tipo": "rsc85"
+					}
+				]');
+				break;
+		}
 		$eq		= $result==$value;
 		$this->assertTrue(
 			$eq,

@@ -2840,8 +2840,6 @@ rsc937	Projecte	termino	lg-cat
 rsc938	Listado	termino	lg-spa
 rsc938	Llistat	termino	lg-cat
 rsc684	Conservación	termino	lg-spa
-rsc939	Estado de conservación	termino	lg-spa
-rsc939	Estat de conservació	termino	lg-cat
 rsc940	Indentificació	termino	lg-cat
 rsc941	Id	termino	lg-spa
 rsc941	Id	termino	lg-cat
@@ -2907,12 +2905,11 @@ rsc972	Reporte del registro	termino	lg-spa
 rsc972	Report del registre	termino	lg-cat
 rsc973	Listado	termino	lg-spa
 rsc973	Llistat	termino	lg-cat
+rsc939	Biografías dels bens	termino	lg-cat
 rsc974	Listado de relaciones	termino	lg-spa
 rsc974	Llistat de rel·lacions	termino	lg-cat
 rsc975	Histórico del componente	termino	lg-spa
 rsc975	Històric del component	termino	lg-cat
-rsc976	Inspecciones	termino	lg-spa
-rsc976	Inspeccions	termino	lg-cat
 rsc977	Identificación	termino	lg-spa
 rsc977	Identificació	termino	lg-cat
 rsc978	Id	termino	lg-spa
@@ -3937,7 +3934,6 @@ rsc935	Neu	termino	lg-deu
 rsc936	Löschen	termino	lg-deu
 rsc937	Projekt	termino	lg-deu
 rsc938	Liste	termino	lg-deu
-rsc939	Konservierungszustand	termino	lg-deu
 rsc94	Beruf	termino	lg-deu
 rsc940	Identifizierung	termino	lg-deu
 rsc941	Id	termino	lg-deu
@@ -3948,6 +3944,7 @@ rsc945	Pathologien	termino	lg-deu
 rsc946	Beschreibung der aktuellen Veränderungen	termino	lg-deu
 rsc947	Projekt	termino	lg-deu
 rsc948	Liste	termino	lg-deu
+rsc939	Biografien von Vermögenswerten	termino	lg-deu
 rsc949	Parameter für die präventive Konservierung	termino	lg-deu
 rsc95	Berufsgruppe / Titel	termino	lg-deu
 rsc950	Identifizierung	termino	lg-deu
@@ -3978,7 +3975,6 @@ rsc972	Protokollbericht	termino	lg-deu
 rsc973	Liste	termino	lg-deu
 rsc974	Liste der Beziehungen	termino	lg-deu
 rsc975	Komponentenverlauf	termino	lg-deu
-rsc976	Inspektionen	termino	lg-deu
 rsc977	Identifizierung	termino	lg-deu
 rsc978	Id	termino	lg-deu
 rsc979	Datum	termino	lg-deu
@@ -4814,7 +4810,6 @@ rsc935	New	termino	lg-eng
 rsc936	Delete	termino	lg-eng
 rsc937	Project	termino	lg-eng
 rsc938	List	termino	lg-eng
-rsc939	State of conservation	termino	lg-eng
 rsc940	Identification	termino	lg-eng
 rsc941	Id	termino	lg-eng
 rsc942	Date	termino	lg-eng
@@ -4849,7 +4844,6 @@ rsc972	Log report	termino	lg-eng
 rsc973	List	termino	lg-eng
 rsc974	List of relationships	termino	lg-eng
 rsc975	Component History	termino	lg-eng
-rsc976	Inspections	termino	lg-eng
 rsc977	Identification	termino	lg-eng
 rsc978	Id	termino	lg-eng
 rsc979	Date	termino	lg-eng
@@ -4865,6 +4859,7 @@ rsc956	Margin +/- seasonal %	termino	lg-eng
 rsc988	List	termino	lg-eng
 rsc989	List	termino	lg-eng
 rsc990	List	termino	lg-eng
+rsc976	Inspections / State of conservation	termino	lg-eng
 rsc995	Subtitles	termino	lg-eng
 rsc996	Consultation to documentary collections	termino	lg-eng
 rsc997	Identification	termino	lg-eng
@@ -5783,7 +5778,6 @@ rsc935	Nouveau	termino	lg-fra
 rsc936	Supprimer	termino	lg-fra
 rsc937	Projet	termino	lg-fra
 rsc938	Liste	termino	lg-fra
-rsc939	État de conservation 	termino	lg-fra
 rsc94	Profession	termino	lg-fra
 rsc940	Identification	termino	lg-fra
 rsc941	Id	termino	lg-fra
@@ -5824,7 +5818,6 @@ rsc972	Rapport d'enregistrement	termino	lg-fra
 rsc973	Liste	termino	lg-fra
 rsc974	Liste de relations	termino	lg-fra
 rsc975	Historique des composants	termino	lg-fra
-rsc976	Inspecter	termino	lg-fra
 rsc977	Identification	termino	lg-fra
 rsc978	Id	termino	lg-fra
 rsc979	Date	termino	lg-fra
@@ -5840,6 +5833,7 @@ rsc987	Liste	termino	lg-fra
 rsc988	Liste	termino	lg-fra
 rsc989	Liste	termino	lg-fra
 rsc99	Observations	termino	lg-fra
+rsc939	Biographies des actifs	termino	lg-fra
 rsc990	Liste	termino	lg-fra
 rsc995	Sous-titres	termino	lg-fra
 rsc996	Consultation des fonds documentaires	termino	lg-fra
@@ -7342,3 +7336,46 @@ rsc1281	Llistat	termino	lg-cat
 rsc1281	Liste	termino	lg-deu
 rsc1281	Liste	termino	lg-fra
 rsc1281	Elenco	termino	lg-ita
+rsc976	Inspecciones / Estado de conservación	termino	lg-spa
+rsc976	Inspeccions / Estat de conservació	termino	lg-cat
+rsc976	Inspektionen / Konservierungszustand	termino	lg-deu
+rsc976	Inspecter / État de conservation	termino	lg-fra
+rsc939	Biografías de los bienes	termino	lg-spa
+rsc939	Biographies of properties	termino	lg-eng
+rsc939	Biografie dei beni	termino	lg-ita
+rsc1282	Custodio/Colección	termino	lg-spa
+rsc1282	Custodi/Col·lecció	termino	lg-cat
+rsc1282	Hüterin/Sammlung	termino	lg-deu
+rsc1282	Gardien/Collection	termino	lg-fra
+rsc1282	Custode/Collezione	termino	lg-ita
+rsc1283	Rol	termino	lg-spa
+rsc1283	Role	termino	lg-eng
+rsc1283	Rol	termino	lg-cat
+rsc1283	Rolle	termino	lg-deu
+rsc1283	Rôle	termino	lg-fra
+rsc1283	Ruolo	termino	lg-ita
+rsc1284	Descripción	termino	lg-spa
+rsc1284	Description	termino	lg-eng
+rsc1284	Descripció	termino	lg-cat
+rsc1284	Beschreibung	termino	lg-deu
+rsc1284	Description	termino	lg-fra
+rsc1284	Descrizione	termino	lg-ita
+rsc1285	Bibliografía	termino	lg-spa
+rsc1285	Bibliography	termino	lg-eng
+rsc1285	Bibliografia	termino	lg-cat
+rsc1285	Literaturverzeichnis	termino	lg-deu
+rsc1285	Bibliographie	termino	lg-fra
+rsc1285	Bibliografia	termino	lg-ita
+rsc1286	Notas	termino	lg-spa
+rsc1286	Remark	termino	lg-eng
+rsc1286	Bemerkung	termino	lg-deu
+rsc1286	Remarque	termino	lg-fra
+rsc1286	Notes	termino	lg-cat
+rsc1286	Nota	termino	lg-ita
+rsc1287	Publicable	termino	lg-spa
+rsc1287	Publicable	termino	lg-cat
+rsc1287	Publishable	termino	lg-eng
+rsc1287	Publizierbar	termino	lg-deu
+rsc1287	Publiable	termino	lg-fra
+rsc1287	Pubblicabile	termino	lg-ita
+rsc1282	Keeper/Collection	termino	lg-eng

@@ -463,7 +463,7 @@ component_common.prototype.save = async function(new_changed_data) {
 			if (self.node.classList.contains('save_success')) {
 				self.node.classList.remove('save_success')
 			}
-			self.node.classList.add('loading')
+			self.node.classList.add('saving')
 		}
 
 	// send_data function
@@ -524,9 +524,9 @@ component_common.prototype.save = async function(new_changed_data) {
 		}
 		const response = await send_data()
 
-		// remove loading class on finish
+		// remove saving class on finish
 			if (self.node) {
-				self.node.classList.remove('loading')
+				self.node.classList.remove('saving')
 			}
 
 
