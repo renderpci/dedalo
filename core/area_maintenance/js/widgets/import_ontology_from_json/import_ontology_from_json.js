@@ -5,7 +5,7 @@
 
 
 // imports
-	import {widget_common} from '../../../../widgets/widget_common/widget_common.js'
+	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {render_import_ontology_from_json} from './render_import_ontology_from_json.js'
 
 
