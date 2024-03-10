@@ -48,14 +48,14 @@ Instead install you can use our "ready to use" virtual machine with all installe
 
 Then, you can use our V6 ready-to-use Virtual Machine for development:
 
-[Dedalo V6](https://dedalo.dev/v6)
+[Dedalo V6](./install_help.md#v6-ready-to-use-virtual-machine-for-development)
 
 > Note: we do not recommended use this machine as production system, it could be fine to develop or learn about Dédalo. If you want to use it you will need change all passwords because are public.
 
 ### 2.2. Video-guide for V6 installation
 
 Then, you can follow the steps in the V6 installation video:
-[Dedalo V6 installation video on Ubuntu](https://dedalo.dev/v6_install)
+[Dedalo V6 installation video on Ubuntu](./install_help.md#video-guide-for-v6-installation)
 
 ### 2.3. Manual installation
 
@@ -73,6 +73,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         sudo add-apt-repository ppa:ondrej/php
         sudo apt update
         ```
+
         Install PHP 8.3
 
         ```shell
@@ -219,6 +220,7 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
 
         !!! note "about `.pgpass` file"
             Dédalo use default `.pgpass` access to postgreSQL command tools.
+
             Note that `.pgpass` file has your postgreSQL credentials to access your database.
             Please read the [PostgreSQL documentation about this file.](https://www.postgresql.org/docs/current/libpq-pgpass.html)
 
