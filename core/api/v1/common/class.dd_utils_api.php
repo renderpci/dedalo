@@ -1260,9 +1260,22 @@ final class dd_utils_api {
 				$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_CORE_PATH, '', $el);
-					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					if ( stripos($file, '/acc/')!==false ||
+						 strpos($file, '/themes/')!==false || // ignore themes directory
+						 strpos($file, '/ontology/')!==false || // ignore old ontology files (no modules)
+						 stripos($file, '/old/')!==false ||
+						 stripos($file, '/lib/')!==false || // ignore libraries
+						 strpos($file, '/test/')!==false || // ignore test
+						 strpos($file, '/plug-ins/')!==false || // ignore test
+						 strpos($file, '/fonts/')!==false // ignore fonts
+						) {
 						return null; // item does not will be added to the result
 					}
+					// only js dirs
+					if (strpos($file, '/js/')===false) {
+						return null; // item does not will be added to the result
+					}
+
 					return DEDALO_CORE_URL . '' . $file;
 				});
 				foreach ($core_js_files as $url) {
@@ -1277,7 +1290,10 @@ final class dd_utils_api {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
 
-					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					if ( stripos($file, '/acc/')!==false ||
+						 stripos($file, '/old/')!==false ||
+						 stripos($file, '/lib/')!==false
+						) {
 						return null; // item does not will be added to the result
 					}
 
