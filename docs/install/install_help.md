@@ -24,6 +24,8 @@ Some considerations:
 
 If you want try Dédalo or to begin to develop tools, you can download the full operative virtual machine with a full operative Dédalo installation.
 
+[**Download**](Dedalo_v6_Ubuntu_64-bit_Arm_Server_22.04.4_2024-03-10.vmwarevm.zip){ .md-button .md-button--primary }
+
 This virtual machine use Ubuntu Server 22.04.4 LTS Jammy Jellyfish for ARM (arm64), PostgreSQL 16.2 and PHP 8.3, MariaDB 11.3. It has configured with 16GB of RAM and 8 cores.
 
 !!! note "x86 version of the Virtual Machine"
@@ -46,7 +48,7 @@ The virtual machine is configured with the next users and passwords:
     | password | demo |
 
     !!! note "About root user"
-       ssh access for root user is deactivate as Ubuntu default config, if you want activate, enter with dedalo user, scale permissions, and change the ssh configuration.
+        ssh access for root user is deactivate as Ubuntu default config, if you want activate, enter with dedalo user, scale permissions, and change the ssh configuration.
 
 2. PostgreSQL 16.2
 
