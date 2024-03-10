@@ -33,6 +33,8 @@
 	$session_id = $data['session_id'];
 	session_id($session_id);
 
+	error_log(")))))))))))))))))))))))))))))))))))))))))))))))) session_id 1: $session_id");
+
 // unlock session. Only for read
 	define('PREVENT_SESSION_LOCK', true);
 
@@ -44,6 +46,23 @@
 
 // actions to run
 	$datalist = component_security_access::calculate_tree($user_id, $lang);
+
+	error_log(")))))))))))))))))))))))))))))))))))))))))))))))) session_id 2: " . session_id());
+	error_log(")))))))))))))))))))))))))))))))))))))))))))))))) session value dedalo_application_lang: " . $_SESSION['dedalo']['config']['dedalo_application_lang']);
+
+	$current_session = session_id();
+	if (empty($current_session)) {
+		trigger_error("))))) Warning! current session is empty");
+	}
+	if ($session_id!=session_id()) {
+		trigger_error("))))) Warning! session id received and current session id do not match " . $session_id . ' -> ' .$current_session);
+	}
+	if (!isset($_SESSION['dedalo']['config']['dedalo_application_lang'])) {
+		trigger_error('))))) Warning! session dedalo_application_lang is not defined (' . '$_SESSION[\'dedalo\'][\'config\'][\'dedalo_application_lang\']' .')');
+	}
+	if ($lang!=$_SESSION['dedalo']['config']['dedalo_application_lang']) {
+		trigger_error('))))) Warning! session dedalo_application_lang ('.$_SESSION['dedalo']['config']['dedalo_application_lang'].') is not the desired language ('.$lang.')');
+	}
 
 // write result to file as text
 	echo json_encode($datalist);
