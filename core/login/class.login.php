@@ -734,6 +734,11 @@ class login extends common {
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = $login_type;
 
+		// fix lang
+			if (!isset($_SESSION['dedalo']['config']['dedalo_application_lang'])) {
+				$_SESSION['dedalo']['config']['dedalo_application_lang'] = DEDALO_APPLICATION_LANG;
+			}
+
 		// cookie authorization
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 				self::init_cookie_auth();
