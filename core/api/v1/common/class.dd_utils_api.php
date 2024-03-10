@@ -310,7 +310,7 @@ final class dd_utils_api {
 		// dedalo_application_lang
 			if (!empty($dedalo_application_lang)) {
 				$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
-				# Save in session
+				# Save in session dedalo_application_lang
 				$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;

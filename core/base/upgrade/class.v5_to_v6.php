@@ -19,7 +19,6 @@ class v5_to_v6 {
 	public static function convert_table_data(array $ar_tables, string $action) : bool {
 
 		return update::convert_table_data($ar_tables, $action);
-
 	}//end convert_table_data
 
 
@@ -649,7 +648,6 @@ class v5_to_v6 {
 
 		return $new_dato;
 	}//end fix_data_action
-
 
 
 
