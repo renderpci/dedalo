@@ -11,7 +11,8 @@
 * 		 "SERVER_NAME"	: "127.0.0.1"
 * 	],
 * 	"session_id"	: "3j4mkd21cq71fh9qp7gj1ka033",
-* 	"user_id"		: "-1"
+* 	"user_id"		: "-1",
+* 	"lang" 			: "lg-spa"
 * }
 */
 
