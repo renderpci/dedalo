@@ -571,7 +571,7 @@ class v5_to_v6 {
 			'matrix_users',
 			'matrix_stats'
 		];
-		$action = 'fix_data_action';
+		$action = 'v5_to_v6::fix_data_action';
 
 		self::convert_table_data($ar_tables, $action);
 
