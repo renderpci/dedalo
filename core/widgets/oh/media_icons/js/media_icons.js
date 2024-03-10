@@ -5,7 +5,7 @@
 
 
 // imports
-	import {widget_common} from '../../../widget_common/widget_common.js'
+	import {widget_common} from '../../../widget_common/js/widget_common.js'
 	import {render_media_icons} from '../js/render_media_icons.js'
 
 

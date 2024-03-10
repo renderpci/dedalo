@@ -310,7 +310,7 @@ final class dd_utils_api {
 		// dedalo_application_lang
 			if (!empty($dedalo_application_lang)) {
 				$dedalo_application_lang = trim( safe_xss($dedalo_application_lang) );
-				# Save in session
+				# Save in session dedalo_application_lang
 				$_SESSION['dedalo']['config']['dedalo_application_lang'] = $dedalo_application_lang;
 
 				$response->msg .= ' Changed dedalo_application_lang to '.$dedalo_application_lang;
@@ -340,7 +340,8 @@ final class dd_utils_api {
 						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 						'data'			=> (object)[
 							'session_id'	=> session_id(),
-							'user_id'		=> get_user_id()
+							'user_id'		=> get_user_id(),
+							'lang'			=> $dedalo_application_lang ?? DEDALO_APPLICATION_LANG
 						],
 						'file_name'		=> $cache_file_name,
 						'wait'			=> false
@@ -1259,9 +1260,22 @@ final class dd_utils_api {
 				$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_CORE_PATH, '', $el);
-					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					if ( stripos($file, '/acc/')!==false ||
+						 strpos($file, '/themes/')!==false || // ignore themes directory
+						 strpos($file, '/ontology/')!==false || // ignore old ontology files (no modules)
+						 stripos($file, '/old/')!==false ||
+						 stripos($file, '/lib/')!==false || // ignore libraries
+						 strpos($file, '/test/')!==false || // ignore test
+						 strpos($file, '/plug-ins/')!==false || // ignore test
+						 strpos($file, '/fonts/')!==false // ignore fonts
+						) {
 						return null; // item does not will be added to the result
 					}
+					// only js dirs
+					if (strpos($file, '/js/')===false) {
+						return null; // item does not will be added to the result
+					}
+
 					return DEDALO_CORE_URL . '' . $file;
 				});
 				foreach ($core_js_files as $url) {
@@ -1276,7 +1290,10 @@ final class dd_utils_api {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
 
-					if ( stripos($file, '/acc/')!==false || stripos($file, '/old/')!==false) {
+					if ( stripos($file, '/acc/')!==false ||
+						 stripos($file, '/old/')!==false ||
+						 stripos($file, '/lib/')!==false
+						) {
 						return null; // item does not will be added to the result
 					}
 

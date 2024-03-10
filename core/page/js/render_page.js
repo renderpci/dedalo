@@ -269,12 +269,13 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 			if (wrapper.notification_container) {
 				wrapper.notification_container.remove() // remove node
 				wrapper.notification_container = null // set pointer
+				if(SHOW_DEBUG===true) {
+					console.warn('))) Removed wrapper.notification_container:', dedalo_notification);;
+				}
 			}
 			// fix to compare with next requests
 			self.last_dedalo_notification = null
-			if(SHOW_DEBUG===true) {
-				console.warn(')))))))))))))))))) Removed wrapper.notification_container:', dedalo_notification);;
-			}
+
 			return null
 		}
 
@@ -285,7 +286,7 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 			self.last_dedalo_notification.class_name===dedalo_notification.class_name
 			) {
 			if(SHOW_DEBUG===true) {
-				console.warn(')))))))))))))))))) Ignored dedalo_notification unchanged:', dedalo_notification);
+				console.warn('))) Ignored dedalo_notification unchanged:', dedalo_notification);
 			}
 			return null
 		}

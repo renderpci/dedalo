@@ -38,7 +38,7 @@ class activity_v5_to_v6 extends v5_to_v6 {
 		$ar_tables = [
 			'matrix_activity'
 		];
-		$action = 'convert_section_dato_to_data';
+		$action = 'activity_v5_to_v6::convert_section_dato_to_data';
 
 		self::convert_table_data($ar_tables, $action);
 

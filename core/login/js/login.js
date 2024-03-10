@@ -245,30 +245,34 @@ login.prototype.action_dispatch = async function(api_response) {
 					? api_response.result_options.user_image
 					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
 				if (bg_image) {
-					// force load image
-					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
+					// force preload image
 					await (()=>{
 						return new Promise(function(resolve, reject){
-							const img = new Image()
-							img.onload = () => {
+							const img = document.createElement('img')
+							img.addEventListener('load', function(e) {
+								img.remove()
 								resolve(true)
-							}
-							img.onerror = () => reject(false)
+							})
+							img.addEventListener('error', function(e) {
+								reject(false)
+							})
 							img.src = bg_image
 						})
 						.catch((error) => {
-							console.log('Error loading image:', bg_image);
+							console.error('Error loading image:', bg_image);
 							console.error(error);
 						});
 					})();
+					// CSS
+					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
 					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1 && DEVELOPMENT_SERVER===true) {
 						self.node.classList.add('raspa_loading')
 					}
 					await (()=>{
-						return new Promise(function(resolve, reject){
+						return new Promise(function(resolve){
 							setTimeout(function(){
 								resolve(true)
-							}, 160)
+							}, 160) // 160
 						})
 					})();
 				}
@@ -303,7 +307,7 @@ login.prototype.action_dispatch = async function(api_response) {
 				const files_loader = render_files_loader({
 					on_load_finish : load_finish
 				})
-				await self.node.content_data.top.appendChild(files_loader)
+				self.node.content_data.top.appendChild(files_loader)
 
 			// launch worker cache
 				const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {

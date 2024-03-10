@@ -5,7 +5,7 @@
 
 
 // imports
-	import {widget_common} from '../../../../widgets/widget_common/widget_common.js'
+	import {widget_common} from '../../../../widgets/widget_common/js/widget_common.js'
 	import {render_make_backup} from './render_make_backup.js'
 
 

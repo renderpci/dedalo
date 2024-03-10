@@ -20,7 +20,7 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 			'matrix_hierarchy'
 		];
 
-		$action = 'change_index';
+		$action = 'relation_index_v5_to_v6::change_index';
 
 		self::convert_table_data($ar_tables, $action);
 

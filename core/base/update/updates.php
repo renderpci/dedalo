@@ -637,6 +637,18 @@ $updates->$v = new stdClass();
 					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
 			");
 
+	// add the section_id_key to matrix_time_machine
+		// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			ALTER TABLE \"matrix_time_machine\"
+				ADD COLUMN IF NOT EXISTS \"section_id_key\" integer NULL;
+		");
+	// create new index into time_machine table to include section_id_key
+		// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
+		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+			CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
+		");
+
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_av',

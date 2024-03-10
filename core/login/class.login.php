@@ -734,6 +734,11 @@ class login extends common {
 		// login_type
 			$_SESSION['dedalo']['auth']['login_type'] = $login_type;
 
+		// fix lang
+			if (!isset($_SESSION['dedalo']['config']['dedalo_application_lang'])) {
+				$_SESSION['dedalo']['config']['dedalo_application_lang'] = DEDALO_APPLICATION_LANG;
+			}
+
 		// cookie authorization
 			if (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) {
 				self::init_cookie_auth();
@@ -776,7 +781,7 @@ class login extends common {
 				// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
 				dd_cache::delete_cache_files();
 
-				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_DATA_LANG);
+				$cache_file_name = component_security_access::get_cache_tree_file_name(DEDALO_APPLICATION_LANG);
 				debug_log(__METHOD__
 					." Generating security access datalist in background... [cache_file_name: $cache_file_name]"
 					, logger::DEBUG
@@ -785,7 +790,8 @@ class login extends common {
 					'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 					'data'			=> (object)[
 						'session_id'	=> session_id(),
-						'user_id'		=> $user_id
+						'user_id'		=> $user_id,
+						'lang'			=> DEDALO_APPLICATION_LANG
 					],
 					'file_name'		=> $cache_file_name,
 					'wait'			=> false

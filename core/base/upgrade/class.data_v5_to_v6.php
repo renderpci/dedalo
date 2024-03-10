@@ -41,7 +41,7 @@ class data_v5_to_v6 extends v5_to_v6 {
 			'matrix_users',
 			'matrix_stats'
 		];
-		$action = 'parse_properties';
+		$action = 'data_v5_to_v6::parse_properties';
 
 		self::convert_table_data($ar_tables, $action);
 

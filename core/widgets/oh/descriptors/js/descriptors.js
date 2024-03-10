@@ -5,7 +5,7 @@
 
 
 // imports
-	import {widget_common} from '../../../widget_common/widget_common.js'
+	import {widget_common} from '../../../widget_common/js/widget_common.js'
 	import {render_edit_descriptors} from './render_edit_descriptors.js'
 	import {render_list_descriptors} from './render_list_descriptors.js'
 
