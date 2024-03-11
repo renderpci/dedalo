@@ -310,6 +310,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			class_name		: 'input-group-addon button calendar hidden_button ',
 			parent			: input_wrap
 		})
+		button_calendar.tabIndex = -1;
 		button_calendar.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
 		})
