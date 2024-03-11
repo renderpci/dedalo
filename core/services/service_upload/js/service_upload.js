@@ -299,7 +299,7 @@ export const upload = async function(options) {
 						// check if the file uploaded is a chunk
 						const file_data = api_response.file_data
 						// if upload is chunked is necessary join the files in the server before resolve the upload
-						if(file_data.chunked){
+						if(file_data && file_data.chunked) {
 							// get the index
 							const chunk_index = file_data.chunk_index
 
