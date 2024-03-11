@@ -498,8 +498,12 @@ class search {
 		// Converts JSON search_query_object to SQL query string
 			$count_sql_query	= $this->parse_search_query_object( true );
 			$count_result		= JSON_RecordObj_matrix::search_free($count_sql_query);
-			$row_count			= pg_fetch_assoc($count_result);
-			$total				= (int)$row_count['full_count'];
+			// Note that in some cases, such as "relationship search", more than one total is given.
+			// because UNION is used for tables
+			$total = 0;
+			while($rows = pg_fetch_assoc($count_result)) {
+				$total = $total + (int)$rows['full_count'];
+			}
 
 			if(SHOW_DEVELOPER===true) {
 				$exec_time = round(start_time()-$start_time, 3);
