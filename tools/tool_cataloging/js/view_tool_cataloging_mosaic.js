@@ -53,6 +53,12 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 				const hover_columns		= self.columns_map.filter(el => el.hover===true)
 				const hover_columns_map	= await rebuild_columns_map(hover_columns, self, false)
 
+			// interface configurations
+				// button_delete prevent to show
+				self.show_interface.button_delete = false
+				// button edit click, opens record in a new window instead navigate
+				self.show_interface.button_edit_options.action_mousedown = 'open_window'
+
 			// hover_view (body)
 				const hover_ar_section_record = await get_section_records({
 					caller		: self,

@@ -173,7 +173,7 @@ export const create_target_component = (lang, self) => {
 
 					// component load
 						const component = await self.get_component(lang.value)
-
+						component.show_interface.tools = false
 					// render node
 						const node = await component.render({
 							render_mode : 'edit'//mode // 'edit'
