@@ -178,10 +178,11 @@ export const set_context_vars = function(self) {
 				save_animation			: true, // bool true
 				// buttons_container	: true, // bool false
 				value_buttons			: true,  // bool true
-				button_add				: true, // bool true
+				button_add				: true, // bool true (on get_buttons function)
 				button_delete			: true, // bool true
-				button_link				: true, // bool true
-				button_edit				: false, // bool false. Ex. component_select User profile (dd1725)
+				button_link				: true, // bool true (portal button to link with another sections)
+				button_edit				: false, // bool false. (ex. component_select User profile (dd1725) inside value)
+				button_list				: true, // bool true (ex. component_radio_button: to go to target section)
 				button_edit_options		: {
 					action_mousedown	: 'navigate', // string navigate|open_window (name of function to exec)
 					action_contextmenu	: 'open_window' // string open_window (name of function to exec)
@@ -190,6 +191,7 @@ export const set_context_vars = function(self) {
 				button_external			: false, // bool false
 				button_tree				: false, // bool false
 				button_fullscreen		: true, // bool false
+				button_save				: true, // bool true (used by component_geolocation, text_area...)
 				show_autocomplete		: true // bool true
 			}
 			// set the instance show_interface
