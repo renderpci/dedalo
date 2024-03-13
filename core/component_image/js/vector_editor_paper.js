@@ -36,7 +36,7 @@ vector_editor.prototype.init_canvas = async function(self) {
 
 	// init with the DOM svg object
 		//object node with the save svg into the server
-		const object 	= self.object_node
+		const object 	= self.image_container.object_node
 		// svg document inside the object tag
 		const svg_doc 	= object.contentDocument;
 		// Get one of the svg items by ID;

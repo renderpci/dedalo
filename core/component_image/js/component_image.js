@@ -80,8 +80,8 @@ component_image.prototype.init = async function(options) {
 
 	const self = this
 
-	// image node
-		self.object_node 			= null
+	// image_container node
+		self.image_container 		= null
 	// image size
 		self.img_height				= null
 		self.img_width				= null
