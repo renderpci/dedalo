@@ -269,9 +269,6 @@ component_common.prototype.build = async function(autoload=false) {
 	// set the server data to preserve the data that is already saved in DDBB
 		self.db_data = clone(self.data)
 
-	// is_inside_tool
-		self.is_inside_tool = ui.inside_tool(self)
-
 	// status update
 		self.status = 'built'
 

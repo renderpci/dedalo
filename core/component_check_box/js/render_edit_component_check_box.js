@@ -316,11 +316,13 @@ const get_content_value_read = (i, current_value, self) => {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= self.is_inside_tool
-		const fragment			= new DocumentFragment()
+		const show_interface = self.show_interface
 
-	// button edit (go to target section)
-		if(!is_inside_tool) {
+	// fragment
+		const fragment = new DocumentFragment()
+
+	// button_list (go to target section)
+		if(show_interface.button_list === true){
 
 			const target_sections			= self.context.target_sections
 			const target_sections_length	= target_sections.length
@@ -332,13 +334,13 @@ export const get_buttons = (self) => {
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
 						: item.label
-					const button_edit = ui.create_dom_element({
+					const button_list = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button pen',
 						title			: label,
 						parent			: fragment
 					})
-					button_edit.addEventListener('mousedown', function(e){
+					button_list.addEventListener('mousedown', function(e){
 						e.stopPropagation()
 
 						// open a new window
@@ -358,12 +360,12 @@ export const get_buttons = (self) => {
 								}
 							})
 					})//end click event
-			}
+			}//end for (let i = 0; i < target_sections_length; i++)
 		}
 
-	// button reset
-		// remove all values
-		if(!is_inside_tool) {
+	// button reset (delete) remove all values
+		if(show_interface.button_delete === true){
+
 			const button_reset = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
@@ -390,15 +392,12 @@ export const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool) {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({

@@ -106,14 +106,11 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+		const multi_line = (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-
-		const is_inside_tool 		= self.is_inside_tool
 		const with_lang_versions	= self.context.properties.with_lang_versions || false
-
-		const default_color = '#f78a1c';
+		const default_color			= '#f78a1c';
 
 	// content_value node
 		const content_value = ui.create_dom_element({
@@ -141,7 +138,7 @@ const get_content_value = (i, current_value, self) => {
 			input.value = e.target.value;
 
 		});
-		color_picker.addEventListener("input", function(e){
+		color_picker.addEventListener('input', function(e){
 			input.value = e.target.value;
 
 			// change data
@@ -186,6 +183,8 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
 			})
+
+
 	return content_value
 }//end get_content_value
 
@@ -241,15 +240,11 @@ const get_content_value_read = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			// if (!is_inside_tool && self.mode==='edit') {
-				ui.add_tools(self, fragment)
-			// }
+		if(self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}//end add tools
 
 	// buttons container

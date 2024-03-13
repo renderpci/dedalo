@@ -139,6 +139,7 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			self.component_to_propagate.show_interface.button_add		= true
 			self.component_to_propagate.show_interface.button_link		= true
 			self.component_to_propagate.show_interface.save_animation	= false
+			self.component_to_propagate.show_interface.tools			= false
 
 		// set value
 			self.component_to_propagate.changed_data = [Object.freeze({

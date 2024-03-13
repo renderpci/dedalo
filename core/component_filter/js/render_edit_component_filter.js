@@ -336,25 +336,14 @@ export const get_input_element_read = (element, self) => {
 */
 export const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
-
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		button_fullscreen.addEventListener('click', function(e) {
-			e.stopPropagation()
-			ui.enter_fullscreen(self.node)
-		})
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// button edit (go to target section)
-		if((mode==='edit') && !is_inside_tool) {
+		if(show_interface.button_list === true){
 
 			const target_sections			= self.context.target_sections
 			const target_sections_length	= target_sections.length
@@ -366,13 +355,13 @@ export const get_buttons = (self) => {
 					? `${item.label} [${item.tipo}]`
 					: item.label
 
-				const button_edit = ui.create_dom_element({
+				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button pen',
 					title			: label,
 					parent			: fragment
 				})
-				button_edit.addEventListener('mousedown', function(e){
+				button_list.addEventListener('mousedown', function(e){
 					e.stopPropagation()
 
 					// open a new window
@@ -395,36 +384,51 @@ export const get_buttons = (self) => {
 			}
 		}
 
-	// button reset
-		const button_reset = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button reset',
-			parent			: fragment
-		})
-		button_reset.addEventListener('click', function() {
-			if (self.data.value.length===0) {
-				return true
-			}
+	// button reset (button_delete)
+		if(show_interface.button_delete === true){
 
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				key		: false,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				label			: 'All',
-				refresh			: true
+			const button_reset = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button reset',
+				parent			: fragment
 			})
+			button_reset.addEventListener('click', function() {
+				if (self.data.value.length===0) {
+					return true
+				}
 
-			return true
-		})
+				const changed_data = [Object.freeze({
+					action	: 'remove',
+					key		: false,
+					value	: null
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					label			: 'All',
+					refresh			: true
+				})
+
+				return true
+			})
+		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+			})
 		}
 
 	// buttons container

@@ -64,7 +64,7 @@ view_default_edit_section_id.render = async function(self, options) {
 				'background-color' : self.context.color
 			}
 		})
-		
+
 		// set pointers
 		wrapper.content_data = content_data
 
@@ -106,9 +106,11 @@ const get_content_data_edit = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)

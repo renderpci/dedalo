@@ -268,13 +268,13 @@ const get_content_value_read = (i, current_value, self) => {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool = self.is_inside_tool
+		const show_interface = self.show_interface
 
 	// document fragment
 		const fragment = new DocumentFragment()
 
-	// button edit (go to target section)
-		if(!is_inside_tool) {
+	// button_list (go to target section)
+		if(show_interface.button_list === true){
 
 			const target_sections			= self.context.target_sections || []
 			const target_sections_length	= target_sections.length
@@ -286,13 +286,13 @@ export const get_buttons = (self) => {
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
 						: item.label
-					const button_edit = ui.create_dom_element({
+					const button_list = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button pen',
 						title			: label,
 						parent			: fragment
 					})
-					button_edit.addEventListener('mousedown', function(e){
+					button_list.addEventListener('mousedown', function(e){
 						e.stopPropagation()
 
 						// open a new window
@@ -316,7 +316,8 @@ export const get_buttons = (self) => {
 		}
 
 	// button reset
-		if(!is_inside_tool) {
+		if(show_interface.button_delete === true){
+
 			const reset_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
@@ -346,10 +347,8 @@ export const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool) {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container

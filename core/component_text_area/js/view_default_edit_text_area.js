@@ -109,9 +109,9 @@ view_default_edit_text_area.render = async function(self, options) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const data				= self.data || {}
-		const value				= data.value || []
-		const is_inside_tool	= self.is_inside_tool
+		const data	= self.data || {}
+		const value	= data.value || []
+
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -122,8 +122,8 @@ const get_content_data_edit = function(self) {
 		for (let i = 0; i < value_length; i++) {
 			// get the content_value
 			const content_value = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self, is_inside_tool)
-				: get_content_value(i, inputs_value[i], self, is_inside_tool)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			// add node to content_data
 			content_data.appendChild(content_value)
 			// set pointers
@@ -372,13 +372,19 @@ const get_content_value_read = (i, current_value, self) => {
 const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= self.is_inside_tool // (self.caller && self.caller.type==='tool')
-		const mode				= self.mode
-		const fragment			= new DocumentFragment()
+		const show_interface = self.show_interface
 
-	if (!is_inside_tool && mode==='edit') {
+	// fragment
+		const fragment = new DocumentFragment()
 
-		// button_fullscreen
+	// buttons tools
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+
 			const button_fullscreen = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button full_screen',
@@ -389,29 +395,26 @@ const get_buttons = (self) => {
 				e.stopPropagation()
 				ui.enter_fullscreen(self.node)
 			})
-
-		// buttons tools
-			if( self.show_interface.tools === true){
-				ui.add_tools(self, fragment)
-			}
-	}
+		}
 
 	// save
-		const save = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button tool save',
-			title			: get_label.save || 'Save',
-			parent			: fragment
-		})
-		save.addEventListener('click', fn_save)
-		function fn_save(e) {
-			e.stopPropagation()
-			self.text_editor[0].save()
+		if (show_interface.button_save === true) {
+
+			const save = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button tool save',
+				title			: get_label.save || 'Save',
+				parent			: fragment
+			})
+			save.addEventListener('click', fn_save)
+			function fn_save(e) {
+				e.stopPropagation()
+				self.text_editor[0].save()
+			}
 		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-		// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({

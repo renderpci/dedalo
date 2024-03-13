@@ -64,9 +64,9 @@ view_line_edit_text_area.render = async function(self, options) {
 const get_content_data_edit = function(self) {
 
 	// short vars
-		const data				= self.data || {}
-		const value				= data.value || []
-		const is_inside_tool	= self.is_inside_tool
+		const data	= self.data || {}
+		const value	= data.value || []
+
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -77,8 +77,8 @@ const get_content_data_edit = function(self) {
 		for (let i = 0; i < value_length; i++) {
 			// get the content_value
 			const content_value = (self.permissions===1)
-				? get_content_value_read(i, inputs_value[i], self, is_inside_tool)
-				: get_content_value(i, inputs_value[i], self, is_inside_tool)
+				? get_content_value_read(i, inputs_value[i], self)
+				: get_content_value(i, inputs_value[i], self)
 			// add node to content_data
 			content_data.appendChild(content_value)
 			// set pointers

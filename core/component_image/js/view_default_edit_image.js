@@ -442,34 +442,14 @@ const render_image_node = function(self, file_info, content_value) {
 */
 const get_buttons = (self) => {
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const show_interface = self.show_interface
 
-	// prevent show buttons inside a tool
-		if (self.caller && self.caller.type==='tool') {
-			return fragment
-		}
-
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		// button_fullscreen.addEventListener('mouseup', () =>{
-		// 	self.node.classList.toggle('fullscreen')
-		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-			// event_manager.publish('full_screen_'+self.id, fullscreen_state)
-		// })
-		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node, ()=>{
-				event_manager.publish('full_screen_'+self.id, false)
-			})
-			event_manager.publish('full_screen_'+self.id, true)
-		})
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// buttons tools
-		if( self.show_interface.tools === true) {
+		if(show_interface.tools === true) {
 			ui.add_tools(self, fragment)
 		}
 
@@ -480,13 +460,15 @@ const get_buttons = (self) => {
 			title			: 'Toggle vector editor',
 			parent			: fragment
 		})
-		vector_editor.addEventListener('mouseup', () => {
+		vector_editor.addEventListener('mouseup', (e) => {
+			e.stopPropagation()
+
 			vector_editor_tools.classList.toggle('hide')
 			if(!vector_editor_tools.classList.contains('hide')){
 				self.load_vector_editor()
 			}
 			// set wrapper as wide mode (100%)
-				// self.node.classList.add('wide')
+			// self.node.classList.add('wide')
 		})
 
 	// svg editor tools
@@ -496,6 +478,24 @@ const get_buttons = (self) => {
 			parent			: fragment
 		})
 		self.vector_editor_tools = vector_editor_tools
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node, ()=>{
+					event_manager.publish('full_screen_'+self.id, false)
+				})
+				event_manager.publish('full_screen_'+self.id, true)
+			})
+		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
@@ -524,7 +524,7 @@ const get_buttons = (self) => {
 * @return void
 */
 const fit_image = function(self) {
-console.log('self:', self);
+
 	// vector_editor. If isset, nothing to do, only for non edit image
 		if (self.vector_editor) {
 			return

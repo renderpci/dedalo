@@ -107,11 +107,10 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+		const multi_line = (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
 		const element_type			= (multi_line===true) ? 'textarea' : 'input'
-		const is_inside_tool 		= self.is_inside_tool
 		const with_lang_versions	= self.context.properties.with_lang_versions || false
 
 	// check if the component is mandatory and it doesn't has value
@@ -202,7 +201,7 @@ const get_content_value = (i, current_value, self) => {
 			// })
 
 	// button remove. Triggered by wrapper delegated events
-		if(!is_inside_tool && i>0) {
+		if(i>0) {
 			// button_remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
@@ -280,17 +279,15 @@ const get_content_value_read = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
-
-	// prevent to show buttons inside tool
-		if (is_inside_tool) {
-			return fragment
-		}
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// button add input
-		if (!is_inside_tool) {
+		if(show_interface.button_add === true){
+
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
@@ -331,10 +328,8 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			// if (!is_inside_tool && self.mode==='edit') {
-				ui.add_tools(self, fragment)
-			// }
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}//end add tools
 
 	// buttons container

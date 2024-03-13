@@ -72,16 +72,15 @@ view_default_edit_info.render = async function(self, options) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container

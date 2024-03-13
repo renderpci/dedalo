@@ -290,15 +290,17 @@ const get_content_value_read = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool			= self.is_inside_tool
-	const mode						= self.mode
-	const target_sections			= self.context.target_sections || []
-	const target_sections_length	= target_sections.length
+	// short vars
+		const target_sections			= self.context.target_sections || []
+		const target_sections_length	= target_sections.length
+		const show_interface			= self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
-	// button_add
-		if(self.show_interface.button_add===true && self.model!=='component_select_lang') {
+	// button_add (not in component_select_lang)
+		if(show_interface.button_add === true && self.model !== 'component_select_lang'){
+
 			const button_add = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
@@ -374,8 +376,31 @@ const get_buttons = (self) => {
 			button_add.addEventListener('click', fn_add)
 		}//end button_add
 
-	// button edit (go to target section)
-		if(!is_inside_tool) {
+	// button_list (go to target section)
+		if(show_interface.button_list === true){
+
+			const fn_mousedown = (e) => {
+				e.stopPropagation()
+
+				const item = e.target
+
+				// open a new window
+					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+						tipo	: item.tipo,
+						mode	: 'list',
+						menu	: false
+					})
+					open_window({
+						url		: url,
+						name	: 'section_view',
+						on_blur : () => {
+							// refresh current instance
+							self.refresh({
+								build_autoload : true
+							})
+						}
+					})
+			}//end fn_mousedown
 
 			for (let i = 0; i < target_sections_length; i++) {
 
@@ -385,45 +410,24 @@ const get_buttons = (self) => {
 					const label = (SHOW_DEBUG===true)
 						? `${item.label} [${item.tipo}]`
 						: item.label || ''
-					const button_edit = ui.create_dom_element({
+					const button_list = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button pen',
 						title			: label.replace(/<\/?[^>]+(>|$)/g, ""),
 						parent			: fragment
 					})
-					button_edit.addEventListener('mousedown', function(e){
-						e.stopPropagation()
-
-						// open a new window
-							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-								tipo	: item.tipo,
-								mode	: 'list',
-								menu	: false
-							})
-							open_window({
-								url		: url,
-								name	: 'section_view',
-								on_blur : () => {
-									// refresh current instance
-									self.refresh({
-										build_autoload : true
-									})
-								}
-							})
-					})
-			}
+					button_list.tipo = item.tipo
+					button_list.addEventListener('mousedown', fn_mousedown)
+			}//end for (let i = 0; i < target_sections_length; i++)
 		}
 
 	// tools buttons
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
