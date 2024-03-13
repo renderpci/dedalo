@@ -547,7 +547,7 @@ export const render_column_id = function(options) {
 					const button_delete = self.context.buttons
 						? self.context.buttons.find(el => el.model==='button_delete')
 						: null
-					if (button_delete) {
+					if (button_delete, self.show_interface.button_delete===true) {
 						// delete_button
 							const delete_button = ui.create_dom_element({
 								element_type	: 'button',
