@@ -691,6 +691,7 @@ export const render_column_remove = function(options) {
 export const get_buttons = (self) => {
 
 	// short vars
+		const show_interface		= self.show_interface
 		const target_section		= self.target_section || []
 		const target_section_length	= target_section.length
 			  // sort section by label ascendant
@@ -706,129 +707,134 @@ export const get_buttons = (self) => {
 			parent			: buttons_container
 		})
 
-	// button_update_data_external
-		if(self.show_interface.button_external===true) {
+	// button_external: button_update_data_external
+		if(show_interface.button_external === true){
+
 			// button_update data external
-				const button_update_data_external = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button sync',
-					parent			: buttons_fold
-				})
-				const fn_update_data_external = async function(e) {
-					e.stopPropagation()
-					// force server data to calculate external data
-					const source = self.rqo.source
-					source.build_options = {
-						get_dato_external : true
-					}
-					// const built = await self.build(true)
-					// if (built) {
-					// 	self.render({render_level : 'content'})
-					// }
-					self.refresh({
-						build_autoload	: true,
-						render_level	: 'content'
-					})
+			const button_update_data_external = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button sync',
+				parent			: buttons_fold
+			})
+			const fn_update_data_external = async function(e) {
+				e.stopPropagation()
+				// force server data to calculate external data
+				const source = self.rqo.source
+				source.build_options = {
+					get_dato_external : true
 				}
-				button_update_data_external.addEventListener('click', fn_update_data_external)
+				// const built = await self.build(true)
+				// if (built) {
+				// 	self.render({render_level : 'content'})
+				// }
+				self.refresh({
+					build_autoload	: true,
+					render_level	: 'content'
+				})
+			}
+			button_update_data_external.addEventListener('click', fn_update_data_external)
 		}//end button external
 
 	// button_add
-		// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample:
-			// {
-			//     "typo": "ddo",
-			//     "tipo": "rsc170",
-			//     "model": "section",
-			//     "label": "Image",
-			//     "color": "#b9b9b9",
-			//     "permissions": 2,
-			//     "buttons": [
-			//         {
-			//             "model": "button_new",
-			//             "permissions": 1
-			//         },
-			//         {
-			//             "model": "button_delete",
-			//             "permissions": 1
-			//         }
-			//     ]
-			// }
-		const target_section_ddo	= target_section.find(el => el.tipo===target_section[0].tipo) || {}
-		const section_buttons		= target_section_ddo.buttons || []
-		const button_new			= section_buttons.find(el => el.model==='button_new')
+		if(show_interface.button_add === true){
 
-		if(self.show_interface.button_add===true && button_new && button_new.permissions>1) {
-			const button_add = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button add',
-				title			: get_label.new || 'New',
-				parent			: buttons_fold
-			})
-			const fn_add = async function(e) {
-				e.stopPropagation()
+			// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample:
+				// {
+				//     "typo": "ddo",
+				//     "tipo": "rsc170",
+				//     "model": "section",
+				//     "label": "Image",
+				//     "color": "#b9b9b9",
+				//     "permissions": 2,
+				//     "buttons": [
+				//         {
+				//             "model": "button_new",
+				//             "permissions": 1
+				//         },
+				//         {
+				//             "model": "button_delete",
+				//             "permissions": 1
+				//         }
+				//     ]
+				// }
+			const target_section_ddo	= target_section.find(el => el.tipo===target_section[0].tipo) || {}
+			const section_buttons		= target_section_ddo.buttons || []
+			const button_new			= section_buttons.find(el => el.model==='button_new')
 
-				// target_section_tipo. to add section selector
-					const target_section_tipo = target_section_length > 1
-						? false
-						: target_section[0].tipo
-					if (!target_section_tipo) {
-						alert('Error. Empty or invalid target_section');
-						return
-					}
+			if (button_new && button_new.permissions > 1) {
+				const button_add = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button add',
+					title			: get_label.new || 'New',
+					parent			: buttons_fold
+				})
+				const fn_add = async function(e) {
+					e.stopPropagation()
 
-				// add_new_element
-					const result = await self.add_new_element(target_section_tipo)
-					if (result===true) {
+					// target_section_tipo. to add section selector
+						const target_section_tipo = target_section_length > 1
+							? false
+							: target_section[0].tipo
+						if (!target_section_tipo) {
+							alert('Error. Empty or invalid target_section');
+							return
+						}
 
-						// last_value. Get the last value of the portal to open the new section
-							const last_value	= self.data.value[self.data.value.length-1]
-							const section_tipo	= last_value.section_tipo
-							const section_id	= last_value.section_id
+					// add_new_element
+						const result = await self.add_new_element(target_section_tipo)
+						if (result===true) {
 
-						// section. Create the new section instance
-							const section = await get_instance({
-								model			: 'section',
-								mode			: 'edit',
-								tipo			: section_tipo,
-								section_tipo	: section_tipo,
-								section_id		: section_id,
-								inspector		: false,
-								session_save	: false,
-								session_key		: 'section_' + section_tipo + '_' + self.tipo
-							})
-							await section.build(true)
-							const section_node = await section.render()
+							// last_value. Get the last value of the portal to open the new section
+								const last_value	= self.data.value[self.data.value.length-1]
+								const section_tipo	= last_value.section_tipo
+								const section_id	= last_value.section_id
 
-						// header
-							const header = (get_label.new || 'New section') + ' ' + target_section[0].label
-
-						// modal. Create a modal to attach the section node
-							const modal = ui.attach_to_modal({
-								header		: header,
-								body		: section_node
-							})
-							modal.on_close = function(){
-								self.refresh().then(function(response){
-									event_manager.publish('add_row_'+ self.id)
+							// section. Create the new section instance
+								const section = await get_instance({
+									model			: 'section',
+									mode			: 'edit',
+									tipo			: section_tipo,
+									section_tipo	: section_tipo,
+									section_id		: section_id,
+									inspector		: false,
+									session_save	: false,
+									session_key		: 'section_' + section_tipo + '_' + self.tipo
 								})
-							}
+								await section.build(true)
+								const section_node = await section.render()
 
-						// activate_first_component. Get the first ddo in ddo_map to be focused
-							ui.activate_first_component({
-								section	: section
-							})
-					}//end if (result===true)
+							// header
+								const header = (get_label.new || 'New section') + ' ' + target_section[0].label
 
-				// remove aux items
-					if (window.page_globals.service_autocomplete) {
-						window.page_globals.service_autocomplete.destroy(true, true, true)
-					}
+							// modal. Create a modal to attach the section node
+								const modal = ui.attach_to_modal({
+									header		: header,
+									body		: section_node
+								})
+								modal.on_close = function(){
+									self.refresh().then(function(response){
+										event_manager.publish('add_row_'+ self.id)
+									})
+								}
+
+							// activate_first_component. Get the first ddo in ddo_map to be focused
+								ui.activate_first_component({
+									section	: section
+								})
+						}//end if (result===true)
+
+					// remove aux items
+						if (window.page_globals.service_autocomplete) {
+							window.page_globals.service_autocomplete.destroy(true, true, true)
+						}
+				}
+				button_add.addEventListener('click', fn_add)
 			}
-			button_add.addEventListener('click', fn_add)
 		}//end button_add
 
 	// button_link
-		if(self.show_interface.button_link===true) {
+		if(show_interface.button_link === true){
+
 			const button_link = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button link',
@@ -927,8 +933,8 @@ export const get_buttons = (self) => {
 			button_link.addEventListener('mousedown', fn_link)
 		}//end button_link
 
-	// button_open_section_list (button_add)
-		if(self.show_interface.button_add===true) {
+	// button_list (go to target section in list mode)
+		if(show_interface.button_list === true){
 
 			const first_section = target_section[0] || null
 			if (first_section) {
@@ -940,7 +946,7 @@ export const get_buttons = (self) => {
 					? `${first_section.label} [${first_section.tipo}]`
 					: first_section.label
 
-				const button_open_section_list = ui.create_dom_element({
+				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button pen',
 					title			: label,
@@ -968,28 +974,28 @@ export const get_buttons = (self) => {
 							}
 						})
 				}//end fn_click
-				button_open_section_list.addEventListener('mousedown', fn_click)
+				button_list.addEventListener('mousedown', fn_click)
 			}
 		}
 
 	// button tree terms selector
-		if(self.show_interface.button_tree===true) {
+		if(show_interface.button_tree === true){
+
 			const button_tree_selector = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button gear',
 				parent			: buttons_fold
 			})
 			// add listener to the select
-			button_tree_selector.addEventListener('mouseup', function(){
+			button_tree_selector.addEventListener('mouseup', function(e){
+				e.stopPropagation()
 
 			})
 		}//end button_external
 
 	// buttons tools
-		if(self.show_interface.tools===true) {
-			// if (!is_inside_tool && self.mode==='edit') {
-				ui.add_tools(self, buttons_fold)
-			// }
+		if(show_interface.tools===true) {
+			ui.add_tools(self, buttons_fold)
 		}//end add tools
 
 

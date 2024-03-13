@@ -188,22 +188,25 @@ export const get_content_value = (i, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
-	const data				= self.data || {}
-	const value				= data.value || []
+	// short vars
+		const data				= self.data || {}
+		const value				= data.value || []
+		const show_interface	= self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// button add input
-		if(mode==='edit') { // && !is_inside_tool
+		if(show_interface.button_add === true){
+
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
-				class_name 		: 'button add',
-				parent 			: fragment
+				class_name		: 'button add',
+				parent			: fragment
 			})
 			// event to insert new input
-			button_add_input.addEventListener('mouseup', function() {
+			button_add_input.addEventListener('mouseup', function(e) {
+				e.stopPropagation()
 
 				const changed_data = [Object.freeze({
 					action	: 'insert',
@@ -227,10 +230,8 @@ const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container

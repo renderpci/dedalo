@@ -184,7 +184,11 @@ const get_content_value_read = function(i, self) {
 */
 const get_buttons = (self) => {
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const show_interface = self.show_interface
+
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)

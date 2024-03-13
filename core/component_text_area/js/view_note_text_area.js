@@ -165,8 +165,8 @@ view_note_text_area.render = async function(self, options) {
 					callback			: async () => {
 
 						await component.build(true)
-						// force is_inside_tool to remove buttons
-						component.is_inside_tool = true
+						// force to remove buttons
+						component.show_interface.tools = false
 						const node = await component.render()
 
 						// event subscription. Focus editor when ready

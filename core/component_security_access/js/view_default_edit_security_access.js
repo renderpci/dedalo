@@ -825,15 +825,15 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool= self.is_inside_tool
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool) {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container

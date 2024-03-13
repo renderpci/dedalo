@@ -156,73 +156,73 @@ export const create_target_component = (lang, self) => {
 		if (lang.value===self.source_lang) {
 
 			target_component_container.classList.add('source')
-			self.main_element.render()
-			.then(function(node){
-				target_component_container.appendChild(node)
-				node.classList.add('disabled_component')
-			})
+			// self.main_element.render()
+			// .then(function(node){
+			// 	target_component_container.appendChild(node)
+			// 	node.classList.add('disabled_component')
+			// })
 			target_component_title.classList.add('bold')
-		}else{
-
-			// load component gracefully
-			const node = ui.load_item_with_spinner({
-				container			: target_component_container,
-				preserve_content	: true,
-				label				: lang.label,
-				callback			: async () => {
-
-					// component load
-						const component = await self.get_component(lang.value)
-						component.show_interface.tools = false
-					// render node
-						const node = await component.render({
-							render_mode : 'edit'//mode // 'edit'
-						})
-
-					// translator_engine. Append translation button if exists
-						const translator_engine = (self.context.config)
-							? self.context.config.translator_engine.value
-							: false
-						if (translator_engine) {
-							const buttons_fold = node.querySelector('.buttons_fold')
-							if (buttons_fold) {
-								const button_translate = ui.create_dom_element({
-									element_type	: 'span',
-									class_name		: 'button lang',
-									title			: get_label.traduccion_automatica || 'Automatic translation',
-									parent			: buttons_fold
-								})
-								const fn_click = function(e) {
-									e.stopPropagation()
-
-									// non empty value cases generates a confirm dialog
-										const current_value	= component.data.value
-										const is_empty		= (!current_value || current_value.length<1 || current_value[0]==='')
-										if (is_empty===false) {
-											if(!confirm(get_label.are_you_sure_to_overwrite_text || 'Are you sure to overwrite the current value?')) {
-												return
-											}
-										}
-
-									target_component_container.classList.add('loading')
-
-									const translator	= self.translator_engine_select.value
-									const source_lang	= self.source_lang
-									const target_lang	= component.lang
-
-									self.automatic_translation(translator, source_lang, target_lang, target_component_container)
-									.then(()=>{
-										target_component_container.classList.remove('loading')
-									})
-								}//end fn_click
-								button_translate.addEventListener('click', fn_click)
-							}
-						}//end translator_engine
-
-					return node
-				}
-			})//end ui.load_item_with_spinner
 		}
+
+		// load component gracefully
+		const node = ui.load_item_with_spinner({
+			container			: target_component_container,
+			preserve_content	: true,
+			label				: lang.label,
+			callback			: async () => {
+
+				// component load
+					const component = await self.get_component(lang.value)
+					component.show_interface.tools = false
+				// render node
+					const node = await component.render({
+						render_mode : 'edit'//mode // 'edit'
+					})
+
+				// translator_engine. Append translation button if exists
+					const translator_engine = (self.context.config)
+						? self.context.config.translator_engine.value
+						: false
+					if (translator_engine) {
+						const buttons_fold = node.querySelector('.buttons_fold')
+						if (buttons_fold) {
+							const button_translate = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button lang',
+								title			: get_label.traduccion_automatica || 'Automatic translation',
+								parent			: buttons_fold
+							})
+							const fn_click = function(e) {
+								e.stopPropagation()
+
+								// non empty value cases generates a confirm dialog
+									const current_value	= component.data.value
+									const is_empty		= (!current_value || current_value.length<1 || current_value[0]==='')
+									if (is_empty===false) {
+										if(!confirm(get_label.are_you_sure_to_overwrite_text || 'Are you sure to overwrite the current value?')) {
+											return
+										}
+									}
+
+								target_component_container.classList.add('loading')
+
+								const translator	= self.translator_engine_select.value
+								const source_lang	= self.source_lang
+								const target_lang	= component.lang
+
+								self.automatic_translation(translator, source_lang, target_lang, target_component_container)
+								.then(()=>{
+									target_component_container.classList.remove('loading')
+								})
+							}//end fn_click
+							button_translate.addEventListener('click', fn_click)
+						}
+					}//end translator_engine
+
+				return node
+			}
+		})//end ui.load_item_with_spinner
+
 
 
 	return target_component_container

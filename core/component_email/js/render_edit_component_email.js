@@ -101,10 +101,9 @@ export const get_content_data = function(self) {
 */
 const get_content_value = (i, current_value, self) => {
 
-	const mode				= self.mode
-	const is_inside_tool	= self.is_inside_tool
+	const mode = self.mode
 	// check if the component is mandatory and it doesn't has value
-	const add_class			= self.context.properties.mandatory && !current_value
+	const add_class = self.context.properties.mandatory && !current_value
 		? ' mandatory'
 		: ''
 
@@ -153,32 +152,30 @@ const get_content_value = (i, current_value, self) => {
 			}//end change
 
 	// add buttons to the email row
-		if((mode==='edit') && !is_inside_tool) {
-
-			// button_remove
-				if (i>0) {
-					const button_remove = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button remove hidden_button',
-						parent			: content_value
-					})
-					button_remove.addEventListener('mouseup', function(e) {
-						e.stopPropagation()
-						remove_handler(input, i, self)
-					})
-				}
-
-			// button email
-				const button_email = ui.create_dom_element({
+		// button_remove
+			if (i>0) {
+				const button_remove = ui.create_dom_element({
 					element_type	: 'span',
-					class_name		: 'button email hidden_button',
+					class_name		: 'button remove hidden_button',
 					parent			: content_value
 				})
-				button_email.addEventListener('mouseup', function(e) {
+				button_remove.addEventListener('mouseup', function(e) {
 					e.stopPropagation()
-					self.send_email(input.value)
+					remove_handler(input, i, self)
 				})
-		}
+			}
+
+		// button email
+			const button_email = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button email hidden_button',
+				parent			: content_value
+			})
+			button_email.addEventListener('mouseup', function(e) {
+				e.stopPropagation()
+				self.send_email(input.value)
+			})
+
 
 
 	return content_value
@@ -218,13 +215,15 @@ const get_content_value_read = (i, current_value, self) => {
 */
 export const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// button add input
-		if(!is_inside_tool) {
+		if(show_interface.button_add === true){
+
 			// button_add_input
 			const add_button = ui.create_dom_element({
 				element_type	: 'span',
@@ -263,77 +262,75 @@ export const get_buttons = (self) => {
 					}
 				})
 			})
-
-		// button send_multiple_email
-			const send_multiple_email = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button email_multiple',
-				parent			: fragment
-			})
-			send_multiple_email.addEventListener('click', async function (e) {
-				e.stopPropagation()
-
-				const ar_emails		= await self.get_ar_emails()
-				const mailto_prefix	= 'mailto:?bcc=';
-				// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
-				// if the maximum chars is surpassed the string it was spliced in sorted strings and passed as string items of the array
-				// every item of the array will be opened by the user to create the email
-				if(ar_emails.length > 1){
-
-					const body = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'body'
-					})
-
-					const body_title = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'body_title',
-						text_node		: get_label.email_limit_explanation,
-						parent			: body
-					})
-					// create the mail with the addresses and create the buttons to open the email app
-					for (let i = 0; i < ar_emails.length; i++) {
-
-						const current_emails = ar_emails[i]
-						// find the separator to count the total of emails for every chunk of emails.
-						const regex = /;/g;
-						const search_number_of_email =  current_emails.match(regex) || []
-						const number_of_email = search_number_of_email.length > 0
-							? search_number_of_email.length +1
-							: 1
-						const buton_option = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'warning',
-							inner_html		: (get_label.email || 'email') + ': ' + number_of_email,
-							parent			: body
-						})
-
-						buton_option.addEventListener('mouseup', function (e) {
-							// when the user click in the button remove the option and open the email with the addresses
-							buton_option.remove()
-							window.location.href = mailto_prefix + current_emails
-						})
-					}
-
-					// modal. create new modal with the email buttons
-						ui.attach_to_modal({
-							header	: get_label.alert_limit_of_emails || 'emails limitation',
-							body	: body,
-							footer	: null,
-							size	: 'small'
-						})
-
-				}else{
-					window.location.href = mailto_prefix + ar_emails[0]
-				}
-			})
 		}
 
-	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
+	// button send_multiple_email
+		const send_multiple_email = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button email_multiple',
+			parent			: fragment
+		})
+		send_multiple_email.addEventListener('click', async function (e) {
+			e.stopPropagation()
+
+			const ar_emails		= await self.get_ar_emails()
+			const mailto_prefix	= 'mailto:?bcc=';
+			// ar_mails could be an array with 1 string item with all addresses or more than 1 string when the length is more than length supported by the SO (in Windows 2000 charts)
+			// if the maximum chars is surpassed the string it was spliced in sorted strings and passed as string items of the array
+			// every item of the array will be opened by the user to create the email
+			if(ar_emails.length > 1){
+
+				const body = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'body'
+				})
+
+				const body_title = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'body_title',
+					text_node		: get_label.email_limit_explanation,
+					parent			: body
+				})
+				// create the mail with the addresses and create the buttons to open the email app
+				for (let i = 0; i < ar_emails.length; i++) {
+
+					const current_emails = ar_emails[i]
+					// find the separator to count the total of emails for every chunk of emails.
+					const regex = /;/g;
+					const search_number_of_email =  current_emails.match(regex) || []
+					const number_of_email = search_number_of_email.length > 0
+						? search_number_of_email.length +1
+						: 1
+					const buton_option = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning',
+						inner_html		: (get_label.email || 'email') + ': ' + number_of_email,
+						parent			: body
+					})
+
+					buton_option.addEventListener('mouseup', function (e) {
+						// when the user click in the button remove the option and open the email with the addresses
+						buton_option.remove()
+						window.location.href = mailto_prefix + current_emails
+					})
+				}
+
+				// modal. create new modal with the email buttons
+					ui.attach_to_modal({
+						header	: get_label.alert_limit_of_emails || 'emails limitation',
+						body	: body,
+						footer	: null,
+						size	: 'small'
+					})
+
+			}else{
+				window.location.href = mailto_prefix + ar_emails[0]
 			}
+		})
+
+	// buttons tools
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container

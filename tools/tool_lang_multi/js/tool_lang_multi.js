@@ -144,6 +144,9 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 	// call generic common tool build
 		const component_instance = await load_component(options);
 
+	// show_interface configure
+		// component_instance.show_interface.button_fullscreen = false
+
 
 	return component_instance
 }//end get_component

@@ -418,32 +418,11 @@ const get_quality_selector = (content_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const fragment = new DocumentFragment()
+	// short vars
+		const show_interface = self.show_interface
 
-	// prevent show buttons inside a tool
-		if (self.caller && self.caller.type==='tool') {
-			return fragment
-		}
-
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		// button_fullscreen.addEventListener("mouseup", () =>{
-		// 	self.node.classList.toggle('fullscreen')
-		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
-		// })
-		button_fullscreen.addEventListener('click', function(e) {
-			e.stopPropagation()
-			ui.enter_fullscreen(self.node)
-		})
-
-	// buttons tools
-		ui.add_tools(self, fragment)
+	// fragment
+		const fragment = new DocumentFragment()
 
 	// des
 		// const button_info = ui.create_dom_element({
@@ -476,9 +455,28 @@ const get_buttons = (self) => {
 		// 		self.node[0].appendChild(node)
 		// })
 
+	// buttons tools
+		if(show_interface.tools === true) {
+			ui.add_tools(self, fragment)
+		}
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+			})
+		}
+
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({

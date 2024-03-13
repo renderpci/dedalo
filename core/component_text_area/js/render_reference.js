@@ -45,7 +45,6 @@ export const render_reference = async function(options) {
 		const references_component_tipo		= self.context.features.references_component_tipo
 		const references_component_model	= self.context.features.references_component_model
 
-
 	// reference_component
 		const instance_options = {
 			model			: references_component_model,
@@ -71,10 +70,10 @@ export const render_reference = async function(options) {
 				})
 				return false
 			}
-			// is_inside_tool force to prevent to show tool buttons
-			reference_component.is_inside_tool = true
+			// force to prevent to show tool buttons
+			reference_component.show_interface.tools = false
 
-			const reference_component_node	= await reference_component.render()
+			const reference_component_node = await reference_component.render()
 
 		// save_animation
 			reference_component.show_interface.save_animation = false

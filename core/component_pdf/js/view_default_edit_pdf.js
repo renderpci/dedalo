@@ -325,28 +325,30 @@ const get_content_value = function(i, current_value, self) {
 */
 const get_buttons = (self) => {
 
-	// DOM fragment
+	// short vars
+		const show_interface = self.show_interface
+
+	// fragment
 		const fragment = new DocumentFragment()
 
-	// prevent show buttons inside a tool
-		if (self.caller && self.caller.type==='tool') {
-			return fragment
+	// buttons tools
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node)
-		})
+		if(show_interface.button_fullscreen === true){
 
-	// buttons tools
-		if( self.show_interface.tools === true){
-			ui.add_tools(self, fragment)
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+			})
 		}
 
 	// buttons container

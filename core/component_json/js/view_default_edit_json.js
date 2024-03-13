@@ -253,22 +253,16 @@ const get_content_value_read = (key, current_value, self) => {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool	= self.is_inside_tool
-	const mode				= self.mode
+	// short vars
+		const show_interface = self.show_interface
 
-	const fragment = new DocumentFragment()
+	// fragment
+		const fragment = new DocumentFragment()
 
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		button_fullscreen.addEventListener('click', function(e) {
-			e.stopPropagation()
-			ui.enter_fullscreen(self.node)
-		})
+	// buttons tools
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
 
 	// button_download . Force automatic download of component data value
 		const button_download = ui.create_dom_element({
@@ -284,16 +278,23 @@ const get_buttons = (self) => {
 			download_object_as_json(export_obj, export_name)
 		})
 
-	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+			})
 		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({

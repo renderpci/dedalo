@@ -407,65 +407,60 @@ export const get_content_value_read = (i, current_value, self) =>{
 const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= self.is_inside_tool
-		const mode				= self.mode
+		const show_interface = self.show_interface
 
-	// DOM fragment
+	// fragment
 		const fragment = new DocumentFragment()
 
-	// button_fullscreen
-		const button_fullscreen = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button full_screen',
-			title			: get_label.full_screen || 'Full screen',
-			parent			: fragment
-		})
-		// button_fullscreen.addEventListener('mouseup', () =>{
-		// 	self.node.classList.toggle('fullscreen')
-		// 	const fullscreen_state = self.node.classList.contains('fullscreen') ? true : false
-		// 	event_manager.publish('full_screen_'+self.id, fullscreen_state)
-		// 	self.map.invalidateSize()
-		// })
-		button_fullscreen.addEventListener('click', function(e) {
-			e.stopPropagation()
-			ui.enter_fullscreen(self.node)
-			self.map.invalidateSize()
-		})
-
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
+		}
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: fragment
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node)
+				self.map.invalidateSize()
+			})
 		}
 
 	// save
-		const save = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button tool save',
-			title			: get_label.save || 'Save',
-			parent			: fragment
-		})
-		save.addEventListener('click', fn_save)
-		function fn_save(e) {
-			e.stopPropagation()
-
-			const key = 0; // fixed key (only one element is allowed)
-
-			const changed_data = [Object.freeze({
-				action		: 'update',
-				key			: key,
-				value		: self.current_value[key]
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				refresh			: false
+		if(show_interface.button_save === true){
+			const save = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button tool save',
+				title			: get_label.save || 'Save',
+				parent			: fragment
 			})
-			.then(()=>{
-				// set the data_changed to false to control that the data was changed
-					self.is_data_changed = false
-			})
-		}//end fn_save
+			save.addEventListener('click', fn_save)
+			function fn_save(e) {
+				e.stopPropagation()
+
+				const key = 0; // fixed key (only one element is allowed)
+
+				const changed_data = [Object.freeze({
+					action		: 'update',
+					key			: key,
+					value		: self.current_value[key]
+				})]
+				self.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+				.then(()=>{
+					// set the data_changed to false to control that the data was changed
+						self.is_data_changed = false
+				})
+			}//end fn_save
+		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)

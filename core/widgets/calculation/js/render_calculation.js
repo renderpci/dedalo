@@ -62,13 +62,13 @@ render_calculation.prototype.list = render_calculation.prototype.edit
 
 /**
 * GET_CONTENT_DATA_EDIT
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data_edit = async function(self) {
 
 	// sort vars
-		const mode 			= self.mode
-		const is_inside_tool= self.is_inside_tool
+		const mode = self.mode
 
 	const fragment = new DocumentFragment()
 

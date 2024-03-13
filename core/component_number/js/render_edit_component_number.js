@@ -143,34 +143,29 @@ const get_content_value = (i, current_value, self) => {
 			})
 
 	// button remove
-		const mode				= self.mode
-		const is_inside_tool	= self.is_inside_tool
-		if((mode==='edit') && !is_inside_tool) {
+		const button_remove = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button remove hidden_button',
+			parent			: content_value
+		})
+		button_remove.addEventListener('mouseup', fn_remove_mouseup)
+		function fn_remove_mouseup() {
+			// force possible input change before remove
+			document.activeElement.blur()
 
-			const button_remove = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button remove hidden_button',
-				parent			: content_value
+			const current_value = input.value ? input.value : null
+
+			const changed_data = [Object.freeze({
+				action	: 'remove',
+				key		: i,
+				value	: null
+			})]
+			self.change_value({
+				changed_data	: changed_data,
+				label			: current_value,
+				refresh			: true
 			})
-			button_remove.addEventListener('mouseup', fn_remove_mouseup)
-			function fn_remove_mouseup() {
-				// force possible input change before remove
-				document.activeElement.blur()
-
-				const current_value = input.value ? input.value : null
-
-				const changed_data = [Object.freeze({
-					action	: 'remove',
-					key		: i,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					label			: current_value,
-					refresh			: true
-				})
-			}//end fn_remove_mouseup
-		}//end if((mode==='edit') && !is_inside_tool)
+		}//end fn_remove_mouseup
 
 
 	return content_value
@@ -208,14 +203,13 @@ const get_content_value_read = (i, current_value, self) => {
 export const get_buttons = (self) => {
 
 	// short vars
-		const is_inside_tool	= self.is_inside_tool
-		const mode				= self.mode
+		const show_interface = self.show_interface
 
-	// DOM fragment
+	// fragment
 		const fragment = new DocumentFragment()
 
 	// button add input
-		if(!is_inside_tool) {
+		if(show_interface.button_add === true){
 
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
@@ -244,15 +238,12 @@ export const get_buttons = (self) => {
 		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			if (!is_inside_tool && mode==='edit') {
-				ui.add_tools(self, fragment)
-			}
+		if(show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}
 
 	// buttons container
 		const buttons_container = ui.component.build_buttons_container(self)
-			// buttons_container.appendChild(fragment)
 
 	// buttons_fold (allow sticky position on large components)
 		const buttons_fold = ui.create_dom_element({
