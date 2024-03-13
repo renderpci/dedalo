@@ -8,93 +8,67 @@ declare(strict_types=1);
 class dd_object extends stdClass {
 
 
-
 	// properties
 		// typo : "ddo"
 		public $typo = 'ddo';
 		/*
 		// type					: "component"  (section | component | grouper | button | tool ..)
-		public $type;
 		// tipo					: 'oh14',
-		public $tipo;
 		// section_tipo			: 'oh1',
-		public $section_tipo;
 		// parent				: 'oh2', // caller section / portal  tipo
-		public $parent;
 		// parent_grouper		: 'oh7', // structure parent
-		public $parent_grouper;
 		// lang					: 'lg-eng',
-		public $lang;
 		// mode					: "list",
-		public $mode;
 		// model				: 'component_input_text',
-		public $model;
 		// properties			: {}
-		public $properties;
 		// permissions			: 1
-		public $permissions;
 		// label				: 'Title'
-		public $label;
 		// labels				: ['Title']
-		public $labels;
 		// translatable			: true
-		public $translatable;
 		// tools				: [] // array of tools dd_objects (context)
-		public $tools;
 		// buttons				: [] // array of buttons dd_objects (context)
-		public $buttons;
 		// css					: {}
-		public $css;
 		// target_sections		: [{'tipo':'dd125','label':'Projects']
-		public $target_sections;
 		// request_config		: [],
-		public $request_config;
 		// columns_map			: array
-		public $columns_map;
 		// view					: string|null like 'table'
-		public $view;
 		// children_view		: string like "text"
-		public $children_view;
 		// section_id			: int like 1 // Used by tools
-		public $section_id;
 		// name					: string like 'tool_lang' // Used by tools
-		public $name;
 		// description			: string like 'Description of tool x' // Used by tools
-		public $description;
 		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
-		public $icon;
 		// developer			: string like 'Dédalo team' // Used by tools
-		public $developer;
 		// show_in_inspector	: bool // Used by tools
-		public $show_in_inspector;
 		// show_in_component	: bool // Used by tools
-		public $show_in_component;
 		// config				: object // Used by tools
-		public $config;
 		// sortable				: bool // Used by components (columns)
-		public $sortable;
 		// fields_separator		: string like ", " // used by portal to join different fields
-		public $fields_separator;
 		// records_separator	: string like " | " // used by portal to join different records (rows)
-		public $records_separator;
 		// legacy_model			: string like "component_autocomplet_hi"
-		public $legacy_model;
+		// autoload 			: bool // Used by tools
+		// role 				: string // 'main_component' // Used by tools
+		// section_map 			: object // {
+										"thesaurus": {
+											"term": "hierarchy25",
+											"model": "hierarchy27",
+											"order": "hierarchy48",
+											"parent": "hierarchy36",
+											"is_indexable": "hierarchy24",
+											"is_descriptor": "hierarchy23"
+										}
+									} Used by tools
+		// color 				: string // "#f1f1f1"
+		// matrix_table 		: string || 'matrix_dd'
+
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
-		public $features;
 		// array toolbar_buttons
-		public $toolbar_buttons;
 		// bool value_with_parents
-		public $value_with_parents;
 		// array search_operators_info
-		public $search_operators_info;
 		// string search_options_title
-		public $search_options_title;
 		// string target_section_tipo
-		public $target_section_tipo;
 
 		// debug				: object
-		public $debug;
 		*/
 
 
@@ -1274,6 +1248,8 @@ class dd_object extends stdClass {
 	}//end get_section_map
 
 
+
+
 	/**
 	* SET_COLOR
 	* @param string|null $value
@@ -1302,7 +1278,7 @@ class dd_object extends stdClass {
 
 
 	/**
-	* SET_matrix_TABLE
+	* SET_MATRIX_TABLE
 	* @param string|null $value
 	* @return bool
 	*/
