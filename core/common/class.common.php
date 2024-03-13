@@ -2910,6 +2910,9 @@ abstract class common {
 									// set buttons
 									$ddo->set_buttons($buttons);
 
+								// Matrix table. set matrix table of the section to determinate if the section is editable or private (shared and not editable by users)
+									$ddo->set_matrix_table(common::get_matrix_table_from_tipo($section_tipo));
+
 								return $ddo;
 							}, (array)$ar_section_tipo);
 
@@ -3599,6 +3602,9 @@ abstract class common {
 								}
 							// set buttons
 							$ddo->set_buttons($buttons);
+
+						// Matrix table. set matrix table of the section to determinate if the section is editable or private (shared and not editable by users)
+							$ddo->set_matrix_table(common::get_matrix_table_from_tipo($section_tipo));
 
 						return $ddo;
 					}, $ar_section_tipo);
