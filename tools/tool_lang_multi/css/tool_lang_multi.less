@@ -50,12 +50,27 @@
 				min-height: 110px;
 
 				&.source {
-					border-bottom: 1px solid @tool_color;
+					.wrapper_component {
+						// outline: 1px solid @tool_color;
+						border-left: 2px solid @tool_color;
+					}
+				}
+
+				.label {
+					// visibility: hidden;
 				}
 
 				.target_component_title  {
 					padding: 0.5em;
 					padding-left: 0;
+
+					&.bold {
+						font-weight: 600;
+						letter-spacing: 1px;
+						// text-transform: uppercase;
+						// color: darken(@tool_color, 5%);
+						color: @tool_color;
+					}
 				}
 
 				>.wrapper_component {
