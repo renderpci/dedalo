@@ -1302,6 +1302,34 @@ class dd_object extends stdClass {
 
 
 	/**
+	* SET_matrix_TABLE
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_matrix_table(?string $value) : bool {
+
+		$this->matrix_table = $value;
+
+		return true;
+	}//end set_matrix_table
+
+
+
+	/**
+	* GET_MATRIX_TABLE
+	* Return property value
+	* @return string|null $this->label
+	*/
+	public function get_matrix_table() : ?string {
+
+		return $this->matrix_table ?? null;
+	}//end get_matrix_table
+
+
+
+
+
+	/**
 	* COMPARE_DDO
 	* @param object $ddo1
 	* @param object $ddo2
