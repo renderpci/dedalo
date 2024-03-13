@@ -2694,15 +2694,11 @@ abstract class component_common extends common {
 			// }
 
 		// config_context. Get_config_context normalized
-			$config_context = $this->get_ar_request_config();
+			$ar_target_section_ddo = $this->get_ar_target_section_ddo();
 
 			$ar_target_section_tipo = [];
-			foreach ($config_context as $config_context_item) {
-				$ar_current_section_tipo = array_map(function($el){
-					return $el->tipo;
-				}, $config_context_item->sqo->section_tipo);
-
-				$ar_target_section_tipo = array_merge($ar_target_section_tipo, $ar_current_section_tipo);
+			foreach ($ar_target_section_ddo as $current_section_ddo) {
+				$ar_target_section_tipo[] = $current_section_ddo->tipo;
 			}
 
 			if (empty($ar_target_section_tipo)) {
