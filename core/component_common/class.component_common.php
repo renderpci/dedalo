@@ -2619,6 +2619,63 @@ abstract class component_common extends common {
 
 
 	/**
+	* GET_AR_TARGET_SECTION_DDO
+	* target section/s from which the portal/autocomplete feeds with records.
+	* Not to be confused with the section in which the portal is
+	* @return array|null ar_target_section_ddo
+	* 	Array of ddo tipo like [
+	*	{
+	*		tipo : dd64
+	*		color: "#b9b9b9"
+	*		label: "Yes/No"
+	*		matrix_table: "matrix_dd"
+	*		model: "section"
+	*		permissions: 3
+	*		tipo: "dd64"
+	*		typo: "ddo"
+	* 	}
+	* ]
+	*/
+	public function get_ar_target_section_ddo() : ?array {
+
+		if (empty($this->tipo)) {
+			return null;
+		}
+
+		// cached
+			// if(isset($this->ar_target_section_tipo)) {
+			// 	return $this->ar_target_section_tipo;
+			// }
+
+		// config_context. Get_config_context normalized
+			$ar_request_config = $this->get_ar_request_config();
+
+			$ar_target_section_ddo = [];
+			foreach ($ar_request_config as $config_context_item) {
+				$ar_current_section_tipo = $config_context_item->sqo->section_tipo;
+				$ar_target_section_ddo = array_merge($ar_target_section_ddo, $ar_current_section_tipo);
+			}
+
+			if (empty($ar_target_section_ddo)) {
+				$component_name = RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG, true, true);
+				debug_log(__METHOD__
+					. " Error Processing Request. Please, define target section structure for component: $component_name".PHP_EOL
+					. ' tipo: '. $this->tipo .PHP_EOL
+					. ' model: ' .get_called_class()
+					, logger::DEBUG
+				);
+			}
+
+		# Fix value
+		// $this->ar_target_section_ddo = $ar_target_section_ddo;
+
+		return (array)$ar_target_section_ddo;
+	}//end get_ar_target_section_ddo
+
+
+
+
+	/**
 	* GET_AR_TARGET_SECTION_TIPO
 	* Section/s from which the portal/autocomplete feeds with records.
 	* Not to be confused with the section in which the portal is
