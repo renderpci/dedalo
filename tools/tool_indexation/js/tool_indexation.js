@@ -381,6 +381,8 @@ tool_indexation.prototype.get_component = async function(lang) {
 /**
 * LOAD_RELATED_SECTIONS_LIST
 * Get the list of related sections with the actual resource
+* Uses transcriptions component (component_text_area) to get
+* related sections
 * @return object datum
 */
 tool_indexation.prototype.load_related_sections_list = async function() {

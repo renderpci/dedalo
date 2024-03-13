@@ -1684,31 +1684,6 @@ export const ui = {
 
 
 	/**
-	* INSIDE_TOOL
-	* Check if instance is inside tool
-	* @param object self
-	* 	Component instance
-	* @return bool|string
-	* 	Tool name is exists
-	*/
-	inside_tool : function(self) {
-
-		// already custom fixed case (bool is expected)
-			if (self.is_inside_tool!==undefined && self.is_inside_tool!==null) {
-				return self.is_inside_tool
-			}
-
-		// caller is a tool case
-			if (self.caller && self.caller.type==='tool') {
-				return self.caller.constructor.name
-			}
-
-		return false
-	},//end inside_tool
-
-
-
-	/**
 	* ADD_TOOLS
 	* Adds all the existent tools for the selected component
 	* @param object self
