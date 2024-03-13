@@ -9,9 +9,8 @@
 	import {get_section_records} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
-		render_column_id,
-		activate_autocomplete
-	} from '../../../core/component_portal/js/render_edit_component_portal.js'
+		render_column_id
+	} from '../../../core/section/js/render_list_section.js'
 
 
 
