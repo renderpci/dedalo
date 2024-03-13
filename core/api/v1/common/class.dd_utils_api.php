@@ -682,6 +682,11 @@ final class dd_utils_api {
 				$file_tmp_name	= $file_to_upload['tmp_name'];
 				$file_type 		= $file_to_upload['type'];
 
+				// blob case (componen_3d posterframe auto-generated)
+				if ($file_name==='blob' && isset($options->file_name)) {
+					$file_name = $options->file_name;
+				}
+
 				// extension
 				$extension	= strtolower( pathinfo($file_name, PATHINFO_EXTENSION) );
 
@@ -704,22 +709,46 @@ final class dd_utils_api {
 				}
 
 			// CHECKING
-				// Check MIME
-					$known_mime_types = self::get_known_mime_types();
-					if (false===array_search(
-						$file_mime,
-						$known_mime_types,
-						true
-						)) {
+				$known_mime_types = self::get_known_mime_types();
+				// Check MIME type
+					$mime_is_known = false;
+					foreach ($known_mime_types as $current_mime) {
+						if ($current_mime['mime']===$file_mime) {
+							$mime_is_known = true;
+							break;
+						}
+					}
+					if ($mime_is_known===false) {
 						// throw new RuntimeException('Invalid file format.');
 						debug_log(__METHOD__
 							." Error. Stopped upload unknown file mime type." . PHP_EOL
 							. ' file_mime: ' . to_string($file_mime) . PHP_EOL
-							. ' file_tmp_name: ' . to_string($file_tmp_name)
+							. ' file_tmp_name: ' . to_string($file_tmp_name) . PHP_EOL
+							. ' extension: ' . to_string($extension) . PHP_EOL
+							. ' known_mime_types: ' . to_string($known_mime_types)
 							, logger::ERROR
 						);
 						$msg = ' upload: Invalid file format. (mime: '.$file_mime.')';
 						$response->msg .= $msg;
+						return $response;
+					}
+				// check extension
+					$extension_is_allowed = false;
+					foreach ($known_mime_types as $current_mime) {
+						if (in_array($extension, $current_mime['extension'])) {
+							$extension_is_allowed = true;
+							break;
+						}
+					}
+					if ($extension_is_allowed===false) {
+						$response->msg .= "Error. Invalid file extension [2] ".$extension;
+						debug_log(__METHOD__
+							. ' '.$response->msg .PHP_EOL
+							. ' extension from file_name: '. to_string($extension) .PHP_EOL
+							. ' file_name: '. to_string($file_name) .PHP_EOL
+							. ' file_to_upload: '. to_string($file_to_upload)
+							, logger::ERROR
+						);
 						return $response;
 					}
 
@@ -739,19 +768,6 @@ final class dd_utils_api {
 							, logger::ERROR
 						);
 						$response->msg .= "Uploaded file not found in temporary folder";
-						return $response;
-					}
-
-				// check extension
-					$allowed_extensions	= array_keys($known_mime_types);
-					if (!empty($extension) && !in_array($extension, $allowed_extensions)) {
-						$response->msg .= " Error. Invalid file extension [1]: ".to_string($extension);
-						debug_log(__METHOD__
-							.' ' . $response->msg .PHP_EOL
-							. 'extension: ' . to_string($extension) .PHP_EOL
-							. 'allowed_extensions: ' .to_string($allowed_extensions)
-							, logger::ERROR
-						);
 						return $response;
 					}
 
@@ -981,14 +997,19 @@ final class dd_utils_api {
 			$extension = strtolower( pathinfo($tmp_joined_file, PATHINFO_EXTENSION) );
 
 		// check extension
-			$known_mime_types	= self::get_known_mime_types();
-			$allowed_extensions	= array_keys($known_mime_types);
-			if (!in_array($extension, $allowed_extensions)) {
+			$known_mime_types		= self::get_known_mime_types();
+			$extension_is_allowed	= false;
+			foreach ($known_mime_types as $current_mime) {
+				if (in_array($extension, $current_mime['extension'])) {
+					$extension_is_allowed = true;
+					break;
+				}
+			}
+			if ($extension_is_allowed===false) {
 				$response->msg .= "Error. Invalid file extension [2] ".$extension;
 				debug_log(__METHOD__
 					. ' '.$response->msg .PHP_EOL
 					. ' extension: '. to_string($extension) .PHP_EOL
-					. ' allowed_extensions: ' .to_string($allowed_extensions)
 					, logger::ERROR
 				);
 				return $response;
@@ -1412,102 +1433,234 @@ final class dd_utils_api {
 	private static function get_known_mime_types() : array {
 
 		$mime_types = array(
-
-			'txt'	=> 'text/plain',
-			'htm'	=> 'text/html',
-			'html'	=> 'text/html',
-			'php'	=> 'text/html',
-			'css'	=> 'text/css',
-			'csv'	=> 'text/csv',
-			'js'	=> 'application/javascript',
-			'json'	=> 'application/json',
-			'xml'	=> 'application/xml',
-			'swf'	=> 'application/x-shockwave-flash',
-			'flv'	=> 'video/x-flv',
-
+			[
+				'mime'		=> 'text/plain',
+				'extension'	=> ['txt','glsl']
+			],
+			[
+				'mime'		=> 'text/html',
+				'extension'	=> ['html','htm','php']
+			],
+			[
+				'mime'		=> 'text/css',
+				'extension'	=> ['css','csv']
+			],
+			[
+				'mime'		=> 'application/javascript',
+				'extension'	=> ['js']
+			],
+			[
+				'mime'		=> 'application/json',
+				'extension'	=> ['json']
+			],
+			[
+				'mime'		=> 'application/xml',
+				'extension'	=> ['xml']
+			],
+			[
+				'mime'		=> 'application/x-shockwave-flash',
+				'extension'	=> ['swf']
+			],
+			[
+				'mime'		=> 'video/x-flv',
+				'extension'	=> ['flv']
+			],
+			[
+				'mime'		=> 'video/x-flv',
+				'extension'	=> ['flv']
+			],
 			// images
-			'png'	=> 'image/png',
-			'jpe'	=> 'image/jpeg',
-			'jpeg'	=> 'image/jpeg',
-			'jpg'	=> 'image/jpeg',
-			'gif'	=> 'image/gif',
-			'bmp'	=> 'image/bmp',
-			'ico'	=> 'image/vnd.microsoft.icon',
-			'tiff'	=> 'image/tiff',
-			'tif'	=> 'image/tiff',
-			'svg'	=> 'image/svg+xml',
-			'svgz'	=> 'image/svg+xml',
-			'heic'	=> 'image/heic',
-			'avif'	=> 'image/avif',
-			'webp'	=> 'image/webp',
-
+			[
+				'mime'		=> 'image/png',
+				'extension'	=> ['png']
+			],
+			[
+				'mime'		=> 'image/jpeg',
+				'extension'	=> ['jpe','jpeg','jpg']
+			],
+			[
+				'mime'		=> 'image/gif',
+				'extension'	=> ['gif']
+			],
+			[
+				'mime'		=> 'image/bmp',
+				'extension'	=> ['bmp']
+			],
+			[
+				'mime'		=> 'image/vnd.microsoft.icon',
+				'extension'	=> ['ico']
+			],
+			[
+				'mime'		=> 'image/tiff',
+				'extension'	=> ['tiff','tif']
+			],
+			[
+				'mime'		=> 'image/svg+xml',
+				'extension'	=> ['svg','svgz']
+			],
+			[
+				'mime'		=> 'image/heic',
+				'extension'	=> ['heic']
+			],
+			[
+				'mime'		=> 'image/avif',
+				'extension'	=> ['avif']
+			],
+			[
+				'mime'		=> 'image/webp',
+				'extension'	=> ['webp']
+			],
 			// archives
-			'zip'	=> 'application/zip',
-			'rar'	=> 'application/x-rar-compressed',
-			'blob' 	=> 'application/octet-stream',
-			'exe'	=> 'application/x-msdownload',
-			'msi'	=> 'application/x-msdownload',
-			'cab'	=> 'application/vnd.ms-cab-compressed',
-			'mrc' 	=> 'application/marc',
-
+			[
+				'mime'		=> 'application/zip',
+				'extension'	=> ['zip']
+			],
+			[
+				'mime'		=> 'application/x-rar-compressed',
+				'extension'	=> ['rar']
+			],
+			[
+				'mime'		=> 'application/octet-stream',
+				'extension'	=> ['blob','fbx','obj','glb']
+			],
+			[
+				'mime'		=> 'application/x-msdownload',
+				'extension'	=> ['exe','msi']
+			],
+			[
+				'mime'		=> 'application/vnd.ms-cab-compressed',
+				'extension'	=> ['cab']
+			],
+			[
+				'mime'		=> 'application/marc',
+				'extension'	=> ['mrc']
+			],
 			// audio/video
-			'mp3'	=> 'audio/mpeg',
-			'mp4'	=> 'video/mp4',
-			'mp4v'	=> 'video/mp4',
-			'mpg4'	=> 'video/mp4',
-			'qt'	=> 'video/quicktime',
-			'mov'	=> 'video/quicktime',
-			'm2v'	=> 'video/mpeg',
-			'mpa'	=> 'video/mpeg',
-			'mpe'	=> 'video/mpeg',
-			'mpeg'	=> 'video/mpeg',
-			'mpg'	=> 'video/mpeg',
-			'ogv'	=> 'video/ogg',
-			'mkv'	=> 'video/x-matroska',
-			'avi'	=> 'video/x-msvideo',
-			'm4v'	=> 'video/x-m4v',
-			'jpgv'	=> 'video/jpeg',
-			'webm'	=> 'video/webm',
-			'wav'	=> 'audio/x-wav',
-
-			// 3d
-			'glb'	=> 'model/gltf-binary',
-			'gltf'	=> 'model/gltf+json',
-			'obj'	=> 'model/obj',
-			'fbx'	=> 'application/octet-stream',
-			'dae'	=> 'model/vnd.collada+xml',
-
-			// adobe
-			'pdf'	=> 'application/pdf',
-			'psd'	=> 'image/vnd.adobe.photoshop',
-			'ai'	=> 'application/postscript',
-			'eps'	=> 'application/postscript',
-			'ps'	=> 'application/postscript',
-
-			// ms office
-			'doc'	=> 'application/msword',
-			'rtf'	=> 'application/rtf',
-			'xls'	=> 'application/vnd.ms-excel',
-			'ppt'	=> 'application/vnd.ms-powerpoint',
-			'pptx'	=> 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-
-			// open office
-			'odt'	=> 'application/vnd.oasis.opendocument.text',
-			'ods'	=> 'application/vnd.oasis.opendocument.spreadsheet',
-
-			'pages'		=> 'application/pages',
-			'key'		=> 'application/vnd.apple.keynote',
-			'numbers'	=> 'application/vnd.apple.numbers',
-
+			[
+				'mime'		=> 'audio/mpeg',
+				'extension'	=> ['mp3']
+			],
+			[
+				'mime'		=> 'video/mp4',
+				'extension'	=> ['mp4','mp4v','mpg4']
+			],
+			[
+				'mime'		=> 'video/quicktime',
+				'extension'	=> ['qt','mov']
+			],
+			[
+				'mime'		=> 'video/mpeg',
+				'extension'	=> ['m2v','mpa','mpe','mpeg','mpg']
+			],
+			[
+				'mime'		=> 'video/x-m4v',
+				'extension'	=> ['m4v']
+			],
+			[
+				'mime'		=> 'video/ogg',
+				'extension'	=> ['ogv']
+			],
+			[
+				'mime'		=> 'video/x-matroska',
+				'extension'	=> ['mkv']
+			],
+			[
+				'mime'		=> 'video/x-msvideo',
+				'extension'	=> ['avi']
+			],
+			[
+				'mime'		=> 'video/jpeg',
+				'extension'	=> ['jpgv']
+			],
+			[
+				'mime'		=> 'video/webm',
+				'extension'	=> ['webm']
+			],
+			[
+				'mime'		=> 'audio/x-wav',
+				'extension'	=> ['wav']
+			],
 			// 3d @see https://github.com/KhronosGroup/glTF/blob/main/specification/1.0/README.md#mimetypes
-			'glb'	=> 'application/octet-stream',
-			'gltf'	=> 'model/gltf+json',
-			'glsl'	=> 'text/plain',
-
+			[
+				'mime'		=> 'model/gltf-binary',
+				'extension'	=> ['glb']
+			],
+			[
+				'mime'		=> 'model/gltf+json',
+				'extension'	=> ['gltf']
+			],
+			[
+				'mime'		=> 'model/vnd.collada+xml',
+				'extension'	=> ['dae']
+			],
+			// adobe
+			[
+				'mime'		=> 'application/pdf',
+				'extension'	=> ['pdf']
+			],
+			[
+				'mime'		=> 'image/vnd.adobe.photoshop',
+				'extension'	=> ['psd']
+			],
+			[
+				'mime'		=> 'application/postscript',
+				'extension'	=> ['ai','eps','ps']
+			],
+			// ms office
+			[
+				'mime'		=> 'application/msword',
+				'extension'	=> ['doc']
+			],
+			[
+				'mime'		=> 'application/rtf',
+				'extension'	=> ['rtf']
+			],
+			[
+				'mime'		=> 'application/vnd.ms-excel',
+				'extension'	=> ['xls']
+			],
+			[
+				'mime'		=> 'application/vnd.ms-powerpoint',
+				'extension'	=> ['ppt']
+			],
+			[
+				'mime'		=> 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+				'extension'	=> ['pptx']
+			],
+			// open office
+			[
+				'mime'		=> 'application/vnd.oasis.opendocument.text',
+				'extension'	=> ['odt']
+			],
+			[
+				'mime'		=> 'application/vnd.oasis.opendocument.spreadsheet',
+				'extension'	=> ['ods']
+			],
+			[
+				'mime'		=> 'application/pages',
+				'extension'	=> ['pages']
+			],
+			[
+				'mime'		=> 'application/vnd.apple.keynote',
+				'extension'	=> ['key']
+			],
+			[
+				'mime'		=> 'application/vnd.apple.numbers',
+				'extension'	=> ['numbers']
+			],
 			// geojson
-			'geojson'	=> 'application/geo+json',
-			'kml'		=> 'application/vnd.google-earth.kml+xml',
-			'kmz'		=> 'application/vnd.google-earth.kmz'
+			[
+				'mime'		=> 'application/geo+json',
+				'extension'	=> ['geojson']
+			],
+			[
+				'mime'		=> 'application/vnd.google-earth.kml+xml',
+				'extension'	=> ['kml']
+			],
+			[
+				'mime'		=> 'application/vnd.google-earth.kmz',
+				'extension'	=> ['kmz']
+			]
 		);
 
 

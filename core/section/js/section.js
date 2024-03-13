@@ -620,6 +620,7 @@ section.prototype.build = async function(autoload=false) {
 									inner_html		: get_label.debug || "Debug",
 									parent			: debug
 								})
+								button_debug.tabIndex = -1;
 								button_debug.addEventListener("click", function(){
 
 									if (debug_container.hasChildNodes()) {

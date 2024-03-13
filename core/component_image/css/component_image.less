@@ -14,6 +14,10 @@
 
 	&.edit {
 
+		&.fullscreen {
+
+		}
+
 		>.content_data {
 
 			// moved to layout.less.media_wrapper.edit
@@ -33,7 +37,8 @@
 
 			// image container
 			>.content_value {
-				.image_container{
+
+				.image_container {
 					// visibility: hidden;
 					height: 100%;
 					// height: auto;
@@ -65,6 +70,27 @@
 						}
 					}
 
+					// object image
+					.image  {
+						// visibility: hidden;
+						height: 100%;
+						// height: auto;
+						max-height: 100%;
+						// width: 100%;
+						max-width: 100%;
+						object-fit: contain;
+
+						// on focus adds a soft shadow and outline
+						&:focus {
+							.hilite_mixin(-1px);
+						}
+
+						// body {
+						// 	display: flex;
+						// 	overflow: hidden;
+						// 	justify-content: center;
+						// }
+					}
 				}
 				// moved to layout.less.media_wrapper.edit
 					// display: flex;
@@ -79,27 +105,8 @@
 					// resize: vertical;
 					// overflow: hidden;
 
-				// object image
-				.image  {
-					// visibility: hidden;
-					height: 100%;
-					// height: auto;
-					max-height: 100%;
-					// width: 100%;
-					max-width: 100%;
-					object-fit: contain;
 
-					// on focus adds a soft shadow and outline
-					&:focus {
-						.hilite_mixin(-1px);
-					}
-
-					body {
-						display: flex;
-						overflow: hidden;
-						justify-content: center;
-					}
-				}
+				/*
 				canvas {
 					background-color: #f5f5f5;
 					max-width: 100%;
@@ -116,6 +123,7 @@
 					// object-fit: contain;
 					// object-position: center;
 				}
+				*/
 			}//end .content_value
 
 		}//end .content_data

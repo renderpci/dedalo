@@ -309,6 +309,7 @@ const get_quality_selector = (content_value, self) => {
 			class_name		: 'quality_selector',
 			parent			: fragment
 		})
+		quality_selector.tabIndex = -1;
 		quality_selector.addEventListener('change', (e) =>{
 			video.src = e.target.value
 			// event_manager.publish('image_quality_change_'+self.id, img_src)

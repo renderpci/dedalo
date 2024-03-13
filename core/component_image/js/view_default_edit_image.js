@@ -59,6 +59,11 @@ view_default_edit_image.render = function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// event
+		event_manager.subscribe('full_screen_'+self.id, () => {
+			fit_image(self)
+		})
+
 
 	return wrapper
 }//end render
@@ -133,8 +138,7 @@ const get_content_value = function(i, value, self) {
 
 	// render image node
 		self.image_container = render_image_node(self, file_info, content_value)
-		const image_node = self.image_container
-		content_value.appendChild(image_node)
+		content_value.appendChild(self.image_container)
 
 	// quality_selector
 		const quality_selector = get_quality_selector(self)
@@ -297,27 +301,27 @@ const render_image_node = function(self, file_info, content_value) {
 			class_name 		: 'image_container work_area'
 		})
 
-		// const bg_reference_image_url = url // || page_globals.fallback_image
-		// const image = ui.create_dom_element({
-		// 	element_type	: 'img',
-		// 	class_name 		: 'img',
-		// 	// parent 			: image_container
-		// })
-		// // image background color
-		// 	image.addEventListener('load', set_bg_color, false)
-		// 	function set_bg_color() {
-		// 		this.removeEventListener('load', set_bg_color, false)
-		// 		// ui.set_background_image(this, content_value)
-		// 		image.classList.remove('hide')
-		// 	}
-		// // error
-		// 	image.addEventListener('error', function(){
-		// 		// console.warn('Error on load image:', bg_reference_image_url, image);
-		// 		svg_fallback(object_node)
-		// 	}, false)
-		// image.src = bg_reference_image_url
-
-		// image_container.image = image
+		// des
+			// const bg_reference_image_url = url // || page_globals.fallback_image
+			// const image = ui.create_dom_element({
+			// 	element_type	: 'img',
+			// 	class_name 		: 'img',
+			// 	// parent 			: image_container
+			// })
+			// // image background color
+			// 	image.addEventListener('load', set_bg_color, false)
+			// 	function set_bg_color() {
+			// 		this.removeEventListener('load', set_bg_color, false)
+			// 		// ui.set_background_image(this, content_value)
+			// 		image.classList.remove('hide')
+			// 	}
+			// // error
+			// 	image.addEventListener('error', function(){
+			// 		// console.warn('Error on load image:', bg_reference_image_url, image);
+			// 		svg_fallback(object_node)
+			// 	}, false)
+			// image.src = bg_reference_image_url
+			// image_container.image = image
 
 	// fallback to default svg file
 		function svg_fallback(object_node) {
@@ -348,12 +352,8 @@ const render_image_node = function(self, file_info, content_value) {
 			class_name		: 'image',
 			parent 			: image_container
 		})
-		object_node.url			= url
-		image_container.object_node	= object_node
-
-		object_node.type = "image/svg+xml"
-		// set pointer
-		self.object_node = object_node
+		object_node.type	= "image/svg+xml"
+		object_node.url		= url
 		// set data or fallback
 		if (data.base_svg_url) {
 
@@ -365,6 +365,8 @@ const render_image_node = function(self, file_info, content_value) {
 			// base_svg_url_default. Replace default image extension from '0.jpg' to '0.svg'
 			svg_fallback(object_node)
 		}
+		// set pointers
+		image_container.object_node	= object_node
 
 		// auto-change url the first time
 		object_node.onload = async function() {
@@ -460,7 +462,7 @@ const get_buttons = (self) => {
 			// event_manager.publish('full_screen_'+self.id, fullscreen_state)
 		// })
 		button_fullscreen.addEventListener('click', function() {
-			ui.enter_fullscreen(self.node,()=>{
+			ui.enter_fullscreen(self.node, ()=>{
 				event_manager.publish('full_screen_'+self.id, false)
 			})
 			event_manager.publish('full_screen_'+self.id, true)
@@ -510,6 +512,75 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* FIT_IMAGE
+* Resizes the image to fit the container
+* Used on fullscreen mode to scale current image object to fit
+* the new component dimensions
+* @param object self
+* @return void
+*/
+const fit_image = function(self) {
+console.log('self:', self);
+	// vector_editor. If isset, nothing to do, only for non edit image
+		if (self.vector_editor) {
+			return
+		}
+
+	// wrapper
+		const wrapper = self.node
+
+	// image container
+		const image_container		= self.image_container
+		const bb_image_container	= image_container.getBoundingClientRect()
+
+	// object_node
+		const object_node	= image_container.object_node
+		const layers		= object_node.contentDocument.querySelectorAll('.layer')
+		const main_image	= object_node.contentDocument.querySelector('#main_image')
+			|| object_node.contentDocument.querySelector('image')
+			if (!main_image) {
+				console.error('main_image not found in object_node!', object_node);
+				return
+			}
+
+	// ratio
+		const image_container_height	= bb_image_container.height
+		const image_container_width		= bb_image_container.width
+		const main_image_height			= main_image.height.baseVal.value
+		const main_image_width			= main_image.width.baseVal.value
+
+		const ratio_h	= image_container_height / main_image_height
+		const ratio_w	= image_container_width / main_image_width
+
+		const ratio = Math.min(ratio_h, ratio_w)
+
+	// style scale
+		const layers_length = layers.length
+		for (let i = 0; i < layers_length; i++) {
+			const el = layers[i]
+
+			// el.style.transform = `scale(${ratio})`;
+			el.style.scale = ratio
+
+			if (i===0) {
+				const bb = el.getBoundingClientRect()
+				object_node.style.width = bb.width + 'px'
+				// object_node.style.height = bb.height + 'px'
+			}
+		}
+
+	// event resize. Only if we are in fullscreen
+		const fn_resize = () => {
+			fit_image(self)
+		}
+		if (wrapper.classList.contains('fullscreen')) {
+			window.onresize = fn_resize;
+		}
+}//end fit_image
 
 
 
