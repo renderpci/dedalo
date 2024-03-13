@@ -179,11 +179,17 @@ export const set_context_vars = function(self) {
 				// buttons_container	: true, // bool false
 				value_buttons			: true,  // bool true
 				button_add				: true, // bool true
+				button_delete			: true, // bool true
 				button_link				: true, // bool true
 				button_edit				: false, // bool false. Ex. component_select User profile (dd1725)
+				button_edit_options		: {
+					action_mousedown	: 'navigate', // string navigate|open_window (name of function to exec)
+					action_contextmenu	: 'open_window' // string open_window (name of function to exec)
+				},
 				tools					: true, // bool true
 				button_external			: false, // bool false
 				button_tree				: false, // bool false
+				button_fullscreen		: true, // bool false
 				show_autocomplete		: true // bool true
 			}
 			// set the instance show_interface
