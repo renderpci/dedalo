@@ -98,6 +98,9 @@ export const render_column_id = function(options) {
 	// permissions
 		const permissions = self.permissions
 
+	// show_interface
+		const show_interface = self.show_interface || {}
+
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
@@ -362,18 +365,9 @@ export const render_column_id = function(options) {
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
-
-							// Prevent to show the context menu
-							// open new window with the content
-							// if user has alt pressed, open new tab
-							button_edit.addEventListener('contextmenu', (e) => {
-								e.preventDefault();
-
-								// if alt is pressed open new tab instead new window
-								const features = e.altKey===true
-									? 'new_tab'
-									: null
-
+							// open_window action
+							button_edit.open_window = (features) => {
+								
 								// open a new window
 								const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 									tipo			: section_tipo,
@@ -386,7 +380,7 @@ export const render_column_id = function(options) {
 								open_window({
 									url			: url,
 									name		: 'record_view_' + section_id,
-									features	: features,
+									features	: features || null,
 									on_blur : () => {
 										// refresh current instance
 										self.refresh({
@@ -394,44 +388,77 @@ export const render_column_id = function(options) {
 										})
 									}
 								})
-							});
-							button_edit.addEventListener('mousedown', function(e){
+							}//end open_window
+							// navigate action
+							button_edit.navigate = () => {
+
+								// MODE USING PAGE USER_NAVIGATION
+								// sqo. Note that sqo will be used as request_config.sqo on navigate
+									const sqo = clone(self.request_config_object.sqo)
+									// set updated filter
+									sqo.filter = self.rqo.sqo.filter
+									// reset pagination
+									sqo.limit	= 1
+									sqo.offset	= paginated_key
+
+								// source
+									const source = {
+										action				: 'search',
+										model				: self.model, // 'section'
+										tipo				: section_tipo,
+										section_tipo		: section_tipo,
+										// section_id		: section_id, // (!) enabling affect local db stored rqo's
+										section_id_selected	: section_id,
+										mode				: 'edit',
+										lang				: self.lang
+									}
+
+								// user_navigation
+									const user_navigation_rqo = {
+										caller_id	: self.id,
+										source		: source,
+										sqo			: sqo
+									}
+									// page js is observing this event
+									event_manager.publish('user_navigation', user_navigation_rqo)
+							}//end navigate
+
+							// contextmenu event
+							// Prevent to show the context menu
+							// open new window with the content
+							// if user has alt pressed, open new tab
+							button_edit.addEventListener('contextmenu', (e) => {
+								e.stopPropagation()
+								e.preventDefault();
+								console.log('e:', e);
+
+								// if alt is pressed open new tab instead new window
+								const features = e.altKey===true
+									? 'new_tab'
+									: null
+
+								// function to execute. see definition in common.set_context_vars
+								// values: string navigate|open_window
+								const fn = show_interface.button_edit_options?.action_contextmenu || 'open_window'
+								if (typeof button_edit[fn]==='function') {
+									return button_edit[fn](features)
+								}
+							})
+							// mousedown event
+							button_edit.addEventListener('mousedown', (e) => {
 								e.stopPropagation()
 
-								// if the user click with right mouse button stop
+								// if the user click with right mouse button, stop here
 								if (e.which == 3 || e.altKey===true) {
 									return
 								}
 
-								/* MODE USING PAGE user_navigation */
-									// sqo. Note that sqo will be used as request_config.sqo on navigate
-										const sqo = clone(self.request_config_object.sqo)
-										// set updated filter
-										sqo.filter = self.rqo.sqo.filter
-										// reset pagination
-										sqo.limit	= 1
-										sqo.offset	= paginated_key
-
-									// source
-										const source = {
-											action				: 'search',
-											model				: self.model, // 'section'
-											tipo				: section_tipo,
-											section_tipo		: section_tipo,
-											// section_id		: section_id, // (!) enabling affect local db stored rqo's
-											section_id_selected	: section_id,
-											mode				: 'edit',
-											lang				: self.lang
-										}
-
-									// user_navigation
-										const user_navigation_rqo = {
-											caller_id	: self.id,
-											source		: source,
-											sqo			: sqo
-										}
-										// page js is observing this event
-										event_manager.publish('user_navigation', user_navigation_rqo)
+								// function to execute. see definition in common.set_context_vars
+								// values: string navigate|open_window
+								const fn = show_interface.button_edit_options?.action_mousedown || 'navigate'
+								if (typeof button_edit[fn]==='function') {
+									return button_edit[fn]()
+								}
 
 								/* MODE USING SECTION change_mode
 									// menu. Get from caller page
