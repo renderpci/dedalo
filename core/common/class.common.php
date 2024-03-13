@@ -1682,6 +1682,23 @@ abstract class common {
 						// $dd_object->ontology_info = $this->get_ontlogy_info();
 					}
 
+					// set the show_interface of shared sections
+					// check if the matrix table of the target section is matrix_dd (shared table between installations as yes/no list)
+					// if target section is a shared section, remove the button edit and button list of the interface
+						$ar_target_section_ddo = $this->get_ar_target_section_ddo();
+
+						foreach ($ar_target_section_ddo as $current_section_ddo) {
+							if($current_section_ddo->matrix_table && $current_section_ddo->matrix_table==='matrix_dd'){
+
+								if(!isset($properties->show_interface)){
+									$properties->show_interface = new stdClass();
+								}
+
+								$properties->show_interface->button_edit = false;
+								$properties->show_interface->button_list = false;
+							}
+						}
+
 				}else if($model==='section') {
 
 					// section_map.
