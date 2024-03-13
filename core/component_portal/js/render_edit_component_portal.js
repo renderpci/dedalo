@@ -127,6 +127,7 @@ export const render_column_id = function(options) {
 			class_name		: 'button_edit button_view_' + self.context.view,
 			parent			: fragment
 		})
+		button_edit.tabIndex = -1;
 
 		// Prevent to show the context menu
 		// open new window with the content
@@ -506,6 +507,7 @@ export const render_column_remove = function(options) {
 				class_name		: 'button_remove',
 				parent			: fragment
 			})
+			button_remove.tabIndex = -1;
 			button_remove.addEventListener('click', function(e){
 				e.stopPropagation()
 
