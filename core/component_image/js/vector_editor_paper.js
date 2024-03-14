@@ -1431,7 +1431,8 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 							text_content	: get_label.delete || 'Delete',
 							parent			: footer
 						})
-						button_delete.addEventListener("click", function(){
+						button_delete.addEventListener('click', function(e){
+							e.stopPropagation()
 
 							// get the layer in paper, we change the name if the layer is the raster layer
 								const name = (layer.layer_id==0)

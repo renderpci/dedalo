@@ -118,7 +118,6 @@ const get_content_data_edit = async function(self) {
 			}// end for
 		}// end if(ar_file_processor)
 
-
 	// component options to store the file, normally the component_portal, it could be defined in the preferences or could be the caller
 		const ddo_option_components = self.tool_config.ddo_map.filter(el => el.role === 'component_option')
 
@@ -231,7 +230,6 @@ const get_content_data_edit = async function(self) {
 					option_procesor_node.value = option
 				}// end for
 		}// end if(ar_quality)
-
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
@@ -391,14 +389,12 @@ const get_content_data_edit = async function(self) {
 						parent			: same_name_same_section
 					})
 
-
 	// components container
 		const drop_zone = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'drop_zone',
 			parent			: fragment
 		})
-
 
 	// template_container
 		const template_container = ui.create_dom_element({
@@ -411,7 +407,6 @@ const get_content_data_edit = async function(self) {
 		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
 
-
 		// inputs components container label
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -419,13 +414,15 @@ const get_content_data_edit = async function(self) {
 			parent			: fragment
 		})
 
-		const inputs_container_caption = ui.create_dom_element({
+		// inputs_container_caption (Values)
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inputs_container_caption',
 			inner_html		: get_label.values || 'Values',
 			parent			: inputs_container
 		})
 
+		// service_tmp_section
 		const inputs_nodes = await self.service_tmp_section.render()
 		inputs_container.appendChild(inputs_nodes)
 
@@ -443,7 +440,9 @@ const get_content_data_edit = async function(self) {
 			inner_html		: get_label.import || 'IMPORT',
 			parent			: buttons_bottom_container
 		})
-		button_process_import.addEventListener('click', function(){
+		button_process_import.addEventListener('click', function(e){
+			e.stopPropagation()
+
 			if(self.files_data.length < 1){
 				return
 			}
