@@ -454,30 +454,31 @@ const get_buttons = (self) => {
 		}
 
 	// open svg editor tools
-		const vector_editor = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button vector_editor',
-			title			: 'Toggle vector editor',
-			parent			: fragment
-		})
-		vector_editor.addEventListener('mouseup', (e) => {
-			e.stopPropagation()
+		if (show_interface.read_only === false) {
+			// vector_editor
+			const vector_editor = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button vector_editor',
+				title			: 'Toggle vector editor',
+				parent			: fragment
+			})
+			vector_editor.addEventListener('mouseup', (e) => {
+				e.stopPropagation()
 
-			vector_editor_tools.classList.toggle('hide')
-			if(!vector_editor_tools.classList.contains('hide')){
-				self.load_vector_editor()
-			}
-			// set wrapper as wide mode (100%)
-			// self.node.classList.add('wide')
-		})
+				vector_editor_tools.classList.toggle('hide')
+				if(!vector_editor_tools.classList.contains('hide')){
+					self.load_vector_editor()
+				}
+			})
 
-	// svg editor tools
-		const vector_editor_tools = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'vector_editor_tools hide',
-			parent			: fragment
-		})
-		self.vector_editor_tools = vector_editor_tools
+			// svg editor tools
+			const vector_editor_tools = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'vector_editor_tools hide',
+				parent			: fragment
+			})
+			self.vector_editor_tools = vector_editor_tools
+		}
 
 	// button_fullscreen
 		if(show_interface.button_fullscreen === true){
