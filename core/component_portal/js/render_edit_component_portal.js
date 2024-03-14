@@ -949,7 +949,7 @@ export const get_buttons = (self) => {
 				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button pen',
-					title			: label,
+					title			: label.replace( /(<([^>]+)>)/ig, ''),
 					parent			: buttons_fold
 				})
 				const fn_click = function(e){
