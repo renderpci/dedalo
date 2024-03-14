@@ -71,7 +71,7 @@ export const get_content_data = async function(self) {
 
 	// render template
 		const tmp_components_node = await render_tmp_components(self)
-			content_data.appendChild(tmp_components_node)
+		content_data.appendChild(tmp_components_node)
 
 
 	return content_data
