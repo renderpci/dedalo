@@ -2191,6 +2191,7 @@ export const ui = {
 					header.classList.add('header')
 				}
 				modal_container.appendChild(header)
+				modal_container.header = header
 			}else{
 				const header_blank = ui.create_dom_element({
 					element_type	: 'div',
@@ -2198,6 +2199,7 @@ export const ui = {
 				})
 				header_blank.slot = 'header'
 				modal_container.appendChild(header_blank)
+				modal_container.header = header
 			}
 
 		// body. Add  wrapper to modal body and insert it into slot
@@ -2207,6 +2209,7 @@ export const ui = {
 					body.classList.add('body')
 				}
 				modal_container.appendChild(body)
+				modal_container.body = body
 			}
 
 		// footer. Add node footer to modal footer and insert it into slot
@@ -2216,6 +2219,7 @@ export const ui = {
 					footer.classList.add('footer')
 				}
 				modal_container.appendChild(footer)
+				modal_container.footer = footer
 			}
 
 			if(minimizable===false){
