@@ -76,7 +76,10 @@ const content_data_edit = async function(self) {
 			parent			: components_container
 		})
 		// main_element render
+		// show_interface
 		self.main_element.show_interface.read_only	= true
+		self.main_element.show_interface.tools		= false
+		// auto_init_editor
 		self.main_element.auto_init_editor			= false
 		self.main_element.render()
 		.then(function(node){

@@ -7,12 +7,16 @@
 @import (once) '../../../core/page/css/layout/vars';
 
 // local vars
-@color_bg_tool : #a22b29;
+@tool_color : #a22b29;
 
 
 
 // tool wrapper. Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_user_admin {
+
+		.spinner {
+			border-top-color: @tool_color;
+		}
 
 		>.tool_header {
 			position: relative;
@@ -108,5 +112,5 @@
 
 // modal header tool modification
 	.tool_header.tool_user_admin {
-		background-color: @color_bg_tool;
+		background-color: @tool_color;
 	}

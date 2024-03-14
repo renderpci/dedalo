@@ -5,20 +5,21 @@
 */
 
 // local vars
-@tool_color: #ce8e0c;
+// @tool_color: #ce8e0c;
+@tool_color : #7859ae;
 
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_lang_multi {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		// content_data
 		>.content_data {
 			padding-right: 1em;
-
-			.spinner {
-				border-top-color: @tool_color;
-			}
 		}
 
 		.top_container {

@@ -88,10 +88,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
-		self.show_interface.tools = true
-		const buttons = (self.permissions > 1)
-			? get_buttons(self)
-			: null
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {

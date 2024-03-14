@@ -12,6 +12,10 @@
 	.wrapper_tool.tool_hierarchy {
 		position: relative;
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		// &:before {
 		// 	background-image: url(../img/icon.svg);
 		// 	background-position: right;
@@ -24,10 +28,6 @@
 		// }
 
 		>.content_data {
-
-			.spinner {
-				border-top-color: @tool_color;
-			}
 
 			>.components_container {
 				display: grid;
@@ -44,7 +44,7 @@
 				padding-left: 0;
 			}
 
-			.buttons_container {
+			>.buttons_container {
 				padding: 2rem;
 				padding-left: 0rem;
 

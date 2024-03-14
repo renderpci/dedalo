@@ -71,6 +71,10 @@ const get_content_data = async function(self) {
 			class_name		: 'main_element_container',
 			parent			: fragment
 		})
+		// show_interface
+		self.main_element.show_interface.tools = false
+		self.main_element.show_interface.read_only = true
+		// render
 		self.main_element.render()
 		.then(function(component_node){
 			main_element_container.appendChild(component_node)

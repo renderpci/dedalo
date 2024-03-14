@@ -96,6 +96,8 @@ const get_content_data_edit = async function(self) {
 
 	// component_text_area. render another node of component caller and append to container
 		const component_text_area = self.transcription_component
+		// show_interface
+		component_text_area.show_interface.tools = false
 		// set auto_init_editor for convenience
 		component_text_area.auto_init_editor = true
 		component_text_area.render()
