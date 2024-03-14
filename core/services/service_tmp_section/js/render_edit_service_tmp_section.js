@@ -94,6 +94,9 @@ const render_tmp_components = async function(self) {
 
 		const current_instance = ar_instances[i]
 
+		// show_interface
+		current_instance.show_interface.tools = false
+
 		const instance_node = await current_instance.render()
 		fragment.appendChild(instance_node)
 	}

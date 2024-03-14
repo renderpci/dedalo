@@ -130,6 +130,8 @@ const get_content_data_edit = async function(self) {
 						const component = await self.get_component(e.target.value)
 						// set auto_init_editor for convenience
 						component.auto_init_editor = true
+						// show_interface
+						component.show_interface.tools = false
 						component.render()
 						.then(function(node){
 							// remove previous node
@@ -147,6 +149,9 @@ const get_content_data_edit = async function(self) {
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
 				// set auto_init_editor = true to force init editor instead use user click to activate it
 				transcription_component.auto_init_editor = true
+				// show_interface
+				transcription_component.show_interface.tools = false
+
 				const transcription_component_node = await transcription_component.render()
 				transcription_component_container.appendChild(transcription_component_node)
 

@@ -215,6 +215,8 @@ tool_indexation.prototype.render_note = async function(options) {
 			model			: 'component_input_text'
 		})
 		await title_instance.build(true)
+		// show_interface
+		title_instance.show_interface.tools = false
 		const title_node = await title_instance.render()
 		// set instance
 		self.title_instance = title_instance
@@ -230,6 +232,8 @@ tool_indexation.prototype.render_note = async function(options) {
 			model			: 'component_text_area'
 		})
 		await description_instance.build(true)
+		// show_interface
+		description_instance.show_interface.tools = false
 		const description_node = await description_instance.render()
 		fragment.appendChild(description_node)
 

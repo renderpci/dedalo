@@ -126,7 +126,9 @@ const get_content_data_edit = async function(self) {
 				class_name		: 'source_component_container',
 				parent			: left_block
 			})
+			// show_interface
 			self.main_element.show_interface.read_only = true
+			self.main_element.show_interface.tools = false
 			self.main_element.render()
 			.then(function(node){
 				source_component_container.appendChild(node)
@@ -183,7 +185,9 @@ const get_content_data_edit = async function(self) {
 		// if the target component has the same lang than source component block the edition to avoid errors
 		// ck-editor can not manage 2 instances of the same component in edit
 			if (self.target_component) {
+				// show_interface
 				self.target_component.show_interface.read_only = (self.target_component.lang===self.source_lang)
+				self.target_component.show_interface.tools = false
 				const target_component_node = await self.target_component.render()
 				const target_component_container = ui.create_dom_element({
 					element_type	: 'div',

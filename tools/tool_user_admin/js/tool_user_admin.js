@@ -132,7 +132,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'section_id',
 			mode			: 'edit',
-			properties		: {css:{}},
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			},
 			permissions		: 1
 		},
 		// username . read only (!)
@@ -145,7 +150,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'User name',
 			mode			: 'edit',
-			properties		: {css:{}},
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			},
 			// view			: 'line',
 			permissions		: 1
 		},
@@ -159,7 +169,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'User profile',
 			mode			: 'edit',
-			properties		: {css:{}},
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			},
 			// view			: 'line',
 			permissions		: 1
 		},
@@ -173,7 +188,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'Full user name',
 			mode			: 'edit',
-			properties		: {css:{}}
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			}
 		},
 		// password . editable
 		{
@@ -185,7 +205,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'Password',
 			mode			: 'edit',
-			properties		: {css:{}}
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			}
 		},
 		// email . editable
 		{
@@ -197,7 +222,12 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'email',
 			mode			: 'edit',
-			properties		: {css:{}}
+			properties		: {
+				css:{},
+				show_interface : {
+					tools : false
+				}
+			}
 		},
 		// projects . read only (!)
 		// {
@@ -222,7 +252,13 @@ tool_user_admin.prototype.get_ddo_map = function() {
 			parent			: section_tipo,
 			// label		: 'User image',
 			mode			: 'edit',
-			properties		: {css:{}}
+			properties		: {
+				css:{},
+				show_interface : {
+					// allow necessary upload tool here
+					tools : true
+				}
+			}
 		}
 	]
 

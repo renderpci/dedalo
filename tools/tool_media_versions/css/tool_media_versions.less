@@ -14,6 +14,10 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_media_versions {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		// content_data
 		>.content_data {
 			display: flex;
@@ -22,10 +26,6 @@
 			padding-bottom: 0px;
 			// display: grid;
 			// grid-template-rows: 1fr 1fr;
-
-			.spinner {
-				border-top-color: @tool_color;
-			}
 
 			>.main_element_container {
 				width: 100%;

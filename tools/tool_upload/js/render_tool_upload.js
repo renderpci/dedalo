@@ -213,6 +213,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 				}
 
 			// render component
+				// show_interface
+				component_instance.show_interface.tools = false
 				const component_node = await component_instance.render()
 
 			// preview. add rendered component node

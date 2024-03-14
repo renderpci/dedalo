@@ -98,6 +98,9 @@ const get_content_data = async function(self) {
 		self.ar_instances.push(real_st_component_instance)
 		// build
 		await real_st_component_instance.build(true)
+		// show_interface
+		real_st_component_instance.show_interface.tools = false
+		real_st_component_instance.show_interface.button_add = false
 		// render
 		const real_st_component_node = await real_st_component_instance.render()
 		components_container.appendChild(real_st_component_node)
@@ -119,6 +122,9 @@ const get_content_data = async function(self) {
 		self.ar_instances.push(tld_component_instance)
 		// build
 		await tld_component_instance.build(true)
+		// show_interface
+		tld_component_instance.show_interface.tools = false
+		tld_component_instance.show_interface.button_add = false
 		// render
 		const tld_component_node = await tld_component_instance.render()
 		components_container.appendChild(tld_component_node)

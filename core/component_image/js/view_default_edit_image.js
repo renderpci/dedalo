@@ -454,7 +454,7 @@ const get_buttons = (self) => {
 		}
 
 	// open svg editor tools
-		if (show_interface.read_only === false) {
+		if (show_interface.read_only === false && show_interface.tools === true) {
 			// vector_editor
 			const vector_editor = ui.create_dom_element({
 				element_type	: 'span',

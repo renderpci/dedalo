@@ -4,10 +4,15 @@
 * Loaded on tool init
 */
 
-
+// local vars
+@tool_color: #9d535e;
 
 // wrapper_tool
 	.wrapper_tool.tool_tr_print {
+
+		.spinner {
+			border-top-color: @tool_color;
+		}
 
 		.content_data {
 			width: 100%;
@@ -58,8 +63,6 @@
 				text-align: justify;
 				padding: 5ch;
 				box-shadow: 0 0px 10px 0px #dddddd;
-
-
 
 				.data_block {
 					.fragment_block {
@@ -238,3 +241,9 @@
 		}//end @media print
 
 	}//end .wrapper_tool.tool_tr_print
+
+
+// modal and new window header tool modification
+	.tool_header.tool_tr_print {
+		background-color: @tool_color;
+	}
