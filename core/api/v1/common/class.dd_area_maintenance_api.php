@@ -1154,4 +1154,36 @@ final class dd_area_maintenance_api {
 
 
 
+	/**
+	* EXPORT_HIERARCHY
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function export_hierarchy(object $rqo) : object {
+
+		// options
+			$options	= $rqo->options;
+			$object		= array_find($options, function($el){
+				return $el->name==='section_tipo';
+			});
+			$section_tipo = $object->value ?? null;
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+			if (empty($section_tipo)) {
+				$response->msg .= ' Empty section_tipo value';
+				return $response;
+			}
+
+		// export_hierarchy
+			$response = hierarchy::export_hierarchy($section_tipo);
+
+
+		return $response;
+	}//end export_hierarchy
+
+
+
 }//end dd_area_maintenance_api
