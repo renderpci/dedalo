@@ -62,11 +62,11 @@ const get_content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// top_container
-		const top_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'top_container',
-			parent			: fragment
-		})
+		// const top_container = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'top_container',
+		// 	parent			: fragment
+		// })
 
 	// automatic_translation
 		// // icon

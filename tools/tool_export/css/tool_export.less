@@ -15,6 +15,10 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_export {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		@media print {
 		    .tool_header, .no_print, .no_print * {
 		        display: none !important;
@@ -23,10 +27,6 @@
 
 		>.content_data {
 			width: 100%;
-
-			.spinner {
-				border-top-color: @tool_color;
-			}
 
 			// grid_top . 3 columns grid
 			>.grid_top {

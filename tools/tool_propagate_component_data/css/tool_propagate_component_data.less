@@ -14,11 +14,14 @@
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_propagate_component_data {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		>.content_data {
 
 			.spinner {
 				position: absolute;
-				border-top-color: @tool_color;
 				top: calc(50% - 1rem);
 				left: calc(50% - 3.2rem);
 			}

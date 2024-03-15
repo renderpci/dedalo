@@ -27,6 +27,10 @@
 		// width: 100%;
 		// height: calc(100vh - 20%);
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		>.tool_header {
 			background-color: @tool_color;
 			position: relative;
@@ -148,10 +152,6 @@
 				flex-wrap: wrap;
 			}
 
-			.spinner {
-				border-top-color: @tool_color;
-			}
-
 			>.left_container, >.right_container {
 				display: grid;
 				padding: 1rem;
@@ -178,6 +178,15 @@
 				// thesaurus
 				>.area_thesaurus {
 					padding: 0px;
+				}
+
+				// component_av
+				>.wrapper_component {
+					>.buttons_container {
+						top: 0;
+						z-index: 2;
+						border-radius: 0;
+					}
 				}
 			}
 

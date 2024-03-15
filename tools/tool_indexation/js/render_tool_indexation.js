@@ -130,6 +130,8 @@ const get_content_data_edit = async function(self) {
 						const component = await self.get_component(e.target.value)
 						// set auto_init_editor for convenience
 						component.auto_init_editor = true
+						// show_interface
+						component.show_interface.tools = false
 						component.render()
 						.then(function(node){
 							// remove previous node
@@ -147,6 +149,9 @@ const get_content_data_edit = async function(self) {
 				const transcription_component = self.transcription_component || await self.get_component(self.lang)
 				// set auto_init_editor = true to force init editor instead use user click to activate it
 				transcription_component.auto_init_editor = true
+				// show_interface
+				transcription_component.show_interface.tools = false
+
 				const transcription_component_node = await transcription_component.render()
 				transcription_component_container.appendChild(transcription_component_node)
 
@@ -515,7 +520,10 @@ const render_related_list = function(self){
 				}
 
 			const section_label		= context.find(el => el.section_tipo===current_locator.section_top_tipo).label
-			const ar_component_data	= data.filter(el => el.section_tipo===current_locator.section_top_tipo && el.section_id===current_locator.section_top_id)
+			const ar_component_data	= data.filter(el =>
+				el.section_tipo === current_locator.section_top_tipo &&
+				el.section_id === current_locator.section_top_id
+			)
 
 			// ar_component_value
 				const ar_component_value = []
@@ -718,7 +726,7 @@ const render_status = async function(self) {
 	// status_user_component
 		if (self.status_user_component) {
 			self.status_user_component.context.view	= 'mini'
-			self.status_user_component.is_inside_tool = true
+			self.status_user_component.show_interface.tools = false
 			self.status_user_component.show_interface.save_animation = false
 			const status_user_node = await self.status_user_component.render()
 			fragment.appendChild(status_user_node)
@@ -727,7 +735,7 @@ const render_status = async function(self) {
 	// status_admin_component
 		if (self.status_admin_component) {
 			self.status_admin_component.context.view = 'mini'
-			self.status_admin_component.is_inside_tool = true
+			self.status_admin_component.show_interface.tools = false
 			self.status_admin_component.show_interface.save_animation = false
 			const status_admin_node	= await self.status_admin_component.render()
 			fragment.appendChild(status_admin_node)

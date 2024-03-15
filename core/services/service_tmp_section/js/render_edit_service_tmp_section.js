@@ -71,7 +71,7 @@ export const get_content_data = async function(self) {
 
 	// render template
 		const tmp_components_node = await render_tmp_components(self)
-			content_data.appendChild(tmp_components_node)
+		content_data.appendChild(tmp_components_node)
 
 
 	return content_data
@@ -93,6 +93,9 @@ const render_tmp_components = async function(self) {
 	for (let i = 0; i < ar_instances_length; i++) {
 
 		const current_instance = ar_instances[i]
+
+		// show_interface
+		current_instance.show_interface.tools = false
 
 		const instance_node = await current_instance.render()
 		fragment.appendChild(instance_node)

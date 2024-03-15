@@ -224,6 +224,10 @@ export const add_component = async (self, component_container, lang_value, label
 				// set permissions as read
 					component.context.permissions = 1
 
+				// show_interface
+					component.show_interface.tools = false
+					component.show_interface.read_only = true
+
 				// render node
 					const node = await component.render({
 						render_mode : 'edit'//mode // 'edit'
