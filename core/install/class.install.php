@@ -127,7 +127,8 @@ class install extends common {
 			$properties->hierarchies = $hierarchies->result !== false
 				? $hierarchies->result
 				: null;
-			$properties->install_checked_default = $config->install_checked_default;
+			$properties->install_checked_default	= $config->install_checked_default;
+			$properties->hierarchy_typologies		= $config->hierarchy_typologies;
 
 		// check php version
 			$properties->php_version			= PHP_VERSION;
@@ -210,6 +211,7 @@ class install extends common {
 		$target_file_path_compress	= $target_file_path.'.gz';
 		$hierarchy_files_dir_path	= DEDALO_ROOT_PATH . '/install/import/hierarchy';
 		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
+		$hierarchy_typologies 		= json_decode( file_get_contents(__DIR__.'/hierarchies_typologies.json') );
 
 		return (object)[
 			'db_install_name'			=> $db_install_name,
@@ -221,6 +223,7 @@ class install extends common {
 			'target_file_path_compress'	=> $target_file_path_compress,
 			'hierarchy_files_dir_path'	=> $hierarchy_files_dir_path,
 			'install_checked_default'	=> $install_checked_default,
+			'hierarchy_typologies'		=> $hierarchy_typologies,
 			'config_core_file_path'		=> $config_core_file_path
 		];
 	}//end get_config
@@ -2045,13 +2048,16 @@ class install extends common {
 			// 	$label .= ' [model]';
 			// }
 
+			$typology = isset($current_hierachy) ? $current_hierachy->typology : 'undefined typology ['.$tld.']';
+
 			$item = (object)[
 				'file'			=> $file,
 				'file_name'		=> $file_name,
 				'section_tipo'	=> $section_tipo,
 				'tld'			=> $tld,
 				'label'			=> $label,
-				'type'			=> $type
+				'type'			=> $type,
+				'typology'		=> $typology
 			];
 
 			return $item;

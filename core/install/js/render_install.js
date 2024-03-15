@@ -255,8 +255,9 @@ const get_content_data = function(self) {
 		})
 
 		const hierarchies_import_options = {
-			hierarchies		: self.context.properties.hierarchies,
-			default_checked	: self.context.properties.install_checked_default,
+			hierarchies				: self.context.properties.hierarchies,
+			default_checked			: self.context.properties.install_checked_default,
+			hierarchy_typologies	: self.context.properties.hierarchy_typologies,
 			callback		: function() {
 				// show next block
 				self.node.content_data.install_finish_block.classList.remove('hide')
@@ -1205,15 +1206,19 @@ export const render_hierarchies_import_block = function(options) {
 
 	// options
 		const hierarchies				= options.hierarchies || []
+
 		const default_checked			= options.default_checked || []
 		const active_hierarchies		= options.active_hierarchies || [] // already activated hierarchies
 		const hierarchy_files_dir_path	= options.hierarchy_files_dir_path || '' // informative only
 		const callback					= options.callback // executed on finish importation
+		const hierarchy_typologies		= options.hierarchy_typologies || [] // array with typology definitions
 
 	// DocumentFragment
 		const fragment = new DocumentFragment();
 
 		hierarchies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
+
+		hierarchy_typologies.sort((a,b) => (a.label < b.label) ? 1 : ((b.label < a.label) ? -1 : 0))
 
 	// info
 		ui.create_dom_element({
@@ -1231,79 +1236,104 @@ export const render_hierarchies_import_block = function(options) {
 			parent			: fragment
 		})
 
-	// list of hierarchies
-		const hierachy_ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'hierachy_ul',
+		// hierarchies
+		const hierachy_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'hierachy_container',
 			parent			: fragment
 		})
+
 		const hierarchies_to_install = []
-		const hierarchies_len = hierarchies.length
-		for (let i = hierarchies_len - 1; i >= 0; i--) {
+		const hierarchy_typologies_length = hierarchy_typologies.length
+		for (var i = hierarchy_typologies_length - 1; i >= 0; i--) {
+			const current_hierachy_typology = hierarchy_typologies[i]
 
-			// hierarchy object
-				const current_hierarchy = hierarchies[i]
-				if(current_hierarchy.type==='model'){
-					continue
-				}
+			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierachy_typology.typology)
 
-			// is_default check
-				const is_default_checked	= default_checked.find(el => el===current_hierarchy.tld)
-				const checked				= is_default_checked
-					? true
-					: false
+			if(found_hierarchies.length < 1){
+				continue
+			}
 
-			// li element
-				const hierachy_li = ui.create_dom_element({
-					element_type	: 'li',
-					parent			: hierachy_ul
-				})
+			const typology_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'typology_label',
+				inner_html		: current_hierachy_typology.label,
+				parent			: hierachy_container
+			})
 
-			// label
-				const hierachy_label = ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'hierarchy_label',
-					inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
-					parent			: hierachy_li
-				})
-				if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'active_hierarchy',
-						inner_html		: ' [active]',
-						parent			: hierachy_label
-					})
-				}
+			// list of hierarchies
+			const hierachy_ul = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'hierachy_ul',
+				parent			: hierachy_container
+			})
 
-			// checkbox
-				const hierarchy_checkbox = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					class_name		: 'hierarchy_checkbox'
-				})
-				hierachy_label.prepend(hierarchy_checkbox)
-				hierarchy_checkbox.checked = checked ? 'checked' : ''
-				hierarchy_checkbox.addEventListener('change', function() {
+			const hierarchies_len = found_hierarchies.length
+			for (let i = hierarchies_len - 1; i >= 0; i--) {
 
-					if(hierarchy_checkbox.checked){
-						hierarchies_to_install.push(current_hierarchy.tld)
-					}else{
-						const index = hierarchies_to_install.indexOf(current_hierarchy.tld)
-						if (index !== -1) hierarchies_to_install.splice(index, 1);
+				// hierarchy object
+					const current_hierarchy = found_hierarchies[i]
+					if(current_hierarchy.type==='model'){
+						continue
 					}
-				})
 
-			// add checked to hierarchies_to_install
-				if(checked){
-					hierarchies_to_install.push(current_hierarchy.tld)
-				}
-		}//end for (let i = hierarchies_len - 1; i >= 0; i--)
+				// is_default check
+					const is_default_checked	= default_checked.find(el => el===current_hierarchy.tld)
+					const checked				= is_default_checked
+						? true
+						: false
 
+				// li element
+					const hierachy_li = ui.create_dom_element({
+						element_type	: 'li',
+						parent			: hierachy_ul
+					})
+
+				// label
+					const hierachy_label = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'hierarchy_label',
+						inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
+						parent			: hierachy_li
+					})
+					if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'active_hierarchy',
+							inner_html		: ' [active]',
+							parent			: hierachy_label
+						})
+					}
+
+				// checkbox
+					const hierarchy_checkbox = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'hierarchy_checkbox'
+					})
+					hierachy_label.prepend(hierarchy_checkbox)
+					hierarchy_checkbox.checked = checked ? 'checked' : ''
+					hierarchy_checkbox.addEventListener('change', function() {
+
+						if(hierarchy_checkbox.checked){
+							hierarchies_to_install.push(current_hierarchy.tld)
+						}else{
+							const index = hierarchies_to_install.indexOf(current_hierarchy.tld)
+							if (index !== -1) hierarchies_to_install.splice(index, 1);
+						}
+					})
+
+				// add checked to hierarchies_to_install
+					if(checked){
+						hierarchies_to_install.push(current_hierarchy.tld)
+					}
+			}//end for (let i = hierarchies_len - 1; i >= 0; i--)
+		}
 		const import_hierarchies_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'primary import_hierarchies_button',
 			inner_html		: get_label.import_hierarchies_button || ' Import hierarchies ',
-			parent			: fragment
+			parent			: hierachy_container
 		})
 		import_hierarchies_button.addEventListener('mouseup', fn_import_hierarchies)
 		async function fn_import_hierarchies(){
@@ -1321,7 +1351,7 @@ export const render_hierarchies_import_block = function(options) {
 
 			// lock button
 				import_hierarchies_button.classList.add('loading')
-				hierachy_ul.classList.add('loading')
+				hierachy_container.classList.add('loading')
 
 			// add spinner
 				const spinner = ui.create_dom_element({
@@ -1381,7 +1411,7 @@ export const render_hierarchies_import_block = function(options) {
 
 			// unlock button
 				import_hierarchies_button.classList.remove('loading')
-				hierachy_ul.classList.remove('loading')
+				hierachy_container.classList.remove('loading')
 				spinner.remove()
 		}
 
