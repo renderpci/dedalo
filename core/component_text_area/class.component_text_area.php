@@ -1689,11 +1689,9 @@ class component_text_area extends component_common {
 	/**
 	* GET_AR_RELATED_SECTIONS
 	* get the ar_related_section object to use for persons tags
-	* @return
+	* @return object related_sections
 	*/
 	public function get_related_sections() : object {
-
-		// $related_section = new stdClass();
 
 		$current_locator = new locator();
 			$current_locator->section_tipo	= $this->section_tipo;
@@ -1713,7 +1711,7 @@ class component_text_area extends component_common {
 			'related_list',
 			$this->lang
 		);
-		$related_section = $related_sections->get_json();
+		$related_sections = $sections->get_json();
 
 
 		return $related_section;

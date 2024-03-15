@@ -2293,9 +2293,9 @@ abstract class component_common extends common {
 				// create the section instance and set current row as his own data
 				// it prevent to call multiple times to DDBB
 				$section = section::get_instance(
-						$row->section_id,
-						$row->section_tipo
-					);
+					$row->section_id,
+					$row->section_tipo
+				);
 				$section->set_dato($row->datos);
 
 				// get the locator of the current row
@@ -2308,6 +2308,17 @@ abstract class component_common extends common {
 
 				$ar_label = [];
 				foreach ($show_ddo_map as $ddo) {
+
+					// ignore non component ddo
+					if (strpos($ddo->model, 'component_')===false) {
+						debug_log(__METHOD__
+							. " Ignored non component model ddo in get_list_of_values " . PHP_EOL
+							. ' model: ' . to_string($ddo->model) . PHP_EOL
+							. ' ddo: ' . to_string($ddo)
+							, logger::ERROR
+						);
+						continue;
+					}
 
 					// create the component to be resolved
 					$current_component = component_common::get_instance(
@@ -2361,6 +2372,7 @@ abstract class component_common extends common {
 
 				$result[] = $item;
 			}
+
 		}else{
 
 			debug_log(__METHOD__
