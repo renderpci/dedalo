@@ -434,9 +434,11 @@ abstract class common {
 					. " Error. Don't use non section tipo to calculate matrix_table. Use always section_tipo". PHP_EOL
 					. " tipo: $tipo " . PHP_EOL
 					. " model: $model_name" . PHP_EOL
-					. ' bt: ' . to_string( debug_backtrace()[0] )
+					. ' bt 0: ' . to_string( debug_backtrace()[0] ) . PHP_EOL
+					// . ' bt all: ' . to_string( debug_backtrace() )
 					, logger::ERROR
 				);
+
 				return null;
 			}
 
@@ -2754,9 +2756,24 @@ abstract class common {
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
 		// debug
-			// if (to_string($section_tipo)==='self') {
-			// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
-			// }
+			if(SHOW_DEBUG===true) {
+				// if (to_string($section_tipo)==='self') {
+				// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
+				// }
+			}
+
+		// check section tipo model
+			$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+			if ($section_model!=='section') {
+				// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
+				debug_log(__METHOD__
+					. " Error. Invalid section tipo " . PHP_EOL
+					. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
+					. ' section_model: ' . to_string($section_model) . PHP_EOL
+					. ' current tipo: '  . to_string($tipo)
+					, logger::ERROR
+				);
+			}
 
 		// cache
 			static $resolved_request_properties_parsed = [];
@@ -2883,18 +2900,18 @@ abstract class common {
 								: [$section_tipo];
 
 						// parsed_item (section_tipo). normalized ddo with tipo and label
-							$parsed_item->sqo->section_tipo = array_map(function($section_tipo){
+							$parsed_item->sqo->section_tipo = array_map(function($current_section_tipo){
 								$ddo = new dd_object();
-									$ddo->set_tipo($section_tipo);
-									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-									$ddo->set_color(RecordObj_dd::get_color($section_tipo));
-									$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+									$ddo->set_tipo($current_section_tipo);
+									$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+									$ddo->set_color(RecordObj_dd::get_color($current_section_tipo));
+									$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
 								// buttons. Add button_new and button_delete to determine new and delete permissions on client
 									$buttons = [];
 									// button_new
 										$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-											$section_tipo,
+											$current_section_tipo,
 											['button_new'],
 											true, // bool from_cache
 											true, // bool resolve_virtual
@@ -2905,12 +2922,12 @@ abstract class common {
 										if (isset($ar_button_new[0])) {
 											$buttons[] = (object)[
 												'model'			=> 'button_new',
-												'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
 											];
 										}
 									// button_delete
 										$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-											$section_tipo,
+											$current_section_tipo,
 											['button_delete'],
 											true, // bool from_cache
 											true, // bool resolve_virtual
@@ -2921,14 +2938,14 @@ abstract class common {
 										if (isset($ar_button_delete[0])) {
 											$buttons[] = (object)[
 												'model'			=> 'button_delete',
-												'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
 											];
 										}
 									// set buttons
 									$ddo->set_buttons($buttons);
 
 								// Matrix table. set matrix table of the section to determinate if the section is editable or private (shared and not editable by users)
-									$ddo->set_matrix_table(common::get_matrix_table_from_tipo($section_tipo));
+									$ddo->set_matrix_table(common::get_matrix_table_from_tipo($current_section_tipo));
 
 								return $ddo;
 							}, (array)$ar_section_tipo);
@@ -3576,18 +3593,18 @@ abstract class common {
 
 				// sqo section_tipo as ddo
 					$ar_section_tipo	= is_array($target_section_tipo) ? $target_section_tipo : [$target_section_tipo];
-					$ddo_section_tipo	= array_map(function($section_tipo){
+					$ddo_section_tipo	= array_map(function($current_section_tipo){
 						$ddo = new dd_object();
-							$ddo->set_tipo($section_tipo);
-							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true, true));
-							$ddo->set_color(RecordObj_dd::get_color($section_tipo));
-							$ddo->set_permissions(common::get_permissions($section_tipo, $section_tipo));
+							$ddo->set_tipo($current_section_tipo);
+							$ddo->set_label(RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true, true));
+							$ddo->set_color(RecordObj_dd::get_color($current_section_tipo));
+							$ddo->set_permissions(common::get_permissions($current_section_tipo, $current_section_tipo));
 
 						// buttons. Add button_new and button_delete to determine new and delete permissions on client
 							$buttons = [];
 							// button_new
 								$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-									$section_tipo,
+									$current_section_tipo,
 									['button_new'],
 									true, // bool from_cache
 									true, // bool resolve_virtual
@@ -3598,12 +3615,12 @@ abstract class common {
 								if (isset($ar_button_new[0])) {
 									$buttons[] = (object)[
 										'model'			=> 'button_new',
-										'permissions'	=> common::get_permissions($section_tipo, $ar_button_new[0])
+										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
 									];
 								}
 							// button_delete
 								$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-									$section_tipo,
+									$current_section_tipo,
 									['button_delete'],
 									true, // bool from_cache
 									true, // bool resolve_virtual
@@ -3614,14 +3631,14 @@ abstract class common {
 								if (isset($ar_button_delete[0])) {
 									$buttons[] = (object)[
 										'model'			=> 'button_delete',
-										'permissions'	=> common::get_permissions($section_tipo, $ar_button_delete[0])
+										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
 									];
 								}
 							// set buttons
 							$ddo->set_buttons($buttons);
 
 						// Matrix table. set matrix table of the section to determinate if the section is editable or private (shared and not editable by users)
-							$ddo->set_matrix_table(common::get_matrix_table_from_tipo($section_tipo));
+							$ddo->set_matrix_table(common::get_matrix_table_from_tipo($current_section_tipo));
 
 						return $ddo;
 					}, $ar_section_tipo);
