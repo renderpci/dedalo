@@ -1704,17 +1704,17 @@ class component_text_area extends component_common {
 			$sqo->filter_by_locators	= [$current_locator];
 
 		// sections. Get the related_list of the related sections it include some information component to identify the related section.
-		$related_sections = sections::get_instance(
+		$sections = sections::get_instance(
 			null,
 			$sqo,
-			$this->tipo,
+			$this->section_tipo, // string caller_tipo
 			'related_list',
 			$this->lang
 		);
 		$related_sections = $sections->get_json();
 
 
-		return $related_section;
+		return $related_sections;
 	}//end get_ar_related_sections
 
 
