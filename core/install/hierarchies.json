@@ -1,0 +1,1387 @@
+[
+	{
+		"tld": "AF",
+		"label": "Afghanistan",
+		"typology": 2
+	},
+	{
+		"tld": "AD",
+		"label": "Andorra",
+		"typology": 2
+	},
+	{
+		"tld": "AE",
+		"label": "United Arab Emirates",
+		"typology": 2
+	},
+	{
+		"tld": "AG",
+		"label": "Ancient and Barbuda",
+		"typology": 2
+	},
+	{
+		"tld": "AI",
+		"label": "Anguila",
+		"typology": 2
+	},
+	{
+		"tld": "AL",
+		"label": "Albania",
+		"typology": 2
+	},
+	{
+		"tld": "AM",
+		"label": "Armenia",
+		"typology": 2
+	},
+	{
+		"tld": "AN",
+		"label": "Netherlands Antilles",
+		"typology": 2
+	},
+	{
+		"tld": "AO",
+		"label": "Angola",
+		"typology": 2
+	},
+	{
+		"tld": "AQ",
+		"label": "Antarctica",
+		"typology": 2
+	},
+	{
+		"tld": "AR",
+		"label": "Argentina",
+		"typology": 2
+	},
+	{
+		"tld": "AS",
+		"label": "American Samoa",
+		"typology": 2
+	},
+	{
+		"tld": "AT",
+		"label": "Austria",
+		"typology": 2
+	},
+	{
+		"tld": "AU",
+		"label": "Australia",
+		"typology": 2
+	},
+	{
+		"tld": "AW",
+		"label": "Aruba",
+		"typology": 2
+	},
+	{
+		"tld": "AX",
+		"label": "Åland",
+		"typology": 2
+	},
+	{
+		"tld": "AZ",
+		"label": "Azerbaijan",
+		"typology": 2
+	},
+	{
+		"tld": "BA",
+		"label": "Bosnia and Herzegovina",
+		"typology": 2
+	},
+	{
+		"tld": "BB",
+		"label": "Barbados",
+		"typology": 2
+	},
+	{
+		"tld": "BD",
+		"label": "Bangladesh",
+		"typology": 2
+	},
+	{
+		"tld": "BE",
+		"label": "Belgium",
+		"typology": 2
+	},
+	{
+		"tld": "BF",
+		"label": "Burkina Faso",
+		"typology": 2
+	},
+	{
+		"tld": "BG",
+		"label": "Bulgaria",
+		"typology": 2
+	},
+	{
+		"tld": "BH",
+		"label": "Bahrain",
+		"typology": 2
+	},
+	{
+		"tld": "BI",
+		"label": "Burundi",
+		"typology": 2
+	},
+	{
+		"tld": "BJ",
+		"label": "Benin",
+		"typology": 2
+	},
+	{
+		"tld": "BM",
+		"label": "Bermuda",
+		"typology": 2
+	},
+	{
+		"tld": "BN",
+		"label": "Brunei",
+		"typology": 2
+	},
+	{
+		"tld": "BO",
+		"label": "Bolivia",
+		"typology": 2
+	},
+	{
+		"tld": "BR",
+		"label": "Brazil",
+		"typology": 2
+	},
+	{
+		"tld": "BS",
+		"label": "Bahamas",
+		"typology": 2
+	},
+	{
+		"tld": "BT",
+		"label": "Bhutan",
+		"typology": 2
+	},
+	{
+		"tld": "BV",
+		"label": "Bouvet Island",
+		"typology": 2
+	},
+	{
+		"tld": "BW",
+		"label": "Botswana",
+		"typology": 2
+	},
+	{
+		"tld": "BY",
+		"label": "Belarus",
+		"typology": 2
+	},
+	{
+		"tld": "BZ",
+		"label": "Belize",
+		"typology": 2
+	},
+	{
+		"tld": "CA",
+		"label": "Canada",
+		"typology": 2
+	},
+	{
+		"tld": "CC",
+		"label": "Cocos (Keeling) Islands",
+		"typology": 2
+	},
+	{
+		"tld": "CD",
+		"label": "Democratic Republic of the Congo",
+		"typology": 2
+	},
+	{
+		"tld": "CF",
+		"label": "Central African Republic",
+		"typology": 2
+	},
+	{
+		"tld": "CG",
+		"label": "Republic of the Congo",
+		"typology": 2
+	},
+	{
+		"tld": "CH",
+		"label": "Switzerland",
+		"typology": 2
+	},
+	{
+		"tld": "CI",
+		"label": "Ivory Coast",
+		"typology": 2
+	},
+	{
+		"tld": "CK",
+		"label": "Cook Islands",
+		"typology": 2
+	},
+	{
+		"tld": "CL",
+		"label": "Chile",
+		"typology": 2
+	},
+	{
+		"tld": "CM",
+		"label": "Cameroon",
+		"typology": 2
+	},
+	{
+		"tld": "CN",
+		"label": "China",
+		"typology": 2
+	},
+	{
+		"tld": "CO",
+		"label": "Colombia",
+		"typology": 2
+	},
+	{
+		"tld": "CR",
+		"label": "Costa Rica",
+		"typology": 2
+	},
+	{
+		"tld": "CU",
+		"label": "Cuba",
+		"typology": 2
+	},
+	{
+		"tld": "CV",
+		"label": "Cape Verde",
+		"typology": 2
+	},
+	{
+		"tld": "CX",
+		"label": "Christmas Island",
+		"typology": 2
+	},
+	{
+		"tld": "CY",
+		"label": "Cyprus",
+		"typology": 2
+	},
+	{
+		"tld": "CZ",
+		"label": "Czech Republic",
+		"typology": 2
+	},
+	{
+		"tld": "DE",
+		"label": "Germany",
+		"typology": 2
+	},
+	{
+		"tld": "DJ",
+		"label": "Djibouti",
+		"typology": 2
+	},
+	{
+		"tld": "DK",
+		"label": "Denmark",
+		"typology": 2
+	},
+	{
+		"tld": "DM",
+		"label": "Dominica",
+		"typology": 2
+	},
+	{
+		"tld": "DO",
+		"label": "Dominican Republic",
+		"typology": 2
+	},
+	{
+		"tld": "DZ",
+		"label": "Algeria",
+		"typology": 2
+	},
+	{
+		"tld": "EC",
+		"label": "Ecuador",
+		"typology": 2
+	},
+	{
+		"tld": "EE",
+		"label": "Estonia",
+		"typology": 2
+	},
+	{
+		"tld": "EG",
+		"label": "Egypt",
+		"typology": 2
+	},
+	{
+		"tld": "EH",
+		"label": "Sahrawi Arab Democratic Republic",
+		"typology": 2
+	},
+	{
+		"tld": "ER",
+		"label": "Eritrea",
+		"typology": 2
+	},
+	{
+		"tld": "ES",
+		"label": "Spain",
+		"typology": 2
+	},
+	{
+		"tld": "ET",
+		"label": "Ethiopia",
+		"typology": 2
+	},
+	{
+		"tld": "FI",
+		"label": "Finland",
+		"typology": 2
+	},
+	{
+		"tld": "FJ",
+		"label": "Fiji",
+		"typology": 2
+	},
+	{
+		"tld": "FK",
+		"label": "Falkland Islands (Islas Malvinas)",
+		"typology": 2
+	},
+	{
+		"tld": "FM",
+		"label": "Federated States of Micronesia",
+		"typology": 2
+	},
+	{
+		"tld": "FO",
+		"label": "Faroe Islands",
+		"typology": 2
+	},
+	{
+		"tld": "FR",
+		"label": "France",
+		"typology": 2
+	},
+	{
+		"tld": "GA",
+		"label": "Gabon",
+		"typology": 2
+	},
+	{
+		"tld": "GB",
+		"label": "United Kingdom",
+		"typology": 2
+	},
+	{
+		"tld": "GD",
+		"label": "Granada",
+		"typology": 2
+	},
+	{
+		"tld": "GE",
+		"label": "Georgia",
+		"typology": 2
+	},
+	{
+		"tld": "GF",
+		"label": "French Guiana",
+		"typology": 2
+	},
+	{
+		"tld": "GG",
+		"label": "Guernsey",
+		"typology": 2
+	},
+	{
+		"tld": "GH",
+		"label": "Ghana",
+		"typology": 2
+	},
+	{
+		"tld": "GI",
+		"label": "Gibraltar",
+		"typology": 2
+	},
+	{
+		"tld": "GL",
+		"label": "Greenland",
+		"typology": 2
+	},
+	{
+		"tld": "GM",
+		"label": "Gambia",
+		"typology": 2
+	},
+	{
+		"tld": "GN",
+		"label": "Guinea",
+		"typology": 2
+	},
+	{
+		"tld": "GP",
+		"label": "Guadalupe",
+		"typology": 2
+	},
+	{
+		"tld": "GQ",
+		"label": "Equatorial Guinea",
+		"typology": 2
+	},
+	{
+		"tld": "GR",
+		"label": "Greece",
+		"typology": 2
+	},
+	{
+		"tld": "GS",
+		"label": "South Georgia and the South Sandwich Islands",
+		"typology": 2
+	},
+	{
+		"tld": "GT",
+		"label": "Guatemala",
+		"typology": 2
+	},
+	{
+		"tld": "GU",
+		"label": "Guam",
+		"typology": 2
+	},
+	{
+		"tld": "GW",
+		"label": "Guinea-Bissau",
+		"typology": 2
+	},
+	{
+		"tld": "GY",
+		"label": "Guyana",
+		"typology": 2
+	},
+	{
+		"tld": "HK",
+		"label": "Hong Kong",
+		"typology": 2
+	},
+	{
+		"tld": "HM",
+		"label": "Heard Island and McDonald Islands",
+		"typology": 2
+	},
+	{
+		"tld": "HN",
+		"label": "Honduras",
+		"typology": 2
+	},
+	{
+		"tld": "HR",
+		"label": "Croatia",
+		"typology": 2
+	},
+	{
+		"tld": "HT",
+		"label": "Haiti",
+		"typology": 2
+	},
+	{
+		"tld": "HU",
+		"label": "Hungary",
+		"typology": 2
+	},
+	{
+		"tld": "ID",
+		"label": "Indonesia",
+		"typology": 2
+	},
+	{
+		"tld": "IE",
+		"label": "Ireland",
+		"typology": 2
+	},
+	{
+		"tld": "IL",
+		"label": "Israel",
+		"typology": 2
+	},
+	{
+		"tld": "IM",
+		"label": "Isle of Man",
+		"typology": 2
+	},
+	{
+		"tld": "IN",
+		"label": "India",
+		"typology": 2
+	},
+	{
+		"tld": "IO",
+		"label": "British Indian Ocean Territory",
+		"typology": 2
+	},
+	{
+		"tld": "IQ",
+		"label": "Iraq",
+		"typology": 2
+	},
+	{
+		"tld": "IR",
+		"label": "Iran",
+		"typology": 2
+	},
+	{
+		"tld": "IS",
+		"label": "Iceland",
+		"typology": 2
+	},
+	{
+		"tld": "IT",
+		"label": "Italy",
+		"typology": 2
+	},
+	{
+		"tld": "JE",
+		"label": "Jersey",
+		"typology": 2
+	},
+	{
+		"tld": "JM",
+		"label": "Jamaica",
+		"typology": 2
+	},
+	{
+		"tld": "JO",
+		"label": "Jordan",
+		"typology": 2
+	},
+	{
+		"tld": "JP",
+		"label": "Japan",
+		"typology": 2
+	},
+	{
+		"tld": "KE",
+		"label": "Kenya",
+		"typology": 2
+	},
+	{
+		"tld": "KG",
+		"label": "Kyrgyz Republic",
+		"typology": 2
+	},
+	{
+		"tld": "KH",
+		"label": "Cambodia",
+		"typology": 2
+	},
+	{
+		"tld": "KI",
+		"label": "Kiribati",
+		"typology": 2
+	},
+	{
+		"tld": "KM",
+		"label": "Comoros",
+		"typology": 2
+	},
+	{
+		"tld": "KN",
+		"label": "Saint Kitts and Nevis",
+		"typology": 2
+	},
+	{
+		"tld": "KP",
+		"label": "North Korea",
+		"typology": 2
+	},
+	{
+		"tld": "KR",
+		"label": "South Korea",
+		"typology": 2
+	},
+	{
+		"tld": "KW",
+		"label": "Kuwait",
+		"typology": 2
+	},
+	{
+		"tld": "KY",
+		"label": "Cayman Islands",
+		"typology": 2
+	},
+	{
+		"tld": "KZ",
+		"label": "Kazakhstan",
+		"typology": 2
+	},
+	{
+		"tld": "LA",
+		"label": "Laos",
+		"typology": 2
+	},
+	{
+		"tld": "LB",
+		"label": "Lebanon",
+		"typology": 2
+	},
+	{
+		"tld": "LC",
+		"label": "Saint Lucia",
+		"typology": 2
+	},
+	{
+		"tld": "LI",
+		"label": "Liechtenstein",
+		"typology": 2
+	},
+	{
+		"tld": "LK",
+		"label": "Sri Lanka",
+		"typology": 2
+	},
+	{
+		"tld": "LR",
+		"label": "Liberia",
+		"typology": 2
+	},
+	{
+		"tld": "LS",
+		"label": "Lesotho",
+		"typology": 2
+	},
+	{
+		"tld": "LT",
+		"label": "Lithuania",
+		"typology": 2
+	},
+	{
+		"tld": "LU",
+		"label": "Luxembourg",
+		"typology": 2
+	},
+	{
+		"tld": "LV",
+		"label": "Latvia",
+		"typology": 2
+	},
+	{
+		"tld": "LY",
+		"label": "Libya",
+		"typology": 2
+	},
+	{
+		"tld": "MA",
+		"label": "Morocco",
+		"typology": 2
+	},
+	{
+		"tld": "MC",
+		"label": "Monaco",
+		"typology": 2
+	},
+	{
+		"tld": "MD",
+		"label": "Moldova",
+		"typology": 2
+	},
+	{
+		"tld": "ME",
+		"label": "Montenegro",
+		"typology": 2
+	},
+	{
+		"tld": "MG",
+		"label": "Madagascar",
+		"typology": 2
+	},
+	{
+		"tld": "MH",
+		"label": "Marshall Islands",
+		"typology": 2
+	},
+	{
+		"tld": "MK",
+		"label": "Macedonia",
+		"typology": 2
+	},
+	{
+		"tld": "ML",
+		"label": "Mali",
+		"typology": 2
+	},
+	{
+		"tld": "MM",
+		"label": "Myanmar",
+		"typology": 2
+	},
+	{
+		"tld": "MN",
+		"label": "Mongolia",
+		"typology": 2
+	},
+	{
+		"tld": "MO",
+		"label": "Macau",
+		"typology": 2
+	},
+	{
+		"tld": "MP",
+		"label": "Northern Mariana Islands",
+		"typology": 2
+	},
+	{
+		"tld": "MQ",
+		"label": "Martinique",
+		"typology": 2
+	},
+	{
+		"tld": "MR",
+		"label": "Mauritania",
+		"typology": 2
+	},
+	{
+		"tld": "MS",
+		"label": "Montserrat",
+		"typology": 2
+	},
+	{
+		"tld": "MT",
+		"label": "Malta",
+		"typology": 2
+	},
+	{
+		"tld": "MU",
+		"label": "Mauritius",
+		"typology": 2
+	},
+	{
+		"tld": "MV",
+		"label": "Maldives",
+		"typology": 2
+	},
+	{
+		"tld": "MW",
+		"label": "Malawi",
+		"typology": 2
+	},
+	{
+		"tld": "MX",
+		"label": "Mexico",
+		"typology": 2
+	},
+	{
+		"tld": "MY",
+		"label": "Malaysia",
+		"typology": 2
+	},
+	{
+		"tld": "MZ",
+		"label": "Mozambique",
+		"typology": 2
+	},
+	{
+		"tld": "NA",
+		"label": "Namibia",
+		"typology": 2
+	},
+	{
+		"tld": "NC",
+		"label": "New Caledonia",
+		"typology": 2
+	},
+	{
+		"tld": "NE",
+		"label": "Niger",
+		"typology": 2
+	},
+	{
+		"tld": "NF",
+		"label": "Norfolk",
+		"typology": 2
+	},
+	{
+		"tld": "NG",
+		"label": "Nigeria",
+		"typology": 2
+	},
+	{
+		"tld": "NI",
+		"label": "Nicaragua",
+		"typology": 2
+	},
+	{
+		"tld": "NL",
+		"label": "Netherlands",
+		"typology": 2
+	},
+	{
+		"tld": "NO",
+		"label": "Norway",
+		"typology": 2
+	},
+	{
+		"tld": "NP",
+		"label": "Nepal",
+		"typology": 2
+	},
+	{
+		"tld": "NR",
+		"label": "Nauru",
+		"typology": 2
+	},
+	{
+		"tld": "NU",
+		"label": "Niue",
+		"typology": 2
+	},
+	{
+		"tld": "NZ",
+		"label": "New Zealand",
+		"typology": 2
+	},
+	{
+		"tld": "OM",
+		"label": "Oman",
+		"typology": 2
+	},
+	{
+		"tld": "PA",
+		"label": "Panama",
+		"typology": 2
+	},
+	{
+		"tld": "PE",
+		"label": "Peru",
+		"typology": 2
+	},
+	{
+		"tld": "PF",
+		"label": "French Polynesia",
+		"typology": 2
+	},
+	{
+		"tld": "PG",
+		"label": "Papua New Guinea",
+		"typology": 2
+	},
+	{
+		"tld": "PH",
+		"label": "Philippines",
+		"typology": 2
+	},
+	{
+		"tld": "PK",
+		"label": "Pakistan",
+		"typology": 2
+	},
+	{
+		"tld": "PL",
+		"label": "Poland",
+		"typology": 2
+	},
+	{
+		"tld": "PM",
+		"label": "Saint Pierre and Miquelon",
+		"typology": 2
+	},
+	{
+		"tld": "PN",
+		"label": "Pitcairn Islands",
+		"typology": 2
+	},
+	{
+		"tld": "PR",
+		"label": "Puerto Rico",
+		"typology": 2
+	},
+	{
+		"tld": "PS",
+		"label": "Palestine",
+		"typology": 2
+	},
+	{
+		"tld": "PT",
+		"label": "Portugal",
+		"typology": 2
+	},
+	{
+		"tld": "PW",
+		"label": "Palau",
+		"typology": 2
+	},
+	{
+		"tld": "PY",
+		"label": "Paraguay",
+		"typology": 2
+	},
+	{
+		"tld": "QA",
+		"label": "Qatar",
+		"typology": 2
+	},
+	{
+		"tld": "RE",
+		"label": "Réunion",
+		"typology": 2
+	},
+	{
+		"tld": "RO",
+		"label": "Romania",
+		"typology": 2
+	},
+	{
+		"tld": "RS",
+		"label": "Serbia",
+		"typology": 2
+	},
+	{
+		"tld": "RW",
+		"label": "Rwanda",
+		"typology": 2
+	},
+	{
+		"tld": "SA",
+		"label": "Saudi Arabia",
+		"typology": 2
+	},
+	{
+		"tld": "SB",
+		"label": "Solomon Islands",
+		"typology": 2
+	},
+	{
+		"tld": "SC",
+		"label": "Seychelles",
+		"typology": 2
+	},
+	{
+		"tld": "SD",
+		"label": "Sudan",
+		"typology": 2
+	},
+	{
+		"tld": "SE",
+		"label": "Sweden",
+		"typology": 2
+	},
+	{
+		"tld": "SG",
+		"label": "Singapore",
+		"typology": 2
+	},
+	{
+		"tld": "SH",
+		"label": "Saint Helena",
+		"typology": 2
+	},
+	{
+		"tld": "SI",
+		"label": "Slovenia",
+		"typology": 2
+	},
+	{
+		"tld": "SJ",
+		"label": "Svalbard and Jan Mayen",
+		"typology": 2
+	},
+	{
+		"tld": "SK",
+		"label": "Slovakia",
+		"typology": 2
+	},
+	{
+		"tld": "SL",
+		"label": "Sierra Leone",
+		"typology": 2
+	},
+	{
+		"tld": "SM",
+		"label": "San Marino",
+		"typology": 2
+	},
+	{
+		"tld": "SN",
+		"label": "Senegal",
+		"typology": 2
+	},
+	{
+		"tld": "SO",
+		"label": "Somalia",
+		"typology": 2
+	},
+	{
+		"tld": "SR",
+		"label": "Suriname",
+		"typology": 2
+	},
+	{
+		"tld": "ST",
+		"label": "São Tomé and Príncipe",
+		"typology": 2
+	},
+	{
+		"tld": "SV",
+		"label": "El Salvador",
+		"typology": 2
+	},
+	{
+		"tld": "SY",
+		"label": "Syria",
+		"typology": 2
+	},
+	{
+		"tld": "SZ",
+		"label": "Swaziland",
+		"typology": 2
+	},
+	{
+		"tld": "TC",
+		"label": "Turks and Caicos Islands",
+		"typology": 2
+	},
+	{
+		"tld": "TD",
+		"label": "Chad",
+		"typology": 2
+	},
+	{
+		"tld": "TF",
+		"label": "French Southern and Antarctic Lands",
+		"typology": 2
+	},
+	{
+		"tld": "TG",
+		"label": "Togo",
+		"typology": 2
+	},
+	{
+		"tld": "TH",
+		"label": "Thailand",
+		"typology": 2
+	},
+	{
+		"tld": "TJ",
+		"label": "Tajikistan",
+		"typology": 2
+	},
+	{
+		"tld": "TK",
+		"label": "Tokelau",
+		"typology": 2
+	},
+	{
+		"tld": "TL",
+		"label": "Timor-Leste",
+		"typology": 2
+	},
+	{
+		"tld": "TM",
+		"label": "Turkmenistan",
+		"typology": 2
+	},
+	{
+		"tld": "TN",
+		"label": "Tunisia",
+		"typology": 2
+	},
+	{
+		"tld": "TO",
+		"label": "Tonga",
+		"typology": 2
+	},
+	{
+		"tld": "TR",
+		"label": "Turkey",
+		"typology": 2
+	},
+	{
+		"tld": "TT",
+		"label": "Trinidad and Tobago",
+		"typology": 2
+	},
+	{
+		"tld": "TV",
+		"label": "Tuvalu",
+		"typology": 2
+	},
+	{
+		"tld": "TW",
+		"label": "Taiwan",
+		"typology": 2
+	},
+	{
+		"tld": "TZ",
+		"label": "Tanzania",
+		"typology": 2
+	},
+	{
+		"tld": "UA",
+		"label": "Ukraine",
+		"typology": 2
+	},
+	{
+		"tld": "UG",
+		"label": "Uganda",
+		"typology": 2
+	},
+	{
+		"tld": "UM",
+		"label": "United States Minor Outlying Islands",
+		"typology": 2
+	},
+	{
+		"tld": "US",
+		"label": "United States",
+		"typology": 2
+	},
+	{
+		"tld": "UY",
+		"label": "Uruguay",
+		"typology": 2
+	},
+	{
+		"tld": "UZ",
+		"label": "Uzbekistan",
+		"typology": 2
+	},
+	{
+		"tld": "VA",
+		"label": "Vatican City",
+		"typology": 2
+	},
+	{
+		"tld": "VC",
+		"label": "Saint Vincent and the Grenadines",
+		"typology": 2
+	},
+	{
+		"tld": "VE",
+		"label": "Venezuela",
+		"typology": 2
+	},
+	{
+		"tld": "VG",
+		"label": "British Virgin Islands",
+		"typology": 2
+	},
+	{
+		"tld": "VI",
+		"label": "United States Virgin Islands",
+		"typology": 2
+	},
+	{
+		"tld": "VN",
+		"label": "Vietnam",
+		"typology": 2
+	},
+	{
+		"tld": "VU",
+		"label": "Vanuatu",
+		"typology": 2
+	},
+	{
+		"tld": "WF",
+		"label": "Wallis and Futuna",
+		"typology": 2
+	},
+	{
+		"tld": "WS",
+		"label": "Samoa",
+		"typology": 2
+	},
+	{
+		"tld": "YE",
+		"label": "Yemen",
+		"typology": 2
+	},
+	{
+		"tld": "YT",
+		"label": "Mayotte",
+		"typology": 2
+	},
+	{
+		"tld": "ZA",
+		"label": "South Africa",
+		"typology": 2
+	},
+	{
+		"tld": "ZM",
+		"label": "Zambia",
+		"typology": 2
+	},
+	{
+		"tld": "ZW",
+		"label": "Zimbabwe",
+		"typology": 2
+	},
+	{
+		"tld": "XK",
+		"label": "Kosovo",
+		"typology": 2
+	},
+	{
+		"tld": "RU",
+		"label": "Russia",
+		"typology": 2
+	},
+	{
+		"tld": "LG",
+		"label": "Languages",
+		"typology": 3
+	},
+	{
+		"tld": "special",
+		"label": "Special",
+		"typology": 5
+	},
+	{
+		"tld": "DS",
+		"label": "Semantic",
+		"typology": 4
+	},
+	{
+		"tld": "TS",
+		"label": "Thematic descriptors",
+		"typology": 1
+	},
+	{
+		"tld": "DC",
+		"label": "Chronological descriptors",
+		"typology": 1
+	},
+	{
+		"tld": "ON",
+		"label": "Onomastic descriptors",
+		"typology": 1
+	},
+	{
+		"tld": "ISAD",
+		"label": "ISAD(g)",
+		"typology": 8
+	},
+	{
+		"tld": "UBICATION",
+		"label": "Topographical",
+		"typology": 9
+	},
+	{
+		"tld": "MATERIAL",
+		"label": "Material",
+		"typology": 1
+	},
+	{
+		"tld": "TECHNIQUE",
+		"label": "Technique",
+		"typology": 1
+	},
+	{
+		"tld": "OBJECT",
+		"label": "Object",
+		"typology": 1
+	},
+	{
+		"tld": "ROLEUSR",
+		"label": "User roles",
+		"typology": 4
+	},
+	{
+		"tld": "ROLEJOB",
+		"label": "Job roles",
+		"typology": 4
+	},
+	{
+		"tld": "ROLEPOS",
+		"label": "Positon roles",
+		"typology": 4
+	},
+	{
+		"tld": "UNCERTAINTY",
+		"label": "Uncertainty reasons",
+		"typology": 4
+	},
+	{
+		"tld": "SCCMK",
+		"label": "Countermarks",
+		"typology": 7
+	},
+	{
+		"tld": "SCELL",
+		"label": "Greek",
+		"typology": 7
+	},
+	{
+		"tld": "SCTXR",
+		"label": "Iberian South-Western",
+		"typology": 7
+	},
+	{
+		"tld": "sclat",
+		"label": "Latin",
+		"typology": 7
+	},
+	{
+		"tld": "scxibm",
+		"label": "Iberian Southern Palaeohispanic",
+		"typology": 7
+	},
+	{
+		"tld": "scxibo",
+		"label": "Iberian Northern Palaeohispanic",
+		"typology": 7
+	},
+	{
+		"tld": "scxpu",
+		"label": "Punic",
+		"typology": 7
+	},
+	{
+		"tld": "scsym",
+		"label": "Symbols",
+		"typology": 7
+	},
+	{
+		"tld": "TCHI",
+		"label": "Uncertainty reasons",
+		"typology": 1
+	},
+	{
+		"tld": "fauna",
+		"label": "Fauna",
+		"typology": 11
+	},
+	{
+		"tld": "flora",
+		"label": "Flora",
+		"typology": 11
+	},
+	{
+		"tld": "pieces",
+		"label": "Position of inscriptions",
+		"typology": 1
+	},
+	{
+		"tld": "copathology",
+		"label": "Conservation pathologies",
+		"typology": 10
+	},
+	{
+		"tld": "cocause",
+		"label": "Causes of conservation",
+		"typology": 10
+	},
+	{
+		"tld": "cotreatment",
+		"label": "Conservation treatments",
+		"typology": 10
+	},
+	{
+		"tld": "coanalysis",
+		"label": "Conservation analysis",
+		"typology": 10
+	},
+	{
+		"tld": "comaterial",
+		"label": "Conservation materials",
+		"typology": 10
+	}
+]
