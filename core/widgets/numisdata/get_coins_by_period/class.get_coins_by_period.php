@@ -158,10 +158,8 @@ class get_coins_by_period extends widget_common {
 					$current_data->value 	= $$current_id ?? null;
 				$data[] = $current_data;
 			}
-
-
 		}//foreach ipo
-			dump($data, ' data +---------+ '.to_string());
+
 		return $data;
 	}//end get_dato
 
