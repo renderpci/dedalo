@@ -384,7 +384,7 @@ abstract class backup {
 
 		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
 		// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
-		$command_base = DB_BIN_PATH . 'psql ' . DBi::get_connection_string();
+		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
 		switch ($table) {
 
@@ -968,13 +968,15 @@ abstract class backup {
 					$path_file 	= $path.'/'.$file_name;
 					$res1 		= backup::copy_from_file($table, $path_file, $tld);
 					if (empty($res1)) {
-						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
-						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						// $load_with_errors=true;
+						$msg .= "<br>Error on import table: '$table' - tld: '$tld' - copy_from_file: '$path_file'";
 						if(SHOW_DEBUG===true) {
 							$msg .= "<pre>".print_r($res1,true)."</pre>";
 						}
-
+						debug_log(
+							__METHOD__." $msg ".to_string($res1)
+							, logger::ERROR
+						);
+						// $load_with_errors=true;
 						$response->result	= false;
 						$response->msg		.= $msg;
 						$response->errors[]	= "Error on import $table {$tld}";
