@@ -1687,8 +1687,11 @@ abstract class common {
 					// if target section is a shared section, remove the button edit and button list of the interface
 						$ar_target_section_ddo = $this->get_ar_target_section_ddo();
 
+						// user id
+						$user_id_logged = get_user_id();
+
 						foreach ($ar_target_section_ddo as $current_section_ddo) {
-							if($current_section_ddo->matrix_table && $current_section_ddo->matrix_table==='matrix_dd'){
+							if($current_section_ddo->matrix_table && $current_section_ddo->matrix_table==='matrix_dd' && $user_id_logged!=DEDALO_SUPERUSER){
 
 								if(!isset($properties->show_interface)){
 									$properties->show_interface = new stdClass();
