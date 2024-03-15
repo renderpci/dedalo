@@ -68,7 +68,7 @@ const get_content_data_edit = async function(self) {
 
 	// short vars
 		const value					= self.value || {}
-		const export_hierarchy_path	= value.export_hierarchy_path || 'unknown'
+		const export_hierarchy_path	= value.export_hierarchy_path || null
 		const confirm_text			= value.confirm_text || 'Sure?'
 
 	// content_data
@@ -76,8 +76,19 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
+	// export_hierarchy_path check
+		if (!export_hierarchy_path) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'info_text',
+				inner_html		: `To enable exporting, define var EXPORT_HIERARCHY_PATH in the configuration file`,
+				parent			: content_data
+			})
+			return content_data
+		}
+
 	// info
-		const info = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
 			inner_html		: `Creates files like es1.copy.gz in /install/import/hierarchy (for MASTER toponymy export)`,
@@ -110,11 +121,11 @@ const get_content_data_edit = async function(self) {
 					parent			: config_grid
 				})
 			}
-			// structure_from_server
-				add_to_grid('Config:', '')
-				add_to_grid('export_hierarchy_path: ', export_hierarchy_path)
+			// add lines to config_grid container
+			add_to_grid('Config:', '')
+			add_to_grid('export_hierarchy_path: ', export_hierarchy_path)
 
-		// form init
+	// form init
 		self.caller.init_form({
 			submit_label	: 'Export hierarchy',
 			confirm_text	: confirm_text,
@@ -133,7 +144,6 @@ const get_content_data_edit = async function(self) {
 				options	: null
 			}
 		})
-
 
 	// add at end body_response
 		content_data.appendChild(body_response)

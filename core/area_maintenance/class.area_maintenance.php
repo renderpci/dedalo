@@ -211,7 +211,9 @@ class area_maintenance extends area_common {
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
 				$item->value	= (object)[
-					'export_hierarchy_path' => EXPORT_HIERARCHY_PATH
+					'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
+						? EXPORT_HIERARCHY_PATH
+						: null)
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
