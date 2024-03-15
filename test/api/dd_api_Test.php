@@ -394,7 +394,7 @@ final class dd_api_Test extends TestCase {
 				        "full_count": false,
 				        "filter_by_locators": [
 				            {
-				                "section_tipo": "test17",
+				                "section_tipo": "test3",
 				                "section_id": "1"
 				            }
 				        ]
@@ -408,7 +408,8 @@ final class dd_api_Test extends TestCase {
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
-				'expected running without errors'
+				'expected running without errors ' . PHP_EOL
+					.to_string($_ENV['DEDALO_LAST_ERROR'])
 			);
 
 			$this->assertTrue(
