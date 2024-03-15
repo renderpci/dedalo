@@ -134,8 +134,9 @@ abstract class backup {
 				}
 
 			// command base. Export the database and output the status to the page
-				$port_str	= !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-				$command	= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_str. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+				// $port_str = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+				// $command	= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_str. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
+				$command = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
 
 			if($skip_backup_time_range===true) {
 
@@ -321,8 +322,9 @@ abstract class backup {
 			}
 
 		// command
-			$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-			$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
+			// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+			// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN . $port_command . ' -h '.DEDALO_HOSTNAME_CONN;
+			$command_base = DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
 			switch ($table) {
 
 				case 'jer_dd':
@@ -380,9 +382,10 @@ abstract class backup {
 
 		$command_history = array();
 
-		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		$command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
-      	#$command_base = DB_BIN_PATH.'psql -h '.DEDALO_HOSTNAME_CONN.' -p '.DEDALO_DB_PORT_CONN. ' -U '.DEDALO_USERNAME_CONN.' '.DEDALO_DATABASE_CONN;
+		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		// $command_base = DB_BIN_PATH.'psql '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN .' -h '.DEDALO_HOSTNAME_CONN . $port_command;
+		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+
 		switch ($table) {
 
 			case 'jer_dd':
@@ -482,8 +485,6 @@ abstract class backup {
 		$file_path		 = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
 		$mysqlExportPath = $file_path .'/'. $db_name . ".backup";
 
-		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-
 		# Export the database and output the status to the page
 		# '-F c' Output compressed custom format (p = plain, c = custom, d = directory, t = tar)
 		# '-b' include blobs
@@ -491,17 +492,19 @@ abstract class backup {
 		# '-t "*_dd"' tables wildcard. dump only tables ended with '_dd'
 		# -T "jer_dd*" -T "matrix_descriptors_dd*"  exclude tables
 		$command  = '';
-		$command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" ';
-		$command .= '--no-owner --no-privileges ';
+		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		// $command .= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" ';
+		$command .= DB_BIN_PATH . 'pg_dump ' . DBi::get_connection_string();
+		$command .= ' --no-owner --no-privileges';
 		if ($exclude_tables===true) {
-		$command .= '-T "jer_dd*" -T "matrix_descriptors_dd*" ';	// Exclude tables (AND respective sequences) ( T UPERCASE )
+		$command .= ' -T "jer_dd*" -T "matrix_descriptors_dd*"';	// Exclude tables (AND respective sequences) ( T UPERCASE )
 		}
-		$command .= '-F c -t "*_dd" -t "*dd_id_seq" ';				// Include tables ( t lowercase ) -t "*_dd" -t "*dd_id_seq"
-		$command .= DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
+		$command .= ' -F c -t "*_dd" -t "*dd_id_seq"';				// Include tables ( t lowercase ) -t "*_dd" -t "*dd_id_seq"
+		$command .= ' ' . DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
 		// -T "jer_dd" -T "matrix_descriptors_dd"
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
-		#$command = "nice ".$command ;
+		#$command = " nice ".$command ;
 		#debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
 
 		exec($command.' 2>&1', $output, $worked_result);
@@ -801,11 +804,11 @@ abstract class backup {
 			return (object)$response;
 		}
 
-		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-
 		// Import the database and output the status to the page
-		$command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
-		$command .= '--no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"' ;
+		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		// $command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
+		$command  = DB_BIN_PATH.'pg_restore ' . DBi::get_connection_string() . ' --dbname '.DEDALO_DATABASE_CONN;
+		$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"';
 
 		# LOW PRIORITY ( nice , at 22:56 , etc)
 		#$command = "nice ".$command ;
@@ -965,13 +968,15 @@ abstract class backup {
 					$path_file 	= $path.'/'.$file_name;
 					$res1 		= backup::copy_from_file($table, $path_file, $tld);
 					if (empty($res1)) {
-						$msg .= "<br>Error on import $table {$tld} copy_from_file $path_file.";
-						debug_log(__METHOD__." $msg ".to_string($res1), logger::ERROR);
-						// $load_with_errors=true;
+						$msg .= "<br>Error on import table: '$table' - tld: '$tld' - copy_from_file: '$path_file'";
 						if(SHOW_DEBUG===true) {
 							$msg .= "<pre>".print_r($res1,true)."</pre>";
 						}
-
+						debug_log(
+							__METHOD__." $msg ".to_string($res1)
+							, logger::ERROR
+						);
+						// $load_with_errors=true;
 						$response->result	= false;
 						$response->msg		.= $msg;
 						$response->errors[]	= "Error on import $table {$tld}";
@@ -1691,8 +1696,9 @@ abstract class backup {
 	public static function optimize_tables(array $tables) {
 
 		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -p ".DEDALO_DB_PORT_CONN." -h ".DEDALO_HOSTNAME_CONN;
-		$port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		$command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
+		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
+		// $command_base = DB_BIN_PATH."psql ".DEDALO_DATABASE_CONN." -U ".DEDALO_USERNAME_CONN." -h ".DEDALO_HOSTNAME_CONN . $port_command;
+		$command_base = DB_BIN_PATH . 'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 
 		// re-index
 			$index_commands = [];

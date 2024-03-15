@@ -1909,4 +1909,113 @@ class hierarchy {
 
 
 
+	/**
+	* EXPORT_HIERARCHY
+	* For MASTER toponymy export
+	* @param string $section_tipo
+	* 	Could be '*', 'all', and comma separated list too as 'ts1,es1,fr1'
+	* @return object $response
+	*/
+	public static function export_hierarchy(string $section_tipo) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
+
+		// EXPORT_HIERARCHY_PATH check
+			if (!defined('EXPORT_HIERARCHY_PATH')) {
+				$response->errors[] = 'var EXPORT_HIERARCHY_PATH is not defined';
+				return $response;
+			}
+
+		// ar_section_tipo (target section tipo list)
+			if ($section_tipo==='*') {
+
+				$active_hierarchies = hierarchy::get_active_hierarchies();
+
+				$ar_section_tipo = array_map(function($el){
+					return $el->target_section_tipo;
+				}, $active_hierarchies);
+
+			}elseif($section_tipo==='all'){
+
+				$ar_section_tipo = ['all'];
+
+			}else{
+
+				$ar_section_tipo = explode(',', $section_tipo);
+				foreach ($ar_section_tipo as $key => $current_section_tipo) {
+					$ar_section_tipo[$key] = trim($current_section_tipo);
+				}
+			}
+
+		$msg = [];
+		foreach ($ar_section_tipo as $key => $current_section_tipo) {
+
+			$command  = '';
+			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
+			#$command .= 'psql dedalo4_'.DEDALO_ENTITY.' -h localhost  ';
+			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
+			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
+			if ($current_section_tipo==='all') {
+				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
+				$date 	  = date('Y-m-d_His');
+				$command .= 'TO '.$current_section_tipo.'_'.$date.'.copy " ; ';
+				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
+
+			}else{
+				$command .= 'section_tipo = \''.safe_tipo($current_section_tipo).'\' ORDER BY section_id ASC) ';
+				$command .= 'TO '.safe_tipo($current_section_tipo).'.copy " ; ';
+				$command .= 'gzip -f '.safe_tipo($current_section_tipo).'.copy';
+			}
+			debug_log(__METHOD__
+				.' Exec command (export_hierarchy) '.PHP_EOL
+				.to_string($command)
+				, logger::WARNING
+			);
+
+			$command_res = shell_exec($command);
+			debug_log(__METHOD__
+				.' Exec response (shell_exec) ' . PHP_EOL
+				.to_string($command_res)
+				, logger::DEBUG
+			);
+
+			$msg[] = trim('section_tipo: '.$current_section_tipo.' = '.to_string($command_res));
+		}//end foreach ($ar_section_tipo as $key => $current_section_tipo)
+
+		// response OK
+			$response->result	= true;
+			$response->msg	= 'Ok. All data is exported successfully'; // Override first message
+			$response->msg	.= "<br>".implode('<br>', $msg);
+			$response->msg	.= '<br>' . 'command_res: ' .$command_res;
+			$response->msg	.= '<br>' . 'To import, use a command like this: ';
+			$response->msg	.= '<br>' . 'SECTION_TIPO=\'us1\' ; gunzip ${SECTION_TIPO}.copy.gz | psql dedalo4_myentity -U mydbuser -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from ${SECTION_TIPO}.copy"';
+
+		// files links
+			$dir_path	= EXPORT_HIERARCHY_PATH; // like '../httpdocs/dedalo/install/import/hierarchy'
+			$files		= glob( $dir_path . '/*' ); // get all file names
+			$ar_link	= [];
+			foreach($files as $file){ // iterate files
+				if(is_file($file)) {
+					$extension = pathinfo($file,PATHINFO_EXTENSION);
+					if ($extension==='gz') {
+						$file_name = pathinfo($file,PATHINFO_BASENAME);
+						$url	= DEDALO_ROOT_WEB . '/install/import/hierarchy/' . $file_name;
+						$a		= '<a href="'.$url.'" target="_blank">'.$url.'</a>';
+						$ar_link[] = $a;
+					}
+				}
+			}
+			if (!empty($ar_link)) {
+				$response->msg	.= '<br>Available files for download: ' . '<br>' . implode('<br>', $ar_link);
+			}
+
+
+		return $response;
+	}//end export_hierarchy
+
+
+
 }//end class hierarchy

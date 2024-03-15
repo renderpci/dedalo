@@ -317,7 +317,7 @@ export const print_response = (container, api_response) => {
 		if (api_response.errors && api_response.errors.length) {
 			ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'error',
+				class_name		: 'api_response error',
 				parent			: container,
 				inner_html		: api_response.errors.join('<br>')
 			})
@@ -331,7 +331,7 @@ export const print_response = (container, api_response) => {
 			: 'Unknown API response error'
 		ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: '',
+			class_name		: 'api_response',
 			parent			: container,
 			inner_html		: api_msg
 		})
@@ -371,7 +371,6 @@ export const build_form = function(widget_object) {
 			class_name		: 'form_container',
 			parent			: body_info
 		})
-
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
@@ -481,7 +480,8 @@ export const build_form = function(widget_object) {
 			inner_html		: submit_label,
 			parent			: form_container
 		})
-		button_submit.addEventListener('click', function(){
+		button_submit.addEventListener('click', function(e){
+			e.stopPropagation()
 
 			// if (confirm( (get_label["sure"] || "Sure?") )) {
 			// 	for (let i = 0; i < input_nodes.length; i++) {

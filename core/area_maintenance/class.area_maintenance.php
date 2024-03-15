@@ -204,6 +204,21 @@ class area_maintenance extends area_common {
 			$ar_widgets[] = $widget;
 
 
+		// export_hierarchy *
+			$item = new stdClass();
+				$item->id		= 'export_hierarchy';
+				$item->typo		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
+				$item->value	= (object)[
+					'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
+						? EXPORT_HIERARCHY_PATH
+						: null)
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
 		// update_data_version *
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 			$updates				= update::get_updates();

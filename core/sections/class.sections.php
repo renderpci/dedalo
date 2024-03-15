@@ -50,8 +50,27 @@ class sections extends common {
 
 	/**
 	* CONSTRUCT
+	* @param array|null $ar_locators
+	* @param object $search_query_object
+	* @param string $caller_tipo
+	* @param string $mode
+	* @param string $lang
+	*
+	* @return void
 	*/
 	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
+
+		// caller_tipo check model (only section is expected)
+			if(SHOW_DEBUG===true) {
+				$caller_model = RecordObj_dd::get_modelo_name_by_tipo($caller_tipo,true);
+				if ($caller_model!=='section') {
+					debug_log(__METHOD__
+						. " Expected model of caller_tipo is section, but received is  " . PHP_EOL
+						. ' caller_model: ' . to_string($caller_model)
+						, logger::ERROR
+					);
+				}
+			}
 
 		// Set general vars
 		$this->ar_locators			= $ar_locators;
