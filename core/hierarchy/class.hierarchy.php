@@ -1953,12 +1953,10 @@ class hierarchy {
 		$msg = [];
 		foreach ($ar_section_tipo as $key => $current_section_tipo) {
 
-			$port_str	= !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-
 			$command  = '';
 			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
 			#$command .= 'psql dedalo4_'.DEDALO_ENTITY.' -h localhost  ';
-			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN .' '. DBi::get_connection_string();
+			$command  .= DB_BIN_PATH.'psql ' . DEDALO_DATABASE_CONN . ' ' . DBi::get_connection_string();
 			$command .= ' -c "\copy (SELECT section_id, section_tipo, datos FROM matrix_hierarchy WHERE ';
 			if ($current_section_tipo==='all') {
 				$command .= 'section_tipo IS NOT NULL ORDER BY section_tipo, section_id ASC) ';
