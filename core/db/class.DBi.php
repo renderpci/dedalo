@@ -78,6 +78,38 @@ abstract class DBi {
 
 
 	/**
+	* GET_CONNECTION_STRING
+	* Builds a DB connection string
+	* @return string $connection_string
+	*/
+	public static function get_connection_string() : string {
+
+		$ar_sentence = [];
+
+		// database name
+		// $ar_sentence[] = DEDALO_DATABASE_CONN;
+
+		// host
+		$ar_sentence[] = '-h ' . DEDALO_HOSTNAME_CONN;
+
+		// port
+		if (!empty(DEDALO_DB_PORT_CONN)) {
+			$ar_sentence[] = '-p ' . DEDALO_DB_PORT_CONN;
+		}
+
+		// user
+		$ar_sentence[] = '-U ' . DEDALO_USERNAME_CONN;
+
+		// connection_string
+		$connection_string = implode(' ', $ar_sentence);
+
+
+		return $connection_string;
+	}//end get_connection_string
+
+
+
+	/**
 	* _GETNEWCONNECTION
 	* Alias of _getConnection, but with param cache=false
 	* Get a new PostgreSQL database connection without reuse existing connections
