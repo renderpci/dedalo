@@ -54,10 +54,10 @@ view_indexation_edit_portal.render = async function(self, options) {
 		self.columns_map = await rebuild_columns_map(self)
 
 	// value_combined (grouped by tag id)
-		const data	= self.data || {}
-		const value	= data.value || []
-		const value_combined = []
-		const value_length = value.length
+		const data				= self.data || {}
+		const value				= data.value || []
+		const value_combined	= []
+		const value_length		= value.length
 		for (let i = 0; i < value_length; i++) {
 			const item = value[i]
 			const found = value_combined.find(el => el.section_tipo===item.section_tipo && el.section_id===item.section_id)
@@ -88,10 +88,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
-		self.show_interface.tools = true
-		const buttons = (self.permissions > 1)
-			? get_buttons(self)
-			: null
+		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper
 		const wrapper = ui.component.build_wrapper_edit(self, {
@@ -123,8 +120,6 @@ const get_content_data = async function(self, ar_section_record) {
 	// build_values
 		const fragment = new DocumentFragment()
 
-		const section_records_nodes = []
-
 		// add all section_record rendered nodes
 			const ar_section_record_length	= ar_section_record.length
 			if (ar_section_record_length===0) {
@@ -147,8 +142,6 @@ const get_content_data = async function(self, ar_section_record) {
 					for (let i = 0; i < ar_section_record_length; i++) {
 
 						const section_record = values[i]
-
-						// console.log('section_record.innerText:', section_record.innerText);
 
 						fragment.appendChild(section_record)
 					}

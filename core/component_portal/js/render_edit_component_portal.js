@@ -949,7 +949,7 @@ export const get_buttons = (self) => {
 				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button pen',
-					title			: label,
+					title			: label.replace( /(<([^>]+)>)/ig, ''),
 					parent			: buttons_fold
 				})
 				const fn_click = function(e){
@@ -997,6 +997,24 @@ export const get_buttons = (self) => {
 		if(show_interface.tools===true) {
 			ui.add_tools(self, buttons_fold)
 		}//end add tools
+
+	// button_fullscreen
+		if(show_interface.button_fullscreen === true){
+
+			const button_fullscreen = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button full_screen',
+				title			: get_label.full_screen || 'Full screen',
+				parent			: buttons_fold
+			})
+			button_fullscreen.addEventListener('click', function(e) {
+				e.stopPropagation()
+				ui.enter_fullscreen(self.node, ()=>{
+					event_manager.publish('full_screen_'+self.id, false)
+				})
+				event_manager.publish('full_screen_'+self.id, true)
+			})
+		}
 
 
 	return buttons_container

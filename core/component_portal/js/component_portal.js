@@ -655,8 +655,8 @@ component_portal.prototype.build = async function(autoload=false) {
 	// self.show_interface is defined in component_comom init()
 	// Default source external buttons configuration,
 	// if show.interface is defined in properties used the definition, else use this default
-		const is_inside_tool = self.caller && self.caller.type==='tool'
 		switch (true) {
+
 			case (self.context.properties.source?.mode==='external'):
 				self.show_interface.button_add					= false
 				self.show_interface.button_link					= false
@@ -666,7 +666,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				self.show_interface.button_open_section_list	= true
 				break;
 
-			case (is_inside_tool===true):
+			case (self.caller && self.caller.type==='tool'):
 				self.show_interface.button_add					= false
 				self.show_interface.button_link					= false
 				self.show_interface.tools						= false

@@ -111,56 +111,46 @@ const get_content_data = function(self) {
 */
 const get_buttons = (self) => {
 
-	const is_inside_tool = self.is_inside_tool
-
 	const fragment = new DocumentFragment()
 
-	// prevent to show buttons inside tool
-		if (is_inside_tool) {
-			return fragment
-		}
-
 	// button add input
-		if (!is_inside_tool) {
-			const button_add = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button add',
-				title			: get_label.new || 'Add new input field',
-				parent			: fragment
+		const button_add = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button add',
+			title			: get_label.new || 'Add new input field',
+			parent			: fragment
+		})
+		button_add.addEventListener('click', function(e) {
+			e.stopPropagation()
+
+			const key = self.data.value.length
+
+			const changed_data = [Object.freeze({
+				action	: 'insert',
+				key		: key,
+				value	: null
+			})]
+			self.change_value({
+				changed_data	: changed_data,
+				refresh			: true
 			})
-			button_add.addEventListener('click', function(e) {
-				e.stopPropagation()
+			.then(()=>{
+				// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
+				const input_node = self.node.content_data[key]
+					? self.node.content_data[key].querySelector('input')
+					: null
+				if (input_node) {
+					input_node.focus()
+				}else{
+					console.warn('Empty input_node:', self.node.content_data, key);
+				}
+			})
+		})//end event click
 
-				const key = self.data.value.length
-
-				const changed_data = [Object.freeze({
-					action	: 'insert',
-					key		: key,
-					value	: null
-				})]
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: true
-				})
-				.then(()=>{
-					// console.log("self.node.content_data:",self.node.content_data[changed_data.key]);
-					const input_node = self.node.content_data[key]
-						? self.node.content_data[key].querySelector('input')
-						: null
-					if (input_node) {
-						input_node.focus()
-					}else{
-						console.warn('Empty input_node:', self.node.content_data, key);
-					}
-				})
-			})//end event click
-		}
 
 	// buttons tools
-		if( self.show_interface.tools === true){
-			// if (!is_inside_tool && self.mode==='edit') {
-				ui.add_tools(self, fragment)
-			// }
+		if(self.show_interface.tools === true){
+			ui.add_tools(self, fragment)
 		}//end add tools
 
 	// buttons container

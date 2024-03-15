@@ -56,7 +56,7 @@ class DDModal extends HTMLElement {
 					width: 80%;
 					/*min-width: 390px;*/
 					min-width: 15rem;
-					max-height: 95vh;
+					max-height: 93.5vh;
 					box-shadow: 0 4px 8px 0 rgba(0,0,0,0.2),0 6px 20px 0 rgba(0,0,0,0.19);
 					font-size: inherit;
 					/* border: 1px solid #888; */

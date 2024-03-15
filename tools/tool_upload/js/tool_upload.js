@@ -11,7 +11,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	import {ui} from '../../../core/common/js/ui.js'
+	// import {ui} from '../../../core/common/js/ui.js'
 	import {render_tool_upload} from './render_tool_upload.js'
 
 

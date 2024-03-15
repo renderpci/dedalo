@@ -4,11 +4,16 @@
 * Loaded on tool init
 */
 
-
+// local vars
+@tool_color : #f78a1c;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
 	.wrapper_tool.tool_upload {
+
+		.spinner {
+			border-top-color: @tool_color;
+		}
 
 		>.service_upload_container {
 			// background-color: #e7ff2d;
@@ -43,6 +48,6 @@
 
 
 // modal header tool modification
-	.tool_header.tool_update_cache {
-		// background-color: #62866a;
+	.tool_header.tool_upload {
+		background-color: @tool_color;
 	}

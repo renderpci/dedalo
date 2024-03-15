@@ -613,36 +613,64 @@ const view_modal = async function(options) {
 			return false
 		}
 
-	// build
-		await tool_instance.build(true)
-
-	// render tool (don't wait here)
-		tool_instance.render()
-		.then(function(wrapper){
-
-			const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-			const modal		= ui.attach_to_modal({
-				header	: header,
-				body	: wrapper,
-				footer	: null
-			})
-			modal.on_close	= () => {
-
-				if (typeof tool_instance.on_close_actions==='function') {
-					// custom actions
-					tool_instance.on_close_actions('modal')
-				}else{
-
-					caller.refresh({
-						refresh_id_base_lang : true
-					})
-					tool_instance.destroy(true, true, true)
-				}
-			}
-
-			// pointer from wrapper to modal
-			wrapper.modal = modal
+	// modal
+		const loading_label = get_label.loading || 'Loading tool..'
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: `tool_header ${tool_context.name} header`,
+			inner_html		: `<div class="tool_name_container">
+								<div class="label">${tool_context.label}</div>
+								<div class="description">${loading_label}</div>
+							  </div>`
 		})
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: `wrapper_tool ${tool_context.name} edit body`,
+			inner_html		: loading_label
+		})
+		body.style.minHeight = '15rem'
+		const modal = ui.attach_to_modal({
+			header		: header,
+			body		: body,
+			footer		: null,
+			callback	: () => {
+				ui.load_item_with_spinner({
+					container			: body,
+					label				: tool_context.label,
+					preserve_content	: false,
+					callback			: async () => {
+
+						await tool_instance.build(true)
+						const wrapper = await tool_instance.render()
+
+						// header
+						wrapper.tool_header.slot = 'header'
+						wrapper.tool_header.classList.add('header')
+						header.replaceWith(wrapper.tool_header);
+
+						// body
+						wrapper.slot = 'body'
+						body.replaceWith(wrapper);
+
+						// pointer from wrapper to modal
+						wrapper.modal = modal
+					}
+				})
+			}
+		})
+		modal.on_close	= () => {
+
+			if (typeof tool_instance.on_close_actions==='function') {
+				// custom actions
+				tool_instance.on_close_actions('modal')
+			}else{
+
+				caller.refresh({
+					refresh_id_base_lang : true
+				})
+				tool_instance.destroy(true, true, true)
+			}
+		}
 
 
 	return tool_instance

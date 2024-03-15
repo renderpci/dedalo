@@ -25,6 +25,10 @@
 // wrapper_tool
 	.wrapper_tool.tool_numisdata_order_coins {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		>.tool_header {
 			position: relative;
 
@@ -34,7 +38,7 @@
 
 			>.tool_buttons_container {
 				display: flex;
-				align-items: flex-start;
+				align-items: center;
 
 				@media screen and (max-width: @width_break_point_0) {
 					flex-wrap: wrap;
@@ -118,10 +122,6 @@
 				width: 100%;
 				flex-wrap: wrap;
 				// flex-direction: column-reverse;
-			}
-
-			.spinner {
-				border-top-color: @tool_color;
 			}
 
 			// left and right commons

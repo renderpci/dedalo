@@ -13,15 +13,15 @@
 // wrapper_tool
 	.wrapper_tool.tool_time_machine {
 
+		.spinner {
+			border-top-color: @tool_color;
+		}
+
 		>.content_data {
 			display: grid;
 			grid-template-columns: 1fr 1fr;
 			// grid-template-rows: auto 2em 1fr;
 			grid-template-rows: auto auto auto;
-
-			.spinner {
-				border-top-color: @tool_color;
-			}
 
 			// component containers
 			.current_component_container, .preview_component_container {

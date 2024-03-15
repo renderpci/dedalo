@@ -96,6 +96,8 @@ const get_content_data_edit = async function(self) {
 
 	// component_text_area. render another node of component caller and append to container
 		const component_text_area = self.transcription_component
+		// show_interface
+		component_text_area.show_interface.tools = false
 		// set auto_init_editor for convenience
 		component_text_area.auto_init_editor = true
 		component_text_area.render()
@@ -578,7 +580,7 @@ const render_process_status = async function(self) {
 	// status_user_component
 		if (self.status_user_component) {
 			self.status_user_component.context.view = 'mini'
-			self.status_user_component.is_inside_tool = true
+			self.status_user_component.show_interface.tools = false
 			self.status_user_component.show_interface.save_animation = false
 			const status_user_node = await self.status_user_component.render()
 			fragment.appendChild(status_user_node)
@@ -587,7 +589,7 @@ const render_process_status = async function(self) {
 	// status_admin_component
 		if (self.status_admin_component) {
 			self.status_admin_component.context.view = 'mini'
-			self.status_admin_component.is_inside_tool = true
+			self.status_admin_component.show_interface.tools = false
 			self.status_admin_component.show_interface.save_animation = false
 			const status_admin_node	= await self.status_admin_component.render()
 			fragment.appendChild(status_admin_node)

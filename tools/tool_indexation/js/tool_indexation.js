@@ -254,10 +254,14 @@ tool_indexation.prototype.build = async function(autoload=false) {
 		// indexing_component. fix indexing_component for convenience
 			const indexing_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='indexing_component')
 			self.indexing_component			= self.ar_instances.find(el => el.tipo===indexing_component_ddo.tipo)
+			// show_interface
+			self.indexing_component.show_interface.tools = false
 
 		// media_component. fix media_component for convenience
 			const media_component_ddo	= self.tool_config.ddo_map.find(el => el.role==='media_component')
 			self.media_component		= self.ar_instances.find(el => el.tipo===media_component_ddo.tipo)
+			// show_interface
+			self.media_component.show_interface.tools = false
 
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
@@ -381,6 +385,8 @@ tool_indexation.prototype.get_component = async function(lang) {
 /**
 * LOAD_RELATED_SECTIONS_LIST
 * Get the list of related sections with the actual resource
+* Uses transcriptions component (component_text_area) to get
+* related sections
 * @return object datum
 */
 tool_indexation.prototype.load_related_sections_list = async function() {
