@@ -1030,14 +1030,14 @@ class component_filter extends component_relation_common {
 	* GET_AR_TARGET_SECTION_TIPO
 	* Select source section/s
 	* Overrides component common method
-	* @return array|null ar_target_section_tipo
+	* @return array ar_target_section_tipo
 	* 	Array of string like ['dd153']
 	*/
-	public function get_ar_target_section_tipo() : ?array {
+	public function get_ar_target_section_tipo() : array {
 
 		return defined('DEDALO_SECTION_PROJECTS_TIPO')
 			? [DEDALO_SECTION_PROJECTS_TIPO]
-			: null;
+			: [];
 	}//end get_ar_target_section_tipo
 
 
