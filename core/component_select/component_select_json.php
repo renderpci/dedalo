@@ -29,7 +29,7 @@
 					);
 				// target_sections add
 					$target_sections		= [];
-					$ar_target_section_tipo	= $this->get_ar_target_section_tipo() ?? [];
+					$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
 					foreach ($ar_target_section_tipo as $current_section_tipo) {
 						$current_section_tipo_permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
 						if ($current_section_tipo_permissions>0) {

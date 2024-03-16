@@ -2,8 +2,7 @@
 declare(strict_types=1);
 /**
 * CLASS COMPONENT_PORTAL
-* former component_autocomplete
-*
+* Integrates former component_autocomplete
 */
 class component_portal extends component_relation_common {
 
@@ -13,99 +12,11 @@ class component_portal extends component_relation_common {
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_LINK;
 	protected $default_relation_type_rel	= null;
 
-	# test_equal_properties is used to verify duplicates when add locators
+	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = ['section_tipo','section_id','type','from_component_tipo'];
 
-	# ar_target_section_tipo
-	public $ar_target_section_tipo;		# Used to fix section tipo (get the section from relation terms, section can be real or virtual.
-
-	# Array of related terms in structure (one or more)
-	// protected $ar_terminos_relacionados;
-
-	# referenced component tipo
-	// public $tipo_to_search;
-
-
-
-	/**
-	* GET_PROPERTIES DES
-	* Only to enable component_autocomplete_hi compatibility
-	* @return object $properties
-	*/
-		// public function get_properties_DES() {
-
-		// 	$properties = parent::get_properties();
-		// 		#dump($properties, ' properties ++ '.to_string($this->tipo));
-
-		// 	// component_portal_hi compatibility
-		// 	$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-		// 	if ($legacy_model==='component_autocomplete_hi') {
-		// 		// convert from
-		// 		// {
-		// 		//   "source": {
-		// 		//     "mode": "autocomplete",
-		// 		//     "hierarchy_types": [
-		// 		//       2
-		// 		//     ],
-		// 		//     "hierarchy_sections": []
-		// 		//   },
-		// 		//   "value_with_parents": true,
-		// 		//   "css": {
-		// 		//     ".wrap_component": {
-		// 		//       "mixin": [
-		// 		//         ".vertical",
-		// 		//         ".width_33",
-		// 		//         ".line_top"
-		// 		//       ],
-		// 		//       "style": {
-		// 		//         "clear": "left"
-		// 		//       }
-		// 		//     },
-		// 		//     ".content_data": {
-		// 		//       "style": {}
-		// 		//     }
-		// 		//   }
-		// 		// }
-
-		// 		$source_string = trim('
-		// 		{
-		// 			"config_context": [
-		// 		      {
-		// 		        "type": "internal",
-		// 		        "hierarchy_types": '.((isset($properties->source->hierarchy_types) && !empty($properties->source->hierarchy_types)) ? json_encode($properties->source->hierarchy_types) : '[2]').',
-		// 		        "search": [
-		// 		          "hierarchy25"
-		// 		        ],
-		// 		        "select": [
-		// 		          "hierarchy25",
-		// 		          "hierarchy41"
-		// 		        ],
-		// 		        "show": [
-		// 		          "hierarchy25"
-		// 		        ]
-		// 		      }
-		// 			],
-		// 		    "section_to_search": '.((isset($properties->source->hierarchy_sections) && !empty($properties->source->hierarchy_sections)) ? json_encode($properties->source->hierarchy_sections) : '[]').',
-		// 		    "filter_by_list": [],
-		// 		    "fields_separator": " | ",
-		// 		    "type_map": {},
-		// 		    "operator": "or",
-		// 		    "records_mode": "list"
-		// 		}
-		// 		');
-		// 		// dump(json_decode($source_string), ' source_string ++ '.to_string($this->tipo));
-
-		// 		$new_properties = new stdClass();
-		// 			$new_properties->source 			= json_decode($source_string);
-		// 			$new_properties->value_with_parents = isset($properties->value_with_parents) ? $properties->value_with_parents : false;
-		// 			$new_properties->css  				= isset($properties->css) ? $properties->css : null;
-
-		// 		$properties = $new_properties;
-		// 	}//end if ($legacy_model==='component_portal_hi')
-
-
-		// 	return $properties;
-		// }//end get_properties
+	// ar_target_section_tipo
+	public $ar_target_section_tipo; // Used to fix section tipo (get the section from relation terms, section can be real or virtual.
 
 
 

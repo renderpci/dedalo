@@ -2036,10 +2036,9 @@ class install extends common {
 			$file_name		= pathinfo($file)['basename'];
 			$section_tipo	= explode('.', $file_name)[0];
 			$tld			= preg_replace('/\d/', '', $section_tipo);
-			$tld_uppercase	= strtoupper($tld);
 
-			$current_hierachy = array_find($hierarchies, function($el) use($tld_uppercase){
-				return $el->tld===$tld_uppercase;
+			$current_hierachy = array_find($hierarchies, function($el) use($tld){
+				return strtolower($el->tld)===strtolower($tld);
 			});
 			$label			= isset($current_hierachy) ? $current_hierachy->label : 'undefined ['.$tld.']';
 			$type			= strpos($section_tipo, '2')!==false ? 'model' : 'term';

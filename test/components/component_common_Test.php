@@ -1068,7 +1068,9 @@ final class component_common_test extends TestCase {
 				false
 			);
 
-			$response = $component->parse_search_dynamic($ar_filtered_by_search_dynamic);
+			$response = $component->parse_search_dynamic(
+				$ar_filtered_by_search_dynamic
+			);
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
@@ -1256,6 +1258,93 @@ final class component_common_test extends TestCase {
 
 
 	/**
+	* TEST_get_ar_target_section_ddo
+	* @return void
+	*/
+	public function test_get_ar_target_section_ddo() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$result = $component->get_ar_target_section_ddo();
+
+		// expected sample
+			// [
+			//     {
+			//         "typo": "ddo",
+			//         "tipo": "test3",
+			//         "model": "section",
+			//         "label": "Test Unit (data on matrix_test)",
+			//         "color": "#b9b9b9",
+			//         "permissions": 2,
+			//         "buttons": [
+			//             {
+			//                 "model": "button_new",
+			//                 "permissions": 2
+			//             },
+			//             {
+			//                 "model": "button_delete",
+			//                 "permissions": 2
+			//             }
+			//         ],
+			//         "matrix_table": "matrix_test"
+			//     }
+			// ]
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($result)==='array',
+				'result type expected array|null. current type: ' .gettype($result) .' - '.$element->model
+			);
+
+			if (!empty($result)) {
+				$this->assertTrue(
+					!empty($result) && !empty($result[0]),
+					'result expected not empty ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+				$this->assertTrue(
+					$result[0]->typo==='ddo',
+					'result[0]->typo expected "ddo" ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+				$this->assertTrue(
+					$result[0]->model==='section',
+					'result[0]->model expected "section" ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+				$this->assertTrue(
+					$result[0]->permissions>=1,
+					'expected result[0]->permissions>=1 ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+				$this->assertTrue(
+					isset($result[0]->buttons),
+					'expected isset($result[0]->buttons) ' .$element->model .PHP_EOL
+					. json_encode($result)
+				);
+			}
+		}
+	}//end test_get_ar_target_section_ddo
+
+
+
+	/**
 	* TEST_GET_AR_TARGET_SECTION_TIPO
 	* @return void
 	*/
@@ -1284,8 +1373,8 @@ final class component_common_test extends TestCase {
 			);
 
 			$this->assertTrue(
-				gettype($result)==='array' || gettype($result)==='NULL',
-				'result type expected array|null. current type: ' .gettype($result) .' - '.$element->model
+				gettype($result)==='array',
+				'result type expected array. current type: ' .gettype($result) .' - '.$element->model
 			);
 
 			if (!is_null($result)) {
@@ -1538,19 +1627,19 @@ final class component_common_test extends TestCase {
 			  "q": "pepe",
 			  "lang": "lg-spa",
 			  "path": [
-			    {
-			      "section_tipo": "oh1",
-			      "component_tipo": "oh24",
-			      "target_section": "rsc197"
-			    },
-			    {
-			      "section_tipo": "rsc197",
-			      "component_tipo": "rsc85",
-			      "model": "component_input_text"
-			    }
+				{
+				  "section_tipo": "oh1",
+				  "component_tipo": "oh24",
+				  "target_section": "rsc197"
+				},
+				{
+				  "section_tipo": "rsc197",
+				  "component_tipo": "rsc85",
+				  "model": "component_input_text"
+				}
 			  ],
 			  "component_path": [
-			    "dato"
+				"dato"
 			  ]
 			}
 		');
