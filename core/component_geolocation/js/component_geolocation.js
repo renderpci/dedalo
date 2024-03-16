@@ -202,14 +202,14 @@ component_geolocation.prototype.init = async function(options) {
 	// event subscriptions
 		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
 		// {
-	    //   "client": {
-	    //     "event": "click_tag_geo",
-	    //     "perform": {
-	    //       "function": "load_tag_into_geo_editor"
-	    //     }
-	    //   },
-	    //   "component_tipo": "numisdata19"
-	    // }
+		//   "client": {
+		//     "event": "click_tag_geo",
+		//     "perform": {
+		//       "function": "load_tag_into_geo_editor"
+		//     }
+		//   },
+		//   "component_tipo": "numisdata19"
+		// }
 
 
 	return common_init
@@ -1146,21 +1146,41 @@ component_geolocation.prototype.update_draw_data = function(layer_id) {
 /**
 * MAP_UPDATE_COORDINATES
 * Update the coordinates based in the data sent by other components, as autocomplet_hi
-* this components can point to other record, as toponomy, that has a geolocation component
-* this method will use the data of the referenced geolocation data in the pointed record as own coordinates
+* this components can point to other record, as toponymy, that has a geolocation component.
+* This method is fired by the update_value or other events defined in ontology.
+* This method will use the data of the referenced geolocation data in the pointed record as his own coordinates
 * The caller component will dispatch a event when it update his data that will fire this method
 * the self component(geolocation that is listen) could be configured in properties as:
 *
-* 	"observe":[
-* 		{
-*			"event": "update_value",
-*			"perform": "map_update_coordinates",
-*			"component_tipo": "test9" // The component to be observe, usually an autocomplete_hi
-*		}]
+*	"observe": [
+*		{
+*			"client": {
+*				"event": "update_value",
+*				"perform": {
+*				"function": "map_update_coordinates"
+*				}
+*			},
+*			"component_tipo": "tch245"
+*		}
+*	]
 *
-* the observable component could specify the component_geolocation that has the coordinates to be used:
+* the observable component (portal with the data) should specify the component_geolocation that has the coordinates to be used
+* it need to be defined in request_config 'hide' property with the role of 'target_geolocation_tipo'
+* in this way:
 *
-* 	"target_geolocation_tipo": "hierarchy31"
+* "request_config": [{
+*		"hide": {
+*			"ddo_map": [
+*				{
+*					"info": "component_geolocation to be used as data of the observer geolocation (move the map to the value of this component), role property identify it by map_update_coordinates() funcion",
+*					"role": "target_geolocation_tipo",
+*					"tipo": "hierarchy31",
+*					"parent": "self",
+*					"section_tipo": "self"
+*				}
+*			]
+*		}
+*	}]
 *
 * If the observable doesn't has specified the component_geolocation will use the default thesaurus component_geolocation: hierarchy31
 * @param object options
@@ -1170,50 +1190,32 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 
 	const self = this
 
-	const caller		= options.caller
-	const changed_data	= options.changed_data[0]
-	// check if the data sent has value(a locator), if not stop
-	if(changed_data.value === null){
+	const caller = options.caller
+
+	// check if the caller has defined 'target_geolocation_tipo' component in hide of rqo
+	const target_geolocation_tipo = caller.request_config_object.hide?.ddo_map.find(
+		el => el.role === 'target_geolocation_tipo').tipo
+		|| 'hierarchy31' // Default geolocation map in thesarus
+
+	const original_value = caller.data.value
+	// if the caller has not data, do not update the map
+	if(!original_value){
 		return
 	}
+	// get the last value of the caller portal
+	// it will use to find the target_geolocation_tipo data
+	const last_value = original_value[original_value.length-1]
 
-	const section_tipo	= changed_data.value.section_tipo
-	const section_id	= changed_data.value.section_id
-	// check if the caller has defined 'target_geolocation_tipo' in his properties
-	const tipo = caller.context.properties.target_geolocation_tipo
-		? caller.context.properties.target_geolocation_tipo
-		: 'hierarchy31' // Default geolocation map in thesarus
+	const target_geolocation_data = caller.datum.data.find( el =>
+		el.tipo === target_geolocation_tipo
+		&& parseInt(el.section_id) === parseInt(last_value.section_id)
+	)
 
-	// create the component to get the data
-	// source object
-		const source = {
-			typo			: 'source',
-			type			: self.type,
-			action			: 'get_data',
-			model			: self.model,
-			tipo			: tipo,
-			section_tipo	: section_tipo,
-			section_id		: section_id,
-			mode			: 'edit',
-			lang			: self.lang
-		}
-	// create the default rqo
-		const rqo = {
-			action	: 'read',
-			source	: source
-		}
-
-	// load data. get context and data from API
-		const api_response = await data_manager.request({
-			body : rqo
-		})
-
-	// if result, incorporate it to the current map and reload it
-	if(api_response.result){
-		const data = api_response.result.data
+	// if target_geolocation_data, incorporate it to the current map and reload it
+	if(target_geolocation_data){
 		// geolocation doesn't has multiple maps and the key of the data array is always 0
 		const key = 0
-		self.current_value = data[key].value
+		self.current_value = target_geolocation_data.value
 		self.update_input_values(
 			key,
 			self.current_value[key],
@@ -1232,7 +1234,8 @@ component_geolocation.prototype.map_update_coordinates = async function(options)
 			changed_data	: changed_data,
 			refresh			: false
 		})
-	}//end if check api_response
+	}
+
 }//end map_update_coordinates
 
 

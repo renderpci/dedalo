@@ -697,8 +697,8 @@ component_common.prototype.update_datum = async function(new_datum) {
 
 					const ar_data_elements	= self.datum.data.filter( function(el) {
 						if( el.tipo===data_item.tipo &&
-							el.section_tipo===data_item.section_tipo &&
-							parseInt(el.section_id)===parseInt(data_item.section_id)
+							el.section_tipo===data_item.section_tipo
+							&& parseInt(el.section_id)===parseInt(data_item.section_id)
 							){
 							// if the new data provides by dataframe it will has section_id_key
 							// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
@@ -1012,7 +1012,7 @@ component_common.prototype.change_value = async function(options) {
 
 	// event to update the DOM elements of the instance
 		const id_base_lang = self.id_base + '_' + self.lang
-		event_manager.publish('update_value_'+id_base_lang, {
+		event_manager.publish('sync_data_'+id_base_lang, {
 			caller			: self,
 			changed_data	: changed_data
 		})
