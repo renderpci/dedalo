@@ -581,7 +581,25 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.remove('loading')
 		// }
 
-	// update value (defined in ontology to fire events, see: hierarchy93 or numisdata77)
+	// event update_value_ (defined in ontology to fire events, see: hierarchy93 or numisdata77)
+	// subscriptions from component_common.build() -> init_events_subscription(self)
+	// @see component_common.init_events_subscription
+	// sample:
+		// "observe": [
+		// 	{
+		// 	  "info": "Observes 'Review status' radio_button value changes to update this calculated value",
+		// 	  "client": {
+		// 		"event": "update_value",
+		// 		"perform": {
+		// 		  "function": "refresh"
+		// 		}
+		// 	  },
+		// 	  "server": {
+		// 		"filter": false
+		// 	  },
+		// 	  "component_tipo": "oh93"
+		// 	}
+		// ]
 		const id_base = self.id_base
 		event_manager.publish('update_value_'+id_base, {
 			caller			: self
