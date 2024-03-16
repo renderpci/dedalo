@@ -455,5 +455,6 @@
     "component": "Component",
     "translatable": "Traduïble",
     "select_one_project": "Heu de seleccionar almenys un projecte",
-    "publicado": "Publicat"
+    "publicado": "Publicat",
+    "export_hierarchy": "Exportar jerarquia"
 }
