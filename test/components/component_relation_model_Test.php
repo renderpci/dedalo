@@ -202,8 +202,8 @@ final class component_relation_model_test extends TestCase {
 		$result = $component->get_ar_target_section_tipo();
 
 		$this->assertTrue(
-			gettype($result)==='array' || gettype($result)==='NULL',
-			'expected type array|null : ' . PHP_EOL
+			gettype($result)==='array',
+			'expected type array : ' . PHP_EOL
 				. gettype($result)
 		);
 
