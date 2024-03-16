@@ -183,7 +183,8 @@ class tools_register {
 							if (isset($current_tool_section_data->type) && $current_tool_section_data->type==='placeholder') {
 								$msg = isset($current_tool_section_data->info)
 									? $current_tool_section_data->info
-									: 'This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+									: 'This file (register.json) must be downloaded from current tool Dédalo Tools Development record
+									   using the button \'Download register file\' ';
 								debug_log(__METHOD__
 									. " Error. tool register file of basename: '$basename' is a placeholder !" . PHP_EOL
 									. ' ' . $msg
@@ -193,7 +194,10 @@ class tools_register {
 
 						// check register file is well formed
 							if (!isset($current_tool_section_data->relations) || !isset($current_tool_section_data->components)) {
-								$msg = 'Error. '.$basename.' Bad formed file! This file must be downloaded from current tool Dédalo Tools Development record using the button \'Download register file\' ';
+								$msg = 'Error. '.$basename.' Bad formed register file (register.json)!
+										This file must be downloaded from current tool Dédalo Tools Development record using the button
+										\'Download register file\'
+										';
 								debug_log(__METHOD__
 									. " Error. tool register file" . PHP_EOL
 									. ' ' . $msg
