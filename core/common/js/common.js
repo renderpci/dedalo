@@ -581,6 +581,12 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.remove('loading')
 		// }
 
+	// update value (defined in ontology to fire events, see: hierarchy93 or numisdata77)
+		const id_base = self.id_base
+		event_manager.publish('update_value_'+id_base, {
+			caller			: self
+		})
+
 	// refresh_id_base_lang. On true, force to refresh components with same 'id_base_lang'
 	// @see render_tool_upload.upload_done
 		if (refresh_id_base_lang===true) {
