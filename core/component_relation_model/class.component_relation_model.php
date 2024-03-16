@@ -11,6 +11,7 @@ class component_relation_model extends component_relation_common {
 	// relation_type defaults
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_MODEL_TIPO;
 	protected $default_relation_type_rel	= null;
+	public $ar_target_section_tipo;
 
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties = array('section_tipo','section_id','type','from_component_tipo');
@@ -112,13 +113,9 @@ class component_relation_model extends component_relation_common {
 	* GET_AR_TARGET_SECTION_TIPO
 	* Select source section/s
 	* Overrides component common method
+	* @return array $ar_target_section_tipo
 	*/
-	public function get_ar_target_section_tipo() : ?array {
-
-		// empty case
-			if (!$this->tipo) {
-				return null;
-			}
+	public function get_ar_target_section_tipo() : array {
 
 		// cache
 			if(isset($this->ar_target_section_tipo)) {
@@ -163,14 +160,14 @@ class component_relation_model extends component_relation_common {
 				// set into array
 					$ar_target_section_tipo = [$target_section_tipo];
 				break;
-		}
+		}//end switch ($target_mode)
 
 
 		// Fix value
 		$this->ar_target_section_tipo = $ar_target_section_tipo;
 
 
-		return (array)$ar_target_section_tipo;
+		return $ar_target_section_tipo;
 	}//end get_ar_target_section_tipo
 
 
