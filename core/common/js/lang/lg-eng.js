@@ -455,5 +455,6 @@
     "component": "Component",
     "translatable": "Translatable",
     "select_one_project": "You must select at least one project",
-    "publicado": "Published"
+    "publicado": "Published",
+    "export_hierarchy": "Export hierarchy"
 }

@@ -455,5 +455,6 @@
     "component": "<mark>Componente<\/mark>",
     "translatable": "<mark>Traducible<\/mark>",
     "select_one_project": "<mark>Debe seleccionar al menos un proyecto<\/mark>",
-    "publicado": "Publicado"
+    "publicado": "Publicado",
+    "export_hierarchy": "<mark>Exportar jerarquía<\/mark>"
 }
