@@ -978,21 +978,6 @@ export const get_buttons = (self) => {
 			}
 		}
 
-	// button tree terms selector
-		if(show_interface.button_tree === true){
-
-			const button_tree_selector = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button gear',
-				parent			: buttons_fold
-			})
-			// add listener to the select
-			button_tree_selector.addEventListener('mouseup', function(e){
-				e.stopPropagation()
-
-			})
-		}//end button_external
-
 	// buttons tools
 		if(show_interface.tools===true) {
 			ui.add_tools(self, buttons_fold)
