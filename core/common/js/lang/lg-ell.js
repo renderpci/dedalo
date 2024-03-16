@@ -455,5 +455,6 @@
     "component": "Συστατικό",
     "translatable": "Μεταφράσιμος",
     "select_one_project": "<mark>Debe seleccionar al menos un proyecto<\/mark>",
-    "publicado": "Δημοσιευμένο"
+    "publicado": "Δημοσιευμένο",
+    "export_hierarchy": "Εξαγωγή ιεραρχίας"
 }
