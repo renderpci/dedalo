@@ -1068,7 +1068,9 @@ final class component_common_test extends TestCase {
 				false
 			);
 
-			$response = $component->parse_search_dynamic($ar_filtered_by_search_dynamic);
+			$response = $component->parse_search_dynamic(
+				$ar_filtered_by_search_dynamic
+			);
 				// dump($response, ' $response ++ '.to_string($element->model));
 
 			$this->assertTrue(
@@ -1625,19 +1627,19 @@ final class component_common_test extends TestCase {
 			  "q": "pepe",
 			  "lang": "lg-spa",
 			  "path": [
-			    {
-			      "section_tipo": "oh1",
-			      "component_tipo": "oh24",
-			      "target_section": "rsc197"
-			    },
-			    {
-			      "section_tipo": "rsc197",
-			      "component_tipo": "rsc85",
-			      "model": "component_input_text"
-			    }
+				{
+				  "section_tipo": "oh1",
+				  "component_tipo": "oh24",
+				  "target_section": "rsc197"
+				},
+				{
+				  "section_tipo": "rsc197",
+				  "component_tipo": "rsc85",
+				  "model": "component_input_text"
+				}
 			  ],
 			  "component_path": [
-			    "dato"
+				"dato"
 			  ]
 			}
 		');
