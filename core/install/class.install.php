@@ -1821,52 +1821,163 @@ class install extends common {
 	/**
 	* ACTIVATE_HIERARCHY
 	* Activate thesaurus hierarchy by tld2
-	* @param string $tld2
-	* 	Like 'lg'
+	* @param object $options
+	*  Sample
+	* {
+	*	"file": "/localdir/dedalo/install/import/hierarchy/fauna1.copy.gz",
+	*	"file_name": "fauna1.copy.gz",
+	*	"section_tipo": "fauna1",
+	*	"tld": "fauna",
+	*	"label": "Fauna",
+	*	"type": "term", // or model
+	*	"typology": 11
+	* }
 	* @return object $response
 	*/
-	public static function activate_hierarchy(string $tld2) : object {
+	public static function activate_hierarchy(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
+			$response->errors	= [];
+
+		// options
+			$tld		= $options->tld;
+			$typology	= $options->typology;
+			$label		= $options->label;
 
 		// short vars
 			$config	= self::get_config();
-			$exec	= true;
 
-		// hierarchy data
-			$sql = '
-				SELECT section_id
-				FROM "matrix_hierarchy_main"
-				WHERE
-				f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld2.'"\].*\')
-			';
-			debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
-			if ($exec) {
-				$result = pg_query(DBi::_getConnection(), $sql);
-				if ($result===false) {
-					$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
+		// hierarchy search by
+			// MOVED TO CLASS HIERARCHY !
+				// $sql = '
+				// 	SELECT section_id
+				// 	FROM "matrix_hierarchy_main"
+				// 	WHERE
+				// 	f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
+				// ';
+				// debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+				// if ($exec) {
+				// 	$result = pg_query(DBi::_getConnection(), $sql);
+				// 	if ($result===false) {
+				// 		$msg = " Error on db execution (clone database): ".pg_last_error(DBi::_getConnection());
+				// 		debug_log(__METHOD__.$msg, logger::ERROR);
+				// 		$response->msg = $msg;
 
-					return $response; // return error here !
-				}
-				$rows	= (array)pg_fetch_assoc($result);
-				$value	= reset($rows);
-				if (empty($value)) {
-					$msg = " Error on db search. Not found tld to activate: tld2: '$tld2' (activate_hierarchy)";
-					debug_log(__METHOD__.$msg, logger::ERROR);
-					$response->msg = $msg;
+				// 		return $response; // return error here !
+				// 	}
+				// 	$rows	= (array)pg_fetch_assoc($result);
+				// 	$value	= reset($rows);
+				// 	if (empty($value)) {
+				// 		$msg = " Error on db search. Not found tld to activate: tld2: '$tld' (activate_hierarchy)";
+				// 		debug_log(__METHOD__.$msg, logger::ERROR);
+				// 		$response->msg = $msg;
 
-					return $response; // return error here !
-				}
+				// 		return $response; // return error here !
+				// 	}
+				// }
+				// $section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+				// $section_id		= $value;
+			$hierarchy_by_tld_response	= hierarchy::get_hierarchy_by_tld($tld);
+			$section_tipo				= DEDALO_HIERARCHY_SECTION_TIPO;
+			$section_id					= $hierarchy_by_tld_response->result;
+			$section_exists				= !empty($section_id);
+
+		// hierarchy not already exists case. Create a new one
+			if ($section_exists===false) {
+
+				// create a new section
+				$section = section::get_instance(
+					null, // string|null section_id
+					$section_tipo // string section_tipo
+				);
+				$section_id = $section->Save();
 			}
-			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
-			$section_id		= $value;
+
+		// check valid $section_id
+			if (empty($section_id)) {
+				$msg = " ERROR creating a new section in '$section_tipo' - tld: '$tld'";
+				debug_log(__METHOD__
+					. $msg
+					, logger::ERROR
+				);
+				$response->errors[] = $msg;
+
+				return $response; // return error here !
+			}
+
+		// new hierarchy case
+			if ($section_exists===false) {
+
+				// tld
+					$tld_tipo	= DEDALO_HIERARCHY_TLD2_TIPO; // hierarchy6
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld_tipo, true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$tld_tipo,
+						$section_id,
+						'list',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
+					$dato = [$tld];
+					$component->set_dato($dato);
+					$component->Save();
+
+				// typology
+					$hierarchy_type_tipo	= DEDALO_HIERARCHY_TYPOLOGY_TIPO; // hierarchy9
+					$model_name				= RecordObj_dd::get_modelo_name_by_tipo($hierarchy_type_tipo, true);
+					$component				= component_common::get_instance(
+						$model_name,
+						$hierarchy_type_tipo,
+						$section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
+					$locator = new locator();
+						$locator->set_section_tipo(DEDALO_HIERARCHY_TYPES_SECTION_TIPO); // hierarchy13
+						$locator->set_section_id($typology);
+						$locator->set_from_component_tipo($hierarchy_type_tipo);
+					$dato = [$locator];
+					$component->set_dato($dato);
+					$component->Save();
+
+				// name
+					$name_tipo	= DEDALO_HIERARCHY_TERM_TIPO;	// hierarchy5
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$name_tipo,
+						$section_id,
+						'edit',
+						DEDALO_DATA_LANG,
+						$section_tipo
+					);
+					$dato = [$label];
+					$component->set_dato($dato);
+					$component->Save();
+
+				// lang
+					$name_tipo	= DEDALO_HIERARCHY_LANG_TIPO;	// hierarchy8
+					$model_name	= RecordObj_dd::get_modelo_name_by_tipo($name_tipo, true);
+					$component	= component_common::get_instance(
+						$model_name,
+						$name_tipo,
+						$section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$section_tipo
+					);
+					$lang_locator = lang::get_lang_locator_from_code(DEDALO_DATA_LANG_DEFAULT);
+					$dato = [$lang_locator];
+					$component->set_dato($dato);
+					$component->Save();
+			}
 
 		// active hierarchy
-			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// 'hierarchy4';
+			$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO;	// hierarchy4
 			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($active_tipo, true);
 			$component		= component_common::get_instance(
 				$model_name,
@@ -1887,7 +1998,7 @@ class install extends common {
 			$component->set_dato($dato);
 			$component->Save();
 
-		// set real section tipo (!) needed for create virtual section
+		// set real section tipo (!) needed to create virtual section
 			// source_real_section_tipo
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_HIERARCHY_SOURCE_REAL_SECTION_TIPO, true);
 			$component	= component_common::get_instance(
@@ -1908,11 +2019,12 @@ class install extends common {
 			];
 			$call_response = hierarchy::generate_virtual_section($options);
 			if ($call_response->result===false) {
+				$msg = " ERROR " . PHP_EOL . to_string($call_response->msg);
 				debug_log(__METHOD__
-					." Error " .PHP_EOL
-					. to_string($call_response->msg)
+					. $msg
 					, logger::ERROR
 				);
+				$response->errors[] = $msg;
 			}
 
 		// set target section data
@@ -1927,7 +2039,7 @@ class install extends common {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$dato = [$tld2.'1'];
+				$dato = [$tld.'1'];
 				$component->set_dato($dato);
 				$component->Save();
 
@@ -1942,39 +2054,14 @@ class install extends common {
 					DEDALO_DATA_NOLAN,
 					$section_tipo
 				);
-				$dato = [$tld2.'2'];
+				$dato = [$tld.'2'];
 				$component->set_dato($dato);
 				$component->Save();
 
 		// set children data
-			// general term
-				$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
-				$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
-				$component		= component_common::get_instance(
-					$model_name,
-					$component_tipo,
-					$section_id,
-					'list',
-					DEDALO_DATA_NOLAN,
-					$section_tipo
-				);
-				$dato = json_decode('[
-					{
-						"type": "dd48",
-						"section_id": "1",
-						"section_tipo": "'.$tld2.'1",
-						"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
-					}
-				]');
-				$component->set_dato($dato);
-				$component->Save();
-
-			// general model
-				$dir_path		= $config->hierarchy_files_dir_path;
-				$models_file	= $dir_path . '/' . strtolower($tld2) . '.copy.gz';
-				if (file_exists($models_file)) {
-
-					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
+			if ($typology==2) {
+				// general term
+					$component_tipo	= DEDALO_HIERARCHY_CHILDREN_TIPO;	// 'hierarchy45';
 					$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 					$component		= component_common::get_instance(
 						$model_name,
@@ -1987,18 +2074,49 @@ class install extends common {
 					$dato = json_decode('[
 						{
 							"type": "dd48",
-							"section_id": "2",
-							"section_tipo": "'. $tld2.'2",
-							"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
+							"section_id": "1",
+							"section_tipo": "'.$tld.'1",
+							"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_TIPO.'"
 						}
 					]');
 					$component->set_dato($dato);
 					$component->Save();
-				}else{
-					debug_log(__METHOD__." Ignored not existing model data for tld: ".to_string($tld2), logger::WARNING);
-				}
 
+				// general model
+					$dir_path		= $config->hierarchy_files_dir_path;
+					$models_file	= $dir_path . '/' . strtolower($tld) . '.copy.gz';
+					if (file_exists($models_file)) {
 
+						$component_tipo	= DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO;	// 'hierarchy59';
+						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
+						$component		= component_common::get_instance(
+							$model_name,
+							$component_tipo,
+							$section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$section_tipo
+						);
+						$dato = json_decode('[
+							{
+								"type": "dd48",
+								"section_id": "2",
+								"section_tipo": "'. $tld.'2",
+								"from_component_tipo": "'.DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO.'"
+							}
+						]');
+						$component->set_dato($dato);
+						$component->Save();
+
+					}else{
+						debug_log(__METHOD__
+							." Ignored not existing model data for tld: ".to_string($tld)
+							, logger::WARNING
+						);
+					}
+			}
+
+		// response OK
 		$response->result	= true;
 		$response->msg		= 'OK. Request done '.__METHOD__;
 
@@ -2064,9 +2182,15 @@ class install extends common {
 		$response->result	= $hierarchy_files;
 		$response->msg		= 'OK. Request done '.__METHOD__;
 
-		if (empty($hierarchy_files)) {
-			error_log('Dédalo Error: directory "'.$dir_path.'" is not accessible or empty!');
-		}
+		// empty case
+			if (empty($hierarchy_files)) {
+				debug_log(__METHOD__
+					. "Dédalo Error: directory '$dir_path' is not accessible or empty!  " . PHP_EOL
+					. ' dir_path: ' . to_string($dir_path) . PHP_EOL
+					. ' hierarchy_files: ' . to_string($hierarchy_files)
+					, logger::ERROR
+				);
+			}
 
 
 		return $response;
@@ -2089,10 +2213,6 @@ class install extends common {
 		// options
 			$hierarchies = $options->hierarchies;
 
-		// short vars
-			$config		= self::get_config();
-			$dir_path	= $config->hierarchy_files_dir_path;
-
 		// read the dir
 			$hierarchy_files = install::get_available_hierarchy_files();
 
@@ -2103,16 +2223,34 @@ class install extends common {
 
 		$ar_responses = [];
 
-		// import_hierarchy_file
+		// import_hierarchy_files
+		// iterate selected_hierarchies and import DDBB data (psql -copy). After this,
+		// creates and activates the new hierarchy
+			// sample data
+			// [
+			// 	{
+			// 		"file": "/localdir/dedalo/install/import/hierarchy/fauna1.copy.gz",
+			// 		"file_name": "fauna1.copy.gz",
+			// 		"section_tipo": "fauna1",
+			// 		"tld": "fauna",
+			// 		"label": "Fauna",
+			// 		"type": "term", // or model
+			// 		"typology": 11
+			// 	}
+			// ]
 			foreach ($selected_hierarchies as $item) {
 
 				// import records from file *.copy.gz
+				// this delete existing data of current tld and copy all file pg data
 				$ar_responses[] = install::import_hierarchy_file($item->section_tipo);
 
-				// activate_hierarchy
-				if ($item->type==='term') {
-					$ar_responses[] = install::activate_hierarchy($item->tld);
+				// ignore models for creating hierarchy
+				if ($item->type!=='term') {
+					continue;
 				}
+
+				// creates/activate the new hierarchy and ontology
+				$ar_responses[] = install::activate_hierarchy($item);
 			}
 
 		$response->result	= $ar_responses;

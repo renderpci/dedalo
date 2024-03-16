@@ -379,7 +379,7 @@ final class dd_api_Test extends TestCase {
 				    "source": {
 				        "action": "related_search",
 				        "model": "component_text_area",
-				        "tipo": "test17",
+				        "tipo": "test3",
 				        "section_tipo": "test3",
 				        "section_id": "1",
 				        "lang": "lg-eng",

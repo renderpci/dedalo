@@ -107,7 +107,9 @@ class hierarchy {
 			);
 			$dato		= $component->get_dato();
 			$first_dato	= $dato[0] ?? null;
-			$tld2		= strtolower( $first_dato );
+			$tld2		= !empty($first_dato)
+				? strtolower( $first_dato )
+				: $first_dato;
 			if (empty($tld2)) {
 
 				// Error: TLD2 is mandatory
@@ -1866,6 +1868,8 @@ class hierarchy {
 
 	/**
 	* GET_HIERARCHY_SECTION
+	* Search hierarchy sections by target section_tipo and
+	* get result section_id
 	* @param $section_tipo
 	*	Source section_tipo
 	* @param $hierarchy_component_tipo
@@ -1907,6 +1911,61 @@ class hierarchy {
 
 		return $section_id;
 	}//end get_hierarchy_section
+
+
+
+	/**
+	* GET_HIERARCHY_BY_TLD
+	* Search hierarchy sections by tld and
+	* get result section_id
+	* @param $tld
+	*	tld like 'es'
+	* @return object $response
+	*/
+	public static function get_hierarchy_by_tld(string $tld) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// short vars
+			$table			= hierarchy::$table; // expected 'matrix_hierarchy_main'
+			$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO;
+
+		$sql = '
+			SELECT section_id
+			FROM "'.$table.'"
+			WHERE
+			section_tipo = \''.$section_tipo.'\' AND
+			f_unaccent(matrix_hierarchy_main.datos#>>\'{components,hierarchy6,dato}\') ~* f_unaccent(\'.*\["'.$tld.'"\].*\')
+		';
+		// debug info
+		debug_log(__METHOD__
+			." Executing DB query ".to_string($sql)
+			, logger::WARNING
+		);
+
+		$result = pg_query(DBi::_getConnection(), $sql);
+		if ($result===false) {
+			$msg = " Error on db execution (get_hierarchy_by_tld): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__
+				. $msg
+				, logger::ERROR
+			);
+			$response->errors[] = $msg;
+
+			return $response; // return error here !
+		}
+		$rows	= (array)pg_fetch_assoc($result);
+		$value	= reset($rows);
+
+		$response->result	= $value ?? null;
+		$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end get_hierarchy_by_tld
 
 
 
