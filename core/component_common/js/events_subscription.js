@@ -40,7 +40,7 @@ export const events_subscription = function(self) {
 
 	// update value
 		if (self.mode!=='tm') {
-			const fn_update_value = function(options) {
+			const fn_sync_data = function(options) {
 
 				// options
 					const caller		= options.caller
@@ -86,12 +86,13 @@ export const events_subscription = function(self) {
 						render_level	: render_level
 					})
 			}
-			// sync data on similar components (same id_base)
+			// sync data in similar components (same id_base)
 			// Subscription to the changes: if the DOM input value was changed,
 			// observers DOM elements will be changed own value with the observable value
 			const id_base_lang = self.id_base + '_' + self.lang
+
 			self.events_tokens.push(
-				event_manager.subscribe('update_value_'+id_base_lang, fn_update_value)
+				event_manager.subscribe('sync_data_'+id_base_lang, fn_sync_data)
 			)
 		}//end if (self.mode!=='tm')
 

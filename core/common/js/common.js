@@ -585,7 +585,7 @@ common.prototype.refresh = async function(options={}) {
 	// @see render_tool_upload.upload_done
 		if (refresh_id_base_lang===true) {
 			const id_base_lang = self.id_base + '_' + self.lang
-			event_manager.publish('update_value_'+id_base_lang, {
+			event_manager.publish('sync_data_'+id_base_lang, {
 				caller			: self,
 				changed_data	: null
 			})
