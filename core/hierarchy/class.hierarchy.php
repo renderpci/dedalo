@@ -2013,6 +2013,18 @@ class hierarchy {
 		$msg = [];
 		foreach ($ar_section_tipo as $key => $current_section_tipo) {
 
+			// safe tipo. Must be as 'es1', not only the tld
+			$safe_tipo = safe_tipo($current_section_tipo);
+			if ($safe_tipo===false) {
+				debug_log(__METHOD__
+					. " Ignored invalid section tipo " . PHP_EOL
+					. ' section_tipo: ' . to_string($current_section_tipo)
+					, logger::ERROR
+				);
+				$response->errors[]	= 'Ignored invalid section tipo: ' . $current_section_tipo. ' . Use format like "es1"';
+				continue;
+			}
+
 			$command  = '';
 			$command .= 'cd "'.EXPORT_HIERARCHY_PATH.'" ; ';
 			#$command .= 'psql dedalo4_'.DEDALO_ENTITY.' -h localhost  ';
@@ -2025,9 +2037,9 @@ class hierarchy {
 				$command .= 'gzip -f '.$current_section_tipo.'_'.$date.'.copy';
 
 			}else{
-				$command .= 'section_tipo = \''.safe_tipo($current_section_tipo).'\' ORDER BY section_id ASC) ';
-				$command .= 'TO '.safe_tipo($current_section_tipo).'.copy " ; ';
-				$command .= 'gzip -f '.safe_tipo($current_section_tipo).'.copy';
+				$command .= 'section_tipo = \''.$safe_tipo.'\' ORDER BY section_id ASC) ';
+				$command .= 'TO '.$safe_tipo.'.copy " ; ';
+				$command .= 'gzip -f '.$safe_tipo.'.copy';
 			}
 			debug_log(__METHOD__
 				.' Exec command (export_hierarchy) '.PHP_EOL
