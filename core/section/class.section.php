@@ -1867,7 +1867,7 @@ class section extends common {
 				}
 
 			// real section
-				$children_real_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$children_real_tipos = section::get_ar_children_tipo_by_model_name_in_section(
 					$section_real_tipo, // section_tipo
 					['button_'], // ar_model_name_required
 					true, // from_cache
@@ -1878,7 +1878,7 @@ class section extends common {
 				);
 
 			// virtual section. Add the specific buttons of the virtual section, if the virtual have buttons add to the list.
-				$children_virtual_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+				$children_virtual_tipos = section::get_ar_children_tipo_by_model_name_in_section(
 					$this->tipo, // section_tipo
 					['button_'], // ar_model_name_required
 					true, // from_cache
@@ -1888,7 +1888,7 @@ class section extends common {
 					$ar_excluded_tipo // ar_tipo_exclude_elements
 				);
 
-			$ar_buttons_tipo = array_merge($children_virtual_tipo, $children_real_tipo);
+			$ar_buttons_tipo = array_merge( $children_real_tipos, $children_virtual_tipos );
 
 		}else{
 
