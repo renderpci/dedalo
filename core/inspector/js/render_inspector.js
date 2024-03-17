@@ -391,7 +391,7 @@ const render_selection_info = function(self) {
 			// add label text
 			ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: '',
+				class_name		: 'selection_info_label',
 				inner_html		: caller.label || '',
 				parent			: selection_info_node
 			})
