@@ -102,3 +102,4 @@ Every config file has its own parameters that need to be changed with the your o
    1. Work system [configuration](./config_db.md#work-system-database-variables)
    2. Diffusion system [configuration](./config_db.md#diffusion-system-database-variables)
 3. Changing parameters of [areas configuration file](./config_areas.md#changing-parameters-of-dédalo-areas-config-file).
+4. Implement all [thesaurus dependencies](thesaurus_dependeces.md).
