@@ -587,7 +587,6 @@ component_common.prototype.save = async function(new_changed_data) {
 					// self.db_data.value[changed_data.key] = clone(changed_data.value)
 					self.db_data = clone(response.result.data)
 					// console.log('response:.result', response.result);
-
 				}
 
 			// ui. Add save_success class to component wrappers (green line animation)
@@ -980,7 +979,7 @@ component_common.prototype.change_value = async function(options) {
 		const prev_status = self.status
 		// self.status = 'changing'
 
-	// update the component data value in the instance before to save (returns bool)
+	// update_data_value. update the component data value in the instance before to save (returns bool)
 		const changed_data_length = changed_data.length
 		for (let i = 0; i < changed_data_length; i++) {
 			const changed_data_item = changed_data[i] // must be a freeze object
@@ -1015,6 +1014,8 @@ component_common.prototype.change_value = async function(options) {
 				build_autoload : build_autoload
 			})
 		}
+
+	// restore previous status value
 		self.status = prev_status
 
 	// event sync_data_ . Used to update the DOM elements of the instance
