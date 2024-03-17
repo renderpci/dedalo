@@ -920,9 +920,11 @@ class component_relation_parent extends component_relation_common {
 	* @param object|null $options
 	* @param array $parents_recursive = []
 	* 	Accumulates results to allow check for duplicates
+	* @param bool $is_recursion = false
+	* 	Used to prevent cache recursions
 	* @return array $parents_recursive
 	*/
-	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?object $options, array $parents_recursive=[]) : array {
+	public static function get_parents_recursive(int|string $section_id, string $section_tipo, ?object $options, array $parents_recursive=[], bool $is_recursion=false) : array {
 
 		// options
 			// skip_root. Allows you to avoid including the root term as a parent
@@ -983,7 +985,8 @@ class component_relation_parent extends component_relation_common {
 						$current_locator->section_id,
 						$current_locator->section_tipo,
 						$options,
-						$parents_recursive
+						$parents_recursive,
+						true // is_recursion
 					);
 					if (!empty($parent_parents_recursive)) {
 						foreach ($parent_parents_recursive as $parent_locator) {
@@ -1016,7 +1019,9 @@ class component_relation_parent extends component_relation_common {
 		}
 
 		// cache Set as resolved
-			$parents_recursive_resolved[$key_resolve] = $parents_recursive;
+			if ($is_recursion===false) {
+				$parents_recursive_resolved[$key_resolve] = $parents_recursive;
+			}
 
 
 		return $parents_recursive;
