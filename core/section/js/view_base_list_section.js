@@ -7,19 +7,17 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import {clone} from '../../common/js/utils/index.js'
+	// import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
-	import {
-		render_column_id
-	} from './render_list_section.js'
+	// import {render_column_id} from './render_list_section.js'
 
 
 
 /**
-* view_base_list_section
+* VIEW_BASE_LIST_SECTION
 * Manages the component's logic and appearance in client side
 */
 export const view_base_list_section = function() {
@@ -178,8 +176,8 @@ view_base_list_section.render = async function(self, options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @param array ar_section_record
-* @para object self
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self, ar_section_record) {
@@ -259,8 +257,10 @@ const get_buttons = function(self) {
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
+
 	return fragment
 }//end get_buttons
+
 
 
 // @license-end
