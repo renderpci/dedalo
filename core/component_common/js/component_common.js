@@ -1011,6 +1011,8 @@ component_common.prototype.change_value = async function(options) {
 		self.status = prev_status
 
 	// event to update the DOM elements of the instance
+	// subscriptions from component_common.init()
+	// @see events_subscription.js
 		const id_base_lang = self.id_base + '_' + self.lang
 		event_manager.publish('sync_data_'+id_base_lang, {
 			caller			: self,
