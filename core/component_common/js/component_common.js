@@ -587,7 +587,6 @@ component_common.prototype.save = async function(new_changed_data) {
 					// self.db_data.value[changed_data.key] = clone(changed_data.value)
 					self.db_data = clone(response.result.data)
 					// console.log('response:.result', response.result);
-
 				}
 
 			// ui. Add save_success class to component wrappers (green line animation)
@@ -980,7 +979,7 @@ component_common.prototype.change_value = async function(options) {
 		const prev_status = self.status
 		// self.status = 'changing'
 
-	// update the component data value in the instance before to save (returns bool)
+	// update_data_value. update the component data value in the instance before to save (returns bool)
 		const changed_data_length = changed_data.length
 		for (let i = 0; i < changed_data_length; i++) {
 			const changed_data_item = changed_data[i] // must be a freeze object
@@ -994,29 +993,62 @@ component_common.prototype.change_value = async function(options) {
 		const api_response = await self.save(changed_data)
 
 		// fix instance changed_data
-			// self.data.changed_data = changed_data
-			if (api_response && api_response.result) {
-				// reset component changed_data to empty object
-				self.data.changed_data = []
-			}
+		if (api_response && api_response.result) {
 
-		// refresh
-			if (refresh===true) {
-				await self.refresh({
-					build_autoload : build_autoload // default value is false
-				})
-			}
+			// reset component changed_data to empty array
+			self.data.changed_data = []
 
-	// restore previous status
+			// update_datum. Force update datum with received API response result
+			// That is necessary for example to allow update maps with ddo.hide items
+			// containing coordinates value
+			// @see component_geolocation tch244
+			if(!self.standalone){
+				await self.update_datum(api_response.result)
+			}
+		}
+
+	// refresh (optional, default is false)
+		if (refresh===true) {
+			await self.refresh({
+				// build_autoload default value is false but could be a function callback
+				build_autoload : build_autoload
+			})
+		}
+
+	// restore previous status value
 		self.status = prev_status
 
-	// event to update the DOM elements of the instance
+	// event sync_data_ . Used to update the DOM elements of the instance
 	// subscriptions from component_common.init()
 	// @see events_subscription.js
 		const id_base_lang = self.id_base + '_' + self.lang
 		event_manager.publish('sync_data_'+id_base_lang, {
 			caller			: self,
 			changed_data	: changed_data
+		})
+
+	// event update_value_ . Defined in Ontology to fire events, see: hierarchy93 or numisdata77
+	// subscriptions from component_common.build() -> init_events_subscription(self)
+	// @see component_common.init_events_subscription
+	// sample of use in Ontology item properties:
+		// "observe": [
+		// 	{
+		// 	  "info": "Observes 'Review status' radio_button value changes to update this calculated value",
+		// 	  "client": {
+		// 		"event": "update_value",
+		// 		"perform": {
+		// 		  "function": "refresh"
+		// 		}
+		// 	  },
+		// 	  "server": {
+		// 		"filter": false
+		// 	  },
+		// 	  "component_tipo": "oh93"
+		// 	}
+		// ]
+		const id_base = self.id_base
+		event_manager.publish('update_value_'+id_base, {
+			caller			: self
 		})
 
 	// exec queue one by one
