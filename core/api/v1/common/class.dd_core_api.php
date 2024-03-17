@@ -1806,7 +1806,7 @@ final class dd_core_api {
 								$source_sections  = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$tipo, //  string $caller_tipo = null
+									$section_tipo, //  string $caller_tipo = null
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1832,7 +1832,7 @@ final class dd_core_api {
 									$dataframe_sections = sections::get_instance(
 										null, // ?array $ar_locators
 										$dataframe_sqo, // object $search_query_object = null
-										$tipo, //  string $caller_tipo = null
+										$section_tipo, //  string $caller_tipo = null
 										$mode, // string $mode = 'list'
 										$lang // string $lang = DEDALO_DATA_NOLAN
 									);
@@ -1881,7 +1881,7 @@ final class dd_core_api {
 								$element  = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$tipo, //  string $caller_tipo = null
+									$section_tipo, //  string $caller_tipo = null
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1897,7 +1897,7 @@ final class dd_core_api {
 								$element = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$tipo, // string $caller_tipo = null
+									$section_tipo, // string $caller_tipo = null
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1952,7 +1952,7 @@ final class dd_core_api {
 						$element = sections::get_instance(
 							null,
 							$sqo,
-							$tipo,
+							$section_tipo,
 							$mode,
 							$lang ?? DEDALO_DATA_LANG
 						);
