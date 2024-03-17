@@ -29,46 +29,53 @@ Every hierarchy has a unique TLD that identify it and is used into Dédalo [onto
 
 In some hierarchies this TLD use a standard denomination, as toponymy hierarchies, that use the [ISO 3166-1](https://www.iso.org/iso-3166-country-codes.html) definition to identify the countries.
 
-Some common and shared TLD's: (list ordered by type and antiquity)
+Some common and shared TLD's: (list ordered by type and name)
 
 | Hierarchy | Description | type | section | TLD |
 | --- | --- | --- | --- | --- |
-| Thematic | Themes used to analyze heritage | Thematic (1) | hierarchy20 | ts |
-| Onomastic | Names of people and places | Thematic (1) | hierarchy20 | on |
-| Chronological | Periods and time events | Thematic (1) | hierarchy20 | cr |
-| Deposition type | Defines the different Deposition types of donations in register | Thematic (1) | hierarchy20 | deposit |
-| Object name | Defines the different names for objects | Thematic (1) | hierarchy20 | object |
-| Inscriptions and measures | Defines typologies of inscriptions and his ubication into the object | Thematic (1) | hierarchy20 | pieces |
-| Culture | Defines different cultures and his space and time | Thematic (1)  | hierarchy20 | cult |
-| Material | Defines the composition materials used in objects | Thematic (1) | hierarchy20 | material |
-| Technique | Defines the techniques used to build objects | Thematic (1) | hierarchy20 | technique |
-| Iconography | Defines iconography | Thematic (1) | hierarchy20 | icon |
-| Languages | Languages families and dialects | languages (3) | hierarchy20 | lg |
-| Users roles | Defines the different roles of Dédalo users | Semantic (4) | hierarchy20 | roleusr |
-| Users jobs | Defines the different jobs for people | Semantic (4) | hierarchy20 | rolejob |
-| Position role | Defines the different position role for persons | Semantic (4) | hierarchy20 | rolepos |
-| Northern Paleo Hispanic | Defines Iberian symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | scxibo |
-| Southern Paleo Hispanic | Defines Iberian symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | scxibm |
-| South-Western Paleo Hispanic | Defines Iberian symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | sctxr |
-| Greek | Defines especial symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | scell |
-| Latin | Defines especial symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | sclat |
-| Punic | Defines especial symbols not defined into Unicode | Epigraphy (7) | hierarchy20 | scxpu |
-| Symbols | Defines symbols | Epigraphy (7) | hierarchy20 | scsym |
-| Countermark | Defines symbols used as countermarks | Epigraphy (7) | hierarchy20 | icon |
-| Special | Defines a restrictions for indexation | Special (5) | hierarchy20 | special |
-| Ubication | Topographic, to identify the location of objects | Ubications (9) | hierarchy20 | ubication |
-| Places | Defines places as findspots | Ubications (9) | hierarchy20 | place |
-| Web sites | Website structure, menus, etc | websites (6) | hierarchy20 | ww |
+| Chronological  | Periods and time events  | Thematic (1)  | hierarchy20  | dc |
+| Culture  | Defines different cultures and his space and time  | Thematic (1)  | hierarchy20  | culture |
+| Deposition type  | Defines the different Deposition types of donations in register  | Thematic (1)  | hierarchy20  | depositiontype |
+| Iconography  | Defines iconography  | Thematic (1)  | hierarchy20  | icon |
+| Immovable  | Defines places as archeological sites, findspots  | Thematic (1)  | hierarchy20  | tchi |
+| Inscriptions and measures  | Defines typologies of inscriptions and his ubication into the object  | Thematic (1)  | hierarchy20  | pieces |
+| Material  | Defines the composition materials used in objects  | Thematic (1)  | hierarchy20  | material |
+| Object name  | Defines the different names for objects  | Thematic (1)  | hierarchy20  | object |
+| Onomastic  | Names of people and places  | Thematic (1)  | hierarchy20  | on |
+| Technique  | Defines the techniques used to build objects  | Thematic (1)  | hierarchy20  | technique |
+| Thematic  | Themes used to analyze heritage  | Thematic (1)  | hierarchy20  | ts |
+| ISAD(g)  | Defines the hierarchy related to the ISAD(g)  | Catalog (8)  | isad1  | isad |
+| Languages  | Languages families and dialects  | languages (3)  | hierarchy20  | lg |
+| Cause of uncertainty  | Defines the reasons of the uncertainty  | Semantic (4)  | hierarchy20  | uncertainty |
+| Position role  | Defines the different position role for persons  | Semantic (4)  | hierarchy20  | rolepos |
+| Semantic  | Defines context for data, relations between concepts  | Semantic (4)  | hierarchy20  | ds |
+| Users jobs  | Defines the different jobs for people  | Semantic (4)  | hierarchy20  | rolejob |
+| Users roles  | Defines the different roles of Dédalo users  | Semantic (4)  | hierarchy20  | roleusr |
+| Special  | Defines a restrictions for indexation  | Special (5)  | hierarchy20  | special |
+| Analysis  | Defines the different analysis techniques applied to objects.  | Conservation (10)  | hierarchy20  | coanalysis |
+| Cause  | Defines the reasons of the affectation  | Conservation (10)  | hierarchy20  | cocause |
+| Countermark  | Defines symbols used as countermarks  | Epigraphy (7)  | hierarchy20  | sccmk |
+| Greek  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scell |
+| Job material  | Defines the work materials to be used in the restoration process  | Conservation (10)  | hierarchy20  | comaterial |
+| Latin  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | sclat |
+| Northern Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxibo |
+| Pathology  | Defines the affectations in the objects  | Conservation (10)  | hierarchy20  | copathology |
+| Punic  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxpu |
+| South-Western Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | sctxr |
+| Southern Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxibm |
+| Symbols  | Defines symbols  | Epigraphy (7)  | hierarchy20  | scsym |
+| Treatment  | Defines the processes that can be applied into the restoration process  | Conservation (10)  | hierarchy20  | cotreatment |
+| Web sites  | Website structure, menus, etc  | Websites (6)  | ww10  | ww |
+| Ubication  | Topographic, to identify the location of objects  | Ubications (9)  | hierarchy20  | ubication |
 
 !!! info "TLD's names"
-
-    The first hierarchies created were toponyms, and this hierarchies followed the ISO TLD's Alpha 2 to use as Dédalo ontology TLD. Some of the first common hierarchies follow the ISO Alpha 2 rule, as thematic hierarchy, that use `ts` as TLD, by the time, it became impossible to create new ontologies following the Alpha 2 rule, so, the Alpha2 rule was removed and now Dédalo can use a longs TLD's, but following some rules: For this historical reasons no spaces, especial characters, numbers, points, commas or any other characters outside ASCII characters are valid (as accents, ç, ñ, etc.). To create hierarchies TLD's, only \[a-z\] characters are accepted.
+    The first hierarchies created were toponyms, and this hierarchies followed the ISO TLD's Alpha 2 to use as Dédalo ontology TLD. Some of the first common hierarchies follow the ISO Alpha 2 rule, as thematic hierarchy, that use `ts` as TLD, by the time, it became impossible to create new ontologies following the Alpha 2 rule, so, the Alpha2 rule was removed and now Dédalo can use a longs TLD's, but following some rules: For this historical reasons no spaces, especial characters, numbers, points, commas or any other characters outside ASCII characters are valid (as accents á, è, ç, ñ, etc.). To create hierarchies TLD's, only \[a-z\] characters are accepted.
 
 #### Private hierarchies
 
-Is possible to create hierarchies by your own, alone for other Dédalo installations. In this case you will need to use a specific TLD following the rule of use only letters, without spaces or special characters.
+Is possible to create hierarchies by your own, alone for other Dédalo installations. In this case you will need to use a specific TLD following the rule of use only letters, without spaces, numbers or any special characters.
 
-Normally, the hierarchy reference will be [hierarchy20](https://dedalo.dev/ontology/hierarchy20), the normalized section used as thesaurus model.
+Usually, the hierarchy reference will be [hierarchy20](https://dedalo.dev/ontology/hierarchy20), the normalized section used as thesaurus model.
 
 ### Process to create new hierarchy
 
@@ -83,10 +90,10 @@ Both, common and private, hierarchies has the same process to be created.
     ![Searching TLD Alpha 2 into hierarchy section](assets/20231008_211329_search_tld_hierarchy.png)
 
 3. If not exists, create new record as any other section.
-4. Add the new TLD into the TLD (Alpha2) field.
+4. **Mandatory** Add the new TLD into the TLD (Alpha2) field.
 5. Add the main language of the hierarchy
 6. **Mandatory** Set the Typology of the new hierarchy
-7. **Mandatory** Set the real section tipo (normally hierarchy20)
+7. **Mandatory** Set the real section tipo (usually hierarchy20)
 8. **Mandatory** Add the name of the hierarchy
 9. Change the state of the field "Active" to "Yes"
 
@@ -104,17 +111,17 @@ Both, common and private, hierarchies has the same process to be created.
 
     ![Check the new hierarchy into thesaurus view](assets/20231008_213400_check_hierarchy_into_thesarurs.png)
 
-#### Toponyms
+#### Toponyms or other standardized hierarchies
 
 For simplified the creation and load toponymy hierarchies is possible use the Maintenance panel to control the all toponyms hierarchies.
 
-Dédalo installations will pre-configure all counties, but their are not active and his data is not loaded by default. Only countries loaded in the install process will be accesible to users. To activate new one follow this steps:
+Dédalo installations will pre-configure all counties, but their are not active and his data is not loaded by default. Only countries loaded in the install process will be accessible to users. To activate new one follow this steps:
 
 1. Go to "Maintenance" panel in "System administration" menu.
 2. Locate the "Install hierarchies" block
 
     ![Import toponymy control panel](assets/20231008_213848_import_toponymy.png)
 
-3. Check the country that you want to load. (Is possible check more than one)
+3. Check the country or the normalized hierarchy that you want to load. (Is possible check more than one)
 4. Click the "Import hierarchy" button and wait. (Some countries may have a large dataset)
 5. Check in Thesaurus view that this hierarchy is ready and set the permissions to users as you need.
