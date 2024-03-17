@@ -203,8 +203,8 @@ component_security_access.prototype.update_value = function(item, input_value) {
 	// fix updated changed_value
 		self.filled_value = value
 
-	// event. publish update_value_xx event on change data.value
-		const name = 'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
+	// event. publish update_item_value_xx event on change data.value
+		const name = 'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo
 		event_manager.publish(name, input_value)
 		// console.log("changed_value:", item.tipo, item.section_tipo, changed_value);
 
