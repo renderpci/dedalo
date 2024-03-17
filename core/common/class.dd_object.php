@@ -33,7 +33,6 @@ class dd_object extends stdClass {
 		// columns_map			: array
 		// view					: string|null like 'table'
 		// children_view		: string like "text"
-		// section_id			: int like 1 // Used by tools
 		// name					: string like 'tool_lang' // Used by tools
 		// description			: string like 'Description of tool x' // Used by tools
 		// icon					: string like '/tools/tool_lang/img/icon.svg' // Used by tools
@@ -1252,6 +1251,7 @@ class dd_object extends stdClass {
 
 	/**
 	* SET_COLOR
+	* Used by sections
 	* @param string|null $value
 	* @return bool
 	*/

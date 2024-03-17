@@ -581,30 +581,7 @@ common.prototype.refresh = async function(options={}) {
 		// 	self.node[i].classList.remove('loading')
 		// }
 
-	// event update_value_ (defined in ontology to fire events, see: hierarchy93 or numisdata77)
-	// subscriptions from component_common.build() -> init_events_subscription(self)
-	// @see component_common.init_events_subscription
-	// sample:
-		// "observe": [
-		// 	{
-		// 	  "info": "Observes 'Review status' radio_button value changes to update this calculated value",
-		// 	  "client": {
-		// 		"event": "update_value",
-		// 		"perform": {
-		// 		  "function": "refresh"
-		// 		}
-		// 	  },
-		// 	  "server": {
-		// 		"filter": false
-		// 	  },
-		// 	  "component_tipo": "oh93"
-		// 	}
-		// ]
-		const id_base = self.id_base
-		event_manager.publish('update_value_'+id_base, {
-			caller			: self
-		})
-
+	// event sync_data_ . Used to update the DOM elements of the instance
 	// refresh_id_base_lang. On true, force to refresh components with same 'id_base_lang'
 	// @see render_tool_upload.upload_done
 		if (refresh_id_base_lang===true) {
