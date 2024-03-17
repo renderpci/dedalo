@@ -1080,10 +1080,12 @@ Besides, every installation can import the ontology tipo that will use in the in
 | --- | --- |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
-| **numisdata** | Numismatic heritage,  the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
 | **tch** | Tangible heritage, the definition of sections and tools to use for tangible heritage, such as objects, collectors, informants, etc |
+| **tchi** | Tangible heritage immovable, the definition of sections and tools to use for tangible heritage immovable, such as archeological sites, finds, alqueries, etc |
 | **dmm** | Memory and documentary heritage, the definition of sections and tools to be used for the heritage of memory, such as graves, deportees, exiles, tortured, etc. |
+| **numisdata** | Numismatic heritage, the definition sections and tools to use for numismatics project, such as mints, types, legends, hoards, finds, etc. |
 | **isad** | Archives following the [ISAD(g) standard](https://www.ica.org/en/isadg-general-international-standard-archival-description-second-edition) (General International Standard Archival Description - Second edition), the definition of sections and tools to be used for cataloging documents with the standard structure, etc. |
+| **actv** | Activities, the definition of section and fields of activities as exhibitions, workshops, didactics, conferences, etc. |
 
 ```php
 define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
@@ -1093,7 +1095,12 @@ define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
     Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users.
 
 !!! note "Applying changes in DEDALO_PREFIX_TIPOS"
-    Any change in `DEDALO_PREFIX_TIPOS` will need a update of the ontology, this changes are not directly applied. Dédalo need to get the ontology tld and install it, to do that update the ontology in Developers control panel.
+    Any change in `DEDALO_PREFIX_TIPOS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenace_status.md) control panel.
+
+!!! note "Activities"
+    The `actv` tld should be used as model to implement a virtual sections with more specific activities as hierarchies of toponymy does into the thesaurus using it as `hierarchy20`, the main section to implement in this way is `actv1` and his model `actv2`. The virtual sections should be defined with a prefix `actv` into the new tld, in this way:
+    - for exhibitions section the tld could be: `actvexhibition`
+    - for conferences section the tld could be: `actvconference`
 
 ---
 
