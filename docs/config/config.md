@@ -1092,7 +1092,7 @@ define('DEDALO_PREFIX_TIPOS', [ 'dd', 'rsc', 'hierarchy', 'lg', 'oh', 'ich' ]);
 ```
 
 !!! note "Thesaurus dependencies"
-    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users.
+    Some tld has a thesaurus dependency, if you want to use a `tch` Dédalo installation will need to create the `material`, `technique`, or `objects` hierarchies. This hierarchies are not included into the main tld, because the hierarchies need to be activate and created by the users. [See the table of dependencies](thesaurus_dependeces.md#dependencies).
 
 !!! note "Applying changes in DEDALO_PREFIX_TIPOS"
     Any change in `DEDALO_PREFIX_TIPOS` will need a update of the ontology, this changes are not directly applied. Dédalo needs to get the ontology tld and install it, to do that update the ontology in [maintenance](../management/maintenace_status.md) control panel.
