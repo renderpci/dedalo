@@ -205,7 +205,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				if(self.caller_dataframe){
 					ddo.caller_dataframe = self.caller_dataframe
 				}
-				if(self.main_element.properties.has_dataframe){
+				const has_dataframe = self.main_element.properties && self.main_element.properties.has_dataframe
+					? self.main_element.properties.has_dataframe
+					: null
+				if(has_dataframe){
 					ddo.has_dataframe = self.main_element.properties.has_dataframe
 					// get the dataframe component defined in request_config to assign it to main ddo
 					const request_config = self.main_element.context.request_config || null
