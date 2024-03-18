@@ -3370,6 +3370,9 @@ export const ui = {
 	/**
 	* ACTIVATE_TOOLTIPS
 	* Add tooltip to buttons based on title attribute
+	* @param HTMLElement wrapper
+	* 	Element (component, inspector, etc.) wrapper
+	* @return void
 	*/
 	activate_tooltips : function(wrapper) {
 
