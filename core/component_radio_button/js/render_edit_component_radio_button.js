@@ -321,6 +321,7 @@ export const get_buttons = (self) => {
 			const reset_button = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
+				title_label		: get_label.reset || 'Reset',
 				parent			: fragment
 			})
 			reset_button.addEventListener('click', function(e) {
