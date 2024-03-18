@@ -1230,48 +1230,28 @@
 		"typology": 3
 	},
 	{
-		"tld": "special",
-		"label": "Special",
-		"typology": 5
-	},
-	{
-		"tld": "ds",
-		"label": "Semantic",
-		"typology": 4
-	},
-	{
-		"tld": "ts",
-		"label": "Thematic descriptors",
+		"tld": "culture",
+		"label": "Culture",
 		"typology": 1
 	},
 	{
 		"tld": "dc",
-		"label": "Chronological descriptors",
+		"label": "Chronology",
 		"typology": 1
 	},
 	{
-		"tld": "on",
-		"label": "Onomastic descriptors",
+		"tld": "depositiontype",
+		"label": "Deposition type",
 		"typology": 1
 	},
 	{
-		"tld": "isad",
-		"label": "ISAD(g)",
-		"typology": 8
-	},
-	{
-		"tld": "ubication",
-		"label": "Topographical",
-		"typology": 9
+		"tld": "icon",
+		"label": "Iconography",
+		"typology": 1
 	},
 	{
 		"tld": "material",
 		"label": "Material",
-		"typology": 1
-	},
-	{
-		"tld": "technique",
-		"label": "Technique",
 		"typology": 1
 	},
 	{
@@ -1280,8 +1260,43 @@
 		"typology": 1
 	},
 	{
-		"tld": "roleusr",
-		"label": "User roles",
+		"tld": "on",
+		"label": "Onomastic",
+		"typology": 1
+	},
+	{
+		"tld": "pieces",
+		"label": "Enrollment Position",
+		"typology": 1
+	},
+	{
+		"tld": "tchi",
+		"label": "Immovable property",
+		"typology": 1
+	},
+	{
+		"tld": "technique",
+		"label": "Technique",
+		"typology": 1
+	},
+	{
+		"tld": "ts",
+		"label": "Thematic",
+		"typology": 1
+	},
+	{
+		"tld": "isad",
+		"label": "ISAD(g)",
+		"typology": 1
+	},
+	{
+		"tld": "ubication",
+		"label": "Location",
+		"typology": 9
+	},
+	{
+		"tld": "ds",
+		"label": "Semantic",
 		"typology": 4
 	},
 	{
@@ -1291,13 +1306,48 @@
 	},
 	{
 		"tld": "rolepos",
-		"label": "Positon roles",
+		"label": "Position roles",
+		"typology": 4
+	},
+	{
+		"tld": "roleusr",
+		"label": "User roles",
 		"typology": 4
 	},
 	{
 		"tld": "uncertainty",
-		"label": "Uncertainty reasons",
+		"label": "Cause of uncertainty",
 		"typology": 4
+	},
+	{
+		"tld": "special",
+		"label": "Special",
+		"typology": 5
+	},
+	{
+		"tld": "coanalysis",
+		"label": "Analysis",
+		"typology": 10
+	},
+	{
+		"tld": "cocause",
+		"label": "Cause",
+		"typology": 10
+	},
+	{
+		"tld": "comaterial",
+		"label": "Job material",
+		"typology": 10
+	},
+	{
+		"tld": "copathology",
+		"label": "Pathology",
+		"typology": 10
+	},
+	{
+		"tld": "cotreatment",
+		"label": "Treatment",
+		"typology": 10
 	},
 	{
 		"tld": "sccmk",
@@ -1310,78 +1360,33 @@
 		"typology": 7
 	},
 	{
-		"tld": "sctxr",
-		"label": "Iberian South-Western",
-		"typology": 7
-	},
-	{
 		"tld": "sclat",
 		"label": "Latin",
 		"typology": 7
 	},
 	{
+		"tld": "scsym",
+		"label": "Symbol",
+		"typology": 7
+	},
+	{
+		"tld": "sctxr",
+		"label": "Southwest Paleohispanic",
+		"typology": 7
+	},
+	{
 		"tld": "scxibm",
-		"label": "Iberian Southern Palaeohispanic",
+		"label": "Southern Paleohispanic",
 		"typology": 7
 	},
 	{
 		"tld": "scxibo",
-		"label": "Iberian Northern Palaeohispanic",
+		"label": "Northern Paleohispanic",
 		"typology": 7
 	},
 	{
 		"tld": "scxpu",
 		"label": "Punic",
 		"typology": 7
-	},
-	{
-		"tld": "scsym",
-		"label": "Symbols",
-		"typology": 7
-	},
-	{
-		"tld": "tchi",
-		"label": "Immovable property",
-		"typology": 1
-	},
-	{
-		"tld": "fauna",
-		"label": "Fauna",
-		"typology": 11
-	},
-	{
-		"tld": "flora",
-		"label": "Flora",
-		"typology": 11
-	},
-	{
-		"tld": "pieces",
-		"label": "Position of inscriptions",
-		"typology": 1
-	},
-	{
-		"tld": "copathology",
-		"label": "Conservation pathologies",
-		"typology": 10
-	},
-	{
-		"tld": "cocause",
-		"label": "Causes of conservation",
-		"typology": 10
-	},
-	{
-		"tld": "cotreatment",
-		"label": "Conservation treatments",
-		"typology": 10
-	},
-	{
-		"tld": "coanalysis",
-		"label": "Conservation analysis",
-		"typology": 10
-	},
-	{
-		"tld": "comaterial",
-		"label": "Conservation materials",
-		"typology": 10
 	}
 ]
