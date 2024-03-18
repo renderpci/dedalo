@@ -56,8 +56,6 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Symbol | Epigraphy | scsym | x | x | x | √ | x | x | x |
 | Web sites | Websites | ww |  x | x | x | x | x | x | x |
 
-
-
 The above table shows required dependencies for the main tlds, but it is possible to implement more thesaurus than those required, for example, if you want to work with epigraphic legends in amphorae with Greek thesaurus when you are working with the `tch` catalogue, you can implement it.
 
 ## How implement?
