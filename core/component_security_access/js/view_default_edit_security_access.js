@@ -338,7 +338,7 @@ const render_area_item = function(item, datalist, value, self) {
 		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe(
-					'update_value_' + self.id + '_' + tipo + '_' + section_tipo,
+					'update_item_value_' + self.id + '_' + tipo + '_' + section_tipo,
 					fn_update_value)
 			)
 			function fn_update_value(changed_data) {
@@ -619,7 +619,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 			// If the DOM input value was changed, observers DOM elements will change self value with the observable value
 				self.events_tokens.push(
 					event_manager.subscribe(
-						'update_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
+						'update_item_value_' + self.id + '_' + item.tipo + '_' + item.section_tipo,
 						fn_update_value
 					)
 				)
