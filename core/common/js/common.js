@@ -465,9 +465,11 @@ common.prototype.render = async function (options={}) {
 		// event_manager.publish('render_instance', self)
 
 	// activate_tooltips
-		setTimeout(function(){
-			ui.activate_tooltips(result_node)
-		}, 1)
+		if (self.mode==='edit') {
+			setTimeout(function(){
+				ui.activate_tooltips(result_node)
+			}, 1)
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
