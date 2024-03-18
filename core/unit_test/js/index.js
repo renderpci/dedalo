@@ -44,18 +44,23 @@ import {url_vars_to_object} from '../../common/js/utils/index.js'
 	// import './test_components_render.js'
 
 	const area = url_vars.area
-	try {
+	if (area) {
+		try {
 
-		// load test file
-		await import(`./${area}.js`)
-		// exec mocha
-		import('./exec.js')
+			// load test file
+			await import(`./${area}.js`)
+			// exec mocha
+			import('./exec.js')
 
-	} catch (error) {
-		if (area!==undefined) {
-			console.log(error)
+		} catch (error) {
+			if (area!==undefined) {
+				console.log(error)
+			}
+
+			// list
+			import('./list.js')
 		}
-
+	}else{
 		// list
 		import('./list.js')
 	}

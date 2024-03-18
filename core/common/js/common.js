@@ -464,6 +464,11 @@ common.prototype.render = async function (options={}) {
 		event_manager.publish('render_'+self.id, result_node)
 		// event_manager.publish('render_instance', self)
 
+	// activate_tooltips
+		setTimeout(function(){
+			ui.activate_tooltips(result_node)
+		}, 1)
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// const total = (performance.now()-t0).toFixed(3)

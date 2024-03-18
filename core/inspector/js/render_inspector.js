@@ -80,6 +80,9 @@ render_inspector.prototype.edit = async function(options) {
 		wrapper.appendChild(label)
 		wrapper.appendChild(content_data)
 
+	// tooltip
+		ui.activate_tooltips(wrapper)
+
 
 	return wrapper
 }//end edit
