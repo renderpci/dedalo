@@ -62,36 +62,36 @@ const get_content_data_edit = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// top_container
-		// const top_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'top_container',
-		// 	parent			: fragment
-		// })
+		const top_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'top_container',
+			parent			: fragment
+		})
 
 	// automatic_translation
-		// // icon
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button icon lang black',
-		// 	parent			: top_container
-		// })
-		// // label
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'automatic_label',
-		// 	inner_html		: get_label.automatic_translation || 'Automatic translation',
-		// 	parent			: top_container
-		// })
-		// const translator_engine = (self.context.config)
-		// 	? self.context.config.translator_engine.value
-		// 	: false
-		// if (translator_engine) {
-		// 	const automatic_tranlation_node = build_automatic_translation({
-		// 		self				: self,
-		// 		translator_engine	: translator_engine
-		// 	})
-		// 	top_container.appendChild(automatic_tranlation_node)
-		// }//end if (translator_engine)
+		// icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button icon lang black',
+			parent			: top_container
+		})
+		// label
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'automatic_label',
+			inner_html		: get_label.automatic_translation || 'Automatic translation',
+			parent			: top_container
+		})
+		const translator_engine = (self.context.config)
+			? self.context.config.translator_engine.value
+			: false
+		if (translator_engine) {
+			const automatic_tranlation_node = build_automatic_translation({
+				self				: self,
+				translator_engine	: translator_engine
+			})
+			top_container.appendChild(automatic_tranlation_node)
+		}//end if (translator_engine)
 
 
 	// components container
@@ -211,8 +211,14 @@ export const create_target_component = (lang, self) => {
 								const target_lang	= component.lang
 
 								self.automatic_translation(translator, source_lang, target_lang, target_component_container)
-								.then(()=>{
+								.then((api_response)=>{
 									target_component_container.classList.remove('loading')
+									if (api_response.errors) {
+										console.error('api_response errors:', api_response.errors);
+									}
+									if (api_response.result===false) {
+										alert( api_response.msg );
+									}
 								})
 							}//end fn_click
 							button_translate.addEventListener('click', fn_click)

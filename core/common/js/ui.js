@@ -20,6 +20,7 @@
 	// import {get_instance, get_all_instances} from '../../common/js/instances.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
+	import '../../../lib/codex-tooltip/tooltip.js';
 
 
 
@@ -3362,7 +3363,39 @@ export const ui = {
 
 
 		return modal_node
-	}//end render_edit_modal
+	},//end render_edit_modal
+
+
+
+	/**
+	* ACTIVATE_TOOLTIPS
+	* Add tooltip to buttons based on title attribute
+	*/
+	activate_tooltips : function(wrapper) {
+
+		// mobile do not use tooltip
+		if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+			return
+		}
+
+		const tooltip = new Tooltip();
+
+		const buttons = wrapper.querySelectorAll('.button')
+		const buttons_length = buttons.length
+		for (let i = 0; i < buttons_length; i++) {
+			const button = buttons[i]
+			if (!button.title) {
+				continue;
+			}
+			tooltip.onHover(button, button.title, {
+				placement: 'top',
+				delay: 150
+			})
+			button.addEventListener('mouseover', function(e) {
+				button.title = ''
+			})
+		}
+	}//end activate_tooltips
 
 
 

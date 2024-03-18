@@ -74,7 +74,7 @@ class DDModal extends HTMLElement {
 				}
 				@media screen and (max-width: 1024px) {
 					.modal-content {
-						width: 98%;
+						width: 96%;
 					}
 				}
 				.modal-content.center {
