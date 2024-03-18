@@ -22,6 +22,7 @@ class tool_lang extends tool_common {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// options
 			$source_lang	= $options->source_lang		?? DEDALO_DATA_LANG;
@@ -50,6 +51,20 @@ class tool_lang extends tool_common {
 				return $item->name===$translator_name;
 			});
 
+			// check config
+				if (empty($translator_config->uri)) {
+					$msg = 'Translator config URI is not defined';
+					$response->msg .= ' ' . $msg;
+					$response->errors[] = $msg;
+					return $response;
+				}
+				if (empty($translator_config->key)) {
+					$msg = 'Translator config key is not defined';
+					$response->msg .= ' ' . $msg;
+					$response->errors[] = $msg;
+					return $response;
+				}
+
 		// data from options translator
 			$uri	= $translator_config->uri;
 			$key	= $translator_config->key;
@@ -75,6 +90,7 @@ class tool_lang extends tool_common {
 					case 'google_translation':
 						// Not implemented yet
 						$response->msg = "Sorry. '{$translator_name}' is not implemented yet"; // error msg
+						$response->errors[] = 'Tool not implemented';
 						return $response;
 						break;
 

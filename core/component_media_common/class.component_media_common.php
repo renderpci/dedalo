@@ -2032,4 +2032,25 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
+	* @return object $query_object
+	*	Edited/parsed version of received object
+	*/
+	public static function resolve_query_object_sql(object $query_object) : object {
+
+		// media components are not searchable at now
+		debug_log(__METHOD__
+			. " media components are not searchable at now " . PHP_EOL
+			. ' query_object: ' . to_string($query_object)
+			, logger::ERROR
+		);
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
+
+
+
 }//end component_media_common
