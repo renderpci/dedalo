@@ -18,6 +18,23 @@
 <li>Add remove HTML tags to portal button_list title to prevent untranslated terms <mark> tags</li>
 <li>[<strong>breaking</strong>] Fix bug where component_text_area-&gt;get_related_sections passes &#8216;tipo&#8217; as caller tipo instead of the expected &#8216;section_tipo&#8217;</li>
 <li>Fix command error in backup::copy_from_file that generates update ontology errors</li>
+<li>Fix unittest call error where tipo was pased as component instead section</li>
+<li>Fix line text wrap in inspector selection_info</li>
+<li>[<strong>breaking</strong>] Fix but where component_relation_parent::get_parents_recursive store recursions in cache. Now, only final result is saved to cache</li>
+</ul>
+
+<h3 id="documentation">Documentation</h3>
+
+<ul>
+<li>Update change log</li>
+<li>Remove the changle log html</li>
+<li>Add new thesaurus dependencies to documentation</li>
+<li>Redefine the thesaurus definitions into install new hierarchies documentation</li>
+<li>Add new main tld&#8217;s into the configuration tlds documentation</li>
+<li>Add new link the config index documentation</li>
+<li>Add link to the dependencies table into config documentation</li>
+<li>Add events manager documentation</li>
+<li>Add new properties to dd_object</li>
 </ul>
 
 <h3 id="features">Features</h3>
@@ -43,6 +60,11 @@
 <li>Remove old code that show a gear as button_tree, use view tree instead</li>
 <li>Render languages</li>
 <li>Unifies tld definition to lower case in hierarchies.json</li>
+<li>Add install::activate_hierarchy options to create target hierarchy section when do not already exists</li>
+<li>Add padding to hierachy_container in area_maintenance CSS</li>
+<li>Add error control to bad section_tipo in hierarchy::export_hierarchy</li>
+<li>Change section buttons list order. The new order is children_real_tipos, children_virtual_tipos</li>
+<li>Change the update_value event to event_item_value for component_security_access</li>
 </ul>
 
 <h3 id="refactor">Refactor</h3>
@@ -54,11 +76,15 @@
 <li>[<strong>breaking</strong>] Reformulate the update_value event fired by the ontology configuration to sync data between components.</li>
 <li>Change the map_update_coordinates to get the new data from the hide data of the caller component instead to call directly</li>
 <li>Unify get_ar_target_section_tipo methods across components and calls</li>
+<li>[<strong>breaking</strong>] Move event publish &#8216;update_value&#8217; from common.refresh to method component_common.change_value again for flow coherence</li>
 </ul>
 
 <h3 id="styling">Styling</h3>
 
 <ul>
+<li>Clean up code</li>
+<li>Clean up code</li>
+<li>Clean up code</li>
 <li>Clean up code</li>
 <li>Clean up code</li>
 <li>Clean up code</li>
@@ -737,12 +763,6 @@
 <h3 id="bugfixes">Bug Fixes</h3>
 
 <ul>
-<li>Ck_editor toolbar disappear when the with is not odd</li>
-<li>Fix duplicity issue on get_files info from disk in component_media_common</li>
-<li>Fix error where media_common-&gt;update_component_dato_files_info do not preserve injected &#8216;dato&#8217; like in unit test cases</li>
-<li>Incorrect name of the view_mini class for component_input_text CSS</li>
-<li>Fix component_text area list max-height issue. Remove it to improve audiovisual list (rsc167)</li>
-<li>Fix component_relation_parent error in tool_import_dedalo_csv where new data generates an error because a valid locator type was expected</li>
 <li>Fix component_email issues on conform_import_data, converting to array when is not</li>
 <li>Fix non array values issue on component_common conform_import_data</li>
 <li>Fix non existing language case in component_date conform_import_data</li>
@@ -768,9 +788,6 @@
 <h3 id="features">Features</h3>
 
 <ul>
-<li>Add component_3d unit test</li>
-<li>New color picker view for component_input_text to select color in easy way.</li>
-<li>Add component_av unit test</li>
 <li>Add component_pdf unit test</li>
 <li>Add component_svg unit test</li>
 <li>Add component_check_box unit test</li>
@@ -809,26 +826,6 @@
 <h3 id="miscellaneoustasks">Miscellaneous Tasks</h3>
 
 <ul>
-<li>Update ck-editor</li>
-<li>Code clean up</li>
-<li>Code clean up</li>
-<li>Code clean up</li>
-<li>Add core_functions get_username to allow centralized access to the current registered user name</li>
-<li>Change direct access session vars for user_id and username, to centralized functions in core_function (get_user_id, get_username)</li>
-<li>Code clean up</li>
-<li>Unify icon stars appearance</li>
-<li>Code clean up</li>
-<li>Update version info</li>
-<li>Fix date syntax mistake</li>
-<li>Code clean up</li>
-<li>Add update to 6.0.5 with new tables for nexus data</li>
-<li>Update version info</li>
-<li>Code clean up</li>
-<li>Update version info</li>
-<li>Add the click event of the tool_media_versions tag to make access easier</li>
-<li>Update composer php test phpunit from 10.1.9 to 10.1.10</li>
-<li>Update main css</li>
-<li>Update version to 6.0.5</li>
 <li>Unify components media unit test</li>
 <li>Unify unit test common components</li>
 <li>Update version info</li>
@@ -857,17 +854,9 @@
 <li>Update version to 6.0.6</li>
 </ul>
 
-<h3 id="performance">Performance</h3>
-
-<ul>
-<li>Add session_write_close to close the current session and set it as read-only (unblock PHP thread) in dd_api-&gt;build_json_rows-&gt;search</li>
-</ul>
-
 <h3 id="refactor">Refactor</h3>
 
 <ul>
-<li>Rewrite core_function debug_log to make it more configurable</li>
-<li>Rewrite PHP text unit classes to use a unified bootstrap</li>
 <li>Move component_check_box method &#8216;get_dato_as_string&#8217; to class component_relation_common</li>
 <li>Improve flexible test from tool_import_dedalo_csv. Add custom over-writable files_path</li>
 <li>Move static functions from component-date to dd_date class</li>
@@ -885,8 +874,6 @@
 <h3 id="styling">Styling</h3>
 
 <ul>
-<li>Unify component_3d_Test class</li>
-<li>Unify component_image_Test class</li>
 <li>Clean up code</li>
 <li>Clean up code</li>
 <li>Clean up code</li>
@@ -901,6 +888,72 @@
 <li>Clean up code</li>
 <li>Tab code</li>
 <li>Reorder button in alphabetic order</li>
+</ul>
+
+<h2 id="6.0.5-2023-12-12">[6.0.5] - 2023&#8211;12&#8211;12</h2>
+
+<h3 id="bugfixes">Bug Fixes</h3>
+
+<ul>
+<li>Ck_editor toolbar disappear when the with is not odd</li>
+<li>Fix duplicity issue on get_files info from disk in component_media_common</li>
+<li>Fix error where media_common-&gt;update_component_dato_files_info do not preserve injected &#8216;dato&#8217; like in unit test cases</li>
+<li>Incorrect name of the view_mini class for component_input_text CSS</li>
+<li>Fix component_text area list max-height issue. Remove it to improve audiovisual list (rsc167)</li>
+<li>Fix component_relation_parent error in tool_import_dedalo_csv where new data generates an error because a valid locator type was expected</li>
+</ul>
+
+<h3 id="features">Features</h3>
+
+<ul>
+<li>Add component_3d unit test</li>
+<li>New color picker view for component_input_text to select color in easy way.</li>
+<li>Add component_av unit test</li>
+</ul>
+
+<h3 id="miscellaneoustasks">Miscellaneous Tasks</h3>
+
+<ul>
+<li>Update ck-editor</li>
+<li>Code clean up</li>
+<li>Code clean up</li>
+<li>Code clean up</li>
+<li>Add core_functions get_username to allow centralized access to the current registered user name</li>
+<li>Change direct access session vars for user_id and username, to centralized functions in core_function (get_user_id, get_username)</li>
+<li>Code clean up</li>
+<li>Unify icon stars appearance</li>
+<li>Code clean up</li>
+<li>Update version info</li>
+<li>Fix date syntax mistake</li>
+<li>Code clean up</li>
+<li>Add update to 6.0.5 with new tables for nexus data</li>
+<li>Update version info</li>
+<li>Code clean up</li>
+<li>Update version info</li>
+<li>Add the click event of the tool_media_versions tag to make access easier</li>
+<li>Update composer php test phpunit from 10.1.9 to 10.1.10</li>
+<li>Update main css</li>
+<li>Update version to 6.0.5</li>
+</ul>
+
+<h3 id="performance">Performance</h3>
+
+<ul>
+<li>Add session_write_close to close the current session and set it as read-only (unblock PHP thread) in dd_api-&gt;build_json_rows-&gt;search</li>
+</ul>
+
+<h3 id="refactor">Refactor</h3>
+
+<ul>
+<li>Rewrite core_function debug_log to make it more configurable</li>
+<li>Rewrite PHP text unit classes to use a unified bootstrap</li>
+</ul>
+
+<h3 id="styling">Styling</h3>
+
+<ul>
+<li>Unify component_3d_Test class</li>
+<li>Unify component_image_Test class</li>
 </ul>
 
 <h2 id="6.0.4-2023-12-07">[6.0.4] - 2023&#8211;12&#8211;07</h2>
