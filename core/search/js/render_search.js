@@ -631,7 +631,13 @@ render_search.prototype.build_search_component = async function(options) {
 
 		// render component
 			// note that component here is already built with custom injected data
-			const component_node = await component_instance.render()
+			const component_node = component_instance
+				? await component_instance.render()
+				: ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: "invalid_component error",
+					inner_html 		: get_label.invalid_componet || 'Invalid component',
+				})
 
 		// add component node
 			search_component.appendChild(component_node)
@@ -642,16 +648,21 @@ render_search.prototype.build_search_component = async function(options) {
 			parent			: search_component,
 			class_name		: "button close"
 		})
-		search_component_button_close.addEventListener("click", function(){
+		search_component_button_close.addEventListener("click", function(e){
+			e.stopPropagation()
 			// remove search box and content (component) from dom
 			search_component.parentNode.removeChild(search_component)
 			// delete the instance from search ar_instances
 			const delete_instance_index = self.ar_instances.findIndex( instance => instance.id===component_instance.id )
-			self.ar_instances.splice(delete_instance_index, 1)
-			// destroy component instance
-			component_instance.destroy(
-				true // delete_self
-			)
+
+			if(delete_instance_index !== -1){
+				self.ar_instances.splice(delete_instance_index, 1)
+				// destroy component instance
+				component_instance.destroy(
+					true // delete_self
+				)
+			}
+
 			// Set as changed
 			self.update_state({state:'changed'})
 		})
