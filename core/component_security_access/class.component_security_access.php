@@ -474,6 +474,7 @@ class component_security_access extends component_common {
 	/**
 	* CALCULATE_TREE
 	* @param int $user_id
+	* @param string $lang
 	* @return array $datalist
 	*/
 	public static function calculate_tree(int $user_id, string $lang) : array {

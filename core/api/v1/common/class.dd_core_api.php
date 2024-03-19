@@ -665,7 +665,7 @@ final class dd_core_api {
 			$section_tipo	= $rqo->source->section_tipo;
 			$section_id		= $rqo->source->section_id;
 
-		// save section_id
+		// safe section_id
 			if ( (int)$section_id<1 ) {
 				$response->msg .= ' Invalid section_id/section_tipo';
 				return $response;

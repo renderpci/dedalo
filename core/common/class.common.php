@@ -454,6 +454,7 @@ abstract class common {
 					break;
 
 				default:
+
 					// try related. If section have TR of model name 'matrix_table' takes its matrix_table value
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
@@ -1693,7 +1694,10 @@ abstract class common {
 						$user_id_logged = get_user_id();
 
 						foreach ($ar_target_section_ddo as $current_section_ddo) {
-							if($current_section_ddo->matrix_table && $current_section_ddo->matrix_table==='matrix_dd' && $user_id_logged!=DEDALO_SUPERUSER){
+							if(		isset($current_section_ddo->matrix_table)
+								&&  $current_section_ddo->matrix_table==='matrix_dd'
+								&&  $user_id_logged!=DEDALO_SUPERUSER
+								){
 
 								if(!isset($properties->show_interface)){
 									$properties->show_interface = new stdClass();

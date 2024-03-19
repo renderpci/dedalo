@@ -818,7 +818,7 @@
 
 				// $init_response->msg = 'Warning. Redirect to Area Maintenance to update Dédalo data';
 				$init_response->result_options	= (object)[
-					'redirect'	=> DEDALO_CORE_URL.'/page/?t=dd88'
+					'redirect'	=> DEDALO_CORE_URL .'/page/?t=' . DEDALO_AREA_MAINTENANCE_TIPO // dd88
 				];
 
 			}else{
