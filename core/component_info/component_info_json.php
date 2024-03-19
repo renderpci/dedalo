@@ -23,7 +23,7 @@
 		}
 	}//end if($options->get_context===true)
 
-	// dump($context, ' $context ++ '.to_string($this->mode));
+
 	// $bt = debug_backtrace();
 	// dump($bt, ' $bt ++ '.to_string());
 

@@ -1981,11 +1981,11 @@ abstract class common {
 							continue;
 						}
 					// short vars
-						$current_tipo			= $dd_object->tipo;
-						$model = ( isset($dd_object->model) )
+						$current_tipo	= $dd_object->tipo;
+						$model			= ( isset($dd_object->model) )
 							? $dd_object->model
 							: RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$view					= $dd_object->view ?? null;
+						$view			= $dd_object->view ?? null;
 
 						// dataframe case
 						// dataframe ddo need to get section_tipo has it has defined
@@ -2007,7 +2007,7 @@ abstract class common {
 							$section_id_key	= $current_locator->section_id;
 						}
 
-						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+						$current_section_tipo = $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
 						// if the component is a dataframe assign a possible suffix to be used
 						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
 							? '_dataframe'
@@ -2015,7 +2015,7 @@ abstract class common {
 						// if the component or section is in tm mode propagate the mode to the ddo
 						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
 						// see radio_button case of the dataframe component of the numisdata161
-						$mode					= $this->mode==='tm'
+						$mode = $this->mode==='tm'
 							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
 							: ($dd_object->mode ?? $this->get_mode());
 
@@ -4306,7 +4306,7 @@ abstract class common {
 
 			}//end foreach ($ar_elements as $element_tipo)
 		}//end foreach ((array)$ar_section_tipo as $section_tipo)
-
+	// dump($context, ' context +---------------+ '.to_string());
 
 		return $context;
 	}//end get_section_elements_context
