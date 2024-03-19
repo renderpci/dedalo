@@ -140,6 +140,16 @@ menu.prototype.build = async function(autoload=true) {
 						body : rqo
 					})
 
+					// server: wrong response
+					if (!api_response) {
+						return false
+					}
+					// server: bad build context
+					if(!api_response.result.context.length){
+						console.error("Error!!!!, menu without context:", api_response);
+						return false
+					}
+
 				// set the result to the datum
 					self.datum = api_response.result
 
