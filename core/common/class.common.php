@@ -2132,6 +2132,13 @@ abstract class common {
 										}
 									}
 
+								// component_info get dato case.
+								// get the data from database instead the calculation
+								// do not use the default get_dato() because it's calculated by observer and save in DB
+									if ($model==='component_info') {
+										$related_element->use_db_data = true;
+									}
+
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
 								// Sample of use is request config: numisdata11 (ordered coins)
 									if(isset($dd_object->limit)){

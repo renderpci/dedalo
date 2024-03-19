@@ -15,6 +15,7 @@ class component_info extends component_common {
 	*/
 	public $widget_lang;
 	public $widget_mode;
+	public $use_db_data = false;
 
 
 
@@ -76,6 +77,26 @@ class component_info extends component_common {
 
 		return $dato;
 	}//end get_dato
+
+
+	/**
+	* GET_DB_DATA
+	* @return
+	*/
+	public function get_db_data() {
+
+		$data = parent::get_dato();
+
+		if(empty($data)){
+			$data = $this->get_dato();
+			// if(!empty($data)){
+			// 	$this->set_dato($data);
+			// 	$this->Save();
+			// }
+		}
+
+		return $data;
+	}//end get_db_data
 
 
 
