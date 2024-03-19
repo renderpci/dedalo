@@ -4286,6 +4286,16 @@ abstract class common {
 					// 		$get_json_options->get_data 		= false;
 					// 	$element_json = $element->get_json($get_json_options);
 
+				if(empty($element)){
+					debug_log(__METHOD__
+						." Ignored empty element !!!!".PHP_EOL
+						."tipo: ".to_string($element_tipo).PHP_EOL
+						."model: ".to_string($model)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				// item context simple
 				$item_context = [
 					$element->get_structure_context_simple(
