@@ -617,7 +617,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				const component_wrapper		= element.querySelector('.wrapper_component')
 				const component_instance	= self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
 
-				if(component_instance){
+				if(!component_instance){
 					continue
 				}
 				// get the search value
