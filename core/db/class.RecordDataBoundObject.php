@@ -804,7 +804,6 @@ abstract class RecordDataBoundObject {
 			// debug
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
-					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
 					if($total_time_ms>SLOW_QUERY_MS) {
 						debug_log(__METHOD__
 							." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL

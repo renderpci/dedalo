@@ -403,7 +403,7 @@ class search {
 				$response->ar_records = $ar_records;
 
 		// debug
-			if(SHOW_DEVELOPER===true) {
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				// error_log($sql_query);
 				$exec_time = (start_time()-$start_time)/1000000;
 				$response->generated_time['parsed_time'] = $parsed_time;
