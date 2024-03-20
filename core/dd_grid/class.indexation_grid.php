@@ -374,6 +374,10 @@ class indexation_grid {
 					? $current_ddo_map->mode
 					: 'indexation_list';
 
+			// model
+				$current_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo_map->tipo,true);
+
+
 			$final_ddo_map[] = $current_ddo_map;
 		}//end foreach ($ar_ddo_map as $current_ddo_map)
 
