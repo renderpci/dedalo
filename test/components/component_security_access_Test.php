@@ -191,7 +191,7 @@ final class component_security_access_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
-		$user_id = get_user_id();
+		$user_id = logged_user_id();
 
 		$result	= $component->get_datalist(
 			$user_id

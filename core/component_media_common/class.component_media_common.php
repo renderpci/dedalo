@@ -500,7 +500,7 @@ class component_media_common extends component_common {
 				return $response;
 			}
 
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 			$source_file	= isset($source_file)
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
@@ -764,7 +764,7 @@ class component_media_common extends component_common {
 			$file_name_label	= $options->file_name_label ?? 'original_file_name';
 			$upload_date		= $options->upload_date ?? component_date::get_date_now();
 			$upload_date_label	= $options->upload_date_label ?? 'upload_date';
-			$user_id			= $options->user_id ?? get_user_id();
+			$user_id			= $options->user_id ?? logged_user_id();
 			$user_id_label		= $options->user_id_label ?? 'user_id';
 
 		// set value properties

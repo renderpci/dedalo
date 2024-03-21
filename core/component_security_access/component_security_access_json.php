@@ -47,7 +47,7 @@
 
 	if($options->get_data===true && $permissions>0) {
 
-		$user_id = get_user_id();
+		$user_id = logged_user_id();
 
 		// value
 			switch ($mode) {

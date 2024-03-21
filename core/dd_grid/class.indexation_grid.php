@@ -397,7 +397,7 @@ class indexation_grid {
 		$start_time=start_time();
 
 		$ar_section_top_tipo	= array();
-		$user_id				= get_user_id();
+		$user_id				= logged_user_id();
 		$ar_locators			= $this->get_ar_locators();
 
 		foreach ($ar_locators as $current_locator) {

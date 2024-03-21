@@ -355,7 +355,7 @@ final class dd_core_api {
 						case (strpos($model, 'tool_')===0):
 
 							// resolve tool from name and user
-								$user_id			= get_user_id();
+								$user_id			= logged_user_id();
 								$registered_tools	= tool_common::get_user_tools($user_id);
 								$tool_found = array_find($registered_tools, function($el) use($model){
 									return $el->name===$model;
@@ -455,7 +455,7 @@ final class dd_core_api {
 
 				// unlock user components. Normally this occurs when user force reload the page
 					if (DEDALO_LOCK_COMPONENTS===true) {
-						lock_components::force_unlock_all_components( get_user_id() );
+						lock_components::force_unlock_all_components( logged_user_id() );
 					}
 			}//end if (login::is_logged()!==true)
 
@@ -917,7 +917,7 @@ final class dd_core_api {
 		// check delete multiple
 		// only global admins can perform multiple deletes
 			$records_len = count($ar_records);
-			if($records_len > 1 && security::is_global_admin(get_user_id()) === false){
+			if($records_len > 1 && security::is_global_admin( logged_user_id() ) === false){
 				$response->result = [];
 				$response->msg 	.= 'forbidden delete multiple for this user';
 				debug_log(__METHOD__
@@ -1432,7 +1432,7 @@ final class dd_core_api {
 						// }
 
 					// resolve tool from name and user
-						$user_id			= get_user_id();
+						$user_id			= logged_user_id();
 						$registered_tools	= tool_common::get_user_tools($user_id);
 						$tool_found = array_find($registered_tools, function($el) use($model){
 							return $el->name===$model;
@@ -1582,7 +1582,7 @@ final class dd_core_api {
 
 		// 	// save_temp_preset
 		// 		$result = search::save_temp_preset(
-		// 			get_user_id(),
+		// 			logged_user_id(),
 		// 			$section_tipo,
 		// 			$filter_obj
 		// 		);
@@ -1746,7 +1746,7 @@ final class dd_core_api {
 								$user_preset = request_config_presets::search_request_config(
 									$tipo,
 									$section_tipo,
-									get_user_id(), // int $user_id
+									logged_user_id(), // int $user_id
 									$mode,
 									null // view
 								);
@@ -1948,7 +1948,7 @@ final class dd_core_api {
 
 					// unlock user components. Normally this occurs when user navigate across sections or paginate
 						if (DEDALO_LOCK_COMPONENTS===true) {
-							lock_components::force_unlock_all_components( get_user_id() );
+							lock_components::force_unlock_all_components( logged_user_id() );
 						}
 					break;
 
@@ -2173,7 +2173,7 @@ final class dd_core_api {
 
 				debug_log(__METHOD__
 					.' Catching non enough permissions call' . PHP_EOL
-					.' User: '. get_user_id() . PHP_EOL
+					.' User: '. logged_user_id() . PHP_EOL
 					.' tipo: '. $tipo . PHP_EOL
 					.' section_tipo: '. $section_tipo . PHP_EOL
 					.' Permissions: ' .$permissions . PHP_EOL
@@ -2429,11 +2429,11 @@ final class dd_core_api {
 		// page_globals
 			$page_globals = (function() {
 
-				$user_id			= get_user_id();
-				$username			= get_username();
+				$user_id			= logged_user_id();
+				$username			= logged_user_username();
 				$mode				= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-				$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
-				$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
+				$full_username		= logged_user_full_username();
+				$is_global_admin	= logged_user_is_global_admin();
 				$is_root			= $user_id==DEDALO_SUPERUSER;
 
 				$obj = new stdClass();

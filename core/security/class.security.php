@@ -35,11 +35,11 @@ class security {
 	function __construct() {
 
 		// user id check
-			if(empty($_SESSION['dedalo']['auth']['user_id'])) {
+			$current_logged_user_id = logged_user_id();
+			if( empty($current_logged_user_id) ) {
 				$msg = " Error: Session user_id is not defined! ";
 				debug_log(__METHOD__
-					. " $msg  " . PHP_EOL
-					. to_string()
+					. " $msg  "
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -47,7 +47,7 @@ class security {
 				}
 				die();
 			}else{
-				$this->user_id = $_SESSION['dedalo']['auth']['user_id'];
+				$this->user_id = $current_logged_user_id;
 			}
 
 		// permissions root check
@@ -406,15 +406,13 @@ class security {
 			}
 
 		// logged user_id (from session)
-			$logged_user_id = get_user_id();
+			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
 			if ( $user_id==$logged_user_id ) {
 
 				// get from session (set on user login)
-				$is_global_admin = isset($_SESSION['dedalo']['auth']['is_global_admin'])
-					? (bool)$_SESSION['dedalo']['auth']['is_global_admin']
-					: false;
+				$is_global_admin = logged_user_is_global_admin();
 
 			}else{
 
@@ -464,15 +462,13 @@ class security {
 			}
 
 		// logged user_id (from session)
-			$logged_user_id = get_user_id();
+			$logged_user_id = logged_user_id();
 
 		// cached value. If request user_id is the same as current logged user, return session value, without access to component
 			if ( $user_id==$logged_user_id ) {
 
 				// get from session value (set on user login)
-				$is_developer = isset($_SESSION['dedalo']['auth']['is_developer'])
-					? (bool)$_SESSION['dedalo']['auth']['is_developer']
-					: false;
+				$is_developer = logged_user_is_developer();
 
 			}else{
 

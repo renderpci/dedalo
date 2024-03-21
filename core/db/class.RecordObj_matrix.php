@@ -250,8 +250,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 		}
 
 		# TEST VALID USER
-		#$userID	= get_user_id();
-		$userID		= $_SESSION['dedalo']['auth']['user_id'];
+		$userID	= logged_user_id(); // from session
 		if (
 			empty($userID)
 			&& $this->matrix_table != 'matrix_activity' && $this->matrix_table != 'matrix_counter' && $this->matrix_table != 'matrix_stats'
@@ -349,7 +348,7 @@ class RecordObj_matrix extends RecordDataBoundObject {
 			$dato = $this->dato;
 
 		// user_id
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 
 		// RecordObj_time_machine
 			$RecordObj_time_machine = new RecordObj_time_machine();

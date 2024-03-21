@@ -149,7 +149,7 @@ class dd_cache {
 	* @return string
 	*/
 	public static function get_cache_file_prefix() : string {
-		return DEDALO_ENTITY .'_'. get_user_id() . '_';
+		return DEDALO_ENTITY .'_'. logged_user_id() . '_';
 		// return session_id() . '_';
 	}//end get_cache_file_prefix
 

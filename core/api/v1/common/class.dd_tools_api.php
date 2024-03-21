@@ -35,7 +35,7 @@ final class dd_tools_api {
 			$ar_requested_tools	= $options->ar_requested_tools ?? null;
 
 		// all user authorized tools
-			$user_id	= get_user_id();
+			$user_id	= logged_user_id();
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		$result = [];

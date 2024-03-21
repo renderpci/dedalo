@@ -45,7 +45,7 @@ class menu extends common {
 
 		$ar_areas = [];
 
-		$user_id = get_user_id();
+		$user_id = logged_user_id();
 		if (empty($user_id)) {
 			debug_log(__METHOD__
 				. " Warning. Empty user id "

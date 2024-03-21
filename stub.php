@@ -41,4 +41,5 @@ function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};
 function custom_postprocessing_image(){};
-function get_user_id() : ?int {};
+// function logged_user_id() : ?int {};
+function logged_user_is_developer() {};
