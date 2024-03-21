@@ -134,6 +134,17 @@ final class dd_manager {
 				// 	dump($response, ' response ++ '.to_string());
 				// }
 
+				// metrics
+					// permissions stats
+						debug_log(__METHOD__ . PHP_EOL
+							.'--> calculated permissions for user ' . logged_user_id() . PHP_EOL
+							.'--> calculated permissions_table ' . metrics::$security_permissions_table_time . PHP_EOL
+							.'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count . PHP_EOL
+							.'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms' . PHP_EOL
+							.'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls
+							, logger::WARNING
+						);
+
 				// end line info
 					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
 					$text			= 'API REQUEST ' . $rqo->action . ' ' . $id . ' END IN ' . $total_time_api_exec;
