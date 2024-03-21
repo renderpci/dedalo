@@ -2916,38 +2916,40 @@ abstract class common {
 
 								// buttons. Add button_new and button_delete to determine new and delete permissions on client
 									$buttons = [];
-									// button_new
-										$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-											$current_section_tipo,
-											['button_new'],
-											true, // bool from_cache
-											true, // bool resolve_virtual
-											true, // bool recursive
-											true, // bool search_exact
-											false // array|bool $ar_tipo_exclude_elements
-										);
-										if (isset($ar_button_new[0])) {
-											$buttons[] = (object)[
-												'model'			=> 'button_new',
-												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
-											];
-										}
-									// button_delete
-										$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-											$current_section_tipo,
-											['button_delete'],
-											true, // bool from_cache
-											true, // bool resolve_virtual
-											true, // bool recursive
-											true, // bool search_exact
-											false // array|bool $ar_tipo_exclude_elements
-										);
-										if (isset($ar_button_delete[0])) {
-											$buttons[] = (object)[
-												'model'			=> 'button_delete',
-												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
-											];
-										}
+									if ($ddo->permissions>1) {
+										// button_new
+											$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+												$current_section_tipo,
+												['button_new'],
+												true, // bool from_cache
+												true, // bool resolve_virtual
+												true, // bool recursive
+												true, // bool search_exact
+												false // array|bool $ar_tipo_exclude_elements
+											);
+											if (isset($ar_button_new[0])) {
+												$buttons[] = (object)[
+													'model'			=> 'button_new',
+													'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
+												];
+											}
+										// button_delete
+											$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+												$current_section_tipo,
+												['button_delete'],
+												true, // bool from_cache
+												true, // bool resolve_virtual
+												true, // bool recursive
+												true, // bool search_exact
+												false // array|bool $ar_tipo_exclude_elements
+											);
+											if (isset($ar_button_delete[0])) {
+												$buttons[] = (object)[
+													'model'			=> 'button_delete',
+													'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
+												];
+											}
+									}
 									// set buttons
 									$ddo->set_buttons($buttons);
 
@@ -3609,38 +3611,40 @@ abstract class common {
 
 						// buttons. Add button_new and button_delete to determine new and delete permissions on client
 							$buttons = [];
-							// button_new
-								$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-									$current_section_tipo,
-									['button_new'],
-									true, // bool from_cache
-									true, // bool resolve_virtual
-									true, // bool recursive
-									true, // bool search_exact
-									false // array|bool $ar_tipo_exclude_elements
-								);
-								if (isset($ar_button_new[0])) {
-									$buttons[] = (object)[
-										'model'			=> 'button_new',
-										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
-									];
-								}
-							// button_delete
-								$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-									$current_section_tipo,
-									['button_delete'],
-									true, // bool from_cache
-									true, // bool resolve_virtual
-									true, // bool recursive
-									true, // bool search_exact
-									false // array|bool $ar_tipo_exclude_elements
-								);
-								if (isset($ar_button_delete[0])) {
-									$buttons[] = (object)[
-										'model'			=> 'button_delete',
-										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
-									];
-								}
+							if ($ddo->permissions>1) {
+								// button_new
+									$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+										$current_section_tipo,
+										['button_new'],
+										true, // bool from_cache
+										true, // bool resolve_virtual
+										true, // bool recursive
+										true, // bool search_exact
+										false // array|bool $ar_tipo_exclude_elements
+									);
+									if (isset($ar_button_new[0])) {
+										$buttons[] = (object)[
+											'model'			=> 'button_new',
+											'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
+										];
+									}
+								// button_delete
+									$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+										$current_section_tipo,
+										['button_delete'],
+										true, // bool from_cache
+										true, // bool resolve_virtual
+										true, // bool recursive
+										true, // bool search_exact
+										false // array|bool $ar_tipo_exclude_elements
+									);
+									if (isset($ar_button_delete[0])) {
+										$buttons[] = (object)[
+											'model'			=> 'button_delete',
+											'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
+										];
+									}
+							}
 							// set buttons
 							$ddo->set_buttons($buttons);
 
@@ -4166,10 +4170,8 @@ abstract class common {
 			// user id
 				$user_id_logged = logged_user_id();
 
-			// skip section if permissions are not enough
-				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
-					&& $user_id_logged!=DEDALO_SUPERUSER
-					&& ((int)$section_permisions<1)) {
+			// skip section if permissions are not enough (except thesaurus 'hierarchy20')
+				if ( $section_permisions<1  && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
 					// user don't have access to current section. skip section
 					continue;
 				}
