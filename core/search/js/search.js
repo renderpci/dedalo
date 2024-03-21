@@ -493,8 +493,11 @@ search.prototype.get_component_instance = async function(options) {
 		}
 
 	// build component to force load datalist, portal resolve_data etc.
-		await component_instance.build(true)
-
+		const build_result = await component_instance.build(true)
+		if(build_result===false){
+			console.error("Ignored component instance, build result is: ",build_result);
+			return null
+		}
 	// data. Inject value again from search user preset is needed for regular components
 		component_instance.data.value = value
 
@@ -612,8 +615,11 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			if (add_arguments!==false) {
 
 				const component_wrapper		= element.querySelector('.wrapper_component')
-				const component_instance	= self.ar_instances.find(instance => instance.id===component_wrapper.id)
+				const component_instance	= self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
 
+				if(!component_instance){
+					continue
+				}
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.

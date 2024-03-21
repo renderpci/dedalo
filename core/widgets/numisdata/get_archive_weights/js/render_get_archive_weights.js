@@ -277,7 +277,7 @@ const get_value_element = (i, data, values_container, self) => {
 		// even manager model to use in other widgets_properties
 		// this widget don't use it, because the info is not in the same section
 		// than the components that changed our value
-		// the user don't see the info and the imput componets at same time
+		// the user don't see the info and the input components at same time
 		self.events_tokens.push(
 			event_manager.subscribe('update_widget_value_'+i+'_'+self.id, fn_update_widget_value)
 		)

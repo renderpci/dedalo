@@ -179,6 +179,16 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					use_worker	: true
 				})
 
+				// server: wrong response
+				if (!api_response) {
+					return false
+				}
+				// server: bad build context
+				if(!api_response.result.context.length){
+					console.error("Error!!!!, service_time_machine without context:", api_response);
+					return false
+				}
+
 			// set the result to the datum
 				self.datum		= api_response.result || []
 				self.data		= self.datum.data.find(el => el.tipo===self.tipo && el.typo==='sections')

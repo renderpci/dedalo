@@ -23,7 +23,7 @@
 		}
 	}//end if($options->get_context===true)
 
-	// dump($context, ' $context ++ '.to_string($this->mode));
+
 	// $bt = debug_backtrace();
 	// dump($bt, ' $bt ++ '.to_string());
 
@@ -37,12 +37,23 @@
 
 				case 'list':
 				case 'tm':
+				dump($this->use_db_data, ' $this->use_db_data ++ '.to_string($this->mode));
+				if(isset($this->use_db_data) && $this->use_db_data===true){
+					$value		= $this->get_db_data();
+				}else{
 					$value		= $this->get_list_value();
+				}
 					break;
 
 				case 'edit':
 				default:
+
+				if(isset($this->use_db_data) && $this->use_db_data===true){
+					$value		= $this->get_db_data();
+				}else{
 					$value		= $this->get_dato();
+				}
+
 					$data_list	= $this->get_data_list();
 					break;
 			}

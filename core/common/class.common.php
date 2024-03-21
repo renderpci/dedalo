@@ -1987,11 +1987,11 @@ abstract class common {
 							continue;
 						}
 					// short vars
-						$current_tipo			= $dd_object->tipo;
-						$model = ( isset($dd_object->model) )
+						$current_tipo	= $dd_object->tipo;
+						$model			= ( isset($dd_object->model) )
 							? $dd_object->model
 							: RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
-						$view					= $dd_object->view ?? null;
+						$view			= $dd_object->view ?? null;
 
 						// dataframe case
 						// dataframe ddo need to get section_tipo has it has defined
@@ -2013,7 +2013,7 @@ abstract class common {
 							$section_id_key	= $current_locator->section_id;
 						}
 
-						$current_section_tipo	= $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
+						$current_section_tipo = $section_tipo; //$dd_object->section_tipo ?? $dd_object->tipo;
 						// if the component is a dataframe assign a possible suffix to be used
 						$dataframe_tm_mode = (get_called_class() === 'component_dataframe')
 							? '_dataframe'
@@ -2021,7 +2021,7 @@ abstract class common {
 						// if the component or section is in tm mode propagate the mode to the ddo
 						// and it's a dataframe add the suffix '_dataframe' to differentiate it of the tm mode in the component
 						// see radio_button case of the dataframe component of the numisdata161
-						$mode					= $this->mode==='tm'
+						$mode = $this->mode==='tm'
 							? 'tm' . $dataframe_tm_mode // propagate tm mode from parent
 							: ($dd_object->mode ?? $this->get_mode());
 
@@ -2136,6 +2136,13 @@ abstract class common {
 										if (!empty($original_lang) && $original_lang!==$current_lang) {
 											$related_element->set_lang($original_lang);
 										}
+									}
+
+								// component_info get dato case.
+								// get the data from database instead the calculation
+								// do not use the default get_dato() because it's calculated by observer and save in DB
+									if ($model==='component_info') {
+										$related_element->use_db_data = true;
 									}
 
 								// pagination->limit. Get limit from component calculation or if it's defined from ddo
@@ -4294,6 +4301,16 @@ abstract class common {
 					// 		$get_json_options->get_data 		= false;
 					// 	$element_json = $element->get_json($get_json_options);
 
+				if(empty($element)){
+					debug_log(__METHOD__
+						." Ignored empty element !!!!".PHP_EOL
+						."tipo: ".to_string($element_tipo).PHP_EOL
+						."model: ".to_string($model)
+						, logger::ERROR
+					);
+					continue;
+				}
+
 				// item context simple
 				$item_context = [
 					$element->get_structure_context_simple(
@@ -4314,7 +4331,7 @@ abstract class common {
 
 			}//end foreach ($ar_elements as $element_tipo)
 		}//end foreach ((array)$ar_section_tipo as $section_tipo)
-
+	// dump($context, ' context +---------------+ '.to_string());
 
 		return $context;
 	}//end get_section_elements_context

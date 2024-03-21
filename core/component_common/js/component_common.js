@@ -220,6 +220,17 @@ component_common.prototype.build = async function(autoload=false) {
 				const api_response = await data_manager.request({
 					body : rqo
 				})
+
+				// server: wrong response
+				if (!api_response) {
+					return false
+				}
+				// server: bad build component context
+				if(!api_response.result.context.length){
+					console.error("Error!!!!, component without context:", api_response, rqo);
+					return false
+				}
+
 				if(SHOW_DEVELOPER===true) {
 				// console.log(`COMPONENT ${self.model} api_response:`,self.id, api_response);
 					dd_console(`[component_common.build] COMPONENT: ${self.model} api_response:`, 'DEBUG', api_response)
