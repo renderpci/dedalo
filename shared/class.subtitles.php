@@ -233,13 +233,18 @@ abstract class subtitles {
 
 			$tc = (int)OptimizeTC::TC2seg($line['tcin']);
 
+
+			$tc_to_be_compared = $tc_in_secs -6;
+
 			// Skip lines before tc_in_secs
-				if ( $tc < $tc_in_secs ) {
+				if ( $tc < $tc_to_be_compared ) {
 					continue; # Skip
 				}
 
 			// Offset
-				$current_time 	= $tc - $tc_in_secs; // Use tc_in_secs as offset
+				$current_time 	= ($tc - $tc_in_secs) >= 0
+					? $tc - $tc_in_secs
+					: 0; // Use tc_in_secs as offset
 				$current_tc 	= OptimizeTC::seg2tc($current_time);
 				$line['tcin']	= $current_tc;
 

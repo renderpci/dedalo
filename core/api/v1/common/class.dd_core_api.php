@@ -2094,17 +2094,21 @@ final class dd_core_api {
 								$component_lang,
 								$section_tipo
 							);
-						// inject custom value to the component (usually an array of locators)
-							$value = $rqo->source->value ?? [];
-							$element->set_dato($value);
 
-						// pagination. fix pagination vars (defined in class component_common)
-							if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
-								$pagination = new stdClass();
-									$pagination->limit	= $rqo->sqo->limit;
-									$pagination->offset	= $rqo->sqo->offset;
+							if(!empty($element)){
 
-								$element->pagination = $pagination;
+								// inject custom value to the component (usually an array of locators)
+									$value = $rqo->source->value ?? [];
+									$element->set_dato($value);
+
+								// pagination. fix pagination vars (defined in class component_common)
+									if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
+										$pagination = new stdClass();
+											$pagination->limit	= $rqo->sqo->limit;
+											$pagination->offset	= $rqo->sqo->offset;
+
+										$element->pagination = $pagination;
+									}
 							}
 
 					}else{

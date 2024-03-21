@@ -94,9 +94,8 @@ const get_value_element = (i, data, values_container, self) => {
 const fragment = new DocumentFragment()
 	//period
 		const value = data.find(item => item.id === 'period').value
-
-		for (const [period, count] of Object.entries(value)) {
-
+	console.log("value:",value);
+		for (const [order, period] of Object.entries(value)) {
 			// li
 				const li = ui.create_dom_element({
 					element_type	: 'li',
@@ -109,7 +108,7 @@ const fragment = new DocumentFragment()
 				const period_label = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'label',
-					inner_html 	: `${period}`,
+					inner_html 	: `${period.label}`,
 					parent 		: li
 				})
 
@@ -117,7 +116,7 @@ const fragment = new DocumentFragment()
 				const period_count = ui.create_dom_element({
 					element_type: 'span',
 					class_name	: 'value',
-					inner_html 	: `${count}`,
+					inner_html 	: `${period.count}`,
 					parent 		: li
 				})
 		}

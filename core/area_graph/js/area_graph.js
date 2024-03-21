@@ -199,7 +199,14 @@ area_graph.prototype.build = async function(autoload=true) {
 			// Use unified way to load context and data with
 			// errors and not login situation managing
 				const api_response = await build_autoload(self)
+
+				// server: wrong response
 				if (!api_response) {
+					return false
+				}
+				// server: bad build context
+				if(!api_response.result.context.length){
+					console.error("Error!!!!, area_graph without context:", api_response);
 					return false
 				}
 
