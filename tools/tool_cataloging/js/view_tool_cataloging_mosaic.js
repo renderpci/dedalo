@@ -8,6 +8,7 @@
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_section_records} from '../../../core/section/js/section.js'
 	import {ui} from '../../../core/common/js/ui.js'
+	import {set_element_css} from '../../../core/page/js/css.js'
 	import {
 		render_column_id
 	} from '../../../core/section/js/render_list_section.js'
@@ -148,6 +149,19 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		self.node_body = list_body
 		// content_data append
 		list_body.appendChild(content_data)
+
+		// list_body css
+			const selector 			= `${self.section_tipo}_${self.tipo}.view_tool_cataloging_mosaic`
+			const css_object = {}
+			if (self.context.css) {
+				// use defined section css
+				for(const property in self.context.css) {
+					css_object[property] = self.context.css[property]
+				}
+			}
+			// use calculated css
+			set_element_css(selector, css_object)
+
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
