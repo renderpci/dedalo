@@ -47,7 +47,7 @@
 // actions to run
 	$datalist = component_security_access::calculate_tree($user_id, $lang);
 
-	$session_lang = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['config']) && $_SESSION['dedalo']['config']['dedalo_application_lang']
+	$session_lang = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['config']) && isset($_SESSION['dedalo']['config']['dedalo_application_lang'])
 		? $_SESSION['dedalo']['config']['dedalo_application_lang']
 		: null;
 
