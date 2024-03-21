@@ -519,6 +519,20 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			data_set		: {id:counter},
 			parent			: parent_div
 		})
+
+		when_in_viewport(
+			search_group,
+			() => {
+				const search_group_size = search_group.getBoundingClientRect()
+
+				if(search_group_size.width < 1024){
+					search_group.classList.add('column_2')
+				}
+				if(search_group_size.width < 512){
+					search_group.classList.add('column_1')
+				}
+			}
+		)
 		// Check already created root_search_group and store if not
 		if(is_root===true){
 			self.root_search_group = search_group

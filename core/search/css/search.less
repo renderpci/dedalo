@@ -167,6 +167,13 @@
 						display: grid;
 						grid-template-columns: 1fr 1fr 1fr;
 
+						&.column_2 {
+							grid-template-columns: 1fr 1fr;
+						}
+						&.column_1 {
+							grid-template-columns: 1fr;
+						}
+
 						@media screen and (max-width: @width_break_point_0) {
 							grid-template-columns: 1fr 1fr;
 						}
