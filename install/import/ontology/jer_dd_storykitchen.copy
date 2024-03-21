@@ -26,8 +26,8 @@ storykitchen142	storykitchen141	dd8	no	si	si	1	storykitchen	no	\N	\N	{"css": {".
 storykitchen64	storykitchen63	dd6	no	si	si	1	storykitchen	no	\N	\N	{"color": "#682b88"}
 storykitchen16	storykitchen15	dd1747	no	si	si	1	storykitchen	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "1"}}}
 storykitchen2	storykitchen1	dd6	no	si	si	1	storykitchen	no	\N	\N	{"color": "#255c59"}
+storykitchen13	dd68	dd4	no	si	si	21	storykitchen	no	\N	\N	\N
 storykitchen207	storykitchen154	dd9	no	si	si	3	storykitchen	si	\N	\N	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "2 / span 1"}}}
-storykitchen13	dd68	dd4	no	si	si	20	storykitchen	no	\N	\N	\N
 storykitchen208	storykitchen154	dd10	no	si	si	4	storykitchen	si	\N	\N	{"css": {".wrapper_component": {"grid-row": "span 3", "grid-column": "span 2"}}}
 storykitchen35	storykitchen34	dd8	no	si	si	1	storykitchen	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 storykitchen70	storykitchen69	dd8	no	si	si	1	storykitchen	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}

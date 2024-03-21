@@ -1452,12 +1452,6 @@ rsc434	birthplace_id	termino	lg-spa
 rsc432	location	termino	lg-spa
 rsc43	Musical document	termino	lg-eng
 rsc44	Date of capture	termino	lg-eng
-rsc462	Ricerca	termino	lg-ita
-rsc462	Search	termino	lg-spa
-rsc463	Escluse Emissioni radio - MUPI	termino	lg-ita
-rsc463	Exluidos Emisiones de rádio -MUPI	termino	lg-spa
-rsc464	Esclusi radio MUPI	termino	lg-ita
-rsc464	Excluidos radio MUPI	termino	lg-spa
 rsc465	Identificació	termino	lg-cat
 rsc465	Identificación	termino	lg-spa
 rsc465	Identificazione	termino	lg-ita
@@ -1495,6 +1489,11 @@ rsc472	Σημειώσεις	termino	lg-ell
 rsc474	Codi anterior	termino	lg-cat
 rsc474	Codice precedente	termino	lg-ita
 rsc474	Código anterior	termino	lg-spa
+rsc463	Nuovo	termino	lg-ita
+rsc462	Borrar	termino	lg-spa
+rsc462	Cancellare	termino	lg-ita
+rsc464	Nuevo	termino	lg-spa
+rsc464	Nuovo	termino	lg-ita
 rsc474	Προηγούμενος κώδικας	termino	lg-ell
 rsc475	Identificació	termino	lg-cat
 rsc475	Identificación	termino	lg-spa
@@ -3480,7 +3479,6 @@ rsc455	Liste	termino	lg-deu
 rsc456	Neu	termino	lg-deu
 rsc46	Gemeinde	termino	lg-deu
 rsc461	Nationalitäten	termino	lg-deu
-rsc462	Suchen	termino	lg-deu
 rsc465	Identifizierung	termino	lg-deu
 rsc466	Id	termino	lg-deu
 rsc467	Nationalität	termino	lg-deu
@@ -4409,9 +4407,6 @@ rsc455	List	termino	lg-eng
 rsc456	New	termino	lg-eng
 rsc457	Last changes	termino	lg-eng
 rsc461	Nationalities	termino	lg-eng
-rsc462	Search	termino	lg-eng
-rsc463	Excluded Radio broadcasts -MUPI	termino	lg-eng
-rsc464	Excluding MUPI radio	termino	lg-eng
 rsc465	Identification	termino	lg-eng
 rsc466	Id	termino	lg-eng
 rsc467	Nationality	termino	lg-eng
@@ -4443,6 +4438,8 @@ rsc492	Project	termino	lg-eng
 rsc493	TL Validation	termino	lg-eng
 rsc494	List	termino	lg-eng
 rsc496	External source	termino	lg-eng
+rsc462	Delete	termino	lg-eng
+rsc464	New	termino	lg-eng
 rsc497	Description	termino	lg-eng
 rsc498	Alt: Birth town	termino	lg-eng
 rsc499	Alt: Residence town	termino	lg-eng
@@ -5333,9 +5330,6 @@ rsc456	Nouveau	termino	lg-fra
 rsc457	Dernières modifications	termino	lg-fra
 rsc46	Municipalité	termino	lg-fra
 rsc461	Nationalités	termino	lg-fra
-rsc462	Recherche	termino	lg-fra
-rsc463	Exclus Radiodiffusion -MUPI	termino	lg-fra
-rsc464	MUPI Radio Exclu	termino	lg-fra
 rsc465	Identification	termino	lg-fra
 rsc466	Id	termino	lg-fra
 rsc467	Nationalité	termino	lg-fra
@@ -5377,6 +5371,8 @@ rsc50	Interviewer	termino	lg-fra
 rsc500	Alt : Commune de décès	termino	lg-fra
 rsc501	Dernières modifications	termino	lg-fra
 rsc1162	Löschen	termino	lg-deu
+rsc462	Supprimer	termino	lg-fra
+rsc464	Nouveau	termino	lg-fra
 rsc502	Dernières modifications	termino	lg-fra
 rsc503	Dernières modifications	termino	lg-fra
 rsc504	Dernières modifications	termino	lg-fra
@@ -7379,3 +7375,18 @@ rsc1287	Publizierbar	termino	lg-deu
 rsc1287	Publiable	termino	lg-fra
 rsc1287	Pubblicabile	termino	lg-ita
 rsc1282	Keeper/Collection	termino	lg-eng
+rsc463	Nuevo	termino	lg-spa
+rsc463	New	termino	lg-eng
+rsc463	Nou	termino	lg-cat
+rsc463	Neu	termino	lg-deu
+rsc463	Nouveau	termino	lg-fra
+rsc462	Löschen	termino	lg-deu
+rsc462	Esborrar	termino	lg-cat
+rsc464	Nou	termino	lg-cat
+rsc464	Neu	termino	lg-deu
+rsc1288	Borrar	termino	lg-spa
+rsc1288	Delete	termino	lg-eng
+rsc1288	Esborrar	termino	lg-cat
+rsc1288	Löschen	termino	lg-deu
+rsc1288	Supprimer	termino	lg-fra
+rsc1288	Cancellare	termino	lg-ita

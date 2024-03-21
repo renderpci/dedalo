@@ -181,8 +181,6 @@ tch144	Nouveau	termino	lg-fra
 tch144	New	termino	lg-eng
 tch144	Nou	termino	lg-cat
 tch144	Nuevo	termino	lg-spa
-tch145	QDP	termino	lg-eng
-tch145	QDP	termino	lg-fra
 tch146	Delete	termino	lg-eng
 tch146	Borrar	termino	lg-spa
 tch146	Esborrar	termino	lg-cat
@@ -262,6 +260,8 @@ tch165	Projecte	termino	lg-cat
 tch165	Proyecto	termino	lg-spa
 tch165	Projet	termino	lg-fra
 tch136	Important fitxas amb imatges	termino	lg-cat
+tch145	Movable property	termino	lg-eng
+tch145	Biens meubles	termino	lg-fra
 tch165	Project	termino	lg-eng
 tch166	QDP	termino	lg-fra
 tch166	QDP	termino	lg-eng
@@ -1364,10 +1364,10 @@ tch523	relations	termino	lg-spa
 tch524	ts_material	termino	lg-spa
 tch507	Inspecciones / Estado de conservación	termino	lg-spa
 tch507	Inspections / Conservation state	termino	lg-eng
-tch506	Biografías de los bienes	termino	lg-spa
-tch506	Biografías dels bens	termino	lg-cat
-tch506	Biographies des actifs	termino	lg-fra
-tch506	Biographies of properties	termino	lg-eng
+tch506	Biografía del bien	termino	lg-spa
+tch506	Biografia del bé	termino	lg-cat
+tch506	Biography of property	termino	lg-eng
+tch506	Biographie du bien	termino	lg-fra
 tch525	relations	termino	lg-spa
 tch526	ts_onomastic	termino	lg-spa
 tch527	relations	termino	lg-spa
@@ -1613,7 +1613,6 @@ tch72	Date du bulletin d'initiation	termino	lg-fra
 tch72	Butlletí Incoació	termino	lg-cat
 tch327	TCH	termino	lg-spa
 tch166	TCH	termino	lg-spa
-tch145	TCH	termino	lg-spa
 tch101	Listado	termino	lg-spa
 tch116	Latest changes	termino	lg-eng
 tch99	Relacions	termino	lg-cat
@@ -1971,18 +1970,6 @@ tchi53	Estat actual	termino	lg-cat
 tchi53	Aktueller Stand	termino	lg-deu
 tchi53	État actuel	termino	lg-fra
 tchi53	Stato attuale	termino	lg-ita
-tchi54	Estado de conservación	termino	lg-spa
-tchi54	Conservation state	termino	lg-eng
-tchi54	Estat de conservació	termino	lg-cat
-tchi54	Stand der Erhaltung	termino	lg-deu
-tchi54	État de conservation	termino	lg-fra
-tchi54	Stato di conservazione	termino	lg-ita
-tchi55	Inspecciones	termino	lg-spa
-tchi55	Inspections	termino	lg-eng
-tchi55	Inspeccions	termino	lg-cat
-tchi55	Inspektionen	termino	lg-deu
-tchi55	Inspections	termino	lg-fra
-tchi55	Ispezioni	termino	lg-ita
 tch356	Restauración	termino	lg-spa
 tchi56	Restauración	termino	lg-spa
 tchi56	Restoration	termino	lg-eng
@@ -2010,8 +1997,18 @@ tch171	Interventi	termino	lg-ita
 tchi58	Interventi	termino	lg-ita
 tch507	Inspections / État de conservation	termino	lg-fra
 tch507	Ispezioni / Stato di conservazione	termino	lg-ita
-tch506	Biografien von Vermögenswerten	termino	lg-deu
-tch506	Biografie dei beni	termino	lg-ita
+tchi55	Inspections / Conservation state	termino	lg-eng
+tchi55	Inspeccions / Estat de conservació	termino	lg-cat
+tchi55	Inspektionen / Stand der Erhaltung	termino	lg-deu
+tchi55	Ispezioni / Stato di conservazione	termino	lg-ita
+tchi54	Biografía del bien	termino	lg-spa
+tchi54	Biography of property	termino	lg-eng
+tchi54	Biografia del bé	termino	lg-cat
+tchi54	Biographie du bien	termino	lg-fra
+tchi54	Biografia del bene	termino	lg-ita
+tchi54	Biographie des Guten	termino	lg-deu
+tch506	Biografia del bene	termino	lg-ita
+tch506	Biographie des Guten	termino	lg-deu
 tchi2	Property typologies	termino	lg-eng
 tchi2	Tipologies d'inmobles	termino	lg-cat
 tchi2	Immobilientypologien	termino	lg-deu
@@ -2033,3 +2030,6 @@ tch136	Dateien mit Bildern importieren	termino	lg-deu
 tch136	Importer des fiches avec images	termino	lg-fra
 tch136	Importare schede con immagine	termino	lg-ita
 tch297	fund	termino	lg-spa
+tch145	Bienes muebles	termino	lg-spa
+tchi55	Inspecciones / Estado de conservación	termino	lg-spa
+tchi55	Inspections / État de conservation	termino	lg-fra
