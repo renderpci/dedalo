@@ -118,7 +118,6 @@ hierarchy20	Thesaurus	termino	lg-ita
 hierarchy20	θησαυρός λέξεων	termino	lg-ell
 hierarchy21	Identificació	termino	lg-cat
 hierarchy21	Identificación	termino	lg-spa
-hierarchy6	TLD (alpha2)	termino	lg-fra
 hierarchy21	Identificazione	termino	lg-ita
 hierarchy21	αναγνώριση	termino	lg-ell
 hierarchy22	Id	termino	lg-cat
@@ -144,6 +143,7 @@ hierarchy27	Modello	termino	lg-ita
 hierarchy27	Modelo	termino	lg-spa
 hierarchy64	Sources externes	termino	lg-fra
 hierarchy27	μοντέλο	termino	lg-ell
+hierarchy6	TLD	termino	lg-fra
 hierarchy28	Nota d'abast	termino	lg-cat
 hierarchy28	Nota d&#039;ambito	termino	lg-ita
 hierarchy28	Nota de alcance	termino	lg-spa
@@ -293,9 +293,6 @@ hierarchy59	Terme general model	termino	lg-cat
 hierarchy59	Termine generale modello	termino	lg-ita
 hierarchy59	Término general modelo	termino	lg-spa
 hierarchy59	γενικός όρος μοντέλο	termino	lg-ell
-hierarchy6	TLD (alpha2)	termino	lg-cat
-hierarchy6	TLD (alpha2)	termino	lg-ell
-hierarchy6	TLD (alpha2)	termino	lg-spa
 hierarchy6	Use only uppercase	def	lg-eng
 hierarchy6	Use sólo mayúsculas	def	lg-spa
 hierarchy6	Utilitza només majúscules	def	lg-cat
@@ -329,11 +326,13 @@ hierarchy68	code	termino	lg-spa
 hierarchy69	model	termino	lg-spa
 hierarchy7	TLS (alpha3)	termino	lg-cat
 hierarchy7	TLS (alpha3)	termino	lg-ell
-hierarchy7	TLS (alpha3)	termino	lg-spa
 hierarchy70	term	termino	lg-spa
 hierarchy71	time	termino	lg-spa
 hierarchy72	space	termino	lg-spa
 hierarchy73	Map first locator to plain terminoID like es_2	obs	lg-spa
+hierarchy6	TLD	termino	lg-cat
+hierarchy6	TLD	termino	lg-ell
+hierarchy7	TLS (alpha3) DEPRECATED	termino	lg-spa
 hierarchy73	parent	termino	lg-spa
 hierarchy74	related	termino	lg-spa
 hierarchy75	indexation	termino	lg-spa
@@ -478,7 +477,6 @@ hierarchy56	Begriffe	termino	lg-deu
 hierarchy57	Modelle	termino	lg-deu
 hierarchy58	Zielmodelle	termino	lg-deu
 hierarchy59	Allgemeiner Begriff Modell	termino	lg-deu
-hierarchy6	TLD (alpha2)	termino	lg-deu
 hierarchy60	Beziehungen	termino	lg-deu
 hierarchy61	Hinweis zum Geltungsbereich	termino	lg-deu
 hierarchy62	Druckreif	termino	lg-deu
@@ -498,11 +496,11 @@ hierarchy95	Illustration	termino	lg-deu
 hierarchy97	Beziehungen Thesaurus	termino	lg-deu
 hierarchy98	Letzte Änderungen	termino	lg-deu
 hierarchy99	Definition	termino	lg-deu
+hierarchy6	TLD	termino	lg-deu
 hierarchy119	space_geojson	termino	lg-spa
 hierarchy35	Related terms	termino	lg-eng
 hierarchy1	Hierarchy	termino	lg-eng
 hierarchy2	Description	termino	lg-eng
-hierarchy6	TLD (alpha2)	termino	lg-eng
 hierarchy8	Language	termino	lg-eng
 hierarchy9	Typology	termino	lg-eng
 hierarchy10	List	termino	lg-eng
@@ -529,6 +527,7 @@ hierarchy31	Geolocation	termino	lg-eng
 hierarchy32	Instructions for indexing	termino	lg-eng
 hierarchy33	Observations	termino	lg-eng
 hierarchy34	Relations	termino	lg-eng
+hierarchy6	TLD	termino	lg-eng
 hierarchy36	Dependent of	termino	lg-eng
 hierarchy37	List	termino	lg-eng
 hierarchy38	New	termino	lg-eng
@@ -640,3 +639,4 @@ hierarchy122	Toponymie	termino	lg-deu
 hierarchy122	τοπωνύμια	termino	lg-ell
 hierarchy122	Toponymie	termino	lg-fra
 hierarchy122	Toponomastica	termino	lg-ita
+hierarchy6	TLD	termino	lg-spa

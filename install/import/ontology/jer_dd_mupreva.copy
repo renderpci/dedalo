@@ -2386,7 +2386,6 @@ mupreva503	mupreva501	dd442	no	si	si	6	mupreva	no	[{"dd6":"mupreva380"},{"dd9":"
 mupreva2343	mupreva239	dd227	no	si	si	8	mupreva	no	\N	{\r\n  "multiple_data": true,\r\n  "multiple_data_tipo": "mupreva2617",\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2677	mupreva2487	dd524	no	si	si	2	mupreva	si	[{"dd6":"mupreva2541"},{"dd530":"mupreva2544"}]	\N	\N
 mupreva2415	mupreva1250	dd530	no	si	si	4	mupreva	no	[{"dd6":"mupreva1"},{"dd1747":"mupreva1224"},{"dd9":"mupreva776"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "50%"\r\n      }\r\n    }\r\n  }\r\n}	\N
-mupreva2562	hierarchy56	dd4	no	si	si	11	mupreva	si	\N	\N	\N
 mupreva2347	mupreva239	dd11	no	si	si	12	mupreva	no	[{"dd6":"mupreva2352"},{"dd9":"mupreva2354"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%",\r\n        "clear": "left"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva2348	mupreva239	dd11	no	si	si	13	mupreva	no	[{"dd6":"mupreva2358"},{"dd9":"mupreva2360"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical",\r\n        ".line_top"\r\n      ],\r\n      "style": {\r\n        "width": "25%"\r\n      }\r\n    }\r\n  }\r\n}	\N
 mupreva1238	mupreva231	dd57	no	si	si	5	mupreva	no	[{"dd6":"dd861"},{"dd9":"dd863"}]	{\r\n  "css": {\r\n    ".wrap_component": {\r\n      "mixin": [\r\n        ".vertical"\r\n      ],\r\n      "style": {\r\n        "width": "16%"\r\n      }\r\n    }\r\n  }\r\n}	\N
@@ -2799,6 +2798,7 @@ mupreva1408	dd69	dd4	no	si	si	2	mupreva	no	\N		\N
 mupreva2618	mupreva2635	dd440	no	si	si	1	mupreva	si	\N	\N	\N
 mupreva33	dd3	dd17	no	si	si	13	mupreva	no	\N		\N
 mupreva2635	ts11	dd440	no	si	si	7	mupreva	no	null		null
-mupreva76	dd68	dd4	no	si	si	10	mupreva	si	\N		\N
+mupreva76	dd68	dd4	no	si	si	11	mupreva	si	\N		\N
 mupreva19	dd14	dd4	no	si	si	15	mupreva	no	\N		\N
+mupreva2562	hierarchy56	dd4	no	si	si	11	mupreva	si	\N	\N	\N
 mupreva493	dd321	dd4	no	si	si	2	mupreva	no	\N		\N
