@@ -1295,7 +1295,6 @@ final class dd_core_api {
 		*    "prevent_lock": true
 		* }
 	* @return object $response
-	*
 	*/
 	public static function count(object $rqo) : object {
 

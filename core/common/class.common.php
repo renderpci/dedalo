@@ -1784,17 +1784,19 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				// $time_string = $time>15
-				// 	? sprintf("\033[31m%s\033[0m", $time)
-				// 	: $time;
-				$len = !empty($this->tipo)
-					? strlen($this->tipo)
-					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
-					: 0;
-				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				// error_log('------- get_structure_context -------- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				if ($time>15) {
+					$time_string = $time>15
+						? sprintf("\033[31m%s\033[0m", $time)
+						: $time;
+					$len = !empty($this->tipo)
+						? strlen($this->tipo)
+						: 0;
+					$repeat = ($len < 14)
+						? (14 - $len)
+						: 0;
+					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+					error_log('------- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				}
 			}
 
 

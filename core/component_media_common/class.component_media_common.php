@@ -1894,6 +1894,22 @@ class component_media_common extends component_common {
 			}
 			$target_quality_path = $this->get_media_filepath($quality);
 
+		// check target directory
+			$target_dir = pathinfo($target_quality_path)['dirname'];
+			if (!is_dir($target_dir)) {
+				// create it
+				if(!mkdir($target_dir, 0750, true)) {
+					$msg = ' Error. Creating directory ' . $target_dir ;
+					debug_log(__METHOD__
+						.$msg . PHP_EOL
+						.' target_dir: ' .$target_dir
+						, logger::ERROR
+					);
+					$response->msg .= $msg;
+					return $response;
+				}
+			}
+
 		// copy file from source quality to target quality
 			$copy_result = copy(
 				$original_file_path, // from original quality directory
