@@ -1319,11 +1319,13 @@ final class dd_core_api {
 		// permissions check. If user don't have access to any section, set total to zero and prevent search
 			$ar_section_tipo = $sqo->section_tipo;
 			foreach ($ar_section_tipo as $current_section_tipo) {
-				$permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
-				if($permissions<1){
-					$result = (object)[
-						'total' => 0
-					];
+				if($current_section_tipo===DEDALO_SECTION_USERS_TIPO) {
+					$permissions = common::get_permissions($current_section_tipo, $current_section_tipo);
+					if($permissions<1){
+						$result = (object)[
+							'total' => 0
+						];
+					}
 				}
 			}
 
