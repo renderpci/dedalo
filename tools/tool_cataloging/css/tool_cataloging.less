@@ -67,51 +67,6 @@
 					}
 
 				}
-
-				// select top tipo / id
-				>.related_list_container {
-
-					>select {
-
-					}
-				}
-
-				// component lang selector
-				>.lang_selector {
-					display: flex;
-					align-items: center;
-					margin-left: 0.75rem;
-					margin-right: 0.12rem;
-					@media screen and (max-width: @width_break_point_0) {
-						padding-right: 0.5rem;
-					}
-
-					>.lang_label {
-						padding-right: 0.33rem;
-					}
-					>select {
-
-					}
-				}
-
-				// buttons of tools (tool print, tool time machine..)
-				>.tool_button {
-					// background-color: #fde2c6;
-					// border-color: #e9ecef;
-					// color: #212529;
-					// // width: 12em;
-					// padding: 0.5em;
-					// cursor: pointer;
-					// border-radius: 0.25rem;
-					// // display: inline-flex;
-					// // align-items: center;
-					// // justify-content: space-evenly;
-
-					>.icon {
-						height: 1rem;
-						margin-right: 0.33rem;
-					}
-				}
 			}
 		}//end >.tool_header
 
@@ -168,7 +123,6 @@
 
 							.section_record {
 								background-color:#ffffff;
-								height: 9rem;
 								display: flex;
 								align-items: center;
 
@@ -201,14 +155,15 @@
 								}
 
 								.column_drag {
-									justify-content: space-between;
+									padding: unset;
+									// justify-content: space-between;
 									.options_left_contaniner{
 										display: flex;
 										flex-direction: column;
-										padding-top: 1em;
-										label{
-											margin: 0.3em;
-										}
+										// padding-top: 1em;
+										// label{
+										// 	margin: 0.3em;
+										// }
 										.label_drag{
 											background-color: #bff8bc;
 										}
@@ -216,9 +171,9 @@
 											background-color: #f8bcbc;
 										}
 
-										.row_snap {
-											padding-top: 2em;
-										}
+										// .row_snap {
+										// 	padding-top: 2em;
+										// }
 									}
 
 									.dragger {
@@ -229,11 +184,11 @@
 										height: auto;
 										opacity: 0.3;
 										min-height: 2rem;
-										min-width: 2rem;
+										// min-width: 2rem;
 										cursor: move;
-										padding: 1.3em;
+										// padding: 1.3em;
 										height	: 100%;
-										width	: 2em;
+										width	: 34px;
 										&.used{
 											opacity: 0.8;
 											background-color: #ffda86;
@@ -253,7 +208,7 @@
 							}
 
 							.sr_mosaic_hover {
-								// background-color: rgb(255 255 255 / 35%);
+								// background-color: rgb(255 255 255 / 100%);
 								position: absolute;
 								width: 100%;
 								height: 100%;
@@ -262,8 +217,9 @@
 								// grid-template-rows: 25% auto 22%;
 								// grid-template-rows: 1fr 2fr 1fr;
 								grid-template-rows: minmax(3rem, auto) 2fr minmax(3rem, auto);
+								border: 0.1rem solid #333333;
 								overflow: hidden;
-								@bg_color_buttons: rgb(255 255 255 / 80%);
+								@bg_color_buttons: rgb(245 245 245 / 100%);
 
 								>.column {
 									z-index: 2;
@@ -372,7 +328,8 @@
 						>.content_data >.section_record {
 							position: relative;
 							display: grid;
-							grid-template-columns: auto 1.5fr 1fr 34px;
+							// grid-template-columns: auto 1fr 1fr 1fr 34px;
+							// grid-template-rows: 1fr 1fr 1fr;
 							height: 100%;
 							overflow-y: hidden;
 
