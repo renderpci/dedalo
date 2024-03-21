@@ -1440,7 +1440,7 @@ class search {
 			$section_tipo		= $this->main_section_tipo;
 			$section_alias		= $this->main_section_tipo_alias;
 			$datos_container	= ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
-			$user_id			= get_user_id(); // Logged user id
+			$user_id			= logged_user_id(); // Logged user id
 
 		// cache
 			static $sql_projects_filter_data;

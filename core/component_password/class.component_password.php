@@ -202,7 +202,7 @@ class component_password extends component_common {
 		}
 
 		// demo user case. Prevent to change password for logged user 'demo'
-			$username = get_username();
+			$username = logged_user_username();
 			if ($username==='dedalo') {
 				debug_log(__METHOD__
 					. " Attempt to change dedalo demo user password blocked "

@@ -96,35 +96,108 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 
 
 /**
-* GET_USER_ID
+* LOGGED_USER_ID
 * Resolve current logged user id
 * @return int|null
 */
-function get_user_id() : ?int {
+function logged_user_id() : ?int {
 
 	$user_id = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['user_id'])
 		? (int)$_SESSION['dedalo']['auth']['user_id']
 		: null;
 
 	return $user_id;
+}//end logged_user_id
+
+
+
+/**
+* GET_USER_ID
+* @deprecated (use logged_user_id instead)
+* Alias of logged_user_id
+* @return int|null
+*/
+function get_user_id() : ?int {
+	return logged_user_id();
 }//end get_user_id
 
 
 
 /**
-* GET_USERNAME
+* LOGGED_USER_USERNAME
 * Resolve current logged user username
 * This is the short version, like 'render'
 * @return int|null
 */
-function get_username() : ?string {
+function logged_user_username() : ?string {
 
 	$username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['username'])
 		? $_SESSION['dedalo']['auth']['username']
 		: null;
 
 	return $username;
+}//end logged_user_username
+
+
+
+/**
+* GET_USERNAME
+* @deprecated (use logged_user_username instead)
+* Alias of logged_user_username
+* @return int|null
+*/
+function get_username() : ?string {
+	return logged_user_username();
 }//end get_username
+
+
+
+/**
+* LOGGED_USER_FULL_USERNAME
+* Resolve current logged user username
+* This is the short version, like 'render'
+* @return int|null $full_username
+*/
+function logged_user_full_username() : ?string {
+
+	$full_username = isset($_SESSION['dedalo']) && isset($_SESSION['dedalo']['auth']) && isset($_SESSION['dedalo']['auth']['full_username'])
+		? $_SESSION['dedalo']['auth']['full_username']
+		: null;
+
+	return $full_username;
+}//end logged_user_full_username
+
+
+
+/**
+* LOGGED_USER_IS_DEVELOPER
+* Resolve current is_developer status for current logged user
+* @return bool
+*/
+function logged_user_is_developer() : bool {
+
+	$is_developer = isset($_SESSION['dedalo']['auth']['is_developer'])
+		? (bool)$_SESSION['dedalo']['auth']['is_developer']
+		: false;
+
+	return $is_developer;
+}//end logged_user_is_developer
+
+
+
+/**
+* LOGGED_USER_IS_GLOBAL_ADMIN
+* Resolve current is_global_admin status for current logged user
+* @return bool
+*/
+function logged_user_is_global_admin() : bool {
+
+	$is_global_admin = isset($_SESSION['dedalo']['auth']['is_global_admin'])
+		? (bool)$_SESSION['dedalo']['auth']['is_global_admin']
+		: false;
+
+	return $is_global_admin;
+}//end logged_user_is_developer
 
 
 

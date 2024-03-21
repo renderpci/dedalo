@@ -1691,7 +1691,7 @@ abstract class common {
 						$ar_target_section_ddo = $this->get_ar_target_section_ddo();
 
 						// user id
-						$user_id_logged = get_user_id();
+						$user_id_logged = logged_user_id();
 
 						foreach ($ar_target_section_ddo as $current_section_ddo) {
 							if(		isset($current_section_ddo->matrix_table)
@@ -2583,7 +2583,7 @@ abstract class common {
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 
 		// 1. From user preset
 			$user_preset = request_config_presets::search_request_config(
@@ -2706,7 +2706,7 @@ abstract class common {
 			// 		if(empty($request_ddo)) {
 			// 			// preset request_ddo
 			// 				if (!isset($user_preset)) {
-			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, get_user_id(), $mode, null);
+			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, logged_user_id(), $mode, null);
 			// 				}
 			// 				if (!empty($user_preset)) {
 			// 					$request_ddo = array_find($user_preset, function($item){
@@ -4164,7 +4164,7 @@ abstract class common {
 				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
 
 			// user id
-				$user_id_logged = get_user_id();
+				$user_id_logged = logged_user_id();
 
 			// skip section if permissions are not enough
 				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
@@ -4334,7 +4334,7 @@ abstract class common {
 		$tools = [];
 
 		// user_id
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 			if (empty($user_id)) {
 				return $tools;
 			}
