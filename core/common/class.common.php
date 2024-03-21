@@ -2779,16 +2779,19 @@ abstract class common {
 			}
 
 		// check section tipo model (allow areas)
-			$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-			if ($section_model!=='section' && strpos($section_model, 'area_')===false) {
-				// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
-				debug_log(__METHOD__
-					. " Error. Invalid section/area tipo " . PHP_EOL
-					. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
-					. ' section_model: ' . to_string($section_model) . PHP_EOL
-					. ' current tipo: '  . to_string($tipo)
-					, logger::ERROR
-				);
+			if ($section_tipo!=='self') {
+				$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				if ($section_model!=='section' && strpos($section_model, 'area_')===false) {
+					// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
+					debug_log(__METHOD__
+						. " Error. Invalid section/area tipo " . PHP_EOL
+						. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
+						. ' section_model: ' . to_string($section_model) . PHP_EOL
+						. ' current tipo: '  . to_string($tipo) . PHP_EOL
+						. ' dbt: ' . to_string( debug_backtrace()[1] )
+						, logger::ERROR
+					);
+				}
 			}
 
 		// cache
