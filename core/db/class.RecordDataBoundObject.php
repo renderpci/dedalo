@@ -342,6 +342,10 @@ abstract class RecordDataBoundObject {
 						, logger::WARNING
 					);
 				}
+
+				// metrics
+					metrics::$ontology_total_time += $total_time_ms;
+					metrics::$ontology_total_calls++;
 			}
 
 

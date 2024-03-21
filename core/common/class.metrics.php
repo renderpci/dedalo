@@ -13,7 +13,17 @@ final class metrics {
 		static $security_permissions_total_time = 0;
 		static $security_permissions_total_calls = 0;
 
+	// search
+		static $search_total_time = 0;
+		static $search_total_calls = 0;
 
+	// ontology
+		static $ontology_total_time = 0;
+		static $ontology_total_calls = 0;
+
+	// matrix
+		static $matrix_total_time = 0;
+		static $matrix_total_calls = 0;
 
 
 }//end class metrics
