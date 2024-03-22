@@ -1465,7 +1465,8 @@ class section extends common {
 					// don't delete some components
 					$ar_components_model_no_delete_dato = [
 						'component_section_id',
-						'component_external'
+						'component_external',
+						'component_inverse'
 					];
 
 					$ar_models_of_media_components = section::get_components_with_media_content();

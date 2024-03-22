@@ -87,6 +87,23 @@ class component_section_id extends component_common {
 
 
 	/**
+	* SAVE
+	* Only used to catch common method here
+	* @return int|null $section_matrix_id
+	*/
+	public function Save() : ?int {
+
+		debug_log(__METHOD__
+			. " Ignored save command for component (component_section_id) "
+			, logger::ERROR
+		);
+
+		return $this->section_id;
+	}//end Save
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
