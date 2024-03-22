@@ -2250,8 +2250,8 @@ abstract class common {
 								}
 
 							// parent_grouper
-								if (isset($parent_grouper)) {
-									$related_element->parent_grouper = $parent_grouper;
+								if (isset($dd_object->parent_grouper)) {
+									$related_element->parent_grouper = $dd_object->parent_grouper;
 								}
 
 							// properties injection
