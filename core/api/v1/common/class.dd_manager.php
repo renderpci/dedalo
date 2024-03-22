@@ -151,6 +151,7 @@ final class dd_manager {
 						'Ontology load',
 						'--> ontology_total_time: ' . metrics::$ontology_total_time.' ms',
 						'--> ontology_total_calls: '. metrics::$ontology_total_calls,
+						'--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached,
 						// matrix stats
 						'matrix load',
 						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
