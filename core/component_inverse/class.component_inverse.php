@@ -51,6 +51,23 @@ class component_inverse extends component_common {
 
 
 	/**
+	* SAVE
+	* Only used to catch common method here
+	* @return int|null $section_matrix_id
+	*/
+	public function Save() : ?int {
+
+		debug_log(__METHOD__
+			. " Ignored save command for component (component_inverse) "
+			, logger::WARNING
+		);
+
+		return $this->section_id;
+	}//end Save
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the component.
 	* For component inverse, data is the locators of sections that call to his section
