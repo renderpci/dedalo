@@ -2752,10 +2752,10 @@ abstract class common {
 
 
 	/**
-	* GET_REQUEST_PROPERTIES_PARSED
+	* GET_AR_REQUEST_CONFIG
 	* Resolves the component config context with backward compatibility
 	* The proper config in v6 is on term properties config, NOT as related terms
-	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
+	* Note that section tipo 'self' will be replaced by current '$section_tipo'
 	*
 	* @return array $ar_request_config
 	*/

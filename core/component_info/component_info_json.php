@@ -2,9 +2,11 @@
 // JSON data component controller
 
 
+
 // component configuration vars
 	$permissions	= $this->get_component_permissions();
 	$mode			= $this->get_mode();
+
 
 
 // context
@@ -24,37 +26,27 @@
 	}//end if($options->get_context===true)
 
 
-	// $bt = debug_backtrace();
-	// dump($bt, ' $bt ++ '.to_string());
 
 // data
 	$data = [];
 
 	if($options->get_data===true && $permissions>0) {
-
 		// value
 			switch ($mode) {
 
 				case 'list':
 				case 'tm':
-				dump($this->use_db_data, ' $this->use_db_data ++ '.to_string($this->mode));
-				if(isset($this->use_db_data) && $this->use_db_data===true){
-					$value		= $this->get_db_data();
-				}else{
-					$value		= $this->get_list_value();
-				}
+					$value = (isset($this->use_db_data) && $this->use_db_data===true)
+						? $this->get_db_data()
+						: $this->get_list_value();
 					break;
 
 				case 'edit':
 				default:
-
-				if(isset($this->use_db_data) && $this->use_db_data===true){
-					$value		= $this->get_db_data();
-				}else{
-					$value		= $this->get_dato();
-				}
-
-					$data_list	= $this->get_data_list();
+					$value = (isset($this->use_db_data) && $this->use_db_data===true)
+						? $this->get_db_data()
+						: $this->get_dato();
+					$data_list = $this->get_data_list();
 					break;
 			}
 
