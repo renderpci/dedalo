@@ -155,6 +155,18 @@ final class dd_manager {
 						'matrix load',
 						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
 						'--> matrix_total_calls: '. metrics::$matrix_total_calls,
+						// search_free stats
+						'Search free',
+						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
+						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
+						// summary
+						'summary',
+						'time: ' . (
+							metrics::$security_permissions_total_time +
+							metrics::$search_free_total_time +
+							metrics::$ontology_total_time +
+							metrics::$matrix_total_time
+						)
 					];
 					debug_log(__METHOD__ . PHP_EOL
 						. implode(PHP_EOL, $metrics)
