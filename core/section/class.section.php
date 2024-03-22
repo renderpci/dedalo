@@ -1206,7 +1206,7 @@ class section extends common {
 						debug_log(__METHOD__
 							." Ignored set filter default in section without filter: $this->tipo" . PHP_EOL
 							.' section_tipo: ' . $this->tipo . PHP_EOL
-							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG)
+							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
 							, logger::WARNING
 						);
 
@@ -3775,7 +3775,7 @@ class section extends common {
 								// component_label
 									$component_label = RecordObj_dd::get_termino_by_tipo(
 										$tipo, // string terminoID
-										DEDALO_DATA_LANG, // string lang
+										DEDALO_APPLICATION_LANG, // string lang
 										true, // bool from_cache
 										true // bool fallback
 									);
@@ -3785,7 +3785,7 @@ class section extends common {
 										// section_label
 											$section_label = RecordObj_dd::get_termino_by_tipo(
 												$section_tipo, // string terminoID
-												DEDALO_DATA_LANG, // string lang
+												DEDALO_APPLICATION_LANG, // string lang
 												true, // bool from_cache
 												true // bool fallback
 											);
