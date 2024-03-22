@@ -163,6 +163,8 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 			await self.load_section( section_to_cataloging )
 			await self.section_to_cataloging.build(true)
 
+			self.section_to_cataloging.context.css = section_to_cataloging.properties.css
+
 		// area_thesaurus. fix area_thesaurus for convenience
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
