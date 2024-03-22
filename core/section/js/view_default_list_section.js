@@ -153,7 +153,7 @@ view_default_list_section.render = async function(self, options) {
 					'grid-template-columns' : template_columns
 				}
 			}
-			if (self.context.css) {
+			if (self.context?.css) {
 				// use defined section css
 				for(const property in self.context.css) {
 					css_object[property] = self.context.css[property]
@@ -302,7 +302,7 @@ const rebuild_columns_map = async function(self) {
 const get_buttons = function(self) {
 
 	// ar_buttons list from context
-		const ar_buttons = self.context.buttons
+		const ar_buttons = self.context?.buttons
 		if(!ar_buttons) {
 			return null;
 		}
