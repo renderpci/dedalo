@@ -527,7 +527,7 @@ const get_buttons = (self) => {
 const fit_image = function(self) {
 
 	// vector_editor. If isset, nothing to do, only for non edit image
-		if (self.vector_editor) {
+		if (self.vector_editor || !self.image_container.object_node) {
 			return
 		}
 
