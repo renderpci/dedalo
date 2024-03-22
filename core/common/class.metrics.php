@@ -20,6 +20,7 @@ final class metrics {
 	// ontology
 		static $ontology_total_time = 0;
 		static $ontology_total_calls = 0;
+		static $ontology_total_calls_cached = 0;
 
 	// matrix
 		static $matrix_total_time = 0;
