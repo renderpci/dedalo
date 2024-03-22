@@ -162,60 +162,52 @@ class security {
 	private static function get_permissions_table() : array {
 		$start_time=start_time();
 
-		// cache. Cached once by script run
+		// static cache. Cached once by script run
 			if (isset(security::$permissions_table_cache)) {
 				return security::$permissions_table_cache;
 			}
 
-		// cache cascade
-			$use_cache = false;
-			if ($use_cache===true) {
+		// cache cascade (do not use the cache memory here because the gain is not worth it)
+			// $use_cache		= false;
+			// $use_cache_type	= 'session';
+			// if ($use_cache===true) {
 
-				$cache_file_name = 'cache_permissions_table.json';
+			// 	$cache_file_name = 'cache_permissions_table.json';
 
-				switch (true) {
+			// 	switch ($use_cache_type) {
 
-					// static cache (ram)
-						// case (isset(security::$permissions_table_cache)):
-						// 	// Cached once by script run
-						// 	return security::$permissions_table_cache;
-						// 	break;
+			// 		// session cache (hd)
+			// 		case 'session' :
+			// 			if ( isset($_SESSION['dedalo']['auth']['permissions_table']) ) {
+			// 				// debug_log(__METHOD__." Loaded permissions_table session");
+			// 				$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
+			// 				return $permissions_table;
+			// 			}
 
-					// development_server (non session cache is used)
-						// case (defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true):
-						// 	// Break and continue calculation without session cache
-						// 	break;
+			// 		// cache file
+			// 		default:
 
-					// session cache (hd)
-						// case (isset($_SESSION['dedalo']['auth']['permissions_table'])):
-						// 	// debug_log(__METHOD__." Loaded permissions_table session");
-						// 	$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
-						// 	return $permissions_table;
-						// 	break;
+			// 			// cache file
+			// 			$cache_data	= dd_cache::cache_from_file((object)[
+			// 				'file_name' => $cache_file_name
+			// 			]);
+			// 			if (!empty($cache_data)) {
 
-					// cache file
-					default:
-						// cache file
-						$cache_data	= dd_cache::cache_from_file((object)[
-							'file_name' => $cache_file_name
-						]);
-						if (!empty($cache_data)) {
+			// 				$permissions_table = json_decode($cache_data);
 
-							$permissions_table = json_decode($cache_data);
+			// 				// set cache
+			// 				// security::$permissions_table_cache = $permissions_table;
 
-							// set cache
-							// security::$permissions_table_cache = $permissions_table;
+			// 				debug_log(__METHOD__
+			// 					." Returning permissions_table from cache disk file"
+			// 					, logger::DEBUG
+			// 				);
 
-							debug_log(__METHOD__
-								." Returning permissions_table from cache disk file"
-								, logger::DEBUG
-							);
-
-							return $permissions_table;
-						}
-						break;
-				}
-			}
+			// 				return $permissions_table;
+			// 			}
+			// 			break;
+			// 	}
+			// }
 
 		// get reliable component (assigned profile checked)
 			$user_id = logged_user_id(); // from session
@@ -234,22 +226,24 @@ class security {
 				$permissions_table[$permissions_key] = $item;
 			}
 
-		// set cache
+		// set static cache
 			security::$permissions_table_cache = $permissions_table;
 
 		// session cached table
-			if ($use_cache===true) {
-				switch (true) {
-					// session
-						// $_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
-					// cache to file
-					default:
-						dd_cache::cache_to_file((object)[
-							'file_name'	=> $cache_file_name,
-							'data'		=> $permissions_table
-						]);
-				}
-			}
+			// if ($use_cache===true) {
+			// 	switch ($use_cache_type) {
+			// 		// session (hd)
+			// 		case 'session':
+			// 			$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
+			// 			break;
+			// 		// cache to file
+			// 		default:
+			// 			dd_cache::cache_to_file((object)[
+			// 				'file_name'	=> $cache_file_name,
+			// 				'data'		=> $permissions_table
+			// 			]);
+			// 	}
+			// }
 
 		// debug
 			if(SHOW_DEBUG===true) {

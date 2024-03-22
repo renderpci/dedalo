@@ -193,6 +193,8 @@ abstract class JSON_RecordDataBoundObject {
 			// debug
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time, 'ms');
+
+					// slow request notification
 					if($total_time_ms > SLOW_QUERY_MS){
 						$n_records = is_countable($dato) ? sizeof($dato) : 0;
 						debug_log(__METHOD__
@@ -207,6 +209,12 @@ abstract class JSON_RecordDataBoundObject {
 					// metrics
 						metrics::$matrix_total_time += $total_time_ms;
 						metrics::$matrix_total_calls++;
+
+					// debug_log(__METHOD__ . PHP_EOL
+					// 	. ' load total_time_ms: ' . $total_time_ms . PHP_EOL
+					// 	. ' ' . to_string($strQuery)
+					// 	, logger::DEBUG
+					// );
 				}
 		}
 
@@ -560,6 +568,16 @@ abstract class JSON_RecordDataBoundObject {
 						, logger::WARNING
 					);
 				}
+
+				// metrics
+					metrics::$search_free_total_time += $total_time_ms;
+					metrics::$search_free_total_calls++;
+
+				// debug_log(__METHOD__ . PHP_EOL
+				// 	. ' search_free total_time_ms: ' . $total_time_ms . PHP_EOL
+				// 	. ' ' . to_string($strQuery)
+				// 	, logger::DEBUG
+				// );
 			}
 
 

@@ -126,14 +126,14 @@ class component_section_id extends component_common {
 		$data	= $this->get_dato();
 		$label	= $this->get_label();
 
-	// value
-		$value = new dd_grid_cell_object();
-			$value->set_type('column');
-			$value->set_label($label);
-			$value->set_ar_columns_obj([$column_obj]);
-			$value->set_cell_type('section_id');
-			$value->set_row_count(1);
-			$value->set_value($data);
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				$value->set_cell_type('section_id');
+				$value->set_row_count(1);
+				$value->set_value($data);
 
 
 		return $value;
