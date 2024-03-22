@@ -278,6 +278,29 @@ const get_buttons = (self) => {
 			download_object_as_json(export_obj, export_name)
 		})
 
+	// button sample data
+		if (self.context?.properties?.sample_data) {
+			const button_sample_data = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button code',
+				title			: get_label.add_sample_data || 'Add sample data',
+				parent			: fragment
+			})
+			button_sample_data.addEventListener('click', function(e) {
+				e.stopPropagation()
+				// const export_obj  = self.data.value[0]
+				if (self.data.value && self.data.value[0] && self.data.value[0].length) {
+					if(!confirm("Current value is not empty. \nOverwrite actual value?")) {
+						return
+					}
+				}
+				const key = 0
+				const sample_data = self.context.properties.sample_data
+				self.editors[key].set(sample_data);
+				console.log('self:', self);
+			})
+		}
+
 	// button_fullscreen
 		if(show_interface.button_fullscreen === true){
 
