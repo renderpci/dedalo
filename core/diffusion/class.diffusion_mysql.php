@@ -1291,7 +1291,7 @@ class diffusion_mysql extends diffusion_sql  {
 					, logger::WARNING
 				);
 			}
-			$file_name		= date("Y-m-d_His") .'_'. $db_name .'_'. get_user_id() .'.sql';
+			$file_name		= date("Y-m-d_His") .'_'. $db_name .'_'. logged_user_id() .'.sql';
 			$target_file	= $folder_path .'/'. $file_name;
 
 		// command

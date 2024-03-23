@@ -39,9 +39,9 @@ final class core_functions_test extends TestCase {
 	* TEST_get_user_id
 	* @return void
 	*/
-	public function test_get_user_id() {
+	public function test_logged_user_id() {
 
-		$result = get_user_id();
+		$result = logged_user_id();
 
 		$eq = gettype($result)==='integer' || gettype($result)==='NULL';
 		$this->assertTrue(
@@ -57,9 +57,9 @@ final class core_functions_test extends TestCase {
 	* TEST_get_username
 	* @return void
 	*/
-	public function test_get_username() {
+	public function test_logged_user_username() {
 
-		$result = get_username();
+		$result = logged_user_username();
 
 		$eq = gettype($result)==='string' || gettype($result)==='NULL';
 		$this->assertTrue(

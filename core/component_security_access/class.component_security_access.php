@@ -98,7 +98,7 @@ class component_security_access extends component_common {
 			$ar_areas = area::get_areas();
 
 		// areas (including sections)
-			if($user_id===DEDALO_SUPERUSER || $is_global_admin===true){
+			if($is_global_admin===true){
 
 				// unfiltered case
 
@@ -474,13 +474,14 @@ class component_security_access extends component_common {
 	/**
 	* CALCULATE_TREE
 	* @param int $user_id
+	* @param string $lang
 	* @return array $datalist
 	*/
 	public static function calculate_tree(int $user_id, string $lang) : array {
 		$start_time = start_time();
 
 		// profile_section_id
-			if($user_id===DEDALO_SUPERUSER || security::is_global_admin($user_id)===true){
+			if(security::is_global_admin($user_id)===true){
 
 				$section_id = null;
 

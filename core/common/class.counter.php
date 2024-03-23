@@ -202,7 +202,7 @@ abstract class counter {
 	public static function modify_counter(string $section_tipo, string $counter_action) : bool {
 
 		// check user before proceed
-			$user_id			= get_user_id();
+			$user_id			= logged_user_id();
 			$is_global_admin	= security::is_global_admin($user_id);
 			if ($is_global_admin!==true) {
 				debug_log(__METHOD__

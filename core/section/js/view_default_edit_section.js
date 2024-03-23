@@ -105,7 +105,7 @@ view_default_edit_section.render = async function(self, options) {
 		wrapper.content_data = content_data
 
 	// css v6
-		if (self.context.css) {
+		if (self.context && self.context.css) {
 			const selector = `${self.section_tipo}_${self.tipo}.edit`
 			set_element_css(selector, self.context.css)
 			// add_class

@@ -349,7 +349,7 @@ class login extends common {
 
 					// Is already logged check
 						if (login::is_logged()===true) {
-							if ($_SESSION['dedalo']['auth']['user_id']==$section_id) {
+							if (logged_user_id()==$section_id) {
 								# Logged as same user
 								$response->result = true;
 								$response->msg 	  = " User already logged. ";
@@ -419,7 +419,7 @@ class login extends common {
 					// LOGIN (ALL IS OK) - INIT LOGIN SECUENCE WHEN ALL IS OK
 
 						// User name
-							$username = login::get_username($section_id);
+							$username = login::logged_user_username($section_id);
 
 						// Full username
 							$full_username = login::get_full_username($section_id);
@@ -483,7 +483,7 @@ class login extends common {
 	* @param string|int $section_id (is user section id)
 	* @return string $username
 	*/
-	public static function get_username(string|int $section_id) : string {
+	public static function logged_user_username(string|int $section_id) : string {
 
 		$component = component_common::get_instance(
 			'component_input_text',
@@ -1120,8 +1120,8 @@ class login extends common {
 			}
 
 		// session user values
-			$user_id	= $_SESSION['dedalo']['auth']['user_id'];
-			$username	= $_SESSION['dedalo']['auth']['username'];
+			$user_id	= logged_user_id();
+			$username	= logged_user_username();
 
 		// lock_components. remove lock_components elements
 			if (defined('DEDALO_LOCK_COMPONENTS') && DEDALO_LOCK_COMPONENTS===true) {

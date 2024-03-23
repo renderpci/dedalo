@@ -40,7 +40,7 @@
 				break;
 		}
 
-		$user_id = get_user_id(); // CURRENT_LOGGED_USED_ID
+		$user_id = logged_user_id(); // CURRENT_LOGGED_USED_ID
 
 		// data item
 		$item = new stdClass();
@@ -49,7 +49,7 @@
 			$item->tree_datalist	= $tree_datalist;
 			$item->info_data		= $info_data;
 			$item->show_ontology	= security::is_developer($user_id); //  SHOW_DEVELOPER; // boolean from config file
-			$item->username			= get_username();
+			$item->username			= logged_user_username();
 
 		$data[] = $item;
 	}//end if($options->get_data===true && $permissions>0)

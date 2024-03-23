@@ -186,7 +186,7 @@ class logger_backend_activity extends logger_backend {
 			$component_tipo = self::$_COMPONENT_WHO['tipo']; // dd543 component_autocomplete
 
 			// value
-				$user_id = $_SESSION['dedalo']['auth']['user_id'] ?? '-666';
+				$user_id = logged_user_id() ?? '-666';
 				$locator_user_id = new locator();
 					$locator_user_id->set_section_id($user_id);
 					$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);

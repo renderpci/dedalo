@@ -134,6 +134,47 @@ final class dd_manager {
 				// 	dump($response, ' response ++ '.to_string());
 				// }
 
+				// metrics
+					$metrics = [
+						// permissions stats
+						'Permissions',
+						'--> calculated permissions for user ' . logged_user_id(),
+						'--> calculated permissions_table ' . metrics::$security_permissions_table_time,
+						'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count,
+						'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms',
+						'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls,
+						// search stats
+						'Search',
+						'--> search_total_time: ' . metrics::$search_total_time.' ms',
+						'--> search_total_calls: '. metrics::$search_total_calls,
+						// ontology stats
+						'Ontology load',
+						'--> ontology_total_time: ' . metrics::$ontology_total_time.' ms',
+						'--> ontology_total_calls: '. metrics::$ontology_total_calls,
+						'--> ontology_total_calls_cached: '. metrics::$ontology_total_calls_cached,
+						// matrix stats
+						'matrix load',
+						'--> matrix_total_time: ' . metrics::$matrix_total_time.' ms',
+						'--> matrix_total_calls: '. metrics::$matrix_total_calls,
+						// search_free stats
+						'Search free',
+						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
+						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
+						// summary
+						'summary',
+						'time: ' . (
+							metrics::$security_permissions_total_time +
+							metrics::$search_free_total_time +
+							metrics::$ontology_total_time +
+							metrics::$matrix_total_time
+						)
+					];
+					debug_log(__METHOD__ . PHP_EOL
+						. implode(PHP_EOL, $metrics)
+						, logger::WARNING
+					);
+
+
 				// end line info
 					$id				= $rqo->id ?? $rqo->source->tipo ?? '';
 					$text			= 'API REQUEST ' . $rqo->action . ' ' . $id . ' END IN ' . $total_time_api_exec;

@@ -126,7 +126,8 @@ function get_elements() : array {
 			'section_tipo'	=> $section_tipo,
 			'section_id'	=> $section_id,
 			'mode'			=> $mode,
-			'lang'			=> $lang
+			'lang'			=> $lang,
+			'test_save'		=> false
 		],
 		(object)[
 			'model'			=> 'component_iri',

@@ -305,18 +305,6 @@ tchi53	Estat actual	termino	lg-cat
 tchi53	Aktueller Stand	termino	lg-deu
 tchi53	État actuel	termino	lg-fra
 tchi53	Stato attuale	termino	lg-ita
-tchi54	Estado de conservación	termino	lg-spa
-tchi54	Conservation state	termino	lg-eng
-tchi54	Estat de conservació	termino	lg-cat
-tchi54	Stand der Erhaltung	termino	lg-deu
-tchi54	État de conservation	termino	lg-fra
-tchi54	Stato di conservazione	termino	lg-ita
-tchi55	Inspecciones	termino	lg-spa
-tchi55	Inspections	termino	lg-eng
-tchi55	Inspeccions	termino	lg-cat
-tchi55	Inspektionen	termino	lg-deu
-tchi55	Inspections	termino	lg-fra
-tchi55	Ispezioni	termino	lg-ita
 tchi56	Restauración	termino	lg-spa
 tchi56	Restoration	termino	lg-eng
 tchi56	Restauració	termino	lg-cat
@@ -335,8 +323,20 @@ tchi58	Intervencions	termino	lg-cat
 tchi58	Interventioneng	termino	lg-deu
 tchi58	Interventions	termino	lg-fra
 tchi58	Interventi	termino	lg-ita
+tchi55	Inspections / Conservation state	termino	lg-eng
+tchi55	Inspeccions / Estat de conservació	termino	lg-cat
+tchi55	Inspektionen / Stand der Erhaltung	termino	lg-deu
+tchi55	Ispezioni / Stato di conservazione	termino	lg-ita
+tchi54	Biografía del bien	termino	lg-spa
+tchi54	Biography of property	termino	lg-eng
+tchi54	Biografia del bé	termino	lg-cat
+tchi54	Biographie du bien	termino	lg-fra
+tchi54	Biografia del bene	termino	lg-ita
+tchi54	Biographie des Guten	termino	lg-deu
 tchi2	Property typologies	termino	lg-eng
 tchi2	Tipologies d'inmobles	termino	lg-cat
 tchi2	Immobilientypologien	termino	lg-deu
 tchi2	Typologies des biens immobiliers	termino	lg-fra
 tchi2	Tipologie di immobili	termino	lg-ita
+tchi55	Inspecciones / Estado de conservación	termino	lg-spa
+tchi55	Inspections / État de conservation	termino	lg-fra

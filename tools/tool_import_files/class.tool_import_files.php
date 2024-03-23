@@ -139,7 +139,7 @@ class tool_import_files extends tool_common {
 					}
 
 				// Delete the thumbnail copy
-					$user_id		= get_user_id();
+					$user_id		= logged_user_id();
 					$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
 
 					$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
@@ -368,7 +368,7 @@ class tool_import_files extends tool_common {
 		// ar_data. All files collected from files upload form
 			$ar_processed	= [];
 			// $tmp_dir		= TOOL_IMPORT_FILES_UPLOAD_DIR;
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 			foreach ((array)$files_data as $value_obj) {

@@ -87,6 +87,23 @@ class component_section_id extends component_common {
 
 
 	/**
+	* SAVE
+	* Only used to catch common method here
+	* @return int|null $section_matrix_id
+	*/
+	public function Save() : ?int {
+
+		debug_log(__METHOD__
+			. " Ignored save command for component (component_section_id) "
+			, logger::ERROR
+		);
+
+		return $this->section_id;
+	}//end Save
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
@@ -109,14 +126,14 @@ class component_section_id extends component_common {
 		$data	= $this->get_dato();
 		$label	= $this->get_label();
 
-	// value
-		$value = new dd_grid_cell_object();
-			$value->set_type('column');
-			$value->set_label($label);
-			$value->set_ar_columns_obj([$column_obj]);
-			$value->set_cell_type('section_id');
-			$value->set_row_count(1);
-			$value->set_value($data);
+		// value
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_label($label);
+				$value->set_ar_columns_obj([$column_obj]);
+				$value->set_cell_type('section_id');
+				$value->set_row_count(1);
+				$value->set_value($data);
 
 
 		return $value;

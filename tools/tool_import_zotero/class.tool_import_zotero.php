@@ -79,7 +79,7 @@ class tool_import_zotero extends tool_common {
 					return str_ends_with($el->name, '.json');
 				});
 
-				$user_id	= get_user_id();
+				$user_id	= logged_user_id();
 				$tmp_dir	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 				$ar_procesing_info = [];

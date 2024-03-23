@@ -500,7 +500,7 @@ class component_media_common extends component_common {
 				return $response;
 			}
 
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 			$source_file	= isset($source_file)
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;
@@ -764,7 +764,7 @@ class component_media_common extends component_common {
 			$file_name_label	= $options->file_name_label ?? 'original_file_name';
 			$upload_date		= $options->upload_date ?? component_date::get_date_now();
 			$upload_date_label	= $options->upload_date_label ?? 'upload_date';
-			$user_id			= $options->user_id ?? get_user_id();
+			$user_id			= $options->user_id ?? logged_user_id();
 			$user_id_label		= $options->user_id_label ?? 'user_id';
 
 		// set value properties
@@ -1893,6 +1893,22 @@ class component_media_common extends component_common {
 				return $response;
 			}
 			$target_quality_path = $this->get_media_filepath($quality);
+
+		// check target directory
+			$target_dir = pathinfo($target_quality_path)['dirname'];
+			if (!is_dir($target_dir)) {
+				// create it
+				if(!mkdir($target_dir, 0750, true)) {
+					$msg = ' Error. Creating directory ' . $target_dir ;
+					debug_log(__METHOD__
+						.$msg . PHP_EOL
+						.' target_dir: ' .$target_dir
+						, logger::ERROR
+					);
+					$response->msg .= $msg;
+					return $response;
+				}
+			}
 
 		// copy file from source quality to target quality
 			$copy_result = copy(

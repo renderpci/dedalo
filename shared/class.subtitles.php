@@ -578,7 +578,12 @@ abstract class subtitles {
 		$string = str_replace('</em>', '</i>', $string);
 		// $string = str_replace('<u>', '<u>', $string); # to implemented! now is a style with span
 		// $string = str_replace('</u>', '</u>', $string);
-		$string = str_replace(['&nbsp;'], ' ', $string);
+
+		// unify spaces
+		// Note that "\xc2\xa0" must be set with double quotes, not single.
+		// @see https://stackoverflow.com/questions/40724543/how-to-replace-decoded-non-breakable-space-nbsp
+		$string = str_replace(['&nbsp;',"\xc2\xa0",' '], ' ', $string);
+
 		// remove UNICODE non-break character
 		$string = preg_replace( "~\x{00a0}~siu", " ", $string );
 

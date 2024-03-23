@@ -169,7 +169,7 @@ class tool_transcription extends tool_common {
 			$transcriber_engine		= $options->transcriber_engine;
 			$transcriber_quality	= $options->transcriber_quality;
 			$config					= $options->config;
-			$user_id				= get_user_id();
+			$user_id				= logged_user_id();
 			$entity_name			= DEDALO_ENTITY;
 
 		// config
@@ -296,7 +296,7 @@ class tool_transcription extends tool_common {
 			$transcriber_engine		= $options->transcriber_engine;
 			$config					= $options->config;
 			$pid					= $options->pid;
-			$user_id				= get_user_id();
+			$user_id				= logged_user_id();
 			$entity_name			= DEDALO_ENTITY;
 
 		// config

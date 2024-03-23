@@ -177,7 +177,7 @@
 // show_debug
 	if (!defined('SHOW_DEBUG')) {
 		// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
-		define('SHOW_DEBUG', (get_user_id()==DEDALO_SUPERUSER)
+		define('SHOW_DEBUG', (logged_user_id()==DEDALO_SUPERUSER)
 			? true
 			: false // default false
 		);
@@ -187,10 +187,9 @@
 
 // is_developer
 	// Logged user is developer value. Depends of user config 'is_developer' value from database
-	define('SHOW_DEVELOPER',
-		(isset($_SESSION['dedalo']['auth']['is_developer']) && $_SESSION['dedalo']['auth']['is_developer']===true)
-			? true
-			: false // default false
+	define('SHOW_DEVELOPER', (logged_user_is_developer()===true)
+		? true
+		: false // default false
 	);
 
 

@@ -454,6 +454,7 @@ abstract class common {
 					break;
 
 				default:
+
 					// try related. If section have TR of model name 'matrix_table' takes its matrix_table value
 						$ar_related = common::get_ar_related_by_model('matrix_table', $tipo);
 						if ( isset($ar_related[0]) ) {
@@ -1690,10 +1691,13 @@ abstract class common {
 						$ar_target_section_ddo = $this->get_ar_target_section_ddo();
 
 						// user id
-						$user_id_logged = get_user_id();
+						$user_id_logged = logged_user_id();
 
 						foreach ($ar_target_section_ddo as $current_section_ddo) {
-							if($current_section_ddo->matrix_table && $current_section_ddo->matrix_table==='matrix_dd' && $user_id_logged!=DEDALO_SUPERUSER){
+							if(		isset($current_section_ddo->matrix_table)
+								&&  $current_section_ddo->matrix_table==='matrix_dd'
+								&&  $user_id_logged!=DEDALO_SUPERUSER
+								){
 
 								if(!isset($properties->show_interface)){
 									$properties->show_interface = new stdClass();
@@ -1780,17 +1784,19 @@ abstract class common {
 
 				$dd_object->debug = $debug;
 
-				// $time_string = $time>15
-				// 	? sprintf("\033[31m%s\033[0m", $time)
-				// 	: $time;
-				$len = !empty($this->tipo)
-					? strlen($this->tipo)
-					: 0;
-				$repeat = ($len < 14)
-					? (14 - $len)
-					: 0;
-				$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
-				// error_log('------- get_structure_context -------- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				if ($time>15) {
+					$time_string = $time>15
+						? sprintf("\033[31m%s\033[0m", $time)
+						: $time;
+					$len = !empty($this->tipo)
+						? strlen($this->tipo)
+						: 0;
+					$repeat = ($len < 14)
+						? (14 - $len)
+						: 0;
+					$tipo_line = $this->tipo .' '. str_repeat('-', $repeat);
+					error_log('------- SLOW get_structure_context --- '."$tipo_line $time_string ms" . " ---- $model - parent:". $parent .' '.json_encode($add_request_config));
+				}
 			}
 
 
@@ -2586,7 +2592,7 @@ abstract class common {
 			$mode			= $this->get_mode();
 			$tipo			= $this->get_tipo();
 			$section_tipo	= $this->get_section_tipo();
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 
 		// 1. From user preset
 			$user_preset = request_config_presets::search_request_config(
@@ -2709,7 +2715,7 @@ abstract class common {
 			// 		if(empty($request_ddo)) {
 			// 			// preset request_ddo
 			// 				if (!isset($user_preset)) {
-			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, get_user_id(), $mode, null);
+			// 					$user_preset = layout_map::search_user_preset($tipo, $section_tipo, logged_user_id(), $mode, null);
 			// 				}
 			// 				if (!empty($user_preset)) {
 			// 					$request_ddo = array_find($user_preset, function($item){
@@ -2746,10 +2752,10 @@ abstract class common {
 
 
 	/**
-	* GET_REQUEST_PROPERTIES_PARSED
+	* GET_AR_REQUEST_CONFIG
 	* Resolves the component config context with backward compatibility
 	* The proper config in v6 is on term properties config, NOT as related terms
-	* Note that section tipo 'self' will be replaced by argument '$section_tipo'
+	* Note that section tipo 'self' will be replaced by current '$section_tipo'
 	*
 	* @return array $ar_request_config
 	*/
@@ -2773,16 +2779,19 @@ abstract class common {
 			}
 
 		// check section tipo model (allow areas)
-			$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
-			if ($section_model!=='section' && strpos($section_model, 'area_')===false) {
-				// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
-				debug_log(__METHOD__
-					. " Error. Invalid section/area tipo " . PHP_EOL
-					. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
-					. ' section_model: ' . to_string($section_model) . PHP_EOL
-					. ' current tipo: '  . to_string($tipo)
-					, logger::ERROR
-				);
+			if ($section_tipo!=='self') {
+				$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
+				if ($section_model!=='section' && strpos($section_model, 'area_')===false) {
+					// throw new Exception("Error Processing Request. Model is not section ($section_tipo - $section_model)", 1);
+					debug_log(__METHOD__
+						. " Error. Invalid section/area tipo " . PHP_EOL
+						. ' section_tipo: '  . to_string($section_tipo) . PHP_EOL
+						. ' section_model: ' . to_string($section_model) . PHP_EOL
+						. ' current tipo: '  . to_string($tipo) . PHP_EOL
+						. ' dbt: ' . to_string( debug_backtrace()[1] )
+						, logger::ERROR
+					);
+				}
 			}
 
 		// cache
@@ -2919,38 +2928,40 @@ abstract class common {
 
 								// buttons. Add button_new and button_delete to determine new and delete permissions on client
 									$buttons = [];
-									// button_new
-										$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-											$current_section_tipo,
-											['button_new'],
-											true, // bool from_cache
-											true, // bool resolve_virtual
-											true, // bool recursive
-											true, // bool search_exact
-											false // array|bool $ar_tipo_exclude_elements
-										);
-										if (isset($ar_button_new[0])) {
-											$buttons[] = (object)[
-												'model'			=> 'button_new',
-												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
-											];
-										}
-									// button_delete
-										$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-											$current_section_tipo,
-											['button_delete'],
-											true, // bool from_cache
-											true, // bool resolve_virtual
-											true, // bool recursive
-											true, // bool search_exact
-											false // array|bool $ar_tipo_exclude_elements
-										);
-										if (isset($ar_button_delete[0])) {
-											$buttons[] = (object)[
-												'model'			=> 'button_delete',
-												'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
-											];
-										}
+									if ($ddo->permissions>1) {
+										// button_new
+											$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+												$current_section_tipo,
+												['button_new'],
+												true, // bool from_cache
+												true, // bool resolve_virtual
+												true, // bool recursive
+												true, // bool search_exact
+												false // array|bool $ar_tipo_exclude_elements
+											);
+											if (isset($ar_button_new[0])) {
+												$buttons[] = (object)[
+													'model'			=> 'button_new',
+													'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
+												];
+											}
+										// button_delete
+											$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+												$current_section_tipo,
+												['button_delete'],
+												true, // bool from_cache
+												true, // bool resolve_virtual
+												true, // bool recursive
+												true, // bool search_exact
+												false // array|bool $ar_tipo_exclude_elements
+											);
+											if (isset($ar_button_delete[0])) {
+												$buttons[] = (object)[
+													'model'			=> 'button_delete',
+													'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
+												];
+											}
+									}
 									// set buttons
 									$ddo->set_buttons($buttons);
 
@@ -3612,38 +3623,40 @@ abstract class common {
 
 						// buttons. Add button_new and button_delete to determine new and delete permissions on client
 							$buttons = [];
-							// button_new
-								$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
-									$current_section_tipo,
-									['button_new'],
-									true, // bool from_cache
-									true, // bool resolve_virtual
-									true, // bool recursive
-									true, // bool search_exact
-									false // array|bool $ar_tipo_exclude_elements
-								);
-								if (isset($ar_button_new[0])) {
-									$buttons[] = (object)[
-										'model'			=> 'button_new',
-										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
-									];
-								}
-							// button_delete
-								$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
-									$current_section_tipo,
-									['button_delete'],
-									true, // bool from_cache
-									true, // bool resolve_virtual
-									true, // bool recursive
-									true, // bool search_exact
-									false // array|bool $ar_tipo_exclude_elements
-								);
-								if (isset($ar_button_delete[0])) {
-									$buttons[] = (object)[
-										'model'			=> 'button_delete',
-										'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
-									];
-								}
+							if ($ddo->permissions>1) {
+								// button_new
+									$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+										$current_section_tipo,
+										['button_new'],
+										true, // bool from_cache
+										true, // bool resolve_virtual
+										true, // bool recursive
+										true, // bool search_exact
+										false // array|bool $ar_tipo_exclude_elements
+									);
+									if (isset($ar_button_new[0])) {
+										$buttons[] = (object)[
+											'model'			=> 'button_new',
+											'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_new[0])
+										];
+									}
+								// button_delete
+									$ar_button_delete = section::get_ar_children_tipo_by_model_name_in_section(
+										$current_section_tipo,
+										['button_delete'],
+										true, // bool from_cache
+										true, // bool resolve_virtual
+										true, // bool recursive
+										true, // bool search_exact
+										false // array|bool $ar_tipo_exclude_elements
+									);
+									if (isset($ar_button_delete[0])) {
+										$buttons[] = (object)[
+											'model'			=> 'button_delete',
+											'permissions'	=> common::get_permissions($current_section_tipo, $ar_button_delete[0])
+										];
+									}
+							}
 							// set buttons
 							$ddo->set_buttons($buttons);
 
@@ -4167,12 +4180,10 @@ abstract class common {
 				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
 
 			// user id
-				$user_id_logged = get_user_id();
+				$user_id_logged = logged_user_id();
 
-			// skip section if permissions are not enough
-				if ( $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO
-					&& $user_id_logged!=DEDALO_SUPERUSER
-					&& ((int)$section_permisions<1)) {
+			// skip section if permissions are not enough (except thesaurus 'hierarchy20')
+				if ( $section_permisions<1  && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
 					// user don't have access to current section. skip section
 					continue;
 				}
@@ -4347,7 +4358,7 @@ abstract class common {
 		$tools = [];
 
 		// user_id
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 			if (empty($user_id)) {
 				return $tools;
 			}

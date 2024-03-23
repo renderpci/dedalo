@@ -191,8 +191,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			return true;
 		}
 
-		# Other tables. Test valid user (fast check only auth->user_id in session)
-		if ( !isset($_SESSION['dedalo']['auth']['user_id']) ) {
+		// Other tables. Test valid user (fast check only auth->user_id in session)
+		$user_id = logged_user_id();
+		if( empty($user_id) ) {
 			$msg = "Save matrix: valid 'userID' value is mandatory. No data is saved! ";
 			trigger_error($msg);
 			dump($_SESSION, ' $_SESSION[dedalo][auth] ++ '.to_string());
@@ -440,7 +441,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// timestamp
 				$RecordObj_time_machine->set_timestamp( $time_machine_date );
 			// userID
-				$RecordObj_time_machine->set_userID( get_user_id() );
+				$RecordObj_time_machine->set_userID( logged_user_id() );
 			// dato
 				if (!empty($time_machine_data)) {
 					$RecordObj_time_machine->set_dato( $time_machine_data );
