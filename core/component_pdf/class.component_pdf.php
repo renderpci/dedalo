@@ -466,7 +466,7 @@ class component_pdf extends component_media_common {
 	* CREATE_IMAGE
 	*
 	* Once the full path is specified, the command is working as desired.
-	* @param object $options
+	* @param object|null $options
 	* @return string|bool $result
 	*/
 	public function create_image(?object $options=null) : string|bool {
@@ -475,32 +475,46 @@ class component_pdf extends component_media_common {
 			$page		= $options->page ?? 0;
 			$quality	= $options->quality ?? $this->get_original_quality();
 
-		// PDF path
-			$file_name	= $this->get_id();
-			$folder		= $this->get_folder();
+		// source file
+			$source_file = $this->get_media_filepath($quality);
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					. " Ignored image creation. Source file do not exists " . PHP_EOL
+					. 'source_file: ' . to_string($source_file)
+					, logger::ERROR
+				);
+				return false;
+			}
 
+		// target file
+			$file_name		= $this->get_id();
+			$folder			= $this->get_folder();
 			$target_file	= DEDALO_MEDIA_PATH . $folder . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
 
 		// generate from PDF
-			$source_file	= $this->get_media_filepath($quality);
-			if (file_exists($source_file)) {
+			$image_pdf_options = new stdClass();
+				$image_pdf_options->source_file	= $source_file;
+				$image_pdf_options->ar_layers	= [$page];
+				$image_pdf_options->target_file	= $target_file;
+				$image_pdf_options->density		= 600;
+				$image_pdf_options->antialias	= true;
+				$image_pdf_options->quality		= 75;
+				$image_pdf_options->resize		= '25%';
 
-				$image_pdf_options = new stdClass();
-					$image_pdf_options->source_file	= $source_file;
-					$image_pdf_options->ar_layers	= [$page];
-					$image_pdf_options->target_file	= $target_file;
-					$image_pdf_options->density		= 600;
-					$image_pdf_options->antialias	= true;
-					$image_pdf_options->quality		= 75;
-					$image_pdf_options->resize		= '25%';
+			ImageMagick::convert($image_pdf_options);
 
-				ImageMagick::convert($image_pdf_options);
+			// check file
+			if (!file_exists($target_file)) {
+				debug_log(__METHOD__
+					. " Error on image creation. target file do not exists " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
 			}
 
-			$result = (file_exists($target_file)) ? $target_file : false;
 
-
-		return $result;
+		return $target_file;
 	}//end create_image
 
 

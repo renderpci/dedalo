@@ -1618,8 +1618,8 @@ abstract class backup {
 	public static function make_backup(object $options=new stdClass()) : object {
 
 		// options
-			$user_id				= $options->user_id ?? get_user_id();
-			$username				= $options->username ?? get_username();
+			$user_id				= $options->user_id ?? logged_user_id();
+			$username				= $options->username ?? logged_user_username();
 			$skip_backup_time_range	= $options->skip_backup_time_range ?? true;
 
 		// response

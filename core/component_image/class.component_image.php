@@ -2126,9 +2126,12 @@ class component_image extends component_media_common {
 
 	/**
 	* GET_TARGET_PIXELS_TO_QUALITY_CONVERSION
+	* @param int|string|null $source_pixels_width
+	* @param int|string|null $source_pixels_height
+	* @param string $target_quality
 	* @return array|null $result
 	*/
-	public static function get_target_pixels_to_quality_conversion($source_pixels_width, $source_pixels_height, $target_quality) : ?array {
+	public static function get_target_pixels_to_quality_conversion(int|string|null $source_pixels_width, int|string|null $source_pixels_height, string $target_quality) : ?array {
 
 		// check valid pixels
 			if((int)$source_pixels_width===0 || (int)$source_pixels_height===0) {

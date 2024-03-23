@@ -18,7 +18,7 @@ class component_filter_master extends component_filter {
 
 		// Reset cache on every save action. IMPORTANT !
 			filter::clean_caches(
-				get_user_id(),  // user id. Current logged user id
+				logged_user_id(),  // user id. Current logged user id
 				$this->tipo // DEDALO_FILTER_MASTER_TIPO dd170
 			);
 

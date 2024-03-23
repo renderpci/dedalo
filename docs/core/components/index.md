@@ -138,7 +138,7 @@ This components extend component_relation_common.php class
 
 ## Inheritance
 
-In server context. components classes inherit from common classes dependent of the component typology. The main component class is `component_common.php` and some components, as media components, share his own common class as `compnent_media_commmon.php`
+In server context. components classes inherit from common classes dependent of the component typology. The main component class is `component_common.php` and some components, as media components, share his own common class as `component_media_common.php`
 
 ```mermaid
     flowchart RL
@@ -259,7 +259,7 @@ In special cases, such as personal names, the component can be define as transli
 
 ## Properties
 
-The ontology define the properties that will be used when the component will be instantiated. Properties define specific context of the component, as CSS styles or the RQO used.
+The ontology defines the properties that will be used when the component will be instantiated. Properties define specific context of the component, such as CSS styles or the RQO used.
 
 Properties are write in JSON.
 
@@ -289,189 +289,189 @@ Example of context for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91)
 
 ```json
 {
-    "context":{
-        "label"             : "Birth town", // resolution of the name of the component in the application lang
-        "tipo"              : "rsc91", // ontology tipo
-        "section_tipo"      : "rsc197", // ontology section tipo
-        "model"             : "component_portal", // component model to be instantiated
-        "legacy_model"      : "component_autocomplete_hi", // old component model in versions <v6
-        "parent"            : "rsc197", // parent node in ontology
-        "parent_grouper"    : "rsc76", // parent grouper in ontology
-        "lang"              : "lg-nolan", // lang to be instantiated
-        "mode"              : "edit", // mode to get data from database (edit, list, search, ...)
-        "translatable"      : false, // specify if the component could be translatable
-        "properties"        : {
-                                "source": {
-                                    "mode": "autocomplete",
-                                    "request_config": [{
-                                        "sqo": {
-                                            "section_tipo": [{
-                                                "value": [2],
-                                                "source": "hierarchy_types"
-                                            }]
-                                        },
-                                        "show": {
-                                            "ddo_map": [{
-                                                "tipo": "hierarchy25",
-                                                "parent": "self",
-                                                "section_tipo": "self",
-                                                "value_with_parents": true
-                                            }],
-                                            "fields_separator": ", "
-                                        },
-                                        "choose": {
-                                            "ddo_map": [
-                                                {
-                                                    "tipo": "hierarchy25",
-                                                    "parent": "self",
-                                                    "section_tipo": "self",
-                                                    "value_with_parents": true
-                                                },{
-                                                    "tipo": "hierarchy27",
-                                                    "parent": "self",
-                                                    "section_tipo": "self"
-                                                }
-                                            ],
-                                            "sqo_config": {
-                                                "limit": 30
-                                            },
-                                            "fields_separator": " | "
-                                            }
-                                    }
-                                    ]
-                                }
-                             }, // properties defined in ontology
-        "css"               : {
-                                ".wrapper_component": {
-                                "grid-column": "span 7"
-                                }
-                              }, // style defined in ontology
+    "context" : {
+        "label"          : "Birth town", // resolution of the name of the component in the application lang
+        "tipo"           : "rsc91", // ontology tipo
+        "section_tipo"   : "rsc197", // ontology section tipo
+        "model"          : "component_portal", // component model to be instantiated
+        "legacy_model"   : "component_autocomplete_hi", // old component model in versions <v6
+        "parent"         : "rsc197", // parent node in ontology
+        "parent_grouper" : "rsc76", // parent grouper in ontology
+        "lang"           : "lg-nolan", // lang to be instantiated
+        "mode"           : "edit", // mode to get data from database (edit, list, search, ...)
+        "translatable"   : false, // specify if the component could be translatable
+        "properties"     : {
+            "source": {
+                "mode": "autocomplete",
+                "request_config": [{
+                    "sqo": {
+                        "section_tipo": [{
+                            "value": [2],
+                            "source": "hierarchy_types"
+                        }]
+                    },
+                    "show": {
+                        "ddo_map": [{
+                            "tipo": "hierarchy25",
+                            "parent": "self",
+                            "section_tipo": "self",
+                            "value_with_parents": true
+                        }],
+                        "fields_separator": ", "
+                    },
+                    "choose": {
+                        "ddo_map": [
+                            {
+                                "tipo": "hierarchy25",
+                                "parent": "self",
+                                "section_tipo": "self",
+                                "value_with_parents": true
+                            },{
+                                "tipo": "hierarchy27",
+                                "parent": "self",
+                                "section_tipo": "self"
+                            }
+                        ],
+                        "sqo_config": {
+                            "limit": 30
+                        },
+                        "fields_separator": " | "
+                    }
+                }]
+            }
+        }, // properties defined in ontology
+        "css" : {
+            ".wrapper_component": {
+                "grid-column": "span 7"
+            }
+        }, // style defined in ontology
         "permissions"       : 2, // user permissions of the component
         "buttons"           : [], // specific buttons
         "request_config"    : [{
-                                "api_engine": "dedalo",
-                                "type": "main",
-                                "sqo": {
-                                    "section_tipo": [
-                                        {
-                                            "typo": "ddo",
-                                            "tipo": "es1",
-                                            "model": "section",
-                                            "label": "Spain"
-                                        },
-                                        {
-                                            "typo": "ddo",
-                                            "tipo": "fr1",
-                                            "model": "section",
-                                            "label": "France"
-                                        }
-                                    ],
-                                    "limit": 10
-                                },
-                                "show": {
-                                    "ddo_map": [
-                                        {
-                                            "tipo": "hierarchy25",
-                                            "parent": "rsc91",
-                                            "section_tipo": [
-                                                "fr1",
-                                                "es1"
-                                            ],
-                                            "value_with_parents": true,
-                                            "label": "Term",
-                                            "mode": "list",
-                                            "model": "component_input_text",
-                                            "view": "text",
-                                            "column_id": "rsc91"
-                                        }
-                                    ],
-                                    "fields_separator": ", ",
-                                    "sqo_config": {
-                                        "full_count": false,
-                                        "limit": 10,
-                                        "offset": 0,
-                                        "mode": "edit",
-                                        "operator": "$or"
-                                    }
-                                },
-                                "search": null,
-                                "choose": {
-                                    "ddo_map": [
-                                        {
-                                            "tipo": "hierarchy25",
-                                            "parent": "rsc91",
-                                            "section_tipo": [
-                                                "fr1",
-                                                "es1"
-                                            ],
-                                            "value_with_parents": true,
-                                            "label": "Term",
-                                            "mode": "list"
-                                        },
-                                        {
-                                            "tipo": "hierarchy27",
-                                            "parent": "rsc91",
-                                            "section_tipo": [
-                                                "fr1",
-                                                "es1"
-                                            ],
-                                            "label": "Model",
-                                            "mode": "list"
-                                        }
-                                    ],
-                                    "sqo_config": {
-                                        "limit": 30
-                                    },
-                                    "fields_separator": " | "
-                                }
-                              }], // parsed request config, ready to be used.
+            "api_engine": "dedalo",
+            "type": "main",
+            "sqo": {
+                "section_tipo": [
+                    {
+                        "typo": "ddo",
+                        "tipo": "es1",
+                        "model": "section",
+                        "label": "Spain"
+                    },
+                    {
+                        "typo": "ddo",
+                        "tipo": "fr1",
+                        "model": "section",
+                        "label": "France"
+                    }
+                ],
+                "limit": 10
+            },
+            "show": {
+                "ddo_map": [
+                    {
+                        "tipo": "hierarchy25",
+                        "parent": "rsc91",
+                        "section_tipo": [
+                            "fr1",
+                            "es1"
+                        ],
+                        "value_with_parents": true,
+                        "label": "Term",
+                        "mode": "list",
+                        "model": "component_input_text",
+                        "view": "text",
+                        "column_id": "rsc91"
+                    }
+                ],
+                "fields_separator": ", ",
+                "sqo_config": {
+                        "full_count": false,
+                        "limit": 10,
+                        "offset": 0,
+                        "mode": "edit",
+                        "operator": "$or"
+                    }
+                },
+                "search": null,
+                "choose": {
+                    "ddo_map": [
+                        {
+                            "tipo": "hierarchy25",
+                            "parent": "rsc91",
+                            "section_tipo": [
+                                "fr1",
+                                "es1"
+                            ],
+                            "value_with_parents": true,
+                            "label": "Term",
+                            "mode": "list"
+                        },
+                        {
+                            "tipo": "hierarchy27",
+                            "parent": "rsc91",
+                            "section_tipo": [
+                                "fr1",
+                                "es1"
+                            ],
+                            "label": "Model",
+                            "mode": "list"
+                        }
+                    ],
+                    "sqo_config": {
+                        "limit": 30
+                    },
+                    "fields_separator": " | "
+                }
+        }], // parsed request config, ready to be used.
         "columns_map"       : [], // columns to be render with the components
         "tools"             : [{
-                                    "typo": "ddo",
-                                    "model": "tool_propagate_component_data",
-                                    "name": "tool_propagate_component_data",
-                                    "label": "Propaga datos de componentes",
-                                    "section_tipo": "dd1324",
-                                    "mode": "edit",
-                                    "properties": null,
-                                    "css": {
-                                        "url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
-                                    },
-                                    "icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
-                                    "show_in_inspector": true,
-                                    "show_in_component": true,
-                                    "type": "tool"
-                                },
-                                {
-                                    "typo": "ddo",
-                                    "model": "tool_time_machine",
-                                    "name": "tool_time_machine",
-                                    "label": "Máquina del tiempo",
-                                    "section_tipo": "dd1324",
-                                    "mode": "edit",
-                                    "properties": {
-                                        "open_as": "window",
-                                        "windowFeatures": null
-                                    },
-                                    "css": {
-                                        "url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
-                                    },
-                                    "icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
-                                    "show_in_inspector": true,
-                                    "show_in_component": true,
-                                    "type": "tool"
-                                }], // tools active for the component
-        "sortable"          : true, // indicate if the components can be used to sort in list,
-        "type"              : "component", // type of the context object
-        "typo"              : "ddo", // 
-        "view"              : "line" // view to be used in render process
+            "typo": "ddo",
+            "model": "tool_propagate_component_data",
+            "name": "tool_propagate_component_data",
+            "label": "Propagates component data",
+            "section_tipo": "dd1324",
+            "mode": "edit",
+            "properties": null,
+            "css": {
+                "url": "/dedalo/tools/tool_propagate_component_data/css/tool_propagate_component_data.css"
+            },
+            "icon": "/dedalo/tools/tool_propagate_component_data/img/icon.svg",
+            "show_in_inspector": true,
+            "show_in_component": true,
+            "type": "tool"
+        },
+        {
+            "typo": "ddo",
+            "model": "tool_time_machine",
+            "name": "tool_time_machine",
+            "label": "Time machine",
+            "section_tipo": "dd1324",
+            "mode": "edit",
+            "properties": {
+                "open_as": "window",
+                "windowFeatures": null
+            },
+            "css": {
+                "url": "/dedalo/tools/tool_time_machine/css/tool_time_machine.css"
+            },
+            "icon": "/dedalo/tools/tool_time_machine/img/icon.svg",
+            "show_in_inspector": true,
+            "show_in_component": true,
+            "type": "tool"
+        }], // tools active for the component
+        "sortable"    : true, // indicate if the components can be used to sort in list,
+        "type"        : "component", // type of the context object
+        "typo"        : "ddo", // 
+        "view"        : "line", // view to be used in render process
+        "sample_data" : [{"show":{"ddo_map":[{"mode":"edit","tipo":"test80","parent":"test3","section_tipo":"test3"}]}}] // is used to obtain an example of data to easily understand the expected value
     }
 }
 ```
 
 ## data
 
-Every component defines his own data structure, but all components has a `value` property with the database value. All components store his data as an array, so, value always is an array.
+Every component defines his own data structure, but all components have a `value` property with the database value. All components store their data as an array, so the value is always an array.
 
 Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal (relation component)
 

@@ -1,4 +1,12 @@
 {
+    "etiqueta_salvar_texto": "<mark>y guarde el texto<\/mark>",
+    "etiquetas_perdidas": "ट्यागहरू छुटेका छन्",
+    "comenzar_la_carga": "<mark>Comenzar la carga<\/mark>",
+    "go_to_page": "पृष्ठमा जानुहोस्",
+    "site_under_maintenance": "मर्मत अन्तर्गत प्रणाली। असुविधाको लागि माफ गर्नुहोस्",
+    "go_to_record": "रेकर्डमा जानुहोस्",
+    "project": "परियोजना",
+    "tesauro": "थिसॉरस",
     "breakdown": "तोड्नुहोस्",
     "update_ontology": "<mark>Actualizar Ontología<\/mark>",
     "total_records": "<mark>Registros totales<\/mark>",
@@ -91,9 +99,6 @@
     "language": "भाषा",
     "by_user": "प्रयोगकर्ता द्वारा",
     "modified": "परिमार्जित",
-    "etiqueta_salvar_texto": "<mark>y guarde el texto<\/mark>",
-    "etiquetas_perdidas": "ट्यागहरू छुटेका छन्",
-    "comenzar_la_carga": "<mark>Comenzar la carga<\/mark>",
     "herramienta": "उपकरण",
     "visualizar": "हेर्नुहोस्",
     "rotate": "<mark>Rotar<\/mark>",
@@ -254,11 +259,6 @@
     "no_empty": "यसमा जानकारी समावेश छ",
     "similar_to": "जस्तै",
     "does_not_contain": "समावेश गर्दैन",
-    "go_to_page": "पृष्ठमा जानुहोस्",
-    "site_under_maintenance": "मर्मत अन्तर्गत प्रणाली। असुविधाको लागि माफ गर्नुहोस्",
-    "go_to_record": "रेकर्डमा जानुहोस्",
-    "project": "परियोजना",
-    "tesauro": "थिसॉरस",
     "loading": "लोड हुँदै...",
     "sin_fichero": "कुनै फाइल छैन",
     "fail_to_save": "बचत गर्न असफल!",
@@ -455,5 +455,6 @@
     "component": "कम्पोनेन्ट",
     "translatable": "अनुवाद योग्य",
     "select_one_project": "तपाईंले कम्तिमा एउटा परियोजना चयन गर्नुपर्छ",
-    "publicado": "प्रकाशित"
+    "publicado": "प्रकाशित",
+    "export_hierarchy": "पदानुक्रम निर्यात गर्दै"
 }

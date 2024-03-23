@@ -45,7 +45,7 @@ class menu extends common {
 
 		$ar_areas = [];
 
-		$user_id = get_user_id();
+		$user_id = logged_user_id();
 		if (empty($user_id)) {
 			debug_log(__METHOD__
 				. " Warning. Empty user id "
@@ -60,8 +60,8 @@ class menu extends common {
 		// get all areas of the current installation
 			$ar_full_areas = area::get_areas();
 
-		// filter areas to non root users
-			if($user_id===DEDALO_SUPERUSER){
+		// filter areas to non global_admin
+			if($is_global_admin===true && $is_developer){
 
 				// unfiltered areas
 				$ar_areas = $ar_full_areas;

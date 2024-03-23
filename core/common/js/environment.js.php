@@ -61,12 +61,12 @@ session_write_close();
 // page_globals
 	$page_globals = (function() {
 
-		$user_id			= get_user_id();
-		$username			= get_username();
+		$user_id			= logged_user_id();
+		$username			= logged_user_username();
 		$mode				= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-		$full_username		= $_SESSION['dedalo']['auth']['full_username'] ?? null;
-		$is_global_admin	= $_SESSION['dedalo']['auth']['is_global_admin'] ?? null;
-		$is_developer		= $_SESSION['dedalo']['auth']['is_developer'] ?? null;
+		$full_username		= logged_user_full_username();
+		$is_global_admin	= logged_user_is_global_admin();
+		$is_developer		= logged_user_is_developer();
 		$is_root			= $user_id==DEDALO_SUPERUSER;
 
 		$obj = new stdClass();

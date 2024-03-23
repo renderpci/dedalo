@@ -114,7 +114,7 @@ class tool_dev_template extends tool_common {
 		// move file
     		// re-build the real path based on file data
     		// like: '/dedalo/media/upload/service_upload/tmp/' + '1' + '/' + 'component_geolocation'
-   			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. get_user_id() . '/' . $file_data->key_dir .'/'. $file_data->tmp_name;
+   			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. logged_user_id() . '/' . $file_data->key_dir .'/'. $file_data->tmp_name;
 
    		// @see PHP error log here
    			dump($tmp_dir, ' tmp_dir ++ '.to_string());

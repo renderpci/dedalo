@@ -358,7 +358,7 @@ class component_json extends component_common {
 				return $response;
 			}
 
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 			$source_file	= isset($source_file)
 				? $source_file
 				: constant($tmp_dir). '/'. $user_id .'/'. rtrim($key_dir, '/') . '/' . $tmp_name;

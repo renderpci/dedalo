@@ -192,10 +192,29 @@ abstract class JSON_RecordDataBoundObject {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					$total_time_ms = exec_time_unit($start_time,'ms');
-					#$_SESSION['debug_content'][__METHOD__][] = "". str_replace("\n",'',$strQuery) ." [$total_time_ms ms]";
-					$n_records = is_countable($dato) ? sizeof($dato) : 0;
-					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms." ms - LOAD_SLOW_QUERY: $strQuery - records:".$n_records);
+					$total_time_ms = exec_time_unit($start_time, 'ms');
+
+					// slow request notification
+					if($total_time_ms > SLOW_QUERY_MS){
+						$n_records = is_countable($dato) ? sizeof($dato) : 0;
+						debug_log(__METHOD__
+							.' LOAD_SLOW_QUERY: ' . PHP_EOL
+							.' time: ' . $total_time_ms . ' ms' . PHP_EOL
+							. 'strQuery: ' . to_string($strQuery) . PHP_EOL
+							.' n_records: ' . $n_records
+							, logger::WARNING
+						);
+					}
+
+					// metrics
+						metrics::$matrix_total_time += $total_time_ms;
+						metrics::$matrix_total_calls++;
+
+					// debug_log(__METHOD__ . PHP_EOL
+					// 	. ' load total_time_ms: ' . $total_time_ms . PHP_EOL
+					// 	. ' ' . to_string($strQuery)
+					// 	, logger::DEBUG
+					// );
 				}
 		}
 
@@ -549,6 +568,16 @@ abstract class JSON_RecordDataBoundObject {
 						, logger::WARNING
 					);
 				}
+
+				// metrics
+					metrics::$search_free_total_time += $total_time_ms;
+					metrics::$search_free_total_calls++;
+
+				// debug_log(__METHOD__ . PHP_EOL
+				// 	. ' search_free total_time_ms: ' . $total_time_ms . PHP_EOL
+				// 	. ' ' . to_string($strQuery)
+				// 	, logger::DEBUG
+				// );
 			}
 
 
@@ -725,7 +754,6 @@ abstract class JSON_RecordDataBoundObject {
 			// debug
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
-					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
 					if($total_time_ms>SLOW_QUERY_MS) error_log($total_time_ms."ms. SEARCH_SLOW_QUERY: $strQuery - records:".$n_records);
 					#global$TIMER;$TIMER[__METHOD__.'_'.$strQuery.'_TOTAL:'.count($ar_records).'_'.start_time()]=start_time();
 				}

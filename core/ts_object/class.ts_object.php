@@ -854,7 +854,6 @@ class ts_object {
 					$recursive=true,
 					$search_exact=true
 				);
-				# dump($ar_children, ' ar_children ++ '.to_string());
 				if (isset($ar_children[0])) {
 					$permissions = common::get_permissions($this->section_tipo, $ar_children[0]);
 				}else{

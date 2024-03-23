@@ -340,7 +340,7 @@ final class dd_utils_api {
 						'process_file'	=> DEDALO_CORE_PATH . '/component_security_access/calculate_tree.php',
 						'data'			=> (object)[
 							'session_id'	=> session_id(),
-							'user_id'		=> get_user_id(),
+							'user_id'		=> logged_user_id(),
 							'lang'			=> $dedalo_application_lang ?? DEDALO_APPLICATION_LANG
 						],
 						'file_name'		=> $cache_file_name,
@@ -784,7 +784,7 @@ final class dd_utils_api {
 						return $response;
 					}
 				// user_id. Currently logged user
-					$user_id = get_user_id();
+					$user_id = logged_user_id();
 					$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 				// Check the target_dir, if it's not created will be make to be used.
@@ -954,7 +954,7 @@ final class dd_utils_api {
 				$response->msg 		= 'Error. Request failed';
 
 		// file_path
-			$user_id	= get_user_id();
+			$user_id	= logged_user_id();
 			$file_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// tmp_joined_file
@@ -1067,7 +1067,7 @@ final class dd_utils_api {
 			$key_dir = $rqo->options->key_dir ?? null;
 
 		// dir
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 			$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 			$tmp_url = DEDALO_UPLOAD_TMP_URL . '/'. $user_id . '/' . $key_dir;
 
@@ -1128,7 +1128,7 @@ final class dd_utils_api {
 			$key_dir	= $options->key_dir; // key_dir. Contraction of tipo + section_tipo, like: 'rsc29_rsc176'
 
 		// dir
-			$user_id	= get_user_id();
+			$user_id	= logged_user_id();
 			$tmp_dir	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
 		// delete each file
@@ -1222,10 +1222,10 @@ final class dd_utils_api {
 			$section_tipo	= $options->section_tipo;
 			$component_tipo	= $options->component_tipo ?? null;
 			$action			= $options->action; // delete_user_section_locks | blur | focus
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 			$full_username	= ($user_id<0)
 				? 'Debug user'
-				: ($_SESSION['dedalo']['auth']['full_username'] ?? 'Unknown');
+				: (logged_user_full_username() ?? 'Unknown');
 
 		// event_element
 			$event_element = new stdClass();

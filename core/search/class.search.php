@@ -403,9 +403,9 @@ class search {
 				$response->ar_records = $ar_records;
 
 		// debug
-			if(SHOW_DEVELOPER===true) {
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				// error_log($sql_query);
-				$exec_time = (start_time()-$start_time)/1000000;
+				$exec_time = exec_time_unit($start_time, 'ms');
 				$response->generated_time['parsed_time'] = $parsed_time;
 				# Info about required time to exec the search
 				$response->generated_time['get_records_data'] = $exec_time;
@@ -431,25 +431,11 @@ class search {
 				// dd_core_api::$sql_query_search. Fulfill on API request
 					if (!empty(dd_core_api::$rqo)) {
 						dd_core_api::$sql_query_search[] = '-- TIME ms: '. $exec_time . PHP_EOL . $sql_query;
-
-						if(SHOW_DEBUG===true) {
-							// $dbt	= debug_backtrace();
-							// $list	= [];
-							// $list[]	= (object)[
-							// 	'sql_query'	=> $sql_query, //$sql_query,
-							// 	'time'		=> exec_time_unit($start_time,'ms')
-							// ];
-							// foreach ($dbt as $el) {
-
-							// 	$list[] = (object)[
-							// 		'file'		=> $el['file'],
-							// 		'function'	=> $el['function'],
-							// 		'class'		=> $el['class'] ?? null
-							// 	];
-							// }
-							// dump($list, '$list ++ '.to_string($sql_query));
-						}
 					}
+
+				// metrics
+					metrics::$search_total_time += $exec_time;
+					metrics::$search_total_calls++;
 
 				// warning on too much relations_cache (to prevent updates/import memory issues)
 					$total_relations = isset($this->relations_cache)
@@ -506,7 +492,8 @@ class search {
 			}
 
 			if(SHOW_DEVELOPER===true) {
-				$exec_time = round(start_time()-$start_time, 3);
+				$exec_time = exec_time_unit($start_time, 'ms');
+				// $exec_time = round($total_time, 3);
 				# Info about required time to exec the search
 				$records_data->debug = $records_data->debug ?? new stdClass();
 				$records_data->debug->generated_time['get_records_data'] = $exec_time;
@@ -515,6 +502,10 @@ class search {
 				$this->search_query_object->generated_time	= $exec_time;
 
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
+
+				// metrics
+					metrics::$search_total_time += $exec_time;
+					metrics::$search_total_calls++;
 			}
 
 		// Fix total value
@@ -1440,7 +1431,7 @@ class search {
 			$section_tipo		= $this->main_section_tipo;
 			$section_alias		= $this->main_section_tipo_alias;
 			$datos_container	= ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
-			$user_id			= get_user_id(); // Logged user id
+			$user_id			= logged_user_id(); // Logged user id
 
 		// cache
 			static $sql_projects_filter_data;

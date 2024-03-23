@@ -418,6 +418,17 @@ class component_relation_common extends component_common {
 			$ar_columns			= [];
 			foreach ($ddo_direct_children as $ddo) {
 
+				// model check
+				if (!isset($ddo->model)) {
+					$ddo->model = RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+					debug_log(__METHOD__
+						. " ddo without model ! Added calculated model: $ddo->model" . PHP_EOL
+						. ' ddo: ' . to_string($ddo) . PHP_EOL
+						. ' bt[1]: ' . to_string( debug_backtrace()[1] )
+						, logger::WARNING
+					);
+				}
+
 				// the the ddo has a multiple section_tipo (such as toponymy component_autocomplete), reset the section_tipo
 				$ddo_section_tipo		= is_array($ddo->section_tipo) ? reset($ddo->section_tipo) : $ddo->section_tipo;
 				$locator->section_tipo	= $locator->section_tipo ?? $ddo_section_tipo;

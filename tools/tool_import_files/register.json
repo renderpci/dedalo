@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057518370,
+              "day": 21,
+              "hour": 21,
+              "time": 65060141710,
               "year": 2024,
-              "month": 2,
-              "minute": 52,
-              "second": 50
+              "month": 3,
+              "minute": 35,
+              "second": 10
             }
           }
         ]
@@ -113,14 +113,32 @@
     "dd799": {
       "inf": "Etiqueta [component_input_text]",
       "dato": {
+        "lg-cat": [
+          "Importació de fitxers"
+        ],
+        "lg-deu": [
+          "Dateien importieren"
+        ],
         "lg-ell": [
-          "Εισαγωγή αρχείων εργαλείου"
+          "Εισαγωγή αρχείων"
         ],
         "lg-eng": [
-          "Tool import files"
+          "Import files"
+        ],
+        "lg-fra": [
+          "Importer des fichiers"
+        ],
+        "lg-ita": [
+          "Importazione di file"
         ],
         "lg-nep": [
           "उपकरण आयात फाइलहरू"
+        ],
+        "lg-por": [
+          "Importar ficheiros"
+        ],
+        "lg-spa": [
+          "Importación de archivos"
         ]
       }
     },
@@ -354,7 +372,7 @@
   "section_id": 19,
   "created_date": "2023-11-01 21:16:17",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:52:50",
+  "modified_date": "2024-03-21 21:35:10",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

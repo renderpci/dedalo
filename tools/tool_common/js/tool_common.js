@@ -642,6 +642,10 @@ const view_modal = async function(options) {
 
 						await tool_instance.build(true)
 						const wrapper = await tool_instance.render()
+						if (!wrapper.tool_header) {
+							console.error('Invalid tool wrapper:', wrapper);
+							return
+						}
 
 						// header
 						wrapper.tool_header.slot = 'header'

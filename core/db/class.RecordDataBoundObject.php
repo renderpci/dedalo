@@ -216,9 +216,10 @@ abstract class RecordDataBoundObject {
 		// $strQuery
 			$strQuery = implode(' ', $ar_query);
 
-		# CACHE_MANAGER
-		# SI SE LE PASA UN QUERY QUE YA HA SIDO RECIBIDO, NO SE CONECTA CON LA DB Y SE LE DEVUELVE EL RESULTADO DEL QUERY IDÉNTICO YA CALCULADO
-		# QUE SE GUARDA EN UN ARRAY ESTÁTICO
+		// CACHE_MANAGER
+		// If a query is passed to it that has already been received, it does not connect to the db and it returns
+ 		// the result of the identical query already calculated and stored in a static array.
+		// This is reliable because the Ontology does not change at runtime.
 		static $ar_RecordDataObject_load_query_cache = [];
 		$use_cache = $this->use_cache;
 		// if ($use_cache===true && isset($ar_RecordDataObject_load_query_cache[$strQuery])) {
@@ -227,6 +228,9 @@ abstract class RecordDataBoundObject {
 			// from cache data case
 
 			$row = $ar_RecordDataObject_load_query_cache[$strQuery];
+
+			// metrics
+				metrics::$ontology_total_calls_cached++;
 
 		}else{
 
@@ -249,7 +253,6 @@ abstract class RecordDataBoundObject {
 						. ' strQuery: '.to_string($strQuery)
 						, logger::ERROR
 					);
-
 					return false;
 				}
 
@@ -342,6 +345,10 @@ abstract class RecordDataBoundObject {
 						, logger::WARNING
 					);
 				}
+
+				// metrics
+					metrics::$ontology_total_time += $total_time_ms;
+					metrics::$ontology_total_calls++;
 			}
 
 
@@ -804,7 +811,6 @@ abstract class RecordDataBoundObject {
 			// debug
 				if(SHOW_DEBUG===true) {
 					$total_time_ms = exec_time_unit($start_time,'ms');
-					#$_SESSION['debug_content'][__METHOD__][] = " ". str_replace("\n",'',$strQuery) ." count:".count($ar_records)." [$total_time_ms ms]";
 					if($total_time_ms>SLOW_QUERY_MS) {
 						debug_log(__METHOD__
 							." 'WARNING: LOAD_SLOW_QUERY IN RECORDDATABOUNCEOBJECT !" .PHP_EOL

@@ -31,6 +31,7 @@ include DEDALO_CORE_PATH . '/common/class.ddo_map_object.php'; // new 28-07-2019
 include DEDALO_CORE_PATH . '/common/class.request_query_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.request_config_object.php'; // new 16-05-2021
 include DEDALO_CORE_PATH . '/common/class.search_query_object.php'; // new 30-06-2021
+include DEDALO_CORE_PATH . '/common/class.metrics.php'; // new 20-03-2024
 include DEDALO_CORE_PATH . '/section/class.section.php';
 // media_engine. media auxiliary classes
 include DEDALO_CORE_PATH . '/media_engine/class.Ffmpeg.php';

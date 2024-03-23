@@ -876,7 +876,7 @@ class section extends common {
 					: $this->get_section_real_tipo();
 
 		// user id. Current logged user id
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 
 		// date now
 			$date_now = dd_date::get_timestamp_now_for_db();
@@ -1206,7 +1206,7 @@ class section extends common {
 						debug_log(__METHOD__
 							." Ignored set filter default in section without filter: $this->tipo" . PHP_EOL
 							.' section_tipo: ' . $this->tipo . PHP_EOL
-							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_DATA_LANG)
+							.' section label ' . RecordObj_dd::get_termino_by_tipo($this->tipo, DEDALO_APPLICATION_LANG)
 							, logger::WARNING
 						);
 
@@ -1296,7 +1296,7 @@ class section extends common {
 			// DEDALO_SECTION_PROJECTS_TIPO
 			else if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
 				filter::clean_caches(
-					get_user_id(), // user id. Current logged user id
+					logged_user_id(), // user id. Current logged user id
 					DEDALO_FILTER_MASTER_TIPO // dd170
 				);
 			}
@@ -1344,7 +1344,7 @@ class section extends common {
 				$section_tipo = $this->get_section_real_tipo();
 			}
 			// user id
-			$user_id = get_user_id();
+			$user_id = logged_user_id();
 			// matrix_table
 			$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
 
@@ -1369,7 +1369,7 @@ class section extends common {
 							$RecordObj_time_machine_new->set_tipo((string)$section_tipo);
 							$RecordObj_time_machine_new->set_lang((string)$this->get_lang());
 							$RecordObj_time_machine_new->set_timestamp((string)dd_date::get_timestamp_now_for_db());	# Format 2012-11-05 19:50:44
-							$RecordObj_time_machine_new->set_userID(get_user_id());
+							$RecordObj_time_machine_new->set_userID(logged_user_id());
 							$RecordObj_time_machine_new->set_dato((object)$this->dato);
 						$id_time_machine = (int)$RecordObj_time_machine_new->Save();
 					}else{
@@ -1465,7 +1465,8 @@ class section extends common {
 					// don't delete some components
 					$ar_components_model_no_delete_dato = [
 						'component_section_id',
-						'component_external'
+						'component_external',
+						'component_inverse'
 					];
 
 					$ar_models_of_media_components = section::get_components_with_media_content();
@@ -2635,7 +2636,7 @@ class section extends common {
 		if (!isset($dato->diffusion_info->$diffusion_element_tipo)) {
 
 			$date		= date('Y-m-d H:i:s');
-			$user_id	= get_user_id();
+			$user_id	= logged_user_id();
 
 			$dato->diffusion_info->{$diffusion_element_tipo} = (object)[
 				'date'		=> $date,
@@ -3363,7 +3364,7 @@ class section extends common {
 				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 		// array('tipo'=>'dd201', 'model'=>'component_date');
 
 		// Current user locator
-			$user_id		= get_user_id();
+			$user_id		= logged_user_id();
 			$user_locator	= new locator();
 				$user_locator->set_section_tipo(DEDALO_SECTION_USERS_TIPO); // dd128
 				$user_locator->set_section_id($user_id); // logged user
@@ -3774,7 +3775,7 @@ class section extends common {
 								// component_label
 									$component_label = RecordObj_dd::get_termino_by_tipo(
 										$tipo, // string terminoID
-										DEDALO_DATA_LANG, // string lang
+										DEDALO_APPLICATION_LANG, // string lang
 										true, // bool from_cache
 										true // bool fallback
 									);
@@ -3784,7 +3785,7 @@ class section extends common {
 										// section_label
 											$section_label = RecordObj_dd::get_termino_by_tipo(
 												$section_tipo, // string terminoID
-												DEDALO_DATA_LANG, // string lang
+												DEDALO_APPLICATION_LANG, // string lang
 												true, // bool from_cache
 												true // bool fallback
 											);
@@ -4327,7 +4328,7 @@ class section extends common {
 		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
 
 		// logged user id
-			$user_id = get_user_id() ?? null;
+			$user_id = logged_user_id();
 
 		// user section . Allow user edit self data (used by tool_user_admin)
 			if ($this->permissions<2 &&

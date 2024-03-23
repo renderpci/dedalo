@@ -3151,7 +3151,7 @@ abstract class component_common extends common {
 				if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO) {
 
 					// logged user id
-						$user_id = get_user_id();
+						$user_id = logged_user_id();
 
 					// his own section
 						if($this->section_id==$user_id) {
