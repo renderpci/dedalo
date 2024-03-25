@@ -332,7 +332,9 @@ class get_coins_by_period extends widget_common {
 
 						}else{
 							// count the coin into the term
-							$ts_term->count = $ts_term->count + 1;
+							if(isset($ts_term)){
+								$ts_term->count = $ts_term->count + 1;
+							}
 						}
 
 						// $tesauro = $tesauro + (start_time()-$tesa);
