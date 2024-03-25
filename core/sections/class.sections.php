@@ -89,7 +89,7 @@ class sections extends common {
 		// limit check
 			if (!isset($search_query_object->limit)) {
 
-				if ($this->model==='edit') {
+				if ($this->mode==='edit') {
 
 					$search_query_object->limit = 1;
 
