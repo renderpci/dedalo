@@ -650,12 +650,12 @@ component_portal.prototype.build = async function(autoload=false) {
 									|| ' | '
 
 	// check if the target section is multiple to remove the add button
-		self.show_interface.button_add = (self.target_section.length > 1)
+		self.show_interface.button_add = (self.target_section?.length > 1)
 			? false
 			: self.show_interface.button_add ?? true
 
 	// check if the target section is multiple to remove the add button
-		self.show_interface.button_open_section_list = (self.target_section.length > 1)
+		self.show_interface.button_open_section_list = (self.target_section?.length > 1)
 			? false
 			: self.show_interface.button_open_section_list ?? true
 
