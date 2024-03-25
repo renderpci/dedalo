@@ -22,7 +22,7 @@ class sections extends common {
 		// search_query_object
 		public $search_query_object;
 
-		// string
+		// string (section/portal)
 		public $caller_tipo;
 
 
@@ -33,7 +33,7 @@ class sections extends common {
 	* @param array|null $ar_locators
 	* @param object $search_query_object = null
 	* @param string $caller_tipo = null
-	* 	expected section_tipo like 'oh1'
+	* 	normally will be section or component_portal
 	* @param string $mode = list
 	* @param string $lang = DEDALO_DATA_NOLAN
 	* @return object $instance
@@ -59,18 +59,6 @@ class sections extends common {
 	* @return void
 	*/
 	private function __construct(?array $ar_locators, object $search_query_object, string $caller_tipo, string $mode, string $lang) {
-
-		// caller_tipo check model (only section is expected)
-			if(SHOW_DEBUG===true) {
-				$caller_model = RecordObj_dd::get_modelo_name_by_tipo($caller_tipo,true);
-				if ($caller_model!=='section') {
-					debug_log(__METHOD__
-						. " Expected model of caller_tipo is section, but received is  " . PHP_EOL
-						. ' caller_model: ' . to_string($caller_model)
-						, logger::ERROR
-					);
-				}
-			}
 
 		// Set general vars
 		$this->ar_locators			= $ar_locators;
@@ -107,17 +95,23 @@ class sections extends common {
 
 				}else{
 
-					$section = section::get_instance(
-						null, // string|null section_id
-						$this->caller_tipo // string section_tipo
-					);
-					$request_config = $section->build_request_config();
-					$found = array_find($request_config, function($el){
-						return isset($el->api_engine) && $el->api_engine==='dedalo';
-					});
-					if (!empty($found)) {
-						if (isset($found->sqo) && isset($found->sqo->limit)) {
-							$search_query_object->limit = $found->sqo->limit;
+					$caller_model = RecordObj_dd::get_modelo_name_by_tipo($this->caller_tipo,true);
+					if ($caller_model==='section') {
+
+						// section case
+						$section = section::get_instance(
+							null, // string|null section_id
+							$this->caller_tipo // string section_tipo
+						);
+						$request_config = $section->build_request_config();
+
+						$found = array_find($request_config, function($el){
+							return isset($el->api_engine) && $el->api_engine==='dedalo';
+						});
+						if (!empty($found)) {
+							if (isset($found->sqo) && isset($found->sqo->limit)) {
+								$search_query_object->limit = $found->sqo->limit;
+							}
 						}
 					}
 				}
