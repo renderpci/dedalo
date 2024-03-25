@@ -1813,7 +1813,7 @@ final class dd_core_api {
 								$source_sections  = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$section_tipo, //  string $caller_tipo = null
+									$tipo, // string $caller_tipo = null (section/portal)
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1839,7 +1839,7 @@ final class dd_core_api {
 									$dataframe_sections = sections::get_instance(
 										null, // ?array $ar_locators
 										$dataframe_sqo, // object $search_query_object = null
-										$section_tipo, //  string $caller_tipo = null
+										$tipo, // string $caller_tipo = null (section/portal)
 										$mode, // string $mode = 'list'
 										$lang // string $lang = DEDALO_DATA_NOLAN
 									);
@@ -1888,7 +1888,7 @@ final class dd_core_api {
 								$element  = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$section_tipo, //  string $caller_tipo = null
+									$tipo, // string $caller_tipo = null (section/portal)
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1904,7 +1904,7 @@ final class dd_core_api {
 								$element = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null
-									$section_tipo, // string $caller_tipo = null
+									$tipo, // string $caller_tipo = null (section/portal)
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
@@ -1959,7 +1959,7 @@ final class dd_core_api {
 						$element = sections::get_instance(
 							null,
 							$sqo,
-							$section_tipo,
+							$tipo, // string $caller_tipo = null (section/portal)
 							$mode,
 							$lang ?? DEDALO_DATA_LANG
 						);
