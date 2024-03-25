@@ -39,7 +39,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "-1",
+      "section_id": "1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -69,13 +69,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 20,
-              "time": 65047781598,
-              "year": 2023,
-              "month": 11,
-              "minute": 13,
-              "second": 18
+              "day": 22,
+              "hour": 15,
+              "time": 65060205250,
+              "year": 2024,
+              "month": 3,
+              "minute": 14,
+              "second": 10
             }
           }
         ]
@@ -84,17 +84,29 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>Agrupació i ordenació d'objectes numismàtics</p>"
+        ],
         "lg-deu": [
           "<p>Gruppierung und Sortierung von numismatischen Objekten</p>"
         ],
+        "lg-ell": [
+          "<p>Ομαδοποίηση και ταξινόμηση νομισματικών αντικειμένων</p>"
+        ],
         "lg-eng": [
           "<p>Grouping and sorting of numismatic objects</p>"
+        ],
+        "lg-eus": [
+          "<p>Objektu numismatikoen multzokatzea eta ordenatzea</p>"
         ],
         "lg-fra": [
           "<p>Regroupement et tri des objets numismatiques</p>"
         ],
         "lg-ita": [
           "<p>Raggruppamento e ordinamento di oggetti numismatici</p>"
+        ],
+        "lg-nep": [
+          "<p>संख्यात्मक वस्तुहरूको समूहीकरण र क्रमबद्ध गर्ने</p>"
         ],
         "lg-por": [
           "<p>Agrupamento e classificação de objectos numismáticos</p>"
@@ -117,11 +129,17 @@
         "lg-eng": [
           "Sorting numismatic objects"
         ],
+        "lg-eus": [
+          "Objektu numismatikoak ordenatzea"
+        ],
         "lg-fra": [
           "Trier des objets numismatiques"
         ],
         "lg-ita": [
           "Ordinamento degli oggetti numismatici"
+        ],
+        "lg-nep": [
+          "अंकीय वस्तुहरू क्रमबद्ध गर्दै"
         ],
         "lg-por": [
           "Classificação de objectos numismáticos"
@@ -143,7 +161,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.1"
+          "2.0.2"
         ]
       }
     },
@@ -661,7 +679,7 @@
             {
               "lang": "lg-eng",
               "name": "snap",
-              "value": "Sanp"
+              "value": "Snap"
             },
             {
               "lang": "lg-por",
@@ -772,6 +790,46 @@
               "lang": "lg-spa",
               "name": "original_copy",
               "value": "Establecer original /copia"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "snap",
+              "value": ""
+            },
+            {
+              "lang": "lg-eus",
+              "name": "snap",
+              "value": ""
+            },
+            {
+              "lang": "lg-ara",
+              "name": "snap",
+              "value": ""
+            },
+            {
+              "lang": "lg-ell",
+              "name": "snap",
+              "value": "Θραύση"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "snap",
+              "value": "स्न्याप"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "types",
+              "value": ""
+            },
+            {
+              "lang": "lg-nep",
+              "name": "original_copy",
+              "value": ""
+            },
+            {
+              "lang": "lg-nep",
+              "name": "order_by",
+              "value": ""
             }
           ]
         ]
@@ -789,9 +847,9 @@
   "section_id": 20,
   "created_date": "2023-11-02 18:36:51",
   "section_tipo": "dd1340",
-  "modified_date": "2023-11-02 20:13:18",
+  "modified_date": "2024-03-22 15:14:10",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "modified_by_userID": 1
 }
