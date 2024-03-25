@@ -25,6 +25,17 @@
 		$total_days    = $data->total_days;
 		$month_days    = 30.42;
 
+		// check value
+		if (!is_numeric($total_days)) {
+			debug_log(__METHOD__
+				. " Invalid total days value (non numeric) " . PHP_EOL
+				. ' total_days: ' . to_string($total_days) . PHP_EOL
+				. ' request_options: ' . to_string($request_options)
+				, logger::ERROR
+			);
+			return [];
+		}
+
 		$years         = floor($total_days / 365);
 		$years_days    = $total_days - ($years * 365);
 		$total_months  = floor($total_days / $month_days);
@@ -242,6 +253,17 @@
 
 		$numero = $data->numero;
 		// error_log('------ to_euros numero: '.json_encode($options));
+
+		// check value
+		if (!is_numeric($numero)) {
+			debug_log(__METHOD__
+				. " Invalid 'numero' value (non numeric) " . PHP_EOL
+				. ' numero: ' . to_string($numero) . PHP_EOL
+				. ' request_options: ' . to_string($request_options)
+				, logger::ERROR
+			);
+			return [];
+		}
 
 		$total = !empty($numero)
 			? ($numero / 166.386)
