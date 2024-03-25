@@ -1236,7 +1236,7 @@ abstract class common {
 		if ($exact===false) {
 			// ...search the last occurrence of a space...
 			$spacepos = strrpos($truncate, ' ');
-			if (isset($spacepos)) {
+			if (isset($spacepos) && $spacepos!==false) {
 				// ...and cut the text in this position
 				$truncate = substr($truncate, 0, $spacepos);
 			}
