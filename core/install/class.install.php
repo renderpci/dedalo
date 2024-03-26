@@ -211,7 +211,7 @@ class install extends common {
 		$target_file_path_compress	= $target_file_path.'.gz';
 		$hierarchy_files_dir_path	= DEDALO_ROOT_PATH . '/install/import/hierarchy';
 		$config_core_file_path		= DEDALO_CONFIG_PATH.'/config_core.php';
-		$hierarchy_typologies 		= json_decode( file_get_contents(__DIR__.'/hierarchies_typologies.json') );
+		$hierarchy_typologies 		= install::get_hierarchy_typlologies();
 
 		return (object)[
 			'db_install_name'			=> $db_install_name,
@@ -2173,6 +2173,7 @@ class install extends common {
 		// read the dir
 			$hierarchy_files = (array)glob($dir_path . '/*.copy.gz');
 
+		// hierarchy_files conform items
 		$hierarchy_files = array_map(function($file) use($hierarchies){
 
 			$file_name		= pathinfo($file)['basename'];
@@ -2221,6 +2222,30 @@ class install extends common {
 
 		return $response;
 	}//end get_available_hierarchy_files
+
+
+
+	/**
+	* GET_HIERARCHY_TYPLOLOGIES
+	* Read JSON file 'hierarchies_typologies.json'
+	* @return array $typlologies
+	* Sample:
+	* [
+	*  {
+	*	"typology": 6,
+	*	"label": "Web sites"
+	*  },
+	*  ...
+	* ]
+	*/
+	public static function get_hierarchy_typlologies() : array {
+
+		$typlologies = json_handler::decode(
+			file_get_contents(__DIR__.'/hierarchies_typologies.json')
+		);
+
+		return $typlologies;
+	}//end get_hierarchy_typlologies
 
 
 
