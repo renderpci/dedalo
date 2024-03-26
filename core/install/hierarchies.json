@@ -393,7 +393,8 @@
 		"tld": "es",
 		"label": "Spain",
 		"typology": 2,
-		"active_in_thesaurus": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "et",
@@ -1473,7 +1474,8 @@
 		"tld": "lg",
 		"label": "Languages",
 		"typology": 3,
-		"active_in_thesaurus": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "culture",
@@ -1539,7 +1541,8 @@
 		"tld": "ts",
 		"label": "Thematic",
 		"typology": 1,
-		"active_in_thesaurus": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "isad",
@@ -1666,5 +1669,12 @@
 		"label": "Punic",
 		"typology": 7,
 		"active_in_thesaurus": true
+	},
+	{
+		"tld": "utoponymy",
+		"label": "Unofficial toponymy",
+		"typology": 2,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
 	}
 ]
