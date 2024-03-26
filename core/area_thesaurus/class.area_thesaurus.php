@@ -76,7 +76,7 @@ class area_thesaurus extends area_common {
 		$hierarchy_children_tipo 		= $terms_are_model ? DEDALO_HIERARCHY_CHILDREN_MODEL_TIPO 		: DEDALO_HIERARCHY_CHILDREN_TIPO;
 
 		// get all hierarchy sections
-			$ar_records = area_thesaurus::get_active_hierarchy_sections();
+			$ar_records = area_thesaurus::get_active_and_visible_hierarchy_sections();
 
 		$ar_items = [];
 		foreach ($ar_records as $row) {
@@ -167,48 +167,60 @@ class area_thesaurus extends area_common {
 
 
 	/**
-	* GET_ACTIVE_HIERARCHY_SECTIONS
+	* GET_ACTIVE_and_visible_HIERARCHY_SECTIONS
 	* @return array $ar_records
 	*/
-	public static function get_active_hierarchy_sections() : array {
+	public static function get_active_and_visible_hierarchy_sections() : array {
 
-		$section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
-		$active_tipo	= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
-		$order_tipo		= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
-
+		$section_tipo		= DEDALO_HIERARCHY_SECTION_TIPO; // hierarchy1
+		$active_tipo		= DEDALO_HIERARCHY_ACTIVE_TIPO; // hierarchy4
+		$order_tipo			= DEDALO_HIERARCHY_ORDER_TIPO; // hierarchy48
+		$active_in_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO; //hierarchy125
 
 		$search_query_object = json_decode('{
-		  "id": "thesaurus",
-		  "section_tipo": ["'.$section_tipo.'"],
-		  "limit": 0,
-		  "full_count": false,
-		  "filter": {
-		    "$and": [
-		      {
-		        "q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.$active_tipo.'\"}",
-		        "path": [
-		          {
-		          	"name": "Active",
-		          	"model": "component_radio_button",
-		            "section_tipo": "'.$section_tipo.'",
-		            "component_tipo": "'.$active_tipo.'"
-		          }]
-		      }
-		    ]
-		  },
-		  "order": [
-	        {
-	            "direction": "ASC",
-	            "path": [
-		          {
-		            "name": "Order",
-		            "model": "component_number",
-		            "section_tipo": "'.$section_tipo.'",
-		            "component_tipo": "'.$order_tipo.'"
-		          }
-	            ]
-	        }
-	    ]
+			"id": "thesaurus",
+			"section_tipo": ["'.$section_tipo.'"],
+			"limit": 0,
+			"full_count": false,
+			"filter": {
+				"$and": [
+					{
+						"q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.$active_tipo.'\"}",
+						"path": [
+							{
+								"name": "Active",
+								"model": "component_radio_button",
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$active_tipo.'"
+							}
+						]
+					},
+					{
+						"q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.$active_in_ts_tipo.'\"}",
+						"path": [
+							{
+								"name": "Active",
+								"model": "component_radio_button",
+								"section_tipo": "'.$section_tipo.'",
+								"component_tipo": "'.$active_in_ts_tipo.'"
+							}
+						]
+					}
+				]
+			},
+			"order": [
+				{
+					"direction": "ASC",
+					"path": [
+						{
+							"name": "Order",
+							"model": "component_number",
+							"section_tipo": "'.$section_tipo.'",
+							"component_tipo": "'.$order_tipo.'"
+						}
+					]
+				}
+			]
 		}');
 
 		$search = search::get_instance($search_query_object);
@@ -217,7 +229,7 @@ class area_thesaurus extends area_common {
 		$ar_records = $result->ar_records;
 
 		return $ar_records;
-	}//end get_active_hierarchy_sections
+	}//end get_active_and_visible_hierarchy_sections
 
 
 
