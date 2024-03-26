@@ -216,7 +216,7 @@ class security {
 		// dato_access. is the first value of the result array if not empty
 		// $dato_access = is_object($component_security_access) ? (array)$component_security_access->get_dato() : null;
 			$dato = !empty($component_security_access)
-				? $component_security_access->get_dato()
+				? ($component_security_access->get_dato() ?? [])
 				: [];
 
 		// transforms to assoc array (fast for check if item exists)
