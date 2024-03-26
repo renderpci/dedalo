@@ -1843,9 +1843,10 @@ class install extends common {
 			$response->errors	= [];
 
 		// options
-			$tld		= $options->tld;
-			$typology	= $options->typology;
-			$label		= $options->label;
+			$tld					= $options->tld;
+			$typology				= $options->typology;
+			$label					= $options->label;
+			$active_in_thesaurus	= $options->active_in_thesaurus ?? true;
 
 		// short vars
 			$config	= self::get_config();
@@ -1997,6 +1998,28 @@ class install extends common {
 			  }
 			]');
 			$component->set_dato($dato);
+			$component->Save();
+
+		// active in thesaurus
+			$active_view_ts_tipo	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;	// hierarchy4
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($active_view_ts_tipo, true);
+			$component				= component_common::get_instance(
+				$model_name,
+				$active_view_ts_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$target_active_ts_section_id = ($active_in_thesaurus===true) ? NUMERICAL_MATRIX_VALUE_YES : NUMERICAL_MATRIX_VALUE_NO;
+
+			$active_data = new locator();
+				$active_data->set_type(DEDALO_RELATION_TYPE_LINK);
+				$active_data->set_section_tipo(DEDALO_SECTION_SI_NO_TIPO);
+				$active_data->set_section_id($target_active_ts_section_id);
+				$active_data->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO);
+
+			$component->set_dato($active_data);
 			$component->Save();
 
 		// set real section tipo (!) needed to create virtual section
@@ -2166,16 +2189,18 @@ class install extends common {
 			// 	$label .= ' [model]';
 			// }
 
-			$typology = isset($current_hierachy) ? $current_hierachy->typology : 'undefined typology ['.$tld.']';
+			$typology				= isset($current_hierachy) ? $current_hierachy->typology : 'undefined typology ['.$tld.']';
+			$active_in_thesaurus	= isset($current_hierachy) ? $current_hierachy->active_in_thesaurus : 'undefined typology ['.$tld.']';
 
 			$item = (object)[
-				'file'			=> $file,
-				'file_name'		=> $file_name,
-				'section_tipo'	=> $section_tipo,
-				'tld'			=> $tld,
-				'label'			=> $label,
-				'type'			=> $type,
-				'typology'		=> $typology
+				'file'					=> $file,
+				'file_name'				=> $file_name,
+				'section_tipo'			=> $section_tipo,
+				'tld'					=> $tld,
+				'label'					=> $label,
+				'type'					=> $type,
+				'typology'				=> $typology,
+				'active_in_thesaurus'	=> $active_in_thesaurus
 			];
 
 			return $item;
