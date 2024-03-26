@@ -203,7 +203,8 @@ class install extends common {
 			'fr', // france
 			// 'ds', // semantic
 			'lg', // lang
-			'ts' // thematic
+			'ts', // thematic
+			'utoponymy'
 		];
 
 		$target_file_path			= DEDALO_ROOT_PATH . '/install/db/'.$db_install_name.'.pgsql';

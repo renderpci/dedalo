@@ -286,18 +286,18 @@
 
 // dedalo default config values
 	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
-	// mandatory: ['dd','rsc','tool','hierarchy','lg','actv','nexus']
+	// mandatory: ['dd','rsc','hierarchy','lg','nexus']
 	// optional: ['test']
 	define('DEDALO_PREFIX_TIPOS', [
 		'dd',
 		'rsc',
 		'hierarchy',
 		'lg',
+		'utoponymy',
 		'oh',
 		'ich',
 		'nexus',
-		'actv',
-		'test'
+		'actv'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any
 	define('MAIN_FALLBACK_SECTION', 'oh1'); # go after login (tipo inventory)
