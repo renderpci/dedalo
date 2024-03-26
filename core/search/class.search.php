@@ -176,7 +176,14 @@ class search {
 
 		// matrix_table (for time machine if always fixed 'matrix_time_machine', not calculated)
 		if (get_class($this)!=='search_tm' && get_class($this)!=='search_related') {
-			$this->matrix_table = common::get_matrix_table_from_tipo($this->main_section_tipo);
+			// get first reliable table from ar_section_tipo (skip non existing sections)
+			foreach ($this->ar_section_tipo as $current_tipo) {
+				$current_matrix_table = common::get_matrix_table_from_tipo($current_tipo);
+				if (!empty($current_matrix_table)) {
+					$this->matrix_table = $current_matrix_table;
+					break;
+				}
+			}
 		}
 
 		// matrix table for related searches
