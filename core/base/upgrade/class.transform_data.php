@@ -629,5 +629,97 @@ class transform_data {
 	}//end remove_paper_lib_data_rsc29
 
 
+	/**
+	* UPDATE_hierarchy_view_in_thesaurus
+	* @return bool
+	*/
+	public static function update_hierarchy_view_in_thesaurus() : bool {
+
+		$ar_tables = [
+			// 'new_matrix'
+			// 'matrix',
+			// 'matrix_activities',
+			// 'matrix_dataframe',
+			// 'matrix_dd',
+			// 'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			// 'matrix_indexations',
+			// 'matrix_langs',
+			// 'matrix_layout',
+			// 'matrix_layout_dd',
+			// 'matrix_list',
+			// 'matrix_notes',
+			// 'matrix_profiles',
+			// 'matrix_projects',
+			// 'matrix_structurations',
+			// 'matrix_tools',
+			// 'matrix_users',
+			// 'matrix_stats'
+		];
+		$action = 'transform_data::add_view_in_thesaurus';
+
+		update::convert_table_data($ar_tables, $action);
+
+		return true;
+	}//end update_hierarchy_view_in_thesaurus
+
+
+
+	/**
+	* ADD_VIEW_IN_THESAURUS
+	* Change the matrix_hierarchy_main with new component to control hierarchy show into thesaurus tree
+	* View in thesaurus need to be controlled independent of the active or not the hierarchy
+	* @param object|null $datos
+	* @return null $datos // don't need to be saved by update, the new component save by itself
+	*/
+	public static function add_view_in_thesaurus(?object $datos) : null {
+
+		// empty relations cases
+			if (empty($datos->relations)) {
+				return null;
+			}
+
+		// fixed tipos
+			$active		= DEDALO_HIERARCHY_ACTIVE_TIPO;
+			$view_in_ts	= DEDALO_HIERARCHY_ACTIVE_IN_THESAURUS_TIPO;
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($view_in_ts,true);
+
+		// relations container iteration
+			$relations = $datos->relations ?? [];
+			foreach ($relations as $locator) {
+
+				if($locator->from_component_tipo === $active){
+
+					// hierarchy view_in_ts
+					$component_view_in_ts = component_common::get_instance(
+						$model,
+						$view_in_ts,
+						$datos->section_id,
+						'edit',
+						DEDALO_DATA_NOLAN,
+						$datos->section_tipo
+					);
+
+					$compnent_data = $component_view_in_ts->get_dato();
+
+					if(!empty($compnent_data)){
+						return null;
+					}
+
+					$view_in_ts_data = new locator();
+						$view_in_ts_data->section_id	= $locator->section_id;
+						$view_in_ts_data->section_tipo	= $locator->section_tipo;
+
+					$component_view_in_ts->set_dato($view_in_ts_data);
+					$component_view_in_ts->Save();
+				}//end if(isset($locator->section_id_key))
+
+			}//end foreach ($relations as $locator)
+
+		return null;
+	}//end add_view_in_thesaurus
+
+
+
 
 }//end class transform_data

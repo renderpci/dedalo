@@ -3,1668 +3,1678 @@
 		"tld": "af",
 		"label": "Afghanistan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ad",
 		"label": "Andorra",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ae",
 		"label": "United Arab Emirates",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ag",
 		"label": "Ancient and Barbuda",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ai",
 		"label": "Anguila",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "al",
 		"label": "Albania",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "am",
 		"label": "Armenia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "an",
 		"label": "Netherlands Antilles",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ao",
 		"label": "Angola",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "aq",
 		"label": "Antarctica",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ar",
 		"label": "Argentina",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "as",
 		"label": "American Samoa",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "at",
 		"label": "Austria",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "au",
 		"label": "Australia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "aw",
 		"label": "Aruba",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ax",
 		"label": "Åland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "az",
 		"label": "Azerbaijan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ba",
 		"label": "Bosnia and Herzegovina",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bb",
 		"label": "Barbados",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bd",
 		"label": "Bangladesh",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "be",
 		"label": "Belgium",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bf",
 		"label": "Burkina Faso",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bg",
 		"label": "Bulgaria",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bh",
 		"label": "Bahrain",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bi",
 		"label": "Burundi",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bj",
 		"label": "Benin",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bm",
 		"label": "Bermuda",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bn",
 		"label": "Brunei",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bo",
 		"label": "Bolivia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "br",
 		"label": "Brazil",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bs",
 		"label": "Bahamas",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bt",
 		"label": "Bhutan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bv",
 		"label": "Bouvet Island",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bw",
 		"label": "Botswana",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "by",
 		"label": "Belarus",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "bz",
 		"label": "Belize",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ca",
 		"label": "Canada",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cc",
 		"label": "Cocos (Keeling) Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cd",
 		"label": "Democratic Republic of the Congo",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cf",
 		"label": "Central African Republic",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cg",
 		"label": "Republic of the Congo",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ch",
 		"label": "Switzerland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ci",
 		"label": "Ivory Coast",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ck",
 		"label": "Cook Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cl",
 		"label": "Chile",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cm",
 		"label": "Cameroon",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cn",
 		"label": "China",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "co",
 		"label": "Colombia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cr",
 		"label": "Costa Rica",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cu",
 		"label": "Cuba",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cv",
 		"label": "Cape Verde",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cx",
 		"label": "Christmas Island",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cy",
 		"label": "Cyprus",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cz",
 		"label": "Czech Republic",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "de",
 		"label": "Germany",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "dj",
 		"label": "Djibouti",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "dk",
 		"label": "Denmark",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "dm",
 		"label": "Dominica",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "do",
 		"label": "Dominican Republic",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "dz",
 		"label": "Algeria",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ec",
 		"label": "Ecuador",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ee",
 		"label": "Estonia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "eg",
 		"label": "Egypt",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "eh",
 		"label": "Sahrawi Arab Democratic Republic",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "er",
 		"label": "Eritrea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "es",
 		"label": "Spain",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "et",
 		"label": "Ethiopia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fi",
 		"label": "Finland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fj",
 		"label": "Fiji",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fk",
 		"label": "Falkland Islands (Islas Malvinas)",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fm",
 		"label": "Federated States of Micronesia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fo",
 		"label": "Faroe Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "fr",
 		"label": "France",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ga",
 		"label": "Gabon",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gb",
 		"label": "United Kingdom",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gd",
 		"label": "Granada",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ge",
 		"label": "Georgia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gf",
 		"label": "French Guiana",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gg",
 		"label": "Guernsey",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gh",
 		"label": "Ghana",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gi",
 		"label": "Gibraltar",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gl",
 		"label": "Greenland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gm",
 		"label": "Gambia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gn",
 		"label": "Guinea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gp",
 		"label": "Guadalupe",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gq",
 		"label": "Equatorial Guinea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gr",
 		"label": "Greece",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gs",
 		"label": "South Georgia and the South Sandwich Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gt",
 		"label": "Guatemala",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gu",
 		"label": "Guam",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gw",
 		"label": "Guinea-Bissau",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "gy",
 		"label": "Guyana",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "hk",
 		"label": "Hong Kong",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "hm",
 		"label": "Heard Island and McDonald Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "hn",
 		"label": "Honduras",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "hr",
 		"label": "Croatia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ht",
 		"label": "Haiti",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "hu",
 		"label": "Hungary",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "id",
 		"label": "Indonesia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ie",
 		"label": "Ireland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "il",
 		"label": "Israel",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "im",
 		"label": "Isle of Man",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "in",
 		"label": "India",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "io",
 		"label": "British Indian Ocean Territory",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "iq",
 		"label": "Iraq",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ir",
 		"label": "Iran",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "is",
 		"label": "Iceland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "it",
 		"label": "Italy",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "je",
 		"label": "Jersey",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "jm",
 		"label": "Jamaica",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "jo",
 		"label": "Jordan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "jp",
 		"label": "Japan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ke",
 		"label": "Kenya",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kg",
 		"label": "Kyrgyz Republic",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kh",
 		"label": "Cambodia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ki",
 		"label": "Kiribati",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "km",
 		"label": "Comoros",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kn",
 		"label": "Saint Kitts and Nevis",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kp",
 		"label": "North Korea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kr",
 		"label": "South Korea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kw",
 		"label": "Kuwait",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ky",
 		"label": "Cayman Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "kz",
 		"label": "Kazakhstan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "la",
 		"label": "Laos",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lb",
 		"label": "Lebanon",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lc",
 		"label": "Saint Lucia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "li",
 		"label": "Liechtenstein",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lk",
 		"label": "Sri Lanka",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lr",
 		"label": "Liberia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ls",
 		"label": "Lesotho",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lt",
 		"label": "Lithuania",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lu",
 		"label": "Luxembourg",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lv",
 		"label": "Latvia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ly",
 		"label": "Libya",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ma",
 		"label": "Morocco",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mc",
 		"label": "Monaco",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "md",
 		"label": "Moldova",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "me",
 		"label": "Montenegro",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mg",
 		"label": "Madagascar",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mh",
 		"label": "Marshall Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mk",
 		"label": "Macedonia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ml",
 		"label": "Mali",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mm",
 		"label": "Myanmar",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mn",
 		"label": "Mongolia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mo",
 		"label": "Macau",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mp",
 		"label": "Northern Mariana Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mq",
 		"label": "Martinique",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mr",
 		"label": "Mauritania",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ms",
 		"label": "Montserrat",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mt",
 		"label": "Malta",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mu",
 		"label": "Mauritius",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mv",
 		"label": "Maldives",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mw",
 		"label": "Malawi",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mx",
 		"label": "Mexico",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "my",
 		"label": "Malaysia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "mz",
 		"label": "Mozambique",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "na",
 		"label": "Namibia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nc",
 		"label": "New Caledonia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ne",
 		"label": "Niger",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nf",
 		"label": "Norfolk",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ng",
 		"label": "Nigeria",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ni",
 		"label": "Nicaragua",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nl",
 		"label": "Netherlands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "no",
 		"label": "Norway",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "np",
 		"label": "Nepal",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nr",
 		"label": "Nauru",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nu",
 		"label": "Niue",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "nz",
 		"label": "New Zealand",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "om",
 		"label": "Oman",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pa",
 		"label": "Panama",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pe",
 		"label": "Peru",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pf",
 		"label": "French Polynesia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pg",
 		"label": "Papua New Guinea",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ph",
 		"label": "Philippines",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pk",
 		"label": "Pakistan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pl",
 		"label": "Poland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pm",
 		"label": "Saint Pierre and Miquelon",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pn",
 		"label": "Pitcairn Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pr",
 		"label": "Puerto Rico",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ps",
 		"label": "Palestine",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pt",
 		"label": "Portugal",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pw",
 		"label": "Palau",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "py",
 		"label": "Paraguay",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "qa",
 		"label": "Qatar",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "re",
 		"label": "Réunion",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ro",
 		"label": "Romania",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "rs",
 		"label": "Serbia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "rw",
 		"label": "Rwanda",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sa",
 		"label": "Saudi Arabia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sb",
 		"label": "Solomon Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sc",
 		"label": "Seychelles",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sd",
 		"label": "Sudan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "se",
 		"label": "Sweden",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sg",
 		"label": "Singapore",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sh",
 		"label": "Saint Helena",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "si",
 		"label": "Slovenia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sj",
 		"label": "Svalbard and Jan Mayen",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sk",
 		"label": "Slovakia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sl",
 		"label": "Sierra Leone",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sm",
 		"label": "San Marino",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sn",
 		"label": "Senegal",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "so",
 		"label": "Somalia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sr",
 		"label": "Suriname",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "st",
 		"label": "São Tomé and Príncipe",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sv",
 		"label": "El Salvador",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sy",
 		"label": "Syria",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sz",
 		"label": "Swaziland",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tc",
 		"label": "Turks and Caicos Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "td",
 		"label": "Chad",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tf",
 		"label": "French Southern and Antarctic Lands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tg",
 		"label": "Togo",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "th",
 		"label": "Thailand",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tj",
 		"label": "Tajikistan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tk",
 		"label": "Tokelau",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tl",
 		"label": "Timor-Leste",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tm",
 		"label": "Turkmenistan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tn",
 		"label": "Tunisia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "to",
 		"label": "Tonga",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tr",
 		"label": "Turkey",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tt",
 		"label": "Trinidad and Tobago",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tv",
 		"label": "Tuvalu",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tw",
 		"label": "Taiwan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tz",
 		"label": "Tanzania",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ua",
 		"label": "Ukraine",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ug",
 		"label": "Uganda",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "um",
 		"label": "United States Minor Outlying Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "us",
 		"label": "United States",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "uy",
 		"label": "Uruguay",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "uz",
 		"label": "Uzbekistan",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "va",
 		"label": "Vatican City",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "vc",
 		"label": "Saint Vincent and the Grenadines",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ve",
 		"label": "Venezuela",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "vg",
 		"label": "British Virgin Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "vi",
 		"label": "United States Virgin Islands",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "vn",
 		"label": "Vietnam",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "vu",
 		"label": "Vanuatu",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "wf",
 		"label": "Wallis and Futuna",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ws",
 		"label": "Samoa",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ye",
 		"label": "Yemen",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "yt",
 		"label": "Mayotte",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "za",
 		"label": "South Africa",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "zm",
 		"label": "Zambia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "zw",
 		"label": "Zimbabwe",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "xk",
 		"label": "Kosovo",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ru",
 		"label": "Russia",
 		"typology": 2,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "lg",
 		"label": "Languages",
 		"typology": 3,
-		"active_tree": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "culture",
 		"label": "Culture",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "dc",
 		"label": "Chronology",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "depositiontype",
 		"label": "Deposition type",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "icon",
 		"label": "Iconography",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "material",
 		"label": "Material",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "object",
 		"label": "Object",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "on",
 		"label": "Onomastic",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "pieces",
 		"label": "Enrollment Position",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "tchi",
 		"label": "Immovable property",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "technique",
 		"label": "Technique",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ts",
 		"label": "Thematic",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true,
+		"install_checked_default": true
 	},
 	{
 		"tld": "isad",
 		"label": "ISAD(g)",
 		"typology": 1,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ubication",
 		"label": "Location",
 		"typology": 9,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "ds",
 		"label": "Semantic",
 		"typology": 4,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "rolejob",
 		"label": "Job roles",
 		"typology": 4,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "rolepos",
 		"label": "Position roles",
 		"typology": 4,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "roleusr",
 		"label": "User roles",
 		"typology": 4,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "uncertainty",
 		"label": "Cause of uncertainty",
 		"typology": 4,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "special",
 		"label": "Special",
 		"typology": 5,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "coanalysis",
 		"label": "Analysis",
 		"typology": 10,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cocause",
 		"label": "Cause",
 		"typology": 10,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "comaterial",
 		"label": "Job material",
 		"typology": 10,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "copathology",
 		"label": "Pathology",
 		"typology": 10,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "cotreatment",
 		"label": "Treatment",
 		"typology": 10,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sccmk",
 		"label": "Countermarks",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "scell",
 		"label": "Greek",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sclat",
 		"label": "Latin",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "scsym",
 		"label": "Symbol",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "sctxr",
 		"label": "Southwest Paleohispanic",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "scxibm",
 		"label": "Southern Paleohispanic",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "scxibo",
 		"label": "Northern Paleohispanic",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
 	},
 	{
 		"tld": "scxpu",
 		"label": "Punic",
 		"typology": 7,
-		"active_tree": true
+		"active_in_thesaurus": true
+	},
+	{
+		"tld": "utoponymy",
+		"label": "Unofficial toponymy",
+		"typology": 2,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
 	}
 ]

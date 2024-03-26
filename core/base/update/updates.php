@@ -5,6 +5,35 @@
 global $updates;
 $updates = new stdClass();
 
+$v=614; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 1;
+	$updates->$v->version_minor			= 4;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 1;
+	$updates->$v->update_from_minor		= 0;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+		$alert->command			= '';
+		$updates->$v->alert_update[] = $alert;
+
+	// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Change the matrix_hierarchy_main with new component to control hierarchy show into thesaurus tree";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "update_hierarchy_view_in_thesaurus";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
 
 $v=610; #####################################################################################
 $updates->$v = new stdClass();

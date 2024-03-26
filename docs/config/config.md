@@ -1067,16 +1067,17 @@ Every tipo (typology of indirect programming object) defines a heritage field, a
 
 By default Dédalo load some common tipos for all project types.
 
-| tld | defintion |
+| **TLD** | **Defintion** |
 | --- | --- |
 | **dd** | dedalo. Definition of default list and common uses and tools such as translation tools. |
 | **rsc** | resources. Definition for areas and sections commons to all projects such as people, images, audiovisual files, publications, documents, bibliography, etc. |
 | **hierarchy** | thesaurus. Definition for sections as toponymy, onomastic, chronologies, techniques, material, etc. |
 | **lg** | languages, Definition for the languages in the thesaurus (used for all application to translate data and interface) |
+| **utoponymy** | Unofficial toponymy. Section definition for unofficial toponymy (unofficial places names), used to add places that are not inside the official toponymy of countries or the installation don't want import the official toponymy (use to point the place without the official term in some sections as Publications, to define any place of publication around the world) |
 
 Besides, every installation can import the ontology tipo that will use in the inventory or research:
 
-| tld | defintion |
+| **TLD** | **Defintion** |
 | --- | --- |
 | **oh** | Oral History, the definition sections and tools to be used for oral history projects such as interviews, transcription, indexation, etc. |
 | **ich** | Intangible Cultural Heritage, the definition sections and tools to use for intangible heritage, such as elements, processes, communities, symbolic acts, etc. |
