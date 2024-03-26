@@ -350,10 +350,10 @@ const render_image_node = function(self, file_info, content_value) {
 		const object_node = ui.create_dom_element({
 			element_type	: 'object',
 			class_name		: 'image',
-			parent 			: image_container
+			parent			: image_container
 		})
 		object_node.type	= "image/svg+xml"
-		object_node.url		= url
+		object_node.url		= url // image URL
 		// set data or fallback
 		if (data.base_svg_url) {
 
