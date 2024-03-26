@@ -369,9 +369,10 @@ export const get_buttons = (self) => {
 			const button_reset = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button reset',
+				title			: get_label.reset || 'Reset',
 				parent			: fragment
 			})
-			button_reset.addEventListener('mousedown', function(e) {
+			button_reset.addEventListener('click', function(e) {
 				e.stopPropagation()
 
 				if (self.data.value.length===0) {
@@ -379,14 +380,14 @@ export const get_buttons = (self) => {
 				}
 
 				const changed_data = [Object.freeze({
-					action  : 'remove',
-					key 	: false,
-					value 	: null
+					action	: 'remove',
+					key		: false,
+					value	: null
 				})]
 				self.change_value({
-					changed_data : changed_data,
-					label  		 : 'All',
-					refresh 	 : true
+					changed_data	: changed_data,
+					label			: 'All',
+					refresh			: true
 				})
 			})
 		}
