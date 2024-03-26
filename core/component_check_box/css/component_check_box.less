@@ -125,6 +125,21 @@
 			grid-template-columns: 1fr 1fr;
 			overflow: hidden;
 
+			.select_all {
+				position: absolute;
+				top: 1rem;
+				right: 1rem;
+				cursor: pointer;
+
+				>.input_checkbox {
+					margin-right: 0.33rem;
+				}
+
+				>span {
+					vertical-align: text-top;
+				}
+			}
+
 			>.content_value {
 				display: flex;
 				align-items: stretch;

@@ -75,7 +75,74 @@ const get_content_data = function(self) {
 		})
 		content_data.classList.add('nowrap')
 
-	// build options
+	// activate all
+		// label
+			const option_label	= ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'input_label select_all',
+				inner_html		: '<span>'+ (get_label.all || 'All') +'</span>',
+				parent			: content_data
+			})
+		// input checkbox
+			const input_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				class_name		: 'input_checkbox'
+			})
+			option_label.prepend(input_checkbox)
+			input_checkbox.addEventListener('change', async function(e) {
+
+				const datalist_values = []
+
+				let changed				= false
+				const source			= e.target
+				const checkboxes		= content_data.querySelectorAll('.input_checkbox');
+				const checkboxes_length	= checkboxes.length
+				for (let i = 0; i < checkboxes_length; i++) {
+
+					const item = checkboxes[i]
+
+					// ignore disabled inputs
+					if (item.disabled || item===input_checkbox) {
+						continue;
+					}
+
+					// check if checked status has changed
+					if (changed===false && item.checked!==source.checked) {
+						changed = true
+					}
+
+					// set new value
+					item.checked = source.checked;
+
+					// add to values list if is checked
+					if (item.checked) {
+						datalist_values.push( item.datalist_value )
+					}
+				}
+
+				// if nothing has changed, stop here
+					if (changed===false) {
+						return
+					}
+
+				// change data to set empty value in the component (it saved in Session instead DDBB)
+					const changed_data = [Object.freeze({
+						action	: 'set_data',
+						value	: datalist_values.length ? datalist_values : null
+					})]
+
+				// fix instance changed_data
+					self.data.changed_data = changed_data
+
+				// force to save on every change. Needed to recalculate the value keys
+					await self.change_value({
+						changed_data	: changed_data,
+						refresh			: false
+					})
+			})//end change event
+
+	// render datalist options
 		const datalist_length = datalist.length
 		for (let i = 0; i < datalist_length; i++) {
 
@@ -85,10 +152,11 @@ const get_content_data = function(self) {
 			// if(datalist_item.always_active){
 				// continue
 			// }
-			const input_element_node = get_input_element(i, datalist_item, self)
-			content_data.appendChild(input_element_node)
+
+			const content_value_node = get_input_element(i, datalist_item, self)
+			content_data.appendChild(content_value_node)
 			// set the pointer
-			content_data[i] = input_element_node
+			content_data[i] = content_value_node
 		}
 
 
@@ -134,6 +202,7 @@ const get_input_element = (i, current_value, self) => {
 			class_name		: 'input_checkbox',
 		})
 		option_label.prepend(input_checkbox)
+		input_checkbox.datalist_value = datalist_value
 		input_checkbox.addEventListener('focus', function() {
 			// force activate on input focus (tabulating case)
 			if (!self.active) {
