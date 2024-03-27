@@ -576,6 +576,46 @@ function to_string(mixed $var=null) : string {
 
 
 /**
+* GET_DIR_FILES
+* Get directory files recursively
+* @param string $dir
+* @param array $ext
+* @param callable $format
+*
+* @return array $files
+*/
+function get_dir_files(string $dir, array $ext, callable $format) : array {
+
+	$rii = new RecursiveIteratorIterator(
+		new RecursiveDirectoryIterator( $dir )
+	);
+
+	$files = array();
+	foreach ($rii as $file) {
+
+		if ($file->isDir()){
+			continue;
+		}
+
+		$file_ext = $file->getExtension();
+		if (!in_array($file_ext, $ext)) {
+			continue;
+		}
+
+		$file_path		= $file->getPathname();
+		$file_base_name	= $format($file_path);
+
+		if (!empty($file_base_name)) {
+			$files[] = $file_base_name;
+		}
+	}
+
+	return $files;
+}//end get_dir_files
+
+
+
+/**
 * GET_LAST_MODIFICATION_DATE
 * Get last modified file date in all Dedalo files
 * This will return a timestamp, you will have to use date() like date("d-m-Y H:i:s ", $ret)
