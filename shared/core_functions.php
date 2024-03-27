@@ -580,15 +580,27 @@ function to_string(mixed $var=null) : string {
 * Get directory files recursively
 * @param string $dir
 * @param array $ext
-* @param callable $format
-*
+* @param callable|null $processor // when null is passed will be return the filename
+*	format sample:
+* 	function($file) {
+* 		return {
+* 			url => URL_PATH . $file
+* 		}
+* 	}
 * @return array $files
 */
-function get_dir_files(string $dir, array $ext, callable $format) : array {
+function get_dir_files(string $dir, array $ext, ?callable $processor=null) : array {
 
 	$rii = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator( $dir )
 	);
+
+	// processor fallback
+		if (!isset($processor)) {
+			$processor = function($el){
+				return $el;
+			};
+		}
 
 	$files = array();
 	foreach ($rii as $file) {
@@ -603,7 +615,7 @@ function get_dir_files(string $dir, array $ext, callable $format) : array {
 		}
 
 		$file_path		= $file->getPathname();
-		$file_base_name	= $format($file_path);
+		$file_base_name	= $processor($file_path);
 
 		if (!empty($file_base_name)) {
 			$files[] = $file_base_name;
