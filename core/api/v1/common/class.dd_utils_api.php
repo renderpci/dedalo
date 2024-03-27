@@ -1278,7 +1278,7 @@ final class dd_utils_api {
 					'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
 				];
 				// js
-				$core_js_files	= self::get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
+				$core_js_files	= get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_CORE_PATH, '', $el);
 					if ( stripos($file, '/acc/')!==false ||
@@ -1307,7 +1307,7 @@ final class dd_utils_api {
 				}
 
 			// TOOLS
-				$tools_js_files	= self::get_dir_files(DEDALO_TOOLS_PATH, ['js','css'], function(string $el) : ?string {
+				$tools_js_files	= get_dir_files(DEDALO_TOOLS_PATH, ['js','css'], function(string $el) : ?string {
 					// remove self base directory from file path
 					$file = str_replace(DEDALO_TOOLS_PATH, '', $el);
 
@@ -1355,46 +1355,6 @@ final class dd_utils_api {
 
 
 	// private methods ///////////////////////////////////
-
-
-
-	/**
-	* GET_DIR_FILES
-	* Get directory files recursively
-	* @param string $dir
-	* @param array $ext
-	* @param callable $format
-	*
-	* @return array $files
-	*/
-	private static function get_dir_files(string $dir, array $ext, callable $format) : array {
-
-		$rii = new RecursiveIteratorIterator(
-			new RecursiveDirectoryIterator( $dir )
-		);
-
-		$files = array();
-		foreach ($rii as $file) {
-
-			if ($file->isDir()){
-				continue;
-			}
-
-			$file_ext = $file->getExtension();
-			if (!in_array($file_ext, $ext)) {
-				continue;
-			}
-
-			$file_path		= $file->getPathname();
-			$file_base_name	= $format($file_path);
-
-			if (!empty($file_base_name)) {
-				$files[] = $file_base_name;
-			}
-		}
-
-		return $files;
-	}//end get_dir_files
 
 
 
