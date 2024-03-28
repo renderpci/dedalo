@@ -169,14 +169,19 @@ $global_start_time = hrtime(true);
 
 		// debug
 			if(SHOW_DEBUG===true) {
+				// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
+				$response->dedalo_last_error = $_ENV['DEDALO_LAST_ERROR'] ?? null;
+
 				// real_execution_time add
 				$response->debug						= $response->debug ?? new stdClass();
 				$response->debug->real_execution_time	= exec_time_unit($global_start_time,'ms').' ms';
-			}
 
-		// server_errors. bool true on debug_log write log with LOGGER_LEVEL as 'ERROR' or 'CRITICAL'
-			$response->dedalo_last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? null;
-			// $response->dedalo_last_error	= 'fake error!';
+			}else{
+
+				$response->dedalo_last_error = isset($_ENV['DEDALO_LAST_ERROR'])
+					? 'Server errors occurred. Check the server log for details'
+					: null;
+			}
 
 	// } catch (Throwable $e) { // For PHP 7
 
