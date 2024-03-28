@@ -12,6 +12,10 @@
 			min-height: 12rem;
 			pointer-events: unset !important; // prevent time machine lock tree arrows
 
+			@media screen and (max-width: @width_break_point_0) {
+				display: block;
+			}
+
 			.button_save {
 				top: 5rem;
 				position: sticky;
@@ -29,6 +33,11 @@
 				padding-right: 0.66rem;
 				flex-basis: 25rem;
 				transition: opacity 1s linear;
+				padding-bottom: 1.5rem;
+
+				@media screen and (max-width: @width_break_point_0) {
+					flex-basis: 100%;
+				}
 
 				.changes_files_selector {
 					margin-top: 0.5rem;
@@ -67,10 +76,21 @@
 				font-size: 13px;
 				border-left: 0.1rem solid @color_grey_light;
 
+				@media screen and (max-width: @width_break_point_0) {
+					border-left: none;
+					padding-bottom: 1.5rem;
+				}
+
 				// all ul
 				.ul_item {
 					width: 100%;
 					display: block;
+				}
+
+				>.li_item {
+					@media screen and (max-width: @width_break_point_0) {
+						margin-left: 0rem !important;
+					}
 				}
 
 				// all li
