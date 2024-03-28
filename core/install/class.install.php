@@ -1682,11 +1682,21 @@ class install extends common {
 			}
 
 		// terminal command psql execute sql query from .sql file
-			$command = DB_BIN_PATH.'psql  -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$sql_file_path.'"';
+			$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors --file "'.$sql_file_path.'"';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
 				debug_log(__METHOD__." Exec response 2 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			}
+
+		// update sequence value
+			$query = 'SELECT setval(\'matrix_hierarchy_main_id_seq\', (SELECT MAX(id) FROM "matrix_hierarchy_main")+1)';
+			$command = DB_BIN_PATH.'psql -d '.$config->db_install_name.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+				.'-c "'.$query.';";';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+			if ($exec) {
+				$command_res = shell_exec($command);
+				debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
 
@@ -1801,12 +1811,22 @@ class install extends common {
 				debug_log(__METHOD__." Exec response 3 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
+		// update sequence value
+			$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
+			$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+				.'-c "'.$query.';";';
+			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+			if ($exec) {
+				$command_res = shell_exec($command);
+				debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+			}
+
 		// delete uncompressed_file
 			$command  = 'rm '.$uncompressed_file.';';
 			debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
 			if ($exec) {
 				$command_res = shell_exec($command);
-				debug_log(__METHOD__." Exec response 4 (shell_exec): ".json_encode($command_res), logger::DEBUG);
+				debug_log(__METHOD__." Exec response 5 (shell_exec): ".json_encode($command_res), logger::DEBUG);
 			}
 
 
@@ -1888,6 +1908,15 @@ class install extends common {
 
 		// hierarchy not already exists case. Create a new one
 			if ($section_exists===false) {
+
+				// update sequence value
+				$matrix_table = 'matrix_hierarchy_main';
+				$query = 'SELECT setval(\''.$matrix_table.'_id_seq\', (SELECT MAX(id) FROM "'.$matrix_table.'")+1)';
+				$command = DB_BIN_PATH.'psql -d '.DEDALO_DATABASE_CONN.' -U '.DEDALO_USERNAME_CONN.' '.$config->host_line.' '.$config->port_line.' --echo-errors '
+					.'-c "'.$query.';";';
+				debug_log(__METHOD__." Executing terminal DB command ".PHP_EOL. to_string($command), logger::WARNING);
+				$command_res = shell_exec($command);
+				debug_log(__METHOD__." Exec response (shell_exec): ".json_encode($command_res), logger::DEBUG);
 
 				// create a new section
 				$section = section::get_instance(
