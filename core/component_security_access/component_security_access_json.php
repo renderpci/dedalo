@@ -58,8 +58,9 @@
 
 				case 'edit':
 				default:
-					$value		= $this->get_dato();
-					$datalist	= $this->get_datalist($user_id);
+					$value			= $this->get_dato();
+					$datalist		= $this->get_datalist($user_id);
+					$changes_files	= hierarchy::get_simple_schema_changes_files();
 					break;
 			}
 		// data item
@@ -70,6 +71,11 @@
 			// datalist
 			if (isset($datalist)) {
 				$item->datalist = $datalist;
+			}
+
+			// datalist
+			if (isset($changes_files)) {
+				$item->changes_files = $changes_files;
 			}
 
 		$data[] = $item;

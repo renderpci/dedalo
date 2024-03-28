@@ -8,7 +8,7 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {set_before_unload, when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 
 
 
@@ -80,6 +80,8 @@ const get_content_data = async function(self) {
 		// filled_value is the full value that will not save in DDBB
 		// the name value of const is used to maintain the content_data uniformity between components
 		const value		= self.filled_value || [] // data.value || []
+		// file list of changes done, ordered by date last change file is the first into the array
+		const changes_files = data.changes_files || []
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -92,16 +94,28 @@ const get_content_data = async function(self) {
 		const content_data = ui.component.build_content_data(self)
 			  content_data.classList.add('nowrap')
 
+	// Tree
+		// ul tree_root
+		const ul = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'ul_item content_value tree_root' // former 'inputs_container'
+			})
+
+	// get changes selector
+		const changes_files_selector = render_changes_files_selector({
+			self			: self,
+			changes_files	: changes_files,
+			datalist		: datalist,
+			value 			: value,
+			ul 				: ul
+		})
+
+		content_data.appendChild(changes_files_selector)
+		content_data.appendChild(ul)
+
 	// root level nodes. Filtered form full datalist
 		const root_level_items = datalist.filter(el => el.parent==='dd1')
 
-	// Tree
-		// ul tree_root
-			const ul = ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'ul_item content_value tree_root', // former 'inputs_container'
-				parent			: content_data
-			})
 
 	// Read only
 		 if(self.permissions === 1){
@@ -296,6 +310,7 @@ const render_tree_item = function(item, datalist, value, self) {
 */
 const render_area_item = function(item, datalist, value, self) {
 
+
 	// direct_children check and set
 		const tipo					= item.tipo
 		const section_tipo			= item.section_tipo
@@ -417,9 +432,10 @@ const render_area_item = function(item, datalist, value, self) {
 			})//end input_checkbox.addEventListener("change", async function(e) {
 
 	// label
+		const css_selected = self.selected_tipo===item.tipo ? ' selected' : ''
 		const label = ui.create_dom_element({
 			element_type	: 'label',
-			class_name		: 'area_label' + (direct_children ? ' icon_arrow' : ''),
+			class_name		: 'area_label' + (direct_children ? ' icon_arrow' : '') + css_selected,
 			inner_html		: item.label,
 			parent			: li
 		})
@@ -1092,5 +1108,226 @@ const render_permissions_item_read = function(item, datalist, value) {
 }//end render_permissions_item_read
 
 
+
+/**
+* RENDER_CHANGES_FILES_SELECTOR
+* Creates a select node with all changes files
+* @param array changes_files
+* 	file list of changes
+* @return HTMLElement changes_files_container
+*/
+const render_changes_files_selector = function (options) {
+
+	//simple_schema_changes_2024-03-26_20-44-22
+
+	const self			= options.self
+	const changes_files	= options.changes_files
+	const datalist		= options.datalist
+	const value			= options.value
+	const ul			= options.ul
+
+	// remove the extension and the fixed name and show the date and time in human way.
+	const parse_filename = (filename) => {
+
+		const file_base		= filename.replace('.json', '')
+		const file_date		= file_base.replace('simple_schema_changes_', '')
+		const ar_part		= file_date.split('_')
+		const date			= ar_part[0].split('-')
+		const time			= ar_part[1].replaceAll('-', ':')
+		const name			= `${date[2]}/${date[1]}/${date[0]} ${time}`
+
+		return name
+	}
+
+	const changes_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'changes_container'
+	})
+
+		const changes_files_label = ui.create_dom_element({
+			element_type	: 'label',
+			class_name		: 'changes_files_label',
+			inner_html 		: get_label.latest_changes || 'Latest changes',
+			parent 			: changes_container
+		})
+
+		const changes_files_selector = ui.create_dom_element({
+			element_type	: 'select',
+			class_name		: 'changes_files_selector',
+			parent 			: changes_container
+		})
+
+		changes_files_selector.addEventListener('change', async function(e){
+			const filename = e.target.value
+
+			while (changes_data_container.firstChild) {
+				changes_data_container.removeChild(changes_data_container.firstChild);
+			}
+
+			if(!filename){
+				return
+			}
+
+			const changes_data = await self.get_changes_data(filename)
+
+			const changes_data_node = render_changes_data({
+				changes_data	: changes_data,
+				datalist		: datalist,
+				value			: value,
+				self 			: self,
+				ul 				: ul
+			})
+
+			changes_data_container.appendChild(changes_data_node)
+		})
+
+		const empty_option = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html		: '',
+			value 			: null,
+			parent 			: changes_files_selector
+		})
+
+		const changes_data_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'changes_data_container',
+			parent 			: changes_container
+		})
+
+	const changes_length = changes_files.length
+	for (let i = 0; i < changes_length; i++) {
+		const current_file	= changes_files[i]
+		const name = parse_filename(current_file)
+
+		const opiton = ui.create_dom_element({
+			element_type	: 'option',
+			inner_html		: name,
+			value 			: current_file,
+			parent 			: changes_files_selector
+		})
+	}
+
+	return changes_container
+}//end render_changes_files_selector
+
+
+/**
+* RENDER_CHANGES_DATA
+* Creates a data fragment node with all changes by section
+* changes_data has:
+* - parents: array with all parents. Used to show the path to the section, and open the nodes path into the tree
+* - section: Object. main section that changed and need to review his permissions, it will be open to show all components
+* - children: array with new children. Only informative nodes, no active, only show the additions of the section.
+* @param object options
+* changes_data: new ontology nodes
+* datalist: all ontology nodes
+* value: data permissions of the profile
+* ul: main node to build the tree
+* @return HTMLElement fragment
+*/
+const render_changes_data =function (options) {
+
+	const changes_data	= options.changes_data
+	const datalist		= options.datalist
+	const value			= options.value
+	const self			= options.self
+	const ul			= options.ul
+
+	const fragment = new DocumentFragment();
+
+	const data_len = changes_data.length
+	for (let i = 0; i < data_len; i++) {
+		const current_section = changes_data[i]
+
+		// parents
+		// remove the main ontology node 'dd1'
+		const parents = current_section.parents.filter(el => el.tipo !== 'dd1')
+		const parents_labels = parents.map(el => el.label).join(' > ')
+
+		const parents_labels_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'parents_labels',
+			inner_html		: parents_labels,
+			parent 			: fragment
+		})
+
+		//section
+		const section_label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_label',
+			inner_html		: current_section.section.label,
+			parent 			: fragment
+		})
+		// when the user click into the section label active all parent nodes and the section
+		// open all nodes and load the section to show all components.
+		// this event show the tree as if the user had clicked on the path items (open the tree nodes)
+		section_label.addEventListener('mouseup',async function(e){
+
+			const section_tipo = current_section.section.tipo
+
+			// fix
+			self.selected_tipo = section_tipo
+
+			// set the parents into local_db to mark it to be open
+			for (let i = 0; i < parents.length; i++) {
+
+				const current_parent = parents[i].tipo
+				// add record to local DB
+					const data = {
+						id		: 'security_acccess_'+current_parent,
+						value	: false
+					}
+					await data_manager.set_local_db_data(
+						data,
+						'status'
+					)
+			}
+			// set the section tipo into local_db to mark it to be open
+			await data_manager.set_local_db_data(
+				{
+					id		: 'security_acccess_'+section_tipo,
+					value	: false
+				},
+				'status'
+			)
+
+			// get the main children to render all of them (as first loading)
+			const items = datalist.filter(el => el.parent === 'dd1')
+
+			// remove old rendered nodes
+			while (ul.firstChild) {
+				ul.removeChild(ul.firstChild);
+			}
+			// render the tree and fill the main ul
+			// when the render check the nodes will be open the parents and the section to show it
+			const node = render_tree_items(items, datalist, value, self)
+			ul.appendChild(node)
+		})
+
+		//children
+		// show the children additions
+		const children_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'children_container',
+			parent 			: fragment
+		})
+
+		const children = current_section.children
+		const children_length = children.length
+
+		for (let i = 0; i < children_length; i++) {
+			const current_child = children[i]
+
+			const child_label = ui.create_dom_element({
+				element_type	: 'li',
+				class_name		: 'child_label',
+				inner_html		: current_child.label,
+				parent 			: children_container
+			})
+		}
+	}
+
+	return fragment;
+}//end render_changes_data
 
 // @license-end
