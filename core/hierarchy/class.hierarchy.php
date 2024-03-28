@@ -2090,4 +2090,74 @@ class hierarchy {
 
 
 
+	/**
+	* GET_SIMPLE_SCHEMA_OF_SECTIONS
+	* Get all sections of the current ontology with his own children in a simple associative array.
+	* [
+	* 	"oh1"  => ["oh17","oh25"],
+	* 	"ich1" => ["ich14","ich58"]
+	* ]
+	* @return array  $simple_schema_of_sections
+	*/
+	public static function get_simple_schema_of_sections() : array {
+
+		$all_sections = RecordObj_dd::get_ar_all_terminoID_of_modelo_tipo('dd6', false);
+
+		$simple_schema_of_sections = [];
+
+		foreach ($all_sections as $current_section) {
+
+			$real_section = section::get_section_real_tipo_static($current_section);
+
+			$ar_children = RecordObj_dd::get_ar_recursive_childrens(
+				$real_section,
+				false,
+				null,
+				null,
+				false //use cache false
+			);
+			$simple_schema_of_sections[$current_section] = $ar_children;
+		}
+
+		return $simple_schema_of_sections;
+	}//end get_simple_schema_of_sections
+
+
+	/**
+	* BUILD_SIMPLE_SCHEMA_CHANGES
+	* Compare two simple schemas and return only the changes by section and return it into array of objects
+	* @param associative array $old_schema
+	* @param associative array $new_schema
+	* @return array of objects $simple_schema_changes
+	*/
+	public static function build_simple_schema_changes(array $old_schema, array $new_schema) : array {
+
+		$simple_schema_changes = [];
+
+		foreach ($new_schema as $current_section => $curent_children) {
+
+			$old_children = $old_schema[$current_section] ?? null;
+
+			if(isset($old_children)){
+
+				$diferences = array_values(array_diff($curent_children, $old_children));
+
+				if(empty($diferences)){
+					continue;
+				}
+
+				$section_schema = new stdClass();
+					$section_schema->tipo			= $current_section;
+					$section_schema->children_added	= $diferences;
+
+				$simple_schema_changes[] = $section_schema;
+			}
+		}
+
+		return $simple_schema_changes;
+	}//end build_simple_schema_changes
+
+
+
+
 }//end class hierarchy
