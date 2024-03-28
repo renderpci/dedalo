@@ -8,6 +8,7 @@
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_edit_component_security_access} from './render_edit_component_security_access.js'
 	import {render_list_component_security_access} from './render_list_component_security_access.js'
 	import {render_search_component_security_access} from './render_search_component_security_access.js'
@@ -453,6 +454,34 @@ component_security_access.prototype.save_changes = async function() {
 
 	return result
 }//end save_changes
+
+
+/**
+* GET_CHANGES_DATA
+* get changes of the specific file, parsed to be represented
+* @return promise
+* 	Resolve bool|object (API response) from parse_simple_schema_changes_files()
+*/
+component_security_access.prototype.get_changes_data = async function(filename){
+
+	// data_manager
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'parse_simple_schema_changes_files',
+			options	: {
+				filename	: filename
+			}
+		}
+	})
+	if(SHOW_DEBUG===true) {
+		console.log('get_changes_data api_response:', api_response);
+	}
+
+	return api_response.result
+
+}//end get_changes_data
 
 
 
