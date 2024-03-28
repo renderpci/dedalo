@@ -1987,6 +1987,8 @@ abstract class backup {
 						return $response;
 					}
 			}
+		//get current simple schema of sections, will use to compare with the new schema
+			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// EXPORT. Before import, EXPORT ;-)
 			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
@@ -2064,6 +2066,40 @@ abstract class backup {
 					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
 				]
 			);
+
+
+		// get new simple_schema_of_sections, will use to compare with the previous schema
+			$new_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
+
+			$simple_schema_changes = hierarchy::build_simple_schema_changes(
+				$old_simple_schema_of_sections,
+				$new_simple_schema_of_sections
+			);
+
+			$simple_schema_changes_name	= 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json';
+			$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+
+			if( !is_dir($simple_schema_dir_path) ) {
+				if(!mkdir($simple_schema_dir_path, 0750,true)) {
+
+					#throw new Exception(" Error on read or create directory. Permission denied ($path)");
+					$response->result 	= false;
+					$response->msg 		= "Error on read or create directory. Permission denied ($simple_schema_dir_path)";
+					return $response;
+				}
+			}
+
+			$filepath = $simple_schema_dir_path.$simple_schema_changes_name;
+
+			$save_simple_schema = file_put_contents($filepath, json_encode($simple_schema_changes));
+
+			if($save_simple_schema=== false){
+
+				#throw new Exception(" Error on read or create directory. Permission denied ($path)");
+					$response->result 	= false;
+					$response->msg 		= "Error on read or create file of simple schema changes. Permission denied ($filepath)";
+					return $response;
+			}
 
 		// response
 			$response->result	= true;
