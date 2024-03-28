@@ -109,6 +109,15 @@ class tool_common {
 			$tool_label = array_find($tool_object->label, function($el){
 				return $el->lang===DEDALO_APPLICATION_LANG;
 			})->value ?? reset($tool_object->label)->value;
+			if (!is_string($tool_label)) {
+				debug_log(__METHOD__
+					. " Fixed invalid tool label " . PHP_EOL
+					. ' tool_label: ' . to_string($tool_label) . PHP_EOL
+					. ' tool_object: ' . to_string($tool_object) . PHP_EOL
+					, logger::ERROR
+				);
+				$tool_label = $name;
+			}
 
 		// developer
 			$developer_data = array_find($tool_object->developer, function($el){
