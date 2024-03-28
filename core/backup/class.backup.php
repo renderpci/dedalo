@@ -2101,6 +2101,10 @@ abstract class backup {
 					return $response;
 			}
 
+		// force reset cache of hierarchy tree
+			// delete previous cache files
+			dd_cache::delete_cache_files();
+
 		// response
 			$response->result	= true;
 			$response->msg		= 'OK. Request done ['.__FUNCTION__.'] ' .$response->msg ;
