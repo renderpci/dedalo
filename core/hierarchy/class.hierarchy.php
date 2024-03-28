@@ -2222,7 +2222,7 @@ class hierarchy {
 			// section
 			$section_item = new stdClass();
 				$section_item->tipo		= $current_section->tipo;
-				$section_item->label	= RecordObj_dd::get_termino_by_tipo($current_section->tipo);
+				$section_item->label	= RecordObj_dd::get_termino_by_tipo($current_section->tipo, DEDALO_APPLICATION_LANG);
 
 			// parents
 				$parents		= [];
@@ -2232,7 +2232,7 @@ class hierarchy {
 
 					$parent_item = new stdClass();
 						$parent_item->tipo = $parent_tipo;
-						$parent_item->label = RecordObj_dd::get_termino_by_tipo($parent_tipo);
+						$parent_item->label = RecordObj_dd::get_termino_by_tipo($parent_tipo,DEDALO_APPLICATION_LANG);
 
 						$parents[] = $parent_item;
 				}
@@ -2244,7 +2244,7 @@ class hierarchy {
 
 					$child_item = new stdClass();
 						$child_item->tipo = $child_tipo;
-						$child_item->label = RecordObj_dd::get_termino_by_tipo($child_tipo);
+						$child_item->label = RecordObj_dd::get_termino_by_tipo($child_tipo, DEDALO_APPLICATION_LANG);
 
 						$children[] = $child_item;
 				}
