@@ -1127,22 +1127,23 @@ const render_changes_files_selector = function (options) {
 	const ul			= options.ul
 
 	// remove the extension and the fixed name and show the date and time in human way.
-	const parse_filename = (filename) => {
+		const parse_filename = (filename) => {
 
-		const file_base		= filename.replace('.json', '')
-		const file_date		= file_base.replace('simple_schema_changes_', '')
-		const ar_part		= file_date.split('_')
-		const date			= ar_part[0].split('-')
-		const time			= ar_part[1].replaceAll('-', ':')
-		const name			= `${date[2]}/${date[1]}/${date[0]} ${time}`
+			const file_base		= filename.replace('.json', '')
+			const file_date		= file_base.replace('simple_schema_changes_', '')
+			const ar_part		= file_date.split('_')
+			const date			= ar_part[0].split('-')
+			const time			= ar_part[1].replaceAll('-', ':')
+			const name			= `${date[2]}/${date[1]}/${date[0]} ${time}`
 
-		return name
-	}
+			return name
+		}
 
-	const changes_container = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'changes_container'
-	})
+	// changes_container
+		const changes_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'changes_container'
+		})
 
 		const changes_files_label = ui.create_dom_element({
 			element_type	: 'label',
@@ -1151,61 +1152,73 @@ const render_changes_files_selector = function (options) {
 			parent 			: changes_container
 		})
 
+		// selector
 		const changes_files_selector = ui.create_dom_element({
 			element_type	: 'select',
 			class_name		: 'changes_files_selector',
 			parent 			: changes_container
 		})
-
 		changes_files_selector.addEventListener('change', async function(e){
+
 			const filename = e.target.value
-
-			while (changes_data_container.firstChild) {
-				changes_data_container.removeChild(changes_data_container.firstChild);
-			}
-
-			if(!filename){
+			if(!filename || filename===''){
+				while (changes_data_container.firstChild) {
+					changes_data_container.removeChild(changes_data_container.firstChild)
+				}
 				return
 			}
 
-			const changes_data = await self.get_changes_data(filename)
+			ui.load_item_with_spinner({
+				container	: changes_data_container,
+				label		: get_label.changes || 'changes',
+				callback	: async () => {
+					// api call to read selected JSON file
+					const changes_data = await self.get_changes_data(filename)
+					// render result
+					const changes_data_node = render_changes_data({
+						changes_data	: changes_data,
+						datalist		: datalist,
+						value			: value,
+						self			: self,
+						ul				: ul
+					})
 
-			const changes_data_node = render_changes_data({
-				changes_data	: changes_data,
-				datalist		: datalist,
-				value			: value,
-				self 			: self,
-				ul 				: ul
+					return changes_data_node
+				}
 			})
-
-			changes_data_container.appendChild(changes_data_node)
 		})
 
-		const empty_option = ui.create_dom_element({
+		// empty option
+		ui.create_dom_element({
 			element_type	: 'option',
 			inner_html		: '',
-			value 			: null,
-			parent 			: changes_files_selector
+			value			: '',
+			parent			: changes_files_selector
 		})
 
+		// options
+		const changes_length = changes_files.length
+		for (let i = 0; i < changes_length; i++) {
+
+			const current_file	= changes_files[i]
+			const name			= parse_filename(current_file)
+
+			// option
+			ui.create_dom_element({
+				element_type	: 'option',
+				inner_html		: name,
+				value 			: current_file,
+				parent 			: changes_files_selector
+			})
+		}
+
+	// api response container
 		const changes_data_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'changes_data_container',
 			parent 			: changes_container
 		})
 
-	const changes_length = changes_files.length
-	for (let i = 0; i < changes_length; i++) {
-		const current_file	= changes_files[i]
-		const name = parse_filename(current_file)
-
-		const opiton = ui.create_dom_element({
-			element_type	: 'option',
-			inner_html		: name,
-			value 			: current_file,
-			parent 			: changes_files_selector
-		})
-	}
 
 	return changes_container
 }//end render_changes_files_selector
