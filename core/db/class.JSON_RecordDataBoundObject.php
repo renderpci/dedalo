@@ -410,7 +410,8 @@ abstract class JSON_RecordDataBoundObject {
 							, logger::ERROR
 						);
 						if(SHOW_DEBUG===true) {
-							dump($strQuery, "strQuery section_id:$section_id, section_tipo:$section_tipo, datos:".to_string($datos));
+							$resoved_query = str_replace(['$1','$2','$3'], [$section_id, "'$section_tipo'", "'$datos'"], $strQuery);
+							dump($resoved_query, "strQuery section_id: $section_id, section_tipo: $section_tipo, datos: ".to_string($datos));
 						}
 						// return false;
 						return null;
