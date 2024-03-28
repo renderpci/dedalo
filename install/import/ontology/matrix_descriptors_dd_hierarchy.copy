@@ -26,7 +26,6 @@ hierarchy22	Id	termino	lg-fra
 hierarchy23	C'est un descripteur	termino	lg-fra
 hierarchy24	Utilisable pour l'indexation	termino	lg-fra
 hierarchy25	Terme	termino	lg-fra
-hierarchy27	Modèle	termino	lg-fra
 hierarchy28	Note de portée	termino	lg-fra
 hierarchy29	Description	termino	lg-fra
 hierarchy3	Id	termino	lg-fra
@@ -37,6 +36,7 @@ hierarchy33	Observations	termino	lg-fra
 hierarchy34	Relations	termino	lg-fra
 hierarchy35	Termes liés	termino	lg-fra
 hierarchy36	Dépend de	termino	lg-fra
+hierarchy27	Typologie	termino	lg-fra
 hierarchy37	Liste	termino	lg-fra
 hierarchy38	Nouveau	termino	lg-fra
 hierarchy39	Supprimer	termino	lg-fra
@@ -138,12 +138,12 @@ hierarchy25	Terme	termino	lg-cat
 hierarchy25	Termine	termino	lg-ita
 hierarchy25	Término	termino	lg-spa
 hierarchy25	όρος	termino	lg-ell
-hierarchy27	Model	termino	lg-cat
-hierarchy27	Modello	termino	lg-ita
-hierarchy27	Modelo	termino	lg-spa
 hierarchy64	Sources externes	termino	lg-fra
-hierarchy27	μοντέλο	termino	lg-ell
 hierarchy6	TLD	termino	lg-fra
+hierarchy27	Tipología	termino	lg-spa
+hierarchy27	Tipologia	termino	lg-ita
+hierarchy27	Tipologia	termino	lg-cat
+hierarchy27	τυπολογία	termino	lg-ell
 hierarchy28	Nota d'abast	termino	lg-cat
 hierarchy28	Nota d&#039;ambito	termino	lg-ita
 hierarchy28	Nota de alcance	termino	lg-spa
@@ -239,14 +239,12 @@ hierarchy3	Id	termino	lg-eng
 hierarchy4	Active	termino	lg-eng
 hierarchy46	Elenco indicizzazione	termino	lg-ita
 hierarchy46	Listado indexación	termino	lg-spa
-hierarchy47	Recerca	termino	lg-cat
-hierarchy47	Ricerca	termino	lg-ita
-hierarchy47	Search	termino	lg-eng
-hierarchy47	έρευνα	termino	lg-ell
 hierarchy48	Orden	termino	lg-spa
 hierarchy48	Ordine	termino	lg-ita
 hierarchy48	Ordre	termino	lg-cat
 hierarchy48	Pasado de float a int el 21-07-2017 (para que cuadre en publicación como entero)	obs	lg-spa
+hierarchy47	Coordenades	termino	lg-cat
+hierarchy47	Συντεταγμένες	termino	lg-ell
 hierarchy48	παραγγελία	termino	lg-ell
 hierarchy49	Figli	termino	lg-ita
 hierarchy49	Fills	termino	lg-cat
@@ -304,7 +302,6 @@ hierarchy61	Nota d'abast	termino	lg-cat
 hierarchy61	Nota de alcance	termino	lg-spa
 hierarchy61	Nota di ambito	termino	lg-ita
 hierarchy61	Επεξηγηματικό σημείωμα	termino	lg-ell
-hierarchy47	RECYCLE HIERARCHY	termino	lg-spa
 hierarchy63	Geonames ID	termino	lg-cat
 hierarchy63	Geonames ID	termino	lg-ell
 hierarchy63	Geonames ID	termino	lg-spa
@@ -333,6 +330,7 @@ hierarchy73	Map first locator to plain terminoID like es_2	obs	lg-spa
 hierarchy6	TLD	termino	lg-cat
 hierarchy6	TLD	termino	lg-ell
 hierarchy7	TLS (alpha3) DEPRECATED	termino	lg-spa
+hierarchy47	Coordenadas	termino	lg-spa
 hierarchy73	parent	termino	lg-spa
 hierarchy74	related	termino	lg-spa
 hierarchy75	indexation	termino	lg-spa
@@ -442,7 +440,6 @@ hierarchy23	Ist Deskriptor	termino	lg-deu
 hierarchy24	Verwendbar in Indexierung	termino	lg-deu
 hierarchy25	Begriff	termino	lg-deu
 hierarchy26	Druckreif	termino	lg-deu
-hierarchy27	Modell	termino	lg-deu
 hierarchy28	Hinweis zum Geltungsbereich	termino	lg-deu
 hierarchy29	Beschreibung	termino	lg-deu
 hierarchy3	Id	termino	lg-deu
@@ -450,6 +447,7 @@ hierarchy30	Temporal Frame	termino	lg-deu
 hierarchy31	Geolokalisation	termino	lg-deu
 hierarchy32	Anleitung für das Indexieren	termino	lg-deu
 hierarchy33	Beobachtungen	termino	lg-deu
+hierarchy27	Typologie	termino	lg-deu
 hierarchy34	Beziehungen	termino	lg-deu
 hierarchy35	Verwandte Begriffe	termino	lg-deu
 hierarchy36	Abhängig von	termino	lg-deu
@@ -464,7 +462,6 @@ hierarchy43	Erstellen	termino	lg-deu
 hierarchy44	Liste Thesaurus	termino	lg-deu
 hierarchy45	Allgemeiner Begriff	termino	lg-deu
 hierarchy46	Liste Indexierung	termino	lg-deu
-hierarchy47	Suche	termino	lg-deu
 hierarchy48	Ordnung	termino	lg-deu
 hierarchy49	Unterbegriffe	termino	lg-deu
 hierarchy5	Name	termino	lg-deu
@@ -497,6 +494,7 @@ hierarchy97	Beziehungen Thesaurus	termino	lg-deu
 hierarchy98	Letzte Änderungen	termino	lg-deu
 hierarchy99	Definition	termino	lg-deu
 hierarchy6	TLD	termino	lg-deu
+hierarchy47	Koordinaten	termino	lg-deu
 hierarchy119	space_geojson	termino	lg-spa
 hierarchy35	Related terms	termino	lg-eng
 hierarchy1	Hierarchy	termino	lg-eng
@@ -519,7 +517,6 @@ hierarchy22	Id	termino	lg-eng
 hierarchy23	Is descriptor	termino	lg-eng
 hierarchy24	Usable in indexing	termino	lg-eng
 hierarchy25	Term	termino	lg-eng
-hierarchy27	Model	termino	lg-eng
 hierarchy28	Scope note	termino	lg-eng
 hierarchy29	Description	termino	lg-eng
 hierarchy30	Time frame	termino	lg-eng
@@ -528,6 +525,7 @@ hierarchy32	Instructions for indexing	termino	lg-eng
 hierarchy33	Observations	termino	lg-eng
 hierarchy34	Relations	termino	lg-eng
 hierarchy6	TLD	termino	lg-eng
+hierarchy27	Typology	termino	lg-eng
 hierarchy36	Dependent of	termino	lg-eng
 hierarchy37	List	termino	lg-eng
 hierarchy38	New	termino	lg-eng
@@ -584,7 +582,6 @@ hierarchy26	प्रकाशन योग्य	termino	lg-nep
 hierarchy23	वर्णनकर्ता छ	termino	lg-nep
 hierarchy24	अनुक्रमणिका मा प्रयोग गर्न सकिन्छ	termino	lg-nep
 hierarchy41	आधिकारिक कोड	termino	lg-nep
-hierarchy27	मोडेल	termino	lg-nep
 hierarchy25	अवधि	termino	lg-nep
 hierarchy95	दृष्टान्त	termino	lg-nep
 hierarchy55	परियोजना	termino	lg-nep
@@ -640,3 +637,25 @@ hierarchy122	τοπωνύμια	termino	lg-ell
 hierarchy122	Toponymie	termino	lg-fra
 hierarchy122	Toponomastica	termino	lg-ita
 hierarchy6	TLD	termino	lg-spa
+hierarchy47	Coordinates	termino	lg-eng
+hierarchy47	Coordonnées	termino	lg-fra
+hierarchy47	Coordinate	termino	lg-ita
+hierarchy123	Estado de revisión	termino	lg-spa
+hierarchy123	Revision status	termino	lg-eng
+hierarchy123	Estat de revisió	termino	lg-cat
+hierarchy123	Revisionsstand	termino	lg-deu
+hierarchy123	Statut de la révision	termino	lg-fra
+hierarchy123	Stato di revisione	termino	lg-ita
+hierarchy124	Información pública	termino	lg-spa
+hierarchy124	Public information	termino	lg-eng
+hierarchy124	Öffentliche Information	termino	lg-deu
+hierarchy124	Information publique	termino	lg-fra
+hierarchy124	Informació pública	termino	lg-cat
+hierarchy124	Informazione pubblica	termino	lg-ita
+hierarchy27	टाइपोलोजी	termino	lg-nep
+hierarchy125	Activa en tesauro	termino	lg-spa
+hierarchy125	Active in thesaurus	termino	lg-eng
+hierarchy125	Activa al tesauro	termino	lg-cat
+hierarchy125	Aktiv im Thesaurus	termino	lg-deu
+hierarchy125	Actif dans le thésaurus	termino	lg-fra
+hierarchy125	Attivo nel thesaurus	termino	lg-ita

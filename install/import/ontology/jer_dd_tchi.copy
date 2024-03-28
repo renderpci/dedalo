@@ -14,9 +14,9 @@ tchi57	tchi56	dd57	no	si	si	1	tchi	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	{"css":
 tchi58	tchi56	dd592	no	si	si	2	tchi	no	[{"dd6":"rsc550"},{"dd635":"rsc558"},{"dd11":"rsc562"},{"dd530":"rsc565"},{"dd10":"rsc564"},{"dd592":"rsc557"},{"dd592":"rsc560"}]	\N	{"css": {".wrapper_component": {"grid-row": "5", "grid-column": "1 / span 4"}}}
 tchi4	tchi2	dd91	no	si	si	1	tchi	no	[{"dd339":"tchi8"},{"dd57":"tchi7"},{"dd57":"tchi11"},{"dd9":"tchi13"},{"dd9":"tchi15"},{"dd530":"tchi16"},{"dd635":"tchi20"},{"dd592":"tchi17"}]	\N	\N
 tchi6	tchi2	dd1129	no	si	si	2	tchi	no	null		\N
-tchi5	tchi1	dd8	no	si	si	1	tchi	no	null	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 10%)"}}}
 tchi7	tchi5	dd57	no	si	si	3	tchi	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	{"css": {".wrapper_component": {"grid-column": "3 / span 1"}}, "dato_default": [{"section_id": "1", "section_tipo": "dd64"}]}
-tchi2	hierarchy57	dd6	no	si	si	21	tchi	no	[{"dd6":"hierarchy20"}]	\N	\N
+tchi2	hierarchy57	dd6	no	si	si	20	tchi	no	[{"dd6":"hierarchy20"}]	\N	\N
+tchi5	tchi1	dd8	no	si	si	1	tchi	no	null	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 10%)"}}}
 tchi34	tchi1	dd8	no	si	si	3	tchi	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(2, 1fr)"}}}
 tchi32	tchi28	dd500	no	si	si	6	tchi	si	\N	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
 tchi36	tchi34	dd247	no	si	si	2	tchi	no	\N	\N	\N
@@ -34,11 +34,11 @@ tchi13	tchi5	dd9	no	si	si	6	tchi	no	\N	\N	{"css": {".wrapper_component": {"grid-
 tchi15	tchi5	dd9	no	si	si	7	tchi	si	\N	\N	{"css": {".wrapper_component": {"grid-row": "2", "grid-column": "span 4"}}}
 tchi28	tchi49	dd711	no	si	si	2	tchi	no	\N	\N	{"css": {".wrapper_grouper": {"grid-template-columns": "repeat(2, 1fr)"}}}
 tchi40	tchi38	dd352	no	si	si	2	tchi	no	\N	\N	{"source": {"records_mode": "list", "request_config": [{"sqo": {"section_tipo": [{"source": "self"}]}, "show": {"ddo_map": [{"tipo": "tchi15", "parent": "self", "section_tipo": "self", "value_with_parents": true}]}}]}}
-tchi3	tchi1	dd91	no	si	si	5	tchi	no	[{"dd339":"tchi8"},{"dd57":"tchi7"},{"dd57":"tchi11"},{"dd9":"tchi13"},{"dd9":"tchi15"},{"dd530":"tchi16"},{"dd635":"tchi20"},{"dd592":"tchi17"}]	\N	\N
 tchi8	tchi5	dd339	no	si	si	2	tchi	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	{"css": {".wrapper_component": {"grid-column": "2 / span 1"}}}
 tchi11	tchi5	dd57	no	si	si	4	tchi	no	[{"dd6":"dd64"},{"dd9":"dd62"}]	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}, "dato_default": [{"section_id": "1", "section_tipo": "dd64"}]}
 tchi12	tchi5	dd57	no	si	si	5	tchi	no	[{"dd6":"dd501"},{"dd9":"dd503"}]	\N	{"css": {".wrapper_component": {"grid-row": "1", "grid-column": "5 / span 2"}}, "dato_default": [{"section_id": "1", "section_tipo": "dd501"}]}
 tchi16	tchi5	dd530	no	si	si	8	tchi	no	[{"dd6":"tchi2"},{"dd9":"tchi15"}]	\N	{"css": {".wrapper_component": {"grid-row": "3", "grid-column": "span 2"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": ["tchi2"], "source": "section_tipo"}]}, "show": {"ddo_map": [{"tipo": "tchi15", "parent": "self", "section_tipo": "self", "value_with_parents": false}], "fields_separator": ", "}}]}}
+tchi3	tchi1	dd91	no	si	si	5	tchi	no	[{"dd339":"tchi8"},{"dd57":"tchi7"},{"dd57":"tchi11"},{"dd9":"tchi13"},{"dd9":"tchi15"},{"dd530":"tchi16"},{"dd635":"tchi20"},{"dd592":"tchi17"}]	\N	\N
 tchi18	tchi5	dd442	no	si	si	9	tchi	no	\N	\N	{"css": {".wrapper_component": {"grid-row": "3", "grid-column": "span 4"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [1], "source": "hierarchy_types"}, {"value": ["cult1"], "source": "section_tipo"}]}, "show": {"sqo_config": {"limit": 30}, "get_ddo_map": {"model": "section_map", "columns": [["thesaurus", "term"]]}, "fields_separator": ", ", "value_with_parents": true}}]}, "config_relation": {"relation_type": "dd96"}}
 tchi22	tchi19	dd318	no	si	si	1	tchi	si	\N	\N	{"css": {".wrapper_component": {"grid-row": "1 / span 3", "grid-column": "span 2"}, ".wrapper_component >.content_data": {"max-height": "570px"}}}
 tchi27	tchi51	dd592	no	si	si	2	tchi	no	[{"dd6":"rsc913"},{"dd43":"rsc919"},{"dd43":"rsc920"},{"dd43":"rsc1177"},{"dd11":"rsc918"},{"dd11":"rsc1168"}]	\N	{"css": {".wrapper_component": {"grid-column": "span 1"}}}
