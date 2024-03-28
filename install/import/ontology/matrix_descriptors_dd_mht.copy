@@ -35,7 +35,6 @@ mht123	documentos	termino	lg-spa
 mht124	entrevistas	termino	lg-spa
 mht125	Casi	termino	lg-ita
 mht125	Casos	termino	lg-spa
-mht126	search_list	termino	lg-spa
 mht127	casos	termino	lg-spa
 mht128	imagen	termino	lg-spa
 mht129	Imagen	termino	lg-spa
@@ -149,6 +148,7 @@ mht77	Descrittore	termino	lg-ita
 mht77	es descriptor	termino	lg-spa
 mht78	General	termino	lg-spa
 mht78	Generale	termino	lg-ita
+mht126	Nuevo	termino	lg-spa
 mht79	Id	termino	lg-spa
 mht8	List	termino	lg-spa
 mht81	Titolo	termino	lg-ita
@@ -367,3 +367,4 @@ mht95	bibliographic_references	termino	lg-spa
 mht65	publications	termino	lg-spa
 mht154	publications	termino	lg-spa
 mht175	publications	termino	lg-spa
+mht126	New	termino	lg-eng

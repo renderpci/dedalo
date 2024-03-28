@@ -656,7 +656,7 @@ export function pause(milliseconds) {
 * @param int threshold = 4
 * @return float font_size
 */
-export const get_font_fit_size = (text, base_size=1.7, threshold=4) => {
+export function get_font_fit_size(text, base_size=1.7, threshold=4) {
 
 	const text_length = String(text).length
 

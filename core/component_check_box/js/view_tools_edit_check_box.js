@@ -69,6 +69,15 @@ const get_content_data = function(self) {
 	// short vars
 		const datalist = self.data.datalist || []
 
+	// datalist: prepare a clean list to render
+		// remove html tags like <mark>
+		datalist.map(el => {
+			el.label = strip_tags(el.label)
+			return el
+		})
+		// sort again by label
+		datalist.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
+
 	// content_data
 		const content_data = ui.component.build_content_data(self, {
 			autoload : true

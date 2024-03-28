@@ -387,7 +387,6 @@ tch184	Ingreso	termino	lg-spa
 tch184	Ingrés	termino	lg-cat
 tch184	Entry	termino	lg-eng
 tch184	Revenu	termino	lg-fra
-tch186	Colección	termino	lg-spa
 tch191	Forma de ingreso	termino	lg-spa
 tch191	Form of entry	termino	lg-eng
 tch178	Conjuntos	termino	lg-spa
@@ -403,9 +402,6 @@ tch194	Fecha de ingreso/referencia recuperación	termino	lg-spa
 tch194	Date of admission/recovery reference	termino	lg-eng
 tch192	Conservador/a	termino	lg-spa
 tch192	Curator	termino	lg-eng
-tch186	Collection	termino	lg-fra
-tch186	Col·lecció	termino	lg-cat
-tch186	Collection	termino	lg-eng
 tch180	Observaciones	termino	lg-spa
 tch180	Observations	termino	lg-fra
 tch180	Observacions	termino	lg-cat
@@ -471,6 +467,10 @@ tch223	PDF documents	termino	lg-eng
 tch223	Documentos PDF	termino	lg-spa
 tch223	Documents PDF	termino	lg-cat
 tch179	Bienes del conjunto	termino	lg-spa
+tch186	Fondo	termino	lg-spa
+tch186	Fond	termino	lg-eng
+tch186	Fons	termino	lg-cat
+tch186	Fond	termino	lg-fra
 tch223	Documents PDF	termino	lg-fra
 tch224	Audiovisuals	termino	lg-eng
 tch224	Audiovisuels	termino	lg-fra
@@ -1298,11 +1298,7 @@ tch497	Initial conservation state	termino	lg-eng
 tch498	Interveciones históricas	termino	lg-spa
 tch498	Interventions historiques	termino	lg-fra
 tch498	Historical interventions	termino	lg-eng
-tch49	Fondo	termino	lg-spa
 tch48	Diffusion	termino	lg-eng
-tch49	Fond	termino	lg-eng
-tch49	Fons	termino	lg-cat
-tch49	Fond	termino	lg-fra
 tch496	Status prior to incorporation into the collection	termino	lg-eng
 tch496	Estat anterior a la incorporació a la col·lecció	termino	lg-cat
 tch496	État avant l'adhésion à la collection	termino	lg-fra
@@ -1368,6 +1364,9 @@ tch506	Biografía del bien	termino	lg-spa
 tch506	Biografia del bé	termino	lg-cat
 tch506	Biography of property	termino	lg-eng
 tch506	Biographie du bien	termino	lg-fra
+tch49	Colección	termino	lg-spa
+tch49	Collection	termino	lg-fra
+tch49	Collection	termino	lg-eng
 tch525	relations	termino	lg-spa
 tch526	ts_onomastic	termino	lg-spa
 tch527	relations	termino	lg-spa
@@ -2033,3 +2032,4 @@ tch297	fund	termino	lg-spa
 tch145	Bienes muebles	termino	lg-spa
 tchi55	Inspecciones / Estado de conservación	termino	lg-spa
 tchi55	Inspections / État de conservation	termino	lg-fra
+tch49	Col·lecció	termino	lg-cat

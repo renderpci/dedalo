@@ -591,6 +591,15 @@ function to_string(mixed $var=null) : string {
 */
 function get_dir_files(string $dir, array $ext, ?callable $processor=null) : array {
 
+	if (!is_dir($dir)) {
+		debug_log(__METHOD__
+			. " WARNING. Ignored non directory to get files " . PHP_EOL
+			. ' dir: ' . to_string($dir)
+			, logger::WARNING
+		);
+		return [];
+	}
+
 	$rii = new RecursiveIteratorIterator(
 		new RecursiveDirectoryIterator( $dir )
 	);

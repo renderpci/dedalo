@@ -52,6 +52,30 @@
 		font-size: 1.25rem;
 	}
 
+// basic page styles
+	.loading {
+		opacity: 0.4;
+		pointer-events: none !important;
+		-webkit-user-select: none !important;
+		-khtml-user-select: none !important;
+		-moz-user-select: none !important;
+		-o-user-select: none !important;
+		user-select: none !important;
+		animation-play-state: paused;
+		/*transition: opacity 0.25s*/
+		cursor: wait;
+	}
+	.hide {
+		display: none !important;
+	}
+	.invisible {
+		visibility: hidden !important;
+		opacity: 0 !important;
+		height: 0 !important;
+		width: 0 !important;
+		padding: 0!important;
+		margin: 0!important;
+	}
 
 // #main
 	#main {
