@@ -6965,7 +6965,6 @@ dd201	Modification date	termino	lg-eng
 dd202	New	termino	lg-eng
 dd203	Word processing processes	termino	lg-eng
 dd205	Process	termino	lg-eng
-dd207	System administration	termino	lg-eng
 dd208	Type of activities	termino	lg-eng
 dd209	Type of activities	termino	lg-eng
 dd210	Type of activities	termino	lg-eng
@@ -8167,8 +8166,8 @@ dd1555	SVG	termino	lg-spa
 dd1555	SVG	termino	lg-deu
 dd1555	SVG	termino	lg-eng
 dd1635	bibliography_data	termino	lg-spa
-dd1637	bibliographic_references	termino	lg-spa
 dd1646	activities	termino	lg-spa
+dd1637	Id	termino	lg-spa
 dd35	प्रक्रियाहरू	termino	lg-nep
 dd1631	RECYCLE DD +	termino	lg-spa
 dd100	थिसौरस	termino	lg-nep
@@ -8616,4 +8615,10 @@ dd1659	Exportation de la hiérarchie	termino	lg-fra
 dd1659	Gerarchia di esportazione	termino	lg-ita
 dd1659	पदानुक्रम निर्यात गर्दै	termino	lg-nep
 dd1659	Εξαγωγή ιεραρχίας	termino	lg-ell
-dd1	Dédalo 2024-03-18T13:05:17+01:00 Benimamet	termino	lg-spa
+dd207	Administration	termino	lg-eng
+dd1637	Id	termino	lg-eng
+dd1637	Id	termino	lg-cat
+dd1637	Id	termino	lg-deu
+dd1637	Id	termino	lg-fra
+dd1637	Id	termino	lg-ita
+dd1	Dédalo 2024-03-28T10:04:19+01:00 Benimamet	termino	lg-spa

@@ -2,7 +2,6 @@ test16	image	termino	lg-spa
 test5	Web CUNY Teach	termino	lg-eng
 test126	New	termino	lg-eng
 test42	Web Teach cuny (DG)	termino	lg-eng
-test1	AREA DE PRUEBAS (TESTS) YYYY	termino	lg-spa
 test126	Nuevo	termino	lg-spa
 test137	section_map	termino	lg-spa
 test138	relation_list	termino	lg-spa
@@ -67,14 +66,12 @@ test105	relation_model	termino	lg-spa
 test103	relation_parent	termino	lg-spa
 test12	select_lang	termino	lg-spa
 test14	section_id2	termino	lg-spa
-test2	Called from Administration menu virtual section	obs	lg-spa
+test1	Area de pruebas (TESTS)	termino	lg-spa
 test200	equivalents para external	termino	lg-spa
 test22	BOX DESACTIVOS	termino	lg-spa
 test24	matrix_test	termino	lg-spa
 test31	geolocation	termino	lg-spa
-test33	autocomplete ts tree	termino	lg-spa
 test37	autocomplete hi all options	termino	lg-spa
-test4	Varios	termino	lg-spa
 test40	Portal mosaic imagen	termino	lg-spa
 test101	filter	termino	lg-spa
 test140	iri	termino	lg-spa
@@ -111,10 +108,6 @@ test18	json	termino	lg-spa
 test102	section_id	termino	lg-spa
 test17	text_area	termino	lg-spa
 test41	view_mosaic	termino	lg-spa
-test44	Portal single line	termino	lg-spa
-test47	autocomplete hi	termino	lg-spa
-test48	Autocomplete	termino	lg-spa
-test49	autocomplete_ts with parents	termino	lg-spa
 test5	Web CUNY Teach	termino	lg-spa
 test55	select	termino	lg-spa
 test61	autocomplete Zenon	termino	lg-spa
@@ -126,7 +119,6 @@ test66	List	termino	lg-spa
 test67	Exclude	termino	lg-spa
 test69	Nótese que el nombre de este alias será usado como el nombre de la tabla, ya que incluye una relación a una sección, por lo que se comportará como una tabla de difusión real excepto porque no posee hijos propios.	obs	lg-spa
 test87	radio_button	termino	lg-spa
-test74	Import kml tesoros numisdata test	termino	lg-spa
 test74	Reference only. Deploy real element when needed	obs	lg-spa
 test78	autocomplete_hi topo	termino	lg-spa
 test81	av	termino	lg-spa
@@ -141,8 +133,6 @@ test39	interview	termino	lg-spa
 test8	informant	termino	lg-spa
 test63	web_cuny_dev	termino	lg-spa
 test59	ts_thematic	termino	lg-spa
-test183	test autocomplete	termino	lg-spa
-test38	Section Test lista	termino	lg-spa
 test188	autocomple busca en autocomplete DES	termino	lg-spa
 test34	Componentes de texto	termino	lg-spa
 test28	Componentes con listas de valores	termino	lg-spa
@@ -165,6 +155,15 @@ test72	security_access	termino	lg-spa
 test6	select	termino	lg-spa
 test50	svg	termino	lg-spa
 test82	text_area	termino	lg-spa
+test183	Test autocomplete	termino	lg-spa
+test38	Test list section	termino	lg-spa
+test74	listado	termino	lg-spa
+test33	Borrar	termino	lg-spa
+test47	Borrar	termino	lg-spa
+test44	Countermarks case (numisdata575)	termino	lg-spa
+test4	Countermarks case (service_autocomplete)	termino	lg-spa
+test49	Observe cases (properties defined events)	termino	lg-spa
+test48	Toponomy	termino	lg-spa
 test70	filter_master	termino	lg-spa
 test19	myglobaltable	termino	lg-spa
 test9	location for map	termino	lg-spa
@@ -181,7 +180,6 @@ test88	check_box	termino	lg-spa
 test98	text área para imagen	termino	lg-spa
 test97	Text area para pdf	termino	lg-spa
 test68	inverse	termino	lg-spa
-test2	Test section E	termino	lg-spa
 test202	soy autocomplete_hi	termino	lg-spa
 test3	Section used to run v6 test unit only. Don't use this section to make another user test	obs	lg-spa
 test52	Translatable	obs	lg-spa
@@ -217,7 +215,6 @@ test172	Rango de fechas	termino	lg-spa
 test99	image	termino	lg-spa
 test80	portal	termino	lg-spa
 test89	select_lang	termino	lg-spa
-test4	Various	termino	lg-eng
 test153	dedalo_edu	termino	lg-spa
 test154	ts_web	termino	lg-spa
 test122	Projects	termino	lg-eng
@@ -234,7 +231,6 @@ test125	security_access	termino	lg-spa
 test201	relation_children	termino	lg-spa
 test213	section list thesaurus	termino	lg-spa
 test118	section_list_thesaurus_indexation	termino	lg-spa
-test189	test autocomplete thesauro	termino	lg-spa
 test96	Delete	termino	lg-eng
 test214	radio_button rating	termino	lg-spa
 test215	external	termino	lg-spa
@@ -243,3 +239,9 @@ test3	Unit Test Section (using matrix_test table)	termino	lg-spa
 test209	unit_test_diffusion	termino	lg-spa
 test10	email	termino	lg-spa
 test21	unit_test_diffusion	termino	lg-spa
+test1	Test area (TESTS)	termino	lg-eng
+test189	Test autocomplete thesaurus	termino	lg-spa
+test2	Test section reference cases	termino	lg-spa
+test2	Test section reference cases	termino	lg-eng
+test33	Delete	termino	lg-eng
+test47	New	termino	lg-eng
