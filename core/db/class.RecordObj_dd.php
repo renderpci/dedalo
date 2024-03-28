@@ -670,12 +670,13 @@ class RecordObj_dd extends RecordDataBoundObject {
 	/**
 	* GET_AR_ALL_TERMINOID_OF_MODELO_TIPO
 	*/
-	public static function get_ar_all_terminoID_of_modelo_tipo(string $modelo_tipo) : array {
+	public static function get_ar_all_terminoID_of_modelo_tipo(string $modelo_tipo, bool $use_cache=true) : array {
 
 		# SEARCH
 		$arguments=array();
 		$arguments['modelo']	= $modelo_tipo;
 		$RecordObj_dd			= new RecordObj_dd(NULL,'dd');
+			$RecordObj_dd->use_cache = $use_cache;
 		$ar_id					= (array)$RecordObj_dd->search($arguments);
 
 		$ar_all_terminoID=array();
@@ -697,7 +698,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 	* @return array $ar_childrens_of_this
 	*/
-	public function get_ar_childrens_of_this($esdescriptor='si', string $esmodelo=null, $order_by='norden') : array {
+	public function get_ar_childrens_of_this($esdescriptor='si', string $esmodelo=null, $order_by='norden', bool $use_cache=true) : array {
 
 		# COMPROBACIÓN
 		if(empty($this->terminoID))	{
@@ -708,7 +709,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 		# STATIC CACHE
 		static $ar_childrens_of_this_stat_data;
 		$key = $this->terminoID.'_'.$esdescriptor.'_'.$esmodelo.'_'.$order_by;
-		if(isset($ar_childrens_of_this_stat_data[$key])) {
+		if(isset($ar_childrens_of_this_stat_data[$key]) && $use_cache===true) {
 			#error_log("Returned from cache get_ar_childrens_of_this - $key");
 			return $ar_childrens_of_this_stat_data[$key];
 		}
@@ -727,6 +728,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		if (!empty($order_by)) {
 			$arguments['order_by_asc']	= $order_by;
 		}
+
+		$this->use_cache = $use_cache;
 
 		$ar_childrens_of_this = (array)$this->search($arguments);
 		if(SHOW_DEBUG===true) {
@@ -818,7 +821,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* GET_AR_RECURSIVE_CHILDRENS : Static version
 	* No hay aumento de velocidad apreciable entre la versión estática y dinámica. Sólo una reducción de unos 140 KB en el consumo de memoria
 	*/
-	public static function get_ar_recursive_childrens(string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null) : array {
+	public static function get_ar_recursive_childrens(string $terminoID, bool $is_recursion=false, array $ar_exclude_models=null, string $order_by=null, bool $use_cache=true) : array {
 
 		$ar_resolved=array();
 
@@ -831,7 +834,8 @@ class RecordObj_dd extends RecordDataBoundObject {
 		$ar_childrens		= (array)$RecordObj_dd->get_ar_childrens_of_this(
 			'si', // string esdescriptor
 			null, // string esmodelo
-			$order_by // string order_by
+			$order_by, // string order_by
+			$use_cache
 		);
 		$ar_childrens_size	= sizeof($ar_childrens);
 
@@ -850,7 +854,10 @@ class RecordObj_dd extends RecordDataBoundObject {
 			}
 
 			# Recursion
-			$ar_resolved = array_merge( $ar_resolved, (array)RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models, $order_by) );
+			$ar_resolved = array_merge(
+				$ar_resolved,
+				RecordObj_dd::get_ar_recursive_childrens($current_terminoID, true, $ar_exclude_models, $order_by, $use_cache)
+			);
 		}
 
 		return $ar_resolved;
@@ -1342,6 +1349,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 		return ($translatable==='si');
 	}//end get_translatable
+
 
 
 	/**

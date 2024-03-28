@@ -1186,4 +1186,46 @@ final class dd_area_maintenance_api {
 
 
 
+	/**
+	* GET_SIMPLE_SCHEMA_CHANGES_FILES
+	* Used to call the hierarchy function by client
+	* get the last list of files with the changes in ontology
+	* @return object $response
+	*/
+	public static function get_simple_schema_changes_files() : object {
+
+		$response = new stdClass();
+			$response->result	= hierarchy::get_simple_schema_changes_files();
+			$response->msg		= 'Ok.';
+
+		return $response;
+	}//end get_simple_schema_changes_files
+
+
+
+	/**
+	* PARSE_SIMPLE_SCHEMA_CHANGES_FILES
+	* Used to call the hierarchy function by client
+	* get the parse data of specific file send by client in the rqo->options->filename
+	* @param object $rqo
+	* @return object $response
+	* response>result will be the array of changes/additions into the ontology since last update section by section.
+	*/
+	public static function parse_simple_schema_changes_files(object $rqo) : object {
+
+		// options
+			$options	= $rqo->options;
+			$filename	= $options->filename;
+
+		$changes = hierarchy::parse_simple_schema_changes_file($filename);
+
+		$response = new stdClass();
+			$response->result = $changes;
+			$response->msg = 'OK';
+
+		return $response;
+	}//end parse_simple_schema_changes_files
+
+
+
 }//end dd_area_maintenance_api
