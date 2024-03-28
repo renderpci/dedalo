@@ -209,17 +209,65 @@ class component_security_access extends component_common {
 
 		// get all ontology nodes inside the main section (section_groups, components, tabs, sections, etc.)
 		$children_recursive = self::get_children_recursive_security_acces($section_tipo, $ar_tipo_to_be_exclude);
-		foreach ($children_recursive as $current_child) {
 
+
+		// v6
+		// see if the section has a ddo_map defined
+			$ontology_node		= new RecordObj_dd($section_tipo);
+			$section_properties	= $ontology_node->get_properties();
+			// check section properties request_config
+			if(isset($section_properties->source) && isset($section_properties->source->request_config)){
+				// v6 children
+				$v6_children = [];
+				foreach ($section_properties->source->request_config as $item_request_config) {
+					$ddo_map = $item_request_config->show->ddo_map;
+					if(isset($ddo_map)){
+						$v6_children = array_filter($ddo_map, function($el) use ($section_tipo){
+							return ($el->parent === 'self' || $el->parent === $section_tipo);
+						});
+					}
+				}
+
+				// with request_config case list
+				$children_list = [];
+
+				// create the children list of the v6 components
+				foreach ($v6_children as $ddo) {
+					$item = (object)[
+						'tipo'			=> $ddo->tipo,
+						'section_tipo'	=> $section_tipo,
+						'model'			=> RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo, true),
+						'label'			=> RecordObj_dd::get_termino_by_tipo($ddo->tipo, DEDALO_APPLICATION_LANG, true, true),
+						'parent'		=> $ddo->parent_grouper ?? $section_tipo
+					];
+					$children_list[] = $item;
+				}
+
+				// add 'default' calculated items excluding components and section_groups
+				foreach ($children_recursive as $current_item) {
+					if (strpos($current_item->model, 'component_')===0 || $current_item->model==='section_group'){
+						continue;
+					}
+					$children_list[] = $current_item;
+				}
+
+			}else{
+
+				// default case list
+				$children_list = $children_recursive;
+			}
+
+
+		foreach ($children_list as $current_child) {
 			// add
-				$item = (object)[
-					'tipo'			=> $current_child->tipo,
-					'section_tipo'	=> $section_tipo,
-					'model'			=> $current_child->model,
-					'label'			=> $current_child->label,
-					'parent'		=> $current_child->parent
-				];
-				$datalist[] = $item;
+			$item = (object)[
+				'tipo'			=> $current_child->tipo,
+				'section_tipo'	=> $section_tipo, // force current section_tipo
+				'model'			=> $current_child->model,
+				'label'			=> $current_child->label,
+				'parent'		=> $current_child->parent
+			];
+			$datalist[] = $item;
 		}
 
 		// duplicates check
@@ -264,8 +312,7 @@ class component_security_access extends component_common {
 			case 'section':
 
 				$section_tipo				= $tipo;
-				$ar_modelo_name_required	= array('section_group','section_tab','tab','button_','relation_list','time_machine_list','component_');
-
+				$ar_modelo_name_required	= ['section_group','section_tab','tab','button_','relation_list','time_machine_list','component_'];
 				// real section
 					$ar_ts_children = section::get_ar_children_tipo_by_model_name_in_section(
 						$section_tipo, // string section_tipo
@@ -306,7 +353,8 @@ class component_security_access extends component_common {
 				'search_list',
 				'component_semantic_node',
 				'box_elements',
-				'exclude_elements'
+				'exclude_elements',
+				'edit_view'
 			);
 
 		// ar_exclude_components
