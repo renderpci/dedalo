@@ -2158,6 +2158,109 @@ class hierarchy {
 	}//end build_simple_schema_changes
 
 
+	/**
+	* GET_SIMPLE_SCHEMA_CHANGES_FILES
+	* @return array $filenames
+	*/
+	public static function get_simple_schema_changes_files() : array {
+
+		$dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+
+		$all_files = get_dir_files($dir_path, ['json']);
+
+		$files = [];
+		foreach ($all_files as $dir_file) {
+			$files[] = basename($dir_file);
+		}
+
+		arsort($files);
+
+		$filenames = array_values($files);
+
+		return $filenames;
+	}//end get_simple_schema_changes_files
+
+
+
+	/**
+	* PARSE_SIMPLE_SCHEMA_CHANGES_FILE
+	* Open the file specified into $filename variable and parse it into a simple schema changes.
+	* Simple schema changes is a array of objects with section as main node, his parents and his children.
+	* all nodes has the tipo and his label.
+	* section is a object
+	* parents is a array of objects
+	* children is a array of objects
+	* [{
+	* 	"section 	: {"tipo":"oh1","label":"Oral History"},
+	* 	"parents"	: [{"tipo":"dd323","lqbel":"Imaterial"},{"tipo":"dd355","label":"Cultural"}]
+	* 	"children"	: [{"tipo":"oh2","lqbel":"Identification"},{"tipo":"oh14","label":"Code"}]
+	* "}]
+	* @param string $filename
+	* @return array $data
+	*/
+	public static function parse_simple_schema_changes_file($filename) : array {
+
+		$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+		$file_path = $simple_schema_dir_path.$filename;
+
+		$file_contents =  file_get_contents($file_path);
+
+		if(empty($file_contents)){
+			return [];
+		}
+
+		$data = json_decode($file_contents);
+
+		if(empty($data)){
+			return [];
+		}
+
+
+		$changes = [];
+		foreach ($data as $current_section) {
+
+			// section
+			$section_item = new stdClass();
+				$section_item->tipo		= $current_section->tipo;
+				$section_item->label	= RecordObj_dd::get_termino_by_tipo($current_section->tipo);
+
+			// parents
+				$parents		= [];
+				$RecordObj_dd	= new RecordObj_dd($current_section->tipo);
+				$parents_tipo	= $RecordObj_dd->get_ar_parents_of_this();
+				foreach ($parents_tipo as $parent_tipo) {
+
+					$parent_item = new stdClass();
+						$parent_item->tipo = $parent_tipo;
+						$parent_item->label = RecordObj_dd::get_termino_by_tipo($parent_tipo);
+
+						$parents[] = $parent_item;
+				}
+
+			// children
+				$children		= [];
+				$children_tipo	= $current_section->children_added;
+				foreach ($children_tipo as $child_tipo) {
+
+					$child_item = new stdClass();
+						$child_item->tipo = $child_tipo;
+						$child_item->label = RecordObj_dd::get_termino_by_tipo($child_tipo);
+
+						$children[] = $child_item;
+				}
+
+			$item = (object)[
+				'section'	=> $section_item,
+				'parents'	=> $parents,
+				'children'	=> $children
+			];
+
+			$changes[] = $item;
+		}
+
+		return $changes;
+	}//end parse_simple_schema_changes_file
+
 
 
 }//end class hierarchy
