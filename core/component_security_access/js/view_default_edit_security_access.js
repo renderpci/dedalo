@@ -120,7 +120,7 @@ const get_content_data = async function(self) {
 	// Read only
 		 if(self.permissions === 1){
 		 	// tree_nodes. create nodes and add to tree_object
-			const tree_nodes = await render_tree_items_read(
+			const tree_nodes = render_tree_items_read(
 				root_level_items, // array of objects as [{"label":"Inventory","model":"area_root","parent":"dd1","section_tipo":"dd242","tipo":"dd242"},...]
 				datalist, // array of objects. Full items list
 				value, // array of objects. Full list of data as [{"section_tipo":"mupi2","tipo":"mupi23","value":2},...]
@@ -310,7 +310,6 @@ const render_tree_item = function(item, datalist, value, self) {
 */
 const render_area_item = function(item, datalist, value, self) {
 
-
 	// direct_children check and set
 		const tipo					= item.tipo
 		const section_tipo			= item.section_tipo
@@ -350,7 +349,7 @@ const render_area_item = function(item, datalist, value, self) {
 				// nothing to do
 			}
 		}
-		// update value, subscription to the changes: if the dom input value was changed, observers dom elements will be changed own value with the observable value
+		// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
 			self.events_tokens.push(
 				event_manager.subscribe(
 					'update_item_value_' + self.id + '_' + tipo + '_' + section_tipo,
@@ -358,7 +357,7 @@ const render_area_item = function(item, datalist, value, self) {
 			)
 			function fn_update_value(changed_data) {
 				// console.log("-------------- - event update_value changed_data:", changed_data);
-				// change the value of the current dom element
+				// change the value of the current DOM element
 				if (changed_data>=2) {
 					input_checkbox.checked			= true
 					input_checkbox.indeterminate	= false

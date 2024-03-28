@@ -38,10 +38,11 @@ const t0 = performance.now()
 
 		// check environment
 			if (typeof page_globals==='undefined') {
-				document.getElementById('main').innerHTML = `
-				<div class="maintenance_container">
-					Error: the environment is not available. Check your configuration files
-				</div>`
+				const error_node = render_server_response_error([{
+					msg		: 'Error: the environment is not available. Check your server configuration files',
+					error	: null
+				}], false)
+				document.getElementById('main').appendChild(error_node)
 				return
 			}
 
