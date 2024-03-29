@@ -1167,6 +1167,7 @@ const render_changes_files_selector = function (options) {
 				return
 			}
 
+
 			ui.load_item_with_spinner({
 				container	: changes_data_container,
 				label		: get_label.changes || 'changes',
@@ -1181,7 +1182,6 @@ const render_changes_files_selector = function (options) {
 						self			: self,
 						ul				: ul
 					})
-
 					return changes_data_node
 				}
 			})
@@ -1251,92 +1251,113 @@ const render_changes_data =function (options) {
 	for (let i = 0; i < data_len; i++) {
 		const current_section = changes_data[i]
 
+		const change_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'change',
+			parent 			: fragment
+		})
+
 		// parents
 		// remove the main ontology node 'dd1'
-		const parents = current_section.parents.filter(el => el.tipo !== 'dd1')
-		const parents_labels = parents.map(el => el.label).join(' > ')
+			const parents = current_section.parents.filter(el => el.tipo !== 'dd1')
+			const parents_labels = parents.map(el => el.label).join(' > ')
 
-		const parents_labels_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'parents_labels',
-			inner_html		: parents_labels,
-			parent 			: fragment
-		})
+			const parents_labels_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'parents_labels',
+				inner_html		: parents_labels,
+				parent 			: change_container
+			})
 
 		//section
-		const section_label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'section_label',
-			inner_html		: current_section.section.label,
-			parent 			: fragment
-		})
-		// when the user click into the section label active all parent nodes and the section
-		// open all nodes and load the section to show all components.
-		// this event show the tree as if the user had clicked on the path items (open the tree nodes)
-		section_label.addEventListener('mouseup',async function(e){
+			const section_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'section_label',
+				inner_html		: current_section.section.label,
+				parent 			: change_container
+			})
+			// when the user click into the section label active all parent nodes and the section
+			// open all nodes and load the section to show all components.
+			// this event show the tree as if the user had clicked on the path items (open the tree nodes)
+			section_label.addEventListener('mouseup',async function(e){
 
-			const section_tipo = current_section.section.tipo
+				const section_tipo = current_section.section.tipo
 
-			// fix
-			self.selected_tipo = section_tipo
+				// fix
+				self.selected_tipo = section_tipo
 
-			// set the parents into local_db to mark it to be open
-			for (let i = 0; i < parents.length; i++) {
+				change_container.classList.add('selected')
 
-				const current_parent = parents[i].tipo
-				// add record to local DB
-					const data = {
-						id		: 'security_acccess_'+current_parent,
-						value	: false
-					}
+				// set the parents into local_db to mark it to be open
+				for (let i = 0; i < parents.length; i++) {
+
+					const current_parent = parents[i].tipo
+					// add record to local DB
+						const data = {
+							id		: 'security_acccess_'+current_parent,
+							value	: false
+						}
+						await data_manager.set_local_db_data(
+							data,
+							'status'
+						)
+				}
+				// set the section tipo into local_db to mark it to be open
 					await data_manager.set_local_db_data(
-						data,
+						{
+							id		: 'security_acccess_'+section_tipo,
+							value	: false
+						},
 						'status'
 					)
-			}
-			// set the section tipo into local_db to mark it to be open
-			await data_manager.set_local_db_data(
-				{
-					id		: 'security_acccess_'+section_tipo,
-					value	: false
-				},
-				'status'
-			)
 
-			// get the main children to render all of them (as first loading)
-			const items = datalist.filter(el => el.parent === 'dd1')
+				// get the main children to render all of them (as first loading)
+				const items = datalist.filter(el => el.parent === 'dd1')
 
-			// remove old rendered nodes
-			while (ul.firstChild) {
-				ul.removeChild(ul.firstChild);
-			}
-			// render the tree and fill the main ul
-			// when the render check the nodes will be open the parents and the section to show it
-			const node = render_tree_items(items, datalist, value, self)
-			ul.appendChild(node)
-		})
+				// get the size of the tree container and set as min height to maintain the changes container with his height
+					const ul_size	= ul.getBoundingClientRect()
+					const ul_height	= ul_size.height
+
+					ul.style.minHeight = ul_height+'px'
+
+				// remove old rendered nodes
+					while (ul.firstChild) {
+						ul.removeChild(ul.firstChild);
+					}
+
+
+				// render the tree and fill the main ul
+				// when the render check the nodes will be open the parents and the section to show it
+					const node = render_tree_items(items, datalist, value, self)
+					ul.appendChild(node)
+
+				// remove the min_heigth when the component was rendered (+/- 1.5seg)
+					setTimeout(function() {
+						ul.style.minHeight = ''
+					}, 1500);
+			})
 
 		//children
 		// show the children additions
-		const children_container = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'children_container',
-			parent 			: fragment
-		})
-
-		const children = current_section.children
-		const children_length = children.length
-
-		for (let i = 0; i < children_length; i++) {
-			const current_child = children[i]
-
-			const child_label = ui.create_dom_element({
-				element_type	: 'li',
-				class_name		: 'child_label',
-				inner_html		: current_child.label,
-				parent 			: children_container
+			const children_container = ui.create_dom_element({
+				element_type	: 'ul',
+				class_name		: 'children_container',
+				parent 			: change_container
 			})
-		}
+
+			const children = current_section.children
+			const children_length = children.length
+
+			for (let i = 0; i < children_length; i++) {
+				const current_child = children[i]
+
+				const child_label = ui.create_dom_element({
+					element_type	: 'li',
+					class_name		: 'child_label',
+					inner_html		: current_child.label,
+					parent 			: children_container
+				})
+			}
 	}
 
 	return fragment;
