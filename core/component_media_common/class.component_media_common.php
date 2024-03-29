@@ -959,8 +959,11 @@ class component_media_common extends component_common {
 						if (!isset($file_info->extension)) {
 							// dump($file_info, ' file_info without extension info: ++ '.to_string());
 							debug_log(__METHOD__
-								. " file_info without extension info " . PHP_EOL
-								. ' file_info: ' . to_string($file_info)
+								. ' file_info without extension info ' . PHP_EOL
+								. ' file_info: ' . to_string($file_info) . PHP_EOL
+								. ' tipo: ' . $this->tipo . PHP_EOL
+								. ' section_id: ' . to_string($this->section_id) . PHP_EOL
+								. ' component: ' . get_called_class()
 								, logger::ERROR
 							);
 						}
