@@ -237,7 +237,7 @@ const render_maintenance_msg = function() {
 	const maintenance_msg = ui.create_dom_element({
 		element_type	: 'span',
 		class_name		: 'maintenance_msg',
-		inner_html		: get_label.site_under_maintenance || 'System in maintenance',
+		inner_html		: '<span style="font-size:2rem"> 👩🏽‍💻 </span> ' + (get_label.site_under_maintenance || 'System in maintenance'),
 		parent			: maintenance_container
 	})
 
