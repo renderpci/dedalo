@@ -3090,6 +3090,14 @@ abstract class common {
 										continue;
 									}
 
+								// model. Calculated always to prevent errors
+									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
+
+								// list mode exclude groupers (see case section test2)
+									if ($this->mode==='list' && strpos($current_ddo->model, 'section_group')!==false) {
+										continue;
+									}
+
 								// label. Add to all ddo_map items
 									if (!isset($current_ddo->label)) {
 										$current_ddo->label = RecordObj_dd::get_termino_by_tipo($current_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
@@ -3117,9 +3125,6 @@ abstract class common {
 											? 'list'
 											: $mode;
 									}
-
-								// model. Calculated always to prevent errors
-									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
 
 								// fields_map. Used by component external to map to different API format, defined in the component,
 								// when this property is present and true, get the component fields_map
