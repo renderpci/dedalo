@@ -1621,6 +1621,8 @@ abstract class backup {
 			$user_id				= $options->user_id ?? logged_user_id();
 			$username				= $options->username ?? logged_user_username();
 			$skip_backup_time_range	= $options->skip_backup_time_range ?? true;
+			// async. On false, the function wait until process is finish
+			$async					= $options->async ?? true;
 
 		// response
 			$response = new stdClass();
@@ -1665,7 +1667,9 @@ abstract class backup {
 				$php_command = PHP_BIN_PATH ." $process_file '$server_vars'";
 
 			// final command
-				$command = 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!';
+				$command = $async===false
+					? $php_command
+					: 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!'; // default case
 
 			// debug
 				debug_log(__METHOD__.
@@ -1675,11 +1679,18 @@ abstract class backup {
 				);
 
 			// exec command
-				$PID = exec($command);
+				$result = exec($command);
 
-
-		$response->result	= $PID;
-		$response->msg		= 'Making backup in background. PID: ' .to_string($PID);
+		// response
+			if ($async===false) {
+				// waiting result case
+				$response->result	= $result;
+				$response->msg		= 'Request done: ' .to_string($result);
+			}else{
+				// default
+				$response->result	= $result; // PID
+				$response->msg		= 'Making backup in background. PID: ' .to_string($result);
+			}
 
 
 		return $response;
