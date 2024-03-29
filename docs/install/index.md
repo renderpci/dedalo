@@ -159,9 +159,9 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         > Optional: if you want you can use xpdf utils instead poppler.
 
         ```shell
-        wget https://dl.xpdfreader.com/xpdf-tools-linux-4.04.tar.gz
-        tar xpvf  xpdf-tools-linux-4.03.tar.gz
-        sudo mv pdf* /usr/local/bin
+        wget https://dl.xpdfreader.com/xpdf-tools-linux-4.05.tar.gz
+        tar xpvf xpdf-tools-linux-4.05.tar.gz
+        sudo mv xpdf-tools-linux-4.05/bin64/pdf* /usr/local/bin
         ```
 
 3. Download Dédalo and place it under the httpdocs directory of the web server.
