@@ -1987,7 +1987,8 @@ abstract class backup {
 						return $response;
 					}
 			}
-		//get current simple schema of sections, will use to compare with the new schema
+
+		// simple_schema_of_sections. Get current simple schema of sections, will use to compare with the new schema
 			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
 
 		// EXPORT. Before import, EXPORT ;-)

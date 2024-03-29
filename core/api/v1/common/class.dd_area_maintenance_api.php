@@ -19,15 +19,9 @@ final class dd_area_maintenance_api {
 	*/
 	public static function make_backup(object $rqo) : object {
 
-		// session_write_close();
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-
-		$response->result	= backup::make_backup();
-		$response->msg		= 'OK. Request done';
+		$response = backup::make_backup((object)[
+			'async' => true
+		]);
 
 
 		return $response;
