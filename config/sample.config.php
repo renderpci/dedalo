@@ -115,13 +115,18 @@
 
 
 
+// SESSIONS
+	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
+
+
+
 // cache
 	// dedalo_cache_manager. bool|array.
 	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
 	// sample: value ['manager' => 'files', 'files_path' => '/tmp']
 	define('DEDALO_CACHE_MANAGER', [
 		'manager'		=> 'files',
-		'files_path'	=> '/tmp'
+		'files_path'	=> DEDALO_SESSIONS_PATH
 	]);
 
 
@@ -162,7 +167,7 @@
 		session_start_manager([
 			'save_handler'				=> 'files',
 			'timeout_seconds'			=> $timeout_seconds,
-			'save_path'					=> '/tmp', // string optional
+			'save_path'					=> DEDALO_SESSIONS_PATH,
 			// 'additional_save_path'	=> false, bool optional
 			'prevent_session_lock'		=> defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
 			'session_name'				=> 'dedalo_'.DEDALO_ENTITY,
