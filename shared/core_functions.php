@@ -1420,6 +1420,45 @@ function safe_sql_query(string $sql_query) : string {
 
 
 /**
+* CHECK_SESSIONS_DIRECTORY
+* Verify the existence of target session directory.
+* If not already exists, it creates a new one
+* @return bool
+*/
+function check_sessions_directory() : bool {
+
+	$folder_path = defined('DEDALO_SESSIONS_PATH')
+		? DEDALO_SESSIONS_PATH
+		: @session_save_path();
+
+	// Target folder exists test
+	if(!is_dir($folder_path) ) {
+
+		// try to create it
+		if(!mkdir($folder_path, 0750, true)) {
+
+			// error (use trigger_error here because log manager is not ready yet)
+			trigger_error(__METHOD__
+				.' Error on read or create sessions directory. Permission denied' . PHP_EOL
+				.' folder_path: ' .$folder_path
+			);
+
+			return false;
+		}
+
+		// OK. Directory created (use error_log here because log manager is not ready yet)
+		error_log(__METHOD__
+			." CREATED DIR: $folder_path  "
+		);
+	}
+
+
+	return true;
+}//end check_sessions_directory
+
+
+
+/**
 * SESSION_START_MANAGER
 * Starts a session with a specific timeout and a specific GC probability.
 * @param int $timeout The number of seconds until it should time out.
@@ -1513,14 +1552,28 @@ function session_start_manager(array $request_options) : bool {
 					ini_set('session.gc_divisor', $gc_divisor); // Should always be 100
 				}
 
-			// session_start. Start the session!
-				if ($options->prevent_session_lock===true) {
-					// read only but non locking session
-					session_start([
-						'read_and_close' => true
-					]);
-				}else{
-					session_start();
+			// session start
+				$session_ok = function() use($options) {
+
+					if ($options->prevent_session_lock===true) {
+						// read only but non locking session
+						return @\session_start([
+							'read_and_close' => true
+						]);
+					}else{
+						return @\session_start();
+					}
+				};
+				if ($session_ok()!==true) {
+					if (defined('DEDALO_SESSIONS_PATH')) {
+						if( !check_sessions_directory() ){
+							die('Unable to write sessions. Review your permissions for sessions directory path 1');
+						}
+						// try again
+						$session_ok();
+					}else{
+						die('Unable to write sessions. Review your permissions for sessions directory path 2');
+					}
 				}
 
 			// cookie

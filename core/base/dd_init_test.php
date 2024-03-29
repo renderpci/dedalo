@@ -59,6 +59,44 @@
 
 
 
+// SESSIONS
+	if (defined('DEDALO_SESSIONS_PATH')) {
+		// verify directory already exists
+		if( !check_sessions_directory() ){
+			die('Unable to write sessions. Review your permissions for sessions directory path');
+		}
+		// clean old files (sessions and caches)
+		$cache_life	= 2 * 24 * 60 * 60; // caching time, in seconds - 2 days -
+		$files		= glob(DEDALO_SESSIONS_PATH . '/*');
+		foreach($files as $file) {
+
+			// time in seconds (number of seconds since the Unix Epoch (January 1 1970 00:00:00 GMT))
+			$date_now		= time();
+			$date_modified	= filemtime($file);
+
+			if ( ($date_now - $date_modified) >= $cache_life ) {
+				$deleted = unlink($file);
+				if( !$deleted ) {
+					debug_log(__METHOD__
+						. " Error deleting cache file " . PHP_EOL
+						. ' file: ' . to_string($file)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+				debug_log(__METHOD__
+					. " Deleted cache file " . PHP_EOL
+					. ' file: ' . to_string($file) .PHP_EOL
+					. ' date_modified: ' . to_string($date_modified)
+					, logger::WARNING
+				);
+			}
+		}
+	}
+
+
+
 // BACKUPS
 	// Target folder exists test
 	$folder_path = DEDALO_BACKUP_PATH;
@@ -849,7 +887,30 @@
 	}else{
 
 		$files_path = DEDALO_CACHE_MANAGER['files_path'] ?? null;
-		if ( !is_dir($files_path) ) {
+
+		// create directory if is not already created
+			if (!empty($files_path)) {
+				if ( !is_dir($files_path) ) {
+					if(!mkdir($files_path, 0750, true)) {
+						debug_log(__METHOD__
+							." Error creating files_path path: " . $files_path
+							, logger::ERROR
+						);
+
+						$init_response->msg[]	= 'Warning: Unable to create cache dir: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
+						$init_response->errors	= true;
+						debug_log(__METHOD__
+							."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
+							.' files_path: ' . $files_path
+							, logger::ERROR
+						);
+
+						return $init_response;
+					}
+				}
+			}
+
+		if (!empty($files_path) && !is_dir($files_path) ) {
 
 			$init_response->msg[]	= 'Warning: Cache dir unavailable at: '.$files_path . PHP_EOL . ' Check your DEDALO_CACHE_MANAGER config to fix it';
 			$init_response->errors	= true;
