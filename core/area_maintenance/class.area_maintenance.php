@@ -671,7 +671,7 @@ class area_maintenance extends area_common {
 			}
 
 			// regex search
-			preg_match_all('/[^\/\/ ]define\(\'(\S*)\',.*/', $input_lines, $output_array);
+			preg_match_all('/[^\/\/ #]define\(\'(\S*)\',.*/', $input_lines, $output_array);
 
 			// check every constant from config
 				$constants_list	= $output_array[1] ?? [];
