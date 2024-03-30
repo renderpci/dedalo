@@ -1222,4 +1222,19 @@ final class dd_area_maintenance_api {
 
 
 
+	/**
+	* REBUILD_DB_INDEXES
+	* Force to re-build the PostgreSQL main indexes, extensions and functions
+	* @return object $response
+	* response>result will be the array of changes/additions into the ontology since last update section by section.
+	*/
+	public static function rebuild_db_indexes() : object {
+
+		$response = area_maintenance::rebuild_db_indexes();
+
+		return $response;
+	}//end rebuild_db_indexes
+
+
+
 }//end dd_area_maintenance_api
