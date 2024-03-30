@@ -1436,7 +1436,7 @@ abstract class component_common extends common {
 
 		// current_observer. Get the current observe preference in ontology to be processed
 			$current_observer = array_find($ar_observe, function($item) use ($observable_tipo){
-				return $item->component_tipo === $observable_tipo;
+				return $item->component_tipo === $observable_tipo || $item->component_tipo === 'all';
 			});
 
 		// empty observer->server case
