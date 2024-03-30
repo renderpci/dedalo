@@ -154,16 +154,6 @@ class js {
 				$added_component_text_area_commons = true;
 			}
 
-			# Si se carga un componente html_text cargamos la librería tinymce y especiíficas
-			#if( strpos($url,'component_html_text')!== false && !isset($added_component_html_text_commons) && navigator::get_selected('modo')!=='list' ) {
-			#	# Tinymce
-			#	$html .= self::build_tag( TEXT_EDITOR_URL_JS );
-			#
-			#	$html .= self::build_tag( DEDALO_CORE_URL . '/component_html_text/js/component_html_text_editor.js' );
-			#	#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js' );
-			#	$added_component_html_text_commons = true;
-			#}
-
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false)

@@ -89,7 +89,7 @@ export function group_objects_by(xs, key) {
 * WAIT_FOR_GLOBAL
 * Waits for global is available with timeout
 * @param string name
-*	global name like 'tinymce'
+*	global name like 'Leaftlet L.'
 * @param int timeout
 *	time limit to wait in seconds
 * @return promise
