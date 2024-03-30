@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
@@ -89,8 +90,54 @@ const get_content_data_edit = async function(self) {
 	// version
 		ui.create_dom_element({
 			element_type	: 'pre',
-			class_name		: '',
+			class_name		: 'version_info',
 			inner_html		: JSON.stringify(info, null, 2),
+			parent			: content_data
+		})
+
+	// re-build indexes
+		const button_rebuild_indexes = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_rebuild_indexes',
+			inner_html		: 'Re-build indexes',
+			parent			: content_data
+		})
+		button_rebuild_indexes.addEventListener('click', async function(e) {
+			e.stopPropagation();
+
+			if (!confirm(get_label.seguro || 'Sure?')) {
+				return
+			}
+
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'rebuild_db_indexes',
+					options	: {}
+				}
+			})
+
+			// remove annoying rqo_string from object
+			if (api_response && api_response.debug && api_response.debug.rqo_string) {
+				delete api_response.debug.rqo_string
+			}
+
+			while (info_node.firstChild) {
+				info_node.removeChild(info_node.firstChild);
+			}
+			const response_node = ui.create_dom_element({
+				element_type	: 'pre',
+				class_name		: 'response_node',
+				inner_html		: JSON.stringify(api_response, null, 2),
+				parent			: info_node
+			})
+		})
+
+	// info_node
+		const info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_node',
 			parent			: content_data
 		})
 
