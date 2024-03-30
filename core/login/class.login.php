@@ -166,7 +166,9 @@ class login extends common {
 				DEDALO_USER_PASSWORD_TIPO,
 				$section_id,
 				'list',
-				DEDALO_DATA_NOLAN,DEDALO_SECTION_USERS_TIPO
+				DEDALO_DATA_NOLAN,
+				DEDALO_SECTION_USERS_TIPO,
+				false
 			);
 			$ar_password_dato	= $component_password->get_dato();
 			$password_dato		= is_array($ar_password_dato)

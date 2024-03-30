@@ -84,7 +84,7 @@ export const render_popup_text = function(ar_text_obj) {
 		// text_node
 			ui.create_dom_element({
 				element_type	: 'span',
-				inner_html		: label + ' ' +messure,
+				inner_html		: label + ' ' + messure,
 				parent			: text_container
 			})
 
@@ -105,6 +105,11 @@ export const render_popup_text = function(ar_text_obj) {
 
 /**
 * RENDER_COLOR_PICKER
+* Render a new iro.ColorPicker to allow user change
+* item selected color
+* @param object self
+* @param object layer
+* @param string layer_id
 * @return HTMLElement color_container
 */
 export const render_color_picker = function(self, layer, layer_id) {
@@ -174,7 +179,8 @@ export const render_color_picker = function(self, layer, layer_id) {
 			]
 		}
 	)//end new iro.ColorPicker
-	button_color_picker.addEventListener('mouseup', () =>{
+	button_color_picker.addEventListener('mouseup', (e) =>{
+		e.stopPropagation()
 		color_wheel_contaniner.classList.toggle('hide')
 	})
 	// color:change event callback
