@@ -8,6 +8,7 @@
 
 // local vars
 @tool_color: #17a2b8;
+@active_color: #0075ff;
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
@@ -18,9 +19,9 @@
 		}
 
 		>.service_upload_container {
+			position: relative;
 			width: 100%;
 			min-height: 138px;
-			position: relative;
 
 			>.spinner {
 				top: 67%;
@@ -41,9 +42,10 @@
 			>.files_list {
 
 				>.file_item {
-					background-color: #f0f1f2;
-					margin-bottom: 0.5rem;
+					background-color: #f8f8f8; // #f8f8f8
+					margin-bottom: 0.75rem;
 					padding: 0.75rem;
+					padding-bottom: 0.5rem;
 					border-radius: 0.25rem;
 
 					>* {
@@ -56,14 +58,12 @@
 						position: relative;
 
 						.button.csv {
-							font-size: 1.25rem;
-
 							font-size: 1.5rem;
 							background-color: #a6a6a6;
 							margin-right: 0.5rem;
 
 							&.active {
-								background-color: #0075ff;
+								background-color: @active_color;
 							}
 						}
 
@@ -79,14 +79,14 @@
 						.arrow_right {
 						    -webkit-mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
 							mask-image: url(../../../core/themes/default/icons/arrow_down.svg);
-							background-color: #8e8e90;
+							background-color: @color_grey_dark;
 							margin-left: 1rem;
 							padding: 0.5rem;
 							right: 0;
 							transform: rotate(-90deg);
 
 							&.active {
-								background-color: #0075ff;
+								background-color: @active_color;
 							}
     					}
 
@@ -101,7 +101,7 @@
 								text-align: center;
 								font-size: 0.9rem;
 								margin-left: 0.33rem;
-								border: 1px solid #d1d1d1;
+								border: 1px solid @color_grey_medium;
 								border-radius: 3px;
 							}
 
@@ -114,7 +114,7 @@
 								display: inline-block;
 								margin-left: 0.5rem;
 								font-weight: 600;
-								color: #424242;
+								color: @color_grey_ultradark;
 							}
 						}
 
@@ -125,8 +125,8 @@
 					}//end >.file_line
 
 					.warning {
-						background-color: #f76c1c;
-						color: #fff;
+						background-color: @color_orange_dedalo;
+						color: #ffffff;
 						padding: 0.5rem;
 						border-radius: 3px;
 					}
@@ -144,7 +144,7 @@
 					}
 
 					>.preview {
-						background-color: rgb(202 247 218); // green
+						background-color: #caf7da; // green
 						font-size: 0.8rem;
 						white-space: pre;
 						overflow: auto;
@@ -154,15 +154,18 @@
 						width: 100%;
 
 						>.columns_header {
-							background-color: #dedede;
 							width: 100%;
 							padding: 0.5rem;
-							color: #4e4e4e;
+							background-color: #eeeeee;
+							color: @color_grey_ultradark; //  #4e4e4e;
+							cursor: pointer;
 						}
 						>.columns_body {
 							display: grid;
 							grid-template-columns: minmax(5rem,10rem) minmax(9rem,14rem) minmax(7rem,10rem) minmax(3rem,4.5rem) minmax(7rem,30rem) minmax(7rem,auto);
 							// grid-gap: 0.5rem;
+							background-color: #f0f0f0;
+							border-radius: 5px;
 
 							>.columns_mapper_line {
 								display: contents;
@@ -234,7 +237,6 @@
 							}
 						}
 					}//end >.columns_mapper
-
 
 					.result_container {
 
@@ -334,9 +336,10 @@
 							}
 						}
 					}
-				}
 
-			}
+				}//end >.file_item
+			}//end >.files_list
+
 
 			>.submit_container {
 				padding: 1rem;
