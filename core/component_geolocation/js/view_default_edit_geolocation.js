@@ -444,15 +444,17 @@ const get_buttons = (self) => {
 			function fn_save(e) {
 				e.stopPropagation()
 
-				const key = 0; // fixed key (only one element is allowed)
+				// const changed_data = self.data.changed_data || []
 
-				const changed_data = [Object.freeze({
+				const key = 0; // fixed key (only one element is allowed)
+				const changed_data_item = Object.freeze({
 					action		: 'update',
 					key			: key,
 					value		: self.current_value[key]
-				})]
+				})
+
 				self.change_value({
-					changed_data	: changed_data,
+					changed_data	: [changed_data_item],
 					refresh			: false
 				})
 				.then(()=>{

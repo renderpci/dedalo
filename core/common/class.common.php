@@ -435,6 +435,7 @@ abstract class common {
 					. " tipo: $tipo " . PHP_EOL
 					. " model: $model_name" . PHP_EOL
 					. ' bt 0: ' . to_string( debug_backtrace()[0] ) . PHP_EOL
+					. ' bt 1: ' . to_string( debug_backtrace()[1] ) . PHP_EOL
 					// . ' bt all: ' . to_string( debug_backtrace() )
 					, logger::ERROR
 				);
