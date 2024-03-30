@@ -199,19 +199,6 @@ class js {
 		/*
 		// CDN VERSIONS
 		switch ($url) {
-			case JQUERY_LIB_URL_JS:
-				return "\n<script src=\"//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js\"></script>\n<script>window.jQuery || document.write('<script src=\"".JQUERY_LIB_URL_JS."\"><\/script>')</script>";
-				break;
-			case JQUERY_UI_URL_JS:
-				return "\n<script src=\"//code.jquery.com/ui/1.11.1/jquery-ui.min.js\"></script>\n<script>window.jQuery.ui || document.write('<script src=\"".JQUERY_UI_URL_JS."\"><\/script>')</script>";
-				break;
-			case PAPER_JS_URL:
-				$url='//cdn.jsdelivr.net/paperjs/0.9.20/paper-core.min.js';	# //cdnjs.cloudflare.com/ajax/libs/paper.js/0.9.9/paper.min.js
-				return "\n<script src=\"$url\"></script>\n<script>window.paper || document.write('<script src=\"".PAPER_JS_URL."\"><\/script>')</script>";
-				break;
-			case TEXT_EDITOR_URL_JS: # @see http://www.tinymce.com/wiki.php/Configuration:external_plugins
-				return "\n<script src=\"//tinymce.cachefly.net/4.1/tinymce.min.js\"></script>\n<script>window.tinymce || document.write('<script src=\"".TEXT_EDITOR_URL_JS."\"><\/script>')</script>";
-				break;
 			case D3_URL_JS:
 				$url='//cdn.jsdelivr.net/d3js/3.1.6/d3.min.js';
 				return "\n<script src=\"$url\"></script>\n<script>window.d3 || document.write('<script src=\"".D3_URL_JS."\"><\/script>')</script>";

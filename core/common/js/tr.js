@@ -69,7 +69,7 @@ export const tr = {
 				reg_ex = /(\[(svg)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
 				break;
 
-			// DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Now manage images over draws js paper data)
+			// DRAW (Old svg renamed 18-05-2018. Pre 4.9.0 . Until 01-02-2024 manage images over draws js paper data. now only layer id is referred)
 			case 'draw' :
 				reg_ex = /(\[(draw)-([a-z])-([0-9]{1,6})(-([^-]{0,22}))?-data:(.*?):data\])/g;
 				break;

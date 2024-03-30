@@ -147,7 +147,7 @@ export const render_color_picker = function(self, layer, layer_id) {
 		{
 			// Set the size of the color picker
 			width: 160,
-			// Set the initial color to paper project color
+			// Set the initial color
 			color: layer_color,
 			// color wheel will not fade to black when the lightness decreases.
 			wheelLightness: true,
