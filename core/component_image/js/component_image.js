@@ -96,7 +96,6 @@ component_image.prototype.init = async function(options) {
 
 	// editor init vars
 		self.ar_layers				= []
-		// self.current_paper			= null
 		self.vector_editor			= null
 
 
@@ -150,7 +149,7 @@ component_image.prototype.get_data_tag = function() {
 
 /**
 * GET_LIB_DATA
-* get the lib_data in self.data, lib_data is the specific data of the library used (paperjs)
+* get the lib_data in self.data, lib_data is the specific data of the library used (svgEdit js)
 * @return array lib_data
 */
 component_image.prototype.get_lib_data = function() {
