@@ -80,14 +80,23 @@ final class dd_area_maintenance_api {
 		return $response;
 	}//end class_request
 
+
+
+	/**
 	* MAKE_BACKUP
 	* @param object $rqo
 	* @return object $response
 	*/
 	public static function make_backup(object $rqo) : object {
 
-		$response = backup::make_backup((object)[
-			'async' => true
+		$user_id				= logged_user_id();
+		$username				= logged_user_username();
+		$skip_backup_time_range	= true;
+
+		$response = backup::init_backup_sequence((object)[
+			'user_id'					=> $user_id,
+			'username'					=> $username,
+			'skip_backup_time_range'	=> $skip_backup_time_range
 		]);
 
 
