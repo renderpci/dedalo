@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
@@ -89,7 +90,7 @@ const get_content_data = async function(self) {
 			return content_data
 		}
 
-	// info
+	// info text
 		const text = `Force to make a full backup now like:<br><div>${backup_path}/<br>${file_name}</div>`
 		const info = ui.create_dom_element({
 			element_type	: 'div',
@@ -101,42 +102,141 @@ const get_content_data = async function(self) {
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'body_response'
+			class_name		: 'body_response',
+			parent			: content_data
 		})
 
-	// form init
-		self.caller.init_form({
-			submit_label	: self.name,
-			confirm_text	: get_label.sure || 'Sure?',
-			body_info		: content_data,
-			body_response	: body_response,
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'make_backup',
-				options	: null
-			}
-		})
-
-	// backup_files
-		if (backup_files && backup_files.length>0) {
-
-			const backup_toggle = ui.create_dom_element({
-				element_type	: 'div',
-				inner_html		: get_label.show_last_files || 'Show last files',
-				class_name		: 'backup_toggle_button unselectable',
-				parent			: content_data
-			})
-			backup_toggle.addEventListener('click', function(e) {
-				backup_files_container.classList.toggle('hide')
-			})
-
-			const backup_files_container = ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'backup_files_container hide',
-				inner_html		: JSON.stringify(backup_files, null, 2),
-				parent			: content_data
+	// update_process_status
+		const update_process_status = (pid, pfile) => {
+			button_submit.classList.add('loading')
+			ui.render_process_status({
+				id				: 'process_make_backup', // used to store DB local data status
+				pid				: pid,
+				pfile			: pfile,
+				container		: body_response,
+				callback_done	: () => {
+					button_submit.classList.remove('loading')
+				},
+				callback_read : () => {
+					// get files list updated
+					data_manager.request({
+						use_worker	: true,
+						body		: {
+							dd_api	: 'dd_area_maintenance_api',
+							action	: 'class_request',
+							source	: {
+								action : 'get_dedalo_backup_files'
+							},
+							options	: {
+								max_files			: 1,
+								psql_backup_files	: true,
+								mysql_backup_files	: false
+							}
+						}
+					})
+					.then(function(response){
+						// display_json_box.innerHTML += '\n' + JSON.stringify(response.result, null, 2)
+						const backup_files_info = document.getElementById('backup_files_info') || ui.create_dom_element({
+							element_type	: 'pre',
+							id				: 'backup_files_info',
+							class_name		: 'backup_files_info',
+							parent			: body_response
+						})
+						const msg = response?.result?.psql_backup_files[0]
+						backup_files_info.innerHTML = JSON.stringify(msg, null, 2)
+					})
+				}
 			})
 		}
+
+	// check process status always
+		const check_process_data = () => {
+			data_manager.get_local_db_data(
+				'process_make_backup',
+				'status'
+			)
+			.then(function(local_data){
+				if (local_data && local_data.value) {
+					update_process_status(
+						local_data.value.pid,
+						local_data.value.pfile
+					)
+				}
+			})
+		}
+		check_process_data()
+
+
+	// fn_submit
+		const fn_submit = async (e) => {
+			e.stopPropagation()
+
+			// prevent multiple calls
+			const local_db_data = await data_manager.get_local_db_data(
+				'process_make_backup',
+				'status'
+			)
+			if (local_db_data) {
+				alert("Busy!");
+				return
+			}
+
+			if (!confirm(get_label.seguro || 'Sure?')) {
+				return
+			}
+
+			while (body_response.firstChild) {
+				body_response.removeChild(body_response.firstChild);
+			}
+
+			// spinner
+			const spinner = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'spinner',
+				parent			: body_response
+			})
+
+			// call API to fire process and get PID
+			const api_response = await data_manager.request({
+				use_worker	: true,
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'make_backup',
+					options	: {}
+				}
+			})
+
+			if (!api_response || !api_response.result) {
+				spinner.remove()
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'error',
+					inner_html		: 'Error: failed make_backup',
+					parent			: body_response
+				})
+				return
+			}
+
+			// fire update_process_status
+			update_process_status(
+				api_response.pid,
+				api_response.pfile
+			)
+		}//end fn_submit
+
+	// button submit (make backup)
+		const button_submit = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'light button_submit',
+			inner_html		: self.name,
+			parent			: content_data
+		})
+		content_data.button_submit = button_submit
+		button_submit.addEventListener('click', fn_submit)
+
+	// add at end body_response
+		content_data.appendChild(body_response)
+
 	// backup_files
 		const backup_files_container = render_psql_backup_files()
 		content_data.appendChild(backup_files_container)
