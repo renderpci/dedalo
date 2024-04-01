@@ -166,6 +166,130 @@ data_manager.request = async function(options) {
 
 
 /**
+* REQUEST_STREAM
+* Make a fetch request_stream to server API
+* Note that, unlike 'request', this method receives a stream that must be read by a reader 'getReader'.
+* The 'is_stream' body property indicates that server must parse the result as readable stream
+* with header("Content-Type: text/event-stream")
+* @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/ReadableStream
+* @param object options
+* @return api_response
+*/
+data_manager.request_stream = async function(options) {
+
+	// short vars
+	const url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
+	const method		= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
+	const mode			= options.mode || 'cors' // no-cors, cors, *same-origin
+	const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
+	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
+	const headers		= options.headers || {
+		'Content-Type': 'application/json',
+		'Accept': 'text/event-stream',
+	}
+	const redirect		= options.redirect || 'follow' // manual, *follow, error
+	const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
+	const body			= options.body // body data type must match "Content-Type" header
+	// always force the request as a stream
+	body.is_stream = true
+
+	return new Promise(function(resolve){
+
+		fetch(
+			url,
+			{
+				method		: method,
+				mode		: mode,
+				cache		: cache,
+				credentials	: credentials,
+				headers		: headers,
+				redirect	: redirect,
+				referrer	: referrer,
+				body		: JSON.stringify(body)
+			}
+		)
+		.then(response => {
+
+			// Get the readable stream from the response body
+			const stream = response.body;
+
+			resolve(stream)
+
+		})
+		.catch(error => {
+			// Log the error
+			console.error(error);
+		});
+
+	})
+}//end request_stream
+
+
+
+/**
+* READ_STREAM
+* Read a SSE ReadableStream from server API response
+* @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
+* @param ReadableStream stream
+* @param function on_read
+* 	optional callback function fired on each reader chunk
+* @param function on_done
+* 	optional callback function fired on reader done (close read)
+* @return void
+*/
+data_manager.read_stream = function(stream, on_read, on_done) {
+
+	// Get the reader from the stream
+	const reader = stream.getReader();
+
+	// register reader (allow stop on page navigation)
+		page_globals.stream_readers.push(reader)
+
+	// Define a function to read each chunk
+	const readChunk = () => {
+		// Read a chunk from the reader
+		reader.read()
+			.then(({
+				value,
+				done
+			}) => {
+				// Check if the stream is done
+				if (done) {
+					// Log a message
+					console.log('Stream finished', done, value);
+					on_done(true)
+					// Return from the function
+					return;
+				}
+
+				// Convert the chunk value to a string
+				const chunkString = new TextDecoder().decode(value);
+
+				// parse text response as JSON
+				const sse_response = chunkString
+					? JSON.parse(chunkString)
+					: ''
+
+				// console.log('sse_response:', sse_response);
+
+				// exec callback function
+				on_read(reader, sse_response)
+
+				// Read the next chunk
+				readChunk();
+			})
+			.catch(error => {
+				// Log the error
+				console.error(error);
+			});
+	};
+	// Start reading the first chunk
+	readChunk();
+}//end read_stream
+
+
+
+/**
 * GET_ELEMENT_CONTEXT
 * Resolves full element context based on minimal source vars
 * Like:

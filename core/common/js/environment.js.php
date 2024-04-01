@@ -133,6 +133,7 @@ session_write_close();
 			$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 			$obj->component_active				= null;
 			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null;
+			$obj->stream_readers				= [];
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;

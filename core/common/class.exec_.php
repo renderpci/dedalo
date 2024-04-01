@@ -300,9 +300,11 @@ class exec_ {
  * @compatibility: Linux only. (Windows does not work).
  * @author: Peec
  */
-class Process {
+class process {
+
     private $pid;
     private $command;
+    private $file;
 
     public function __construct($cl=false){
         if ($cl != false){
@@ -311,9 +313,21 @@ class Process {
         }
     }
     private function runCom(){
-		$command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
-        exec($command, $op);
-        $this->pid = (int)$op[0];
+    	// reference command for non blocking process
+		// $command = 'nohup '.$this->command.' > /dev/null 2>&1 & echo $!';
+		$command = $this->command; // untouched command
+
+		// debug
+		if(SHOW_DEBUG===true) {
+			debug_log(__METHOD__
+				. " Executing process command: " . PHP_EOL
+				. $command
+				, logger::DEBUG
+			);
+		}
+
+        exec($command, $output);
+        $this->pid = (int)$output[0];
     }
 
     public function setPid($pid){
@@ -326,8 +340,8 @@ class Process {
 
     public function status(){
         $command = 'ps -p '.$this->pid;
-        exec($command,$op);
-        if (!isset($op[1]))return false;
+        exec($command, $output);
+        if (!isset($output[1]))return false;
         else return true;
     }
 
@@ -342,4 +356,42 @@ class Process {
         if ($this->status() === false)return true;
         else return false;
     }
-}//end class Process
+
+    public function setFile($file){
+        $this->file = $file;
+    }
+
+    public function read(){
+        $command = 'tail -n 1 '.$this->file;
+        exec($command, $output);
+        return $output;
+    }
+
+    /**
+	* GET_UNIQUE_PROCESS_FILE
+	* Calculate unified unique process path name for files
+	* @return string $name
+	*/
+	static function get_unique_process_file() : string {
+
+		$name = 'process_' . logged_user_id() .'_'. date('Y-m-d_H-i-s') .'_'. hrtime(true);
+
+		return $name;
+	}//end get_unique_process_file
+
+	/**
+	* GET_PROCESS_PATH
+	* Calculate common process path name
+	* Normally, it is stored in the session directory
+	* @return string $dir
+	*/
+	static function get_process_path() : string {
+
+		$dir = defined('DEDALO_SESSIONS_PATH')
+			? DEDALO_SESSIONS_PATH
+			: (@session_save_path() ?? '/tmp');
+
+		return $dir;
+	}//end get_process_path
+
+}//end class process
