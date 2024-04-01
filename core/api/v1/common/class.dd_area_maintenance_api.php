@@ -13,6 +13,73 @@ final class dd_area_maintenance_api {
 
 
 	/**
+	* CLASS_REQUEST
+	* Call to class method given and return and object with the response
+	* Method must be static and accept a only one object argument
+	* Method must return an object like { result: mixed, msg: string }
+	*
+	* @param object $rqo
+	* sample:
+	* {
+	* 	action: "class_request"
+	* 	dd_api: "dd_area_maintenance_api"
+	* 	source: {
+	* 		typo: "source",
+	* 		action: "make_backup"
+	* 	},
+	* 	options: {
+	*   	skip_backup_time_range: true
+	*   }
+	* }
+	* @return object response { result: mixed, msg: string }
+	*/
+	public static function class_request(object $rqo) : object {
+
+		// options
+			$options		= $rqo->options ?? [];
+			$fn_arguments	= $options;
+
+		// source
+			$source			= $rqo->source;
+			$class_name		= 'area_maintenance';
+			$class_method	= $source->action;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
+				$response->errors	= [];
+
+		// method (static)
+			if (!method_exists($class_name, $class_method)) {
+				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
+				return $response;
+			}
+			try {
+
+				$fn_result = call_user_func(array($class_name, $class_method), $fn_arguments);
+
+			} catch (Exception $e) { // For PHP 5
+
+				debug_log(__METHOD__
+					." Exception caught [class_request] : ". $e->getMessage()
+					, logger::ERROR
+				);
+				trigger_error($e->getMessage());
+
+
+				$fn_result = new stdClass();
+					$fn_result->result	= false;
+					$fn_result->msg		= 'Error. Request failed on call_user_func method: '.$class_method;
+					$response->errors[] = 'Invalid method ' . $class_method;
+			}
+
+			$response = $fn_result;
+
+
+		return $response;
+	}//end class_request
+
 	* MAKE_BACKUP
 	* @param object $rqo
 	* @return object $response
