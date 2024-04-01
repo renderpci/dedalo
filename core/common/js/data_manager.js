@@ -16,6 +16,7 @@ export const data_manager = function() {
 /**
 * REQUEST
 * Make a fetch request to server API
+* Receives a JSON string to be parsed
 * @param object options
 * @return api_response
 */

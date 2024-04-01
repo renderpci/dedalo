@@ -749,7 +749,7 @@ class login extends common {
 		// backup all
 			if( DEDALO_BACKUP_ON_LOGIN ) {
 
-				$make_backup_response = backup::make_backup((object)[
+				$make_backup_response = backup::init_backup_sequence((object)[
 					'user_id'					=> $user_id,
 					'username'					=> $username,
 					'skip_backup_time_range'	=> false
