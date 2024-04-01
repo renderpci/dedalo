@@ -116,6 +116,13 @@ page.prototype.init = async function(options) {
 					: null
 					if (container) { container.classList.add('loading') }
 
+			// stream_readers. If any stream reader is active, stop it
+				if (page_globals.stream_readers && page_globals.stream_readers.length) {
+					page_globals.stream_readers.forEach((el)=>{
+						el.cancel('abort')
+					})
+				}
+
 			try {
 
 				// do the work

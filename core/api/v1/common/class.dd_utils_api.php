@@ -1350,6 +1350,31 @@ final class dd_utils_api {
 
 
 
+	/**
+	* GET_PROCESS_STATUS
+	* Used for SSE events to get info about know background process
+	* Note that PID (process id) and PFILE (process file name) are mandatory
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function get_process_status(object $rqo) : object {
+
+		// session unlock
+			session_write_close();
+
+		// options
+			$pfile	= $rqo->options->pfile;
+			$pid	= $rqo->options->pid;
+
+		// response
+			$response = new stdClass();
+				$response->pfile	= $pfile;
+				$response->pid		= $pid;
+
+		return $response;
+	}//end get_process_status
+
+
 
 
 

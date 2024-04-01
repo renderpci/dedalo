@@ -13,15 +13,6 @@ $global_start_time = hrtime(true);
 	// ini_set('implicit_flush', true);
 	// ob_implicit_flush(true);
 
-	// debug
-		// $current = (hrtime(true) - $global_start_time) / 1000000;
-		// error_log('--------------------------------------- current 0 ms: '.$current);
-
-
-
-// header print as JSON data
-	header('Content-Type: application/json');
-
 
 
 // PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
@@ -42,16 +33,15 @@ $global_start_time = hrtime(true);
 
 
 
-	// CORS preflight OPTIONS requests
-		if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
-			// error_log('Ignored '.print_r($_SERVER['REQUEST_METHOD'], true));
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Ignored call ' . $_SERVER['REQUEST_METHOD'];
-			error_log('Error: '.$response->msg);
-			echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-			exit( 0 );
-		}
+// CORS preflight OPTIONS requests area ignored
+	if (isset($_SERVER['REQUEST_METHOD']) && $_SERVER['REQUEST_METHOD']==='OPTIONS') {
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Ignored call ' . $_SERVER['REQUEST_METHOD'];
+		error_log('Error: '.$response->msg);
+		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+		exit( 0 );
+	}
 
 
 
@@ -62,29 +52,25 @@ $global_start_time = hrtime(true);
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
 		error_log('Error: '.$response->msg);
+		// header print as JSON data
+		header('Content-Type: application/json');
 		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		die();
 	}
 
 
 
-// includes
+// file includes
 	// config dedalo
 	include dirname(dirname(dirname(dirname(dirname(__FILE__))))) .'/config/config.php';
 
 
 
-// get post vars. file_get_contents returns a string
+// php://input get post vars. file_get_contents returns a string
 	$str_json = file_get_contents('php://input');
-	// error_log(print_r($str_json,true));
-	// error_log(print_r($_REQUEST,true));
 	if (!empty($str_json)) {
 		$rqo = json_decode( $str_json );
 	}
-
-	// debug
-		// $current = (hrtime(true) - $global_start_time) / 1000000;
-		// error_log('--------------------------------------- current 1 (after file_get_contents) ms: '.$current);
 
 
 
@@ -158,10 +144,6 @@ $global_start_time = hrtime(true);
 		$dd_manager	= new dd_manager();
 		$response	= $dd_manager->manage_request( $rqo );
 
-		// debug
-			// $current = (hrtime(true) - $global_start_time) / 1000000;
-			// error_log('--------------------------------------- current 2 ms: '.$current);
-
 		// close current session and set as read only
 			if ($session_closed===false) {
 				session_write_close();
@@ -184,41 +166,33 @@ $global_start_time = hrtime(true);
 			}
 
 	// } catch (Throwable $e) { // For PHP 7
+		// 	$result = new stdClass();
+		// 		$result->result	= false;
+		// 		$result->msg	= (SHOW_DEBUG===true)
+		// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+		// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
+		// 		$result->debug	= (object)[
+		// 			'rqo' => $rqo
+		// 		];
 
-	// 	$result = new stdClass();
-	// 		$result->result	= false;
-	// 		$result->msg	= (SHOW_DEBUG===true)
-	// 			? 'Throwable Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-	// 			: 'Throwable Exception when calling Dédalo API. Contact with your admin';
-	// 		$result->debug	= (object)[
-	// 			'rqo' => $rqo
-	// 		];
+		// 	trigger_error($e->getMessage());
 
-	// 	trigger_error($e->getMessage());
+		// } catch (Exception $e) { // For PHP 5
 
-	// } catch (Exception $e) { // For PHP 5
-
-	// 	$result = new stdClass();
-	// 		$result->result	= false;
-	// 		$result->msg	= (SHOW_DEBUG===true)
-	// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
-	// 			: 'Exception when calling Dédalo API. Contact with your admin';
-	// 		$result->debug	= (object)[
-	// 			'rqo' => $rqo
-	// 		];
-
+		// 	$result = new stdClass();
+		// 		$result->result	= false;
+		// 		$result->msg	= (SHOW_DEBUG===true)
+		// 			? 'Exception when calling Dédalo API: '.PHP_EOL.'  '. $e->getMessage()
+		// 			: 'Exception when calling Dédalo API. Contact with your admin';
+		// 		$result->debug	= (object)[
+		// 			'rqo' => $rqo
+		// 		];
 	// 	trigger_error($e->getMessage());
 	// }
 
 
 
-// output the response JSON string
-	// $output_string = json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-	$output_string = isset($rqo->pretty_print)
-		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-
-	// debug (browser Server-Timing)
+// debug (browser Server-Timing)
 		// header('Server-Timing: miss, db;dur=53, app;dur=47.2');
 		// $current = (hrtime(true) - $global_start_time) / 1000000;
 		// header('Server-Timing: API;dur='.$current);
@@ -246,16 +220,96 @@ $global_start_time = hrtime(true);
 	// 	// if (session_id()) session_write_close();
 	// }
 
-	// debug
-		// $current = (hrtime(true) - $global_start_time) / 1000000;
-		// error_log('--------------------------------------- current 3 (before echo) ms: '.$current);
-		// dump($_SESSION, ' _SESSION ++ '.to_string());
 
 
+// SSE stream / JSON cases
+	$is_stream = $rqo->is_stream ?? false;
+	if ($is_stream===true) {
 
-// output_string_and_close_connection($output_string);
-	echo $output_string;
+		// SSE case ----------------------------------
 
-	// debug
-		// $current = (hrtime(true) - $global_start_time) / 1000000;
-		// error_log('--------------------------------------- current FINAL (after echo) ms: '.$current);
+		// only logged users can access SSE events
+			if(login::is_logged()!==true) {
+				die('Authentication error: please login');
+			}
+
+		// header print as event stream
+			header("Content-Type: text/event-stream");
+
+		// mandatory vars
+			$pfile	= $response->pfile ?? null;
+			$pid	= $response->pid ?? null;
+			if (empty($pfile) || empty($pid)) {
+				$output = (object)[
+					'pid'			=> $pid,
+					'pfile'			=> $pfile,
+					'is_running'	=> $is_running,
+					'data'			=> null,
+					'time'			=> date(DATE_ISO8601),
+					'errors'		=> ['Error: pfile and pid are mandatory']
+				];
+				echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+				die();
+			}
+
+		// process
+			$process = new process();
+				$process->setPid($pid);
+				$process->setFile(process::get_process_path() .'/'. $pfile);
+
+		// event loop
+			// update rate (int milliseconds)
+			$update_rate = $rqo->update_rate ?? 1000;
+			while (1) {
+
+				// process info updated on each loop
+					$is_running	= $process->status(); // bool is running
+					$data		= $process->read(); // string data
+
+				// output JSON to client
+					$output = (object)[
+						'pid'			=> $pid,
+						'pfile'			=> $pfile,
+						'is_running'	=> $is_running,
+						'data'			=> $data,
+						'time'			=> date(DATE_ISO8601),
+						'total_time' 	=> exec_time_unit($global_start_time,'secs').' secs',
+						'errors'		=> []
+					];
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
+					}
+
+				// output the response JSON string
+					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+
+				// flush the output buffer and send echoed messages to the browser
+					while (ob_get_level() > 0) {
+						ob_end_flush();
+					}
+					flush();
+
+				// stop on finish
+					if ($is_running===false) break;
+
+				// break the loop if the client aborted the connection (closed the page)
+					if ( connection_aborted() ) break;
+
+				// sleep n milliseconds before running the loop again
+					$ms = $update_rate; usleep( $ms * 1000 );
+			}//end while
+	}else{
+
+		// JSON case ----------------------------------
+
+		// header print as JSON data
+			header('Content-Type: application/json');
+
+		// output the response JSON string
+			$output_string = isset($rqo->pretty_print)
+				? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+				: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+			echo $output_string;
+	}
