@@ -20,24 +20,25 @@ abstract class backup {
 
 
 	/**
-	* INIT_BACKUP_SECUENCE
+	* INIT_BACKUP_SEQUENCE
 	* Make backup (compressed SQL dump) of current dedalo DB before login
 	* @param int $user_id
 	* @param string $username
 	* @param bool $skip_backup_time_range = false
 	* @return object $response
 	*/
-	public static function init_backup_secuence(object $options) : object {
+	public static function init_backup_sequence(object $options) : object {
 
 		// options
-			$user_id				= (int)$options->user_id; // int
-			$username				= (string)$options->username; // string
+			$user_id				= $options->user_id ?? logged_user_id(); // int
+			$username				= $options->username ?? logged_user_username(); // string
 			$skip_backup_time_range	= $options->skip_backup_time_range ?? false; // bool
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed '.__METHOD__;
+				$response->errors	= [];
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
@@ -60,7 +61,8 @@ abstract class backup {
 					if(!mkdir($file_path, 0700, true)) {
 						#throw new Exception(" Error on read or create backup directory. Permission denied");
 						$response->result	= false;
-						$response->msg		= "Error on read or create backup directory. Permission denied ".__METHOD__;
+						$response->msg		= 'Error on read or create backup directory. Permission denied '.__METHOD__;
+						$response->error[]	= 'Error: unable to create backups folder';
 						debug_log(__METHOD__
 							. " $response->msg " . PHP_EOL
 							. ' file_path: ' . to_string($file_path)
@@ -133,100 +135,99 @@ abstract class backup {
 				}
 
 			// command base. Export the database and output the status to the page
-				// $port_str = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-				// $command	= DB_BIN_PATH.'pg_dump -h '.DEDALO_HOSTNAME_CONN .$port_str. ' -U "'.DEDALO_USERNAME_CONN.'" -F c -b '.DEDALO_DATABASE_CONN.'  > "'.$mysqlExportPath .'"';
-				$command = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
+			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
 
-			if($skip_backup_time_range===true) {
+			// process
+				$pfile		= process::get_unique_process_file(); // like 'process_1_2024-03-31_23-47-36_3137757' usually stored in the sessions directory
+				$file_path	= process::get_process_path() .'/' . $pfile; // output file with errors and stream data
+				$command	= "nohup sh -c 'nice -n 19 $cmd' >$file_path 2>&1 & echo $!";
 
-				// forced backup case. Wait until finish
+				// debug
+					debug_log(__METHOD__
+						." Building backup file in background ($mysqlExportPath)". PHP_EOL
+						." Command: ". PHP_EOL. to_string($command)
+						, logger::DEBUG
+					);
 
-				$command = 'nice -n 19 ' . $command;
+				$process	= new process($command);
+				$pid		= $process->getPid();
 
-				debug_log(__METHOD__
-					." Building direct backup file ($mysqlExportPath)". PHP_EOL
-					." Command:\n ".to_string($command)
-					, logger::DEBUG
-				);
+			/* OLD WAY
+				if($skip_backup_time_range===true) {
 
-				// exec directly and wait result
-				shell_exec($command);
+					// forced backup case. Wait until finish
 
-			}else{
+					$pfile		= process::get_unique_process_file();
+					$file_path	= process::get_process_path() .'/' . $pfile;
+					$command	= "nohup sh -c 'nice -n 19 $command' >$file_path 2>&1 & echo $!";
 
-				// default backup case. Async dump building sh file
+					debug_log(__METHOD__
+						." Building direct backup file ($mysqlExportPath)". PHP_EOL
+						." Command: ". PHP_EOL. to_string($command)
+						, logger::DEBUG
+					);
 
-				$command = 'sleep 15s; nice -n 19 ' . $command;
+					$process	= new process($command);
+					$pid		= $process->getPid();
 
-				// build sh file with backup command if not exists
-				$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
-				if(!file_exists($prgfile)) {
+				}else{
 
-					// target folder verify (exists and permissions)
-						$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
-						if( !is_dir($target_folder_path) ) {
-							if(!mkdir($target_folder_path, 0775, true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+					// default backup case. Async dump building sh file
+
+
+
+						$command = 'sleep 15s; nice -n 19 ' . $command;
+
+						// build sh file with backup command if not exists
+						$prgfile = DEDALO_BACKUP_PATH_TEMP.'/backup_' . DEDALO_DB_TYPE . '_' . date("Y-m-d_H") . '_' . DEDALO_DATABASE_CONN  . '.sh';	//
+						if(!file_exists($prgfile)) {
+
+							// target folder verify (exists and permissions)
+								$target_folder_path = DEDALO_BACKUP_PATH_TEMP;
+								if( !is_dir($target_folder_path) ) {
+									if(!mkdir($target_folder_path, 0775, true)) throw new Exception(" Error on read or create backup temp directory. Permission denied");
+								}
+
+							// sh file generating
+								$fp = fopen($prgfile, "w");
+								fwrite($fp, "#!/bin/bash\n");
+								fwrite($fp, "$command\n");
+								fclose($fp);
+
+							// sh file permissions
+								if(file_exists($prgfile)) {
+									chmod($prgfile, 0755);
+								}else{
+									$msg = "Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions";
+									debug_log(__METHOD__
+										." $msg "
+										, logger::ERROR
+									);
+									throw new Exception($msg, 1);
+								}
+
+							// fastcgi_finish_request
+								// if (function_exists('fastcgi_finish_request')) {
+								// 	fastcgi_finish_request();
+								// 	debug_log(__METHOD__." fastcgi_finish_request() function was called to prevent lock this connection. ".to_string(), logger::WARNING);
+								// } else {
+								// 	debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
+								// }
+
+							// run delayed command in background
+								$PID = exec_::exec_sh_file($prgfile);
+
+								debug_log(__METHOD__
+									." Building delayed backup file" . PHP_EOL
+									.' mysqlExportPath: ' . $mysqlExportPath . PHP_EOL
+									.' Command: '.$command .PHP_EOL
+									.' PID: '.$PID
+									, logger::WARNING
+								);
 						}
 
-					// sh file generating
-						$fp = fopen($prgfile, "w");
-						fwrite($fp, "#!/bin/bash\n");
-						fwrite($fp, "$command\n");
-						fclose($fp);
-
-					// sh file permissions
-						if(file_exists($prgfile)) {
-							chmod($prgfile, 0755);
-						}else{
-							$msg = "Error Processing backup. Script file do not exists or is not accessible. Please check folder '../backup/temp' permissions";
-							debug_log(__METHOD__
-								." $msg "
-								, logger::ERROR
-							);
-							throw new Exception($msg, 1);
-						}
-
-					// fastcgi_finish_request
-						// if (function_exists('fastcgi_finish_request')) {
-						// 	fastcgi_finish_request();
-						// 	debug_log(__METHOD__." fastcgi_finish_request() function was called to prevent lock this connection. ".to_string(), logger::WARNING);
-						// } else {
-						// 	debug_log(__METHOD__." Error: This server does not support fastcgi_finish_request() function. ".to_string(), logger::ERROR);
-						// }
-
-					// run delayed command in background
-						$PID = exec_::exec_sh_file($prgfile);
-
-						debug_log(__METHOD__
-							." Building delayed backup file" . PHP_EOL
-							.' mysqlExportPath: ' . $mysqlExportPath . PHP_EOL
-							.' Command: '.$command .PHP_EOL
-							.' PID: '.$PID
-							, logger::WARNING
-						);
-				}
-			}//end if($skip_backup_time_range===true)
-
-			// EXEC : Exec command
-				// $worked_result exec_::exec_command($command);
-
-				// switch($worked_result){
-				// 	case 0:
-				// 		$msg = 'Database <b>' .DEDALO_DATABASE_CONN .'</b> successfully exported to <b>' .$mysqlExportPath .'</b>';
-				// 		#trigger_error($msg);
-				// 		break;
-				// 	case 1:
-				// 		$msg = "There was a error ($worked_result) during the system backup. Please contact with your administrator and report this error";
-				// 		throw new Exception($msg, 1);
-				// 		break;
-				// 	case 2:
-				// 		$msg = "There was an error ($worked_result) during backup. Please contact with your administrator and report this error";
-				// 		throw new Exception($msg, 1);
-				// 		break;
-				// 	default:
-				// 		$msg = $worked_result;
-				// 		throw new Exception($msg, 1);
-				// }
+				}//end if($skip_backup_time_range===true)
+				*/
 
 		}catch (Exception $e) {
 
@@ -239,22 +240,20 @@ abstract class backup {
 			// response error
 				$response->result	= false;
 				$response->msg		= "Exception: $msg";
+				$response->errors[] = $e->getMessage();
 
-			return $response;
+			return $response; // stop here
 		}
-
-		// bk file size
-			$file_bk_size = (file_exists($mysqlExportPath))
-				? format_size_units( filesize($mysqlExportPath) )
-				: '0 MB';
 
 		// response OK
 			$response->result	= true;
-			$response->msg		= "OK. backup done. ".$db_name." ($file_bk_size)";
+			$response->pid		= $pid ?? null;
+			$response->pfile	= $pfile ?? null;
+			$response->msg		= 'OK. backup process running for db: ' . $db_name;
 
 
 		return $response;
-	}//end init_backup_secuence
+	}//end init_backup_sequence
 
 
 
@@ -1605,95 +1604,6 @@ abstract class backup {
 
 		return $response;
 	}//end check_remote_server
-
-
-
-	/**
-	* MAKE_BACKUP
-	* Exec method init_backup_secuence in an isolated thread
-	* @param object $options = new stdClass()
-	* @return object $response
-	*/
-	public static function make_backup(object $options=new stdClass()) : object {
-
-		// options
-			$user_id				= $options->user_id ?? logged_user_id();
-			$username				= $options->username ?? logged_user_username();
-			$skip_backup_time_range	= $options->skip_backup_time_range ?? true;
-			// async. On false, the function wait until process is finish
-			$async					= $options->async ?? true;
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= '';
-
-		// process_runner way
-			// process_file
-				$process_file = DEDALO_CORE_PATH.'/base/process_runner.php';
-
-			// server_vars
-				// sh_data
-				$sh_data = [
-					'server' => [
-						'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
-						'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
-						'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
-					],
-					'session_id'	=> session_id(),
-					'user_id'		=> $user_id
-				];
-
-				// params. additional data (options)
-				$params = (object)[
-					'user_id'					=> $user_id,
-					'username'					=> $username,
-					'skip_backup_time_range'	=> $skip_backup_time_range
-				];
-				$data = [
-					'class_name'	=> 'backup',
-					'method_name'	=> 'init_backup_secuence',
-					'params'		=> $params
-				];
-				foreach ($data as $key => $value) {
-					$sh_data[$key] = $value;
-				}
-
-				// server_vars JSON encoded
-				$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-
-			// command
-				$php_command = PHP_BIN_PATH ." $process_file '$server_vars'";
-
-			// final command
-				$command = $async===false
-					? $php_command
-					: 'nohup '.$php_command.' > /dev/null 2>&1 & echo $!'; // default case
-
-			// debug
-				debug_log(__METHOD__.
-					" ------> COMMAND backup_sequence_with_options: $process_file --------------------------------------------------------:"
-					.PHP_EOL.PHP_EOL. $command .PHP_EOL,
-					logger::DEBUG
-				);
-
-			// exec command
-				$result = exec($command);
-
-		// response
-			if ($async===false) {
-				// waiting result case
-				$response->result	= $result;
-				$response->msg		= 'Request done: ' .to_string($result);
-			}else{
-				// default
-				$response->result	= $result; // PID
-				$response->msg		= 'Making backup in background. PID: ' .to_string($result);
-			}
-
-
-		return $response;
-	}//end make_backup
 
 
 
