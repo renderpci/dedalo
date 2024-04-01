@@ -15,6 +15,11 @@ $global_start_time = hrtime(true);
 
 
 
+// header print as JSON data
+	header('Content-Type: application/json');
+
+
+
 // PUBLIC API HEADERS (!) TEMPORAL 16-11-2022
 	// Allow CORS
 	header('Access-Control-Allow-Origin: *');
@@ -52,8 +57,6 @@ $global_start_time = hrtime(true);
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
 		error_log('Error: '.$response->msg);
-		// header print as JSON data
-		header('Content-Type: application/json');
 		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 		die();
 	}
@@ -222,94 +225,8 @@ $global_start_time = hrtime(true);
 
 
 
-// SSE stream / JSON cases
-	$is_stream = $rqo->is_stream ?? false;
-	if ($is_stream===true) {
-
-		// SSE case ----------------------------------
-
-		// only logged users can access SSE events
-			if(login::is_logged()!==true) {
-				die('Authentication error: please login');
-			}
-
-		// header print as event stream
-			header("Content-Type: text/event-stream");
-
-		// mandatory vars
-			$pfile	= $response->pfile ?? null;
-			$pid	= $response->pid ?? null;
-			if (empty($pfile) || empty($pid)) {
-				$output = (object)[
-					'pid'			=> $pid,
-					'pfile'			=> $pfile,
-					'is_running'	=> $is_running,
-					'data'			=> null,
-					'time'			=> date("Y-m-d H:i:s"),
-					'errors'		=> ['Error: pfile and pid are mandatory']
-				];
-				echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
-				die();
-			}
-
-		// process
-			$process = new process();
-				$process->setPid($pid);
-				$process->setFile(process::get_process_path() .'/'. $pfile);
-
-		// event loop
-			// update rate (int milliseconds)
-			$update_rate = $rqo->update_rate ?? 1000;
-			while (1) {
-
-				// process info updated on each loop
-					$is_running	= $process->status(); // bool is running
-					$data		= $process->read(); // string data
-
-				// output JSON to client
-					$output = (object)[
-						'pid'			=> $pid,
-						'pfile'			=> $pfile,
-						'is_running'	=> $is_running,
-						'data'			=> $data,
-						'time'			=> date("Y-m-d H:i:s"),
-						'total_time' 	=> exec_time_unit_auto($global_start_time),
-						'errors'		=> []
-					];
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
-					}
-
-				// output the response JSON string
-					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
-
-				// flush the output buffer and send echoed messages to the browser
-					while (ob_get_level() > 0) {
-						ob_end_flush();
-					}
-					flush();
-
-				// stop on finish
-					if ($is_running===false) break;
-
-				// break the loop if the client aborted the connection (closed the page)
-					if ( connection_aborted() ) break;
-
-				// sleep n milliseconds before running the loop again
-					$ms = $update_rate; usleep( $ms * 1000 );
-			}//end while
-	}else{
-
-		// JSON case ----------------------------------
-
-		// header print as JSON data
-			header('Content-Type: application/json');
-
-		// output the response JSON string
-			$output_string = isset($rqo->pretty_print)
-				? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
-				: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-			echo $output_string;
-	}
+// output the response JSON string
+	$output_string = isset($rqo->pretty_print)
+		? json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)
+		: json_handler::encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+	echo $output_string;
