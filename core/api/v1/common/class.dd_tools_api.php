@@ -76,16 +76,16 @@ final class dd_tools_api {
 	* 	source: {
 	* 		typo: "source",
 	* 		action: "delete_tag",
-	* 		model: "tool_indexation",
-	* 		arguments: {
-	*   		indexing_component_tipo: "rsc860"
-	*			main_component_lang: "lg-eng"
-	*			main_component_tipo: "rsc36"
-	*			section_id: "1"
-	*			section_tipo: "rsc167"
-	*			tag_id: "5"
-	*   	}
-	* 	}
+	* 		model: "tool_indexation"
+	* 	},
+	* 	options: {
+	*		indexing_component_tipo: "rsc860"
+	*		main_component_lang: "lg-eng"
+	*		main_component_tipo: "rsc36"
+	*		section_id: "1"
+	*		section_tipo: "rsc167"
+	*		tag_id: "5"
+	*    }
 	* }
 	* @return object response { result: mixed, msg: string }
 	*/

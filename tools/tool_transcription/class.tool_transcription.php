@@ -150,7 +150,7 @@ class tool_transcription extends tool_common {
 
 	/**
 	* AUTOMATIC_TRANSCRIPTION
-	* Exec a translation request against the transcriber service given (babel, google, etc.)
+	* Exec a transcription request against the transcriber service given (babel, google, etc.)
 	* and save the result to the target component in the target lang.
 	* Note that transcriber config is stored in the tool section data (tools_register)
 	* @param object $options
