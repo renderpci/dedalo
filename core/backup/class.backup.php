@@ -1,10 +1,7 @@
 <?php
-// declare(strict*_types=1);
-// include_once DEDALO_CORE_PATH . '/common/class.exec_.php';
-// include_once DEDALO_CORE_PATH . '/common/class.Thread.php';
+declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * CLASS BACKUP
-*
 *
 */
 abstract class backup {

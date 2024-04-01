@@ -481,7 +481,7 @@ function start_time() : int {
 
 
 /**
-* EXEC_TIME
+* EXEC_TIME_UNIT
 * @param float $start
 * 	time in nanoseconds from function start_time()
 * @param string $unit = 'ms' (milliseconds)
@@ -517,6 +517,43 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : float {
 
 	return $result;
 }//end exec_time_unit
+
+
+
+/**
+* EXEC_TIME_UNIT_AUTO
+* @param float $start
+* 	time expressed in minutes, seconds or milliseconds from function start_time()
+* @return string $result
+*/
+function exec_time_unit_auto(float $start) : string {
+
+	$round = 3;
+
+	// calculation is always in nanoseconds
+	$total_ns = start_time() - $start;
+
+	$total_ms = $total_ns/1000000;
+	if ($total_ms>1000) {
+		$total_sec = $total_ns/1000000000;
+		if ($total_sec>60) {
+			$total_min = $total_ns/60000000000;
+		}
+	}
+
+	if (isset($total_min)) {
+		$result = round($total_min, $round).' min';
+	}
+	elseif (isset($total_sec)) {
+		$result = round($total_sec, $round).' sec';
+	}
+	else {
+		$result = round($total_ms, $round).' ms';
+	}
+
+
+	return $result;
+}//end exec_time_unit_auto
 
 
 

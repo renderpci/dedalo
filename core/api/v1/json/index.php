@@ -245,7 +245,7 @@ $global_start_time = hrtime(true);
 					'pfile'			=> $pfile,
 					'is_running'	=> $is_running,
 					'data'			=> null,
-					'time'			=> date(DATE_ISO8601),
+					'time'			=> date("Y-m-d H:i:s"),
 					'errors'		=> ['Error: pfile and pid are mandatory']
 				];
 				echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
@@ -272,8 +272,8 @@ $global_start_time = hrtime(true);
 						'pfile'			=> $pfile,
 						'is_running'	=> $is_running,
 						'data'			=> $data,
-						'time'			=> date(DATE_ISO8601),
-						'total_time' 	=> exec_time_unit($global_start_time,'secs').' secs',
+						'time'			=> date("Y-m-d H:i:s"),
+						'total_time' 	=> exec_time_unit_auto($global_start_time),
 						'errors'		=> []
 					];
 

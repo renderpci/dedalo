@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * DD_AREA_MAINTENANCE_API
 * Manage API REST data flow of the area with Dédalo
