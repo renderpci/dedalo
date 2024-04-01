@@ -2451,4 +2451,29 @@ class area_maintenance extends area_common {
 
 
 
+	/**
+	* LONG_PROCESS
+	* Print a sequential number every 1000 milliseconds
+	* Used to test long processes and timeouts issues
+	* @return void
+	*/
+	public static function long_process() {
+
+		$i=0;
+		while(1){
+
+			echo $i++ . PHP_EOL;
+
+			while (ob_get_level() > 0) {
+				ob_end_flush();
+			}
+			flush();
+
+			$ms = 1000;
+			usleep( $ms * 1000 );
+		}
+	}//end long_process
+
+
+
 }//end class area_maintenance
