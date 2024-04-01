@@ -11,8 +11,8 @@ abstract class backup {
 
 
 
-	# Columns to save (used by copy command, etc.)
-	# Do not use id column NEVER here
+	// Columns to save (used by copy command, etc.)
+	// Do not use id column NEVER here
 	public static $jer_dd_columns			= '"terminoID", parent, modelo, esmodelo, esdescriptor, visible, norden, tld, traducible, relaciones, propiedades, properties';
 	public static $descriptors_dd_columns	= 'parent, dato, tipo, lang';
 	public static $checked_download_str_dir	= false;
@@ -115,7 +115,6 @@ abstract class backup {
 						return $response; // stop here
 					}
 				}
-
 
 			// Backup file exists (less than an hour apart)
 				$mysqlExportPath = $file_path .'/'. $db_name . '.custom.backup';
@@ -1152,26 +1151,26 @@ abstract class backup {
 			$msg = "<b>Update dedalo core data sequences</b>";
 			# SEQUENCE UPDATE (to the last table id)
 				$table 	 ='jer_dd';
-				$consolide_sequence = (object)self::consolide_sequence($table);
-				if ($consolide_sequence->result===false) {
+				$consolidate_sequence = (object)self::consolidate_sequence($table);
+				if ($consolidate_sequence->result===false) {
 					$response->result	= false;
-					$response->msg		.= $consolide_sequence->msg;
-					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolide_sequence->msg ?? '');
+					$response->msg		.= $consolidate_sequence->msg;
+					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolidate_sequence->msg ?? '');
 					return $response;
 				}else{
-					$msg .= $consolide_sequence->msg;
+					$msg .= $consolidate_sequence->msg;
 				}
 
 			# SEQUENCE UPDATE (to the last table id)
 				$table = 'matrix_descriptors_dd';
-				$consolide_sequence = (object)self::consolide_sequence($table);
-				if ($consolide_sequence->result===false) {
+				$consolidate_sequence = (object)self::consolidate_sequence($table);
+				if ($consolidate_sequence->result===false) {
 					$response->result 	 = false;
-					$response->msg 		.= $consolide_sequence->msg;
-					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolide_sequence->msg ?? '');
+					$response->msg 		.= $consolidate_sequence->msg;
+					$response->errors[]	= "Error consolidating sequences ($table): " . ($consolidate_sequence->msg ?? '');
 					return $response;
 				}else{
-					$msg .= $consolide_sequence->msg;
+					$msg .= $consolidate_sequence->msg;
 				}
 
 			$ar_msg[]=$msg;
@@ -1187,11 +1186,11 @@ abstract class backup {
 
 
 	/**
-	* CONSOLIDE_SEQUENCE
+	* CONSOLIDATE_SEQUENCE
 	* Set sequence value as last table id row
 	* @return array $ar_response
 	*/
-	public static function consolide_sequence(string $table) : object {
+	public static function consolidate_sequence(string $table) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1222,7 +1221,7 @@ abstract class backup {
 			}
 
 		return (object)$response;
-	}//end consolide_sequence
+	}//end consolidate_sequence
 
 
 
