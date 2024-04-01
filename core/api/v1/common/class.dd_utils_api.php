@@ -1355,9 +1355,10 @@ final class dd_utils_api {
 	* Used for SSE events to get info about know background process
 	* Note that PID (process id) and PFILE (process file name) are mandatory
 	* @param object $rqo
-	* @return object $response
+	* @return die()
 	*/
-	public static function get_process_status(object $rqo) : object {
+	public static function get_process_status(object $rqo) {
+		$start_time=start_time();
 
 		// session unlock
 			session_write_close();
@@ -1366,16 +1367,79 @@ final class dd_utils_api {
 			$pfile	= $rqo->options->pfile;
 			$pid	= $rqo->options->pid;
 
-		// response
-			$response = new stdClass();
-				$response->pfile	= $pfile;
-				$response->pid		= $pid;
+		// only logged users can access SSE events
+			if(login::is_logged()!==true) {
+				die('Authentication error: please login');
+			}
 
-		return $response;
+		// header print as event stream
+			header("Content-Type: text/event-stream");
+
+		// mandatory vars
+			if (empty($pfile) || empty($pid)) {
+				$output = (object)[
+					'pid'			=> $pid,
+					'pfile'			=> $pfile,
+					'is_running'	=> false,
+					'data'			=> null,
+					'time'			=> date("Y-m-d H:i:s"),
+					'errors'		=> ['Error: pfile and pid are mandatory']
+				];
+				echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+				die();
+			}
+
+		// process
+			$process = new process();
+				$process->setPid($pid);
+				$process->setFile(process::get_process_path() .'/'. $pfile);
+
+		// event loop
+			// update rate (int milliseconds)
+			$update_rate = $rqo->update_rate ?? 1000;
+			while (1) {
+
+				// process info updated on each loop
+					$is_running	= $process->status(); // bool is running
+					$data		= $process->read(); // string data
+
+				// output JSON to client
+					$output = (object)[
+						'pid'			=> $pid,
+						'pfile'			=> $pfile,
+						'is_running'	=> $is_running,
+						'data'			=> $data,
+						'time'			=> date("Y-m-d H:i:s"),
+						'total_time' 	=> exec_time_unit_auto($start_time),
+						'errors'		=> []
+					];
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
+					}
+
+				// output the response JSON string
+					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+
+				// flush the output buffer and send echoed messages to the browser
+					while (ob_get_level() > 0) {
+						ob_end_flush();
+					}
+					flush();
+
+				// stop on finish
+					if ($is_running===false) break;
+
+				// break the loop if the client aborted the connection (closed the page)
+					if ( connection_aborted() ) break;
+
+				// sleep n milliseconds before running the loop again
+					$ms = $update_rate; usleep( $ms * 1000 );
+			}//end while
+
+		die();
 	}//end get_process_status
-
-
-
 
 
 

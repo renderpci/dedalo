@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {data_manager} from '../../common/js/data_manager.js'
 
 
 
@@ -358,6 +359,142 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 
 	return wrapper
 }//end render_server_response_error
+
+
+
+/**
+* RENDER_STREAM
+* Render div with spinner and info about the given process status
+* Note that some functions (update_stream, done) are returned to
+* be fired by the stream reader in the corresponding events
+* @param object options
+* {
+* 	container: HTMLElement (parent of current generated nodes)
+* 	id: string (used to store DB local data status like 'process_make_backup')
+* 	pid: int (process id number)
+* 	pfile: string (name of process generated file)
+* 	display_json: bool false (on true, add raw JSON view of data)
+* }
+* @return object response
+* {
+* 	process_status_node: HTMLElement (main node)
+* 	update_stream: function (render sse_response chunk nodes)
+* 	done: function (remove spinner)
+* }
+*/
+export const render_stream = function(options) {
+
+	// options
+		const container		= options.container
+		const id			= options.id
+		const pid			= options.pid
+		const pfile			= options.pfile
+		const display_json	= options.display_json ?? (SHOW_DEBUG===true)
+
+	// response
+		const response = {}
+
+	// clean container node
+		while (container.firstChild) {
+			container.removeChild(container.firstChild);
+		}
+
+	// process_status_node
+		const process_status_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'process_status_node',
+			parent			: container
+		})
+		response.process_status_node = process_status_node
+
+	// spinner
+		const spinner = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'spinner',
+			parent			: process_status_node
+		})
+
+	// info node
+		const info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_node',
+			parent			: process_status_node
+		})
+
+	// store local info about this process
+		data_manager.set_local_db_data(
+			{
+				id		: id, // like 'process_make_backup',
+				value	: {
+					pid		: pid,
+					pfile	: pfile
+				}
+			}, // mixed data
+			'status' // string table
+		)
+
+	// update_stream function. loop from data_manager.read_stream
+		const update_stream = (sse_response) => {
+
+			// sample sse_response
+				// {
+				// 		pid			: int pid,
+				// 		pfile		: string pfile,
+				// 		is_running	: bool is_running,
+				// 		data		: JSON data,
+				// 		errors		: array []
+				// }
+
+			while (info_node.firstChild) {
+				info_node.removeChild(info_node.firstChild);
+			}
+
+			const is_running = sse_response?.is_running ?? true
+
+			const msg = sse_response && sse_response.data && sse_response.data.length
+				? sse_response.data
+				: is_running
+					? 'Running process.. ' + pid
+					: 'Process finished. ' + pid
+
+			const msg_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'msg',
+				inner_html		: msg,
+				parent			: info_node
+			})
+
+			if(display_json) {
+				ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'display_json_box',
+					inner_html		: JSON.stringify(sse_response, null, 2),
+					parent			: info_node
+				})
+			}
+
+			// running state check. If false, delete local DB reference
+			if(is_running===false) {
+				data_manager.delete_local_db_data(
+					id, // like 'make_backup_process'
+					'status' // string table
+				)
+				msg_node.classList.add('done')
+				spinner.remove()
+			}
+		}
+		// set node specific function
+		response.update_stream = update_stream
+
+	// done function
+		const done = () => {
+			spinner.remove()
+		}
+		response.done = done
+
+
+	return response
+}//end render_stream
 
 
 

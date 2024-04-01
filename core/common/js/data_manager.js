@@ -5,7 +5,7 @@
 
 
 /**
-* DATA_LOADER
+* DATA_MANAGER
 */
 export const data_manager = function() {
 
@@ -274,7 +274,7 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				// console.log('sse_response:', sse_response);
 
 				// exec callback function
-				on_read(reader, sse_response)
+				on_read(sse_response, reader)
 
 				// Read the next chunk
 				readChunk();
