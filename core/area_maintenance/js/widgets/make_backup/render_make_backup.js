@@ -72,8 +72,6 @@ const get_content_data = async function(self) {
 		const backup_path			= value.backup_path
 		const file_name				= value.file_name
 		const mysql_db				= value.mysql_db
-		const backup_files			= value.backup_files
-		const mysql_backup_files	= value.mysql_backup_files
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -139,6 +137,9 @@ const get_content_data = async function(self) {
 				parent			: content_data
 			})
 		}
+	// backup_files
+		const backup_files_container = render_psql_backup_files()
+		content_data.appendChild(backup_files_container)
 
 	// form backup MySQL DDBB
 		if (mysql_db && mysql_db[0] && mysql_db[0].db_name) {
@@ -157,34 +158,134 @@ const get_content_data = async function(self) {
 			})
 
 			// mysql_backup_files
-			if (mysql_backup_files && mysql_backup_files.length>0) {
-
-				const mysql_backup_toggle = ui.create_dom_element({
-					element_type	: 'div',
-					inner_html		: get_label.show_last_files || 'Show last files',
-					class_name		: 'backup_toggle_button unselectable',
-					parent			: content_data
-				})
-				mysql_backup_toggle.addEventListener('click', function(e) {
-					mysql_backup_files_container.classList.toggle('hide')
-				})
-
-				const mysql_backup_files_container = ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'mysql_backup_files_container hide',
-					inner_html		: JSON.stringify(mysql_backup_files, null, 2),
-					parent			: content_data
-				})
-			}
+			const backup_files_container = render_mysql_backup_files()
+			content_data.appendChild(backup_files_container)
 		}
-
-
-	// add at end body_response
-		content_data.appendChild(body_response)
 
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_PSQL_BACKUP_FILES
+* Render Dédalo backup files list
+* @return HTMLElement backup_files_container
+*/
+const render_psql_backup_files = function() {
+
+	// container
+	const backup_files_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'backup_files_container'
+	})
+
+	// button toggle
+	const backup_toggle = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: get_label.show_last_files || 'Show last files',
+		class_name		: 'backup_toggle_button unselectable',
+		parent			: backup_files_container
+	})
+	backup_toggle.addEventListener('click', async function(e) {
+		e.stopPropagation()
+		backup_files_list.classList.toggle('hide')
+
+		if (backup_files_list.classList.contains('hide')) {
+			return
+		}
+
+		// get files list updated
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'class_request',
+				source	: {
+					action : 'get_dedalo_backup_files'
+				},
+				options	: {
+					max_files			: 20,
+					psql_backup_files	: true,
+					mysql_backup_files	: false
+				}
+			}
+		})
+		const msg = api_response?.result || 'Unknown error'
+		backup_files_list.innerHTML = JSON.stringify(msg, null, 2)
+	})
+
+	const backup_files_list = ui.create_dom_element({
+		element_type	: 'pre',
+		class_name		: 'backup_files_list hide',
+		parent			: backup_files_container
+	})
+
+
+	return backup_files_container
+}//end render_psql_backup_files
+
+
+
+/**
+* RENDER_MYSQL_BACKUP_FILES
+* Render MySQL backup files list
+* @return HTMLElement backup_files_container
+*/
+const render_mysql_backup_files = function() {
+
+	// container
+	const backup_files_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'backup_files_container'
+	})
+
+	// button toggle
+	const mysql_backup_toggle = ui.create_dom_element({
+		element_type	: 'div',
+		inner_html		: get_label.show_last_files || 'Show last files',
+		class_name		: 'backup_toggle_button unselectable',
+		parent			: backup_files_container
+	})
+	mysql_backup_toggle.addEventListener('click', async function(e) {
+		e.stopPropagation()
+		mysql_backup_files_list.classList.toggle('hide')
+
+		if (mysql_backup_files_list.classList.contains('hide')) {
+			return
+		}
+
+		// get files list updated
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				dd_api	: 'dd_area_maintenance_api',
+				action	: 'class_request',
+				source	: {
+					action : 'get_dedalo_backup_files'
+				},
+				options	: {
+					max_files			: 20,
+					psql_backup_files	: false,
+					mysql_backup_files	: true
+				}
+			}
+		})
+		const msg = api_response?.result || 'Unknown error'
+		mysql_backup_files_list.innerHTML = JSON.stringify(msg, null, 2)
+	})
+
+
+	const mysql_backup_files_list = ui.create_dom_element({
+		element_type	: 'pre',
+		class_name		: 'mysql_backup_files_list hide',
+		parent			: backup_files_container
+	})
+
+
+	return backup_files_container
+}//end render_mysql_backup_files
 
 
 

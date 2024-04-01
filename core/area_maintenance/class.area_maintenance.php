@@ -39,10 +39,7 @@ class area_maintenance extends area_common {
 	public function item_make_backup() : object {
 
 		// short vars
-			$mysql_db			= (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
-			$mysql_backup_files	= backup::get_mysql_backup_files(); // MariaDB/MySQL files
-			$backup_files		= backup::get_backup_files(); // postgresql files
-			$max_files			= 10;
+			$mysql_db = (defined('API_WEB_USER_CODE_MULTIPLE') ? API_WEB_USER_CODE_MULTIPLE : null);
 
 		// item
 			$item = new stdClass();
@@ -53,14 +50,57 @@ class area_maintenance extends area_common {
 					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
 					'backup_path'			=> DEDALO_BACKUP_PATH_DB,
 					'file_name'				=> date("Y-m-d_His") .'.'. DEDALO_DATABASE_CONN .'.'. DEDALO_DB_TYPE .'_'. logged_user_id() .'_forced_dbv' . implode('-', get_current_version_in_db()).'.custom.backup',
-					'backup_files'			=> array_slice($backup_files, 0, $max_files), // first 10 items
 					'mysql_db'				=> $mysql_db, // first 10 items
-					'mysql_backup_files'	=> array_slice($mysql_backup_files, 0, $max_files) // first 10 items
 				];
 
 
 		return $item;
 	}//end item_make_backup
+
+
+
+	/**
+	* GET_DEDALO_BACKUP_FILES
+	* Called from widget 'make_backup'
+	* @param object $options
+	* {
+	* 	max_files: int 10
+	* 	psql_backup_files: bool true
+	* 	mysql_backup_files: bool true
+	* }
+	* @return object $response
+	*/
+	public static function get_dedalo_backup_files(object $options) : object {
+
+		// options
+			$max_files			= $options->max_files ?? 10;
+			$psql_backup_files	= $options->psql_backup_files ?? true;
+			$mysql_backup_files	= $options->mysql_backup_files ?? true;
+
+		// result
+			$result = new stdClass();
+
+			// psql_backup_files
+				if ($psql_backup_files===true) {
+					$files = backup::get_backup_files(); // postgresql files
+					$result->psql_backup_files = array_slice($files, 0, $max_files); // first N items
+				}
+
+			// mysql_backup_files
+				if ($mysql_backup_files===true) {
+					$files = backup::get_mysql_backup_files(); // MariaDB/MySQL files
+					$result->mysql_backup_files = array_slice($files, 0, $max_files); // first N items
+				}
+
+		// response
+			$response = new stdClass();
+				$response->result	= $result;
+				$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end get_dedalo_backup_files
+
 
 
 
