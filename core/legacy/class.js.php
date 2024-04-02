@@ -154,16 +154,6 @@ class js {
 				$added_component_text_area_commons = true;
 			}
 
-			# Si se carga un componente html_text cargamos la librería tinymce y especiíficas
-			#if( strpos($url,'component_html_text')!== false && !isset($added_component_html_text_commons) && navigator::get_selected('modo')!=='list' ) {
-			#	# Tinymce
-			#	$html .= self::build_tag( TEXT_EDITOR_URL_JS );
-			#
-			#	$html .= self::build_tag( DEDALO_CORE_URL . '/component_html_text/js/component_html_text_editor.js' );
-			#	#$html .= self::build_tag( DEDALO_CORE_URL . '/tools/tool_indexation/js/tool_indexation.js' );
-			#	$added_component_html_text_commons = true;
-			#}
-
 
 			# EVITA DUPLICIDADES
 			if(strpos($html,$url)===false)
@@ -199,19 +189,6 @@ class js {
 		/*
 		// CDN VERSIONS
 		switch ($url) {
-			case JQUERY_LIB_URL_JS:
-				return "\n<script src=\"//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js\"></script>\n<script>window.jQuery || document.write('<script src=\"".JQUERY_LIB_URL_JS."\"><\/script>')</script>";
-				break;
-			case JQUERY_UI_URL_JS:
-				return "\n<script src=\"//code.jquery.com/ui/1.11.1/jquery-ui.min.js\"></script>\n<script>window.jQuery.ui || document.write('<script src=\"".JQUERY_UI_URL_JS."\"><\/script>')</script>";
-				break;
-			case PAPER_JS_URL:
-				$url='//cdn.jsdelivr.net/paperjs/0.9.20/paper-core.min.js';	# //cdnjs.cloudflare.com/ajax/libs/paper.js/0.9.9/paper.min.js
-				return "\n<script src=\"$url\"></script>\n<script>window.paper || document.write('<script src=\"".PAPER_JS_URL."\"><\/script>')</script>";
-				break;
-			case TEXT_EDITOR_URL_JS: # @see http://www.tinymce.com/wiki.php/Configuration:external_plugins
-				return "\n<script src=\"//tinymce.cachefly.net/4.1/tinymce.min.js\"></script>\n<script>window.tinymce || document.write('<script src=\"".TEXT_EDITOR_URL_JS."\"><\/script>')</script>";
-				break;
 			case D3_URL_JS:
 				$url='//cdn.jsdelivr.net/d3js/3.1.6/d3.min.js';
 				return "\n<script src=\"$url\"></script>\n<script>window.d3 || document.write('<script src=\"".D3_URL_JS."\"><\/script>')</script>";

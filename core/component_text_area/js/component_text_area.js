@@ -38,10 +38,10 @@ export const component_text_area = function(){
 	this.id				= null
 
 	this.tag			= null // user selected tag DOM element (set on event click_tag_index_)
-	this.text_editor	= [] // array. current active text_editor (service_tinymce) for current node
+	this.text_editor	= [] // array. current active text_editor (service_ckeditor) for current node
 	this.events_tokens	= []
 
-	// service_text_editor. Name of desired service  to call (service_ckeditor|service_tinymce)
+	// service_text_editor. Name of desired service to call (service_ckeditor)
 	this.service_text_editor			= null
 	// service_text_editor_instance. array of created service instances based on input key (one is expected)
 	this.service_text_editor_instance	= []

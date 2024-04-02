@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label,  SHOW_DEBUG, DEDALO_ROOT_WEB, paper, iro */
+/*global get_label,  SHOW_DEBUG, DEDALO_ROOT_WEB, svgcanvas, iro */
 /*eslint no-undef: "error"*/
 
 
@@ -19,9 +19,7 @@ export const vector_editor = function() {
 	this.id
 
 	this.stage = null
-	// paper vars
-	// this.segment = this.path = this.movePath = this.handle = this.handle_sync = null;
-	// this.currentSegment			= this.mode = this.type = null
+	// svgcanvas vars
 	this.active_layer			= null
 	this.active_fill_color		= '#ffffff'
 	this.active_opacity			= 0.3
@@ -147,8 +145,8 @@ vector_editor.prototype.init_canvas = async function(self) {
 			// check if the clipboard is a svg data
 			if ( clipboard.indexOf('<svg version="')!=-1 ) {
 
-				const pasted_svg = self.current_paper.project.importSVG( clipboard )
-				pasted_svg.clipped = true;
+				// const pasted_svg = self.current_paper.project.importSVG( clipboard )
+				// pasted_svg.clipped = true;
 
 				// optional: remove the clipped path
 					// pasted_svg.clipped = false;
@@ -188,7 +186,6 @@ vector_editor.prototype.init_canvas = async function(self) {
 		this.render_tools_buttons(self);
 
 	// subscription to the full_screen change event
-	// the event will send fullscreen boolean option, true or false, true: paper is in fullscreen, false: paper is in the edit window
 		self.events_tokens.push(
 			event_manager.subscribe('full_screen_'+self.id,  this.update_canvas.bind(this))
 		)
@@ -363,8 +360,8 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 
 
 /**
-* INIT_TOOLS
-* init paper tools
+* POINTER
+* init pointer tool
 * @return bool true
 */
 vector_editor.prototype.pointer = function() {
@@ -597,7 +594,6 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 		}
 
 	// Tool buttons. Show
-		// const view			= self.current_paper.view
 		const buttons_container	= self.vector_editor_tools
 		buttons_container.classList.remove('hide')
 
@@ -746,7 +742,6 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 
 				// 	// const delta_x	= self.canvas_width /2
 				// 	// const delta_y	= self.canvas_height /2
-				// 	// self.current_paper.view.setCenter(delta_x, delta_y)
 				// })
 				// buttons.push(move)
 
@@ -796,7 +791,7 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 				this.color_picker = new iro.ColorPicker(color_wheel_contaniner, {
 						// Set the size of the color picker
 						width: 160,
-						// Set the initial color to paper project color
+						// Set the initial color to project color
 						color: '#f00',
 						// color wheel will not fade to black when the lightness decreases.
 						wheelLightness: false,
@@ -1244,7 +1239,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 		layer_li.addEventListener('click', () =>{
 			stage.clearSelection()
 
-			// get the paper layer name
+			// get the layer name
 			const name	= 'layer_'+layer.layer_id
 
 			// const new_active_layer	= project.layers[name]
@@ -1294,7 +1289,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 				parent			: layer_li,
 				text_node		: layer.layer_icon
 			})
-			// select the layer in paper, if the layer is the raster we change the selector name
+			// select the layer, if the layer is the raster we change the selector name
 			const name			= layer.layer_id===0 ? 'raster': 'layer_'+layer.layer_id
 			const viewed_layer	= drawing.getLayerName(layer.layer_id)
 
@@ -1415,9 +1410,6 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 								//remove the layer node
 									layer_li.remove()
-								// active the raster layer in the project
-								// it will by used for the next action in the vector editor
-								// if don't active one layer, paper can't save the changes (it has one delete layer active)
 							}
 
 							// close modal

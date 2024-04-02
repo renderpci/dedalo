@@ -654,10 +654,10 @@ component_portal.prototype.build = async function(autoload=false) {
 			? false
 			: self.show_interface.button_add ?? true
 
-	// check if the target section is multiple to remove the add button
-		self.show_interface.button_open_section_list = (self.target_section?.length > 1)
+	// check if the target section is multiple to remove the open_section_list
+		self.show_interface.button_list = (self.target_section?.length > 1)
 			? false
-			: self.show_interface.button_open_section_list ?? true
+			: self.show_interface.button_list ?? true
 
 	// self.show_interface is defined in component_comom init()
 	// Default source external buttons configuration,
@@ -665,21 +665,22 @@ component_portal.prototype.build = async function(autoload=false) {
 		switch (true) {
 
 			case (self.context.properties.source?.mode==='external'):
-				self.show_interface.button_add					= false
-				self.show_interface.button_link					= false
-				self.show_interface.tools						= false
-				self.show_interface.button_external				= true
-				self.show_interface.button_tree					= false
-				self.show_interface.button_open_section_list	= true
+				self.show_interface.button_add			= false
+				self.show_interface.button_link			= false
+				self.show_interface.tools				= false
+				self.show_interface.button_external		= true
+				self.show_interface.button_tree			= false
+				self.show_interface.button_list			= self.show_interface.button_list ?? true
+				self.show_interface.show_autocomplete	= false
 				break;
 
 			case (self.caller && self.caller.type==='tool'):
-				self.show_interface.button_add					= false
-				self.show_interface.button_link					= false
-				self.show_interface.tools						= false
-				self.show_interface.button_external				= false
-				self.show_interface.button_tree					= false
-				self.show_interface.button_open_section_list	= false
+				self.show_interface.button_add		= false
+				self.show_interface.button_link		= false
+				self.show_interface.tools			= false
+				self.show_interface.button_external	= false
+				self.show_interface.button_tree		= false
+				self.show_interface.button_list		= false
 				break;
 
 			default:

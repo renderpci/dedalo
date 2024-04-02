@@ -47,7 +47,7 @@ class search_related extends search {
 				}
 			}
 			$section_filter = !empty($ar_section_filter)
-				? implode(' AND ', $ar_section_filter)
+				? implode(' OR ', $ar_section_filter)
 				: false;
 
 		// each table query
