@@ -1401,7 +1401,12 @@ final class dd_utils_api {
 
 				// process info updated on each loop
 					$is_running	= $process->status(); // bool is running
-					$data		= $process->read(); // string data
+					$array_data	= $process->read(); // array data
+
+					// encode
+					$data = isset($array_data[0])
+						? json_decode($array_data[0])
+						: null;
 
 				// output JSON to client
 					$output = (object)[
@@ -1416,11 +1421,12 @@ final class dd_utils_api {
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
+						// error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
+						error_log('process loop: is_running: '.to_string($is_running) );
 					}
 
 				// output the response JSON string
-					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL . PHP_EOL;
 
 				// flush the output buffer and send echoed messages to the browser
 					while (ob_get_level() > 0) {
