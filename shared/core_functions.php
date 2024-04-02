@@ -96,6 +96,33 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 
 
 /**
+* PRINT_CLI
+* Echo the text msg as line and flush object buffers
+* only if current environment is CLI
+* @param string $msg
+* @return void
+*/
+function print_cli(string $msg) : void {
+
+	if (php_sapi_name()==='cli') {
+
+		// echo $msg . PHP_EOL;
+		$msg_object = (object)[
+			'msg' => $msg
+		];
+		echo json_handler::encode($msg_object, JSON_UNESCAPED_UNICODE) . PHP_EOL;
+
+		// flush the output buffer and send echoed messages to the console
+		// while (ob_get_level() > 0) {
+		// 	ob_end_flush();
+		// }
+		// flush();
+	}
+}//end print_cli
+
+
+
+/**
 * LOGGED_USER_ID
 * Resolve current logged user id
 * @return int|null
