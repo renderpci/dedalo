@@ -1404,9 +1404,15 @@ final class dd_utils_api {
 					$array_data	= $process->read(); // array data
 
 					// encode
-					$data = isset($array_data[0])
-						? json_decode($array_data[0])
+					$value = isset($array_data[0])
+						? (json_decode($array_data[0]) ?? $array_data[0])
 						: null;
+
+					$data = (!is_object($value))
+						? (object)[
+							'msg' => $value
+						 ]
+						: $value;
 
 				// output JSON to client
 					$output = (object)[
