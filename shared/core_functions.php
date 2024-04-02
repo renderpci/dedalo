@@ -22,6 +22,11 @@ declare(strict_types=1);
 */
 function dump(mixed $val, string $var_name=null, array $arguments=null) : string {
 
+	// ignore dump in CLI mode
+		if (php_sapi_name()==='cli') {
+			return '';
+		}
+
 	// Back-trace info of current execution
 		$bt = debug_backtrace();
 
