@@ -1373,7 +1373,10 @@ final class dd_utils_api {
 			}
 
 		// header print as event stream
+			header('Access-Control-Allow-Origin: *');
 			header("Content-Type: text/event-stream");
+			header('Cache-Control: no-cache');
+			header('Connection: keep-alive');
 
 		// mandatory vars
 			if (empty($pfile) || empty($pid)) {
@@ -1381,7 +1384,9 @@ final class dd_utils_api {
 					'pid'			=> $pid,
 					'pfile'			=> $pfile,
 					'is_running'	=> false,
-					'data'			=> null,
+					'data'			=> (object)[
+						'msg' => 'Error: pfile and pid are mandatory'
+					],
 					'time'			=> date("Y-m-d H:i:s"),
 					'errors'		=> ['Error: pfile and pid are mandatory']
 				];
@@ -1402,17 +1407,20 @@ final class dd_utils_api {
 				// process info updated on each loop
 					$is_running	= $process->status(); // bool is running
 					$array_data	= $process->read(); // array data
-
 					// encode
 					$value = isset($array_data[0])
 						? (json_decode($array_data[0]) ?? $array_data[0])
-						: null;
+						: '';
 
 					$data = (!is_object($value))
 						? (object)[
 							'msg' => $value
 						 ]
 						: $value;
+
+					$data =	(object)[
+							'msg' => 'patata'
+						 ];
 
 				// output JSON to client
 					$output = (object)[
@@ -1429,6 +1437,7 @@ final class dd_utils_api {
 					if(SHOW_DEBUG===true) {
 						// error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
 						error_log('process loop: is_running: '.to_string($is_running) );
+						error_log('process output: '.to_string($output) );
 					}
 
 				// output the response JSON string

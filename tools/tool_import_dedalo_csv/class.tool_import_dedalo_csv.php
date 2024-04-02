@@ -279,6 +279,10 @@ class tool_import_dedalo_csv extends tool_common {
 			$time_machine_save	= $options->time_machine_save ?? null;
 			$dir				= $options->files_path ?? tool_import_dedalo_csv::get_files_path();
 
+		// process information
+			$process_info = new stdClass();
+				$process_info->msg				= null;
+
 		// import each file
 			$import_response=[];
 			foreach ((array)$files as $current_file_obj) {
@@ -286,6 +290,10 @@ class tool_import_dedalo_csv extends tool_common {
 				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
 				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
 				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+
+				// print the process_info
+					$process_info->msg = label::get_label('reading') . ': ' .$current_file;
+					print_cli($process_info);
 
 				// file
 					$file = $dir . '/' . $current_file;
@@ -841,6 +849,15 @@ class tool_import_dedalo_csv extends tool_common {
 				$modified_by_user	= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_by_user'; }); // array('tipo'=>'dd197', 'model'=>'component_select');
 				$modified_date		= array_find($modified_section_tipos, function($el){ return $el['name']==='modified_date'; }); 	// array('tipo'=>'dd201', 'model'=>'component_date');
 
+		// process information
+			$process_info = new stdClass();
+				$process_info->msg				= null;
+				$process_info->section_tipo		= $section_tipo;
+				$process_info->section_id		= null;
+				$process_info->component_tipo	= null;
+				$process_info->compomnent_label	= null;
+
+
 		// rows info statistics
 			$created_rows	= [];
 			$updated_rows	= [];
@@ -874,6 +891,12 @@ class tool_import_dedalo_csv extends tool_common {
 					true // set cache always to true important (!)
 				);
 				$create_record = $section->forced_create_record();
+
+			// set the information about the process
+				$process_info->section_id = $section_id;
+				$process_info->msg = ($create_record===true)
+					? label::get_label('new') ?? 'New'
+					: label::get_label('update') ?? 'Update';
 
 			// SAVE_TIME_MACHINE
 				// Set section to save data for time machine
@@ -1113,6 +1136,14 @@ class tool_import_dedalo_csv extends tool_common {
 							}
 							break;
 					}//end switch (true)
+
+
+					// set the information about the process
+					$process_info->component_tipo = $component_tipo;
+					$process_info->compomnent_label = RecordObj_dd::get_termino_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
+
+					// print the process_info
+					print_cli($process_info);
 				}//end foreach ($columns as $key => $value)
 
 			// action add for statistics

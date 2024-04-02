@@ -264,6 +264,7 @@ tool_import_dedalo_csv.prototype.import_files = function(files, time_machine_sav
 			action	: 'tool_request',
 			source	: source,
 			options	: {
+				background_running	: true,
 				files				: files,
 				time_machine_save	: time_machine_save
 			}

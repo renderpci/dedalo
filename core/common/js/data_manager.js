@@ -266,12 +266,15 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				// Convert the chunk value to a string
 				const chunkString = new TextDecoder().decode(value);
 
+					console.log('))))))))))) read_stream value:', value);
+					console.log('))))))))))) read_stream chunkString:', chunkString);
+
 				// parse text response as JSON
 				const sse_response = chunkString
 					? JSON.parse(chunkString)
 					: ''
 
-				// console.log('sse_response:', sse_response);
+				console.log('sse_response:', sse_response);
 
 				// exec callback function
 				on_read(sse_response, reader)

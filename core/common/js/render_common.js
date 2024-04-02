@@ -405,6 +405,7 @@ export const render_stream = function(options) {
 			class_name		: 'process_status_node',
 			parent			: container
 		})
+		// set specific node
 		response.process_status_node = process_status_node
 
 	// spinner
@@ -435,7 +436,9 @@ export const render_stream = function(options) {
 
 	// update_stream function. loop from data_manager.read_stream
 		const update_stream = (sse_response) => {
-			console.log('sse_response:', typeof sse_response, sse_response);
+			if(SHOW_DEBUG===true) {
+				console.log('update_stream sse_response:', typeof sse_response, sse_response);
+			}
 
 			// sample sse_response
 				// {
@@ -487,13 +490,14 @@ export const render_stream = function(options) {
 				spinner.remove()
 			}
 		}
-		// set node specific function
+		// set specific function
 		response.update_stream = update_stream
 
 	// done function
 		const done = () => {
 			spinner.remove()
 		}
+		// set specific function
 		response.done = done
 
 
