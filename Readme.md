@@ -79,14 +79,14 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 - flatpickr 4.6.3
 - geoip2 (!)
 - json-view
-- leaflet 1.8+
-- geoman 2.13.0
+- leaflet 1.9+
+- geoman 2.16.0
 - lessphp v0.4.0
 - d3
 - mocha 9.2.2
 - chai 4.3.3
 - nvd3 1.7.1
-- paper 0.9.25
+- svgCanvas 7.2.1
 - pdfjs 1.1.1
 - pdfkit
 - tcpdf 6.2.5
