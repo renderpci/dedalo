@@ -62,4 +62,4 @@
 	);
 
 // write result to file as text
-	echo json_encode($output_result);
+	echo json_encode($output_result, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
