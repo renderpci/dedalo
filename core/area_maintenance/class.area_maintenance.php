@@ -2452,27 +2452,61 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* LONG_PROCESS
+	* LONG_PROCESS_STREAM
 	* Print a sequential number every 1000 milliseconds
 	* Used to test long processes and timeouts issues
 	* @return void
 	*/
-	public static function long_process() {
+	public static function long_process_stream() {
+		$start_time=start_time();
+
+		// session unlock
+		session_write_close();
+
+		// header print as event stream
+		header("Content-Type: text/event-stream");
 
 		$i=0;
 		while(1){
 
-			echo $i++ . PHP_EOL;
+			$counter = $i++;
+
+			$data = (object)[
+				'msg' => 'Iteration ' . $counter
+			];
+
+			$output = (object)[
+				'pid'			=> null,
+				'pfile'			=> null,
+				'is_running'	=> true,
+				'data'			=> $data,
+				'time'			=> date("Y-m-d H:i:s"),
+				'total_time' 	=> exec_time_unit_auto($start_time),
+				'errors'		=> []
+			];
+
+			// debug
+				if(SHOW_DEBUG===true) {
+					error_log('process loop: is_running output: ' .PHP_EOL. json_encode($output) );
+				}
+
+			// echo $i++ . PHP_EOL;
+			echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
 
 			while (ob_get_level() > 0) {
 				ob_end_flush();
 			}
 			flush();
 
+			// break the loop if the client aborted the connection (closed the page)
+			if ( connection_aborted() ) break;
+
 			$ms = 1000;
 			usleep( $ms * 1000 );
 		}
-	}//end long_process
+
+		die();
+	}//end long_process_stream
 
 
 
