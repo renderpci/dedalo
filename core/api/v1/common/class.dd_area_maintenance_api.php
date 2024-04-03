@@ -37,8 +37,9 @@ final class dd_area_maintenance_api {
 	public static function class_request(object $rqo) : object {
 
 		// options
-			$options		= $rqo->options ?? [];
-			$fn_arguments	= $options;
+			$options			= $rqo->options ?? [];
+			$fn_arguments		= $options;
+			$background_running	= $options->background_running ?? false;
 
 		// source
 			$source			= $rqo->source;
@@ -51,6 +52,18 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__METHOD__.']. ';
 				$response->errors	= [];
 
+		// check valid options
+			if (!is_object($options)) {
+				$response->msg = 'Error. invalid options ';
+				$response->errors[] = 'Invalid options type';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' options: ' .to_string($options)
+					, logger::ERROR
+				);
+				return $response;
+			}
+
 		// method (static)
 			if (!method_exists($class_name, $class_method)) {
 				$response->msg = 'Error. class method \''.$class_method.'\' do not exists ';
@@ -58,7 +71,25 @@ final class dd_area_maintenance_api {
 			}
 			try {
 
-				$fn_result = call_user_func(array($class_name, $class_method), $fn_arguments);
+				// background_running / direct cases
+				switch (true) {
+					case ($background_running===true):
+
+						$cli_options = new stdClass();
+							$cli_options->class_name	= $class_name;
+							$cli_options->method_name	= $class_method;
+							$cli_options->class_file	= null; // already loaded by loader
+							$cli_options->params		= $options;
+
+						$fn_result = exec_::request_cli($cli_options);
+						break;
+
+					default:
+						// direct case
+
+						$fn_result = call_user_func(array($class_name, $class_method), $fn_arguments);
+						break;
+				}
 
 			} catch (Exception $e) { // For PHP 5
 
