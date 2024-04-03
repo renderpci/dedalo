@@ -6,8 +6,9 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {render_stream} from '../../../../common/js/render_common.js'
 	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
-	// import {data_manager} from '../../../../common/js/data_manager.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -123,6 +124,56 @@ const get_content_data_edit = async function(self) {
 			}
 		})
 
+	// fn_long_process
+		const fn_long_process = async (e) => {
+			e.stopPropagation()
+
+			// locks the button submit
+			button_run_long_process.classList.add('loading')
+
+			// get_process_status from API and returns a SEE stream
+			data_manager.request_stream({
+				use_worker	: true,
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action	: 'long_process_stream',
+					}
+				}
+			})
+			.then(function(stream){
+
+				// render base nodes and set functions to manage
+				// the stream reader events
+				const render_response = render_stream({
+					container		: long_process_container,
+					id				: 'process_test_long_process',
+					pid				: null,
+					pfile			: null
+				})
+
+				// on_read event (called on every chunk from stream reader)
+				const on_read = (sse_response) => {
+					// fire update_stream on every reader read chunk
+					render_response.update_stream(sse_response)
+				}
+
+				// on_done event (called once at finish or cancel the stream read)
+				const on_done = () => {
+					// is triggered at the reader's closing
+					render_response.done()
+					// unlocks the button submit
+					button_run_long_process.classList.remove('loading')
+				}
+
+				// read stream. Creates ReadableStream that fire
+				// 'on_read' function on each stream chunk at update_rate
+				// (1 second default) until stream is done (PID is no longer running)
+				data_manager.read_stream(stream, on_read, on_done)
+			})
+		}//end fn_long_process
+
 	// button_run_long_process
 		const button_run_long_process = ui.create_dom_element({
 			element_type	: 'button',
@@ -130,54 +181,12 @@ const get_content_data_edit = async function(self) {
 			inner_html		: 'Run long process',
 			parent			: content_data
 		})
-		button_run_long_process.addEventListener('click', fn_unlock)
-		async function fn_unlock(e) {
-			e.stopPropagation()
+		button_run_long_process.addEventListener('click', fn_long_process)
 
-			// prompt
-				const seconds = prompt('Seconds');
-				if (seconds===null) {
-					// user cancel action case
-					return
-				}
-
-			// lock
-				content_data.classList.add('lock')
-
-			// spinner
-				const spinner = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'spinner'
-				})
-				info_node.prepend(spinner)
-
-			// request
-				const api_response = await data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'run_long_process',
-						options	: {
-							seconds : seconds
-						}
-					}
-				})
-
-				info_node.innerHTML = JSON.stringify({
-					action	: 'run_long_process',
-					result	: api_response.result,
-					msg		: api_response.msg
-				}, null, 2)
-
-			// lock
-				content_data.classList.remove('lock')
-				spinner.remove()
-		}//end fn_reset_counter
-
-	// info_node
-		const info_node = ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: 'info_node',
+		// long_process_container
+		const long_process_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'long_process_container',
 			parent			: content_data
 		})
 

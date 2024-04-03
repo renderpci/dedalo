@@ -186,7 +186,7 @@ data_manager.request_stream = async function(options) {
 	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
 	const headers		= options.headers || {
 		'Content-Type': 'application/json',
-		'Accept': 'text/event-stream',
+		'Accept': 'text/event-stream'
 	}
 	const redirect		= options.redirect || 'follow' // manual, *follow, error
 	const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
@@ -215,13 +215,11 @@ data_manager.request_stream = async function(options) {
 			const stream = response.body;
 
 			resolve(stream)
-
 		})
 		.catch(error => {
 			// Log the error
 			console.error(error);
 		});
-
 	})
 }//end request_stream
 
@@ -232,10 +230,11 @@ data_manager.request_stream = async function(options) {
 * Read a SSE ReadableStream from server API response
 * @see ReadableStream: https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream/getReader
 * @param ReadableStream stream
+* 	from fetch response.body
 * @param function on_read
-* 	optional callback function fired on each reader chunk
+* 	callback function fired for each reader chunk
 * @param function on_done
-* 	optional callback function fired on reader done (close read)
+* 	callback function fired on reader done (close read)
 * @return void
 */
 data_manager.read_stream = function(stream, on_read, on_done) {
@@ -244,7 +243,7 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 	const reader = stream.getReader();
 
 	// register reader (allow stop on page navigation)
-		page_globals.stream_readers.push(reader)
+	page_globals.stream_readers.push(reader)
 
 	// Define a function to read each chunk
 	const readChunk = () => {
@@ -258,6 +257,7 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				if (done) {
 					// Log a message
 					console.log('Stream finished', done, value);
+					// exec callback function on_done
 					on_done(true)
 					// Return from the function
 					return;
@@ -266,17 +266,12 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				// Convert the chunk value to a string
 				const chunkString = new TextDecoder().decode(value);
 
-					console.log('))))))))))) read_stream value:', value);
-					console.log('))))))))))) read_stream chunkString:', chunkString);
-
 				// parse text response as JSON
 				const sse_response = chunkString
 					? JSON.parse(chunkString)
 					: ''
 
-				console.log('sse_response:', sse_response);
-
-				// exec callback function
+				// exec callback function on_read
 				on_read(sse_response, reader)
 
 				// Read the next chunk

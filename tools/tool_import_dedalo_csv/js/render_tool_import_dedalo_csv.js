@@ -1211,7 +1211,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlocks the button submit
-			button.classList.remove('loading')
+			button_submit.classList.remove('loading')
 		}
 
 		// read stream. Creates ReadableStream that fire
