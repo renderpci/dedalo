@@ -201,9 +201,9 @@ class tool_diffusion extends tool_common {
 			$resolve_levels			= $options->resolve_levels;
 
 		// fix levels on each call
-			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = isset($resolve_levels)
-				? $resolve_levels
-				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+			if (!empty($resolve_levels)) {
+				$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = (int)$resolve_levels;
+			}
 
 		// time_limit set
 			$minutes = 5;
@@ -256,7 +256,7 @@ class tool_diffusion extends tool_common {
 		// time_limit set
 			$minutes = 20;
 			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Prevent some infinite loop cases when data is bad formed
+			set_time_limit($seconds); // Avoiding some cases of infinite loop when data are badly formed
 
 		// response
 			$response = new stdClass();
@@ -265,14 +265,13 @@ class tool_diffusion extends tool_common {
 
 		// options
 			$section_tipo			= $options->section_tipo;
-			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 			$resolve_levels			= $options->resolve_levels;
 
 		// fix levels on each call
-			$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = !empty($resolve_levels)
-				? $resolve_levels
-				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+			if (!empty($resolve_levels)) {
+				$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = (int)$resolve_levels;
+			}
 
 		// Write session to unlock session file
 			session_write_close();
@@ -458,11 +457,8 @@ class tool_diffusion extends tool_common {
 				// success
 				$response->result = true;
 
-				$max_recursions	= isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-					? $_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-					: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
-
-				$response->msg = "Published record ID $section_id successfully. Levels: $max_recursions. ";
+				$max_recursions	= diffusion::get_resolve_levels();
+				$response->msg	= "Published record ID $section_id successfully. Levels: $max_recursions. ";
 				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
 			}else{
 
