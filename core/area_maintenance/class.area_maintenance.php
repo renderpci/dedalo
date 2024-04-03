@@ -2458,63 +2458,85 @@ class area_maintenance extends area_common {
 	* @return void
 	*/
 	public static function long_process_stream() {
-		$start_time=start_time();
 
-		// session unlock
-		session_write_close();
+		if (running_in_cli()===true) {
 
-		// header print as event stream
-		header("Content-Type: text/event-stream");
-		header("Cache-Control: no-cache");
-		header('Connection: keep-alive');
-		header("Access-Control-Allow-Origin: *");
-		header('X-Accel-Buffering: no'); // nginex buffer control
+			// executing from dd_utils_api::get_process_status
 
-		$i=0;
-		while(1){
+			$i=0;
+			while(1){
 
-			$counter = $i++;
+				$counter = $i++;
 
-			$data = (object)[
-				'msg' => 'Iteration ' . $counter
-			];
+				print_cli((object)[
+					'msg'		=> 'Iteration ' . $counter,
+					'memory'	=> dd_memory_usage()
+				]);
 
-			$output = (object)[
-				'pid'			=> null,
-				'pfile'			=> null,
-				'is_running'	=> true,
-				'data'			=> $data,
-				'time'			=> date("Y-m-d H:i:s"),
-				'total_time' 	=> exec_time_unit_auto($start_time),
-				'errors'		=> []
-			];
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					error_log('process loop: is_running output: ' .PHP_EOL. json_encode($output) );
-				}
-
-			// output the response JSON string
-				$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
-				echo $a;
-				// fix Apache issue where small chunks are not sent correctly over HTTP
-				if (strlen($a) < 4096) {
-					echo str_pad(' ', 4096) . PHP_EOL;
-				}
-
-			while (ob_get_level() > 0) {
-				ob_end_flush();
+				$ms = 1000; usleep( $ms * 1000 );
 			}
-			flush();
 
-			// break the loop if the client aborted the connection (closed the page)
-			if ( connection_aborted() ) break;
+		}else{
 
-			$ms = 1000;
-			usleep( $ms * 1000 );
+			// direct call version
+
+			$start_time=start_time();
+
+			// session unlock
+			session_write_close();
+
+			// header print as event stream
+			header("Content-Type: text/event-stream");
+			header("Cache-Control: no-cache");
+			header('Connection: keep-alive');
+			header("Access-Control-Allow-Origin: *");
+			header('X-Accel-Buffering: no'); // nginx buffer control
+
+			$i=0;
+			while(1){
+
+				$counter = $i++;
+
+				$data = (object)[
+					'msg' => '(no cli version) Iteration ' . $counter
+				];
+
+				$output = (object)[
+					// 'pid'		=> $pid,
+					// 'pfile'		=> $pfile,
+					'is_running'	=> true,
+					'data'			=> $data,
+					'time'			=> date("Y-m-d H:i:s"),
+					'total_time' 	=> exec_time_unit_auto($start_time),
+					'errors'		=> []
+				];
+
+				// debug
+					if(SHOW_DEBUG===true) {
+						error_log('process loop: is_running output: ' .PHP_EOL. json_encode($output) );
+					}
+
+				// output the response JSON string
+					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
+					echo $a;
+					// fix Apache issue where small chunks are not sent correctly over HTTP
+					if (strlen($a) < 4096) {
+						echo str_pad(' ', 4096) . PHP_EOL;
+					}
+
+				while (ob_get_level() > 0) {
+					ob_end_flush();
+				}
+				flush();
+
+				// break the loop if the client aborted the connection (closed the page)
+				if ( connection_aborted() ) break;
+
+				$ms = 1000;
+				usleep( $ms * 1000 );
+			}
+			die();
 		}
-
-		die();
 	}//end long_process_stream
 
 
