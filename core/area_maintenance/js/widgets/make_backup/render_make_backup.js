@@ -108,7 +108,7 @@ const get_content_data = async function(self) {
 		})
 
 	// update_process_status
-		const update_process_status = (pid, pfile) => {
+		const update_process_status = (pid, pfile, container) => {
 
 			// locks the button submit
 			button_submit.classList.add('loading')
@@ -130,7 +130,7 @@ const get_content_data = async function(self) {
 				// render base nodes and set functions to manage
 				// the stream reader events
 				const render_response = render_stream({
-					container		: body_response,
+					container		: container,
 					id				: 'process_make_backup',
 					pid				: pid,
 					pfile			: pfile
@@ -169,7 +169,8 @@ const get_content_data = async function(self) {
 				if (local_data && local_data.value) {
 					update_process_status(
 						local_data.value.pid,
-						local_data.value.pfile
+						local_data.value.pfile,
+						body_response
 					)
 				}
 			})
@@ -259,7 +260,8 @@ const get_content_data = async function(self) {
 			// fire update_process_status
 			update_process_status(
 				api_response.pid,
-				api_response.pfile
+				api_response.pfile,
+				body_response
 			)
 		}//end fn_submit
 
@@ -308,8 +310,47 @@ const get_content_data = async function(self) {
 
 
 /**
+* REFRESH_FILES_LIST
+* Get and print the files list of selected type
+* @param string type
+* 	psql|mysql
+* @param HTMLElement container
+* 	DOM node where print the result JSON list
+* @return void
+*/
+const refresh_files_list = async (type, container) => {
+
+	const psql_backup_files		= (type==='psql')
+	const mysql_backup_files	= (type==='mysql')
+
+	// get files list updated
+	const api_response = await data_manager.request({
+		use_worker	: true,
+		body		: {
+			dd_api	: 'dd_area_maintenance_api',
+			action	: 'class_request',
+			source	: {
+				action : 'get_dedalo_backup_files'
+			},
+			options	: {
+				max_files			: 20,
+				psql_backup_files	: psql_backup_files,
+				mysql_backup_files	: mysql_backup_files
+			}
+		}
+	})
+	// message from API response
+	const msg = api_response?.result || 'Unknown error'
+	// print list
+	container.innerHTML = JSON.stringify(msg, null, 2)
+}//end refresh_files_list
+
+
+
+/**
 * RENDER_PSQL_BACKUP_FILES
 * Render Dédalo backup files list
+* Refresh the list every 1 sec
 * @return HTMLElement backup_files_container
 */
 const render_psql_backup_files = function() {
@@ -320,6 +361,8 @@ const render_psql_backup_files = function() {
 		class_name		: 'backup_files_container'
 	})
 
+	let interval = null
+
 	// button toggle
 	const backup_toggle = ui.create_dom_element({
 		element_type	: 'div',
@@ -329,32 +372,22 @@ const render_psql_backup_files = function() {
 	})
 	backup_toggle.addEventListener('click', async function(e) {
 		e.stopPropagation()
+		// toggle backup_files_list visibility
 		backup_files_list.classList.toggle('hide')
-
+		// clean previous intervals
+		if (interval) clearInterval(interval);
+		// if hiding, return
 		if (backup_files_list.classList.contains('hide')) {
 			return
 		}
-
-		// get files list updated
-		const api_response = await data_manager.request({
-			use_worker	: true,
-			body		: {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
-				source	: {
-					action : 'get_dedalo_backup_files'
-				},
-				options	: {
-					max_files			: 20,
-					psql_backup_files	: true,
-					mysql_backup_files	: false
-				}
-			}
-		})
-		const msg = api_response?.result || 'Unknown error'
-		backup_files_list.innerHTML = JSON.stringify(msg, null, 2)
+		// call API and refresh the list
+		refresh_files_list('psql', backup_files_list)
+		// activate interval to refresh after 1 sec
+		interval = setInterval(refresh_files_list, 1000);
 	})
 
+	// files list container (JOSN array of objects) as
+	// [{ "name": "2024-04-02_223514.dedalo6_development.postgresql_-1_forced_dbv6-1-4.custom.backup", "size": "5.34 GB"}]
 	const backup_files_list = ui.create_dom_element({
 		element_type	: 'pre',
 		class_name		: 'backup_files_list hide',
@@ -370,6 +403,7 @@ const render_psql_backup_files = function() {
 /**
 * RENDER_MYSQL_BACKUP_FILES
 * Render MySQL backup files list
+* Refresh the list every 1 sec
 * @return HTMLElement backup_files_container
 */
 const render_mysql_backup_files = function() {
@@ -380,6 +414,8 @@ const render_mysql_backup_files = function() {
 		class_name		: 'backup_files_container'
 	})
 
+	let interval = null
+
 	// button toggle
 	const mysql_backup_toggle = ui.create_dom_element({
 		element_type	: 'div',
@@ -389,33 +425,22 @@ const render_mysql_backup_files = function() {
 	})
 	mysql_backup_toggle.addEventListener('click', async function(e) {
 		e.stopPropagation()
+		// toggle backup_files_list visibility
 		mysql_backup_files_list.classList.toggle('hide')
+		// clean previous intervals
+		if (interval) clearInterval(interval);
 
 		if (mysql_backup_files_list.classList.contains('hide')) {
 			return
 		}
-
-		// get files list updated
-		const api_response = await data_manager.request({
-			use_worker	: true,
-			body		: {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'class_request',
-				source	: {
-					action : 'get_dedalo_backup_files'
-				},
-				options	: {
-					max_files			: 20,
-					psql_backup_files	: false,
-					mysql_backup_files	: true
-				}
-			}
-		})
-		const msg = api_response?.result || 'Unknown error'
-		mysql_backup_files_list.innerHTML = JSON.stringify(msg, null, 2)
+		// call API and refresh the list
+		refresh_files_list('mysql', mysql_backup_files_list)
+		// activate interval to refresh after 1 sec
+		interval = setInterval(refresh_files_list, 1000);
 	})
 
-
+	// files list container (JOSN array of objects) as
+	// [{ "name": "2024-04-02_223514.dedalo6_development.postgresql_-1_forced_dbv6-1-4.custom.backup", "size": "5.34 GB"}]
 	const mysql_backup_files_list = ui.create_dom_element({
 		element_type	: 'pre',
 		class_name		: 'mysql_backup_files_list hide',
