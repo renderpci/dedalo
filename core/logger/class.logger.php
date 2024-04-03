@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * CLASS LOGGER
 *
@@ -19,7 +20,7 @@ class logger {
 	const ERROR		= 10;
 	const CRITICAL	= 5;
 
-	# global logger obj array to store instances of logger
+	// global logger obj array to store instances of logger
 	static $obj;
 
 
@@ -33,7 +34,8 @@ class logger {
 
 
 	/**
-	* LEVEL TO STRING CONVERSION
+	* LEVEL_TO_STRING
+	* Level to string conversion
 	* @param int $log_level
 	* @return string
 	*/
@@ -59,6 +61,7 @@ class logger {
 	* @param string $connection_string
 	* 	Sample: 'activity://auto:auto@auto:5432/log_data?table=matrix_activity'
 	* @return bool
+	* 	true
 	*/
 	public static function register(string $log_name, string $connection_string) : bool {
 
@@ -91,8 +94,9 @@ class logger {
 	/**
 	* GET INSTANCE
 	* @param string $name
+	* @return object|null
 	*/
-	public static function get_instance(string $name) {
+	public static function get_instance(string $name) : ?object {
 
 		return logger::manage_backends($name);
 	}//end get_instance
@@ -105,7 +109,7 @@ class logger {
 	* @param logger_backend $obj_back = null
 	* @return object|null
 	*/
-	private static function manage_backends(string $name, logger_backend $obj_back=null) {
+	private static function manage_backends(string $name, logger_backend $obj_back=null) : ?object {
 
 		static $backends;
 
