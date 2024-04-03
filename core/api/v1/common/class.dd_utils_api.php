@@ -1373,10 +1373,11 @@ final class dd_utils_api {
 			}
 
 		// header print as event stream
-			header('Access-Control-Allow-Origin: *');
 			header("Content-Type: text/event-stream");
-			header('Cache-Control: no-cache');
+			header("Cache-Control: no-cache");
 			header('Connection: keep-alive');
+			header("Access-Control-Allow-Origin: *");
+			header('X-Accel-Buffering: no'); // nginex buffer control
 
 		// mandatory vars
 			if (empty($pfile) || empty($pid)) {
@@ -1418,10 +1419,6 @@ final class dd_utils_api {
 						 ]
 						: $value;
 
-					$data =	(object)[
-							'msg' => 'patata'
-						 ];
-
 				// output JSON to client
 					$output = (object)[
 						'pid'			=> $pid,
@@ -1441,7 +1438,12 @@ final class dd_utils_api {
 					}
 
 				// output the response JSON string
-					echo json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL . PHP_EOL;
+					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
+					echo $a;
+					// fix Apache issue where small chunks are not sent correctly over HTTP
+					if (strlen($a) < 4096) {
+						echo str_pad(' ', 4096) . PHP_EOL;
+					}
 
 				// flush the output buffer and send echoed messages to the browser
 					while (ob_get_level() > 0) {
