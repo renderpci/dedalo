@@ -3369,6 +3369,12 @@ abstract class component_common extends common {
 			$q_operator			= $query_object->q_operator ?? null;
 			$operator_between	= '$or';	// default (!)
 
+		// q
+			$q = $query_object->q ?? null;
+			if ($q==='only_operator') {
+				return $query_object;
+			}
+
 		// JSON CASE
 		if ($json_value = json_decode($search_value)) {
 
