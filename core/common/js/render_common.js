@@ -434,10 +434,10 @@ export const render_stream = function(options) {
 			'status' // string table
 		)
 
-	// update_stream function. loop from data_manager.read_stream
-		const update_stream = (sse_response) => {
+	// update_info_node function. loop from data_manager.read_stream
+		const update_info_node = (sse_response, callback) => {
 			if(SHOW_DEBUG===true) {
-				console.log('update_stream sse_response:', typeof sse_response, sse_response);
+				console.log('update_info_node sse_response:', typeof sse_response, sse_response);
 			}
 
 			// sample sse_response
@@ -455,21 +455,31 @@ export const render_stream = function(options) {
 
 			const is_running = sse_response?.is_running ?? true
 
-			const msg = sse_response && sse_response.data && sse_response.data.msg
-				? sse_response.data.msg
-				// ? JSON.stringify(sse_response.data, null, 2)
-				: is_running
-					? 'Running process.. ' + pid
-					: 'Process finished. ' + pid
+			if(typeof callback === 'function'){
 
-			// const msg = JSON.stringify(sse_response, null, 2)
+				const msg_node = callback()
+				if(msg_node){
+					info_node.appendChild(msg_node)
+				}
 
-			const msg_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'msg',
-				inner_html		: msg,
-				parent			: info_node
-			})
+			}else{
+
+				const msg = sse_response && sse_response.data && sse_response.data.msg
+					? sse_response.data.msg
+					// ? JSON.stringify(sse_response.data, null, 2)
+					: is_running
+						? 'Running process.. ' + pid
+						: 'Process finished. ' + pid
+
+				// const msg = JSON.stringify(sse_response, null, 2)
+
+				const msg_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg',
+					inner_html		: msg,
+					parent			: info_node
+				})
+			}
 
 			if(display_json) {
 				ui.create_dom_element({
