@@ -501,7 +501,7 @@ export const render_stream = function(options) {
 			}
 		}
 		// set specific function
-		response.update_stream = update_stream
+		response.update_info_node = update_info_node
 
 	// done function
 		const done = () => {
