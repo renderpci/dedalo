@@ -104,7 +104,6 @@ const get_content_data_edit = async function(self) {
 			list_of_test.innerHTML = JSON.stringify(module.list_of_test, null, 2)
 		})
 
-
 	// body_response
 		const body_response = ui.create_dom_element({
 			element_type	: 'div',
@@ -131,47 +130,66 @@ const get_content_data_edit = async function(self) {
 			// locks the button submit
 			button_run_long_process.classList.add('loading')
 
-			// get_process_status from API and returns a SEE stream
-			data_manager.request_stream({
-				use_worker	: true,
-				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
-						action	: 'long_process_stream',
+			// counter long process fire
+				const response  = await data_manager.request({
+					body		: {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'class_request',
+						source	: {
+							action	: 'long_process_stream',
+						},
+						options : {
+							background_running : true // set run in background CLI
+						}
 					}
-				}
-			})
-			.then(function(stream){
-
-				// render base nodes and set functions to manage
-				// the stream reader events
-				const render_response = render_stream({
-					container		: long_process_container,
-					id				: 'process_test_long_process',
-					pid				: null,
-					pfile			: null
 				})
 
-				// on_read event (called on every chunk from stream reader)
-				const on_read = (sse_response) => {
-					// fire update_stream on every reader read chunk
-					render_response.update_stream(sse_response)
-				}
+			const pid	= response.pid
+			const pfile	= response.pfile
 
-				// on_done event (called once at finish or cancel the stream read)
-				const on_done = () => {
-					// is triggered at the reader's closing
-					render_response.done()
-					// unlocks the button submit
-					button_run_long_process.classList.remove('loading')
-				}
+			// get_process_status from API and returns a SEE stream
+				data_manager.request_stream({
+					body : {
+						dd_api		: 'dd_utils_api',
+						action		: 'get_process_status',
+						update_rate	: 1000, // int milliseconds
+						options		: {
+							pid		: pid,
+							pfile	: pfile
+						}
+					}
+				})
+				.then(function(stream){
 
-				// read stream. Creates ReadableStream that fire
-				// 'on_read' function on each stream chunk at update_rate
-				// (1 second default) until stream is done (PID is no longer running)
-				data_manager.read_stream(stream, on_read, on_done)
-			})
+					// render base nodes and set functions to manage
+					// the stream reader events
+					const render_response = render_stream({
+						container		: long_process_container,
+						id				: 'process_test_long_process',
+						pid				: pid,
+						pfile			: pfile,
+						display_json	: true
+					})
+
+					// on_read event (called on every chunk from stream reader)
+					const on_read = (sse_response) => {
+						// fire update_info_node on every reader read chunk
+						render_response.update_info_node(sse_response)
+					}
+
+					// on_done event (called once at finish or cancel the stream read)
+					const on_done = () => {
+						// is triggered at the reader's closing
+						render_response.done()
+						// unlocks the button submit
+						button_run_long_process.classList.remove('loading')
+					}
+
+					// read stream. Creates ReadableStream that fire
+					// 'on_read' function on each stream chunk at update_rate
+					// (1 second default) until stream is done (PID is no longer running)
+					data_manager.read_stream(stream, on_read, on_done)
+				})
 		}//end fn_long_process
 
 	// button_run_long_process
