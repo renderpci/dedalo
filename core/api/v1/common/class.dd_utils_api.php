@@ -1432,9 +1432,8 @@ final class dd_utils_api {
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						// error_log('process loop: is_running: '.to_string($is_running) .' output: ' .PHP_EOL. json_encode($output) );
-						error_log('process loop: is_running: '.to_string($is_running) );
-						error_log('process output: '.to_string($output) );
+						error_log('process loop: is_running: '.to_string($is_running) . ' - pid: ' .$pid. ' - pfile: ' .$pfile );
+						// error_log('process output: '.to_string($output) );
 					}
 
 				// output the response JSON string
