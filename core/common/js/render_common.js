@@ -378,7 +378,7 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 * @return object response
 * {
 * 	process_status_node: HTMLElement (main node)
-* 	update_stream: function (render sse_response chunk nodes)
+* 	update_info_node: function (render sse_response chunk nodes)
 * 	done: function (remove spinner)
 * }
 */
@@ -392,7 +392,11 @@ export const render_stream = function(options) {
 		const display_json	= options.display_json ?? (SHOW_DEBUG===true)
 
 	// response
-		const response = {}
+		const response = {
+			process_status_node	: undefined,
+			update_info_node	: undefined,
+			done				: undefined
+		}
 
 	// clean container node
 		while (container.firstChild) {
@@ -449,56 +453,60 @@ export const render_stream = function(options) {
 				// 		errors		: array []
 				// }
 
-			while (info_node.firstChild) {
-				info_node.removeChild(info_node.firstChild);
-			}
-
-			const is_running = sse_response?.is_running ?? true
-
-			if(typeof callback === 'function'){
-
-				const msg_node = callback()
-				if(msg_node){
-					info_node.appendChild(msg_node)
+			// clean container on each call (reader chunk)
+				while (info_node.firstChild) {
+					info_node.removeChild(info_node.firstChild);
 				}
 
-			}else{
+			// process running status
+				const is_running = sse_response?.is_running ?? true
 
-				const msg = sse_response && sse_response.data && sse_response.data.msg
-					? sse_response.data.msg
-					// ? JSON.stringify(sse_response.data, null, 2)
-					: is_running
-						? 'Running process.. ' + pid
-						: 'Process finished. ' + pid
+			// info node render
+				if(typeof callback === 'function'){
 
-				// const msg = JSON.stringify(sse_response, null, 2)
+					const msg_node = callback()
+					if(msg_node){
+						info_node.appendChild(msg_node)
+					}
 
-				const msg_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'msg',
-					inner_html		: msg,
-					parent			: info_node
-				})
-			}
+				}else{
 
-			if(display_json) {
-				ui.create_dom_element({
-					element_type	: 'pre',
-					class_name		: 'display_json_box',
-					inner_html		: JSON.stringify(sse_response, null, 2),
-					parent			: info_node
-				})
-			}
+					const msg = sse_response && sse_response.data && sse_response.data.msg
+						? sse_response.data.msg
+						// ? JSON.stringify(sse_response.data, null, 2)
+						: is_running
+							? 'Running process.. ' + pid
+							: 'Process finished. ' + pid
+
+					const msg_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'msg',
+						inner_html		: msg,
+						parent			: info_node
+					})
+					if(is_running===false) {
+						msg_node.classList.add('done')
+					}
+				}
+
+			// debug display_json_box
+				if(display_json) {
+					ui.create_dom_element({
+						element_type	: 'pre',
+						class_name		: 'display_json_box',
+						inner_html		: JSON.stringify(sse_response, null, 2),
+						parent			: info_node
+					})
+				}
 
 			// running state check. If false, delete local DB reference
-			if(is_running===false) {
-				data_manager.delete_local_db_data(
-					id, // like 'make_backup_process'
-					'status' // string table
-				)
-				msg_node.classList.add('done')
-				spinner.remove()
-			}
+				if(is_running===false) {
+					data_manager.delete_local_db_data(
+						id, // like 'make_backup_process'
+						'status' // string table
+					)
+					spinner.remove()
+				}
 		}
 		// set specific function
 		response.update_info_node = update_info_node
