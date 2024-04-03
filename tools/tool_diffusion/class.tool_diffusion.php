@@ -1,9 +1,5 @@
 <?php
-// includes. Include another files if need
-	// include( dirname(__FILE__) . '/additional/class.additional.php');
-
-
-
+declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * CLASS TOOL_DIFFUSION
 * Manages Dédalo diffusion features
@@ -161,10 +157,10 @@ class tool_diffusion extends tool_common {
 
 		// export_options
 			$export_options = (object)[
-				'section_tipo'				=> $section_tipo ?? null,
-				'section_id'				=> $section_id ?? null,
+				'section_tipo'				=> $section_tipo,
+				'section_id'				=> $section_id,
 				'diffusion_element_tipo'	=> $diffusion_element_tipo,
-				'resolve_levels'			=> $resolve_levels ?? 1
+				'resolve_levels'			=> $resolve_levels
 			];
 
 		// response
@@ -187,7 +183,6 @@ class tool_diffusion extends tool_common {
 	* @return object $response
 	*/
 	public static function export_edit(object $options) : object {
-
 
 		// response
 			$response = new stdClass();
