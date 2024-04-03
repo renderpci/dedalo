@@ -281,7 +281,7 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// process information
 			$process_info = new stdClass();
-				$process_info->msg				= null;
+				$process_info->msg = null;
 
 		// import each file
 			$import_response=[];
@@ -292,8 +292,10 @@ class tool_import_dedalo_csv extends tool_common {
 				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 
 				// print the process_info
-					$process_info->msg = label::get_label('reading') . ': ' .$current_file;
-					print_cli($process_info);
+					if ( running_in_cli()===true ) {
+						$process_info->msg = label::get_label('reading') . ': ' .$current_file;
+						print_cli($process_info);
+					}
 
 				// file
 					$file = $dir . '/' . $current_file;
@@ -1143,7 +1145,9 @@ class tool_import_dedalo_csv extends tool_common {
 					$process_info->compomnent_label = RecordObj_dd::get_termino_by_tipo($component_tipo,DEDALO_APPLICATION_LANG, true);
 
 					// print the process_info
-					print_cli($process_info);
+					if ( running_in_cli()===true ) {
+						print_cli($process_info);
+					}
 				}//end foreach ($columns as $key => $value)
 
 			// action add for statistics

@@ -109,7 +109,7 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 */
 function print_cli(object $process_info) : void {
 
-	if (php_sapi_name()==='cli') {
+	if ( running_in_cli()===true ) {
 
 		echo json_handler::encode($process_info, JSON_UNESCAPED_UNICODE) . PHP_EOL;
 
@@ -120,6 +120,18 @@ function print_cli(object $process_info) : void {
 		// flush();
 	}
 }//end print_cli
+
+
+
+/**
+* RUNNING_IN_CLI
+* Get if current execution environment is command line interface or not
+* @return void
+*/
+function running_in_cli() : bool {
+
+	return php_sapi_name()==='cli';
+}//end running_in_cli
 
 
 
