@@ -487,8 +487,12 @@ class component_iri extends component_common {
 					$langs_query_json = new stdClass;
 						$langs_query_json->$logical_operator = $ar_query_object;
 
-				# override
-				$query_object = [$new_query_json, $langs_query_json];
+				$sub_group1 = new stdClass();
+					$sub_name1 = '$and';
+					$sub_group1->$sub_name1 = [$new_query_json, $langs_query_json];
+
+				// override
+				$query_object = $sub_group1;
 				break;
 			# IS DIFFERENT
 			case (strpos($q, '!=')===0 || $q_operator==='!='):
