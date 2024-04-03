@@ -1626,9 +1626,7 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// references. Resolve references until reach max_recursions level
-			$max_recursions = isset($_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'])
-				? (int)$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS']
-				: (defined('DEDALO_DIFFUSION_RESOLVE_LEVELS') ? DEDALO_DIFFUSION_RESOLVE_LEVELS : 2);
+			$max_recursions = diffusion::get_resolve_levels();
 			// subtract one to cohere key (recursion level and max_recursions)
 			$max_recursions--;
 
