@@ -2465,6 +2465,10 @@ class area_maintenance extends area_common {
 
 		// header print as event stream
 		header("Content-Type: text/event-stream");
+		header("Cache-Control: no-cache");
+		header('Connection: keep-alive');
+		header("Access-Control-Allow-Origin: *");
+		header('X-Accel-Buffering: no'); // nginex buffer control
 
 		$i=0;
 		while(1){
@@ -2490,8 +2494,13 @@ class area_maintenance extends area_common {
 					error_log('process loop: is_running output: ' .PHP_EOL. json_encode($output) );
 				}
 
-			// echo $i++ . PHP_EOL;
-			echo json_handler::encode($output, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) . PHP_EOL . PHP_EOL;
+			// output the response JSON string
+				$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
+				echo $a;
+				// fix Apache issue where small chunks are not sent correctly over HTTP
+				if (strlen($a) < 4096) {
+					echo str_pad(' ', 4096) . PHP_EOL;
+				}
 
 			while (ob_get_level() > 0) {
 				ob_end_flush();
