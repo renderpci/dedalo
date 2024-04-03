@@ -229,8 +229,6 @@ const get_content_data = async function(self) {
 		// })
 		// button_apply.addEventListener('click', function(e){
 		// 	e.preventDefault()
-
-
 		// })
 
 	// content_data
@@ -245,17 +243,20 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_PUBLICATION_ITEMS
+* @param object self
 * @return HTMLElement publication_items
 */
 export const render_publication_items = function(self) {
 
-	const diffusion_map	= self.diffusion_info.diffusion_map
-	const ar_data		= self.diffusion_info.ar_data
+	// short vars
+		const diffusion_map	= self.diffusion_info.diffusion_map
+		const ar_data		= self.diffusion_info.ar_data
 
-	const publication_items = ui.create_dom_element({
-		element_type	: 'div',
-		class_name		: 'publication_items'
-	})
+	// publication_items container
+		const publication_items = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'publication_items'
+		})
 
 	let diffusion_group_key = 0;
 	for(const diffusion_group_tipo in diffusion_map) {
@@ -436,7 +437,7 @@ export const render_publication_items = function(self) {
 					})
 				}
 
-			// connection_status
+			// DB connection_status
 				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: get_label.connection_status || 'Connection status',

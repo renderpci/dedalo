@@ -126,7 +126,7 @@ function print_cli(object $process_info) : void {
 /**
 * RUNNING_IN_CLI
 * Get if current execution environment is command line interface or not
-* @return void
+* @return bool
 */
 function running_in_cli() : bool {
 
