@@ -146,7 +146,7 @@ final class dd_tools_api {
 						$cli_options->class_file	= $class_file;
 						$cli_options->params		= $options;
 
-					$fn_result = dd_tools_api::tool_request_cli($cli_options);
+					$fn_result = exec_::request_cli($cli_options);
 					break;
 
 				default:
@@ -164,7 +164,6 @@ final class dd_tools_api {
 						);
 						trigger_error($e->getMessage());
 
-
 						$fn_result = new stdClass();
 							$fn_result->result	= false;
 							$fn_result->msg		= 'Error. Request failed on call_user_func tool_method: '.$tool_method;
@@ -176,83 +175,6 @@ final class dd_tools_api {
 
 		return $response;
 	}//end tool_request
-
-
-
-	/**
-	* TOOL_REQUEST_CLI
-	* Exec tool method in CLI
-	* @param object $options
-	* {
-	* 	class_name: string "tool_request_cli"
-	* 	method_name: string "export_records"
-	* 	class_file: string
-	*	params: object
-	* }
-	* @return object response { result: mixed, msg: string }
-	*/
-	private static function tool_request_cli(object $options) : object {
-
-		// options
-			$class_name		= $options->class_name;
-			$method_name	= $options->method_name;
-			$class_file		= $options->class_file;
-			$params			= $options->params;
-
-			$safe_params = new stdClass();
-			foreach ($params as $key => $value) {
-				$safe_params->{$key} = safe_xss($value);
-			}
-
-		// server_vars
-			// sh_data mandatory vars
-			$sh_data = [
-				'server' => [
-					'HTTP_HOST'		=> $_SERVER['HTTP_HOST'],
-					'REQUEST_URI'	=> $_SERVER['REQUEST_URI'],
-					'SERVER_NAME'	=> $_SERVER['SERVER_NAME']
-				],
-				'session_id'	=> session_id(),
-				'user_id'		=> logged_user_id(),
-				'class_name'	=> $class_name, // class name
-				'method_name'	=> $method_name, // method name
-				'file'			=> $class_file, // class file to include optional
-				'params'		=> $safe_params // object with options passed to the function
-			];
-			$server_vars = json_encode($sh_data, JSON_UNESCAPED_SLASHES|JSON_UNESCAPED_UNICODE);
-
-		// process file (temporal file where store function output)
-			$pfile			= process::get_unique_process_file(); // like 'process_1_2024-03-31_23-47-36_3137757' usually stored in the sessions directory
-			$file_path		= process::get_process_path() .'/'. $pfile; // output file with errors and stream data
-
-		// process_runner. File to sh execute that manage given vars calling desired class and method
-			$process_runner	= DEDALO_CORE_PATH . '/base/process_runner.php';
-
-		// command composition
-			$cmd		= PHP_BIN_PATH . " $process_runner '$server_vars' ";
-			$command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
-
-			// debug
-				debug_log(__METHOD__
-					." Running tool task in background ($pfile)". PHP_EOL
-					." Command: ". PHP_EOL. to_string($command)
-					, logger::DEBUG
-				);
-
-		// process creation
-			$process	= new process($command);
-			$pid		= $process->getPid();
-
-		// response OK
-			$response = new stdClass();
-				$response->result	= true;
-				$response->pid		= $pid;
-				$response->pfile	= $pfile;
-				$response->msg		= 'OK. Running publication ' . $pid;
-
-
-		return $response;
-	}//end tool_request_cli
 
 
 
