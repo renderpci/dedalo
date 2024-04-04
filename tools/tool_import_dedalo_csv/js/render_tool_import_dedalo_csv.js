@@ -1231,16 +1231,12 @@ const update_process_status = (options) => {
 
 				const ar_msg = []
 
-				if(data.file){
-					ar_msg.push(`${data.msg}: ${data.file}`)
+				if(data.current_file){
+					ar_msg.push(`${data.msg}: ${data.current_file}`)
 				}
-				if(data.section_id){
-					ar_msg.push(`${data.msg} - id: ${data.section_id}`)
-				}
-
+				if(data.section_id)	ar_msg.push(`id: ${data.section_id}`)
 				if(data.compomnent_label) ar_msg.push(data.compomnent_label)
 				if(sse_response.time) ar_msg.push(sse_response.total_time)
-
 
 				const msg = ar_msg.join(' | ')
 
