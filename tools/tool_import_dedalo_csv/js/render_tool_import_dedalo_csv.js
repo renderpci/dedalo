@@ -1272,7 +1272,7 @@ const update_process_status = (options) => {
 
 // check process status always
 const check_process_data = (options) => {
-		console.log("process_info_container:",options.process_info_container);
+
 	data_manager.get_local_db_data(
 		'process_import_dedalo_csv',
 		'status'
