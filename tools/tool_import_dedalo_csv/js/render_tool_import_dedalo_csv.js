@@ -894,7 +894,7 @@ const render_final_report = function(options){
 	const api_response				= options.api_response
 	const process_info_container	= options.process_info_container
 
-	const selected_files = self.csv_files_list.filter(el => el.checked===true)
+	const selected_files = self.csv_files_list //.filter(el => el.checked===true)
 	const result_len = api_response.result.length
 	for (let i = result_len - 1; i >= 0; i--) {
 
@@ -903,7 +903,7 @@ const render_final_report = function(options){
 			el.name === current_rensponse.file && el.section_tipo === current_rensponse.section_tipo
 		)
 
-		const result_container = current_file.result_container || null
+		const result_container = current_file?.result_container || null
 		if(result_container) {
 
 			// clean container
@@ -1151,21 +1151,21 @@ const render_final_report = function(options){
 		}//end if(result_container)
 	}//end for (let i = result_len - 1; i >= 0; i--)
 
-	// response JSON print
-		while (api_response_container.firstChild) {
-			api_response_container.removeChild(api_response_container.firstChild)
-		}
-		ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: '',
-			inner_html		: JSON.stringify(api_response, null, 2),
-			parent			: api_response_container
-		})
+	// // response JSON print
+	// 	while (api_response_container.firstChild) {
+	// 		api_response_container.removeChild(api_response_container.firstChild)
+	// 	}
+	// 	ui.create_dom_element({
+	// 		element_type	: 'pre',
+	// 		class_name		: '',
+	// 		inner_html		: JSON.stringify(api_response, null, 2),
+	// 		parent			: api_response_container
+	// 	})
 
-	// loading
-		loading_items.map((el)=>{
-			el.classList.remove('loading')
-		})
+	// // loading
+	// 	loading_items.map((el)=>{
+	// 		el.classList.remove('loading')
+	// 	})
 }//end render_final_report
 
 
