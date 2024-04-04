@@ -186,9 +186,9 @@ data_manager.request_stream = async function(options) {
 	const cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
 	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
 	const headers		= options.headers || {
-		'Content-Type': 'application/json',
-		'Accept': 'text/event-stream',
-		'Content-Encoding': 'none',
+		'Content-Type'		: 'application/json',
+		'Accept'			: 'text/event-stream',
+		'Content-Encoding'	: 'none',
 	}
 	const redirect		= options.redirect || 'follow' // manual, *follow, error
 	const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
