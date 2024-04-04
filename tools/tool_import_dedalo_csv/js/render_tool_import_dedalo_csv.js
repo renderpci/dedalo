@@ -887,7 +887,12 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 }//end upload_done
 
 
-
+/**
+* RENDER_FINAL_REPORT
+* Called on import process has finished to render the final report
+* @param object options
+* @return void
+*/
 const render_final_report = function(options){
 
 	const self						= options.self
@@ -1109,8 +1114,6 @@ const render_final_report = function(options){
 										alert(error_coping_text, err);
 									});
 								}
-
-
 							})
 
 						// copy_as_column_button
@@ -1150,22 +1153,6 @@ const render_final_report = function(options){
 			}//end if(current_rensponse.result)
 		}//end if(result_container)
 	}//end for (let i = result_len - 1; i >= 0; i--)
-
-	// // response JSON print
-	// 	while (api_response_container.firstChild) {
-	// 		api_response_container.removeChild(api_response_container.firstChild)
-	// 	}
-	// 	ui.create_dom_element({
-	// 		element_type	: 'pre',
-	// 		class_name		: '',
-	// 		inner_html		: JSON.stringify(api_response, null, 2),
-	// 		parent			: api_response_container
-	// 	})
-
-	// // loading
-	// 	loading_items.map((el)=>{
-	// 		el.classList.remove('loading')
-	// 	})
 }//end render_final_report
 
 
