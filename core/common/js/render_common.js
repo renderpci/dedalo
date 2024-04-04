@@ -481,7 +481,7 @@ export const render_stream = function(options) {
 
 					const msg_node = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'msg',
+						class_name		: 'msg_node',
 						inner_html		: msg,
 						parent			: info_node
 					})
