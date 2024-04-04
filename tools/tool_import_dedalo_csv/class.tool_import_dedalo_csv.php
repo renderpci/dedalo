@@ -293,7 +293,8 @@ class tool_import_dedalo_csv extends tool_common {
 
 				// print the process_info
 					if ( running_in_cli()===true ) {
-						$process_info->msg = label::get_label('reading') . ': ' .$current_file;
+						$process_info->msg = label::get_label('reading');
+						$process_info->file = $current_file;
 						print_cli($process_info);
 					}
 
@@ -897,8 +898,8 @@ class tool_import_dedalo_csv extends tool_common {
 			// set the information about the process
 				$process_info->section_id = $section_id;
 				$process_info->msg = ($create_record===true)
-					? label::get_label('new') ?? 'New'
-					: label::get_label('update') ?? 'Update';
+					? label::get_label('creating') ?? 'Creating'
+					: label::get_label('updating') ?? 'Updating';
 
 			// SAVE_TIME_MACHINE
 				// Set section to save data for time machine
