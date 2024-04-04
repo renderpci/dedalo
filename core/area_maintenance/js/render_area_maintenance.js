@@ -275,8 +275,7 @@ const build_widget = (item, self) => {
 						}
 					}
 				*/
-			});
-
+		});
 
 
 	return container
