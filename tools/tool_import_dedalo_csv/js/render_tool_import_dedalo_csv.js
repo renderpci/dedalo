@@ -1272,21 +1272,23 @@ const update_process_status = (options) => {
 
 // check process status always
 const check_process_data = (options) => {
-	// data_manager.get_local_db_data(
-	// 	'process_import_dedalo_csv',
-	// 	'status'
-	// )
-	// .then(function(local_data){
-	// 	if (local_data && local_data.value) {
-	// 		update_process_status({
-	// 			pid						: local_data.value.pid,
-	// 			pfile					: local_data.value.pfile,
-	// 			process_info_container	: options.process_info,
-	// 			button_submit			: options.button_submit
+		console.log("process_info_container:",options.process_info_container);
+	data_manager.get_local_db_data(
+		'process_import_dedalo_csv',
+		'status'
+	)
+	.then(function(local_data){
+		if (local_data && local_data.value) {
+			update_process_status({
+				pid						: local_data.value.pid,
+				pfile					: local_data.value.pfile,
+				process_info_container	: options.process_info_container,
+				button_submit			: options.button_submit,
+				self 					: options.self
 
-	// 		})
-	// 	}
-	// })
+			})
+		}
+	})
 }//end check_process_data
 
 
