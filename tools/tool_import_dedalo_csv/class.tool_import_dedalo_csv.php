@@ -293,8 +293,8 @@ class tool_import_dedalo_csv extends tool_common {
 
 				// print the process_info
 					if ( running_in_cli()===true ) {
-						$process_info->msg = label::get_label('reading');
-						$process_info->file = $current_file;
+						$process_info->msg			= label::get_label('reading');
+						$process_info->current_file	= $current_file;
 						print_cli($process_info);
 					}
 
@@ -321,12 +321,14 @@ class tool_import_dedalo_csv extends tool_common {
 					);
 
 				// import exec
-					$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file(
-						$section_tipo,
-						$ar_csv_data,
-						$time_machine_save,
-						$ar_columns_map
-					);
+					$import_csv_options = new stdClass();
+						$import_csv_options->section_tipo		= $section_tipo;
+						$import_csv_options->ar_csv_data		= $ar_csv_data;
+						$import_csv_options->time_machine_save	= $time_machine_save;
+						$import_csv_options->ar_columns_map		= $ar_columns_map;
+						$import_csv_options->current_file		= $current_file;
+
+					$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file($import_csv_options);
 					$current_file_response->file			= $current_file;
 					$current_file_response->section_tipo	= $section_tipo;
 
@@ -799,10 +801,14 @@ class tool_import_dedalo_csv extends tool_common {
 	* IMPORT_DEDALO_CSV_FILE
 	* 	Import CSV array data to Dédalo
 	*
-	* @param string $section_tipo
-	* @param array $ar_csv_data
-	* @param bool $time_machine_save
-	* @param array $ar_columns_map
+	* @param object $options
+	* {
+	* 	"section_tipo"		: "oh1", 				// string $section_tipo
+	* 	"ar_csv_data"		: [], 					// array $ar_csv_data
+	* 	"time_machine_save"	: true, 				// bool $time_machine_save
+	* 	"ar_columns_map"	: [] 					// array $ar_columns_map
+	* 	""current_file" 	: my_import_csv-oh1 	// string $current_file
+	* }
 	*
 	* @return object $response
 	* {
@@ -814,8 +820,14 @@ class tool_import_dedalo_csv extends tool_common {
 	*	time			: string
 	* }
 	*/
-	public static function import_dedalo_csv_file(string $section_tipo, array $ar_csv_data, bool $time_machine_save, array $ar_columns_map) : object {
+	public static function import_dedalo_csv_file(object $options) : object {
 		$start_time = start_time();
+
+		$section_tipo		= $options->section_tipo;
+		$ar_csv_data		= $options->ar_csv_data;
+		$time_machine_save	= $options->time_machine_save;
+		$ar_columns_map		= $options->ar_columns_map;
+		$current_file		= $options->current_file;
 
 		// Disable logging activity (!) IMPORTANT
 			logger_backend_activity::$enable_log = false;
@@ -859,6 +871,7 @@ class tool_import_dedalo_csv extends tool_common {
 				$process_info->section_id		= null;
 				$process_info->component_tipo	= null;
 				$process_info->compomnent_label	= null;
+				$process_info->current_file		= $current_file;
 
 
 		// rows info statistics

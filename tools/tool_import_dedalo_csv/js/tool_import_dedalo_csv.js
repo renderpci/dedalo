@@ -202,6 +202,12 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 
 	const self = this
 
+	// remove of local database the process connection
+		data_manager.delete_local_db_data(
+			'process_import_dedalo_csv', // like 'make_backup_process'
+			'status' // string table
+		)
+
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'delete_csv_file')

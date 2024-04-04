@@ -887,14 +887,19 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 }//end upload_done
 
 
-
+/**
+* RENDER_FINAL_REPORT
+* Called on import process has finished to render the final report
+* @param object options
+* @return void
+*/
 const render_final_report = function(options){
 
 	const self						= options.self
 	const api_response				= options.api_response
 	const process_info_container	= options.process_info_container
 
-	const selected_files = self.csv_files_list.filter(el => el.checked===true)
+	const selected_files = self.csv_files_list //.filter(el => el.checked===true)
 	const result_len = api_response.result.length
 	for (let i = result_len - 1; i >= 0; i--) {
 
@@ -903,7 +908,7 @@ const render_final_report = function(options){
 			el.name === current_rensponse.file && el.section_tipo === current_rensponse.section_tipo
 		)
 
-		const result_container = current_file.result_container || null
+		const result_container = current_file?.result_container || null
 		if(result_container) {
 
 			// clean container
@@ -1109,8 +1114,6 @@ const render_final_report = function(options){
 										alert(error_coping_text, err);
 									});
 								}
-
-
 							})
 
 						// copy_as_column_button
@@ -1150,22 +1153,6 @@ const render_final_report = function(options){
 			}//end if(current_rensponse.result)
 		}//end if(result_container)
 	}//end for (let i = result_len - 1; i >= 0; i--)
-
-	// response JSON print
-		while (api_response_container.firstChild) {
-			api_response_container.removeChild(api_response_container.firstChild)
-		}
-		ui.create_dom_element({
-			element_type	: 'pre',
-			class_name		: '',
-			inner_html		: JSON.stringify(api_response, null, 2),
-			parent			: api_response_container
-		})
-
-	// loading
-		loading_items.map((el)=>{
-			el.classList.remove('loading')
-		})
 }//end render_final_report
 
 
@@ -1181,7 +1168,7 @@ const update_process_status = (options) => {
 		const process_info_container	= options.process_info_container
 
 	// locks the button submit
-	button_submit.classList.add('loading')
+	button_submit.classList.add('hide')
 	if (process_info_container.classList.contains('hide')) {
 		process_info_container.classList.remove('hide')
 	}
@@ -1204,10 +1191,11 @@ const update_process_status = (options) => {
 		// render base nodes and set functions to manage
 		// the stream reader events
 		const render_response = render_stream({
-			container		: process_info_container,
-			id				: 'process_import_dedalo_csv',
-			pid				: pid,
-			pfile			: pfile
+			container				: process_info_container,
+			id						: 'process_import_dedalo_csv',
+			pid						: pid,
+			pfile					: pfile,
+			delete_local_db_data	: false
 		})
 
 		// on_read event (called on every chunk from stream reader)
@@ -1223,23 +1211,19 @@ const update_process_status = (options) => {
 						api_response			: data,
 						process_info_container	: process_info_container
 					})
-					button_submit.classList.remove('loading')
+					button_submit.classList.remove('hide')
 
 					return
 				}
 
 				const ar_msg = []
 
-				if(data.file){
-					ar_msg.push(`${data.msg}: ${data.file}`)
+				if(data.current_file){
+					ar_msg.push(`${data.msg}: ${data.current_file}`)
 				}
-				if(data.section_id){
-					ar_msg.push(`${data.msg} - id: ${data.section_id}`)
-				}
-
+				if(data.section_id)	ar_msg.push(`id: ${data.section_id}`)
 				if(data.compomnent_label) ar_msg.push(data.compomnent_label)
 				if(sse_response.time) ar_msg.push(sse_response.total_time)
-
 
 				const msg = ar_msg.join(' | ')
 
@@ -1258,7 +1242,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlocks the button submit
-			button_submit.classList.remove('loading')
+			button_submit.classList.remove('hide')
 		}
 
 		// read stream. Creates ReadableStream that fire
@@ -1272,7 +1256,7 @@ const update_process_status = (options) => {
 
 // check process status always
 const check_process_data = (options) => {
-		console.log("process_info_container:",options.process_info_container);
+
 	data_manager.get_local_db_data(
 		'process_import_dedalo_csv',
 		'status'
