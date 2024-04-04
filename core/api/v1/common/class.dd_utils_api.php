@@ -1437,12 +1437,35 @@ final class dd_utils_api {
 					}
 
 				// output the response JSON string
-					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
-					echo $a;
-					// fix Apache issue where small chunks are not sent correctly over HTTP
-					if (strlen($a) < 4096) {
-						echo str_pad(' ', 4096) . PHP_EOL;
+					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+
+					// fix Apache issue where small chunks are not sent correctly over HTTP 1.1
+					// sometimes Apache server join some outputs into a message (merge).
+					// this code helps but is not the full solution.
+					// And is possible to change the Apache vhosts as:
+					// 		ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10
+					// to prevent this behavior, but the problem doesn't disappear completely.
+					// With h2 protocol and SSL the problem disappear, but is necessary to be compatibles with http 1.1
+					if(DEDALO_PROTOCOL === 'http://'){
+						$len = strlen($a);
+						if ($len < 4096) {
+							$a .= str_pad(' ', 4095-$len);
+						}
 					}
+					// format the message to be analyzed in client side.
+					// client side doesn't use the eventManager(), the event is sent by fetch(),
+					// so the format is not relevant instead in the http 1.1 cases, than Apache can join or split the message in chunks
+					echo 'data:';
+					echo "\n";
+					echo $a;
+					echo "\n\n";
+
+						debug_log(__METHOD__
+							. " $a " . PHP_EOL
+							. to_string()
+							, logger::DEBUG
+						);
+
 
 				// flush the output buffer and send echoed messages to the browser
 					while (ob_get_level() > 0) {
