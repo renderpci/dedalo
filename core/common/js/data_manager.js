@@ -187,7 +187,8 @@ data_manager.request_stream = async function(options) {
 	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
 	const headers		= options.headers || {
 		'Content-Type': 'application/json',
-		'Accept': 'text/event-stream'
+		'Accept': 'text/event-stream',
+		'Content-Encoding': 'none',
 	}
 	const redirect		= options.redirect || 'follow' // manual, *follow, error
 	const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
