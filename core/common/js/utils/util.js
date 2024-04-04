@@ -50,7 +50,7 @@ export function dd_console(msg, level='WARNING', items){
 
 
 /**
-* JSON_parse_safely
+* JSON_PARSE_SAFELY
 * Custom console log from Dédalo
 * @param string str
 * @param string error_value = null

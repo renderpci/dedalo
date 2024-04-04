@@ -1374,7 +1374,7 @@ final class dd_utils_api {
 
 		// header print as event stream
 			header("Content-Type: text/event-stream");
-			header("Cache-Control: no-cache");
+			header("Cache-Control: no-cache, must-revalidate");
 			header('Connection: keep-alive');
 			header("Access-Control-Allow-Origin: *");
 			header('X-Accel-Buffering: no'); // nginex buffer control
