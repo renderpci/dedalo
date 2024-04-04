@@ -1809,7 +1809,9 @@
 	position: relative;
 
 	>.spinner {
-		position: relative;
+		position		: relative;
+		top				: unset;
+		margin-bottom	: 2rem;
 	}
 
 	>.info_node {
@@ -1817,8 +1819,17 @@
 		margin-bottom: 1rem;
 
 		// div msg
-		>.msg {
-			padding: 1rem;
+		>.msg_node {
+			padding				: 1rem;
+			font-size			: 1.2rem;
+			background-color	: @color_grey_ultralight;
+			padding				: 1.3rem;
+			display				: block;
+			width				: 100%;
+			margin-bottom		: 1rem;
+			font-family			: monospace;
+			border-radius 		: 15rem;
+			min-width: 50rem;
 
 			&.done {
 				font-weight: bold;
