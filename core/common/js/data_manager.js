@@ -2,7 +2,8 @@
 /*global get_label, page_globals, SHOW_DEBUG, DEDALO_CORE_URL, DEDALO_API_URL, Promise */
 /*eslint no-undef: "error"*/
 
-
+// imports
+	import {JSON_parse_safely} from '../../../core/common/js/utils/util.js'
 
 /**
 * DATA_MANAGER
@@ -186,7 +187,8 @@ data_manager.request_stream = async function(options) {
 	const credentials	= options.credentials || 'same-origin' // include, *same-origin, omit
 	const headers		= options.headers || {
 		'Content-Type': 'application/json',
-		'Accept': 'text/event-stream'
+		'Accept': 'text/event-stream',
+		'Content-Encoding': 'none',
 	}
 	const redirect		= options.redirect || 'follow' // manual, *follow, error
 	const referrer		= options.referrer || 'no-referrer' // no-referrer, *client
@@ -245,14 +247,18 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 	// register reader (allow stop on page navigation)
 	page_globals.stream_readers.push(reader)
 
+	const ar_chunks = []
 	// Define a function to read each chunk
 	const readChunk = () => {
 		// Read a chunk from the reader
+
 		reader.read()
 			.then(({
 				value,
 				done
 			}) => {
+
+
 				// Check if the stream is done
 				if (done) {
 					// Log a message
@@ -262,17 +268,62 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 					// Return from the function
 					return;
 				}
+				// CHEKING THE STRING TO DETERMINATE THE MSG SENT
+				// The event message always begins with "data:\n" and end with "\n\n"
+				// PHP create the message correctly, but http server can split it or merge it into a chunk
+				// Why is not coherent ???? (only gods knows!)
+				// So, every value received needs to be analyzed to determinate:
+				//	1 - It's a full message, perfect! the message is ok.
+				// 	2 - It's a part (message divided in parts, then need to be joined to get the message)
+				//	3 - It has more than 1 message (merged, then need to be split to get the message)
+
+				// Get the last two character of the value
+				// it will be check to determinate if the value is the final message
+				const last		= value[value.length-1]
+				const previous	= value[value.length-2]
 
 				// Convert the chunk value to a string
-				const chunkString = new TextDecoder().decode(value);
+				// every chuck is decoded and analyzed to determinate if the message is a part or it's a full
+					const chunk_string		= new TextDecoder().decode(value);
 
-				// parse text response as JSON
-				const sse_response = chunkString
-					? JSON.parse(chunkString)
-					: ''
+					// split the string by the initial string: data:\n
+					const chunk_split_in	= chunk_string.split('data:\n');
+					// split again the string with the end string and initial
+					// this case has two message in one chunk, so delete the previous message because is complicate to rebuild it
+					// and it's not the final message (the message has new one that begins with "data:\n")
+					const chunk_split_in2	= chunk_string.split('\n\ndata:\n');
+					// in the case that the string has two o more message deletes previous stored message and begins again.
+					if(chunk_split_in2.length > 1){
+						// reset the array
+						ar_chunks.length = 0
+					}
+					// check if the split has information (some messages can be empty)
+					// and get the last one or previous (empty message will be discarded)
+					const valid_chunk = chunk_split_in.length >1 && !chunk_split_in[chunk_split_in.length-1].length
+						?  chunk_split_in[chunk_split_in.length-2]
+						:  chunk_split_in[chunk_split_in.length-1]
+					//add the valid chuck into the array, is used to add divided messages into 1 valid.
+					ar_chunks.push(valid_chunk)
 
-				// exec callback function on_read
-				on_read(sse_response, reader)
+				// if the value indicate the is the final part of the message, decode it and get the json
+				// if not, the message is incomplete and can't be processed and showed.
+				if(last === 10 && previous ===10 ){
+
+					// join the messages parts into one string
+					// and parse message response as JSON
+					// JSON_parse_safely is needed to check and don't stop the event loop
+					// BUT only a valid JSON is expected here.
+					const data_string	= ar_chunks.join('')
+					const sse_response	= JSON_parse_safely(data_string)
+
+					// reset the array
+					ar_chunks.length = 0
+
+					if(sse_response){
+						// exec callback function on_read
+						on_read(sse_response, reader)
+					}
+				}
 
 				// Read the next chunk
 				readChunk();

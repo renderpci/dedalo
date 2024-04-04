@@ -145,15 +145,15 @@ const get_content_data = async function(self) {
 				}
 
 			// loading
-				const loading_items = (SHOW_DEBUG === true)
-					? [content_data, api_response_container]
-					: [content_data]
-				loading_items.map((el)=>{
-					el.classList.add('loading')
-					if (el.classList.contains('hide')) {
-						el.classList.remove('hide')
-					}
-				})
+				// const loading_items = (SHOW_DEBUG === true)
+				// 	? [content_data, process_info_container]
+				// 	: [content_data]
+				// loading_items.map((el)=>{
+				// 	// el.classList.add('loading')
+				// 	if (el.classList.contains('hide')) {
+				// 		el.classList.remove('hide')
+				// 	}
+				// })
 
 			// array of file names
 				const files = selected_files.map(el => {
@@ -176,10 +176,11 @@ const get_content_data = async function(self) {
 					if(api_response.result===true){
 						// fire update_process_status
 						update_process_status({
-							pid				: api_response.pid,
-							pfile			: api_response.pfile,
-							button_submit	: import_button,
-							process_info	: api_response_container
+							self					: self,
+							pid						: api_response.pid,
+							pfile					: api_response.pfile,
+							button_submit			: import_button,
+							process_info_container	: process_info_container
 						})
 					}
 				})//end .then(function(api_response)
@@ -209,19 +210,20 @@ const get_content_data = async function(self) {
 		checkbox_time_machine_save.checked = 'checked' // default is checked
 		checkbox_label.prepend(checkbox_time_machine_save)
 
-	// api_response_container
-		const api_response_container = ui.create_dom_element({
+	// process_info_container
+		const process_info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'api_response_container hide',
+			class_name		: 'process_info_container hide',
 			parent			: fragment
 		})
 
 	// check if the process is active
 		check_process_data({
-			button_submit	: import_button,
-			process_info	: api_response_container
-		})
+			self					: self,
+			button_submit			: import_button,
+			process_info_container	: process_info_container
 
+		})
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -886,9 +888,13 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 
 
 
-const render_final_report = function(){
+const render_final_report = function(options){
 
+	const self						= options.self
+	const api_response				= options.api_response
+	const process_info_container	= options.process_info_container
 
+	const selected_files = self.csv_files_list.filter(el => el.checked===true)
 	const result_len = api_response.result.length
 	for (let i = result_len - 1; i >= 0; i--) {
 
@@ -1168,20 +1174,24 @@ const render_final_report = function(){
 const update_process_status = (options) => {
 
 	// options
+		const self 						= options.self
 		const pid						= options.pid
 		const pfile						= options.pfile
 		const button_submit				= options.button_submit
-		const process_info_container	= options.process_info
+		const process_info_container	= options.process_info_container
 
 	// locks the button submit
 	button_submit.classList.add('loading')
+	if (process_info_container.classList.contains('hide')) {
+		process_info_container.classList.remove('hide')
+	}
 
 	// get_process_status from API and returns a SEE stream
 	data_manager.request_stream({
 		body : {
 			dd_api		: 'dd_utils_api',
 			action		: 'get_process_status',
-			update_rate	: 500, // int milliseconds
+			update_rate	: 10, // int milliseconds
 			options		: {
 				pid		: pid,
 				pfile	: pfile
@@ -1202,8 +1212,45 @@ const update_process_status = (options) => {
 
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
-			// fire update_stream on every reader read chunk
-			render_response.update_stream(sse_response)
+			// fire update_info_node (in render response funtion in render_common) on every reader read chunk
+			render_response.update_info_node(sse_response, ()=>{
+
+				const data = sse_response.data || {}
+
+				if(sse_response.is_running===false){
+					render_final_report({
+						self					: self,
+						api_response			: data,
+						process_info_container	: process_info_container
+					})
+					button_submit.classList.remove('loading')
+
+					return
+				}
+
+				const ar_msg = []
+
+				if(data.file){
+					ar_msg.push(`${data.msg}: ${data.file}`)
+				}
+				if(data.section_id){
+					ar_msg.push(`${data.msg} - id: ${data.section_id}`)
+				}
+
+				if(data.compomnent_label) ar_msg.push(data.compomnent_label)
+				if(sse_response.time) ar_msg.push(sse_response.total_time)
+
+
+				const msg = ar_msg.join(' | ')
+
+				const msg_node = ui.create_dom_element({
+					element_type	: 'span',
+					inner_html		: msg,
+					class_name		: 'msg_node'
+				})
+
+				return msg_node
+			})
 		}
 
 		// on_done event (called once at finish or cancel the stream read)
@@ -1225,21 +1272,23 @@ const update_process_status = (options) => {
 
 // check process status always
 const check_process_data = (options) => {
-	// data_manager.get_local_db_data(
-	// 	'process_import_dedalo_csv',
-	// 	'status'
-	// )
-	// .then(function(local_data){
-	// 	if (local_data && local_data.value) {
-	// 		update_process_status({
-	// 			pid						: local_data.value.pid,
-	// 			pfile					: local_data.value.pfile,
-	// 			process_info_container	: options.process_info,
-	// 			button_submit			: options.button_submit
+		console.log("process_info_container:",options.process_info_container);
+	data_manager.get_local_db_data(
+		'process_import_dedalo_csv',
+		'status'
+	)
+	.then(function(local_data){
+		if (local_data && local_data.value) {
+			update_process_status({
+				pid						: local_data.value.pid,
+				pfile					: local_data.value.pfile,
+				process_info_container	: options.process_info_container,
+				button_submit			: options.button_submit,
+				self 					: options.self
 
-	// 		})
-	// 	}
-	// })
+			})
+		}
+	})
 }//end check_process_data
 
 
