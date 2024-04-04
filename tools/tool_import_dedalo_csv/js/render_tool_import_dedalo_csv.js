@@ -1181,7 +1181,7 @@ const update_process_status = (options) => {
 		const process_info_container	= options.process_info_container
 
 	// locks the button submit
-	button_submit.classList.add('loading')
+	button_submit.classList.add('hide')
 	if (process_info_container.classList.contains('hide')) {
 		process_info_container.classList.remove('hide')
 	}
@@ -1224,7 +1224,7 @@ const update_process_status = (options) => {
 						api_response			: data,
 						process_info_container	: process_info_container
 					})
-					button_submit.classList.remove('loading')
+					button_submit.classList.remove('hide')
 
 					return
 				}
@@ -1259,7 +1259,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlocks the button submit
-			button_submit.classList.remove('loading')
+			button_submit.classList.remove('hide')
 		}
 
 		// read stream. Creates ReadableStream that fire
