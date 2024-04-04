@@ -385,11 +385,12 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 export const render_stream = function(options) {
 
 	// options
-		const container		= options.container
-		const id			= options.id
-		const pid			= options.pid
-		const pfile			= options.pfile
-		const display_json	= options.display_json ?? (SHOW_DEBUG===true)
+		const container				= options.container
+		const id					= options.id
+		const pid					= options.pid
+		const pfile					= options.pfile
+		const display_json			= options.display_json ?? (SHOW_DEBUG===true)
+		const delete_local_db_data	= options.delete_local_db_data ?? true
 
 	// response
 		const response = {
@@ -501,12 +502,16 @@ export const render_stream = function(options) {
 
 			// running state check. If false, delete local DB reference
 				if(is_running===false) {
-					data_manager.delete_local_db_data(
-						id, // like 'make_backup_process'
-						'status' // string table
-					)
 					spinner.remove()
+
+					if(delete_local_db_data === true){
+						data_manager.delete_local_db_data(
+							id, // like 'make_backup_process'
+							'status' // string table
+						)
+					}
 				}
+
 		}
 		// set specific function
 		response.update_info_node = update_info_node
