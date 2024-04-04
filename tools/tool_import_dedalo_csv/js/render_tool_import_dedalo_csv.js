@@ -1204,10 +1204,11 @@ const update_process_status = (options) => {
 		// render base nodes and set functions to manage
 		// the stream reader events
 		const render_response = render_stream({
-			container		: process_info_container,
-			id				: 'process_import_dedalo_csv',
-			pid				: pid,
-			pfile			: pfile
+			container				: process_info_container,
+			id						: 'process_import_dedalo_csv',
+			pid						: pid,
+			pfile					: pfile,
+			delete_local_db_data	: false
 		})
 
 		// on_read event (called on every chunk from stream reader)
