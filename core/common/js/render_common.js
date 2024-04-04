@@ -439,6 +439,7 @@ export const render_stream = function(options) {
 		)
 
 	// update_info_node function. loop from data_manager.read_stream
+		let last_message
 		const update_info_node = (sse_response, callback) => {
 			if(SHOW_DEBUG===true) {
 				console.log('update_info_node sse_response:', typeof sse_response, sse_response);
@@ -471,7 +472,7 @@ export const render_stream = function(options) {
 
 				}else{
 
-					const msg = sse_response && sse_response.data && sse_response.data.msg
+					const msg = sse_response && sse_response.data && sse_response.data.msg && sse_response.data.msg.length>5
 						? sse_response.data.msg
 						// ? JSON.stringify(sse_response.data, null, 2)
 						: is_running
@@ -486,6 +487,14 @@ export const render_stream = function(options) {
 					})
 					if(is_running===false) {
 						msg_node.classList.add('done')
+						// avoid freezing the last message in cases where
+						// the process does not return anything at end
+						if (msg===last_message) {
+							msg_node.innerHTML = 'Process finished. ' + pid
+						}
+					}else{
+						// store last message to compare on done
+						last_message = msg
 					}
 				}
 
