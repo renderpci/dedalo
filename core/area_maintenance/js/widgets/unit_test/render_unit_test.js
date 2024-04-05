@@ -105,7 +105,7 @@ const get_content_data_edit = async function(self) {
 		const content = content_data
 		import('../../../../unit_test/js/list.js')
 		.then(function(module){
-			list_of_test.innerHTML = JSON.stringify(module.list_of_test, null, 2)
+			ui.update_node_content(list_of_test, JSON.stringify(module.list_of_test, null, 2))
 		})
 
 	// body_response

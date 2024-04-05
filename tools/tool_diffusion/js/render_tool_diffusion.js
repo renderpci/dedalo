@@ -606,7 +606,7 @@ const publish_content = async (self, options) => {
 		}
 
 	// main response msg print
-		response_message.innerHTML = api_response.msg || 'Unknown error'
+		ui.update_node_content(response_message, (api_response.msg || 'Unknown error') )
 		if (api_response.result===false) {
 			response_message.classList.add('error')
 			publication_button.classList.remove('loading')
