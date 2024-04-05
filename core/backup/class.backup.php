@@ -132,7 +132,7 @@ abstract class backup {
 				}
 
 			// command base. Export the database and output the status to the page
-			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
+			$cmd = DB_BIN_PATH.'pg_dump '.DBi::get_connection_string().' -F c -b -v '.DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
 
 			// process
 				$pfile		= process::get_unique_process_file(); // like 'process_1_2024-03-31_23-47-36_3137757' usually stored in the sessions directory
