@@ -899,6 +899,11 @@ const render_final_report = function(options){
 	const api_response				= options.api_response
 	const process_info_container	= options.process_info_container
 
+	if (!api_response || !api_response.result) {
+		console.error('Invalid API response result:', api_response);
+		return
+	}
+
 	const selected_files = self.csv_files_list //.filter(el => el.checked===true)
 	const result_len = api_response.result.length
 	for (let i = result_len - 1; i >= 0; i--) {
@@ -1199,40 +1204,63 @@ const update_process_status = (options) => {
 
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
-			// fire update_info_node (in render response funtion in render_common) on every reader read chunk
-			render_response.update_info_node(sse_response, ()=>{
+			// fire update_info_node (in render response function in render_common) on every reader read chunk
+			render_response.update_info_node(sse_response, (info_node) =>{
 
 				const data = sse_response.data || {}
 
 				if(sse_response.is_running===false){
+
+					// errors case
+					if(data.errors && data.errors.length){
+						// Note that on running == false, the last message is not printed
+						// add errors
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: data.errors.join(' | ') + '<br>' + data.msg,
+							parent			: info_node.msg_node
+						})
+					}
+
+					// print final_report into process_info_container
 					render_final_report({
 						self					: self,
 						api_response			: data,
 						process_info_container	: process_info_container
 					})
+
+					// activate button_submit
 					button_submit.classList.remove('hide')
 
+					// stop execution here
 					return
 				}
 
-				const ar_msg = []
+				// msg
+					const ar_msg = []
 
-				if(data.current_file){
-					ar_msg.push(`${data.msg}: ${data.current_file}`)
-				}
-				if(data.section_id)	ar_msg.push(`id: ${data.section_id}`)
-				if(data.compomnent_label) ar_msg.push(data.compomnent_label)
-				if(sse_response.time) ar_msg.push(sse_response.total_time)
+					if(data.current_file && data.current_file.length){
+						ar_msg.push(`${data.msg}: ${data.current_file}`)
+					}else{
+						ar_msg.push(data.msg)
+					}
+					if(data.section_id)	ar_msg.push(`id: ${data.section_id}`)
+					if(data.compomnent_label) ar_msg.push(data.compomnent_label)
+					if(sse_response.time) ar_msg.push(sse_response.total_time)
 
-				const msg = ar_msg.join(' | ')
+					const msg = ar_msg.join(' | ')
 
-				const msg_node = ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: msg,
-					class_name		: 'msg_node'
-				})
-
-				return msg_node
+				// build msg_node once and attach it to the info_node container
+					if(!info_node.msg_node) {
+						info_node.msg_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_node',
+							parent			: info_node
+						})
+					}
+					// update text content only
+					ui.update_node_content(info_node.msg_node, msg)
 			})
 		}
 

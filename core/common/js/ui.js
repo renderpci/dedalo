@@ -1685,6 +1685,21 @@ export const ui = {
 
 
 	/**
+	* UPDATE_NODE_CONTENT
+	* Clean node container and add the new content as HTML
+	* @param object options
+	* @return HTMLElement element
+	*/
+	update_node_content : function(node, value) {
+		while (node.firstChild) {
+			node.removeChild(node.firstChild);
+		}
+		node.insertAdjacentHTML('afterbegin', value)
+	},//end update_node_content
+
+
+
+	/**
 	* ADD_TOOLS
 	* Adds all the existent tools for the selected component
 	* @param object self

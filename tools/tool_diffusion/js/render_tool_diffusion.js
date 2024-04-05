@@ -717,16 +717,16 @@ const update_process_status = (options) => {
 		const on_read = (sse_response) => {
 
 			// fire update_info_node on every reader read chunk
-			render_response.update_info_node(sse_response, () => {
-				console.log('sse_response.data:', sse_response.data);
+			render_response.update_info_node(sse_response, (info_node) => {
 
 				const is_running = sse_response?.is_running ?? true
 
 				const compound_msg = (sse_response) => {
 					const data = sse_response.data
 					const parts = []
-					parts.push(data.msg +' '+ data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
-					parts.push(data.section_label + ' ' + data.current?.section_id)
+					parts.push(data.msg +': '+ data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+					parts.push(data.section_label)
+					parts.push('id: ' + data.current?.section_id)
 					parts.push(sse_response.total_time)
 					return parts.join(' | ')
 				}
@@ -740,11 +740,14 @@ const update_process_status = (options) => {
 						? 'Process running... please wait'
 						: 'Process completed in ' + sse_response.total_time
 
-				return ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
-					inner_html		: msg
-				})
+				if(!info_node.msg_node) {
+					info_node.msg_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
+						parent			: info_node
+					})
+				}
+				ui.update_node_content(info_node.msg_node, msg)
 			})
 		}
 

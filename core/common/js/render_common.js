@@ -455,43 +455,39 @@ export const render_stream = function(options) {
 				// 		errors		: array []
 				// }
 
-			// clean container on each call (reader chunk)
-				while (info_node.firstChild) {
-					info_node.removeChild(info_node.firstChild);
-				}
-
 			// process running status
 				const is_running = sse_response?.is_running ?? true
 
 			// info node render
 				if(typeof callback === 'function'){
 
-					const msg_node = callback()
-					if(msg_node){
-						info_node.appendChild(msg_node)
-					}
+					// callback option
+					// Note that info_node is passed as a node
+					// container where to place the new custom nodes
+					callback(info_node)
 
 				}else{
 
 					const msg = sse_response && sse_response.data && sse_response.data.msg && sse_response.data.msg.length>5
 						? sse_response.data.msg
-						// ? JSON.stringify(sse_response.data, null, 2)
 						: is_running
-							? 'Running process.. ' + pid
-							: 'Process finished. ' + pid
+							? 'Process running... please wait'
+							: 'Process completed'
 
-					const msg_node = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg_node',
-						inner_html		: msg,
-						parent			: info_node
-					})
+					// msg_node. Create once
+					if (!info_node.msg_node) {
+						info_node.msg_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_node',
+							parent			: info_node
+						})
+					}
+					ui.update_node_content(info_node.msg_node, msg)
 					if(is_running===false) {
-						msg_node.classList.add('done')
 						// avoid freezing the last message in cases where
 						// the process does not return anything at end
 						if (msg===last_message) {
-							msg_node.innerHTML = 'Process finished. ' + pid
+							ui.update_node_content(info_node.msg_node, 'Process completed ' + sse_response.total_time)
 						}
 					}else{
 						// store last message to compare on done
@@ -501,12 +497,15 @@ export const render_stream = function(options) {
 
 			// debug display_json_box
 				if(display_json) {
-					ui.create_dom_element({
-						element_type	: 'pre',
-						class_name		: 'display_json_box',
-						inner_html		: JSON.stringify(sse_response, null, 2),
-						parent			: info_node
-					})
+					// display_json_box. Create once
+					if (!info_node.display_json_box) {
+						info_node.display_json_box = ui.create_dom_element({
+							element_type	: 'pre',
+							class_name		: 'display_json_box',
+							parent			: info_node
+						})
+					}
+					ui.update_node_content(info_node.display_json_box, JSON.stringify(sse_response, null, 2))
 				}
 
 			// running state check. If false, delete local DB reference
@@ -518,6 +517,10 @@ export const render_stream = function(options) {
 							id, // like 'make_backup_process'
 							'status' // string table
 						)
+					}
+
+					if (info_node.msg_node) {
+						info_node.msg_node.classList.add('done')
 					}
 				}
 
