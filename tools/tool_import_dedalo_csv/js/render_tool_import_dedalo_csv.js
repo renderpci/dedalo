@@ -1209,17 +1209,35 @@ const update_process_status = (options) => {
 
 				const data = sse_response.data || {}
 
+				// build msg_node once and attach it to the info_node container
+					if(!info_node.msg_node) {
+						info_node.msg_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_node',
+							parent			: info_node
+						})
+					}
+
 				// finished process case
 				if(sse_response.is_running===false){
 
+					const msg_end = [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
+
+					// update text content only
+					ui.update_node_content(info_node.msg_node, msg_end)
+
+					// errors
+					const errors = data.errors && data.errors.length
+						? data.errors
+						: null
 					// errors found case
-					if(data.errors && data.errors.length){
-						// Note that on running == false, the last message is not printed
-						// add errors
+					if(errors){
+						// add errors. Note that on running == false, the last message is not printed
+						const msg_error = (get_label.error || 'Error') +': '+ errors.join(' | ') +'<br>'+ data.msg
 						ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'error',
-							inner_html		: data.errors.join(' | ') + '<br>' + data.msg,
+							inner_html		: msg_error,
 							parent			: info_node.msg_node
 						})
 					}
@@ -1252,14 +1270,6 @@ const update_process_status = (options) => {
 
 					const msg = ar_msg.join(' | ')
 
-				// build msg_node once and attach it to the info_node container
-					if(!info_node.msg_node) {
-						info_node.msg_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'msg_node',
-							parent			: info_node
-						})
-					}
 					// update text content only
 					ui.update_node_content(info_node.msg_node, msg)
 			})

@@ -374,6 +374,7 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 * 	pid: int (process id number)
 * 	pfile: string (name of process generated file)
 * 	display_json: bool false (on true, add raw JSON view of data)
+* 	delete_local_db_data: bool (on true, delete local DB process by id)
 * }
 * @return object response
 * {
@@ -392,7 +393,7 @@ export const render_stream = function(options) {
 		const display_json			= options.display_json ?? (SHOW_DEBUG===true)
 		const delete_local_db_data	= options.delete_local_db_data ?? true
 
-	// response
+	// response. Object to fill and return
 		const response = {
 			process_status_node	: undefined,
 			update_info_node	: undefined,
@@ -410,7 +411,7 @@ export const render_stream = function(options) {
 			class_name		: 'process_status_node',
 			parent			: container
 		})
-		// set specific node
+		// set specific node to response
 		response.process_status_node = process_status_node
 
 	// spinner
@@ -440,7 +441,6 @@ export const render_stream = function(options) {
 		)
 
 	// update_info_node function. loop from data_manager.read_stream
-		let last_message
 		const update_info_node = (sse_response, callback) => {
 			if(SHOW_DEBUG===true) {
 				console.log('update_info_node sse_response:', typeof sse_response, sse_response);
@@ -458,6 +458,9 @@ export const render_stream = function(options) {
 			// process running status
 				const is_running = sse_response?.is_running ?? true
 
+			// data
+				const data = sse_response?.data || {}
+
 			// info node render
 				if(typeof callback === 'function'){
 
@@ -468,12 +471,6 @@ export const render_stream = function(options) {
 
 				}else{
 
-					const msg = sse_response && sse_response.data && sse_response.data.msg && sse_response.data.msg.length>5
-						? sse_response.data.msg
-						: is_running
-							? 'Process running... please wait'
-							: 'Process completed'
-
 					// msg_node. Create once
 					if (!info_node.msg_node) {
 						info_node.msg_node = ui.create_dom_element({
@@ -482,16 +479,31 @@ export const render_stream = function(options) {
 							parent			: info_node
 						})
 					}
-					ui.update_node_content(info_node.msg_node, msg)
-					if(is_running===false) {
+
+					// msg
+					if(is_running===true) {
+
+						const msg = data.msg && data.msg.length>3
+							? data.msg
+							: is_running
+								? 'Process running... please wait'
+								: (get_label.proceso_completado || 'Process completed')
+
+						ui.update_node_content(info_node.msg_node, msg)
+
+					}else{
+
 						// avoid freezing the last message in cases where
 						// the process does not return anything at end
-						if (msg===last_message) {
-							ui.update_node_content(info_node.msg_node, 'Process completed ' + sse_response.total_time)
+						const msg_end = [(get_label.proceso_completado || 'Process completed') + ' ' + sse_response.total_time]
+						// add errors if any
+						if (data.errors && data.errors.length) {
+							const msg_error = (get_label.error || 'Error') +  ': ' + data.errors.join(', ')
+							msg_end.push(msg_error)
+							info_node.msg_node.classList.add('error')
 						}
-					}else{
-						// store last message to compare on done
-						last_message = msg
+
+						ui.update_node_content(info_node.msg_node, msg_end.join(' | '))
 					}
 				}
 
