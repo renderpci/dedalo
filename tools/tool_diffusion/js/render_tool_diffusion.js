@@ -8,6 +8,8 @@
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {object_to_url_vars} from '../../../core/common/js/utils/index.js'
+	import {render_stream} from '../../../core/common/js/render_common.js'
+	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
 
 
@@ -269,13 +271,47 @@ export const render_publication_items = function(self) {
 			const item		= current_diffusion_map[i]
 			const data_item	= ar_data[diffusion_group_key]
 
+			// process_id like 'process_diffusion_mht2_rsc170'
+			const process_id = 'process_diffusion_' + item.element_tipo + '_' + self.caller.section_tipo
+
 			const current_diffusion_element_tipo = item.element_tipo
+
+			// publication_item_label
+				const publication_item_label = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'publication_item_label label icon_arrow up',
+					inner_html		: item.name,
+					parent			: publication_items
+				})
+
+			// publication_item_body
+				const publication_item_body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'publication_item_body',
+					parent			: publication_items
+				})
+
+			// collapse body
+				ui.collapse_toggle_track({
+					toggler				: publication_item_label,
+					container			: publication_item_body,
+					collapsed_id		: 'collapsed_diffusion_item_'+current_diffusion_element_tipo,
+					collapse_callback	: collapse,
+					expose_callback		: expose,
+					default_state		: 'opened'
+				})
+				function collapse() {
+					publication_item_label.classList.remove('up')
+				}
+				function expose() {
+					publication_item_label.classList.add('up')
+				}
 
 			// publication_items_grid
 				const publication_items_grid = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'publication_items_grid',
-					parent			: publication_items
+					parent			: publication_item_body
 				})
 
 			// name
@@ -471,98 +507,64 @@ export const render_publication_items = function(self) {
 				})
 
 				// response_message
-					const response_message = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'response_message',
-						parent			: container_bottom
-					})
+				const response_message = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'response_message',
+					parent			: container_bottom
+				})
 
 				// publication_button
-					const publication_button = ui.create_dom_element({
-						element_type	: 'button',
-						class_name		: 'warning publication_button',
-						inner_html		: get_label.publish || 'Publish',
-						parent			: container_bottom
-					})
-					publication_button.addEventListener('click', function(e) {
-						e.stopPropagation()
+				const publication_button = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning publication_button',
+					inner_html		: get_label.publish || 'Publish',
+					parent			: container_bottom
+				})
+				publication_button.addEventListener('click', (e) => {
+					e.stopPropagation()
 
-						// user confirmation
-							if (!confirm(get_label.sure || 'Sure?')) {
-								return
-							}
-
-						// clean previous messages
-							response_message.classList.remove('error')
-							while (response_message.firstChild) {
-								response_message.removeChild(response_message.firstChild);
-							}
-
-						// spinner
-							const spinner = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'spinner',
-								parent			: container_bottom
-							})
-							publication_button.classList.add('hide')
-
-						// export
-							self.export({
-								diffusion_element_tipo : current_diffusion_element_tipo
-							})
-							.then(function(api_response){
-								if(SHOW_DEBUG===true) {
-									console.log('export api_response:', api_response);
-								}
-
-								response_message.innerHTML = api_response.msg || 'Unknown error'
-								if (api_response.result===false) {
-									response_message.classList.add('error')
-								}
-
-								// update_record_response
-									if (api_response.update_record_response) {
-
-										const detail_container = ui.create_dom_element({
-											element_type	: 'div',
-											class_name		: 'detail_container',
-											parent			: response_message
-										})
-										const update_record_response		= api_response.update_record_response
-										const update_record_response_length	= update_record_response.length
-										for (let i = 0; i < update_record_response_length; i++) {
-
-											const item = update_record_response[i]
-
-											const class_add = item.result===true ? 'green' : 'red'
-											ui.create_dom_element({
-												element_type	: 'div',
-												class_name		: class_add,
-												inner_html		: item.msg,
-												parent			: detail_container
-											})
-										}
-									}
-
-								// time
-									if (api_response.time) {
-										ui.create_dom_element({
-											element_type	: 'div',
-											class_name		: 'detail_container',
-											inner_html		: 'Total secs: ' + api_response.time,
-											parent			: response_message
-										})
-									}
-
-								spinner.remove()
-								publication_button.classList.remove('hide')
-							})
-					})
-					if (item.connection_status) {
-						if (item.connection_status.result===false) {
-							publication_button.classList.add('not_ready')
-						}
+					// user confirmation
+					if (!confirm(get_label.sure || 'Sure?')) {
+						return
 					}
+
+					// publish content exec
+					publish_content(self, {
+						response_message		: response_message,
+						publication_button		: publication_button,
+						diffusion_element_tipo	: current_diffusion_element_tipo,
+						process_id				: process_id
+					})
+				})
+				// disable cases :
+						if (item.connection_status) {
+							if (item.connection_status.result===false) {
+								publication_button.classList.add('not_ready')
+							}
+						}
+						if (item.class_name==='diffusion_mysql' && !data_item.table) {
+							publication_button.classList.add('loading')
+						}
+
+				// check process status always
+				const check_process_data = () => {
+					data_manager.get_local_db_data(
+						process_id,
+						'status'
+					)
+					.then(function(local_data){
+						if (local_data && local_data.value) {
+							update_process_status({
+								pid                    : local_data.value.pid,
+								pfile				: local_data.value.pfile,
+								process_id			: process_id,
+								container			: response_message,
+								publication_button	: publication_button
+							})
+						}
+					})
+				}
+				check_process_data()
 		}//end for (let i = 0; i < current_diffusion_map_length; i++)
 
 		diffusion_group_key++
@@ -571,6 +573,208 @@ export const render_publication_items = function(self) {
 
 	return publication_items
 }//end render_publication_items
+
+
+
+/**
+* PUBLISH_CONTENT
+* Trigger the publish records action against the API
+* @param object self
+* @param object options
+*/
+const publish_content = async (self, options) => {
+
+	// options
+		const response_message			= options.response_message
+		const publication_button		= options.publication_button
+		const diffusion_element_tipo	= options.diffusion_element_tipo
+		const process_id				= options.process_id
+
+	// clean previous messages
+		response_message.classList.remove('error')
+		publication_button.classList.add('loading')
+		// while (response_message.firstChild) {
+		// 	response_message.removeChild(response_message.firstChild);
+		// }
+
+	// export API call
+		const api_response = await self.export({
+			diffusion_element_tipo : diffusion_element_tipo
+		})
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.log('export api_response:', api_response);
+		}
+
+	// main response msg print
+		response_message.innerHTML = api_response.msg || 'Unknown error'
+		if (api_response.result===false) {
+			response_message.classList.add('error')
+			publication_button.classList.remove('loading')
+			return
+		}
+
+	// fire update_process_status
+		update_process_status({
+			pid					: api_response.pid,
+			pfile				: api_response.pfile,
+			process_id			: process_id,
+			container			: response_message,
+			publication_button	: publication_button
+		})
+
+		/* DES
+			// update_record_response
+				if (api_response.update_record_response) {
+
+					const detail_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'detail_container',
+						parent			: response_message
+					})
+					const update_record_response		= api_response.update_record_response
+					const update_record_response_length	= update_record_response.length
+					for (let i = 0; i < update_record_response_length; i++) {
+
+						const item = update_record_response[i]
+
+						const class_add = item.result===true ? 'green' : 'red'
+						ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: class_add,
+							inner_html		: item.msg,
+							parent			: detail_container
+						})
+					}
+				}
+
+			// time
+				if (api_response.time) {
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'detail_container',
+						inner_html		: 'Total secs: ' + api_response.time,
+						parent			: response_message
+					})
+				}
+
+			spinner.remove()
+			publication_button.classList.remove('hide')
+			*/
+}//end publish_content
+
+
+
+/**
+* UPDATE_PROCESS_STATUS
+* Call API get_process_status and render the info nodes
+* @param object options
+* @return void
+*/
+const update_process_status = (options) => {
+
+	const pid					= options.pid
+	const pfile					= options.pfile
+	const publication_button	= options.publication_button
+	const process_id			= options.process_id
+	const container				= options.container
+
+	// locks the button submit
+	publication_button.classList.add('loading')
+
+	// blur button
+	document.activeElement.blur()
+
+	// clean container
+	while (container.firstChild) {
+		container.removeChild(container.firstChild);
+	}
+
+	// get_process_status from API and returns a SEE stream
+	data_manager.request_stream({
+		body : {
+			dd_api		: 'dd_utils_api',
+			action		: 'get_process_status',
+			update_rate	: 150, // int milliseconds
+			options		: {
+				pid		: pid,
+				pfile	: pfile
+			}
+		}
+	})
+	.then(function(stream){
+
+		// render base nodes and set functions to manage
+		// the stream reader events
+		const render_response = render_stream({
+			container		: container,
+			id				: process_id,
+			pid				: pid,
+			pfile			: pfile,
+			display_json	: true
+		})
+
+		// on_read event (called on every chunk from stream reader)
+		const on_read = (sse_response) => {
+
+			// fire update_info_node on every reader read chunk
+			render_response.update_info_node(sse_response, () => {
+				console.log('sse_response.data:', sse_response.data);
+
+				const is_running = sse_response?.is_running ?? true
+
+				const compound_msg = (sse_response) => {
+					const data = sse_response.data
+					const parts = []
+					parts.push(data.msg +' '+ data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+					parts.push(data.section_label + ' ' + data.current?.section_id)
+					parts.push(sse_response.total_time)
+					return parts.join(' | ')
+				}
+
+				const msg = sse_response
+							&& sse_response.data
+							&& sse_response.data.msg
+							&& sse_response.data.msg.length>5
+					? compound_msg(sse_response)
+					: is_running
+						? 'Process running... please wait'
+						: 'Process completed in ' + sse_response.total_time
+
+				return ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
+					inner_html		: msg
+				})
+			})
+		}
+
+		// on_done event (called once at finish or cancel the stream read)
+		const on_done = () => {
+			// is triggered at the reader's closing
+			render_response.done()
+			// unlocks the button submit
+			publication_button.classList.remove('loading')
+			// render_response.process_status_node
+		}
+
+		// read stream. Creates ReadableStream that fire
+		// 'on_read' function on each stream chunk at update_rate
+		// (1 second default) until stream is done (PID is no longer running)
+		data_manager.read_stream(stream, on_read, on_done)
+	})
+}//end update_process_status
+
+
+
+/**
+* RENDER_PROCESS_REPORT
+* @return
+*/
+const render_process_report = function(options) {
+
+}//end render_process_report
 
 
 

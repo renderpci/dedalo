@@ -141,10 +141,17 @@ class tool_diffusion extends tool_common {
 		// options
 			$mode							= $options->mode ?? 'edit';
 			$section_tipo					= $options->section_tipo ?? null;
-			$section_id						= $options->section_id ?? null;
+			$section_id						= (isset($options->section_id) ? (int)$options->section_id : null);
 			$diffusion_element_tipo			= $options->diffusion_element_tipo;
 			$resolve_levels					= $options->resolve_levels ?? 1;
 			$skip_publication_state_check	= $options->skip_publication_state_check ?? null;
+
+		// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => (label::get_label('processing_wait') ?? 'Processing... please wait')
+				]);
+			}
 
 		// skip_publication_state_check
 			if (isset($skip_publication_state_check)) {
@@ -168,7 +175,8 @@ class tool_diffusion extends tool_common {
 				? tool_diffusion::export_list( $export_options ) // list mode (based on session sqo)
 				: tool_diffusion::export_edit( $export_options ); // edit mode only one record
 
-			$response->time = exec_time_unit($start_time, 'sec');
+			$response->time		= exec_time_unit_auto($start_time);
+			$response->memory	= dd_memory_usage();
 
 
 		return $response;
@@ -187,7 +195,8 @@ class tool_diffusion extends tool_common {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= []; // 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// options
 			$section_tipo			= $options->section_tipo;
@@ -221,7 +230,7 @@ class tool_diffusion extends tool_common {
 				);
 
 				$response->result					= $export_result->result;
-				$response->msg						= $export_result->msg;
+				$response->msg						= array_merge($response->msg, (array)$export_result->msg);
 				$response->update_record_response	= is_array($export_result->update_record_response)
 					? $export_result->update_record_response
 					: [$export_result->update_record_response];
@@ -230,8 +239,9 @@ class tool_diffusion extends tool_common {
 				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
 
 			}catch (Exception $e) {
-				$response->result = false;
-				$response->msg 	  = 'EXCEPTION [export_edit]: ' . $e->getMessage();
+				$response->result	= false;
+				$response->msg[]	= 'EXCEPTION [export_edit]: ' . $e->getMessage();
+				$response->errors[]	= $e->getMessage();
 			}
 
 
@@ -256,7 +266,8 @@ class tool_diffusion extends tool_common {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= []; //'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
 
 		// options
 			$section_tipo			= $options->section_tipo;
@@ -279,17 +290,18 @@ class tool_diffusion extends tool_common {
 					$propiedades			= $RecordObj_dd->get_propiedades(true);
 					$diffusion_class_name	= $propiedades->diffusion->class_name;
 
-				// reset msg
-					$response->msg = '';
-
 				// sqo
 					$sqo_id			= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]);
 					$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 					if ( empty($sqo_session) ) {
 
 						// error case
-						$response->msg = ' Not sqo_session found from id: '.$sqo_id;
-						debug_log(__METHOD__." $response->msg ", logger::ERROR);
+						$response->msg[]	= 'Not sqo_session found from id: '.$sqo_id;
+						$response->error[]	= 'no sqo session found';
+						debug_log(__METHOD__
+							."  " . implode(', '. $response->msg)
+							, logger::ERROR
+						);
 						return $response;
 
 					}else{
@@ -304,13 +316,44 @@ class tool_diffusion extends tool_common {
 						$rows_data	= $search->search();
 					}
 
+
+				// short vars
 				$resolve_references		= true;
 				$n_records_published	= 0;
-				$update_record_response = [];
+				$total					= count($rows_data->ar_records);
+				$counter				= 0;
+				$update_record_response	= [];
+
+				// CLI process data
+				if ( running_in_cli()===true ) {
+					$pdata = new stdClass();
+						$pdata->msg		= (label::get_label('processing') ?? 'Processing');
+						$pdata->counter	= $counter;
+						$pdata->total	= $total;
+					// send to output
+					print_cli($pdata);
+				}
+
 				foreach ((array)$rows_data->ar_records as $row) {
+
+					$counter++;
 
 					$section_id		= (int)$row->section_id;
 					$section_tipo	= (string)$row->section_tipo;
+
+					// print CLI. Echo the text msg as line and flush object buffers
+					// only if current environment is CLI
+					if ( running_in_cli()===true ) {
+						$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+						$pdata->counter			= $counter;
+						$pdata->current			= (object)[
+							'section_tipo'	=> $section_tipo,
+							'section_id'	=> $section_id
+						];
+						$pdata->memory = dd_memory_usage();
+						// send to output
+						print_cli($pdata);
+					}
 
 					// exec export from current record
 						$export_result = tool_diffusion::export_record(
@@ -323,14 +366,27 @@ class tool_diffusion extends tool_common {
 						if($export_result->result==true) {
 							$n_records_published++;
 						}else{
-							$response->msg .= $export_result->msg;
+							$response->msg[]	= $export_result->msg;
+							$response->errors	= array_merge(
+								$response->errors,
+								(array)$export_result->errors
+							);
 							debug_log(__METHOD__
 								." export_result ".to_string($export_result)
 								, logger::ERROR
 							);
 						}
 
+					// add response object {result:bool, msg:string}
 						$update_record_response[] = $export_result->update_record_response;
+
+					// print CLI. Echo the text msg as line and flush object buffers
+					// only if current environment is CLI
+					if ( running_in_cli()===true ) {
+						$pdata->update_record_response = $export_result->update_record_response;
+						// send to output
+						print_cli($pdata);
+					}
 
 					// diffusion_rdf case
 						if ($diffusion_class_name==='diffusion_rdf') {
@@ -343,16 +399,17 @@ class tool_diffusion extends tool_common {
 					if ($n_records_published>0) {
 						$response->result = true;
 						if ($diffusion_class_name==='diffusion_rdf') {
-							$response->msg .= to_string($export_result->msg);
+							$response->msg[] = to_string($export_result->msg);
 						}else{
-							$response->msg .= sprintf("Published %s records successfully", $n_records_published);
+							$response->msg[] = sprintf("Published %s records successfully", $n_records_published);
 						}
 
 					}else{
-						$response->result = false;
-						$response->msg .= "Error on publish records: response->result is false. n_records_published: $n_records_published";
+						$response->result	= false;
+						$response->msg[]	= "Error on publish records: response->result is false. n_records_published: $n_records_published";
+						$response->errors[]	= 'zero records published';
 						debug_log(__METHOD__
-							."  ".$response->msg
+							."  ". implode(', '. $response->msg)
 							, logger::ERROR
 						);
 					}
@@ -363,9 +420,10 @@ class tool_diffusion extends tool_common {
 
 			}catch (Exception $e) {
 				$response->result	= false;
-				$response->msg		= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
+				$response->msg[]	= 'EXCEPTION caught [export_list]: ' . $e->getMessage();
+				$response->errors[]	= $e->getMessage();
 				debug_log(__METHOD__
-					. "  ".$response->msg . PHP_EOL
+					. "  ". implode(', '. $response->msg) . PHP_EOL
 					. ' exception message: ' . $e->getMessage()
 					, logger::ERROR
 				);
@@ -404,7 +462,7 @@ class tool_diffusion extends tool_common {
 		// response default
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error on export_record '.$section_tipo;
+				$response->msg		= []; // 'Error on export_record '.$section_tipo;
 
 		// empty records case
 			// if (empty($ar_records)) {
@@ -420,7 +478,8 @@ class tool_diffusion extends tool_common {
 					. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
 					, logger::ERROR
 				);
-				$response->msg .= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
+				$response->msg[]	= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
+				$response->errors[]	= 'diffusion element not found '.$diffusion_element_tipo;
 				return $response;
 			}
 
@@ -452,25 +511,29 @@ class tool_diffusion extends tool_common {
 				// success
 				$response->result = true;
 
-				$max_recursions	= diffusion::get_resolve_levels();
-				$response->msg	= "Published record ID $section_id successfully. Levels: $max_recursions. ";
-				debug_log(__METHOD__." $response->msg ", logger::DEBUG);
+				$max_recursions		= diffusion::get_resolve_levels();
+				$response->msg[]	= "Published record ID $section_id successfully. Levels: $max_recursions. ";
+				debug_log(__METHOD__
+					." " . implode(', ', $response->msg)
+					, logger::DEBUG
+				);
 			}else{
 
 				// error case
 				$response->result = false;
 
 				if (isset($update_record_response->code) && $update_record_response->code===2) {
-					$response->msg		= "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
+					$response->msg[] = "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
 					debug_log(__METHOD__
-						. " $response->msg " .PHP_EOL
+						. "  " . implode(', ', $response->msg) . PHP_EOL
 						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
 						, logger::WARNING
 					);
 				}else{
-					$response->msg		= "Error on publish record $section_id";
+					$response->msg[] = "Error on publish record $section_id";
+					$response->errors[] = 'publication record failed '.$section_id;
 					debug_log(__METHOD__
-						. " $response->msg " .PHP_EOL
+						. "  " . implode(', ', $response->msg) . PHP_EOL
 						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);

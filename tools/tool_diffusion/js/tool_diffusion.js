@@ -184,6 +184,7 @@ tool_diffusion.prototype.export = function(options) {
 			action	: 'tool_request',
 			source	: source,
 			options : {
+				background_running				: true, // set run in background CLI
 				section_tipo					: section_tipo,
 				section_id						: section_id,
 				mode							: mode,
