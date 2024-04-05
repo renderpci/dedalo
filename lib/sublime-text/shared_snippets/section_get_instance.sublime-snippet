@@ -1,0 +1,12 @@
+<snippet>
+	<content><![CDATA[
+section::get_instance(
+	\$${1:section_id}, // string|null section_id
+	\$${2:section_tipo} // string section_tipo
+);
+]]></content>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<tabTrigger>section::get_instance</tabTrigger>
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+	<scope>source.php</scope>
+</snippet>

@@ -1,0 +1,12 @@
+<snippet>
+	<content><![CDATA[
+\$locator = new locator();
+	\$locator->set_section_tipo(\$${1:section_tipo});
+	\$locator->set_section_id(\$${2:section_id});
+
+]]></content>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<tabTrigger>locator</tabTrigger>
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+	<scope>source.php</scope>
+</snippet>
