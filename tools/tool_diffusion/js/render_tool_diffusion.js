@@ -537,12 +537,10 @@ export const render_publication_items = function(self) {
 					})
 				})
 				// disable cases :
-						if (item.connection_status) {
-							if (item.connection_status.result===false) {
-								publication_button.classList.add('not_ready')
-							}
-						}
-						if (item.class_name==='diffusion_mysql' && !data_item.table) {
+						if (
+							(item.connection_status && item.connection_status.result===false) ||
+							(item.class_name==='diffusion_mysql' && !data_item.table)
+							) {
 							publication_button.classList.add('loading')
 						}
 
