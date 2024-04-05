@@ -366,6 +366,25 @@
 			>.process_info_container {
 				display			: flex;
 				justify-content	: center;
+				width: 100%;
+
+				.process_status_node {
+					width: auto;
+					margin-left: 20%;
+					margin-right: 20%;
+
+					min-width: 65vw;
+					@media screen and (max-width: @width_break_point_0) {
+						min-width: unset;
+						width: 100%;
+						margin-left: unset;
+						margin-right: unset;
+					}
+				}
+
+				.info_node {
+					// width: 100%;
+				}
 			}
 		}//end content_data
 	}//end wrapper_tool
