@@ -30,6 +30,16 @@ class dd_error {
 		// PHP-APACHE LOG
 		// error_log('ERROR: '.$error_to_show['debug'].$error_to_show['dump']);
 
+		// print CLI. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( SHOW_DEBUG===true && running_in_cli()===true ) {
+				// send to output
+				print_cli((object)[
+					'msg'		=> $message ?? 'Unknown error',
+					'errors'	=> ['captureError']
+				]);
+			}
+
 		// error_log('ERROR [dd_error::captureError]: '. print_r($error, true));
 		$error_msg = sprintf("\033[43m%s\033[0m", 'ERROR [dd_error::captureError]: '.$info);
 		error_log($error_msg);
@@ -55,6 +65,16 @@ class dd_error {
 			$error_to_show['user']	= 'Ops.. [Exception] ' . $message;
 			$error_to_show['debug']	= 'Ops.. [Exception] ' . $message;
 			$error_to_show['dump']	= print_r($exception,true);
+
+			// print CLI. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( SHOW_DEBUG===true && running_in_cli()===true ) {
+				// send to output
+				print_cli((object)[
+					'msg'		=> $message ?? 'Unknown error',
+					'errors'	=> ['captureException']
+				]);
+			}
 
 			error_log('Exception [dd_error::captureException] '.$error_to_show['debug'] . $error_to_show['dump']);
 		}
@@ -96,6 +116,16 @@ class dd_error {
 			$error_to_show['user']	= 'Ops.. [Fatal Error] ' . $error['message'];
 			$error_to_show['debug']	= 'Ops.. [Fatal Error] ' . $error['message'];
 			$error_to_show['dump']	= print_r($error,true);
+
+			// print CLI. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( SHOW_DEBUG===true && running_in_cli()===true ) {
+				// send to output
+				print_cli((object)[
+					'msg'		=> $error['message'] ?? 'Unknown error',
+					'errors'	=> ['captureShutdown']
+				]);
+			}
 
 			error_log('ERROR [dd_error::captureShutdown]: '. print_r($error_to_show, true));
 
