@@ -101,12 +101,23 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				dump($matrix_table, "section_id: $section_id - tipo: $section_tipo");
 			}
+			$msg = 'Error Processing Request. matrix_table is empty. Check Ontology resolution for tipo: '. $section_tipo;
 			debug_log(__METHOD__
-				. " Error Processing Request. matrix_table is empty" . PHP_EOL
+				. ' ' . $msg . PHP_EOL
 				. ' section_tipo: '. $section_tipo . PHP_EOL
 				. ' section_id: '. $section_id . PHP_EOL
 				, logger::ERROR
 			);
+			// print CLI. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( running_in_cli()===true ) {
+				// send to output
+				print_cli((object)[
+					'msg'		=> $msg,
+					'errors'	=> ['Unresolved matrix_table ('.$section_tipo.'-'.$section_id.')']
+				]);
+				die(); // do not throw here, only stop to fix this as last message
+			}
 			throw new Exception("Error Processing Request. matrix_table is empty. section_tipo: $section_tipo, section_id: $section_id ", 1);
 		}
 
@@ -121,13 +132,24 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			if(SHOW_DEBUG===true) {
 				dump($section_tipo,"section_id:$section_id - matrix_table:$matrix_table");
 			}
+			$msg = 'Error Processing Request. section_tipo is empty';
 			debug_log(__METHOD__
-				. " Error Processing Request. section_tipo is empty " . PHP_EOL
+				. ' ' . $msg . PHP_EOL
 				. ' matrix_table: '. $matrix_table . PHP_EOL
 				. ' section_tipo: '. $section_tipo . PHP_EOL
 				. ' section_id: '. $section_id . PHP_EOL
 				, logger::ERROR
 			);
+			// print CLI. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( running_in_cli()===true ) {
+				// send to output
+				print_cli((object)[
+					'msg'		=> $msg,
+					'errors'	=> ['Empty mandatory var section_tipo']
+				]);
+				die(); // do not throw here, only stop to fix this as last message
+			}
 			throw new Exception("Error Processing Request. section_tipo is empty ", 1);
 		}
 
