@@ -986,7 +986,7 @@ const get_line_build_version = function(ar_quality, self) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'blink',
-							inner_html		: get_label.procesing || 'Processing',
+							inner_html		: get_label.processing || 'Processing',
 							parent			: file_info_node
 						})
 
