@@ -204,7 +204,7 @@ const get_content_data = async function(self) {
 					parent			: body_response
 				})
 				const msg = response?.result?.psql_backup_files[0]
-				backup_files_info.innerHTML = JSON.stringify(msg, null, 2)
+				ui.update_node_content(backup_files_info, JSON.stringify(msg, null, 2))
 			})
 		}
 
@@ -337,9 +337,9 @@ const refresh_files_list = async (type, container) => {
 		}
 	})
 	// message from API response
-	const msg = api_response?.result || 'Unknown error'
+	const msg = api_response?.result || ['Unknown error']
 	// print list
-	container.innerHTML = JSON.stringify(msg, null, 2)
+	ui.update_node_content(container, JSON.stringify(msg, null, 2))
 }//end refresh_files_list
 
 
@@ -380,7 +380,9 @@ const render_psql_backup_files = function() {
 		// call API and refresh the list
 		refresh_files_list('psql', backup_files_list)
 		// activate interval to refresh after 1 sec
-		interval = setInterval(refresh_files_list, 1000);
+		interval = setInterval(()=>{
+			refresh_files_list('psql', backup_files_list)
+		}, 1000);
 	})
 
 	// files list container (JOSN array of objects) as
@@ -433,7 +435,9 @@ const render_mysql_backup_files = function() {
 		// call API and refresh the list
 		refresh_files_list('mysql', mysql_backup_files_list)
 		// activate interval to refresh after 1 sec
-		interval = setInterval(refresh_files_list, 1000);
+		interval = setInterval(()=> {
+			refresh_files_list('mysql', mysql_backup_files_list)
+		}, 1000);
 	})
 
 	// files list container (JOSN array of objects) as
