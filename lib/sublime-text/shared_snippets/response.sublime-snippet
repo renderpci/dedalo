@@ -1,0 +1,13 @@
+<snippet>
+	<content><![CDATA[
+\$response = new stdClass();
+	\$response->result	= false;
+	\$response->msg		= 'Error. Request failed';
+	\$response->errors	= [];
+]]></content>
+	<tabTrigger>response</tabTrigger>
+	<scope>source.php</scope>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<!-- <tabTrigger>hello</tabTrigger> -->
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+</snippet>

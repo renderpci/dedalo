@@ -1,0 +1,13 @@
+<snippet>
+	<content><![CDATA[
+try {
+	$1
+} catch (Exception \$e) {
+	error_log( 'Caught exception: ' . \$e->getMessage() );
+}
+]]></content>
+	<!-- Optional: Set a tabTrigger to define how to trigger the snippet -->
+	<tabTrigger>try_ php</tabTrigger>
+	<!-- Optional: Set a scope to limit where the snippet will trigger -->
+	<scope>source.php</scope>
+</snippet>
