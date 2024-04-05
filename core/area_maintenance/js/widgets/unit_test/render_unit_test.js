@@ -76,6 +76,10 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
+	// render_long_process
+		const long_process_node = render_long_process()
+		content_data.appendChild(long_process_node)
+
 	// button_open
 		const button_open = ui.create_dom_element({
 			element_type	: 'button',
@@ -123,29 +127,54 @@ const get_content_data_edit = async function(self) {
 			}
 		})
 
-	// fn_long_process
-		const fn_long_process = async (e) => {
-			e.stopPropagation()
+	// add at end body_response
+		content_data.appendChild(body_response)
+
+
+	return content_data
+}//end get_content_data_edit
+
+
+
+/**
+* RENDER_LONG_PROCESS
+* Render button and response container of long process test
+* @return HTMLElement long_process_container
+*/
+const render_long_process = function() {
+
+	// long_process_container
+		const long_process_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'long_process_container'
+		})
+
+	// long_process_stream
+		const long_process_stream = async (iterations) => {
 
 			// locks the button submit
 			button_run_long_process.classList.add('loading')
 
 			// counter long process fire
-				const response  = await data_manager.request({
-					body		: {
-						dd_api	: 'dd_area_maintenance_api',
-						action	: 'class_request',
-						source	: {
-							action	: 'long_process_stream',
-						},
-						options : {
-							background_running : true // set run in background CLI
-						}
+			const response  = await data_manager.request({
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action	: 'long_process_stream',
+					},
+					options : {
+						background_running	: true, // set run in background CLI
+						iterations			: iterations
 					}
-				})
+				}
+			})
 
-			const pid	= response.pid
-			const pfile	= response.pfile
+			return response
+		}//end long_process_stream
+
+	// update_process_status
+		const update_process_status = function(pid, pfile, container) {
 
 			// get_process_status from API and returns a SEE stream
 				data_manager.request_stream({
@@ -163,8 +192,8 @@ const get_content_data_edit = async function(self) {
 
 					// render base nodes and set functions to manage
 					// the stream reader events
-					const render_response = render_stream({
-						container		: long_process_container,
+					const render_stream_response = render_stream({
+						container		: container,
 						id				: 'process_test_long_process',
 						pid				: pid,
 						pfile			: pfile,
@@ -174,13 +203,13 @@ const get_content_data_edit = async function(self) {
 					// on_read event (called on every chunk from stream reader)
 					const on_read = (sse_response) => {
 						// fire update_info_node on every reader read chunk
-						render_response.update_info_node(sse_response)
+						render_stream_response.update_info_node(sse_response)
 					}
 
 					// on_done event (called once at finish or cancel the stream read)
 					const on_done = () => {
 						// is triggered at the reader's closing
-						render_response.done()
+						render_stream_response.done()
 						// unlocks the button submit
 						button_run_long_process.classList.remove('loading')
 					}
@@ -192,29 +221,64 @@ const get_content_data_edit = async function(self) {
 				})
 		}//end fn_long_process
 
+		// check process status always
+		const check_process_data = () => {
+			data_manager.get_local_db_data(
+				'process_test_long_process',
+				'status'
+			)
+			.then(function(local_data){
+				if (local_data && local_data.value) {
+					update_process_status(
+						local_data.value.pid,
+						local_data.value.pfile,
+						long_process_response
+					)
+				}
+			})
+		}
+		check_process_data()
+
 	// button_run_long_process
 		const button_run_long_process = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'light button_run_long_process',
 			inner_html		: 'Run long process',
-			parent			: content_data
+			parent			: long_process_container
 		})
-		button_run_long_process.addEventListener('click', fn_long_process)
+		button_run_long_process.addEventListener('click', (e) => {
+			e.stopPropagation()
 
-		// long_process_container
-		const long_process_container = ui.create_dom_element({
+			// prompt
+			const iterations = prompt('How many iterations', 10);
+			if (iterations===null) {
+				// user cancel action case
+				return
+			}
+
+			// blur button
+			document.activeElement.blur()
+
+			// long_process_stream
+			long_process_stream(iterations)
+			.then(function(response){
+				update_process_status(
+					response.pid,
+					response.pfile,
+					long_process_response
+				)
+			})
+		})
+
+		// long_process_response
+		const long_process_response = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'long_process_container',
-			parent			: content_data
+			class_name		: 'long_process_response',
+			parent			: long_process_container
 		})
 
-
-	// add at end body_response
-		content_data.appendChild(body_response)
-
-
-	return content_data
-}//end get_content_data_edit
+	return long_process_container
+}//end render_long_process
 
 
 
