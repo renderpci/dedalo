@@ -1186,7 +1186,6 @@ const update_process_status = (options) => {
 		}
 	})
 	.then(function(stream){
-		console.warn('stream:', stream);
 
 		// render base nodes and set functions to manage
 		// the stream reader events

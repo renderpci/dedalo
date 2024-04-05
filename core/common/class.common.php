@@ -418,8 +418,9 @@ abstract class common {
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 			// empty model case
 			if (empty($model_name)) {
+				$msg = "Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: '$tipo'";
 				debug_log(__METHOD__
-					. " Current tipo ($tipo) model name is empty. Model is mandatory, check your model for tipo: $tipo"
+					. ' ' . $msg
 					, logger::ERROR
 				);
 				return null;

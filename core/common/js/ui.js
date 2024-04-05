@@ -1550,7 +1550,7 @@ export const ui = {
 	* @param object options
 	* @return HTMLElement element
 	*/
-	create_dom_element : function(options){
+	create_dom_element : function(options) {
 
 		// options
 			const element_type		= options.element_type

@@ -1416,7 +1416,7 @@ final class dd_utils_api {
 					$data = (!is_object($value))
 						? (object)[
 							'msg' => $value
-						 ]
+						  ]
 						: $value;
 
 				// output JSON to client

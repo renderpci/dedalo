@@ -130,15 +130,13 @@ class section extends common {
 			}
 
 		// tipo check model (only section is expected)
-			if(SHOW_DEBUG===true) {
-				$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-				if ($model!=='section') {
-					debug_log(__METHOD__
-						. " Expected model of tipo is section, but received is  " . PHP_EOL
-						. ' model: ' . to_string($model)
-						, logger::ERROR
-					);
-				}
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			if ($model!=='section') {
+				debug_log(__METHOD__
+					. ' Expected model of tipo '.$tipo.' is section, but received is ' . PHP_EOL
+					. ' model: ' . to_string($model)
+					, logger::ERROR
+				);
 			}
 
 		// cache
