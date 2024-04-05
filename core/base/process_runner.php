@@ -24,11 +24,15 @@
 		session_id($session_id);
 	}
 
-
 // config. Starts a new session with forced id from command arguments
 	include (dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
 // unlock session. Only for read
 	session_write_close();
+
+// only logged users can access SSE events
+	if(login::is_logged()!==true) {
+		die('Authentication error: please login');
+	}
 
 
 // output manager
