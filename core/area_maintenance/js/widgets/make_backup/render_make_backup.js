@@ -133,13 +133,14 @@ const get_content_data = async function(self) {
 					container		: container,
 					id				: 'process_make_backup',
 					pid				: pid,
-					pfile			: pfile
+					pfile			: pfile,
+					// display_json	: false
 				})
 
 				// on_read event (called on every chunk from stream reader)
 				const on_read = (sse_response) => {
-					// fire update_stream on every reader read chunk
-					render_response.update_stream(sse_response)
+					// fire update_info_node on every reader read chunk
+					render_response.update_info_node(sse_response)
 					// get files list updated with last file only
 					update_last_file_info()
 				}
@@ -225,16 +226,13 @@ const get_content_data = async function(self) {
 				return
 			}
 
+			// blur button
+			document.activeElement.blur()
+
+			// clean up container
 			while (body_response.firstChild) {
 				body_response.removeChild(body_response.firstChild);
 			}
-
-			// spinner
-			const spinner = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'spinner',
-				parent			: body_response
-			})
 
 			// call API to fire process and get PID
 			const api_response = await data_manager.request({
@@ -247,7 +245,6 @@ const get_content_data = async function(self) {
 			})
 
 			if (!api_response || !api_response.result) {
-				spinner.remove()
 				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'error',

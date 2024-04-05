@@ -195,7 +195,7 @@ tool_diffusion.prototype.export = function(options) {
 
 	// call to the API, fetch data and get response
 		return new Promise(function(resolve){
-
+			// request
 			data_manager.request({
 				use_worker	: true,
 				body		: rqo

@@ -2455,24 +2455,43 @@ class area_maintenance extends area_common {
 	* LONG_PROCESS_STREAM
 	* Print a sequential number every 1000 milliseconds
 	* Used to test long processes and timeouts issues
-	* @return void
+	* @param object $options
+	* {
+	* 	iterations: int
+	* }
+	* @return object|void
 	*/
-	public static function long_process_stream() {
+	public static function long_process_stream(object $options) {
+
+		// options
+			$iterations = $options->iterations ?? 10;
 
 		if (running_in_cli()===true) {
 
 			// executing from dd_utils_api::get_process_status
 
-			$i=0;
+			$counter = 0;
 			while(1){
 
-				$counter = $i++;
+				$counter++;
 
+				// end runner case
+				if ($counter>$iterations) {
+					$result = (object)[
+						'msg'		=> 'Iterations completed ' . $iterations,
+						'memory'	=> dd_memory_usage()
+					];
+					// return is printed by manager too
+					return $result; // stop the loop here
+				}
+
+				// print notification
 				print_cli((object)[
-					'msg'		=> 'Iteration ' . $counter,
+					'msg'		=> 'Iteration ' . $counter . ' of ' . $iterations,
 					'memory'	=> dd_memory_usage()
 				]);
 
+				// sleep process
 				$ms = 1000; usleep( $ms * 1000 );
 			}
 
