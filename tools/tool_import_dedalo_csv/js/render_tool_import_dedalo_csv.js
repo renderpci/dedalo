@@ -25,7 +25,7 @@ export const render_tool_import_dedalo_csv = function() {
 
 
 /**
-* TOOL_IMPORT_DEDALO_CSV
+* EDIT
 * Render tool DOM nodes
 * This function is called by render common attached in 'tool_import_dedalo_csv.js'
 * @param object options
@@ -82,7 +82,7 @@ render_tool_import_dedalo_csv.prototype.edit = async function(options) {
 
 
 	return wrapper
-}//end tool_import_dedalo_csv
+}//end edit
 
 
 
@@ -154,6 +154,9 @@ const get_content_data = async function(self) {
 				// 		el.classList.remove('hide')
 				// 	}
 				// })
+
+			// blur button
+				document.activeElement.blur()
 
 			// array of file names
 				const files = selected_files.map(el => {
@@ -355,8 +358,6 @@ const render_file_info = function(self, item) {
 				}
 			}//end update_section_warn
 
-
-
 			// section_label
 				ui.create_dom_element({
 					element_type	: 'span',
@@ -370,12 +371,6 @@ const render_file_info = function(self, item) {
 					inner_html		: item.section_label || 'XX',
 					parent			: section_tipo_label
 				})
-
-			// const section_warn = (!section_tipo)
-			// 	? 'Unable to autodetected file section tipo "'+section_tipo+'" using name file. Remember, only current ('+self.caller.tipo+') is accepted'
-			// 	: (section_tipo!==self.caller.tipo)
-			// 		? 'Autodetected file section tipo "'+section_tipo+'" appears to be invalid. Remember, only current ('+self.caller.tipo+') is accepted'
-			// 		: false
 
 		// icon delete
 			const icon_delete = ui.create_dom_element({
@@ -887,6 +882,7 @@ render_tool_import_dedalo_csv.prototype.upload_done = async function (options) {
 }//end upload_done
 
 
+
 /**
 * RENDER_FINAL_REPORT
 * Called on import process has finished to render the final report
@@ -1162,7 +1158,11 @@ const render_final_report = function(options){
 
 
 
-// update_process_status
+/**
+* UPDATE_PROCESS_STATUS
+* @param object options
+* @return void
+*/
 const update_process_status = (options) => {
 
 	// options
@@ -1173,7 +1173,7 @@ const update_process_status = (options) => {
 		const process_info_container	= options.process_info_container
 
 	// locks the button submit
-	button_submit.classList.add('hide')
+	button_submit.classList.add('loading')
 	if (process_info_container.classList.contains('hide')) {
 		process_info_container.classList.remove('hide')
 	}
@@ -1209,9 +1209,10 @@ const update_process_status = (options) => {
 
 				const data = sse_response.data || {}
 
+				// finished process case
 				if(sse_response.is_running===false){
 
-					// errors case
+					// errors found case
 					if(data.errors && data.errors.length){
 						// Note that on running == false, the last message is not printed
 						// add errors
@@ -1231,7 +1232,7 @@ const update_process_status = (options) => {
 					})
 
 					// activate button_submit
-					button_submit.classList.remove('hide')
+					button_submit.classList.remove('loading')
 
 					// stop execution here
 					return
@@ -1269,7 +1270,7 @@ const update_process_status = (options) => {
 			// is triggered at the reader's closing
 			render_response.done()
 			// unlocks the button submit
-			button_submit.classList.remove('hide')
+			button_submit.classList.remove('loading')
 		}
 
 		// read stream. Creates ReadableStream that fire
@@ -1281,8 +1282,18 @@ const update_process_status = (options) => {
 
 
 
-// check process status always
+/**
+* CHECK_PROCESS_DATA
+* @param object options
+* @return void
+*/
 const check_process_data = (options) => {
+
+	// options
+		const self						= options.self
+		const process_info_container	= options.process_info_container
+		const button_submit				= options.button_submit
+
 
 	data_manager.get_local_db_data(
 		'process_import_dedalo_csv',
@@ -1293,9 +1304,9 @@ const check_process_data = (options) => {
 			update_process_status({
 				pid						: local_data.value.pid,
 				pfile					: local_data.value.pfile,
-				process_info_container	: options.process_info_container,
-				button_submit			: options.button_submit,
-				self 					: options.self
+				process_info_container	: process_info_container,
+				button_submit			: button_submit,
+				self 					: self
 
 			})
 		}
