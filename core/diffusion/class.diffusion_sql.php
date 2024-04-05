@@ -1326,16 +1326,26 @@ class diffusion_sql extends diffusion  {
 	* UPDATE_RECORD
 	* Update one or any number of records ( array ) and references
 	* @param object $options
+	* {
+	* 	section_tipo: string
+	* 	section_id: string|int
+	* 	diffusion_element_tipo: string
+	* 	recursion_level: int
+	* 	component_publication_tipo: string|null
+	* 	skip_tipos: array|null
+	* 	resolve_references: bool
+	* }
 	* @return object $response
 	*/
 	public function update_record(object $options) : object {
 		// $start_time = start_time();
 
-		set_time_limit ( 259200 );  // 3 dias
+		set_time_limit ( 259200 );  // 3 days
 
 		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= '';
+			$response->result			= false;
+			$response->msg				= [];
+			$response->errors			= [];
 
 		// options
 			$section_tipo				= $options->section_tipo;
@@ -1351,12 +1361,13 @@ class diffusion_sql extends diffusion  {
 		// mandatory vars check
 			if(empty($section_tipo) || empty($section_id) || empty($diffusion_element_tipo)) {
 				$response->result	= false;
-				$response->msg		.= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined a mandatory options var";
+				$response->msg[]	= " ERROR ON UPDATE RECORD section_id:'$section_id' - section_tipo:'$section_tipo' - diffusion_element_tipo:'$diffusion_element_tipo'. Undefined a mandatory options var";
 				debug_log(__METHOD__
-					." $response->msg " . PHP_EOL
+					.' ' . implode(', ', $response->msg) . PHP_EOL
 					. to_string($options)
 					, logger::ERROR
 				);
+				$response->errors[] = 'Mandatory vars error';
 				return $response;
 			}
 			// Old code heritage control
@@ -1365,11 +1376,12 @@ class diffusion_sql extends diffusion  {
 					dump($section_id, ' $section_id ++ '.to_string());
 				}
 				$response->result	= false;
-				$response->msg		.= 'Error Processing Request. Type array is not accepted to update_record anymore. Please use integer as section_id';
+				$response->msg[]	= 'Error Processing Request. Type array is not accepted to update_record anymore. Please use integer as section_id';
 				debug_log(__METHOD__
-					." $response->msg "
+					.'  ' . implode(', ', $response->msg)
 					, logger::ERROR
 				);
+				$response->errors[] = 'section_id is an array. Expected integer';
 				return $response;
 			}
 
@@ -1382,9 +1394,9 @@ class diffusion_sql extends diffusion  {
 			if (true===in_array($resolved_static_key, $ar_resolved_static)) {
 				// response
 				$response->result	= true;
-				$response->msg		= 'Skipped record already updated. resolved_static_key: '.$resolved_static_key;
+				$response->msg[]	= 'Skipped record already updated. resolved_static_key: '.$resolved_static_key;
 				debug_log(__METHOD__
-					. ' '.$response->msg
+					. ' '. implode(', ', $response->msg)
 					, logger::WARNING
 				);
 				return $response;
@@ -1397,12 +1409,12 @@ class diffusion_sql extends diffusion  {
 
 				$response->code		= 2;
 				$response->result	= false;
-				$response->msg		.= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo.".PHP_EOL
+				$response->msg[]	= "WARNING ON UPDATE RECORD[2] section_id: $section_id - section_tipo: $section_tipo - diffusion_element_tipo: $diffusion_element_tipo.".PHP_EOL
 				." Undefined section_tipo $section_tipo var in diffusion_element_tables_map. ".PHP_EOL
 				." PROBABLY THE TARGET TABLE FOR $section_tipo ($label) DO NOT EXISTS IN SQL. ".PHP_EOL
 				." If you want to resolve this reference, create a diffusion table for this data ($section_tipo) or check the MYSQL schema for problems with tables creation.";
 				debug_log(__METHOD__
-					. " $response->msg " .PHP_EOL
+					. " " . implode(', ', $response->msg) .PHP_EOL
 					. ' The property "'.$section_tipo.'" do not exists in the object diffusion_element_tables_map ' .PHP_EOL
 					.' Ignored update_record request. options:' .PHP_EOL
 					. json_encode($options, JSON_PRETTY_PRINT)
@@ -1448,7 +1460,7 @@ class diffusion_sql extends diffusion  {
 					diffusion::update_publication_data($section_tipo, $section_id);
 
 				$response->result 	= true;
-				$response->msg 		= 'Processing with '.$function_name;
+				$response->msg[]	= 'Processing with '.$function_name;
 
 				return $response;
 			}
@@ -1458,11 +1470,12 @@ class diffusion_sql extends diffusion  {
 			// diffusion_section . Resolve diffusion section from section tipo
 				if (in_array($section_tipo, (array)$ar_unconfigured_diffusion_section)) {
 					$response->result	= false;
-					$response->msg		.= 'unconfigured_diffusion_section';
+					$response->msg[]	= 'unconfigured_diffusion_section';
 					debug_log(__METHOD__
 						." Error[1]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
 						, logger::ERROR
 					);
+					$response->errors[] = '[1] misconfigured diffusion section '.to_string($section_tipo);
 					return $response;
 				}
 				$diffusion_section = $table_tipo;
@@ -1472,17 +1485,21 @@ class diffusion_sql extends diffusion  {
 						// throw new Exception("Error Processing Request. diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated", 1);
 						// echo "<hr> DEBUG update_record: Omitted update section <b>'$section_name'</b>. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id]<br>";
 						$msg = " Omitted update section '$section_name'. Optional diffusion_section not found in correspondence with section_tipo: $section_tipo [$section_id] ";
-						$response->msg .= $msg;
-						debug_log(__METHOD__." $msg", logger::DEBUG);
+						$response->msg[] = $msg;
+						debug_log(__METHOD__
+							. " " . implode(', ', $response->msg)
+							, logger::DEBUG
+						);
 					}
 					// error_log(__METHOD__." WARNING: diffusion_section not found in correspondence with section_tipo: $section_tipo . Nothing is updated !!");
 					$ar_unconfigured_diffusion_section[] = $section_tipo;
 
-					$response->msg .= " [2] misconfigured diffusion section for section_tipo: $section_tipo";
+					$response->msg[] = " [2] misconfigured diffusion section for section_tipo: $section_tipo";
 					debug_log(__METHOD__
 						." Error[2]: misconfigured diffusion section for section_tipo: ".to_string($section_tipo)
 						, logger::ERROR
 					);
+					$response->errors[] = '[2] misconfigured diffusion section '.to_string($section_tipo);
 					return $response;
 				}
 
@@ -1538,6 +1555,7 @@ class diffusion_sql extends diffusion  {
 								.' save_response: ' . json_encode($save_response, JSON_PRETTY_PRINT)
 								, logger::ERROR
 							);
+							$response->errors[] = 'failed save record: '. $save_response->msg ?? 'Unknown error';
 						}
 
 					// global_search (LEGACY ONLY)
@@ -1800,8 +1818,8 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// response
-			$response->result	 = true;
-			$response->msg		.= "Record updated section_id: $section_id. Number of references: ".count($ar_resolved_static).' in levels: '.($max_recursions + 1);
+			$response->result	= true;
+			$response->msg[]	= "Record updated section_id: $section_id. Number of references: ".count($ar_resolved_static).' in levels: '.($max_recursions + 1);
 
 
 		return $response;
