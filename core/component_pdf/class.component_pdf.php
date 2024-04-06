@@ -467,7 +467,7 @@ class component_pdf extends component_media_common {
 	*
 	* Once the full path is specified, the command is working as desired.
 	* @param object|null $options
-	* @return string|bool $result
+	* @return bool $result
 	*/
 	public function create_image(?object $options=null) : string|bool {
 
@@ -487,34 +487,38 @@ class component_pdf extends component_media_common {
 			}
 
 		// target file
-			$file_name		= $this->get_id();
-			$folder			= $this->get_folder();
-			$target_file	= DEDALO_MEDIA_PATH . $folder . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+			$file_name				= $this->get_id();
+			$folder					= $this->get_folder();
+			$target_path			= $this->get_media_path_dir($quality);
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [DEDALO_IMAGE_EXTENSION];
 
-		// generate from PDF
-			$image_pdf_options = new stdClass();
-				$image_pdf_options->source_file	= $source_file;
-				$image_pdf_options->ar_layers	= [$page];
-				$image_pdf_options->target_file	= $target_file;
-				$image_pdf_options->density		= 600;
-				$image_pdf_options->antialias	= true;
-				$image_pdf_options->quality		= 75;
-				$image_pdf_options->resize		= '25%';
+			foreach ($alternative_extensions as $current_extension) {
+				$target_file =  $target_path . '/' . $file_name . '.' . $current_extension;
 
-			ImageMagick::convert($image_pdf_options);
+			// generate from PDF
+				$image_pdf_options = new stdClass();
+					$image_pdf_options->source_file	= $source_file;
+					$image_pdf_options->ar_layers	= [$page];
+					$image_pdf_options->target_file	= $target_file;
+					$image_pdf_options->density		= 900;
+					$image_pdf_options->antialias	= true;
+					$image_pdf_options->quality		= 75;
+					$image_pdf_options->resize		= '50%';
 
-			// check file
-			if (!file_exists($target_file)) {
-				debug_log(__METHOD__
-					. " Error on image creation. target file do not exists " . PHP_EOL
-					. 'target_file: ' . to_string($target_file)
-					, logger::ERROR
-				);
-				return false;
+				ImageMagick::convert($image_pdf_options);
+
+				// check file
+				if (!file_exists($target_file)) {
+					debug_log(__METHOD__
+						. " Error on image creation. target file do not exists " . PHP_EOL
+						. 'target_file: ' . to_string($target_file)
+						, logger::ERROR
+					);
+					return false;
+				}
 			}
 
-
-		return $target_file;
+		return true;
 	}//end create_image
 
 
