@@ -752,11 +752,15 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* @return array
+	* @return array|null $alternative_extensions
 	*/
-	public function get_alternative_extensions() : array {
+	public function get_alternative_extensions() : ?array {
 
-		return DEDALO_PDF_EXTENSIONS_SUPPORTED;
+		$alternative_extensions = defined('DEDALO_PDF_ALTERNATIVE_EXTENSIONS')
+			? DEDALO_PDF_ALTERNATIVE_EXTENSIONS
+			: null;
+
+		return $alternative_extensions;
 	}//end get_alternative_extensions
 
 
