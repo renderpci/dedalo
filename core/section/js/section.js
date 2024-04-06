@@ -333,9 +333,17 @@ section.prototype.init = async function(options) {
 							return
 						}
 
+						// Resolve the label of the section
+						// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
+						// it's stored into the tool_congext of the config.
+						// else get the section label
+						const section_label = self.config?.tool_context?.label
+							? self.config.tool_context.label
+							: self.label
+
 						// update_section_label. Show icon Inspector and activate the link event
 						menu.update_section_label({
-							value					: self.label,
+							value					: section_label,
 							mode					: self.mode,
 							section_label_on_click	: section_label_on_click
 						})
