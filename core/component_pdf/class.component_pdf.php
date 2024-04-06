@@ -636,6 +636,10 @@ class component_pdf extends component_media_common {
 						);
 					}
 
+					// image alternative
+
+					$this->create_image();
+
 					// thumb : Create pdf_thumb image
 						$thumb_url = $this->get_pdf_thumb(
 							true // bool force_create
