@@ -166,18 +166,19 @@ const render_header_options = async function(self, content_data) {
 		order_by(order_active)
 	})
 
+	// subscribe to window_blur of the portal coins
+	event_manager.subscribe('window_bur_'+self.coins.id, fn_reorder)
+
+	function fn_reorder(options) {
+		order_active.button_node.classList.remove('active')
+		order_by(order_active)
+	}
+
 	// order_by, get data and order by components or by section_id
 	const order_by = async function (options) {
 		//options
 		const button_node	= options.button_node
 		const tipo			= options.tipo
-
-		const left_container = self.node.content_data.left_container
-
-		// clean the coins container
-			while (left_container.firstChild) {
-				left_container.removeChild(left_container.firstChild);
-			}
 
 		button_node.classList.toggle('active')
 
@@ -212,8 +213,7 @@ const render_header_options = async function(self, content_data) {
 		// set the order data to the component build and render it and append to the left container
 		self.coins.data.value = order_data_value
 		await self.coins.build(false)
-		const coins_node = await self.coins.render()
-		left_container.appendChild(coins_node)
+		self.coins.render('content')
 	}
 
 	const set_original_button = ui.create_dom_element({
