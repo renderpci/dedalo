@@ -143,12 +143,13 @@ const render_header_options = async function(self, content_data) {
 		parent			: fragment
 	})
 
+	// set a order object to define the current active option
+	const order_active = {}
 	order_by_weight.addEventListener('mouseup', ()=>{
 		order_by_diameter.classList.remove('active')
-		order_by({
-			button_node	: order_by_weight,
-			tipo		: 'numisdata133'
-		})
+		order_active.button_node	= order_by_weight
+		order_active.tipo	= 'numisdata133'
+		order_by(order_active)
 	})
 
 	const order_by_diameter = ui.create_dom_element({
@@ -160,10 +161,9 @@ const render_header_options = async function(self, content_data) {
 
 	order_by_diameter.addEventListener('mouseup', ()=>{
 		order_by_weight.classList.remove('active')
-		order_by({
-			button_node	: order_by_diameter,
-			tipo		: 'numisdata135'
-		})
+		order_active.button_node = order_by_diameter
+		order_active.tipo	= 'numisdata135'
+		order_by(order_active)
 	})
 
 	// order_by, get data and order by components or by section_id
