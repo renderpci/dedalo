@@ -378,18 +378,30 @@ class install extends common {
 	*/
 	public static function build_install_version() {
 
+		// set timeout in seconds
+		set_time_limit(600); // 10 minutes (10*60)
+
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
-
-		$exec = true;
+		// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => (label::get_label('processing_wait') ?? 'Processing... please wait')
+				]);
+			}
 
 		// config
 			$config = install::get_config();
 
-
 		// clone database to dedalo_install
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Cloning database'
+				]);
+			}
 			$skip_if_exists = false;
 			$call_response = install::clone_database($skip_if_exists);
 			if ($call_response->result===false) {
@@ -397,24 +409,48 @@ class install extends common {
 			}
 
 		// clean ontology (structure)
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Cleaning Ontology'
+				]);
+			}
 			$call_response = install::clean_ontology();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// clean counters (truncate all counters to force re-create later)
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Cleaning counters'
+				]);
+			}
 			$call_response = install::clean_counters();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// clean general tables ($to_clean_tables)
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Cleaning tables'
+				]);
+			}
 			$call_response = install::clean_tables();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// create extensions (unaccent, pg_trgm ..)
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating extensions (unaccent, pg_trgm ..)'
+				]);
+			}
 			$call_response = install::create_extensions();
 			if ($call_response->result===false) {
 				return $call_response;
@@ -427,30 +463,60 @@ class install extends common {
 			// }
 
 		// create default blank root user
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating root user'
+				]);
+			}
 			$call_response = install::create_root_user();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// create default main project
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating main project'
+				]);
+			}
 			$call_response = install::create_main_project();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// create default main profiles
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating main profiles'
+				]);
+			}
 			$call_response = install::create_main_profiles();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// create default test_record
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating default test record'
+				]);
+			}
 			$call_response = install::create_test_record();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// import_hierarchy_main_records (matrix_hierarchy_main records)
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Importing main hierarchy records'
+				]);
+			}
 			$call_response = install::import_hierarchy_main_records();
 			if ($call_response->result===false) {
 				return $call_response;
@@ -502,12 +568,24 @@ class install extends common {
 			// }
 
 		// vacuum analyze
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Vacuum database'
+				]);
+			}
 			$call_response = install::optimize_database();
 			if ($call_response->result===false) {
 				return $call_response;
 			}
 
 		// build install DDBB to default compressed psql file
+			// cli msg
+			if ( running_in_cli()===true ) {
+				print_cli((object)[
+					'msg' => 'Creating compressed psql file'
+				]);
+			}
 			$call_response = install::build_install_db_file();
 			if ($call_response->result===false) {
 				return $call_response;
@@ -996,6 +1074,13 @@ class install extends common {
 
 		// clean matrix and accessory tables
 			$items = array_map(function($table){
+
+				// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg' => 'Cleaning table: ' . $table
+					]);
+				}
 
 				$sql = 'DELETE FROM "'.$table.'"; ALTER SEQUENCE IF EXISTS '.$table.'_id_seq RESTART WITH 1 ;';
 				if ($table==='matrix_activity') {

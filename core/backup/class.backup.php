@@ -2083,6 +2083,10 @@ abstract class backup {
 	/**
 	* MAKE_MYSQL_BACKUP
 	* @return object $response
+	* {
+	* 	result: array|bool [result: true, msg: Backup done web_my_ddbb,..]
+	* 	msg: string
+	* }
 	*/
 	public static function make_mysql_backup() : object {
 
@@ -2118,7 +2122,7 @@ abstract class backup {
 
 	/**
 	* GET_MYSQL_BACKUP_FILES
-	* Read mysql backup directory and get all SQL files name
+	* Read MYSQL backup directory and get all SQL files name
 	* @return array $ar_files
 	*/
 	public static function get_mysql_backup_files() : array {

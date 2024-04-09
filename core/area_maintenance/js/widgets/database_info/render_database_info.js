@@ -113,7 +113,10 @@ const get_content_data_edit = async function(self) {
 				use_worker	: true,
 				body		: {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'rebuild_db_indexes',
+					action	: 'class_request',
+					source	: {
+						action : 'rebuild_db_indexes'
+					},
 					options	: {}
 				}
 			})

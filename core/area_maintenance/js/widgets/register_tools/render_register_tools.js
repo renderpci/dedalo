@@ -220,8 +220,11 @@ const render_content_data = async function(self) {
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'register_tools',
-				options	: null
+				action	: 'class_request',
+				source	: {
+					action : 'register_tools'
+				},
+				options	: {}
 			}
 		})
 

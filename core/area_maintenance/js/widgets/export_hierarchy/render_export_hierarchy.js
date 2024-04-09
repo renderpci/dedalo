@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -138,10 +138,52 @@ const get_content_data_edit = async function(self) {
 				mandatory	: true,
 				value		: ''
 			}],
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'export_hierarchy',
-				options	: null
+			on_submit	: (e, values) => {
+
+				const input			= values.find(el => el.name==='section_tipo')
+				const section_tipo	= input?.value // string like '*'
+
+				const form_container = content_data.querySelector('.form_container')
+
+				// clean
+					while (body_response.firstChild) {
+						body_response.removeChild(body_response.firstChild);
+					}
+
+				// spinner
+					const spinner = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'spinner'
+					})
+					body_response.prepend(spinner)
+					form_container.classList.add('lock')
+
+				// counter long process fire
+				data_manager.request({
+					body		: {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'class_request',
+						source	: {
+							action	: 'export_hierarchy',
+						},
+						options : {
+							section_tipo : section_tipo // string like '*' or 'es1,es2'
+						}
+					}
+				})
+				.then(function(response){
+					console.log('response:', response);
+					form_container.classList.remove('lock')
+					spinner.remove()
+
+					ui.create_dom_element({
+						element_type	: 'pre',
+						inner_html		: JSON.stringify(response, null, 2),
+						parent			: body_response
+					})
+
+
+				})
 			}
 		})
 
