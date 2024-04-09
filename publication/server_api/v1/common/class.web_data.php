@@ -1529,6 +1529,18 @@ class web_data {
 			$current_ar_value = !empty($rows[$current_field_ar_id])
 				? json_decode($rows[$current_field_ar_id])
 				: null;
+
+			// link case {"link","auto"}
+				if ($current_field==='link' && $resolve_portals_custom->{$current_field}==='auto') {
+					if (!empty($rows[$current_field_ar_id])) {
+						$parsed_value = json_decode($rows[$current_field_ar_id]);
+						if (isset($parsed_value->section_id)) {
+							$table				= $parsed_value->table;
+							$current_ar_value	= [$parsed_value->section_id];
+						}
+					}
+				}
+
 			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
 				// dd_relations case
