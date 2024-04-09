@@ -55,6 +55,10 @@
 
 	// include class file
 	if (isset($safe_data['file'])) {
+		$allow_url_include = ini_get('allow_url_include');
+		if ($allow_url_include==='On' || $allow_url_include==true) {
+			die('Invalid server config. Remote files are not allowed');
+		}
 		// file_exists get false for remote files. It is used here for security reasons too
 		if (!file_exists($safe_data['file'])) {
 			debug_log(__METHOD__
