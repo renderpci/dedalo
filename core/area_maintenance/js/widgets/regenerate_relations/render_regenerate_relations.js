@@ -5,6 +5,8 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {render_stream} from '../../../../common/js/render_common.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -107,13 +109,138 @@ const get_content_data_edit = async function(self) {
 				label		: 'Table name/s like "matrix,matrix_hierarchy" or "*" for all',
 				mandatory	: true
 			}],
-			trigger : {
-				dd_api	: 'dd_area_maintenance_api',
-				action	: 'regenerate_relations',
-				options	: null
+			on_submit	: (e, values) => {
+
+				const input		= values.find(el => el.name==='tables')
+				const tables	= input?.value // string like '*'
+
+				// regenerate_relations
+				regenerate_relations(tables)
+				.then(function(response){
+					update_process_status(
+						response.pid,
+						response.pfile,
+						body_response
+					)
+				})
 			}
 		})
 
+	// regenerate_relations
+		const regenerate_relations = async (tables) => {
+
+			// counter long process fire
+			const response  = await data_manager.request({
+				body		: {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action	: 'regenerate_relations',
+					},
+					options : {
+						background_running	: true, // set run in background CLI
+						tables				: tables // string like '*' or 'matrix_hierarchy'
+					}
+				}
+			})
+
+			return response
+		}//end regenerate_relations
+
+	// update_process_status
+		const update_process_status = function(pid, pfile, container) {
+
+			// get_process_status from API and returns a SEE stream
+				data_manager.request_stream({
+					body : {
+						dd_api		: 'dd_utils_api',
+						action		: 'get_process_status',
+						update_rate	: 1000, // int milliseconds
+						options		: {
+							pid		: pid,
+							pfile	: pfile
+						}
+					}
+				})
+				.then(function(stream){
+
+					// render base nodes and set functions to manage
+					// the stream reader events
+					const render_stream_response = render_stream({
+						container		: container,
+						id				: 'process_regenerate_relations',
+						pid				: pid,
+						pfile			: pfile,
+						display_json	: true
+					})
+
+					// on_read event (called on every chunk from stream reader)
+					const on_read = (sse_response) => {
+						// fire update_info_node on every reader read chunk
+						render_stream_response.update_info_node(sse_response)
+					}
+
+					// on_done event (called once at finish or cancel the stream read)
+					const on_done = () => {
+						// is triggered at the reader's closing
+						render_stream_response.done()
+					}
+
+					// read stream. Creates ReadableStream that fire
+					// 'on_read' function on each stream chunk at update_rate
+					// (1 second default) until stream is done (PID is no longer running)
+					data_manager.read_stream(stream, on_read, on_done)
+				})
+		}//end update_process_status
+
+		// check process status always
+		const check_process_data = () => {
+			data_manager.get_local_db_data(
+				'process_regenerate_relations',
+				'status'
+			)
+			.then(function(local_data){
+				if (local_data && local_data.value) {
+					update_process_status(
+						local_data.value.pid,
+						local_data.value.pfile,
+						body_response
+					)
+				}
+			})
+		}
+		check_process_data()
+
+	// button_process
+		// const button_process = ui.create_dom_element({
+		// 	element_type	: 'button',
+		// 	class_name		: 'light button_process',
+		// 	inner_html		: self.name,
+		// 	parent			: content_data
+		// })
+		// button_process.addEventListener('click', (e) => {
+		// 	e.stopPropagation()
+
+		// 	// blur button
+		// 	document.activeElement.blur()
+
+		// 	// regenerate_relations
+		// 	regenerate_relations()
+		// 	.then(function(response){
+		// 		update_process_status(
+		// 			response.pid,
+		// 			response.pfile,
+		// 			body_response
+		// 		)
+		// 	})
+		// })
+
+	// process_response
+		// const process_response = ui.create_dom_element({
+		// 	element_type	: 'div',
+		// 	class_name		: 'process_response',
+		// 	parent			: content_data
+		// })
 
 	// add at end body_response
 		content_data.appendChild(body_response)

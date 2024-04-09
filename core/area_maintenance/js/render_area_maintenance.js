@@ -358,11 +358,13 @@ export const print_response = (container, api_response) => {
 export const build_form = function(widget_object) {
 
 	// widget_object
-		const body_info			= widget_object.body_info
-		const body_response		= widget_object.body_response
-		const confirm_text		= widget_object.confirm_text || get_label.sure || 'Sure?'
-		const inputs			= widget_object.inputs || []
-		const submit_label		= widget_object.submit_label || 'OK'
+		const body_info		= widget_object.body_info
+		const body_response	= widget_object.body_response
+		const confirm_text	= widget_object.confirm_text || get_label.sure || 'Sure?'
+		const inputs		= widget_object.inputs || []
+		const submit_label	= widget_object.submit_label || 'OK'
+		const trigger		= widget_object.trigger || {}
+		const on_submit		= widget_object.on_submit // optional replacement function to exec on submit
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -372,6 +374,17 @@ export const build_form = function(widget_object) {
 		})
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
+
+			// blur button
+				document.activeElement.blur()
+
+			// collect values from inputs
+				const values = input_nodes.map((el)=>{
+					return {
+						name	: el.name,
+						value	: el.value
+					}
+				})
 
 			if ( confirm(confirm_text) ) {
 
@@ -384,6 +397,11 @@ export const build_form = function(widget_object) {
 						}
 					}
 
+				// on_submit. Overwrites default submit action
+					if (on_submit) {
+						return on_submit(e, values)
+					}
+
 				// submit data
 					form_container.classList.add('lock')
 
@@ -394,24 +412,17 @@ export const build_form = function(widget_object) {
 					})
 					body_response.prepend(spinner)
 
-					// collect values from inputs
-					const values = input_nodes.map((el)=>{
-						return {
-							name	: el.name,
-							value	: el.value
-						}
-					})
-
-					const options = (widget_object.trigger.options)
-						? Object.assign(widget_object.trigger.options, values)
+					const options = (trigger.options)
+						? Object.assign(trigger.options, values)
 						: values
 
 					// data_manager
 						const api_response = await data_manager.request({
 							use_worker	: true,
 							body		: {
-								dd_api	: widget_object.trigger.dd_api,
-								action	: widget_object.trigger.action,
+								dd_api	: trigger.dd_api,
+								action	: trigger.action,
+								source	: trigger.source || null,
 								options	: options
 							}
 						})
@@ -425,8 +436,8 @@ export const build_form = function(widget_object) {
 						// });
 						// current_worker.postMessage({
 						// 	url		: DEDALO_API_URL,
-						// 	dd_api	: widget_object.trigger.dd_api,
-						// 	action	: widget_object.trigger.action,
+						// 	dd_api	: trigger.dd_api,
+						// 	action	: trigger.action,
 						// 	options	: options
 						// });
 						// current_worker.onmessage = function(e) {

@@ -533,14 +533,20 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GENERATE_RELATIONS_TABLE_DATA
+	* REGENERATE_RELATIONS
 	* Re-creates relationships between components in given tables (or all of then)
 	* All relationships pointers are stored in table 'relations' for easy search. This function
 	* deletes the data in that table and and rebuild it from component's locators
-	* @param string $tables = '*'
+	* @param object $options
+	* {
+	* 	tables: string ('matrix_hierarchy','*')
+	* }
 	* @return object $response
 	*/
-	public static function generate_relations_table_data(string $tables='*') : object {
+	public static function regenerate_relations(object $options) : object {
+
+		// options
+			$tables = $options->tables ?? '*';
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -583,8 +589,7 @@ class area_maintenance extends area_common {
 				}
 			}
 
-
-		foreach ($ar_tables as $key => $table) {
+		foreach ($ar_tables as $table) {
 
 			$counter = 1;
 
@@ -604,6 +609,13 @@ class area_maintenance extends area_common {
 				$min = ($table==='matrix_users')
 					? -1
 					: 1;
+
+			// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg' => 'Processing table: ' . $table .' | Records: ' . $max
+					]);
+				}
 
 			// iterate from 1 to last id
 			for ($i=$min; $i<=$max; $i++) {
@@ -647,7 +659,7 @@ class area_maintenance extends area_common {
 									$propagate_options->from_component_tipo	= $from_component_tipo;
 
 								// propagate_component_dato_to_relations_table takes care of delete and insert new relations
-								$propagate_response = search::propagate_component_dato_to_relations_table($propagate_options);
+								search::propagate_component_dato_to_relations_table($propagate_options);
 							}
 
 					}else{
@@ -684,7 +696,7 @@ class area_maintenance extends area_common {
 
 
 		return $response;
-	}//end generate_relations_table_data
+	}//end regenerate_relations
 
 
 
@@ -2557,6 +2569,585 @@ class area_maintenance extends area_common {
 			die();
 		}
 	}//end long_process_stream
+
+
+
+	/**
+	* MAKE_BACKUP
+	* Alias of backup::init_backup_sequence
+	* Exec a full pg_dump of current Dédalo database
+	* Is fired by widget 'make_backup'
+	* @return object $response
+	*/
+	public static function make_backup() : object {
+
+		$user_id				= logged_user_id();
+		$username				= logged_user_username();
+		$skip_backup_time_range	= true;
+
+		$response = backup::init_backup_sequence((object)[
+			'user_id'					=> $user_id,
+			'username'					=> $username,
+			'skip_backup_time_range'	=> $skip_backup_time_range
+		]);
+
+
+		return $response;
+	}//end make_backup
+
+
+
+	/**
+	* MAKE_MYSQL_BACKUP
+	* Alias of backup::make_mysql_backup
+	* Exec a full MySQL dump of current Publication database
+	* @return object $response
+	*/
+	public static function make_mysql_backup() : object {
+
+		$response = backup::make_mysql_backup();
+
+
+		return $response;
+	}//end make_mysql_backup
+
+
+
+	/**
+	* CREATE_TEST_RECORD
+	* This record it's necessary to run unit_test checks
+	* Table 'matrix_test' must to exists
+	* @return object $response
+	*/
+	public static function create_test_record() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// short vars
+			$db_conn		= DBi::_getConnection();
+			$section_tipo	= 'test3';
+			$table			= 'matrix_test';
+
+		$dato = trim('
+			{
+			  "relations": [
+			  	{
+			      "type": "dd151",
+			      "section_id": "1",
+			      "section_tipo": "dd64",
+			      "from_component_tipo": "test88"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "2",
+			      "section_tipo": "dd64",
+			      "from_component_tipo": "test88"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "1",
+			      "section_tipo": "dd153",
+			      "from_component_tipo": "test70"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "2",
+			      "section_tipo": "dd153",
+			      "from_component_tipo": "test70"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "1",
+			      "section_tipo": "dd64",
+			      "from_component_tipo": "test92"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "1",
+			      "section_tipo": "dd64",
+			      "from_component_tipo": "test87"
+			    },
+			    {
+			      "type": "dd98",
+			      "section_id": "1",
+			      "section_tipo": "dd922",
+			      "from_component_tipo": "test169"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "1",
+			      "section_tipo": "dd64",
+			      "from_component_tipo": "test91"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "17344",
+			      "section_tipo": "lg1",
+			      "from_component_tipo": "test89"
+			    },
+			    {
+			      "type": "dd151",
+			      "section_id": "-1",
+			      "section_tipo": "dd128",
+			      "from_component_tipo": "dd197"
+			    }
+			  ],
+			  "components": {
+			    "dd201": {
+			      "lg-nolan": [
+			        {
+			          "start": {
+			            "day": 3,
+			            "hour": 10,
+			            "time": 65034439952,
+			            "year": 2023,
+			            "month": 6,
+			            "minute": 12,
+			            "second": 32
+			          }
+			        }
+			      ]
+			    },
+			    "test17": {
+			      "inf": "text_area [component_text_area]",
+			      "dato": {
+			        "lg-eng": [
+			          "Text area content of one"
+			        ]
+			      }
+			    },
+			    "test18": {
+			      "inf": "json [component_json]",
+			      "dato": {
+			        "lg-nolan": [{"a": 1}]
+			      }
+			    },
+			    "test26": {
+			      "inf": "3d [component_3d]",
+			      "dato": {
+			        "lg-nolan": [{
+			            "files_info": [
+			              {
+			                "quality": "original",
+			                "file_url": "//media/media_development/3d/original/test26_test3_1.glb",
+			                "file_name": "test26_test3_1.glb",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/3d/original/test26_test3_1.glb",
+			                "file_size": 28944948,
+			                "file_time": {
+			                  "day": 16,
+			                  "hour": 13,
+			                  "time": 65032896961,
+			                  "year": 2023,
+			                  "month": 5,
+			                  "minute": 36,
+			                  "second": 1,
+			                  "timestamp": "2023-05-16 13:36:01"
+			                },
+			                "file_exist": true
+			              }
+			            ]
+			        }]
+			      }
+			    },
+			    "test52": {
+			      "inf": "input_text [component_input_text]",
+			      "dato": {
+			        "lg-eng": ["input text content of one"]
+			      }
+			    },
+			    "test69": {
+			      "inf": "filter_records [component_filter_records]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "tipo": "rsc167",
+			            "value": [30,26]
+			          }
+			        ]
+			      }
+			    },
+			    "test85": {
+			      "inf": "pdf [component_pdf]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "files_info": [
+			              {
+			                "quality": "original",
+			                "file_url": "//media/media_development/pdf/original/test85_test3_1.pdf",
+			                "file_name": "test85_test3_1.pdf",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/pdf/original/test85_test3_1.pdf",
+			                "file_size": 11585750,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 17,
+			                  "time": 65034380441,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 40,
+			                  "second": 41,
+			                  "timestamp": "2023-06-02 17:40:41"
+			                },
+			                "file_exist": true
+			              },
+			              {
+			                "quality": "web",
+			                "file_url": "//media/media_development/pdf/web/test85_test3_1.pdf",
+			                "file_name": "test85_test3_1.pdf",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/pdf/web/test85_test3_1.pdf",
+			                "file_size": 11585750,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 17,
+			                  "time": 65034380442,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 40,
+			                  "second": 42,
+			                  "timestamp": "2023-06-02 17:40:42"
+			                },
+			                "file_exist": true
+			              }
+			            ]
+			          }
+			        ]
+			      }
+			    },
+			    "test94": {
+			      "inf": "av [component_av]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "files_info": [
+			              {
+			                "quality": "original",
+			                "file_url": "//media/media_development/av/original/test94_test3_1.mp4",
+			                "file_name": "test94_test3_1.mp4",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/original/test94_test3_1.mp4",
+			                "file_size": 26080862,
+			                "file_time": {
+			                  "day": 7,
+			                  "hour": 15,
+			                  "time": 65029446008,
+			                  "year": 2023,
+			                  "month": 4,
+			                  "minute": 0,
+			                  "second": 8,
+			                  "timestamp": "2023-04-07 15:00:08"
+			                },
+			                "file_exist": true
+			              },
+			              {
+			                "quality": "404",
+			                "file_url": "//media/media_development/av/404/test94_test3_1.mp4",
+			                "file_name": "test94_test3_1.mp4",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/av/404/test94_test3_1.mp4",
+			                "file_size": 8041417,
+			                "file_time": {
+			                  "day": 30,
+			                  "hour": 14,
+			                  "time": 65010005912,
+			                  "year": 2022,
+			                  "month": 8,
+			                  "minute": 58,
+			                  "second": 32,
+			                  "timestamp": "2022-08-30 14:58:32"
+			                },
+			                "file_exist": true
+			              }
+			            ]
+			          }
+			        ]
+			      }
+			    },
+			    "test99": {
+			      "inf": "image [component_image]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "lib_data": null,
+			            "files_info": [
+			              {
+			                "quality": "original",
+			                "file_url": "//media/media_development/image/original/test99_test3_1.jpg",
+			                "file_name": "test99_test3_1.jpg",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/original/test99_test3_1.jpg",
+			                "file_size": 620888,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 21,
+			                  "time": 64972789824,
+			                  "year": 2021,
+			                  "month": 7,
+			                  "minute": 10,
+			                  "second": 24,
+			                  "timestamp": "2021-07-02 21:10:24"
+			                },
+			                "file_exist": true
+			              },
+			              {
+			                "quality": "1.5MB",
+			                "file_url": "//media/media_development/image/1.5MB/test99_test3_1.jpg",
+			                "file_name": "test99_test3_1.jpg",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/1.5MB/test99_test3_1.jpg",
+			                "file_size": 158123,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 16,
+			                  "time": 65034376305,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 31,
+			                  "second": 45,
+			                  "timestamp": "2023-06-02 16:31:45"
+			                },
+			                "file_exist": true
+			              },
+			              {
+			                "quality": "thumb",
+			                "file_url": "//media/media_development/image/thumb/test99_test3_1.jpg",
+			                "file_name": "test99_test3_1.jpg",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/image/thumb/test99_test3_1.jpg",
+			                "file_size": 20690,
+			                "file_time": {
+			                  "day": 3,
+			                  "hour": 10,
+			                  "time": 65034439569,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 6,
+			                  "second": 9,
+			                  "timestamp": "2023-06-03 10:06:09"
+			                },
+			                "file_exist": true
+			              }
+			            ]
+			          }
+			        ]
+			      }
+			    },
+			    "test100": {
+			      "inf": "geolocation [component_geolocation]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "alt": 0,
+			            "lat": 39.45952823913757,
+			            "lon": -0.3274998574173816,
+			            "zoom": 16
+			          }
+			        ]
+			      }
+			    },
+			    "test140": {
+			      "inf": "iri [component_iri]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "iri": "http://elraspa.com",
+			            "title": "Title or IRI"
+			          }
+			        ]
+			      }
+			    },
+			    "test145": {
+			      "inf": "date [component_date]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "start": {
+			              "day": 9,
+			              "time": 20198505600,
+			              "year": 628,
+			              "month": 6
+			            }
+			          }
+			        ]
+			      }
+			    },
+			    "test152": {
+			      "inf": "password [component_password]",
+			      "dato": {
+			        "lg-nolan": ["TUdHMGV4WEhLTXJ0UWxvMEk5UGZDZ1NnRjFhQldBc3NDQi9rMnErTVhvYz0="]
+			      }
+			    },
+			    "test157": {
+			      "inf": "security_access [component_security_access]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "tipo": "oh25",
+			            "value": 1940,
+			            "section_tipo": "oh1"
+			          }
+			        ]
+			      }
+			    },
+			    "test177": {
+			      "inf": "svg [component_svg]",
+			      "dato": {
+			        "lg-nolan": [
+			          {
+			            "files_info": [
+			              {
+			                "quality": "original",
+			                "file_url": "//media/media_development/svg/original/test177_test3_1.svg",
+			                "file_name": "test177_test3_1.svg",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/svg/original/test177_test3_1.svg",
+			                "file_size": 1275,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 17,
+			                  "time": 65034379674,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 27,
+			                  "second": 54,
+			                  "timestamp": "2023-06-02 17:27:54"
+			                },
+			                "file_exist": true
+			              },
+			              {
+			                "quality": "web",
+			                "file_url": "//media/media_development/svg/web/test177_test3_1.svg",
+			                "file_name": "test177_test3_1.svg",
+			                "file_path": "/Users/paco/Trabajos/Dedalo/v6/master_dedalo/media/media_development/svg/web/test177_test3_1.svg",
+			                "file_size": 1275,
+			                "file_time": {
+			                  "day": 2,
+			                  "hour": 17,
+			                  "time": 65034379674,
+			                  "year": 2023,
+			                  "month": 6,
+			                  "minute": 27,
+			                  "second": 54,
+			                  "timestamp": "2023-06-02 17:27:54"
+			                },
+			                "file_exist": true
+			              }
+			            ]
+			          }
+			        ]
+			      }
+			    },
+			    "test208": {
+			      "inf": "email [component_email]",
+			      "dato": {
+			        "lg-nolan": ["myemail@mydomain.net"]
+			      }
+			    },
+			    "test211": {
+			      "inf": "number [component_number]",
+			      "dato": {
+			        "lg-nolan": [8888]
+			      }
+			    }
+			  },
+			  "section_id": 1,
+			  "created_date": "2017-11-19 17:41:43",
+			  "section_tipo": "test3",
+			  "section_real_tipo": "test3",
+			  "modified_date": "2023-05-15 09:36:32",
+			  "diffusion_info": null,
+			  "created_by_userID": -1,
+			  "modified_by_userID": -1
+			}
+		');
+		$sql = '
+			TRUNCATE "'.$table.'";
+			ALTER SEQUENCE '.$table.'_id_seq RESTART WITH 1;
+			INSERT INTO "'.$table.'" ("section_id", "section_tipo", "datos") VALUES (\'1\', \''.$section_tipo.'\', \''.$dato.'\');
+		';
+		debug_log(__METHOD__." Executing DB query ".to_string($sql), logger::WARNING);
+		$result   = pg_query($db_conn, $sql);
+		if (!$result) {
+			$msg = " Error on db execution (matrix_counter): ".pg_last_error(DBi::_getConnection());
+			debug_log(__METHOD__
+				. $msg . PHP_EOL
+				. ' sql: ' . $sql
+				, logger::ERROR
+			);
+			$response->msg = $msg;
+			return $response;
+		}
+
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end create_test_record
+
+
+
+	/**
+	* REGISTER_TOOLS
+	* Alias of tools_register::import_tools
+	* @return object $response
+	*/
+	public static function register_tools() : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		$response->result	= tools_register::import_tools();
+		$response->msg		= 'OK. Request done successfully';
+
+		// check results errors
+		$errors = [];
+		if (!empty($response->result)) {
+			foreach ($response->result as $item) {
+				if (!empty($item->errors)) {
+					$errors = array_merge($errors, (array)$item->errors);
+				}
+			}
+			$response->msg = 'Warning. Request done with errors';
+		}
+		$response->errors = $errors;
+
+
+		return $response;
+	}//end register_tools
+
+
+
+	/**
+	* BUILD_INSTALL_VERSION
+	* Alias of install::build_install_version
+	* @return object $response
+	*/
+	public static function build_install_version() : object {
+
+		// build
+		$response = install::build_install_version();
+
+
+		return $response;
+	}//end build_install_version
+
+
+
+	/**
+	* EXPORT_HIERARCHY
+	* Alias of hierarchy::export_hierarchy
+	* @param object $options
+	* @return object $response
+	*/
+	public static function export_hierarchy(object $options) : object {
+
+		// options
+			$section_tipo = $options->section_tipo ?? null;
+
+		// export_hierarchy
+			$response = hierarchy::export_hierarchy($section_tipo);
+
+
+		return $response;
+	}//end export_hierarchy
 
 
 
