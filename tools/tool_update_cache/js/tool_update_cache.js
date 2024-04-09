@@ -135,9 +135,12 @@ tool_update_cache.prototype.get_component_list = function() {
 					dd_console("-> get_component_list API response:",'DEBUG',response);
 				}
 
-				const result = response.result // array of objects
+				const list = response.result || [] // array of objects
 
-				resolve(result)
+				// sort list
+				list.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
+
+				resolve(list)
 			})
 		})
 }//end get_component_list
@@ -165,7 +168,8 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source,
-			options	: {
+			options : {
+				background_running	: true, // set run in background CLI
 				section_tipo		: section_tipo,
 				ar_component_tipo	: ar_component_tipo,
 				lang				: page_globals.dedalo_application_lang

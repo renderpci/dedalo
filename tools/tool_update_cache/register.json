@@ -45,7 +45,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "-1",
+      "section_id": "1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057516917,
+              "day": 9,
+              "hour": 21,
+              "time": 65061784599,
               "year": 2024,
-              "month": 2,
-              "minute": 28,
-              "second": 37
+              "month": 4,
+              "minute": 56,
+              "second": 39
             }
           }
         ]
@@ -134,7 +134,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -142,6 +142,150 @@
       "dato": {
         "lg-nolan": [
           "6.0.0"
+        ]
+      }
+    },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "updated",
+              "value": "Updated"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "updated",
+              "value": "Actualizado"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "updated",
+              "value": "Actualitzat"
+            },
+            {
+              "lang": "lg-por",
+              "name": "updated",
+              "value": "Atualizado"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "updated",
+              "value": "Mise à jour"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "updated",
+              "value": "Aggiornato"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "updated",
+              "value": "Ενημερωμένο"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "updated",
+              "value": "Aktualisiert"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "updated",
+              "value": "अद्यावधिक गरियो"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "components",
+              "value": "Components"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "components",
+              "value": "Komponenten"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "components",
+              "value": "Componentes"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "components",
+              "value": "Components"
+            },
+            {
+              "lang": "lg-por",
+              "name": "components",
+              "value": "Componentes"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "components",
+              "value": "Composants"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "components",
+              "value": "Componenti"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "components",
+              "value": "Εξαρτήματα"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "components",
+              "value": "अवयवहरू"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "records",
+              "value": "Records"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "records",
+              "value": "Registres"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "records",
+              "value": "रेकर्डहरू"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "records",
+              "value": "Εγγραφές"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "records",
+              "value": "Aufzeichnungen"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "records",
+              "value": "Registros"
+            },
+            {
+              "lang": "lg-por",
+              "name": "records",
+              "value": "Registos"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "records",
+              "value": "Registres"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "records",
+              "value": "Registrazioni"
+            }
+          ]
         ]
       }
     },
@@ -157,9 +301,9 @@
   "section_id": 10,
   "created_date": "2022-02-28 10:50:50",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:28:37",
+  "modified_date": "2024-04-09 21:56:39",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "modified_by_userID": 1
 }
