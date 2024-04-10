@@ -1921,7 +1921,11 @@ class diffusion_sql extends diffusion  {
 					'ages',
 					// added 10-02-2022
 					'death_context',
-					'buried_type'
+					'buried_type',
+					//added 14-05-2023
+					'stolpersteine',
+					'stolpersteine_date',
+					'stolpersteine_place'
 				];
 
 			$fields_array = [];
@@ -2135,6 +2139,11 @@ class diffusion_sql extends diffusion  {
 														$ar_part = explode('-', $current_field_value);
 														$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
 														$current_field_value 	= $year;
+														break;
+													case 'stolpersteine_date':
+														$ar_current_field_value = (array)explode(',', $current_field_value);
+														$current_field_value 	= reset($ar_current_field_value);
+														$current_field_value 	= strtotime($current_field_value);
 														break;
 													default:
 														break;
@@ -2522,7 +2531,6 @@ class diffusion_sql extends diffusion  {
 				, logger::DEBUG
 			);
 		}
-
 
 
 		return (object)$save;
