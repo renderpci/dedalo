@@ -1069,7 +1069,7 @@ final class dd_core_api {
 			$caller_dataframe	= $source->caller_dataframe ?? null;
 
 		// activity section check
-			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
 				$response->msg = 'Error. Illegal save to activity';
 				debug_log(__METHOD__
 					. " $response->msg "
