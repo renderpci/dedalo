@@ -2158,7 +2158,7 @@ function get_legacy_constant_value(string $constant_name) {
 				debug_log(__METHOD__
 					." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance." .PHP_EOL
 					." NAME: ". $constant_name
-					, logger::WARNING
+					, logger::ERROR
 				);
 			}
 			return $value;

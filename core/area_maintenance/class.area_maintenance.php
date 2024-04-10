@@ -1,14 +1,15 @@
 <?php
 declare(strict_types=1);
-require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
 /**
 * AREA_MAINTENANCE
-*
+* System administrator's area with useful methods to
+* backup, review data, update Ontology, etc.
+* @see API entry point dd_area_maintenance_api.class
 */
 class area_maintenance extends area_common {
 
 
-
+	// tables_with_relations
 	static $ar_tables_with_relations = [
 		'matrix_users',
 		'matrix_projects',
@@ -60,54 +61,11 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* GET_DEDALO_BACKUP_FILES
-	* Called from widget 'make_backup'
-	* @param object $options
-	* {
-	* 	max_files: int 10
-	* 	psql_backup_files: bool true
-	* 	mysql_backup_files: bool true
-	* }
-	* @return object $response
-	*/
-	public static function get_dedalo_backup_files(object $options) : object {
-
-		// options
-			$max_files			= $options->max_files ?? 10;
-			$psql_backup_files	= $options->psql_backup_files ?? true;
-			$mysql_backup_files	= $options->mysql_backup_files ?? true;
-
-		// result
-			$result = new stdClass();
-
-			// psql_backup_files
-				if ($psql_backup_files===true) {
-					$files = backup::get_backup_files(); // postgresql files
-					$result->psql_backup_files = array_slice($files, 0, $max_files); // first N items
-				}
-
-			// mysql_backup_files
-				if ($mysql_backup_files===true) {
-					$files = backup::get_mysql_backup_files(); // MariaDB/MySQL files
-					$result->mysql_backup_files = array_slice($files, 0, $max_files); // first N items
-				}
-
-		// response
-			$response = new stdClass();
-				$response->result	= $result;
-				$response->msg		= 'OK. Request done';
-
-
-		return $response;
-	}//end get_dedalo_backup_files
-
-
-
-
-	/**
 	* GET_AR_WIDGETS
+	* Definition of all visible widgets in the area
+	* Every widget has the client side code in JavaScript
 	* @return array $data_items
-	*	Array of widgets object
+	*	Array of widget objects
 	*/
 	public function get_ar_widgets() : array {
 
@@ -464,6 +422,7 @@ class area_maintenance extends area_common {
 
 
 		// sequences_status *
+			require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
 			$response = db_data_check::check_sequences();
 			$item = new stdClass();
 				$item->id		= 'sequences_status';
@@ -529,6 +488,50 @@ class area_maintenance extends area_common {
 
 		return $widget;
 	}//end widget_factory
+
+
+
+	/**
+	* GET_DEDALO_BACKUP_FILES
+	* Called from widget 'make_backup'
+	* @param object $options
+	* {
+	* 	max_files: int 10
+	* 	psql_backup_files: bool true
+	* 	mysql_backup_files: bool true
+	* }
+	* @return object $response
+	*/
+	public static function get_dedalo_backup_files(object $options) : object {
+
+		// options
+			$max_files			= $options->max_files ?? 10;
+			$psql_backup_files	= $options->psql_backup_files ?? true;
+			$mysql_backup_files	= $options->mysql_backup_files ?? true;
+
+		// result
+			$result = new stdClass();
+
+			// psql_backup_files
+				if ($psql_backup_files===true) {
+					$files = backup::get_backup_files(); // postgresql files
+					$result->psql_backup_files = array_slice($files, 0, $max_files); // first N items
+				}
+
+			// mysql_backup_files
+				if ($mysql_backup_files===true) {
+					$files = backup::get_mysql_backup_files(); // MariaDB/MySQL files
+					$result->mysql_backup_files = array_slice($files, 0, $max_files); // first N items
+				}
+
+		// response
+			$response = new stdClass();
+				$response->result	= $result;
+				$response->msg		= 'OK. Request done';
+
+
+		return $response;
+	}//end get_dedalo_backup_files
 
 
 

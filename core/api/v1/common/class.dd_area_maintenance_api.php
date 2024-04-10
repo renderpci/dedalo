@@ -1,5 +1,5 @@
 <?php
-declare(strict_types=1); // NOT IN UNIT TEST !
+declare(strict_types=1); // TEST NOT FINISHED !
 /**
 * DD_AREA_MAINTENANCE_API
 * Manage API REST data flow of the area with Dédalo
@@ -18,20 +18,19 @@ final class dd_area_maintenance_api {
 	* Call to class method given and return and object with the response
 	* Method must be static and accept a only one object argument
 	* Method must return an object like { result: mixed, msg: string }
-	*
 	* @param object $rqo
 	* sample:
-	* {
-	* 	action: "class_request"
-	* 	dd_api: "dd_area_maintenance_api"
-	* 	source: {
-	* 		typo: "source",
-	* 		action: "make_backup"
-	* 	},
-	* 	options: {
-	*   	skip_backup_time_range: true
-	*   }
-	* }
+		* {
+		* 	action: "class_request"
+		* 	dd_api: "dd_area_maintenance_api"
+		* 	source: {
+		* 		typo: "source",
+		* 		action: "make_backup"
+		* 	},
+		* 	options: {
+		*   	skip_backup_time_range: true
+		*   }
+		* }
 	* @return object response { result: mixed, msg: string }
 	*/
 	public static function class_request(object $rqo) : object {
@@ -518,7 +517,7 @@ final class dd_area_maintenance_api {
 	* }
 	* @return object $response
 	*/
-	public static function lock_components_actions( object $rqo ) : object {
+	public static function lock_components_actions(object $rqo) : object {
 
 		// response
 			$response = new stdClass();
