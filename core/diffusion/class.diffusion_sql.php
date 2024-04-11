@@ -727,11 +727,12 @@ class diffusion_sql extends diffusion  {
 													: json_encode($current_value);
 											}
 										}
-										$value = implode(' ', $ar_value);
-										if (!empty($value)) {
-											$value = str_replace(['<br>',' | ','  '], ' ', $value);
-											$value = strip_tags($value);
-										}
+										$separator = isset($properties->separator)
+											? $properties->separator
+											: ' ';
+										$value = implode($separator, $ar_value);
+										$value = str_replace(['<br>',' | ','  '], $separator, $value);
+										$value = strip_tags($value);
 
 									    $column = [];
 										$column['field_name']		= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
