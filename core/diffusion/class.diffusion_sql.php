@@ -2445,6 +2445,15 @@ class diffusion_sql extends diffusion  {
 							'field_value'	=> $source_table_name
 						];
 
+					// link
+						$new_items[] = [
+							'field_name'	=> 'link',
+							'field_value'	=> (object)[
+								'table'			=> $source_table_name,
+								'section_id'	=> $section_id
+							]
+						];
+
 					foreach ($columns_map as $column_map_item) {
 
 						$column_values = [];
