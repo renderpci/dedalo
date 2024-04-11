@@ -1,8 +1,8 @@
 {
   "swagger" : "2.0",
   "info" : {
-    "version" : "1.1.0",
-    "title" : "Dédalo V6 Publication Server REST API 1.1.0",
+    "version" : "1.1.1",
+    "title" : "Dédalo V6 Publication Server REST API 1.1.1",
     "description" : "Builds Public Dédalo data for publication. Use this online tool to test your data, and remember to always enter your authentication code when running a test call. <br>This API is focused on Oral History files and is for general purpose. If you need special functions or custom results, you can join the API development team by contacting the source developers (also known as Alex & Paco) at webmaster@render.es ",
     "license" : {
       "name" : "Apache 2.0 license",
@@ -302,7 +302,7 @@
         }, {
           "name" : "resolve_portals_custom",
           "in" : "query",
-          "description" : "Resolve requested portals only. Use a json map object like<br>{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}<br>where key is column name and value is target table. To resolve deeper, use format '{\"table.column\":\"table\"}'",
+          "description" : "Resolve requested portals only. Use a json map object like<br>{\"audiovisual\":\"audiovisual\",\"informant\":\"informant\"}<br>where key is column name and value is target table. <br>To resolve deeper, use format {\"table.column\":\"table\"}. <br>To resolve special columns 'link' (using data format like {\"table\":\"interview\",\"section_id\":1}) use target 'auto' in this way '{\"link\":\"auto\"}'. This dynamically resolves the target tables (as in the case of 'global_search' tables).",
           "required" : false,
           "type" : "string",
           "format" : "string"
