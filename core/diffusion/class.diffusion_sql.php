@@ -2467,7 +2467,12 @@ class diffusion_sql extends diffusion  {
 									return ($element['field_name']===$source_column);
 								});
 								if ($found!==null) {
-									$column_values[] = $found['field_value'];
+									// $column_values[] = $found['field_value'];
+									// trying to decode before assign (do not affects current numisdata use at map_global)
+									$safe_field_value = is_string($found['field_value'])
+										? (json_decode($found['field_value']) ?? $found['field_value'])
+										: $found['field_value'];
+									$column_values[] = $safe_field_value;
 								}
 							}
 
