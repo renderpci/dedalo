@@ -2954,10 +2954,29 @@ class diffusion_sql extends diffusion  {
 		switch ( get_called_class() ) {
 			case 'diffusion_mysql':
 			case 'diffusion_sql': // ??
+
+				// global_search try delete records
+				$global_search_tables = ['global_search'];
+				foreach ($global_search_tables as $global_search_table) {
+					if( diffusion_mysql::table_exits($database_name, $global_search_table) ) {
+						$global_search_section_id = $section_tipo . '_' . $section_id;
+						$response = diffusion_mysql::delete_sql_record($global_search_section_id, $database_name, $global_search_table, $section_tipo); // $section_id, $database_name, $global_search_table, $section_tipo=null, $custom=false
+						if ($response->result===true) {
+							debug_log(__METHOD__
+								." MySQL record '$global_search_section_id' is deleted from global_search table '$global_search_table' (publication=no) $response->msg "
+								, logger::DEBUG
+							);
+						}
+					}
+				}
+
 				if( diffusion_mysql::table_exits($database_name, $table_name) ) {
 					$response = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo); // $section_id, $database_name, $table_name, $section_tipo=null, $custom=false
 					if ($response->result===true) {
-						debug_log(__METHOD__." MySQL record is deleted (publication=no) $response->msg ", logger::DEBUG);
+						debug_log(__METHOD__
+							." MySQL record '$section_tipo - $section_id' is deleted (publication=no) $response->msg "
+							, logger::DEBUG
+						);
 					}
 					return $response->result;
 				}
