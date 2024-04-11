@@ -616,7 +616,8 @@ class area_maintenance extends area_common {
 			// cli msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
-						'msg' => 'Processing table: ' . $table .' | Records: ' . $max
+						'msg'		=> 'Processing table: ' . $table .' | Records: ' . $max,
+						'memory'	=> dd_memory_usage()
 					]);
 				}
 
@@ -654,6 +655,13 @@ class area_maintenance extends area_common {
 
 						// propagate component dato
 							foreach ($component_dato as $from_component_tipo => $ar_locators) {
+
+								// cli msg
+									if ( running_in_cli()===true ) {
+										print_cli((object)[
+											'msg' => 'Propagating section_tipo: ' . $section_tipo .' | section_id: ' . $section_id .' | component_tipo: ' . $from_component_tipo
+										]);
+									}
 
 								$propagate_options = new stdClass();
 									$propagate_options->ar_locators			= $ar_locators;
