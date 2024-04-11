@@ -338,7 +338,8 @@ component_text_area.prototype.destroy = async function(delete_self=true, delete_
 		if (self.text_editor && self.text_editor.length>0) {
 			for (let i = 0; i < self.text_editor.length; i++) {
 				// self.text_editor[x] is a instance of service_ckeditor
-				self.text_editor[i].destroy()
+				const service_ckeditor = self.text_editor[i]
+				service_ckeditor.destroy()
 			}
 		}
 

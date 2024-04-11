@@ -11,6 +11,7 @@
 	// import {set_before_unload} from '../../../common/js/events.js';
 	import {clone} from '../../../common/js/utils/index.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
+	import {delete_instance} from '../../../common/js/instances.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 	// import {ddEditor} from '../../../../lib/ckeditor/build/ckeditor.js'
 
@@ -524,9 +525,9 @@ export const service_ckeditor = function() {
 		editor.model.document.on( 'change:data', () => {
 
 			// Clear timer every time than keyup
-    			clearTimeout(timer);
+				clearTimeout(timer);
 
-    		// Wait for X ms and then process data and setup dirty
+			// Wait for X ms and then process data and setup dirty
 				timer = setTimeout(() => {
 					self.set_dirty(true);
 				}, waitTime);
@@ -1912,8 +1913,8 @@ export const service_ckeditor = function() {
 		const editorInstance = this.editor
 
 		editorInstance.model.change( writer => {
-		    writer.setSelection( writer.createPositionAt( editorInstance.model.document.getRoot(), 'end' ));
-		    editorInstance.editing.view.focus();
+			writer.setSelection( writer.createPositionAt( editorInstance.model.document.getRoot(), 'end' ));
+			editorInstance.editing.view.focus();
 		});
 	}//end focus
 
@@ -1923,12 +1924,20 @@ export const service_ckeditor = function() {
 	* DESTROY
 	* @return void
 	*/
-	this.destroy = function() {
+	this.destroy = async function() {
 
-		this.editor.destroy()
+		await this.editor.destroy()
 		.catch( error => {
 			console.error( error );
-		});
+		})
+
+		this.editor = null
+
+		// delete_instance from instances register array
+		const instance_options = {
+			id : self.id
+		}
+		await delete_instance(instance_options)
 	}//end destroy
 
 
