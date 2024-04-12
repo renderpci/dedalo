@@ -159,30 +159,30 @@ final class tool_common_test extends TestCase {
 
 
 	/**
-	* TEST_GET_CLIENT_REGISTERED_TOOLS
+	* TEST_GET_ALL_REGISTERED_TOOLS
 	* @return void
 	*/
-	public function test_get_client_registered_tools() {
+	public function test_get_all_registered_tools() {
 
-		$client_registered_tools = tool_common::get_client_registered_tools();
+		$all_registered_tools = tool_common::get_all_registered_tools();
 
 		$this->assertTrue(
-			gettype($client_registered_tools)==='array',
+			gettype($all_registered_tools)==='array',
 			'expected type is array'
-				.' and is : '.gettype($client_registered_tools)
+				.' and is : '.gettype($all_registered_tools)
 		);
 
 		$this->assertTrue(
-			gettype($client_registered_tools[0]->name)==='string',
+			gettype($all_registered_tools[0]->name)==='string',
 			'expected type is string'
-				.' and is : '.gettype($client_registered_tools[0]->name)
+				.' and is : '.gettype($all_registered_tools[0]->name)
 		);
 
 		$this->assertTrue(
-			!empty($client_registered_tools[0]->name),
+			!empty($all_registered_tools[0]->name),
 			'expected name value is not empty'
 		);
-	}//end test_get_client_registered_tools
+	}//end test_get_all_registered_tools
 
 
 

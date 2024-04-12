@@ -367,14 +367,14 @@ class tools_register {
 				}else{
 
 					// compare register.json file.
-					$client_registered_tools = tool_common::get_client_registered_tools();
-					$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+					$all_registered_tools = tool_common::get_all_registered_tools();
+					$tool_info = array_find($all_registered_tools, function($el) use($tool_name) {
 						return $el->name===$tool_name;
 					});
 
 					if(empty($tool_info)) {
 						debug_log(__METHOD__
-							." Tool '$tool_name' not found in client_registered_tools."
+							." Tool '$tool_name' not found in all_registered_tools."
 							, logger::WARNING
 						);
 						$item->warning = '(!) Not registered tool';
@@ -1287,7 +1287,7 @@ class tools_register {
 
 		// 	// allowed_tools
 		// 		$allowed_tools		= [];
-		// 		$registered_tools	= tool_common::get_client_registered_tools();
+		// 		$registered_tools	= tool_common::get_all_registered_tools();
 		// 		$ar_id = array_map(function($el){
 		// 			return $el->section_id;
 		// 		}, $dato);

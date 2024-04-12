@@ -347,7 +347,7 @@ class tool_common {
 	* Get the full or filtered list data of current registered tools in database
 	* @return array $registered_tools
 	*/
-	public static function get_client_registered_tools() : array {
+	public static function get_all_registered_tools() : array {
 
 		$registered_tools = [];
 
@@ -381,9 +381,9 @@ class tool_common {
 					}
 			}
 
-		// client_registered_tools_records
-			static $client_registered_tools_records;
-			if(!isset($client_registered_tools_records)) {
+		// all_registered_tools_records
+			static $all_registered_tools_records;
+			if(!isset($all_registered_tools_records)) {
 
 				// get all active and registered tools
 					$sqo_tool_active = json_decode('{
@@ -411,13 +411,13 @@ class tool_common {
 					$result	= $search->search();
 
 					// fix cache static
-					$client_registered_tools_records = $result->ar_records;
+					$all_registered_tools_records = $result->ar_records;
 			}
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool_client();
 
 		// get the simple_tool_object
-			foreach ($client_registered_tools_records as $record) {
+			foreach ($all_registered_tools_records as $record) {
 
 				$section		= section::get_instance($record->section_id, $record->section_tipo);
 				$section_dato	= $record->datos;
@@ -470,7 +470,7 @@ class tool_common {
 						: null;
 
 				$registered_tools[] = $current_value;
-			}//end foreach ($client_registered_tools_records as $record)
+			}//end foreach ($all_registered_tools_records as $record)
 
 		// cache
 			if ($use_cache===true) {
@@ -489,7 +489,7 @@ class tool_common {
 
 
 		return $registered_tools;
-	}//end get_client_registered_tools
+	}//end get_all_registered_tools
 
 
 
@@ -761,7 +761,7 @@ class tool_common {
 			}
 
 		// all unfiltered tools
-			$registered_tools = tool_common::get_client_registered_tools();
+			$registered_tools = tool_common::get_all_registered_tools();
 
 		// user_tools
 			if ($user_id==DEDALO_SUPERUSER) {
