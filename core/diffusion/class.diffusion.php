@@ -396,7 +396,7 @@ abstract class diffusion  {
 			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
 			// }
 
-		include_once(DEDALO_CORE_PATH . '/diffusion/class.'.$class_name.'.php');
+		include_once DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
 
 		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
 
