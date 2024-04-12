@@ -343,6 +343,15 @@ abstract class diffusion  {
 	*/
 	public static function have_section_diffusion(string $section_tipo, array $ar_diffusion_map_elements=null) : bool {
 
+		// cache
+			$use_cache = true;
+			if ($use_cache===true) {
+				// session
+				if (isset($_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo])) {
+					return $_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo];
+				}
+			}
+
 		$have_section_diffusion = false;
 
 		if (is_null($ar_diffusion_map_elements)) {
@@ -360,6 +369,13 @@ abstract class diffusion  {
 				break;
 			}
 		}
+
+		// cache
+			if ($use_cache===true) {
+				// session
+				$_SESSION['dedalo']['config']['have_section_diffusion'][$section_tipo] = $have_section_diffusion;
+			}
+
 
 		return $have_section_diffusion;
 	}//end have_section_diffusion
