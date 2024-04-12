@@ -190,6 +190,9 @@ abstract class RecordDataBoundObject {
 				$start_time = start_time();
 			}
 
+		// metrics
+			metrics::$ontology_total_calls++;
+
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
 				return false;
@@ -348,7 +351,6 @@ abstract class RecordDataBoundObject {
 
 				// metrics
 					metrics::$ontology_total_time += $total_time_ms;
-					metrics::$ontology_total_calls++;
 			}
 
 

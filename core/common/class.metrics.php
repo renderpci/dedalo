@@ -26,7 +26,7 @@ final class metrics {
 		static $matrix_total_time = 0;
 		static $matrix_total_calls = 0;
 
-	// search_free
+	// search_free (JSON_RecordDataBounceObject)
 		static $search_free_total_time = 0;
 		static $search_free_total_calls = 0;
 
