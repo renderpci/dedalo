@@ -4354,12 +4354,20 @@ abstract class common {
 	* @return array $tools
 	*/
 	public function get_tools() : array {
+		$start_time=start_time();
+
+		// metrics
+			metrics::$get_tools_total_calls++;
 
 		// cache
-			$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-			static $cache_get_tools;
-			if (isset($cache_get_tools[$cache_key])) {
-				return $cache_get_tools[$cache_key];
+			$use_cache = true;
+			if ($use_cache===true) {
+				// static $cache_get_tools;
+				static $cache_get_tools;
+				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
+				if (isset($cache_get_tools[$cache_key])) {
+					return $cache_get_tools[$cache_key];
+				}
 			}
 
 		$tools = [];
@@ -4428,7 +4436,14 @@ abstract class common {
 			}//end foreach ($registered_tools as $tool)
 
 		// cache
-			$cache_get_tools[$cache_key] = $tools;
+			if ($use_cache===true) {
+				// static
+				$cache_get_tools[$cache_key] = $tools;
+			}
+
+		// metrics
+			$total_time_ms = exec_time_unit($start_time, 'ms');
+			metrics::$get_tools_total_time += $total_time_ms;
 
 
 		return $tools;
