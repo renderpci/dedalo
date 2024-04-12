@@ -4492,7 +4492,7 @@ abstract class common {
 					if($model==='button_import' || $model==='button_trigger'){
 
 						// tools_list
-						$tools_list	= tool_common::get_client_registered_tools();
+						$tools_list	= tool_common::get_all_registered_tools();
 
 						$tools = [];
 						foreach ($tools_list as $tool_object) {
