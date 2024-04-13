@@ -351,34 +351,29 @@ class tool_common {
 
 		$registered_tools = [];
 
-		static $registered_tools_cache;
-
 		// cache
 			$use_cache = true;
 			if ($use_cache===true) {
+
 				// static
-					if (isset($registered_tools_cache)) {
-						return $registered_tools_cache;
+					static $all_registered_tools_cache;
+					if (isset($all_registered_tools_cache)) {
+						return $all_registered_tools_cache;
 					}
 
-				// session
-					// if(isset($_SESSION['dedalo']['registered_tools'])) {
-					// 	return $_SESSION['dedalo']['registered_tools'];
+				// cache file (moved to tool_common::get_user_tools)
+			 		// $file_cache = dd_cache::cache_from_file((object)[
+					// 	'file_name'	=> 'cache_registered_tools.json'
+					// ]);
+					// if (!empty($file_cache)) {
+					// 	// read from file encoded JSON
+					// 	$registered_tools = json_handler::decode($file_cache);
+
+					// 	// static save value
+					// 	$all_registered_tools_cache = $registered_tools;
+
+					// 	return $registered_tools;
 					// }
-
-				// cache file
-			 		$file_cache = dd_cache::cache_from_file((object)[
-						'file_name'	=> 'cache_registered_tools.json'
-					]);
-					if (!empty($file_cache)) {
-						// read from file encoded JSON
-						$registered_tools = json_handler::decode($file_cache);
-
-						// static save value
-						$registered_tools_cache = $registered_tools;
-
-						return $registered_tools;
-					}
 			}
 
 		// all_registered_tools_records
@@ -475,16 +470,13 @@ class tool_common {
 		// cache
 			if ($use_cache===true) {
 				// static
-					$registered_tools_cache = $registered_tools;
+					$all_registered_tools_cache = $registered_tools;
 
-				// session
-					// $_SESSION['dedalo']['registered_tools'] = $registered_tools;
-
-				// cache file
-					dd_cache::cache_to_file((object)[
-						'data'		=> $registered_tools,
-						'file_name'	=> 'cache_registered_tools.json'
-					]);
+				// cache file (moved to tool_common::get_user_tools)
+					// dd_cache::cache_to_file((object)[
+					// 	'data'		=> $registered_tools,
+					// 	'file_name'	=> 'cache_registered_tools.json'
+					// ]);
 			}
 
 
@@ -744,7 +736,8 @@ class tool_common {
 	*/
 	public static function get_user_tools(int $user_id) : array {
 
-		$user_tools = [];
+		// default value (empty array)
+			$user_tools = [];
 
 		// empty or zero user case
 			if (empty($user_id)) {
@@ -753,11 +746,28 @@ class tool_common {
 
 		// cache
 			$use_cache = true;
-			static $cache_user_tools;
 			if ($use_cache===true) {
-				if (isset($cache_user_tools[$user_id])) {
-					return $cache_user_tools[$user_id];
-				}
+
+				// static
+					static $user_tools_cache;
+					if (isset($user_tools_cache[$user_id])) {
+						return $user_tools_cache[$user_id];
+					}
+
+				// cache file
+					$cache_file_name = 'cache_user_tools.json';
+			 		$file_cache = dd_cache::cache_from_file((object)[
+						'file_name'	=> $cache_file_name
+					]);
+					if (!empty($file_cache)) {
+						// read from file encoded JSON
+						$user_tools = json_handler::decode($file_cache);
+
+						// static save value
+						$user_tools_cache[$user_id] = $user_tools;
+
+						return $user_tools;
+					}
 			}
 
 		// all unfiltered tools
@@ -809,14 +819,16 @@ class tool_common {
 
 		// cache
 			if ($use_cache===true) {
-				$cache_user_tools[$user_id] = $user_tools;
-			}
+				// static
+					$user_tools_cache[$user_id] = $user_tools;
 
-		// debug
-			// $names = array_map(function($el){
-			// 	return $el->name .' - '. $el->section_id;
-			// }, $user_tools);
-			// dump($names, ')))))))))))) $names ++ '.to_string());
+				// cache file
+					// cache file
+					dd_cache::cache_to_file((object)[
+						'data'		=> $user_tools,
+						'file_name'	=> $cache_file_name
+					]);
+			}
 
 
 		return $user_tools;

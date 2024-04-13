@@ -143,8 +143,8 @@ class menu extends common {
 
 							if ($tool_name!==false) {
 
-								$all_registered_tools = tool_common::get_all_registered_tools();
-								$tool_info = array_find($all_registered_tools, function($el) use($tool_name) {
+								$user_tools = tool_common::get_user_tools( logged_user_id() );
+								$tool_info = array_find($user_tools, function($el) use($tool_name) {
 									return $el->name===$tool_name;
 								});
 								if (empty($tool_info)) {
