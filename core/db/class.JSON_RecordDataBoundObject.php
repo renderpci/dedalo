@@ -79,12 +79,12 @@ abstract class JSON_RecordDataBoundObject {
 	* @return bool
 	*/
 	public function Load() : bool {
+
 		// debug info showed in footer
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
-
 				// metrics
-					metrics::$matrix_total_calls++;
+				metrics::$matrix_total_calls++;
 			}
 
 		// verify mandatory vars
@@ -209,7 +209,7 @@ abstract class JSON_RecordDataBoundObject {
 					}
 
 					// metrics
-						metrics::$matrix_total_time += $total_time_ms;
+					metrics::$matrix_total_time += $total_time_ms;
 
 					// debug_log(__METHOD__ . PHP_EOL
 					// 	. ' load total_time_ms: ' . $total_time_ms . PHP_EOL
@@ -499,12 +499,14 @@ abstract class JSON_RecordDataBoundObject {
 	*/
 	public static function search_free(string $strQuery, bool $wait=true) {
 
-		// metrics
-			metrics::$search_free_total_calls++;
-
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
+
+				// metrics
+				metrics::$search_free_total_calls++;
+
+				// query additional info
 				if (isset(debug_backtrace()[1]['function'])) {
 					$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n" . $strQuery;
 				}
@@ -575,7 +577,7 @@ abstract class JSON_RecordDataBoundObject {
 				}
 
 				// metrics
-					metrics::$search_free_total_time += $total_time_ms;
+				metrics::$search_free_total_time += $total_time_ms;
 
 				// debug_log(__METHOD__ . PHP_EOL
 				// 	. ' search_free total_time_ms: ' . $total_time_ms . PHP_EOL
