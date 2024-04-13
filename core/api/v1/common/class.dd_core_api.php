@@ -252,8 +252,8 @@ final class dd_core_api {
 									: false;
 								if ($tool_name) {
 
-									$all_registered_tools = tool_common::get_all_registered_tools();
-									$tool_info = array_find($all_registered_tools, function($el) use($tool_name) {
+									$user_tools = tool_common::get_user_tools( logged_user_id() );
+									$tool_info = array_find($user_tools, function($el) use($tool_name) {
 										return $el->name===$tool_name;
 									});
 									if (empty($tool_info)) {
@@ -362,7 +362,7 @@ final class dd_core_api {
 								});
 								if (empty($tool_found)) {
 									debug_log(__METHOD__
-										." Tool $model not found in tool_common::get_all_registered_tools "
+										." Tool $model not found in tool_common::get_user_tools "
 										, logger::ERROR
 									);
 								}else{
@@ -1440,7 +1440,7 @@ final class dd_core_api {
 						});
 						if (empty($tool_found)) {
 							debug_log(__METHOD__
-								." Tool $model not found in tool_common::get_all_registered_tools " .PHP_EOL
+								." Tool $model not found in tool_common::get_user_tools " .PHP_EOL
 								.' rqo: '.to_string($rqo)
 								, logger::ERROR
 							);
