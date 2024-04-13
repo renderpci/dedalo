@@ -188,10 +188,10 @@ abstract class RecordDataBoundObject {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time = start_time();
-			}
 
-		// metrics
-			metrics::$ontology_total_calls++;
+				// metrics
+				metrics::$ontology_total_calls++;
+			}
 
 		// Prevent load if $this->ID is not set
 			if(!isset($this->ID) || $this->ID===false) {
@@ -232,8 +232,10 @@ abstract class RecordDataBoundObject {
 
 			$row = $ar_RecordDataObject_load_query_cache[$strQuery];
 
-			// metrics
+			if(SHOW_DEBUG===true) {
+				// metrics
 				metrics::$ontology_total_calls_cached++;
+			}
 
 		}else{
 
@@ -350,7 +352,7 @@ abstract class RecordDataBoundObject {
 				}
 
 				// metrics
-					metrics::$ontology_total_time += $total_time_ms;
+				metrics::$ontology_total_time += $total_time_ms;
 			}
 
 
