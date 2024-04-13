@@ -111,6 +111,11 @@ function print_cli(object $process_info) : void {
 
 	if ( running_in_cli()===true ) {
 
+		// prevent to print messages in test unit environment
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST===true) {
+			return;
+		}
+
 		echo json_handler::encode($process_info, JSON_UNESCAPED_UNICODE) . PHP_EOL;
 
 		// flush the output buffer and send echoed messages to the console

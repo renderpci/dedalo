@@ -14,6 +14,9 @@ declare(strict_types=1);
 	// ]
 	define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
 
+// IS_UNIT_TEST
+	define('IS_UNIT_TEST', true);
+
 // config file
 	require_once dirname(dirname(__FILE__)) . '/config/config.php';
 
