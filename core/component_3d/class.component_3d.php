@@ -311,6 +311,59 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* CREATE_THUMB
+	*
+	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
+	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
+	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
+	* command="&quot;gs&quot;
+	* with
+	* command="&quot;/usr/local/bin/gs&quot;
+	* @return bool
+	*/
+	public function create_thumb() : bool {
+
+		// check config constant definition
+			if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
+				define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
+				debug_log(__METHOD__." Undefined config 'DEDALO_PDF_THUMB_DEFAULT'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+			}
+
+		// thumb_path
+			$file_name			= $this->get_id();
+
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
+
+		// thumb not exists case: generate from posterframe
+			$posterframe	= $this->get_posterframe_filepath();
+			if (!file_exists($posterframe)) {
+				debug_log(__METHOD__
+					." posterframe file doesn't exists, is not possible to create a thumb"
+					, logger::WARNING
+				);
+
+				return false;
+			}
+
+			// thumb generate
+			$result = ImageMagick::dd_thumb(
+				$posterframe, // source file
+				$target_file, // thumb file
+			);
+
+		// exec command
+			// exec($command.' 2>&1', $output, $result_code);
+			if ($result===false) {
+				return false;
+			}
+
+		return true;
+	}//end create_thumb
+
+
+	/**
 	* GET_ORIGINAL_FILE_PATH
 	* Returns the full path of the original file if exists
 	* The original files are saved renamed but with the file ending preserved. This function is used to locate them by checking
