@@ -389,10 +389,17 @@ const render_search_input = function(self) {
 
 		// Init a timeout variable to be used below
 			let timeout = null
+			let is_searching = false
 
 		// input_handler
 			const input_handler = async function(e) {
-				// console.log('e1:', e);
+				e.stopPropagation();
+				e.preventDefault();
+
+				// is_searching. Search is locked until request finish
+					if (is_searching === true) {
+						return
+					}
 
 				// ignore keys
 					const ignore_keys = [
@@ -412,9 +419,23 @@ const render_search_input = function(self) {
 						return
 					}
 
-				// class searching (remove icon magnifying glass)
+				// is_paste
+					const is_paste = (e.type && e.type==='paste')
+
+				// paste case. Note that clipboard event trigger keyup event too. Because this,
+				// lock search immediately after paste event to prevent search overlap
+					if (is_paste) {
+						// lock search until finish to prevent double search
+						is_searching = true
+						// Get pasted data via clipboard API (set e.preventDefault() before !)
+						const clipboardData	= e.clipboardData || window.clipboardData;
+						const pastedData	= clipboardData.getData('Text');
+						search_input.value	= pastedData
+					}
+
+				// loading styles. class searching (remove icon magnifying glass)
 					search_input.classList.add('searching')
-				// spinner
+					// spinner
 					const prev_spinner = search_input.parentNode.querySelector('.spinner')
 					if(prev_spinner){
 						prev_spinner.remove()
@@ -425,47 +446,60 @@ const render_search_input = function(self) {
 					})
 					search_input.parentNode.insertBefore(spinner, search_input.nextSibling);
 
-				// q
-					const q = search_input.value
-					self.filter_free_nodes.map(el => {
-						el.filter_item.q = ''
-						el.value = ''
-					})
-
-				const filter_free_nodes_len = self.filter_free_nodes.length
-
-				// ar q split iterate
-					const split_q	= self.split_q(q)
-					const ar_q		= split_q.ar_q
-					if (split_q.divisor!==false) {
-						// PROPAGATE TO FILTER FIELDS
-						for (let j = 0; j < filter_free_nodes_len; j++) {
-							if (ar_q[j]) {
-								self.filter_free_nodes[j].filter_item.q = ar_q[j]
-								self.filter_free_nodes[j].value = ar_q[j]
-							}
-						}
-					}else{
+				// search prepare
+					// q
+						const q = search_input.value
 						self.filter_free_nodes.map(el => {
-							el.filter_item.q = search_input.value
-							el.value = search_input.value
+							el.filter_item.q = ''
+							el.value = ''
 						})
-					}
+					// split_q. ar q split iterate
+						const split_q	= self.split_q(q)
+						const ar_q		= split_q.ar_q
+						if (split_q.divisor!==false) {
+							// propagate to filter fields
+							const filter_free_nodes_len	= self.filter_free_nodes.length
+							for (let j = 0; j < filter_free_nodes_len; j++) {
+								if (ar_q[j]) {
+									self.filter_free_nodes[j].filter_item.q = ar_q[j]
+									self.filter_free_nodes[j].value = ar_q[j]
+								}
+							}
+						}else{
+							self.filter_free_nodes.map(el => {
+								el.filter_item.q = search_input.value
+								el.value = search_input.value
+							})
+						}
 
 				// Clear the timeout if it has already been set.
 				// This will prevent the previous task from executing
 				// if it has been less than <MILLISECONDS>
-					clearTimeout(timeout);
+					if (timeout) {
+						clearTimeout(timeout);
+					}
+
+				// datalist container node
+					const datalist = self.datalist
+					while (datalist.firstChild) {
+						datalist.removeChild(datalist.firstChild);
+					}
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'loading_label',
+						inner_html		: get_label.loading || 'Loading..',
+						parent			: datalist
+					})
 
 				// search fire is delayed to enable multiple simultaneous selections
 				// get final value (input events are fired one by one)
-					const ms = self.search_cache[q]
+					const ms = self.search_cache[q] || is_paste===true
 						? 1
-						: 320
+						: 320 * 1
 					timeout = setTimeout(async()=>{
 
 						// api_response. Get from cache if exists
-							const api_response = self.search_cache[q]
+							const api_response = q.length && self.search_cache[q]
 								? { result : self.search_cache[q] }
 								: await self.autocomplete_search()
 
@@ -474,14 +508,16 @@ const render_search_input = function(self) {
 								self.search_cache[q] = api_response.result
 							}
 
-						// render datalist
+						// render datalist (call API and render the response result)
 							await render_datalist(self, api_response.result)
 
-						// class searching
+						// loading styles. class searching
 							search_input.classList.remove('searching')
-
-						// spinner remove
+							// spinner remove
 							spinner.remove()
+
+						// unlock search
+						is_searching = false
 					}, ms)
 			}//end input_handler
 
@@ -1081,7 +1117,8 @@ const render_datalist = async function(self, result) {
 		self.ar_instances.push(...ar_section_record)
 
 	// iterate the section_records
-		for (let i = 0; i < ar_section_record.length; i++) {
+		const ar_section_record_length = ar_section_record.length
+		for (let i = 0; i < ar_section_record_length; i++) {
 
 			// section_record
 				const current_section_record = ar_section_record[i]
