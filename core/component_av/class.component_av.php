@@ -196,29 +196,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_URL
-	* @param string|null $quality = null
-	* @return string $url
-	*/
-	public function get_url(?string $quality=null) : string {
-
-		if(empty($quality)) {
-			$quality = $this->get_quality();
-		}
-
-		// item id like 'rsc201_rsc202_9'
-			$id	= $this->get_id();
-
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
-
-
-		return $url;
-	}//end get_url
-
-
-
-	/**
 	* GET_POSTERFRAME_FILE_NAME
 	*  like 'rsc35_rsc167_1.jpg'
 	* @return string $posterframe_file_name;
