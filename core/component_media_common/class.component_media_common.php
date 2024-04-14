@@ -789,6 +789,12 @@ class component_media_common extends component_common {
 
 		$ar_quality = $this->get_ar_quality();
 
+		$thumb_quality		= $this->get_thumb_quality();
+		$thumb_extension	= $this->get_thumb_extension();
+		if(!in_array($thumb_quality, $ar_quality)){
+			$ar_quality[] = $thumb_quality;
+		}
+
 		$alternative_extensions	= $this->get_alternative_extensions();
 		$extensions				= is_array($alternative_extensions)
 			? array_merge([$this->get_extension()], $alternative_extensions)
@@ -799,6 +805,21 @@ class component_media_common extends component_common {
 		// files check
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
+
+				//thumb, use thumb extension instead the component extension (for av is .mp4 and for thumb is .jpg)
+				if($quality===$thumb_quality){
+
+					$quality_file_info = $this->get_quality_file_info($quality, $thumb_extension);
+					// file_exist check
+					if ($include_empty===false && $quality_file_info->file_exist===false) {
+						// skip quality without file
+						continue;
+					}
+
+					// add
+					$files_info[] = $quality_file_info;
+					continue;
+				}
 
 				foreach ($unique_extensions as $extension) {
 
