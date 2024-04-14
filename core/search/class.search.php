@@ -386,7 +386,7 @@ class search {
 			}//end if search_query_object->children_recursive===true
 
 		// debug
-			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				if($total_time_ms>SLOW_QUERY_MS) {
 					debug_log(__METHOD__
