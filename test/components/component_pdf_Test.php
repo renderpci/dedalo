@@ -377,31 +377,6 @@ final class component_pdf_test extends TestCase {
 
 
 
-	/**
-	* TEST_get_preview_url
-	* @return void
-	*/
-	public function test_get_preview_url() {
-
-		$component = $this->build_component_instance();
-
-		$result = $component->get_preview_url();
-
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-
-		if (!empty($result)) {
-			$this->assertTrue(
-				strpos($result, 'http')!==0,
-				'unexpected http protocol in relative URL : ' . PHP_EOL
-					. to_string($result)
-			);
-		}
-	}//end test_get_preview_url
-
 
 
 	/**

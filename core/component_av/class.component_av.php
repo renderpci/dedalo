@@ -266,37 +266,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_PREVIEW_URL
-	* Return posterframe url
-	* Alias of get_posterframe_url
-	* @return string|null $preview_url
-	*/
-	public function get_preview_url() : ?string {
-
-		$preview_url = $this->get_posterframe_url(
-			false, // bool test_file
-			false, // bool absolute
-			true // bool avoid_cache
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_posterframe_url();
-	}//end get_thumb_url
-
-
-
-	/**
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
