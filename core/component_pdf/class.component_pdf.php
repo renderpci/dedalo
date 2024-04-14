@@ -392,7 +392,7 @@ class component_pdf extends component_media_common {
 			foreach ($alternative_extensions as $current_extension) {
 				$target_file =  $target_path . '/' . $file_name . '.' . $current_extension;
 
-			// generate from PDF
+				// generate from PDF
 				$image_pdf_options = new stdClass();
 					$image_pdf_options->source_file	= $source_file;
 					$image_pdf_options->ar_layers	= [$page];
@@ -525,22 +525,27 @@ class component_pdf extends component_media_common {
 							, logger::ERROR
 						);
 					}else{
+
+						// create alternative image of versions the default quality
+						$create_image_options = new stdClass();
+						$create_image_options->quality = $default_quality;
+						$this->create_image($create_image_options);
+
 						debug_log(__METHOD__ . PHP_EOL
 							. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
 							. ' Source path: ' . $full_file_path . PHP_EOL
 							. ' Target path: ' . $target_file_path
 							, logger::DEBUG
 						);
+
 					}
 
-					// image alternative
-
-					$this->create_image();
+					// create alternative image versions of the PDF
+						$this->create_image();
 
 					// thumb : Create pdf_thumb image
 						$thumb_url = $this->get_pdf_thumb(
 							true // bool force_create
-						);
 
 					// transcription to text automatic
 						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
