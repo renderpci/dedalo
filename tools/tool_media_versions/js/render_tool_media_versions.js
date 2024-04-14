@@ -224,52 +224,39 @@ const render_versions_grid = function(self) {
 			return fragment
 		}
 
-	// versions_container
-		const versions_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'versions_container',
-			parent			: fragment
-		})
-		Object.assign(
-			versions_container.style,
-			{
-				'grid-template-columns': `minmax(6rem, 20%) repeat(${ar_quality.length}, 1fr)`
-			}
-		)
+	const thumb = ar_quality.find(el => el === 'thumb')
+	if(!thumb){
+		ar_quality.push('thumb')
+	}
 
-	// line_labels
-		versions_container.appendChild( get_line_labels(ar_quality, self) )
-
-	// line_file_exists
-		versions_container.appendChild( get_line_file(ar_quality, self) )
-
-	// line_file_open
-		versions_container.appendChild( get_line_file_open(ar_quality, self) )
-
-	// line_file_extension
-		// versions_container.appendChild( get_line_file_extension(ar_quality, self) )
-
-	// line_file_size
-		versions_container.appendChild( get_line_file_size(ar_quality, self) )
-
-	// line_file_upload
-		versions_container.appendChild( get_line_file_upload(ar_quality, self) )
-
-	// line_file_download
-		versions_container.appendChild( get_line_file_download(ar_quality, self) )
-
-	// line_alternative_extensions
-		// if(self.main_element.context.features.alternative_extensions) {
-		// 	versions_container.appendChild( get_line_alternative_extensions(ar_quality, self) )
-		// }
-
-	// line_file_delete
-		versions_container.appendChild( get_line_file_delete(ar_quality, self) )
-
-	// line_file_build_version
-		if (ar_quality.length>1) {
-			versions_container.appendChild( get_line_build_version(ar_quality, self) )
+	const ar_rows = [
+		{
+			renderer	: render_file,
+			label		: get_label.file || 'File'
+		},
+		// {renderer: render_file_extension,label: get_label.extension || 'Extension'},
+		{
+			renderer	: render_file_size,
+			label		: get_label.size || 'Size'
+		},
+		// { renderer: , label: get_label.alternative_extensions || 'Alt. extensions' },
+		{
+			renderer	: render_file_upload,
+			label		: get_label.upload || 'Upload'
+		},
+		{
+			renderer	: render_file_versions,
+			label		: get_label.versions || 'Versions'
+		},
+		{
+			renderer	: render_file_delete,
+			label		: get_label.delete || 'Delete'
+		},
+		{
+			renderer	: render_build_version,
+			label		: (get_label.build || 'Build') + ' ' + (get_label.version || 'version')
 		}
+	]
 
 	// specific_actions. Special features based on main_element model. They are defined in tool properties.
 		// sample:
@@ -286,26 +273,127 @@ const render_versions_grid = function(self) {
 		const specific_actions = self.context.properties.specific_actions || {}
 		// functions mapper. Maps action name with handler function
 		// Define here the list of available specific tool functions
-		const fn_mapper = {
-			conform_headers	: get_line_conform_headers,
-			rotate			: get_line_rotate
-		}
 		for(const action_name in specific_actions) {
 
 			const ar_models = specific_actions[action_name]
 			if (ar_models.includes(self.main_element.model)) {
 
 				// check valid function call
-					if(typeof fn_mapper[action_name]!=='function') {
-						console.log("Ignored invalid function name:", action_name);
+					if(typeof render_specific_actions[action_name]!=='function') {
+						console.warn("Ignored invalid function name:", action_name);
 						continue;
 					}
 
-				// build line node and add
-					const line_node = fn_mapper[action_name](ar_quality, self)
-					versions_container.appendChild(line_node)
+				ar_rows.push({
+					renderer	: render_specific_actions[action_name],
+					label		: get_label[action_name] || action_name
+				})
 			}
 		}
+
+
+	// versions_container
+		const versions_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'versions_container',
+			parent			: fragment
+		})
+		Object.assign(
+			versions_container.style,
+			{
+				'grid-template-columns': `minmax(6rem, 1fr) repeat(${ar_quality.length}, 1fr)`,
+				'grid-template-rows': `repeat(${ar_rows.length + 1}, minmax(2rem, auto))`
+			}
+		)
+
+	// line_labels
+		const colum_labels_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'column labels_container',
+			parent			: versions_container
+		})
+			const quality_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label',
+				inner_html		: get_label.quality || 'Quality',
+				parent			: colum_labels_container
+			})
+
+		Object.assign(
+			quality_label.style,
+			{
+				'grid-column': `1`,
+				'grid-row': `1`,
+			}
+		)
+
+
+	// quality labels
+	const ar_rows_length = ar_rows.length
+	for (let i = 0; i < ar_rows_length; i++) {
+		const current_row = ar_rows[i]
+
+		const label = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: current_row.label,
+			parent			: colum_labels_container
+		})
+		Object.assign(
+			label.style,
+			{
+				'grid-column': `1`,
+				'grid-row': `${i+2}`
+			}
+		)
+	}
+
+	const ar_quality_length = ar_quality.length
+	for (let i = 0; i < ar_quality_length; i++) {
+
+		const current_quality = ar_quality[i];
+
+		const quality_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'column quality_container',
+			parent			: versions_container
+		})
+		// quality label
+			const quality_label_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_info' + (current_quality===self.main_element.context.features.default_quality ? ' default' : ''),
+				parent			: quality_container
+			})
+
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label',
+				inner_html		: current_quality,
+				parent			: quality_label_node
+			})
+			Object.assign(
+				quality_label_node.style,
+				{
+					'grid-column': `${i+2}`,
+					'grid-row': `1`
+				}
+			)
+
+		const ar_rows_length = ar_rows.length
+		for (let j = 0; j < ar_rows_length; j++) {
+			const current_row = ar_rows[j]
+			const row_node = current_row.renderer(current_quality, self)
+
+			quality_container.appendChild( row_node )
+			Object.assign(
+				row_node.style,
+				{
+					'grid-column': `${i+2}`,
+					'grid-row': `${j+2}`
+				}
+			)
+		}
+	}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
@@ -314,310 +402,140 @@ const render_versions_grid = function(self) {
 
 
 /**
-* GET_LINE_LABELS
+* RENDER_FILE
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_labels = function(ar_quality, self) {
+const render_file = function(quality, self) {
 
-	// DocumentFragment
- 	const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
+	// info columns
+		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.quality || 'Quality',
-			parent			: fragment
+			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
-	// quality labels
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
+		// file_info
+		const file_info = self.files_info_safe.find(el => el.quality===quality)
 
-			const quality = ar_quality[i]
+		if (file_info && file_info.file_exist===true) {
+			if (file_info.file_path) {
+				const button_file_av = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button media',
+					parent			: file_info_node
+				})
+				button_file_av.addEventListener('click', async function(e) {
+					e.stopPropagation()
 
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
+					self.node.classList.add('loading')
+					// change component av quality and refresh
+					self.main_element.quality = quality
+					await self.main_element.refresh()
+					self.node.classList.remove('loading')
+				})
+			}else{
+				// const extension = file_info.file_path.split(".").pop();
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: '',
+					inner_html		: `-`,
+					parent			: file_info_node
+				})
+			}
+		}//end if (file_info.file_path) {
 
+
+	return file_info_node
+}//end render_file
+
+
+
+/**
+* RENDER_FILE_EXTENSION
+* @param array ar_quality
+* @param object self
+* @return HTMLElement file_info_node
+*/
+const render_file_extension = function(quality, self) {
+
+
+	// info columns
+		const file_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+		})
+
+		// file_info
+		const file_info = (quality==='original' && self.file_info_normalized_name)
+			? self.file_info_normalized_name
+			: self.files_info_safe.find(el => el.quality===quality)
+
+		if (file_info && file_info.file_exist===true) {
+
+			const extension = file_info.file_path.split('.').pop();
+
+			// icon file
 			ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'label',
-				inner_html		: quality,
+				element_type	: 'span',
+				class_name		: '',
+				inner_html		: extension,
 				parent			: file_info_node
 			})
 		}
 
 
-	return fragment
-}//end get_line_labels
+	return file_info_node
+}//end render_file_extension
 
 
 
 /**
-* GET_LINE_FILE
+* RENDER_FILE_SIZE
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_file = function(ar_quality, self) {
+const render_file_size = function(quality, self) {
 
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.file || 'File',
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			// file_info
-			const file_info = self.files_info_safe.find(el => el.quality===quality)
-
-			if (file_info && file_info.file_exist===true) {
-				if (file_info.file_path) {
-					const button_file_av = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button media',
-						parent			: file_info_node
-					})
-					button_file_av.addEventListener('click', async function(e) {
-						e.stopPropagation()
-
-						self.node.classList.add('loading')
-						// change component av quality and refresh
-						self.main_element.quality = quality
-						await self.main_element.refresh()
-						self.node.classList.remove('loading')
-					})
-				}else{
-					// const extension = file_info.file_path.split(".").pop();
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: '',
-						inner_html		: `-`,
-						parent			: file_info_node
-					})
-				}
-			}//end if (file_info.file_path) {
-		}//end for (let i = 0; i < ar_quality_length; i++)
-
-
-	return fragment
-}//end get_line_file
-
-
-
-/**
-* GET_LINE_FILE_OPEN
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_file_open = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.open || 'Open',
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			// file_info
-			const file_info = self.files_info_safe.find(el => el.quality===quality)
-
-			if (file_info && file_info.file_exist===true) {
-
-				// file_url
-				const file_url = DEDALO_MEDIA_URL + file_info.file_path
-
-				// icon file
-				const link = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button find',
-					parent			: file_info_node
-				})
-				link.addEventListener('click', function(e) {
-					e.stopPropagation()
-
-					open_window({
-						url : file_url
-					})
-				})
-			}
-		}
-
-
-	return fragment
-}//end get_line_file_open
-
-
-
-/**
-* GET_LINE_FILE_EXTENSION
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_file_extension = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.extension || 'Extension',
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			// file_info
-			const file_info = (quality==='original' && self.file_info_normalized_name)
-				? self.file_info_normalized_name
-				: self.files_info_safe.find(el => el.quality===quality)
-
-			if (file_info && file_info.file_exist===true) {
-
-				const extension = file_info.file_path.split('.').pop();
-
-				// icon file
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: '',
-					inner_html		: extension,
-					parent			: file_info_node
-				})
-			}
-		}//end for (let i = 0; i < ar_quality_length; i++)
-
-
-	return fragment
-}//end get_line_file_extension
-
-
-
-/**
-* GET_LINE_FILE_SIZE
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_file_size = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.size || 'Size',
-			parent			: fragment
-		})
 
 	const custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
 
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
+	// file_info
+	const file_info = custom_files_info.find(el => el.quality===quality)
 
-			const quality = ar_quality[i]
+	const file_info_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+	})
 
-			// file_info
-			const file_info = custom_files_info.find(el => el.quality===quality)
+	if (file_info && file_info.file_exist===true) {
 
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
+		// size
+		const size = bytes_format(file_info.file_size)
 
-			if (file_info && file_info.file_exist===true) {
-
-				// size
-				const size = bytes_format(file_info.file_size)
-
-				// icon file
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: '',
-					inner_html		: size,
-					parent			: file_info_node
-				})
-			}
-		}//end for (let i = 0; i < ar_quality_length; i++)
+		// icon file
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: '',
+			inner_html		: size,
+			parent			: file_info_node
+		})
+	}
 
 
-	return fragment
-}//end get_line_file_size
+	return file_info_node
+}//end render_file_size
 
 
 
 /**
-* GET_LINE_ALTERNATIVE_EXTENSIONS
+* RENDER_ALTERNATIVE_EXTENSIONS
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_alternative_extensions = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.alternative_extensions || 'Alt. extensions',
-			parent			: fragment
-		})
+const render_alternative_extensions = function(quality, self) {
 
 	// short vars
 		const value_files_info				= self.files_info_alternative
@@ -625,15 +543,12 @@ const get_line_alternative_extensions = function(ar_quality, self) {
 		const alternative_extensions		= self.main_element.context.features.alternative_extensions
 		const alternative_extensions_length	= alternative_extensions.length
 
-	const ar_quality_length = ar_quality.length
-	for (let i = 0; i < ar_quality_length; i++) {
+	// const ar_quality_length = ar_quality.length
+	// for (let i = 0; i < ar_quality_length; i++) {
 
-		const quality = ar_quality[i]
-
-		const file_info_container = ui.create_dom_element({
+		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-			parent			: fragment
 		})
 
 		// info columns
@@ -648,7 +563,7 @@ const get_line_alternative_extensions = function(ar_quality, self) {
 					const cell_node = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'cell_node',
-						parent			: file_info_container
+						parent			: file_info_node
 					})
 
 					const button_download = ui.create_dom_element({
@@ -673,110 +588,82 @@ const get_line_alternative_extensions = function(ar_quality, self) {
 					})
 			}
 		}
-	}//end for (let i = 0; i < ar_quality_length; i++)
+	// }//end for (let i = 0; i < ar_quality_length; i++)
 
 
-	return fragment
-}//end get_line_alternative_extensions
+	return file_info_node
+}//end render_alternative_extensions
 
 
 
 /**
-* GET_LINE_FILE_UPLOAD
+* RENDER_FILE_UPLOAD
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_file_upload = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.upload || 'Upload',
-			parent			: fragment
-		})
+const render_file_upload = function(quality, self) {
 
 	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
+		const file_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+		})
 
-			const quality = ar_quality[i]
-
-			// file_info
-				// const file_info = self.files_info.find(el => el.quality===quality)
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			const button_file_upload = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button upload',
-				parent			: file_info_node
-			})
-			button_file_upload.addEventListener('click', function(e){
-				e.stopPropagation()
-
-				// open tool_upload
-					// tool context minimum
-						const tool_context = {
-							model	: 'tool_upload',
-							name	: 'tool_upload',
-							mode	: 'edit'
-						}
-
-					const caller = self.main_element
-
-					// update caller context quality
-						caller.context.target_quality = quality
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_context,
-							caller			: caller
-						})
-
-				// event on refresh caller
-					const token = event_manager.subscribe('render_'+self.main_element.id, fn_refresh)
-					self.events_tokens.push(token)
-					function fn_refresh() {
-						event_manager.unsubscribe(token)
-						self.main_element_quality = quality
-						self.refresh()
-					}
-			})
+		if(quality==='thumb'){
+			return file_info_node
 		}
 
+		const button_file_upload = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button upload',
+			parent			: file_info_node
+		})
+		button_file_upload.addEventListener('click', function(e){
+			e.stopPropagation()
 
-	return fragment
-}//end get_line_file_upload
+			// open tool_upload
+				// tool context minimum
+					const tool_context = {
+						model	: 'tool_upload',
+						name	: 'tool_upload',
+						mode	: 'edit'
+					}
+
+				const caller = self.main_element
+
+				// update caller context quality
+					caller.context.target_quality = quality
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_context,
+						caller			: caller
+					})
+
+			// event on refresh caller
+				const token = event_manager.subscribe('render_'+self.main_element.id, fn_refresh)
+				self.events_tokens.push(token)
+				function fn_refresh() {
+					event_manager.unsubscribe(token)
+					self.main_element_quality = quality
+					self.refresh()
+				}
+		})
+
+
+	return file_info_node
+}//end render_file_upload
 
 
 
 /**
-* GET_LINE_FILE_DOWNLOAD
+* RENDER_FILE_VERSIONS
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_file_download = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.download || 'Download',
-			parent			: fragment
-		})
+const render_file_versions = function(quality, self) {
 
 	// custom_files_info. Include non original and files_info_alternative quality
 		const raw_custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
@@ -790,16 +677,10 @@ const get_line_file_download = function(ar_quality, self) {
 		const custom_files_info = Object.values(object_files_info)
 
 	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
 			// file_info_node
 				const file_info_node = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
-					parent			: fragment
+					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 				})
 
 			const files_info = custom_files_info.filter(el => el.quality===quality)
@@ -828,6 +709,23 @@ const get_line_file_download = function(ar_quality, self) {
 							parent			: file_info_node
 						})
 
+						// file_url
+							const file_url = DEDALO_MEDIA_URL + file_info.file_path
+
+							// icon file
+							const link = ui.create_dom_element({
+								element_type	: 'a',
+								class_name		: 'button find',
+								parent			: cell_node
+							})
+							link.addEventListener('click', function(e) {
+								e.stopPropagation()
+
+								open_window({
+									url : file_url
+								})
+							})
+
 						const button_file_download = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button download',
@@ -854,338 +752,264 @@ const get_line_file_download = function(ar_quality, self) {
 						})
 					}
 			}//end for (let k = 0; k < files_info_length; k++)
-		}//end if (file_info.file_exist===true)
 
 
-	return fragment
-}//end get_line_file_download
+	return file_info_node
+}//end render_file_versions
 
 
 
 /**
-* GET_LINE_FILE_DELETE
+* RENDER_FILE_DELETE
 * @param array ar_quality
 * @param object self
-* @return HTMLElement fragment
+* @return HTMLElement file_info_node
 */
-const get_line_file_delete = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: get_label.delete || 'Delete',
-			parent			: fragment
-		})
+const render_file_delete = function(quality, self) {
 
 	// custom_files_info. Include non original and original quality
 		const custom_files_info = self.files_info_safe.concat(self.files_info_original)
 
 	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
+	const file_info_node = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+	})
 
-			const quality = ar_quality[i]
+	// file_info
+		const file_info = custom_files_info.find(el => el.quality===quality)
+		// const file_info = (quality==='original' && self.file_info_normalized_name)
+		// 	? self.file_info_normalized_name
+		// 	: custom_files_info.find(el => el.quality===quality)
 
+		if (file_info && file_info.file_exist===true) {
+
+			const button_file_download = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button delete',
+				parent			: file_info_node
+			})
+			button_file_download.addEventListener('click', async function(){
+				self.node.classList.add('loading')
+				// exec delete_file
+				const response = await self.delete_file(quality)
+				if (response===true) {
+					// self.main_element_quality = quality
+					self.refresh()
+				}
+				self.node.classList.remove('loading')
+			})
+		}
+
+
+	return file_info_node
+}//end render_file_delete
+
+
+
+/**
+* RENDER_BUILD_VERSION
+* @param array ar_quality
+* @param object self
+* @return HTMLElement file_info_node
+*/
+const render_build_version = function(quality, self) {
+
+	// info columns
+	// file_info
+		const file_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+		})
+
+	// exclude original quality button from list
+		if (quality==='original') {
+			return file_info_node
+		}
+
+	// button_build_version
+		const button_build_version = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button gear',
+			parent			: file_info_node
+		})
+		const fn_click = async function (e) {
+			e.stopPropagation()
+
+			self.node.classList.add('loading')
+
+			// exec build_version
+			const result = await self.build_version(quality)
+			if (result===true) {
+
+				// building
+				button_build_version.remove()
+
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'blink',
+					inner_html		: get_label.processing || 'Processing',
+					parent			: file_info_node
+				})
+
+				if (self.main_element.model === 'component_av' && quality !== 'thumb') {
+					const check_file = async function() {
+
+						if (self.timer) {
+							clearTimeout(self.timer);
+						}
+
+						const files_info	= await self.get_files_info()
+						const found			= files_info.find(el => el.quality===quality)
+						if (found && found.file_exist===true) {
+							// processing_label.remove()
+							// button_build_version.classList.remove('hide')
+							self.main_element_quality = quality
+
+							// force save component to update dato files_info
+							// Note that action 'force_save' do not save data really and do not need more
+							// properties, is only to allow API exec component save transparently
+								await self.main_element.save([{
+									action : 'force_save'
+								}])
+
+							self.refresh({
+								build_autoload : false
+							})
+						}else{
+							// check again after 5 sec
+							self.timer = setTimeout(async function(){
+								check_file()
+							}, 2000)
+						}
+					}
+					check_file()
+				}else{
+					setTimeout(async function(){
+						self.refresh({
+							build_autoload : false
+						})
+					}, 1)
+				}
+			}
+			self.node.classList.remove('loading')
+		}
+		button_build_version.addEventListener('click', fn_click)
+
+
+
+	return file_info_node
+}//end render_build_version
+
+
+
+
+const render_specific_actions = {
+
+	/**
+	* GET_LINE_CONFORM_HEADERS
+	* 	Specific component_av feature
+	* @param array ar_quality
+	* @param object self
+	* @return HTMLElement file_info_node
+	*/
+	conform_headers(quality, self) {
+
+		// info columns
+		// file_info_node
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
+				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 			})
 
-			// file_info
-				const file_info = custom_files_info.find(el => el.quality===quality)
-				// const file_info = (quality==='original' && self.file_info_normalized_name)
-				// 	? self.file_info_normalized_name
-				// 	: custom_files_info.find(el => el.quality===quality)
+
+		// file_info
+		const file_info = self.files_info_safe.find(el => el.quality===quality)
+
+		if (file_info && quality!=='original' && file_info.file_exist===true) {
+
+			const button_build_version = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button repair',
+				parent			: file_info_node
+			})
+			button_build_version.addEventListener('click', async function(){
+				self.node.classList.add('loading')
+				// exec conform_headers
+				const result = await self.conform_headers(quality)
+				if (result===true) {
+					self.main_element_quality = quality
+					self.refresh()
+				}
+				self.node.classList.remove('loading')
+			})
+		}
+
+
+		return file_info_node
+	},//end conform_headers
+
+
+
+	/**
+	* ROTATE
+	* 	Specific component_image feature
+	* @param array ar_quality
+	* @param object self
+	* @return HTMLElement file_info_node
+	*/
+	rotate(quality, self) {
+	
+		// info columns
+				const file_info_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+				})
+
+				// file_info
+				const file_info = self.files_info_safe.find(el => el.quality===quality)
 
 				if (file_info && file_info.file_exist===true) {
 
-					const button_file_download = ui.create_dom_element({
+					// left rotate
+					const button_rotate_left = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'button delete',
+						class_name		: 'button rotate',
 						parent			: file_info_node
 					})
-					button_file_download.addEventListener('click', async function(){
+					button_rotate_left.addEventListener('click', async function(){
 						self.node.classList.add('loading')
-						// exec delete_file
-						const response = await self.delete_file(quality)
-						if (response===true) {
-							// self.main_element_quality = quality
-							self.refresh()
+						// exec rotate
+						const result = await self.rotate(quality, -90)
+						if (result===true) {
+							self.main_element.quality = quality
+							self.main_element.refresh()
+						}
+						self.node.classList.remove('loading')
+					})
+
+					// right rotate
+					const button_rotate_right = ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button rotate right',
+						parent			: file_info_node
+					})
+					button_rotate_right.addEventListener('click', async function(){
+						self.node.classList.add('loading')
+						// exec rotate
+						const result = await self.rotate(quality, 90)
+						if (result===true) {
+							self.main_element.quality = quality
+							self.main_element.refresh()
 						}
 						self.node.classList.remove('loading')
 					})
 				}
-		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
-	return fragment
-}//end get_line_file_delete
+		return file_info_node
+	}//end rotate
 
-
-
-/**
-* GET_LINE_BUILD_VERSION
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_build_version = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: (get_label.build || 'Build') + ' ' + (get_label.version || 'version'),
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			// file_info
-				const file_info_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-					parent			: fragment
-				})
-
-			// exclude original quality button from list
-				if (quality==='original') {
-					continue;
-				}
-
-			// button_build_version
-				const button_build_version = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button gear',
-					parent			: file_info_node
-				})
-				const fn_click = async function (e) {
-					e.stopPropagation()
-
-					self.node.classList.add('loading')
-
-					// exec build_version
-					const result = await self.build_version(quality)
-					if (result===true) {
-
-						// building
-						button_build_version.remove()
-
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'blink',
-							inner_html		: get_label.processing || 'Processing',
-							parent			: file_info_node
-						})
-
-						switch (self.main_element.model) {
-
-							case 'component_av': {
-								const check_file = async function() {
-
-									if (self.timer) {
-										clearTimeout(self.timer);
-									}
-
-									const files_info	= await self.get_files_info()
-									const found			= files_info.find(el => el.quality===quality)
-									if (found && found.file_exist===true) {
-										// processing_label.remove()
-										// button_build_version.classList.remove('hide')
-										self.main_element_quality = quality
-
-										// force save component to update dato files_info
-										// Note that action 'force_save' do not save data really and do not need more
-										// properties, is only to allow API exec component save transparently
-											await self.main_element.save([{
-												action : 'force_save'
-											}])
-
-										self.refresh({
-											build_autoload : false
-										})
-									}else{
-										// check again after 5 sec
-										self.timer = setTimeout(async function(){
-											check_file()
-										}, 2000)
-									}
-								}
-								check_file()
-								break;
-							}
-							default:
-								setTimeout(async function(){
-									self.refresh({
-										build_autoload : false
-									})
-								}, 1)
-								break;
-						}
-					}
-					self.node.classList.remove('loading')
-				}
-				button_build_version.addEventListener('click', fn_click)
-		}//end for (let i = 0; i < ar_quality_length; i++)
-
-
-	return fragment
-}//end get_line_build_version
-
-
-
-/**
-* GET_LINE_CONFORM_HEADERS
-* 	Specific component_av feature
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_conform_headers = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: (get_label.conform_headers || 'Conform headers'),
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			// file_info_node
-				const file_info_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-					parent			: fragment
-				})
-
-
-			// file_info
-			const file_info = self.files_info_safe.find(el => el.quality===quality)
-
-			if (file_info && quality!=='original' && file_info.file_exist===true) {
-
-				const button_build_version = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button repair',
-					parent			: file_info_node
-				})
-				button_build_version.addEventListener('click', async function(){
-					self.node.classList.add('loading')
-					// exec conform_headers
-					const result = await self.conform_headers(quality)
-					if (result===true) {
-						self.main_element_quality = quality
-						self.refresh()
-					}
-					self.node.classList.remove('loading')
-				})
-			}
-		}//end for (let i = 0; i < ar_quality_length; i++)
-
-
-	return fragment
-}//end get_line_conform_headers
-
-
-
-/**
-* GET_LINE_ROTATE
-* 	Specific component_image feature
-* @param array ar_quality
-* @param object self
-* @return HTMLElement fragment
-*/
-const get_line_rotate = function(ar_quality, self) {
-
-	// DocumentFragment
- 		const fragment = new DocumentFragment()
-
- 	// main label
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: (get_label.rotate || 'Rotate'),
-			parent			: fragment
-		})
-
-	// info columns
-		const ar_quality_length = ar_quality.length
-		for (let i = 0; i < ar_quality_length; i++) {
-
-			const quality = ar_quality[i]
-
-			const file_info_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: fragment
-			})
-
-			// file_info
-			const file_info = self.files_info_safe.find(el => el.quality===quality)
-
-			if (file_info && file_info.file_exist===true) {
-
-				// left rotate
-				const button_rotate_left = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button rotate',
-					parent			: file_info_node
-				})
-				button_rotate_left.addEventListener('click', async function(){
-					self.node.classList.add('loading')
-					// exec rotate
-					const result = await self.rotate(quality, -90)
-					if (result===true) {
-						self.main_element.quality = quality
-						self.main_element.refresh()
-					}
-					self.node.classList.remove('loading')
-				})
-
-				// right rotate
-				const button_rotate_right = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button rotate right',
-					parent			: file_info_node
-				})
-				button_rotate_right.addEventListener('click', async function(){
-					self.node.classList.add('loading')
-					// exec rotate
-					const result = await self.rotate(quality, 90)
-					if (result===true) {
-						self.main_element.quality = quality
-						self.main_element.refresh()
-					}
-					self.node.classList.remove('loading')
-				})
-			}
-		}//end for (let i = 0; i < ar_quality_length; i++)
-
-
-	return fragment
-}//end get_line_rotate
-
-
+}
 
 // @license-end

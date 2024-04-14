@@ -81,57 +81,69 @@
 				width: 100%;
 				max-width: 1600px;
 				overflow: auto;
+				min-height: 25rem;
 
 				// @media screen and (max-width: @width_break_point_1) {
 				// 	grid-template-columns: auto !important;
 				// }
 
-				>.label, >.file_info {
-					border-bottom: 1px solid #eeeeee;
-					padding: 0.60rem;
-				}
+				>.column {
+					// border-bottom: 1px solid #eeeeee;
+					// padding: 0.60rem;
+					display: contents;
 
-				>.label {
-					text-transform: capitalize;
-				}
 
-				.file_info {
-					text-align: center;
-					display: flex;
-					flex-wrap: wrap;
-					justify-content: center;
-					align-content: flex-start;
+					>.label {
+						text-transform: capitalize;
+						text-align: right;
+						padding-right: 1rem;
+						display: flex;
+						justify-content: flex-end;
+						align-items: center;
+						background-color: white;
+						border-right: 1px #ececec solid;
+					}
 
-					span {
-						color: #525252;
-						font-size: 0.9rem;
+					.file_info {
+						text-align: center;
+						display: flex;
+						flex-wrap: wrap;
+						justify-content: center;
+						align-content: center;
+						border-bottom: #ececec 1px solid;
 
-						&.button {
-							font-size: 1.1rem;
-							background-color: #767676;
+						span {
+							color: #525252;
+							font-size: 0.9rem;
+
+							&.button {
+								font-size: 1.1rem;
+								background-color: #767676;
+							}
 						}
-					}
 
-					.button {
-						&:active {
-							opacity: 0.5;
+						.button {
+							   background-color: #767676;
+							&:active {
+								opacity: 0.5;
+							}
 						}
-					}
 
-					&.default {
-						background-color: #f2f2f2;
-					}
+						&.default {
+							background-color: #f2f2f2;
+						}
 
-					.cell_node {
-						// margin-bottom: 0.33rem;
-						line-height: 1.5rem;
-						width: 100%;
+						.cell_node {
+							// margin-bottom: 0.33rem;
+							line-height: 1.5rem;
+							width: 100%;
 
-						.file_info_extension {
-							padding-left: 0.33rem;
-							min-width: 2rem;
-							display: inline-block;
-							text-align: left;
+							.file_info_extension {
+								padding-left: 0.33rem;
+								min-width: 2rem;
+								display: inline-block;
+								text-align: left;
+							}
 						}
 					}
 				}
