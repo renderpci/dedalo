@@ -233,21 +233,21 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_POSTERFRAME_PATH
+	* GET_POSTERFRAME_FILEPATH
 	* Get full file path
-	* @return string $posterframe_path
+	* @return string $posterframe_filepath
 	*/
-	public function get_posterframe_path() : string {
+	public function get_posterframe_filepath() : string {
 
 		$file_name			= $this->get_posterframe_file_name();
 		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
 		$additional_path	= $this->additional_path;
 
-		$posterframe_path	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
+		$posterframe_filepath	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
 
-		return $posterframe_path;
-	}//end get_posterframe_path
+		return $posterframe_filepath;
+	}//end get_posterframe_filepath
 
 
 
@@ -334,9 +334,9 @@ class component_av extends component_media_common {
 	public function create_posterframe(string|float $current_time, string $target_quality=null) : bool {
 
 		// short vars
-			$quality			= $target_quality ?? $this->get_original_quality();
-			$src_file			= $this->get_media_filepath($quality);
-			$posterframe_path	= $this->get_posterframe_path();
+			$quality				= $target_quality ?? $this->get_original_quality();
+			$src_file				= $this->get_media_filepath($quality);
+			$posterframe_filepath	= $this->get_posterframe_filepath();
 
 		// check source file
 			if (!file_exists($src_file)) {
@@ -373,7 +373,7 @@ class component_av extends component_media_common {
 			'timecode'			=> $current_time, // like '00:00:10',
 			'src_file'			=> $src_file,
 			'quality'			=> $quality,
-			'posterframe_path'	=> $posterframe_path
+			'posterframe_filepath'	=> $posterframe_filepath
 		]);
 
 
@@ -713,7 +713,7 @@ class component_av extends component_media_common {
 		// posterframe remove (default is true)
 			if ($remove_posterframe===true) {
 
-				$media_path = $this->get_posterframe_path();
+				$media_path = $this->get_posterframe_filepath();
 				if (file_exists($media_path)) {
 
 					$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
@@ -774,8 +774,8 @@ class component_av extends component_media_common {
 			parent::restore_component_media_files();
 
 		// posterframe restore
-			$posterframe_path	= $this->get_posterframe_path();
-			$media_path			= pathinfo($posterframe_path, PATHINFO_DIRNAME).'/deleted';
+			$posterframe_filepath	= $this->get_posterframe_filepath();
+			$media_path			= pathinfo($posterframe_filepath, PATHINFO_DIRNAME).'/deleted';
 			$id					= $this->get_id();
 			$file_pattern		= $media_path.'/'.$id.'_*.'.DEDALO_AV_POSTERFRAME_EXTENSION;
 			$ar_files			= glob($file_pattern);
@@ -790,7 +790,7 @@ class component_av extends component_media_common {
 
 				natsort($ar_files);	// sort the files from newest to oldest
 				$last_file_path	= end($ar_files);
-				$new_file_path	= $this->get_posterframe_path();
+				$new_file_path	= $this->get_posterframe_filepath();
 				if( !rename($last_file_path, $new_file_path) ) {
 					// throw new Exception(" Error on move files to restore folder. Permission denied to restore posterframe. Nothing was restored (4)");
 					debug_log(__METHOD__
