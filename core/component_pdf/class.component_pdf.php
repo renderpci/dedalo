@@ -104,54 +104,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_URL
-	* Get PDF url for current quality
-	*
-	* @param string|bool $quality = null
-	* @param bool $test_file = true
-	*	Check if file exists. If not use 0.jpg as output
-	* @param bool $absolute = false
-	* @param bool $default_add = true
-	*
-	* @return string|null $url
-	*	Return relative o absolute url
-	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
-
-		// quality fallback to default
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
-
-		// pdf id
-			$id = $this->get_id();
-
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
-
-		// File exists test : If not, show '0' dedalo image logo
-			if($test_file===true) {
-				$file = $this->get_media_filepath($quality);
-				if(!file_exists($file)) {
-					if ($default_add===false) {
-						return null;
-					}
-					$url = DEDALO_CORE_URL . '/themes/default/0.pdf';
-				}
-			}
-
-		// Absolute (Default false)
-			if ($absolute===true) {
-				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-			}
-
-
-		return $url;
-	}//end get_url
-
-
-
-	/**
 	* GET_GRID_VALUE (USE MEDIA_COMMON->get_grid_value INSTEAD !)
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
