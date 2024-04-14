@@ -581,14 +581,14 @@ final class component_image_test extends TestCase {
 
 
 	/**
-	* TEST_generate_thumb
+	* TEST_create_thumb
 	* @return void
 	*/
-	public function test_generate_thumb() {
+	public function test_create_thumb() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->generate_thumb();
+		$result = $component->create_thumb();
 
 		if (!is_null($result)) {
 
@@ -610,7 +610,7 @@ final class component_image_test extends TestCase {
 					. empty($result)
 			);
 		}
-	}//end test_generate_thumb
+	}//end test_create_thumb
 
 
 
