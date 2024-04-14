@@ -218,9 +218,9 @@ class component_3d extends component_media_common {
 	* @param bool $test_file = true
 	* @param bool $absolute = false
 	* @param bool $avoid_cache = false
-	* @return string $posterframe_url
+	* @return string|null $posterframe_url
 	*/
-	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : string {
+	public function get_posterframe_url(bool $test_file=false, bool $absolute=false, bool $avoid_cache=false) : ?string {
 
 		$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
 		$file_name			= $this->get_posterframe_file_name();
@@ -232,7 +232,7 @@ class component_3d extends component_media_common {
 		if ($test_file===true) {
 			$file = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 			if(!file_exists($file)) {
-				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
+				return null;
 			}
 		}
 
