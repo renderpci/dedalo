@@ -1048,6 +1048,17 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_THUMB_EXTENSION
+	* @return string $thumb_extension
+	*/
+	public function get_thumb_extension() : string {
+
+		$thumb_extension = defined('DEDALO_THUMB_EXTENSION') ? DEDALO_THUMB_EXTENSION : 'jpg';
+
+		return $thumb_extension;
+	}//end get_thumb_extension
+
+	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files
