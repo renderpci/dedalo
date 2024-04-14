@@ -111,6 +111,9 @@ abstract class common {
 		// API autocomplete search. bool
 		public $autocomplete;
 
+		// tools. Array of element tools. If defined, they will not be recalculated
+		public $tools;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
@@ -1815,6 +1818,10 @@ abstract class common {
 	*/
 	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
 
+		// tools. Force set $this->tools to prevent calculate tools in simple mode
+		$this->tools = [];
+
+		// call general method
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
 		// dd_object
@@ -1828,7 +1835,6 @@ abstract class common {
 			// 	'mode'			=> $full_ddo->mode,
 			// 	'translatable'	=> $full_ddo->translatable,
 			// 	'permissions'	=> $full_ddo->permissions,
-
 			// ]);
 
 
@@ -4355,11 +4361,28 @@ abstract class common {
 	*/
 	public function get_tools() : array {
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=start_time();
+
+				// metrics
+				metrics::$get_tools_total_calls++;
+			}
+
+		// already set
+			if (isset($this->tools)) {
+				return $this->tools;
+			}
+
 		// cache
-			$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
-			static $cache_get_tools;
-			if (isset($cache_get_tools[$cache_key])) {
-				return $cache_get_tools[$cache_key];
+			$use_cache = true;
+			if ($use_cache===true) {
+				// static $cache_get_tools;
+				static $cache_get_tools;
+				$cache_key = $this->tipo.'_'.($this->get_section_tipo() ?? '');
+				if (isset($cache_get_tools[$cache_key])) {
+					return $cache_get_tools[$cache_key];
+				}
 			}
 
 		$tools = [];
@@ -4370,7 +4393,7 @@ abstract class common {
 				return $tools;
 			}
 
-		// user_tools
+		// user_tools (cached on file cache_user_tools.json)
 			$user_tools	= tool_common::get_user_tools($user_id);
 
 		// short vars
@@ -4428,7 +4451,17 @@ abstract class common {
 			}//end foreach ($registered_tools as $tool)
 
 		// cache
-			$cache_get_tools[$cache_key] = $tools;
+			if ($use_cache===true) {
+				// static
+				$cache_get_tools[$cache_key] = $tools;
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				// metrics
+				$total_time_ms = exec_time_unit($start_time, 'ms');
+				metrics::$get_tools_total_time += $total_time_ms;
+			}
 
 
 		return $tools;
@@ -4492,7 +4525,7 @@ abstract class common {
 					if($model==='button_import' || $model==='button_trigger'){
 
 						// tools_list
-						$tools_list	= tool_common::get_client_registered_tools();
+						$tools_list	= tool_common::get_user_tools( logged_user_id() );
 
 						$tools = [];
 						foreach ($tools_list as $tool_object) {

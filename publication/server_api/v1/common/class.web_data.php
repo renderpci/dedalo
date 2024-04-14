@@ -1529,6 +1529,18 @@ class web_data {
 			$current_ar_value = !empty($rows[$current_field_ar_id])
 				? json_decode($rows[$current_field_ar_id])
 				: null;
+
+			// link case {"link","auto"}
+				if ($current_field==='link' && $resolve_portals_custom->{$current_field}==='auto') {
+					if (!empty($rows[$current_field_ar_id])) {
+						$parsed_value = json_decode($rows[$current_field_ar_id]);
+						if (isset($parsed_value->section_id)) {
+							$table				= $parsed_value->table;
+							$current_ar_value	= [$parsed_value->section_id];
+						}
+					}
+				}
+
 			if(is_array($current_ar_value)) foreach ($current_ar_value as $p_value) {
 
 				// dd_relations case
@@ -4744,6 +4756,60 @@ class web_data {
 					$ar_filter[] = 'gender = '. (int)$json_data->filters->gender;
 				}
 
+				# stolpersteine . like ["1","2"] - operator: AND
+				// if (!empty($json_data->filters->stolpersteine)) {
+				// 	$ar_filter[] = 'stolpersteine = '. $json_data->filters->stolpersteine;
+				// }
+				if (!empty($json_data->filters->stolpersteine)) {
+					$ar_stolpersteine = $json_data->filters->stolpersteine;
+					$ar_term = [];
+					foreach ((array)$ar_stolpersteine as $key => $value) {
+						if ($value==='*') {
+							$ar_filter[] = '(`stolpersteine` IS NOT NULL AND `stolpersteine`!=\'\')';
+							break;
+						}
+						$ar_term[] = "`stolpersteine` LIKE '%\"".escape_string($value)."\"%'";
+						// $ar_term[] = "`stolpersteine` = '[\"".escape_string($value)."\"]'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_stolpersteine = '('.implode(' OR ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_stolpersteine;
+					}
+				}
+
+				# stolpersteine_date . like 376790400 OR [376790400,396790400]
+				if (!empty($json_data->filters->stolpersteine_date)) {
+					#$ar_filter[] = "stolpersteine_date = ".$json_data->filters->stolpersteine_date;
+					#$ar_filter[] = "stolpersteine_date = '".$json_data->filters->stolpersteine_date."'";
+					if (is_array($json_data->filters->stolpersteine_date)) {
+						$in  = isset($json_data->filters->stolpersteine_date[0]) ? (int)$json_data->filters->stolpersteine_date[0] : false;
+						$out = isset($json_data->filters->stolpersteine_date[1]) ? (int)$json_data->filters->stolpersteine_date[1] : false;
+						if ($in!==false && $out!==false) {
+							$stolpersteine_date_filter = '(stolpersteine_date >= '.$in.' AND stolpersteine_date <= '.$out.')';
+						}elseif ($in!==false) {
+							$stolpersteine_date_filter = 'stolpersteine_date = '.$in;
+						}
+					}else{
+						$stolpersteine_date_filter = 'stolpersteine_date = '.(int)$json_data->filters->stolpersteine_date;
+					}
+					if (!empty($stolpersteine_date_filter)) {
+						$ar_filter[] = $stolpersteine_date_filter;
+					}
+				}
+
+				# stolpersteine_place . like ["es1_2352","es1_2359"] - operator: AND
+				if (!empty($json_data->filters->stolpersteine_place)) {
+					$ar_stolpersteine_place = $json_data->filters->stolpersteine_place;
+					$ar_term = [];
+					foreach ((array)$ar_stolpersteine_place as $key => $value) {
+						$ar_term[] = "`stolpersteine_place` LIKE '%\"".escape_string($value)."\"%'";
+					}
+					if (!empty($ar_term)) {
+						$current_filter_stolpersteine_place = '('.implode(' AND ', $ar_term).')';
+						$ar_filter[] 	= $current_filter_stolpersteine_place;
+					}
+				}
+
 				// (!) Remember to add filters too in diffusion_mysql::save_global_search_data
 
 				// Added 09-12-2021. Is the same as above but in bulk mode
@@ -4835,7 +4901,11 @@ class web_data {
 					// added 03-02-2021
 					'gender',
 					// added 10-02-2022
-					'death_context'
+					'death_context',
+					// added 12-05-2023
+					'stolpersteine',
+					'stolpersteine_date',
+					'stolpersteine_place'
 				];
 
 			#

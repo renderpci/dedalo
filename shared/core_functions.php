@@ -111,6 +111,11 @@ function print_cli(object $process_info) : void {
 
 	if ( running_in_cli()===true ) {
 
+		// prevent to print messages in test unit environment
+		if (defined('IS_UNIT_TEST') && IS_UNIT_TEST===true) {
+			return;
+		}
+
 		echo json_handler::encode($process_info, JSON_UNESCAPED_UNICODE) . PHP_EOL;
 
 		// flush the output buffer and send echoed messages to the console
@@ -2158,7 +2163,7 @@ function get_legacy_constant_value(string $constant_name) {
 				debug_log(__METHOD__
 					." Current constant is serialized ! Please edit your Dédalo config file and set without legacy serialization to best performance." .PHP_EOL
 					." NAME: ". $constant_name
-					, logger::WARNING
+					, logger::ERROR
 				);
 			}
 			return $value;

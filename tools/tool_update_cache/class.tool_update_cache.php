@@ -8,7 +8,7 @@ class tool_update_cache extends tool_common {
 
 
 	static $n_records = 0;
-
+	static $total; // count records search
 
 
 	/**
@@ -60,6 +60,11 @@ class tool_update_cache extends tool_common {
 			$sqo->limit		= 1000;
 			$sqo->offset	= 0;
 
+		// count records
+			$search			= search::get_instance($sqo);
+			$rows_data		= $search->count();
+			self::$total	= $rows_data->total;
+
 		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
 			tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
 
@@ -67,10 +72,13 @@ class tool_update_cache extends tool_common {
 			logger_backend_activity::$enable_log				= true;
 			RecordObj_time_machine::$save_time_machine_version	= true;
 
+		$section_label = RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+
 		// response
 			$response->result		= true;
-			$response->msg			= "Updated cache of section '$section_tipo' successfully.";
-			$response->n_records	= self::$n_records;
+			$response->msg			= "Updated cache of section $section_label ($section_tipo) successfully";
+			$response->counter		= self::$n_records;
+			$response->total		= self::$total;
 			$response->n_components	= count($ar_component_tipo);
 
 
@@ -95,10 +103,33 @@ class tool_update_cache extends tool_common {
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 
+		// CLI process data
+		if ( running_in_cli()===true ) {
+			$pdata = new stdClass();
+				$pdata->msg		= (label::get_label('processing') ?? 'Processing');
+				$pdata->counter	= self::$n_records;
+				$pdata->total	= self::$total;
+			// send to output
+			print_cli($pdata);
+		}
+
 		// result records iterate
 			foreach ($rows_data->ar_records as $row) {
 
 				$section_id = $row->section_id;
+
+				// print CLI. Echo the text msg as line and flush object buffers
+				// only if current environment is CLI
+				if ( running_in_cli()===true ) {
+					$pdata->counter	= self::$n_records;
+					$pdata->current	= (object)[
+						'section_tipo'	=> $row->section_tipo,
+						'section_id'	=> $section_id
+					];
+					$pdata->memory = dd_memory_usage();
+					// send to output
+					print_cli($pdata);
+				}
 
 				foreach ($ar_component_tipo as $current_component_tipo) {
 

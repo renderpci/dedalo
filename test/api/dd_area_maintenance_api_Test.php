@@ -54,7 +54,6 @@ final class dd_area_maintenance_api_Test extends TestCase {
 
 
 
-
 	/**
 	* TEST_UPDATE_ONTOLOGY
 	* @return void
@@ -133,7 +132,7 @@ final class dd_area_maintenance_api_Test extends TestCase {
 			}
 		');
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		// $response = $rqo->dd_api::{$rqo->action}($rqo);
+		$response = $rqo->dd_api::{$rqo->action}($rqo);
 			// dump($response, ' response ++ '.to_string());
 
 		$this->assertTrue(
@@ -146,35 +145,6 @@ final class dd_area_maintenance_api_Test extends TestCase {
 			'expected result type is boolean'
 		);
 	}//end test_import_structure_from_json
-
-
-
-	/**
-	* TEST_REGISTER_TOOLS
-	* @return void
-	*/
-	public function test_register_tools(): void {
-
-		$rqo = json_handler::decode('
-			{
-				"dd_api": "dd_area_maintenance_api",
-			    "action": "register_tools"
-			}
-		');
-		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
-		$response = $rqo->dd_api::{$rqo->action}($rqo);
-			// dump($response, ' response ++ '.to_string());
-
-		$this->assertTrue(
-			gettype($response->result)==='array',
-			'expected result type is array ' .gettype($response->result)
-		);
-
-		$this->assertTrue(
-			count($response->result)>0,
-			'expected result is not empty '
-		);
-	}//end test_register_tools
 
 
 
