@@ -703,12 +703,12 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GENERATE_THUMB
+	* CREATE_THUMB
 	* Called on save
 	* @return object|null $result
 	* 	URL	path of thumb file path OR null if default quality file does not exists
 	*/
-	public function generate_thumb() : ?object {
+	public function create_thumb() : ?object {
 		$start_time = start_time();
 
 		// common data
@@ -732,7 +732,9 @@ class component_image extends component_media_common {
 
 		// old thumb rename
 			$thumb_quality		= $this->get_thumb_quality();
-			$image_thumb_path	= $this->get_media_filepath($thumb_quality);
+			$thumb_extension	= $this->get_thumb_extension();
+
+			$image_thumb_path	= $this->get_media_filepath($thumb_quality, $thumb_extension);
 			$image_thumb_url	= $this->get_url(
 				$thumb_quality,
 				false,  // bool test_file
@@ -747,11 +749,8 @@ class component_image extends component_media_common {
 
 		// thumb generate
 			ImageMagick::dd_thumb(
-				'list',
 				$default_image_path,
 				$image_thumb_path,
-				false, // bool dimensions
-				$initial_media_path ?? ''
 			);
 
 		// debug
@@ -769,9 +768,7 @@ class component_image extends component_media_common {
 
 
 		return $result;
-	}//end generate_thumb
-
-
+	}//end create_thumb
 
 
 
@@ -1222,11 +1219,11 @@ class component_image extends component_media_common {
 
 
 					// Generate thumb image quality from default always (if default exits)
-						$thumb = $this->generate_thumb();
+						$thumb = $this->create_thumb();
 
 					// debug
 						debug_log(__METHOD__
-							." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb)
+							." SAVING COMPONENT IMAGE: create_thumb response: ".to_string($thumb)
 							, logger::DEBUG
 						);
 				}
@@ -2105,7 +2102,7 @@ class component_image extends component_media_common {
 				}
 
 			// re-create thumb always
-				$this->generate_thumb();
+				$this->create_thumb();
 
 			// svg file. Create file if not exists
 				$svg_file_path = $this->get_svg_file_path();
