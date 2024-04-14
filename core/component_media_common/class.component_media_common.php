@@ -999,22 +999,13 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_QUALITY
-	* Method used only to capture non defined cases. Define in every media component
-	* Called from get_grid_value method in non edit mode
-	* @return string $fake_quality
+	* @return string $thumb_quality
 	*/
 	public function get_thumb_quality() : string {
 
-		debug_log(__METHOD__
-			. " Calling unimplemented method get_thumb_quality catch by component_media_common " . PHP_EOL
-			. ' Define a real get_thumb_quality method ASAP' . PHP_EOL
-			.' called class: ' . get_called_class()
-			, logger::DEBUG
-		);
+		$thumb_quality = defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
 
-		$fake_quality = $this->get_default_quality();
-
-		return $fake_quality;
+		return $thumb_quality;
 	}//end get_thumb_quality
 
 

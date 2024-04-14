@@ -56,18 +56,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
-	* Defined in config file
-	*/
-	public function get_thumb_quality() : string {
-
-		return DEDALO_PDF_THUMB_DEFAULT;
-	}//end get_thumb_quality
-
-
-
-	/**
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
