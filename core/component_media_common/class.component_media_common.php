@@ -2042,28 +2042,37 @@ class component_media_common extends component_common {
 				}
 			}
 
-		// copy file from source quality to target quality
-			$copy_result = copy(
-				$original_file_path, // from original quality directory
-				$target_quality_path // to default quality directory
-			);
-			if ($copy_result===false) {
+			if($quality==='thumb'){
+				// thumb quality
+				$result = $this->create_thumb();
+
+			}else{
+				// copy file from source quality to target quality
+				$result = copy(
+					$original_file_path, // from original quality directory
+					$target_quality_path // to default quality directory
+				);
+			}
+
+
+			if ($result===false) {
 				debug_log(__METHOD__ . PHP_EOL
-					. " Error: Unable copy file : " . PHP_EOL
+					. " Error: Unable to build version file : " . PHP_EOL
 					. ' original_file_path: ' . $original_file_path . PHP_EOL
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::ERROR
 				);
 			}else{
 				debug_log(__METHOD__ . PHP_EOL
-					. " Copied file : " . PHP_EOL
+					. " Built file : " . PHP_EOL
 					. ' original_file_path: ' . $original_file_path . PHP_EOL
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::DEBUG
 				);
 			}
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+
+		// logger activity : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
 				logger::INFO,
