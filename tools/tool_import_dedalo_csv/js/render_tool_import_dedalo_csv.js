@@ -985,6 +985,48 @@ const render_final_report = function(options){
 							inner_html		: self.get_tool_label('failed') || 'Failed' + ':',
 							parent			: header
 						})
+
+						// copy_to_find_button
+							const copy_to_find_button = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'warning copy_button copy',
+								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
+								parent			: header
+							})
+							copy_to_find_button.addEventListener( 'click', (e) => {
+								e.stopPropagation()
+
+								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
+
+								navigator.clipboard.writeText(failed_section_id.join(','))
+								.then(() => {
+									alert('Text copied to clipboard');
+								})
+								.catch(err => {
+									alert('Error in copying text: ', err);
+								});
+							})
+
+						// copy_as_column_button
+							const copy_as_column_button = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'warning copy_button copy',
+								inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
+								parent			: header
+							})
+							copy_as_column_button.addEventListener( 'click', (e) => {
+								e.stopPropagation()
+
+								const failed_section_id = current_rensponse.failed_rows.map(el => el.section_id)
+								navigator.clipboard.writeText(failed_section_id.join('\n'))
+								.then(() => {
+									alert('Text copied to clipboard');
+								})
+								.catch(err => {
+									alert('Error in copying text: ', err);
+								});
+							})
+
 						const failed_rows_len = failed_rows.length
 						for (let i = 0; i < failed_rows_len; i++) {
 							const failed = failed_rows[i]
