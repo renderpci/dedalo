@@ -36,6 +36,15 @@ view_text_list_3d.render = async function(self, options) {
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 
+	// thumb, if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+
+	// URL
+	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const url = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: posterframe_url
+
 	// wrapper
 		const wrapper = document.createElement('span')
 
@@ -47,7 +56,7 @@ view_text_list_3d.render = async function(self, options) {
 				image.src = page_globals.fallback_image
 			}
 		})
-		image.src = posterframe_url
+		image.src = thumb
 		wrapper.appendChild(image)
 
 
