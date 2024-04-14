@@ -1377,6 +1377,24 @@ class component_av extends component_media_common {
 				return $response;
 			}
 
+		// thumb case
+			if($quality===$this->get_thumb_quality()){
+
+				$return = $this->create_thumb();
+
+				if($return===false){
+					$response->msg .= ' Is not possible create thumb';
+					return $response;
+				}
+
+				// update component dato files info and save
+					$this->Save();
+
+				$response->result	= true;
+				$response->msg		= 'Thumb file built';
+				return $response;
+			}
+
 		// build_av_alternate_command. Creates the command and the sh file to run
 			$source_file_path		= $this->get_original_file_path($source_quality);
 			if (!file_exists($source_file_path)) {
