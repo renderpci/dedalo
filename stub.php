@@ -37,6 +37,7 @@ define('DEDALO_PUBLICATION_CLEAN_URL', '');
 define('DEDALO_DATA_LANG_SYNC', '');
 define('DEDALO_NOTIFICATION', []);
 define('EXPORT_HIERARCHY_PATH','');
+define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', '');
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};
