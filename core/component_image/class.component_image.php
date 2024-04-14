@@ -773,24 +773,6 @@ class component_image extends component_media_common {
 
 
 
-	/**
-	* GET_THUMB_URL
-	* @return string|null $image_thumb_url
-	*/
-	public function get_thumb_url() : ?string {
-
-		$thumb_quality = $this->get_thumb_quality();
-
-		# target data (target quality is thumb)
-		$image_thumb_url = $this->get_url(
-			$thumb_quality,
-			false,  // bool test_file
-			false,  // bool absolute
-			false // bool default_add
-		);
-
-		return $image_thumb_url;
-	}//end get_thumb_url
 
 
 

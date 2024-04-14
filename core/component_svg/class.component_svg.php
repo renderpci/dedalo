@@ -141,17 +141,6 @@ class component_svg extends component_media_common {
 
 
 
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_url();
-	}//end get_thumb_url
-
-
 
 	/**
 	* GET_FILE_CONTENT
