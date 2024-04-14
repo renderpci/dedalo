@@ -4,124 +4,12 @@
 * Manages image files process with ImageMagick lib
 * https://imagemagick.org
 */
-require_once(dirname(dirname(dirname(__FILE__))).'/config/config.php');
-require_once( DEDALO_CORE_PATH . '/common/class.exec_.php');
 
 final class ImageMagick {
 
 
 
 	/**
-	* TEST_IMAGE_MAGICK
-	* @param bool $info = false
-	* @return true (or info about) / throw error
-	*/
-	public static function test_image_magick( bool $info=false ) {
-		return true;
-
-		# Print the return code: 0 if OK, nonzero if error.
-		exec(MAGICK_PATH. "convert -version", $out, $rcode); //Try to get ImageMagick "convert" program version number.
-
-		if ($rcode!==0) {
-			if(SHOW_DEBUG) {
-				#dump($rcode,'$rcode');
-				#dump($out,'$out');
-			}
-			throw new Exception("Error Processing Request. ImageMagick lib not found", 1);
-		}else{
-			if($info===true) {
-
-				$html = '';
-				$html .= '<ul>';
-				for ($i = 0; $i < sizeof($array); $i++) {
-					$html .= '<li>'.$array[$i].'</li>';
-				}
-				$html .= '</ul>';
-
-				return $html;
-			}else{
-				return true;
-			}
-		}
-	}//end test_image_magick
-
-
-
-	/**
-	* GET_THUMB
-	* @param string $mode
-	* 	'edit, list, ..'
-	* @param string $f
-	* 	filename
-	* @param bool $verify
-	* @param string $initial_media_path = ''
-	*
-	* @return string $thumb_file_url
-	*/
-	public static function get_thumb( string $mode, string $f, bool $verify=true, string $initial_media_path='' ) : string {
-
-		if(empty($f)) {
-			throw new Exception("Error Processing Request. Few arguments", 1);
-		}
-
-		#if(file_exists(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f)) unlink(DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.'/DEDALO_IMAGE_THUMB_DEFAULT/'.$f);
-
-		$thumb_file_path	= DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-		$thumb_file_url		= DEDALO_MEDIA_URL.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$f;
-
-		# FAST METHOD (NOT verify)
-			if($verify===false) {
-				return $thumb_file_url;
-			}
-
-		# THUMB FILE EXISTS TEST : Redirect to real existing image thumb
-		if (!file_exists( $thumb_file_path )) {
-
-			# SOURCE FILE
-				$source_base = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_QUALITY_DEFAULT.'/';
-				if (strpos($f, $source_base)!==false) {
-					$source = $f;
-				}else{
-					$source = $source_base . $f;
-				}
-
-			if (file_exists( $source )) {
-
-				# Target folder exists test
-				$additional_path = substr($f, 0, strrpos($f,'/'));
-				$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/'.DEDALO_IMAGE_THUMB_DEFAULT.'/'.$additional_path;	#dump( $target_folder_path, $f  );return null;
-				if( !is_dir($target_folder_path) ) {
-					if(!mkdir($target_folder_path, 0777,true)) {
-						throw new Exception(" Error on read or create directory. Permission denied $target_folder_path");
-					}
-				}
-
-				# TARGET FILE
-				$target = $thumb_file_path;
-				debug_log(__METHOD__." Creating thumb with target: $thumb_file_path ".to_string(), logger::DEBUG);
-
-				# CONVERT
-				ImageMagick::dd_thumb($mode, $source, $target, false, $initial_media_path);
-
-			}else{
-				#throw new Exception("Error Processing Request. Sorry, source file from default quality (".DEDALO_IMAGE_QUALITY_DEFAULT.") not found", 1);
-				# URL THUMB FILE
-				$thumb_file_url = DEDALO_CORE_URL.'/themes/default/0-thumb.jpg';
-
-				# SOURCE FILE
-				#$source = DEDALO_CORE_PATH.'/themes/default/0.jpg';
-				# TARGET FILE
-				#$target = $thumb_file_path;
-				# CONVERT
-				#ImageMagick::dd_thumb($mode, $source, $target);
-			}
-		}
-		#dump($thumb_file_url,'thumb_file_url');
-		#error_log($thumb_file_url);
-
-		return $thumb_file_url;
-	}//end get_thumb
-
 
 
 	/**
