@@ -961,7 +961,8 @@ class component_media_common extends component_common {
 		}
 
 		// extension
-			$extension = $this->get_extension();
+			$extension			= $this->get_extension();
+			$thumb_extension	= $this->get_thumb_extension();
 		// ar_quality_to_include
 			$ar_quality_to_include = [
 				$this->get_default_quality(),
@@ -989,7 +990,11 @@ class component_media_common extends component_common {
 							);
 						}
 
-					if (	(isset($file_info->extension) && $file_info->extension===$extension)
+					$current_extension = $file_info->quality==='thumb'
+						? $thumb_extension
+						: $extension;
+
+					if ( (isset($file_info->extension) && $file_info->extension===$current_extension)
 						&&  in_array($file_info->quality, $ar_quality_to_include)
 						) {
 
