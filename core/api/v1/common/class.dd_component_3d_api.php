@@ -83,12 +83,12 @@ final class dd_component_3d_api {
 				);
 
 			// target directory check
-				$target_dir = dirname($target_file_path);
-				if (!is_dir($target_dir)) {
-					if(!mkdir($target_dir, 0750, true)) {
+				$full_target_dir = dirname($target_file_path);
+				if (!is_dir($full_target_dir)) {
+					if(!mkdir($full_target_dir, 0750, true)) {
 						debug_log(__METHOD__
 							.' Error creating directory: ' . PHP_EOL
-							.' target_dir: ' . $target_dir
+							.' target_dir: ' . $full_target_dir
 							, logger::ERROR
 						);
 						$response->msg .= ' Error creating directory';
@@ -119,6 +119,11 @@ final class dd_component_3d_api {
 				return $response;
 			}
 
+		// thumb. Create thumb from posterframe
+			if ($target_dir==='posterframe') {
+				$component->create_thumb();
+				$component->Save();
+			}
 
 		// response
 			$response->result	= $result;

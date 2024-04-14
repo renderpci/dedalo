@@ -388,6 +388,9 @@ class component_svg extends component_media_common {
 					$this->set_dato($dato);
 				}
 
+			// thumb. Create thumb from PDF file
+				$this->create_thumb();
+
 			// save component dato
 				// Note that save action don't change upload info properties,
 				// but force updates every quality file info in property 'files_info

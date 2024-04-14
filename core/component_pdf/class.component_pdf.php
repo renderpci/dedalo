@@ -374,6 +374,7 @@ class component_pdf extends component_media_common {
 		// options
 			$page		= $options->page ?? 0;
 			$quality	= $options->quality ?? $this->get_original_quality();
+			$overwrite	= $options->overwirite ?? true;
 
 		// source file
 			$source_file = $this->get_media_filepath($quality);
@@ -393,7 +394,16 @@ class component_pdf extends component_media_common {
 			$alternative_extensions	= $this->get_alternative_extensions() ?? [DEDALO_IMAGE_EXTENSION];
 
 			foreach ($alternative_extensions as $current_extension) {
+
 				$target_file =  $target_path . '/' . $file_name . '.' . $current_extension;
+
+				// no overwrite case
+					if ($overwrite===false) {
+						// check if file already exists
+						if (file_exists($target_file)) {
+							continue;
+						}
+					}
 
 				// generate from PDF
 				$image_pdf_options = new stdClass();
