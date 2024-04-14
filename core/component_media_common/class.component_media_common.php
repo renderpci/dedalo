@@ -1731,6 +1731,33 @@ class component_media_common extends component_common {
 
 		return $url;
 	}//end get_url
+
+
+
+	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		$thumb_quality = $this->get_thumb_quality();
+
+		# target data (target quality is thumb)
+		$image_thumb_url = $this->get_url(
+			$thumb_quality,
+			false,  // bool test_file
+			false,  // bool absolute
+			false // bool default_add
+		);
+
+		return $image_thumb_url;
+	}//end get_thumb_url
+
+
+
+
+	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
