@@ -10,20 +10,14 @@ final class ImageMagick {
 
 
 	/**
-
-
-	/**
 	* DD_THUMB
 	* Creates the thumb version file using the ImageMagick command line
-	* @param string $mode ('edit,list,..')
 	* @param string $source_file (full source file path)
 	* @param string $target_file (full target thumb file path)
-	* @param mixed $dimensions = false
-	* @param string $initial_media_path = ''
 	*
-	* @return string|null $result
+	* @return string|bool $result
 	*/
-	public static function dd_thumb( string $mode, string $source_file, string $target_file, $dimensions=false, string $initial_media_path='' ) : ?string {
+	public static function dd_thumb(string $source_file, string $target_file, $dimensions=false) : string|bool {
 
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -33,81 +27,32 @@ final class ImageMagick {
 			}
 		}
 
-		# Dimensions (original 102x57)
-		#$dimensions = (string)"102x90";
-		# Nota: para ejecutar un crop, definir como {$dimensions}^ .Desactivado el crop por interferir demasiado con las fotos verticales
-		#if (!$dimensions) {
+		$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
+		$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
 
-			$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
-			$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
+		# Like "102x57"
+		$dimensions = $width.'x'.$height.'>';
 
-			# Like "102x57"
-			$dimensions = $width.'x'.$height.'>';
-			#$dimensions = "200x200>";
-		#}
-
-		switch ($mode) {
-			case 'list':
-				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
-				break;
-			case 'edit':
-				#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 jpg -quality 72 \"$target_file\" ";
-				$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail x404 -unsharp 0x.5 -auto-orient -quality 72 \"$target_file\" ";
-				break;
-			default:
-				throw new Exception("Error Processing file. Thumb mode is not valid", 1);
-				break;
-		}
-		#$command = 'nice -n 19 '.$command;
+		#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
+		$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
+		$command = 'nice -n 19 '.$command;
 
 
 		# RUN COMMAND
-		#$result = shell_exec($command);
-		#return exec_::exec_command($command);
 		$result = exec($command.' 2>&1', $output, $worked_result);
-		if(SHOW_DEBUG) {
-			if ($worked_result!=0) {
-				dump($worked_result, ' worked_result. output: '.to_string($output));
-			}
-			if (!empty($result)) {
-				debug_log(__METHOD__." WARNING expected result empty but received result: ".to_string($result), logger::WARNING);
-			}
+
+		if ($worked_result!=0) {
+			debug_log(__METHOD__
+				."  worked_result : output: ".to_string($output)." - worked_result:"
+				.to_string($worked_result)
+				, logger::DEBUG
+			);
+			return false;
 		}
 
 		return $result;
-
-		/*
-		$prgfile = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp/dd_thumb_'.$mode.'_'.str_replace('/', '_', substr($target_file, strpos($target_file, 'thumbs/')+7) ).'.sh';
-			#dump($prgfile,'$prgfile');
-			#if(file_exists($prgfile)) unlink($prgfile);
-
-		# BUILD SH FILE WITH BACKUP COMMAND IF NOT EXISTS
-		if(!file_exists($prgfile)) {
-
-			# Target folder exists test
-			$target_folder_path = DEDALO_MEDIA_PATH.DEDALO_IMAGE_FOLDER.$initial_media_path.'/temp';
-			if( !is_dir($target_folder_path) ) {
-				if(!mkdir($target_folder_path, 0777,true)) {
-					throw new Exception(" Error on read or create directory. Permission denied $target_folder_path");
-				}
-			}
-
-			# Temp sh file
-			$fp = fopen($prgfile, "w");
-			fwrite($fp, "#!/bin/bash\n");
-			fwrite($fp, "$command\n");
-			fclose($fp);
-			if(!file_exists($prgfile)) {
-				throw new Exception("Error Processing file. Thumb script file not exists or is not accessible", 1);
-			}
-			#error_log("Created thumb for $source_file - dimensions:$dimensions");
-		}
-
-		# RUN COMMAND
-		return exec_::exec_sh_file($prgfile);
-		*/
 	}//end dd_thumb
+
 
 
 	/**
