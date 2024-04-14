@@ -341,21 +341,21 @@ final class component_av_test extends TestCase {
 
 
 	/**
-	* TEST_get_posterframe_path
+	* TEST_get_posterframe_filepath
 	* @return void
 	*/
-	public function test_get_posterframe_path() {
+	public function test_get_posterframe_filepath() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_posterframe_path();
+		$result = $component->get_posterframe_filepath();
 
 		$this->assertTrue(
 			gettype($result)==='string',
 			'expected type string : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_posterframe_path
+	}//end test_get_posterframe_filepath
 
 
 

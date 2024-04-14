@@ -775,7 +775,7 @@ final class Ffmpeg {
 	* 	timecode : float|string like 102.369217 or 10:00:00,
 	* 	src_file : string full path to source av file,
 	* 	quality : string current quality used like 'original'
-	* 	posterframe_path : string full path to target image file
+	* 	posterframe_filepath : string full path to target image file
 	* }
 	*
 	* @return bool
@@ -787,7 +787,7 @@ final class Ffmpeg {
 			$timecode			= $options->timecode;
 			$src_file			= $options->src_file;
 			$quality			= $options->quality;
-			$posterframe_path	= $options->posterframe_path;
+			$posterframe_filepath	= $options->posterframe_filepath;
 
 		// aspect_ratio_cmd
 			$raw_aspect_ratio	= Ffmpeg::get_aspect_ratio($src_file, $quality);
@@ -809,7 +809,7 @@ final class Ffmpeg {
 			$timecode = number_format((float)$timecode, 3, '.', '');
 
 		// posterframe directory exists check
-			$target_dir = dirname($posterframe_path);
+			$target_dir = dirname($posterframe_filepath);
 			if( !is_dir($target_dir) ) {
 				$create_dir = mkdir($target_dir, 0775, true);
 				if(!$create_dir) {
@@ -824,7 +824,7 @@ final class Ffmpeg {
 
 		// commands shell
 			// command (use video track only)
-			$command = DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_path";
+			$command = DEDALO_AV_FFMPEG_PATH . " -ss $timecode -i $src_file -y -vframes 1 -f rawvideo -an -vcodec mjpeg $aspect_ratio_cmd $posterframe_filepath";
 			// exec command (return boolean)
 			$posterFrame_command_exc = exec_::exec_command($command);
 			// debug
