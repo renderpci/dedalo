@@ -45,7 +45,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "-1",
+      "section_id": "1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 8,
-              "hour": 17,
-              "time": 65059003898,
+              "day": 14,
+              "hour": 20,
+              "time": 65062212940,
               "year": 2024,
-              "month": 3,
-              "minute": 31,
-              "second": 38
+              "month": 4,
+              "minute": 55,
+              "second": 40
             }
           }
         ]
@@ -90,8 +90,32 @@
     "dd612": {
       "inf": "Descripción [component_text_area]",
       "dato": {
+        "lg-cat": [
+          "<p>Gestiona amb precisió la rotació de la imatge</p>"
+        ],
+        "lg-deu": [
+          "<p>Präzise Verwaltung der Bilddrehung</p>"
+        ],
+        "lg-ell": [
+          "<p>Διαχειρίζεται με ακρίβεια την περιστροφή της εικόνας</p>"
+        ],
         "lg-eng": [
-          "<p>Manage image rotation precisely</p>"
+          "<p>Accurately manages image rotation</p>"
+        ],
+        "lg-eus": [
+          "<p>Irudien biraketa zehaztasunez kudeatzen du</p>"
+        ],
+        "lg-fra": [
+          "<p>Gestion précise de la rotation des images</p>"
+        ],
+        "lg-ita": [
+          "<p>Gestione accurata della rotazione delle immagini</p>"
+        ],
+        "lg-nep": [
+          "<p>सही रूपमा छवि रोटेशन व्यवस्थापन गर्दछ</p>"
+        ],
+        "lg-por": [
+          "<p>Gere com precisão a rotação da imagem</p>"
         ],
         "lg-spa": [
           "<p>Gestiona la rotación de imágenes con precisión</p>"
@@ -102,31 +126,34 @@
       "inf": "Etiqueta [component_input_text]",
       "dato": {
         "lg-cat": [
-          "Eina de rotació d'imatge"
+          "Rotació d'imatge"
         ],
         "lg-deu": [
-          "Bildrotationswerkzeug"
+          "Bilddrehung"
         ],
         "lg-ell": [
-          "Εργαλείο περιστροφής εικόνας"
+          "Περιστροφή εικόνας"
         ],
         "lg-eng": [
-          "Tool image rotation"
+          "Image rotation"
+        ],
+        "lg-eus": [
+          "Irudiaren biraketa"
         ],
         "lg-fra": [
-          "Outil de rotation d'image"
+          "Rotation d'image"
         ],
         "lg-ita": [
-          "Strumento di rotazione delle immagini"
+          "Rotazione delle immagini"
         ],
         "lg-nep": [
-          "छवि घुमाउने उपकरण"
+          "छवि रोटेशन"
         ],
         "lg-por": [
-          "Ferramenta de rotação de imagem"
+          "Rotação de imagem"
         ],
         "lg-spa": [
-          "Herramienta de rotación de imagen"
+          "Rotación de imagen"
         ]
       }
     },
@@ -150,7 +177,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.0"
+          "1.0.1"
         ]
       }
     },
@@ -167,141 +194,6 @@
       "dato": {
         "lg-nolan": [
           [
-            {
-              "lang": "lg-eng",
-              "name": "rotation",
-              "value": "Rotation"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "rotation",
-              "value": "Rotación"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "rotation",
-              "value": "Rotació"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "rotation",
-              "value": "Rotació"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "rotation",
-              "value": "Rotation"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "rotation",
-              "value": "Rotazione"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "rotation",
-              "value": "Drehung"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "rotation",
-              "value": "Περιστροφή"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "rotation",
-              "value": ""
-            },
-            {
-              "lang": "lg-eng",
-              "name": "degrees",
-              "value": "Degrees"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "degrees",
-              "value": "Grados"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "degrees",
-              "value": "Graus"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "degrees",
-              "value": "Graus"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "degrees",
-              "value": "Degrés"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "degrees",
-              "value": "Gradi"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "degrees",
-              "value": "Πτυχία"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "degrees",
-              "value": "Grades"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "degrees",
-              "value": ""
-            },
-            {
-              "lang": "lg-eng",
-              "name": "transparent",
-              "value": "Transparent"
-            },
-            {
-              "lang": "lg-spa",
-              "name": "transparent",
-              "value": "Transparente"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "transparent",
-              "value": "Transparent"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "transparent",
-              "value": "Transparent"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "transparent",
-              "value": "Transparent"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "transparent",
-              "value": "Trasparente"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "transparent",
-              "value": "Διαφανές"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "transparent",
-              "value": "Transparent"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "transparent",
-              "value": ""
-            },
             {
               "lang": "lg-eng",
               "name": "bk_colour",
@@ -323,24 +215,144 @@
               "value": "Color de fons"
             },
             {
-              "lang": "lg-fra",
-              "name": "bk_colour",
-              "value": "Couleur de fond"
-            },
-            {
               "lang": "lg-ita",
               "name": "bk_colour",
               "value": "Colore di sfondo"
             },
             {
-              "lang": "lg-ell",
+              "lang": "lg-fra",
               "name": "bk_colour",
-              "value": "Χρώμα φόντου"
+              "value": "Couleur de fond"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "degrees",
+              "value": "Degrees"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "degrees",
+              "value": "Degrés"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "rotation",
+              "value": "Drehung"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "degrees",
+              "value": "Grades"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "degrees",
+              "value": "Gradi"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "degrees",
+              "value": "Grados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "degrees",
+              "value": "Graus"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "degrees",
+              "value": "Graus"
             },
             {
               "lang": "lg-deu",
               "name": "bk_colour",
               "value": "Hintergrundfarbe"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "rotation",
+              "value": "Rotació"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "rotation",
+              "value": "Rotació"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "rotation",
+              "value": "Rotación"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "rotation",
+              "value": "Rotation"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "rotation",
+              "value": "Rotation"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "rotation",
+              "value": "Rotazione"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "transparent",
+              "value": "Transparent"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "transparent",
+              "value": "Transparente"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "transparent",
+              "value": "Trasparente"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "transparent",
+              "value": "Διαφανές"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "rotation",
+              "value": "Περιστροφή"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "degrees",
+              "value": "Πτυχία"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "bk_colour",
+              "value": "Χρώμα φόντου"
             }
           ]
         ]
@@ -358,9 +370,9 @@
   "section_id": 29,
   "created_date": "2024-03-07 17:20:47",
   "section_tipo": "dd1340",
-  "modified_date": "2024-03-08 17:31:38",
+  "modified_date": "2024-04-14 20:55:40",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": -1
+  "modified_by_userID": 1
 }
