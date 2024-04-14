@@ -544,8 +544,7 @@ class component_pdf extends component_media_common {
 						$this->create_image();
 
 					// thumb : Create pdf_thumb image
-						$thumb_url = $this->get_pdf_thumb(
-							true // bool force_create
+						$this->create_thumb();
 
 					// transcription to text automatic
 						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
