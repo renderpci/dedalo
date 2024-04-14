@@ -741,11 +741,6 @@ class component_image extends component_media_common {
 				false,  // bool absolute
 				false // bool default_add
 			);
-			if(file_exists($image_thumb_path)) {
-				// unlink($image_thumb_path);
-				$image_thumb_path_des = $image_thumb_path.'_DES';
-				shell_exec("mv $image_thumb_path $image_thumb_path_des");
-			}
 
 		// thumb generate
 			ImageMagick::dd_thumb(
