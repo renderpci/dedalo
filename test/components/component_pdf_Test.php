@@ -359,21 +359,21 @@ final class component_pdf_test extends TestCase {
 
 
 	/**
-	* TEST_get_pdf_thumb
+	* TEST_create_thumb
 	* @return void
 	*/
-	public function test_get_pdf_thumb() {
+	public function test_create_thumb() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_pdf_thumb();
+		$result = $component->create_thumb();
 
 		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
+			gettype($result)==='boolean',
+			'expected type boolean : ' . PHP_EOL
 				. gettype($result)
 		);
-	}//end test_get_pdf_thumb
+	}//end test_create_thumb
 
 
 
@@ -457,13 +457,13 @@ final class component_pdf_test extends TestCase {
 		$result = $component->get_alternative_extensions();
 
 		$this->assertTrue(
-			gettype($result)==='array',
-			'expected type array : ' . PHP_EOL
+			gettype($result)==='array' || gettype($result)==='NULL',
+			'expected type array|null : ' . PHP_EOL
 				. gettype($result)
 		);
 		$this->assertTrue(
-			$result === DEDALO_PDF_EXTENSIONS_SUPPORTED,
-			'expected DEDALO_PDF_EXTENSIONS_SUPPORTED : ' . PHP_EOL
+			$result === DEDALO_PDF_ALTERNATIVE_EXTENSIONS,
+			'expected DEDALO_PDF_ALTERNATIVE_EXTENSIONS : ' . PHP_EOL
 				. gettype($result)
 		);
 	}//end test_get_alternative_extensions
