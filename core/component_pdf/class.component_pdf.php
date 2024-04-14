@@ -374,7 +374,7 @@ class component_pdf extends component_media_common {
 		// options
 			$page		= $options->page ?? 0;
 			$quality	= $options->quality ?? $this->get_original_quality();
-			$overwrite	= $options->overwirite ?? true;
+			$overwrite	= $options->overwrite ?? true;
 
 		// source file
 			$source_file = $this->get_media_filepath($quality);
@@ -1059,6 +1059,33 @@ class component_pdf extends component_media_common {
 
 		return $response;
 	}//end update_dato_version
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-build and save its data
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// quality
+			$ar_quality = $this->get_ar_quality();
+			foreach ($ar_quality as $quality) {
+				// create_image. Creates alternative images if they do not exists
+				$this->create_image((object)[
+					'overwrite'	=> false,
+					'quality'	=> $quality
+				]);
+			}
+
+		// common regenerate_component exec after specific actions (this action saves at the end)
+			$result = parent::regenerate_component();
+
+
+		return $result;
+	}//end regenerate_component
 
 
 
