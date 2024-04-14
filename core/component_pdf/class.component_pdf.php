@@ -304,7 +304,7 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_PDF_THUMB
+	* CREATE_THUMB
 	*
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
@@ -312,12 +312,9 @@ class component_pdf extends component_media_common {
 	* command="&quot;gs&quot;
 	* with
 	* command="&quot;/usr/local/bin/gs&quot;
-	* Once the full path is specified, the command is working as desired.
-	* @param bool $force_create = false
-	* @param bool $absolute = false
-	* @return string|false $url
+	* @return bool
 	*/
-	public function get_pdf_thumb(bool $force_create=false, bool $absolute=false) : ?string {
+	public function create_thumb() : bool {
 
 		// check config constant definition
 			if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
@@ -325,92 +322,52 @@ class component_pdf extends component_media_common {
 				debug_log(__METHOD__." Undefined config 'DEDALO_PDF_THUMB_DEFAULT'. Using fallback 'thumb' value".to_string(), logger::WARNING);
 			}
 
-		// url default
-			$url = null;
-
 		// thumb_path
-			$file_name	= $this->get_id();
-			$folder		= $this->get_folder();
+			$file_name			= $this->get_id();
+			// $target_path		= $this->get_media_path_dir('thumb');
 
-			$target_file = DEDALO_MEDIA_PATH . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
-		// thumb already exists case
-			if (!$force_create && file_exists($target_file)) {
-				$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-				# ABSOLUTE (Default false)
-				if ($absolute) {
-					$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-				}
-				return $url;
-			}
+			// $target_file		= $target_path . '/' . $file_name . '.'. $thumb_extension;
 
 		// thumb not exists case: generate from PDF
 			$quality		= $this->get_default_quality();
 			$source_file	= $this->get_media_filepath($quality);
-			if (file_exists($source_file)) {
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					." default quality file doesn't exists, is not possible to create a thumb"
+					, logger::WARNING
+				);
 
-				// dimensions . Like "102x57"
-					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
-					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
-					$dimensions	= $width.'x'.$height;
-
-					$thumb_pdf_options = new stdClass();
-						$thumb_pdf_options->source_file = $source_file;
-						$thumb_pdf_options->ar_layers 	= [0];
-						$thumb_pdf_options->target_file = $target_file;
-						$thumb_pdf_options->density		= 150;
-						$thumb_pdf_options->antialias	= true;
-						$thumb_pdf_options->quality		= 75;
-						$thumb_pdf_options->resize		= $dimensions;
-
-					$result = ImageMagick::convert($thumb_pdf_options);
-
-				// command
-					// $flags 		= '-debug all';
-					// $flags 		= " -scale 200x200 -background white -flatten ";
-					// $command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $target_file";
-
-				// exec command
-					// exec($command.' 2>&1', $output, $result_code);
-					if ($result!==false) {
-
-						// url. All is OK
-						$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-
-						// absolute (Default false). Prepend protocol and host
-						if ($absolute===true) {
-							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-						}
-					}
+				return false;
 			}
 
-		return $url;
-	}//end get_pdf_thumb
+		// dimensions . Like "102x57"
+			$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+			$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
+			$dimensions	= $width.'x'.$height;
 
+			$thumb_pdf_options = new stdClass();
+				$thumb_pdf_options->source_file = $source_file;
+				$thumb_pdf_options->ar_layers 	= [0];
+				$thumb_pdf_options->target_file = $target_file;
+				$thumb_pdf_options->density		= 150;
+				$thumb_pdf_options->antialias	= true;
+				$thumb_pdf_options->quality		= 75;
+				$thumb_pdf_options->resize		= $dimensions;
 
+			$result = ImageMagick::convert($thumb_pdf_options);
 
-	/**
-	* GET_PREVIEW_URL
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
+		// exec command
+			// exec($command.' 2>&1', $output, $result_code);
+			if ($result===false) {
+				return false;
+			}
 
-		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_pdf_thumb(false, false);
-	}//end get_thumb_url
+		return true;
+	}//end create_thumb
 
 
 
