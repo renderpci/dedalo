@@ -172,7 +172,6 @@ class component_svg extends component_media_common {
 
 
 
-
 	/**
 	* CREATE_THUMB
 	*
@@ -238,7 +237,6 @@ class component_svg extends component_media_common {
 
 		return true;
 	}//end create_thumb
-
 
 
 
