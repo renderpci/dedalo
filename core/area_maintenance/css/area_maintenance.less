@@ -165,8 +165,8 @@
 				}
 
 				.body_info {
-					padding-top: 0.5em;
-					padding-bottom: 0.5em;
+					// padding-top: 0.5em;
+					// padding-bottom: 0.5em;
 					font-size: 0.9em;
 					color: #676464;
 
@@ -463,7 +463,7 @@
 
 				.tool_item {
 					display: grid;
-					grid-template-columns: 1.2fr 1fr 3rem 4rem 1.5fr;
+					grid-template-columns: 1.2fr 1.1fr 3rem 4rem 1.5fr;
 					gap: 0.5rem;
 					line-height: 1.1rem;
 					border-bottom: 1px solid @color_grey_dark;
@@ -732,10 +732,6 @@
 
 			&#check_config {
 
-				.missing_total {
-					padding-top: 0.5rem;
-					padding-bottom: 0.5rem;
-				}
 
 				.errors_container {
 					display: block;
@@ -775,11 +771,73 @@
 
 				}
 
+				// .missing_total {
+				// 	padding-top: 0.5rem;
+				// 	padding-bottom: 0.5rem;
+				// }
+
+				.tables {
+					width: 100%;
+					display: grid;
+					grid-template-columns: 1fr 1fr;
+					// grid-gap: 0.75rem;
+				}
+
+				.missing_container, .obsolete_container {
+					display: grid;
+    				grid-auto-rows: auto 1fr minmax(1ch,10ch) minmax(1ch,10ch);
+
+    				>.label {
+    					font-weight: 600;
+    					font-size: 1.1rem;
+    					padding: 0px;
+    					padding-left: 0.5rem;
+    					padding-bottom: 0.75rem;
+    					text-transform: uppercase;
+    				}
+
+					>.file_container {
+
+						>.label {
+							// background-color: #f1a558;
+							// color: white;
+							padding: 0.5rem;
+							border-bottom: 1px solid #c2c2c2;
+						}
+
+						>.data {
+							// background-color: #ffffff;
+							padding: 0.5rem;
+							line-height: 1.2rem;
+							color: @color_green_success;
+
+							&.missing {
+								color: @color_danger;
+								font-weight: 600;
+							}
+
+							&.obsolete {
+								color: @color_orange_dedalo;
+								font-weight: 400;
+							}
+						}
+					}
+
+				}
+
+
 				.datalist_container {
-					margin-top: 1rem;
+					margin-bottom: 0.5rem;
 
 					&.show_list {
 						cursor: pointer;
+						user-select: none;
+						vertical-align: bottom;
+						width: 100%;
+
+						>.icon {
+							vertical-align: bottom;
+						}
 					}
 
 					.datalist_item_container {
