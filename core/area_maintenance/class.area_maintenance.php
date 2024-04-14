@@ -712,6 +712,34 @@ class area_maintenance extends area_common {
 
 
 	/**
+	* GET_FILE_CONSTANTS
+	* Get all config file constants using a regex
+	* @param string $file
+	* 	full file path like DEDALO_CONFIG_PATH . '/sample.config.php'
+	* @return array $constants_list
+	*/
+	public static function get_file_constants($file) : array {
+
+		if (!file_exists($file)) {
+			return [];
+		}
+
+		$input_lines = file_get_contents($file);
+		if(empty($input_lines)) {
+			return [];
+		}
+
+		// regex search
+		preg_match_all('/[^\/\/ #]define\(\'(\S*)\',.*/', $input_lines, $output_array);
+		$constants_list = $output_array[1] ?? [];
+
+
+		return $constants_list;
+	}//end get_file_constants
+
+
+
+	/**
 	* CHECK_CONFIG
 	* @return object $response
 	*/
@@ -721,87 +749,60 @@ class area_maintenance extends area_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
 
-		// sample config file
-			$input_lines = '';
-			$file = DEDALO_CONFIG_PATH . '/sample.config.php';
-			if (!file_exists($file)) {
-				$response->msg .= 'sample config file do not exists';
-			}else{
-				$input_lines = file_get_contents($file);
-				if(empty($input_lines)) {
-					$response->msg .= 'Invalid sample config file';
-				}
-			}
+		// result
+			$result = [];
 
-			// regex search
-			preg_match_all('/[^\/\/ #]define\(\'(\S*)\',.*/', $input_lines, $output_array);
+		// ar_files_name iterate
+			$ar_files_name = [
+				'config',
+				'config_db',
+				'config_core'
+			];
+			foreach ($ar_files_name as $file_name) {
 
-			// check every constant from config
-				$constants_list	= $output_array[1] ?? [];
-				$ar_missing		= [];
-				foreach ($constants_list as $const_name) {
-					if (!defined($const_name)) {
-						$ar_missing[] = $const_name;
+				$item = new stdClass();
+					$item->file_name		= $file_name;
+					$item->config_vs_sample	= [];
+					$item->sample_vs_config	= [];
+
+				// sample_config_constants_list
+					$sample_config_constants_list = area_maintenance::get_file_constants(
+						DEDALO_CONFIG_PATH . '/sample.'.$file_name.'.php'
+					);
+					$item->sample_config_constants_list	= $sample_config_constants_list;
+
+				// config_constants_list
+					$config_constants_list = area_maintenance::get_file_constants(
+						DEDALO_CONFIG_PATH . '/'.$file_name.'.php'
+					);
+					$item->config_constants_list = $config_constants_list;
+
+				// config_vs_sample. Compares defined config constants vs sample config
+					foreach ($config_constants_list as $const_name) {
+						if (!in_array($const_name, $sample_config_constants_list)) {
+							$item->config_vs_sample[] = $const_name;
+						}
 					}
-				}
 
-		// sample config db
-			$input_lines = '';
-			$file = DEDALO_CONFIG_PATH . '/sample.config_db.php';
-			if (!file_exists($file)) {
-				$response->msg .= 'sample config_db file do not exists';
-			}else{
-				$input_lines = file_get_contents($file );
-				if(empty($input_lines)) {
-					$response->msg .= 'Invalid sample config_db file';
-				}
-			}
-
-			// regex search
-			preg_match_all("/[^\/\/ ]define\(\'(\S*)\',.*'.*/", $input_lines, $db_output_array);
-
-			// check every constant from config
-				$db_constants_list	= $db_output_array[1] ?? [];
-				$db_ar_missing		= [];
-				foreach ($db_constants_list as $const_name) {
-					if (!defined($const_name)) {
-						$db_ar_missing[] = $const_name;
+				// sample_vs_config. Compares defined sample constants vs config
+					foreach ($sample_config_constants_list as $const_name) {
+						// if (!in_array($const_name, $config_constants_list)) {
+						// 	$item->sample_vs_config[] = $const_name;
+						// }
+						if (!defined($const_name)) {
+							$item->sample_vs_config[] = $const_name;
+						}
 					}
-				}
 
-		// sample config core
-			$input_lines = '';
-			$file = DEDALO_CONFIG_PATH . '/sample.config_core.php';
-			if (!file_exists($file)) {
-				$response->msg .= 'sample config_core file do not exists';
-			}else{
-				$input_lines = file_get_contents($file);
-				if(empty($input_lines)) {
-					$response->msg .= 'Invalid sample config_core file';
-				}
-			}
+				// add
+					$result[] = $item;
+			}//end foreach
 
-			// regex search
-			preg_match_all("/[^\/\/ ]define\(\'(\S*)\',.*/", $input_lines, $core_output_array);
-
-			// check every constant from config
-				$core_constants_list	= $core_output_array[1] ?? [];
-				$core_ar_missing		= [];
-				foreach ($core_constants_list as $const_name) {
-					if (!defined($const_name)) {
-						$core_ar_missing[] = $const_name;
-					}
-				}
-
-		// merge config and config_db vars
-			array_push($constants_list, ...$db_constants_list, ...$core_constants_list);
-			array_push($ar_missing, ...$db_ar_missing, ...$core_ar_missing);
 
 		// response
-			$response->result			= true;
-			$response->msg				= 'OK. Request done successfully ';
-			$response->constants_list	= $constants_list;
-			$response->ar_missing		= $ar_missing;
+			$response->result						= $result;
+			$response->sample_config_constants_list	= $sample_config_constants_list;
+			$response->msg							= 'OK. Request done successfully';
 
 
 		return $response;
