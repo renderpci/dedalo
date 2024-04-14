@@ -416,8 +416,10 @@ const render_file = function(quality, self) {
 		})
 
 		// file_info
-		const file_info = self.files_info_safe.find(el => el.quality===quality)
-
+		const files_info = (quality==='thumb')
+			? self.files_info_disk // thumb is not in files_info_safe (different extension case)
+			: self.files_info_safe
+		const file_info = files_info.find(el => el.quality===quality)
 		if (file_info && file_info.file_exist===true) {
 			if (file_info.file_path) {
 				const button_file_av = ui.create_dom_element({
@@ -427,6 +429,15 @@ const render_file = function(quality, self) {
 				})
 				button_file_av.addEventListener('click', async function(e) {
 					e.stopPropagation()
+
+					// thumb open a new window always (is not compatible with all media components view)
+					if (quality==='thumb') {
+						const file_url = DEDALO_MEDIA_URL + file_info.file_path
+						open_window({
+							url : file_url
+						})
+						return
+					}
 
 					self.node.classList.add('loading')
 					// change component av quality and refresh
@@ -497,7 +508,6 @@ const render_file_extension = function(quality, self) {
 * @return HTMLElement file_info_node
 */
 const render_file_size = function(quality, self) {
-
 
 	const custom_files_info	= self.files_info_safe.concat(self.files_info_alternative)
 
@@ -959,7 +969,7 @@ const render_specific_actions = {
 	* @return HTMLElement file_info_node
 	*/
 	rotate(quality, self) {
-	
+
 		// info columns
 				const file_info_node = ui.create_dom_element({
 					element_type	: 'div',
