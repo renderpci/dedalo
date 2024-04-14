@@ -1587,7 +1587,7 @@ class component_media_common extends component_common {
 
 					$ext				= pathinfo($file, PATHINFO_EXTENSION);
 					$default_extension	= $this->get_extension();
-					if(strtolower($ext)!==strtolower($default_extension)) {
+					if(strtolower($ext)===strtolower($default_extension)) {
 						// overwrite ar_originals with only one value
 						$ar_originals = [$file];
 						break;
