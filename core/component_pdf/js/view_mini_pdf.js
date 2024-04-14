@@ -28,11 +28,31 @@ export const view_mini_pdf = function() {
 */
 view_mini_pdf.render = async function(self, options) {
 
+		const data				= self.data || {}
+		const files_info		= data.value || []
+		const extension			= self.context.features.extension
+		const quality			= self.context.features.quality;
+
+
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
+		// url
+		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension && el.file_exist===true) //
+
+		// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+
+		const thumb_file = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
+
+
+		const url = file_info
+			? thumb_file
+			: page_globals.fallback_image // page_globals.fallback_image
+
 	// image append to wrapper
-		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 		ui.create_dom_element({
 			element_type	: 'img',
 			src				: url,
