@@ -1217,16 +1217,15 @@ class component_image extends component_media_common {
 							, logger::DEBUG
 						);
 
-
-					// Generate thumb image quality from default always (if default exits)
-						$thumb = $this->create_thumb();
-
 					// debug
 						debug_log(__METHOD__
 							." SAVING COMPONENT IMAGE: create_thumb response: ".to_string($thumb)
 							, logger::DEBUG
 						);
 				}
+
+			// Generate thumb image quality from default always (if default exits)
+				$thumb = $this->create_thumb();
 
 			// save component dato
 				// Note that save action don't change upload info properties,
@@ -2100,9 +2099,6 @@ class component_image extends component_media_common {
 					// ]);
 					$this->build_version($default_quality, true, false);
 				}
-
-			// re-create thumb always
-				$this->create_thumb();
 
 			// svg file. Create file if not exists
 				$svg_file_path = $this->get_svg_file_path();

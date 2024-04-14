@@ -1068,6 +1068,10 @@ class component_av extends component_media_common {
 										'00:00:10',
 										$quality_default // 404 normally
 									);
+
+									// thumb. Create thumb from posterframe
+									$this->create_thumb();
+
 								}else{
 									$msg = ' Error Processing Request. build_av_alternate_command fails. ' . to_string($av_alternate_response->msg);
 									debug_log(__METHOD__.$msg, logger::ERROR);
