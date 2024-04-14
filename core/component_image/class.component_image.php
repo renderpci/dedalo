@@ -1286,23 +1286,6 @@ class component_image extends component_media_common {
 
 
 
-	/**
-	* GET_PREVIEW_URL
-	* @return string $preview_url
-	*/
-	public function get_preview_url(string $quality=DEDALO_IMAGE_QUALITY_DEFAULT) : string {
-
-		$preview_url = $this->get_url(
-			$quality,
-			false,  // bool test_file
-			false,  // bool  absolute
-			false // bool default_add
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
 
 	/**
 	* CREATE_DEFAULT_SVG_STRING_NODE

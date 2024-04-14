@@ -87,12 +87,10 @@ class tool_upload extends tool_common {
 
 					// preview url. Usually the thumb image or posterframe
 						$default_quality	= $component->get_default_quality();
-						$preview_url		= $component->get_preview_url($default_quality);
 
 					// response OK
 						$response->result		= true;
 						$response->msg			= 'OK. File processed successfully';
-						$response->preview_url	= $preview_url;
 
 					break;
 

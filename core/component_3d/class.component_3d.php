@@ -250,38 +250,6 @@ class component_3d extends component_media_common {
 	}//end get_posterframe_url
 
 
-
-	/**
-	* GET_PREVIEW_URL
-	* Alias of get_posterframe_url
-	* Return posterframe url
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = $this->get_posterframe_url(
-			false, // bool test_file
-			false, // bool absolute
-			true // bool avoid_cache
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_posterframe_url();
-	}//end get_thumb_url
-
-
-
 	/**
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file

@@ -207,25 +207,6 @@ class component_svg extends component_media_common {
 
 
 	/**
-	* GET_PREVIEW_URL
-	* Alias of get_url
-	* @return string $url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = $this->get_url(
-			null,  // string|null quality
-			false, // bool test_file
-			false, // bool absolute
-			false // bool default_add
-		);
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
 	* PROCESS_UPLOADED_FILE
 	* Note that this is the last method called in a sequence started on upload file.
 	* The sequence order is:
