@@ -165,10 +165,13 @@ class component_pdf extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$force_create	= false;
-		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
-
-		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
+		$thumb_quality	= $this->get_thumb_quality();
+		$valor			= $this->get_url(
+			$thumb_quality,
+			false,
+			true,  // absolute, output absolute path like 'http://myhost/mypath/myimage.jpg';
+			false
+		);	// Note this absolute url is converted to image on export
 
 		return $valor;
 	}//end get_valor_export
