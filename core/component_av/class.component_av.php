@@ -93,19 +93,6 @@ class component_av extends component_media_common {
 
 
 	/**
-	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
-	*/
-	public function get_thumb_quality() : string {
-
-		$thumb_quality = DEDALO_AV_QUALITY_DEFAULT;
-
-		return $thumb_quality;
-	}//end get_thumb_quality
-
-
-
-	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component
