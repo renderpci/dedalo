@@ -173,4 +173,27 @@ final class area_maintenance_test extends TestCase {
 
 
 
+	/**
+	* TEST_REGISTER_TOOLS
+	* @return void
+	*/
+	public function test_register_tools(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+		$response = area_maintenance::register_tools();
+			// dump($response, ' response ++ '.to_string());
+
+		$this->assertTrue(
+			gettype($response->result)==='array',
+			'expected result type is array - gettype: ' .gettype($response->result)
+		);
+
+		$this->assertTrue(
+			count($response->result)>0,
+			'expected result is not empty '
+		);
+	}//end test_register_tools
+
+
+
 }//end class area_maintenance

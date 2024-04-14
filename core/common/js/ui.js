@@ -30,6 +30,12 @@
 export const ui = {
 
 
+	/**
+	* LOCAL VARS
+	*/
+	tooltip : null,
+
+
 
 	/**
 	* SHOW_MESSAGE
@@ -3386,7 +3392,7 @@ export const ui = {
 	* ACTIVATE_TOOLTIPS
 	* Add tooltip to buttons based on title attribute
 	* @param HTMLElement wrapper
-	* 	Element (component, inspector, etc.) wrapper
+	* 	Element (page, section, component, inspector, etc.) wrapper
 	* @return void
 	*/
 	activate_tooltips : function(wrapper) {
@@ -3396,15 +3402,26 @@ export const ui = {
 			return
 		}
 
-		const tooltip = new Tooltip();
+		if (!ui.tooltip) {
+			ui.tooltip = new Tooltip();
+		}
+		const tooltip = ui.tooltip
 
 		const buttons = wrapper.querySelectorAll('.button')
 		const buttons_length = buttons.length
 		for (let i = 0; i < buttons_length; i++) {
+
 			const button = buttons[i]
-			if (!button.title) {
+
+			if (button.active_tooltip) {
+				// console.log(')) activate_tooltips ignored already activated button:', button);
 				continue;
 			}
+
+			if (!button.title || !button.title.length) {
+				continue;
+			}
+
 			tooltip.onHover(button, button.title, {
 				placement: 'top',
 				delay: 150
@@ -3412,8 +3429,11 @@ export const ui = {
 			button.addEventListener('mouseover', function(e) {
 				button.title = ''
 			})
+
+			// set as active to prevent double activation
+			button.active_tooltip = true
 		}
-	}//end activate_tooltips
+	},//end activate_tooltips
 
 
 

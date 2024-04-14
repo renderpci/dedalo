@@ -671,7 +671,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				self.show_interface.button_external		= true
 				self.show_interface.button_tree			= false
 				self.show_interface.button_list			= self.show_interface.button_list ?? true
-				self.show_interface.show_autocomplete	= false
+				self.show_interface.show_autocomplete	= self.show_interface.show_autocomplete ?? false
 				break;
 
 			case (self.caller && self.caller.type==='tool'):

@@ -82,6 +82,8 @@ class security {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
+				// metrics
+				metrics::$security_permissions_total_calls++;
 			}
 
 		// logged root user id
@@ -136,13 +138,11 @@ class security {
 				}
 			}
 
-
 		// debug
 			if(SHOW_DEBUG===true) {
-				// performance metrics
+				// metrics
 				$total_time = exec_time_unit($start_time);
 				metrics::$security_permissions_total_time += $total_time;
-				metrics::$security_permissions_total_calls++;
 			}
 
 
@@ -167,45 +167,32 @@ class security {
 				return security::$permissions_table_cache;
 			}
 
-		// cache cascade (do not use the cache memory here because the gain is not worth it)
-			// $use_cache		= false;
-			// $use_cache_type	= 'session';
+		// cache file (do NOT use the cache file here because the gain is not worth it)
+			// $use_cache = false;
 			// if ($use_cache===true) {
 
 			// 	$cache_file_name = 'cache_permissions_table.json';
 
-			// 	switch ($use_cache_type) {
+			// 	// cache file
+			// 	$cache_data	= dd_cache::cache_from_file((object)[
+			// 		'file_name' => $cache_file_name
+			// 	]);
+			// 	if (!empty($cache_data)) {
 
-			// 		// session cache (hd)
-			// 		case 'session' :
-			// 			if ( isset($_SESSION['dedalo']['auth']['permissions_table']) ) {
-			// 				// debug_log(__METHOD__." Loaded permissions_table session");
-			// 				$permissions_table = $_SESSION['dedalo']['auth']['permissions_table'];
-			// 				return $permissions_table;
-			// 			}
+			// 		$json_data = json_decode($cache_data);
 
-			// 		// cache file
-			// 		default:
+			// 		// cast to associative array (JSON encoded as object)
+			// 		$permissions_table = (array)$json_data;
 
-			// 			// cache file
-			// 			$cache_data	= dd_cache::cache_from_file((object)[
-			// 				'file_name' => $cache_file_name
-			// 			]);
-			// 			if (!empty($cache_data)) {
+			// 		// set static cache
+			// 		security::$permissions_table_cache = $permissions_table;
 
-			// 				$permissions_table = json_decode($cache_data);
+			// 		debug_log(__METHOD__
+			// 			." Returning permissions_table from cache disk file"
+			// 			, logger::DEBUG
+			// 		);
 
-			// 				// set cache
-			// 				// security::$permissions_table_cache = $permissions_table;
-
-			// 				debug_log(__METHOD__
-			// 					." Returning permissions_table from cache disk file"
-			// 					, logger::DEBUG
-			// 				);
-
-			// 				return $permissions_table;
-			// 			}
-			// 			break;
+			// 		return $permissions_table;
 			// 	}
 			// }
 
@@ -229,24 +216,18 @@ class security {
 		// set static cache
 			security::$permissions_table_cache = $permissions_table;
 
-		// session cached table
+		// cache file
 			// if ($use_cache===true) {
-			// 	switch ($use_cache_type) {
-			// 		// session (hd)
-			// 		case 'session':
-			// 			$_SESSION['dedalo']['auth']['permissions_table'] = $permissions_table;
-			// 			break;
-			// 		// cache to file
-			// 		default:
-			// 			dd_cache::cache_to_file((object)[
-			// 				'file_name'	=> $cache_file_name,
-			// 				'data'		=> $permissions_table
-			// 			]);
-			// 	}
+			// 	// cache to file
+			// 	dd_cache::cache_to_file((object)[
+			// 		'file_name'	=> $cache_file_name,
+			// 		'data'		=> $permissions_table // will be convert to JSON object
+			// 	]);
 			// }
 
 		// debug
 			if(SHOW_DEBUG===true) {
+				// metrics
 				metrics::$security_permissions_table_time = exec_time_unit($start_time);
 				metrics::$security_permissions_table_count = count($permissions_table);
 			}
@@ -306,7 +287,8 @@ class security {
 				$profile_id,
 				'list',
 				DEDALO_DATA_NOLAN,
-				DEDALO_SECTION_PROFILES_TIPO
+				DEDALO_SECTION_PROFILES_TIPO,
+				true // bool cache
 			);
 
 

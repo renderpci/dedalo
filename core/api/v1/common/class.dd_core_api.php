@@ -252,8 +252,8 @@ final class dd_core_api {
 									: false;
 								if ($tool_name) {
 
-									$client_registered_tools = tool_common::get_client_registered_tools();
-									$tool_info = array_find($client_registered_tools, function($el) use($tool_name) {
+									$user_tools = tool_common::get_user_tools( logged_user_id() );
+									$tool_info = array_find($user_tools, function($el) use($tool_name) {
 										return $el->name===$tool_name;
 									});
 									if (empty($tool_info)) {
@@ -362,7 +362,7 @@ final class dd_core_api {
 								});
 								if (empty($tool_found)) {
 									debug_log(__METHOD__
-										." Tool $model not found in tool_common::get_client_registered_tools "
+										." Tool $model not found in tool_common::get_user_tools "
 										, logger::ERROR
 									);
 								}else{
@@ -1069,7 +1069,7 @@ final class dd_core_api {
 			$caller_dataframe	= $source->caller_dataframe ?? null;
 
 		// activity section check
-			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
+			if ($section_tipo===DEDALO_ACTIVITY_SECTION_TIPO && strpos($section_id, 'search_')===false) {
 				$response->msg = 'Error. Illegal save to activity';
 				debug_log(__METHOD__
 					. " $response->msg "
@@ -1420,7 +1420,7 @@ final class dd_core_api {
 					// tool section_tipo and section_id can be resolved from model if is necessary
 						// if (empty($section_id) || empty($section_id)) {
 						// 	// resolve
-						// 	$registered_tools = tool_common::get_client_registered_tools();
+						// 	$registered_tools = tool_common::get_all_registered_tools();
 						// 	$tool_found = array_find($registered_tools, function($el) use($model){
 						// 		return $el->name===$model;
 						// 	});
@@ -1428,7 +1428,7 @@ final class dd_core_api {
 						// 		$section_tipo	= $tool_found->section_tipo;
 						// 		$section_id		= $tool_found->section_id;
 						// 	}else{
-						// 		debug_log(__METHOD__." Tool $model not found in tool_common::get_client_registered_tools ".to_string(), logger::ERROR);
+						// 		debug_log(__METHOD__." Tool $model not found in tool_common::get_all_registered_tools ".to_string(), logger::ERROR);
 						// 	}
 						// }
 
@@ -1440,7 +1440,7 @@ final class dd_core_api {
 						});
 						if (empty($tool_found)) {
 							debug_log(__METHOD__
-								." Tool $model not found in tool_common::get_client_registered_tools " .PHP_EOL
+								." Tool $model not found in tool_common::get_user_tools " .PHP_EOL
 								.' rqo: '.to_string($rqo)
 								, logger::ERROR
 							);

@@ -15,7 +15,7 @@
 	$_SERVER = $data['server'];
 
 // user_id
-	$user_id = $data['user_id'];
+	$user_id = (int)$data['user_id'];
 
 // session_id. Is used mainly to verify that user is logged or not.
 	// get current session id and force new session name as equal
@@ -26,7 +26,8 @@
 
 // config. Starts a new session with forced id from command arguments
 	include (dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
-// unlock session. Only for read
+
+// unlock session. Only use for read
 	session_write_close();
 
 // only logged users can access SSE events
@@ -34,18 +35,40 @@
 		die('Authentication error: please login');
 	}
 
+// safe_data. data check
+	$safe_data = [];
+	foreach ($data as $key => $value) {
+		$safe_value = safe_xss($value);
+		if ($safe_value!==$value) {
+			die("Invalid value [$key]: ". to_string($value));
+		}
+		$safe_data[$key] = $safe_value;
+	}
 
 // output manager
 	// class_name
-	$output_class_name		= $data['class_name'];
+	$output_class_name		= $safe_data['class_name'];
 	// method_name
-	$output_method_name		= $data['method_name'];
+	$output_method_name		= $safe_data['method_name'];
 	// params
-	$output_params			= $data['params'] ?? new stdClass();
+	$output_params			= $safe_data['params'] ?? new stdClass();
 
 	// include class file
-	if (isset($data['file'])) {
-		include_once($data['file']);
+	if (isset($safe_data['file'])) {
+		$allow_url_include = ini_get('allow_url_include');
+		if ($allow_url_include==='On' || $allow_url_include==true) {
+			die('Invalid server config. Remote files are not allowed');
+		}
+		// file_exists get false for remote files. It is used here for security reasons too
+		if (!file_exists($safe_data['file'])) {
+			debug_log(__METHOD__
+				. " Request file for include is not valid " . PHP_EOL
+				. ' file: ' . to_string($safe_data['file'])
+				, logger::ERROR
+			);
+			die('Invalid file');
+		}
+		include_once($safe_data['file']);
 	}
 
 	// check callable

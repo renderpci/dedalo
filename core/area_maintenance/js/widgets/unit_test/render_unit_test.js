@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {render_stream} from '../../../../common/js/render_common.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
@@ -122,8 +121,11 @@ const get_content_data_edit = async function(self) {
 			body_response	: body_response,
 			trigger : {
 				dd_api	: 'dd_area_maintenance_api',
-				action	: 'create_test_record',
-				options	: null
+				action	: 'class_request',
+				source	: {
+					action : 'create_test_record'
+				},
+				options	: {}
 			}
 		})
 

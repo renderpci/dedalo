@@ -727,11 +727,12 @@ class diffusion_sql extends diffusion  {
 													: json_encode($current_value);
 											}
 										}
-										$value = implode(' ', $ar_value);
-										if (!empty($value)) {
-											$value = str_replace(['<br>',' | ','  '], ' ', $value);
-											$value = strip_tags($value);
-										}
+										$separator = isset($properties->separator)
+											? $properties->separator
+											: ' ';
+										$value = implode($separator, $ar_value);
+										$value = str_replace(['<br>',' | ','  '], $separator, $value);
+										$value = strip_tags($value);
 
 									    $column = [];
 										$column['field_name']		= RecordObj_dd::get_termino_by_tipo($curent_children_tipo, DEDALO_STRUCTURE_LANG, true, false);
@@ -1921,7 +1922,11 @@ class diffusion_sql extends diffusion  {
 					'ages',
 					// added 10-02-2022
 					'death_context',
-					'buried_type'
+					'buried_type',
+					//added 14-05-2023
+					'stolpersteine',
+					'stolpersteine_date',
+					'stolpersteine_place'
 				];
 
 			$fields_array = [];
@@ -2135,6 +2140,11 @@ class diffusion_sql extends diffusion  {
 														$ar_part = explode('-', $current_field_value);
 														$year 	 = isset($ar_part[0]) ? $ar_part[0] : null;
 														$current_field_value 	= $year;
+														break;
+													case 'stolpersteine_date':
+														$ar_current_field_value = (array)explode(',', $current_field_value);
+														$current_field_value 	= reset($ar_current_field_value);
+														$current_field_value 	= strtotime($current_field_value);
 														break;
 													default:
 														break;
@@ -2435,6 +2445,15 @@ class diffusion_sql extends diffusion  {
 							'field_value'	=> $source_table_name
 						];
 
+					// link
+						$new_items[] = [
+							'field_name'	=> 'link',
+							'field_value'	=> (object)[
+								'table'			=> $source_table_name,
+								'section_id'	=> $section_id
+							]
+						];
+
 					foreach ($columns_map as $column_map_item) {
 
 						$column_values = [];
@@ -2448,7 +2467,12 @@ class diffusion_sql extends diffusion  {
 									return ($element['field_name']===$source_column);
 								});
 								if ($found!==null) {
-									$column_values[] = $found['field_value'];
+									// $column_values[] = $found['field_value'];
+									// trying to decode before assign (do not affects current numisdata use at map_global)
+									$safe_field_value = is_string($found['field_value'])
+										? (json_decode($found['field_value']) ?? $found['field_value'])
+										: $found['field_value'];
+									$column_values[] = $safe_field_value;
 								}
 							}
 
@@ -2522,7 +2546,6 @@ class diffusion_sql extends diffusion  {
 				, logger::DEBUG
 			);
 		}
-
 
 
 		return (object)$save;
@@ -2931,10 +2954,29 @@ class diffusion_sql extends diffusion  {
 		switch ( get_called_class() ) {
 			case 'diffusion_mysql':
 			case 'diffusion_sql': // ??
+
+				// global_search try delete records
+				$global_search_tables = ['global_search'];
+				foreach ($global_search_tables as $global_search_table) {
+					if( diffusion_mysql::table_exits($database_name, $global_search_table) ) {
+						$global_search_section_id = $section_tipo . '_' . $section_id;
+						$response = diffusion_mysql::delete_sql_record($global_search_section_id, $database_name, $global_search_table, $section_tipo); // $section_id, $database_name, $global_search_table, $section_tipo=null, $custom=false
+						if ($response->result===true) {
+							debug_log(__METHOD__
+								." MySQL record '$global_search_section_id' is deleted from global_search table '$global_search_table' (publication=no) $response->msg "
+								, logger::DEBUG
+							);
+						}
+					}
+				}
+
 				if( diffusion_mysql::table_exits($database_name, $table_name) ) {
 					$response = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo); // $section_id, $database_name, $table_name, $section_tipo=null, $custom=false
 					if ($response->result===true) {
-						debug_log(__METHOD__." MySQL record is deleted (publication=no) $response->msg ", logger::DEBUG);
+						debug_log(__METHOD__
+							." MySQL record '$section_tipo - $section_id' is deleted (publication=no) $response->msg "
+							, logger::DEBUG
+						);
 					}
 					return $response->result;
 				}

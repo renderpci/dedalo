@@ -1,4 +1,5 @@
-<?php declare(strict_types=1);
+<?php
+declare(strict_types=1);
 
 // require __DIR__ . '/../src/autoload.php';
 // require __DIR__ . '/autoload.php';
@@ -12,6 +13,9 @@
 	// 	2 // regular user
 	// ]
 	define('TEST_USER_ID', 1); // DEDALO_SUPERUSER
+
+// IS_UNIT_TEST
+	define('IS_UNIT_TEST', true);
 
 // config file
 	require_once dirname(dirname(__FILE__)) . '/config/config.php';

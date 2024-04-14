@@ -239,7 +239,10 @@ const get_content_data = async function(self) {
 				use_worker	: true,
 				body		: {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'make_backup',
+					action	: 'class_request',
+					source	: {
+						action : 'make_backup'
+					},
 					options	: {}
 				}
 			})
@@ -282,18 +285,30 @@ const get_content_data = async function(self) {
 	// form backup MySQL DDBB
 		if (mysql_db && mysql_db[0] && mysql_db[0].db_name) {
 
+			// mysql_body_response
+			const mysql_body_response = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'body_response'
+			})
+
 			// form init
 			self.caller.init_form({
 				submit_label	: 'Backup MySQL DDBB: ' + mysql_db.map(el => el.db_name).join(', '),
 				confirm_text	: get_label.sure || 'Sure?',
 				body_info		: content_data,
-				body_response	: body_response,
-				trigger : {
+				body_response	: mysql_body_response,
+				trigger		: {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'make_mysql_backup',
-					options	: null
+					action	: 'class_request',
+					source	: {
+						action : 'make_mysql_backup'
+					},
+					options	: {}
 				}
 			})
+
+			// add at end body_response
+			content_data.appendChild(mysql_body_response)
 
 			// mysql_backup_files
 			const backup_files_container = render_mysql_backup_files()

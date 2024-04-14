@@ -267,11 +267,20 @@ class search {
 	* }
 	*/
 	public function search() : object {
-		$start_time=start_time();
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=start_time();
+
+				// metrics
+				metrics::$search_total_calls++;
+			}
 
 		// parse SQO. Converts JSON search_query_object to SQL query string
-			$sql_query		= $this->parse_search_query_object( $full_count=false );
-			$parsed_time	= round(start_time()-$start_time,3);
+			$sql_query = $this->parse_search_query_object( $full_count=false );
+			if(SHOW_DEBUG===true) {
+				$parsed_time = round(start_time()-$start_time,3);
+			}
 
 		// search
 			$result	= JSON_RecordObj_matrix::search_free($sql_query);
@@ -377,7 +386,7 @@ class search {
 			}//end if search_query_object->children_recursive===true
 
 		// debug
-			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+			if(SHOW_DEBUG===true) {
 				$total_time_ms = exec_time_unit($start_time,'ms');
 				if($total_time_ms>SLOW_QUERY_MS) {
 					debug_log(__METHOD__
@@ -410,7 +419,7 @@ class search {
 				$response->ar_records = $ar_records;
 
 		// debug
-			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+			if(SHOW_DEBUG===true) {
 				// error_log($sql_query);
 				$exec_time = exec_time_unit($start_time, 'ms');
 				$response->generated_time['parsed_time'] = $parsed_time;
@@ -441,8 +450,7 @@ class search {
 					}
 
 				// metrics
-					metrics::$search_total_time += $exec_time;
-					metrics::$search_total_calls++;
+				metrics::$search_total_time += $exec_time;
 
 				// warning on too much relations_cache (to prevent updates/import memory issues)
 					$total_relations = isset($this->relations_cache)
@@ -475,7 +483,12 @@ class search {
 	*/
 	public function count() : object {
 
-		$start_time=start_time();
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=start_time();
+				// metrics
+				metrics::$search_total_calls++;
+			}
 
 		// RECORDS_DATA BUILD TO OUTPUT
 			$records_data = new stdClass();
@@ -498,7 +511,8 @@ class search {
 				$total = $total + (int)$rows['full_count'];
 			}
 
-			if(SHOW_DEVELOPER===true) {
+		// debug
+			if(SHOW_DEBUG===true) {
 				$exec_time = exec_time_unit($start_time, 'ms');
 				// $exec_time = round($total_time, 3);
 				# Info about required time to exec the search
@@ -511,8 +525,7 @@ class search {
 				dd_core_api::$sql_query_search[] = '-- TIME sec: '. $exec_time . PHP_EOL . $count_sql_query;
 
 				// metrics
-					metrics::$search_total_time += $exec_time;
-					metrics::$search_total_calls++;
+				metrics::$search_total_time += $exec_time;
 			}
 
 		// Fix total value

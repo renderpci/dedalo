@@ -160,13 +160,18 @@ final class dd_manager {
 						'Search free',
 						'--> search_free_total_time: ' . metrics::$search_free_total_time.' ms',
 						'--> search_free_total_calls: '. metrics::$search_free_total_calls,
+						// get_tools stats
+						'Get tools',
+						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
+						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
 						// summary
 						'summary',
 						'time: ' . (
 							metrics::$security_permissions_total_time +
 							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
-							metrics::$matrix_total_time
+							metrics::$matrix_total_time +
+							metrics::$get_tools_total_time
 						)
 					];
 					debug_log(__METHOD__ . PHP_EOL
