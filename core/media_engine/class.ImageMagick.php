@@ -95,7 +95,7 @@ final class ImageMagick {
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0777,true)) {
 				debug_log(__METHOD__
-					." Error on crate folder ". PHP_EOL
+					." Error on create folder ". PHP_EOL
 					. 'folder_path: ' . $folder_path
 					, logger::ERROR
 				);
@@ -213,9 +213,10 @@ final class ImageMagick {
 		// error case
 			if ($worked_result!=0) {
 				debug_log(__METHOD__
-					."  worked_result : output: ".to_string($output)." - worked_result:"
-					.to_string($worked_result)
-					, logger::DEBUG
+					. ' exec command bad result' . PHP_EOL
+					. ' worked_result:' . to_string($worked_result) . PHP_EOL
+					. ' output: ' . to_string($output). PHP_EOL
+					, logger::ERROR
 				);
 				return false;
 			}
