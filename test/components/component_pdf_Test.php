@@ -263,8 +263,8 @@ final class component_pdf_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===DEDALO_PDF_THUMB_DEFAULT,
-			'expected DEDALO_PDF_THUMB_DEFAULT ' . PHP_EOL
+			$result===DEDALO_QUALITY_THUMB,
+			'expected DEDALO_QUALITY_THUMB ' . PHP_EOL
 				. json_encode($result)
 		);
 	}//end test_get_thumb_quality

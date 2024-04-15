@@ -364,9 +364,9 @@ class component_av extends component_media_common {
 	public function create_thumb() : bool {
 
 		// check config constant definition
-			if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
-				define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
-				debug_log(__METHOD__." Undefined config 'DEDALO_PDF_THUMB_DEFAULT'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+			if (!defined('DEDALO_QUALITY_THUMB')) {
+				define('DEDALO_QUALITY_THUMB', 'thumb');
+				debug_log(__METHOD__." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value".to_string(), logger::WARNING);
 			}
 
 		// thumb_path

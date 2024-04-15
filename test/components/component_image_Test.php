@@ -480,8 +480,8 @@ final class component_image_test extends TestCase {
 		);
 
 		$this->assertTrue(
-			$result===DEDALO_IMAGE_THUMB_DEFAULT,
-			'expected DEDALO_IMAGE_THUMB_DEFAULT ' . PHP_EOL
+			$result===DEDALO_QUALITY_THUMB,
+			'expected DEDALO_QUALITY_THUMB ' . PHP_EOL
 				. $result
 		);
 	}//end test_get_thumb_quality

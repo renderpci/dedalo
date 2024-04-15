@@ -364,7 +364,6 @@ class component_image extends component_media_common {
 			$target_quality	= $options->target_quality;
 
 		// invalid targets check
-			// if ($target_quality===DEDALO_IMAGE_QUALITY_ORIGINAL || $target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
 			$original_quality = $this->get_original_quality();
 			if ($target_quality===$original_quality) {
 				debug_log(__METHOD__
@@ -989,7 +988,7 @@ class component_image extends component_media_common {
 		// 	$id = pathinfo($image_url,PATHINFO_FILENAME);
 		// 		#dump($name, ' name ++ '.to_string());
 
-		// 	$image_deleted = self::get_deleted_image( $quality=DEDALO_IMAGE_THUMB_DEFAULT, $id );
+		// 	$image_deleted = self::get_deleted_image( $quality=DEDALO_QUALITY_THUMB, $id );
 		// 		#dump($image_deleted, ' image_deleted ++ '.to_string());
 
 		// 	$ar_parts 		 = explode(DEDALO_MEDIA_PATH, $image_deleted);
@@ -2011,7 +2010,8 @@ class component_image extends component_media_common {
 			}
 
 		// thumbs. To generate thumbs, the measurements are fixed
-			if($target_quality===DEDALO_IMAGE_THUMB_DEFAULT) {
+			$thumb_quality = defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
+			if($target_quality===$thumb_quality) {
 				// Default 102x57
 				$result = [
 					DEDALO_IMAGE_THUMB_WIDTH,

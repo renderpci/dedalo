@@ -70,7 +70,7 @@ const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self, {})
 
 	// url
-		const quality	= page_globals.dedalo_image_thumb_default // '1.5MB'
+		const quality	= page_globals.dedalo_quality_thumb // '1.5MB'
 		const file_info	= files_info.find(item => item.quality===quality)
 		const url		= external_source
 			? external_source
