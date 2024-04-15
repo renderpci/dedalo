@@ -2441,7 +2441,7 @@ class diffusion_sql extends diffusion  {
 
 					// table
 						$new_items[] = [
-							'field_name'	=> 'table',
+							'field_name'	=> 'ref_table',
 							'field_value'	=> $source_table_name
 						];
 
