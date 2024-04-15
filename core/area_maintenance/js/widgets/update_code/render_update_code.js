@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
+	import {data_manager} from '../../../../common/js/data_manager.js'
 
 
 
@@ -70,6 +70,7 @@ const get_content_data_edit = async function(self) {
 		const value								= self.value || {}
 		const dedalo_source_version_url			= value.dedalo_source_version_url
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
+		const process_id						= 'process_update_code'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -108,6 +109,70 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'body_response'
 		})
 
+	// update_process_status
+		const update_process_status = function(pid, pfile, container) {
+
+			// get_process_status from API and returns a SEE stream
+				data_manager.request_stream({
+					body : {
+						dd_api		: 'dd_utils_api',
+						action		: 'get_process_status',
+						update_rate	: 1000, // int milliseconds
+						options		: {
+							pid		: pid,
+							pfile	: pfile
+						}
+					}
+				})
+				.then(function(stream){
+
+					// render base nodes and set functions to manage
+					// the stream reader events
+					const render_stream_response = render_stream({
+						container		: container,
+						id				: process_id,
+						pid				: pid,
+						pfile			: pfile,
+						display_json	: true
+					})
+
+					// on_read event (called on every chunk from stream reader)
+					const on_read = (sse_response) => {
+						// fire update_info_node on every reader read chunk
+						render_stream_response.update_info_node(sse_response)
+					}
+
+					// on_done event (called once at finish or cancel the stream read)
+					const on_done = () => {
+						// is triggered at the reader's closing
+						render_stream_response.done()
+					}
+
+					// read stream. Creates ReadableStream that fire
+					// 'on_read' function on each stream chunk at update_rate
+					// (1 second default) until stream is done (PID is no longer running)
+					data_manager.read_stream(stream, on_read, on_done)
+				})
+		}//end update_process_status
+
+		// check process status always
+		const check_process_data = () => {
+			data_manager.get_local_db_data(
+				process_id,
+				'status'
+			)
+			.then(function(local_data){
+				if (local_data && local_data.value) {
+					update_process_status(
+						local_data.value.pid,
+						local_data.value.pfile,
+						body_response
+					)
+				}
+			})
+		}
+		check_process_data()
+
 	// dedalo_entity check
 		if (page_globals.dedalo_entity==='development') {
 			// message development
@@ -127,9 +192,41 @@ const get_content_data_edit = async function(self) {
 				body_response	: body_response,
 				trigger : {
 					dd_api	: 'dd_area_maintenance_api',
-					action	: 'update_code',
-					options	: null
+					action	: 'class_request',
+					source	: {
+						action	: 'update_code'
+					},
+					options	: {}
 				}
+				// on_submit	: async (e, values) => {
+				// 	// update_code process fire
+				// 	const api_response = await data_manager.request({
+				// 		body		: {
+				// 			dd_api	: 'dd_area_maintenance_api',
+				// 			action	: 'class_request',
+				// 			source	: {
+				// 				action	: 'update_code',
+				// 			},
+				// 			options : {
+				// 				background_running	: true // set run in background CLI
+				// 			}
+				// 		}
+				// 	})
+
+				// 	// error case
+				// 		if (!api_response || !api_response.result) {
+				// 			alert("Server error updating code");
+				// 			console.error('update_code api_response:', api_response);
+				// 			return
+				// 		}
+
+				// 	// update_process_status
+				// 		update_process_status(
+				// 			api_response.pid,
+				// 			api_response.pfile,
+				// 			body_response
+				// 		)
+				// }
 			})
 		}
 
