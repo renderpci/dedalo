@@ -1224,13 +1224,13 @@ This parameter defines the path to the default values definition file for compon
 
 Defaults values are specific data to be enter into the component when a section is created, empty values are not allowed in components with default data, the component will replace empty data with default value.
 
-Usually the component define is own defaults data into the ontology, but is possible change that in the local installations creating a config_defaults.json file in the config directory with the specific default data for your installation.
+Usually the component defines is own defaults data into the ontology, but is possible change it in the local installations creating a `config_defaults.json` file into the config directory with the specific default data for your installation.
 
 ```php
 define('CONFIG_DEFAULT_FILE_PATH',    DEDALO_CONFIG_PATH .'/config_defaults.json');
 ```
 
-Example to change the default data for the publishable component [rsc279](https://dedalo.dev/ontology/rsc279), in the ontology the component has a default value of "no" (the value is the locator to point the yes/no list, for "No" the section_id is 2). If we want to change to 'yes'(section_id 1 of the section [dd64](https://dedalo.dev/ontology/dd64)) the config_defaults.json needs to define it as:
+Example to change the default data for the publishable component [rsc279](https://dedalo.dev/ontology/rsc279), in the ontology the component has a default value of "no", the value is the locator to point the yes/no list (for "No" the section_id is 2). If we want to change to 'Yes'(section_id 1 of the section [dd64](https://dedalo.dev/ontology/dd64)) the `config_defaults.json` needs to have it defined as:
 
 ```json
 [{
