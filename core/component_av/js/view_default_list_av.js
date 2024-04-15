@@ -85,7 +85,7 @@ view_default_list_av.render = async function(self, options) {
 		image.src = posterframe_url
 
 		// open viewer
-			image.addEventListener('mouseup', function (e) {
+			image.addEventListener('mousedown', function (e) {
 				e.stopPropagation();
 
 				const file_exist = files_info.find(item => item.file_exist===true)
