@@ -1965,17 +1965,48 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', serialize(['pdf']));
 
 ---
 
-#### Defining pdf quality for default files
+#### Defining pdf alternative extensions to process the original file into different images
 
 ./dedalo/config/config.php
 
-DEDALO_PDF_QUALITY_DEFAULT `string`
+DEDALO_PDF_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-This parameter define the default quality used to manage pdf files.
+
+This parameter defines the standards file types that will use to create versions of the uploaded PDF files.
+
+Dédalo will use this parameter to create alternative versions of the PDF uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every PDF uploaded will be processed for every quality with every alternative format defines.
 
 ```php
-define('DEDALO_PDF_QUALITY_DEFAULT', 'standar');
+define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['avif','jpg']);
 ```
+
+Example:
+
+Original file: **my_pfd.pdf**
+
+Alternatives formats defined in DEDALO_PDF_ALTERNATIVE_EXTENSIONS: **\['avif','jpg'\]**
+
+Result:
+
+In original quality directory:
+> ../media/pdf/original/rsc37_rsc176_1.pdf
+>
+> ../media/pdf/original/rsc37_rsc176_1.avif
+>
+> ../media/pdf/original/rsc37_rsc176_1.jpg
+
+
+In web quality directory:
+> ../media/pdf/web/rsc37_rsc176_1.pdf
+>
+> ../media/pdf/web/rsc37_rsc176_1.avif
+>
+> ../media/pdf/web/rsc37_rsc176_1.jpg
+
+!!! warning "About increment time when uploaded PDF files render alternative versions"
+    Alternative versions of PDF increase the rendering process time of uploaded PDF files by ~5 times.
+    The render PDF use a high density dpi and reduce the final image to get a good anti-aliased image.
+    This process increases the waiting time until the PDF is displayed and usable.
 
 ---
 
