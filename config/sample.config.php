@@ -673,6 +673,23 @@
 		]);
 
 
+// defaults (optional)
+	// optional defaults values of components
+		// array of objects, every object is a default that will apply to the component defined.
+		// Is possible add multiple defaults for different components as:
+		// [{
+		//	"tipo": "rsc279",
+		//	"type": "component",
+		//	"tld": "rsc",
+		//	"value": [
+		//		{
+		//			"section_id": "2",
+		//			"section_tipo": "dd64"
+		//		}
+		//	]
+		// }]
+			//define('CONFIG_DEFAULT_FILE_PATH',		DEDALO_CONFIG_PATH .'/config_defaults.json');
+
 
 // maintenance
 	// maintenance mode active / inactive
