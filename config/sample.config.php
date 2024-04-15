@@ -317,7 +317,22 @@
 	define('DEDALO_DEFAULT_PROJECT', 1);
 	// dedalo_filter_section_tipo_default. Target filter section (current 'dd153' - Projects section). Do not change this
 	define('DEDALO_FILTER_SECTION_TIPO_DEFAULT', DEDALO_SECTION_PROJECTS_TIPO);
-
+	// defaults (optional, disable)
+	// optional defaults values of components
+		// array of objects, every object is a default that will apply to the component defined.
+		// Is possible add multiple defaults for different components as:
+		// [{
+		//	"tipo": "rsc279",
+		//	"type": "component",
+		//	"tld": "rsc",
+		//	"value": [
+		//		{
+		//			"section_id": "2",
+		//			"section_tipo": "dd64"
+		//		}
+		//	]
+		// }]
+			//define('CONFIG_DEFAULT_FILE_PATH',		DEDALO_CONFIG_PATH .'/config_defaults.json');
 
 
 // media config
@@ -671,24 +686,6 @@
 			'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
 			'country_code'	=> 'country_code' // / property where look country code for flag
 		]);
-
-
-// defaults (optional)
-	// optional defaults values of components
-		// array of objects, every object is a default that will apply to the component defined.
-		// Is possible add multiple defaults for different components as:
-		// [{
-		//	"tipo": "rsc279",
-		//	"type": "component",
-		//	"tld": "rsc",
-		//	"value": [
-		//		{
-		//			"section_id": "2",
-		//			"section_tipo": "dd64"
-		//		}
-		//	]
-		// }]
-			//define('CONFIG_DEFAULT_FILE_PATH',		DEDALO_CONFIG_PATH .'/config_defaults.json');
 
 
 // maintenance
