@@ -340,6 +340,15 @@
 	define('DEDALO_MEDIA_PATH',	DEDALO_ROOT_PATH	. '/media');
 	define('DEDALO_MEDIA_URL',	DEDALO_ROOT_WEB		. '/media');
 
+	// thumb common
+		// this part is used by all components to create and show thumbs images
+		// thumb_extension.  Default: 'jpg'
+		define('DEDALO_THUMB_EXTENSION',			'jpg');
+		// dedalo_thumb_default. Default: 'thumb')
+		define('DEDALO_QUALITY_THUMB',				'thumb');
+		// thumbs dedalo_image_thumb sizes. Integer as pixels
+		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
+		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 
 
 	// av media
@@ -470,13 +479,6 @@
 		define('DEDALO_3D_COLLADA2GLTF_PATH',		'/usr/local/bin/COLLADA2GLTF-bin');
 
 
-
-	// html_files
-		define('DEDALO_HTML_FILES_FOLDER',			'/html_files');
-		define('DEDALO_HTML_FILES_EXTENSION',		'html');
-
-
-
 	// svg media
 		// svg_folder. Default: '/svg'
 		define('DEDALO_SVG_FOLDER',					'/svg');
@@ -494,15 +496,9 @@
 		define('DEDALO_SVG_AR_QUALITY',				[DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
 
-	// thumb common
-		// this part is used by all components to create and show thumbs images
-		// thumb_extension.  Default: 'jpg'
-		define('DEDALO_THUMB_EXTENSION',			'jpg');
-		// dedalo_thumb_default. Default: 'thumb')
-		define('DEDALO_QUALITY_THUMB',				'thumb');
-		// thumbs dedalo_image_thumb sizes. Integer as pixels
-		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
-		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
+	// html_files
+		define('DEDALO_HTML_FILES_FOLDER',			'/html_files');
+		define('DEDALO_HTML_FILES_EXTENSION',		'html');
 
 
 // upload config
