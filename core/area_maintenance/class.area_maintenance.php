@@ -255,12 +255,18 @@ class area_maintenance extends area_common {
 
 
 		// check_config *
+			$config_status = self::check_config();
+			$missing = [];
+			foreach ($config_status->result as $el) {
+				$missing = array_merge($missing, $el->sample_vs_config);
+			}
 			$item = new stdClass();
 				$item->id		= 'check_config';
+				$item->class	= empty($missing) ? 'success' : 'danger';
 				$item->typo		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
 				$item->value	= (object)[
-					'info' => self::check_config()
+					'info' => $config_status
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
