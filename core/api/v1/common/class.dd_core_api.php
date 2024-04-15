@@ -2474,7 +2474,7 @@ final class dd_core_api {
 					// quality defaults
 					$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
 					$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
-					$obj->dedalo_image_thumb_default	= DEDALO_IMAGE_THUMB_DEFAULT;
+					$obj->dedalo_quality_thumb			= defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
 
 					// tag_id
 					$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;

@@ -401,10 +401,8 @@
 		define('DEDALO_IMAGE_QUALITY_RETOUCHED',	'modified');
 		// quality default. Default: '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT',		'1.5MB');
-		// dedalo_image_thumb_default. Default: 'thumb')
-		define('DEDALO_IMAGE_THUMB_DEFAULT',		'thumb');
-		// image_ar_quality. Array of image quality specifications like [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_IMAGE_THUMB_DEFAULT]
-		define('DEDALO_IMAGE_AR_QUALITY',			[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
+		// image_ar_quality. Array of image quality specifications like [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_QUALITY_THUMB]
+		define('DEDALO_IMAGE_AR_QUALITY',			[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_QUALITY_THUMB]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI',			150);
 		// image_file_url
@@ -440,8 +438,6 @@
 		define('DEDALO_PDF_QUALITY_DEFAULT',		'web');
 		// pdf_ar_quality. Array of PDF quality definitions
 		define('DEDALO_PDF_AR_QUALITY',				[DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
-		// pdf_thumb_default Default: 'thumb'
-		define('DEDALO_PDF_THUMB_DEFAULT',			'thumb');
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
 		define('DEDALO_PDF_RENDERER',				'/usr/bin/wkhtmltopdf');
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com

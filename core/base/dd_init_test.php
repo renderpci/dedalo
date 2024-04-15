@@ -347,7 +347,7 @@
 			}
 		// Target folder exists test
 			$ar_quality = DEDALO_PDF_AR_QUALITY;
-			$ar_quality[] = DEDALO_PDF_THUMB_DEFAULT; // append thumb as quality only to force iterate it
+			$ar_quality[] = DEDALO_QUALITY_THUMB; // append thumb as quality only to force iterate it
 			foreach ($ar_quality as $quality) {
 				$folder_path = DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER . '/'. $quality;
 				if( !is_dir($folder_path) ) {
