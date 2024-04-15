@@ -94,7 +94,7 @@ export const get_content_data = function(self) {
 		if (svg_file) {
 
 			// open viewer on click
-				const fn_mouseup = function(e) {
+				const fn_mousedown = function(e) {
 					e.stopPropagation();
 					// open a new window
 					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -111,8 +111,8 @@ export const get_content_data = function(self) {
 						width	: 1024,
 						height	: 720
 					})
-				}//end fn_mouseup
-				content_data.addEventListener('mouseup', fn_mouseup)
+				}//end fn_mousedown
+				content_data.addEventListener('mousedown', fn_mousedown)
 		}else{
 
 			// open tool upload on click
@@ -128,7 +128,7 @@ export const get_content_data = function(self) {
 							caller			: self
 						})
 				}//end fn_open_tool
-				content_data.addEventListener('mouseup', fn_open_tool)
+				content_data.addEventListener('mousedown', fn_open_tool)
 		}
 
 

@@ -806,7 +806,7 @@ class component_media_common extends component_common {
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
-				//thumb, use thumb extension instead the component extension (for av is .mp4 and for thumb is .jpg)
+				// thumb, use thumb extension instead the component extension (for av is .mp4 and for thumb is .jpg)
 				if($quality===$thumb_quality){
 
 					$quality_file_info = $this->get_quality_file_info($quality, $thumb_extension);
@@ -818,9 +818,11 @@ class component_media_common extends component_common {
 
 					// add
 					$files_info[] = $quality_file_info;
+
 					continue;
 				}
 
+				// extensions iterate
 				foreach ($unique_extensions as $extension) {
 
 					$quality_file_info = $this->get_quality_file_info($quality, $extension);
@@ -1793,7 +1795,6 @@ class component_media_common extends component_common {
 
 
 
-
 	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
@@ -1801,6 +1802,9 @@ class component_media_common extends component_common {
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
+
+		// re-create thumb always
+			$this->create_thumb();
 
 		// files_info. Updates component dato files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it

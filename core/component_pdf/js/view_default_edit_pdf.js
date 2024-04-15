@@ -159,7 +159,7 @@ const get_content_value = function(i, current_value, self) {
 				parent			: content_value
 			})
 			// open viewer
-			image.addEventListener('mouseup', function (e) {
+			image.addEventListener('mousedown', function (e) {
 				e.stopPropagation();
 
 				// get the upload tool to be fired

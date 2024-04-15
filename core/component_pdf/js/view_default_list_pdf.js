@@ -69,7 +69,7 @@ view_default_list_pdf.render = async function(self, options) {
 			console.log('pdf icon load error:', url);
 		})
 		// open viewer
-		image.addEventListener('mouseup', function (e) {
+		image.addEventListener('mousedown', function (e) {
 			e.stopPropagation();
 
 			if(!file_info){

@@ -172,7 +172,6 @@ class component_svg extends component_media_common {
 
 
 
-
 	/**
 	* CREATE_THUMB
 	*
@@ -238,7 +237,6 @@ class component_svg extends component_media_common {
 
 		return true;
 	}//end create_thumb
-
 
 
 
@@ -387,6 +385,9 @@ class component_svg extends component_media_common {
 
 					$this->set_dato($dato);
 				}
+
+			// thumb. Create thumb from PDF file
+				$this->create_thumb();
 
 			// save component dato
 				// Note that save action don't change upload info properties,
