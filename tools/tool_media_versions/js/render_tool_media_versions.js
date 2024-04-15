@@ -425,6 +425,7 @@ const render_file = function(quality, self) {
 				const button_file_av = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button media',
+					title			: get_label.visualizar || 'View',
 					parent			: file_info_node
 				})
 				button_file_av.addEventListener('click', async function(e) {
@@ -627,6 +628,7 @@ const render_file_upload = function(quality, self) {
 		const button_file_upload = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button upload',
+			title			: get_label.upload || 'Upload',
 			parent			: file_info_node
 		})
 		button_file_upload.addEventListener('click', function(e){
@@ -726,6 +728,7 @@ const render_file_versions = function(quality, self) {
 							const link = ui.create_dom_element({
 								element_type	: 'a',
 								class_name		: 'button find',
+								title			: get_label.open || 'Open',
 								parent			: cell_node
 							})
 							link.addEventListener('click', function(e) {
@@ -841,6 +844,7 @@ const render_build_version = function(quality, self) {
 		const button_build_version = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button gear',
+			title			: (get_label.build || 'Build') + ` ${quality} ` + (get_label.version || 'version'),
 			parent			: file_info_node
 		})
 		const fn_click = async function (e) {

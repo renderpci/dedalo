@@ -153,7 +153,7 @@ const get_content_value = function(i, value, self) {
 			image_node.src = image_url
 
 			// click
-			image_node.addEventListener('click', function(e) {
+			image_node.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
 
 				const tool_upload = self.tools.find(el => el.model==='tool_upload')
