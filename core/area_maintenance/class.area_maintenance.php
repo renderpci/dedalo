@@ -780,7 +780,11 @@ class area_maintenance extends area_common {
 				// config_vs_sample. Compares defined config constants vs sample config
 					foreach ($config_constants_list as $const_name) {
 						if (!in_array($const_name, $sample_config_constants_list)) {
-							$item->config_vs_sample[] = $const_name;
+							// exceptions (ignore optional constants that could be disabled)
+							$ignore = ['DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
+							if (!in_array($const_name, $ignore)) {
+								$item->config_vs_sample[] = $const_name;
+							}
 						}
 					}
 
@@ -790,11 +794,7 @@ class area_maintenance extends area_common {
 						// 	$item->sample_vs_config[] = $const_name;
 						// }
 						if (!defined($const_name)) {
-							// exceptions (ignore optional constants that could be disabled)
-							$ignore = ['DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
-							if (!in_array($const_name, $ignore)) {
-								$item->sample_vs_config[] = $const_name;
-							}
+							$item->sample_vs_config[] = $const_name;
 						}
 					}
 
