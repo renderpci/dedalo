@@ -102,8 +102,8 @@ export const get_content_data = function(self) {
 		image.src = url
 
 	// open viewer
-		content_data.addEventListener('mouseup', fn_mouseup)
-		function fn_mouseup(e) {
+		content_data.addEventListener('mousedown', fn_mousedown)
+		function fn_mousedown(e) {
 			e.stopPropagation();
 
 			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
@@ -136,7 +136,7 @@ export const get_content_data = function(self) {
 						height	: 720
 					})
 			}
-		}//end fn_mouseup
+		}//end fn_mousedown
 
 
 	return content_data

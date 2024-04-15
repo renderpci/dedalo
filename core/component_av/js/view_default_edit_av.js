@@ -182,7 +182,7 @@ const get_content_value = (i, current_value, self) => {
 		}else{
 
 			posterframe.classList.add('link')
-			posterframe.addEventListener('mouseup', function(e) {
+			posterframe.addEventListener('mousedown', function(e) {
 				e.stopPropagation();
 
 				const tool_upload = self.tools.find(el => el.model==='tool_upload')
