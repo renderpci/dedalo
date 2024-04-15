@@ -1578,41 +1578,38 @@ class component_av extends component_media_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* @param object $options
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$update_version	= $options->update_version ?? '';
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
-		// short vars
-			$update_version	= implode('.', $options->update_version);
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
-
+		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
 
+			case '6.2.0':
+				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
+					$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 					$component	= component_common::get_instance(
 						$model,
-						$options->tipo,
-						$options->section_id,
+						$tipo,
+						$section_id,
 						'list',
 						DEDALO_DATA_NOLAN,
-						$options->section_tipo,
+						$section_tipo,
 						false
 					);
 
@@ -1643,14 +1640,14 @@ class component_av extends component_media_common {
 						// }
 
 					// create the component av
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo,true);
+						$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 						$component	= component_common::get_instance(
 							$model, // string 'component_av'
-							$options->tipo,
-							$options->section_id,
+							$tipo,
+							$section_id,
 							'list',
 							DEDALO_DATA_NOLAN,
-							$options->section_tipo,
+							$section_tipo,
 							false
 						);
 
