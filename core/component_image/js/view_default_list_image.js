@@ -80,7 +80,7 @@ view_default_list_image.render = function(self, options) {
 		image.src = url
 
 	// open viewer
-		image.addEventListener('mouseup', function (e) {
+		image.addEventListener('mousedown', function (e) {
 			e.stopPropagation();
 
 			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so

@@ -51,10 +51,19 @@ view_default_list_av.render = async function(self, options) {
 		// set pointers to content_data
 		wrapper.content_data = content_data
 
-	// url
+	// posterframe (used as fallback)
 		const posterframe_url = data.posterframe_url
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
+
+	// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
+
+	// URL
+	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const url = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
@@ -82,7 +91,7 @@ view_default_list_av.render = async function(self, options) {
 			}, false)
 
 		// set image src
-		image.src = posterframe_url
+		image.src = url
 
 		// open viewer
 			image.addEventListener('mousedown', function (e) {
