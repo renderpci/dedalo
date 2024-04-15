@@ -70,30 +70,12 @@ const get_content_data_edit = async function(self) {
 	// short vars
 		const value				= self.value || {}
 		const info				= value.info || {}
-		const constants_list	= info.constants_list || []
-		const ar_missing		= info.ar_missing || []
 		const errors			= info.errors
+		const result			= info.result || []
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
-		})
-
-	// working here..
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: '',
-			inner_html		: 'Checks your configuration files for errors.',
-			parent			: content_data
-		})
-
-	// missing_total
-		const missing_class = ar_missing.length > 0 ? 'warning' : 'success'
-		ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'missing_total ' + missing_class,
-			inner_html		: `Non defined config constants total: <strong>${ar_missing.length}</strong> of ${constants_list.length}`,
-			parent			: content_data
 		})
 
 	// errors
@@ -112,64 +94,125 @@ const get_content_data_edit = async function(self) {
 			})
 		}
 
-	// body_response
-		const body_response = ui.create_dom_element({
+	// tables
+		const tables = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'body_response'
-		})
-
-	// datalist
-		const datalist_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'datalist_container',
+			class_name		: 'tables',
 			parent			: content_data
 		})
-		// header
 
-		// missing_list
-			const ar_missing_length = ar_missing.length
-			for (let i = 0; i < ar_missing_length; i++) {
 
-				const item = ar_missing[i]
+	// missing_container
+		const missing_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'table missing_container',
+			parent			: tables
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: 'Missing constants',
+			parent			: missing_container
+		})
 
-				const datalist_item_container = ui.create_dom_element({
+	// obsolete_container
+		const obsolete_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'table obsolete_container',
+			parent			: tables
+		})
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'label',
+			inner_html		: 'Obsolete constants',
+			parent			: obsolete_container
+		})
+
+	// result iterate
+		const result_length = result.length
+		for (let i = 0; i < result_length; i++) {
+			const item = result[i]
+
+			// missing
+			{
+				// file_container (grid)
+				const file_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'datalist_item_container',
-					parent			: datalist_container
+					class_name		: 'file_container ' + item.file_name,
+					parent			: missing_container
+				})
+				// sample_vs_config
+				// label
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label sample_vs_config',
+					inner_html		: `${item.file_name}`,
+					parent			: file_container
+				})
+				// data
+				const data_text = item.sample_vs_config.length>0
+					? item.sample_vs_config.join('<br>')
+					: get_label.ok || 'OK'
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'data' + (item.sample_vs_config.length>0 ? ' missing' : ''),
+					inner_html		: data_text,
+					parent			: file_container
+				})
+			}
+
+			// obsolete
+			{
+				// file_container (grid)
+				const file_container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_container ' + item.file_name,
+					parent			: obsolete_container
+				})
+				// config_vs_sample
+				// label
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label config_vs_sample',
+					inner_html		: `${item.file_name}`,
+					parent			: file_container
+				})
+				// data
+				const data_text = item.config_vs_sample.length>0
+					? item.config_vs_sample.join('<br>')
+					: get_label.ok || 'OK'
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'data' + (item.config_vs_sample.length>0 ? ' obsolete' : ''),
+					inner_html		: data_text,
+					parent			: file_container
+				})
+			}
+
+			// list
+			{
+				// const_list_node
+				const const_list_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'datalist_container show_list',
+					inner_html		: '<span class="button icon eye"></span>Display all sample.'+item.file_name+' constants list',
+					parent			: content_data
+				})
+				const_list_node.addEventListener('click', function(e) {
+					e.stopPropagation();
+					const_list_pre.classList.toggle('hide')
+				})
+				const const_list	= item.sample_config_constants_list || []
+				const const_list_pre = ui.create_dom_element({
+					element_type	: 'pre',
+					class_name		: 'hide',
+					inner_html		: JSON.stringify(const_list, null, 2),
+					parent			: const_list_node
 				})
 
-				// section_name
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'item_column non_defined',
-						inner_html		: item,
-						parent			: datalist_item_container
-					})
-			}//end for (let i = 0; i < ar_missing_length; i++)
+			}
 
-		// constants_list_node
-			const constants_list_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'datalist_container show_list',
-				inner_html		: 'Display all sample.config constants list',
-				parent			: content_data
-			})
-			constants_list_node.addEventListener('click', function(e) {
-				e.stopPropagation();
-				constants_list_pre.classList.toggle('hide')
-
-			})
-			const constants_list_pre = ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'hide',
-				inner_html		: JSON.stringify(constants_list, null, 2),
-				parent			: constants_list_node
-			})
-
-
-
-	// add at end body_response
-		content_data.appendChild(body_response)
+		}//end for (let i = 0; i < result_length; i++)
 
 
 	return content_data

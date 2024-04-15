@@ -1613,7 +1613,7 @@ export const ui = {
 
 		// title . Add title attribute to element
 			if(title_label) {
-				element.title = title_label
+				element.title = strip_tags(title_label)
 			}
 
 		// dataset Add dataset values to element
