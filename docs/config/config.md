@@ -1297,6 +1297,14 @@ define('DEDALO_MEDIA_URL', DEDALO_ROOT_WEB . '/media');
 
 ### Defining audiovisual directory
 
+---
+
+### Audiovisual
+
+Audiovisual media includes video and audio files, it use a posterframe to represent the file as the original quality.
+
+#### Defining audiovisual directory
+
 ./dedalo/config/config.php
 
 DEDALO_AV_FOLDER `string`
@@ -1309,7 +1317,7 @@ define('DEDALO_AV_FOLDER', '/av');
 
 ---
 
-### Defining audiovisual extension (type of file)
+#### Defining audiovisual extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1325,7 +1333,7 @@ define('DEDALO_AV_EXTENSION', 'mp4');
 
 ---
 
-### Defining audiovisual extensions supported
+#### Defining audiovisual extensions supported
 
 ./dedalo/config/config.php
 
@@ -1341,7 +1349,7 @@ define('DEDALO_AV_EXTENSIONS_SUPPORTED', ['mp4','wave','wav','aiff','aif','mp3',
 
 ---
 
-### Defining audiovisual mime type
+#### Defining audiovisual mime type
 
 ./dedalo/config/config.php
 
@@ -1357,7 +1365,7 @@ define('DEDALO_AV_MIME_TYPE', 'video/mp4');
 
 ---
 
-### Defining audiovisual codec type
+#### Defining audiovisual codec type
 
 ./dedalo/config/config.php
 
@@ -1371,7 +1379,7 @@ define('DEDALO_AV_TYPE', 'h264/AAC');
 
 ---
 
-### Defining audiovisual quality for original files
+#### Defining audiovisual quality for original files
 
 ./dedalo/config/config.php
 
@@ -1387,7 +1395,7 @@ define('DEDALO_AV_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Defining audiovisual quality for processed files
+#### Defining audiovisual quality for processed files
 
 ./dedalo/config/config.php
 
@@ -1403,7 +1411,7 @@ define('DEDALO_AV_QUALITY_DEFAULT', '404');
 
 ---
 
-### Defining audiovisual qualities definition
+#### Defining audiovisual qualities definition
 
 ./dedalo/config/config.php
 
@@ -1419,7 +1427,7 @@ define('DEDALO_AV_AR_QUALITY', [DEDALO_AV_QUALITY_ORIGINAL,'4k','1080','720','57
 
 ---
 
-### Defining posterframe filetype extension for audiovisual files
+#### Defining posterframe filetype extension for audiovisual files
 
 ./dedalo/config/config.php
 
@@ -1435,7 +1443,7 @@ define('DEDALO_AV_POSTERFRAME_EXTENSION', 'jpg');
 
 ---
 
-### Defining audiovisual processor filepath (ffmpeg path)
+#### Defining audiovisual processor filepath (ffmpeg path)
 
 ./dedalo/config/config.php
 
@@ -1449,7 +1457,7 @@ define('DEDALO_AV_FFMPEG_PATH', '/usr/bin/ffmpeg');
 
 ---
 
-### Defining audiovisual processor settings (ffmpeg settings)
+#### Defining audiovisual processor settings (ffmpeg settings)
 
 ./dedalo/config/config.php
 
@@ -1464,7 +1472,7 @@ define('DEDALO_AV_FFMPEG_SETTINGS', DEDALO_CORE_PATH . '/media_engine/lib/ffmpeg
 
 ---
 
-### Defining audiovisual processor settings (faststart)
+#### Defining audiovisual processor settings (faststart)
 
 ./dedalo/config/config.php
 
@@ -1480,7 +1488,7 @@ define('DEDALO_AV_FASTSTART_PATH', '/usr/bin/qt-faststart');
 
 ---
 
-### Defining audiovisual ffprobe path
+#### Defining audiovisual ffprobe path
 
 ./dedalo/config/config.php
 
@@ -1494,7 +1502,7 @@ define('DEDALO_AV_FFPROBE_PATH', '/usr/bin/ffprobe');
 
 ---
 
-### Defining audiovisual streamer
+#### Defining audiovisual streamer
 
 ./dedalo/config/config.php
 
@@ -1510,7 +1518,7 @@ define('DEDALO_AV_STREAMER', NULL);
 
 ---
 
-### Defining audiovisual watermark file
+#### Defining audiovisual watermark file
 
 ./dedalo/config/config.php
 
@@ -1527,7 +1535,7 @@ define('DEDALO_AV_WATERMARK_FILE', DEDALO_MEDIA_PATH .'/'. DEDALO_AV_FOLDER . '/
 
 ---
 
-### Defining audiovisual subtitles directory
+#### Defining audiovisual subtitles directory
 
 ./dedalo/config/config.php
 
@@ -1543,7 +1551,7 @@ define('DEDALO_SUBTITLES_FOLDER', '/subtitles');
 
 ---
 
-### Defining audiovisual subtitles type extension
+#### Defining audiovisual subtitles type extension
 
 ./dedalo/config/config.php
 
@@ -1559,7 +1567,7 @@ define('DEDALO_AV_SUBTITLES_EXTENSION', 'vtt');
 
 ---
 
-### Defining audiovisual re-compress all uploaded files
+#### Defining audiovisual re-compress all uploaded files
 
 ./dedalo/config/config.php
 
@@ -1575,7 +1583,9 @@ define('DEDALO_AV_RECOMPRESS_ALL', 1);
 
 ---
 
-### Defining image directory
+### Image
+
+#### Defining image directory
 
 ./dedalo/config/config.php
 
@@ -1589,7 +1599,7 @@ define('DEDALO_IMAGE_FOLDER', '/image');
 
 ---
 
-### Defining image extension (type of file)
+#### Defining image extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1605,7 +1615,7 @@ define('DEDALO_IMAGE_EXTENSION', 'jpg');
 
 ---
 
-### Defining image mime type
+#### Defining image mime type
 
 ./dedalo/config/config.php
 
@@ -1619,7 +1629,7 @@ define('DEDALO_IMAGE_MIME_TYPE', 'image/jpeg');
 
 ---
 
-### Defining image type
+#### Defining image type
 
 ./dedalo/config/config.php
 
@@ -1635,7 +1645,7 @@ define('DEDALO_IMAGE_TYPE', 'jpeg');
 
 ---
 
-### Defining image extensions supported
+#### Defining image extensions supported
 
 ./dedalo/config/config.php
 
@@ -1649,7 +1659,7 @@ Dédalo will use this parameter to identify the file format of the original file
 define('DEDALO_IMAGE_EXTENSIONS_SUPPORTED', ['jpg','jpeg','png','tif','tiff','bmp','psd','raw','webp','heic']);
 ```
 
-### Defining alternative image extensions of image files
+#### Defining alternative image extensions of image files
 
 ./dedalo/config/config.php
 
@@ -1691,7 +1701,7 @@ In 1.5MB quality directory:
 
 ---
 
-### Defining image quality for original files
+#### Defining image quality for original files
 
 ./dedalo/config/config.php
 
@@ -1707,7 +1717,7 @@ define('DEDALO_IMAGE_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Defining image quality for the retouched files
+#### Defining image quality for the retouched files
 
 ./dedalo/config/config.php
 
@@ -1723,7 +1733,7 @@ define('DEDALO_IMAGE_QUALITY_RETOUCHED', 'modified');
 
 ---
 
-### Defining image default quality
+#### Defining image default quality
 
 ./dedalo/config/config.php
 
@@ -1739,7 +1749,7 @@ define('DEDALO_IMAGE_QUALITY_DEFAULT', '1.5MB');
 
 ---
 
-### Defining image thumb default
+#### Defining image thumb default
 
 ./dedalo/config/config.php
 
@@ -1755,7 +1765,7 @@ define('DEDALO_IMAGE_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Defining image qualities definition
+#### Defining image qualities definition
 
 ./dedalo/config/config.php
 
@@ -1771,7 +1781,7 @@ define('DEDALO_IMAGE_AR_QUALITY', [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QU
 
 ---
 
-### Defining image print resolution definition
+#### Defining image print resolution definition
 
 ./dedalo/config/config.php
 
@@ -1785,7 +1795,7 @@ define('DEDALO_IMAGE_PRINT_DPI', 150);
 
 ---
 
-### Defining image engine processor URL
+#### Defining image engine processor URL
 
 ./dedalo/config/config.php
 
@@ -1799,7 +1809,7 @@ define('DEDALO_IMAGE_FILE_URL', DEDALO_CORE_URL . '/media_engine/img.php');
 
 ---
 
-### Defining Image Magick path
+#### Defining Image Magick path
 
 ./dedalo/config/config.php
 
@@ -1813,7 +1823,7 @@ define('MAGICK_PATH', '/usr/bin/');
 
 ---
 
-### Defining Color profiles paths
+#### Defining Color profiles paths
 
 ./dedalo/config/config.php
 
@@ -1871,7 +1881,9 @@ define('DEDALO_IMAGE_WEB_FOLDER', '/web');
 
 ---
 
-### Defining pdf directory
+### PDF
+
+#### Defining pdf directory
 
 ./dedalo/config/config.php
 
@@ -1885,7 +1897,7 @@ define('DEDALO_PDF_FOLDER', '/pdf');
 
 ---
 
-### Defining pdf extension (type of file)
+#### Defining pdf extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -1899,7 +1911,7 @@ define('DEDALO_PDF_EXTENSION', 'pdf');
 
 ---
 
-### Defining pdf extensions supported
+#### Defining pdf extensions supported
 
 ./dedalo/config/config.php
 
@@ -1913,7 +1925,7 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', serialize(['pdf']));
 
 ---
 
-### Defining pdf quality for default files
+#### Defining pdf quality for default files
 
 ./dedalo/config/config.php
 
@@ -1927,7 +1939,7 @@ define('DEDALO_PDF_QUALITY_DEFAULT', 'standar');
 
 ---
 
-### Defining pdf qualities definition
+#### Defining pdf qualities definition
 
 ./dedalo/config/config.php
 
@@ -1943,7 +1955,7 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', ['pdf']);
 
 ---
 
-### Defining pdf mime type
+#### Defining pdf mime type
 
 ./dedalo/config/config.php
 
@@ -1959,7 +1971,7 @@ define('DEDALO_PDF_MIME_TYPE', 'application/pdf');
 
 ---
 
-### Defining pdf type
+#### Defining pdf type
 
 ./dedalo/config/config.php
 
@@ -1975,7 +1987,7 @@ define('DEDALO_PDF_TYPE', 'pdf');
 
 ---
 
-### Defining pdf quality for original files
+#### Defining pdf quality for original files
 
 ./dedalo/config/config.php
 
@@ -1991,7 +2003,7 @@ define('DEDALO_PDF_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Defining pdf quality default
+#### Defining pdf quality default
 
 ./dedalo/config/config.php
 
@@ -2007,7 +2019,7 @@ define('DEDALO_PDF_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Defining pdf quality for processed files
+#### Defining pdf quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2023,7 +2035,7 @@ define('DEDALO_PDF_AR_QUALITY', [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY
 
 ---
 
-### Defining pdf thumb default
+#### Defining pdf thumb default
 
 ./dedalo/config/config.php
 
@@ -2039,7 +2051,23 @@ define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Defining main 3d directory
+#### Pdf automatic transcription engine
+
+./dedalo/config/config.php
+
+PDF_AUTOMATIC_TRANSCRIPTION_ENGINE `string`
+
+This parameter defines the path to the library, normally xpdf (pdftotext), to be used for process the pdf to extract the information, this library will be used get the text fo the pdf files and store in the component_text_area. The text will be use to search inside the pdf information.
+
+```php
+define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE', '/usr/bin/pdftotext');
+```
+
+---
+
+### 3D
+
+#### Defining main 3d directory
 
 ./dedalo/config/config.php
 
@@ -2053,7 +2081,7 @@ define('DEDALO_3D_FOLDER', '/3d');
 
 ---
 
-### Defining 3d extension (type of file)
+#### Defining 3d extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -2069,11 +2097,11 @@ define('DEDALO_3D_EXTENSION', 'glb');
 
 ---
 
-### Defining 3d extensions supported
+#### Defining 3d extensions supported
 
 ./dedalo/config/config.php
 
-DEDALO_IMAGE_EXTENSIONS_SUPPORTED `array`
+DEDALO_3D_EXTENSIONS_SUPPORTED `array`
 
 This parameter defines the standards file type admitted for the 3d files.
 
@@ -2087,7 +2115,7 @@ define('DEDALO_3D_EXTENSIONS_SUPPORTED', ['glb']);
 
 ---
 
-### Defining 3d mime type
+#### Defining 3d mime type
 
 ./dedalo/config/config.php
 
@@ -2103,7 +2131,7 @@ define('DEDALO_3D_MIME_TYPE', 'model/gltf-binary');
 
 ---
 
-### Defining 3d quality for original files
+#### Defining 3d quality for original files
 
 ./dedalo/config/config.php
 
@@ -2119,7 +2147,7 @@ define('DEDALO_3D_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Defining 3d quality for processed files
+#### Defining 3d quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2135,7 +2163,7 @@ define('DEDALO_3D_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Defining 3d thumb default
+#### Defining 3d thumb default
 
 ./dedalo/config/config.php
 
@@ -2151,7 +2179,7 @@ define('DEDALO_3D_THUMB_DEFAULT', 'thumb');
 
 ---
 
-### Defining 3d qualities definition
+#### Defining 3d qualities definition
 
 ./dedalo/config/config.php
 
@@ -2167,7 +2195,7 @@ define('DEDALO_3D_AR_QUALITY', [DEDALO_3D_QUALITY_ORIGINAL, DEDALO_3D_QUALITY_DE
 
 ---
 
-### Defining 3d gltfpack converter
+#### Defining 3d gltfpack converter
 
 ./dedalo/config/config.php
 
@@ -2183,7 +2211,7 @@ define('DEDALO_3D_GLTFPACK_PATH', '/usr/local/bin/gltfpack');
 
 ---
 
-### Defining 3d FBX2glTF converter
+#### Defining 3d FBX2glTF converter
 
 ./dedalo/config/config.php
 
@@ -2199,7 +2227,7 @@ define('DEDALO_3D_FBX2GLTF_PATH', '/usr/local/bin/FBX2glTF');
 
 ---
 
-### Defining 3d COLLADA2GLTF converter
+#### Defining 3d COLLADA2GLTF converter
 
 ./dedalo/config/config.php
 
@@ -2215,63 +2243,9 @@ define('DEDALO_3D_COLLADA2GLTF_PATH', '/usr/local/bin/COLLADA2GLTF-bin');
 
 ---
 
-### Defining html render to pdf library path
+### SVG
 
-./dedalo/config/config.php
-
-DEDALO_PDF_RENDERER `string`
-
-This parameter defines the path to the library, normally wkhtmltopdf, to be used for process the html pages to pdf format, this library will be used to create a print version of the records.
-
-```php
-define('DEDALO_PDF_RENDERER', '/usr/bin/wkhtmltopdf');
-```
-
----
-
-### Pdf automatic transcription engine
-
-./dedalo/config/config.php
-
-PDF_AUTOMATIC_TRANSCRIPTION_ENGINE `string`
-
-This parameter defines the path to the library, normally xpdf (pdftotext), to be used for process the pdf to extract the information, this library will be used get the text fo the pdf files and store in the component_text_area. The text will be use to search inside the pdf information.
-
-```php
-define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE', '/usr/bin/pdftotext');
-```
-
----
-
-### Defining directory for html files
-
-./dedalo/config/config.php
-
-DEDALO_HTML_FILES_FOLDER `string`
-
-This parameter defines the directory for the html files.
-
-```php
-define('DEDALO_HTML_FILES_FOLDER', '/html_files');
-```
-
----
-
-### Defining html files extension (type of file)
-
-./dedalo/config/config.php
-
-DEDALO_HTML_FILES_EXTENSION `string`
-
-This parameter defines the standard file type of pdf files.
-
-```php
-define('DEDALO_HTML_FILES_EXTENSION', 'html');
-```
-
----
-
-### Defining main directory for svg files
+#### Defining main directory for svg files
 
 ./dedalo/config/config.php
 
@@ -2285,7 +2259,7 @@ define('DEDALO_SVG_FOLDER', '/svg');
 
 ---
 
-### Defining svg extension (type of file)
+#### Defining svg extension (type of file)
 
 ./dedalo/config/config.php
 
@@ -2299,7 +2273,7 @@ define('DEDALO_SVG_EXTENSION', 'svg');
 
 ---
 
-### Defining svg extensions supported
+#### Defining svg extensions supported
 
 ./dedalo/config/config.php
 
@@ -2315,7 +2289,7 @@ define('DEDALO_SVG_EXTENSIONS_SUPPORTED', ['svg']);
 
 ---
 
-### Defining svg mime type
+#### Defining svg mime type
 
 ./dedalo/config/config.php
 
@@ -2331,7 +2305,7 @@ define('DEDALO_SVG_MIME_TYPE', 'image/svg+xml');
 
 ---
 
-### Defining svg quality for original files
+#### Defining svg quality for original files
 
 ./dedalo/config/config.php
 
@@ -2347,7 +2321,7 @@ define('DEDALO_SVG_QUALITY_ORIGINAL', 'original');
 
 ---
 
-### Defining svg quality for processed files
+#### Defining svg quality for processed files
 
 ./dedalo/config/config.php
 
@@ -2363,7 +2337,7 @@ define('DEDALO_SVG_QUALITY_DEFAULT', 'web');
 
 ---
 
-### Defining svg qualities for processed files
+#### Defining svg qualities for processed files
 
 ./dedalo/config/config.php
 
@@ -2378,6 +2352,51 @@ define('DEDALO_SVG_AR_QUALITY', [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_
 ```
 
 ---
+
+### HTML
+
+#### Defining html render to pdf library path
+
+./dedalo/config/config.php
+
+DEDALO_PDF_RENDERER `string`
+
+This parameter defines the path to the library, normally wkhtmltopdf, to be used for process the html pages to pdf format, this library will be used to create a print version of the records.
+
+```php
+define('DEDALO_PDF_RENDERER', '/usr/bin/wkhtmltopdf');
+```
+
+---
+
+#### Defining directory for html files
+
+./dedalo/config/config.php
+
+DEDALO_HTML_FILES_FOLDER `string`
+
+This parameter defines the directory for the html files.
+
+```php
+define('DEDALO_HTML_FILES_FOLDER', '/html_files');
+```
+
+---
+
+#### Defining html files extension (type of file)
+
+./dedalo/config/config.php
+
+DEDALO_HTML_FILES_EXTENSION `string`
+
+This parameter defines the standard file type of pdf files.
+
+```php
+define('DEDALO_HTML_FILES_EXTENSION', 'html');
+```
+
+---
+
 
 ### Defining upload temporary directory
 
@@ -2417,7 +2436,7 @@ Dédalo use a georeference system based in leaflet library to create maps for th
 
 ---
 
-### Defining georeference provider
+#### Defining georeference provider
 
 ./dedalo/config/config.php
 
