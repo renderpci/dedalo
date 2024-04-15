@@ -1295,7 +1295,75 @@ define('DEDALO_MEDIA_URL', DEDALO_ROOT_WEB . '/media');
 
 ---
 
-### Defining audiovisual directory
+### Thumb
+
+Thumb media are small images to be used in lists, all media has thumb image to represent the media.
+
+#### Defining image thumb extension
+
+./dedalo/config/config.php
+
+DEDALO_THUMB_EXTENSION `string`
+
+This parameter defines the standard file type of thumb files.
+
+```php
+define('DEDALO_THUMB_EXTENSION', 'jpg');
+```
+
+---
+
+#### Defining image thumb quality
+
+./dedalo/config/config.php
+
+DEDALO_QUALITY_THUMB `string`
+
+
+This parameter defines the thumb quality definition that can be used for compress the media files.
+
+This parameter will use to compress and store image files used in lists. The compression will use the default file.
+
+| Media | Remark |
+| --- | --- |
+| PDF | Will render the first page of the website in quality, if the default image does not exist it will try to use the original quality.|
+| AV | Will render the posterframe.|
+| Image | Will render the default quality, if the default image does not exist it will try to use the original quality.|
+| SVG | Will render the default quality, if the default image does not exist it will try to use the original quality.|
+| 3d | Will render the posterframe.|
+
+
+```php
+define('DEDALO_QUALITY_THUMB', 'thumb');
+```
+
+---
+
+#### Defining image thumb width size
+
+./dedalo/config/config.php
+
+DEDALO_IMAGE_THUMB_WIDTH `int`
+
+This parameter defines width size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
+
+```php
+define('DEDALO_IMAGE_THUMB_WIDTH', 222);
+```
+
+---
+
+#### Defining image thumb height size
+
+./dedalo/config/config.php
+
+DEDALO_IMAGE_THUMB_HEIGHT `int`
+
+This parameter defines height size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
+
+```php
+define('DEDALO_IMAGE_THUMB_HEIGHT', 148);
+```
 
 ---
 
@@ -1753,7 +1821,7 @@ define('DEDALO_IMAGE_QUALITY_DEFAULT', '1.5MB');
 
 ./dedalo/config/config.php
 
-DEDALO_IMAGE_THUMB_DEFAULT `string`
+DEDALO_IMAGE_THUMB_DEFAULT `string` *deprecated; use DEDALO_QUALITY_THUMB*
 
 This parameter defines the thumb quality definition that can be used for compress the image files.
 
@@ -1776,7 +1844,7 @@ This parameter defines the different qualities that can be used for compress the
 This parameter will use to compress image files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
 
 ```php
-define('DEDALO_IMAGE_AR_QUALITY', [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_IMAGE_THUMB_DEFAULT]);
+define('DEDALO_IMAGE_AR_QUALITY', [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_QUALITY_THUMB]);
 ```
 
 ---
@@ -1839,35 +1907,7 @@ define('COLOR_PROFILES_PATH', DEDALO_CORE_PATH . '/media_engine/lib/color_profil
 
 ---
 
-### Defining image thumb width size
-
-./dedalo/config/config.php
-
-DEDALO_IMAGE_THUMB_WIDTH `int`
-
-This parameter defines width size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
-
-```php
-define('DEDALO_IMAGE_THUMB_WIDTH', 222);
-```
-
----
-
-### Defining image thumb height size
-
-./dedalo/config/config.php
-
-DEDALO_IMAGE_THUMB_HEIGHT `int`
-
-This parameter defines height size in pixels to the thumb images, it will be used to compress the images with the thumb quality (the smaller version to be used in lists).
-
-```php
-define('DEDALO_IMAGE_THUMB_HEIGHT', 148);
-```
-
----
-
-### Defining image web directory
+#### Defining image web directory
 
 ./dedalo/config/config.php
 
@@ -2039,7 +2079,7 @@ define('DEDALO_PDF_AR_QUALITY', [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY
 
 ./dedalo/config/config.php
 
-DEDALO_PDF_THUMB_DEFAULT `string`
+DEDALO_PDF_THUMB_DEFAULT `string` *deprecated; use DEDALO_QUALITY_THUMB*
 
 This parameter defines the thumb quality definition that can be used for compress the pdf files.
 
