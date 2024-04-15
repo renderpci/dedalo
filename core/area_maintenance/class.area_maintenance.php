@@ -790,7 +790,11 @@ class area_maintenance extends area_common {
 						// 	$item->sample_vs_config[] = $const_name;
 						// }
 						if (!defined($const_name)) {
-							$item->sample_vs_config[] = $const_name;
+							// exceptions (ignore optional constants that could be disabled)
+							$ignore = ['DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
+							if (!in_array($const_name, $ignore)) {
+								$item->sample_vs_config[] = $const_name;
+							}
 						}
 					}
 
