@@ -69,14 +69,9 @@
 			$item = $this->get_data_item($value);
 
 			// posterframe_url
-			// @todo: include posterframe_url as thumb quality info value in files_info
-				$item->posterframe_url = $this->get_thumb_url();
-
-			// default quality video URL (usually from 404)
-				// $default_quality	= $this->get_default_quality();
-				// $item->video_url	= $this->quality_file_exist( $default_quality )
-				// 	? $this->get_url(false)
-				// 	: null;
+					$item->posterframe_url = empty($value)
+					? null
+					: $this->get_posterframe_url();
 
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='edit') {

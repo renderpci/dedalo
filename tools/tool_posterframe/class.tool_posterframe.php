@@ -219,9 +219,9 @@ class tool_posterframe extends tool_common {
 				);
 				return $response;
 			}
-			// posterframe_path. Target to generate posterframe
+			// posterframe_filepath. Target to generate posterframe
 			// We send the posterframe to the final component_image path as the tool upload would do
-			$posterframe_path = $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
+			$posterframe_filepath = $component_image->get_media_filepath(DEDALO_IMAGE_QUALITY_ORIGINAL);
 
 		// ffmpeg create_posterframe
 			$Ffmpeg = new Ffmpeg();
@@ -229,13 +229,13 @@ class tool_posterframe extends tool_common {
 				'timecode'			=> $current_time,
 				'src_file'			=> $src_file, // av file
 				'quality'			=> $quality,
-				'posterframe_path'	=> $posterframe_path // full target file path
+				'posterframe_filepath'	=> $posterframe_filepath // full target file path
 			]);
 
 		// component_image process_uploaded_file
 			// original file name from posterframe path like rsc35_rsc167_1.jpg
-			$original_file_name	= pathinfo($posterframe_path)['basename'];
-			$full_file_path		= $posterframe_path; // full path to file
+			$original_file_name	= pathinfo($posterframe_filepath)['basename'];
+			$full_file_path		= $posterframe_filepath; // full path to file
 			$full_file_name		= $original_file_name; // same as original_file_name
 			// process create default and thumb files and save component files info
 			$process_response = $component_image->process_uploaded_file((object)[

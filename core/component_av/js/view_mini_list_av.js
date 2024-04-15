@@ -40,6 +40,16 @@ view_mini_list_av.render = async function(self) {
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 
+	// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
+
+	// URL
+	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const url = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: posterframe_url
+
+
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
@@ -50,7 +60,7 @@ view_mini_list_av.render = async function(self) {
 				image.src = page_globals.fallback_image
 			}
 		})
-		image.src = posterframe_url
+		image.src = url
 
 
 	return wrapper

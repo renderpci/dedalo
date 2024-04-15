@@ -789,6 +789,12 @@ class component_media_common extends component_common {
 
 		$ar_quality = $this->get_ar_quality();
 
+		$thumb_quality		= $this->get_thumb_quality();
+		$thumb_extension	= $this->get_thumb_extension();
+		if(!in_array($thumb_quality, $ar_quality)){
+			$ar_quality[] = $thumb_quality;
+		}
+
 		$alternative_extensions	= $this->get_alternative_extensions();
 		$extensions				= is_array($alternative_extensions)
 			? array_merge([$this->get_extension()], $alternative_extensions)
@@ -800,6 +806,23 @@ class component_media_common extends component_common {
 			$files_info = [];
 			foreach ($ar_quality as $quality) {
 
+				// thumb, use thumb extension instead the component extension (for av is .mp4 and for thumb is .jpg)
+				if($quality===$thumb_quality){
+
+					$quality_file_info = $this->get_quality_file_info($quality, $thumb_extension);
+					// file_exist check
+					if ($include_empty===false && $quality_file_info->file_exist===false) {
+						// skip quality without file
+						continue;
+					}
+
+					// add
+					$files_info[] = $quality_file_info;
+
+					continue;
+				}
+
+				// extensions iterate
 				foreach ($unique_extensions as $extension) {
 
 					$quality_file_info = $this->get_quality_file_info($quality, $extension);
@@ -940,7 +963,8 @@ class component_media_common extends component_common {
 		}
 
 		// extension
-			$extension = $this->get_extension();
+			$extension			= $this->get_extension();
+			$thumb_extension	= $this->get_thumb_extension();
 		// ar_quality_to_include
 			$ar_quality_to_include = [
 				$this->get_default_quality(),
@@ -968,7 +992,11 @@ class component_media_common extends component_common {
 							);
 						}
 
-					if (	(isset($file_info->extension) && $file_info->extension===$extension)
+					$current_extension = $file_info->quality==='thumb'
+						? $thumb_extension
+						: $extension;
+
+					if ( (isset($file_info->extension) && $file_info->extension===$current_extension)
 						&&  in_array($file_info->quality, $ar_quality_to_include)
 						) {
 
@@ -999,22 +1027,13 @@ class component_media_common extends component_common {
 
 	/**
 	* GET_THUMB_QUALITY
-	* Method used only to capture non defined cases. Define in every media component
-	* Called from get_grid_value method in non edit mode
-	* @return string $fake_quality
+	* @return string $thumb_quality
 	*/
 	public function get_thumb_quality() : string {
 
-		debug_log(__METHOD__
-			. " Calling unimplemented method get_thumb_quality catch by component_media_common " . PHP_EOL
-			. ' Define a real get_thumb_quality method ASAP' . PHP_EOL
-			.' called class: ' . get_called_class()
-			, logger::DEBUG
-		);
+		$thumb_quality = defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
 
-		$fake_quality = $this->get_default_quality();
-
-		return $fake_quality;
+		return $thumb_quality;
 	}//end get_thumb_quality
 
 
@@ -1034,6 +1053,17 @@ class component_media_common extends component_common {
 	}//end get_thumb_path
 
 
+
+	/**
+	* GET_THUMB_EXTENSION
+	* @return string $thumb_extension
+	*/
+	public function get_thumb_extension() : string {
+
+		$thumb_extension = defined('DEDALO_THUMB_EXTENSION') ? DEDALO_THUMB_EXTENSION : 'jpg';
+
+		return $thumb_extension;
+	}//end get_thumb_extension
 
 	/**
 	* DELETE_FILE
@@ -1559,7 +1589,7 @@ class component_media_common extends component_common {
 
 					$ext				= pathinfo($file, PATHINFO_EXTENSION);
 					$default_extension	= $this->get_extension();
-					if(strtolower($ext)!==strtolower($default_extension)) {
+					if(strtolower($ext)===strtolower($default_extension)) {
 						// overwrite ar_originals with only one value
 						$ar_originals = [$file];
 						break;
@@ -1666,12 +1696,115 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_URL
+	* Get image url for current quality
+	*
+	* @param string|bool $quality = null
+	* @param bool $test_file = true
+	*	Check if file exists. If not use 0.jpg as output
+	* @param bool $absolute = false
+	* @param bool $default_add = true
+	*
+	* @return string|null $url
+	*	Return relative o absolute url
+	*/
+	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
+
+		// quality fallback to default
+			if(empty($quality)) {
+				$quality = $this->get_quality();
+			}
+
+		// external source (link to image outside Dédalo media)
+			$external_source = $this->get_external_source();
+			if(!empty($external_source)){
+				$url = $external_source;
+				return $url;
+			}
+
+		// image id
+			$id = $this->get_id();
+
+		// url
+			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
+			// tm mode case
+			if ($this->mode==='tm' || $this->data_source==='tm') {
+
+				// get last deleted file
+				$last_deleted_file = get_last_modified_file(
+					$this->get_media_path_dir($quality).'/deleted',
+					[$this->get_extension()],
+					function($el) use($id) {
+						$needle = '/'.$id.'_deleted';
+						if (strpos($el, $needle)!==false) {
+							return true;
+						}
+						return false;
+					}
+				);
+				if (!empty($last_deleted_file)) {
+					$separator	= '/deleted/';
+					$parts		= explode($separator, $last_deleted_file);
+					$url		= $this->get_media_url_dir($quality) .$separator. $parts[1];
+				}
+			}
+
+		// File exists test : If not, show '0' dedalo image logo
+			if($test_file===true) {
+				$file = $this->get_media_filepath($quality);
+				if(!file_exists($file)) {
+					if ($default_add===false) {
+						return null;
+					}
+					$default_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
+					// remove possible double slashes ad beginning
+					$url = preg_replace('/^\/\//', '/', $default_url);
+				}
+			}
+
+		// Absolute (Default false)
+			if ($absolute===true) {
+				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
+			}
+
+
+		return $url;
+	}//end get_url
+
+
+
+	/**
+	* GET_THUMB_URL
+	* Unified method to get thumbnail, posterframe, etc.
+	* @return string|null
+	*/
+	public function get_thumb_url() : ?string {
+
+		$thumb_quality = $this->get_thumb_quality();
+
+		# target data (target quality is thumb)
+		$image_thumb_url = $this->get_url(
+			$thumb_quality,
+			false,  // bool test_file
+			false,  // bool absolute
+			false // bool default_add
+		);
+
+		return $image_thumb_url;
+	}//end get_thumb_url
+
+
+
+	/**
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
+
+		// re-create thumb always
+			$this->create_thumb();
 
 		// files_info. Updates component dato files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it
@@ -1913,28 +2046,37 @@ class component_media_common extends component_common {
 				}
 			}
 
-		// copy file from source quality to target quality
-			$copy_result = copy(
-				$original_file_path, // from original quality directory
-				$target_quality_path // to default quality directory
-			);
-			if ($copy_result===false) {
+			if($quality==='thumb'){
+				// thumb quality
+				$result = $this->create_thumb();
+
+			}else{
+				// copy file from source quality to target quality
+				$result = copy(
+					$original_file_path, // from original quality directory
+					$target_quality_path // to default quality directory
+				);
+			}
+
+
+			if ($result===false) {
 				debug_log(__METHOD__ . PHP_EOL
-					. " Error: Unable copy file : " . PHP_EOL
+					. " Error: Unable to build version file : " . PHP_EOL
 					. ' original_file_path: ' . $original_file_path . PHP_EOL
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::ERROR
 				);
 			}else{
 				debug_log(__METHOD__ . PHP_EOL
-					. " Copied file : " . PHP_EOL
+					. " Built file : " . PHP_EOL
 					. ' original_file_path: ' . $original_file_path . PHP_EOL
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::DEBUG
 				);
 			}
 
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+
+		// logger activity : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
 				'NEW VERSION',
 				logger::INFO,

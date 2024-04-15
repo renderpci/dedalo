@@ -234,84 +234,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_URL
-	* Get image url for current quality
-	*
-	* @param string|bool $quality = null
-	* @param bool $test_file = true
-	*	Check if file exists. If not use 0.jpg as output
-	* @param bool $absolute = false
-	* @param bool $default_add = true
-	*
-	* @return string|null $url
-	*	Return relative o absolute url
-	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
-
-		// quality fallback to default
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
-
-		// external source (link to image outside Dédalo media)
-			$external_source = $this->get_external_source();
-			if(!empty($external_source)){
-				$url = $external_source;
-				return $url;
-			}
-
-		// image id
-			$id = $this->get_id();
-
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
-			// tm mode case
-			if ($this->mode==='tm' || $this->data_source==='tm') {
-
-				// get last deleted file
-				$last_deleted_file = get_last_modified_file(
-					$this->get_media_path_dir($quality).'/deleted',
-					[$this->get_extension()],
-					function($el) use($id) {
-						$needle = '/'.$id.'_deleted';
-						if (strpos($el, $needle)!==false) {
-							return true;
-						}
-						return false;
-					}
-				);
-				if (!empty($last_deleted_file)) {
-					$separator	= '/deleted/';
-					$parts		= explode($separator, $last_deleted_file);
-					$url		= $this->get_media_url_dir($quality) .$separator. $parts[1];
-				}
-			}
-
-		// File exists test : If not, show '0' dedalo image logo
-			if($test_file===true) {
-				$file = $this->get_media_filepath($quality);
-				if(!file_exists($file)) {
-					if ($default_add===false) {
-						return null;
-					}
-					$default_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
-					// remove possible double slashes ad beginning
-					$url = preg_replace('/^\/\//', '/', $default_url);
-				}
-			}
-
-		// Absolute (Default false)
-			if ($absolute===true) {
-				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-			}
-
-
-		return $url;
-	}//end get_url
-
-
-
-	/**
 	* GET_EXTERNAL_SOURCE
 	* Look current component properties to find the property 'external_source'
 	* If found, the source path of current media will be get from a component_iri
@@ -400,19 +322,6 @@ class component_image extends component_media_common {
 
 		return $modified_uploaded_file;
 	}//end get_modified_uploaded_file
-
-
-
-	/**
-	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
-	*/
-	public function get_thumb_quality() : string {
-
-		$thumb_quality = DEDALO_IMAGE_THUMB_DEFAULT;
-
-		return $thumb_quality;
-	}//end get_thumb_quality
 
 
 
@@ -794,12 +703,12 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GENERATE_THUMB
+	* CREATE_THUMB
 	* Called on save
 	* @return object|null $result
 	* 	URL	path of thumb file path OR null if default quality file does not exists
 	*/
-	public function generate_thumb() : ?object {
+	public function create_thumb() : ?object {
 		$start_time = start_time();
 
 		// common data
@@ -823,26 +732,20 @@ class component_image extends component_media_common {
 
 		// old thumb rename
 			$thumb_quality		= $this->get_thumb_quality();
-			$image_thumb_path	= $this->get_media_filepath($thumb_quality);
+			$thumb_extension	= $this->get_thumb_extension();
+
+			$image_thumb_path	= $this->get_media_filepath($thumb_quality, $thumb_extension);
 			$image_thumb_url	= $this->get_url(
 				$thumb_quality,
 				false,  // bool test_file
 				false,  // bool absolute
 				false // bool default_add
 			);
-			if(file_exists($image_thumb_path)) {
-				// unlink($image_thumb_path);
-				$image_thumb_path_des = $image_thumb_path.'_DES';
-				shell_exec("mv $image_thumb_path $image_thumb_path_des");
-			}
 
 		// thumb generate
 			ImageMagick::dd_thumb(
-				'list',
 				$default_image_path,
 				$image_thumb_path,
-				false, // bool dimensions
-				$initial_media_path ?? ''
 			);
 
 		// debug
@@ -860,28 +763,8 @@ class component_image extends component_media_common {
 
 
 		return $result;
-	}//end generate_thumb
+	}//end create_thumb
 
-
-
-	/**
-	* GET_THUMB_URL
-	* @return string|null $image_thumb_url
-	*/
-	public function get_thumb_url() : ?string {
-
-		$thumb_quality = $this->get_thumb_quality();
-
-		# target data (target quality is thumb)
-		$image_thumb_url = $this->get_url(
-			$thumb_quality,
-			false,  // bool test_file
-			false,  // bool absolute
-			false // bool default_add
-		);
-
-		return $image_thumb_url;
-	}//end get_thumb_url
 
 
 
@@ -1329,16 +1212,15 @@ class component_image extends component_media_common {
 							, logger::DEBUG
 						);
 
-
-					// Generate thumb image quality from default always (if default exits)
-						$thumb = $this->generate_thumb();
-
 					// debug
 						debug_log(__METHOD__
-							." SAVING COMPONENT IMAGE: generate_thumb response: ".to_string($thumb)
+							." SAVING COMPONENT IMAGE: create_thumb response: ".to_string($thumb)
 							, logger::DEBUG
 						);
 				}
+
+			// Generate thumb image quality from default always (if default exits)
+				$thumb = $this->create_thumb();
 
 			// save component dato
 				// Note that save action don't change upload info properties,
@@ -1362,23 +1244,6 @@ class component_image extends component_media_common {
 		return $response;
 	}//end process_uploaded_file
 
-
-
-	/**
-	* GET_PREVIEW_URL
-	* @return string $preview_url
-	*/
-	public function get_preview_url(string $quality=DEDALO_IMAGE_QUALITY_DEFAULT) : string {
-
-		$preview_url = $this->get_url(
-			$quality,
-			false,  // bool test_file
-			false,  // bool  absolute
-			false // bool default_add
-		);
-
-		return $preview_url;
-	}//end get_preview_url
 
 
 
@@ -2229,9 +2094,6 @@ class component_image extends component_media_common {
 					// ]);
 					$this->build_version($default_quality, true, false);
 				}
-
-			// re-create thumb always
-				$this->generate_thumb();
 
 			// svg file. Create file if not exists
 				$svg_file_path = $this->get_svg_file_path();

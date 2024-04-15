@@ -68,10 +68,19 @@ export const get_content_data = function(self) {
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
-	// url
-		const url = data.posterframe_url
+	// posterframe (used as fallback)
+		const posterframe_url = data.posterframe_url
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
+
+	// thumb, if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+
+	// URL
+	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
+		const url = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: posterframe_url
 
 		const file_info	= files_info.find(item => item.quality===quality)
 

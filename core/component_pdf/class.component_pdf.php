@@ -56,18 +56,6 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_THUMB_QUALITY
-	* @return string $thumb_quality
-	* Defined in config file
-	*/
-	public function get_thumb_quality() : string {
-
-		return DEDALO_PDF_THUMB_DEFAULT;
-	}//end get_thumb_quality
-
-
-
-	/**
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
@@ -100,54 +88,6 @@ class component_pdf extends component_media_common {
 
 		return $this->folder ?? DEDALO_PDF_FOLDER;
 	}//end get_folder
-
-
-
-	/**
-	* GET_URL
-	* Get PDF url for current quality
-	*
-	* @param string|bool $quality = null
-	* @param bool $test_file = true
-	*	Check if file exists. If not use 0.jpg as output
-	* @param bool $absolute = false
-	* @param bool $default_add = true
-	*
-	* @return string|null $url
-	*	Return relative o absolute url
-	*/
-	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
-
-		// quality fallback to default
-			if(empty($quality)) {
-				$quality = $this->get_quality();
-			}
-
-		// pdf id
-			$id = $this->get_id();
-
-		// url
-			$url = $this->get_media_url_dir($quality) .'/'. $id .'.'. $this->get_extension();
-
-		// File exists test : If not, show '0' dedalo image logo
-			if($test_file===true) {
-				$file = $this->get_media_filepath($quality);
-				if(!file_exists($file)) {
-					if ($default_add===false) {
-						return null;
-					}
-					$url = DEDALO_CORE_URL . '/themes/default/0.pdf';
-				}
-			}
-
-		// Absolute (Default false)
-			if ($absolute===true) {
-				$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-			}
-
-
-		return $url;
-	}//end get_url
 
 
 
@@ -225,10 +165,13 @@ class component_pdf extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
 		}
 
-		$force_create	= false;
-		$absolute		= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg';
-
-		$valor			= $this->get_pdf_thumb($force_create, $absolute);	// Note this absolute url is converted to image on export
+		$thumb_quality	= $this->get_thumb_quality();
+		$valor			= $this->get_url(
+			$thumb_quality,
+			false,
+			true,  // absolute, output absolute path like 'http://myhost/mypath/myimage.jpg';
+			false
+		);	// Note this absolute url is converted to image on export
 
 		return $valor;
 	}//end get_valor_export
@@ -352,7 +295,7 @@ class component_pdf extends component_media_common {
 
 
 	/**
-	* GET_PDF_THUMB
+	* CREATE_THUMB
 	*
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
@@ -360,12 +303,9 @@ class component_pdf extends component_media_common {
 	* command="&quot;gs&quot;
 	* with
 	* command="&quot;/usr/local/bin/gs&quot;
-	* Once the full path is specified, the command is working as desired.
-	* @param bool $force_create = false
-	* @param bool $absolute = false
-	* @return string|false $url
+	* @return bool
 	*/
-	public function get_pdf_thumb(bool $force_create=false, bool $absolute=false) : ?string {
+	public function create_thumb() : bool {
 
 		// check config constant definition
 			if (!defined('DEDALO_PDF_THUMB_DEFAULT')) {
@@ -373,92 +313,52 @@ class component_pdf extends component_media_common {
 				debug_log(__METHOD__." Undefined config 'DEDALO_PDF_THUMB_DEFAULT'. Using fallback 'thumb' value".to_string(), logger::WARNING);
 			}
 
-		// url default
-			$url = null;
-
 		// thumb_path
-			$file_name	= $this->get_id();
-			$folder		= $this->get_folder();
+			$file_name			= $this->get_id();
+			// $target_path		= $this->get_media_path_dir('thumb');
 
-			$target_file = DEDALO_MEDIA_PATH . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
-		// thumb already exists case
-			if (!$force_create && file_exists($target_file)) {
-				$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-				# ABSOLUTE (Default false)
-				if ($absolute) {
-					$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-				}
-				return $url;
-			}
+			// $target_file		= $target_path . '/' . $file_name . '.'. $thumb_extension;
 
 		// thumb not exists case: generate from PDF
 			$quality		= $this->get_default_quality();
 			$source_file	= $this->get_media_filepath($quality);
-			if (file_exists($source_file)) {
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					." default quality file doesn't exists, is not possible to create a thumb"
+					, logger::WARNING
+				);
 
-				// dimensions . Like "102x57"
-					$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
-					$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
-					$dimensions	= $width.'x'.$height;
-
-					$thumb_pdf_options = new stdClass();
-						$thumb_pdf_options->source_file = $source_file;
-						$thumb_pdf_options->ar_layers 	= [0];
-						$thumb_pdf_options->target_file = $target_file;
-						$thumb_pdf_options->density		= 150;
-						$thumb_pdf_options->antialias	= true;
-						$thumb_pdf_options->quality		= 75;
-						$thumb_pdf_options->resize		= $dimensions;
-
-					$result = ImageMagick::convert($thumb_pdf_options);
-
-				// command
-					// $flags 		= '-debug all';
-					// $flags 		= " -scale 200x200 -background white -flatten ";
-					// $command = MAGICK_PATH ."convert -alpha off {$path}[0] -thumbnail '$dimensions' -background white -flatten -gravity center -unsharp 0x.5 -quality 90 $target_file";
-
-				// exec command
-					// exec($command.' 2>&1', $output, $result_code);
-					if ($result!==false) {
-
-						// url. All is OK
-						$url = DEDALO_MEDIA_URL . $folder . '/' . DEDALO_PDF_THUMB_DEFAULT . '/' . $file_name . '.jpg';
-
-						// absolute (Default false). Prepend protocol and host
-						if ($absolute===true) {
-							$url = DEDALO_PROTOCOL . DEDALO_HOST . $url;
-						}
-					}
+				return false;
 			}
 
-		return $url;
-	}//end get_pdf_thumb
+		// dimensions . Like "102x57"
+			$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+			$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
+			$dimensions	= $width.'x'.$height;
 
+			$thumb_pdf_options = new stdClass();
+				$thumb_pdf_options->source_file = $source_file;
+				$thumb_pdf_options->ar_layers 	= [0];
+				$thumb_pdf_options->target_file = $target_file;
+				$thumb_pdf_options->density		= 150;
+				$thumb_pdf_options->antialias	= true;
+				$thumb_pdf_options->quality		= 75;
+				$thumb_pdf_options->resize		= $dimensions;
 
+			$result = ImageMagick::convert($thumb_pdf_options);
 
-	/**
-	* GET_PREVIEW_URL
-	* @return string $preview_url
-	*/
-	public function get_preview_url() : string {
+		// exec command
+			// exec($command.' 2>&1', $output, $result_code);
+			if ($result===false) {
+				return false;
+			}
 
-		$preview_url = DEDALO_CORE_URL . '/themes/default/icons/file-pdf-o.svg';
-
-		return $preview_url;
-	}//end get_preview_url
-
-
-
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_pdf_thumb(false, false);
-	}//end get_thumb_url
+		return true;
+	}//end create_thumb
 
 
 
@@ -467,13 +367,14 @@ class component_pdf extends component_media_common {
 	*
 	* Once the full path is specified, the command is working as desired.
 	* @param object|null $options
-	* @return string|bool $result
+	* @return bool $result
 	*/
 	public function create_image(?object $options=null) : string|bool {
 
 		// options
 			$page		= $options->page ?? 0;
 			$quality	= $options->quality ?? $this->get_original_quality();
+			$overwrite	= $options->overwrite ?? true;
 
 		// source file
 			$source_file = $this->get_media_filepath($quality);
@@ -487,34 +388,47 @@ class component_pdf extends component_media_common {
 			}
 
 		// target file
-			$file_name		= $this->get_id();
-			$folder			= $this->get_folder();
-			$target_file	= DEDALO_MEDIA_PATH . $folder . '/tmp/' . $file_name . '.' . DEDALO_IMAGE_EXTENSION;
+			$file_name				= $this->get_id();
+			$folder					= $this->get_folder();
+			$target_path			= $this->get_media_path_dir($quality);
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [DEDALO_IMAGE_EXTENSION];
 
-		// generate from PDF
-			$image_pdf_options = new stdClass();
-				$image_pdf_options->source_file	= $source_file;
-				$image_pdf_options->ar_layers	= [$page];
-				$image_pdf_options->target_file	= $target_file;
-				$image_pdf_options->density		= 600;
-				$image_pdf_options->antialias	= true;
-				$image_pdf_options->quality		= 75;
-				$image_pdf_options->resize		= '25%';
+			foreach ($alternative_extensions as $current_extension) {
 
-			ImageMagick::convert($image_pdf_options);
+				$target_file =  $target_path . '/' . $file_name . '.' . $current_extension;
 
-			// check file
-			if (!file_exists($target_file)) {
-				debug_log(__METHOD__
-					. " Error on image creation. target file do not exists " . PHP_EOL
-					. 'target_file: ' . to_string($target_file)
-					, logger::ERROR
-				);
-				return false;
+				// no overwrite case
+					if ($overwrite===false) {
+						// check if file already exists
+						if (file_exists($target_file)) {
+							continue;
+						}
+					}
+
+				// generate from PDF
+				$image_pdf_options = new stdClass();
+					$image_pdf_options->source_file	= $source_file;
+					$image_pdf_options->ar_layers	= [$page];
+					$image_pdf_options->target_file	= $target_file;
+					$image_pdf_options->density		= 900;
+					$image_pdf_options->antialias	= true;
+					$image_pdf_options->quality		= 75;
+					$image_pdf_options->resize		= '50%';
+
+				ImageMagick::convert($image_pdf_options);
+
+				// check file
+				if (!file_exists($target_file)) {
+					debug_log(__METHOD__
+						. " Error on image creation. target file do not exists " . PHP_EOL
+						. 'target_file: ' . to_string($target_file)
+						, logger::ERROR
+					);
+					return false;
+				}
 			}
 
-
-		return $target_file;
+		return true;
 	}//end create_image
 
 
@@ -624,18 +538,26 @@ class component_pdf extends component_media_common {
 							, logger::ERROR
 						);
 					}else{
+
+						// create alternative image of versions the default quality
+						$create_image_options = new stdClass();
+						$create_image_options->quality = $default_quality;
+						$this->create_image($create_image_options);
+
 						debug_log(__METHOD__ . PHP_EOL
 							. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
 							. ' Source path: ' . $full_file_path . PHP_EOL
 							. ' Target path: ' . $target_file_path
 							, logger::DEBUG
 						);
+
 					}
 
+					// create alternative image versions of the PDF
+						$this->create_image();
+
 					// thumb : Create pdf_thumb image
-						$thumb_url = $this->get_pdf_thumb(
-							true // bool force_create
-						);
+						$this->create_thumb();
 
 					// transcription to text automatic
 						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
@@ -748,11 +670,15 @@ class component_pdf extends component_media_common {
 
 	/**
 	* GET_ALTERNATIVE_EXTENSIONS
-	* @return array
+	* @return array|null $alternative_extensions
 	*/
-	public function get_alternative_extensions() : array {
+	public function get_alternative_extensions() : ?array {
 
-		return DEDALO_PDF_EXTENSIONS_SUPPORTED;
+		$alternative_extensions = defined('DEDALO_PDF_ALTERNATIVE_EXTENSIONS')
+			? DEDALO_PDF_ALTERNATIVE_EXTENSIONS
+			: null;
+
+		return $alternative_extensions;
 	}//end get_alternative_extensions
 
 
@@ -1133,6 +1059,33 @@ class component_pdf extends component_media_common {
 
 		return $response;
 	}//end update_dato_version
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-build and save its data
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// quality
+			$ar_quality = $this->get_ar_quality();
+			foreach ($ar_quality as $quality) {
+				// create_image. Creates alternative images if they do not exists
+				$this->create_image((object)[
+					'overwrite'	=> false,
+					'quality'	=> $quality
+				]);
+			}
+
+		// common regenerate_component exec after specific actions (this action saves at the end)
+			$result = parent::regenerate_component();
+
+
+		return $result;
+	}//end regenerate_component
 
 
 

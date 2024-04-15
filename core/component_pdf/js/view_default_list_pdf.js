@@ -46,8 +46,17 @@ view_default_list_pdf.render = async function(self, options) {
 
 		// url
 		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension && el.file_exist===true) //
+
+		// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+
+		const thumb_file = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
+
+
 		const url = file_info
-			? DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
+			? thumb_file
 			: page_globals.fallback_image // page_globals.fallback_image
 
 		const image = ui.create_dom_element({
@@ -60,7 +69,7 @@ view_default_list_pdf.render = async function(self, options) {
 			console.log('pdf icon load error:', url);
 		})
 		// open viewer
-		image.addEventListener('mouseup', function (e) {
+		image.addEventListener('mousedown', function (e) {
 			e.stopPropagation();
 
 			if(!file_info){

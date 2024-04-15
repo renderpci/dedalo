@@ -141,17 +141,6 @@ class component_svg extends component_media_common {
 
 
 
-	/**
-	* GET_THUMB_URL
-	* Unified method to get thumbnail, posterframe, etc.
-	* @return string|null
-	*/
-	public function get_thumb_url() : ?string {
-
-		return $this->get_url();
-	}//end get_thumb_url
-
-
 
 	/**
 	* GET_FILE_CONTENT
@@ -184,6 +173,74 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* CREATE_THUMB
+	*
+	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
+	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
+	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
+	* command="&quot;gs&quot;
+	* with
+	* command="&quot;/usr/local/bin/gs&quot;
+	* @return bool
+	*/
+	public function create_thumb() : bool {
+
+		// check config constant definition
+			if (!defined('DEDALO_QUALITY_THUMB')) {
+				define('DEDALO_QUALITY_THUMB', 'thumb');
+				debug_log(__METHOD__." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+			}
+
+		// thumb_path
+			$file_name			= $this->get_id();
+			// $target_path		= $this->get_media_path_dir('thumb');
+
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
+
+			// $target_file		= $target_path . '/' . $file_name . '.'. $thumb_extension;
+
+		// thumb not exists case: generate from PDF
+			$quality		= $this->get_default_quality();
+			$source_file	= $this->get_media_filepath($quality);
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					." default quality file doesn't exists, is not possible to create a thumb"
+					, logger::WARNING
+				);
+
+				return false;
+			}
+
+		// dimensions . Like "102x57"
+			$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+			$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
+			$dimensions	= $width.'x'.$height;
+
+			$thumb_pdf_options = new stdClass();
+				$thumb_pdf_options->source_file = $source_file;
+				$thumb_pdf_options->ar_layers 	= [0];
+				$thumb_pdf_options->target_file = $target_file;
+				$thumb_pdf_options->density		= 150;
+				$thumb_pdf_options->antialias	= true;
+				$thumb_pdf_options->quality		= 75;
+				$thumb_pdf_options->resize		= $dimensions;
+
+			$result = ImageMagick::convert($thumb_pdf_options);
+
+		// exec command
+			// exec($command.' 2>&1', $output, $result_code);
+			if ($result===false) {
+				return false;
+			}
+
+		return true;
+	}//end create_thumb
+
+
+
+	/**
 	* GET_URL_FROM_LOCATOR
 	* @param object $locator
 	* @return string|null $url
@@ -203,25 +260,6 @@ class component_svg extends component_media_common {
 
 		return $url;
 	}//end get_url_from_locator
-
-
-
-	/**
-	* GET_PREVIEW_URL
-	* Alias of get_url
-	* @return string $url
-	*/
-	public function get_preview_url() : string {
-
-		$preview_url = $this->get_url(
-			null,  // string|null quality
-			false, // bool test_file
-			false, // bool absolute
-			false // bool default_add
-		);
-
-		return $preview_url;
-	}//end get_preview_url
 
 
 
@@ -347,6 +385,9 @@ class component_svg extends component_media_common {
 
 					$this->set_dato($dato);
 				}
+
+			// thumb. Create thumb from PDF file
+				$this->create_thumb();
 
 			// save component dato
 				// Note that save action don't change upload info properties,

@@ -69,23 +69,29 @@ export const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// svg element
-		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
+		const svg_file	= files_info.find(el => el.quality===quality && el.file_exist===true)
+	// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
-		// url
-			const url = external_source
+		const file = thumb?.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path
+			: svg_file
+				? DEDALO_MEDIA_URL + svg_file.file_path + '?t=' + (new Date()).getTime()
+				: page_globals.fallback_image
+
+		// file_url
+			const file_url = external_source
 				? external_source
-				: file_info
-					? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
-					: page_globals.fallback_image
+				: file
 
 		// image
 			ui.create_dom_element({
 				element_type	: 'img',
-				src				: url,
+				src				: file_url,
 				parent			: content_data
 			})
 
-		if (file_info) {
+		if (svg_file) {
 
 			// open viewer on click
 				const fn_mousedown = function(e) {

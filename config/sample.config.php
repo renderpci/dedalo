@@ -399,8 +399,8 @@
 		// color_profiles_path
 		define('COLOR_PROFILES_PATH',				DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
-		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
-		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
+		// define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
+		// define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
 
@@ -413,6 +413,8 @@
 		define('DEDALO_PDF_EXTENSION',				'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	['pdf','doc','pages','odt','ods','rtf','ppt','pages']);
+		// pdf image_alternative_extensions. Array with the optional compression formats extensions
+		define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg','avif']);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
 		# pdf_type. Default: 'pdf'
@@ -480,6 +482,16 @@
 		// svg_ar_quality
 		define('DEDALO_SVG_AR_QUALITY',				[DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
+
+	// thumb common
+		// this part is used by all components to create and show thumbs images
+		// thumb_extension.  Default: 'jpg'
+		define('DEDALO_THUMB_EXTENSION',			'jpg');
+		// dedalo_thumb_default. Default: 'thumb')
+		define('DEDALO_QUALITY_THUMB',				'thumb');
+		// thumbs dedalo_image_thumb sizes. Integer as pixels
+		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
+		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 
 
 // upload config
