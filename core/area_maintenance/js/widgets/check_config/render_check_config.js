@@ -159,7 +159,6 @@ const get_content_data_edit = async function(self) {
 			parent			: content_data
 		})
 
-
 	// missing_container
 		const missing_container = ui.create_dom_element({
 			element_type	: 'div',
