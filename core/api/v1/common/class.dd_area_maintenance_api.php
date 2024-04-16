@@ -246,60 +246,6 @@ final class dd_area_maintenance_api {
 
 
 	/**
-	* UPDATE_DATA_VERSION
-	* Updates Dédalo data version.
-	* Allow change components data format or add new tables or index
-	* Triggered by Area Development button 'UPDATE DATA'
-	* Sample: Current data version: 5.8.2 -----> 6.0.0
-	* @param object $rqo
-	* @return object $response
-	*/
-	public static function update_data_version(object $rqo) : object {
-
-		// set time limit
-			set_time_limit ( 259200 );  // 3 days
-
-		include(DEDALO_CORE_PATH . '/base/update/class.update.php');
-
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		try {
-
-			// exec update_data_version. return object response
-				$update_data_version_response = update::update_version();
-
-		} catch (Exception $e) {
-
-			debug_log(__METHOD__
-				. " Caught exception [update_data_version]: " . PHP_EOL
-				. ' msg: ' . $e->getMessage()
-				, logger::ERROR
-			);
-
-			$update_data_version_response = (object)[
-				'result'	=> false,
-				'msg'		=> 'ERROR on update_data_version .Caught exception: ' . $e->getMessage()
-			];
-
-			// log line
-				$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
-				$log_line  = PHP_EOL . date('c') . ' ERROR [Exception] ';
-				$log_line .= PHP_EOL . 'Caught exception: ' . $e->getMessage();
-				file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
-		}
-
-		$response->result	= $update_data_version_response->result ?? false;
-		$response->msg		= $update_data_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
-
-
-		return $response;
-	}//end update_data_version
-
-
-
-	/**
 	* LOCK_COMPONENTS_ACTIONS
 	* Get lock components active users info
 	*
