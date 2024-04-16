@@ -70,7 +70,10 @@ class login extends common {
 				return $response;
 			}
 
-			if(DEDALO_MAINTENANCE_MODE===true && $username!=='root'){
+			$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+				? DEDALO_MAINTENANCE_MODE_CUSTOM
+				: DEDALO_MAINTENANCE_MODE;
+			if($maintenance_mode===true && $username!=='root'){
 				$response->msg = label::get_label('site_under_maintenance') ?? "System under maintenance";
 				return $response;
 			}
@@ -1071,8 +1074,11 @@ class login extends common {
 
 			// authenticated case
 
-			// maintenance mode. Only toot user is allowed in maintenance mode
-				if(DEDALO_MAINTENANCE_MODE===true && $_SESSION['dedalo']['auth']['username']!=='root') {
+			// maintenance mode. Only root user is allowed in maintenance mode
+				$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+					? DEDALO_MAINTENANCE_MODE_CUSTOM
+					: DEDALO_MAINTENANCE_MODE;
+				if($maintenance_mode===true && $_SESSION['dedalo']['auth']['username']!=='root') {
 					return false;
 				}
 
