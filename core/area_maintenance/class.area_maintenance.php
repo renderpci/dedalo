@@ -784,10 +784,10 @@ class area_maintenance extends area_common {
 					$item->config_constants_list = $config_constants_list;
 
 				// config_vs_sample. Compares defined config constants vs sample config
+					$ignore = ['DEDALO_MAINTENANCE_MODE_CUSTOM'];
 					foreach ($config_constants_list as $const_name) {
 						if (!in_array($const_name, $sample_config_constants_list)) {
 							// exceptions (ignore optional constants that could be disabled)
-							$ignore = ['DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
 							if (!in_array($const_name, $ignore)) {
 								$item->config_vs_sample[] = $const_name;
 							}
@@ -795,11 +795,9 @@ class area_maintenance extends area_common {
 					}
 
 				// sample_vs_config. Compares defined sample constants vs config
+					$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
 					foreach ($sample_config_constants_list as $const_name) {
-						// if (!in_array($const_name, $config_constants_list)) {
-						// 	$item->sample_vs_config[] = $const_name;
-						// }
-						if (!defined($const_name)) {
+						if (!in_array($const_name, $ignore) && !defined($const_name)) {
 							$item->sample_vs_config[] = $const_name;
 						}
 					}
@@ -3471,5 +3469,96 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end update_data_version
+
+
+
+	/**
+	* SET_MAINTENANCE_MODE
+	* This function set a custom maintenance mode. Useful when the root user
+	* do not have access to the config file to edit
+	* @param object $options
+	* @return object $response
+	*/
+	public static function set_maintenance_mode(object $options) {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options
+			$maintenance_mode = $options->maintenance_mode; // boolean
+			if (!is_bool($maintenance_mode)) {
+				$response->msg = 'Error. invalid maintenance_mode value (boolean is required)';
+				return $response;
+			}
+
+		// config_core file (config_core.php)
+			$config		= install::get_config();
+			$file_path	= $config->config_core_file_path;
+
+		$content = file_get_contents($file_path);
+
+		// add vars
+		if (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')===false) {
+
+			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
+
+			// line
+			$line = PHP_EOL . 'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');';
+			// Write the contents to the file,
+			// using the FILE_APPEND flag to append the content to the end of the file
+			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+			if(!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
+
+				$response->msg = 'Error (2). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: '.$file_path;
+				debug_log(__METHOD__
+					. ' ' . $response->msg .PHP_EOL
+					. 'file: '.$file_path
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'All ready';
+
+			debug_log(__METHOD__
+				." Added config_auto line with constant: DEDALO_MAINTENANCE_MODE_CUSTOM  "
+				, logger::DEBUG
+			);
+
+		}elseif (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')!==false) {
+
+			// file and constant exists DEDALO_MAINTENANCE_MODE_CUSTOM
+
+			// replace line to updated value
+			$content = preg_replace(
+				'/define\(\'DEDALO_MAINTENANCE_MODE_CUSTOM\',.+\);/',
+				'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');',
+				$content
+			);
+			// Write the contents to the file,
+			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
+			if(!file_put_contents($file_path, $content, LOCK_EX)) {
+				$response->msg = 'Error (3). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: ' . $file_path;
+				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'All ready';
+
+			debug_log(__METHOD__
+				." Changed config_auto content with constant: DEDALO_MAINTENANCE_MODE_CUSTOM = '".to_string($maintenance_mode)."' "
+				, logger::DEBUG
+			);
+		}
+
+
+		return $response;
+	}//end set_maintenance_mode
+
+
 
 }//end class area_maintenance
