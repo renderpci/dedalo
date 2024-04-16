@@ -3486,6 +3486,12 @@ class area_maintenance extends area_common {
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
+		// user root check
+			if (logged_user_id()!==DEDALO_SUPERUSER) {
+				$response->msg = 'Error. only root user can set maintenance mode';
+				return $response;
+			}
+
 		// options
 			$maintenance_mode = $options->maintenance_mode; // boolean
 			if (!is_bool($maintenance_mode)) {
