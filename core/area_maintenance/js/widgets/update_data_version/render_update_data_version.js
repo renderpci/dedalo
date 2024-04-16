@@ -184,7 +184,7 @@ const get_content_data = async function(self) {
 					parent			: body_response
 				})
 				break;
-			case (maintenance_mode===true):
+			case (maintenance_mode!==true):
 				// message not allowed
 				ui.create_dom_element({
 					element_type	: 'div',
