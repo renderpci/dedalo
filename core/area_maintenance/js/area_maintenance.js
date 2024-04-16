@@ -394,15 +394,15 @@ export const load_json_editor_files = function() {
 
 /**
 * INIT_FORM
+* Alias of build_form
 * @param object widget_object
-* @return HTMLElement form
+* @return HTMLElement form_container
 */
-area_maintenance.prototype.init_form = async function(widget_object) {
+area_maintenance.prototype.init_form = function(widget_object) {
 
-	build_form(widget_object)
-
-	return true
+	return build_form(widget_object)
 }//end init_form
+
 
 
 // @license-end

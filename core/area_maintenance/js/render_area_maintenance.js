@@ -365,6 +365,7 @@ export const build_form = function(widget_object) {
 		const submit_label	= widget_object.submit_label || 'OK'
 		const trigger		= widget_object.trigger || {}
 		const on_submit		= widget_object.on_submit // optional replacement function to exec on submit
+		const on_done		= widget_object.on_done // optional function to exec on API response
 
 	// create the form
 		const form_container = ui.create_dom_element({
@@ -430,6 +431,11 @@ export const build_form = function(widget_object) {
 						form_container.classList.remove('lock')
 						spinner.remove()
 
+					// on_submit. Execute function after request
+						if (on_done) {
+							return on_done(api_response)
+						}
+
 					// delegates get_children task to worker. When finish, create global radio for current area
 						// const current_worker = new Worker('../area_maintenance/js/worker_area_maintenance.js', {
 						// 	type : 'module'
@@ -486,10 +492,11 @@ export const build_form = function(widget_object) {
 	// button submit
 		const button_submit = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'light',
+			class_name		: 'light button_submit',
 			inner_html		: submit_label,
 			parent			: form_container
 		})
+		form_container.button_submit = button_submit
 		button_submit.addEventListener('click', function(e){
 			e.stopPropagation()
 
