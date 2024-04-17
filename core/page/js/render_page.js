@@ -270,7 +270,7 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 				wrapper.notification_container.remove() // remove node
 				wrapper.notification_container = null // set pointer
 				if(SHOW_DEBUG===true) {
-					console.warn('))) Removed wrapper.notification_container:', dedalo_notification);;
+					console.warn('))) Removed wrapper.notification_container:', dedalo_notification);
 				}
 			}
 			// fix to compare with next requests
