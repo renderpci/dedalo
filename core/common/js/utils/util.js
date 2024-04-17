@@ -310,11 +310,21 @@ export function printf(format) {
 
 	const args = Array.prototype.slice.call(arguments, 1);
 
-	return format.replace(/{(\d+)}/g, function(match, number) {
+	// fix old %s vars from labels like dd340
+	let counter = 0
+	format = format.replace(/%s/g, function(match, number) {
+		const current_value = '{'+counter+'}'
+		counter++
+		return current_value
+	})
+
+	const output = format.replace(/{([\d]+)}/g, function(match, number) {
 		return typeof args[number] != 'undefined'
 			? args[number]
 			: match
 	})
+
+	return output
 }//end printf
 
 
