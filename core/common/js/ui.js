@@ -8,7 +8,6 @@
 	import {
 		strip_tags,
 		prevent_open_new_window
-		// find_up_node
 	} from '../../common/js/utils/index.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
@@ -138,14 +137,15 @@ export const ui = {
 		build_wrapper_edit : (instance, options={}) => {
 
 			// short vars
-				const model			= instance.model 	// like component_input-text
-				const type			= instance.type 	// like 'component'
-				const tipo			= instance.tipo 	// like 'rsc26'
-				const section_tipo	= instance.section_tipo 	// like 'rsc26'
-				const mode			= instance.mode 	// like 'edit'
-				const view			= instance.view || instance.context.view || 'default'
-				const label			= instance.label // instance.context.label
-				const element_css	= instance.context.css || {}
+				const model					= instance.model 	// like component_input-text
+				const type					= instance.type 	// like 'component'
+				const tipo					= instance.tipo 	// like 'rsc26'
+				const section_tipo			= instance.section_tipo 	// like 'rsc26'
+				const mode					= instance.mode 	// like 'edit'
+				const view					= instance.view || instance.context.view || 'default'
+				const label					= instance.label // instance.context.label
+				const element_css			= instance.context.css || {}
+				const state_of_component	= instance.context.properties?.state_of_component || null
 
 			// options
 				const add_styles = options.add_styles || null
@@ -269,6 +269,22 @@ export const ui = {
 					const label_structure_css = typeof element_css.label!=='undefined' ? element_css.label : []
 					const ar_css = ['label', ...label_structure_css]
 					component_label.classList.add(...ar_css)
+					// state_of_component like:
+					// {
+					// "deprecated": {
+					// 	"msg": "Deprecated component .... ",
+					// 	"target_component": "rsc44"
+					// }
+					if (state_of_component) {
+						for (const [key, value] of Object.entries(state_of_component)) {
+							const icon = ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'button icon ' + (value.icon ?? key),
+								title			: (value.msg || key)
+							})
+							component_label.prepend(icon)
+						}
+					}
 				}
 
 			// top

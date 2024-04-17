@@ -388,6 +388,17 @@
 				height: var(--component_label_height);
 				color: #a1a1a1;
 
+				>.icon {
+					vertical-align: bottom;
+
+					&.alternative {
+						background-color: @color_grey_dark;
+					}
+					&.deprecated {
+						background-color: @color_orange_dedalo;
+					}
+				}
+
 				.error& {
 					color: white !important;
 				}

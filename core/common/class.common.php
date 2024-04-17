@@ -1660,6 +1660,19 @@ abstract class common {
 
 					// component specific
 
+					if (isset($properties->state_of_component)) {
+						foreach ($properties->state_of_component as $soc_key => $soc_value) {
+							if (isset($soc_value->target_component) && isset($soc_value->msg)) {
+								// resolve label
+								$base_label		= label::get_label( $soc_value->msg );
+								$component_name	= RecordObj_dd::get_termino_by_tipo($soc_value->target_component, DEDALO_APPLICATION_LANG, true);
+								$msg			= sprintf($base_label, $component_name);
+								// replace label by just resolved version
+								$soc_value->msg = $msg;
+							}
+						}
+					}
+
 					if ($sortable===true) {
 						// add component path to allow sort columns properly
 						// ? remove if because forbids cache list mode uniformly
