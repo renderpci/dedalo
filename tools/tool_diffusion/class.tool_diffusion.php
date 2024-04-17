@@ -146,7 +146,7 @@ class tool_diffusion extends tool_common {
 			$resolve_levels					= $options->resolve_levels ?? 1;
 			$skip_publication_state_check	= $options->skip_publication_state_check ?? null;
 
-		// cli msg
+		// CLI process data
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => (label::get_label('processing_wait') ?? 'Processing... please wait')
@@ -217,6 +217,22 @@ class tool_diffusion extends tool_common {
 		// Write session to unlock session file
 			session_write_close();
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				$pdata = new stdClass();
+					$pdata->msg		= (label::get_label('processing') ?? 'Processing');
+					$pdata->counter	= 1;
+					$pdata->total	= 1;
+					$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+					$pdata->current			= (object)[
+						'section_tipo'	=> $section_tipo,
+						'section_id'	=> $section_id
+					];
+					$pdata->memory = dd_memory_usage();
+				// send to output
+				print_cli($pdata);
+			}
+
 		// export_record
 			try{
 
@@ -226,7 +242,7 @@ class tool_diffusion extends tool_common {
 					$section_id,
 					$diffusion_element_tipo,
 					true, // bool resolve_references
-					[] // array ar_records
+					[] // array ar_records used by diffusion_rdf
 				);
 
 				$response->result					= $export_result->result;
@@ -318,21 +334,20 @@ class tool_diffusion extends tool_common {
 
 
 				// short vars
-				$resolve_references		= true;
-				$n_records_published	= 0;
-				$total					= count($rows_data->ar_records);
-				$counter				= 0;
-				$update_record_response	= [];
+					$n_records_published	= 0;
+					$total					= count($rows_data->ar_records);
+					$counter				= 0;
+					$update_record_response	= [];
 
 				// CLI process data
-				if ( running_in_cli()===true ) {
-					$pdata = new stdClass();
-						$pdata->msg		= (label::get_label('processing') ?? 'Processing');
-						$pdata->counter	= $counter;
-						$pdata->total	= $total;
-					// send to output
-					print_cli($pdata);
-				}
+					if ( running_in_cli()===true ) {
+						$pdata = new stdClass();
+							$pdata->msg		= (label::get_label('processing') ?? 'Processing');
+							$pdata->counter	= $counter;
+							$pdata->total	= $total;
+						// send to output
+						print_cli($pdata);
+					}
 
 				foreach ((array)$rows_data->ar_records as $row) {
 
@@ -341,27 +356,27 @@ class tool_diffusion extends tool_common {
 					$section_id		= (int)$row->section_id;
 					$section_tipo	= (string)$row->section_tipo;
 
-					// print CLI. Echo the text msg as line and flush object buffers
+					// CLI process data. Echo the text msg as line and flush object buffers
 					// only if current environment is CLI
-					if ( running_in_cli()===true ) {
-						$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
-						$pdata->counter			= $counter;
-						$pdata->current			= (object)[
-							'section_tipo'	=> $section_tipo,
-							'section_id'	=> $section_id
-						];
-						$pdata->memory = dd_memory_usage();
-						// send to output
-						print_cli($pdata);
-					}
+						if ( running_in_cli()===true ) {
+							$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+							$pdata->counter			= $counter;
+							$pdata->current			= (object)[
+								'section_tipo'	=> $section_tipo,
+								'section_id'	=> $section_id
+							];
+							$pdata->memory = dd_memory_usage();
+							// send to output
+							print_cli($pdata);
+						}
 
 					// exec export from current record
 						$export_result = tool_diffusion::export_record(
 							$section_tipo,
 							$section_id,
 							$diffusion_element_tipo,
-							$resolve_references, // bool resolve_references
-							$rows_data->ar_records // array ar_records
+							true, // bool resolve_references
+							$rows_data->ar_records // array ar_records used by diffusion_rdf
 						);
 						if($export_result->result==true) {
 							$n_records_published++;
@@ -380,13 +395,13 @@ class tool_diffusion extends tool_common {
 					// add response object {result:bool, msg:string}
 						$update_record_response[] = $export_result->update_record_response;
 
-					// print CLI. Echo the text msg as line and flush object buffers
+					// CLI process data. Echo the text msg as line and flush object buffers
 					// only if current environment is CLI
-					if ( running_in_cli()===true ) {
-						$pdata->update_record_response = $export_result->update_record_response;
-						// send to output
-						print_cli($pdata);
-					}
+						if ( running_in_cli()===true ) {
+							$pdata->update_record_response = $export_result->update_record_response;
+							// send to output
+							print_cli($pdata);
+						}
 
 					// diffusion_rdf case
 						if ($diffusion_class_name==='diffusion_rdf') {
