@@ -52,11 +52,6 @@ render_page.prototype.edit = async function(options) {
 		// fix node before finish render to allow select by render_notification_msg
 		self.node = wrapper
 
-	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
-		if(page_globals.dedalo_notification && page_globals.is_logged===true) {
-			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-		}
-
 
  	return wrapper
 }//end edit
@@ -101,6 +96,11 @@ const get_content_data = async function(self) {
 		if(page_globals.maintenance_mode===true){
 			const maintenance_container = render_maintenance_msg()
 			content_data.prepend(maintenance_container)
+		}
+
+	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
+		if(typeof page_globals.dedalo_notification!=='undefined' && page_globals.is_logged===true) {
+			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 		}
 
 	// add all instance rendered nodes
