@@ -381,7 +381,9 @@
 			}
 
 			@media screen and (max-width: @width_break_point_1) {
-				flex: 0 0 100% ;
+				flex: 0 0 100%;
+				overflow-x: auto;
+				max-width: calc(100vw - 2rem);
 			}
 
 			>.label {
@@ -1829,9 +1831,9 @@
 		// top				: unset;
 		// margin-bottom	: 2rem;
 		position: absolute !important;
-		top: 0.48rem;
+		top: 0.48rem !important;
 		// left: unset !important;
-		left: 0.5rem;
+		left: 0.5rem !important;
 		margin: 0px !important;
 		scale: 0.82;
 	}
