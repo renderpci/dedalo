@@ -90,10 +90,9 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 /**
 * GET_PDF_DATA
 * Obtain useful system PDF file info from API
-* @param object self
 * @return object api_response
 */
-tool_pdf_extractor.prototype.get_pdf_data = async function(options) {
+tool_pdf_extractor.prototype.get_pdf_data = async function() {
 
 	const self = this
 

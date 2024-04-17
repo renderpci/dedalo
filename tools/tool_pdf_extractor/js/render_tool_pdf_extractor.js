@@ -192,7 +192,9 @@ const get_content_data = async function(self) {
 
 					// msg
 					const msg = extracted_data_response.msg || 'Unknown error on get_pdf_data'
-					console.warn('extracted_data_response:', extracted_data_response);
+					if(SHOW_DEBUG===true) {
+						console.warn('extracted_data_response:', extracted_data_response);
+					}
 					// alert(msg);
 					response_msg.innerHTML = msg
 					response_msg.classList.add('error')
