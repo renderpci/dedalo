@@ -146,6 +146,8 @@ const get_content_data_edit = async function(self) {
 					const on_done = () => {
 						// is triggered at the reader's closing
 						render_stream_response.done()
+						// reload JS files
+						reload_js_files()
 					}
 
 					// read stream. Creates ReadableStream that fire
@@ -197,7 +199,8 @@ const get_content_data_edit = async function(self) {
 						action	: 'update_code'
 					},
 					options	: {}
-				}
+				},
+				on_done			: reload_js_files // clean browser cache
 				// on_submit	: async (e, values) => {
 				// 	// update_code process fire
 				// 	const api_response = await data_manager.request({
@@ -236,6 +239,42 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
+
+
+/**
+* RELOAD_JS_FILES
+* Force to clean cache of Dédalo JS/CSS files
+* @return promise
+* 	resolve bool
+*/
+const reload_js_files = function () {
+
+	return new Promise(function(resolve){
+
+		// launch worker cache
+		const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
+			type : 'module'
+		});
+		current_worker.postMessage({
+			action	: 'clear_cache',
+			url		: typeof DEDALO_API_URL!=='undefined'
+				? DEDALO_API_URL
+				: '../../api/v1/json/' // DEDALO_API_URL
+		});
+		current_worker.onmessage = function(e) {
+
+			if (e.data.status==='ready') {
+				console.log('Loading Dédalo JS files..');
+			}
+
+			if (e.data.status==='finish') {
+				console.log('Loading Dédalo JS files done');
+				resolve(true)
+			}
+		}
+	})
+}//end reload_js_files
 
 
 
