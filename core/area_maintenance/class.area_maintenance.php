@@ -3473,29 +3473,70 @@ class area_maintenance extends area_common {
 
 
 	/**
-	* SET_MAINTENANCE_MODE
+	* SET_CONGIF_AUTO
 	* This function set a custom maintenance mode. Useful when the root user
 	* do not have access to the config file to edit
 	* @param object $options
 	* @return object $response
 	*/
-	public static function set_maintenance_mode(object $options) {
+	public static function set_congif_auto(object $options) {
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
-		// user root check
+		// options
+			$name	= $options->name; // name of the constant like 'MAINTENANCE_MODE_CUSTOM'
+			$value	= $options->value ?? null; // value of the constant like bool 'false'
+
+		// user root check. Only root user can set congif_core
 			if (logged_user_id()!==DEDALO_SUPERUSER) {
-				$response->msg = 'Error. only root user can set maintenance mode';
+				$response->msg = 'Error. only root user can set congif_core';
 				return $response;
 			}
 
-		// options
-			$maintenance_mode = $options->maintenance_mode; // boolean
-			if (!is_bool($maintenance_mode)) {
-				$response->msg = 'Error. invalid maintenance_mode value (boolean is required)';
+		// value. check valid value type
+			$value_type = gettype($value);
+
+		// special parsers
+			switch ($name) {
+
+				case 'DEDALO_MAINTENANCE_MODE_CUSTOM':
+					// boolean
+					$ar_allow_type = ['boolean'];
+					if (!in_array($value_type, $ar_allow_type)) {
+						$response->msg = 'Error. invalid value type. Only allow boolean';
+						return $response;
+					}
+					$write_value = json_encode( (bool)$value );
+					break;
+
+				// Disable (Experimental with serious security implications)
+				// case 'DEDALO_NOTIFICATION_CUSTOM':
+				// 	// string|boolean
+				// 	$ar_allow_type = ['boolean','string'];
+				// 	if (!in_array($value_type, $ar_allow_type)) {
+				// 		$response->msg = 'Error. invalid value type. Only allow boolean|string';
+				// 		return $response;
+				// 	}
+				// 	if (is_string($value)) {
+				// 		$msg = safe_xss($value);
+				// 		$write_value = '["msg" => "'.$msg.'", "class_name" => "warning"]';
+				// 	}else{
+				// 		$write_value = 'false'; // no true is expected
+				// 	}
+				// 	break;
+
+				default:
+					$response->msg = 'Error. Invalid name';
+					return $response;
+					break;
+			}
+
+		// write_value check
+			if (!is_string($write_value)) {
+				$response->msg = 'Error. invalid value (3)';
 				return $response;
 			}
 
@@ -3503,21 +3544,22 @@ class area_maintenance extends area_common {
 			$config		= install::get_config();
 			$file_path	= $config->config_core_file_path;
 
-		$content = file_get_contents($file_path);
+		// content string from file
+			$content = file_get_contents($file_path);
 
 		// add vars
-		if (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')===false) {
+		if (strpos($content, $name)===false) {
 
 			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
 
 			// line
-			$line = PHP_EOL . 'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');';
+			$line = PHP_EOL . "define('$name', ".$write_value.");";
 			// Write the contents to the file,
 			// using the FILE_APPEND flag to append the content to the end of the file
 			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
 			if(!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
 
-				$response->msg = 'Error (2). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: '.$file_path;
+				$response->msg = 'Error (2). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: '.$file_path;
 				debug_log(__METHOD__
 					. ' ' . $response->msg .PHP_EOL
 					. 'file: '.$file_path
@@ -3530,24 +3572,24 @@ class area_maintenance extends area_common {
 			$response->msg		= 'All ready';
 
 			debug_log(__METHOD__
-				." Added config_auto line with constant: DEDALO_MAINTENANCE_MODE_CUSTOM  "
+				." Added config_core line with constant: $name  "
 				, logger::DEBUG
 			);
 
-		}elseif (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')!==false) {
+		}elseif (strpos($content, $name)!==false) {
 
-			// file and constant exists DEDALO_MAINTENANCE_MODE_CUSTOM
+			// file and constant exists like 'DEDALO_MAINTENANCE_MODE_CUSTOM'
 
 			// replace line to updated value
 			$content = preg_replace(
-				'/define\(\'DEDALO_MAINTENANCE_MODE_CUSTOM\',.+\);/',
-				'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');',
+				'/define\(\''.$name.'\',.+\);/',
+				'define(\''.$name.'\', '.$write_value.');',
 				$content
 			);
 			// Write the contents to the file,
 			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
 			if(!file_put_contents($file_path, $content, LOCK_EX)) {
-				$response->msg = 'Error (3). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: ' . $file_path;
+				$response->msg = 'Error (3). It\'s not possible set the constant, review the PHP permissions to write in Dédalo directory: ' . $file_path;
 				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
 				return $response;
 			}
@@ -3556,14 +3598,14 @@ class area_maintenance extends area_common {
 			$response->msg		= 'All ready';
 
 			debug_log(__METHOD__
-				." Changed config_auto content with constant: DEDALO_MAINTENANCE_MODE_CUSTOM = '".to_string($maintenance_mode)."' "
+				." Changed config_core content with constant: $name = '".to_string($value)."' "
 				, logger::DEBUG
 			);
 		}
 
 
 		return $response;
-	}//end set_maintenance_mode
+	}//end set_congif_auto
 
 
 
