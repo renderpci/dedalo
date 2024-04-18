@@ -45,7 +45,7 @@ render_tool_import_files.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-		wrapper.content_data	= content_data
+		wrapper.content_data = content_data
 
 
 	return wrapper

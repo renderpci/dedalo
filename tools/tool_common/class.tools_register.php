@@ -1211,8 +1211,26 @@ class tools_register {
 
 
 	/**
-	* GET_ALL_default_CONFIG_TOOL_CLIENT
+	* GET_ALL_DEFAULT_CONFIG_TOOL_CLIENT
 	* filter the client part of the config defined with the "client" property to true
+	* Sample:
+		* {
+		*	"translator_engine": {
+		*		"type": "array",
+		*		"value": [
+		*		  {
+		*			"name": "babel",
+		*			"label": "Babel"
+		*		  },
+		*		  {
+		*			"name": "google_translation",
+		*			"label": "Google translator"
+		*		  }
+		*		],
+		*		"client": true,
+		*		"default": []
+		*	}
+		* }
 	* @return array $ar_client_config
 	*/
 	public static function get_all_default_config_tool_client() : array {

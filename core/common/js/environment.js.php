@@ -132,12 +132,14 @@ session_write_close();
 			$obj->locale						= DEDALO_LOCALE;
 			$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
 			$obj->component_active				= null;
-			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null;
 			$obj->stream_readers				= [];
 			// maintenance mode
 			$obj->maintenance_mode				= defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
 				? DEDALO_MAINTENANCE_MODE_CUSTOM
 				: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
+			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM')
+				? DEDALO_NOTIFICATION_CUSTOM
+				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
