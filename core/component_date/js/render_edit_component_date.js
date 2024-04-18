@@ -277,10 +277,6 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 				e.stopPropagation()
 			})
 		// keyup event
-			input.addEventListener('keyup', function(e) {
-				keyup_handler({
-					e : e
-				})
 			})
 		// change event
 			input.addEventListener('change', fn_change)
@@ -485,11 +481,6 @@ export const input_element_period = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-			input_year.addEventListener('keyup', function(e) {
-				keyup_handler({
-					e : e
-				})
-			})
 			input_year.addEventListener('change', call_change_handler)
 			// year label
 			ui.create_dom_element({
@@ -512,11 +503,6 @@ export const input_element_period = (i, current_value, self) => {
 				if (!self.active) {
 					ui.component.activate(self)
 				}
-			})
-			input_month.addEventListener('keyup', function(e) {
-				keyup_handler({
-					e : e
-				})
 			})
 			input_month.addEventListener('change', call_change_handler)
 			// month label
@@ -541,11 +527,7 @@ export const input_element_period = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-			input_day.addEventListener('keyup', function(e) {
-				keyup_handler({
-					e : e
-				})
-			})
+
 			input_day.addEventListener('change', call_change_handler)
 			// day label
 			ui.create_dom_element({

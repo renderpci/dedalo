@@ -132,10 +132,7 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('keydown', function(e) {
 				e.stopPropagation()
 			})
-		// keyup event
-			input.addEventListener('keyup', function(e) {
-				keyup_handler(e, i, self)
-			})
+
 		// click event
 			input.addEventListener('click', function(e) {
 				e.stopPropagation()

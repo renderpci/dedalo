@@ -170,11 +170,7 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-		// keyup event
-			input.addEventListener('keyup', function(e) {
-				keyup_handler(e, i, self)
-				color_picker.value = e.target.value;
-			})
+
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
