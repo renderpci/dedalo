@@ -915,9 +915,13 @@ class dd_date extends stdClass {
 	*/
 	public function get_unix_timestamp() : int {
 
-		$time = $this->get_dd_timestamp();
+		$datetime		= new DateTime();
 
-		$datetime		= new DateTime($time);
+		$datetime->setDate(
+			$this->get_year(),
+			$this->get_month() ?? 1, // if month is not set use 1 (not 0!, if 0 is used the second are wrong)
+			$this->get_day() ?? 1 // if day is not set use 1 (not 0!, if 0 is used the second are wrong)
+		);
 		$unix_timestamp	= $datetime->getTimestamp();
 
 
