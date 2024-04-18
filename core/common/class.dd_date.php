@@ -924,7 +924,6 @@ class dd_date extends stdClass {
 		);
 		$unix_timestamp	= $datetime->getTimestamp();
 
-
 		return $unix_timestamp;
 	}//end get_unix_timestamp
 
@@ -951,28 +950,33 @@ class dd_date extends stdClass {
 	}//end get_dd_date_from_unix_timestamp
 
 
-		// 	if (isset($this->{$name})) {
-		// 		return $this->{$name};
-		// 	}
 
-		// 	$trace = debug_backtrace();
-		// 	debug_log(__METHOD__
-		// 		.' Undefined property via __get(): '.$name .
-		// 		' in ' . $trace[0]['file'] .
-		// 		' on line ' . $trace[0]['line']
-		// 		, logger::WARNING
-		// 	);
 
-		// 	return null;
-		// }//end __get
 	/**
-	* __SET METHODS
-	* By accessors. When property exits, return property value, else return null
-	* @param string $name
+	* GET_SHAPE
+	* Get the structure of the date. Using for check if any of his values is set or not.
+	* if dd_date has a full date will return : {year: true, month: true, day:true}
+	* if dd_date doesn't has any of his properties it will be set as false.
+	* @return object $shape
 	*/
-		// final public function __set( string $name, mixed $value) : void {
-		// 	$this->$name = $value;
-		// }//end __set
+	public function get_shape() : object {
+
+		$shape = new stdClass();
+
+		$shape->year 	= ( $this->get_year() !== null )
+			? true
+			: false;
+		$shape->month 	= ( $this->get_month() !== null  )
+			? true
+			: false;
+		$shape->day 	= ( $this->get_day() !== null )
+			? true
+			: false;
+
+		return $shape;
+	}//end get_shape
+
+
 
 
 
