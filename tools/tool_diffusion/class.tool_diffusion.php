@@ -139,7 +139,6 @@ class tool_diffusion extends tool_common {
 		$start_time=start_time();
 
 		// options
-			$mode							= $options->mode ?? 'edit';
 			$section_tipo					= $options->section_tipo ?? null;
 			$section_id						= (isset($options->section_id) ? (int)$options->section_id : null);
 			$diffusion_element_tipo			= $options->diffusion_element_tipo;
@@ -171,9 +170,7 @@ class tool_diffusion extends tool_common {
 			];
 
 		// response
-			$response = ($mode==='list')
-				? tool_diffusion::export_list( $export_options ) // list mode (based on session sqo)
-				: tool_diffusion::export_edit( $export_options ); // edit mode only one record
+			$response = tool_diffusion::export_list( $export_options );
 
 			$response->time		= exec_time_unit_auto($start_time);
 			$response->memory	= dd_memory_usage();
@@ -185,94 +182,13 @@ class tool_diffusion extends tool_common {
 
 
 	/**
-	* EXPORT_EDIT
-	* Export selected record
-	* @param object $options
-	* @return object $response
-	*/
-	public static function export_edit(object $options) : object {
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= []; // 'Error. Request failed ['.__FUNCTION__.']';
-				$response->errors	= [];
-
-		// options
-			$section_tipo			= $options->section_tipo;
-			$section_id				= $options->section_id;
-			$diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$resolve_levels			= $options->resolve_levels;
-
-		// fix levels on each call
-			if (!empty($resolve_levels)) {
-				$_SESSION['dedalo']['config']['DEDALO_DIFFUSION_RESOLVE_LEVELS'] = (int)$resolve_levels;
-			}
-
-		// time_limit set
-			$minutes = 5;
-			$seconds = 60 * $minutes;
-			set_time_limit($seconds); // Avoid some infinite loop cases when data is bad formed
-
-		// Write session to unlock session file
-			session_write_close();
-
-		// CLI process data
-			if ( running_in_cli()===true ) {
-				$pdata = new stdClass();
-					$pdata->msg		= (label::get_label('processing') ?? 'Processing');
-					$pdata->counter	= 1;
-					$pdata->total	= 1;
-					$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
-					$pdata->current			= (object)[
-						'section_tipo'	=> $section_tipo,
-						'section_id'	=> $section_id
-					];
-					$pdata->memory = dd_memory_usage();
-				// send to output
-				print_cli($pdata);
-			}
-
-		// export_record
-			try{
-
-				// exec export from current record
-				$export_result = tool_diffusion::export_record(
-					$section_tipo,
-					$section_id,
-					$diffusion_element_tipo,
-					true, // bool resolve_references
-					[] // array ar_records used by diffusion_rdf
-				);
-
-				$response->result					= $export_result->result;
-				$response->msg						= array_merge($response->msg, (array)$export_result->msg);
-				$response->update_record_response	= is_array($export_result->update_record_response)
-					? $export_result->update_record_response
-					: [$export_result->update_record_response];
-
-				// Update schema data always
-				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
-
-			}catch (Exception $e) {
-				$response->result	= false;
-				$response->msg[]	= 'EXCEPTION [export_edit]: ' . $e->getMessage();
-				$response->errors[]	= $e->getMessage();
-			}
-
-
-		return $response;
-	}//end export_edit
-
-
-
-	/**
 	* EXPORT_LIST
 	* Export all SQO filtered records
 	* @param object $options
 	* @return object $response
 	*/
 	public static function export_list(object $options) : object {
+		$start_time=start_time();
 
 		// time_limit set
 			$minutes = 20;
@@ -287,6 +203,7 @@ class tool_diffusion extends tool_common {
 
 		// options
 			$section_tipo			= $options->section_tipo;
+			$section_id				= $options->section_id ?? null;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
 			$resolve_levels			= $options->resolve_levels;
 
@@ -298,46 +215,77 @@ class tool_diffusion extends tool_common {
 		// Write session to unlock session file
 			session_write_close();
 
+		// calculate main vars
+			// ar_diffusion_map_elements
+			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
+			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
+				debug_log(__METHOD__
+					. " Error. Skipped diffusion_element '$diffusion_element_tipo' not found in ar_diffusion_map " . PHP_EOL
+					. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
+					, logger::ERROR
+				);
+				$response->msg[]	= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
+				$response->errors[]	= 'diffusion element not found '.$diffusion_element_tipo;
+				return $response;
+			}
+
+			// obj_diffusion_element
+			$obj_diffusion_element = $ar_diffusion_map_elements[$diffusion_element_tipo];
+
+			// diffusion class. Each diffusion element is managed with their own class that extends the main diffusion class
+			$diffusion_class_name = $obj_diffusion_element->class_name;
+
+			// include class file once
+			require_once DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php';
+
 		// export_record
 			try{
 
-				// diffusion_element
-					$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);
-					$propiedades			= $RecordObj_dd->get_propiedades(true);
-					$diffusion_class_name	= $propiedades->diffusion->class_name;
-
 				// sqo
-					$sqo_id			= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]);
-					$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
-					if ( empty($sqo_session) ) {
+					if(!empty($section_id)) {
 
-						// error case
-						$response->msg[]	= 'Not sqo_session found from id: '.$sqo_id;
-						$response->error[]	= 'no sqo session found';
-						debug_log(__METHOD__
-							."  " . implode(', '. $response->msg)
-							, logger::ERROR
-						);
-						return $response;
+						// edit case. One record
 
+						$locator = new locator();
+							$locator->set_section_tipo($section_tipo);
+							$locator->set_section_id($section_id);
+
+						$sqo = (object)[
+							'section_tipo'			=> [$section_tipo],
+							'limit'					=> 1,
+							'offset'				=> 0,
+							'filter_by_locators'	=> [$locator]
+						];
 					}else{
 
-						// OK case
-						$sqo = clone($sqo_session);
-							$sqo->limit		= 'ALL';
-							$sqo->offset	= 0;
-							$sqo->order		= false;
+						// list case
 
-						$search		= search::get_instance($sqo);
-						$rows_data	= $search->search();
+						$sqo_id			= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]);
+						$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
+						if ( empty($sqo_session) ) {
+
+							// error case
+							$response->msg[]	= 'Not sqo_session found from id: '.$sqo_id;
+							$response->error[]	= 'no sqo session found';
+							debug_log(__METHOD__
+								."  " . implode(', '. $response->msg)
+								, logger::ERROR
+							);
+							return $response;
+						}
+						$sqo = clone($sqo_session);
+						$sqo->order	= false;
 					}
 
+					// search instance
+					$search = search::get_instance($sqo);
+
+					// count records
+					$count_result	= $search->count();
+					$total			= $count_result->total;
 
 				// short vars
-					$n_records_published	= 0;
-					$total					= count($rows_data->ar_records);
-					$counter				= 0;
-					$update_record_response	= [];
+					$counter = 0;
 
 				// CLI process data
 					if ( running_in_cli()===true ) {
@@ -345,93 +293,68 @@ class tool_diffusion extends tool_common {
 							$pdata->msg		= (label::get_label('processing') ?? 'Processing');
 							$pdata->counter	= $counter;
 							$pdata->total	= $total;
+							$pdata->current	= new stdClass();
+								$pdata->current->section_tipo = $section_tipo;
+							$pdata->total_ms = exec_time_unit($start_time);
 						// send to output
 						print_cli($pdata);
 					}
 
-				foreach ((array)$rows_data->ar_records as $row) {
+				// chunk_n_rows. Set maximum number of records we get from search at once
+				$chunk_n_rows = 1000;
+				// fix limit of SQO to prevent large sets with PHP memory implications
+				$sqo->limit = $chunk_n_rows; // chunk results <= 1000 rows
+				// reset offset
+				$sqo->offset = 0;
 
-					$counter++;
+				// iterate as long as search records are found
+				while (true) {
 
-					$section_id		= (int)$row->section_id;
-					$section_tipo	= (string)$row->section_tipo;
-
-					// CLI process data. Echo the text msg as line and flush object buffers
-					// only if current environment is CLI
-						if ( running_in_cli()===true ) {
-							$pdata->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
-							$pdata->counter			= $counter;
-							$pdata->current			= (object)[
-								'section_tipo'	=> $section_tipo,
-								'section_id'	=> $section_id
-							];
-							$pdata->memory = dd_memory_usage();
-							// send to output
-							print_cli($pdata);
-						}
-
-					// exec export from current record
-						$export_result = tool_diffusion::export_record(
-							$section_tipo,
-							$section_id,
-							$diffusion_element_tipo,
-							true, // bool resolve_references
-							$rows_data->ar_records // array ar_records used by diffusion_rdf
-						);
-						if($export_result->result==true) {
-							$n_records_published++;
-						}else{
-							$response->msg[]	= $export_result->msg;
-							$response->errors	= array_merge(
-								$response->errors,
-								(array)$export_result->errors
-							);
-							debug_log(__METHOD__
-								." export_result ".to_string($export_result)
-								, logger::ERROR
-							);
-						}
-
-					// add response object {result:bool, msg:string}
-						$update_record_response[] = $export_result->update_record_response;
-
-					// CLI process data. Echo the text msg as line and flush object buffers
-					// only if current environment is CLI
-						if ( running_in_cli()===true ) {
-							$pdata->update_record_response = $export_result->update_record_response;
-							// send to output
-							print_cli($pdata);
-						}
-
-					// diffusion_rdf case
-						if ($diffusion_class_name==='diffusion_rdf') {
-							break; // Only one iteration is needed
-						}
-				}//end foreach ((array)$rows_data->ar_records as $row)
-
-				// response info
-					$response->n_records_published = $n_records_published;
-					if ($n_records_published>0) {
-						$response->result = true;
-						if ($diffusion_class_name==='diffusion_rdf') {
-							$response->msg[] = to_string($export_result->msg);
-						}else{
-							$response->msg[] = sprintf("Published %s records successfully", $n_records_published);
-						}
-
-					}else{
-						$response->result	= false;
-						$response->msg[]	= "Error on publish records: response->result is false. n_records_published: $n_records_published";
-						$response->errors[]	= 'zero records published';
-						debug_log(__METHOD__
-							."  ". implode(', '. $response->msg)
-							, logger::ERROR
-						);
+					// search
+					$rows_data		= $search->search();
+					$found_records	= count($rows_data->ar_records);
+					if ($found_records<1) {
+						break;
 					}
-					$response->update_record_response = $update_record_response;
 
-				// Update schema data always
-				// $publication_schema_result = tool_diffusion::update_publication_schema($diffusion_element_tipo);
+					// iterate chunk of <=1000 records
+					$chunk_errors = tool_diffusion::iterate_rows(
+						$rows_data->ar_records, // rows
+						$diffusion_element_tipo,
+						$diffusion_class_name,
+						$counter, // passed by reference
+						$pdata // passed by reference
+					);
+
+					// store errors if occurred
+					if (!empty($chunk_errors)) {
+						$response->errors = array_merge($response->errors, $chunk_errors);
+						// CLI process data
+						if ( running_in_cli()===true ) {
+							$pdata->errors = $response->errors;
+							// send to output
+							print_cli($pdata);
+						}
+					}
+
+					// CLI process data
+					if ( running_in_cli()===true ) {
+						// update memory usage on each chunk group
+						$pdata->memory	= dd_memory_usage();
+						// $pdata->total_time = exec_time_unit_auto($start_time);
+						// send to output
+						print_cli($pdata);
+					}
+
+					// (!) update offset on every loop
+					$sqo->offset = $sqo->offset + $chunk_n_rows;
+
+					// clean memory
+					// wait for 15 milliseconds every 1000 records
+					usleep(15000);
+					// Forces collection of any existing garbage cycles
+					gc_collect_cycles();
+				}
 
 			}catch (Exception $e) {
 				$response->result	= false;
@@ -462,6 +385,81 @@ class tool_diffusion extends tool_common {
 
 
 	/**
+	* ITERATE_ROWS
+	* Simple records chunk iterator
+	* Group in max 1000 rows
+	* @return array $errors
+	*/
+	public static function iterate_rows(array $rows, string $diffusion_element_tipo, string $diffusion_class_name, int &$counter, object &$pdata) : array {
+
+		// errors
+		$errors = [];
+
+		// class diffusion instance
+		$diffusion = new $diffusion_class_name();
+
+		foreach ($rows as $row) {
+			$start_time=start_time();
+
+			$counter++;
+
+			$section_id		= $row->section_id;
+			$section_tipo	= $row->section_tipo;
+
+			// CLI process data. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( running_in_cli()===true ) {
+				$pdata->counter				= $counter;
+				$pdata->current->section_id	= $section_id;
+				// send to output
+				print_cli($pdata);
+			}
+
+			// update record
+			$update_record_response = $diffusion->update_record((object)[
+				'section_tipo'				=> $section_tipo,
+				'section_id'				=> (int)$section_id,
+				'diffusion_element_tipo'	=> $diffusion_element_tipo,
+				'resolve_references'		=> true
+			]);
+
+			// manage errors
+			if ($update_record_response->result===false) {
+				if (isset($update_record_response->code) && $update_record_response->code===2) {
+					$msg = "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
+					debug_log(__METHOD__
+						. '  ' .  $msg . PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::WARNING
+					);
+				}else{
+					$msg = "Error on publish record $section_id";
+					$errors[] = 'publication record failed '.$section_id;
+					debug_log(__METHOD__
+						. '  ' . $msg . PHP_EOL
+						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+						, logger::ERROR
+					);
+				}
+			}
+
+			// CLI process data. Echo the text msg as line and flush object buffers
+			// only if current environment is CLI
+			if ( running_in_cli()===true ) {
+				$pdata->current->time	= exec_time_unit($start_time, 'ms');
+				$pdata->total_ms		= $pdata->total_ms + $pdata->current->time;
+				// send to output
+				print_cli($pdata);
+			}
+		}//end foreach ((array)$rows_data->ar_records as $row)
+
+
+		return $errors;
+	}//end iterate_rows
+
+
+
+	/**
 	* EXPORT_RECORD
 	* Call the required diffusion class and exec a generic 'update_record'
 	* @param string $section_tipo
@@ -471,109 +469,109 @@ class tool_diffusion extends tool_common {
 	* @param array $ar_records = []
 	* @return object $response
 	*/
-	public static function export_record(string $section_tipo, int $section_id, string $diffusion_element_tipo, bool $resolve_references=true, array $ar_records=[]) : object {
-		// $start_time = start_time();
+		// public static function export_record(string $section_tipo, int $section_id, string $diffusion_element_tipo, bool $resolve_references=true, array $ar_records=[]) : object {
+		// 	// $start_time = start_time();
 
-		// response default
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= []; // 'Error on export_record '.$section_tipo;
+		// 	// response default
+		// 		$response = new stdClass();
+		// 			$response->result	= false;
+		// 			$response->msg		= []; // 'Error on export_record '.$section_tipo;
 
-		// empty records case
-			// if (empty($ar_records)) {
-			// 	$response->msg .= ' Empty records received!';
-			// 	return $response;
-			// }
+		// 	// empty records case
+		// 		// if (empty($ar_records)) {
+		// 		// 	$response->msg .= ' Empty records received!';
+		// 		// 	return $response;
+		// 		// }
 
-		// ar_diffusion_map_elements
-			$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
-			if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
-				debug_log(__METHOD__
-					. " Error. Skipped diffusion_element '$diffusion_element_tipo' not found in ar_diffusion_map " . PHP_EOL
-					. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
-					, logger::ERROR
-				);
-				$response->msg[]	= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
-				$response->errors[]	= 'diffusion element not found '.$diffusion_element_tipo;
-				return $response;
-			}
+		// 	// ar_diffusion_map_elements
+		// 		$ar_diffusion_map_elements = diffusion::get_ar_diffusion_map_elements(DEDALO_DIFFUSION_DOMAIN);
+		// 		if (!isset($ar_diffusion_map_elements[$diffusion_element_tipo])) {
+		// 			debug_log(__METHOD__
+		// 				. " Error. Skipped diffusion_element '$diffusion_element_tipo' not found in ar_diffusion_map " . PHP_EOL
+		// 				. ' ar_diffusion_map_elements: '.to_string($ar_diffusion_map_elements)
+		// 				, logger::ERROR
+		// 			);
+		// 			$response->msg[]	= "Error. Skipped diffusion_element $diffusion_element_tipo not found in ar_diffusion_map";
+		// 			$response->errors[]	= 'diffusion element not found '.$diffusion_element_tipo;
+		// 			return $response;
+		// 		}
 
-		// obj_diffusion_element
-			$obj_diffusion_element = $ar_diffusion_map_elements[$diffusion_element_tipo];
+		// 	// obj_diffusion_element
+		// 		$obj_diffusion_element = $ar_diffusion_map_elements[$diffusion_element_tipo];
 
-		// diffusion class. Each diffusion element is managed with their own class that extends the main diffusion class
-			$diffusion_class_name = $obj_diffusion_element->class_name;
+		// 	// diffusion class. Each diffusion element is managed with their own class that extends the main diffusion class
+		// 		$diffusion_class_name = $obj_diffusion_element->class_name;
 
-			// include class file
-				require_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
+		// 		// include class file
+		// 			require_once(DEDALO_CORE_PATH . '/diffusion/class.'.$diffusion_class_name.'.php');
 
-			// class instance
-				$diffusion				= new $diffusion_class_name();
-				$diffusion->ar_records	= $ar_records;
+		// 		// class instance
+		// 			$diffusion				= new $diffusion_class_name();
+		// 			$diffusion->ar_records	= $ar_records;
 
-			// update record
-				$diffusion_options = new stdClass();
-					$diffusion_options->section_tipo			= $section_tipo;
-					$diffusion_options->section_id				= (int)$section_id;
-					$diffusion_options->diffusion_element_tipo	= $diffusion_element_tipo;
-					$diffusion_options->resolve_references		= $resolve_references;
+		// 		// update record
+		// 			$diffusion_options = new stdClass();
+		// 				$diffusion_options->section_tipo			= $section_tipo;
+		// 				$diffusion_options->section_id				= (int)$section_id;
+		// 				$diffusion_options->diffusion_element_tipo	= $diffusion_element_tipo;
+		// 				$diffusion_options->resolve_references		= $resolve_references;
 
-				$update_record_response = $diffusion->update_record($diffusion_options);
+		// 			$update_record_response = $diffusion->update_record($diffusion_options);
 
-			// check result
-			if ($update_record_response && $update_record_response->result) {
+		// 		// check result
+		// 		if ($update_record_response && $update_record_response->result) {
 
-				// success
-				$response->result = true;
+		// 			// success
+		// 			$response->result = true;
 
-				$max_recursions		= diffusion::get_resolve_levels();
-				$response->msg[]	= "Published record ID $section_id successfully. Levels: $max_recursions. ";
-				debug_log(__METHOD__
-					." " . implode(', ', $response->msg)
-					, logger::DEBUG
-				);
-			}else{
+		// 			$max_recursions		= diffusion::get_resolve_levels();
+		// 			$response->msg[]	= "Published record ID $section_id successfully. Levels: $max_recursions. ";
+		// 			debug_log(__METHOD__
+		// 				." " . implode(', ', $response->msg)
+		// 				, logger::DEBUG
+		// 			);
+		// 		}else{
 
-				// error case
-				$response->result = false;
+		// 			// error case
+		// 			$response->result = false;
 
-				if (isset($update_record_response->code) && $update_record_response->code===2) {
-					$response->msg[] = "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
-					debug_log(__METHOD__
-						. "  " . implode(', ', $response->msg) . PHP_EOL
-						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
-						, logger::WARNING
-					);
-				}else{
-					$response->msg[] = "Error on publish record $section_id";
-					$response->errors[] = 'publication record failed '.$section_id;
-					debug_log(__METHOD__
-						. "  " . implode(', ', $response->msg) . PHP_EOL
-						. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
-						, logger::ERROR
-					);
-				}
-			}
+		// 			if (isset($update_record_response->code) && $update_record_response->code===2) {
+		// 				$response->msg[] = "Warning [2] on publish record $section_id . Target table is not defined. Skip reference resolution";
+		// 				debug_log(__METHOD__
+		// 					. "  " . implode(', ', $response->msg) . PHP_EOL
+		// 					. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+		// 					, logger::WARNING
+		// 				);
+		// 			}else{
+		// 				$response->msg[] = "Error on publish record $section_id";
+		// 				$response->errors[] = 'publication record failed '.$section_id;
+		// 				debug_log(__METHOD__
+		// 					. "  " . implode(', ', $response->msg) . PHP_EOL
+		// 					. 'update_record_response: ' . json_encode($update_record_response, JSON_PRETTY_PRINT)
+		// 					, logger::ERROR
+		// 				);
+		// 			}
+		// 		}
 
-		// update_record_response
-			$response->update_record_response = isset($update_record_response)
-				? $update_record_response
-				: null;
+		// 	// update_record_response
+		// 		$response->update_record_response = isset($update_record_response)
+		// 			? $update_record_response
+		// 			: null;
 
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	$response->debug = $update_record_response;
-			// 	if (function_exists('bcdiv')) {
-			// 		$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
-			// 	}else{
-			// 		$memory_usage = memory_get_usage();
-			// 	}
-			// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'sec')." secs - MB: ". $memory_usage ."";
-			// }
+		// 	// debug
+		// 		// if(SHOW_DEBUG===true) {
+		// 		// 	$response->debug = $update_record_response;
+		// 		// 	if (function_exists('bcdiv')) {
+		// 		// 		$memory_usage = bcdiv(memory_get_usage(), 1048576, 3);
+		// 		// 	}else{
+		// 		// 		$memory_usage = memory_get_usage();
+		// 		// 	}
+		// 		// 	// $response->msg .= " Exec in ".exec_time_unit($start_time,'sec')." secs - MB: ". $memory_usage ."";
+		// 		// }
 
 
-		return $response;
-	}//end export_record
+		// 	return $response;
+		// }//end export_record
 
 
 
