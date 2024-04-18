@@ -165,7 +165,14 @@ class component_section_id extends component_common {
 				? reset($query_object->q)
 				: $query_object->q;
 
-			$q = $query_object->q;
+
+		// q. if q is a locator, get the section_id as int
+			$query_object->q = is_object($query_object->q) && isset($query_object->q->section_id)
+				? $query_object->q->section_id
+				: $query_object->q;
+
+		// set the q
+		$q = $query_object->q;
 
 		// Always set fixed values
 		$query_object->type = 'number';
