@@ -72,6 +72,7 @@ class dd_date extends stdClass {
 			foreach ($data as $key => $value) {
 
 				if (!isset($value) || is_null($value))  continue; // Skip empty non zero values
+				if($key==='format') continue; //  skip format from comopnent_date data
 
 				$method = 'set_'.$key;
 				if (method_exists($this, $method)) {
