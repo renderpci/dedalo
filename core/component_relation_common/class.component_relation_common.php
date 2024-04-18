@@ -2681,43 +2681,109 @@ class component_relation_common extends component_common {
 					// 	"source": "fixed_dato"
 					// }
 					foreach ($search_item->value as $object) {
-						// foreach ($object->q->value as $q_value) {
-						// 	$filter_item = new stdClass();
-						// 		$filter_item->q		= '';
-						// 		$filter_item->path	= [];
-						// 	foreach ($object->f_path as $key => $value) {
-						// 		if($key % 2 ===0){
-						// 			$filter_item->path[] = search::get_query_path($value, $object->f_path[$key+1],false,false)[0];
-						// 		}
-						// 	}
-						// 	$filter_item->q = $q_value;
-						// 	$dato_filter->{$operator}[] =  $filter_item;
-						// }
 						$dato_filter->{$operator}[] = $object;
 					}
 					break;
 
-				case 'component_dato':
-					foreach ($search_item->value as $object) {
-						$tipo			= $object->q->value;
-						$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$translatable	= RecordObj_dd::get_translatable($tipo);
-						$component		= component_common::get_instance(
-							$model,
-							$tipo,
-							$section_id,
-							'list',
-							$translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
-							$section_tipo
-						);
-						$dato = $component->get_dato();
-						if(empty($dato)) continue;
-						foreach ($dato as $value) {
+				case 'component_data':
+					//Sample
+					//	{
+					//		"value": [
+					//			{
+					//				"q": "rsc423",
+					//				"path": [
+					//					{
+					//						"name": "Id",
+					//						"model": "component_section_id",
+					//						"section_tipo": "rsc420",
+					//						"component_tipo": "rsc414"
+					//					}
+					//				],
+					//				"ddo_map": [
+					//					{
+					//						"tipo": "numisdata1379",
+					//						"parent": "self",
+					//						"section_tipo": "numisdata1374"
+					//					},
+					//					{
+					//						"tipo": "rsc423",
+					//						"parent": "numisdata1379",
+					//						"section_tipo": "rsc197"
+					//					}
+					//				],
+					//				"q_operator": null,
+					//				"search_section_id": true
+					//			}
+					//		],
+					//		"source": "component_data"
+					//	}
+					// Every value has a object with:
+					// q :					His value defines the target component_tipo that has the data to be used into the filter
+					//						(in the example a portal point to biographic milestones)
+					// path : 				To be used as final search path (the component to be searched),
+					//						(in the example the section_id of the biographic milestone section)
+					// ddo_map :			Defines the ddo path to the component that has the data, it could be in the same section or in other.
+					//						(in the example the path from numismatic object to the biographic milestones portal in People under study)
+					// 						when the ddo has a children, every child will be resolve with the data of his parent.
+					// q_operator  			q_operator to be used
+					// search_section_id : 	true | null. Defines if the component data will be used to search into a section_id component, in those cases, join the section_id to optimize the search
+
+					$value = $search_item->value;
+
+					// for every value resolve the path and get the component_data
+					foreach($value as $current_value){
+						// get the first ddo to be resolve the ddo chain
+						$init_ddo = array_find($current_value->ddo_map, function($item) use ($section_tipo) {
+							return $item->parent === 'self' || $item->parent === $section_tipo;
+						});
+						// get the ddo that match with the q definition
+						$tipo_to_be_resolved = $current_value->q;
+
+						$resolve_ddo = array_find($current_value->ddo_map, function($item) use ($tipo_to_be_resolved) {
+							return $item->tipo === $tipo_to_be_resolved;
+						});
+
+						// set the ddo to be resolve as last, is used by the recursion to stop the resolution
+						$resolve_ddo->last = true;
+
+						$ar_ddo = $current_value->ddo_map;
+
+						// create the current_data with the section of the component that call.
+						// it will use to resolve the ddo_chain
+						$current_data = new stdClass();
+							$current_data->section_tipo	= $section_tipo;
+							$current_data->section_id	= $section_id;
+
+						// resolve the ddo_chain recursively
+						$component_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $init_ddo, $current_data);
+
+						// if the fixed_filter is used to search into a section_id, join the result of the locators into a flat string separated by commas.
+						// this action optimize the search by using an IN SQL statement.
+						if(isset($current_value->search_section_id) && $current_value->search_section_id === true){
+							$current_section_id = [];
+
+							foreach ($component_data as $search_data) {
+								$current_section_id[] = $search_data->section_id;
+							}
+							// the joined data will be as: "1,5,83,54"
+							$joined_search_data = implode(',', $current_section_id);
+
+							// create the sqo filter with the data and specified path
 							$filter_item = new stdClass();
-								$filter_item->q		= json_encode($value);
-								$filter_item->path	= search::get_query_path($section_tipo, $tipo,false,false)[0];
+								$filter_item->q		= $joined_search_data;
+								$filter_item->path	= $current_value->path;
 
 							$dato_filter->{$operator}[] =  $filter_item;
+
+						}else{
+							// if the component is other than section_id, create a q and path with every compnent_data.
+							foreach ($component_data as $search_data) {
+								$filter_item = new stdClass();
+									$filter_item->q		= $search_data;
+									$filter_item->path	= $current_value->path;
+									//$filter_item->path	= search::get_query_path($tipo, $section_tipo,false,false)[0];
+								$dato_filter->{$operator}[] =  $filter_item;
+							}
 						}
 					}
 					break;
@@ -2735,9 +2801,79 @@ class component_relation_common extends component_common {
 			}
 		}//end foreach ($ar_fixed as $search_item)
 
-
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
+
+
+
+	/**
+	* RESOLVE_COMPONENT_DATA_RECURSIVELY
+	* Get data of the parent component and inject into the next component in the chain (his children)
+	* @param array $ar_ddo // full array with all ddo
+	* @param dd_object $dd_object // parent ddo to get his children
+	* @param locator $data // data of the previous recursion
+	* @return array|null $component_data
+	*/
+	private static function resolve_component_data_recursively(array $ar_ddo, object $dd_object, object $data) : ?array {
+
+		$last			= $dd_object->last ?? null;
+		$tipo			= $dd_object->tipo;
+		$section_tipo	= $data->section_tipo;
+		$section_id		= $data->section_id;
+		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$translatable	= RecordObj_dd::get_translatable($tipo);
+		$component		= component_common::get_instance(
+			$model,
+			$tipo,
+			$section_id,
+			'list',
+			$translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
+			$section_tipo
+		);
+		$component_data = $component->get_dato();
+		if(empty($component_data)){
+			return null;
+		};
+
+		// if the ddo has a $last property, it will be the component to get his data
+		// but if the ddo in not the $last ddo, do recursion to resolve the next level into the ddo chain.
+		if(!isset($last)){
+			$children = component_relation_common::get_ddo_children_recursive($ar_ddo, $dd_object);
+			$current_compnent_data = [];
+			foreach($component_data as $current_data){
+				foreach ($children as $current_ddo_child) {
+					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $current_data);
+					// join the result data with the siblings resolution.
+					$current_compnent_data = array_merge($current_compnent_data, $result_compnent_data);
+				}
+			}
+			return $current_compnent_data;
+		}
+
+		return $component_data;
+	}//end resolve_component_data_recursively
+
+
+	/**
+	* GET_DDO_CHILDREN_RECURSIVE
+	* children_resursive function, used to get all children for specific ddo
+	* @param array $ar_ddo // full array with all ddo
+	* @param dd_object $dd_object // parent ddo to get his children
+	* @return array $ar_children
+	*/
+	private static function get_ddo_children_recursive(array $ar_ddo, object $dd_object) : array {
+		$ar_children = [];
+		foreach ($ar_ddo as $ddo) {
+			if($ddo->parent===$dd_object->tipo) {
+				$ar_children[] = $ddo;
+				$result = component_relation_common::get_ddo_children_recursive($ar_ddo, $ddo);
+				if (!empty($result)) {
+					$ar_children = array_merge($ar_children, $result);
+				}
+			}
+		}
+		return $ar_children;
+	}
 
 
 
