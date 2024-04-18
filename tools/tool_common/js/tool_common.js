@@ -344,6 +344,9 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 					})
 					self.context = api_response.result[0]
 
+				// config update
+					self.config = self.context.config
+
 				// debug
 					if(SHOW_DEBUG===true) {
 						// console.log("/// [tool_common.build] api_response:", api_response);
