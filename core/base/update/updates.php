@@ -5,6 +5,56 @@
 global $updates;
 $updates = new stdClass();
 
+
+$v=620; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 0;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 1;
+	$updates->$v->update_from_minor		= 4;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>New configuration constants have been added and another are deprecated or removed.
+			<br>Add them to your 'config' file to enable new features, such as unified thumbnails and image versions of PDF documents.
+			<br>
+			<br>
+			<code>// thumb common. This block is used by all components to create and display thumbnail images
+			<br>// dedalo_thumb_extension. Default: 'jpg'
+			<br>define('DEDALO_THUMB_EXTENSION',			'jpg');
+			<br>// dedalo_quality_thumb. Default: 'thumb')
+			<br>define('DEDALO_QUALITY_THUMB',				'thumb');
+			<br>
+			<br>// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
+			<br>// Allows you to create image versions of the PDF, useful for previews or web versions
+			<br>define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
+			</code>
+			<br>See sample.config.php file to review all changes.
+			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/' target='_blank'>https://dedalo.dev/docs/config/config/</a>
+			<br>
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_3d',
+			'component_av',
+			'component_pdf',
+			'component_svg'
+		];	// Force convert from string to array
+
+
+
 $v=614; #####################################################################################
 $updates->$v = new stdClass();
 
