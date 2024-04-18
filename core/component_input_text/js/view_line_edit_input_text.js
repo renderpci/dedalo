@@ -8,7 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	import {keyup_handler} from './render_edit_component_input_text.js'
+	import {change_handler} from './render_edit_component_input_text.js'
 
 
 
@@ -136,6 +136,11 @@ const get_content_value = (i, current_value, self) => {
 		// click event
 			input.addEventListener('click', function(e) {
 				e.stopPropagation()
+			})
+
+		// change event
+			input.addEventListener('change', function(e) {
+				change_handler(e, i, self)
 			})
 
 

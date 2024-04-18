@@ -281,8 +281,7 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 
 		// change event
 			input.addEventListener('change', fn_change)
-			function fn_change() {
-
+			function fn_change(e) {
 				return change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -609,11 +608,9 @@ export const get_input_time_node = (i, mode, input_value, self) => {
 					ui.component.deactivate(self)
 					return
 				}
-					e : e
-				})
 			})
 		// change event
-			input.addEventListener('change', function(){
+			input.addEventListener('change', function(e){
 				change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -663,29 +660,6 @@ export const get_input_time_node = (i, mode, input_value, self) => {
 
 	return input_wrap
 }//end get_input_time_node
-
-
-
-/**
-* KEYUP_HANDLER
-* Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
-* @param event e
-* @param int key
-* @param object self
-* @return bool
-*/
-export const keyup_handler = function(options) {
-
-	// options
-		const e = options.e
-
-
-	e.preventDefault()
-
-
-	return true
-}//end keyup_handler
 
 
 
