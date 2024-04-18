@@ -193,9 +193,9 @@ const get_content_data = async function(self) {
 		})
 
 		// page_info
-			ui.create_dom_element({
+			const page_node = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'page_info',
+				class_name		: 'page_info inactive',
 				inner_html		: (get_label.page || 'Page'),
 				parent			: paginator_info
 			})
@@ -283,8 +283,8 @@ const get_content_data = async function(self) {
 					? (() => {
 						// ref: Registros mostrados de X a Y de Z.
 						const map = {
-							X	: self.page_row_begin,
-							Y	: self.page_row_end,
+							X	: new Intl.NumberFormat(locale, {}).format(self.page_row_begin),
+							Y	: new Intl.NumberFormat(locale, {}).format(self.page_row_end),
 							Z	: total_label
 						};
 						return get_label.registros_mostrados.replace(/X|Y|Z/g, (matched)=> {
@@ -318,6 +318,7 @@ const get_content_data = async function(self) {
 				// execute function passing selected value as param
 				item.callback(value)
 			}
+			page_node.classList.remove('inactive')
 		})
 
 

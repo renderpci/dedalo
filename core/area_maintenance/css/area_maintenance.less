@@ -732,7 +732,6 @@
 
 			&#check_config {
 
-
 				.errors_container {
 					display: block;
 					padding: 0.66rem;
@@ -776,6 +775,35 @@
 				// 	padding-bottom: 0.5rem;
 				// }
 
+				.maintenance_mode_container {
+					width: 100%;
+					padding-bottom: 1rem;
+
+					>.label {
+						font-weight: 600;
+						font-size: 1.1rem;
+						padding: 0px;
+						padding-left: 0.5rem;
+						padding-bottom: 0.75rem;
+						text-transform: uppercase;
+					}
+					>.form_container {
+						padding: 0px;
+
+						.button_submit {
+
+							&.danger {
+								color: @color_white_dirty !important;
+								background-color: @color_danger;
+								font-weight: unset;
+							}
+						}
+					}
+					>.body_response {
+						padding: 0.5rem;
+					}
+				}
+
 				.tables {
 					width: 100%;
 					display: grid;
@@ -785,16 +813,16 @@
 
 				.missing_container, .obsolete_container {
 					display: grid;
-    				grid-auto-rows: auto 1fr minmax(1ch,10ch) minmax(1ch,10ch);
+					grid-auto-rows: auto 1fr 1fr minmax(1ch,10ch);
 
-    				>.label {
-    					font-weight: 600;
-    					font-size: 1.1rem;
-    					padding: 0px;
-    					padding-left: 0.5rem;
-    					padding-bottom: 0.75rem;
-    					text-transform: uppercase;
-    				}
+					>.label {
+						font-weight: 600;
+						font-size: 1.1rem;
+						padding: 0px;
+						padding-left: 0.5rem;
+						padding-bottom: 0.75rem;
+						text-transform: uppercase;
+					}
 
 					>.file_container {
 

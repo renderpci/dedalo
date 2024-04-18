@@ -33,6 +33,12 @@ class tool_propagate_component_data extends tool_common {
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
+		// components mono-value case. Prevent to propagate 'add'
+			if ($action==='add' && in_array($model, component_common::$components_monovalue)) {
+				$response->msg = 'Sorry, action \'add\' is not allowed for this component';
+				return $response;
+			}
+
 		// RECORDS. Use actual list search options as base to build current search
 			$sqo_id	= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
@@ -48,11 +54,45 @@ class tool_propagate_component_data extends tool_common {
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
 
+		// short vars
+			$counter			= 0;
+			$total				= count($rows_data->ar_records);
+			$section_label		= RecordObj_dd::get_termino_by_tipo($section_tipo, DEDALO_APPLICATION_LANG, true);
+			$component_label	= RecordObj_dd::get_termino_by_tipo($component_tipo, DEDALO_APPLICATION_LANG, true);
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				$pdata = new stdClass();
+					$pdata->msg				= (label::get_label('processing') ?? 'Processing') . ' ' . $action .': '. $component_label;
+					$pdata->counter			= $counter;
+					$pdata->total			= $total;
+					$pdata->section_label	= $section_label;
+				// send to output
+				print_cli($pdata);
+			}
+
 		// result records iterate
 			foreach ($rows_data->ar_records as $row) {
 
+				$counter++;
+
 				// section_id
 					$current_section_id	= $row->section_id;
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						$pdata->counter	= $counter;
+						$pdata->current	= (object)[
+							'section_tipo'	=> $section_tipo,
+							'section_id'	=> $current_section_id
+						];
+						// calculate memory in multiples of 1000
+						if($counter%1000==0){
+							$pdata->memory = dd_memory_usage();
+						}
+						// send to output
+						print_cli($pdata);
+					}
 
 				// current component
 					$current_component	= component_common::get_instance(
@@ -66,7 +106,7 @@ class tool_propagate_component_data extends tool_common {
 					$current_dato = $current_component->get_dato();
 
 				// final_dato. Build final_dato based on action type
-					$final_dato = $current_dato;
+					$final_dato = $current_dato ?? [];
 					$save = true;
 					switch ($action) {
 
@@ -81,7 +121,7 @@ class tool_propagate_component_data extends tool_common {
 							foreach ((array)$propagate_data_value as $current_value) {
 
 								$key = ($with_relations===true)
-									? locator::get_key_in_array_locator($current_value, $final_dato, $ar_properties=['section_tipo','section_id'])
+									? locator::get_key_in_array_locator($current_value, $final_dato, ['section_tipo','section_id'])
 									: array_search($current_value, $final_dato);
 								if (false!==$key) {
 									unset($final_dato[$key]);
@@ -119,10 +159,13 @@ class tool_propagate_component_data extends tool_common {
 
 		// response
 			$response->result			= true;
-			$response->msg				= "Updated data (action: $action) of section $section_tipo successfully. Total records: ".count($rows_data->ar_records);
+			$response->msg				= "$action data of '$component_label' in section '$section_tipo' successfully.";
 			$response->action			= $action;
-			$response->section_label	= RecordObj_dd::get_termino_by_tipo($section_tipo);
-			$response->count			= count($rows_data->ar_records);
+			$response->section_label	= $section_label;
+			$response->total			= $total;
+			$response->counter			= $counter;
+			$response->memory			= dd_memory_usage();
+
 
 		return $response;
 	}//end propagate_component_data

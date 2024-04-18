@@ -184,8 +184,8 @@ class tool_common {
 			$config_data	= array_find($ar_config, function($el) use($name) {
 				return $el->name===$name;
 			});
-
-			if(empty($ar_config)){
+			// fallback to default config
+			if(empty($config_data)){
 				$ar_config		= tools_register::get_all_default_config_tool_client();
 				$config_data	= array_find($ar_config, function($el) use($name) {
 					return $el->name===$name;

@@ -111,7 +111,16 @@ class update {
 
 		// SQL_update
 			if(isset($update->SQL_update)){
+				$counter = count($update->SQL_update);
 				foreach ((array)$update->SQL_update as $key => $current_query) {
+
+					// cli msg
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'	=> 'Updating SQL_update ' . $key+1 . ' of ' . $counter,
+							'data'	=> 	to_string($current_query)
+						]);
+					}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -165,7 +174,16 @@ class update {
 
 		// components_update
 			if(isset($update->components_update)){
+				$counter = count($update->components_update);
 				foreach ((array)$update->components_update as $key => $current_model) {
+
+					// cli msg
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'	=> 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model,
+							'data'	=> 	to_string($current_model)
+						]);
+					}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -205,7 +223,16 @@ class update {
 
 		// run_scripts
 			if(isset($update->run_scripts)){
+				$counter = count($update->run_scripts);
 				foreach ((array)$update->run_scripts as $key => $current_script) {
+
+					// cli msg
+					if ( running_in_cli()===true ) {
+						print_cli((object)[
+							'msg'	=> 'Updating run_scripts ' . $key+1 . ' of ' . $counter,
+							'data'	=> 	to_string($current_script)
+						]);
+					}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL

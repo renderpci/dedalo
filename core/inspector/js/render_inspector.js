@@ -497,7 +497,12 @@ export const render_section_info = function(self) {
 				element_type	: 'span',
 				class_name		: 'value bold',
 				inner_html		: section_tipo,
+				title			: 'Click to copy',
 				parent			: fragment
+			})
+			tipo_info.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				navigator.clipboard.writeText( section_tipo )
 			})
 
 	// info
@@ -527,11 +532,16 @@ export const render_section_info = function(self) {
 				parent			: fragment
 			})
 		// value
-			ui.create_dom_element({
+			const model_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
 				inner_html		: section.model,
+				title			: 'Click to copy',
 				parent			: fragment
+			})
+			model_info.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				navigator.clipboard.writeText( section.model )
 			})
 
 	// matrix_table
@@ -543,11 +553,16 @@ export const render_section_info = function(self) {
 				parent			: fragment
 			})
 		// value
-			ui.create_dom_element({
+			const matrix_table_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
 				inner_html		: matrix_table,
+				title			: 'Click to copy',
 				parent			: fragment
+			})
+			matrix_table_info.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				navigator.clipboard.writeText( matrix_table )
 			})
 
 	// section_id
@@ -706,7 +721,12 @@ export const render_component_info = function(self, component) {
 				element_type	: 'span',
 				class_name		: 'value bold',
 				inner_html		: tipo,
+				title			: 'Click to copy',
 				parent			: fragment
+			})
+			tipo_info.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				navigator.clipboard.writeText( tipo )
 			})
 
 	// info
@@ -809,11 +829,16 @@ export const render_component_info = function(self, component) {
 				parent			: fragment
 			})
 		// value
-			ui.create_dom_element({
+			const model_info = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'value',
 				inner_html		: model,
+				title			: 'Click to copy',
 				parent			: fragment
+			})
+			model_info.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				navigator.clipboard.writeText( model )
 			})
 
 	// translatable

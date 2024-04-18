@@ -36,11 +36,22 @@
 				display: grid;
 				grid-template-columns: auto minmax(25rem, 1fr) 200px;
 
+				@media screen and (max-width: @width_break_point_1) {
+					display: block;
+				}
+
 				// components_list_container. List of available section components to drag (at left)
 				>.components_list_container {
 					max-width: 100%;
 					overflow: auto;
 					max-height: calc(100vh - 7.5rem);
+
+					@media screen and (max-width: @width_break_point_1) {
+						max-height: unset;
+						width: 100%;
+						margin-bottom: 1.5rem;
+						overflow: visible;
+					}
 
 					// ul list_container
 					>.list_container {
@@ -60,6 +71,19 @@
 					overflow: auto;
 					max-height: calc(100vh - 7.5rem);
 					width: calc(100% - 2rem);
+
+					@media screen and (max-width: @width_break_point_1) {
+						max-height: unset;
+						margin: 0px;
+						margin-bottom: 1.5rem;
+						overflow: visible;
+						min-height: 35vh;
+						background-color: #faf9f9;
+						padding: 0px;
+						padding-left: 0.33rem;
+						padding-right: 0.33rem;
+						width: 100%;
+					}
 
 					// h1 list_title
 					.list_title {
@@ -184,6 +208,10 @@
 					padding-top: 0;
 					position: relative;
 
+					@media screen and (max-width: @width_break_point_1) {
+						background-color: unset;
+					}
+
 					.section_label {
 						font-size: 1.25rem;
 						line-height: 1.5rem;
@@ -273,6 +301,12 @@
 				.processing_import {
 					background-color: @tool_color;
 					border-color: darken(@tool_color, 10%);
+					margin-bottom: 0.25rem;
+
+					@media screen and (max-width: @width_break_point_1) {
+						margin: 0.5rem;
+						width: calc(50% - 1rem);
+					}
 				}
 			}
 
@@ -284,6 +318,10 @@
 				min-height: 40vh;
 				overflow: auto;
 				margin: 0px;
+
+				@media screen and (max-width: @width_break_point_1) {
+
+				}
 
 				.view_table {
 					// position: absolute;

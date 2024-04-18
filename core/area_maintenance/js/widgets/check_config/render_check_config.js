@@ -78,6 +78,66 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
+	// maintenance mode
+		if (page_globals.is_root===true) {
+			const maintenance_mode_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'maintenance_mode_container',
+				parent			: content_data
+			})
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label',
+				inner_html		: 'Maintenance mode',
+				parent			: maintenance_mode_container
+			})
+			const maintenance_mode_body_response = ui.create_dom_element({
+				element_type	: 'div',
+				inner_html		: "Warning! On true, users other than 'root' will be kicked and will not be able to login in this mode.",
+				class_name		: 'body_response'
+			})
+			const label = page_globals.maintenance_mode===true
+				? 'Deactivate maintenance mode'
+				: 'Activate maintenance mode'
+			const new_maintenance_mode = !page_globals.maintenance_mode
+			const form_container = self.caller.init_form({
+				submit_label	: label,
+				confirm_text	: get_label.sure || 'Sure?',
+				body_info		: maintenance_mode_container,
+				body_response	: maintenance_mode_body_response,
+				trigger : {
+					dd_api	: 'dd_area_maintenance_api',
+					action	: 'class_request',
+					source	: {
+						action : 'set_maintenance_mode'
+					},
+					options	: {
+						maintenance_mode : new_maintenance_mode
+					}
+				},
+				on_done : (api_response) => {
+					if (api_response.result) {
+						setTimeout(function(){
+							// update page_globals value
+							page_globals.maintenance_mode = new_maintenance_mode
+							// render the page again
+							window.dd_page.refresh({
+								build_autoload	: false,
+								destroy			: false
+							})
+						}, 0)
+					}
+				}
+			})
+			if (page_globals.maintenance_mode===false) {
+				form_container.button_submit.classList.add('danger')
+			}
+
+			// add maintenance_mode_body_response at end
+			maintenance_mode_container.appendChild(maintenance_mode_body_response)
+		}
+
+
 	// errors
 		if (errors && errors.length>0) {
 			const errors_container = ui.create_dom_element({
@@ -100,7 +160,6 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'tables',
 			parent			: content_data
 		})
-
 
 	// missing_container
 		const missing_container = ui.create_dom_element({

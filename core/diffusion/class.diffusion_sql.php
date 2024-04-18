@@ -1146,10 +1146,10 @@ class diffusion_sql extends diffusion  {
 												: diffusion::get_is_publicable($current_locator);
 
 											if ($current_is_publicable!==true) {
-												debug_log(__METHOD__
-													." + Skipped locator not publishable: ".to_string($current_locator)
-													, logger::DEBUG
-												);
+												// debug_log(__METHOD__
+												// 	." + Skipped locator not publishable: ".to_string($current_locator)
+												// 	, logger::DEBUG
+												// );
 												continue;
 											}
 
@@ -2441,7 +2441,7 @@ class diffusion_sql extends diffusion  {
 
 					// table
 						$new_items[] = [
-							'field_name'	=> 'table',
+							'field_name'	=> 'ref_table',
 							'field_value'	=> $source_table_name
 						];
 
@@ -4469,7 +4469,10 @@ class diffusion_sql extends diffusion  {
 					? (bool)$process_dato_arguments->is_publicable // override is_publicable verification (Bibliography case)
 					: diffusion::get_is_publicable($locator);
 				if ($current_is_publicable!==true) {
-					debug_log(__METHOD__." + Skipped locator not publishable: ".to_string($locator), logger::DEBUG);
+					// debug_log(__METHOD__
+					// 	." + Skipped locator not publishable: ".to_string($locator)
+					// 	, logger::DEBUG
+					// );
 					continue;
 				}
 

@@ -134,6 +134,10 @@ session_write_close();
 			$obj->component_active				= null;
 			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : null;
 			$obj->stream_readers				= [];
+			// maintenance mode
+			$obj->maintenance_mode				= defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+				? DEDALO_MAINTENANCE_MODE_CUSTOM
+				: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
 			// debug only
 			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
 				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
@@ -176,8 +180,7 @@ session_write_close();
 		'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
 		'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
 		'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
-		'DEDALO_MAINTENANCE_MODE'			=> defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null,
-		'DEDALO_NOTIFICATION'				=> null, // DEPRECATED . legacy support only (remove early)
+		// 'DEDALO_NOTIFICATION'			=> null, // DEPRECATED . legacy support only (remove early)
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [
 			// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,

@@ -269,6 +269,7 @@ view_line_edit_portal.render_column_id = function(options) {
 			element_type	: 'span',
 			// class_name	: 'button pen icon grey',
 			class_name		: 'button pen icon grey',
+			title			: (get_label.open || 'Open'),
 			parent			: button_edit
 		})
 
@@ -346,6 +347,7 @@ view_line_edit_portal.render_column_remove = function(options) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button delete_light icon grey',
+			title			: (get_label.delete_only_the_link || 'Delete only link'),
 			parent			: button_remove
 		})
 

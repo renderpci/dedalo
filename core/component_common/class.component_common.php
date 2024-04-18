@@ -98,6 +98,25 @@ abstract class component_common extends common {
 		public static $ar_component_instances = [];
 		// public bool cache
 		public $cache;
+		// components mono-value (his data is array but only first element is used)
+		// Used in tool propagate_component_data to determine if they can use 'add' functionality
+		public static $components_monovalue = [
+			'component_3d',
+			'component_av',
+			'component_geolocation',
+			'component_image',
+			'component_json',
+			'component_password',
+			'component_pdf',
+			'component_publication',
+			'component_model',
+			'component_section_id',
+			'component_security_access',
+			'component_select',
+			'component_select_lang',
+			'component_svg',
+			'component_text_area'
+		];
 
 
 
