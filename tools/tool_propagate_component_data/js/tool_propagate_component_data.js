@@ -162,6 +162,7 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 * @param string action
 * 	values: add|remove
 * @return promise
+* 	resolve object api_response
 */
 tool_propagate_component_data.prototype.propagate_component_data = function(action) {
 
@@ -184,6 +185,7 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 			action	: 'tool_request',
 			source	: source,
 			options	: {
+				background_running		: true, // set run in background CLI
 				section_tipo			: section_tipo,
 				section_id				: section_id,
 				component_tipo			: component_tipo,
@@ -200,12 +202,12 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				use_worker	: true,
 				body		: rqo
 			})
-			.then(function(response){
+			.then(function(api_response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> propagate_component_data API response:",'DEBUG',response);
+					dd_console("-> propagate_component_data API api_response:",'DEBUG',api_response);
 				}
 
-				resolve(response)
+				resolve(api_response)
 			})
 		})
 }//end propagate_component_data
