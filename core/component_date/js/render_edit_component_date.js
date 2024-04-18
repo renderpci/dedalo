@@ -274,10 +274,11 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			})
 		// keydown event. Prevent to fire page events like open search panel
 			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
+				if(e.key==='Tab' ){
+					ui.component.deactivate(self)
+				}
 			})
-		// keyup event
-			})
+
 		// change event
 			input.addEventListener('change', fn_change)
 			function fn_change() {
@@ -603,11 +604,11 @@ export const get_input_time_node = (i, mode, input_value, self) => {
 		})
 		// keydown event. Prevent to fire page events like open search panel
 			input.addEventListener('keydown', function(e) {
-				e.stopPropagation()
-			})
-		// keyup event
-			input.addEventListener('keyup', function(e) {
-				keyup_handler({
+
+				if(e.key==='Tab' ){
+					ui.component.deactivate(self)
+					return
+				}
 					e : e
 				})
 			})
