@@ -120,9 +120,36 @@ const get_value_element = (i, data, inputs_container, self) => {
 		const data_map = output[j]
 		const current_data = data.find(el => el.id===data_map.id)
 
-		const value = (typeof current_data!=='undefined')
+		const server_value = (typeof current_data!=='undefined')
 			? current_data.value
 			: null
+
+		const get_date_string = ()=>{
+
+			if(server_value){
+
+				// const date		= new Date(server_value.year, server_value.month -1, server_value.day);
+				// const locale	= page_globals.locale
+				// const result	= date.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
+				
+				const ar_date = []
+				if(server_value.day){
+					ar_date.push(server_value.day)
+				}
+				if(server_value.month){
+					ar_date.push(server_value.month)
+				}
+				if(server_value.year){
+					ar_date.push(server_value.year)
+				}
+				const result = ar_date.join('/')
+				return result
+			}
+		}
+
+		const value = (data_map.format && data_map.format === 'date')
+			? get_date_string()
+			: server_value
 
 		const label_suffix = value==1 ? '_singular' : ''
 
