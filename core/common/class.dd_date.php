@@ -931,14 +931,25 @@ class dd_date extends stdClass {
 
 
 	/**
-	* __GET METHODS
-	* By accessors. When property exits, return property value, else return null
-	* @param string $name
+	* GET_DD_DATE_FROM_UNIX_TIMESTAMP
+	* Change the date to the unit (day, month, year)
+	* @param int $unix_timestamp
+	* @return dd_date $dd_date
 	*/
-		// final public function __get( string $name ) : mixed {
+	public static function get_dd_date_from_unix_timestamp( int $unix_timestamp) : dd_date {
 
-		// 		$trace = debug_backtrace();
-		// 		dump($this, ' this ++ '.$trace[1]['file'] . ' - '. $trace[1]['line']);
+		$day		= date('d', $unix_timestamp); // 1-31
+		$month		= date('m', $unix_timestamp); // 1-12
+		$year		= date('Y', $unix_timestamp); // 1973
+
+		$dd_date	= new dd_date();
+			$dd_date->set_day($day);
+			$dd_date->set_month($month);
+			$dd_date->set_year($year);
+
+		return $dd_date;
+	}//end get_dd_date_from_unix_timestamp
+
 
 		// 	if (isset($this->{$name})) {
 		// 		return $this->{$name};
