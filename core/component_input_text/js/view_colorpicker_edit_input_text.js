@@ -9,7 +9,7 @@
 	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {keyup_handler, remove_handler} from './render_edit_component_input_text.js'
+	import {change_handler, remove_handler} from './render_edit_component_input_text.js'
 
 
 /**
@@ -175,9 +175,16 @@ const get_content_value = (i, current_value, self) => {
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
+
 		// mousedown event. Capture event propagation
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
+			})
+
+		// change event
+			input.addEventListener('change', function(e) {
+				change_handler(e, i, self)
+				color_picker.value = e.target.value;
 			})
 
 

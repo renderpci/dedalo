@@ -75,7 +75,7 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 
 
 /**
-* KEYUP_HANDLER
+* CHANGE_HANDLER
 * Store current value in self.data.changed_data
 * If key pressed is 'Enter', force save the value
 * @param event e
@@ -83,48 +83,33 @@ render_edit_component_input_text.prototype.edit = async function(options) {
 * @param object self
 * @return bool
 */
-export const keyup_handler = function(e, key, self) {
-	e.preventDefault()
+export const change_handler = function(e, key, self) {
 
-	// tab/shift case catch
-		if (e.key==='Tab' || e.key==='Shift') {
-			return
-		}
+	const safe_value = self.context.properties?.validation
+		? self.validate(e.target.value)
+		: e.target.value || ''
 
-	// Enter key force to save changes
-		if (e.key==='Enter') {
+	if (e.target.value!=safe_value) {
+		e.target.value = safe_value
+	}
 
-			// force to save current input if changed
-				const changed_data = self.data.changed_data || []
-				// change_value (save data)
-				self.change_value({
-					changed_data	: changed_data,
-					refresh			: false
-				})
-		}else{
+	// change data
+		const changed_data_item = Object.freeze({
+			action	: 'update',
+			key		: key,
+			value	: safe_value
+		})
 
-			const safe_value = self.context.properties?.validation
-				? self.validate(e.target.value)
-				: e.target.value || ''
+	// change_value (save data)
+		self.change_value({
+			changed_data	: [changed_data_item],
+			refresh			: false
+		})
 
-			if (e.target.value!=safe_value) {
-				e.target.value = safe_value
-			}
-
-			// change data
-				const changed_data_item = Object.freeze({
-					action	: 'update',
-					key		: key,
-					value	: safe_value
-				})
-
-			// fix instance changed_data
-				self.set_changed_data(changed_data_item)
-		}
 
 
 	return true
-}//end keyup_handler
+}//end change_handler
 
 
 
