@@ -1926,12 +1926,14 @@ export const service_ckeditor = function() {
 	*/
 	this.destroy = async function() {
 
-		await this.editor.destroy()
-		.catch( error => {
-			console.error( error );
-		})
+		if (this.editor) {
+			await this.editor.destroy()
+			.catch( error => {
+				console.error( error );
+			})
 
-		this.editor = null
+			this.editor = null
+		}
 
 		// delete_instance from instances register array
 		const instance_options = {
