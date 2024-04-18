@@ -2273,7 +2273,7 @@ abstract class component_common extends common {
 						// response OK from cache
 							$response = $list_of_values_data[$uid];
 
-						return $response;
+						// return $response;
 					}
 
 				// set the limit 0 to retrieve all records of the target section
@@ -2282,6 +2282,9 @@ abstract class component_common extends common {
 					$sqo = new search_query_object();
 						$sqo->set_section_tipo($ar_sections_tipo);
 						$sqo->set_limit($limit);
+						if(isset($dedalo_request_config->sqo->fixed_filter)){
+							$sqo->set_filter(reset($dedalo_request_config->sqo->fixed_filter));
+						}
 
 				$search = search::get_instance($sqo);
 				$search_result = $search->search();
