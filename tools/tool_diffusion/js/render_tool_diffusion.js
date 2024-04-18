@@ -7,7 +7,7 @@
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {object_to_url_vars} from '../../../core/common/js/utils/index.js'
+	import {object_to_url_vars, time_unit_auto} from '../../../core/common/js/utils/index.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
@@ -537,12 +537,12 @@ export const render_publication_items = function(self) {
 					})
 				})
 				// disable cases :
-						if (
-							(item.connection_status && item.connection_status.result===false) ||
-							(item.class_name==='diffusion_mysql' && !data_item.table)
-							) {
+					if (
+						(item.connection_status && item.connection_status.result===false) ||
+						(item.class_name==='diffusion_mysql' && !data_item.table)
+						) {
 							publication_button.classList.add('loading')
-						}
+					}
 
 				// check process status always
 				const check_process_data = () => {
@@ -553,11 +553,11 @@ export const render_publication_items = function(self) {
 					.then(function(local_data){
 						if (local_data && local_data.value) {
 							update_process_status({
-								pid                    : local_data.value.pid,
-								pfile				: local_data.value.pfile,
-								process_id			: process_id,
-								container			: response_message,
-								publication_button	: publication_button
+								pid			: local_data.value.pid,
+								pfile		: local_data.value.pfile,
+								process_id	: process_id,
+								container	: response_message,
+								lock_items	: [publication_button]
 							})
 						}
 					})
@@ -615,11 +615,11 @@ const publish_content = async (self, options) => {
 
 	// fire update_process_status
 		update_process_status({
-			pid					: api_response.pid,
-			pfile				: api_response.pfile,
-			process_id			: process_id,
-			container			: response_message,
-			publication_button	: publication_button
+			pid			: api_response.pid,
+			pfile		: api_response.pfile,
+			process_id	: process_id,
+			container	: response_message,
+			lock_items	: [publication_button]
 		})
 
 		/* DES
@@ -672,14 +672,16 @@ const publish_content = async (self, options) => {
 */
 const update_process_status = (options) => {
 
-	const pid					= options.pid
-	const pfile					= options.pfile
-	const publication_button	= options.publication_button
-	const process_id			= options.process_id
-	const container				= options.container
+	const pid			= options.pid
+	const pfile			= options.pfile
+	const process_id	= options.process_id
+	const container		= options.container
+	const lock_items	= options.lock_items
 
-	// locks the button submit
-	publication_button.classList.add('loading')
+	// locks lock_items
+	lock_items.map(el =>{
+		el.classList.add('loading')
+	})
 
 	// blur button
 	document.activeElement.blur()
@@ -694,7 +696,7 @@ const update_process_status = (options) => {
 		body : {
 			dd_api		: 'dd_utils_api',
 			action		: 'get_process_status',
-			update_rate	: 150, // int milliseconds
+			update_rate	: 1000, // int milliseconds
 			options		: {
 				pid		: pid,
 				pfile	: pfile
@@ -713,6 +715,17 @@ const update_process_status = (options) => {
 			display_json	: true
 		})
 
+		// average process time for record
+			const ar_samples = []
+			const get_average = (arr) => {
+				let sum = 0;
+				const arr_length = arr.length;
+				for (let i = 0; i < arr_length; i++) {
+					sum += arr[i];
+				}
+				return Math.ceil( sum / arr_length );
+			}
+
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
 
@@ -724,10 +737,36 @@ const update_process_status = (options) => {
 				const compound_msg = (sse_response) => {
 					const data = sse_response.data
 					const parts = []
-					parts.push(data.msg +': '+ data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
-					parts.push(data.section_label)
-					parts.push('id: ' + data.current?.section_id)
-					parts.push(sse_response.total_time)
+					parts.push(data.msg)
+					if (data.counter) {
+						parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+					}
+					if (data.section_label) {
+						parts.push(data.section_label)
+					}
+					if (data.current) {
+						if (data.current.section_id) {
+							parts.push('id: ' + data.current.section_id)
+						}
+					}
+					if (data.total_ms) {
+						parts.push( time_unit_auto(data.total_ms) )
+					}else{
+						parts.push(sse_response.total_time)
+					}
+					if (data.current && data.current.time) {
+						// save in samples array to make average
+						if (ar_samples.length>50) {
+							ar_samples.shift() // remove older element
+						}
+						ar_samples.push(data.current.time)
+
+						const average			= get_average(ar_samples)
+						const remaining_ms		= ((data.total - data.counter) * average)
+						const remaining_time	= time_unit_auto(remaining_ms)
+						parts.push('Time remaining: ' + remaining_time)
+					}
+
 					return parts.join(' | ')
 				}
 
@@ -755,9 +794,10 @@ const update_process_status = (options) => {
 		const on_done = () => {
 			// is triggered at the reader's closing
 			render_response.done()
-			// unlocks the button submit
-			publication_button.classList.remove('loading')
-			// render_response.process_status_node
+			// unlock lock_items
+			lock_items.map(el =>{
+				el.classList.remove('loading')
+			})
 		}
 
 		// read stream. Creates ReadableStream that fire

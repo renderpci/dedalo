@@ -1,5 +1,5 @@
 // @license magnet:?xt=urn:btih:0b31508aeb0634b347b8270c7bee4d411b5d4109&dn=agpl-3.0.txt AGPL-3.0
-/*global get_label, page_globals, SHOW_DEBUG, DEDALO_NOTIFICATION, Promise, DEDALO_NOTIFICATION, DEDALO_MAINTENANCE_MODE, DEDALO_ROOT_WEB, DEDALO_CORE_URL */
+/*global get_label, page_globals, SHOW_DEBUG, DEDALO_NOTIFICATION, Promise, DEDALO_ROOT_WEB, DEDALO_CORE_URL */
 /*eslint no-undef: "error"*/
 
 
@@ -52,17 +52,6 @@ render_page.prototype.edit = async function(options) {
 		// fix node before finish render to allow select by render_notification_msg
 		self.node = wrapper
 
-	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
-		if(page_globals.dedalo_notification && page_globals.is_logged===true) {
-			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-		}
-
-	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
-		if(DEDALO_MAINTENANCE_MODE===true){
-			const maintenance_container = render_maintenance_msg()
-			wrapper.prepend(maintenance_container)
-		}
-
 
  	return wrapper
 }//end edit
@@ -101,6 +90,17 @@ const get_content_data = async function(self) {
 			)
 
 			return wrapper_page
+		}
+
+	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
+		if(page_globals.maintenance_mode===true){
+			const maintenance_container = render_maintenance_msg()
+			content_data.prepend(maintenance_container)
+		}
+
+	// dedalo_notification. notification_msg (defined in config and get from environment.js.php)
+		if(typeof page_globals.dedalo_notification!=='undefined' && page_globals.is_logged===true) {
+			event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 		}
 
 	// add all instance rendered nodes
@@ -222,7 +222,7 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_MAINTENANCE_MSG
-* Render HTML based in environment.js.php DEDALO_MAINTENANCE_MODE value
+* Render HTML based in environment.js.php page_globals.maintenance_mode value
 * @return HTMLElement maintenance_container
 */
 const render_maintenance_msg = function() {
@@ -270,7 +270,7 @@ export const render_notification_msg = function( self, dedalo_notification ) {
 				wrapper.notification_container.remove() // remove node
 				wrapper.notification_container = null // set pointer
 				if(SHOW_DEBUG===true) {
-					console.warn('))) Removed wrapper.notification_container:', dedalo_notification);;
+					console.warn('))) Removed wrapper.notification_container:', dedalo_notification);
 				}
 			}
 			// fix to compare with next requests

@@ -255,12 +255,18 @@ class area_maintenance extends area_common {
 
 
 		// check_config *
+			$config_status = self::check_config();
+			$missing = [];
+			foreach ($config_status->result as $el) {
+				$missing = array_merge($missing, $el->sample_vs_config);
+			}
 			$item = new stdClass();
 				$item->id		= 'check_config';
+				$item->class	= empty($missing) ? 'success' : 'danger';
 				$item->typo		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
 				$item->value	= (object)[
-					'info' => self::check_config()
+					'info' => $config_status
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -778,23 +784,21 @@ class area_maintenance extends area_common {
 					$item->config_constants_list = $config_constants_list;
 
 				// config_vs_sample. Compares defined config constants vs sample config
+					$ignore = ['DEDALO_MAINTENANCE_MODE_CUSTOM','DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','EXPORT_HIERARCHY_PATH'];
 					foreach ($config_constants_list as $const_name) {
 						if (!in_array($const_name, $sample_config_constants_list)) {
-							$item->config_vs_sample[] = $const_name;
+							// exceptions (ignore optional constants that could be disabled)
+							if (!in_array($const_name, $ignore)) {
+								$item->config_vs_sample[] = $const_name;
+							}
 						}
 					}
 
 				// sample_vs_config. Compares defined sample constants vs config
+					$ignore = ['DEDALO_MAINTENANCE_MODE','DEDALO_API_URL'];
 					foreach ($sample_config_constants_list as $const_name) {
-						// if (!in_array($const_name, $config_constants_list)) {
-						// 	$item->sample_vs_config[] = $const_name;
-						// }
-						if (!defined($const_name)) {
-							// exceptions (ignore optional constants that could be disabled)
-							$ignore = ['DEDALO_NOTIFICATION','GEONAMES_ACCOUNT_USERNAME','DEDALO_API_URL','EXPORT_HIERARCHY_PATH'];
-							if (!in_array($const_name, $ignore)) {
-								$item->sample_vs_config[] = $const_name;
-							}
+						if (!in_array($const_name, $ignore) && !defined($const_name)) {
+							$item->sample_vs_config[] = $const_name;
 						}
 					}
 
@@ -3164,6 +3168,402 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end export_hierarchy
+
+
+
+	/**
+	* UPDATE_CODE
+	* Download code in zip format file from the GIT repository defined in config
+	* @param object $options
+	* @return object $response
+	*/
+	public static function update_code(object $options) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		try {
+
+			$result = new stdClass();
+
+			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
+
+			// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
+						'memory'	=> dd_memory_usage()
+					]);
+				}
+
+			// Download zip file from server (master) curl mode (unified with download_remote_structure_file)
+				// data
+				$data_string = "data=" . json_encode(null);
+				// curl_request
+				$curl_response = curl_request((object)[
+					'url'				=> DEDALO_SOURCE_VERSION_URL,
+					'post'				=> true,
+					'postfields'		=> $data_string,
+					'returntransfer'	=> 1,
+					'followlocation'	=> true,
+					'header'			=> false, // bool add header to result
+					'ssl_verifypeer'	=> false,
+					'timeout'			=> 300, // int seconds
+					'proxy'				=> (defined('SERVER_PROXY') && !empty(SERVER_PROXY))
+						? SERVER_PROXY // from Dédalo config file
+						: false // default case
+				]);
+				$contents = $curl_response->result;
+				// check contents
+				if ($contents===false) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to download from: '.DEDALO_SOURCE_VERSION_URL;
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$result->download_file = [
+					'Downloaded file: ' . DEDALO_SOURCE_VERSION_URL,
+					'Time: ' . exec_time_unit($start_time,'sec') . ' secs'
+				];
+				debug_log(__METHOD__
+					." Downloaded file (".DEDALO_SOURCE_VERSION_URL.") in ".exec_time_unit($start_time,'sec') . ' secs'
+					, logger::DEBUG
+				);
+
+			// Save contents to local dir
+				if (!is_dir(DEDALO_SOURCE_VERSION_LOCAL_DIR)) {
+					if( !mkdir(DEDALO_SOURCE_VERSION_LOCAL_DIR,  0775) ) {
+						$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Unable to create dir: '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+						debug_log(__METHOD__
+							." $response->msg"
+							, logger::ERROR
+						);
+						return $response;
+					}
+				}
+				$file_name		= 'dedalo6_code.zip';
+				$target_file	= DEDALO_SOURCE_VERSION_LOCAL_DIR . '/' . $file_name;
+				$put_contents	= file_put_contents($target_file, $contents);
+				if (!$put_contents) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Contents from Dédalo code repository fail to write on : '.$target_file;
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$result->write_file = [
+					"Written file: ". $target_file,
+					"File size: "	. format_size_units( filesize($target_file) )
+				];
+
+			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
+				// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg'		=> 'Extracting zip file',
+						'memory'	=> dd_memory_usage()
+					]);
+				}
+				$zip = new ZipArchive;
+				$res = $zip->open($target_file);
+				if ($res!==true) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. ERROR ON ZIP file extraction to '.DEDALO_SOURCE_VERSION_LOCAL_DIR;
+					debug_log(__METHOD__
+						." $response->msg"
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$zip->extractTo(DEDALO_SOURCE_VERSION_LOCAL_DIR);
+				$zip->close();
+				$result->extract = [
+					"Extracted ZIP file to: " . DEDALO_SOURCE_VERSION_LOCAL_DIR
+				];
+				debug_log(__METHOD__
+					." ZIP file extracted successfully to ".DEDALO_SOURCE_VERSION_LOCAL_DIR
+					, logger::DEBUG
+				);
+
+			// rsync
+				// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg'		=> 'Updating files',
+						'memory'	=> dd_memory_usage()
+					]);
+				}
+				$source		= (strpos(DEDALO_SOURCE_VERSION_URL, 'github.com'))
+					? DEDALO_SOURCE_VERSION_LOCAL_DIR .'/dedalo-master' // like 'dedalo-master'
+					: DEDALO_SOURCE_VERSION_LOCAL_DIR .'/'. pathinfo($file_name)['filename']; // like 'dedalo6_code' from 'dedalo6_code.zip'
+				$target		= DEDALO_ROOT_PATH;
+				$exclude	= ' --exclude="*/config*" --exclude="media" ';
+				$aditional 	= ''; // $is_preview===true ? ' --dry-run ' : '';
+				$command	= 'rsync -avui --no-owner --no-group --no-perms --progress '. $exclude . $aditional . $source.'/ ' . $target.'/';
+				$output		= shell_exec($command);
+				if ($output===null) {
+					$response->msg = 'Error. Request failed ['.__FUNCTION__.']. Error executing rsync command. source: '.$source;
+					debug_log(__METHOD__
+						. $response->msg  . PHP_EOL
+						. ' command: ' . to_string($command) . PHP_EOL
+						. ' output: ' . to_string($output)
+						, logger::ERROR
+					);
+					return $response;
+				}
+				$result->rsync = [
+					"command: " . $command,
+					"output: "  . str_replace(["\n","\r"], '<br>', $output),
+				];
+				debug_log(__METHOD__
+					." RSYNC command done ". PHP_EOL .to_string($command)
+					, logger::DEBUG
+				);
+
+			// remove temp used files and folders
+				$command_rm_dir		= "rm -R -f $source";
+				$output_rm_dir		= shell_exec($command_rm_dir);
+				$result->remove_dir	= [
+					"command_rm_dir: " . $command_rm_dir,
+					"output_rm_dir: "  . $output_rm_dir
+				];
+				$command_rm_file 	= "rm $target_file";
+				$output_rm_file		= shell_exec($command_rm_file);
+				$result->remove_file= [
+					"command_rm_file: " . $command_rm_file,
+					"output_rm_file: "  . $output_rm_file
+				];
+				debug_log(__METHOD__
+					." Removed temp used files and folders"
+					, logger::DEBUG
+				);
+
+			// update JAVASCRIPT labels
+				// cli msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg'		=> 'Updating js lang files',
+						'memory'	=> dd_memory_usage()
+					]);
+				}
+				$ar_langs = DEDALO_APPLICATION_LANGS;
+				foreach ($ar_langs as $lang => $label) {
+					backup::write_lang_file($lang);
+				}
+
+			// version info. Get from new downloaded file 'version.inc'
+				$command = 'ddversion=`'.PHP_BIN_PATH.' << \'EOF\'
+				<?php require "'.DEDALO_CORE_PATH.'/base/version.inc"; echo DEDALO_VERSION ." Build ". DEDALO_BUILD; ?>`
+				echo $ddversion';
+				// exec command
+				$new_version_info = exec($command); // string like '6.0.0_RC6 Build 2023-08-22T19:19:35+02:00'
+
+			// response OK
+				// $response->result	= $result;
+				// $response->msg		= 'OK. Updated Dédalo code successfully. ' . $new_version_info;
+
+			// debug
+				debug_log(__METHOD__
+					.' Updated Dédalo code successfully. ' . $new_version_info
+					, logger::DEBUG
+				);
+
+			// pause and force garbage collector (prevent cached files generating errors)
+				sleep(1);
+				opcache_reset();
+				gc_collect_cycles();
+				sleep(1);
+
+			// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'SAVE',
+					logger::INFO,
+					DEDALO_ROOT_TIPO,
+					NULL,
+					[
+						'msg' => 'Updated code to v. ' . $new_version_info
+					]
+				);
+
+		} catch (Exception $e) {
+
+			$response->msg = $e->getMessage();
+		}
+
+		$response->result	= true;
+		$response->msg		= 'OK. Updated Dédalo code successfully. '.__METHOD__;
+
+
+		return $response;
+	}//end update_code
+
+
+
+	/**
+	* UPDATE_DATA_VERSION
+	* Updates Dédalo data version.
+	* Allow change components data format or add new tables or index
+	* Triggered by Area Development button 'UPDATE DATA'
+	* Sample: Current data version: 5.8.2 -----> 6.0.0
+	* @param object $options
+	* @return object $response
+	*/
+	public static function update_data_version(object $options) : object {
+
+		// set time limit
+			set_time_limit ( 259200 );  // 3 days
+
+		include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// DEDALO_SUPERUSER only
+			if (logged_user_id()!=DEDALO_SUPERUSER) {
+				$response->msg = 'Error. Only Dédalo superuser can do this action';
+				return $response;
+			}
+
+		// DEDALO_MAINTENANCE_MODE
+			$maintenance_mode = defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+				? DEDALO_MAINTENANCE_MODE_CUSTOM
+				: DEDALO_MAINTENANCE_MODE;
+			if ($maintenance_mode!==true) {
+				$response->msg = 'Error. Update data is not allowed if Dédalo is not in maintenance_mode';
+				return $response;
+			}
+
+		try {
+
+			// exec update_data_version. return object response
+				$update_data_version_response = update::update_version();
+
+		} catch (Exception $e) {
+
+			debug_log(__METHOD__
+				. " Caught exception [update_data_version]: " . PHP_EOL
+				. ' msg: ' . $e->getMessage()
+				, logger::ERROR
+			);
+
+			$update_data_version_response = (object)[
+				'result'	=> false,
+				'msg'		=> 'ERROR on update_data_version .Caught exception: ' . $e->getMessage()
+			];
+
+			// log line
+				$update_log_file = DEDALO_CONFIG_PATH . '/update.log';
+				$log_line  = PHP_EOL . date('c') . ' ERROR [Exception] ';
+				$log_line .= PHP_EOL . 'Caught exception: ' . $e->getMessage();
+				file_put_contents($update_log_file, $log_line, FILE_APPEND | LOCK_EX);
+		}
+
+		$response->result	= $update_data_version_response->result ?? false;
+		$response->msg		= $update_data_version_response->msg ?? 'Error. Request failed ['.__FUNCTION__.']';
+
+
+		return $response;
+	}//end update_data_version
+
+
+
+	/**
+	* SET_MAINTENANCE_MODE
+	* This function set a custom maintenance mode. Useful when the root user
+	* do not have access to the config file to edit
+	* @param object $options
+	* @return object $response
+	*/
+	public static function set_maintenance_mode(object $options) {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// user root check
+			if (logged_user_id()!==DEDALO_SUPERUSER) {
+				$response->msg = 'Error. only root user can set maintenance mode';
+				return $response;
+			}
+
+		// options
+			$maintenance_mode = $options->maintenance_mode; // boolean
+			if (!is_bool($maintenance_mode)) {
+				$response->msg = 'Error. invalid maintenance_mode value (boolean is required)';
+				return $response;
+			}
+
+		// config_core file (config_core.php)
+			$config		= install::get_config();
+			$file_path	= $config->config_core_file_path;
+
+		$content = file_get_contents($file_path);
+
+		// add vars
+		if (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')===false) {
+
+			// file do not exists or const DEDALO_MAINTENANCE_MODE_CUSTOM it's not defined case
+
+			// line
+			$line = PHP_EOL . 'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');';
+			// Write the contents to the file,
+			// using the FILE_APPEND flag to append the content to the end of the file
+			// and the LOCK_EX flag to prevent anyone else writing to the file at the same time
+			if(!file_put_contents($file_path, $line, FILE_APPEND | LOCK_EX)) {
+
+				$response->msg = 'Error (2). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: '.$file_path;
+				debug_log(__METHOD__
+					. ' ' . $response->msg .PHP_EOL
+					. 'file: '.$file_path
+					, logger::ERROR
+				);
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'All ready';
+
+			debug_log(__METHOD__
+				." Added config_auto line with constant: DEDALO_MAINTENANCE_MODE_CUSTOM  "
+				, logger::DEBUG
+			);
+
+		}elseif (strpos($content, 'DEDALO_MAINTENANCE_MODE_CUSTOM')!==false) {
+
+			// file and constant exists DEDALO_MAINTENANCE_MODE_CUSTOM
+
+			// replace line to updated value
+			$content = preg_replace(
+				'/define\(\'DEDALO_MAINTENANCE_MODE_CUSTOM\',.+\);/',
+				'define(\'DEDALO_MAINTENANCE_MODE_CUSTOM\', '.to_string($maintenance_mode).');',
+				$content
+			);
+			// Write the contents to the file,
+			// using the LOCK_EX flag to prevent anyone else writing to the file at the same time
+			if(!file_put_contents($file_path, $content, LOCK_EX)) {
+				$response->msg = 'Error (3). It\'s not possible set the maintenance mode, review the PHP permissions to write in Dédalo directory: ' . $file_path;
+				debug_log(__METHOD__." ".$response->msg, logger::ERROR);
+				return $response;
+			}
+
+			$response->result	= true;
+			$response->msg		= 'All ready';
+
+			debug_log(__METHOD__
+				." Changed config_auto content with constant: DEDALO_MAINTENANCE_MODE_CUSTOM = '".to_string($maintenance_mode)."' "
+				, logger::DEBUG
+			);
+		}
+
+
+		return $response;
+	}//end set_maintenance_mode
 
 
 

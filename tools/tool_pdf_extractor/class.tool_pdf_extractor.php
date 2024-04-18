@@ -46,28 +46,40 @@ class tool_pdf_extractor extends tool_common {
 			if (empty($pdf_path) || !file_exists($pdf_path)) {
 				$response->result = false;
 				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $response->msg "
+					.' pdf_path:' . to_string($pdf_path)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
 		// test engine PDF to text
 			$config				= tool_common::get_config('tool_pdf_extractor');
-			$extactor_engine	= $config->config->{$method}->default ?? null;
+			$extractor_engine	= $config->config->{$method}->default ?? null;
 
-			if (!isset($extactor_engine)) {
+			if (!isset($extractor_engine)) {
 
-				$response->result = false;
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: config extractor engine is not defined";
-				debug_log(__METHOD__." $response->msg ".PHP_EOL.to_string($config), logger::ERROR);
+				$response->result	= false;
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: config extractor engine is not defined";
+				debug_log(__METHOD__
+					." $response->msg ".PHP_EOL
+					.' config: '. to_string($config)
+					, logger::ERROR
+				);
 				return $response;
 
 			}else{
 
-				$transcription_engine = trim( shell_exec('type -P '.$extactor_engine) ?? '' );
+				$transcription_engine = trim( shell_exec('type -P '.$extractor_engine) ?? '' );
 				if (empty($transcription_engine)) {
-					$response->result = false;
-					$response->msg 	  = "Error Processing Request pdf_automatic_transcription: daemon engine not found";
-					debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+					$response->result	= false;
+					$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' extractor_engine: ' . to_string($extractor_engine)
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -111,22 +123,33 @@ class tool_pdf_extractor extends tool_common {
 			$extraction_filename = substr($pdf_path, 0, -4) . $file_extension;
 
 		// exec the extraction
-			// $command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path 2>&1";
-			$command  = $extactor_engine ." -enc UTF-8 $engine_config $pdf_path $extraction_filename";
-			debug_log(__METHOD__." Executing command: ".PHP_EOL. $command, logger::DEBUG);
-			$output   = exec($command, $result);	// Generate text version file in same dir as pdf
-			if ( strpos( strtolower($output), 'error')) {
-				$response->result = false;
-				$response->msg 	  = "$output";
-				debug_log(__METHOD__." $response->msg ".PHP_EOL. 'result: '.to_string($result), logger::ERROR);
+			// $command  = $extractor_engine ." -enc UTF-8 $engine_config $pdf_path 2>&1";
+			$command  = $extractor_engine ." -enc UTF-8 $engine_config $pdf_path $extraction_filename";
+			debug_log(__METHOD__
+				." Executing command: ".PHP_EOL
+				. $command
+				, logger::DEBUG
+			);
+			$output = exec($command, $result);	// Generate text version file in same dir as pdf
+			if ( strpos( strtolower($output), 'error') ) {
+				$response->result	= false;
+				$response->msg		= "$output";
+				debug_log(__METHOD__
+					." $response->msg ".PHP_EOL
+					. 'result: '.to_string($result)
+					, logger::ERROR
+				);
 				return $response;
 			}
 
 		// test if the file is saved
 			if (!file_exists($extraction_filename)) {
-				$response->result = false;
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Extraction file not found";
-				debug_log(__METHOD__." $response->msg ".to_string(), logger::ERROR);
+				$response->result	= false;
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: Extraction file not found";
+				debug_log(__METHOD__
+					." $response->msg "
+					, logger::ERROR
+				);
 				return $response;
 			}
 
@@ -137,7 +160,6 @@ class tool_pdf_extractor extends tool_common {
 			$response->result  = htmlentities($pdf_text);
 			$response->msg 	   = "OK Processing Request pdf_automatic_transcription: text processed";
 			// $response->original = trim($original_text);
-				dump($response, ' response ++ '.to_string());
 
 		// (!) Note: This tool is not finished!
 
@@ -167,58 +189,52 @@ class tool_pdf_extractor extends tool_common {
 
 
 
-	public static function get_text_from_pdf( $new_options ) {
+	/**
+	* GET_TEXT_FROM_PDF
+	* @param object $new_options
+	* @return object $response
+	*/
+		// public static function get_text_from_pdf(object $new_options) : object {
 
+		// 	$options = new stdClass();
+		// 		$options->pdf_path		= null;	// full source pdf file path
+		// 		$options->first_page	= 1; 	// number of first page. default is 1
 
+		// 	// new_options overwrite options defaults
+		// 		foreach ((object)$new_options as $key => $value) {
+		// 			if (property_exists($options, $key)) {
+		// 				$options->$key = $value;
+		// 			}
+		// 		}
 
-		$options = new stdClass();
-			$options->$pdf_path 	 = null;	# full source pdf file path
-			$options->first_page = 1; 		# number of first page. default is 1
+		// 	#
+		// 	# TEST STRING VALUE IS VALID
+		// 	# Test is valid utf8
+		// 	$test_utf8 = self::valid_utf8($pdf_text);
+		// 	if (!$test_utf8) {
+		// 		error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
+		// 	}
 
-		// new_options overwrite options defaults
-			foreach ((object)$new_options as $key => $value) {
-				if (property_exists($options, $key)) {
-					$options->$key = $value;
-				}
-			}
+		// 	# Remove non utf8 chars
+		// 	$pdf_text = self::utf8_clean($pdf_text);
 
+		// 	# Test JSON conversion before save
+		// 	$pdf_text 	= json_handler::encode($pdf_text);
+		// 	if (!$pdf_text) {
+		// 		$response->result = false;
+		// 		$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
+		// 		return $response;
+		// 	}
+		// 	$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
+		// 	$pdf_text 	= trim($pdf_text);	// Trim before check is empty
+		// 	if (empty($pdf_text)) {
+		// 		$response->result = false;
+		// 		$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
+		// 		return $response;
+		// 	}
 
-
-
-
-
-
-
-		#
-		# TEST STRING VALUE IS VALID
-		# Test is valid utf8
-		$test_utf8 = self::valid_utf8($pdf_text);
-		if (!$test_utf8) {
-			error_log("WARNING: Current string is NOT utf8 valid. Anyway continue ...");
-		}
-
-		# Remove non utf8 chars
-		$pdf_text = self::utf8_clean($pdf_text);
-
-		# Test JSON conversion before save
-		$pdf_text 	= json_handler::encode($pdf_text);
-		if (!$pdf_text) {
-			$response->result = false;
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: String is not valid because format encoding is wrong";
-			return $response;
-		}
-		$pdf_text 	= json_handler::decode($pdf_text);	# JSON is valid. We turn object to string
-		$pdf_text 	= trim($pdf_text);	// Trim before check is empty
-		if (empty($pdf_text)) {
-			$response->result = false;
-			$response->msg 	  = "Error Processing Request pdf_automatic_transcription: Empty text";
-			return $response;
-		}
-
-
-
-		return $response;
-	}//end build_pdf_transcription
+		// 	return $response;
+		// }//end get_text_from_pdf
 
 
 

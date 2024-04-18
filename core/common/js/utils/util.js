@@ -310,11 +310,21 @@ export function printf(format) {
 
 	const args = Array.prototype.slice.call(arguments, 1);
 
-	return format.replace(/{(\d+)}/g, function(match, number) {
+	// fix old %s vars from labels like dd340
+	let counter = 0
+	format = format.replace(/%s/g, function(match, number) {
+		const current_value = '{'+counter+'}'
+		counter++
+		return current_value
+	})
+
+	const output = format.replace(/{([\d]+)}/g, function(match, number) {
 		return typeof args[number] != 'undefined'
 			? args[number]
 			: match
 	})
+
+	return output
 }//end printf
 
 
@@ -666,6 +676,40 @@ export function get_font_fit_size(text, base_size=1.7, threshold=4) {
 
 	return font_size
 }//end get_font_fit_size
+
+
+
+/**
+ * TIME_UNIT_AUTO
+ * @param {number} total_ms - time expressed in milliseconds from function start_time()
+ * @returns {string} result
+ */
+export function time_unit_auto(total_ms) {
+
+	const round = 3;
+
+	// calculation is always in milliseconds
+	// const total_ms = Date.now() - start;;
+
+	if (total_ms > 1000) {
+		const total_sec = total_ms / 1000;
+		if (total_sec > 60) {
+			const total_min = total_sec / 60;
+			if (total_min > 60) {
+				const total_hours = total_min / 60;
+				if (total_hours > 24) {
+					const total_days = total_hours / 24;
+					return `${total_days.toFixed(round)} day`;
+				}
+				return `${total_hours.toFixed(round)} hour`;
+			}
+			return `${total_min.toFixed(round)} min`;
+		}
+		return `${total_sec.toFixed(0)} sec`;
+	}
+	return `${total_ms.toFixed(0)} ms`;
+}//end time_unit_auto
+
 
 
 
