@@ -37,18 +37,18 @@
 							{
 								"path": [
 									{
-										"name": "Usable in indexing",
-										"model": "component_radio_button",
-										"section_tipo": "hierarchy20",
-										"component_tipo": "hierarchy24"
+										"name"				: "Usable in indexing",
+										"model"				: "component_radio_button",
+										"section_tipo"		: "hierarchy20",
+										"component_tipo"	: "hierarchy24"
 									}
 								],
 								"q":
 									{
-										"type": "dd151",
-										"section_id": "2",
-										"section_tipo": "dd64",
-										"from_component_tipo": "hierarchy24"
+										"type"					: "dd151",
+										"section_id"			: "2",
+										"section_tipo"			: "dd64",
+										"from_component_tipo"	: "hierarchy24"
 									},
 									2,
 									"abc"
@@ -59,11 +59,34 @@
 							,"operator":"$and"
 						},
 						{
-							"source" : "component_dato",
-							"value" : [{
-								"q" : {"value":"numisdata36"},
-								"q_operator" : null
-							}],
+							"source" : "component_data",
+							"value" : [
+                                {
+                                    "q": "rsc423", // the component to get data, it should to be the last component into ddo chain
+                                    "path": [
+                                        {
+                                            "name": "Id",
+                                            "model": "component_section_id",
+                                            "section_tipo": "rsc420",
+                                            "component_tipo": "rsc414"
+                                        }
+                                    ],
+                                    "ddo_map": [
+                                        {
+                                            "tipo": "numisdata1379",
+                                            "parent": "self",
+                                            "section_tipo": "numisdata1374"
+                                        },
+                                        {
+                                            "tipo": "rsc423",
+                                            "parent": "numisdata1379",
+                                            "section_tipo": "rsc197"
+                                        }
+                                    ],
+                                    "q_operator": null,
+                                    "search_section_id": true
+                                }
+                            ],
 							"operator" : "$or"
 						},
 						{
@@ -102,7 +125,7 @@
 				},
 				"search":{
 					"ddo_map": [
-					[{"section_tipo":"self","tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list"}]
+						{"section_tipo":"self","tipo":"numisdata309","mode":"list"},{"section_tipo":"numisdata300","tipo":"numisdata303","mode":"list"}
 				]},
 				"choose":{
 					"ddo_map":[
