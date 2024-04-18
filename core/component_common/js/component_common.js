@@ -435,7 +435,7 @@ component_common.prototype.save = async function(new_changed_data) {
 
 				const original_value	= self.db_data.value && self.db_data.value[changed_data_item.key]
 					? self.db_data.value[changed_data_item.key]
-					: null
+					: undefined
 				const new_value			= changed_data_item.value
 
 				if (is_equal(new_value, original_value)) {
