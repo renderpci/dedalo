@@ -408,7 +408,7 @@ component_common.prototype.save = async function(new_changed_data) {
 			if(SHOW_DEBUG===true) {
 				console.warn("Invalid changed_data [stop save]:", changed_data)
 				console.trace()
-				console.log('self:', self);
+				console.log('save self:', self);
 			}
 			const msg = "Ignored save. changed_data is undefined or empty!"
 			// console.error('msg:', msg);

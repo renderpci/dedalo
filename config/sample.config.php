@@ -435,8 +435,9 @@
 		define('DEDALO_PDF_EXTENSION',				'pdf');
 		// pdf_extensions_supported. Array default: ['pdf']
 		define('DEDALO_PDF_EXTENSIONS_SUPPORTED',	['pdf','doc','pages','odt','ods','rtf','ppt','pages']);
-		// pdf image_alternative_extensions. Array with the optional compression formats extensions
-		define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg','avif']);
+		// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
+		// Allows you to create image versions of the PDF, useful for previews or web versions
+		define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
 		# pdf_type. Default: 'pdf'
