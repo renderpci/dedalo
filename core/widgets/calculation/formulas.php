@@ -26,41 +26,57 @@ function summarize( string|object $request_options) : array {
 		? json_decode($request_options)
 		: $request_options;
 
-	$data   = $options->data;
-	$opt    = $options->options;
+	$data		= $options->data;
+	$options	= $options->options;
+	$type		= $options->type;
 
-	// sample data:
-		// {
-		//     "au": "",
-		//     "ag": "",
-		//     "cu": "",
-		//     "pb": "",
-		//     "sn": ""
-		// }
 
-	$ar_values = [];
-	foreach ($data as $key => $value) {
-		if (empty($value)) {
-			continue;
-		}
-		$ar_values[] = $value;
-	}
-	$total = array_sum($ar_values);
-
-	if(isset($opt->type)){
-		switch ($opt->type) {
 
 			case 'float':
 				$precision = $opt->precision ?? 2;
 				$total = round($total, $precision);
 				break;
 
-			case 'int':
-			default:
-				$total = round($total, 0);
-				break;
-		}
+			// sample data:
+			//	{
+			//		"au": "1",
+			//		"ag": "2.1",
+			//		"cu": "8.4",
+			//		"pb": "",
+			//		"sn": "0.34"
+			//	}
+
+			$ar_values = [];
+			foreach ($data as $key => $value) {
+				if (empty($value)) {
+					continue;
+				}
+				$ar_values[] = $value;
+			}
+			$total_sum = array_sum($ar_values);
+
+
+			$precision = $options->precision ?? 2;
+			$total = round($total_sum, $precision);
+
+			break;
+		case 'int':
+		default:
+
+			$ar_values = [];
+			foreach ($data as $key => $value) {
+				if (empty($value)) {
+					continue;
+				}
+				$ar_values[] = $value;
+			}
+			$total_sum = array_sum($ar_values);
+
+			$total = round($total_sum, 0);
+
+			break;
 	}
+
 
 	$result[] = (object)[
 		'id'	=> 'total',
