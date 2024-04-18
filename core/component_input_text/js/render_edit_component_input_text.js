@@ -5,12 +5,13 @@
 
 
 // imports
+	import {delete_dataframe} from '../../component_common/js/component_common.js'
 	import {view_default_edit_input_text} from './view_default_edit_input_text.js'
 	import {view_line_edit_input_text} from './view_line_edit_input_text.js'
 	import {view_text_input_text} from './view_text_input_text.js'
 	import {view_mini_input_text} from './view_mini_input_text.js'
 	import {view_colorpicker_edit_input_text} from './view_colorpicker_edit_input_text.js'
-	import {delete_dataframe} from '../../component_common/js/component_common.js'
+
 
 
 /**
