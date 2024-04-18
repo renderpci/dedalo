@@ -49,6 +49,9 @@ export const component_info = function(){
 	component_info.prototype.refresh	= common.prototype.refresh
 	component_info.prototype.destroy	= common.prototype.destroy
 
+	//change data
+	component_info.prototype.update_datum	= component_common.prototype.update_datum
+
 	// render
 	component_info.prototype.list		= render_list_component_info.prototype.list
 	component_info.prototype.tm			= render_edit_component_info.prototype.list
