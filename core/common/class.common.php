@@ -3503,6 +3503,27 @@ abstract class common {
 										true, // bool cache
 										true // bool simple
 									);
+
+									$section_isset = false;
+									foreach ((array)$ar_related as $current_tipo) {
+										$current_model = RecordObj_dd::get_modelo_name_by_tipo($current_tipo,true);
+										if ($current_model==='section') {
+											$section_isset = true;
+										}
+									};
+
+									//fallback when the related term has not section defined
+									// it will use of the main component related
+									if($section_isset === false){
+										$ar_main_section = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+											$tipo, // string tipo
+											'section', // string model
+											'termino_relacionado', // string relation_type
+											true // bool search_exact
+										);
+
+										$ar_related = array_merge($ar_main_section, $ar_related);
+									}
 								}else{
 									// Fallback related when section list is not defined; portal case.
 									$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
