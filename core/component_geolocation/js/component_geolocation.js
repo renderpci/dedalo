@@ -159,16 +159,16 @@ component_geolocation.prototype.init = async function(options) {
 			)
 			load_promises.push(leaflet_promise)
 			leaflet_promise
-			.then(function(response){
+			.then(async function(response){
 
 				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-				common.prototype.load_script(geo_editor_lib_js_file, license)
+				await common.prototype.load_script(geo_editor_lib_js_file, license)
 
 				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-				common.prototype.load_script(geo_messure_lib_js_file, license)
+				await common.prototype.load_script(geo_messure_lib_js_file, license)
 
 				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-				common.prototype.load_script(color_picker_lib_js_file, license)
+				await common.prototype.load_script(color_picker_lib_js_file, license)
 			})
 
 		// another loads in parallel
