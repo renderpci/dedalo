@@ -111,6 +111,9 @@ service_dropzone.prototype.build = async function(autoload=false) {
 			self.session_cache_expire		= system_info.session_cache_expire
 			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
 
+	// reset dropzone
+		self.reset_dropzone()
+
 	// status update
 		self.status = 'built'
 
@@ -151,6 +154,24 @@ const get_system_info = async function() {
 			})
 		})
 }//end get_system_info
+
+
+
+/**
+* RESET_DROPZONE
+* @return bool
+*/
+service_dropzone.prototype.reset_dropzone = function () {
+
+	const self = this
+
+	if (self.active_dropzone) {
+		self.active_dropzone.removeAllFiles();
+		return true
+	}
+
+	return false
+}//end reset_drop_zone
 
 
 
