@@ -111,6 +111,10 @@ abstract class common {
 		// API autocomplete search. bool
 		public $autocomplete;
 
+		// object process data object (messages and process data)
+		// use as { msg: string, property1: mixed, ... }
+		public static $pdata;
+
 		// tools. Array of element tools. If defined, they will not be recalculated
 		public $tools;
 
