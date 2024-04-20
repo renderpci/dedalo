@@ -104,7 +104,7 @@ final class ImageMagick {
 		}
 
 		// convert 21900.jpg json: : Get info about source file color space
-		$colorspace_command	= MAGICK_PATH . "identify -format '%[colorspace]' -quiet " .$source_file. "[0]";
+		$colorspace_command	= MAGICK_PATH . "identify -quiet -format '%[colorspace]' " .$source_file. "[0]";
 		$colorspace_info	= shell_exec($colorspace_command);	//-format "%[EXIF:DateTimeOriginal]"
 
 		# Layers info
@@ -269,7 +269,7 @@ final class ImageMagick {
 			$tiff_format	= shell_exec($command);
 
 		// image format
-			$command	= MAGICK_PATH . 'identify -format "%[scene]:%[tiff:subfiletype]\n" -quiet '. $source_file;
+			$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
 			$output		= shell_exec($command);
 
 		// parse output
@@ -391,7 +391,7 @@ final class ImageMagick {
 		$is_opaque = true;
 
 		// get all layers opacity
-			$command	= MAGICK_PATH . 'identify -format "%[opaque]" -quiet '. $source_file;
+			$command	= MAGICK_PATH . 'identify -quiet -format "%[opaque]" '. $source_file;
 			$output		= shell_exec($command);
 
 		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.

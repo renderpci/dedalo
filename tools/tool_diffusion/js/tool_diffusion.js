@@ -158,7 +158,7 @@ tool_diffusion.prototype.get_diffusion_info = function() {
 * Exec export command in API
 * @param object options
 * @return promise
-* 	Resolve bool
+* 	resolve object api_response
 */
 tool_diffusion.prototype.export = function(options) {
 

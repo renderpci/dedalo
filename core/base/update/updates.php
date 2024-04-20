@@ -39,9 +39,11 @@ $updates->$v = new stdClass();
 			<br>// Allows you to create image versions of the PDF, useful for previews or web versions
 			<br>define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
 			</code>
+			<br>DEDALO_IMAGE_THUMB_DEFAULT is changed by generic DEDALO_QUALITY_THUMB
 			<br>See sample.config.php file to review all changes.
 			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/' target='_blank'>https://dedalo.dev/docs/config/config/</a>
 			<br>
+
 		";
 		$updates->$v->alert_update[] = $alert;
 

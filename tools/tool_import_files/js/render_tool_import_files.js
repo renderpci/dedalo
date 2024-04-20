@@ -118,7 +118,8 @@ const get_content_data_edit = async function(self) {
 			}// end for
 		}// end if(ar_file_processor)
 
-	// component options to store the file, normally the component_portal, it could be defined in the preferences or could be the caller
+	// component options to store the file, normally the component_portal,
+	// it could be defined in the preferences or could be the caller
 		const ddo_option_components = self.tool_config.ddo_map.filter(el => el.role === 'component_option')
 
 		const option_components = (ddo_option_components)
@@ -142,12 +143,12 @@ const get_content_data_edit = async function(self) {
 
 			// label
 			const target_componet_label = self.get_tool_label('target_componet') || 'Target field'
-				ui.create_dom_element({
-					element_type	: 'label',
-					class_name		: 'target_componet label',
-					inner_html		: target_componet_label + ': ',
-					parent			: target_componet
-				})
+			ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'target_componet label',
+				inner_html		: target_componet_label + ': ',
+				parent			: target_componet
+			})
 
 		// select_options
 			const select_options = ui.create_dom_element({
@@ -165,19 +166,18 @@ const get_content_data_edit = async function(self) {
 			for (let i = 0; i < option_components.length; i++) {
 
 				const option = option_components[i]
-				// const map_name = option.map_name ? option.map_name + ' = ' : ''
 
-					const option_node = ui.create_dom_element({
-						element_type	: 'option',
-						class_name		: 'component select',
-						inner_html		: option.label,
-						parent			: select_options
-					})
+				const option_node = ui.create_dom_element({
+					element_type	: 'option',
+					class_name		: 'component select',
+					inner_html		: option.label,
+					parent			: select_options
+				})
 
-					if(option.default){
-						option_node.selected = true
-					}
-					option_node.value = option.tipo
+				if(option.default){
+					option_node.selected = true
+				}
+				option_node.value = option.tipo
 			}
 
 	// Define the quality target to upload the files
@@ -214,7 +214,7 @@ const get_content_data_edit = async function(self) {
 				})
 
 				const default_option_node = new Option(default_target_quality, default_target_quality, true, true);
-					select_quality.appendChild(default_option_node)
+				select_quality.appendChild(default_option_node)
 
 				for (let i = 0; i < ar_quality.length; i++) {
 					const option = ar_quality[i]
@@ -336,12 +336,13 @@ const get_content_data_edit = async function(self) {
 							parent			: control_section_id_switcher
 						})
 
-					const label_section_id_check_box = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'checkbox-label',
-						inner_html		: get_label.name_to_record_id || 'Name indicates id',
-						parent			: name_control_section_id
-					})
+					// label_section_id_check_box
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.name_to_record_id || 'Name indicates id',
+							parent			: name_control_section_id
+						})
 
 			// same_name_same_section
 				const same_name_same_section = ui.create_dom_element({
@@ -382,12 +383,13 @@ const get_content_data_edit = async function(self) {
 							parent			: same_name_same_section_switcher
 						})
 
-					const label_same_name_check_box = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'checkbox-label',
-						inner_html		: get_label.same_name_same_record || 'Same name same record',
-						parent			: same_name_same_section
-					})
+					// label_same_name_check_box
+						ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'checkbox-label',
+							inner_html		: get_label.same_name_same_record || 'Same name same record',
+							parent			: same_name_same_section
+						})
 
 	// components container
 		const drop_zone = ui.create_dom_element({

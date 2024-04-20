@@ -1210,16 +1210,10 @@ class component_image extends component_media_common {
 							." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default)
 							, logger::DEBUG
 						);
-
-					// debug
-						debug_log(__METHOD__
-							." SAVING COMPONENT IMAGE: create_thumb response: ".to_string($thumb)
-							, logger::DEBUG
-						);
 				}
 
 			// Generate thumb image quality from default always (if default exits)
-				$thumb = $this->create_thumb();
+				$this->create_thumb();
 
 			// save component dato
 				// Note that save action don't change upload info properties,
@@ -1939,7 +1933,7 @@ class component_image extends component_media_common {
 				//         "IsColor": 1
 				//     }
 				// }
-				$exif = exif_read_data($file_path);
+				$exif = @exif_read_data($file_path);
 				if(!empty($exif['Orientation'])) {
 					switch($exif['Orientation']) {
 						case 8:// rotate 90

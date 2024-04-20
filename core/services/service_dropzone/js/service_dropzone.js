@@ -74,10 +74,10 @@ service_dropzone.prototype.init = async function(options) {
 		const load_promises = []
 
 		const lib_js_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone.min.js'
-			load_promises.push( common.prototype.load_script(lib_js_file) )
+		load_promises.push( common.prototype.load_script(lib_js_file) )
 
 		const lib_css_file = DEDALO_ROOT_WEB + '/lib/dropzone/dropzone.min.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+		load_promises.push( common.prototype.load_style(lib_css_file) )
 
 		await Promise.all(load_promises).then(async function(response){
 			console.log("dropzone load promise:",response);
@@ -98,6 +98,9 @@ service_dropzone.prototype.build = async function(autoload=false) {
 
 	const self = this
 
+	// status update
+		self.status = 'building'
+
 	// fetch system info
 		const system_info = await get_system_info(self)
 		// set as tool properties
@@ -107,6 +110,10 @@ service_dropzone.prototype.build = async function(autoload=false) {
 			self.upload_tmp_perms			= system_info.upload_tmp_perms
 			self.session_cache_expire		= system_info.session_cache_expire
 			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
+
+	// status update
+		self.status = 'built'
+
 
 	return true
 }//end build_custom
