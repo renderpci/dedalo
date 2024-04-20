@@ -277,7 +277,7 @@ class logger_backend_activity extends logger_backend {
 
 		// DATA (param 'datos' + URL's ...)	#########################################################
 			$component_tipo = self::$_COMPONENT_DATOS['tipo']; // dd551 component_input_text
-			// value
+			// value. Expected assoc array as ['msg'=> 'Upload file complete','data'=>'{string data...}']
 				$dato_array = !is_array($datos)
 					? [$datos]
 					: $datos;

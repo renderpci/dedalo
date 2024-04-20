@@ -253,6 +253,7 @@ export const render_publication_items = function(self) {
 	// short vars
 		const diffusion_map	= self.diffusion_info.diffusion_map
 		const ar_data		= self.diffusion_info.ar_data
+		const lock_items	= []
 
 	// publication_items container
 		const publication_items = ui.create_dom_element({
@@ -520,6 +521,7 @@ export const render_publication_items = function(self) {
 					inner_html		: get_label.publish || 'Publish',
 					parent			: container_bottom
 				})
+				lock_items.push(publication_button)
 				publication_button.addEventListener('click', (e) => {
 					e.stopPropagation()
 
@@ -557,7 +559,7 @@ export const render_publication_items = function(self) {
 								pfile		: local_data.value.pfile,
 								process_id	: process_id,
 								container	: response_message,
-								lock_items	: [publication_button]
+								lock_items	: lock_items
 							})
 						}
 					})

@@ -27,7 +27,7 @@
 				transform: scale(1.2);
 			}
 
-			>.component.options {
+			>.options_container {
 				display: flex;
 				justify-content: space-around;
 				align-items: center;
@@ -249,12 +249,24 @@
 				}
 			}
 
+			>.response_message {
+				padding-left: 1rem;
+				padding-right: 1rem;
+				margin-top: 0.5rem;
+				margin-bottom: 0.5rem;
+
+				.container.error {
+					padding: 1rem;
+				}
+			}
+
 			>.buttons_bottom_container {
 				display: flex;
 				justify-content: center;
+				margin-bottom: 5rem;
 
-				// button IMPORT
-				>.processing_import {
+				// button_process_import
+				>.button_process_import {
 					margin: 2rem;
 					padding-left: 1.5em;
 					padding-right: 1.5em;
@@ -262,7 +274,6 @@
 					border-color: darken(@tool_color, 3%);
 				}
 			}
-
 
 			// inputs_container. Temporal sections container ???????????? REVIEW (!)
 				// .inputs_container {
@@ -272,6 +283,7 @@
 				// 	display: flex;
 				// 	flex-wrap: wrap;
 				// }//end .inputs_container
+
 
 		}//end content_data
 
