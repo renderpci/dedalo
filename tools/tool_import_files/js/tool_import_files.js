@@ -9,8 +9,7 @@
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
-	import {common} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
+	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
 	// import {service_dropzone} from '../../../core/services/service_dropzone/js/service_dropzone.js'
@@ -151,6 +150,75 @@ tool_import_files.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build
+
+
+
+/**
+* IMPORT_FILES
+* Exec import_files command in API
+* @param object options
+* @return promise
+* 	resolve object api_response
+*/
+tool_import_files.prototype.import_files = function(options) {
+
+	const self = this
+
+	// options
+		const components_temp_data	= options.components_temp_data
+
+	// short vars
+		const files_data = self.files_data
+		const safe_files_data = files_data.map(el => {
+			const name = encodeURI(el.name)
+			return {
+				name				: name,
+				file_processor		: el.file_processor || null,
+				component_option	: el.component_option || null
+			}
+		})
+		if(SHOW_DEBUG===true) {
+			console.log('files_data:', files_data);
+			console.log('safe_files_data:', safe_files_data);
+		}
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'import_files')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options : {
+				background_running		: true, // set run in background CLI
+				tipo					: self.caller.tipo,
+				section_tipo			: self.caller.section_tipo,
+				section_id				: self.caller.section_id,
+				tool_config				: self.tool_config,
+				files_data				: safe_files_data,
+				components_temp_data	: components_temp_data,
+				key_dir					: self.key_dir,
+				custom_target_quality	: self.custom_target_quality
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+			// request
+			data_manager.request({
+				// use_worker	: true,
+				body		: rqo
+			})
+			.then(function(api_response){
+				if(SHOW_DEBUG===true) {
+					console.log('import_files api_response:', api_response);;
+				}
+				resolve(api_response)
+			})
+		})
+}//end import_files
 
 
 
