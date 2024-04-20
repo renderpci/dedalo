@@ -147,7 +147,10 @@ class tool_import_files extends tool_common {
 
 					if (file_exists($original_file_thumb)) {
 						if(!unlink($original_file_thumb)){
-							debug_log(__METHOD__." Thumb Delete ERROR of: ".to_string($original_file_thumb), logger::ERROR);
+							debug_log(__METHOD__
+								." Thumb Delete ERROR of: ".to_string($original_file_thumb)
+								, logger::ERROR
+							);
 							return false;
 						}
 					}
@@ -342,6 +345,12 @@ class tool_import_files extends tool_common {
 			$key_dir					= $options->key_dir ?? null;
 			// custom_target_quality. Optional media quality to store uploaded files
 			$custom_target_quality		= $options->custom_target_quality ?? null;
+
+		// check files data
+			if (empty($files_data)) {
+				$response->msg = 'Error. Empty files_data';
+				return $response;
+			}
 
 		// import_mode
 			$import_mode			= $tool_config->import_mode ?? 'default';

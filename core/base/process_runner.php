@@ -10,6 +10,9 @@
 
 // data
 	$data = json_decode($argv[1], true);
+	if (empty($data)) {
+		die('Invalid data');
+	}
 
 // server environment. Restore from command arguments
 	$_SERVER = $data['server'];

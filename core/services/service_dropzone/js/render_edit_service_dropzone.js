@@ -486,8 +486,8 @@ const render_template = async function(self) {
 					class_name		: 'progress progress-striped active',
 					parent			: row_progress_bar
 				})
-			// row_progress_bar
-				const row_progress_bar_success = ui.create_dom_element({
+			// row_progress_bar_success
+				ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'progress-bar progress-bar-success',
 					dataset			: {dzUploadprogress : ''},
@@ -741,14 +741,14 @@ const render_template = async function(self) {
 		}
 
 	// event success
-		current_dropzone.on('success', function(file, response) {
+		current_dropzone.on('success', function(file, api_response) {
 
 			//showing an image created by the server after upload
-			this.emit('thumbnail', file, response.file_data.thumbnail_url);
+			this.emit('thumbnail', file, api_response.file_data.thumbnail_url);
 
-			// Handle the responseText here. For example, add the text to the preview element:
+			// Handle the api_responseText here. For example, add the text to the preview element:
 			file.previewTemplate.appendChild(
-				document.createTextNode(response.msg)
+				document.createTextNode(api_response.msg)
 			);
 
 			const button_start	= file.previewElement.querySelector('.start')

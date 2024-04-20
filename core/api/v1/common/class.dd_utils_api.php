@@ -680,7 +680,7 @@ final class dd_utils_api {
 				// filename
 				$file_name		= $file_to_upload['name'];
 				$file_tmp_name	= $file_to_upload['tmp_name'];
-				$file_type 		= $file_to_upload['type'];
+				$file_type 		= $file_to_upload['type']; // mime like 'image/tiff'
 
 				// blob case (componen_3d posterframe auto-generated)
 				if ($file_name==='blob' && isset($options->file_name)) {
@@ -1812,6 +1812,7 @@ final class dd_utils_api {
 					return null;
 			}
 
+		// temp thumb file URL
 		$thumbnail_url = DEDALO_UPLOAD_TMP_URL .'/'. $user_id .'/'. $key_dir .'/thumbnail/'. $filename . '.jpg';
 
 
