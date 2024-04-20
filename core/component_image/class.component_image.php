@@ -399,6 +399,7 @@ class component_image extends component_media_common {
 					$path = pathinfo($normalized_file);
 
 					foreach ($alternative_extensions as $alternative_extension) {
+						$start_time2=start_time();
 
 						$alternative_target_file = $path['dirname'] . '/' .  $path['filename'] . '.' .$alternative_extension;
 						if(!file_exists($alternative_target_file)){
@@ -407,7 +408,24 @@ class component_image extends component_media_common {
 								$alt_options->target_file	= $alternative_target_file;
 								$alt_options->quality		= 100;
 
+							// CLI process data
+								if ( running_in_cli()===true ) {
+									common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $alternative_extension . ' | id: ' . $this->section_id;
+									common::$pdata->memory		= dd_memory_usage();
+									common::$pdata->target_file	= (SHOW_DEBUG===true) ? $alternative_target_file : $path['filename'];
+									// send to output
+									print_cli(common::$pdata);
+								}
+
 							ImageMagick::convert($alt_options);
+
+							// CLI process data
+								if ( running_in_cli()===true ) {
+									common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
+									common::$pdata->total_ms	= common::$pdata->total_ms + common::$pdata->current_time; // cumulative time
+									// send to output
+									print_cli(common::$pdata);
+								}
 						}
 					}
 				}
