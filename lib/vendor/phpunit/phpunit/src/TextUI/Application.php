@@ -10,16 +10,22 @@
 namespace PHPUnit\TextUI;
 
 use const PHP_EOL;
+use function class_exists;
+use function explode;
+use function function_exists;
 use function is_file;
 use function is_readable;
+use function method_exists;
 use function printf;
 use function realpath;
 use function sprintf;
+use function str_contains;
 use function trim;
 use function unlink;
 use PHPUnit\Event\EventFacadeIsSealedException;
 use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Event\UnknownSubscriberTypeException;
+use PHPUnit\Framework\TestCase;
 use PHPUnit\Framework\TestSuite;
 use PHPUnit\Logging\EventLogger;
 use PHPUnit\Logging\JUnit\JunitXmlLogger;
@@ -38,6 +44,7 @@ use PHPUnit\Runner\Extension\ExtensionBootstrapper;
 use PHPUnit\Runner\Extension\Facade as ExtensionFacade;
 use PHPUnit\Runner\Extension\PharLoader;
 use PHPUnit\Runner\GarbageCollection\GarbageCollectionHandler;
+use PHPUnit\Runner\PhptTestCase;
 use PHPUnit\Runner\ResultCache\DefaultResultCache;
 use PHPUnit\Runner\ResultCache\NullResultCache;
 use PHPUnit\Runner\ResultCache\ResultCache;
@@ -104,12 +111,15 @@ final readonly class Application
                 $this->loadBootstrapScript($configuration->bootstrap());
             }
 
-            $this->executeCommandsThatRequireCompleteConfiguration($configuration, $cliConfiguration);
+            $this->executeCommandsThatDoNotRequireTheTestSuite($configuration, $cliConfiguration);
 
             $testSuite = $this->buildTestSuite($configuration);
 
-            $this->executeCommandsThatRequireCliConfigurationAndTestSuite($cliConfiguration, $testSuite);
-            $this->executeHelpCommandWhenThereIsNothingElseToDo($configuration, $testSuite);
+            $this->executeCommandsThatRequireTheTestSuite($configuration, $cliConfiguration, $testSuite);
+
+            if ($testSuite->isEmpty() && !$configuration->hasCliArguments() && $configuration->testSuite()->isEmpty()) {
+                $this->execute(new ShowHelpCommand(Result::FAILURE));
+            }
 
             $pharExtensions                          = null;
             $extensionRequiresCodeCoverageCollection = false;
@@ -177,6 +187,8 @@ final readonly class Application
             }
 
             $baselineGenerator = $this->configureBaseline($configuration);
+
+            $this->configureDeprecationTriggers($configuration);
 
             EventFacade::instance()->seal();
 
@@ -400,31 +412,7 @@ final readonly class Application
         }
     }
 
-    private function executeCommandsThatRequireCliConfigurationAndTestSuite(CliConfiguration $cliConfiguration, TestSuite $testSuite): void
-    {
-        if ($cliConfiguration->listGroups()) {
-            $this->execute(new ListGroupsCommand($testSuite));
-        }
-
-        if ($cliConfiguration->listTests()) {
-            $this->execute(new ListTestsAsTextCommand($testSuite));
-        }
-
-        if ($cliConfiguration->hasListTestsXml()) {
-            $this->execute(
-                new ListTestsAsXmlCommand(
-                    $cliConfiguration->listTestsXml(),
-                    $testSuite,
-                ),
-            );
-        }
-
-        if ($cliConfiguration->listTestFiles()) {
-            $this->execute(new ListTestFilesCommand($testSuite));
-        }
-    }
-
-    private function executeCommandsThatRequireCompleteConfiguration(Configuration $configuration, CliConfiguration $cliConfiguration): void
+    private function executeCommandsThatDoNotRequireTheTestSuite(Configuration $configuration, CliConfiguration $cliConfiguration): void
     {
         if ($cliConfiguration->listSuites()) {
             $this->execute(new ListTestSuitesCommand($configuration->testSuite()));
@@ -435,10 +423,51 @@ final readonly class Application
         }
     }
 
-    private function executeHelpCommandWhenThereIsNothingElseToDo(Configuration $configuration, TestSuite $testSuite): void
+    private function executeCommandsThatRequireTheTestSuite(Configuration $configuration, CliConfiguration $cliConfiguration, TestSuite $testSuite): void
     {
-        if ($testSuite->isEmpty() && !$configuration->hasCliArguments() && $configuration->testSuite()->isEmpty()) {
-            $this->execute(new ShowHelpCommand(Result::FAILURE));
+        if ($cliConfiguration->listGroups()) {
+            $this->execute(
+                new ListGroupsCommand(
+                    $this->filteredTests(
+                        $configuration,
+                        $testSuite,
+                    ),
+                ),
+            );
+        }
+
+        if ($cliConfiguration->listTests()) {
+            $this->execute(
+                new ListTestsAsTextCommand(
+                    $this->filteredTests(
+                        $configuration,
+                        $testSuite,
+                    ),
+                ),
+            );
+        }
+
+        if ($cliConfiguration->hasListTestsXml()) {
+            $this->execute(
+                new ListTestsAsXmlCommand(
+                    $this->filteredTests(
+                        $configuration,
+                        $testSuite,
+                    ),
+                    $cliConfiguration->listTestsXml(),
+                ),
+            );
+        }
+
+        if ($cliConfiguration->listTestFiles()) {
+            $this->execute(
+                new ListTestFilesCommand(
+                    $this->filteredTests(
+                        $configuration,
+                        $testSuite,
+                    ),
+                ),
+            );
         }
     }
 
@@ -609,7 +638,7 @@ final readonly class Application
             }
 
             if ($baseline !== null) {
-                ErrorHandler::instance()->use($baseline);
+                ErrorHandler::instance()->useBaseline($baseline);
             }
         }
 
@@ -666,5 +695,72 @@ final readonly class Application
         print Version::getVersionString() . PHP_EOL . PHP_EOL . $message . PHP_EOL;
 
         exit(Result::EXCEPTION);
+    }
+
+    /**
+     * @psalm-return list<TestCase|PhptTestCase>
+     */
+    private function filteredTests(Configuration $configuration, TestSuite $suite): array
+    {
+        (new TestSuiteFilterProcessor)->process($configuration, $suite);
+
+        return $suite->collect();
+    }
+
+    private function configureDeprecationTriggers(Configuration $configuration): void
+    {
+        $deprecationTriggers = [
+            'functions' => [],
+            'methods'   => [],
+        ];
+
+        foreach ($configuration->source()->deprecationTriggers()['functions'] as $function) {
+            if (!function_exists($function)) {
+                EventFacade::emitter()->testRunnerTriggeredWarning(
+                    sprintf(
+                        'Function %s cannot be configured as a deprecation trigger because it is not declared',
+                        $function,
+                    ),
+                );
+
+                continue;
+            }
+
+            $deprecationTriggers['functions'][] = $function;
+        }
+
+        foreach ($configuration->source()->deprecationTriggers()['methods'] as $method) {
+            if (!str_contains($method, '::')) {
+                EventFacade::emitter()->testRunnerTriggeredWarning(
+                    sprintf(
+                        '%s cannot be configured as a deprecation trigger because it is not in ClassName::methodName format',
+                        $method,
+                    ),
+                );
+
+                continue;
+            }
+
+            [$className, $methodName] = explode('::', $method);
+
+            if (!class_exists($className) || !method_exists($className, $methodName)) {
+                EventFacade::emitter()->testRunnerTriggeredWarning(
+                    sprintf(
+                        'Method %s::%s cannot be configured as a deprecation trigger because it is not declared',
+                        $className,
+                        $methodName,
+                    ),
+                );
+
+                continue;
+            }
+
+            $deprecationTriggers['methods'][] = [
+                'className'  => $className,
+                'methodName' => $methodName,
+            ];
+        }
+
+        ErrorHandler::instance()->useDeprecationTriggers($deprecationTriggers);
     }
 }

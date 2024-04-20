@@ -45,6 +45,7 @@ use PHPUnit\Util\Reflection;
 use PHPUnit\Util\Test as TestUtil;
 use ReflectionClass;
 use ReflectionMethod;
+use SebastianBergmann\CodeCoverage\InvalidArgumentException;
 use SebastianBergmann\CodeCoverage\UnintentionallyCoveredCodeException;
 use Throwable;
 
@@ -63,13 +64,21 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     /**
      * @psalm-var array<string,list<Test>>
      */
-    private array $groups         = [];
+    private array $groups = [];
+
+    /**
+     * @psalm-var ?list<ExecutionOrderDependency>
+     */
     private ?array $requiredTests = null;
 
     /**
      * @psalm-var list<Test>
      */
-    private array $tests             = [];
+    private array $tests = [];
+
+    /**
+     * @psalm-var ?list<ExecutionOrderDependency>
+     */
     private ?array $providedTests    = null;
     private ?Factory $iteratorFilter = null;
 
@@ -82,6 +91,7 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     }
 
     /**
+     * @psalm-param ReflectionClass<TestCase> $class
      * @psalm-param list<non-empty-string> $groups
      */
     public static function fromClassReflector(ReflectionClass $class, array $groups = []): static
@@ -223,7 +233,7 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
      */
     public function addTestFile(string $filename, array $groups = []): void
     {
-        if (is_file($filename) && str_ends_with($filename, '.phpt')) {
+        if (str_ends_with($filename, '.phpt') && is_file($filename)) {
             try {
                 $this->addTest(new PhptTestCase($filename));
             } catch (RunnerException $e) {
@@ -305,10 +315,32 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     }
 
     /**
-     * @throws \SebastianBergmann\CodeCoverage\InvalidArgumentException
+     * @psalm-return list<TestCase|PhptTestCase>
+     */
+    public function collect(): array
+    {
+        $tests = [];
+
+        foreach ($this as $test) {
+            if ($test instanceof self) {
+                $tests = array_merge($tests, $test->collect());
+
+                continue;
+            }
+
+            assert($test instanceof TestCase || $test instanceof PhptTestCase);
+
+            $tests[] = $test;
+        }
+
+        return $tests;
+    }
+
+    /**
      * @throws CodeCoverageException
      * @throws Event\RuntimeException
      * @throws Exception
+     * @throws InvalidArgumentException
      * @throws NoPreviousThrowableException
      * @throws UnintentionallyCoveredCodeException
      */
@@ -452,7 +484,7 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     }
 
     /**
-     * @psalm-assert-if-true class-string $this->name
+     * @psalm-assert-if-true class-string<TestCase> $this->name
      */
     public function isForTestClass(): bool
     {
@@ -460,6 +492,7 @@ class TestSuite implements IteratorAggregate, Reorderable, SelfDescribing, Test
     }
 
     /**
+     * @psalm-param ReflectionClass<TestCase> $class
      * @psalm-param list<non-empty-string> $groups
      *
      * @throws Exception

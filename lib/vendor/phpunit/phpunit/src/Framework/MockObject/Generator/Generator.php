@@ -26,7 +26,6 @@ use function interface_exists;
 use function is_array;
 use function is_object;
 use function md5;
-use function method_exists;
 use function mt_rand;
 use function preg_match;
 use function preg_match_all;
@@ -108,7 +107,7 @@ final class Generator
      * @throws RuntimeException
      * @throws UnknownTypeException
      */
-    public function testDouble(string $type, bool $mockObject, bool $markAsMockObject, ?array $methods = [], array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, bool $cloneArguments = true, bool $callOriginalMethods = false, object $proxyTarget = null, bool $allowMockingUnknownTypes = true, bool $returnValueGeneration = true): MockObject|Stub
+    public function testDouble(string $type, bool $mockObject, bool $markAsMockObject, ?array $methods = [], array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, bool $cloneArguments = true, bool $callOriginalMethods = false, ?object $proxyTarget = null, bool $allowMockingUnknownTypes = true, bool $returnValueGeneration = true): MockObject|Stub
     {
         if ($type === Traversable::class) {
             $type = Iterator::class;
@@ -164,7 +163,7 @@ final class Generator
      * @throws RuntimeException
      * @throws UnknownTypeException
      */
-    public function testDoubleForInterfaceIntersection(array $interfaces, bool $mockObject, bool $callAutoload = true): MockObject|Stub
+    public function testDoubleForInterfaceIntersection(array $interfaces, bool $mockObject, bool $callAutoload = true, bool $returnValueGeneration = true): MockObject|Stub
     {
         if (count($interfaces) < 2) {
             throw new RuntimeException('At least two interfaces must be specified');
@@ -216,7 +215,12 @@ final class Generator
 
         eval($template->render());
 
-        return $this->testDouble($intersectionName, $mockObject, $mockObject);
+        return $this->testDouble(
+            $intersectionName,
+            $mockObject,
+            $mockObject,
+            returnValueGeneration: $returnValueGeneration,
+        );
     }
 
     /**
@@ -240,7 +244,7 @@ final class Generator
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5241
      */
-    public function mockObjectForAbstractClass(string $originalClassName, array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, array $mockedMethods = null, bool $cloneArguments = true): MockObject
+    public function mockObjectForAbstractClass(string $originalClassName, array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, ?array $mockedMethods = null, bool $cloneArguments = true): MockObject
     {
         if (class_exists($originalClassName, $callAutoload) ||
             interface_exists($originalClassName, $callAutoload)) {
@@ -302,7 +306,7 @@ final class Generator
      *
      * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5243
      */
-    public function mockObjectForTrait(string $traitName, array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, array $mockedMethods = null, bool $cloneArguments = true): MockObject
+    public function mockObjectForTrait(string $traitName, array $arguments = [], string $mockClassName = '', bool $callOriginalConstructor = true, bool $callOriginalClone = true, bool $callAutoload = true, ?array $mockedMethods = null, bool $cloneArguments = true): MockObject
     {
         if (!trait_exists($traitName, $callAutoload)) {
             throw new UnknownTraitException($traitName);
@@ -385,7 +389,7 @@ final class Generator
      *
      * @see https://github.com/sebastianbergmann/phpunit/issues/5476
      */
-    public function generate(string $type, bool $mockObject, bool $markAsMockObject, array $methods = null, string $mockClassName = '', bool $callOriginalClone = true, bool $callAutoload = true, bool $cloneArguments = true, bool $callOriginalMethods = false): MockClass
+    public function generate(string $type, bool $mockObject, bool $markAsMockObject, ?array $methods = null, string $mockClassName = '', bool $callOriginalClone = true, bool $callAutoload = true, bool $cloneArguments = true, bool $callOriginalMethods = false): MockClass
     {
         if ($mockClassName !== '') {
             return $this->generateCodeForTestDoubleClass(
@@ -571,7 +575,7 @@ final class Generator
      * @throws ReflectionException
      * @throws RuntimeException
      */
-    private function getObject(MockType $mockClass, string $type = '', bool $callOriginalConstructor = false, array $arguments = [], bool $callOriginalMethods = false, object $proxyTarget = null, bool $returnValueGeneration = true): object
+    private function getObject(MockType $mockClass, string $type = '', bool $callOriginalConstructor = false, array $arguments = [], bool $callOriginalMethods = false, ?object $proxyTarget = null, bool $returnValueGeneration = true): object
     {
         $className = $mockClass->generate();
         $object    = $this->instantiate($className, $callOriginalConstructor, $arguments);
@@ -641,7 +645,7 @@ final class Generator
                 throw new ClassIsFinalException($_mockClassName['fullClassName']);
             }
 
-            if (method_exists($class, 'isReadOnly') && $class->isReadOnly()) {
+            if ($class->isReadOnly()) {
                 throw new ClassIsReadonlyException($_mockClassName['fullClassName']);
             }
 
@@ -763,7 +767,12 @@ final class Generator
         }
 
         if ($mockMethods->hasMethod('method') || (isset($class) && $class->hasMethod('method'))) {
-            $message = 'Doubling interfaces (or classes) that have a method named "method" is deprecated. Support for this will be removed in PHPUnit 12.';
+            $message = sprintf(
+                '%s %s has a method named "method". Doubling %s that have a method named "method" is deprecated. Support for this will be removed in PHPUnit 12.',
+                ($isInterface) ? 'Interface' : 'Class',
+                isset($class) ? $class->getName() : $type,
+                ($isInterface) ? 'interfaces' : 'classes',
+            );
 
             try {
                 EventFacade::emitter()->testTriggeredPhpunitDeprecation(

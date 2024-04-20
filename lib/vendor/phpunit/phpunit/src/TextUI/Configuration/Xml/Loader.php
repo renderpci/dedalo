@@ -30,6 +30,7 @@ use DOMNode;
 use DOMXPath;
 use PHPUnit\Runner\TestSuiteSorter;
 use PHPUnit\Runner\Version;
+use PHPUnit\TextUI\Configuration\Configuration;
 use PHPUnit\TextUI\Configuration\Constant;
 use PHPUnit\TextUI\Configuration\ConstantCollection;
 use PHPUnit\TextUI\Configuration\Directory;
@@ -106,6 +107,8 @@ final readonly class Loader
         }
 
         $configurationFileRealpath = realpath($filename);
+
+        assert($configurationFileRealpath !== false && $configurationFileRealpath !== '');
 
         return new LoadedFromFileConfiguration(
             $configurationFileRealpath,
@@ -256,6 +259,9 @@ final readonly class Loader
         $ignoreSuppressionOfPhpNotices      = false;
         $ignoreSuppressionOfWarnings        = false;
         $ignoreSuppressionOfPhpWarnings     = false;
+        $ignoreSelfDeprecations             = false;
+        $ignoreDirectDeprecations           = false;
+        $ignoreIndirectDeprecations         = false;
 
         $element = $this->element($xpath, 'source');
 
@@ -276,6 +282,26 @@ final readonly class Loader
             $ignoreSuppressionOfPhpNotices      = $this->getBooleanAttribute($element, 'ignoreSuppressionOfPhpNotices', false);
             $ignoreSuppressionOfWarnings        = $this->getBooleanAttribute($element, 'ignoreSuppressionOfWarnings', false);
             $ignoreSuppressionOfPhpWarnings     = $this->getBooleanAttribute($element, 'ignoreSuppressionOfPhpWarnings', false);
+            $ignoreSelfDeprecations             = $this->getBooleanAttribute($element, 'ignoreSelfDeprecations', false);
+            $ignoreDirectDeprecations           = $this->getBooleanAttribute($element, 'ignoreDirectDeprecations', false);
+            $ignoreIndirectDeprecations         = $this->getBooleanAttribute($element, 'ignoreIndirectDeprecations', false);
+        }
+
+        $deprecationTriggers = [
+            'functions' => [],
+            'methods'   => [],
+        ];
+
+        foreach ($xpath->query('source/deprecationTrigger/function') as $functionNode) {
+            assert($functionNode instanceof DOMElement);
+
+            $deprecationTriggers['functions'][] = $functionNode->textContent;
+        }
+
+        foreach ($xpath->query('source/deprecationTrigger/method') as $methodNode) {
+            assert($methodNode instanceof DOMElement);
+
+            $deprecationTriggers['methods'][] = $methodNode->textContent;
         }
 
         return new Source(
@@ -295,6 +321,10 @@ final readonly class Loader
             $ignoreSuppressionOfPhpNotices,
             $ignoreSuppressionOfWarnings,
             $ignoreSuppressionOfPhpWarnings,
+            $deprecationTriggers,
+            $ignoreSelfDeprecations,
+            $ignoreDirectDeprecations,
+            $ignoreIndirectDeprecations,
         );
     }
 
@@ -835,15 +865,15 @@ final readonly class Loader
 
     private function getColors(DOMDocument $document): string
     {
-        $colors = \PHPUnit\TextUI\Configuration\Configuration::COLOR_DEFAULT;
+        $colors = Configuration::COLOR_DEFAULT;
 
         if ($document->documentElement->hasAttribute('colors')) {
             /* only allow boolean for compatibility with previous versions
               'always' only allowed from command line */
             if ($this->getBoolean($document->documentElement->getAttribute('colors'), false)) {
-                $colors = \PHPUnit\TextUI\Configuration\Configuration::COLOR_AUTO;
+                $colors = Configuration::COLOR_AUTO;
             } else {
-                $colors = \PHPUnit\TextUI\Configuration\Configuration::COLOR_NEVER;
+                $colors = Configuration::COLOR_NEVER;
             }
         }
 

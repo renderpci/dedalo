@@ -25,6 +25,7 @@ use PHPUnit\Framework\Attributes\Before;
 use PHPUnit\Framework\Attributes\BeforeClass;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\CoversFunction;
+use PHPUnit\Framework\Attributes\CoversMethod;
 use PHPUnit\Framework\Attributes\CoversNothing;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\DataProviderExternal;
@@ -37,6 +38,7 @@ use PHPUnit\Framework\Attributes\DependsOnClassUsingDeepClone;
 use PHPUnit\Framework\Attributes\DependsOnClassUsingShallowClone;
 use PHPUnit\Framework\Attributes\DependsUsingDeepClone;
 use PHPUnit\Framework\Attributes\DependsUsingShallowClone;
+use PHPUnit\Framework\Attributes\DisableReturnValueGenerationForTestDoubles;
 use PHPUnit\Framework\Attributes\DoesNotPerformAssertions;
 use PHPUnit\Framework\Attributes\ExcludeGlobalVariableFromBackup;
 use PHPUnit\Framework\Attributes\ExcludeStaticPropertyFromBackup;
@@ -67,6 +69,7 @@ use PHPUnit\Framework\Attributes\TestWithJson;
 use PHPUnit\Framework\Attributes\Ticket;
 use PHPUnit\Framework\Attributes\UsesClass;
 use PHPUnit\Framework\Attributes\UsesFunction;
+use PHPUnit\Framework\Attributes\UsesMethod;
 use PHPUnit\Framework\Attributes\WithoutErrorHandler;
 use PHPUnit\Metadata\Metadata;
 use PHPUnit\Metadata\MetadataCollection;
@@ -122,8 +125,23 @@ final readonly class AttributeParser implements Parser
 
                     break;
 
+                case CoversMethod::class:
+                    assert($attributeInstance instanceof CoversMethod);
+
+                    $result[] = Metadata::coversMethod(
+                        $attributeInstance->className(),
+                        $attributeInstance->methodName(),
+                    );
+
+                    break;
+
                 case CoversNothing::class:
                     $result[] = Metadata::coversNothingOnClass();
+
+                    break;
+
+                case DisableReturnValueGenerationForTestDoubles::class:
+                    $result[] = Metadata::disableReturnValueGenerationForTestDoubles();
 
                     break;
 
@@ -309,6 +327,16 @@ final readonly class AttributeParser implements Parser
                     assert($attributeInstance instanceof UsesFunction);
 
                     $result[] = Metadata::usesFunction($attributeInstance->functionName());
+
+                    break;
+
+                case UsesMethod::class:
+                    assert($attributeInstance instanceof UsesMethod);
+
+                    $result[] = Metadata::usesMethod(
+                        $attributeInstance->className(),
+                        $attributeInstance->methodName(),
+                    );
 
                     break;
             }

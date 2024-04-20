@@ -110,7 +110,6 @@ final readonly class DataProvider
             try {
                 $class  = new ReflectionClass($_dataProvider->className());
                 $method = $class->getMethod($_dataProvider->methodName());
-                $object = null;
 
                 if (!$method->isPublic()) {
                     throw new InvalidDataProviderException(
@@ -142,7 +141,9 @@ final readonly class DataProvider
                     );
                 }
 
-                $data = $method->invoke($object);
+                $className  = $_dataProvider->className();
+                $methodName = $_dataProvider->methodName();
+                $data       = $className::$methodName();
             } catch (Throwable $e) {
                 Event\Facade::emitter()->dataProviderMethodFinished(
                     $testMethod,
@@ -251,7 +252,7 @@ final readonly class DataProvider
         foreach (explode("\n", $annotationContent) as $candidateRow) {
             $candidateRow = trim($candidateRow);
 
-            if ($candidateRow[0] !== '[') {
+            if ($candidateRow === '' || $candidateRow[0] !== '[') {
                 break;
             }
 

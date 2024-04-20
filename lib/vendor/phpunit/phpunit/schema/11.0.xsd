@@ -2,7 +2,7 @@
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
     <xs:annotation>
         <xs:documentation source="https://phpunit.de/documentation.html">
-            This Schema file defines the rules by which the XML configuration file of PHPUnit 11.1 may be structured.
+            This Schema file defines the rules by which the XML configuration file of PHPUnit 11.0 may be structured.
         </xs:documentation>
         <xs:appinfo source="https://phpunit.de/documentation.html"/>
     </xs:annotation>
@@ -23,9 +23,9 @@
                     <xs:group ref="sourcePathGroup"/>
                 </xs:complexType>
             </xs:element>
-            <xs:element name="deprecationTrigger" type="deprecationTriggerType" minOccurs="0"/>
         </xs:all>
         <xs:attribute name="baseline" type="xs:anyURI"/>
+        <xs:attribute name="restrictDeprecations" type="xs:boolean" default="false"/>
         <xs:attribute name="restrictNotices" type="xs:boolean" default="false"/>
         <xs:attribute name="restrictWarnings" type="xs:boolean" default="false"/>
         <xs:attribute name="ignoreSuppressionOfDeprecations" type="xs:boolean" default="false"/>
@@ -35,9 +35,6 @@
         <xs:attribute name="ignoreSuppressionOfPhpNotices" type="xs:boolean" default="false"/>
         <xs:attribute name="ignoreSuppressionOfWarnings" type="xs:boolean" default="false"/>
         <xs:attribute name="ignoreSuppressionOfPhpWarnings" type="xs:boolean" default="false"/>
-        <xs:attribute name="ignoreSelfDeprecations" type="xs:boolean" default="false"/>
-        <xs:attribute name="ignoreDirectDeprecations" type="xs:boolean" default="false"/>
-        <xs:attribute name="ignoreIndirectDeprecations" type="xs:boolean" default="false"/>
     </xs:complexType>
     <xs:group name="sourcePathGroup">
         <xs:sequence>
@@ -322,13 +319,5 @@
         <xs:attribute name="outputFile" type="xs:anyURI" use="required"/>
         <xs:attribute name="showUncoveredFiles" type="xs:boolean" default="false"/>
         <xs:attribute name="showOnlySummary" type="xs:boolean" default="false"/>
-    </xs:complexType>
-    <xs:complexType name="deprecationTriggerType">
-        <xs:sequence>
-            <xs:choice maxOccurs="unbounded">
-                <xs:element name="function" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
-                <xs:element name="method" type="xs:string" minOccurs="0" maxOccurs="unbounded"/>
-            </xs:choice>
-        </xs:sequence>
     </xs:complexType>
 </xs:schema>
