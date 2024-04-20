@@ -153,51 +153,37 @@ component_geolocation.prototype.init = async function(options) {
 
 		// leaflet. (!) It's necessary to be loaded fully before 'geoman'
 			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-			const leaflet_promise = common.prototype.load_script(
+			await common.prototype.load_script(
 				lib_js_file,
 				license
 			)
-			load_promises.push(leaflet_promise)
-			leaflet_promise
-			.then(function(response){
 
-				const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-				common.prototype.load_script(geo_editor_lib_js_file, license)
-
-				const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-				common.prototype.load_script(geo_messure_lib_js_file, license)
-
-				const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-				common.prototype.load_script(color_picker_lib_js_file, license)
-			})
-
-		// another loads in parallel
 			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
-			load_promises.push( common.prototype.load_style(lib_css_file) )
+			common.prototype.load_style(lib_css_file)
+
+		// load geoman
+			const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
+			await common.prototype.load_script(geo_editor_lib_js_file, license)
 
 			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
-			load_promises.push( common.prototype.load_style(geo_editor_lib_css_file) )
+			common.prototype.load_style(geo_editor_lib_css_file)
 
 		// load and set JSON langs file
-			load_promises.push(
-				new Promise(function(resolve){
-					data_manager.request({
-						url		: '../common/js/lang.json',
-						method	: 'GET',
-						cache	: 'force-cache' // force use cache because the file do not changes
-					})
-					.then(function(response){
-						// set json_langs
-						self.json_langs = response
-						resolve(response)
-					})
-				})
-			)
+			data_manager.request({
+				url		: '../common/js/lang.json',
+				method	: 'GET',
+				cache	: 'force-cache' // force use cache because the file do not changes
+			})
+			.then(function(response){
+				// set json_langs
+				self.json_langs = response
+			})
 
-		await Promise.all(load_promises)
-		.then(async function(){
-			// console.log('All component_geolocation items are loaded:', response);
-		})
+		const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
+		common.prototype.load_script(geo_messure_lib_js_file, license)
+
+		const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
+		common.prototype.load_script(color_picker_lib_js_file, license)
 
 	// event subscriptions
 		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
@@ -214,6 +200,7 @@ component_geolocation.prototype.init = async function(options) {
 
 	return common_init
 }//end init
+
 
 
 
