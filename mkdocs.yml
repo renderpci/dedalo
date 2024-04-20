@@ -72,6 +72,10 @@ markdown_extensions:
 extra:
   generator: false
 
+# force to pack external libs like mermaid into a local js files (directory /assets/external)
+plugins:
+  - privacy
+
 # repo_url: https://github.com/renderpci/dedalo
 
 copyright: DÉDALO. MANAGING CULTURAL HERITAGE ARCHIVES - <a href="https://dedalo.dev">dedalo.dev</a>

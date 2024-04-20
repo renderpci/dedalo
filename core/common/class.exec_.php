@@ -315,6 +315,11 @@ class exec_ {
 			foreach ($params as $key => $value) {
 				$safe_params->{$key} = safe_xss($value);
 			}
+			$safe_params_string = json_encode($safe_params);
+			// replace single quotes by the URL encoding value %27
+			$safe_params_string = str_replace("'", '%27', $safe_params_string);
+			// restore object safe_params after escape it
+			$safe_params = json_decode($safe_params_string);
 
 		// server_vars
 			// sh_data mandatory vars

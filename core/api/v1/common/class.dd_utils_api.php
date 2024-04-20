@@ -680,7 +680,7 @@ final class dd_utils_api {
 				// filename
 				$file_name		= $file_to_upload['name'];
 				$file_tmp_name	= $file_to_upload['tmp_name'];
-				$file_type 		= $file_to_upload['type'];
+				$file_type 		= $file_to_upload['type']; // mime like 'image/tiff'
 
 				// blob case (componen_3d posterframe auto-generated)
 				if ($file_name==='blob' && isset($options->file_name)) {
@@ -1783,23 +1783,25 @@ final class dd_utils_api {
 			$thumbnail_file	= $tmp_dir . '/thumbnail/' . $filename . '.jpg';
 
 		// convert based on type
-			$file_type = mime_content_type($target_path);
-			switch ($file_type) {
+			$mime		= mime_content_type($target_path);
+			$ar_mime	= explode('/', $mime);
+			$file_type	= $ar_mime[0] ?? null;
 
-				case 'application/pdf':
+			switch (true) {
+
+				case ($mime==='application/pdf'):
 					$thumb_pdf_options = new stdClass();
 						$thumb_pdf_options->source_file	= $target_path;
 						$thumb_pdf_options->ar_layers	= [0];
 						$thumb_pdf_options->target_file	= $thumbnail_file;
-						$thumb_pdf_options->density		= 150;
+						$thumb_pdf_options->density		= 72;
 						$thumb_pdf_options->antialias	= true;
-						$thumb_pdf_options->quality		= 75;
+						$thumb_pdf_options->quality		= 50;
 						$thumb_pdf_options->resize		= '12.5%';
 					ImageMagick::convert($thumb_pdf_options);
 					break;
 
-
-				case 'image/jpeg':
+				case ($file_type==='image'):
 					ImageMagick::convert((object)[
 						'source_file'	=> $target_path,
 						'target_file'	=> $thumbnail_file,
@@ -1812,6 +1814,7 @@ final class dd_utils_api {
 					return null;
 			}
 
+		// temp thumb file URL
 		$thumbnail_url = DEDALO_UPLOAD_TMP_URL .'/'. $user_id .'/'. $key_dir .'/thumbnail/'. $filename . '.jpg';
 
 
