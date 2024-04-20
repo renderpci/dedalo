@@ -403,4 +403,49 @@ final class ImageMagick {
 	}//end is_opaque
 
 
+
+	/**
+	* GET_DATE_TIME_ORIGINAL
+	* EXIF try to get date from file metadata
+	* @param string $file
+	* 	full file path
+	* @return dd_date|null
+	* dd_date object
+	*/
+	public static function get_date_time_original(string $file) : ?dd_date {
+
+		$command			= MAGICK_PATH . 'identify -quiet -format "%[EXIF:DateTimeOriginal]" ' .'"'.$file.'"';
+		$DateTimeOriginal	= shell_exec($command);
+		$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
+
+		if(empty($DateTimeOriginal)){
+			$command			= MAGICK_PATH . 'identify -quiet -format "%[date:modify]" ' .'"'.$file.'"';
+			$DateTimeOriginal	= shell_exec($command);
+			$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
+		}
+
+		if (!empty($DateTimeOriginal)) {
+
+			$dd_date		= new dd_date();
+			$original_dato	= (string)$DateTimeOriginal;
+
+			preg_match($regex, $original_dato, $matches);
+
+			if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
+			if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
+			if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);
+			if(isset($matches[4])) $dd_date->set_hour((int)$matches[4]);
+			if(isset($matches[5])) $dd_date->set_minute((int)$matches[5]);
+			if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
+			if(isset($matches[7])) $dd_date->set_ms((int)$matches[7]);
+			// if(isset($matches[8])) $dd_date->set_timezonehh((int)$matches[8]);
+			// if(isset($matches[9])) $dd_date->set_timezonemm((int)$matches[9]);
+
+			return $dd_date;
+		}
+
+		return null;
+	}//end get_date_time_original
+
+
 }//end ImageMagick class
