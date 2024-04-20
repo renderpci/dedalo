@@ -13,10 +13,7 @@ use function file_put_contents;
 use function ksort;
 use function sprintf;
 use PHPUnit\Framework\TestCase;
-use PHPUnit\Framework\TestSuite;
 use PHPUnit\Runner\PhptTestCase;
-use PHPUnit\TextUI\Configuration\Registry;
-use RecursiveIteratorIterator;
 use XMLWriter;
 
 /**
@@ -24,18 +21,23 @@ use XMLWriter;
  */
 final readonly class ListTestsAsXmlCommand implements Command
 {
+    /**
+     * @psalm-var list<TestCase|PhptTestCase>
+     */
+    private array $tests;
     private string $filename;
-    private TestSuite $suite;
 
-    public function __construct(string $filename, TestSuite $suite)
+    /**
+     * @psalm-param list<TestCase|PhptTestCase> $tests
+     */
+    public function __construct(array $tests, string $filename)
     {
+        $this->tests    = $tests;
         $this->filename = $filename;
-        $this->suite    = $suite;
     }
 
     public function execute(): Result
     {
-        $buffer = $this->warnAboutConflictingOptions();
         $writer = new XMLWriter;
 
         $writer->openMemory();
@@ -50,7 +52,7 @@ final readonly class ListTestsAsXmlCommand implements Command
         $currentTestClass = null;
         $groups           = [];
 
-        foreach (new RecursiveIteratorIterator($this->suite) as $test) {
+        foreach ($this->tests as $test) {
             if ($test instanceof TestCase) {
                 foreach ($test->groups() as $group) {
                     if (!isset($groups[$group])) {
@@ -80,17 +82,15 @@ final readonly class ListTestsAsXmlCommand implements Command
                 continue;
             }
 
-            if ($test instanceof PhptTestCase) {
-                if ($currentTestClass !== null) {
-                    $writer->endElement();
-
-                    $currentTestClass = null;
-                }
-
-                $writer->startElement('phpt');
-                $writer->writeAttribute('file', $test->getName());
+            if ($currentTestClass !== null) {
                 $writer->endElement();
+
+                $currentTestClass = null;
             }
+
+            $writer->startElement('phpt');
+            $writer->writeAttribute('file', $test->getName());
+            $writer->endElement();
         }
 
         if ($currentTestClass !== null) {
@@ -121,36 +121,11 @@ final readonly class ListTestsAsXmlCommand implements Command
 
         file_put_contents($this->filename, $writer->outputMemory());
 
-        $buffer .= sprintf(
-            'Wrote list of tests that would have been run to %s' . PHP_EOL,
-            $this->filename,
+        return Result::from(
+            sprintf(
+                'Wrote list of tests that would have been run to %s' . PHP_EOL,
+                $this->filename,
+            ),
         );
-
-        return Result::from($buffer);
-    }
-
-    private function warnAboutConflictingOptions(): string
-    {
-        $buffer = '';
-
-        $configuration = Registry::get();
-
-        if ($configuration->hasFilter()) {
-            $buffer .= 'The --filter and --list-tests-xml options cannot be combined, --filter is ignored' . PHP_EOL;
-        }
-
-        if ($configuration->hasGroups()) {
-            $buffer .= 'The --group and --list-tests-xml options cannot be combined, --group is ignored' . PHP_EOL;
-        }
-
-        if ($configuration->hasExcludeGroups()) {
-            $buffer .= 'The --exclude-group and --list-tests-xml options cannot be combined, --exclude-group is ignored' . PHP_EOL;
-        }
-
-        if (!empty($buffer)) {
-            $buffer .= PHP_EOL;
-        }
-
-        return $buffer;
     }
 }

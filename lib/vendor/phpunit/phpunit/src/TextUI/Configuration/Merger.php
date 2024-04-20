@@ -20,6 +20,7 @@ use function time;
 use PHPUnit\Event\Facade as EventFacade;
 use PHPUnit\Runner\TestSuiteSorter;
 use PHPUnit\TextUI\CliArguments\Configuration as CliConfiguration;
+use PHPUnit\TextUI\CliArguments\Exception;
 use PHPUnit\TextUI\XmlConfiguration\Configuration as XmlConfiguration;
 use PHPUnit\TextUI\XmlConfiguration\LoadedFromFileConfiguration;
 use PHPUnit\TextUI\XmlConfiguration\SchemaDetector;
@@ -35,8 +36,8 @@ use SebastianBergmann\Invoker\Invoker;
 final readonly class Merger
 {
     /**
-     * @throws \PHPUnit\TextUI\CliArguments\Exception
      * @throws \PHPUnit\TextUI\XmlConfiguration\Exception
+     * @throws Exception
      * @throws NoCustomCssFileException
      */
     public function merge(CliConfiguration $cliConfiguration, XmlConfiguration $xmlConfiguration): Configuration
@@ -330,6 +331,14 @@ final readonly class Merger
         if ($xmlConfiguration->codeCoverage()->hasText()) {
             $coverageTextShowUncoveredFiles = $xmlConfiguration->codeCoverage()->text()->showUncoveredFiles();
             $coverageTextShowOnlySummary    = $xmlConfiguration->codeCoverage()->text()->showOnlySummary();
+        }
+
+        if ($cliConfiguration->hasCoverageTextShowUncoveredFiles()) {
+            $coverageTextShowUncoveredFiles = $cliConfiguration->coverageTextShowUncoveredFiles();
+        }
+
+        if ($cliConfiguration->hasCoverageTextShowOnlySummary()) {
+            $coverageTextShowOnlySummary = $cliConfiguration->coverageTextShowOnlySummary();
         }
 
         if ($cliConfiguration->hasCoverageText()) {
@@ -722,6 +731,10 @@ final readonly class Merger
                 $xmlConfiguration->source()->ignoreSuppressionOfPhpNotices(),
                 $xmlConfiguration->source()->ignoreSuppressionOfWarnings(),
                 $xmlConfiguration->source()->ignoreSuppressionOfPhpWarnings(),
+                $xmlConfiguration->source()->deprecationTriggers(),
+                $xmlConfiguration->source()->ignoreSelfDeprecations(),
+                $xmlConfiguration->source()->ignoreDirectDeprecations(),
+                $xmlConfiguration->source()->ignoreIndirectDeprecations(),
             ),
             $testResultCacheFile,
             $coverageClover,

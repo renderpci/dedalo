@@ -23,9 +23,15 @@ use PHPUnit\TextUI\XmlConfiguration\Logging\Logging;
  */
 final readonly class LoadedFromFileConfiguration extends Configuration
 {
+    /**
+     * @psalm-var non-empty-string
+     */
     private string $filename;
     private ValidationResult $validationResult;
 
+    /**
+     * @param non-empty-string $filename
+     */
     public function __construct(string $filename, ValidationResult $validationResult, ExtensionBootstrapCollection $extensions, Source $source, CodeCoverage $codeCoverage, Groups $groups, Logging $logging, Php $php, PHPUnit $phpunit, TestSuiteCollection $testSuite)
     {
         $this->filename         = $filename;
@@ -43,6 +49,9 @@ final readonly class LoadedFromFileConfiguration extends Configuration
         );
     }
 
+    /**
+     * @psalm-return non-empty-string
+     */
     public function filename(): string
     {
         return $this->filename;

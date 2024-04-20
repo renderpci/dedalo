@@ -9,11 +9,11 @@
  */
 namespace PHPUnit\Framework;
 
-use function array_keys;
+use function array_combine;
+use function array_intersect_key;
 use function class_exists;
 use function count;
 use function file_get_contents;
-use function in_array;
 use function interface_exists;
 use function is_bool;
 use ArrayAccess;
@@ -84,19 +84,23 @@ abstract class Assert
      */
     final public static function assertArrayIsEqualToArrayOnlyConsideringListOfKeys(array $expected, array $actual, array $keysToBeConsidered, string $message = ''): void
     {
-        foreach (array_keys($expected) as $key) {
-            if (!in_array($key, $keysToBeConsidered, true)) {
-                unset($expected[$key]);
+        $filteredExpected = [];
+
+        foreach ($keysToBeConsidered as $key) {
+            if (isset($expected[$key])) {
+                $filteredExpected[$key] = $expected[$key];
             }
         }
 
-        foreach (array_keys($actual) as $key) {
-            if (!in_array($key, $keysToBeConsidered, true)) {
-                unset($actual[$key]);
+        $filteredActual = [];
+
+        foreach ($keysToBeConsidered as $key) {
+            if (isset($actual[$key])) {
+                $filteredActual[$key] = $actual[$key];
             }
         }
 
-        static::assertEquals($expected, $actual, $message);
+        static::assertEquals($filteredExpected, $filteredActual, $message);
     }
 
     /**
@@ -126,17 +130,9 @@ abstract class Assert
      */
     final public static function assertArrayIsIdenticalToArrayOnlyConsideringListOfKeys(array $expected, array $actual, array $keysToBeConsidered, string $message = ''): void
     {
-        foreach (array_keys($expected) as $key) {
-            if (!in_array($key, $keysToBeConsidered, true)) {
-                unset($expected[$key]);
-            }
-        }
-
-        foreach (array_keys($actual) as $key) {
-            if (!in_array($key, $keysToBeConsidered, true)) {
-                unset($actual[$key]);
-            }
-        }
+        $keysToBeConsidered = array_combine($keysToBeConsidered, $keysToBeConsidered);
+        $expected           = array_intersect_key($expected, $keysToBeConsidered);
+        $actual             = array_intersect_key($actual, $keysToBeConsidered);
 
         static::assertSame($expected, $actual, $message);
     }
@@ -1705,7 +1701,7 @@ abstract class Assert
     {
         Event\Facade::emitter()->testTriggeredPhpunitDeprecation(
             null,
-            'assertStringNotMatchesFormat() is deprecated and will be removed in PHPUnit 12. No replacement is/will be provided.',
+            'assertStringNotMatchesFormat() is deprecated and will be removed in PHPUnit 12 without replacement.',
         );
 
         static::assertThat(
@@ -1746,7 +1742,7 @@ abstract class Assert
     {
         Event\Facade::emitter()->testTriggeredPhpunitDeprecation(
             null,
-            'assertStringNotMatchesFormatFile() is deprecated and will be removed in PHPUnit 12. No replacement is/will be provided.',
+            'assertStringNotMatchesFormatFile() is deprecated and will be removed in PHPUnit 12 without replacement.',
         );
 
         static::assertFileExists($formatFile, $message);
