@@ -181,44 +181,7 @@ class tool_import_files extends tool_common {
 
 		switch ($model) {
 			case 'component_image':
-				// EXIF try to get date from file metadata
-				$DateTimeOriginal=false;
-				try {
-					$command			= MAGICK_PATH . 'identify -format "%[EXIF:DateTimeOriginal]" ' .'"'.$source_full_path.'"';
-					$DateTimeOriginal	= shell_exec($command);
-					$regex				= "/^(-?[0-9]+)[-:\/.]?([0-9]+)?[-:\/.]?([0-9]+)? ?([0-9]+)?:?([0-9]+)?:?([0-9]+)?$/";
-
-					if(empty($DateTimeOriginal)){
-						$command			= MAGICK_PATH . 'identify -format "%[date:modify]" ' .'"'.$source_full_path.'"';
-						$DateTimeOriginal	= shell_exec($command);
-						$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
-					}
-
-				} catch (Exception $e) {
-					debug_log(__METHOD__
-						. " Error on get DateTimeOriginal from image metadata " . PHP_EOL
-						. ' exception: ' . $e->getMessage()
-						, logger::ERROR
-					);
-				}
-
-				if (!empty($DateTimeOriginal)) {
-
-					$dd_date		= new dd_date();
-					$original_dato	= (string)$DateTimeOriginal;
-
-					preg_match($regex, $original_dato, $matches);
-
-					if(isset($matches[1])) $dd_date->set_year((int)$matches[1]);
-					if(isset($matches[2])) $dd_date->set_month((int)$matches[2]);
-					if(isset($matches[3])) $dd_date->set_day((int)$matches[3]);
-					if(isset($matches[4])) $dd_date->set_hour((int)$matches[4]);
-					if(isset($matches[5])) $dd_date->set_minute((int)$matches[5]);
-					if(isset($matches[6])) $dd_date->set_second((int)$matches[6]);
-					if(isset($matches[7])) $dd_date->set_ms((int)$matches[7]);
-					// if(isset($matches[8])) $dd_date->set_timezonehh((int)$matches[8]);
-					// if(isset($matches[9])) $dd_date->set_timezonemm((int)$matches[9]);
-				}
+				$dd_date = ImageMagick::get_date_time_original($source_full_path);
 				break;
 
 			default:
