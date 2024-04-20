@@ -5,7 +5,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../common/js/event_manager.js'
+	import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
 	import {create_source} from '../../../common/js/common.js'
@@ -69,23 +69,26 @@ export const get_content_data = async function(self) {
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data')
 
-	// info
+	// info: About caller, allowed extensions, max file size, upload directory, etc.
 		// button_info
-		const button_info = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button info',
-			parent			: content_data
-		})
-		button_info.addEventListener('click', function(){
-			info_node.classList.toggle('hide')
-		})
-		const info_node = render_info(self)
-		info_node.classList.add('hide')
-		content_data.appendChild(info_node)
+			const button_info = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button info',
+				parent			: content_data
+			})
+			button_info.addEventListener('click', function(e){
+				e.stopPropagation()
+				info_node.classList.toggle('hide')
+			})
+		// info container
+			const info_container = render_info_container(self)
+			info_container.classList.add('hide')
+			content_data.appendChild(info_container)
 
-	// render template
+	// template_node
 		const template_node = await render_template(self)
-			content_data.appendChild(template_node)
+		content_data.appendChild(template_node)
+
 
 	return content_data
 }//end get_content_data
@@ -93,11 +96,11 @@ export const get_content_data = async function(self) {
 
 
 /**
-* RENDER_INFO
+* RENDER_INFO_CONTAINER
 * @param object self
 * @return HTMLElement info_container
 */
-export const render_info = function(self) {
+export const render_info_container = function(self) {
 
 	// info_container
 		const info_container = ui.create_dom_element({
@@ -228,7 +231,7 @@ export const render_info = function(self) {
 
 
 	return info_container
-}//end render_info
+}//end render_info_container
 
 
 
@@ -767,6 +770,11 @@ const render_template = async function(self) {
 
 			const row_progress_bar = file.previewElement.querySelector('.progress')
 			row_progress_bar.style.opacity = '0';
+
+			event_manager.publish('drop_zone_success', {
+				file			: file,
+				api_response	: api_response
+			})
 		});
 
 	// get the images in the server (uploaded previously), and display into the dropzone
