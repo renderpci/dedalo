@@ -30,25 +30,28 @@ export const view_mini_list_av = function() {
 view_mini_list_av.render = async function(self) {
 
 	// short vars
-		const data = self.data
+		const data	= self.data || {}
+		const value	= data.value || []
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self)
 
-	// url
-		const posterframe_url	= data.posterframe_url
-			? data.posterframe_url + '?t=' + (new Date()).getTime()
-			: page_globals.fallback_image
+	// files_info
+		const files_info = value
 
 	// thumb
 		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
+
+	// posterframe_url
+		const posterframe_url	= data.posterframe_url
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// URL
 	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
 		const url = thumb?.file_path
 			? DEDALO_MEDIA_URL + thumb.file_path
 			: posterframe_url
-
 
 	// image
 		const image = ui.create_dom_element({

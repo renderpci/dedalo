@@ -30,14 +30,18 @@ view_text_list_av.render = async function(self, options) {
 
 	// short vars
 		const data = self.data || {}
+		const value	= data.value || []
+
+	// files_info
+		const files_info = value
+
+	// thumb
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 	// posterframe_url
 		const posterframe_url = data.posterframe_url
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
-
-	// thumb
-		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 	// URL
 	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
