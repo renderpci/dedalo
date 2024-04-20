@@ -94,6 +94,9 @@ class tool_import_files extends tool_common {
 
 				// logger activity. Note that this log is here because generic service_upload
 				// is not capable to know if the uploaded file is the last one in a chunked file scenario
+					// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
+					$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+					$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
 					logger::$obj['activity']->log_message(
 						'UPLOAD COMPLETE',
 						logger::INFO,
@@ -101,7 +104,7 @@ class tool_import_files extends tool_common {
 						NULL,
 						[
 							'msg'			=> 'Upload file complete. Processing uploaded file',
-							'file_data'		=> json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+							'file_data'		=> $safe_file_data
 							// 'file_name'	=> $file_data->name,
 							// 'file_size'	=> format_size_units($file_data->size),
 							// 'time_sec'	=> $file_data->time_sec,
@@ -127,6 +130,13 @@ class tool_import_files extends tool_common {
 					if ($add_file->result===false) {
 						// $response->msg .= $add_file->msg;
 						// return $response;
+
+						// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->errors[] = $add_file->msg;
+							// send to output
+							print_cli(common::$pdata);
+						}
 						return false;
 					}
 
@@ -135,6 +145,13 @@ class tool_import_files extends tool_common {
 					if ($process_file->result===false) {
 						// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
 						// return $response;
+
+						// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->errors[] = $process_file->msg;
+							// send to output
+							print_cli(common::$pdata);
+						}
 						return false;
 					}
 
@@ -191,6 +208,12 @@ class tool_import_files extends tool_common {
 					. ' model: ' .$model
 					, logger::ERROR
 				);
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->errors[] = 'Error. get_media_file_date . Model is not defined';
+						// send to output
+						print_cli(common::$pdata);
+					}
 				break;
 		}//end switch ($model)
 
@@ -254,6 +277,12 @@ class tool_import_files extends tool_common {
 						.' function_name: ' . to_string($function_name)
 						, logger::ERROR
 					);
+
+					// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->errors[] = 'Error on call file processor function';
+							print_cli(common::$pdata);
+						}
 				}
 			}else{
 				debug_log(__METHOD__
@@ -261,6 +290,11 @@ class tool_import_files extends tool_common {
 					.' script_file: ' .to_string($script_file)
 					, logger::ERROR
 				);
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->errors[] = 'Error on include file processor file script_file';
+						print_cli(common::$pdata);
+					}
 			}
 
 			debug_log(__METHOD__
@@ -286,6 +320,7 @@ class tool_import_files extends tool_common {
 	* @return object $response
 	*/
 	public static function import_files(object $options) : object {
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -335,7 +370,21 @@ class tool_import_files extends tool_common {
 		// init vars
 			$ar_msg							= [];	// messages for response info
 			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
-			$total							= 0;	// n of files processed
+			$total_processed				= 0;
+			$total							= count($files_data);	// n of files
+			$counter						= 0;
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				common::$pdata = new stdClass(); // init $pdata object
+					common::$pdata->msg			= (label::get_label('processing') ?? 'Processing');
+					common::$pdata->counter		= $counter;
+					common::$pdata->total		= $total;
+					common::$pdata->total_ms	= exec_time_unit($start_time);
+					common::$pdata->errors		= [];
+				// send to output
+				print_cli(common::$pdata);
+			}
 
 		// ar_data. All files collected from files upload form
 			$ar_processed	= [];
@@ -345,13 +394,23 @@ class tool_import_files extends tool_common {
 
 			foreach ((array)$files_data as $value_obj) {
 
-				$current_file_name				= $value_obj->name;
-				$current_file_processor			= $value_obj->file_processor ?? null; # Note that var $current_file_processor is only the current element processor selection
-				$current_component_option_tipo	= $value_obj->component_option;
+				$start_time2=start_time();
+				$counter++;
+
+				$current_file_name				= rawurldecode($value_obj->name); // Note that name is JS encodeURI from browser
+				$current_file_processor			= $value_obj->file_processor ?? null; // Note that var $current_file_processor is only the current element processor selection
+				$current_component_option_tipo	= $value_obj->component_option ?? null;
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->counter	= $counter;
+						common::$pdata->file	= $current_file_name;
+						// send to output
+						print_cli(common::$pdata);
+					}
 
 				// Check file exists
 					$file_full_path = $tmp_dir .'/'. $current_file_name;
-
 					if (!file_exists($file_full_path)) {
 						$msg = "File ignored (not found) $current_file_name";
 						$ar_msg[] = $msg;
@@ -360,6 +419,7 @@ class tool_import_files extends tool_common {
 							.' file_full_path: ' .$file_full_path
 							, logger::ERROR
 						);
+						common::$pdata->errors[] = $msg;
 						continue; // Skip file
 					}
 				// Check proper mode config
@@ -370,11 +430,9 @@ class tool_import_files extends tool_common {
 							, logger::ERROR
 						);
 						$ar_msg[] = $msg;
+						common::$pdata->errors[] = $msg;
 						continue; // Skip file
 					}
-
-				// debug.  Init file import
-				// debug_log(__METHOD__." Init file import_mode:$import_mode - import_file_name_mode:$import_file_name_mode - file_full_path ".to_string($file_full_path), logger::DEBUG);
 
 				// file_data
 					$file_data = tool_import_files::get_file_data($tmp_dir, $current_file_name);
@@ -481,7 +539,10 @@ class tool_import_files extends tool_common {
 							if ($changed_order===true) {
 								$component_portal->Save();
 							}
-							debug_log(__METHOD__." CHANGED ORDER FOR : ".$file_data['regex']->portal_order." ".to_string($file_data['regex']), logger::DEBUG);
+							debug_log(__METHOD__
+								." CHANGED ORDER FOR : ".$file_data['regex']->portal_order." ".to_string($file_data['regex'])
+								, logger::DEBUG
+							);
 						}
 					}
 
@@ -622,10 +683,20 @@ class tool_import_files extends tool_common {
 						$processed_info->file_data				= $file_data;
 					$ar_processed[] = $processed_info;
 
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->current_time	= exec_time_unit($start_time2, 'ms');
+						common::$pdata->total_ms		= common::$pdata->total_ms + common::$pdata->current_time; // cumulative time
+						// send to output
+						print_cli(common::$pdata);
+					}
 
-				debug_log(__METHOD__." Imported files and data from $section_tipo - $section_id".to_string(), logger::WARNING);
+				$total_processed++;
 
-				$total++;
+				debug_log(__METHOD__
+					." Imported files and data from $section_tipo - $section_id"
+					, logger::WARNING
+				);
 			}//end foreach ((array)$files_data as $key => $value_obj)
 
 		// Reset the temporary section of the components, for empty the fields.
@@ -638,7 +709,12 @@ class tool_import_files extends tool_common {
 
 		// response
 			$response->result	= true;
-			$response->msg		= 'Import files done successfully. Total: '.$total ." of " .count($files_data);
+			$response->msg		= ($total_processed<$total || count(common::$pdata->errors)>0)
+				? 'Import files done with errors. Imported: '.$total_processed." of " .$total
+				: 'Import files done successfully. Imported: '.$total_processed." of " .$total;
+			$response->time		= exec_time_unit_auto($start_time);
+			$response->memory	= dd_memory_usage();
+			$response->errors	= common::$pdata->errors;
 
 
 		return $response;
