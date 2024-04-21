@@ -813,6 +813,16 @@ Response:
 }
 ```
 
+##### link
+
+In global_search tables is defined a link property. Link property resolve different relations of every row.
+
+Link columns has data format like `{"table":"interview","section_id":1}`, and can change from a row to other, pointed to other table and other section_id as `{"table":"informant","section_id":5}`, every row has his link to the main table that create the row in global_seach table.
+
+To resolve the main data when the query is in global tables is possible to set `resolve_portals_custom` with the link property in 'auto', in this way `{"link":"auto"}`.
+
+This will solve dynamically the main data of the linked table.
+
 #### process_result
 
 Resolve a column/s of the request with specific function. `object`
