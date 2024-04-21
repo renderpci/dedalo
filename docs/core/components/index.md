@@ -188,7 +188,7 @@ In server context. components classes inherit from common classes dependent of t
 
 ## Instantiation
 
-Normally components are called by sections but it's possible instantiate any component directly.
+Usually components are called by sections but it's possible instantiate any component directly.
 
 To instantiate a component is necessary indicate:
 
@@ -239,7 +239,7 @@ Components manage his own data, but their are not connected directly to the data
 
 ## Translatable property
 
-Daedalus is a multilingual system, all information can be translatable in several languages. Components are translatable by default, but some components may be non-translatable such as component_number, non-translatable components have to define this property specifically as `false`.
+Dédalo is a multilingual system, all information can be translatable in several languages. Components are translatable by default, but some components may be non-translatable such as component_number, non-translatable components have to define this property specifically as `false`.
 
 ### Translatable components
 
@@ -251,19 +251,17 @@ Every component has a language. Language need to be set when the component is in
 
 ### Transliterate components
 
-In special cases, such as personal names, the component can be define as transliterate, (1) in these cases the language is define as `lg-nolan` by default, but the component can handle other languages as English `lg-eng`.
+In special cases, such as personal names, the component can be define as transliterate[^1], in these cases the language is define as `lg-nolan` by default, but the component can handle other languages as English `lg-eng`.
 
-{ .annotate }
-
-1. To express or represent in the characters of another alphabet.
+[^1]: To express or represent in the characters of another alphabet.
 
 ## Properties
 
-The ontology defines the properties that will be used when the component will be instantiated. Properties define specific context of the component, such as CSS styles or the RQO used.
+The ontology defines the properties that will be used when the component will be instantiated. Properties define specific context of the component, such as CSS styles or the RQO to be used.
 
 Properties are write in JSON.
 
-## datum
+## Datum
 
 Datum is a JSON object with all needed to build and render the components. Datum object has two properties; `context` and `data`, `data` has a `value` property with the database value of the component.
 
@@ -271,7 +269,7 @@ Datum structure in JSON
 
 ```json
 {
-    "context":{}
+    "context":{},
     "data":{
         "value":[]
     }
@@ -280,12 +278,12 @@ Datum structure in JSON
 
 ## context
 
-Context defines his part of the ontology and all needed to build the component in client side.
+Context defines his part of the ontology and all needs to build the component in client side.
 Components create his own context when the component is instantiated.
 
-Related components would need a subcontext to be instantiated such as component_portal, that need all context for all components pointed to be builded.
+Related components would need a subcontext to be instantiated such as component_portal, it needs all context of all components pointed in order to be built.
 
-Example of context for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal (relation component)
+Example of context for the *Birth town* [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal.
 
 ```json
 {
@@ -471,7 +469,7 @@ Example of context for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91)
 
 ## data
 
-Every component defines his own data structure, but all components have a `value` property with the database value. All components store their data as an array, so the value is always an array.
+Every component defines his own data structure, but all components have a `value` property with the stored database value. As all components store their data as an array, so the value is always an array.
 
 Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a component_portal (relation component)
 
@@ -504,7 +502,7 @@ Example of data for the Birth town [rsc91](https://dedalo.dev/ontology/rsc91) a 
 
 ## Permissions
 
-Components can handle data and save, permissions define if the user can access, read, write or admin the component.
+Components can handle data and save. Permissions defines if the user can access, read, write or admin the component.
 
 In server context permissions are set with the data saved in database, and it's checked every time that the system is required to load, save, etc.
 
@@ -540,7 +538,7 @@ When a component is set as observable in server context, any change of his data 
 
 In client context components use the event_manager to subscribe and publish his actions. The configuration is set in the ontology properties.
 
-When a component is set as observable in client context, any action do it by the user will be publish in the event_manager, components could to subscribe to this actions and perform some tasks.
+When a component is set as observable in client context, any action do it by the user will be publish in the event_manager, any other components could to subscribe itself to this actions and perform some tasks.
 
 For example, when a component is activate by the user, the component will publish an `activate` action, and all other components, as are subscribe to this action, will be inactivated.
 
