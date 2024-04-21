@@ -901,7 +901,8 @@ final class dd_api_Test extends TestCase {
 		// expected running without errors
 		$this->assertTrue(
 			empty($_ENV['DEDALO_LAST_ERROR']),
-			'expected running without errors'
+			'expected running without errors' . PHP_EOL
+			.'DEDALO_LAST_ERROR: ' . to_string($_ENV['DEDALO_LAST_ERROR'])
 		);
 
 		// expected result as not false
