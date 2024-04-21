@@ -42,7 +42,7 @@ use Test\TestCase;
  */
 class CollectionTest extends TestCase
 {
-    /** @var \EasyRdf\Graph */
+    /** @var Graph */
     private $graph;
 
     protected function setUp(): void

@@ -4,20 +4,22 @@ use PhpCsFixer\Config;
 use PhpCsFixer\Finder;
 
 $finder = Finder::create()
-    ->in(__DIR__ .'/examples')
-    ->in(__DIR__ .'/lib')
-    ->in(__DIR__ .'/test')
-    ->in(__DIR__ .'/tests')
+    ->in(__DIR__ .DIRECTORY_SEPARATOR.'examples')
+    ->in(__DIR__ .DIRECTORY_SEPARATOR.'lib')
+    ->in(__DIR__ .DIRECTORY_SEPARATOR.'test')
+    ->in(__DIR__ .DIRECTORY_SEPARATOR.'tests')
+    ->files([
+        __DIR__.DIRECTORY_SEPARATOR.'.php-cs-fixer.dist.php',
+    ])
     ->name('*.php')
 ;
 
 $config = new Config();
 $config
     ->setFinder($finder)
-    ->setRiskyAllowed(true)
+    ->setRiskyAllowed(false)
     ->setRules([
-        '@Symfony' => true,
-        '@Symfony:risky' => true,
+        '@PSR12' => true,
         'phpdoc_summary' => false,
     ])
 ;

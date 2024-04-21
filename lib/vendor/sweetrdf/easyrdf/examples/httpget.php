@@ -42,7 +42,7 @@ $accept_options = [
 
 <?php
         if (isset($_REQUEST['uri'])) {
-            $client = new \EasyRdf\Http\Client($_REQUEST['uri']);
+            $client = new EasyRdf\Http\Client($_REQUEST['uri']);
             $client->setHeaders('Accept', $_REQUEST['accept']);
             $response = $client->request(); ?>
 

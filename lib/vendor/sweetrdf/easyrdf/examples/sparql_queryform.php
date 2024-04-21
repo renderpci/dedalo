@@ -40,7 +40,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 echo label_tag('endpoint');
 echo text_field_tag('endpoint', 'http://dbpedia.org/sparql', ['size' => 80]).'<br />';
 echo '<code>';
-foreach (\EasyRdf\RdfNamespace::namespaces() as $prefix => $uri) {
+foreach (EasyRdf\RdfNamespace::namespaces() as $prefix => $uri) {
     echo "PREFIX $prefix: &lt;".htmlspecialchars($uri)."&gt;<br />\n";
 }
 echo '</code>';
@@ -53,7 +53,7 @@ echo form_end_tag();
 
 <?php
 if (isset($_REQUEST['endpoint']) && isset($_REQUEST['query'])) {
-    $sparql = new \EasyRdf\Sparql\Client($_REQUEST['endpoint']);
+    $sparql = new EasyRdf\Sparql\Client($_REQUEST['endpoint']);
     try {
         $results = $sparql->query($_REQUEST['query']);
         if (isset($_REQUEST['text'])) {

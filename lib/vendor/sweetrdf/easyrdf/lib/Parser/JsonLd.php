@@ -109,11 +109,11 @@ class JsonLd extends Parser
                     ];
 
                     if ($quad->getObject() instanceof LD\LanguageTaggedString) {
-                        /** @var \ML\JsonLD\LanguageTaggedString */
+                        /** @var LD\LanguageTaggedString */
                         $_o = $quad->getObject();
                         $object['lang'] = $_o->getLanguage();
                     } else {
-                        /** @var \ML\JsonLD\TypedValue */
+                        /** @var LD\TypedValue */
                         $_o = $quad->getObject();
                         $object['datatype'] = $_o->getType();
                     }

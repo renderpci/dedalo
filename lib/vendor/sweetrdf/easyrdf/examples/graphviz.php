@@ -23,12 +23,12 @@ $formats = [
     'SVG' => 'svg',
 ];
 
-$format = \EasyRdf\Format::getFormat(
+$format = EasyRdf\Format::getFormat(
     isset($_REQUEST['format']) ? $_REQUEST['format'] : 'png'
 );
 
 // Construct a graph of three people
-$graph = new \EasyRdf\Graph();
+$graph = new EasyRdf\Graph();
 $graph->set('foaf:knows', 'rdfs:label', 'knows');
 $bob = $graph->resource('http://www.example.com/bob', 'foaf:Person');
 $alice = $graph->resource('http://www.example.com/alice', 'foaf:Person');
@@ -42,7 +42,7 @@ $alice->add('foaf:knows', $bob);
 $alice->add('foaf:knows', $carol);
 
 // Create a GraphViz serialiser
-$gv = new \EasyRdf\Serialiser\GraphViz();
+$gv = new EasyRdf\Serialiser\GraphViz();
 $gv->setUseLabels(isset($_REQUEST['ul']));
 $gv->setOnlyLabelled(isset($_REQUEST['ol']));
 

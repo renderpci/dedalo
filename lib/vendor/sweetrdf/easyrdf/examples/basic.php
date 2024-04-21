@@ -20,7 +20,7 @@ require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 <body>
 
 <?php
-$foaf = \EasyRdf\Graph::newAndLoad('http://njh.me/foaf.rdf');
+$foaf = EasyRdf\Graph::newAndLoad('http://njh.me/foaf.rdf');
 $me = $foaf->primaryTopic();
 ?>
 

@@ -15,7 +15,7 @@
 require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 
 // use the CURL based HTTP client adaptor
-$client = new \Zend\Http\Client(
+$client = new Zend\Http\Client(
     null,
     [
         'adapter' => 'Zend\Http\Client\Adapter\Curl',
@@ -23,7 +23,7 @@ $client = new \Zend\Http\Client(
         'useragent' => 'EasyRdf/zendtest',
     ]
 );
-\EasyRdf\Http::setDefaultHttpClient($client);
+EasyRdf\Http::setDefaultHttpClient($client);
 ?>
 
 <html>
@@ -35,17 +35,17 @@ $client = new \Zend\Http\Client(
 
 <?php
 // Load some sample data into a graph
-$graph = new \EasyRdf\Graph('http://example.com/joe');
+$graph = new EasyRdf\Graph('http://example.com/joe');
 $joe = $graph->resource('http://example.com/joe#me', 'foaf:Person');
 $joe->add('foaf:name', 'Joe Bloggs');
 $joe->addResource('foaf:homepage', 'http://example.com/joe/');
 
 // Store it in a local graphstore
-$store = new \EasyRdf\GraphStore('http://localhost:8080/data/');
+$store = new EasyRdf\GraphStore('http://localhost:8080/data/');
 $store->replace($graph);
 
 // Now make a query to the graphstore
-$sparql = new \EasyRdf\Sparql\Client('http://localhost:8080/sparql/');
+$sparql = new EasyRdf\Sparql\Client('http://localhost:8080/sparql/');
 $result = $sparql->query('SELECT * WHERE {<http://example.com/joe#me> ?p ?o}');
 echo $result->dump();
 ?>

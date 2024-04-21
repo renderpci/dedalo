@@ -188,7 +188,7 @@ class Client
      *
      * @param string $query The update query string to be executed
      *
-     * @return \EasyRdf\Http\Response HTTP response
+     * @return Http\Response HTTP response
      */
     public function update($query)
     {

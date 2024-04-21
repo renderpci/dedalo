@@ -22,10 +22,10 @@ require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 
 <?php
 // Use a local SPARQL 1.1 Graph Store (eg RedStore)
-$gs = new \EasyRdf\GraphStore('http://localhost:8080/data/');
+$gs = new EasyRdf\GraphStore('http://localhost:8080/data/');
 
 // Add the current time in a graph
-$graph1 = new \EasyRdf\Graph();
+$graph1 = new EasyRdf\Graph();
 $graph1->add('http://example.com/test', 'rdfs:label', 'Test');
 $graph1->add('http://example.com/test', 'dc:date', time());
 $gs->insert($graph1, 'time.rdf');

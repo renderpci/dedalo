@@ -42,7 +42,7 @@ use Test\TestCase;
  */
 class SerialiserTest extends TestCase
 {
-    /** @var \EasyRdf\Graph */
+    /** @var Graph */
     private $graph;
 
     /** @var \EasyRdf\Serialiser */

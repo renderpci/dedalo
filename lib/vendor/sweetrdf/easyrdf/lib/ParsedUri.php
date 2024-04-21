@@ -254,12 +254,12 @@ class ParsedUri
     {
         // If it is a string, then convert it to a parsed object
         if (\is_string($relUri)) {
-            /** @var \EasyRdf\ParsedUri */
+            /** @var ParsedUri */
             $relUri = new self($relUri);
         }
 
         // This code is based on the pseudocode in section 5.2.2 of RFC3986
-        /** @var \EasyRdf\ParsedUri */
+        /** @var ParsedUri */
         $target = new self();
         if ($relUri->scheme) {
             $target->scheme = $relUri->scheme;

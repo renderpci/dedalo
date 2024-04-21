@@ -1210,6 +1210,37 @@ class ResourceTest extends TestCase
         $this->assertStringEquals('Dc Title', $this->resource->label('en'));
     }
 
+    /**
+     * Tests behavior of label() when a custom label property list is provided.
+     */
+    public function testLabelWithCustomPropertyLabels()
+    {
+        $this->setupTestGraph();
+
+        // add test data to graph
+        $res1 = new Resource('http://foo', $this->graph);
+        $res1->addLiteral('rdfs:label', [
+            new Literal('rdfs label de', 'de'),
+            new Literal('rdfs label en', 'en'),
+        ]);
+        $res1->addLiteral('skos:prefLabel', 'skos prefLabel');
+        $res1->addLiteral('http://xmlns.com/foaf/0.1/name', 'foaf name');
+
+        // checks
+        $this->assertStringEquals('skos prefLabel', $res1->label());
+        $this->assertStringEquals('rdfs label de', $res1->label('de'));
+        $this->assertStringEquals('foaf name', $res1->label(null, ['foaf:name']));
+
+        // include weird behavior of current EasyRdf: literal was added with full URI as property (http://xmlns.com/foaf/0.1/name)
+        // but you have to use shortened property URI to get label
+        $this->assertStringEquals('', $res1->label(null, ['http://xmlns.com/foaf/0.1/name']));
+
+        // include behavior check for newly introduced label properties
+        $res1->addLiteral('http://dummy/label', 'dummy label');
+        RdfNamespace::set('dummy', 'http://dummy/');
+        $this->assertStringEquals('dummy label', $res1->label(null, ['dummy:label']));
+    }
+
     public function testDump()
     {
         $this->setupTestGraph();

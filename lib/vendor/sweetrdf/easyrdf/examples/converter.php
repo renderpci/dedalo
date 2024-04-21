@@ -24,7 +24,7 @@ $input_format_options = ['Guess' => 'guess'];
 
 $output_format_options = [];
 
-foreach (\EasyRdf\Format::getFormats() as $format) {
+foreach (EasyRdf\Format::getFormats() as $format) {
     if ($format->getSerialiserClass()) {
         $output_format_options[$format->getLabel()] = $format->getName();
     }
@@ -65,7 +65,7 @@ if (!isset($_REQUEST['raw'])) {
 
 if (isset($_REQUEST['uri']) || isset($_REQUEST['data'])) {
     // Parse the input
-    $graph = new \EasyRdf\Graph($_REQUEST['uri']);
+    $graph = new EasyRdf\Graph($_REQUEST['uri']);
     if (empty($_REQUEST['data'])) {
         $graph->load($_REQUEST['uri'], $_REQUEST['input_format']);
     } else {
@@ -73,7 +73,7 @@ if (isset($_REQUEST['uri']) || isset($_REQUEST['data'])) {
     }
 
     // Lookup the output format
-    $format = \EasyRdf\Format::getFormat($_REQUEST['output_format']);
+    $format = EasyRdf\Format::getFormat($_REQUEST['output_format']);
 
     // Serialise to the new output format
     $output = $graph->serialise($format);

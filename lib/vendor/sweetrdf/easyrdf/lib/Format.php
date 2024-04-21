@@ -269,6 +269,8 @@ class Format
             return self::getFormat('json');
         } elseif (preg_match('/<rdf:/i', $short)) {
             return self::getFormat('rdfxml');
+        } elseif (str_contains($short, '<Ontology xmlns=')) {
+            return self::getFormat('rdfxml');
         } elseif (preg_match('|http://www.w3.org/2005/sparql-results|', $short)) {
             return self::getFormat('sparql-xml');
         } elseif (preg_match('/\WRDFa\W/i', $short)) {
@@ -278,7 +280,11 @@ class Format
             return self::getFormat('rdfa');
         } elseif (preg_match('/@prefix\s|@base\s/', $short)) {
             return self::getFormat('turtle');
-        } elseif (preg_match('/prefix\s|base\s/i', $short)) {
+        } elseif (
+            preg_match('/prefix\s|base\s/i', $short)
+            // see FormatTest::testGuessFormatTurtleByPrefix for an example
+            && false === str_contains($short, '<?xml')
+        ) {
             return self::getFormat('turtle');
         } elseif (preg_match('/^\s*<.+> <.+>/m', $short)) {
             return self::getFormat('ntriples');

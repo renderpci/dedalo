@@ -175,7 +175,8 @@ class ClientTest extends TestCase
     {
         $this->client->setHeaders('Accept-Encoding', 'gzip,deflate');
         $this->client->setHeaders('Accept-Encoding', null);
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $this->client->getHeader('Accept-encoding'),
             'Returned value of header is expected to be null'
         );
@@ -271,6 +272,28 @@ class ClientTest extends TestCase
         $this->assertStringEquals('', $this->client->getHeader('Content-Length'));
         $this->assertStringEquals('', $this->client->getHeader('Content-Type'));
         $this->assertStringEquals('', $this->client->getHeader('Accept-Language'));
+    }
+
+    /**
+     * This test covers the change from
+     *
+     *      $uri['query'] .= http_build_query($this->paramsGet, null, '&');
+     *
+     * to
+     *
+     *      $uri['query'] .= http_build_query($this->paramsGet, '', '&');
+     *
+     * Without the change a deprecation warning would be thrown.
+     */
+    public function testRequestGetParamsGiven(): void
+    {
+        $this->client->setParameterGet('foo', 'bar');
+
+        $response = $this->client->request();
+
+        // note: no real request was sent
+
+        $this->assertEquals(200, $response->getStatus());
     }
 
     /**

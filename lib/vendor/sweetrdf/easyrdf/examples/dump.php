@@ -32,7 +32,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 
 <?php
 if (isset($_REQUEST['uri'])) {
-    $graph = \EasyRdf\Graph::newAndLoad($_REQUEST['uri']);
+    $graph = EasyRdf\Graph::newAndLoad($_REQUEST['uri']);
     if (isset($_REQUEST['format']) && 'text' == $_REQUEST['format']) {
         echo '<pre>'.$graph->dump('text').'</pre>';
     } else {
