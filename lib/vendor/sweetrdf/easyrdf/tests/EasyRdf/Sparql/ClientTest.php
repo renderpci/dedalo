@@ -366,7 +366,7 @@ class ClientTest extends TestCase
         $this->assertEquals(new Resource('http://example.org/2'), $list[2]);
     }
 
-    public function checkUpdate(Http\Client $client)
+    public function checkUpdate(HttpClient $client)
     {
         $this->assertSame('INSERT DATA { <a> <p> <b> }', $client->getRawData());
         $this->assertSame('application/sparql-update', $client->getHeader('Content-Type'));
@@ -478,12 +478,12 @@ class ClientTest extends TestCase
          * setup mocks
          */
         // response
-        $response = $this->getMockBuilder(\EasyRdf\Http\Response::class)->disableOriginalConstructor()->getMock();
+        $response = $this->getMockBuilder(Http\Response::class)->disableOriginalConstructor()->getMock();
         $response->method('getStatus')->willReturn(204); // no content
         $response->method('isSuccessful')->willReturn(true);
 
         // client
-        $easyRdfHttpClient = $this->getMockBuilder(\EasyRdf\Http\Client::class)
+        $easyRdfHttpClient = $this->getMockBuilder(HttpClient::class)
             ->disableOriginalConstructor()
             ->getMock();
         $easyRdfHttpClient->method('request')->willReturn($response);
@@ -514,7 +514,7 @@ class ClientTest extends TestCase
          * setup mocks
          */
         // response
-        $response = $this->getMockBuilder(\EasyRdf\Http\Response::class)->disableOriginalConstructor()->getMock();
+        $response = $this->getMockBuilder(Http\Response::class)->disableOriginalConstructor()->getMock();
         $response->method('getStatus')->willReturn(204); // no content
         $response->method('isSuccessful')->willReturn(true);
 

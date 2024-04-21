@@ -13,20 +13,20 @@ require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 require_once __DIR__.'/html_tag_helpers.php';
 
 if (isset($_REQUEST['enable_arc']) && $_REQUEST['enable_arc']) {
-    \EasyRdf\Format::registerSerialiser('ntriples', 'EasyRdf\Serialiser\Arc');
-    \EasyRdf\Format::registerSerialiser('posh', 'EasyRdf\Serialiser\Arc');
-    \EasyRdf\Format::registerSerialiser('rdfxml', 'EasyRdf\Serialiser\Arc');
-    \EasyRdf\Format::registerSerialiser('turtle', 'EasyRdf\Serialiser\Arc');
+    EasyRdf\Format::registerSerialiser('ntriples', 'EasyRdf\Serialiser\Arc');
+    EasyRdf\Format::registerSerialiser('posh', 'EasyRdf\Serialiser\Arc');
+    EasyRdf\Format::registerSerialiser('rdfxml', 'EasyRdf\Serialiser\Arc');
+    EasyRdf\Format::registerSerialiser('turtle', 'EasyRdf\Serialiser\Arc');
 }
 
 if (isset($_REQUEST['enable_rapper']) && $_REQUEST['enable_rapper']) {
-    \EasyRdf\Format::registerSerialiser('dot', 'EasyRdf\Serialiser\Rapper');
-    \EasyRdf\Format::registerSerialiser('rdfxml', 'EasyRdf\Serialiser\Rapper');
-    \EasyRdf\Format::registerSerialiser('turtle', 'EasyRdf\Serialiser\Rapper');
+    EasyRdf\Format::registerSerialiser('dot', 'EasyRdf\Serialiser\Rapper');
+    EasyRdf\Format::registerSerialiser('rdfxml', 'EasyRdf\Serialiser\Rapper');
+    EasyRdf\Format::registerSerialiser('turtle', 'EasyRdf\Serialiser\Rapper');
 }
 
 $format_options = [];
-foreach (\EasyRdf\Format::getFormats() as $format) {
+foreach (EasyRdf\Format::getFormats() as $format) {
     if ($format->getSerialiserClass()) {
         $format_options[$format->getLabel()] = $format->getName();
     }
@@ -67,7 +67,7 @@ Enable Rapper? <?php echo check_box_tag('enable_rapper'); ?><br />
 
 <?php
 if (isset($_REQUEST['uri'])) {
-    $graph = new \EasyRdf\Graph();
+    $graph = new EasyRdf\Graph();
 
     // 1st Technique
     $me = $graph->resource($_REQUEST['uri'], 'foaf:Person');

@@ -390,7 +390,7 @@ class Resource implements \ArrayAccess
      * @param string|array $property The name of the property (e.g. foaf:name)
      * @param string       $lang     The language to filter by (e.g. en)
      *
-     * @return \EasyRdf\Literal Literal value associated with the property
+     * @return Literal Literal value associated with the property
      */
     public function getLiteral($property, $lang = null)
     {
@@ -507,7 +507,7 @@ class Resource implements \ArrayAccess
      *
      * This method will return an empty array if the resource has no properties.
      *
-     * @return array Array of full URIs
+     * @return array<string> Array of full URIs
      */
     public function propertyUris()
     {
@@ -680,14 +680,15 @@ class Resource implements \ArrayAccess
      * is available then it will return null.
      *
      * @param string|null $lang
+     * @param array<non-empty-string> $labelProperties List of shortened label properties (e.g. rdfs:label)
      *
-     * @return \EasyRdf\Literal|null an instance of Literal which contains the label or null
+     * @return Literal|null an instance of Literal which contains the label or null
      */
-    public function label($lang = null)
+    public function label($lang = null, array $labelProperties = [])
     {
         $this->checkHasGraph();
 
-        return $this->graph->label($this->uri, $lang);
+        return $this->graph->label($this->uri, $lang, $labelProperties);
     }
 
     /** Return a human readable view of the resource and its properties

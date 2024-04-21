@@ -4,7 +4,7 @@
 
 ## About this fork 🚀
 
-This is a fork of EasyRdf which I maintain in my spare time. My objective is to keep EasyRdf alive and usable on latest PHP versions. Code is more or less maintained but not developement any further. If you wanna participate, feel free to open a pull request! For more information about this fork, scroll at the end of this document.
+This is a fork of EasyRdf which I maintain in my spare time. My objective is to keep EasyRdf alive and usable on latest PHP versions. Code is more or less maintained but not developed any further. If you wanna participate, feel free to open a pull request! For more information about this fork, scroll at the end of this document.
 
 ## About EasyRdf
 

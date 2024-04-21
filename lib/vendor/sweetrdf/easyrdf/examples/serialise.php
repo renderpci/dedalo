@@ -10,7 +10,7 @@
  */
 require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 
-$graph = new \EasyRdf\Graph();
+$graph = new EasyRdf\Graph();
 $me = $graph->resource('http://www.example.com/joe#me', 'foaf:Person');
 $me->set('foaf:name', 'Joseph Bloggs');
 $me->set('foaf:title', 'Mr');
@@ -18,7 +18,7 @@ $me->set('foaf:nick', 'Joe');
 $me->add('foaf:homepage', $graph->resource('http://example.com/joe/'));
 
 // I made these up; they are not officially part of FOAF
-$me->set('foaf:dateOfBirth', new \EasyRdf\Literal\Date('1980-09-08'));
+$me->set('foaf:dateOfBirth', new EasyRdf\Literal\Date('1980-09-08'));
 $me->set('foaf:height', 1.82);
 
 $project = $graph->newBnode('foaf:Project');
@@ -38,7 +38,7 @@ if (isset($_REQUEST['format'])) {
 
 <ul>
 <?php
-        foreach (\EasyRdf\Format::getFormats() as $f) {
+        foreach (EasyRdf\Format::getFormats() as $f) {
             if ($f->getSerialiserClass()) {
                 if ($f->getName() == $format) {
                     echo '<li><b>'.$f->getLabel()."</b></li>\n";

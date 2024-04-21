@@ -11,7 +11,7 @@
 require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 require_once __DIR__.'/html_tag_helpers.php';
 
-\EasyRdf\RdfNamespace::setDefault('og');
+EasyRdf\RdfNamespace::setDefault('og');
 ?>
 <html>
 <head>
@@ -24,7 +24,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 </head>
 <body>
 <?php
-$doc = \EasyRdf\Graph::newAndLoad('https://www.rottentomatoes.com/m/oceans_eleven');
+$doc = EasyRdf\Graph::newAndLoad('https://www.rottentomatoes.com/m/oceans_eleven');
 if ($doc->image) {
     echo content_tag('img', null, ['src' => $doc->image, 'class' => 'image']);
 }

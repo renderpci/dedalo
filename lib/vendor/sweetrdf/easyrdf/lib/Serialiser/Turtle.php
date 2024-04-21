@@ -318,7 +318,6 @@ class Turtle extends Serialiser
     {
         $turtle = '';
         foreach ($graph->resources() as $resource) {
-            /** @var \EasyRdf\Resource */
             // If the resource has no properties - don't serialise it
             $properties = $resource->propertyUris();
             if (0 == \count($properties)) {

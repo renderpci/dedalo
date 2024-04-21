@@ -44,7 +44,7 @@ use Test\TestCase;
  */
 class FormatTest extends TestCase
 {
-    /** @var \EasyRdf\Format */
+    /** @var Format */
     private $format;
 
     /**
@@ -320,7 +320,8 @@ class FormatTest extends TestCase
     public function testGetDefaultMimeTypeNoDefault()
     {
         $format2 = Format::register('my2', 'Other Format');
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $format2->getDefaultMimeType()
         );
     }
@@ -370,7 +371,8 @@ class FormatTest extends TestCase
     public function testGetExtensionNoDefault()
     {
         $format2 = Format::register('my2', 'Other Format');
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $format2->getDefaultExtension()
         );
     }
@@ -663,6 +665,24 @@ class FormatTest extends TestCase
         $this->assertStringEquals('', $format);
     }
 
+    /**
+     * Case with regex
+     *
+     *      /prefix\s|base\s/i
+     *
+     * was not precise enough and lead to (avoidable) wrong guesses.
+     */
+    public function testGuessFormatTurtleByPrefix()
+    {
+        $data = '<?xml version="1.0"?>
+        <Ontology xmlns="http://www.w3.org/2002/07/owl#"
+             xml:base="http://www.semanticweb.org/hsiehjulien/ontologies/2016/3/untitled-ontology-4"
+             ontologyIRI="http://www.semanticweb.org/hsiehjulien/ontologies/2016/3/untitled-ontology-4">
+            <Prefix name="" IRI="http://www.semanticweb.org/hsiehjulien/ontologies/2016/3/untitled-ontology-4#"/>
+            <Prefix name="owl" IRI="http://www.w3.org/2002/07/owl#"/>';
+        $this->assertStringEquals('rdfxml', Format::guessFormat($data));
+    }
+
     public function testGuessFormatByFilenameTtl()
     {
         $format = Format::guessFormat(
@@ -692,7 +712,8 @@ class FormatTest extends TestCase
 
     public function testGuessFormatUnknown()
     {
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             Format::guessFormat('blah blah blah')
         );
     }

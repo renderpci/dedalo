@@ -36,7 +36,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 
 <?php
 if (isset($_REQUEST['uri'])) {
-    $graph = \EasyRdf\Graph::newAndLoad($_REQUEST['uri'], 'rdfxml');
+    $graph = EasyRdf\Graph::newAndLoad($_REQUEST['uri'], 'rdfxml');
     $channel = $graph->get('rss:channel', '^rdf:type');
 
     echo '<p>Channel: '.link_to($channel->label(), $channel->get('rss:link'))."</p>\n";

@@ -13,12 +13,12 @@ $HOST_LANGUAGE = 'xhtml5';
 $REFERENCE_DISTILLER = 'http://www.w3.org/2012/pyRdfa/extract?format=nt&rdfagraph=output&uri=';
 $FIXTURE_DIR = __DIR__;
 
-\EasyRdf\RdfNamespace::set('test', 'http://www.w3.org/2006/03/test-description#');
-\EasyRdf\RdfNamespace::set('rdfatest', 'http://rdfa.info/vocabs/rdfa-test#');
+EasyRdf\RdfNamespace::set('test', 'http://www.w3.org/2006/03/test-description#');
+EasyRdf\RdfNamespace::set('rdfatest', 'http://rdfa.info/vocabs/rdfa-test#');
 
-$client = new \EasyRdf\Http\Client();
+$client = new EasyRdf\Http\Client();
 
-$manifest = \EasyRdf\Graph::newAndLoad('http://rdfa.info/test-suite/manifest.ttl');
+$manifest = EasyRdf\Graph::newAndLoad('http://rdfa.info/test-suite/manifest.ttl');
 foreach ($manifest->allOfType('test:TestCase') as $test) {
     if (!in_array($RDFA_VERSION, $test->all('rdfatest:rdfaVersion'))) {
         continue;

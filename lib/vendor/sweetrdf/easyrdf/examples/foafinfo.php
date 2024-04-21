@@ -28,7 +28,7 @@ require_once __DIR__.'/html_tag_helpers.php';
 
 <?php
         if (isset($_REQUEST['uri'])) {
-            $graph = \EasyRdf\Graph::newAndLoad($_REQUEST['uri']);
+            $graph = EasyRdf\Graph::newAndLoad($_REQUEST['uri']);
             if ('foaf:PersonalProfileDocument' == $graph->type()) {
                 $person = $graph->primaryTopic();
             } elseif ('foaf:Person' == $graph->type()) {
@@ -36,8 +36,8 @@ require_once __DIR__.'/html_tag_helpers.php';
             }
         }
 
-        if (isset($person)) {
-            ?>
+if (isset($person)) {
+    ?>
 
 <dl>
   <dt>Name:</dt><dd><?php echo $person->get('foaf:name'); ?></dd>
@@ -45,41 +45,41 @@ require_once __DIR__.'/html_tag_helpers.php';
 </dl>
 
 <?php
-            echo "<h2>Known Persons</h2>\n";
-            echo "<ul>\n";
-            foreach ($person->all('foaf:knows') as $friend) {
-                $label = $friend->label();
-                if (!$label) {
-                    $label = $friend->getUri();
-                }
-
-                if ($friend->isBNode()) {
-                    echo "<li>$label</li>";
-                } else {
-                    echo '<li>'.link_to_self($label, 'uri='.urlencode($friend)).'</li>';
-                }
-            }
-            echo "</ul>\n";
-
-            echo "<h2>Interests</h2>\n";
-            echo "<ul>\n";
-            foreach ($person->all('foaf:interest') as $interest) {
-                $label = $interest->label();
-                if ($label) {
-                    if ($interest->isBNode()) {
-                        echo "<li>$label</li>";
-                    } else {
-                        echo '<li>'.$interest->htmlLink($label).'</li>';
-                    }
-                }
-            }
-            echo "</ul>\n";
+    echo "<h2>Known Persons</h2>\n";
+    echo "<ul>\n";
+    foreach ($person->all('foaf:knows') as $friend) {
+        $label = $friend->label();
+        if (!$label) {
+            $label = $friend->getUri();
         }
 
-        if (isset($graph)) {
-            echo '<br />';
-            echo $graph->dump();
+        if ($friend->isBNode()) {
+            echo "<li>$label</li>";
+        } else {
+            echo '<li>'.link_to_self($label, 'uri='.urlencode($friend)).'</li>';
         }
+    }
+    echo "</ul>\n";
+
+    echo "<h2>Interests</h2>\n";
+    echo "<ul>\n";
+    foreach ($person->all('foaf:interest') as $interest) {
+        $label = $interest->label();
+        if ($label) {
+            if ($interest->isBNode()) {
+                echo "<li>$label</li>";
+            } else {
+                echo '<li>'.$interest->htmlLink($label).'</li>';
+            }
+        }
+    }
+    echo "</ul>\n";
+}
+
+if (isset($graph)) {
+    echo '<br />';
+    echo $graph->dump();
+}
 ?>
 </body>
 </html>

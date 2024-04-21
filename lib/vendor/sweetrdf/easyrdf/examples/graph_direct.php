@@ -17,7 +17,7 @@ require_once realpath(__DIR__.'/..').'/vendor/autoload.php';
 <body>
 
 <?php
-$graph = new \EasyRdf\Graph();
+$graph = new EasyRdf\Graph();
 $graph->addResource('http://example.com/joe', 'rdf:type', 'foaf:Person');
 $graph->addLiteral('http://example.com/joe', 'foaf:name', 'Joe Bloggs');
 $graph->addLiteral('http://example.com/joe', 'foaf:name', 'Joseph Bloggs');

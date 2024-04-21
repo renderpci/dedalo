@@ -57,7 +57,7 @@ class GraphTest extends TestCase
     /** @var \Test\EasyRdf\Http\MockClient */
     private $client;
 
-    /** @var \EasyRdf\Graph */
+    /** @var Graph */
     private $graph;
 
     /** @var string */
@@ -735,7 +735,8 @@ class GraphTest extends TestCase
     {
         $this->graph->addLiteral($this->uri, 'foaf:homepage', 'http://example.com/');
         $this->graph->addLiteral('http://example.com/', 'dc:title', 'My Homepage');
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $this->graph->get($this->uri, 'foaf:homepage/dc:title')
         );
     }
@@ -782,14 +783,16 @@ class GraphTest extends TestCase
 
     public function testGetNonExistantLiteral()
     {
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $this->graph->getLiteral($this->uri, 'rdf:type')
         );
     }
 
     public function testGetNonExistantResource()
     {
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $this->graph->get('foo:bar', 'foo:bar')
         );
     }
@@ -2073,6 +2076,35 @@ class GraphTest extends TestCase
         $this->assertStringEquals('', $this->graph->label($this->uri));
     }
 
+    /**
+     * Tests behavior of label() when a custom label property list is provided.
+     */
+    public function testLabelWithCustomPropertyLabels()
+    {
+        // add test data to graph
+        $res1 = new Resource('http://foo', $this->graph);
+        $res1->addLiteral('rdfs:label', [
+            new Literal('rdfs label de', 'de'),
+            new Literal('rdfs label en', 'en'),
+        ]);
+        $res1->addLiteral('skos:prefLabel', 'skos prefLabel');
+        $res1->addLiteral('http://xmlns.com/foaf/0.1/name', 'foaf name');
+
+        // checks
+        $this->assertStringEquals('skos prefLabel', $this->graph->label($res1->getUri()));
+        $this->assertStringEquals('rdfs label de', $this->graph->label($res1->getUri(), 'de'));
+        $this->assertStringEquals('foaf name', $this->graph->label($res1->getUri(), null, ['foaf:name']));
+
+        // include weird behavior of current EasyRdf: literal was added with full URI as property (http://xmlns.com/foaf/0.1/name)
+        // but you have to use shortened property URI to get label
+        $this->assertStringEquals('', $this->graph->label($res1->getUri(), null, ['http://xmlns.com/foaf/0.1/name']));
+
+        // include behavior check for newly introduced label properties
+        $res1->addLiteral('http://dummy/label', 'dummy label');
+        RdfNamespace::set('dummy', 'http://dummy/');
+        $this->assertStringEquals('dummy label', $this->graph->label($res1->getUri(), null, ['dummy:label']));
+    }
+
     public function testCountTriples()
     {
         $this->assertSame(3, $this->graph->countTriples());
@@ -2127,7 +2159,8 @@ class GraphTest extends TestCase
     public function testMagicGetNonExistant()
     {
         RdfNamespace::setDefault('rdf');
-        $this->assertStringEquals('',
+        $this->assertStringEquals(
+            '',
             $this->graph->test
         );
     }

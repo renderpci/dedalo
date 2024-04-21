@@ -73,7 +73,7 @@ class Result extends \ArrayIterator
      * @param string $data     The SPARQL result body
      * @param string $mimeType The MIME type of the result
      *
-     * @throws \EasyRdf\Exception
+     * @throws Exception
      */
     public function __construct($data, $mimeType)
     {

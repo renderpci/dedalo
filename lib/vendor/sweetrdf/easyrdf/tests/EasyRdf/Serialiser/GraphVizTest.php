@@ -45,7 +45,7 @@ use Test\TestCase;
 
 class GraphVizTest extends TestCase
 {
-    /** @var \EasyRdf\Graph */
+    /** @var Graph */
     private $graph;
 
     /** @var GraphViz */

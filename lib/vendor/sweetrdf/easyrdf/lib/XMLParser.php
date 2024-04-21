@@ -59,12 +59,6 @@ class XMLParser extends \XMLReader
     /** Callback to call when significant whitespace is encountered */
     public $whitespaceCallback;
 
-    public bool $isEmptyElement;
-
-    public string $name;
-
-    public int $nodeType;
-
     /** Parse an XML string. Calls the callback methods
      *  when various nodes of an XML document are encountered
      */
