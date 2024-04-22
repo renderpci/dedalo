@@ -132,13 +132,16 @@ class component_portal extends component_relation_common {
 	* GET_CURRENT_SECTION_FILTER_DATA
 	* Gets fast project data of current section
 	* Search component filter in current section and get the component data
-	* @return array $component_filter_dato
+	* @return array|null $component_filter_dato
 	*/
-	public function get_current_section_filter_data() : array {
+	public function get_current_section_filter_data() : ?array {
 
 		// short vars
 			$section_id		= $this->get_section_id();
 			$section_tipo	= $this->get_section_tipo();
+
+		// default value
+			$component_filter_dato = null;
 
 		if ($section_tipo===DEDALO_FILTER_SECTION_TIPO_DEFAULT) {
 
