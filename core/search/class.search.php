@@ -290,6 +290,10 @@ class search {
 					. ' sql_query: ' . $sql_query
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string());
+				}
 				// response
 				$response = new stdClass();
 					$response->ar_records	= [];
