@@ -175,43 +175,6 @@ export const ui = {
 				// And insert the rules into CSS style set.
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
 					if (model!=='component_filter') {
-						// DES
-							// const legacy_selector = '.wrap_component'
-							// if (element_css[legacy_selector]) {
-							// 	// mixin
-							// 		if (element_css[legacy_selector].mixin){
-							// 			// width from mixin
-							// 			const found = element_css[legacy_selector].mixin.find(el=> el.substring(0,7)==='.width_') // like .width_33
-							// 			if (found) { //  && found!=='.width_50'
-							// 				// wrapper.style['flex-basis'] = found.substring(7) + '%'
-							// 				// wrapper.style['--width'] = found.substring(7) + '%'
-							// 				wrapper.style.setProperty('--component_width', found.substring(7) + '%');
-							// 			}
-							// 		}
-							// 	// style
-							// 		if (element_css[legacy_selector].style) {
-							// 			// width from style
-							// 			if (element_css[legacy_selector].style.width) {
-							// 				// wrapper.style['flex-basis'] = element_css[legacy_selector].style.width;
-							// 				// wrapper.style['--width'] = element_css[legacy_selector].style.width
-							// 				wrapper.style.setProperty('--component_width', element_css[legacy_selector].style.width);
-							// 			}
-							// 			// display none from style
-							// 			if (element_css[legacy_selector].style.display && element_css[legacy_selector].style.display==='none') {
-							// 				wrapper.classList.add('display_none')
-							// 			}
-							// 		}
-							// }
-							// const legacy_selector_content_data = '.content_data'
-							// if (element_css[legacy_selector_content_data] && options.content_data) {
-							// 	// style
-							// 		if (element_css[legacy_selector_content_data].style) {
-							// 			// height from style
-							// 			if (element_css[legacy_selector_content_data].style.height) {
-							// 				options.content_data.style.setProperty('height', element_css[legacy_selector_content_data].style.height);
-							// 			}
-							// 		}
-							// }
 						if (instance.context.css) {
 							const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
 							set_element_css(selector, element_css)
