@@ -128,8 +128,10 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_EDIT
-		* Component wrapper unified builder
-		* @param object instance (self component instance)
+		* Component wrapper unified builder.
+		* Constructs an edit node wrapper element for a given instance.
+		* @param object instance
+		* 	current component instance
 		* @param object options = {}
 		* 	Specific objects to place into the wrapper, like 'label', 'top', buttons, filter, paginator, content_data)
 		* @return HTMLElement wrapper
@@ -137,14 +139,14 @@ export const ui = {
 		build_wrapper_edit : (instance, options={}) => {
 
 			// short vars
-				const model					= instance.model 	// like component_input-text
-				const type					= instance.type 	// like 'component'
-				const tipo					= instance.tipo 	// like 'rsc26'
-				const section_tipo			= instance.section_tipo 	// like 'rsc26'
-				const mode					= instance.mode 	// like 'edit'
+				const model					= instance.model // like 'component_input_text'
+				const type					= instance.type // like 'component'
+				const tipo					= instance.tipo // like 'rsc26'
+				const section_tipo			= instance.section_tipo // like 'rsc26'
+				const mode					= instance.mode // like 'edit'
 				const view					= instance.view || instance.context.view || 'default'
 				const label					= instance.label // instance.context.label
-				const element_css			= instance.context.css || {}
+				const ontology_css			= instance.context.css || null // Ontology CSS
 				const state_of_component	= instance.context.properties?.state_of_component || null
 
 			// options
@@ -155,44 +157,47 @@ export const ui = {
 
 			// wrapper
 				const wrapper = document.createElement('div')
-				// css
-					const wrapper_structure_css = typeof element_css.wrapper!=='undefined' ? element_css.wrapper : []
+
+				// CSS
+					// base styles
 					const ar_css = [
 						'wrapper_' + type,
 						model,
 						tipo,
 						section_tipo +'_'+ tipo,
-						mode,
-						...wrapper_structure_css
+						mode
 					]
-					if (add_styles) {ar_css.push(...add_styles)}
-					if (view) {ar_css.push('view_'+view)}
-					if (mode==='search') ar_css.push('tooltip_toggle')
+					// view style
+					if (view) {
+						ar_css.push('view_' + view)
+					}
+					// search styles
+					if (mode==='search') {
+						ar_css.push('tooltip_toggle')
+					}
+					// custom added styles
+					if (add_styles) {
+						ar_css.push(...add_styles)
+					}
+					// set wrapper direct styles
 					wrapper.classList.add(...ar_css)
 
-				// Ontology CSS definition
-				// Get the ontology CSS defined into the ontology properties.
-				// And insert the rules into CSS style set.
-				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
-					if (model!=='component_filter') {
-						if (instance.context.css) {
-							const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
-							set_element_css(selector, element_css)
-						}
-					}//end if (model!=='component_filter')
+					// Ontology CSS. Apply ontology CSS if available
+					// Get the ontology CSS defined into the ontology properties and insert the rules into CSS style set.
+					if (ontology_css) {
+						const selector = `${section_tipo}_${tipo}.${tipo}.${mode}`
+						set_element_css(selector, ontology_css)
+					}
 
-				// read only. Disable events on permissions <2
+				// read only. Add 'disabled_component' class if permissions are less than 2
 					if (!instance.permissions || parseInt(instance.permissions)<2) {
 						wrapper.classList.add('disabled_component')
 					}
 
 				// event click . Activate component on event
-					wrapper.addEventListener('click', (e)=>{
+					const mousedown_handler = (e)=> {
 						e.stopPropagation()
-					})
-					wrapper.addEventListener('mousedown', fn_wrapper_mousedown)
-					function fn_wrapper_mousedown(e) {
-						e.stopPropagation()
+
 						ui.component.activate(instance)
 
 						if(SHOW_DEBUG===true) {
@@ -212,13 +217,17 @@ export const ui = {
 								return
 							}
 						}
-					}//end fn_wrapper_mousedown
+					}//end mousedown_handler
+					wrapper.addEventListener('click', (e)=>{
+						e.stopPropagation()
+					})
+					wrapper.addEventListener('mousedown', mousedown_handler)
 
 			// label. If node label received, it is placed at first. Else a new one will be built from scratch (default)
-				if (options.label===null) { //  || options.label===null
-					// no label add
+				if (options.label===null) {
+					// no label add (line view cases for example)
 				}else if(options.label) {
-					// add custom label
+					// add custom label node
 					wrapper.appendChild(options.label)
 					// set pointer
 					wrapper.label = options.label
@@ -226,21 +235,19 @@ export const ui = {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
+						class_name		: 'label',
 						inner_html		: label
 					})
 					wrapper.appendChild(component_label)
 					// set pointer
 					wrapper.label = component_label
-					// css
-					const label_structure_css = typeof element_css.label!=='undefined' ? element_css.label : []
-					const ar_css = ['label', ...label_structure_css]
-					component_label.classList.add(...ar_css)
-					// state_of_component like:
-					// {
-					// "deprecated": {
-					// 	"msg": "Deprecated component .... ",
-					// 	"target_component": "rsc44"
-					// }
+					// state_of_component
+						// sample:
+						// {
+						// "deprecated": {
+						// 	"msg": "component_deprecated",
+						// 	"target_component": "rsc44"
+						// }
 					if (state_of_component) {
 						for (const [key, value] of Object.entries(state_of_component)) {
 							const icon = ui.create_dom_element({
@@ -297,74 +304,7 @@ export const ui = {
 
 			// content_data
 				if (options.content_data) {
-					// const content_data = options.content_data
-					// // css
-					// 	const content_data_structure_css = typeof element_css.content_data!=='undefined' ? element_css.content_data : []
-					// 	const ar_css = ['content_data', type, ...content_data_structure_css]
-					// 	content_data.classList.add(...ar_css)
 					wrapper.appendChild(options.content_data)
-				}
-
-			// tooltip
-				// if (mode==='search' && instance.context.search_options_title) {
-				// 	//fragment.classList.add('tooltip_toggle')
-				// 	const tooltip = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'tooltip hidden_tooltip',
-				// 		inner_html		: instance.context.search_options_title || '',
-				// 		parent			: fragment
-				// 	})
-				// }
-
-			// debug
-				if(SHOW_DEBUG===true) {
-					// wrapper.addEventListener('click', function(e){
-					// 	if (e.metaKey && e.altKey) {
-					// 		e.stopPropagation()
-					// 		e.preventDefault()
-					// 		console.log('/// refreshing instance:', instance);
-					// 		instance.refresh({
-					// 			build_autoload : true,
-					// 			render_level : 'content'
-					// 		})
-					// 		return
-					// 	}
-					// 	if (e.altKey) {
-					// 		e.stopPropagation()
-					// 		e.preventDefault()
-					// 		// common.render_tree_data(instance, document.getElementById('debug'))
-					// 		console.log('/// selected instance:', instance);
-					// 		return
-					// 	}
-					// })
-
-					// test css
-						// const my_css = {
-						//    '.cssinjs-btn': {
-						//       "color": "white",
-						//       "background": "black"
-						//     }
-						// }
-						// const toCssString = css => {
-						//   let result = ''
-						//   for (const selector in css) {
-						//     result += selector + ' {' // .cssinjs-btn {
-						//     for (const property in css[selector]) {
-						//       // color: white;
-						//       result += property + ': ' + css[selector][property] + ';'
-						//     }
-						//     result += '}'
-						//   }
-						//   return result
-						// }
-						// // Render styles.
-						// let style = document.querySelector("#el_id_del_style")
-						// if (!style) {
-						// 	style = document.createElement('style')
-						// 	style.id = 'el_id_del_style'
-						// 	document.head.appendChild(style)
-						// }
-						// style.textContent += toCssString(my_css) + '\n'
 				}
 
 
