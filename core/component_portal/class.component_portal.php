@@ -168,6 +168,8 @@ class component_portal extends component_relation_common {
 				// throw new Exception("Error Processing Request: 'component_filter' is empty 1", 1);
 				debug_log(__METHOD__
 					. " Error Processing Request: 'component_filter' is empty 1 " . PHP_EOL
+					. ' A component filter is needed to use the portals because you need to
+						set a filter value for the new records created in the target section' . PHP_EOL
 					. ' $ar_children_tipo: '.to_string($ar_children_tipo)
 					, logger::ERROR
 				);
