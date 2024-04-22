@@ -1461,9 +1461,13 @@ abstract class common {
 
 		// properties
 			$properties = $this->get_properties() ?? new stdClass();
+			$remove_edit_css = false;
 			// set properties of the section_list node
-			if($model==='section' && $this->mode==='list'){
-				// section list
+			// section and component_portal could has a section_list node with the list definition
+			// (in section case is mandatory but in component_portal is optional)
+			// in this cases the properties will be get from the section_list instead the main node
+			if(($model==='section' || $model==='component_portal') && $this->mode==='list'){
+				// section list, get the section_list node as child of the main component.
 				$ar_terms = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 					$this->tipo,
 					'section_list',
@@ -1473,11 +1477,22 @@ abstract class common {
 				if(isset($ar_terms[0])) {
 					$RecordObj_dd	= new RecordObj_dd($ar_terms[0]);
 					$properties		= $RecordObj_dd->get_properties();
+				}else{
+					// in cases that section_list is not present (usually component_portal)
+					// remove the edit css, it happens because the main term, by default, defines the edit behavior in ontology
+					$remove_edit_css = true;
 				}
+			}else{
+				// all other components need to remove edit css
+				$remove_edit_css = true;
 			}
 
 		// css
-			$css = $properties->css ?? null; // new stdClass();
+			$css = $properties->css ?? null;
+			$css = ($remove_edit_css === true && $this->mode==='list')
+				? null
+				: $css;
+
 			if (isset($properties->css)) {
 				// remove from properties object
 				unset($properties->css);

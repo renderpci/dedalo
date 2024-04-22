@@ -191,11 +191,28 @@ class css {
 
 	/**
 	* BUILD_STRUCTURE_CSS
+	*
+	* DEACTIVE INTO V6!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+	* NOW THE COMPONENTS AND SECTION SET THE ONTOLOGY CSS IN CLIENT
+	* ONTOLOGY CSS DEFINTION IS PARSE INTO class.common.php INSIDE get_structure_context() AND SET INTO CONTEXT->CSS
+	* AND THE CSS IS ASSIGNED IN CLIENT
+	*
+	* SEE
+	*
+	* COMPONENTS:
+	* common/ui.js build_wrapper_edit or build_wrapper_lit
+	*
+	* SECTION:
+	* view_base_list_section render or
+	* view_default_edit_section.js render()
+	* view_default_list_section.js render()
+	*
 	* @return object $response
 	*/
 	public static function build_structure_css() {
 		$start_time=start_time();
 
+		// SEE common/ui.js build_wrapper_edit for v6 model!!!!
 		$response = new stdClass();
 			$response->result	= true;
 			$response->msg		= 'Ignored build_structure_css in v6';
