@@ -869,8 +869,8 @@ export const get_buttons = (self) => {
 
 						// modal_body
 							const iframe_container = ui.create_dom_element({
-								element_type : 'div',
-								class_name : 'iframe_container'
+								element_type	: 'div',
+								class_name		: 'iframe_container'
 							})
 							const iframe = ui.create_dom_element({
 								element_type	: 'iframe',
