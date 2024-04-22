@@ -430,6 +430,10 @@ abstract class common {
 					. ' ' . $msg
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace();
+					dump($bt, ' bt ++ '.to_string());
+				}
 				return null;
 			}
 			// area model case
