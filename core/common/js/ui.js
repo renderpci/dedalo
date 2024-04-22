@@ -170,7 +170,10 @@ export const ui = {
 					if (mode==='search') ar_css.push('tooltip_toggle')
 					wrapper.classList.add(...ar_css)
 
-				// legacy CSS
+				// Ontology CSS definition
+				// Get the ontology CSS defined into the ontology properties.
+				// And insert the rules into CSS style set.
+				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
 					if (model!=='component_filter') {
 						// DES
 							// const legacy_selector = '.wrap_component'
@@ -517,6 +520,7 @@ export const ui = {
 				const tipo			= instance.tipo 		// like 'rsc26'
 				const section_tipo	= instance.section_tipo // like 'oh1'
 				const view			= instance.view || instance.context.view || 'default'
+				const element_css	= instance.context.css || {}
 
 			// wrapper
 				const wrapper = document.createElement('div')
@@ -540,6 +544,18 @@ export const ui = {
 					// 	const selector = `${section_tipo}_${tipo}.${tipo}.view_${view}`
 					// 	set_element_css(selector, element_css['view_'+view])
 					// }
+
+				// Ontology CSS definition
+				// Get the ontology CSS defined into the ontology properties.
+				// And insert the rules into CSS style set.
+				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
+					if (model!=='component_filter') {
+						// CSS is moved from properties to specific property in context
+						if (instance.context.css) {
+							const selector = `${section_tipo}_${tipo}.${tipo}.${'list'}`
+							set_element_css(selector, element_css)
+						}
+					}//end if (model!=='component_filter')
 
 			// value_string. span value. Add span if value_string is received
 				if (value_string) {
