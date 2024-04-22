@@ -2755,7 +2755,7 @@ class component_relation_common extends component_common {
 							$current_data->section_id	= $section_id;
 
 						// resolve the ddo_chain recursively
-						$component_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $init_ddo, $current_data);
+						$component_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $init_ddo, $current_data) ?? [];
 
 						// if the fixed_filter is used to search into a section_id, join the result of the locators into a flat string separated by commas.
 						// this action optimize the search by using an IN SQL statement.
@@ -3168,8 +3168,8 @@ class component_relation_common extends component_common {
 					, logger::WARNING
 				);
 
-				# Default value is used
-				# Temp section case Use default project here
+				// Default value is used
+				// Temp section case Use default project here
 				$locator = new locator();
 					$locator->set_section_tipo(DEDALO_SECTION_PROJECTS_TIPO);
 					$locator->set_section_id(DEDALO_DEFAULT_PROJECT);
