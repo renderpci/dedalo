@@ -297,10 +297,11 @@ final class dd_date_test extends TestCase {
 		);
 
 		// $test = $unix_timestamp===1689159693; // old version (6.1)
-		$test = $unix_timestamp>1689159693;
+		$reference = 1689142563;
+		$test = $unix_timestamp>$reference;
 		$this->assertTrue(
 			$test,
-			'expected true (>1689159693), but received is: ' . to_string( $test ) . PHP_EOL
+			'expected true (>'.$reference.'), but received is: ' . to_string( $test ) . PHP_EOL
 			.'result unix_timestamp: ' . to_string($unix_timestamp)
 		);
 	}//end test_get_unix_timestamp
