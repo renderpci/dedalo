@@ -771,23 +771,6 @@ export const get_buttons = (self) => {
 				const fn_add = async function(e) {
 					e.stopPropagation()
 
-					// check if the data exceeded limit
-					// current_value. Get the current_value of the component
-						const current_value	= self.data.value || []
-
-					// data_limit. Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
-						const data_limit = self.context.properties.data_limit
-						if(data_limit && current_value.length>=data_limit){
-							console.log("[add_value] Data limit is exceeded!");
-							// notify to user about the limit
-							const data_limit_label = (
-								get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit ='
-							) + ' ' + data_limit
-							window.alert(data_limit_label)
-							// stop the process
-							return
-						}
-
 					// target_section_tipo. to add section selector
 						const target_section_tipo = target_section_length > 1
 							? false
