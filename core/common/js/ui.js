@@ -3164,7 +3164,7 @@ export const ui = {
 		// callback wait (expect promise resolving DOM node)
 			const result_node = await callback()
 			if (!result_node) {
-				console.warn('Unexpected result. no node returned from callback:', options);
+				console.warn('Unexpected result. no node returned from callback. Removing container_placeholder:', options);
 				container_placeholder.remove()
 				return null
 			}
