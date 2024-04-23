@@ -111,10 +111,18 @@ final class ImageMagick {
 		# get thumbnail identification
 		$ar_valid_layers = [];
 		if(!isset($ar_layers)){
-			$layers_file_info = (array)self::get_layers_file_info( $source_file );
-			foreach ($layers_file_info as $layer_key => $layer_type) {
-				if ( strtoupper($layer_type) !== 'REDUCEDIMAGE' ) {
-					$ar_valid_layers[] = (int)$layer_key;
+
+			// get the layer number of the image
+			// layer number include the layer 0 that is a flat version of the image,
+			// in tiff the layer 0 is a flat without transparency and is not possible to use it
+			// in psd format layer 0 is a flat version with transparency.
+			// to be compatible doesn't use the layer 0
+			$layer_number = (int)self::get_layers_file_info( $source_file );
+
+			// fill the valid layers removing the layer 0
+			if($layer_number > 1){
+				for ($i=1; $i < $layer_number; $i++) {
+					$ar_valid_layers[] = $i;
 				}
 			}
 		}else{
@@ -137,6 +145,20 @@ final class ImageMagick {
 
 		// Middle flags : Command flags between source and output files.
 			$middle_flags = '';
+
+			// when the image has layer remove the composite and flatten option to preserve the transparency
+			if(!empty($ar_valid_layers)){
+				$composite		= false;
+				$flatten		= false;
+
+				// set white background when the final image is opaque (as .jpg images)
+				$background = ($is_opaque === true)
+					? '-background "#FFFFFF"'
+					: '-background none';
+
+				// set the layer merge with his relative position into the image
+				$middle_flags	.=' -layers coalesce '.$background.' -layers merge ';
+			}
 
 			$middle_flags .= ($thumbnail===true)
 				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
@@ -257,40 +279,49 @@ final class ImageMagick {
 	* @param string $source_file
 	* @return array $ar_layers
 	*/
-	public static function get_layers_file_info( string $source_file ) : array {
+	public static function get_layers_file_info( string $source_file ) : int {
 
 		$ar_layers = array();
 
-		// tiff info. Get the type of TIFF format:
-			// 1 single image
-			// 2 multipage NOT SUPPORTED SPLIT THE IMAGES BEFORE IMPORT AND CONVERT
-			// 3 true layer tiff
+		// tiff info. Get the layer number of TIFF (PSD use the same property) :
+
 			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
+			// the result could be:
+			// 1 		- without layer, for the flatten images
+			// 8 true 	- the number of the layers and bolean true, (PSD files doesn't has the bool)
+			// the layer number include the layer 0, that is a flat image of all layers
+			$ar_lines		= explode(" ", $tiff_format);
+			$layer_number	= (int)$ar_lines[0];
 
-		// image format
-			$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
-			$output		= shell_exec($command);
-
-		// parse output
-			if (!empty($output)) {
-
-				$output		= trim($output);
-				$ar_lines	= explode("\n", $output);
-				foreach ($ar_lines as $key => $value) {
-
-					$ar_part2	= explode(":", $value);
-					$layer_key	= $ar_part2[0];
-
-					$layer_type = ($tiff_format<=2 && $key>0)
-						? 'REDUCEDIMAGE'
-						: ($ar_part2[1] ?? null);
-
-					$ar_layers[$layer_key] = $layer_type;
-				}
+			// if layer number is greater than 1 send the number
+			if($layer_number > 1 ){
+				return $layer_number;
+			}else{
+				return 1; //$ar_lines[0]
 			}
 
-		return $ar_layers;
+		// // image format
+		// 	$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
+		// 	$output		= shell_exec($command);
+		// // parse output
+		// 	if (!empty($output)) {
+		// 		$output		= trim($output);
+		// 		$ar_lines	= explode("\n", $output);
+		// 		foreach ($ar_lines as $key => $value) {
+
+		// 			$ar_part2	= explode(":", $value);
+		// 			$layer_key	= $ar_part2[0];
+
+		// 			// $layer_type = ($tiff_format<=2 && $key>0)
+		// 			// 	? 'REDUCEDIMAGE'
+		// 			// 	: ($ar_part2[1] ?? null);
+
+		// 			$ar_layers[$layer_key] = $ar_part2[1];;
+		// 		}
+		// 	}
+
+		// return $ar_layers;
 	}//end get_layers_file_info
 
 
