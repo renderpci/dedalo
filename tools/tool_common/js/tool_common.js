@@ -641,6 +641,7 @@ const view_modal = async function(options) {
 					container			: body,
 					label				: tool_context.label,
 					preserve_content	: false,
+					replace_container	: true,
 					callback			: async () => {
 
 						await tool_instance.build(true)
@@ -657,10 +658,15 @@ const view_modal = async function(options) {
 
 						// body
 						wrapper.slot = 'body'
-						body.replaceWith(wrapper);
+						// body.replaceWith(wrapper);
 
 						// pointer from wrapper to modal
 						wrapper.modal = modal
+
+						// ! note that function 'load_item_with_spinner' will replace
+						// body content with tool instance rendered node
+
+						return wrapper
 					}
 				})
 			}
