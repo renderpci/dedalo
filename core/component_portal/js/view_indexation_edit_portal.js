@@ -88,6 +88,8 @@ view_indexation_edit_portal.render = async function(self, options) {
 		}
 
 	// buttons
+		// ! configure interface to avoid display modal button_delete_link_and_record
+		self.show_interface.button_delete_link_and_record = false
 		const buttons = get_buttons(self)
 
 	// wrapper. ui build_edit returns component wrapper

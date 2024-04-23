@@ -473,6 +473,9 @@ export const render_column_remove = function(options) {
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
+	// short vars
+		const show_interface = self.show_interface || {}
+
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
@@ -542,8 +545,9 @@ export const render_column_remove = function(options) {
 					})
 
 				// button_unlink_and_delete (Deletes real target record)
-					const display_delete_record = options.caller.view!=='indexation'
-					if (display_delete_record && button_delete && button_delete.permissions>1) {
+					// interface control defined in Ontology properties. Default is true set in common init
+					const button_delete_link_and_record	= show_interface.button_delete_link_and_record
+					if (button_delete_link_and_record && button_delete.permissions>1) {
 						const button_unlink_and_delete = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'danger remove',
