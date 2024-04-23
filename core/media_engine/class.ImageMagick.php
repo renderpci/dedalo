@@ -22,7 +22,7 @@ final class ImageMagick {
 		# Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0777,true)) {
+			if(!mkdir($folder_path, 0750, true)) {
 				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
 			}
 		}
@@ -93,7 +93,7 @@ final class ImageMagick {
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
-			if(!mkdir($folder_path, 0777,true)) {
+			if(!mkdir($folder_path, 0750, true)) {
 				debug_log(__METHOD__
 					." Error on create folder ". PHP_EOL
 					. 'folder_path: ' . $folder_path
