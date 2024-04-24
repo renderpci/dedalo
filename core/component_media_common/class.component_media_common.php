@@ -2034,7 +2034,8 @@ class component_media_common extends component_common {
 					// original_upload_date
 					if (!isset($dato[0]->original_upload_date)) {
 
-						$file_path = $this->get_original_file_path($original_quality) .'/'. $original_normalized_name;
+						$file_path = $this->get_media_path_dir($original_quality) .'/'. $original_normalized_name;
+
 						if (file_exists($file_path)) {
 							$modification_time				= filectime($file_path);
 							$dato[0]->original_upload_date	= !empty($modification_time)
