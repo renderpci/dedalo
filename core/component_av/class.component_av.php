@@ -370,8 +370,6 @@ class component_av extends component_media_common {
 			}
 
 		// thumb_path
-			$file_name			= $this->get_id();
-
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
