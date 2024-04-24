@@ -289,13 +289,92 @@ class component_image extends component_media_common {
 		$original_uploaded_file = null;
 
 		$dato = $this->get_dato();
-		if (isset($dato[0]) && isset($dato[0]->original_normalized_name)) {
+
+		// not in dato case
+		if(!isset($dato[0]) || !isset($dato[0]->original_normalized_name)) {
+
+			$original_files	= $this->get_original_files();
+			$count			= count( $original_files );
+
+			if($count === 1){
+
+				$original_file = $original_files[0];
+
+			}else{
+
+				$ar_file_object = [];
+
+				foreach ($original_files as $file) {
+
+					$modification_time = filectime($file);
+					$extension = get_file_extension($file);
+
+					$file_object = new stdClass();
+						$file_object->modification_time	= $modification_time;
+						$file_object->extension			= $extension;
+						$file_object->file				= $file;
+
+					$ar_file_object[] = $file_object;
+
+				}
+				usort($ar_file_object, fn($a, $b) => $a->modification_time - $b->modification_time);
+
+				// iterate from oldest to newest
+				foreach ($ar_file_object as $file) {
+
+					if( $file->extension !== DEDALO_IMAGE_EXTENSION
+						&& !in_array($file->extension, DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)
+						&& in_array($file->extension, DEDALO_IMAGE_EXTENSIONS_SUPPORTED)){
+
+							$original_file = $file->file;
+							break;
+					}
+				}
+
+				if(!isset($original_file)){
+					foreach ($ar_file_object as $file) {
+						if( in_array($file->extension, DEDALO_IMAGE_EXTENSIONS_SUPPORTED)){
+							$original_file = $file->file;
+							break;
+						}
+					}
+				}
+			}
+
+			if(isset($original_file)){
+
+				// no previous dato exists case
+					if(!isset($dato[0])){
+						// create a new dato from scratch
+						$files_info = $this->get_files_info();
+						$dato_item = (object)[
+							'files_info' => $files_info
+						];
+						$dato = [$dato_item];
+					}
+
+				// original_normalized_name
+				$dato[0]->original_normalized_name	= basename($original_file);
+
+				// original_upload_date
+				$modification_time					= filectime($original_file);
+				$dato[0]->original_upload_date		= dd_date::get_dd_date_from_unix_timestamp($modification_time);
+	dump($dato, ' dato ++ '.to_string($this->section_id));
+				// update dato and save it
+				$this->set_dato($dato);
+				$this->Save();
+			}
+		}
+
+
+		if(isset($dato[0]->original_normalized_name)) {
 
 			$original_quality	= $this->get_original_quality();
 
 			// original file like 'memoria_oral_presentacion.mov'
 			$original_uploaded_file	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
 		}
+
 
 		return $original_uploaded_file;
 	}//end get_original_uploaded_file
@@ -375,6 +454,13 @@ class component_image extends component_media_common {
 				return false;
 			}
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+			}
+
 		// source_quality files check and create it if they not are created before.
 			// original_file check (normalized Dédalo original viewable). If not exist, create it
 				$normalized_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
@@ -422,7 +508,7 @@ class component_image extends component_media_common {
 							// CLI process data
 								if ( running_in_cli()===true ) {
 									common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
-									common::$pdata->total_ms	= common::$pdata->total_ms + common::$pdata->current_time; // cumulative time
+									common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
 									// send to output
 									print_cli(common::$pdata);
 								}
@@ -1757,8 +1843,9 @@ class component_image extends component_media_common {
 
 		// source
 			$uploaded_modified_file = $this->get_modified_uploaded_file();
+dump($uploaded_modified_file, '$uploaded_modified_file ++ '.to_string());
 			$uploaded_original_file = $this->get_original_uploaded_file();
-
+dump($uploaded_original_file, '$uploaded_original_file ++ '.to_string());
 			if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
 				$source_quality	= $this->get_modified_quality();
 				$source_file	= $uploaded_modified_file;
