@@ -427,6 +427,19 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		return [];
+	}//end get_best_extensions
+
+
+
+	/**
 	* QUALITY_FILE_EXIST
 	* Check if quality given file exists
 	* @param string $quality
