@@ -2028,14 +2028,19 @@ class component_media_common extends component_common {
 					$original_quality
 				);
 				if (!empty($original_normalized_name)) {
+
 					$dato[0]->original_normalized_name = $original_normalized_name;
 
 					// original_upload_date
 					if (!isset($dato[0]->original_upload_date)) {
 
-						$file_path						= $this->get_original_file_path( $original_quality ). '/' .$original_normalized_name;
-						$modification_time				= filectime($file_path);
-						$dato[0]->original_upload_date	= dd_date::get_dd_date_from_unix_timestamp($modification_time);
+						$file_path = $this->get_original_file_path($original_quality) .'/'. $original_normalized_name;
+						if (file_exists($file_path)) {
+							$modification_time				= filectime($file_path);
+							$dato[0]->original_upload_date	= !empty($modification_time)
+								? dd_date::get_dd_date_from_unix_timestamp($modification_time)
+								: null;
+						}
 					}
 				}
 			}
@@ -2054,15 +2059,16 @@ class component_media_common extends component_common {
 					// modified_upload_date
 					if (!isset($dato[0]->modified_upload_date)) {
 
-						$file_path						= $this->get_modified_file_path( $modified_quality ). '/' .$modified_normalized_name;
-						$modification_time				= filectime($file_path);
-						$dato[0]->modified_upload_date	= dd_date::get_dd_date_from_unix_timestamp($modification_time);
+						$file_path = $this->get_modified_file_path($modified_quality) .'/'. $modified_normalized_name;
+						if (file_exists($file_path)) {
+							$modification_time				= filectime($file_path);
+							$dato[0]->modified_upload_date	= !empty($modification_time)
+								? dd_date::get_dd_date_from_unix_timestamp($modification_time)
+								: null;
+						}
 					}
 				}
 			}
-
-
-
 
 		// save
 			$this->Save();
