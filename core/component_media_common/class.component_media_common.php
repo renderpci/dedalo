@@ -1412,14 +1412,14 @@ class component_media_common extends component_common {
 
 					usort($ar_file_object, fn($a, $b) => $a->modification_time - $b->modification_time);
 					// iterate from oldest to newest
-					foreach ($ar_file_object as $file) {
+					foreach ($ar_file_object as $file_object) {
 
-						if( $file->extension !== $default_extension // not default (usually jpg)
-							&& !in_array($file->extension, $this->get_alternative_extensions()) // not alternative
-							&& in_array($file->extension, $this->get_allowed_extensions()) // is allowed extension
+						if( $file_object->extension !== $default_extension // not default (usually jpg)
+							&& !in_array($file_object->extension, $this->get_alternative_extensions()) // not alternative
+							&& in_array($file_object->extension, $this->get_allowed_extensions()) // is allowed extension
 							){
 
-								$file = $file->file;
+								$file = $file_object->file;
 								break;
 						}
 					}
