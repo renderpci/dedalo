@@ -280,6 +280,23 @@ class component_image extends component_media_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		if(!defined('DEDALO_IMAGE_BEST_EXTENSIONS')){
+			define('DEDALO_IMAGE_BEST_EXTENSIONS', ['tif','tiff','psd']);
+		}
+
+		return DEDALO_IMAGE_BEST_EXTENSIONS;
+	}//end get_best_extensions
+
+
+
+	/**
 	* GET_ORIGINAL_UPLOADED_FILE
 	* From component dato
 	* @return string|null $original_quality
@@ -293,79 +310,8 @@ class component_image extends component_media_common {
 		// not in dato case
 		if(!isset($dato[0]) || !isset($dato[0]->original_normalized_name)) {
 
-			$original_files	= $this->get_original_files();
-			$count			= count( $original_files );
-
-			if($count === 1){
-
-				$original_file = $original_files[0];
-
-			}else{
-
-				$ar_file_object = [];
-
-				foreach ($original_files as $file) {
-
-					$modification_time = filectime($file);
-					$extension = get_file_extension($file);
-
-					$file_object = new stdClass();
-						$file_object->modification_time	= $modification_time;
-						$file_object->extension			= $extension;
-						$file_object->file				= $file;
-
-					$ar_file_object[] = $file_object;
-
-				}
-				usort($ar_file_object, fn($a, $b) => $a->modification_time - $b->modification_time);
-
-				// iterate from oldest to newest
-				foreach ($ar_file_object as $file) {
-
-					if( $file->extension !== DEDALO_IMAGE_EXTENSION
-						&& !in_array($file->extension, DEDALO_IMAGE_ALTERNATIVE_EXTENSIONS)
-						&& in_array($file->extension, DEDALO_IMAGE_EXTENSIONS_SUPPORTED)){
-
-							$original_file = $file->file;
-							break;
-					}
-				}
-
-				if(!isset($original_file)){
-					foreach ($ar_file_object as $file) {
-						if( in_array($file->extension, DEDALO_IMAGE_EXTENSIONS_SUPPORTED)){
-							$original_file = $file->file;
-							break;
-						}
-					}
-				}
-			}
-
-			if(isset($original_file)){
-
-				// no previous dato exists case
-					if(!isset($dato[0])){
-						// create a new dato from scratch
-						$files_info = $this->get_files_info();
-						$dato_item = (object)[
-							'files_info' => $files_info
-						];
-						$dato = [$dato_item];
-					}
-
-				// original_normalized_name
-				$dato[0]->original_normalized_name	= basename($original_file);
-
-				// original_upload_date
-				$modification_time					= filectime($original_file);
-				$dato[0]->original_upload_date		= dd_date::get_dd_date_from_unix_timestamp($modification_time);
-	dump($dato, ' dato ++ '.to_string($this->section_id));
-				// update dato and save it
-				$this->set_dato($dato);
-				$this->Save();
-			}
+			$this->get_normalized_name_from_files();
 		}
-
 
 		if(isset($dato[0]->original_normalized_name)) {
 
@@ -424,7 +370,6 @@ class component_image extends component_media_common {
 
 		return $target_filename;
 	}//end get_target_filename
-
 
 
 

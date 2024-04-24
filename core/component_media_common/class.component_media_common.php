@@ -1315,6 +1315,129 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_quality_FILES
+	* Returns the full path of the original file/s found
+	* The original files are saved renamed but keeping the extension.
+	* @return array $original_files
+	* 	Array of full path files found
+	*/
+	public function get_quality_files(string $quality) : array {
+
+		$quality_files = [];
+
+		// target_dir
+			$target_dir = $this->get_media_path_dir($quality);
+			if(!is_dir($target_dir)) {
+				return $quality_files; // empty array
+			}
+
+		// ar_originals. list of original found files
+			$ar_files	= [];
+			$findme		= $this->get_name() . '.';
+			if ($handle = opendir($target_dir)) {
+
+				while( false!==($file = readdir($handle)) ) {
+
+					// note that '.' and '..' are returned even
+					if( strpos($file, $findme)!==false ) {
+						$ar_files[] = $file;
+					}
+				}
+
+				closedir($handle);
+			}
+
+		// add path with image
+			foreach ($ar_files as $current_file) {
+				$quality_files[] = $target_dir . '/' . $current_file;
+			}
+
+		return $quality_files;
+	}//end get_quality_files
+
+
+
+	/**
+	* GET_NORMALIZED_NAME_FROM_FILES
+	* Resolve normalized name from given quality
+	* It is used to resolve orgininal_normalized_name and modified_normalized_name
+	* @param string $quality
+	* @return string|null $normalized_name
+	*/
+	public function get_normalized_name_from_files(string $quality) : ?string {
+
+		// short vars
+			$quality_files		= $this->get_quality_files($quality);
+			$default_extension	= $this->get_extension();
+			$count				= count( $quality_files );
+			$file				= null;
+
+		if($count === 1){
+
+			// only one option exists. Use this file without any other verification
+			$file = $quality_files[0];
+
+		}else{
+
+			// collect files information about modification_time, extension, ..
+				$ar_file_object = [];
+				foreach ($quality_files as $current_file) {
+
+					$file_object = new stdClass();
+						$file_object->modification_time	= filectime($current_file);
+						$file_object->extension			= get_file_extension($current_file);
+						$file_object->file				= $current_file;
+
+					$ar_file_object[] = $file_object;
+				}
+
+			// search file by best_extensions in descending order
+				$best_extensions = $this->get_best_extensions();
+				foreach ($best_extensions as $current_extension) {
+					$found = array_find($ar_file_object, function($current_file) use($current_extension){
+						return $current_file->extension === $current_extension;
+					});
+					if(isset($found)){
+						$file = $found->file;
+						break;
+					}
+				}
+
+			// fallback search by modification_time in descending order
+				if(!isset($file)){
+
+					usort($ar_file_object, fn($a, $b) => $a->modification_time - $b->modification_time);
+					// iterate from oldest to newest
+					foreach ($ar_file_object as $file) {
+
+						if( $file->extension !== $default_extension // not default (usually jpg)
+							&& !in_array($file->extension, $this->get_alternative_extensions()) // not alternative
+							&& in_array($file->extension, $this->get_allowed_extensions()) // is allowed extension
+							){
+
+								$file = $file->file;
+								break;
+						}
+					}
+				}
+		}
+
+		if(isset($file)){
+
+			// normalized_name
+			$normalized_name = basename($file);
+
+			return $normalized_name;
+		}
+
+
+		return null;
+	}//end get_normalized_name_from_files
+
+
+
+
+	/**
 	* GET_QUALITY_FILE_INFO
 	* Read the given quality file data, in media common dato item format
 	* Result sample:
@@ -1831,6 +1954,7 @@ class component_media_common extends component_common {
 
 					// original_file_name
 					if(!empty($filename_dato[0]) && is_object($filename_dato[0])) {
+
 						$dato[0]->original_file_name = $filename_dato[0];
 
 						// original_normalized_name
