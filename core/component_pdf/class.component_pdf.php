@@ -314,8 +314,8 @@ class component_pdf extends component_media_common {
 			}
 
 		// thumb_path
-			$file_name			= $this->get_id();
-			// $target_path		= $this->get_media_path_dir('thumb');
+			// $file_name	= $this->get_id();
+			// $target_path	= $this->get_media_path_dir('thumb');
 
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();

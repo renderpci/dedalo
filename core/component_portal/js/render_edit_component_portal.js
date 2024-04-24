@@ -473,6 +473,9 @@ export const render_column_remove = function(options) {
 		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
 
+	// short vars
+		const show_interface = self.show_interface || {}
+
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
@@ -542,8 +545,9 @@ export const render_column_remove = function(options) {
 					})
 
 				// button_unlink_and_delete (Deletes real target record)
-					const display_delete_record = options.caller.view!=='indexation'
-					if (display_delete_record && button_delete && button_delete.permissions>1) {
+					// interface control defined in Ontology properties. Default is true set in common init
+					const button_delete_link_and_record	= show_interface.button_delete_link_and_record
+					if (button_delete_link_and_record && button_delete.permissions>1) {
 						const button_unlink_and_delete = ui.create_dom_element({
 							element_type	: 'button',
 							class_name		: 'danger remove',
@@ -771,23 +775,6 @@ export const get_buttons = (self) => {
 				const fn_add = async function(e) {
 					e.stopPropagation()
 
-					// check if the data exceeded limit
-					// current_value. Get the current_value of the component
-						const current_value	= self.data.value || []
-
-					// data_limit. Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
-						const data_limit = self.context.properties.data_limit
-						if(data_limit && current_value.length>=data_limit){
-							console.log("[add_value] Data limit is exceeded!");
-							// notify to user about the limit
-							const data_limit_label = (
-								get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit ='
-							) + ' ' + data_limit
-							window.alert(data_limit_label)
-							// stop the process
-							return
-						}
-
 					// target_section_tipo. to add section selector
 						const target_section_tipo = target_section_length > 1
 							? false
@@ -886,8 +873,8 @@ export const get_buttons = (self) => {
 
 						// modal_body
 							const iframe_container = ui.create_dom_element({
-								element_type : 'div',
-								class_name : 'iframe_container'
+								element_type	: 'div',
+								class_name		: 'iframe_container'
 							})
 							const iframe = ui.create_dom_element({
 								element_type	: 'iframe',

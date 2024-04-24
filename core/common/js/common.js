@@ -174,25 +174,27 @@ export const set_context_vars = function(self) {
 		// of some common component behaviors
 		// if show_interface is defined in properties used the definition, else use this default
 			const default_show_interface = {
-				read_only				: false, // bool false
-				save_animation			: true, // bool true
-				// buttons_container	: true, // bool false
-				value_buttons			: true,  // bool true
-				button_add				: true, // bool true (on get_buttons function)
-				button_delete			: true, // bool true
-				button_link				: true, // bool true (portal button to link with another sections)
-				button_edit				: false, // bool false. (ex. component_select User profile (dd1725) inside value)
-				button_list				: true, // bool true (ex. component_radio_button: to go to target section)
-				button_edit_options		: {
+				read_only						: false, // bool false
+				save_animation					: true, // bool true
+				// buttons_container			: true, // bool false
+				value_buttons					: true,  // bool true
+				button_add						: true, // bool true (on get_buttons function)
+				button_delete					: true, // bool true (trash can)
+				button_delete_link				: true, // bool true (modal option to remove portal link only)
+				button_delete_link_and_record	: true, // bool true (modal option to remove portal link and his target record)
+				button_link						: true, // bool true (portal button to link with another sections)
+				button_edit						: false, // bool false. (ex. component_select User profile (dd1725) inside value)
+				button_list						: true, // bool true (ex. component_radio_button: to go to target section)
+				button_edit_options				: {
 					action_mousedown	: 'navigate', // string navigate|open_window (name of function to exec)
 					action_contextmenu	: 'open_window' // string open_window (name of function to exec)
 				},
-				tools					: true, // bool true
-				button_external			: false, // bool false
-				button_tree				: true, // bool false
-				button_fullscreen		: true, // bool false
-				button_save				: true, // bool true (used by component_geolocation, text_area...)
-				show_autocomplete		: true // bool true
+				tools							: true, // bool true
+				button_external					: false, // bool false
+				button_tree						: true, // bool false
+				button_fullscreen				: true, // bool false
+				button_save						: true, // bool true (used by component_geolocation, text_area...)
+				show_autocomplete				: true // bool true
 			}
 			// set the instance show_interface
 			self.show_interface = (!self.context.properties?.show_interface && !self.request_config_object?.show?.interface)
