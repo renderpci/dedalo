@@ -425,6 +425,8 @@
 		// define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
+		// OPTIONAL Extensions list of preferable extensions in original or modified qualities.
+		// define('DEDALO_IMAGE_BEST_EXTENSIONS',		['tif','tiff','psd']);
 
 
 
