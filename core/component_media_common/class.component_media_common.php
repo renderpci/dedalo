@@ -427,6 +427,19 @@ class component_media_common extends component_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		return [];
+	}//end get_best_extensions
+
+
+
+	/**
 	* QUALITY_FILE_EXIST
 	* Check if quality given file exists
 	* @param string $quality
@@ -2016,6 +2029,18 @@ class component_media_common extends component_common {
 						if ( !isset($dato[0]->original_normalized_name) ) {
 							$dato[0]->original_normalized_name = $this->get_id() .'.'. get_file_extension($filename_dato[0]);
 						}
+
+						// original_upload_date
+						if (!isset($dato[0]->original_upload_date)) {
+
+							$file_path = $this->get_media_path_dir( $this->get_original_quality() ) .'/'. $dato[0]->original_normalized_name;
+							if (file_exists($file_path)) {
+								$modification_time				= filectime($file_path);
+								$dato[0]->original_upload_date	= !empty($modification_time)
+									? dd_date::get_dd_date_from_unix_timestamp($modification_time)
+									: null;
+							}
+						}
 					}
 
 					// replace existing dato
@@ -2039,7 +2064,6 @@ class component_media_common extends component_common {
 					if (!isset($dato[0]->original_upload_date)) {
 
 						$file_path = $this->get_media_path_dir($original_quality) .'/'. $original_normalized_name;
-
 						if (file_exists($file_path)) {
 							$modification_time				= filectime($file_path);
 							$dato[0]->original_upload_date	= !empty($modification_time)
@@ -2055,21 +2079,24 @@ class component_media_common extends component_common {
 
 				$modified_quality = $this->get_modified_quality();
 
-				$modified_normalized_name = $this->get_normalized_name_from_files(
-					$modified_quality
-				);
-				if (!empty($modified_normalized_name)) {
-					$dato[0]->modified_normalized_name = $modified_normalized_name;
+				// not all components has modified quality as component_pdf
+				if(!empty($modified_quality)){
+					$modified_normalized_name = $this->get_normalized_name_from_files(
+						$modified_quality
+					);
+					if (!empty($modified_normalized_name)) {
+						$dato[0]->modified_normalized_name = $modified_normalized_name;
 
-					// modified_upload_date
-					if (!isset($dato[0]->modified_upload_date)) {
+						// modified_upload_date
+						if (!isset($dato[0]->modified_upload_date)) {
 
-						$file_path = $this->get_modified_file_path($modified_quality) .'/'. $modified_normalized_name;
-						if (file_exists($file_path)) {
-							$modification_time				= filectime($file_path);
-							$dato[0]->modified_upload_date	= !empty($modification_time)
-								? dd_date::get_dd_date_from_unix_timestamp($modification_time)
-								: null;
+							$file_path = $this->get_media_path_dir($modified_quality) .'/'. $modified_normalized_name;
+							if (file_exists($file_path)) {
+								$modification_time				= filectime($file_path);
+								$dato[0]->modified_upload_date	= !empty($modification_time)
+									? dd_date::get_dd_date_from_unix_timestamp($modification_time)
+									: null;
+							}
 						}
 					}
 				}

@@ -92,6 +92,19 @@ class component_pdf extends component_media_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		return ['pdf'];
+	}//end get_best_extensions
+
+
+
+	/**
 	* GET_GRID_VALUE (USE MEDIA_COMMON->get_grid_value INSTEAD !)
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component

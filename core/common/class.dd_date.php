@@ -940,7 +940,7 @@ class dd_date extends stdClass {
 		$day		= date('d', $unix_timestamp); // 1-31
 		$month		= date('m', $unix_timestamp); // 1-12
 		$year		= date('Y', $unix_timestamp); // 1973
-		$hour		= date('h', $unix_timestamp); // 22
+		$hour		= date('H', $unix_timestamp); // 22
 		$minute		= date('i', $unix_timestamp); // 58
 		$second		= date('s', $unix_timestamp); // 33
 
