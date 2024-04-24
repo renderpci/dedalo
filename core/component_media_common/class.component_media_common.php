@@ -1362,7 +1362,9 @@ class component_media_common extends component_common {
 	* Resolve normalized name from given quality
 	* It is used to resolve orgininal_normalized_name and modified_normalized_name
 	* @param string $quality
+	* 	Sample 'modified'
 	* @return string|null $normalized_name
+	*  Sample: 'rsc29_rsc170_1070.tiff'
 	*/
 	public function get_normalized_name_from_files(string $quality) : ?string {
 
@@ -1374,10 +1376,12 @@ class component_media_common extends component_common {
 
 		if($count === 1){
 
-			// only one option exists. Use this file without any other verification
+			// only one file exists. Use this file without any other verification
 			$file = $quality_files[0];
 
-		}else{
+		}else if($count > 1){
+
+			// more than one file
 
 			// collect files information about modification_time, extension, ..
 				$ar_file_object = [];
@@ -1424,7 +1428,7 @@ class component_media_common extends component_common {
 
 		if(isset($file)){
 
-			// normalized_name
+			// normalized_name as 'rsc29_rsc170_1070.tiff'
 			$normalized_name = basename($file);
 
 			return $normalized_name;
@@ -1434,6 +1438,44 @@ class component_media_common extends component_common {
 		return null;
 	}//end get_normalized_name_from_files
 
+
+
+	/**
+	* GET_UPLOADED_FILE
+	* From component dato with fallback to files
+	* @param string $quality
+	* @return string|null $original_quality
+	*/
+	public function get_uploaded_file(string $quality) : ?string {
+
+		$uploaded_file = null;
+
+		// short vars
+			$dato			= $this->get_dato();
+			$property_name	= $quality . '_normalized_name';
+			$file_name		= null;
+
+		if (isset($dato[0]) && isset($dato[0]->{$property_name})) {
+
+			// already in dato case
+			$file_name = $dato[0]->{$property_name};
+
+		}else{
+
+			// calculated form files
+			$normalized_name = $this->get_normalized_name_from_files( $quality );
+			if (!empty($normalized_name)) {
+				$file_name = $normalized_name;
+			}
+		}
+
+		if (!empty($file_name)) {
+			$uploaded_file = $this->get_media_path_dir($quality) .'/'. $file_name;
+		}
+
+
+		return $uploaded_file;
+	}//end get_uploaded_file
 
 
 
@@ -1934,10 +1976,19 @@ class component_media_common extends component_common {
 		// Note that this method is called again on save, but this is intentional
 			$this->update_component_dato_files_info();
 
-		// target_filename (use example: component_image rsc29)
-		// When original_file_name is not defined, we look in the properties definition for
+		// dato. Current updated stored dato
 			$dato = $this->get_dato();
+
+		// empty case. Previous update_component_dato_files_info generates
+		// a new dato if files are found. Else no dato is set (null)
+			if (empty($dato)) {
+				return false;
+			}
+
+		// original_file_name: from target_filename (use example: component_image rsc29)
+		// When original_file_name is not defined, we look in the properties definition for
 			if (!isset($dato[0]->original_file_name)) {
+
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
 					$tipo  = $properties->target_filename;
@@ -1953,13 +2004,13 @@ class component_media_common extends component_common {
 					$filename_dato = $component->get_dato();
 
 					// original_file_name
-					if(!empty($filename_dato[0]) && is_object($filename_dato[0])) {
+					if( !empty($filename_dato[0]) ) {
 
 						$dato[0]->original_file_name = $filename_dato[0];
 
 						// original_normalized_name
-						if (!isset($dato[0]->original_normalized_name) && is_object($filename_dato[0])) {
-							$dato[0]->original_normalized_name = $this->get_id() .'.'. pathinfo($filename_dato[0])['extension'];
+						if ( !isset($dato[0]->original_normalized_name) ) {
+							$dato[0]->original_normalized_name = $this->get_id() .'.'. get_file_extension($filename_dato[0]);
 						}
 					}
 
@@ -1967,6 +2018,51 @@ class component_media_common extends component_common {
 					$this->set_dato($dato);
 				}
 			}
+
+		// original_normalized_name
+			if (!isset($dato[0]->original_normalized_name)) {
+
+				$original_quality = $this->get_original_quality();
+
+				$original_normalized_name = $this->get_normalized_name_from_files(
+					$original_quality
+				);
+				if (!empty($original_normalized_name)) {
+					$dato[0]->original_normalized_name = $original_normalized_name;
+
+					// original_upload_date
+					if (!isset($dato[0]->original_upload_date)) {
+
+						$file_path						= $this->get_original_file_path( $original_quality ). '/' .$original_normalized_name;
+						$modification_time				= filectime($file_path);
+						$dato[0]->original_upload_date	= dd_date::get_dd_date_from_unix_timestamp($modification_time);
+					}
+				}
+			}
+
+		// modified_normalized_name
+			if (!isset($dato[0]->modified_normalized_name)) {
+
+				$modified_quality = $this->get_modified_quality();
+
+				$modified_normalized_name = $this->get_normalized_name_from_files(
+					$modified_quality
+				);
+				if (!empty($modified_normalized_name)) {
+					$dato[0]->modified_normalized_name = $modified_normalized_name;
+
+					// modified_upload_date
+					if (!isset($dato[0]->modified_upload_date)) {
+
+						$file_path						= $this->get_modified_file_path( $modified_quality ). '/' .$modified_normalized_name;
+						$modification_time				= filectime($file_path);
+						$dato[0]->modified_upload_date	= dd_date::get_dd_date_from_unix_timestamp($modification_time);
+					}
+				}
+			}
+
+
+
 
 		// save
 			$this->Save();

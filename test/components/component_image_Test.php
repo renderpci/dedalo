@@ -166,21 +166,35 @@ final class component_image_test extends TestCase {
 
 
 	/**
-	* TEST_get_original_uploaded_file
+	* TEST_get_uploaded_file
 	* @return void
 	*/
-	public function test_get_original_uploaded_file() {
+	public function test_get_uploaded_file() {
 
 		$component = $this->build_component_instance();
 
-		$result = $component->get_original_uploaded_file();
+		// original_quality
+			$result = $component->get_uploaded_file(
+				$component->get_original_quality()
+			);
 
-		$this->assertTrue(
-			gettype($result)==='string' || gettype($result)==='NULL',
-			'expected type string|null : ' . PHP_EOL
-				. gettype($result)
-		);
-	}//end test_get_original_uploaded_file
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
+			);
+
+		// modified_quality
+			$result = $component->get_uploaded_file(
+				$component->get_modified_quality()
+			);
+
+			$this->assertTrue(
+				gettype($result)==='string' || gettype($result)==='NULL',
+				'expected type string|null : ' . PHP_EOL
+					. gettype($result)
+			);
+	}//end test_get_uploaded_file
 
 
 

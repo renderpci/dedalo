@@ -297,37 +297,6 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_ORIGINAL_UPLOADED_FILE
-	* From component dato
-	* @return string|null $original_quality
-	*/
-	public function get_original_uploaded_file() : ?string {
-
-		$original_uploaded_file = null;
-
-		$dato = $this->get_dato();
-
-		// not in dato case
-		if(!isset($dato[0]) || !isset($dato[0]->original_normalized_name)) {
-
-			$this->get_normalized_name_from_files();
-		}
-
-		if(isset($dato[0]->original_normalized_name)) {
-
-			$original_quality	= $this->get_original_quality();
-
-			// original file like 'memoria_oral_presentacion.mov'
-			$original_uploaded_file	= $this->get_media_path_dir($original_quality) .'/'. $dato[0]->original_normalized_name;
-		}
-
-
-		return $original_uploaded_file;
-	}//end get_original_uploaded_file
-
-
-
-	/**
 	* GET_MODIFIED_UPLOADED_FILE
 	* From component dato
 	* @return string|null $modified_quality
@@ -623,7 +592,7 @@ class component_image extends component_media_common {
 		// 		default:
 
 		// 			$uploaded_modified_file = $this->get_modified_uploaded_file();
-		// 			$uploaded_original_file = $this->get_original_uploaded_file();
+		// 			$uploaded_original_file = $this->get_uploaded_file();
 
 		// 			$source_file = isset($uploaded_modified_file) && file_exists($uploaded_modified_file)
 		// 				? $uploaded_modified_file
@@ -1776,8 +1745,12 @@ class component_image extends component_media_common {
 
 	/**
 	* BUILD_VERSION
-	* Creates a new version using IMAGEMAGICK conversion using settings based on target quality
+	* Creates a new version with IMAGEMAGICK conversion using settings based on target quality
+	* Source file is get from uploaded_modified_file. If not exists, use uploaded_original_file
 	* @param string $quality
+	* 	target quality file to build like '1.5MB'
+	* @param bool $async=true
+	* @param bool $save=true
 	* @return object $response
 	*/
 	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
@@ -1787,46 +1760,52 @@ class component_image extends component_media_common {
 			$response->msg		= 'Error. Request failed';
 
 		// source
-			$uploaded_modified_file = $this->get_modified_uploaded_file();
-dump($uploaded_modified_file, '$uploaded_modified_file ++ '.to_string());
-			$uploaded_original_file = $this->get_original_uploaded_file();
-dump($uploaded_original_file, '$uploaded_original_file ++ '.to_string());
+			$source_file = null; // default
+
+			// modified_file full file path try
+			$uploaded_modified_file = $this->get_uploaded_file(
+				$this->get_modified_quality()
+			);
 			if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
 				$source_quality	= $this->get_modified_quality();
 				$source_file	= $uploaded_modified_file;
-			}else if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
-				$source_quality	= $this->get_original_quality();
-				$source_file	= $uploaded_original_file;
 			}else{
-				$source_file	= null;
+				// original_file full file path try
+				$uploaded_original_file = $this->get_uploaded_file(
+					$this->get_original_quality()
+				);
+				if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
+					$source_quality	= $this->get_original_quality();
+					$source_file	= $uploaded_original_file;
+				}
 			}
 
-		if(!empty($source_file)){
+		// source file not found case
+			if(empty($source_file)){
 
+				debug_log(__METHOD__
+					." Unable to locate source_file. File does not exists:" . PHP_EOL
+					.' source_file: ' . to_string($source_file) . PHP_EOL
+					.' tipo: ' . to_string($this->tipo) . PHP_EOL
+					.' section_tipo: ' . to_string($this->section_tipo) . PHP_EOL
+					.' section_id: ' . to_string($this->section_id)
+					, logger::ERROR
+				);
+
+				// response
+					$response->result			= false;
+					$response->msg				= 'Unable to locate source_file. File does not exists';
+					$response->command_response	= null;
+
+				return $response;
+			}
+
+		// convert_quality
 			$result = $this->convert_quality((object)[
 				'source_quality'	=> $source_quality,
 				'source_file'		=> $source_file,
 				'target_quality'	=> $quality
 			]);
-
-		}else{
-
-			$result = false;
-
-			debug_log(__METHOD__
-				." Unable locate source_file. File does not exists:" . PHP_EOL
-				.' source_file: ' . $source_file
-				, logger::ERROR
-			);
-
-			// response
-				$response->result			= $result;
-				$response->msg				= 'Unable locate source_file. File does not exists';
-				$response->command_response	= null;
-
-			return $response;
-		}
-
 
 		// svg file. Create file again
 			$default_quality = $this->get_default_quality();
@@ -1842,7 +1821,6 @@ dump($uploaded_original_file, '$uploaded_original_file ++ '.to_string());
 					$this->create_svg_file($svg_string_node);
 				}
 			}
-
 
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
