@@ -2055,21 +2055,24 @@ class component_media_common extends component_common {
 
 				$modified_quality = $this->get_modified_quality();
 
-				$modified_normalized_name = $this->get_normalized_name_from_files(
-					$modified_quality
-				);
-				if (!empty($modified_normalized_name)) {
-					$dato[0]->modified_normalized_name = $modified_normalized_name;
+				// not all components has modified quality as component_pdf
+				if(!empty($modified_quality)){
+					$modified_normalized_name = $this->get_normalized_name_from_files(
+						$modified_quality
+					);
+					if (!empty($modified_normalized_name)) {
+						$dato[0]->modified_normalized_name = $modified_normalized_name;
 
-					// modified_upload_date
-					if (!isset($dato[0]->modified_upload_date)) {
+						// modified_upload_date
+						if (!isset($dato[0]->modified_upload_date)) {
 
-						$file_path = $this->get_modified_file_path($modified_quality) .'/'. $modified_normalized_name;
-						if (file_exists($file_path)) {
-							$modification_time				= filectime($file_path);
-							$dato[0]->modified_upload_date	= !empty($modification_time)
-								? dd_date::get_dd_date_from_unix_timestamp($modification_time)
-								: null;
+							$file_path = $this->get_media_path_dir($modified_quality) .'/'. $modified_normalized_name;
+							if (file_exists($file_path)) {
+								$modification_time				= filectime($file_path);
+								$dato[0]->modified_upload_date	= !empty($modification_time)
+									? dd_date::get_dd_date_from_unix_timestamp($modification_time)
+									: null;
+							}
 						}
 					}
 				}
