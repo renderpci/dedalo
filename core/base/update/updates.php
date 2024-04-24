@@ -52,7 +52,8 @@ $updates->$v = new stdClass();
 			'component_3d',
 			'component_av',
 			'component_pdf',
-			'component_svg'
+			'component_svg',
+			'component_image'
 		];	// Force convert from string to array
 
 

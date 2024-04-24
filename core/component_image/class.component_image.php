@@ -1491,6 +1491,8 @@ class component_image extends component_media_common {
 		$update_version	= implode('.', $update_version);
 		switch ($update_version) {
 
+			case '6.2.0':
+				// same case as '6.0.1'. regenerate_component is enough to create thumb
 			case '6.0.1':
 				// component instance
 					$model		= RecordObj_dd::get_modelo_name_by_tipo($options->tipo, true);
