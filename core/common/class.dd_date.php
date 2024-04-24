@@ -940,11 +940,20 @@ class dd_date extends stdClass {
 		$day		= date('d', $unix_timestamp); // 1-31
 		$month		= date('m', $unix_timestamp); // 1-12
 		$year		= date('Y', $unix_timestamp); // 1973
+		$hour		= date('h', $unix_timestamp); // 22
+		$minute		= date('i', $unix_timestamp); // 58
+		$second		= date('s', $unix_timestamp); // 33
 
 		$dd_date	= new dd_date();
 			$dd_date->set_day($day);
 			$dd_date->set_month($month);
 			$dd_date->set_year($year);
+			$dd_date->set_hour($hour);
+			$dd_date->set_minute($minute);
+			$dd_date->set_second($second);
+
+		$time = dd_date::convert_date_to_seconds($dd_date);
+		$dd_date->set_time($time);
 
 		return $dd_date;
 	}//end get_dd_date_from_unix_timestamp
