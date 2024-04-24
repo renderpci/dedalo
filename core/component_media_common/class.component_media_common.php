@@ -1423,6 +1423,10 @@ class component_media_common extends component_common {
 								break;
 						}
 					}
+					// last fallback. Use first file allowing main extension and alternatives
+					if(!isset($file)){
+						$file = $ar_file_object[0]->file ?? null;
+					}
 				}
 		}
 
