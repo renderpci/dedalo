@@ -91,6 +91,20 @@ class component_3d extends component_media_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		return ['glb'];
+	}//end get_best_extensions
+
+
+
+
+	/**
 	* GET_GRID_VALUE
 	* Get the value of the components. By default will be get_dato().
 	* overwrite in every different specific component

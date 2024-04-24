@@ -389,7 +389,8 @@
 		define('DEDALO_AV_SUBTITLES_EXTENSION',		'vtt');
 		// dedalo_av_recompress_all. On 1, all video files are re-compressed to 960k/s variable bit rate and keyframe every 75 frames
 		define('DEDALO_AV_RECOMPRESS_ALL',			1); // 1 re-compress all av files uploaded, 0 to only copy av files uploaded (default 0)
-
+		// Optional Extensions list of preferable extensions in original or modified qualities.
+		// define('DEDALO_AV_BEST_EXTENSIONS',		['mov','wave','wav','aiff','aif']);
 
 	// image media
 		// image_folder. Default: '/image'
@@ -425,7 +426,7 @@
 		// define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
 		// image_web_folder normally '/web' Used to save uploaded files from component_html_text
 		define('DEDALO_IMAGE_WEB_FOLDER',			'/web');
-		// OPTIONAL Extensions list of preferable extensions in original or modified qualities.
+		// Optional Extensions list of preferable extensions in original or modified qualities.
 		// define('DEDALO_IMAGE_BEST_EXTENSIONS',		['tif','tiff','psd']);
 
 

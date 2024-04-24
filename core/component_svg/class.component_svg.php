@@ -90,6 +90,19 @@ class component_svg extends component_media_common {
 
 
 	/**
+	* GET_BEST_EXTENSIONS
+	* Extensions list of preferable extensions in original or modified qualities.
+	* Ordered by most preferable extension, first is the best.
+	* @return array
+	*/
+	public function get_best_extensions() : array {
+
+		return ['svg'];
+	}//end get_best_extensions
+
+
+
+	/**
 	* GET_URL
 	* Get image url for current quality
 	* @param string $quality = null
