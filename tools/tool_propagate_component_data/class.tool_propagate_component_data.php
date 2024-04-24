@@ -23,13 +23,13 @@ class tool_propagate_component_data extends tool_common {
 
 		// options
 			$section_tipo			= $options->section_tipo;
-			$section_id				= $options->section_id;
 			$component_tipo			= $options->component_tipo;
 			$action					= $options->action;
 			$lang					= $options->lang;
 			$propagate_data_value	= $options->propagate_data_value;
 
 		// short vars
+			$mode			= 'list';
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
 			$with_relations	= in_array($model, component_relation_common::get_components_with_relations());
 
@@ -40,13 +40,27 @@ class tool_propagate_component_data extends tool_common {
 			}
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
+			$sqo_id	= section::build_sqo_id($section_tipo, $mode);
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
-				$response->msg .= ' section session sqo is not found!';
-				return $response;
+
+				// sqo create
+					$sqo = new search_query_object();
+						$sqo->set_mode($mode);
+						$sqo->set_section_tipo([$section_tipo]);
+
+				debug_log(__METHOD__
+					. " Auto-created SQO from section:  $section_tipo" . PHP_EOL
+					. to_string($sqo)
+					, logger::WARNING
+				);
+
+			}else{
+
+				// sqo from session
+				$original_sqo	= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
+				$sqo			= clone($original_sqo);
 			}
-			$original_sqo 	= $_SESSION['dedalo']['config']['sqo'][$sqo_id];
-			$sqo 			= clone($original_sqo);
+			// reset sqo limit/offset
 			$sqo->limit		= 0;
 			$sqo->offset	= 0;
 

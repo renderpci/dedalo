@@ -20,7 +20,7 @@
 		[
 			{
 				"api_engine" : "dedalo",
-				"type"		:"main",
+				"type" :"main",
 				"sqo" : {
 					"section_tipo" : [
 						{"source" : "hierarchy_types", "value": [2]},

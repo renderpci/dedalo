@@ -160,7 +160,7 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 * PROPAGATE_COMPONENT_DATA
 * Call API to propagate current value to all selected components
 * @param string action
-* 	values: add|remove
+* 	values: replace|add|delete
 * @return promise
 * 	resolve object api_response
 */

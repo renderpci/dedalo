@@ -149,7 +149,6 @@ component_portal.prototype.init = async function(options) {
 				// add locator selected
 					const result = await self.add_value(locator)
 					if (result===false) {
-						alert(`Value already exists! ${JSON.stringify(locator)}`);
 						return
 					}
 				// modal close
@@ -713,16 +712,9 @@ component_portal.prototype.add_value = async function(value) {
 	// current_value. Get the current_value of the component
 		const current_value	= self.data.value || []
 
-	// data_limit. Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
-		const data_limit = self.context.properties.data_limit
-		if(data_limit && current_value.length>=data_limit){
-			console.log("[add_value] Data limit is exceeded!");
-			// notify to user about the limit
-			const data_limit_label = (
-				get_label.exceeded_limit || 'The maximum number of values for this field has been exceeded. Limit ='
-			) + ' ' + data_limit
-			window.alert(data_limit_label)
-			// stop the process
+	// data_limit. Maximum records allowed by this portal
+		if (data_limit_reached(self)) {
+			// alert and stop the process
 			return false
 		}
 
@@ -841,6 +833,12 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 
 	const self = this
 
+	// data_limit. Maximum records allowed by this portal
+		if (data_limit_reached(self)) {
+			// alert and stop the process
+			return false
+		}
+
 	// source
 		const source = create_source(self, null)
 
@@ -883,6 +881,40 @@ component_portal.prototype.add_new_element = async function(target_section_tipo)
 
 	return true
 }//end add_new_element
+
+
+
+/**
+* DATA_LIMIT_REACHED
+* @param object self
+* 	component  instance
+* @return bool
+* 	true on reached
+*/
+const data_limit_reached = function (self) {
+
+	// current_value. Get the current_value of the component
+		const current_value	= self.data.value || []
+
+	// data_limit. Maximum records allowed by this portal
+	// Check if the component has a data_limit (it could be defined in properties as data_limit with int value)
+		const data_limit = self.context.properties.data_limit
+		if(data_limit && current_value.length>=data_limit){
+
+			console.log("[data_limit_reached] Data limit is reached!");
+
+			// notify to user about the limit
+			const data_limit_label = (
+				get_label.exceeded_limit || 'The maximum number of values for this field has been reached. Limit ='
+			) + ' ' + data_limit
+			window.alert(data_limit_label)
+
+			return true
+		}
+
+
+	return false
+}//end data_limit_reached
 
 
 

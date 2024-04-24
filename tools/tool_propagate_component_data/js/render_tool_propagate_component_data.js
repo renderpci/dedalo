@@ -66,10 +66,8 @@ const get_content_data = async function(self) {
 		const fragment = new DocumentFragment()
 
 	// short vars
-		const section_tipo		= self.caller.section_tipo
-		const component_list	= self.component_list
-		const process_id		= 'process_propagate_component_data'
-		const lock_items		= []; // nodes to lock on process data
+		const process_id	= 'process_propagate_component_data'
+		const lock_items	= []; // nodes to lock on process data
 
 	// section_info
 		const section_info = ui.create_dom_element({
@@ -145,7 +143,6 @@ const get_content_data = async function(self) {
 			return content_data
 		}
 
-
 	// filter. Check the filter to know if the user has apply some filter or if will apply to all records
 		const sqo_filter = section.rqo && section.rqo.sqo && section.rqo.sqo.filter
 			? section.rqo.sqo.filter
@@ -156,16 +153,13 @@ const get_content_data = async function(self) {
 			? is_filter_empty(sqo_filter)
 			: true
 
-		const total = await section.get_total()
-
-		const tipo_label = '<strong>'+self.caller.label+'</strong>'
-
-		const all_records_label = self.get_tool_label('all_records') || 'All'
-
-		const total_label = (filter_empty === false)
+	// info_text
+		const total				= await section.get_total()
+		const tipo_label		= '<strong>'+self.caller.label+'</strong>'
+		const all_records_label	= self.get_tool_label('all_records') || 'All'
+		const total_label		= (filter_empty === false)
 			? '<strong>'+total+'</strong>'
 			: '<strong>'+all_records_label+' - '+total+'</strong>'
-
 		const text_string = self.get_tool_label('content_will_be_added_removed', tipo_label, total_label)
 			|| 'The content will be added or removed from the field: {0} s in the {1} current records'
 		ui.create_dom_element({
@@ -186,7 +180,8 @@ const get_content_data = async function(self) {
 					return
 				}
 
-			await ui.component.deactivate(self.component_to_propagate)
+			// deactivate current component
+				await ui.component.deactivate(self.component_to_propagate)
 
 			// alert user before execute
 				if(filter_empty === true){
