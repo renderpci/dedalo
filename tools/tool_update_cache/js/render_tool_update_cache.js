@@ -78,6 +78,8 @@ const get_content_data = async function(self) {
 	// short vars
 		const section_tipo		= self.caller.section_tipo
 		const component_list	= self.component_list
+		const config			= self.config || {}
+		const hilite_tipos		= config.hilite_tipos || {}
 		const process_id		= 'process_update_cache'
 
 	// section_info
@@ -140,6 +142,11 @@ const get_content_data = async function(self) {
 					option.disabled = true
 				}
 				option_label.prepend(option)
+
+			// hilite
+				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo)) {
+					option_label.classList.add('hilite')
+				}
 
 			// add
 				options_nodes.push(option)
@@ -315,11 +322,13 @@ const update_process_status = (options) => {
 				const compound_msg = (sse_response) => {
 					const data = sse_response.data
 					const parts = []
-					parts.push(data.msg +': '+ data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+					parts.push(data.msg)
+					if (data.counter && data.total) {
+						parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
+					}
 					if (data.n_components) {
 						parts.push('n components: ' + data.n_components)
 					}
-					// parts.push(data.section_label)
 					if (data.current?.section_id) {
 						parts.push('id: ' + data.current?.section_id)
 					}
