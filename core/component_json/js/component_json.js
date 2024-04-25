@@ -166,6 +166,10 @@ component_json.prototype.save_sequence = async function(editor) {
 
 	const self = this
 
+	// short vars
+		const data	= self.data || {}
+		const value	= data.value || []
+
 	let validated = true
 
 	const current_value = (()=>{
@@ -201,7 +205,7 @@ component_json.prototype.save_sequence = async function(editor) {
 		}
 
 	// check data has really changed. If not, stop save
-		const db_value 	= typeof self.data.value[0]!=="undefined" ? self.data.value[0] : null
+		const db_value 	= typeof value[0]!=="undefined" ? value[0] : null
 		const changed 	= JSON.stringify(db_value)!==JSON.stringify(current_value)
 		if (!changed) {
 			console.log('No changes are detected. Stop save');
