@@ -45,7 +45,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "1",
+      "section_id": "-1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 21,
-              "time": 65061784599,
+              "day": 25,
+              "hour": 11,
+              "time": 65063127961,
               "year": 2024,
               "month": 4,
-              "minute": 56,
-              "second": 39
+              "minute": 6,
+              "second": 1
             }
           }
         ]
@@ -124,6 +124,26 @@
         ]
       }
     },
+    "dd999": {
+      "inf": "Configuración [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "hilite_tipos": {
+              "info": "Sets a list of items to highlight for easy location in the list.",
+              "value": [
+                "rsc201",
+                "rsc35",
+                "rsc29",
+                "rsc37",
+                "rsc855"
+              ],
+              "client": true
+            }
+          }
+        ]
+      }
+    },
     "dd1326": {
       "dato": {
         "lg-nolan": [
@@ -134,7 +154,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.3"
+          "2.0.4"
         ]
       }
     },
@@ -301,9 +321,9 @@
   "section_id": 10,
   "created_date": "2022-02-28 10:50:50",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-09 21:56:39",
+  "modified_date": "2024-04-25 11:06:01",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
-  "modified_by_userID": 1
+  "modified_by_userID": -1
 }
