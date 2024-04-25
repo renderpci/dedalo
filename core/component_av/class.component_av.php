@@ -321,9 +321,9 @@ class component_av extends component_media_common {
 
 		$Ffmpeg	= new Ffmpeg();
 		$command_response = $Ffmpeg->create_posterframe((object)[
-			'timecode'			=> $current_time, // like '00:00:10',
-			'src_file'			=> $src_file,
-			'quality'			=> $quality,
+			'timecode'				=> $current_time, // like '00:00:10',
+			'src_file'				=> $src_file,
+			'quality'				=> $quality,
 			'posterframe_filepath'	=> $posterframe_filepath
 		]);
 
@@ -393,14 +393,20 @@ class component_av extends component_media_common {
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
 		// thumb not exists case: generate from posterframe
-			$posterframe	= $this->get_posterframe_filepath();
+			$posterframe = $this->get_posterframe_filepath();
 			if (!file_exists($posterframe)) {
-				debug_log(__METHOD__
-					." posterframe file doesn't exists, is not possible to create a thumb"
-					, logger::WARNING
-				);
 
-				return false;
+				// try to create an automatic posterframe at 5 second
+				$this->create_posterframe(5);
+
+				if (!file_exists($posterframe)) {
+					debug_log(__METHOD__
+						." posterframe file doesn't exists, is not possible to create a thumb"
+						, logger::WARNING
+					);
+
+					return false;
+				}
 			}
 
 			// thumb generate
