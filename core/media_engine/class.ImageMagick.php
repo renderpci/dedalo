@@ -240,6 +240,10 @@ final class ImageMagick {
 					. ' output: ' . to_string($output). PHP_EOL
 					, logger::ERROR
 				);
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace();
+					dump($bt, ' bt -- options: ++ '.to_string($options));
+				}
 				return false;
 			}
 
