@@ -1985,6 +1985,13 @@ class component_media_common extends component_common {
 	*/
 	public function regenerate_component() : bool {
 
+		// check default quality
+			$default_quality	= $this->get_default_quality();
+			$file_path			= $this->get_media_filepath($default_quality);
+			if (!file_exists($file_path)) {
+				$this->build_version($default_quality);
+			}
+
 		// re-create thumb always
 			$this->create_thumb();
 
