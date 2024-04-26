@@ -164,6 +164,10 @@ final class dd_manager {
 						'Get tools',
 						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
 						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
+						// get_tools stats
+						'section_save',
+						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
+						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
 						// summary
 						'summary',
 						'time: ' . (
@@ -171,7 +175,8 @@ final class dd_manager {
 							metrics::$search_free_total_time +
 							metrics::$ontology_total_time +
 							metrics::$matrix_total_time +
-							metrics::$get_tools_total_time
+							metrics::$get_tools_total_time +
+							metrics::$section_save_total_time
 						)
 					];
 					debug_log(__METHOD__ . PHP_EOL

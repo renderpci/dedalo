@@ -34,5 +34,9 @@ final class metrics {
 		static $get_tools_total_time = 0;
 		static $get_tools_total_calls = 0;
 
+	// section_save
+		static $section_save_total_time = 0;
+		static $section_save_total_calls = 0;
+
 
 }//end class metrics
