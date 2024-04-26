@@ -62,7 +62,8 @@ render_tool_import_files.prototype.edit = async function(options) {
 */
 const get_content_data_edit = async function(self) {
 
-	const fragment = new DocumentFragment()
+	// content_data
+		const content_data = ui.tool.build_content_data(self)
 
 	// short vars
 		const ar_file_processor	= self.tool_config.file_processor || null
@@ -70,22 +71,22 @@ const get_content_data_edit = async function(self) {
 		const lock_items		= []
 
 	// options_container
-		const options_container = render_options_container(self)
+		const options_container = render_options_container(self, content_data)
 		lock_items.push(options_container)
-		fragment.appendChild(options_container)
+		content_data.appendChild(options_container)
 
 	// components container
 		const drop_zone = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'drop_zone',
-			parent			: fragment
+			parent			: content_data
 		})
 
 	// template_container
 		const template_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'template_container',
-			parent			: fragment
+			parent			: content_data
 		})
 		lock_items.push(template_container)
 
@@ -93,11 +94,13 @@ const get_content_data_edit = async function(self) {
 		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
 
+		content_data.template_container = template_container
+
 	// inputs components container label
 		const inputs_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'inputs_container',
-			parent			: fragment
+			parent			: content_data
 		})
 		lock_items.push(inputs_container)
 
@@ -117,14 +120,14 @@ const get_content_data_edit = async function(self) {
 		const response_message = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'response_message',
-			parent			: fragment
+			parent			: content_data
 		})
 
 	// buttons_bottom_container
 		const buttons_bottom_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'buttons_bottom_container success',
-			parent			: fragment
+			parent			: content_data
 		})
 		lock_items.push(buttons_bottom_container)
 
@@ -157,9 +160,9 @@ const get_content_data_edit = async function(self) {
 			const components_temp_data = self.service_tmp_section.get_components_data()
 
 			// get the global configuration (to apply in the server)
-			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && control_section_id_check_box.checked)
+			self.tool_config.import_file_name_mode = (self.tool_config.import_mode === 'section' && options_container.control_section_id_check_box.checked)
 				? 'enumerate'
-				: (self.tool_config.import_mode === 'section' && same_name_check_box.checked)
+				: (self.tool_config.import_mode === 'section' && options_container.same_name_check_box.checked)
 					? 'named'
 					: null
 
@@ -275,11 +278,6 @@ const get_content_data_edit = async function(self) {
 		}
 		check_process_data()
 
-	// content_data
-		const content_data = ui.tool.build_content_data(self)
-		content_data.appendChild(fragment)
-
-
 	return content_data
 }//end get_content_data_edit
 
@@ -291,7 +289,7 @@ const get_content_data_edit = async function(self) {
 * 	component instance
 * @return HTMLElement options_container
 */
-const render_options_container = function (self) {
+const render_options_container = function (self, content_data) {
 
 	// options_container
 		const options_container = ui.create_dom_element({
@@ -551,13 +549,13 @@ const render_options_container = function (self) {
 						})
 						control_section_id_check_box.addEventListener('change', function(e) {
 							if(control_section_id_check_box.checked){
-								template_container.classList.add('name_id')
+								content_data.template_container.classList.add('name_id')
 							}else{
-								template_container.classList.remove('name_id')
+								content_data.template_container.classList.remove('name_id')
 							}
 							if(same_name_check_box.checked){
 								same_name_check_box.checked = false
-								template_container.classList.remove('same_name_section')
+								content_data.template_container.classList.remove('same_name_section')
 							}
 						})
 						// switch_label
@@ -573,6 +571,8 @@ const render_options_container = function (self) {
 							inner_html		: get_label.name_to_record_id || 'Name indicates id',
 							parent			: name_control_section_id
 						})
+					// set the node to be used when data will send to server
+						options_container.control_section_id_check_box = control_section_id_check_box
 
 			// same_name_same_section
 				const same_name_same_section = ui.create_dom_element({
@@ -598,12 +598,12 @@ const render_options_container = function (self) {
 						same_name_check_box.addEventListener('change', function(e) {
 							if(control_section_id_check_box.checked){
 								control_section_id_check_box.checked = false
-								template_container.classList.remove('name_id')
+								content_data.template_container.classList.remove('name_id')
 							}
 							if(same_name_check_box.checked){
-								template_container.classList.add('same_name_section')
+								content_data.template_container.classList.add('same_name_section')
 							}else{
-								template_container.classList.remove('same_name_section')
+								content_data.template_container.classList.remove('same_name_section')
 							}
 						})
 
@@ -620,6 +620,9 @@ const render_options_container = function (self) {
 							inner_html		: get_label.same_name_same_record || 'Same name same record',
 							parent			: same_name_same_section
 						})
+
+					// set the node to be used when data will send to server
+						options_container.same_name_check_box = same_name_check_box
 
 
 	return options_container
@@ -806,12 +809,12 @@ const set_import_mode = function (self, apply) {
 		const current_value = files_data[i]
 
 		if(apply===true){
-			const regex = /^(.+)-([a-zA-Z])\.([a-zA-Z]{3,4})$/;
+			const regex = /^(.*?)-(.*?)-?([a-zA-Z])\.([a-zA-Z]{3,4})$/gm;
 			// const name = current_value.name; //`123 85-456 fd-a.jpg`;
 			const map_name = regex.exec(current_value.name)
-			if ( map_name!==null && map_name[2]!==null ) {
+			if ( map_name!==null && map_name[3]!==null ) {
 
-				const map_name_upper = map_name[2].toUpperCase();
+				const map_name_upper = map_name[3].toUpperCase();
 				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
 				if (target_portal) {
 					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
