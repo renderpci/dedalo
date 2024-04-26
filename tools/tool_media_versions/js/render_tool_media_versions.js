@@ -120,8 +120,8 @@ const render_sync_data = function(self) {
 
 	// debug
 		if(SHOW_DEBUG===true) {
-			console.log('files_info_db:', files_info_db);
-			console.log('files_info_disk:', files_info_disk);
+			console.log('debug files_info_db:', files_info_db);
+			console.log('debug files_info_disk:', files_info_disk);
 		}
 
 	// sync_data_wrapper

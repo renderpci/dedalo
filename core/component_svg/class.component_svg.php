@@ -201,26 +201,25 @@ class component_svg extends component_media_common {
 		// check config constant definition
 			if (!defined('DEDALO_QUALITY_THUMB')) {
 				define('DEDALO_QUALITY_THUMB', 'thumb');
-				debug_log(__METHOD__." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value"
+					, logger::WARNING
+				);
 			}
 
 		// thumb_path
 			$file_name			= $this->get_id();
-			// $target_path		= $this->get_media_path_dir('thumb');
-
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
-
-			// $target_file		= $target_path . '/' . $file_name . '.'. $thumb_extension;
 
 		// thumb not exists case: generate from PDF
 			$quality		= $this->get_default_quality();
 			$source_file	= $this->get_media_filepath($quality);
 			if (!file_exists($source_file)) {
 				debug_log(__METHOD__
-					." default quality file doesn't exists, is not possible to create a thumb"
-					, logger::WARNING
+					." default quality file does not exist, it is not possible to create a thumb ($file_name)"
+					, logger::DEBUG
 				);
 
 				return false;
