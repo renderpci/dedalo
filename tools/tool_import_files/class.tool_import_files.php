@@ -39,28 +39,78 @@ class tool_import_files extends tool_common {
 			// $ar_data['image']['image_preview_url']	= DEDALO_LIB_BASE_URL . '/tools/tool_import_files/foto_preview.php?f='.$ar_data['file_path'];
 
 
-		// Regex file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
-			// Format result preg_match '1-2-A.jpg' and 'cat-2-A.jpg'
-			// 0	=>	1-2-A.jpg 	: cat-2-A.jpg 	# full_name
-			// 1	=>	1-2-A 		: cat-2-A 		# name
-			// 2	=>	1 			: cat 			# base_name (name without order and letter)
-			// 3	=>	1 			: 				# section_id (empty when not numeric)
-			// 4	=>				: cat 			# base_string_name (empty when numeric)
-			// 5	=>	-2 			: -2 			# not used
-			// 6	=>	2 			: 2 			# portal_order
-			// 7	=>	-A 			: -A 			# not used
-			// 8	=>	A 			: A 			# target map (A,B,C..)
-			// 9	=>	jpg 		: jpg 			# extension
-		// regex values
-			preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
+		// PREVIOUS
+			// it only allow digits in middle of the filename as : 712-2-A.jpg
+			// Regex file info ^(.+)(-([a-zA-Z]{1}))\.([a-zA-Z]{3,4})$
+				// Format result preg_match '1-2-A.jpg' and 'cat-2-A.jpg'
+				// 0	=>	1-2-A.jpg 	: cat-2-A.jpg 	# full_name
+				// 1	=>	1-2-A 		: cat-2-A 		# name
+				// 2	=>	1 			: cat 			# base_name (name without order and letter)
+				// 3	=>	1 			: 				# section_id (empty when not numeric)
+				// 4	=>				: cat 			# base_string_name (empty when numeric)
+				// 5	=>	-2 			: -2 			# not used
+				// 6	=>	2 			: 2 			# portal_order
+				// 7	=>	-A 			: -A 			# not used
+				// 8	=>	A 			: A 			# target map (A,B,C..)
+				// 9	=>	jpg 		: jpg 			# extension
+			// regex values
+
+			// previous regex, it only allow digits in middle of the filename as : 712-2-A.jpg
+			// preg_match("/^((([\d]+)|([^-]+))([-](\d))?([-]([a-zA-Z]))?)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
+			// $regex_data = new stdClass();
+			//	$regex_data->full_name		= $ar_match[0] ?? null;
+			//	$regex_data->name			= $ar_match[1] ?? null;
+			//	$regex_data->base_name		= $ar_match[2] ?? null;
+			//	$regex_data->section_id		= $ar_match[3] ?? null;
+			//	$regex_data->portal_order	= $ar_match[6] ?? null;
+			//	$regex_data->letter			= $ar_match[8] ?? null;
+			//	$regex_data->extension		= $ar_match[9] ?? null;
+
+		// Regex
+			// the name can identify the section_id to insert the media
+			// the name can identify the field to insert the media (usually a portal)
+			// the name can has other information about the media
+			// separator between concepts is `-`
+			// extension could be set with 3 or 4 letters
+			// Formats supported:
+			// section_id-filename-field.extension		| 73-my image-A.tiff
+			// section_id-field.extension 				| 73-A.tiff
+			// section_id.extension 					| 73.jpg
+			// section_id-filename.extension 			| 73-my image.tif
+			// filename-field.extension					| My image-A.tiff
+			// filename.extension						| My image.tiff
+
+			// Regex groups
+			// group 1 : section_id
+			// group 2 : filename
+			// group 3 : field
+			// group 4 : extension
+			//
+			// ^(\d*)?-?(?(?=.\.)|(.*?))(?(?=-)-([a-zA-Z])|)\.([a-zA-Z]{3,4})$
+			// (\d*)? 					| group 1 | get the section_id it could be present or not
+			// -? 						| check - | check if - exists to create the next groups
+			// (?(?=.\.)|(.*?)) 		| group 2 | conditional, if the next character is only 1 following by the point go to next group, else capture all until next rule
+			// (?(?=-)-([a-zA-Z])|) 	| group 3 | conditional, if the next character is a - get the letter to identify the field, else go next group
+			// \.([a-zA-Z]{3,4})		| group 4 | get the extension
+			// see an example : https://regex101.com/r/APaAxA/1
+
+			// preg_match result examples
+			//
+			// | # | 73-my image-A.tiff | 73-A.tiff	| 73.jpg | 73-my image.tif | My image-A.tiff | My image.tiff | comment |
+			// |---| ------------------ | --------- | ------ | --------------- | --------------- | ------------- | ------- |
+			// | 0 | 73-my image-A.tiff | 73-A.tiff	| 73.jpg | 73-my image.tif | My image-A.tiff | My image.tiff | full_name |
+			// | 1 | 73                 | 73        | 73     | 73              |                 |               | section_id (empty when not numeric) |
+			// | 2 | my image			|           |        | my image        | My image        | My image      | base_name (name without order and letter) |
+			// | 3 | A                  | A         |        |                 | A               |               | target field map (A,B,C..) |
+			// | 4 | tiff               | tiff      | jpg    | tif             | tiff            | tiff          | extension |
+
+			preg_match("/^(\d*)?-?(?(?=.\.)|(.*?))(?(?=-)-([a-zA-Z])|)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
 			$regex_data = new stdClass();
 				$regex_data->full_name		= $ar_match[0] ?? null;
-				$regex_data->name			= $ar_match[1] ?? null;
+				$regex_data->section_id		= $ar_match[1] ?? null;
 				$regex_data->base_name		= $ar_match[2] ?? null;
-				$regex_data->section_id		= $ar_match[3] ?? null;
-				$regex_data->portal_order	= $ar_match[6] ?? null;
-				$regex_data->letter			= $ar_match[8] ?? null;
-				$regex_data->extension		= $ar_match[9] ?? null;
+				$regex_data->letter			= $ar_match[3] ?? null;
+				$regex_data->extension		= $ar_match[4] ?? null;
 			$ar_data['regex'] = $regex_data;
 
 
@@ -459,6 +509,10 @@ class tool_import_files extends tool_common {
 							case 'named':
 								// String case like ánfora.jpg
 								// Look already imported files
+								$file_data['regex']->base_name = empty($file_data['regex']->base_name)
+									? $file_data['regex']->section_id
+									: $file_data['regex']->base_name;
+						
 								$ar_filter_result = array_filter($ar_processed, function($element) use($file_data) {
 									return $file_data['regex']->base_name === $element->file_data['regex']->base_name;
 								});
@@ -575,9 +629,19 @@ class tool_import_files extends tool_common {
 						switch ($ddo->role) {
 							case 'target_filename':
 
-								// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
-									$component->set_dato($current_file_name);
+								// fill the component with image data only when the field is empty
+								// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
+								$component_data = $component->get_dato();
+
+								if(empty($component_data)){
+									// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
+									$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
+										? $file_data['regex']->base_name // only the name of the file without section_id or field
+										: $current_file_name; // full name with extension
+
+									$component->set_dato([$name_to_save]);
 									$component->Save();
+								}
 								break;
 
 							case 'target_date':
