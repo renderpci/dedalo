@@ -88,7 +88,7 @@ describe("COMPONENTS ACTIVATE", async function() {
 							const changed_data_item = Object.freeze({
 								action	: 'update',
 								key		: 0,
-								value	: new_value
+								value	: (Array.isArray(new_value) ? new_value[0] : new_value)
 							})
 
 						// fix instance changed_data

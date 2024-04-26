@@ -63,10 +63,15 @@ describe("COMPONENTS DATA CHANGES", async function() {
 
 								case 'update':
 								default:
+
+									const value_item = element.model==='component_filter_records'
+										? new_value
+										: (Array.isArray(new_value) ? new_value[0] : new_value)
+
 									changed_data = [Object.freeze({
 										action	: 'update',
 										key		: 0,
-										value	: new_value
+										value	: value_item
 									})]
 									break;
 							}
