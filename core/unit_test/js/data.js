@@ -237,459 +237,485 @@
 		return result
 	}
 
+
+
 	export const random_3d_data = function() {
 
-		// const file_name = random_string(64) + '_' + random_number(99) + ''
-
-		const value =
-		  {
-		    "files_info": [
-		      {
-		        "quality": "original",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/3d/original/test26_test3_1.glb",
-		        "file_name": "test26_test3_1.glb",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/3d/original/test26_test3_1.glb",
-		        "file_size": 34165976,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 19,
-		          "time": 65045618879,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 27,
-		          "second": 59,
-		          "timestamp": "2023-10-08 19:27:59"
-		        },
-		        "file_exist": true
-		      },
-		      {
-		        "quality": "web",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/3d/web/test26_test3_1.glb",
-		        "file_name": "test26_test3_1.glb",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/3d/web/test26_test3_1.glb",
-		        "file_size": 34165976,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 19,
-		          "time": 65045618879,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 27,
-		          "second": 59,
-		          "timestamp": "2023-10-08 19:27:59"
-		        },
-		        "file_exist": true
-		      }
-		    ]
-		  }
+		const value = {
+			"files_info": [
+			  {
+				"quality": "original",
+				"extension": "glb",
+				"file_name": "test26_test3_1.glb",
+				"file_path": "/3d/original/0/test26_test3_1.glb",
+				"file_size": 19066216,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207280,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 0,
+				  "timestamp": "2024-04-26 09:08:00"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "web",
+				"extension": "glb",
+				"file_name": "test26_test3_1.glb",
+				"file_path": "/3d/web/0/test26_test3_1.glb",
+				"file_size": 19066216,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207280,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 0,
+				  "timestamp": "2024-04-26 09:08:00"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test26_test3_1.jpg",
+				"file_path": "/3d/thumb/0/test26_test3_1.jpg",
+				"file_size": 5520,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207282,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 2,
+				  "timestamp": "2024-04-26 09:08:02"
+				},
+				"file_exist": true
+			  }
+			],
+			"original_file_name": "calat_mac_girona.glb",
+			"original_upload_date": {
+			  "day": 26,
+			  "hour": 9,
+			  "time": 65063207280,
+			  "year": 2024,
+			  "month": 4,
+			  "minute": 8,
+			  "second": 0
+			},
+			"original_normalized_name": "test26_test3_1.glb"
+		}
 
 		return [value]
-	}
+	}//end random_3d_data
+
+
 
 	export const random_av_data = function() {
 
 		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
-		const value =
-		  {
-            "files_info": [
-              {
-                "quality": "original",
-                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/original/test94_test3_1.mp4",
-                "file_name": "test94_test3_1.mp4",
-                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/original/test94_test3_1.mp4",
-                "file_size": 9159390,
-                "file_time": {
-                  "day": 8,
-                  "hour": 19,
-                  "time": 65045620565,
-                  "year": 2023,
-                  "month": 10,
-                  "minute": 56,
-                  "second": 5,
-                  "timestamp": "2023-10-08 19:56:05"
-                },
-                "file_exist": true
-              },
-              {
-                "quality": "1080",
-                "file_url": null,
-                "file_name": null,
-                "file_path": null,
-                "file_size": null,
-                "file_time": null,
-                "file_exist": false
-              },
-              {
-                "quality": "720",
-                "file_url": null,
-                "file_name": null,
-                "file_path": null,
-                "file_size": null,
-                "file_time": null,
-                "file_exist": false
-              },
-              {
-                "quality": "576",
-                "file_url": null,
-                "file_name": null,
-                "file_path": null,
-                "file_size": null,
-                "file_time": null,
-                "file_exist": false
-              },
-              {
-                "quality": "404",
-                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/404/test94_test3_1.mp4",
-                "file_name": "test94_test3_1.mp4",
-                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/404/test94_test3_1.mp4",
-                "file_size": 9144810,
-                "file_time": {
-                  "day": 8,
-                  "hour": 19,
-                  "time": 65045620568,
-                  "year": 2023,
-                  "month": 10,
-                  "minute": 56,
-                  "second": 8,
-                  "timestamp": "2023-10-08 19:56:08"
-                },
-                "file_exist": true
-              },
-              {
-                "quality": "240",
-                "file_url": DEDALO_ROOT_WEB + "/media/media_development/av/240/test94_test3_1.mp4",
-                "file_name": "test94_test3_1.mp4",
-                "file_path": page_globals.dedalo_root_path + "/media/media_development/av/240/test94_test3_1.mp4",
-                "file_size": 3753529,
-                "file_time": {
-                  "day": 3,
-                  "hour": 11,
-                  "time": 65034444190,
-                  "year": 2023,
-                  "month": 6,
-                  "minute": 23,
-                  "second": 10,
-                  "timestamp": "2023-06-03 11:23:10"
-                },
-                "file_exist": true
-              },
-              {
-                "quality": "audio",
-                "file_url": null,
-                "file_name": null,
-                "file_path": null,
-                "file_size": null,
-                "file_time": null,
-                "file_exist": false
-              }
-            ]
-          }
+		const value = {
+			"files_info": [
+			  {
+				"quality": "original",
+				"extension": "mp4",
+				"file_name": "test94_test3_1.mp4",
+				"file_path": "/av/original/0/test94_test3_1.mp4",
+				"file_size": 14906377,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207294,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 14,
+				  "timestamp": "2024-04-26 09:08:14"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "404",
+				"extension": "mp4",
+				"file_name": "test94_test3_1.mp4",
+				"file_path": "/av/404/0/test94_test3_1.mp4",
+				"file_size": 14908012,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207304,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 24,
+				  "timestamp": "2024-04-26 09:08:24"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test94_test3_1.jpg",
+				"file_path": "/av/thumb/0/test94_test3_1.jpg",
+				"file_size": 14027,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207305,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 8,
+				  "second": 25,
+				  "timestamp": "2024-04-26 09:08:25"
+				},
+				"file_exist": true
+			  }
+			],
+			"original_file_name": "rsc35_rsc167_1_deleted_2023-10-22_1924.mp4",
+			"original_upload_date": {
+			  "day": 26,
+			  "hour": 9,
+			  "time": 65063207305,
+			  "year": 2024,
+			  "month": 4,
+			  "minute": 8,
+			  "second": 25
+			},
+			"original_normalized_name": "test94_test3_1.mp4"
+		}
 
 		return [value]
-	}
+	}//end random_av_data
+
+
 
 	export const random_image_data = function() {
 
 		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
 		const value =
-		  {
-		    "files_info": [
-		      {
-		        "quality": "original",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/original/0/test99_test3_1.jpg",
-		        "file_name": "test99_test3_1.jpg",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/original/0/test99_test3_1.jpg",
-		        "file_size": 2031,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 20,
-		          "time": 65045620919,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 1,
-		          "second": 59,
-		          "timestamp": "2023-10-08 20:01:59"
-		        },
-		        "file_exist": true
-		      },
-		      {
-		        "quality": "modified",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "100MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "50MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "25MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "6MB",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/6MB/0/test99_test3_1.jpg",
-		        "file_name": "test99_test3_1.jpg",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/6MB/0/test99_test3_1.jpg",
-		        "file_size": 276116,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 12,
-		          "time": 65045593073,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 17,
-		          "second": 53,
-		          "timestamp": "2023-10-08 12:17:53"
-		        },
-		        "file_exist": true
-		      },
-		      {
-		        "quality": "3MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "2MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "1.5MB",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/1.5MB/0/test99_test3_1.jpg",
-		        "file_name": "test99_test3_1.jpg",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/1.5MB/0/test99_test3_1.jpg",
-		        "file_size": 2320,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 20,
-		          "time": 65045620919,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 1,
-		          "second": 59,
-		          "timestamp": "2023-10-08 20:01:59"
-		        },
-		        "file_exist": true
-		      },
-		      {
-		        "quality": "<1MB",
-		        "file_url": null,
-		        "file_name": null,
-		        "file_path": null,
-		        "file_size": null,
-		        "file_time": null,
-		        "file_exist": false
-		      },
-		      {
-		        "quality": "thumb",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/image/thumb/0/test99_test3_1.jpg",
-		        "file_name": "test99_test3_1.jpg",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/image/thumb/0/test99_test3_1.jpg",
-		        "file_size": 740,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 20,
-		          "time": 65045620920,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 2,
-		          "second": 0,
-		          "timestamp": "2023-10-08 20:02:00"
-		        },
-		        "file_exist": true
-		      }
-		    ],
-		    "original_file_name": "test94_test3_1.jpg",
-		    "original_upload_date": {
-		      "day": 8,
-		      "hour": 20,
-		      "time": 65045620920,
-		      "year": 2023,
-		      "month": 10,
-		      "minute": 2,
-		      "second": 0
-		    },
-		    "original_normalized_name": "test99_test3_1.jpg"
+		{
+			"files_info": [
+			  {
+				"quality": "original",
+				"extension": "jpg",
+				"file_name": "test99_test3_1.jpg",
+				"file_path": "/image/original/0/test99_test3_1.jpg",
+				"file_size": 448466,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207350,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 9,
+				  "second": 10,
+				  "timestamp": "2024-04-26 09:09:10"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "6MB",
+				"extension": "jpg",
+				"file_name": "test99_test3_1.jpg",
+				"file_path": "/image/6MB/0/test99_test3_1.jpg",
+				"file_size": 848043,
+				"file_time": {
+				  "day": 26,
+				  "hour": 8,
+				  "time": 65063205913,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 45,
+				  "second": 13,
+				  "timestamp": "2024-04-26 08:45:13"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "6MB",
+				"extension": "avif",
+				"file_name": "test99_test3_1.avif",
+				"file_path": "/image/6MB/0/test99_test3_1.avif",
+				"file_size": 788315,
+				"file_time": {
+				  "day": 26,
+				  "hour": 8,
+				  "time": 65063205914,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 45,
+				  "second": 14,
+				  "timestamp": "2024-04-26 08:45:14"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "1.5MB",
+				"extension": "jpg",
+				"file_name": "test99_test3_1.jpg",
+				"file_path": "/image/1.5MB/0/test99_test3_1.jpg",
+				"file_size": 240920,
+				"file_time": {
+				  "day": 26,
+				  "hour": 8,
+				  "time": 65063205916,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 45,
+				  "second": 16,
+				  "timestamp": "2024-04-26 08:45:16"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "1.5MB",
+				"extension": "avif",
+				"file_name": "test99_test3_1.avif",
+				"file_path": "/image/1.5MB/0/test99_test3_1.avif",
+				"file_size": 226212,
+				"file_time": {
+				  "day": 26,
+				  "hour": 8,
+				  "time": 65063205917,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 45,
+				  "second": 17,
+				  "timestamp": "2024-04-26 08:45:17"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test99_test3_1.jpg",
+				"file_path": "/image/thumb/0/test99_test3_1.jpg",
+				"file_size": 12846,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063208385,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 26,
+				  "second": 25,
+				  "timestamp": "2024-04-26 09:26:25"
+				},
+				"file_exist": true
+			  }
+			],
+			"original_file_name": "test94_test3_1.jpg",
+			"original_upload_date": {
+			  "day": 8,
+			  "hour": 20,
+			  "time": 65045620920,
+			  "year": 2023,
+			  "month": 10,
+			  "minute": 2,
+			  "second": 0
+			},
+			"original_normalized_name": "test99_test3_1.jpg"
 		  }
 
-
 		return [value]
-	}
+	}//end random_image_data
+
+
 
 	export const random_pdf_data = function() {
 
-		// const file_name = 'test177_test3_1.pdf' // random_string(64) + '_' + random_number(99) + ''
-
-		const value =
-		  {
-		    "files_info": [
-		      {
-		        "quality": "original",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/pdf/original/test85_test3_1.pdf",
-		        "file_name": "test85_test3_1.pdf",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/pdf/original/test85_test3_1.pdf",
-		        "file_size": 4288553,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 20,
-		          "time": 65045621209,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 6,
-		          "second": 49,
-		          "timestamp": "2023-10-08 20:06:49"
-		        },
-		        "file_exist": true
-		      },
-		      {
-		        "quality": "web",
-		        "file_url": DEDALO_ROOT_WEB + "/media/media_development/pdf/web/test85_test3_1.pdf",
-		        "file_name": "test85_test3_1.pdf",
-		        "file_path": page_globals.dedalo_root_path + "/media/media_development/pdf/web/test85_test3_1.pdf",
-		        "file_size": 4288553,
-		        "file_time": {
-		          "day": 8,
-		          "hour": 20,
-		          "time": 65045621209,
-		          "year": 2023,
-		          "month": 10,
-		          "minute": 6,
-		          "second": 49,
-		          "timestamp": "2023-10-08 20:06:49"
-		        },
-		        "file_exist": true
-		      }
-		    ]
-		  }
-
-		return [value]
-	}
-
-	export const random_svg_data = function() {
-
-		const file_name = 'test177_test3_1' //  random_string(64) + '_' + random_number(99) + ''
-
-		// des
-			// const file_size = random_number(3000) || 1
-
-			// const date		= random_date().start
-			// const month		= String(date.month).padStart(2, '0');
-			// const day		= String(date.day).padStart(2, '0');
-			// date.timestamp	= `${date.year}-${month}-${day} 01:01:01`
-
-			// const date = {
-	        //     "year": 2023,
-	        //     "month": 6,
-	        //     "day": 2,
-	        //     "hour": 17,
-	        //     "minute": 27,
-	        //     "second": 54,
-	        //     "time": 65034379674,
-	        //     "timestamp": "2023-06-02 17:27:54"
-	        // }
-
-			// const value =
-			// {
-			//   "lib_data": null,
-			//   "files_info": [
-			//     {
-			//       "quality": "original",
-			//       "file_exist": true,
-			//       "file_name": `${file_name}.svg`,
-			//       "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/original/${file_name}.svg`,
-			//       "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/original/${file_name}.svg`,
-			//       "file_size": file_size,
-			//       "file_time": date
-			//     },
-			//     {
-			//       "quality": "web",
-			//       "file_exist": true,
-			//       "file_name": `${file_name}.svg`,
-			//       "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/web/${file_name}.svg`,
-			//       "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/web/${file_name}.svg`,
-			//       "file_size": file_size,
-			//       "file_time": date
-			//     }
-			//   ]
-			// }
-
 		const value = {
-		  "lib_data": null,
-		  "files_info": [
-		    {
-		      "quality": "original",
-		      "file_exist": true,
-		      "file_name": "test177_test3_1.svg",
-		      "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/original/${file_name}.svg`,
-		      "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/original/${file_name}.svg`,
-		      "file_size": 1275,
-		      "file_time": {
-		        "year": 2023,
-		        "month": 6,
-		        "day": 2,
-		        "hour": 17,
-		        "minute": 27,
-		        "second": 54,
-		        "time": 65034379674,
-		        "timestamp": "2023-06-02 17:27:54"
-		      }
-		    },
-		    {
-		      "quality": "web",
-		      "file_exist": true,
-		      "file_name": "test177_test3_1.svg",
-		      "file_path": page_globals.dedalo_root_path + `/media/media_development/svg/web/${file_name}.svg`,
-		      "file_url": DEDALO_ROOT_WEB + `/media/media_development/svg/web/${file_name}.svg`,
-		      "file_size": 1275,
-		      "file_time": {
-		        "year": 2023,
-		        "month": 6,
-		        "day": 2,
-		        "hour": 17,
-		        "minute": 27,
-		        "second": 54,
-		        "time": 65034379674,
-		        "timestamp": "2023-06-02 17:27:54"
-		      }
-		    }
-		  ]
+			"files_info": [
+			  {
+				"quality": "original",
+				"extension": "pdf",
+				"file_name": "test85_test3_1.pdf",
+				"file_path": "/pdf/original/0/test85_test3_1.pdf",
+				"file_size": 14063496,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207257,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 7,
+				  "second": 37,
+				  "timestamp": "2024-04-26 09:07:37"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "original",
+				"extension": "jpg",
+				"file_name": "test85_test3_1.jpg",
+				"file_path": "/pdf/original/0/test85_test3_1.jpg",
+				"file_size": 829427,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207269,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 7,
+				  "second": 49,
+				  "timestamp": "2024-04-26 09:07:49"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "web",
+				"extension": "pdf",
+				"file_name": "test85_test3_1.pdf",
+				"file_path": "/pdf/web/0/test85_test3_1.pdf",
+				"file_size": 14063496,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207258,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 7,
+				  "second": 38,
+				  "timestamp": "2024-04-26 09:07:38"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "web",
+				"extension": "jpg",
+				"file_name": "test85_test3_1.jpg",
+				"file_path": "/pdf/web/0/test85_test3_1.jpg",
+				"file_size": 829427,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207263,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 7,
+				  "second": 43,
+				  "timestamp": "2024-04-26 09:07:43"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test85_test3_1.jpg",
+				"file_path": "/pdf/thumb/0/test85_test3_1.jpg",
+				"file_size": 6189,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207270,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 7,
+				  "second": 50,
+				  "timestamp": "2024-04-26 09:07:50"
+				},
+				"file_exist": true
+			  }
+			],
+			"original_file_name": "web2.pdf",
+			"original_upload_date": {
+			  "day": 26,
+			  "hour": 9,
+			  "time": 65063207258,
+			  "year": 2024,
+			  "month": 4,
+			  "minute": 7,
+			  "second": 38
+			},
+			"original_normalized_name": "test85_test3_1.pdf"
 		}
 
 		return [value]
-	}
+	}//end random_pdf_data
+
+
+
+	export const random_svg_data = function() {
+
+		const value = {
+			"files_info": [
+			  {
+				"quality": "original",
+				"extension": "svg",
+				"file_name": "test177_test3_1.svg",
+				"file_path": "/svg/original/0/test177_test3_1.svg",
+				"file_size": 859,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207142,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 5,
+				  "second": 42,
+				  "timestamp": "2024-04-26 09:05:42"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "web",
+				"extension": "svg",
+				"file_name": "test177_test3_1.svg",
+				"file_path": "/svg/web/0/test177_test3_1.svg",
+				"file_size": 859,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207142,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 5,
+				  "second": 42,
+				  "timestamp": "2024-04-26 09:05:42"
+				},
+				"file_exist": true
+			  },
+			  {
+				"quality": "thumb",
+				"extension": "jpg",
+				"file_name": "test177_test3_1.jpg",
+				"file_path": "/svg/thumb/0/test177_test3_1.jpg",
+				"file_size": 4384,
+				"file_time": {
+				  "day": 26,
+				  "hour": 9,
+				  "time": 65063207148,
+				  "year": 2024,
+				  "month": 4,
+				  "minute": 5,
+				  "second": 48,
+				  "timestamp": "2024-04-26 09:05:48"
+				},
+				"file_exist": true
+			  }
+			],
+			"original_file_name": "circle-radiation.svg",
+			"original_upload_date": {
+			  "day": 26,
+			  "hour": 9,
+			  "time": 65063207142,
+			  "year": 2024,
+			  "month": 4,
+			  "minute": 5,
+			  "second": 42
+			},
+			"original_normalized_name": "test177_test3_1.svg"
+		}
+
+		return [value]
+	}//end random_svg_data
 
 
 
