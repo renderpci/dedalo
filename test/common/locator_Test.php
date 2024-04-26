@@ -19,7 +19,12 @@ final class locator_test extends TestCase {
 	public function test___construct() {
 
 		// empty
-		$result = new locator();
+		$result = new locator(
+			(object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 1
+			]
+		);
 
 		$this->assertTrue(
 			gettype($result)==='object' ,
@@ -52,7 +57,12 @@ final class locator_test extends TestCase {
 	*/
 	public function test_set_paginated_key() {
 
-		$locator = new locator();
+		$locator = new locator(
+			(object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 1
+			]
+		);
 
 		$result = $locator->set_paginated_key(
 			0
@@ -81,7 +91,12 @@ final class locator_test extends TestCase {
 	*/
 	public function test_set_label() {
 
-		$locator = new locator();
+		$locator = new locator(
+			(object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 1
+			]
+		);
 
 		$result = $locator->set_label(
 			'Random label'
@@ -110,7 +125,12 @@ final class locator_test extends TestCase {
 	*/
 	public function test_set_type() {
 
-		$locator = new locator();
+		$locator = new locator(
+			(object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 1
+			]
+		);
 
 		$value = 'dd96';
 
@@ -141,7 +161,12 @@ final class locator_test extends TestCase {
 	*/
 	public function test_set_section_top_tipo() {
 
-		$locator = new locator();
+		$locator = new locator(
+			(object)[
+				'section_tipo'	=> 'test3',
+				'section_id'	=> 1
+			]
+		);
 
 		$value = 'test3';
 

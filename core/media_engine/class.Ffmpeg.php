@@ -491,7 +491,7 @@ final class Ffmpeg {
 					# paso 1 extraer el audio
 					#$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec copy $tmp_file ";
 					# convert format always
-					$command	.= "nice -n 19 ".DEDALO_AV_FFMPEG_PATH." -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
+					$command	.= "nice -n 19 $ffmpeg_path -i $src_file -vn -acodec $acodec -ar 44100 -ab 128k -ac 2 $target_file ";
 					# fast-start
 					#$command	.= "&& ".$faststart_path." $tmp_file $target_file ";
 					# delete media temp
@@ -531,40 +531,47 @@ final class Ffmpeg {
 					$acodec			= 'libvo_aacenc';	# default libvo_aacenc
 					$target_path 	= "404";			# like '404'
 					*/
-					# paso 1 sólo video
+
+					// loglevel. Set to 'error' to prevents testunit display ffmpeg logs
+					$log_level = '-loglevel error';
+
 					$ar_cmn = [];
 
-					$ar_cmn[] = "nice -n 19 $ffmpeg_path -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y /dev/null ";
+					// step 1 only video
+					$ar_cmn[] = "nice -n 19 $ffmpeg_path -i $src_file -an -pass 1 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file -y /dev/null";
 
-					# paso 2 video
-					$ar_cmn[] = "&& nice -n 19 $ffmpeg_path -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force -passlogfile $log_file -y ";
+					// step 2 video / audio
+					// video
+					$av_cm  = "nice -n 19 $ffmpeg_path -i $src_file -pass 2 -vcodec $vcodec -vb $vb -s $s -g $g $progresivo $gammma -f $force $log_level -passlogfile $log_file -y ";
+					// audio
+					$av_cm .= "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file";
+					// add
+					$ar_cmn[] = $av_cm;
 
-					# paso 2 audio
-					$ar_cmn[] = "-acodec $acodec -ar $ar -ab $ab -ac $ac -y $tmp_file ";
+					// fast-start
+					$ar_cmn[] = "nice -n 19 $faststart_path $tmp_file $target_file";
 
-					# fast-start
-					$ar_cmn[] = "&& nice -n 19 $faststart_path $tmp_file $target_file ";
+					// delete
+					// delete media temp
+					$ar_cmn[] = "rm -f $tmp_file";
+					// delete log temps (all generated logs files)
+					$ar_cmn[] = "rm -f $log_file*";
+					// delete self sh file
+					$ar_cmn[] = "rm -f " . $sh_file;
 
-					# delete media temp
-					$ar_cmn[] = "&& rm -f $tmp_file ";
-
-					# delete log temps (all generated logs files)
-					$ar_cmn[] = "&& rm -f $log_file* ";
-
-					# delete self sh file
-					$ar_cmn[] = "&& rm -f " . $sh_file;
-
-					$command = implode($ar_cmn);
+					// compose final command
+					$command = implode(" &&\n", $ar_cmn);
 					break;
 			}
-		}//end if($setting_name=='audio') {
+		}//end if($setting_name=='audio')
 
 
 		// debug
 			debug_log(__METHOD__
-				." Creating AV version:".PHP_EOL
-				.' command: ' . $command
-				, logger::DEBUG
+				."Creating AV version:" . PHP_EOL
+				.'command: ' . PHP_EOL . PHP_EOL
+				. $command . PHP_EOL
+				, logger::WARNING
 			);
 
 		// SH FILE
