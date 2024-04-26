@@ -78,8 +78,16 @@ tool_pdf_extractor.prototype.init = async function(options) {
 */
 tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
+	const self = this
+
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
+
+	// config
+		if (!self.config) {
+			console.error('Tool is not configured. Set configuration to use this tool', self);
+			self.config = {}
+		}
 
 
 	return common_build
@@ -97,9 +105,10 @@ tool_pdf_extractor.prototype.get_pdf_data = async function() {
 	const self = this
 
 	// short vars
-		const method	= self.config.method
-		const page_in	= self.config.page_in
-		const page_out	= self.config.page_out
+		const config    = self.config || {}
+		const method	= config.method
+		const page_in	= config.page_in
+		const page_out	= config.page_out
 
 	// component PDF caller
 		const component = self.caller
