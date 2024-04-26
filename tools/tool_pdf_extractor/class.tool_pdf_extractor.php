@@ -10,6 +10,8 @@ class tool_pdf_extractor extends tool_common {
 
 	/**
 	* GET_PDF_DATA
+	* Exec a shell command against selected daemon processor
+	* to extract the file text
 	* @param object $options
 	* @return object $response
 	*/
@@ -18,17 +20,23 @@ class tool_pdf_extractor extends tool_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
 		// options
-			// $component_options 	= $options->component;
-			// $extractor_config 	= $options->extractor_config;
 			$component_tipo	= $options->component_tipo;
 			$section_tipo	= $options->section_tipo;
 			$section_id		= $options->section_id;
-			$lang			= $options->lang;
+			$lang			= $options->lang ?? DEDALO_DATA_LANG;
 			$method			= $options->method; // string text|html
-			$page_in		= $options->page_in;
-			$page_out		= $options->page_out;
+			$page_in		= $options->page_in ?? null;
+			$page_out		= $options->page_out ?? null;
+
+		// check vars
+			if (empty($component_tipo) || empty($section_tipo) || empty($section_id) || empty($method)) {
+				$response->errors[] = 'few vars';
+				$response->msg .= ' Few vars';
+				return $response;
+			}
 
 		// component_pdf. Create the component to get the file path
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -45,19 +53,19 @@ class tool_pdf_extractor extends tool_common {
 		// pdf_path error on missing properties
 			if (empty($pdf_path) || !file_exists($pdf_path)) {
 				$response->result = false;
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source pdf file not found";
+				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source PDF file not found";
 				debug_log(__METHOD__
 					." $response->msg "
 					.' pdf_path:' . to_string($pdf_path)
 					, logger::ERROR
 				);
+				$response->errors[] = 'source file not found';
 				return $response;
 			}
 
 		// test engine PDF to text
 			$config				= tool_common::get_config('tool_pdf_extractor');
 			$extractor_engine	= $config->config->{$method}->default ?? null;
-
 			if (!isset($extractor_engine)) {
 
 				$response->result	= false;
@@ -67,6 +75,7 @@ class tool_pdf_extractor extends tool_common {
 					.' config: '. to_string($config)
 					, logger::ERROR
 				);
+				$response->errors[] = 'config extractor engine is not defined';
 				return $response;
 
 			}else{
@@ -80,6 +89,7 @@ class tool_pdf_extractor extends tool_common {
 						. ' extractor_engine: ' . to_string($extractor_engine)
 						, logger::ERROR
 					);
+					$response->errors[] = 'daemon engine not found';
 					return $response;
 				}
 			}
@@ -139,6 +149,7 @@ class tool_pdf_extractor extends tool_common {
 					. 'result: '.to_string($result)
 					, logger::ERROR
 				);
+
 				return $response;
 			}
 
@@ -150,6 +161,7 @@ class tool_pdf_extractor extends tool_common {
 					." $response->msg "
 					, logger::ERROR
 				);
+				$response->errors[] = 'extraction file do not exists';
 				return $response;
 			}
 
@@ -157,8 +169,8 @@ class tool_pdf_extractor extends tool_common {
 			$pdf_text = file_get_contents($extraction_filename); // Read current text/html file
 
 		// response
-			$response->result  = htmlentities($pdf_text);
-			$response->msg 	   = "OK Processing Request pdf_automatic_transcription: text processed";
+			$response->result	= htmlentities($pdf_text);
+			$response->msg		= "OK Processing Request pdf_automatic_transcription: text processed";
 			// $response->original = trim($original_text);
 
 		// (!) Note: This tool is not finished!

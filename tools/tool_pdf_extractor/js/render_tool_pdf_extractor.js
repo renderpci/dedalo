@@ -123,6 +123,13 @@ const get_content_data = async function(self) {
 					parent			: options_container
 				})
 
+			// change_handler
+				const change_handler = (e) => {
+					// fix config.method
+					const method = e.target.value // html_engine | text_engine
+					self.config.method = method
+				}
+
 			// option txt
 				const option_txt_label = ui.create_dom_element({
 					element_type	: 'label',
@@ -134,13 +141,15 @@ const get_content_data = async function(self) {
 				const option_txt = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'radio',
-					value			: 'txt',
+					value			: 'text_engine',
 					name			: self.id
 				})
+				// set as checked by default
 				option_txt.checked = 'checked'
-				option_txt.addEventListener('change', ()=>{
-					self.config.method = 'text_engine'
-				})
+				// set as method by default
+				self.config.method = 'text_engine'
+				// change event
+				option_txt.addEventListener('change', change_handler)
 				option_txt_label.prepend(option_txt)
 
 			// option html
@@ -153,12 +162,11 @@ const get_content_data = async function(self) {
 				const option_html = ui.create_dom_element({
 					element_type	: 'input',
 					type			: 'radio',
-					value			: 'html',
+					value			: 'html_engine',
 					name			: self.id
 				})
-				option_html.addEventListener('change',()=>{
-					self.config.method = 'html_engine'
-				})
+				// change event
+				option_html.addEventListener('change', change_handler)
 				option_html_label.prepend(option_html)
 
 	// button_submit
