@@ -85,7 +85,6 @@ tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
 	// config
 		if (!self.config) {
-			console.error('Tool is not configured. Set configuration to use this tool', self);
 			self.config = {}
 		}
 
@@ -177,7 +176,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 		const offset = self.config.offset || 1
 
 	// page_in. Get the page_in set by the user in the modal alert
-		const page_in = (self.config.page_in === false || self.config.page_in ==='' || typeof self.config.page_in ==='undefined')
+		const page_in = (self.config.page_in===false || self.config.page_in==='' || typeof self.config.page_in==='undefined')
 			? 1
 			: parseInt(self.config.page_in)
 
@@ -230,6 +229,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	return final_text
 }//end process_pdf_data
+
 
 
 // @license-end
