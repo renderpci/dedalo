@@ -532,19 +532,19 @@ class tool_import_files extends tool_common {
 					$target_section_id = $portal_response->section_id;
 
 				// component portal new section order. Order portal record when is $import_file_name_mode=enumerate
-					if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
-						$portal_norder = $file_data['regex']->portal_order!=='' ? (int)$file_data['regex']->portal_order : false;
-						if ($portal_norder!==false) {
-							$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
-							if ($changed_order===true) {
-								$component_portal->Save();
-							}
-							debug_log(__METHOD__
-								." CHANGED ORDER FOR : ".$file_data['regex']->portal_order." ".to_string($file_data['regex'])
-								, logger::DEBUG
-							);
-						}
-					}
+					// if ($import_file_name_mode==='enumerate' || $import_file_name_mode==='named' ) {
+					// 	$portal_norder = $regex']->portal_order!=='' ? (int)$regex']->portal_order : false;
+					// 	if ($portal_norder!==false) {
+					// 		$changed_order = $component_portal->set_locator_order( $portal_response->added_locator, $portal_norder );
+					// 		if ($changed_order===true) {
+					// 			$component_portal->Save();
+					// 		}
+					// 		debug_log(__METHOD__
+					// 			." CHANGED ORDER FOR : ".$regex']->portal_order." ".to_string($regex'])
+					// 			, logger::DEBUG
+					// 		);
+					// 	}
+					// }
 
 				// ar_ddo_map iterate. role based actions
 					// Create the ddo components with the data to store with the import
