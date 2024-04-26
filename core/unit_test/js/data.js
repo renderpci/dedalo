@@ -241,7 +241,8 @@
 
 	export const random_3d_data = function() {
 
-		const value = {
+		const value =
+		{
 			"files_info": [
 			  {
 				"quality": "original",
@@ -320,7 +321,8 @@
 
 		// const file_name = random_string(64) + '_' + random_number(99) + ''
 
-		const value = {
+		const value =
+		{
 			"files_info": [
 			  {
 				"quality": "original",
@@ -522,7 +524,7 @@
 			  "second": 0
 			},
 			"original_normalized_name": "test99_test3_1.jpg"
-		  }
+		}
 
 		return [value]
 	}//end random_image_data
@@ -531,7 +533,8 @@
 
 	export const random_pdf_data = function() {
 
-		const value = {
+		const value =
+		{
 			"files_info": [
 			  {
 				"quality": "original",
@@ -644,7 +647,8 @@
 
 	export const random_svg_data = function() {
 
-		const value = {
+		const value =
+		{
 			"files_info": [
 			  {
 				"quality": "original",
