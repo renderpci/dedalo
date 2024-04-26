@@ -823,6 +823,11 @@ class section extends common {
 	public function Save( object $save_options=null ) : int|string|null {
 		$start_time = start_time();
 
+		if(SHOW_DEBUG===true) {
+			// metrics
+				metrics::$section_save_total_calls++;;
+		}
+
 		// options
 			$options = new stdClass();
 				$options->main_components_obj			= false;
@@ -1311,12 +1316,19 @@ class section extends common {
 				);
 			}
 
-
 		// debug
-			debug_log(__METHOD__
-				." Saved section finish: ($this->tipo - $this->section_id) in time: ".exec_time_unit($start_time, 'ms').' ms'
-				, logger::DEBUG
-			);
+			if(SHOW_DEBUG===true) {
+
+				$total_time_ms = exec_time_unit($start_time, 'ms');
+
+				// metrics
+					metrics::$section_save_total_time += $total_time_ms;
+
+				debug_log(__METHOD__
+					." Saved section finish: ($this->tipo - $this->section_id) in time: ".$total_time_ms.' ms'
+					, logger::DEBUG
+				);
+			}
 
 
 		return $this->section_id;
