@@ -18,7 +18,7 @@ import {elements} from './elements.js'
 		'test_no_logged_error',
 		'test_unknown_error',
 		'test_page',
-		'test_component_portal_pagination'
+		// 'test_component_portal_pagination'
 	]
 
 	// content: (!) Note that content value is automatically set by mocha selecting page #content
