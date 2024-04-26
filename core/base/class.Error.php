@@ -176,14 +176,14 @@ class dd_error {
 
 if(SHOW_DEBUG===true) {
 
-	ini_set( 'display_errors', 1 );     // Default 1
-	#error_reporting(E_ALL);             // Default -1 or E_ALL (Report all PHP errors)
-	error_reporting(E_ALL ^ E_DEPRECATED);
+	ini_set( 'display_errors', 1 ); // Default 1
+	// Report all errors
+	error_reporting(E_ALL);
 
 }else{
 
-	ini_set( 'display_errors', 0 );     // Default 0
-	#error_reporting(E_ALL ^ E_NOTICE);  // Default E_ALL ^ E_NOTICE
+	ini_set( 'display_errors', 0 ); // Default 0
+	// Turn off all error reporting
 	error_reporting(0);
 }
 
