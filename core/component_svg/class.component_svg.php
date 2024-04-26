@@ -307,6 +307,12 @@ class component_svg extends component_media_common {
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.svg"
 			$original_normalized_name	= $full_file_name;
 
+		// check full_file_path
+			if (!file_exists($full_file_path)) {
+				$response->msg .= ' File full_file_path do not exists';
+				return $response;
+			}
+
 		// debug
 			debug_log(__METHOD__
 				. " process_uploaded_file " . PHP_EOL

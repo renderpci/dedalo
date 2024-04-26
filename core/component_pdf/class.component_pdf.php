@@ -173,9 +173,9 @@ class component_pdf extends component_media_common {
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
 		if (empty($valor)) {
-			$dato = $this->get_dato();				// Get dato from DB
+			$this->get_dato(); // Get dato from DB
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 		$thumb_quality	= $this->get_thumb_quality();
@@ -185,6 +185,7 @@ class component_pdf extends component_media_common {
 			true,  // absolute, output absolute path like 'http://myhost/mypath/myimage.jpg';
 			false
 		);	// Note this absolute url is converted to image on export
+
 
 		return $valor;
 	}//end get_valor_export
@@ -228,7 +229,7 @@ class component_pdf extends component_media_common {
 
 		// 		# move / rename file
 		// 		#$folder_path_del 	= DEDALO_MEDIA_PATH . DEDALO_PDF_FOLDER .'/'. $current_quality . '/deleted';
-		// 		$folder_path_del 	= $this->get_target_dir()  . 'deleted';
+		// 		$folder_path_del 	= $this->get_media_path_dir()  . 'deleted';
 
 		// 		# delete folder exists ?
 		// 		if( !is_dir($folder_path_del) ) {
@@ -490,6 +491,12 @@ class component_pdf extends component_media_common {
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$first_page					= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 			$original_normalized_name	= $full_file_name;
+
+		// check full_file_path
+			if (!file_exists($full_file_path)) {
+				$response->msg .= ' File full_file_path do not exists';
+				return $response;
+			}
 
 		// upload info
 			$original_quality = $this->get_original_quality();
