@@ -13,9 +13,9 @@
 | numisdata | production | 100% | 100% | 100% |  All definitions are ready |
 | isad | production | 100% | 100% | 100% | All definitions are ready |
 | ich | production | 100% | 100% | 100%  | All definitions are ready |
-| tch | beta | 60% | 60% | 60%  | Install and test it, but don't use in production |
-| tchi | alpha | 50% | 50% | 50%  | Install and test it, but don't use in production |
-| dmm | alpha | 0% | 0% | 0% |  |
+| tch | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |
+| tchi | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |
+| dmm | beta | 70% | 60% | 80% | Install and test it, but don't use in production |
 | mdcat | alpha | 0% | 0% |0%  |  |
 
 
@@ -69,7 +69,7 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ### 4.1. Services required for the OS
 
-- PHP 8.2+
+- PHP 8.3+
 - Apache 2.4.6+
 - PostgreSQL 16.1+
 - MySQL 5.6+ (NOT MANDATORY, only for publication).
