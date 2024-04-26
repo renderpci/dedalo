@@ -70,7 +70,7 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_IMAGE ID
+	* GET_ID
 	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
 	* It can be overwritten in properties with JSON ex. {"id": "dd851"} and will be read from the content of the referenced component
 	* @return string|null $id

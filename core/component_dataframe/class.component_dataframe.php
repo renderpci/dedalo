@@ -14,7 +14,6 @@ class component_dataframe extends component_portal {
 	// */
 	// public function set_dato($dato) : bool {
 
-
 	// 	// on set empty data, delete old data target sections
 	// 		if (empty($dato)) {
 	// 			$current_dato = $this->get_dato();
@@ -29,7 +28,6 @@ class component_dataframe extends component_portal {
 	// 				}
 	// 			}
 	// 		}
-
 
 	// 	return parent::set_dato($dato);
 	// }//end set_dato
@@ -52,8 +50,10 @@ class component_dataframe extends component_portal {
 		$all_data = [];
 
 		if(!isset($caller_dataframe)){
-			debug_log(__METHOD__." empty caller dataframe getting all component data ".to_string(), logger::WARNING);
-
+			debug_log(__METHOD__
+				." empty caller dataframe getting all component data "
+				, logger::WARNING
+			);
 			return parent::get_all_data();
 		}
 
@@ -68,7 +68,7 @@ class component_dataframe extends component_portal {
 				// && isset($locator->tipo_key)
 				&& $locator->from_component_tipo	=== $this->tipo
 				&& (int)$locator->section_id_key	=== (int)$caller_dataframe->section_id_key
-				// && $locator->tipo_key				=== $caller_dataframe->tipo_key
+				// && $locator->tipo_key			=== $caller_dataframe->tipo_key
 			) {
 				$all_data[] = $locator;
 			}
@@ -129,18 +129,18 @@ class component_dataframe extends component_portal {
 	* @return array
 	*/
 	public function get_locator_properties_to_check() {
+
 		return ['type','section_id','section_tipo','from_component_tipo','section_id_key'];
-		// return ['type','section_id','section_tipo','from_component_tipo','section_id_key','tipo_key'];
 	}//end get_locator_properties_to_check
 
 
 
-
 	/**
-	* EMPY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
+	* EMPTY_FULL_DATA_ASSOCIATED_TO_MAIN_COMPONENT
+	* !not used function at 26-04-2024
 	* @return bool
 	*/
-	public function empy_full_data_associated_to_main_component() {
+	public function empty_full_data_associated_to_main_component() {
 
 		$all_data = parent::get_all_data();
 
@@ -163,7 +163,9 @@ class component_dataframe extends component_portal {
 			);
 			$this->Save();
 		}
-	}//end empy_full_data_associated_to_main_component
+
+		return true;
+	}//end empty_full_data_associated_to_main_component
 
 
 
