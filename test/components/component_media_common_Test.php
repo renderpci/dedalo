@@ -262,7 +262,6 @@ final class component_media_common_test extends TestCase {
 			);
 
 			$result = $component->get_valor_export();
-				dump($result, ' result ++ '.to_string($element->model));
 
 			$this->assertTrue(
 				gettype($result)==='string' || gettype($result)==='NULL',

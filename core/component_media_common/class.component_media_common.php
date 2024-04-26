@@ -982,6 +982,7 @@ class component_media_common extends component_common {
 		// extension
 			$extension			= $this->get_extension();
 			$thumb_extension	= $this->get_thumb_extension();
+
 		// ar_quality_to_include
 			$ar_quality_to_include = [
 				$this->get_default_quality(),

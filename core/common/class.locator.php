@@ -750,11 +750,11 @@ class locator extends stdClass {
 		// ONLY FOR DEBUG !!
 		if(SHOW_DEBUG===true) {
 			if (!isset($this->section_tipo)) {
-				dump($this, ' this');
+				dump($this, ' locator __destruct this');
 				throw new Exception("Error Processing Request. locator section_tipo is mandatory", 1);
 			}
 			if (!isset($this->section_id)) {
-				dump($this, ' this');
+				dump($this, ' locator __destruct this');
 				throw new Exception("Error Processing Request. locator section_id is mandatory", 1);
 			}
 		}else{
