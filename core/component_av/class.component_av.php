@@ -467,92 +467,92 @@ class component_av extends component_media_common {
 	* @param string $quality
 	* @return string|null $result
 	*/
-	public function get_original_file_path(string $quality) : ?string {
+		// public function get_original_file_path(string $quality) : ?string {
 
-		$result = null;
+		// 	$result = null;
 
-		// store initial_quality
-			// $initial_quality = $this->get_quality();
+		// 	// store initial_quality
+		// 		// $initial_quality = $this->get_quality();
 
-		// quality. Changes current component quality temporally
-			// $this->set_quality($quality);
+		// 	// quality. Changes current component quality temporally
+		// 		// $this->set_quality($quality);
 
-		// directory do not exists case
-			$target_dir = $this->get_media_path_dir($quality);
-			if( !file_exists($target_dir) ) {
-				debug_log(__METHOD__.
-					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-					logger::WARNING
-				);
-				return null;
-			}
+		// 	// directory do not exists case
+		// 		$target_dir = $this->get_media_path_dir($quality);
+		// 		if( !file_exists($target_dir) ) {
+		// 			debug_log(__METHOD__.
+		// 				" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
+		// 				logger::WARNING
+		// 			);
+		// 			return null;
+		// 		}
 
-		// ar_originals
-			$ar_originals	= [];
-			$findme			= $this->get_id() . '.';
-			if ($handle = opendir($target_dir)) {
+		// 	// ar_originals
+		// 		$ar_originals	= [];
+		// 		$findme			= $this->get_id() . '.';
+		// 		if ($handle = opendir($target_dir)) {
 
-				while (false !== ($file = readdir($handle))) {
+		// 			while (false !== ($file = readdir($handle))) {
 
-					// is dir case (DVD files)
-					if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
+		// 				// is dir case (DVD files)
+		// 				if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
 
-						// DES
-							// $dvd_folder = $target_dir.'/'.$file;
-							// # dvd_folder dir set permissions 0777
+		// 					// DES
+		// 						// $dvd_folder = $target_dir.'/'.$file;
+		// 						// # dvd_folder dir set permissions 0777
 
-							// $stat = stat($dvd_folder);
-							// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
+		// 						// $stat = stat($dvd_folder);
+		// 						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
 
-							// if(posix_geteuid() != $stat['uid']){
-							// 	chown($dvd_folder, posix_geteuid());
-							// }
+		// 						// if(posix_geteuid() != $stat['uid']){
+		// 						// 	chown($dvd_folder, posix_geteuid());
+		// 						// }
 
-							// $wantedPerms = 0777;
-							// $actualPerms = fileperms($dvd_folder);
-							// if($actualPerms < $wantedPerms) {
-							// 	$chmod = chmod($dvd_folder, $wantedPerms);
-							// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-							// }
+		// 						// $wantedPerms = 0777;
+		// 						// $actualPerms = fileperms($dvd_folder);
+		// 						// if($actualPerms < $wantedPerms) {
+		// 						// 	$chmod = chmod($dvd_folder, $wantedPerms);
+		// 						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
+		// 						// }
 
-						$ar_originals[] = $file;
-						continue;
-					}
+		// 					$ar_originals[] = $file;
+		// 					continue;
+		// 				}
 
-					// note that '.' and '..' is returned even
-					if( strpos($file, $findme)!==false ) {
-						$ar_originals[] = $file;
-					}
-				}
-				closedir($handle);
-			}
+		// 				// note that '.' and '..' is returned even
+		// 				if( strpos($file, $findme)!==false ) {
+		// 					$ar_originals[] = $file;
+		// 				}
+		// 			}
+		// 			closedir($handle);
+		// 		}
 
-		$n = count($ar_originals);
-		if ($n===0) {
-			// nothing found case
-		}elseif($n===1) {
-			// OK. File found
-			#$path = $_FILES['image']['name'];
-			#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-			$result = $target_dir.'/'.$ar_originals[0];
-		}else{
-			// Error. More than one original found
-				debug_log(__METHOD__
-					." ERROR (DEBUG ONLY): Current quality have more than one file." . PHP_EOL
-					.' ar_originals: ' . to_string($ar_originals)
-					, logger::ERROR
-				);
-				if(SHOW_DEBUG===true) {
-					dump($ar_originals, "ar_originals ++++++++++++++++++ ".to_string($ar_originals));
-				}
-		}
+		// 	$n = count($ar_originals);
+		// 	if ($n===0) {
+		// 		// nothing found case
+		// 	}elseif($n===1) {
+		// 		// OK. File found
+		// 		#$path = $_FILES['image']['name'];
+		// 		#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+		// 		$result = $target_dir.'/'.$ar_originals[0];
+		// 	}else{
+		// 		// Error. More than one original found
+		// 			debug_log(__METHOD__
+		// 				." ERROR (DEBUG ONLY): Current quality have more than one file." . PHP_EOL
+		// 				.' ar_originals: ' . to_string($ar_originals)
+		// 				, logger::ERROR
+		// 			);
+		// 			if(SHOW_DEBUG===true) {
+		// 				dump($ar_originals, "ar_originals ++++++++++++++++++ ".to_string($ar_originals));
+		// 			}
+		// 	}
 
-		// restore component quality
-			// $this->set_quality($initial_quality);
+		// 	// restore component quality
+		// 		// $this->set_quality($initial_quality);
 
 
-		return $result;
-	}//end get_original_file_path
+		// 	return $result;
+		// }//end get_original_file_path
 
 
 
@@ -690,7 +690,7 @@ class component_av extends component_media_common {
 			}
 
 		// files remove
-			parent::remove_component_media_files($ar_quality);
+			$result = parent::remove_component_media_files($ar_quality);
 			// des
 				// foreach ($ar_quality as $current_quality) {
 
@@ -765,7 +765,7 @@ class component_av extends component_media_common {
 			}//end if ($remove_posterframe===true)
 
 
-		return true;
+		return $result;
 	}//end remove_component_media_files
 
 
@@ -964,6 +964,12 @@ class component_av extends component_media_common {
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/av/404/test175_test65_1.mp4"
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.mp4"
 			$original_normalized_name	= $full_file_name;
+
+		// check full_file_path
+			if (!file_exists($full_file_path)) {
+				$response->msg .= ' File full_file_path do not exists';
+				return $response;
+			}
 
 		// debug
 			debug_log(__METHOD__
@@ -1259,6 +1265,15 @@ class component_av extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// check quality
+			$ar_quality = $this->get_ar_quality();
+			if (!in_array($quality, $ar_quality)) {
+				$response->msg .= ' Invalid quality. Ignored action';
+				$response->errors[] = 'invalid quality';
+				return $response;
+			}
 
 		// remove_component_media_files returns bool value
 		$result = $this->remove_component_media_files(
@@ -1394,12 +1409,14 @@ class component_av extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$id				= $this->get_id();
 			$source_quality	= $this->get_source_quality_to_build($quality);
 			if (empty($source_quality)) {
 				$response->msg .= ' Invalid source_quality';
+				$response->errors[] = 'invalid source_quality';
 				return $response;
 			}
 
@@ -1410,6 +1427,7 @@ class component_av extends component_media_common {
 
 				if($return===false){
 					$response->msg .= ' Is not possible create thumb';
+					$response->errors[] = 'building thumb failed';
 					return $response;
 				}
 
@@ -1422,7 +1440,7 @@ class component_av extends component_media_common {
 			}
 
 		// build_av_alternate_command. Creates the command and the sh file to run
-			$source_file_path		= $this->get_original_file_path($source_quality);
+			$source_file_path = $this->get_original_file_path($source_quality);
 			if (!file_exists($source_file_path)) {
 				debug_log(__METHOD__
 					. " original file do not exists. Falling back to default quality " . PHP_EOL
@@ -1435,6 +1453,7 @@ class component_av extends component_media_common {
 			}
 			if (!file_exists($source_file_path)) {
 				$response->msg .= ' Invalid source_file_path';
+				$response->errors[] = 'invalid source_file_path';
 				return $response;
 			}
 			$setting_name			= Ffmpeg::get_setting_name($source_file_path, $quality);
@@ -1453,6 +1472,7 @@ class component_av extends component_media_common {
 					, logger::ERROR
 				);
 				$response->msg .= ' ' . ($av_alternate_response->msg ?? 'Unknown error');
+				$response->errors[] = 'building alternate failed';
 				return $response;
 			}
 
@@ -1478,6 +1498,10 @@ class component_av extends component_media_common {
 				// launch a background process
 				$sh_file	= $av_alternate_response->sh_file;
 				$PID		= exec_::exec_sh_file($sh_file);
+
+				// $command		= 'nohup '. $av_alternate_response->command .' > /dev/null 2>&1 & echo $!';
+				// $new_process	= new process($command);
+				// $PID			= $new_process->getPid();
 
 				debug_log(__METHOD__
 					. " Building av file in background " . PHP_EOL

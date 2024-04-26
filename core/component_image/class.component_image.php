@@ -869,7 +869,7 @@ class component_image extends component_media_common {
 		// 				}
 
 		// 			// delete dir
-		// 				$folder_path_del = $this->get_target_dir($current_quality)  . '/deleted';
+		// 				$folder_path_del = $this->get_media_path_dir($current_quality)  . '/deleted';
 		// 				if( !is_dir($folder_path_del) ) {
 		// 					if( !mkdir($folder_path_del, 0775, true) ) {
 		// 						debug_log(__METHOD__
@@ -1142,6 +1142,12 @@ class component_image extends component_media_common {
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.jpg"
 			$original_normalized_name	= $full_file_name;
+
+		// check full_file_path
+			if (!file_exists($full_file_path)) {
+				$response->msg .= ' File full_file_path do not exists';
+				return $response;
+			}
 
 		// upload info. Update dato information about original or modified quality
 			$original_quality = $this->get_original_quality();
@@ -1760,6 +1766,7 @@ class component_image extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// source
 			$source_file = null; // default
@@ -1798,6 +1805,7 @@ class component_image extends component_media_common {
 					$response->result			= false;
 					$response->msg				= 'Unable to locate source_file. File does not exists';
 					$response->command_response	= null;
+					$response->errors[]			= 'invalid source_file';
 
 				return $response;
 			}

@@ -169,9 +169,9 @@ class component_3d extends component_media_common {
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
-	* @return string $valor_export
+	* @return string|null $valor_export
 	*/
-	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : string {
+	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
@@ -179,14 +179,13 @@ class component_3d extends component_media_common {
 			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
-		$av_file_path = $this->get_valor();
+		$av_file_path			= $this->get_valor();
+		$posterframe_file_path	= $this->get_posterframe_url(
+			true, // bool test_file dedalo image placeholder when not file exists
+			true // bool absolute ike 'http://myhost/mypath/myimage.jpg'
+		);
 
-		$test_file	= true;	// output dedalo image placeholder when not file exists
-		$absolute	= true;	// output absolute path like 'http://myhost/mypath/myimage.jpg'
-
-		$posterframe_file_path	= $this->get_posterframe_url($test_file, $absolute);
-
-		$valor_export = $av_file_path .','. $posterframe_file_path;
+		$valor_export = $av_file_path .','. ($posterframe_file_path ?? '');
 
 
 		return $valor_export;
@@ -385,92 +384,92 @@ class component_3d extends component_media_common {
 	* @param string $quality
 	* @return string|null $result
 	*/
-	public function get_original_file_path(string $quality) : ?string {
+		// public function get_original_file_path(string $quality) : ?string {
 
-		$result = null;
+		// 	$result = null;
 
-		// store initial_quality
-			$initial_quality = $this->get_quality();
+		// 	// store initial_quality
+		// 		$initial_quality = $this->get_quality();
 
-		// quality. Changes current component quality temporally
-			$this->set_quality($quality);
+		// 	// quality. Changes current component quality temporally
+		// 		$this->set_quality($quality);
 
-		// file do not exists case
-			$target_dir = $this->get_target_dir($quality);
-			if( !file_exists($target_dir) ) {
-				debug_log(__METHOD__.
-					" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-					logger::WARNING
-				);
-				return null;
-			}
+		// 	// file do not exists case
+		// 		$target_dir = $this->get_media_path_dir($quality);
+		// 		if( !file_exists($target_dir) ) {
+		// 			debug_log(__METHOD__.
+		// 				" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
+		// 				logger::WARNING
+		// 			);
+		// 			return null;
+		// 		}
 
-		// ar_originals
-			$ar_originals	= [];
-			$findme			= $this->get_id() . '.';
-			if ($handle = opendir($target_dir)) {
+		// 	// ar_originals
+		// 		$ar_originals	= [];
+		// 		$findme			= $this->get_id() . '.';
+		// 		if ($handle = opendir($target_dir)) {
 
-				while (false !== ($file = readdir($handle))) {
+		// 			while (false !== ($file = readdir($handle))) {
 
-					// is dir case (DVD files)
-					if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
+		// 				// is dir case (DVD files)
+		// 				if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
 
-						// DES
-							// $dvd_folder = $target_dir.'/'.$file;
-							// # dvd_folder dir set permissions 0777
+		// 					// DES
+		// 						// $dvd_folder = $target_dir.'/'.$file;
+		// 						// # dvd_folder dir set permissions 0777
 
-							// $stat = stat($dvd_folder);
-							// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
+		// 						// $stat = stat($dvd_folder);
+		// 						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
 
-							// if(posix_geteuid() != $stat['uid']){
-							// 	chown($dvd_folder, posix_geteuid());
-							// }
+		// 						// if(posix_geteuid() != $stat['uid']){
+		// 						// 	chown($dvd_folder, posix_geteuid());
+		// 						// }
 
-							// $wantedPerms = 0777;
-							// $actualPerms = fileperms($dvd_folder);
-							// if($actualPerms < $wantedPerms) {
-							// 	$chmod = chmod($dvd_folder, $wantedPerms);
-							// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-							// }
+		// 						// $wantedPerms = 0777;
+		// 						// $actualPerms = fileperms($dvd_folder);
+		// 						// if($actualPerms < $wantedPerms) {
+		// 						// 	$chmod = chmod($dvd_folder, $wantedPerms);
+		// 						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
+		// 						// }
 
-						$ar_originals[] = $file;
-						continue;
-					}
+		// 					$ar_originals[] = $file;
+		// 					continue;
+		// 				}
 
-					// note that '.' and '..' is returned even
-					if( strpos($file, $findme)!==false ) {
-						$ar_originals[] = $file;
-					}
-				}
-				closedir($handle);
-			}
+		// 				// note that '.' and '..' is returned even
+		// 				if( strpos($file, $findme)!==false ) {
+		// 					$ar_originals[] = $file;
+		// 				}
+		// 			}
+		// 			closedir($handle);
+		// 		}
 
-		$n = count($ar_originals);
-		if ($n===0) {
-			// nothing found case
-		}elseif($n===1) {
-			// OK. File found
-			#$path = $_FILES['image']['name'];
-			#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-			$result = $target_dir.'/'.$ar_originals[0];
-		}else{
-			// Error. More than one original found
-			debug_log(__METHOD__
-				. " ERROR (DEBUG ONLY): Current quality have more than one file " . PHP_EOL
-				. to_string($ar_originals)
-				, logger::ERROR
-			);
-			if(SHOW_DEBUG===true) {
-				dump($ar_originals, "ar_originals ".to_string($ar_originals));
-			}
-		}
+		// 	$n = count($ar_originals);
+		// 	if ($n===0) {
+		// 		// nothing found case
+		// 	}elseif($n===1) {
+		// 		// OK. File found
+		// 		#$path = $_FILES['image']['name'];
+		// 		#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
+		// 		$result = $target_dir.'/'.$ar_originals[0];
+		// 	}else{
+		// 		// Error. More than one original found
+		// 		debug_log(__METHOD__
+		// 			. " ERROR (DEBUG ONLY): Current quality have more than one file " . PHP_EOL
+		// 			. to_string($ar_originals)
+		// 			, logger::ERROR
+		// 		);
+		// 		if(SHOW_DEBUG===true) {
+		// 			dump($ar_originals, "ar_originals ".to_string($ar_originals));
+		// 		}
+		// 	}
 
-		// restore component quality
-			$this->set_quality($initial_quality);
+		// 	// restore component quality
+		// 		$this->set_quality($initial_quality);
 
 
-		return $result;
-	}//end get_original_file_path
+		// 	return $result;
+		// }//end get_original_file_path
 
 
 
@@ -638,6 +637,12 @@ class component_3d extends component_media_common {
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.glb"
 			$original_normalized_name	= $full_file_name;
 
+		// check full_file_path
+			if (!file_exists($full_file_path)) {
+				$response->msg .= ' File full_file_path do not exists';
+				return $response;
+			}
+
 		// debug
 			debug_log(__METHOD__
 				. " Processing file " . PHP_EOL
@@ -764,6 +769,15 @@ class component_3d extends component_media_common {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// check quality
+			$ar_quality = $this->get_ar_quality();
+			if (!in_array($quality, $ar_quality)) {
+				$response->msg .= ' Invalid quality. Ignored action';
+				$response->errors[] = 'invalid quality';
+				return $response;
+			}
 
 		// remove_component_media_files returns bool value
 		$result = $this->remove_component_media_files(

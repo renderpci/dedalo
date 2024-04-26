@@ -105,6 +105,7 @@ class component_media_common extends component_common {
 	* Return array with model names of defined as 'media components'.
 	* Add future media components here
 	* @return array
+	* @test true
 	*/
 	public static function get_media_components() : array {
 
@@ -138,6 +139,7 @@ class component_media_common extends component_common {
 	* @return array|null $dato
 	* 	(!) Note that in v5 data update could be different to null|array
 	* 	Because this, do not apply type constrain here ! ( : ?array)
+	* @test true
 	*/
 	public function get_dato() {
 
@@ -160,6 +162,7 @@ class component_media_common extends component_common {
 	* @param object|null $ddo = null
 	*
 	* @return dd_grid_cell_object $grid_cell_object
+	* @test true
 	*/
 	public function get_grid_value(?object $ddo=null) : dd_grid_cell_object {
 
@@ -217,6 +220,8 @@ class component_media_common extends component_common {
 	* GET VALOR
 	* LIST:
 	* GET VALUE . DEFAULT IS GET DATO . OVERWRITE IN EVERY DIFFERENT SPECIFIC COMPONENT
+	* @return string
+	* @test true
 	*/
 	public function get_valor() {
 
@@ -229,6 +234,7 @@ class component_media_common extends component_common {
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
 	* @return string $valor_export
+	* @test true
 	*/
 	public function get_valor_export($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) : ?string {
 
@@ -253,6 +259,7 @@ class component_media_common extends component_common {
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
+	* @test true
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
@@ -274,6 +281,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_ID
 	* @return string|null $id
+	* @test true
 	*/
 	public function get_id() : ?string {
 
@@ -315,6 +323,7 @@ class component_media_common extends component_common {
 	* GET_NAME
 	* Alias of get_id
 	* @return string|null $id
+	* @test true
 	*/
 	public function get_name() : ?string {
 
@@ -327,6 +336,7 @@ class component_media_common extends component_common {
 	* GET_INITIAL_MEDIA_PATH
 	* Used by component_image, component_pdf
 	* @return string|null $this->initial_media_path
+	* @test true
 	*/
 	public function get_initial_media_path() : ?string {
 
@@ -354,6 +364,7 @@ class component_media_common extends component_common {
 	* Calculate item additional path from 'properties' json config.
 	* Used by component_image, component_pdf
 	* @return string|null $additional_path
+	* @test true
 	*/
 	public function get_additional_path() : ?string {
 
@@ -431,6 +442,7 @@ class component_media_common extends component_common {
 	* Extensions list of preferable extensions in original or modified qualities.
 	* Ordered by most preferable extension, first is the best.
 	* @return array
+	* @test true
 	*/
 	public function get_best_extensions() : array {
 
@@ -444,6 +456,7 @@ class component_media_common extends component_common {
 	* Check if quality given file exists
 	* @param string $quality
 	* @return bool
+	* @test true
 	*/
 	public function quality_file_exist(string $quality) : bool {
 
@@ -474,12 +487,14 @@ class component_media_common extends component_common {
 	*	"full_file_name"	 : $full_file_name, // rsc29_rsc170_1.jpg
 	*	"full_file_path"	 : $full_file_path // /media/image/original/0/rsc29_rsc170_1.jpg
 	* }
+	* @test true
 	*/
 	public function add_file(object $options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
+			$response->errors	= [];
 
 		// options sample
 			// {
@@ -493,7 +508,7 @@ class component_media_common extends component_common {
 			// 	"extension": "jpg"
 			// }
 
-		// short vars
+		// options
 			$name			= $options->name; // string original file name like 'IMG_3007.jpg'
 			$key_dir		= $options->key_dir; // string upload caller name like 'oh1_oh1'
 			$tmp_dir		= $options->tmp_dir; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
@@ -502,14 +517,15 @@ class component_media_common extends component_common {
 			$source_file 	= $options->source_file ?? null;
 
 		// source_file
-			if (!defined($tmp_dir)) {
-				$msg = 'constant is not defined! tmp_dir: '.$tmp_dir;
+			if (empty($tmp_dir) || !defined($tmp_dir)) {
+				$msg = 'constant is not defined! tmp_dir: '. json_encode($tmp_dir);
 				$response->msg .= $msg;
 				debug_log(__METHOD__
 					.' ' .$response->msg . PHP_EOL
 					. ' tmp_dir: ' . $tmp_dir
 					, logger::ERROR
 				);
+				$response->errors[] = 'invalid tmp_dir value';
 				return $response;
 			}
 
@@ -526,13 +542,13 @@ class component_media_common extends component_common {
 					. ' source_file: ' . $source_file
 					, logger::ERROR
 				);
+				$response->errors[] = 'source file not found';
 				return $response;
 			}
 
 		// target file info
 			$file_extension	= strtolower(pathinfo($name, PATHINFO_EXTENSION));
 			$file_name		= $this->get_name();
-			// $folder_path	= $this->get_target_dir_abs($quality);
 			$folder_path	= $this->get_media_path_dir($quality);
 			$full_file_name	= $file_name . '.' . $file_extension;
 			$full_file_path	= $folder_path .'/'. $full_file_name;
@@ -555,6 +571,7 @@ class component_media_common extends component_common {
 					. ' file_extension: ' . $file_extension
 					, logger::ERROR
 				);
+				$response->errors[] = 'invalid extension';
 				return $response;
 			}
 
@@ -568,6 +585,7 @@ class component_media_common extends component_common {
 					. ' folder_path: ' . $folder_path
 					, logger::ERROR
 				);
+				$response->errors[] = 'renaming old files failed';
 				return $response;
 			}
 
@@ -585,6 +603,7 @@ class component_media_common extends component_common {
 						. ' file_name: ' . $file_name
 						, logger::ERROR
 					);
+					$response->errors[] = 'moving zip files failed';
 					return $response;
 				}
 
@@ -606,6 +625,7 @@ class component_media_common extends component_common {
 							. ' '.$response->msg
 							, logger::ERROR
 						);
+						$response->errors[] = 'creating target directory failed';
 						return $response;
 					}
 				}
@@ -619,6 +639,7 @@ class component_media_common extends component_common {
 						. ' full_file_path: ' . $full_file_path
 						, logger::ERROR
 					);
+					$response->errors[] = 'moving source file failed';
 					return $response;
 				}
 			}
@@ -643,7 +664,11 @@ class component_media_common extends component_common {
 	/**
 	* MOVE_ZIP_FILE
 	* Overwrite this method on each component that's needed it, for example 'component_av'
+	* @param string $tmp_name
+	* @param string $folder_path
+	* @param string $file_nam
 	* @return object $response
+	* @test true
 	*/
 	public static function move_zip_file(string $tmp_name, string $folder_path, string $file_name) : object {
 
@@ -662,6 +687,7 @@ class component_media_common extends component_common {
 	* @param $file_name string as 'test175_test65_3'
 	* @param $folder_path string
 	* @return object $response
+	* @test true
 	*/
 	public function rename_old_files(string $file_name, string $folder_path) : object {
 
@@ -669,12 +695,14 @@ class component_media_common extends component_common {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+				$response->errors	= [];
 
 		// check target fir
-			if (empty($folder_path)) {
+			if (empty($folder_path) || !is_dir($folder_path)) {
 				$msg = "Invalid folder_path: '$folder_path' from filename: '$file_name'. Ignored rename";
 				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 				$response->msg .= $msg;
+				$response->errors[] = 'invalid folder path';
 				return $response;
 			}
 
@@ -684,6 +712,7 @@ class component_media_common extends component_common {
 					$msg = "Error on create dir: '$folder_path' . Permission denied";
 					debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
 					$response->msg .= $msg;
+					$response->errors[] = 'unable to create deleted folder';
 					return $response;
 				}
 			}
@@ -717,6 +746,7 @@ class component_media_common extends component_common {
 	/**
 	* VALID_FILE_EXTENSION
 	* @return bool
+	* @test true
 	*/
 	public function valid_file_extension(string $file_extension) : bool {
 
@@ -733,6 +763,7 @@ class component_media_common extends component_common {
 	* GET_ALTERNATIVE_EXTENSIONS
 	* 	Overwrite in each component like component_image do
 	* @return array|null $alternative_extensions
+	* @test true
 	*/
 	public function get_alternative_extensions() : ?array {
 
@@ -746,7 +777,9 @@ class component_media_common extends component_common {
 	/**
 	* PROCESS_UPLOADED_FILE
 	* Dummy method. Overwrite it in each component
+	* @param object $options
 	* @return object $response
+	* @test true
 	*/
 	public function process_uploaded_file(object $options) : object {
 
@@ -760,45 +793,14 @@ class component_media_common extends component_common {
 
 
 	/**
-	* BUILD_MEDIA_VALUE
-	*  Creates a standardized media value
-	* Used by each media component to store their data
-	* @param object $options
-	* @return object $value
-	*/
-	protected function build_media_value(object $options) : object {
-
-		throw new Exception("Error . REMOVE THIS METHOD !", 1);
-
-
-		// options
-			$value				= $options->value ?? new stdClass();
-			$file_name			= $options->file_name;
-			$file_name_label	= $options->file_name_label ?? 'original_file_name';
-			$upload_date		= $options->upload_date ?? component_date::get_date_now();
-			$upload_date_label	= $options->upload_date_label ?? 'upload_date';
-			$user_id			= $options->user_id ?? logged_user_id();
-			$user_id_label		= $options->user_id_label ?? 'user_id';
-
-		// set value properties
-			$value->{$file_name_label}		= $file_name;
-			$value->{$upload_date_label}	= $upload_date;
-			$value->{$user_id_label}		= (int)$user_id;
-
-
-		return $value;
-	}//end build_media_value
-
-
-
-	/**
 	* GET_FILES_INFO
 	* Get file info for every quality from disk
 	* Included alternative_extensions files and original from original_normalized_name
 	* @param bool $include_empty = false
 	* @return array $files_info
+	* @test true
 	*/
-	public function get_files_info( bool $include_empty=false ) : array {
+	public function get_files_info(bool $include_empty=false) : array {
 
 		$ar_quality = $this->get_ar_quality();
 
@@ -896,8 +898,9 @@ class component_media_common extends component_common {
 	* Creates a list of file info items iterating all qualities from
 	* the component dato
 	* @return array $datalist
+	* @test true
 	*/
-	public function get_datalist() {
+	public function get_datalist() : array {
 
 		// files_info from files
 			// $files_info = $this->get_files_info(
@@ -967,6 +970,7 @@ class component_media_common extends component_common {
 	* Reduced version of get_dato to use in list mode.
 	* Unused quality and alternative extension info files will be ignored
 	* @return array|null $list_value
+	* @test true
 	*/
 	public function get_list_value() : ?array {
 
@@ -1028,6 +1032,7 @@ class component_media_common extends component_common {
 	* GET_QUALITY
 	* 	Takes quality from fixed value or fallback to default config value
 	* @return string $quality
+	* @test true
 	*/
 	public function get_quality() : string {
 
@@ -1041,6 +1046,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_THUMB_QUALITY
 	* @return string $thumb_quality
+	* @test true
 	*/
 	public function get_thumb_quality() : string {
 
@@ -1054,6 +1060,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_THUMB_PATH
 	* @return string $image_thumb_path
+	* @test true
 	*/
 	public function get_thumb_path() : string {
 
@@ -1070,6 +1077,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_THUMB_EXTENSION
 	* @return string $thumb_extension
+	* @test true
 	*/
 	public function get_thumb_extension() : string {
 
@@ -1078,18 +1086,30 @@ class component_media_common extends component_common {
 		return $thumb_extension;
 	}//end get_thumb_extension
 
+
+
 	/**
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files
 	* @param string $quality
 	* @return object $response
+	* @test true
 	*/
 	public function delete_file(string $quality) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// check quality
+			$ar_quality = $this->get_ar_quality();
+			if (!in_array($quality, $ar_quality)) {
+				$response->msg .= ' Invalid quality. Ignored action';
+				$response->errors[] = 'invalid quality';
+				return $response;
+			}
 
 		// remove_component_media_files returns bool value
 		$result = $this->remove_component_media_files(
@@ -1147,10 +1167,11 @@ class component_media_common extends component_common {
 	* @see section:remove_section_media_files
 	* @param array $ar_quality = []
 	* @return bool
+	* @test true
 	*/
 	public function remove_component_media_files(array $ar_quality=[]) : bool {
 
-		$date = date('Y-m-d_Hi');
+		$result = false;
 
 		// ar_quality. Get all if not received any
 			if (empty($ar_quality)) {
@@ -1164,14 +1185,30 @@ class component_media_common extends component_common {
 				? array_merge([$extension], $alternative_extensions)
 				: [$extension];
 
+		// date to add at file names
+			$date = date('Y-m-d_Hi');
+
 		// dato
 			$dato = $this->get_dato();
 
-		// files remove
+		// valid quality list
+			$valid_ar_quality = $this->get_ar_quality();
+
+		// files remove of each quality
 			foreach ($ar_quality as $current_quality) {
 
+				// check valid quality
+					if (!in_array($current_quality, $valid_ar_quality)) {
+						debug_log(__METHOD__
+							. " Ignored invalid quality " . PHP_EOL
+							. to_string($current_quality)
+							, logger::WARNING
+						);
+						continue;
+					}
+
 				// deleted directory check
-					$folder_path_del = $this->get_target_dir($current_quality) . '/deleted';
+					$folder_path_del = $this->get_media_path_dir($current_quality) . '/deleted';
 					if( !is_dir($folder_path_del) ) {
 						if( !mkdir($folder_path_del, 0750, true) ) {
 							debug_log(__METHOD__
@@ -1240,10 +1277,13 @@ class component_media_common extends component_common {
 								, logger::WARNING
 							);
 					}//end foreach ($ar_extensions as $current_extension)
+
+				// fix result as true if any of qualities pass here
+					$result = true;
 			}//end foreach ($ar_quality as $current_quality)
 
 
-		return true;
+		return $result;
 	}//end remove_component_media_files
 
 
@@ -1252,6 +1292,7 @@ class component_media_common extends component_common {
 	* GET_SORTABLE
 	* @return bool
 	* 	Default is true. Override when component is sortable
+	* @test true
 	*/
 	public function get_sortable() : bool {
 
@@ -1267,72 +1308,82 @@ class component_media_common extends component_common {
 	* @return array $original_files
 	* 	Array of full path files found
 	*/
-	public function get_original_files() : array {
+		// public function get_original_files() : array {
 
-		$original_files = [];
+		// 	return $this->get_quality_files(
+		// 		$this->get_original_quality()
+		// 	);
 
-		// quality
-			$initial_quality = $this->get_quality();
-			// change current component quality temporally
-			$original_quality = $this->get_original_quality();
-			$this->set_quality($original_quality);
+		// 	/*$original_files = [];
 
-		// target_dir
-			$target_dir = $this->get_target_dir($original_quality);
-			if(!file_exists($target_dir)) {
-				return $original_files; // empty array
-			}
+		// 	// quality swap temporally
+		// 		$initial_quality = $this->get_quality();
+		// 		// change current component quality temporally
+		// 		$original_quality = $this->get_original_quality();
+		// 		$this->set_quality($original_quality);
 
-		// ar_originals. list of original found files
-			$ar_originals	= [];
-			$findme			= $this->get_name() . '.';
-			if ($handle = opendir($target_dir)) {
+		// 	// target_dir
+		// 		$target_dir = $this->get_media_path_dir($original_quality);
+		// 		if(!file_exists($target_dir)) {
+		// 			debug_log(__METHOD__
+		// 				. " target directory for originals do not exist " . PHP_EOL
+		// 				. ' target_dir: ' . to_string($target_dir)
+		// 				, logger::WARNING
+		// 			);
+		// 			return $original_files; // empty array
+		// 		}
 
-				while( false!==($file = readdir($handle)) ) {
+		// 	// ar_originals. list of original found files
+		// 		$ar_originals	= [];
+		// 		$findme			= $this->get_name() . '.';
+		// 		if ($handle = opendir($target_dir)) {
 
-					// note that '.' and '..' are returned even
-					if( strpos($file, $findme)!==false ) {
-						$ar_originals[] = $file;
-					}
-				}
+		// 			while( false!==($file = readdir($handle)) ) {
 
-				closedir($handle);
-			}
+		// 				// note that '.' and '..' are returned even
+		// 				if( strpos($file, $findme)!==false ) {
+		// 					$ar_originals[] = $file;
+		// 				}
+		// 			}
+		// 			closedir($handle);
+		// 		}
 
-		// check found files
-			$n = count($ar_originals);
-			if ($n===0) {
+		// 	// check found files
+		// 		$n = count($ar_originals);
+		// 		if ($n===0) {
 
-				// no file found. Return empty array
+		// 			// no file found. Return empty array
 
-			}elseif($n===1) {
+		// 		}elseif($n===1) {
 
-				// all is OK, found 1 file as expected
-				$original_files[] = $target_dir . '/' . $ar_originals[0];
+		// 			// all is OK, found 1 file as expected
+		// 			$original_files[] = $target_dir . '/' . $ar_originals[0];
 
-			}else{
+		// 		}else{
 
-				// more than one file are found
-				foreach ($ar_originals as $current_file) {
-					$original_files[] = $target_dir . '/' . $current_file;
-				}
-			}
+		// 			// more than one file are found
+		// 			foreach ($ar_originals as $current_file) {
+		// 				$original_files[] = $target_dir . '/' . $current_file;
+		// 			}
+		// 		}
 
-		// restore component quality
-			$this->set_quality($initial_quality);
+		// 	// restore component quality
+		// 		$this->set_quality($initial_quality);
 
 
-		return $original_files;
-	}//end get_original_files
+		// 	return $original_files;*/
+		// }//end get_original_files
 
 
 
 	/**
-	* GET_quality_FILES
+	* GET_QUALITY_FILES
 	* Returns the full path of the original file/s found
 	* The original files are saved renamed but keeping the extension.
+	* @param string $quality
 	* @return array $original_files
 	* 	Array of full path files found
+	* @test true
 	*/
 	public function get_quality_files(string $quality) : array {
 
@@ -1341,6 +1392,11 @@ class component_media_common extends component_common {
 		// target_dir
 			$target_dir = $this->get_media_path_dir($quality);
 			if(!is_dir($target_dir)) {
+				debug_log(__METHOD__
+					. " target directory for quality '$quality' do not exist " . PHP_EOL
+					. ' target_dir: ' . to_string($target_dir)
+					, logger::WARNING
+				);
 				return $quality_files; // empty array
 			}
 
@@ -1356,7 +1412,6 @@ class component_media_common extends component_common {
 						$ar_files[] = $file;
 					}
 				}
-
 				closedir($handle);
 			}
 
@@ -1378,6 +1433,7 @@ class component_media_common extends component_common {
 	* 	Sample 'modified'
 	* @return string|null $normalized_name
 	*  Sample: 'rsc29_rsc170_1070.tiff'
+	* @test true
 	*/
 	public function get_normalized_name_from_files(string $quality) : ?string {
 
@@ -1462,6 +1518,7 @@ class component_media_common extends component_common {
 	* From component dato with fallback to files
 	* @param string $quality
 	* @return string|null $original_quality
+	* @test true
 	*/
 	public function get_uploaded_file(string $quality) : ?string {
 
@@ -1518,7 +1575,9 @@ class component_media_common extends component_common {
 	*	}
 	* }
 	* @param string $quality
+	* @param string $extension = null
 	* @return object $dato_item
+	* @test true
 	*/
 	public function get_quality_file_info(string $quality, string $extension=null) : object {
 
@@ -1643,6 +1702,8 @@ class component_media_common extends component_common {
 	/**
 	* GET_TARGET_FILENAME
 	* @return string target_filename
+	*  as 'rsc29_rsc170_1363.jpg'
+	* @test true
 	*/
 	public function get_target_filename() : string {
 
@@ -1658,6 +1719,8 @@ class component_media_common extends component_common {
 	* Iterate array $ar_quality (Order by quality big to small)
 	* @param string $target_quality
 	* @return string|null $current_quality
+	* 	first suitable quality file to use as source
+	* @test true
 	*/
 	public function get_source_quality_to_build(string $target_quality) : ?string {
 
@@ -1689,13 +1752,17 @@ class component_media_common extends component_common {
 	* @param bool $exclude_converted = true
 	* @return string|null $result
 	* 	File extensions like 'jpg', 'mp4', ...
+	* @test true
 	*/
 	public function get_original_extension(bool $exclude_converted=true) : ?string {
 
 		$result = null;
 
 		// original_files (from component_media_common)
-			$original_files	= $this->get_original_files(); // return array
+			// $original_files	= $this->get_original_files(); // return array
+			$original_files	= $this->get_quality_files(
+				$this->get_original_quality()
+			);
 
 		// ar_originals
 			$ar_originals = [];
@@ -1753,16 +1820,17 @@ class component_media_common extends component_common {
 	* If a file with an extension other than DEDALO_xxx_EXTENSION is uploaded, it is converted to DEDALO_xxx_EXTENSION.
 	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if
 	* there is more than one.
-	* @param string $quality
 	* @return string|null $result
+	* @test true
 	*/
-	public function get_original_file_path(string $quality) : ?string {
+	public function get_original_file_path() : ?string {
 
 		$result = null;
 
 		// original_files (from component_media_common)
-			$original_files	= $this->get_original_files(); // return array
-			$ar_originals	= $original_files;
+			$ar_originals = $this->get_quality_files(
+				$this->get_original_quality()
+			);
 
 		// remove conversions if exists
 			$n = count($ar_originals);
@@ -1816,6 +1884,7 @@ class component_media_common extends component_common {
 	* 	'/user/myuser/httpddocs/dedalo/media/pdf/web'
 	* @param string $quality
 	* @return string $media_path
+	* @test true
 	*/
 	public function get_media_path_dir(string $quality) : string {
 
@@ -1840,26 +1909,12 @@ class component_media_common extends component_common {
 
 
 	/**
-	* GET_TARGET_DIR
-	*  Alias of get_media_path_dir
-	* @param string|null $quality
-	* @return string $target_dir
-	*/
-	public function get_target_dir(string $quality) : string {
-
-		$target_dir = $this->get_media_path_dir($quality);
-
-		return $target_dir;
-	}//end get_target_dir
-
-
-
-	/**
 	* GET_MEDIA_URL_DIR
 	* 	Creates the relative URL path in current quality as
 	* 	'/dedalo/media/pd/standard'
 	* @param string $quality
 	* @return string $media_url_dir
+	* @test true
 	*/
 	public function get_media_url_dir(string $quality) : string {
 
@@ -1871,6 +1926,7 @@ class component_media_common extends component_common {
 
 		// remove possible double slashes ad beginning
 		$media_url_dir = preg_replace('/^\/\//', '/', $media_dir);
+
 
 		return $media_url_dir;
 	}//end get_media_url_dir
@@ -1889,6 +1945,7 @@ class component_media_common extends component_common {
 	*
 	* @return string|null $url
 	*	Return relative o absolute url
+	* @test true
 	*/
 	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false) : ?string {
 
@@ -1958,6 +2015,7 @@ class component_media_common extends component_common {
 	/**
 	* GET_THUMB_URL
 	* Unified method to get thumbnail, posterframe, etc.
+	* Alias of get_url with fixed thumb quality
 	* @return string|null
 	*/
 	public function get_thumb_url() : ?string {
@@ -1982,6 +2040,7 @@ class component_media_common extends component_common {
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
 	* @return bool
+	* @test true
 	*/
 	public function regenerate_component() : bool {
 
@@ -2006,6 +2065,16 @@ class component_media_common extends component_common {
 		// empty case. Previous update_component_dato_files_info generates
 		// a new dato if files are found. Else no dato is set (null)
 			if (empty($dato)) {
+				return false;
+			}
+
+		// bad dato case
+			if (isset($dato[0]) && !is_object($dato[0])) {
+				debug_log(__METHOD__
+					. " Invalid component data. Expected object and received array " . PHP_EOL
+					. ' dato: ' . to_string($dato)
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -2127,6 +2196,7 @@ class component_media_common extends component_common {
 	* 	Like 'avif'
 	* @return string $path
 	* 	complete absolute file path like '/Users/myuser/works/dedalo/media/images/dd152-1.jpg'
+	* @test true
 	*/
 	public function get_media_filepath(?string $quality=null, string $extension=null) : string {
 
@@ -2152,7 +2222,9 @@ class component_media_common extends component_common {
 	* SET_QUALITY
 	* Sync this quality value
 	* set value must be inside config ar_quality definition
+	* @param string $quality
 	* @return bool
+	* @test true
 	*/
 	public function set_quality(string $quality) : bool {
 
@@ -2172,11 +2244,14 @@ class component_media_common extends component_common {
 	}//end set_quality
 
 
+
 	/**
 	* FILE SIZE
 	* Get file physical size in bytes (or KB/MB)
+	* @param string $quality
 	* @return string|null $size
 	* 	(round to KB or MB with label like '256 KB')
+	* @test true
 	*/
 	public function get_size(string $quality) : ?string {
 
@@ -2213,8 +2288,11 @@ class component_media_common extends component_common {
 	* Is triggered when tool_time_machine recover a section
 	* @see tool_time_machine::recover_section_from_time_machine
 	* @return bool
+	* @test true
 	*/
 	public function restore_component_media_files() : bool {
+
+		$result = false;
 
 		// element restore
 		$ar_quality	= $this->get_ar_quality();
@@ -2235,31 +2313,36 @@ class component_media_common extends component_common {
 				continue; // Skip
 			}
 
-			natsort($ar_files);	# sort the files from newest to oldest
+			natsort($ar_files);	// sort the files from newest to oldest
 			$last_file_path	= end($ar_files);
 			$new_file_path	= $this->get_media_filepath($current_quality);
 
 			// move file
-			if( !rename($last_file_path, $new_file_path) ) {
-				debug_log(__METHOD__
-					. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
-					. 'last_file_path: '. $last_file_path . PHP_EOL
-					. 'new_file_path: '. $new_file_path
-					, logger::ERROR
-				);
-				// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-			}
+				if( !rename($last_file_path, $new_file_path) ) {
+					debug_log(__METHOD__
+						. " Error on move files to restore folder. Permission denied . Nothing was restored (2) " . PHP_EOL
+						. 'last_file_path: '. $last_file_path . PHP_EOL
+						. 'new_file_path: '. $new_file_path
+						, logger::ERROR
+					);
+					// throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
+					continue; // Skip
+				}
 
-			debug_log(__METHOD__
-				." Moved file using restore_component_media_files:" .PHP_EOL
-				.' last_file_path: '. $last_file_path . PHP_EOL
-				.' new_file_path: '. $new_file_path
-				, logger::WARNING
-			);
+			// result true when at least one element is moved
+				$result = true;
+
+			// debug
+				debug_log(__METHOD__
+					." Moved file using restore_component_media_files:" .PHP_EOL
+					.' last_file_path: '. $last_file_path . PHP_EOL
+					.' new_file_path: '. $new_file_path
+					, logger::WARNING
+				);
 		}//end foreach
 
 
-		return true;
+		return $result;
 	}//end restore_component_media_files
 
 
@@ -2272,12 +2355,14 @@ class component_media_common extends component_common {
 	* @param string $quality
 	* @param bool $async = true
 	* @return object $response
+	* @test true
 	*/
 	public function build_version(string $quality, bool $async=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
 
 		// short vars
 			$id					= $this->get_id();
@@ -2291,6 +2376,7 @@ class component_media_common extends component_common {
 					. ' original_file_path: ' . to_string($original_file_path)
 					, logger::ERROR
 				);
+				$response->errors[] = 'invalid original_file_path';
 				return $response;
 			}
 			$target_quality_path = $this->get_media_filepath($quality);
@@ -2307,6 +2393,7 @@ class component_media_common extends component_common {
 						, logger::ERROR
 					);
 					$response->msg .= $msg;
+					$response->errors[] = 'creating directory failed';
 					return $response;
 				}
 			}
@@ -2323,7 +2410,6 @@ class component_media_common extends component_common {
 				);
 			}
 
-
 			if ($result===false) {
 				debug_log(__METHOD__ . PHP_EOL
 					. " Error: Unable to build version file : " . PHP_EOL
@@ -2331,6 +2417,7 @@ class component_media_common extends component_common {
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::ERROR
 				);
+				$response->errors[] = 'building version failed';
 			}else{
 				debug_log(__METHOD__ . PHP_EOL
 					. " Built file : " . PHP_EOL
@@ -2339,7 +2426,6 @@ class component_media_common extends component_common {
 					, logger::DEBUG
 				);
 			}
-
 
 		// logger activity : WHAT(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(
@@ -2376,6 +2462,7 @@ class component_media_common extends component_common {
 	* Get component files info reading current media and
 	* updates the component dato. Does not save!
 	* @return bool
+	* @test true
 	*/
 	protected function update_component_dato_files_info() : bool {
 
@@ -2448,6 +2535,7 @@ class component_media_common extends component_common {
 	* SAVE
 	* Update component dato reading media files before Save
 	* @return int|null $section_matrix_id
+	* @test true
 	*/
 	public function Save() : ?int {
 
@@ -2460,9 +2548,11 @@ class component_media_common extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* Parses component SQO query
 	* @param object $query_object
 	* @return object $query_object
 	*	Edited/parsed version of received object
+	* @test true
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
