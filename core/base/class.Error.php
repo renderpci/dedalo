@@ -176,7 +176,7 @@ class dd_error {
 
 if(SHOW_DEBUG===true) {
 
-	ini_set( 'display_errors', 1 ); // Default 1
+	ini_set( 'display_errors', 0 ); // Default 0
 	// Report all errors
 	error_reporting(E_ALL);
 
