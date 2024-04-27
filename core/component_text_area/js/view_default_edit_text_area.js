@@ -534,7 +534,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Show persons list',
 				image	: '../../core/themes/default/icons/person.svg',
-				onclick	: function(evt) {
+				onclick	: function(e) {
+					e.stopPropagation()
 					// event_manager.publish('toggle_persons_list_'+ self.id_base + '_' + i, {
 					// 	caller		: self,
 					// 	text_editor	: text_editor
@@ -551,7 +552,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add georef',
 				image	: '../../core/themes/default/icons/geo.svg',
-				onclick	: function() {
+				onclick	: function(e) {
+					e.stopPropagation()
 					event_manager.publish('create_geo_tag_'+ self.id_base, {
 						caller		: self,
 						text_editor	: text_editor
@@ -567,7 +569,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add note',
 				image	: '../../core/themes/default/icons/note.svg',
-				onclick	: function() {
+				onclick	: function(e) {
+					e.stopPropagation()
 					event_manager.publish('create_note_tag_'+ self.id_base + '_' + i, {
 						caller		: self,
 						text_editor	: text_editor
@@ -627,7 +630,8 @@ const get_custom_buttons = (self, text_editor, i) => {
 			options	: {
 				tooltip	: 'Add lang',
 				image	: '../../core/themes/default/icons/lang.svg',
-				onclick	: function() {
+				onclick	: function(e) {
+					e.stopPropagation()
 					// show the langs list to be selected the new lang for create the new tag
 					// event_manager.publish('toggle_langs_list_'+ self.id_base + '_' + i, {
 					// 	caller		: self,
@@ -648,6 +652,7 @@ const get_custom_buttons = (self, text_editor, i) => {
 		// 		tooltip	: save_label,
 		// 		icon	: false,
 		// 		onclick	: function(e) {
+		//			e.stopPropagation()
 		// 			// save. text_editor save function calls current component save_value()
 		// 			text_editor.save()
 		// 		}
@@ -1071,6 +1076,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 			})
 			layer_li.addEventListener('click', (e) =>{
 				e.preventDefault()
+				e.stopPropagation()
 				data_tag.label = layer.layer_id
 				data_tag.data = [layer.layer_id]
 				const tag = self.build_view_tag_obj(data_tag, tag_id)
@@ -1201,6 +1207,7 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 
 	user_option_ok.addEventListener('click', (e) =>{
 		e.preventDefault()
+		e.stopPropagation()
 		const user_value = body_input.value
 		if(user_value === null) {
 			modal.renove()
@@ -1217,7 +1224,8 @@ const render_page_selector = function(self, data_tag, tag_id, text_editor) {
 		modal.remove()
 	})
 
-	user_option_cancel.addEventListener('click', () =>{
+	user_option_cancel.addEventListener('click', (e) =>{
+		e.stopPropagation()
 		modal.remove()
 	})
 
