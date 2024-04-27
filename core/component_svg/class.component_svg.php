@@ -218,7 +218,7 @@ class component_svg extends component_media_common {
 			$source_file	= $this->get_media_filepath($quality);
 			if (!file_exists($source_file)) {
 				debug_log(__METHOD__
-					." default quality file does not exist, it is not possible to create a thumb ($file_name)"
+					." Ignored thumb creation. default quality file does not exist ($file_name)"
 					, logger::DEBUG
 				);
 
