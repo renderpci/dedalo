@@ -319,39 +319,57 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			break;
 
 		case logger::WARNING:
-			$msg = sprintf(
-				$colorFormats['cyan'],
-				'DEBUG_LOG ['.$level_string.'] '. $info
-			);
+			if ( running_in_cli()===true ) {
+				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+			}else{
+				$msg = sprintf(
+					$colorFormats['cyan'],
+					'DEBUG_LOG ['.$level_string.'] '. $info
+				);
+			}
 			break;
 
 		case logger::ERROR:
-			// backtrace
-				$bt		= debug_backtrace();
-				$source	= $bt[0];
 
-			$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
-				. ' ' . $info .' '. PHP_EOL
-				. ' [File]: ' . $source['file'].' '. PHP_EOL
-				. ' [Line]: ' . $source['line'].' ';
+			if ( running_in_cli()===true ) {
 
-			$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
+				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+
+			}else{
+				// backtrace
+				$bt			= debug_backtrace();
+				$source		= $bt[0];
+				$base_msg	= 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
+					. ' ' . $info .' '. PHP_EOL
+					. ' [File]: ' . $source['file'].' '. PHP_EOL
+					. ' [Line]: ' . $source['line'].' ';
+
+				$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
+			}
 
 			// DEDALO_ERRORS ADD
 			$_ENV['DEDALO_LAST_ERROR'] = $info;
 			break;
 
 		case logger::CRITICAL:
-			// backtrace
-				$bt		= debug_backtrace();
-				$source	= $bt[0];
 
-			$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
-				. ' ' . $info .' '. PHP_EOL
-				. ' [File]: ' . $source['file'].' '. PHP_EOL
-				. ' [Line]: ' . $source['line'].' ';
+			if ( running_in_cli()===true ) {
 
-			$msg = sprintf($colorFormats['bg_red'], $base_msg);
+				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+
+			}else{
+
+				// backtrace
+					$bt		= debug_backtrace();
+					$source	= $bt[0];
+
+				$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
+					. ' ' . $info .' '. PHP_EOL
+					. ' [File]: ' . $source['file'].' '. PHP_EOL
+					. ' [Line]: ' . $source['line'].' ';
+
+				$msg = sprintf($colorFormats['bg_red'], $base_msg);
+			}
 
 			// DEDALO_ERRORS ADD
 			$_ENV['DEDALO_LAST_ERROR'] = $info;
