@@ -478,12 +478,62 @@ class hierarchy {
 					$section_list_relaciones	= $RecordObj_dd->get_relaciones();
 				}
 
+			// virtual section model . model term
+				$default_section_tipo_model = self::get_default_section_tipo_model($tld2);
+
+				$options = new stdClass();
+					$options->terminoID		= $tld2.'2';	// $tld2.'2';
+					$options->parent		= DEDALO_THESAURUS_VIRTUALS_MODELS_AREA_TIPO;	// 'dd101';
+					$options->modelo		= 'dd6';
+					$options->esmodelo		= 'no';
+					$options->esdescriptor	= 'si';
+					$options->visible		= 'si';
+					$options->traducible	= 'no';
+					$options->relaciones	= json_decode('[{"dd6":"'.$real_section_tipo.'"}]');
+					$options->properties 	= null;
+					$options->tld2 			= $tld2;
+					$options->name 			= $name . ' [m]';
+
+				// create_term
+					$create_term = self::create_term( $options );
+					if ($create_term) {
+						$response->result	= $create_term->result;
+						$response->msg[]	= $create_term->msg;
+					}
+
 			// virtual section-list . terms
 				if (!empty($ar_section_list) && !empty($section_list_relaciones)) {
 
 					$options = new stdClass();
 						$options->terminoID		= $tld2.'3';
 						$options->parent		= $tld2.'1';
+						$options->modelo		= 'dd91';
+						$options->esmodelo		= 'no';
+						$options->esdescriptor	= 'si';
+						$options->visible		= 'si';
+						$options->traducible	= 'no';
+						$options->relaciones	= $section_list_relaciones;
+						$options->properties	= null;
+						$options->tld2			= $tld2;
+						$options->name			= 'List';
+
+					// create_term
+						$create_term = self::create_term( $options );
+						if ($create_term) {
+							$response->result	= $create_term->result;
+							$response->msg[]	= $create_term->msg;
+						}
+
+					// set main_dd counter. Creates a counter in main_dd with $current_value +1 (3)
+						// $counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=2);
+				}
+
+			// virtual section-list for model. terms
+				if (!empty($ar_section_list) && !empty($section_list_relaciones)) {
+
+					$options = new stdClass();
+						$options->terminoID		= $tld2.'4';
+						$options->parent		= $tld2.'2';
 						$options->modelo		= 'dd91';
 						$options->esmodelo		= 'no';
 						$options->esdescriptor	= 'si';
