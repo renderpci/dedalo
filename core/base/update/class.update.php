@@ -756,9 +756,6 @@ class update {
 	*/
 	public static function convert_table_data(array $ar_tables, string $action) : bool {
 
-		// Maximum execution time
-		set_time_limit(0);
-
 		// called_class extends current class
 			$called_class = get_called_class();
 			if (strpos($action, '::')!==false) {
@@ -767,17 +764,86 @@ class update {
 				$action			= $parts[1];
 			}
 
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " convert_table_data - action: $action " . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		update::tables_rows_iterator($ar_tables, function($row, $table) use($called_class, $action) {
+
+			$id				= $row['id'];
+			$section_id		= $row['section_id'];
+			$section_tipo	= $row['section_tipo'];
+			$datos			= json_handler::decode($row['datos']);
+
+			if (!empty($datos)) {
+
+				update::check_section_data($id, $table, $section_id, $section_tipo, $datos);
+
+				$section_data = $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
+				if($section_data===null){
+					return;
+				}
+				$section_data_encoded = json_encode($section_data);
+
+				$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+				if($result===false) {
+					$msg = "Failed Update section_data $id";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					return;
+				}
+			}else{
+				debug_log(__METHOD__
+					." ERROR: Empty datos from: $table - $id "
+					, logger::ERROR
+				);
+			}
+		});
+
+		return true;
+	}//end convert_table_data
+
+
+
+	/**
+	* TABLES_ROWS_ITERATOR
+	* Get the row (with all columns) from required tables and apply the action required to every row
+	* @param array $ar_tables
+	*
+	* @return bool
+	* 	true
+	*/
+	public static function tables_rows_iterator(array $ar_tables, $callback) : bool {
+
+		// Maximum execution time
+		set_time_limit(0);
+
 		foreach ($ar_tables as $table) {
 
 			debug_log(__METHOD__ . PHP_EOL
 				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 				. " CONVERTING ... " . PHP_EOL
-				. " convert_table_data - table: $table " . PHP_EOL
-				. " convert_table_data - action: $action " . PHP_EOL
-				. " convert_table_data memory usage: " . dd_memory_usage() . PHP_EOL
+				. " tables_rows_iterator - table: $table " . PHP_EOL
+				. " tables_rows_iterator memory usage: " . dd_memory_usage() . PHP_EOL
 				. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
 				, logger::WARNING
 			);
+
+			// CLI process data
+			if ( running_in_cli()===true ) {
+				$pdata = new stdClass();
+					$pdata->msg		= (label::get_label('processing') ?? 'Processing') . ' table: ' . $table;
+					$pdata->table	= $table;
+				// send to output
+				print_cli($pdata);
+			}
 
 			// Get last id in the table
 			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
@@ -819,38 +885,10 @@ class update {
 
 				while($row = pg_fetch_assoc($result)) {
 
-					$id				= $row['id'];
-					$section_id		= $row['section_id'];
-					$section_tipo	= $row['section_tipo'];
-					$datos			= json_handler::decode($row['datos']);
+					$id	= $row['id'];
+					$callback( $row, $table ); // like 'convert_section_dato_to_data'
 
-					if (!empty($datos)) {
-
-						update::check_section_data($id, $table, $section_id, $section_tipo, $datos);
-
-						$section_data = $called_class::{$action}( $datos ); // like 'convert_section_dato_to_data'
-						if($section_data===null){
-							continue;
-						}
-						$section_data_encoded	= json_encode($section_data);
-
-						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
-						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
-						if($result===false) {
-							$msg = "Failed Update section_data $i";
-							debug_log(__METHOD__
-								." ERROR: $msg "
-								, logger::ERROR
-							);
-							continue;
-						}
-					}else{
-						debug_log(__METHOD__
-							." ERROR: Empty datos from: $table - $id "
-							, logger::ERROR
-						);
-					}
-				}
+				}// end while
 
 				// log info each 1000
 					if ($i_ref===0) {
@@ -872,8 +910,7 @@ class update {
 					if ($i_ref > 1001) {
 						$i_ref = 0;
 					}
-			}
-			#break; // stop now
+			}//end for ($i=$min; $i<=$max; $i++)
 
 			// let GC do the memory job
 			sleep(1);
@@ -883,7 +920,8 @@ class update {
 
 
 		return true;
-	}//end convert_table_data
+	}//end tables_rows_iterator
+
 
 
 
