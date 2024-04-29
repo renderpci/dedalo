@@ -94,6 +94,29 @@ $updates->$v = new stdClass();
 			]; // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
 
+	// Update the relations table
+		$ar_tables_to_update = [
+			'matrix',
+			'matrix_activities',
+			'matrix_dataframe',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_indexations',
+			'matrix_list',
+			'matrix_nexus',
+			'matrix_notes',
+			'matrix_projects'
+		];
+		$table_to_update = new stdClass();
+			$table_to_update->tables =  implode(',', $ar_tables_to_update);
+		$script_obj = new stdClass();
+			$script_obj->info			= "Recreate the relations table with new tipos";
+			$script_obj->script_class	= "area_maintenance";
+			$script_obj->script_method	= "regenerate_relations";
+			$script_obj->script_vars	= [
+				$table_to_update
+			]; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
 
 
 $v=614; #####################################################################################
