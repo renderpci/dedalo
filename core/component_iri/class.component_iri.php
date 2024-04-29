@@ -705,7 +705,8 @@ class component_iri extends component_common {
 								if(is_object($iri_object)){
 
 									if(!empty($iri_object->iri)){
-
+										// remove unused spaces or other invalid code as \t \n, etc
+										$iri_object->iri = trim($iri_object->iri);
 										$result = $has_protocol($iri_object->iri);
 										if($result===false){
 
