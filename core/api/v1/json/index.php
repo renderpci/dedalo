@@ -113,9 +113,9 @@ $global_start_time = hrtime(true);
 	if (empty($rqo)) {
 		error_log('API JSON index. ! Ignored empty rqo');
 		debug_log(__METHOD__
-			." Error on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
+			." Warning on API : Empty rqo (Some cases like preflight, do not generates a rqo) " . PHP_EOL
 			.' $_REQUEST: '. to_string($_REQUEST)
-			, logger::ERROR
+			, logger::WARNING
 		);
 		exit( 0 );
 	}
