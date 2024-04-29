@@ -78,8 +78,15 @@ tool_pdf_extractor.prototype.init = async function(options) {
 */
 tool_pdf_extractor.prototype.build = async function(autoload=false) {
 
+	const self = this
+
 	// call generic common tool build
 		const common_build = await tool_common.prototype.build.call(this, autoload);
+
+	// config
+		if (!self.config) {
+			self.config = {}
+		}
 
 
 	return common_build
@@ -97,9 +104,10 @@ tool_pdf_extractor.prototype.get_pdf_data = async function() {
 	const self = this
 
 	// short vars
-		const method	= self.config.method
-		const page_in	= self.config.page_in
-		const page_out	= self.config.page_out
+		const config    = self.config || {}
+		const method	= config.method
+		const page_in	= config.page_in
+		const page_out	= config.page_out
 
 	// component PDF caller
 		const component = self.caller
@@ -168,7 +176,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 		const offset = self.config.offset || 1
 
 	// page_in. Get the page_in set by the user in the modal alert
-		const page_in = (self.config.page_in === false || self.config.page_in ==='' || typeof self.config.page_in ==='undefined')
+		const page_in = (self.config.page_in===false || self.config.page_in==='' || typeof self.config.page_in==='undefined')
 			? 1
 			: parseInt(self.config.page_in)
 
@@ -221,6 +229,7 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	return final_text
 }//end process_pdf_data
+
 
 
 // @license-end

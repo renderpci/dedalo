@@ -70,7 +70,7 @@ class component_image extends component_media_common {
 
 
 	/**
-	* GET_IMAGE ID
+	* GET_ID
 	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
 	* It can be overwritten in properties with JSON ex. {"id": "dd851"} and will be read from the content of the referenced component
 	* @return string|null $id
@@ -728,11 +728,6 @@ class component_image extends component_media_common {
 	public function create_thumb() : ?object {
 		$start_time = start_time();
 
-		// common data
-			$id					= $this->get_id();
-			$initial_media_path	= $this->get_initial_media_path();
-			// $additional_path	= $this->get_additional_path();
-
 		// quality default
 			$quality_default	= $this->get_default_quality();
 			$default_image_path	= $this->get_media_filepath($quality_default);
@@ -740,9 +735,9 @@ class component_image extends component_media_common {
 		// check default quality image
 			if (!file_exists($default_image_path)) {
 				debug_log(__METHOD__
-					." Default image quality does not exists. Skip to create thumb. ". PHP_EOL
-					.' id: ' . to_string($id)
-					, logger::ERROR
+					." Default image quality file does not exists. Skip to create thumb. "
+					.' id: ' . $this->get_id()
+					, logger::DEBUG
 				);
 				return null;
 			}

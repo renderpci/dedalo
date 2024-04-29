@@ -575,6 +575,24 @@ class component_media_common extends component_common {
 				return $response;
 			}
 
+		// safe folder_path
+			if (!is_dir($folder_path)) {
+				if(!mkdir($folder_path, 0750, true)) {
+					debug_log(__METHOD__
+						.' Error creating directory: ' . PHP_EOL
+						.' folder_path: ' . $folder_path
+						, logger::ERROR
+					);
+					$response->msg .= ' Error creating directory';
+					debug_log(__METHOD__
+						. ' '.$response->msg
+						, logger::ERROR
+					);
+					$response->errors[] = 'creating folder_path directory failed';
+					return $response;
+				}
+			}
+
 		// rename old files when they exists to store a copy before move current an overwrite it
 			$renamed = $this->rename_old_files($file_name, $folder_path);
 			if ($renamed->result===false) {
@@ -700,7 +718,10 @@ class component_media_common extends component_common {
 		// check target fir
 			if (empty($folder_path) || !is_dir($folder_path)) {
 				$msg = "Invalid folder_path: '$folder_path' from filename: '$file_name'. Ignored rename";
-				debug_log(__METHOD__." $msg ".to_string(), logger::ERROR);
+				debug_log(__METHOD__
+					." $msg "
+					, logger::ERROR
+				);
 				$response->msg .= $msg;
 				$response->errors[] = 'invalid folder path';
 				return $response;

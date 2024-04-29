@@ -225,7 +225,7 @@ class component_av extends component_media_common {
 		$folder				= $this->get_folder(); // like DEDALO_AV_FOLDER
 		$additional_path	= $this->additional_path;
 
-		$posterframe_filepath	= DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
+		$posterframe_filepath = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
 
 
 		return $posterframe_filepath;
@@ -250,7 +250,8 @@ class component_av extends component_media_common {
 
 		// FILE EXISTS TEST : If not, show '0' dedalo image logo
 		if ($test_file===true) {
-			$file = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
+			// $file = DEDALO_MEDIA_PATH . $folder .'/posterframe'. $additional_path .'/'. $file_name;
+			$file = $this->get_posterframe_filepath();
 			if(!file_exists($file)) {
 				$posterframe_url = DEDALO_CORE_URL . '/themes/default/0.jpg';
 			}
@@ -340,15 +341,14 @@ class component_av extends component_media_common {
 	*/
 	public function delete_posterframe() : bool {
 
-		$folder					= $this->get_folder(); // like DEDALO_AV_FOLDER
-		$additional_path		= $this->additional_path;
-		$posterframe_file_name	= $this->get_posterframe_file_name(); // like 'rsc35_rsc167_1.jpg'
-
-		$file = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path .'/'. $posterframe_file_name;
+		$file = $this->get_posterframe_filepath();
 
 		// check file already exists
 			if(!file_exists($file)) {
-				debug_log(__METHOD__." Posterframe file do not exists. file: ".to_string($file), logger::DEBUG);
+				debug_log(__METHOD__
+					." Ignored delete posterframe. File do not exists: ".to_string($file)
+					, logger::DEBUG
+				);
 				return false;
 			}
 
