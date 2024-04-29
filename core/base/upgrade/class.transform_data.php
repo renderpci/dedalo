@@ -722,4 +722,306 @@ class transform_data {
 
 
 
+	/**
+	* CHANGES_IN_TIPOS
+	* @return bool
+	*/
+	public static function changes_in_tipos($ar_tables, $json_files) : bool {
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " changes_in_tipos - tables: " . json_encode($ar_tables) . PHP_EOL
+			. " changes_in_tipos - json_files: " . json_encode($json_files) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		$path = DEDALO_CORE_PATH.'/base/transform_definition_files/';
+		// get transform map from files
+			$ar_transform_map = [];
+			foreach ($json_files as $current_json_file) {
+				$contents			= file_get_contents($path.$current_json_file);
+				$transform_map		= json_decode($contents);
+				foreach ($transform_map as $transform_object) {
+					$ar_transform_map[$transform_object->old] = $transform_object;
+				}
+			}
+
+		update::tables_rows_iterator($ar_tables, function($row, $table) use($ar_transform_map) {
+
+			$id				= $row['id'];
+			$section_tipo	= $row['section_tipo'] ?? null;
+			$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
+			$dato			= (isset($row['dato'])) ? json_handler::decode($row['dato']) : null; // matrix_time_machine
+			$tipo			= $row['tipo'] ?? null; // matrix_time_machine
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					$pdata = new stdClass();
+						$pdata->msg		= (label::get_label('processing') ?? 'Processing')
+							. ' - table: ' 			. $table
+							. ' - id: ' 			. $id
+							. ' - section_tipo: ' 	. $section_tipo
+							. ' - section_id: '  	. ($row['section_id'] ?? '');
+						$pdata->table	= $table;
+					// send to output
+					print_cli($pdata);
+				}
+
+			// matrix_counter case
+			if ( $table==='matrix_counter' ) {
+				// delete record
+				if( isset($ar_transform_map[$tipo]) ){
+					$strQuery	= "DELETE FROM $table WHERE id = $1 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $id ));
+					if($result===false) {
+						$msg = "Failed Update section_tipo in $table - $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+				return;
+			}
+
+			// section_tipo. All tables has section_tipo
+			if( isset($section_tipo) && isset($ar_transform_map[$section_tipo]) ){
+
+				$new_section_tipo = $ar_transform_map[$section_tipo]->new;
+
+				$strQuery	= "UPDATE $table SET section_tipo = $1 WHERE id = $2 ";
+				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_section_tipo, $id ));
+				if($result===false) {
+					$msg = "Failed Update section_tipo in $table - $id";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+
+			// tipo. Only matrix_time_machine has tipo it could not be set
+			if( isset($tipo) && isset($ar_transform_map[$tipo]) ){
+
+				$new_tipo = $ar_transform_map[$tipo]->new;
+
+				$strQuery	= "UPDATE $table SET tipo = $1 WHERE id = $2 ";
+				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_tipo, $id ));
+				if($result===false) {
+					$msg = "Failed Update tipo in $table - $id";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+
+			// datos. Common matrix tables
+			if( isset($datos) ){
+
+				// datos properties
+				foreach ($datos as $datos_key => $datos_value) {
+
+					if( empty($datos_value) ){
+						continue;
+					}
+
+					switch ($datos_key) {
+						case 'relations_search':
+						case 'relations':
+							// update relations array
+							$relations = $datos_value ?? [];
+
+							foreach ($relations as $locator) {
+								foreach ($locator as $loc_key => $loc_value) {
+									if( isset($ar_transform_map[$loc_value]) ){
+										// replace old tipo with the new one in any locator property
+										$locator->{$loc_key} = $ar_transform_map[$loc_value]->new;
+									}
+								}
+							}
+							break;
+						case 'diffusion_info':
+						case 'components':
+							// update components object
+							$literal_components = $datos_value ?? [];
+
+							$new_components = new stdClass();
+
+							foreach ($literal_components as $literal_tipo => $literal_value) {
+								if( isset($ar_transform_map[$literal_tipo]) ){
+
+									// replace old tipo with the new one in any locator property
+									$perform = $ar_transform_map[$literal_tipo]->perform;
+									foreach ($perform as $action) {
+
+										$options = new stdClass();
+											$options->transform_object	= $ar_transform_map[$literal_tipo];
+											$options->new_components	= &$new_components; // pass by reference to allow add (!)
+											$options->literal_tipo		= $literal_tipo;
+											$options->literal_value		= $literal_value;
+
+										transform_data::{$action}( $options );
+									}
+								}else{
+									$new_components->{$literal_tipo} = $literal_value;
+								}
+							}
+							// replace whole object
+							$datos->$datos_key = $new_components;
+							break;
+
+						default:
+							// update other properties like section_tipo, section_real_tipo, etc.
+							$test_tipo = $datos_value;
+							if( isset($ar_transform_map[$test_tipo]) ){
+								$datos->{$datos_key} = $ar_transform_map[$test_tipo]->new;
+							}
+							break;
+					}
+				}//end foreach ($datos as $datos_key => $datos_value)
+
+				$section_data_encoded = json_encode($datos);
+
+				$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+				$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+				if($result===false) {
+					$msg = "Failed Update section_data $id";
+					debug_log(__METHOD__
+						." ERROR: $msg "
+						, logger::ERROR
+					);
+					return false;
+				}
+			}//end if( isset($datos) )
+
+
+			// dato. Time machine matrix table
+			if( isset($dato) && !empty($dato) && $table!=='matrix_counter'){
+
+				$string_value = is_string($dato)
+					? $dato
+					: json_encode($dato);
+
+				$options = new stdClass();
+					$options->ar_transform_map	= $ar_transform_map;
+					$options->tipo				= $tipo;
+					$options->value				= $string_value;
+
+				$new_dato_encoded = transform_data::replace_tm_data( $options );
+
+				if($string_value !== $new_dato_encoded ){
+					$strQuery	= "UPDATE $table SET dato = $1 WHERE id = $2 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato_encoded, $id ));
+					if($result===false) {
+						$msg = "Failed Update time machine record $id";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+			}//end if( isset($dato) )
+		});
+
+
+		return true;
+	}//end changes_in_tipos
+
+
+
+	/**
+	* REPLACE_TIPO
+	*  Set the literal component value to a given by reference new object (new_components) key
+	* @param object $options
+	* @return void
+	*/
+	public static function replace_tipo(object $options) {
+
+		$transform_object	= $options->transform_object;
+		$new_components		= $options->new_components; // pass by reference
+		$literal_value		= $options->literal_value;
+
+		// new tipo is transform_object map 'new' property
+		$new_tipo = $transform_object->new;
+
+		// modifies passed by reference object new_components
+		$new_components->{$new_tipo} = $literal_value;
+	}//end replace_tipo
+
+
+
+	/**
+	* REPLACE_TM_DATA
+	*  Used to replace time machine data in column 'dato'
+	*  Set the literal component value to a given by reference new object (new_components) key
+	* @param object $options
+	* @return void
+	*/
+	public static function replace_tm_data(object $options) {
+
+		$ar_transform_map	= $options->ar_transform_map;
+		$value				= $options->value;
+
+		if (empty($value)) {
+			return $value;
+		}
+
+		foreach ($ar_transform_map as $current_tipo => $transform_map_object) {
+			$string_value = str_replace(
+				'"' . $current_tipo . '"',
+				'"' . $transform_map_object->new . '"',
+				$value
+			);
+		}
+
+		return $string_value;
+	}//end replace_tm_data
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 }//end class transform_data

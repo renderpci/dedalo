@@ -4140,9 +4140,9 @@ abstract class component_common extends common {
 			$dato_from_json	= json_handler::decode($import_value); // , false, 512, JSON_INVALID_UTF8_SUBSTITUTE
 
 			// array convert all except null
-			if (!is_array($dato_from_json) && !is_null($dato_from_json)) {
-				$dato_from_json = [$dato_from_json];
-			}
+			// if (!is_array($dato_from_json) && !is_null($dato_from_json)) {
+			// 	$dato_from_json = [$dato_from_json];
+			// }
 
 			$import_value	= $dato_from_json;
 
