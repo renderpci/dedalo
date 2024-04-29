@@ -386,6 +386,9 @@ class update {
 			$start_time = start_time();
 			$before = memory_get_usage();
 
+			$current_section_label = RecordObj_dd::get_termino_by_tipo($current_section_tipo, DEDALO_APPLICATION_LANG, true);
+
+
 			// Activity data is not updated [REMOVED 29-08-2018 TO ALLOW FILTER AND FILTER MASTER UPDATES]
 				if($current_section_tipo===DEDALO_ACTIVITY_SECTION_TIPO) {
 					# component_ip, component_autocomplete, component_autocomplete_ts, component_date, component_input_text, component_filter
@@ -508,6 +511,17 @@ class update {
 				while ($row = pg_fetch_assoc($result)) {
 
 					$section_id = $row['section_id'];
+
+					// CLI process data
+					if ( running_in_cli()===true ) {
+						$pdata = new stdClass();
+							$pdata->msg		= (label::get_label('processing') ?? 'Processing')
+								. ' '. $model_name
+								. ' | section: ' 	.$current_section_label. ' ('. $current_section_tipo.')'
+								. ' | section_id: '	. $section_id;
+						// send to output
+						print_cli($pdata);
+					}
 
 					foreach($ar_component_tipo as $current_component_tipo) {
 
