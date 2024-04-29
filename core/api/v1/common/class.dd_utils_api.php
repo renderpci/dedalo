@@ -842,8 +842,8 @@ final class dd_utils_api {
 			// file_data to client. POST file (sent across $_FILES) info and some additions
 				// Example of received data:
 				// "file_to_upload": {
-				//		"name": "exported_plantillas-web_-1-dd477.csv",
-				//		"full_path": "exported_plantillas-web_-1-dd477.csv",
+				//		"name": "exported_templates-web_-1-dd477.csv",
+				//		"full_path": "exported_templates-web_-1-dd477.csv",
 				//		"type": "text/csv",
 				//		"tmp_name": "/private/var/tmp/phpQ02UUO",
 				//		"error": 0,

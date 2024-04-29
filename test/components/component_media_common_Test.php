@@ -625,7 +625,10 @@ final class component_media_common_test extends TestCase {
 			);
 
 			$options = new stdClass();
-				$options->tmp_dir = null;
+				$options->name		= 'fake_name';
+				$options->key_dir	= 'fake_key_dir';
+				$options->tmp_dir	= null;
+				$options->tmp_name	= 'fake_tmp_name';
 			$result = $component->add_file($options);
 
 			$this->assertTrue(
@@ -645,8 +648,9 @@ final class component_media_common_test extends TestCase {
 			);
 
 			$options = new stdClass();
-				$options->tmp_dir	= 'DEDALO_UPLOAD_TMP_DIR';
+				$options->name		= 'fake_name';
 				$options->key_dir	= '/fake_key_dir';
+				$options->tmp_dir	= 'DEDALO_UPLOAD_TMP_DIR';
 				$options->tmp_name	= 'fake_temp_name';
 			$result = $component->add_file($options);
 
