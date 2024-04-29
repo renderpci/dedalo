@@ -25,7 +25,7 @@ $updates->$v = new stdClass();
 
 		$alert->command			= "
 			<h1>🧐 WARNING! Before apply this update:</h1>
-			<br>New configuration constants have been added and another are deprecated or removed.
+			<br>New configuration constants have been added to config.php and others are deprecated or removed.
 			<br>Add them to your 'config' file to enable new features, such as unified thumbnails and image versions of PDF documents.
 			<br>
 			<br>
@@ -41,20 +41,60 @@ $updates->$v = new stdClass();
 			</code>
 			<br>DEDALO_IMAGE_THUMB_DEFAULT is changed by generic DEDALO_QUALITY_THUMB
 			<br>See sample.config.php file to review all changes.
-			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/' target='_blank'>https://dedalo.dev/docs/config/config/</a>
+			<br>More help in <a href='https://dedalo.dev/docs/config/config/' target='_blank'>Config documentation</a>
 			<br>
+			<br>
+			<h1>🧐 WARNING! Before apply this update: (second part)</h1>
+			<br>If your installation is using a numisdata279 (Finds), as part of numisdata ontology.
+			<br>This update will move your data into new tchi1 (Immovable heritage),
+			<br>therefore change your config.php file to include the new tld: tchi
+			<br>
+			<br>
+			<code>define('DEDALO_PREFIX_TIPOS', ['tchi']
+			</code>
+			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/#defining-prefix-tipos' target='_blank'>defining-prefix-tipos</a>
+			<br>Note: When the update will finish, review your hierarchies to include the new tchi as your previous numisdata279 (Finds).
+			<br>
+			<br>
+			<h1>🧐 WARNING! Before apply this update: (third part)</h1>
+			<br>If your installation is using ImageMagick v6, you will need to review his security policy.
+			<br>This update will generate images from PDF files, so ImageMagick v6 has a restriction to do that.
+			<br>
+			<br>In some configuration the update can not create the thumbs for PDF files and you will get an error as:
+			<br>
+			<br>
+			<code>convert: attempt to perform an operation not allowed by the security policy `PDF' @
+			<br>error/constitute.c/IsCoderAuthorized/421.|convert: no images defined
+			</code>
+			<br> To solve this issue you will need to change the ImageMagick policy for PDF.
+			<br>
+			<br><b>IMPORTANT NOTE: Changing the ImageMagick policy.xml rules can be dangerous for your server!.
+			<br>If you have an older version of GhostScript installed the next change is not recommended since there's a serious security hole for older versions.
+			<br>The recommendation is always keep GhostScript and ImageMagick always up to date and change your server accordingly.</b>
+			<br>More information: <a href='https://www.kb.cert.org/vuls/id/332928/' target='_blank'>Ghostscript contains multiple -dSAFER sandbox bypass vulnerabilities</a>
+			<br>
+			<br>Usually in Ubuntu servers the file will be in:
+			<br>
+			<br>
+			<code>/etc/ImageMagick-6/policy.xml
+			</code>
+			<br> An the line to comment or remove is:
+			<br>
+			<br>
+			<code> ". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
+			</code>
 
 		";
 		$updates->$v->alert_update[] = $alert;
 
 	// UPDATE COMPONENTS
-		// $updates->$v->components_update = [
-		// 	'component_3d',
-		// 	'component_av',
-		// 	'component_pdf',
-		// 	'component_svg',
-		// 	'component_image'
-		// ];	// Force convert from string to array
+		$updates->$v->components_update = [
+			'component_3d',
+			'component_av',
+			'component_pdf',
+			'component_svg',
+			'component_image'
+		];	// Force convert from string to array
 
 	// DATA INSIDE DATABASE UPDATES
 	// clean_section_and_component_dato. Update 'datos' to section_data
