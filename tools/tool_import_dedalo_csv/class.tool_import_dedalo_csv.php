@@ -1006,7 +1006,8 @@ class tool_import_dedalo_csv extends tool_common {
 								foreach ($conform_import_data_response->errors as $current_error) {
 									$failed_rows[] = $current_error;
 								}
-								continue 2; // go to next row
+								// continue 2; // go to next row
+								continue; // go to next column
 							}
 
 						// conformed_value. value conformed replacement
