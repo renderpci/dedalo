@@ -148,6 +148,11 @@ const get_content_data_edit = async function(self) {
 						render_stream_response.done()
 						// reload JS files
 						reload_js_files()
+						.then(function(response){
+							if( confirm('It is recommended to refresh the page to avoid cache problems. Do you wish to continue to do so?') ) {
+								location.reload(true);
+							}
+						})
 					}
 
 					// read stream. Creates ReadableStream that fire
