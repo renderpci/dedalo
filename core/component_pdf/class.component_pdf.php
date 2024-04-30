@@ -714,8 +714,8 @@ class component_pdf extends component_media_common {
 		$response = new stdClass();
 
 		$options = new stdClass();
-			$options->path_pdf		= null;	# full source pdf file path
-			$options->first_page	= 1; 		# number of first page. default is 1
+			$options->path_pdf		= null;	// full source pdf file path
+			$options->first_page	= 1; 	// number of first page. default is 1
 
 		// new_options overwrite options defaults
 			foreach ((object)$new_options as $key => $value) {
@@ -727,7 +727,7 @@ class component_pdf extends component_media_common {
 		// error on missing properties
 			if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
 				$response->result	= 'error';
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: source pdf file not found";
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: source PDF file not found";
 				return $response;
 			}
 
@@ -750,8 +750,13 @@ class component_pdf extends component_media_common {
 		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
 
 		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
-		$output   = exec( "$command 2>&1", $result);	# Generate text version file in same dir as pdf
-		if ( strpos( strtolower($output), 'error')) {
+		debug_log(__METHOD__
+			. " Executing PDF command:" . PHP_EOL
+			. $command . PHP_EOL
+			, logger::WARNING
+		);
+		$output = exec("$command 2>&1", $result); // Generate text version file in same dir as pdf
+		if ( strpos( strtolower($output), 'error') ) {
 			$response->result	= 'error';
 			$response->msg		= "$output";
 			return $response;
@@ -1086,6 +1091,42 @@ class component_pdf extends component_media_common {
 	* @return bool
 	*/
 	public function regenerate_component() : bool {
+
+		// regenerate PDF text
+			// transcription to text automatic
+			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
+			if (!empty($ar_related_component_text_area_tipo)) {
+
+				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+				$quality							= $this->get_default_quality();
+				$target_pdf_path					= $this->get_media_filepath($quality);
+
+				try {
+					$options = new stdClass();
+						$options->path_pdf		= $target_pdf_path;	// full source PDF file path
+						$options->first_page	= 1; // number of first page. default is 1
+					$text_from_pdf_response = component_pdf::get_text_from_pdf( $options );
+
+					if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
+
+						$component_text_area = component_common::get_instance(
+							$related_component_text_area_model,
+							$related_component_text_area_tipo,
+							$this->section_id,
+							'edit',
+							DEDALO_DATA_LANG,
+							$this->section_tipo,
+							false
+						);
+						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
+						$component_text_area->Save();
+					}
+
+				} catch (Exception $e) {
+					debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
+				}
+			}//end if (!empty($related_component_text_area_tipo))
 
 		// quality
 			$ar_quality = $this->get_ar_quality();

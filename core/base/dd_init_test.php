@@ -66,7 +66,7 @@
 			die('Unable to write sessions. Review your permissions for sessions directory path');
 		}
 		// clean old files (sessions and caches)
-		$cache_life	= 2 * 24 * 60 * 60; // caching time, in seconds - 2 days -
+		$cache_life	= 4 * 24 * 60 * 60; // caching time, in seconds - 2 days -
 		$files		= glob(DEDALO_SESSIONS_PATH . '/*');
 		foreach($files as $file) {
 
