@@ -1125,44 +1125,52 @@ class component_pdf extends component_media_common {
 
 				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
 				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-				$quality							= $this->get_default_quality();
-				$target_pdf_path					= $this->get_media_filepath($quality);
 
-				if (file_exists($target_pdf_path)) {
+				$component_text_area = component_common::get_instance(
+					$related_component_text_area_model,
+					$related_component_text_area_tipo,
+					$this->section_id,
+					'edit',
+					DEDALO_DATA_LANG,
+					$this->section_tipo,
+					false
+				);
+				// current value
+				$component_text_area_dato	= $component_text_area->get_dato();
+				$component_text_area_value	= $component_text_area_dato[0] ?? null;
 
-					$text_options = new stdClass();
-						$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
-						$text_options->first_page	= 1; // number of first page. default is 1
+				// extract text only if text area value is empty
+				if (empty($component_text_area_value)) {
+					$quality			= $this->get_default_quality();
+					$target_pdf_path	= $this->get_media_filepath($quality);
+					if (file_exists($target_pdf_path)) {
 
-					try {
-						$text_from_pdf_response = component_pdf::get_text_from_pdf( $text_options );
-					} catch (Exception $e) {
-						debug_log(__METHOD__
-							. " Caught exception: " . PHP_EOL
-							. $e->getMessage()
-							, logger::ERROR
-						);
-					}
+						$text_options = new stdClass();
+							$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
+							$text_options->first_page	= 1; // number of first page. default is 1
 
-					if (
-						isset($text_from_pdf_response) &&
-						$text_from_pdf_response->result!=='error' &&
-						strlen($text_from_pdf_response->original)>2
-						) {
+						try {
+							$text_from_pdf_response = component_pdf::get_text_from_pdf( $text_options );
+						} catch (Exception $e) {
+							debug_log(__METHOD__
+								. " Caught exception: " . PHP_EOL
+								. $e->getMessage()
+								, logger::ERROR
+							);
+						}
 
-						$component_text_area = component_common::get_instance(
-							$related_component_text_area_model,
-							$related_component_text_area_tipo,
-							$this->section_id,
-							'edit',
-							DEDALO_DATA_LANG,
-							$this->section_tipo,
-							false
-						);
-						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
-						$component_text_area->Save();
-					}
-				}
+						if (
+							isset($text_from_pdf_response) &&
+							$text_from_pdf_response->result!=='error' &&
+							strlen($text_from_pdf_response->original)>2
+							) {
+
+							// set and save extracted text
+							$component_text_area->set_dato($text_from_pdf_response->result);
+							$component_text_area->Save();
+						}
+					}//end if (file_exists($target_pdf_path))
+				}//end if (empty($component_text_area_value))
 			}//end if (!empty($related_component_text_area_tipo))
 
 
