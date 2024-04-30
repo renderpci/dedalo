@@ -880,9 +880,10 @@ class transform_data {
 							// remove old data
 							unset($datos->{$datos_key});
 							break;
+
 						default:
 							// update other properties like section_tipo, section_real_tipo, etc.
-							$test_tipo = $datos_value;
+							$test_tipo = to_string($datos_value);
 							if( isset($ar_transform_map[$test_tipo]) ){
 								$datos->{$datos_key} = $ar_transform_map[$test_tipo]->new;
 							}
