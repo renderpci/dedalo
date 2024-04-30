@@ -424,9 +424,9 @@ class component_pdf extends component_media_common {
 					$image_pdf_options->source_file	= $source_file;
 					$image_pdf_options->ar_layers	= [$page];
 					$image_pdf_options->target_file	= $target_file;
-					$image_pdf_options->density		= 900;
+					$image_pdf_options->density		= 600;
 					$image_pdf_options->antialias	= true;
-					$image_pdf_options->quality		= 75;
+					$image_pdf_options->quality		= 100;
 					$image_pdf_options->resize		= '50%';
 
 				ImageMagick::convert($image_pdf_options);
