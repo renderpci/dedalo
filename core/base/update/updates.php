@@ -91,7 +91,7 @@ $updates->$v = new stdClass();
 		$updates->$v->components_update = [
 			'component_3d',
 			'component_av',
-			'component_pdf',
+			// 'component_pdf', // run manually with tool_update_cache !
 			'component_svg',
 			'component_image'
 		];	// Force convert from string to array
