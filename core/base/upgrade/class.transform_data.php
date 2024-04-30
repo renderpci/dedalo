@@ -876,6 +876,10 @@ class transform_data {
 							$datos->$datos_key = $new_components;
 							break;
 
+						case 'inverse_locators':
+							// remove old data
+							unset($datos->{$datos_key});
+							break;
 						default:
 							// update other properties like section_tipo, section_real_tipo, etc.
 							$test_tipo = $datos_value;
