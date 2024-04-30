@@ -241,7 +241,7 @@ abstract class diffusion  {
 									debug_log(__METHOD__
 										."  Caught exception on connect to MySQL (database_name: $item->database_name): ". PHP_EOL
 										. $e->getMessage()
-										, logger::ERROR
+										, logger::WARNING
 									);
 								}
 								if ($conn===false) {
