@@ -75,6 +75,8 @@ extra:
 # force to pack external libs like mermaid into a local js files (directory /assets/external)
 plugins:
   - privacy
+  - search
+  #- glightbox
 
 # repo_url: https://github.com/renderpci/dedalo
 
