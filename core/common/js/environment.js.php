@@ -182,7 +182,7 @@ session_write_close();
 		'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
 		'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
 		'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
-		'DEDALO_MAINTENANCE_MODE'			=> defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null, // DEPRECATED . legacy support only (remove early)
+		'DEDALO_MAINTENANCE_MODE'			=> (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null), // DEPRECATED . legacy support only (remove early)
 		// 'DEDALO_NOTIFICATION'			=> null, // DEPRECATED . legacy support only (remove early)
 		// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
 		'DD_TIPOS' => [

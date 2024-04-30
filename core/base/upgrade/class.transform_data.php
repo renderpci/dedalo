@@ -671,8 +671,9 @@ class transform_data {
 	* View in thesaurus need to be controlled independent of the active or not the hierarchy
 	* @param object|null $datos
 	* @return null $datos // don't need to be saved by update, the new component save by itself
+	* 	! Not use : null as standalone (PHP Fatal error:  Null can not be used as a standalone type)
 	*/
-	public static function add_view_in_thesaurus(?object $datos) : null {
+	public static function add_view_in_thesaurus(?object $datos) {
 
 		// empty relations cases
 			if (empty($datos->relations)) {
