@@ -208,6 +208,19 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		$json_item	= (object)ontology::tipo_to_json_item($term_id);
 		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
 
+	// descriptors
+		// sync Dédalo ontology records. Returns boolean
+		$descriptors = $json_item->descriptors ?? [];
+		foreach ($descriptors as $current_item) {
+
+			ontology::edit_term((object)[
+				'term_id'	=> $terminoID,
+				'dato'		=> $current_item->value,
+				'dato_tipo'	=> 'termino',
+				'lang'		=> $current_item->lang
+			]);
+		}
+
 	// css structure . For easy css edit, save
 		if ( isset($form_data->{MAIN_PROPERTIES_COLUMN}) &&
 			 is_object($form_data->{MAIN_PROPERTIES_COLUMN}) &&
@@ -708,9 +721,27 @@ if($accion==='duplicate') {
 			}
 
 	// JSON Ontology Item save
-		// $term_id	= $new_terminoID;
-		// $json_item	= (object)ontology::tipo_to_json_item($term_id);
-		// $save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+		// json_item build
+			$json_item	= (object)ontology::tipo_to_json_item($terminoID);
+			$json_item->tipo = $new_terminoID; // replace tipo
+		// add item to Ontology
+			ontology::add_term((object)[
+				'term_id'	=> $new_terminoID,
+				'json_item'	=> $json_item
+			]);
+
+	// descriptors
+		// sync Dédalo ontology records. Returns boolean
+		$descriptors = $json_item->descriptors ?? [];
+		foreach ($descriptors as $current_item) {
+
+			ontology::edit_term((object)[
+				'term_id'	=> $new_terminoID,
+				'dato'		=> $current_item->value,
+				'dato_tipo'	=> 'termino',
+				'lang'		=> $current_item->lang
+			]);
+		}
 
 	// response
 		$response = (object)[
