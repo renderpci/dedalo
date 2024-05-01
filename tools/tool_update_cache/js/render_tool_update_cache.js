@@ -111,6 +111,15 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
+	// hilite models
+		const hilite_models = [
+			'component_3d',
+			'component_av',
+			'component_image',
+			'component_pdf',
+			'component_svg'
+		]
+
 	// components list checkbox
 		const options_nodes = []
 		const components_list_length = component_list.length
@@ -144,7 +153,9 @@ const get_content_data = async function(self) {
 				option_label.prepend(option)
 
 			// hilite
-				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo)) {
+				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo) ||
+					hilite_models.includes(item.model)
+					) {
 					option_label.classList.add('hilite')
 				}
 

@@ -295,7 +295,7 @@ abstract class counter {
 			// model check
 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
 				if ($model_name!=='section') {
-					$msg = " Counter row with tipo: $section_tipo is a $model_name . Only sections can use counters. Fix ASAP ";
+					$msg = " Counter row with tipo: '$section_tipo' is a '$model_name' . Only sections can use counters. Fix ASAP ";
 					debug_log(__METHOD__
 						. $msg
 						, logger::ERROR
