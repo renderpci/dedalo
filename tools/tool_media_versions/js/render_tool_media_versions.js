@@ -104,6 +104,8 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_SYNC_DATA
+* Render 'Show data' button and container to display
+* the current files and DB data comparison
 * @param object self
 * @return HTMLElement|null
 */
@@ -137,18 +139,17 @@ const render_sync_data = function(self) {
 				parent			: sync_data_wrapper
 			})
 
-		// icon
-			const icon = ui.create_dom_element({
+		// button_icon_show_data
+			const button_icon_show_data = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button icon ' + (is_sync ? 'eye' : 'exclamation'),
 				parent			: versions_container
 			})
-			icon.addEventListener('click', function(e) {
+			button_icon_show_data.addEventListener('click', function(e) {
 				e.stopPropagation()
 				pre_data.classList.toggle('hide')
 			})
-
-		// label
+			// label
 			const label_string = !is_sync
 				? self.get_tool_label('files_info_is_unsync') || 'Files info data is unsync'
 				: self.get_tool_label('show_data') || 'Show data'
@@ -159,9 +160,8 @@ const render_sync_data = function(self) {
 				parent			: versions_container
 			})
 			label_node.addEventListener('click', (e)=> {
-				icon.click(e)
+				button_icon_show_data.click(e)
 			})
-
 
 		// button_sync
 			const button_sync = ui.create_dom_element({
@@ -191,7 +191,7 @@ const render_sync_data = function(self) {
 				})
 			})
 
-		// pre JSON data
+		// pre_data JSON data
 			const pre_data = ui.create_dom_element({
 				element_type	: 'pre',
 				class_name		: 'pre hide',
@@ -224,10 +224,11 @@ const render_versions_grid = function(self) {
 			return fragment
 		}
 
-	const thumb = ar_quality.find(el => el === 'thumb')
-	if(!thumb){
-		ar_quality.push('thumb')
-	}
+	// thumb
+		const thumb = ar_quality.find(el => el === 'thumb')
+		if(!thumb){
+			ar_quality.push('thumb')
+		}
 
 	const ar_rows = [
 		{
@@ -327,73 +328,73 @@ const render_versions_grid = function(self) {
 			}
 		)
 
-
 	// quality labels
-	const ar_rows_length = ar_rows.length
-	for (let i = 0; i < ar_rows_length; i++) {
-		const current_row = ar_rows[i]
+		const ar_rows_length = ar_rows.length
+		for (let i = 0; i < ar_rows_length; i++) {
+			const current_row = ar_rows[i]
 
-		const label = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'label',
-			inner_html		: current_row.label,
-			parent			: colum_labels_container
-		})
-		Object.assign(
-			label.style,
-			{
-				'grid-column': `1`,
-				'grid-row': `${i+2}`
-			}
-		)
-	}
-
-	const ar_quality_length = ar_quality.length
-	for (let i = 0; i < ar_quality_length; i++) {
-
-		const current_quality = ar_quality[i];
-
-		const quality_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'column quality_container',
-			parent			: versions_container
-		})
-		// quality label
-			const quality_label_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'file_info' + (current_quality===self.main_element.context.features.default_quality ? ' default' : ''),
-				parent			: quality_container
-			})
-
-			ui.create_dom_element({
+			const label = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'label',
-				inner_html		: current_quality,
-				parent			: quality_label_node
+				inner_html		: current_row.label,
+				parent			: colum_labels_container
 			})
 			Object.assign(
-				quality_label_node.style,
+				label.style,
 				{
-					'grid-column': `${i+2}`,
-					'grid-row': `1`
-				}
-			)
-
-		const ar_rows_length = ar_rows.length
-		for (let j = 0; j < ar_rows_length; j++) {
-			const current_row = ar_rows[j]
-			const row_node = current_row.renderer(current_quality, self)
-
-			quality_container.appendChild( row_node )
-			Object.assign(
-				row_node.style,
-				{
-					'grid-column': `${i+2}`,
-					'grid-row': `${j+2}`
+					'grid-column': `1`,
+					'grid-row': `${i+2}`
 				}
 			)
 		}
-	}//end for (let i = 0; i < ar_quality_length; i++)
+
+	// contents by quality
+		const ar_quality_length = ar_quality.length
+		for (let i = 0; i < ar_quality_length; i++) {
+
+			const current_quality = ar_quality[i];
+
+			const quality_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'column quality_container',
+				parent			: versions_container
+			})
+			// quality label
+				const quality_label_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'file_info' + (current_quality===self.main_element.context.features.default_quality ? ' default' : ''),
+					parent			: quality_container
+				})
+
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'label',
+					inner_html		: current_quality,
+					parent			: quality_label_node
+				})
+				Object.assign(
+					quality_label_node.style,
+					{
+						'grid-column': `${i+2}`,
+						'grid-row': `1`
+					}
+				)
+
+			const ar_rows_length = ar_rows.length
+			for (let j = 0; j < ar_rows_length; j++) {
+				const current_row = ar_rows[j]
+				const row_node = current_row.renderer(current_quality, self)
+
+				quality_container.appendChild( row_node )
+				Object.assign(
+					row_node.style,
+					{
+						'grid-column': `${i+2}`,
+						'grid-row': `${j+2}`
+					}
+				)
+			}
+		}//end for (let i = 0; i < ar_quality_length; i++)
 
 
 	return fragment
@@ -403,7 +404,8 @@ const render_versions_grid = function(self) {
 
 /**
 * RENDER_FILE
-* @param array ar_quality
+*  Renders file_info_node whit one icon to display the selected quality preview
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
@@ -465,46 +467,45 @@ const render_file = function(quality, self) {
 
 /**
 * RENDER_FILE_EXTENSION
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
-const render_file_extension = function(quality, self) {
+	// const render_file_extension = function(quality, self) {
+
+	// 	// info columns
+	// 		const file_info_node = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+	// 		})
+
+	// 		// file_info
+	// 		const file_info = (quality==='original' && self.file_info_normalized_name)
+	// 			? self.file_info_normalized_name
+	// 			: self.files_info_safe.find(el => el.quality===quality)
+
+	// 		if (file_info && file_info.file_exist===true) {
+
+	// 			const extension = file_info.file_path.split('.').pop();
+
+	// 			// icon file
+	// 			ui.create_dom_element({
+	// 				element_type	: 'span',
+	// 				class_name		: '',
+	// 				inner_html		: extension,
+	// 				parent			: file_info_node
+	// 			})
+	// 		}
 
 
-	// info columns
-		const file_info_node = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
-		})
-
-		// file_info
-		const file_info = (quality==='original' && self.file_info_normalized_name)
-			? self.file_info_normalized_name
-			: self.files_info_safe.find(el => el.quality===quality)
-
-		if (file_info && file_info.file_exist===true) {
-
-			const extension = file_info.file_path.split('.').pop();
-
-			// icon file
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: '',
-				inner_html		: extension,
-				parent			: file_info_node
-			})
-		}
-
-
-	return file_info_node
-}//end render_file_extension
+	// 	return file_info_node
+	// }//end render_file_extension
 
 
 
 /**
 * RENDER_FILE_SIZE
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
@@ -542,74 +543,73 @@ const render_file_size = function(quality, self) {
 
 /**
 * RENDER_ALTERNATIVE_EXTENSIONS
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
-const render_alternative_extensions = function(quality, self) {
+	// const render_alternative_extensions = function(quality, self) {
 
-	// short vars
-		const value_files_info				= self.files_info_alternative
-		const extension						= self.main_element.context.features.extension
-		const alternative_extensions		= self.main_element.context.features.alternative_extensions
-		const alternative_extensions_length	= alternative_extensions.length
+	// 	// short vars
+	// 		const value_files_info				= self.files_info_alternative
+	// 		const alternative_extensions		= self.main_element.context.features.alternative_extensions
+	// 		const alternative_extensions_length	= alternative_extensions.length
 
-	// const ar_quality_length = ar_quality.length
-	// for (let i = 0; i < ar_quality_length; i++) {
+	// 	// file_info_node
+	// 		const file_info_node = ui.create_dom_element({
+	// 			element_type	: 'div',
+	// 			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
+	// 		})
 
-		const file_info_node = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : ''),
-		})
+	// 	// info columns
+	// 		for (let j = 0; j < alternative_extensions_length; j++) {
 
-		// info columns
-		for (let j = 0; j < alternative_extensions_length; j++) {
+	// 			const alternative_extension = alternative_extensions[j]
 
-			const alternative_extension = alternative_extensions[j]
+	// 			// files_info
+	// 			const file_info = value_files_info.find(el => el.quality===quality && el.extension===alternative_extension)
+	// 			if (file_info) {
 
-			// files_info
-			const file_info = value_files_info.find(el => el.quality===quality && el.extension===alternative_extension)
-			if (file_info) {
+	// 					// cell_node
+	// 						const cell_node = ui.create_dom_element({
+	// 							element_type	: 'div',
+	// 							class_name		: 'cell_node',
+	// 							parent			: file_info_node
+	// 						})
 
-					const cell_node = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'cell_node',
-						parent			: file_info_node
-					})
+	// 					// button_download
+	// 						const button_download = ui.create_dom_element({
+	// 							element_type	: 'span',
+	// 							class_name		: 'button download',
+	// 							title			: get_label.download || 'Download',
+	// 							parent			: cell_node
+	// 						})
+	// 						button_download.addEventListener('click', function(e) {
+	// 							e.stopPropagation();
+	// 							const file_url = DEDALO_MEDIA_URL + file_info.file_path
+	// 							open_window({
+	// 								url : file_url
+	// 							})
+	// 						})
 
-					const button_download = ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'button download',
-						title			: get_label.download || 'Download',
-						parent			: cell_node
-					})
-					button_download.addEventListener('click', function(e) {
-						e.stopPropagation();
-						const file_url = DEDALO_MEDIA_URL + file_info.file_path
-						open_window({
-							url : file_url
-						})
-					})
-
-					ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'file_info_extension',
-						inner_html		: file_info.extension,
-						parent			: cell_node
-					})
-			}
-		}
-	// }//end for (let i = 0; i < ar_quality_length; i++)
+	// 					// file_info_extension
+	// 						ui.create_dom_element({
+	// 							element_type	: 'span',
+	// 							class_name		: 'file_info_extension',
+	// 							inner_html		: file_info.extension,
+	// 							parent			: cell_node
+	// 						})
+	// 			}
+	// 		}
 
 
-	return file_info_node
-}//end render_alternative_extensions
+	// 	return file_info_node
+	// }//end render_alternative_extensions
 
 
 
 /**
 * RENDER_FILE_UPLOAD
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
@@ -671,7 +671,7 @@ const render_file_upload = function(quality, self) {
 
 /**
 * RENDER_FILE_VERSIONS
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
@@ -688,57 +688,52 @@ const render_file_versions = function(quality, self) {
 		}
 		const custom_files_info = Object.values(object_files_info)
 
-	// info columns
-			// file_info_node
-				const file_info_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
-				})
+	// file_info_node
+		const file_info_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+		})
 
-			const files_info = custom_files_info.filter(el => el.quality===quality)
+		const files_info = custom_files_info.filter(el => el.quality===quality)
 
-			const files_info_length = files_info.length
-			for (let k = 0; k < files_info_length; k++) {
+		const files_info_length = files_info.length
+		for (let k = 0; k < files_info_length; k++) {
 
-				const file_info = files_info[k]
+			const file_info = files_info[k]
 
-				// file_info
-					// const file_info = (quality==='original' && self.file_info_normalized_name)
-					// 	? self.file_info_normalized_name
-					// 	: self.files_info_safe.find(el => el.quality===quality)
+			// extension
+				const extension	= file_info && file_info.file_path
+					? file_info.file_path.split('.').pop()
+					: null;
 
-				// extension
-					const extension	= file_info && file_info.file_path
-						? file_info.file_path.split('.').pop()
-						: null;
+			// download button
+				if (file_info && file_info.file_exist===true) {
 
-				// download button
-					if (file_info && file_info.file_exist===true) {
+					const cell_node = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'cell_node',
+						parent			: file_info_node
+					})
 
-						const cell_node = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'cell_node',
-							parent			: file_info_node
+					// file_url
+						const file_url = DEDALO_MEDIA_URL + file_info.file_path
+
+						// icon file
+						const link = ui.create_dom_element({
+							element_type	: 'a',
+							class_name		: 'button find',
+							title			: get_label.open || 'Open',
+							parent			: cell_node
+						})
+						link.addEventListener('click', function(e) {
+							e.stopPropagation()
+
+							open_window({
+								url : file_url
+							})
 						})
 
-						// file_url
-							const file_url = DEDALO_MEDIA_URL + file_info.file_path
-
-							// icon file
-							const link = ui.create_dom_element({
-								element_type	: 'a',
-								class_name		: 'button find',
-								title			: get_label.open || 'Open',
-								parent			: cell_node
-							})
-							link.addEventListener('click', function(e) {
-								e.stopPropagation()
-
-								open_window({
-									url : file_url
-								})
-							})
-
+					// button_file_download
 						const button_file_download = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button download',
@@ -757,14 +752,15 @@ const render_file_versions = function(quality, self) {
 							})
 						})
 
+					// file_info_extension
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'file_info_extension',
 							inner_html		: extension,
 							parent			: cell_node
 						})
-					}
-			}//end for (let k = 0; k < files_info_length; k++)
+				}
+		}//end for (let k = 0; k < files_info_length; k++)
 
 
 	return file_info_node
@@ -774,7 +770,7 @@ const render_file_versions = function(quality, self) {
 
 /**
 * RENDER_FILE_DELETE
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
@@ -822,14 +818,13 @@ const render_file_delete = function(quality, self) {
 
 /**
 * RENDER_BUILD_VERSION
-* @param array ar_quality
+* @param string quality
 * @param object self
 * @return HTMLElement file_info_node
 */
 const render_build_version = function(quality, self) {
 
-	// info columns
-	// file_info
+	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
@@ -911,19 +906,21 @@ const render_build_version = function(quality, self) {
 		button_build_version.addEventListener('click', fn_click)
 
 
-
 	return file_info_node
 }//end render_build_version
 
 
 
-
+/**
+* RENDER_SPECIFIC_ACTIONS
+*  Special render functions based on context.properties definitions
+*/
 const render_specific_actions = {
 
 	/**
 	* GET_LINE_CONFORM_HEADERS
-	* 	Specific component_av feature
-	* @param array ar_quality
+	*  Specific component_av feature
+	* @param string quality
 	* @param object self
 	* @return HTMLElement file_info_node
 	*/
@@ -963,12 +960,10 @@ const render_specific_actions = {
 		return file_info_node
 	},//end conform_headers
 
-
-
 	/**
 	* ROTATE
-	* 	Specific component_image feature
-	* @param array ar_quality
+	*  Specific component_image feature
+	* @param string quality
 	* @param object self
 	* @return HTMLElement file_info_node
 	*/
@@ -1024,6 +1019,8 @@ const render_specific_actions = {
 		return file_info_node
 	}//end rotate
 
-}
+}//end render_specific_actions
+
+
 
 // @license-end
