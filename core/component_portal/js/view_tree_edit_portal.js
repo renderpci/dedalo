@@ -13,6 +13,7 @@
 	import {
 		render_column_remove,
 		activate_autocomplete,
+		get_buttons
 	} from './render_edit_component_portal.js'
 
 
@@ -58,6 +59,13 @@ view_tree_edit_portal.render = async function(self, options) {
 		if (render_level==='content') {
 			return content_data
 		}
+
+	//show interface
+		self.show_interface.button_tree			= true
+		self.show_interface.button_add			= false
+		self.show_interface.button_link			= false
+		self.show_interface.button_list			= false
+		self.show_interface.button_fullscreen	= false
 
 	// buttons
 		const buttons = (self.permissions > 1)
@@ -207,12 +215,6 @@ const get_content_data = async function(self, ar_section_record) {
 				});
 			}//end if (ar_section_record_length===0)
 
-		// build references
-			if(self.data.references && self.data.references.length > 0){
-				const references_node = render_references(self.data.references)
-				fragment.appendChild(references_node)
-			}
-
 	// content_data
 		const content_data = ui.component.build_content_data(self,{button_close: null})
 			  content_data.appendChild(fragment)
@@ -258,271 +260,6 @@ const rebuild_columns_map = async function(self) {
 
 	return columns_map
 }//end rebuild_columns_map
-
-
-
-/**
-* GET_BUTTONS
-* @param object self instance
-* @return HTMLElement buttons_container
-*/
-const get_buttons = (self) => {
-
-	// short vars
-		const show_interface		= self.show_interface
-		const mode					= self.mode
-		const target_section		= self.target_section
-		const target_section_length	= target_section.length
-			  // sort section by label ascendant
-			  target_section.sort((a, b) => (a.label > b.label) ? 1 : -1)
-
-	// fragment
-		const fragment = new DocumentFragment()
-
-	// button_add
-		// 	const button_add = ui.create_dom_element({
-		// 		element_type	: 'span',
-		// 		class_name		: 'button add',
-		// 		parent			: fragment
-		// 	})
-		// 	button_add.addEventListener("click", async function(e){
-
-	// button_link
-		if(show_interface.button_link === true){
-
-			const button_link = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button link',
-				title			: get_label.vincular_recurso || 'Link resource',
-				parent			: fragment
-			})
-			button_link.addEventListener('click', fn_link)
-			async function fn_link(e) {
-				e.stopPropagation()
-
-				// const section_tipo	= select_section.value
-				// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-				const section_tipo	= target_section[0].tipo;
-				const section_label	= target_section[0].label;
-
-				// iframe
-					( () => {
-
-						const iframe_url = (tipo) => {
-							return DEDALO_CORE_URL + '/page/?tipo=' + tipo + '&mode=list&initiator=' + self.id
-						}
-
-						const iframe_container = ui.create_dom_element({element_type : 'div', class_name : 'iframe_container'})
-						const iframe = ui.create_dom_element({
-							element_type	: 'iframe',
-							class_name		: 'fixed',
-							src				: iframe_url(section_tipo),
-							parent			: iframe_container
-						})
-
-						// select_section
-							const select_section = ui.create_dom_element({
-								element_type	: 'select',
-								class_name		: 'select_section' + (target_section_length===1 ? ' mono' : '')
-							})
-							select_section.addEventListener("change", function(){
-								iframe.src = iframe_url(this.value)
-							})
-							// options for select_section
-								for (let i = 0; i < target_section_length; i++) {
-									const item = target_section[i]
-									ui.create_dom_element({
-										element_type	: 'option',
-										value			: item.tipo,
-										inner_html		: item.label + " [" + item.tipo + "]",
-										parent			: select_section
-									})
-								}
-
-						// header label
-							const header = ui.create_dom_element({
-								element_type	: 'span',
-								inner_html		: get_label.section,
-								class_name		: 'label'
-							})
-
-						// header custom
-							const header_custom = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'header_custom'
-							})
-							header_custom.appendChild(header)
-							header_custom.appendChild(select_section)
-
-						// fix modal to allow close later, on set value
-							self.modal = ui.attach_to_modal({
-								header	: header_custom,
-								body	: iframe_container,
-								footer	: null,
-								size	: 'big'
-							})
-					})()
-					return
-			}
-		}
-
-	// button_tree terms selector
-		if(show_interface.button_tree === true){
-
-			const button_tree_selector = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'button tree',
-				parent			: fragment
-			})
-			// add listener to the select
-			button_tree_selector.addEventListener('mouseup', fn_mousedown)
-			function fn_mousedown(e){
-				e.stopPropagation()
-
-				const caller_id = self.id || null
-				const hierarchy_sections = self.rqo.sqo.section_tipo || null
-				const hierarchy_terms = self.context.properties.source
-					&& self.context.properties.source.request_config
-					&& self.context.properties.source.request_config[0]
-					&& self.context.properties.source.request_config[0].sqo
-					&& self.context.properties.source.request_config[0].sqo.fixed_filter
-						? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
-						: null
-
-				// // short vars
-				// 	const component_name		= button_obj.dataset.component_name
-				// 	// optionals. Will be added to url if they exists
-				// 	const hierarchy_types		= button_obj.dataset.hierarchy_types || undefined
-				// 	const hierarchy_sections	= button_obj.dataset.hierarchy_sections || undefined
-				// 	const hierarchy_terms		= button_obj.dataset.hierarchy_terms || undefined
-				// 	const parent_area_is_model	= button_obj.dataset.parent_area_is_model || undefined
-
-				// // Fix current this.selected_wrap_div (Important)
-				// // Nota: el wrapper no cambia al actualizar el componente tras salvarlo, por lo que es seguro
-				// 	this.selected_wrap_div = find_ancestor(button_obj, 'wrap_component')
-				// 	if (this.selected_wrap_div === null ) {
-				// 		if(SHOW_DEBUG===true) console.log(button_obj);
-				// 		return alert("component_autocomplete_hi:open_ts_window: Sorry: this.selected_wrap_div dom element not found")
-				// 	}
-				// 	//console.log(button_obj.dataset.parent_area_is_model)
-
-				// url vars
-					const url_vars = {
-						tipo			: 'dd100', // THESAURUS_TIPO
-						menu			: false,
-						thesaurus_mode	: 'relation'
-					}
-
-				// // hierarchy_types
-				// 	if (hierarchy_types) {
-				// 		url_vars.hierarchy_types = hierarchy_types
-				// 	}
-
-				// hierarchy_sections
-					if (hierarchy_sections) {
-						url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
-					}
-
-				// Optional hierarchy_terms. Add to url if present
-					if (hierarchy_terms) {
-						url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
-					}
-
-				// // parent_area_is_model
-				// 	if (typeof parent_area_is_model!=='undefined' && JSON.parse(parent_area_is_model)===true) {
-				// 		url_vars.model = 1;
-				// 	}
-
-				if(caller_id){
-					url_vars.initiator = JSON.stringify(caller_id)
-				}
-
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-
-				// open window
-				if (!window.rel_window || window.rel_window.closed) {
-					window.rel_window = window.open(
-						url,
-						'rel_window',
-						'status=yes,scrollbars=yes,resizable=yes,left=0,top=0,width=900,height=650'
-					)
-				}
-				window.rel_window.focus()
-			}
-		}
-
-	// buttons tools
-		if(show_interface.tools === true){
-			ui.add_tools(self, fragment)
-		}
-
-	// buttons container
-		const buttons_container = ui.component.build_buttons_container(self)
-			  buttons_container.appendChild(fragment)
-
-
-	return buttons_container
-}//end get_buttons
-
-
-
-/**
-* RENDER_REFERENCES
-* @param array ar_references
-* @return DocumentFragment
-*/
-const render_references = function(ar_references) {
-
-	const fragment = new DocumentFragment()
-
-	// ul
-		const ul = ui.create_dom_element({
-			element_type	: 'ul',
-			class_name		: 'references',
-			parent			: fragment
-		})
-
-	// references label
-		ui.create_dom_element({
-			element_type	: 'div',
-			inner_html 		: get_label.references,
-			parent			: ul
-		})
-
-	// li ar_references
-		const ref_length = ar_references.length
-		for (let i = 0; i < ref_length; i++) {
-
-			const reference = ar_references[i]
-
-			// li
-				const li = ui.create_dom_element({
-					element_type	: 'li',
-					parent			: ul
-				})
-			// button_link
-				const button_link = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button link',
-					parent			: li
-				})
-				button_link.addEventListener('click', function(e){
-					e.stopPropagation()
-					window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&id='+ reference.value.section_id
-					// window.open(url,'ref_edit')
-				})
-			// label
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'label',
-					inner_html		: reference.label,
-					parent			: li
-				})
-		}//end for (let i = 0; i < ref_length; i++)
-
-
-	return fragment
-}//end render_references
 
 
 
