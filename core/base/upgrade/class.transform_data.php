@@ -630,7 +630,7 @@ class transform_data {
 
 
 	/**
-	* UPDATE_hierarchy_view_in_thesaurus
+	* UPDATE_HIERARCHY_VIEW_IN_THESAURUS
 	* @return bool
 	*/
 	public static function update_hierarchy_view_in_thesaurus() : bool {
@@ -670,13 +670,13 @@ class transform_data {
 	* Change the matrix_hierarchy_main with new component to control hierarchy show into thesaurus tree
 	* View in thesaurus need to be controlled independent of the active or not the hierarchy
 	* @param object|null $datos
-	* @return null $datos // don't need to be saved by update, the new component save by itself
+	* @return null // don't need to be saved by update, the new component save by itself
 	* 	! Not use : null as standalone (PHP Fatal error:  Null can not be used as a standalone type)
 	*/
 	public static function add_view_in_thesaurus(?object $datos) {
 
 		// empty relations cases
-			if (empty($datos->relations)) {
+			if (empty($datos) || empty($datos->relations)) {
 				return null;
 			}
 
@@ -722,12 +722,14 @@ class transform_data {
 
 
 
-
 	/**
 	* CHANGES_IN_TIPOS
+	* Map old tipos to new ones using JSON files definitions
+	* @param array $ar_tables
+	* @param array $json_files
 	* @return bool
 	*/
-	public static function changes_in_tipos($ar_tables, $json_files) : bool {
+	public static function changes_in_tipos(array $ar_tables, array $json_files) : bool {
 
 		debug_log(__METHOD__ . PHP_EOL
 			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -760,11 +762,11 @@ class transform_data {
 			// CLI process data
 				if ( running_in_cli()===true ) {
 					$pdata = new stdClass();
-						$pdata->msg		= (label::get_label('processing') ?? 'Processing')
-							. ' - table: ' 			. $table
-							. ' - id: ' 			. $id
-							. ' - section_tipo: ' 	. $section_tipo
-							. ' - section_id: '  	. ($row['section_id'] ?? '');
+						$pdata->msg		= (label::get_label('processing') ?? 'Processing') . ' changes_in_tipos'
+							. ' | table: ' 			. $table
+							. ' | id: ' 			. $id
+							. ' | section_tipo: ' 	. $section_tipo
+							. ' | section_id: '  	. ($row['section_id'] ?? '');
 						$pdata->table	= $table;
 					// send to output
 					print_cli($pdata);
@@ -989,44 +991,6 @@ class transform_data {
 
 		return $string_value;
 	}//end replace_tm_data
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

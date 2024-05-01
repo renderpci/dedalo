@@ -775,7 +775,10 @@ class component_pdf extends component_media_common {
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
 		if (!$test_utf8) {
-			debug_log(__METHOD__." WARNING: Current string is NOT utf8 valid. Anyway continue ... ".to_string(), logger::WARNING);
+			debug_log(__METHOD__
+				." WARNING: Current string is NOT utf8 valid. Anyway continue ... "
+				, logger::WARNING
+			);
 		}
 
 		# Remove non utf8 chars
@@ -834,25 +837,35 @@ class component_pdf extends component_media_common {
 	public static function valid_utf8(string $string) : bool {
 		$len = strlen($string);
 
-		function valid_1byte($char) {
-			if(!is_int($char)) return false;
-			return ($char & 0x80) == 0x00;
+		if (!function_exists('valid_1byte')) {
+			function valid_1byte($char) {
+				if(!is_int($char)) return false;
+				return ($char & 0x80) == 0x00;
+			}
 		}
-		function valid_2byte($char) {
-			if(!is_int($char)) return false;
-			return ($char & 0xE0) == 0xC0;
+		if (!function_exists('valid_2byte')) {
+			function valid_2byte($char) {
+				if(!is_int($char)) return false;
+				return ($char & 0xE0) == 0xC0;
+			}
 		}
-		function valid_3byte($char) {
-			if(!is_int($char)) return false;
-			return ($char & 0xF0) == 0xE0;
+		if (!function_exists('valid_3byte')) {
+			function valid_3byte($char) {
+				if(!is_int($char)) return false;
+				return ($char & 0xF0) == 0xE0;
+			}
 		}
-		function valid_4byte($char) {
-			if(!is_int($char)) return false;
-			return ($char & 0xF8) == 0xF0;
+		if (!function_exists('valid_4byte')) {
+			function valid_4byte($char) {
+				if(!is_int($char)) return false;
+				return ($char & 0xF8) == 0xF0;
+			}
 		}
-		function valid_nextbyte($char) {
-			if(!is_int($char)) return false;
-			return ($char & 0xC0) == 0x80;
+		if (!function_exists('valid_nextbyte')) {
+			function valid_nextbyte($char) {
+				if(!is_int($char)) return false;
+				return ($char & 0xC0) == 0x80;
+			}
 		}
 
 		$i = 0;
@@ -1092,42 +1105,6 @@ class component_pdf extends component_media_common {
 	*/
 	public function regenerate_component() : bool {
 
-		// regenerate PDF text
-			// transcription to text automatic
-			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-			if (!empty($ar_related_component_text_area_tipo)) {
-
-				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-				$quality							= $this->get_default_quality();
-				$target_pdf_path					= $this->get_media_filepath($quality);
-
-				try {
-					$options = new stdClass();
-						$options->path_pdf		= $target_pdf_path;	// full source PDF file path
-						$options->first_page	= 1; // number of first page. default is 1
-					$text_from_pdf_response = component_pdf::get_text_from_pdf( $options );
-
-					if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
-
-						$component_text_area = component_common::get_instance(
-							$related_component_text_area_model,
-							$related_component_text_area_tipo,
-							$this->section_id,
-							'edit',
-							DEDALO_DATA_LANG,
-							$this->section_tipo,
-							false
-						);
-						$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
-						$component_text_area->Save();
-					}
-
-				} catch (Exception $e) {
-					debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
-				}
-			}//end if (!empty($related_component_text_area_tipo))
-
 		// quality
 			$ar_quality = $this->get_ar_quality();
 			foreach ($ar_quality as $quality) {
@@ -1140,6 +1117,61 @@ class component_pdf extends component_media_common {
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
+
+		// regenerate PDF text
+			// transcription to text automatic
+			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
+			if (!empty($ar_related_component_text_area_tipo)) {
+
+				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+
+				$component_text_area = component_common::get_instance(
+					$related_component_text_area_model,
+					$related_component_text_area_tipo,
+					$this->section_id,
+					'edit',
+					DEDALO_DATA_LANG,
+					$this->section_tipo,
+					false
+				);
+				// current value
+				$component_text_area_dato	= $component_text_area->get_dato();
+				$component_text_area_value	= $component_text_area_dato[0] ?? null;
+
+				// extract text only if text area value is empty
+				if (empty($component_text_area_value)) {
+					$quality			= $this->get_default_quality();
+					$target_pdf_path	= $this->get_media_filepath($quality);
+					if (file_exists($target_pdf_path)) {
+
+						$text_options = new stdClass();
+							$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
+							$text_options->first_page	= 1; // number of first page. default is 1
+
+						try {
+							$text_from_pdf_response = component_pdf::get_text_from_pdf( $text_options );
+						} catch (Exception $e) {
+							debug_log(__METHOD__
+								. " Caught exception: " . PHP_EOL
+								. $e->getMessage()
+								, logger::ERROR
+							);
+						}
+
+						if (
+							isset($text_from_pdf_response) &&
+							$text_from_pdf_response->result!=='error' &&
+							strlen($text_from_pdf_response->original)>2
+							) {
+
+							// set and save extracted text
+							$component_text_area->set_dato($text_from_pdf_response->result);
+							$component_text_area->Save();
+						}
+					}//end if (file_exists($target_pdf_path))
+				}//end if (empty($component_text_area_value))
+			}//end if (!empty($related_component_text_area_tipo))
 
 
 		return $result;

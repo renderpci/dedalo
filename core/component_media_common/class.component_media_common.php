@@ -2073,7 +2073,7 @@ class component_media_common extends component_common {
 				$this->build_version($default_quality);
 			}
 
-		// re-create thumb always
+		// re-create thumb always (from default quality file)
 			$this->create_thumb();
 
 		// files_info. Updates component dato files info values iterating available files
@@ -2390,15 +2390,27 @@ class component_media_common extends component_common {
 			$id					= $this->get_id();
 			$original_quality	= $this->get_original_quality();
 			$original_file_path	= $this->get_original_file_path($original_quality);
-			if (empty($original_file_path) || !file_exists($original_file_path)) {
-				$response->msg .= ' Invalid original_file_path. Skip conversion';
+			// check path from original file
+			if (empty($original_file_path)) {
+				$response->msg .= ' Invalid empty original_file_path. Skip conversion';
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
 					. " original_quality: " . $original_quality . PHP_EOL
 					. ' original_file_path: ' . to_string($original_file_path)
 					, logger::ERROR
 				);
-				$response->errors[] = 'invalid original_file_path';
+				$response->errors[] = 'invalid empty original_file_path';
+				return $response;
+			}
+			if (!file_exists($original_file_path)) {
+				$response->msg .= ' original_file_path file not found. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				$response->errors[] = 'original_file_path file not found';
 				return $response;
 			}
 			$target_quality_path = $this->get_media_filepath($quality);
