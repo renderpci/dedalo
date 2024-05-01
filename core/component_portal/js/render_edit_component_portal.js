@@ -982,6 +982,64 @@ export const get_buttons = (self) => {
 			}
 		}
 
+	// button_tree terms selector
+		if(show_interface.button_tree === true){
+
+			const button_tree_selector = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button tree',
+				parent			: buttons_fold
+			})
+			// add listener to the select
+			button_tree_selector.addEventListener('mouseup', fn_mousedown)
+			function fn_mousedown(e){
+				e.stopPropagation()
+
+				const caller_id = self.id || null
+				const hierarchy_sections = self.rqo.sqo.section_tipo || null
+				const hierarchy_terms = self.context.properties.source
+					&& self.context.properties.source.request_config
+					&& self.context.properties.source.request_config[0]
+					&& self.context.properties.source.request_config[0].sqo
+					&& self.context.properties.source.request_config[0].sqo.fixed_filter
+						? self.context.properties.source.request_config[0].sqo.fixed_filter.filter(el => el.source === 'hierarchy_terms')
+						: null
+
+				// url vars
+					const url_vars = {
+						tipo			: 'dd100', // THESAURUS_TIPO
+						menu			: false,
+						thesaurus_mode	: 'relation'
+					}
+
+				// hierarchy_sections
+					if (hierarchy_sections) {
+						url_vars.hierarchy_sections = JSON.stringify(hierarchy_sections)
+					}
+
+				// Optional hierarchy_terms. Add to url if present
+					if (hierarchy_terms) {
+						url_vars.hierarchy_terms = JSON.stringify(hierarchy_terms)
+					}
+
+				if(caller_id){
+					url_vars.initiator = JSON.stringify(caller_id)
+				}
+
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
+
+				// open window
+				if (!window.rel_window || window.rel_window.closed) {
+					window.rel_window = window.open(
+						url,
+						'rel_window',
+						'status=yes,scrollbars=yes,resizable=yes,left=0,top=0,width=900,height=650'
+					)
+				}
+				window.rel_window.focus()
+			}
+		}
+
 	// buttons tools
 		if(show_interface.tools===true) {
 			ui.add_tools(self, buttons_fold)
