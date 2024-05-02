@@ -760,6 +760,16 @@ class transform_data {
 				return $el->old;
 			}, $ar_section_elements, []);
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
 		update::tables_rows_iterator(
 			$ar_tables, // array of tables to iterate
 			function($row, $table, $max) use($ar_transform_map, $ar_old_section_tipo) { // callback function
@@ -772,15 +782,19 @@ class transform_data {
 
 				// CLI process data
 					if ( running_in_cli()===true ) {
-						$pdata = new stdClass();
-							$pdata->msg		= (label::get_label('processing') ?? 'Processing') . ': changes_in_tipos'
-								. ' | table: ' 			. $table
-								. ' | id: ' 			. $id .' - ' . $max
-								. ' | section_tipo: ' 	. $section_tipo
-								. ' | section_id: '  	. ($row['section_id'] ?? '');
-							$pdata->table	= $table;
+						common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': changes_in_tipos'
+							. ' | table: ' 			. $table
+							. ' | id: ' 			. $id .' - ' . $max
+							. ' | section_tipo: ' 	. $section_tipo
+							. ' | section_id: '  	. ($row['section_id'] ?? '');
+						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+							? dd_memory_usage() // update memory information once every 5000 items
+							: common::$pdata->memory;
+						common::$pdata->table = $table;
+						common::$pdata->section_tipo = $section_tipo;
+						common::$pdata->counter++;
 						// send to output
-						print_cli($pdata);
+						print_cli(common::$pdata);
 					}
 
 				// matrix_counter case
