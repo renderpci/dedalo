@@ -534,4 +534,229 @@ class component_json extends component_common {
 
 
 
+	/**
+	* RESOLVE_QUERY_OBJECT_SQL
+	*  Cloned from component_input_text
+	* @param object $query_object
+	* @return object $query_object
+	*	Edited/parsed version of received object
+	*/
+	public static function resolve_query_object_sql(object $query_object) : object {
+
+		// $q
+			$q = is_array($query_object->q)
+				? reset($query_object->q)
+				: $query_object->q;
+			if (is_string($q)) {
+				$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+			}
+
+		// q_operator
+			$q_operator = $query_object->q_operator ?? null;
+
+		// type. Always set fixed values
+			$query_object->type = 'string';
+
+		switch (true) {
+			# EMPTY VALUE (in current lang data)
+			case ($q==='!*'):
+				$operator = 'IS NULL';
+				$q_clean  = '';
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent	= false;
+				$query_object->lang		= 'all';
+
+				$logical_operator = '$or';
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
+
+				// Search empty only in current lang
+				// Resolve lang based on if is translatable
+					$path_end		= end($query_object->path);
+					$component_tipo	= $path_end->component_tipo;
+					$RecordObj_dd	= new RecordObj_dd($component_tipo);
+					$lang			= $RecordObj_dd->get_traducible()!=='si' ? DEDALO_DATA_NOLAN : DEDALO_DATA_LANG;
+
+					$clone = clone($query_object);
+						$clone->operator	= '=';
+						$clone->q_parsed	= '\'[]\'';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;
+
+					// legacy data (set as null instead [])
+					$clone = clone($query_object);
+						$clone->operator	= 'IS NULL';
+						$clone->lang		= $lang;
+					$new_query_json->$logical_operator[] = $clone;
+
+				// langs check all
+					// $ar_query_object = [];
+					// $ar_all_langs 	 = common::get_ar_all_langs();
+					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					// foreach ($ar_all_langs as $current_lang) {
+					// 	// Empty data is blank array []
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = '=';
+					// 		$clone->q_parsed = '\'[]\'';
+					// 		$clone->lang 	 = $current_lang;
+
+					// 	$ar_query_object[] = $clone;
+
+					// 	// legacy data (set as null instead [])
+					// 	$clone = clone($query_object);
+					// 		$clone->operator = 'IS NULL';
+					// 		$clone->lang 	 = $current_lang;
+
+					// 	$ar_query_object[] = $clone;
+					// }
+					// $new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
+
+				// override
+				$query_object = $new_query_json;
+				break;
+			# NOT EMPTY (in any project lang data)
+			case ($q==='*'):
+				$operator = 'IS NOT NULL';
+				$q_clean  = '';
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= $q_clean;
+				$query_object->unaccent	= false;
+
+				$logical_operator = '$and';
+				$new_query_json = new stdClass;
+					$new_query_json->$logical_operator = [$query_object];
+
+				// langs check
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						$clone = clone($query_object);
+							$clone->operator	= '!=';
+							$clone->q_parsed	= '\'[]\'';
+							$clone->lang		= $current_lang;
+						$ar_query_object[] = $clone;
+					}
+
+					$logical_operator = '$or';
+					$langs_query_json = new stdClass;
+						$langs_query_json->$logical_operator = $ar_query_object;
+
+				// override
+				$logical_operator = '$and';
+				$final_query_json = new stdClass;
+					$final_query_json->$logical_operator = [$new_query_json, $langs_query_json];
+				$query_object = $final_query_json;
+				break;
+			# IS DIFFERENT
+			case (strpos($q, '!=')===0 || $q_operator==='!='):
+				$operator = '!=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator	= '!~';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent	= false;
+				break;
+			# IS EXACTLY EQUAL ==
+			case (strpos($q, '==')===0 || $q_operator==='=='):
+				$operator = '==';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator = '@>';
+				$query_object->q_parsed	= '\'["'.$q_clean.'"]\'';
+				$query_object->unaccent = false;
+				$query_object->type = 'object';
+				if (isset($query_object->lang) && $query_object->lang!=='all') {
+					$query_object->component_path[] = $query_object->lang;
+				}
+				if (isset($query_object->lang) && $query_object->lang==='all') {
+					$logical_operator = '$or';
+					$ar_query_object = [];
+					$ar_all_langs 	 = common::get_ar_all_langs();
+					$ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
+					foreach ($ar_all_langs as $current_lang) {
+						// Empty data is blank array []
+						$clone = clone($query_object);
+							$clone->component_path[] = $current_lang;
+
+						$ar_query_object[] = $clone;
+					}
+					$query_object = new stdClass();
+						$query_object->$logical_operator = $ar_query_object;
+				}
+				break;
+			# IS SIMILAR
+			case (strpos($q, '=')===0 || $q_operator==='='):
+				$operator = '=';
+				$q_clean  = str_replace($operator, '', $q);
+				$query_object->operator	= '~*';
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent	= true;
+				break;
+			# NOT CONTAIN
+			case (strpos($q, '-')===0 || $q_operator==='-'):
+				$operator = '!~*';
+				$q_clean  = str_replace('-', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent	= true;
+				break;
+			# CONTAIN EXPLICIT
+			case (substr($q, 0, 1)==='*' && substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent	= true;
+				break;
+			# ENDS WITH
+			case (substr($q, 0, 1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'".*\'';
+				$query_object->unaccent	= true;
+				break;
+			# BEGINS WITH
+			case (substr($q, -1)==='*'):
+				$operator = '~*';
+				$q_clean  = str_replace('*', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\["'.$q_clean.'.*\'';
+				$query_object->unaccent	= true;
+				break;
+			# LITERAL
+			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
+				$operator = '~';
+				$q_clean  = str_replace("'", '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*"'.$q_clean.'".*\'';
+				$query_object->unaccent	= true;
+				break;
+			# DUPLICATED
+			case (strpos($q, '!!')===0 || $q_operator==='!!'):
+				$operator = '=';
+				$query_object->operator 	= $operator;
+				$query_object->unaccent		= false; // (!) always false
+				$query_object->duplicated	= true;
+				// Resolve lang based on if is translatable
+					$path_end			= end($query_object->path);
+					$component_tipo		= $path_end->component_tipo;
+					$query_object->lang	= RecordObj_dd::get_translatable($component_tipo) ?  DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+				break;
+			# DEFAULT CONTAIN
+			default:
+				$operator = '~*';
+				$q_clean  = str_replace('+', '', $q);
+				$query_object->operator	= $operator;
+				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->unaccent	= true;
+				break;
+		}//end switch (true)
+
+
+		return $query_object;
+	}//end resolve_query_object_sql
+
+
+
 }//end class component_json
