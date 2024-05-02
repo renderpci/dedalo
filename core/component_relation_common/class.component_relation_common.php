@@ -2623,7 +2623,9 @@ class component_relation_common extends component_common {
 		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
 
 		// remove duplicates
-		$ar_section_tipo = array_unique($ar_section_tipo);
+		$ar_section_tipo = array_values(
+			array_unique($ar_section_tipo)
+		);
 
 		// debug
 			if(SHOW_DEBUG===true) {
