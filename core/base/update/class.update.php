@@ -900,7 +900,7 @@ class update {
 				while($row = pg_fetch_assoc($result)) {
 
 					$id	= $row['id'];
-					$callback( $row, $table ); // like 'convert_section_dato_to_data'
+					$callback( $row, $table, $max); // like 'convert_section_dato_to_data'
 
 				}// end while
 
