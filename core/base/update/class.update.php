@@ -921,7 +921,7 @@ class update {
 
 				// reset counter
 					$i_ref++;
-					if ($i_ref > 1001) {
+					if ($i_ref > 3001) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)
