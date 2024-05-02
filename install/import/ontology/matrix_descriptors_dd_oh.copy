@@ -7,7 +7,6 @@ oh10	Nova entrevista	termino	lg-cat
 oh10	Nueva entrevista	termino	lg-spa
 oh10	Nuova intervista	termino	lg-ita
 oh10	νέα συνέντευξη	termino	lg-ell
-oh100	code	termino	lg-spa
 oh104	date	termino	lg-spa
 oh107	audiovisual	termino	lg-spa
 oh108	image	termino	lg-spa
@@ -19,7 +18,6 @@ oh11	σαφές συνέντευξη	termino	lg-ell
 oh110	Mapa de componentes	termino	lg-spa
 oh110	Mappa dei componenti	termino	lg-ita
 oh110	Properties of current element:\n - default : common and default standard components map\n - thesaurus : map elements when is used as thesaurus	obs	lg-spa
-oh111	project	termino	lg-spa
 oh112	project	termino	lg-spa
 oh113	name	termino	lg-spa
 oh114	publication	termino	lg-spa
@@ -47,6 +45,8 @@ oh15	Codice precedente	termino	lg-ita
 oh15	Código anterior	termino	lg-spa
 oh115	Rol	termino	lg-cat
 oh115	Ruolo	termino	lg-ita
+oh100	code	termino	lg-spa
+oh111	project	termino	lg-spa
 oh15	παραπάνω κώδικα	termino	lg-ell
 oh16	Títol	termino	lg-cat
 oh16	Titolo	termino	lg-ita
@@ -229,15 +229,12 @@ oh65	List	termino	lg-spa
 oh65	έρευνα	termino	lg-ell
 oh66	interview	termino	lg-spa
 oh67	publication	termino	lg-spa
-oh68	title	termino	lg-spa
-oh69	abstract	termino	lg-spa
 oh7	Elenco	termino	lg-ita
 oh7	Listado	termino	lg-spa
 oh7	Llistat	termino	lg-cat
 oh7	λίστα	termino	lg-ell
 oh70	priority	termino	lg-spa
 oh70	Quality is converted to priority int value. Bigger values are better quality	obs	lg-spa
-oh71	interview_place	termino	lg-spa
 oh72	primary_lang	termino	lg-spa
 oh73	Línea d'investigació	termino	lg-cat
 oh73	Línea de investigación	termino	lg-spa
@@ -315,6 +312,8 @@ oh94	Trascrittore	termino	lg-ita
 oh94	αντιγραφέας	termino	lg-ell
 oh96	Indexador	termino	lg-cat
 oh96	Indexador	termino	lg-spa
+oh69	abstract	termino	lg-spa
+oh71	interview_place	termino	lg-spa
 oh96	Indicizzatore	termino	lg-ita
 oh96	ευρετήριο	termino	lg-ell
 oh97	images	termino	lg-spa
@@ -597,3 +596,4 @@ oh39	व्यवस्थापन नोटहरू	termino	lg-nep
 oh115	Rol	termino	lg-spa
 oh115	Rolle	termino	lg-deu
 oh115	Ρόλος	termino	lg-ell
+oh68	title	termino	lg-spa

@@ -355,7 +355,6 @@ numisdata248	Listado	termino	lg-spa
 numisdata249	Nuevo	termino	lg-spa
 numisdata25	Identificación	termino	lg-spa
 numisdata25	Identificazione	termino	lg-ita
-numisdata250	Borrar	termino	lg-spa
 numisdata251	view_mosaic	termino	lg-spa
 numisdata252	Elenco	termino	lg-ita
 numisdata252	Listado	termino	lg-spa
@@ -365,7 +364,6 @@ numisdata254	view_mosaic	termino	lg-spa
 numisdata255	view_mosaic	termino	lg-spa
 numisdata256	Importar fichas con imagen	termino	lg-spa
 numisdata256	Importare schede con immagine	termino	lg-ita
-numisdata257	Listado	termino	lg-spa
 numisdata258	Borrar	termino	lg-spa
 numisdata259	Listado	termino	lg-spa
 numisdata26	Id	termino	lg-spa
@@ -414,6 +412,7 @@ numisdata290	Buscar	termino	lg-spa
 numisdata272	view_single_line	termino	lg-spa
 numisdata25	Identification	termino	lg-eng
 numisdata261	Autori DEPRECATO	termino	lg-ita
+numisdata257	Tesoros / conjunto	termino	lg-spa
 numisdata265	URL	termino	lg-spa
 numisdata271	Últimos cambios	termino	lg-spa
 numisdata271	Ultime modifiche	termino	lg-ita
@@ -1172,9 +1171,9 @@ numisdata84	Id	termino	lg-spa
 numisdata840	map	termino	lg-spa
 numisdata842	link	termino	lg-spa
 numisdata843	bibliography_data	termino	lg-spa
-numisdata841	ref_publications_magazine	termino	lg-spa
-numisdata844	ref_publications_editor	termino	lg-spa
-numisdata838	ref_publications_date	termino	lg-spa
+numisdata841	Leyenda canto	termino	lg-spa
+numisdata844	Diseño canto	termino	lg-spa
+numisdata838	Otros códigos	termino	lg-spa
 numisdata845	hoards	termino	lg-spa
 numisdata846	mints	termino	lg-spa
 numisdata847	publication	termino	lg-spa
@@ -1580,7 +1579,6 @@ numisdata1175	Date	termino	lg-spa
 numisdata1177	Date	termino	lg-spa
 numisdata1192	Código anterior	termino	lg-spa
 numisdata1192	Codi anterior	termino	lg-cat
-numisdata1193	Otro código	termino	lg-spa
 numisdata1194	Monedas	termino	lg-spa
 numisdata1181	Date	termino	lg-spa
 numisdata1189	nmo:representsObjectType	termino	lg-spa
@@ -1616,6 +1614,7 @@ numisdata1225	Lugar de registro	termino	lg-spa
 numisdata109	URL	termino	lg-ita
 numisdata1228	Leyenda específica reverso	termino	lg-spa
 numisdata1227	Leyenda anverso símbolos	termino	lg-spa
+numisdata1193	Otro código	termino	lg-spa
 numisdata1229	Leyenda reverso símbolos	termino	lg-spa
 numisdata1230	Diámetro min.	termino	lg-spa
 numisdata1231	Desgaste anverso	termino	lg-spa
@@ -1915,7 +1914,6 @@ numisdata1249	Neu	termino	lg-deu
 numisdata125	Beschreibungen	termino	lg-deu
 numisdata1250	Löschen	termino	lg-deu
 numisdata1251	Datenqualität	termino	lg-deu
-numisdata1252	Randtyp	termino	lg-deu
 numisdata1253	Legende Rand	termino	lg-deu
 numisdata1254	Grössenbeschreibung	termino	lg-deu
 numisdata1255	Auflage	termino	lg-deu
@@ -2054,12 +2052,11 @@ numisdata247	Projekt	termino	lg-deu
 numisdata248	Liste	termino	lg-deu
 numisdata249	Neu	termino	lg-deu
 numisdata25	Identifizierung	termino	lg-deu
-numisdata250	Löschen	termino	lg-deu
 numisdata252	Liste	termino	lg-deu
 numisdata253	Liste	termino	lg-deu
 numisdata256	Dateien mit Bildern importieren	termino	lg-deu
 numisdata243	Entdeckungsmethode	termino	lg-deu
-numisdata257	Liste	termino	lg-deu
+numisdata250	Numismatische Gegenstände	termino	lg-deu
 numisdata258	Löschen	termino	lg-deu
 numisdata259	Liste	termino	lg-deu
 numisdata26	Id	termino	lg-deu
@@ -2169,6 +2166,7 @@ numisdata39	Vorderseitentyp	termino	lg-deu
 numisdata40	Legende Avers	termino	lg-deu
 numisdata41	Legenden	termino	lg-deu
 numisdata31	Inhaltliche Quellen	termino	lg-deu
+numisdata257	Schatzfunde	termino	lg-deu
 numisdata43	Schlüssel	termino	lg-deu
 numisdata434	Veröffentlichbar	termino	lg-deu
 numisdata44	Projekt	termino	lg-deu
@@ -2510,7 +2508,6 @@ numisdata136	Find	termino	lg-eng
 numisdata137	New	termino	lg-eng
 numisdata138	Identification	termino	lg-eng
 numisdata139	Id	termino	lg-eng
-numisdata140	Public information	termino	lg-eng
 numisdata141	Project	termino	lg-eng
 numisdata142	List	termino	lg-eng
 numisdata143	New	termino	lg-eng
@@ -2576,16 +2573,16 @@ numisdata208	Catalogue entries	termino	lg-eng
 numisdata209	Identification	termino	lg-eng
 numisdata210	Id	termino	lg-eng
 numisdata211	Name	termino	lg-eng
-numisdata212	Geolocation	termino	lg-eng
-numisdata213	Map	termino	lg-eng
-numisdata214	Time frame	termino	lg-eng
-numisdata215	URL	termino	lg-eng
 numisdata218	Description	termino	lg-eng
 numisdata106	Main	termino	lg-eng
 numisdata107	Source	termino	lg-eng
 numisdata112	Project	termino	lg-eng
+numisdata214	Time frame	termino	lg-eng
+numisdata140	Public information	termino	lg-eng
+numisdata215	URL	termino	lg-eng
+numisdata212	Geolocation	termino	lg-eng
+numisdata213	Map	termino	lg-eng
 numisdata219	Size	termino	lg-eng
-numisdata220	Bibliography	termino	lg-eng
 numisdata221	Project	termino	lg-eng
 numisdata222	New	termino	lg-eng
 numisdata223	Delete	termino	lg-eng
@@ -2613,15 +2610,12 @@ numisdata246	Person	termino	lg-eng
 numisdata247	Project	termino	lg-eng
 numisdata248	List	termino	lg-eng
 numisdata249	New	termino	lg-eng
-numisdata250	Delete	termino	lg-eng
 numisdata252	List	termino	lg-eng
 numisdata253	List	termino	lg-eng
 numisdata256	Import image files	termino	lg-eng
-numisdata257	List	termino	lg-eng
 numisdata258	Delete	termino	lg-eng
 numisdata259	List	termino	lg-eng
 numisdata260	Indexation	termino	lg-eng
-numisdata262	Private information	termino	lg-eng
 numisdata263	Import hoards kml	termino	lg-eng
 numisdata264	Map	termino	lg-eng
 numisdata265	URL	termino	lg-eng
@@ -2629,7 +2623,6 @@ numisdata266	State	termino	lg-eng
 numisdata267	Sorted coins	termino	lg-eng
 numisdata268	Georeferencing	termino	lg-eng
 numisdata269	Analytics	termino	lg-eng
-numisdata270	Images	termino	lg-eng
 numisdata271	Latest changes	termino	lg-eng
 numisdata273	List	termino	lg-eng
 numisdata275	URI	termino	lg-eng
@@ -2649,7 +2642,6 @@ numisdata288	List	termino	lg-eng
 numisdata289	New	termino	lg-eng
 numisdata290	Search	termino	lg-eng
 numisdata291	Import finds kml	termino	lg-eng
-numisdata293	Place	termino	lg-eng
 numisdata294	Status	termino	lg-eng
 numisdata300	Catalogues	termino	lg-eng
 numisdata301	Identification	termino	lg-eng
@@ -2696,6 +2688,12 @@ numisdata358	Title	termino	lg-eng
 numisdata359	Project	termino	lg-eng
 numisdata361	Introduction	termino	lg-eng
 numisdata243	Discovery method	termino	lg-eng
+numisdata270	Images	termino	lg-eng
+numisdata262	Private information	termino	lg-eng
+numisdata220	Bibliography	termino	lg-eng
+numisdata293	Place	termino	lg-eng
+numisdata250	Numismatic objects	termino	lg-eng
+numisdata257	Hoards / set	termino	lg-eng
 numisdata362	Body	termino	lg-eng
 numisdata364	Identifying image	termino	lg-eng
 numisdata365	Relations	termino	lg-eng
@@ -2745,8 +2743,6 @@ numisdata561	Epigraphs	termino	lg-eng
 numisdata562	Reverse type	termino	lg-eng
 numisdata564	List	termino	lg-eng
 numisdata565	Relations	termino	lg-eng
-numisdata566	Children	termino	lg-eng
-numisdata567	Father	termino	lg-eng
 numisdata568	Section map	termino	lg-eng
 numisdata569	Descriptor	termino	lg-eng
 numisdata570	Thesaurus list	termino	lg-eng
@@ -2803,6 +2799,8 @@ numisdata659	Children	termino	lg-eng
 numisdata660	New	termino	lg-eng
 numisdata661	Relations	termino	lg-eng
 numisdata542	Publishable	termino	lg-eng
+numisdata567	Father	termino	lg-eng
+numisdata566	Children	termino	lg-eng
 numisdata662	List	termino	lg-eng
 numisdata663	Thesaurus list	termino	lg-eng
 numisdata665	MIB catalog	termino	lg-eng
@@ -2889,7 +2887,6 @@ numisdata1026	Obverse mark	termino	lg-eng
 numisdata1092	Relations list	termino	lg-eng
 numisdata1093	Id	termino	lg-eng
 numisdata1098	Identification	termino	lg-eng
-numisdata1100	Identifying image	termino	lg-eng
 numisdata1102	Images	termino	lg-eng
 numisdata1103	Delete	termino	lg-eng
 numisdata1105	Epigraphy	termino	lg-eng
@@ -2921,7 +2918,6 @@ numisdata1192	Previous code	termino	lg-eng
 numisdata1193	Other code	termino	lg-eng
 numisdata1194	Coins	termino	lg-eng
 numisdata1195	Edition	termino	lg-eng
-numisdata1196	Authorship	termino	lg-eng
 numisdata1197	Register place	termino	lg-eng
 numisdata1198	Coordinates accuracy	termino	lg-eng
 numisdata1200	NUMISDATA	termino	lg-eng
@@ -2970,12 +2966,10 @@ numisdata1250	Delete	termino	lg-eng
 numisdata1251	Data quality	termino	lg-eng
 numisdata1252	Edge design	termino	lg-eng
 numisdata1253	Edge legend	termino	lg-eng
-numisdata1254	Size description	termino	lg-eng
 numisdata1255	Edition	termino	lg-eng
 numisdata1256	Indexation	termino	lg-eng
 numisdata1257	Register place	termino	lg-eng
 numisdata1258	Data quality	termino	lg-eng
-numisdata1259	Coordinates	termino	lg-eng
 numisdata1261	List	termino	lg-eng
 numisdata1199	Excavations	termino	lg-eng
 numisdata1203	Publication	termino	lg-eng
@@ -2983,6 +2977,8 @@ numisdata1215	Identifying image	termino	lg-eng
 numisdata1206	Date	termino	lg-eng
 numisdata1210	Description	termino	lg-eng
 numisdata1262	Nomisma	termino	lg-eng
+numisdata1259	Coordinates	termino	lg-eng
+numisdata1196	Authorship	termino	lg-eng
 numisdata1281	Authorship	termino	lg-eng
 numisdata1282	list	termino	lg-eng
 numisdata1294	Active	termino	lg-eng
@@ -3259,11 +3255,9 @@ numisdata247	Projet	termino	lg-fra
 numisdata248	Liste	termino	lg-fra
 numisdata249	Nouveau	termino	lg-fra
 numisdata25	Identification	termino	lg-fra
-numisdata250	Supprimer	termino	lg-fra
 numisdata252	Liste	termino	lg-fra
 numisdata253	Liste	termino	lg-fra
 numisdata256	Importer des fiches avec images	termino	lg-fra
-numisdata257	Liste	termino	lg-fra
 numisdata258	Supprimer	termino	lg-fra
 numisdata259	Liste	termino	lg-fra
 numisdata26	Id	termino	lg-fra
@@ -3362,6 +3356,8 @@ numisdata37	Relations	termino	lg-fra
 numisdata371	Liste de thésaurus	termino	lg-fra
 numisdata372	Plan de la section	termino	lg-fra
 numisdata31	Sources de contenu	termino	lg-fra
+numisdata250	Objets numismatiques	termino	lg-fra
+numisdata257	Trésors	termino	lg-fra
 numisdata373	Nouveau	termino	lg-fra
 numisdata374	Supprimer	termino	lg-fra
 numisdata375	NUMISDATA	termino	lg-fra
@@ -4105,7 +4101,7 @@ numisdata1433	Peculiaridad de producción	termino	lg-spa
 numisdata1437	Erhaltungszustand	termino	lg-deu
 numisdata1441	Remarque sur les matériaux	termino	lg-fra
 numisdata1445	Löschen	termino	lg-deu
-numisdata997	ref_publications_other_people_name	termino	lg-spa
+numisdata997	Otros códigos	termino	lg-spa
 numisdata413	Publiable	termino	lg-fra
 numisdata1372	Fecha texto	termino	lg-spa
 numisdata1377	Pubblicabile	termino	lg-ita
@@ -4151,7 +4147,6 @@ numisdata1451	Find(spot)	termino	lg-eng
 numisdata1451	Fund	termino	lg-deu
 numisdata1451	Trouvailles	termino	lg-fra
 numisdata1451	Ritrovamenti	termino	lg-ita
-numisdata1452	Categoría del hallazgo	termino	lg-spa
 numisdata1452	Find category	termino	lg-eng
 numisdata1452	Find category	termino	lg-fra
 numisdata1452	Trova la categoria	termino	lg-ita
@@ -4216,6 +4211,7 @@ numisdata1463	Calidad del dato	termino	lg-spa
 numisdata1463	Data quality	termino	lg-eng
 numisdata1463	Datenqualität	termino	lg-deu
 numisdata1463	Qualité des données	termino	lg-fra
+numisdata1452	Categoría del hallazgo	termino	lg-spa
 numisdata1463	Qualità dei dati	termino	lg-ita
 numisdata1464	Notas	termino	lg-spa
 numisdata1464	Remark	termino	lg-eng
@@ -4387,3 +4383,30 @@ numisdata1494	List	termino	lg-eng
 numisdata1494	Liste	termino	lg-deu
 numisdata1494	Liste	termino	lg-fra
 numisdata1494	Elenco	termino	lg-ita
+numisdata997	Altres codis	termino	lg-cat
+numisdata997	Andere Codes	termino	lg-deu
+numisdata997	Autres codes	termino	lg-fra
+numisdata997	Altri codici	termino	lg-ita
+numisdata997	Other codes	termino	lg-eng
+numisdata838	Other codes	termino	lg-eng
+numisdata838	Altres codis	termino	lg-cat
+numisdata838	Andere Codes	termino	lg-deu
+numisdata838	Autres codes	termino	lg-fra
+numisdata838	Altri codici	termino	lg-ita
+numisdata844	Edge design	termino	lg-eng
+numisdata1252	Design dei bordi	termino	lg-ita
+numisdata844	Design dei bordi	termino	lg-ita
+numisdata844	Dessin de bord	termino	lg-fra
+numisdata1252	Randgestaltung	termino	lg-deu
+numisdata844	Randgestaltung	termino	lg-deu
+numisdata841	Legende Rand	termino	lg-deu
+numisdata841	Edge legend	termino	lg-eng
+numisdata841	Légende des bords	termino	lg-fra
+numisdata841	Legenda del bordo	termino	lg-ita
+numisdata1253	Legenda del bordo	termino	lg-ita
+numisdata1100	Identifying image	termino	lg-eng
+numisdata1254	Size description	termino	lg-eng
+numisdata250	Objetos numismáticos	termino	lg-spa
+numisdata250	Objectes numismàtics	termino	lg-cat
+numisdata250	Oggetti numismatici	termino	lg-ita
+numisdata257	Tesori	termino	lg-ita

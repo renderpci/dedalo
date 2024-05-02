@@ -1048,9 +1048,7 @@ dd1361	Section map	termino	lg-spa
 dd1363	Error. Valor de tc offset buit	termino	lg-cat
 dd1363	Error. Valor de tc offset vacío	termino	lg-spa
 dd1355	Champs personnalisés	termino	lg-fra
-dd1366	pages	termino	lg-spa
 dd1368	reference	termino	lg-spa
-dd1369	publications_data	termino	lg-spa
 dd137	Privadas	termino	lg-spa
 dd137	Privades	termino	lg-cat
 dd137	Private	termino	lg-ita
@@ -1060,7 +1058,6 @@ dd1371	description	termino	lg-spa
 dd1372	Etiquetas	termino	lg-spa
 dd1372	Etiquetes	termino	lg-cat
 dd1357	Norme	termino	lg-fra
-dd1373	dd_tm	termino	lg-spa
 dd1358	Format	termino	lg-fra
 dd1374	Diàmetre	termino	lg-cat
 dd1374	Diametro	termino	lg-ita
@@ -1073,7 +1070,6 @@ dd1375	Hijos	termino	lg-spa
 dd1375	Παιδιά	termino	lg-ell
 dd1376	menu	termino	lg-spa
 dd1377	audiovisual	termino	lg-spa
-dd1378	ref_publications_title	termino	lg-spa
 dd136	Valeur de la liste	termino	lg-fra
 dd1379	Referencias	termino	lg-spa
 dd1379	Referències	termino	lg-cat
@@ -1105,8 +1101,12 @@ dd139	Filtro	termino	lg-spa
 dd1391	General	termino	lg-spa
 dd1392	Relaciones	termino	lg-spa
 dd1610	JSON-Ontologie importieren	termino	lg-deu
-dd1365	publication	termino	lg-spa
-dd1367	sheet	termino	lg-spa
+dd1366	Creando	termino	lg-spa
+dd1373	Id	termino	lg-spa
+dd1378	Borrar	termino	lg-spa
+dd1369	Leyendo	termino	lg-spa
+dd1365	Actualizando	termino	lg-spa
+dd1367	Versiones	termino	lg-spa
 dd1393	Página URI path	termino	lg-spa
 dd1394	Página plantilla	termino	lg-spa
 dd1395	Página activo menu link	termino	lg-spa
@@ -1752,10 +1752,6 @@ dd1523	Totaux	termino	lg-fra
 dd234	Profili	termino	lg-ita
 dd234	προφίλ	termino	lg-ell
 dd1529	Documentation de mise à disposition	termino	lg-fra
-dd235	Nou perfil	termino	lg-cat
-dd235	Nuevo perfil	termino	lg-spa
-dd235	Nuovo profilo	termino	lg-ita
-dd235	νέο προφίλ	termino	lg-ell
 dd236	General	termino	lg-cat
 dd153	Projets	termino	lg-fra
 dd236	General	termino	lg-spa
@@ -1800,6 +1796,9 @@ dd244	Amm. Generale	termino	lg-ita
 dd244	Διαχειριστή. γενικός	termino	lg-ell
 dd245	rdf	termino	lg-spa
 dd246	rdf:predicate	termino	lg-spa
+dd235	Nou	termino	lg-cat
+dd235	Nuovo	termino	lg-ita
+dd235	νέο	termino	lg-ell
 dd247	component_filter	termino	lg-spa
 dd248	rdf:subject	termino	lg-spa
 dd249	Area	termino	lg-ita
@@ -2734,9 +2733,6 @@ dd480	Persone	termino	lg-ita
 dd1718	Accès et autorisations	termino	lg-fra
 dd480	άνθρωποι	termino	lg-ell
 dd481	matrix_notes	termino	lg-spa
-dd482	Búsqueda	termino	lg-spa
-dd482	Ricerca	termino	lg-ita
-dd482	έρευνα	termino	lg-ell
 dd172	Quoi	termino	lg-fra
 dd483	buit	termino	lg-cat
 dd483	vacío	termino	lg-spa
@@ -2748,9 +2744,6 @@ dd484	Importar	termino	lg-spa
 dd484	Importare	termino	lg-ita
 dd484	ύλη	termino	lg-ell
 dd485	matrix_indexations	termino	lg-spa
-dd486	Búsqueda	termino	lg-spa
-dd486	Ricerca	termino	lg-ita
-dd486	έρευνα	termino	lg-ell
 dd487	component_inverse	termino	lg-spa
 dd1726	Appliquer	termino	lg-fra
 dd488	Informació del fitxer	termino	lg-cat
@@ -2797,6 +2790,11 @@ dd498	Nou	termino	lg-cat
 dd498	Nuevo	termino	lg-spa
 dd498	Nuovo	termino	lg-ita
 dd499	Progetto	termino	lg-ita
+dd486	Etiquetas	termino	lg-spa
+dd486	Ετικέτες	termino	lg-ell
+dd482	Ontología	termino	lg-spa
+dd482	Οντολογία	termino	lg-ell
+dd482	Ontologia	termino	lg-ita
 dd499	Projecte	termino	lg-cat
 dd499	Proyecto	termino	lg-spa
 dd499	σχέδιο	termino	lg-ell
@@ -3264,7 +3262,6 @@ dd618	si	termino	lg-spa
 dd234	Profils	termino	lg-fra
 dd618	αν	termino	lg-ell
 dd619	no	termino	lg-cat
-dd235	Nouveau profil	termino	lg-fra
 dd619	No	termino	lg-ita
 dd619	no	termino	lg-spa
 dd610	Importa RDF	termino	lg-ita
@@ -3326,6 +3323,7 @@ dd640	Público	termino	lg-spa
 dd640	Se muestra para todos los usuarios	def	lg-spa
 dd640	Shows for all users	def	lg-eng
 dd630	Reti	termino	lg-ita
+dd235	Nouveau	termino	lg-fra
 dd641	Default	termino	lg-ita
 dd641	Default	termino	lg-spa
 dd641	Per defecte	termino	lg-cat
@@ -4656,9 +4654,6 @@ dd971	Nuovo	termino	lg-ita
 dd972	Borrar	termino	lg-spa
 dd972	Cancellare	termino	lg-ita
 dd972	Esborrar	termino	lg-cat
-dd973	Buscar	termino	lg-spa
-dd973	Cercar	termino	lg-cat
-dd973	Cercare	termino	lg-ita
 dd974	Nou	termino	lg-cat
 dd974	Nuevo	termino	lg-spa
 dd974	Nuovo	termino	lg-ita
@@ -4705,6 +4700,9 @@ dd986	Valor de la lista	termino	lg-spa
 dd986	Valor de la llista	termino	lg-cat
 dd986	Valore della lista	termino	lg-ita
 dd96	Indexation	termino	lg-eng
+dd973	Id	termino	lg-spa
+dd973	Id	termino	lg-cat
+dd973	Id	termino	lg-ita
 dd987	Estándar del Color Audivosiual	termino	lg-spa
 dd987	Estàndard del Color Audivosiual	termino	lg-cat
 dd987	Standard del Colore Audiovisivo	termino	lg-ita
@@ -4882,9 +4880,9 @@ dd64	Oui/Non	termino	lg-fra
 dd640	Public	termino	lg-fra
 dd641	Par défaut	termino	lg-fra
 dd642	Type de section	termino	lg-fra
-dd1632	Percentage	termino	lg-eng
 dd1617	Aktivität	termino	lg-deu
 dd644	Changements	termino	lg-fra
+dd1632	Id	termino	lg-eng
 dd645	Le nom indique le champ	termino	lg-fra
 dd646	Le nom indique l'identifiant	termino	lg-fra
 dd647	Même nombre même registre	termino	lg-fra
@@ -4947,7 +4945,6 @@ dd700	Sauvegarder 	termino	lg-fra
 dd706	récupérer	termino	lg-fra
 dd707	Registre	termino	lg-fra
 dd71	Description	termino	lg-fra
-dd1632	Percentatge	termino	lg-cat
 dd713	Mots fractionnés	termino	lg-fra
 dd715	Défaut de sauvegarde !	termino	lg-fra
 dd1618	Selecció buida	termino	lg-cat
@@ -4958,6 +4955,7 @@ dd719	Accueil	termino	lg-fra
 dd720	Téléchargement…	termino	lg-fra
 dd721	Champ alternatif. Ne pas utiliser sauf si le terme n'est pas normalisé. Utiliser à la place : %s	termino	lg-fra
 dd723	Outil de description	termino	lg-fra
+dd1632	Id	termino	lg-cat
 dd724	Qualité	termino	lg-fra
 dd725	Fichier	termino	lg-fra
 dd726	Taille	termino	lg-fra
@@ -4975,11 +4973,11 @@ dd736	Créer	termino	lg-fra
 dd737	Extension non valide	termino	lg-fra
 dd738	La taille du fichier est trop importante	termino	lg-fra
 dd1618	Leere Auswahl	termino	lg-deu
-dd1632	Prozentsatz	termino	lg-deu
 dd739	Sélectionner le fichier à télécharger	termino	lg-fra
 dd740	Fichier téléchargé avec succès	termino	lg-fra
 dd741	Erreur de téléchargement de fichier	termino	lg-fra
 dd742	Sélectionner un fichier	termino	lg-fra
+dd1632	Id	termino	lg-deu
 dd743	En quittant cette page, vous perdrez les données non sauvegardées	termino	lg-fra
 dd744	Le répertoire n'existe pas ou n'est pas accessible	termino	lg-fra
 dd745	Fermer	termino	lg-fra
@@ -5026,7 +5024,6 @@ dd787	Fichiers d'images	termino	lg-fra
 dd788	Téléchargement de fichiers	termino	lg-fra
 dd789	Indexation	termino	lg-fra
 dd790	Langage	termino	lg-fra
-dd1632	Percentuale	termino	lg-ita
 dd1619	Levels	termino	lg-eng
 dd791	Photogramme	termino	lg-fra
 dd792	Relations	termino	lg-fra
@@ -5044,7 +5041,6 @@ dd803	complet	termino	lg-fra
 dd804	mode	termino	lg-fra
 dd805	Autres références	termino	lg-fra
 dd806	Détails des références	termino	lg-fra
-dd1634	General	termino	lg-spa
 dd1619	Nivells	termino	lg-cat
 dd807	Méthodes	termino	lg-fra
 dd809	Méthodes étendues	termino	lg-fra
@@ -5065,7 +5061,6 @@ dd822	Information générale	termino	lg-fra
 dd823	Id	termino	lg-fra
 dd824	Diffusion	termino	lg-fra
 dd1619	Επίπεδα	termino	lg-ell
-dd1634	General	termino	lg-eng
 dd825	existants	termino	lg-fra
 dd826	Prénom	termino	lg-fra
 dd827	ressource	termino	lg-fra
@@ -5346,9 +5341,9 @@ dd1514	web_dedalo_demo_dev	termino	lg-spa
 dd1519	informant	termino	lg-spa
 dd1520	ts_anthropology	termino	lg-spa
 dd1629	Buscar y reemplazar	termino	lg-spa
-dd1524	ref_publications_typology	termino	lg-spa
-dd1526	ref_publications_title_colective	termino	lg-spa
-dd1527	ref_publications_title_colective_alt	termino	lg-spa
+dd1524	Id	termino	lg-spa
+dd1526	Id	termino	lg-spa
+dd1527	Id	termino	lg-spa
 dd1531	Tipo	termino	lg-spa
 dd1531	It can be one of these values: year,month,day	obs	lg-spa
 dd1534	List	termino	lg-spa
@@ -5360,7 +5355,7 @@ dd1533	matrix_stats	termino	lg-spa
 dd1537	Actividad de usuario	termino	lg-spa
 dd1629	Find and replace	termino	lg-eng
 dd1529		obs	lg-spa
-dd1528	ref_publications_other_people_role	termino	lg-spa
+dd1528	Id	termino	lg-spa
 dd1529	Documentación de versión	termino	lg-spa
 dd1532	tm info	termino	lg-spa
 dd1543	Reglas de aplicación	termino	lg-spa
@@ -5532,7 +5527,6 @@ dd1589	E-mail	termino	lg-spa
 dd1589	Eメール	termino	lg-jpn
 dd1242	Tipo	termino	lg-deu
 dd1242	Tipo	termino	lg-eng
-dd1632	Porcentaje	termino	lg-spa
 dd1	Dédalo	termino	lg-deu
 dd100	Thesaurus	termino	lg-deu
 dd1000	Dédalo Einheiten	termino	lg-deu
@@ -6028,7 +6022,6 @@ dd229	Sitzung beginnen	termino	lg-deu
 dd23	Layout	termino	lg-deu
 dd232	Eintrag bearbeiten	termino	lg-deu
 dd234	Profile	termino	lg-deu
-dd235	Neues Profil	termino	lg-deu
 dd236	Allgemein	termino	lg-deu
 dd237	Name	termino	lg-deu
 dd238	Beschreibung	termino	lg-deu
@@ -6085,6 +6078,7 @@ dd3	Verbreitung	termino	lg-deu
 dd30	Layout	termino	lg-deu
 dd300	Identifizierung	termino	lg-deu
 dd301	Projekt	termino	lg-deu
+dd235	Neues	termino	lg-deu
 dd304	Typ der Einheit	termino	lg-deu
 dd306	Liste	termino	lg-deu
 dd307	Farbbereich	termino	lg-deu
@@ -6244,10 +6238,8 @@ dd477	Web-Vorlagen	termino	lg-deu
 dd478	Eintragsfilter	termino	lg-deu
 dd48	Unterbegriff	termino	lg-deu
 dd480	Personen	termino	lg-deu
-dd482	Suche	termino	lg-deu
 dd483	Leer	termino	lg-deu
 dd484	Importieren	termino	lg-deu
-dd486	Suche	termino	lg-deu
 dd488	Dateiinformation	termino	lg-deu
 dd49	Projekt	termino	lg-deu
 dd490	Strukturierung	termino	lg-deu
@@ -6695,7 +6687,6 @@ dd969	Wert ausserhalb des Bereichs	termino	lg-deu
 dd970	Werkzeuge registrieren	termino	lg-deu
 dd971	Neu	termino	lg-deu
 dd972	Löschen	termino	lg-deu
-dd973	Suchen	termino	lg-deu
 dd974	Neu	termino	lg-deu
 dd975	Löschen	termino	lg-deu
 dd976	Bildformat	termino	lg-deu
@@ -6724,6 +6715,7 @@ dd996	Werkzeugkonfiguration	termino	lg-deu
 dd997	Ausgeschlossene	termino	lg-deu
 dd998	Wählen Sie eine Seite aus dem Dokument	termino	lg-deu
 dd999	Konfiguration	termino	lg-deu
+dd973	Id	termino	lg-deu
 dd1	Dédalo	termino	lg-fra
 dd100	Thésaurus	termino	lg-fra
 dd1000	Entités Dédalo	termino	lg-fra
@@ -6987,7 +6979,6 @@ dd228	New	termino	lg-eng
 dd229	Login	termino	lg-eng
 dd232	Edit record	termino	lg-eng
 dd234	Profiles	termino	lg-eng
-dd235	New Profile	termino	lg-eng
 dd236	General	termino	lg-eng
 dd237	Name	termino	lg-eng
 dd238	Description	termino	lg-eng
@@ -7045,6 +7036,7 @@ dd315	Warning: User %s is using this field. Please, wait for the user to finish 
 dd316	Unlock all components	termino	lg-eng
 dd317	Active users	termino	lg-eng
 dd319	Transcription	termino	lg-eng
+dd235	New	termino	lg-eng
 dd321	Immovable heritage	termino	lg-eng
 dd322	Moveable Heritage	termino	lg-eng
 dd323	Inmaterial	termino	lg-eng
@@ -8148,7 +8140,6 @@ dd1362	Implementazione	termino	lg-ita
 dd1644	Sviluppatore	termino	lg-ita
 dd1644	Προγραμματιστής	termino	lg-ell
 dd558	Uncertainty	termino	lg-eng
-dd482	Search	termino	lg-eng
 dd26	Proyecto	termino	lg-spa
 dd1390	Programación de la web	termino	lg-spa
 dd1645	Borrar registros de difusión	termino	lg-spa
@@ -8258,7 +8249,7 @@ dd315	चेतावनी: प्रयोगकर्ता %s ले यो 
 dd756	खोल्नुहोस्	termino	lg-nep
 dd65	मर्मत अन्तर्गत प्रणाली। असुविधाको लागि माफ गर्नुहोस्	termino	lg-nep
 dd162	त्रुटि: प्रयोगकर्ता र पासवर्ड ठीक छ तर हालको प्रयोगकर्ता ठीकसँग कन्फिगर गरिएको छैन। कृपया यस प्रयोगकर्तालाई प्रोफाइल तोक्न प्रशासकलाई सम्पर्क गर्नुहोस्।	termino	lg-nep
-dd1525	ref_publications_magazine_number	termino	lg-spa
+dd1525	Borrar	termino	lg-spa
 dd747	कृपया पर्खनुहोस्..	termino	lg-nep
 dd657	पृष्ठमा जानुहोस्	termino	lg-nep
 dd1576	फेला परेका सबै रेकर्डहरू मेटिने छन्।	termino	lg-nep
@@ -8621,4 +8612,109 @@ dd1637	Id	termino	lg-cat
 dd1637	Id	termino	lg-deu
 dd1637	Id	termino	lg-fra
 dd1637	Id	termino	lg-ita
-dd1	Dédalo 2024-03-28T10:04:19+01:00 Benimamet	termino	lg-spa
+dd1634	Id	termino	lg-spa
+dd1634	Id	termino	lg-eng
+dd1634	Id	termino	lg-cat
+dd1634	Id	termino	lg-deu
+dd1634	Id	termino	lg-ell
+dd1634	Id	termino	lg-fra
+dd1634	Id	termino	lg-ita
+dd1632	Id	termino	lg-spa
+dd1632	Id	termino	lg-ita
+dd1632	Id	termino	lg-ell
+dd1632	Id	termino	lg-fra
+dd973	Id	termino	lg-eng
+dd973	Id	termino	lg-ell
+dd973	Id	termino	lg-fra
+dd1373	Id	termino	lg-eng
+dd1373	Id	termino	lg-cat
+dd1373	Id	termino	lg-deu
+dd1373	Id	termino	lg-ell
+dd1373	Id	termino	lg-fra
+dd1373	Id	termino	lg-ita
+dd1528	Id	termino	lg-eng
+dd1528	Id	termino	lg-cat
+dd1528	Id	termino	lg-deu
+dd1528	Id	termino	lg-ell
+dd1528	Id	termino	lg-fra
+dd1528	Id	termino	lg-ita
+dd1527	Id	termino	lg-eng
+dd1527	Id	termino	lg-cat
+dd1527	Id	termino	lg-deu
+dd1527	Id	termino	lg-ell
+dd1527	Id	termino	lg-fra
+dd1527	Id	termino	lg-ita
+dd1526	Id	termino	lg-eng
+dd1526	Id	termino	lg-cat
+dd1526	Id	termino	lg-deu
+dd1526	Id	termino	lg-ell
+dd1526	Id	termino	lg-fra
+dd1526	Id	termino	lg-ita
+dd1524	Id	termino	lg-eng
+dd1524	Id	termino	lg-cat
+dd1524	Id	termino	lg-deu
+dd1524	Id	termino	lg-ell
+dd1524	Id	termino	lg-fra
+dd1524	Id	termino	lg-ita
+dd1525	Delete	termino	lg-eng
+dd1525	Esborrar	termino	lg-cat
+dd1525	Löschen	termino	lg-deu
+dd1525	Διαγραφή	termino	lg-ell
+dd1525	Supprimer	termino	lg-fra
+dd1525	Cancellare	termino	lg-ita
+dd1378	Delete	termino	lg-eng
+dd1378	Esborrar	termino	lg-cat
+dd1378	Löschen	termino	lg-deu
+dd1378	Διαγραφή	termino	lg-ell
+dd1378	Supprimer	termino	lg-fra
+dd1378	Cancellare	termino	lg-ita
+dd235	Nuevo	termino	lg-spa
+dd1369	Reading	termino	lg-eng
+dd1369	Llegint	termino	lg-cat
+dd1369	Lesen	termino	lg-deu
+dd1369	Lecture	termino	lg-fra
+dd1369	Lettura	termino	lg-ita
+dd1369	Ανάγνωση	termino	lg-ell
+dd1365	Updating	termino	lg-eng
+dd1365	Actualizant	termino	lg-cat
+dd1365	Aktualisierung von	termino	lg-deu
+dd1365	Mise à jour	termino	lg-fra
+dd1365	Aggiornamento	termino	lg-ita
+dd1366	Creating	termino	lg-eng
+dd1366	Creant	termino	lg-cat
+dd1366	Erstellen von	termino	lg-deu
+dd1366	Création	termino	lg-fra
+dd1366	Creare	termino	lg-ita
+dd1660	Proceso completado	termino	lg-spa
+dd1660	Process completed	termino	lg-eng
+dd1660	Procés completat	termino	lg-cat
+dd1660	Prozesua amaitu da	termino	lg-eus
+dd1660	Prozess abgeschlossen	termino	lg-deu
+dd1660	Η διαδικασία ολοκληρώθηκε	termino	lg-ell
+dd1660	Processus terminé	termino	lg-fra
+dd1660	Processo completato	termino	lg-ita
+dd1660	Processo completo	termino	lg-por
+dd1660	प्रक्रिया पूरा भयो	termino	lg-nep
+dd1661	Error	termino	lg-spa
+dd1661	Error	termino	lg-eng
+dd1661	Error	termino	lg-cat
+dd1661	Errorea	termino	lg-eus
+dd1661	Fehler	termino	lg-deu
+dd1661	Λάθος	termino	lg-ell
+dd1661	Erreur	termino	lg-fra
+dd1661	Errore	termino	lg-ita
+dd1661	Erro	termino	lg-por
+dd1661	त्रुटि	termino	lg-nep
+dd1367	Versions	termino	lg-eng
+dd1367	Versions	termino	lg-cat
+dd1367	Versionen	termino	lg-deu
+dd1367	Versions	termino	lg-fra
+dd1367	Versioni	termino	lg-ita
+dd486	Labels	termino	lg-eng
+dd486	Etiketten	termino	lg-deu
+dd486	Etiquetes	termino	lg-cat
+dd486	Étiquettes	termino	lg-fra
+dd482	Ontology	termino	lg-eng
+dd482	Ontologie	termino	lg-fra
+dd482	Ontologie	termino	lg-deu
+dd1	Dédalo 2024-05-02T18:58:58+02:00 Benimamet	termino	lg-spa
