@@ -774,9 +774,13 @@ class ontology {
 					$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 					$component_tipo	= (function($dato_tipo){
 						switch ($dato_tipo) {
-							case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
-							case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
-							case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
+							case 'term':
+							case 'termino':
+								return ONTOLOGY_SECTION_TIPOS['term'];
+							case 'def':
+								return ONTOLOGY_SECTION_TIPOS['definition'];
+							case 'obs':
+								return ONTOLOGY_SECTION_TIPOS['observations'];
 						}
 						return null;
 					})($dato_tipo);
