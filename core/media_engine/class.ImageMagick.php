@@ -75,6 +75,7 @@ final class ImageMagick {
 		$profile_out	= $options->profile_out ?? 'sRGB_Profile.icc';
 		$flatten		= $options->flatten ?? true;
 		$density		= $options->density ?? null; // resolution to process the source file, used to render pdf files. density = 150;
+		$pdf_cropbox 	= $options->pdf_cropbox ?? null; // use to crop the pdf according his crop-boxes and bleed-box as '-define pdf:use-cropbox=true';
 		$strip			= $options->strip ?? true;
 		$antialias		= $options->antialias ?? true;
 		$composite		= $options->composite ?? true;
@@ -141,6 +142,10 @@ final class ImageMagick {
 				: '';
 			$begin_flags .= isset($antialias)
 				? '-antialias '
+				: '';
+
+			$begin_flags .= isset($pdf_cropbox)
+				? '-define pdf:use-cropbox=true'
 				: '';
 
 		// Middle flags : Command flags between source and output files.

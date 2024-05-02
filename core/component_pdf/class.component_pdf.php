@@ -358,10 +358,11 @@ class component_pdf extends component_media_common {
 				$thumb_pdf_options->source_file = $source_file;
 				$thumb_pdf_options->ar_layers 	= [0];
 				$thumb_pdf_options->target_file = $target_file;
-				$thumb_pdf_options->density		= 150;
+				$thumb_pdf_options->density		= 72;
 				$thumb_pdf_options->antialias	= true;
 				$thumb_pdf_options->quality		= 75;
 				$thumb_pdf_options->resize		= $dimensions;
+				$thumb_pdf_options->pdf_cropbox	= true;
 
 			$result = ImageMagick::convert($thumb_pdf_options);
 
@@ -428,6 +429,7 @@ class component_pdf extends component_media_common {
 					$image_pdf_options->antialias	= true;
 					$image_pdf_options->quality		= 100;
 					$image_pdf_options->resize		= '50%';
+					$image_pdf_options->pdf_cropbox	= true;
 
 				ImageMagick::convert($image_pdf_options);
 
