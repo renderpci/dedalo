@@ -4,16 +4,17 @@ tchi6	Excluidos	termino	lg-spa
 tchi7	Es descriptor	termino	lg-spa
 tchi9	Listado tesauro	termino	lg-spa
 tch1	Objetos	termino	lg-spa
+tch103	Identification	termino	lg-fra
+tch103	Identificació	termino	lg-cat
+tch109	Id	termino	lg-cat
+tch109	Id	termino	lg-fra
 tch10	Estado de conservación	termino	lg-spa
-tch10	État de conservation 	termino	lg-fra
+tch10	État de conservation	termino	lg-fra
 tch10	State of conservation	termino	lg-eng
 tch10	Estat de conservació	termino	lg-cat
 tch102	Fitxa fotografia	termino	lg-cat
-tch102	Dossier photographique	termino	lg-fra
 tch102	Ficha fotografía	termino	lg-spa
 tch102	Photography sheet	termino	lg-eng
-tch103	Identification	termino	lg-fra
-tch103	Identificació	termino	lg-cat
 tch104	Descripció	termino	lg-cat
 tch104	Description	termino	lg-eng
 tch104	Descripción	termino	lg-spa
@@ -31,13 +32,29 @@ tch107	Borrar	termino	lg-spa
 tch107	Delete	termino	lg-eng
 tch107	Supprimer	termino	lg-fra
 tch108	Importa fitxes amb imatge	termino	lg-cat
-tch108	Importar fichas con imagen	termino	lg-spa
 tch108	Import tabs with image	termino	lg-eng
 tch108	Importer des fiches avec images	termino	lg-fra
-tch109	Id	termino	lg-cat
-tch109	Id	termino	lg-fra
 tch11	Información general	termino	lg-spa
 tch11	Information générale	termino	lg-fra
+tch126	Caracterítiques	termino	lg-cat
+tch101	List	termino	lg-eng
+tch101	Llistat	termino	lg-cat
+tch101	Liste	termino	lg-fra
+tch116	Últimos cambios	termino	lg-spa
+tch116	Darrers canvis	termino	lg-cat
+tch116	Dernières modifications	termino	lg-fra
+tch1	Objectes	termino	lg-cat
+tch109	Id	termino	lg-spa
+tch109	Id	termino	lg-eng
+tch103	Identification	termino	lg-eng
+tch103	Identificación	termino	lg-spa
+tch126	Características	termino	lg-spa
+tch1	Objects	termino	lg-eng
+tch126	Caractéristiques	termino	lg-fra
+tch128	Llistat	termino	lg-cat
+tch128	Lista	termino	lg-spa
+tch128	Liste	termino	lg-fra
+tch128	List	termino	lg-eng
 tch11	General Information	termino	lg-eng
 tch11	Informació general	termino	lg-cat
 tch110	Diffusion	termino	lg-eng
@@ -48,18 +65,15 @@ tch111	Colección	termino	lg-spa
 tch111	Collection	termino	lg-fra
 tch111	Col·lecció	termino	lg-cat
 tch111	Collection	termino	lg-eng
+tch113	Photography	termino	lg-eng
 tch112	Persona	termino	lg-cat
 tch112	Person	termino	lg-eng
 tch112	Personne	termino	lg-fra
 tch112	Persona	termino	lg-spa
-tch113	Photography	termino	lg-eng
 tch113	Fotografia	termino	lg-cat
 tch113	Fotografía	termino	lg-spa
 tch113	Photographie	termino	lg-fra
-tch115	List	termino	lg-eng
-tch115	Liste	termino	lg-fra
-tch115	Listado	termino	lg-spa
-tch117	Measures	termino	lg-eng
+tch114	Proyecto	termino	lg-spa
 tch117	Mesures	termino	lg-fra
 tch117	Mesures	termino	lg-cat
 tch117	Medidas	termino	lg-spa
@@ -78,7 +92,6 @@ tch12	Llistat	termino	lg-cat
 tch120	Any	termino	lg-cat
 tch120	Año	termino	lg-spa
 tch120	Year	termino	lg-eng
-tch120	Année	termino	lg-fra
 tch121	Año dudoso	termino	lg-spa
 tch121	Any dubtós	termino	lg-cat
 tch121	Année douteuse	termino	lg-fra
@@ -87,11 +100,10 @@ tch122	Description	termino	lg-fra
 tch122	Descripción	termino	lg-spa
 tch122	Descripció	termino	lg-cat
 tch122	Description	termino	lg-eng
-tch123	Commentaires 	termino	lg-fra
+tch123	Commentaires	termino	lg-fra
 tch123	Comments	termino	lg-eng
 tch123	Comentarios	termino	lg-spa
 tch123	Comentaris	termino	lg-cat
-tch124	Classificació	termino	lg-cat
 tch124	Clasificación	termino	lg-spa
 tch124	Classification	termino	lg-eng
 tch124	Classement	termino	lg-fra
@@ -99,46 +111,35 @@ tch125	Projet	termino	lg-fra
 tch125	Project	termino	lg-eng
 tch125	Projecte	termino	lg-cat
 tch125	Proyecto	termino	lg-spa
-tch126	Caracterítiques	termino	lg-cat
-tch101	List	termino	lg-eng
-tch101	Llistat	termino	lg-cat
-tch101	Liste	termino	lg-fra
-tch116	Últimos cambios	termino	lg-spa
-tch116	Darrers canvis	termino	lg-cat
-tch116	Dernières modifications	termino	lg-fra
-tch114	Proyecto	termino	lg-spa
-tch1	Objectes	termino	lg-cat
-tch109	Id	termino	lg-spa
-tch109	Id	termino	lg-eng
-tch103	Identification	termino	lg-eng
-tch103	Identificación	termino	lg-spa
-tch126	Características	termino	lg-spa
-tch1	Objects	termino	lg-eng
-tch100	Fotografías	termino	lg-spa
-tch100	Photographs	termino	lg-eng
-tch100	Fotografies	termino	lg-cat
-tch100	Photographies	termino	lg-fra
-tch126	Caractéristiques	termino	lg-fra
-tch127	General information	termino	lg-eng
-tch127	Informació general	termino	lg-cat
-tch127	Información general	termino	lg-spa
-tch127	Information générale	termino	lg-fra
-tch128	Liste des caractéristiques	termino	lg-fra
-tch128	Feature List	termino	lg-eng
-tch128	Lista de características	termino	lg-spa
-tch128	Llistat	termino	lg-cat
 tch129	Nou	termino	lg-cat
 tch129	Nouveau	termino	lg-fra
 tch129	New	termino	lg-eng
 tch129	Nuevo	termino	lg-spa
-tch13	Nouveau	termino	lg-fra
-tch13	Nou	termino	lg-cat
-tch13	Nuevo	termino	lg-spa
-tch13	New	termino	lg-eng
 tch130	Supprimer	termino	lg-fra
 tch130	Esborrar	termino	lg-cat
 tch130	Delete	termino	lg-eng
 tch130	Borrar	termino	lg-spa
+tch134	Projet	termino	lg-fra
+tch134	Proyecto	termino	lg-spa
+tch134	Project	termino	lg-eng
+tch134	Projecte	termino	lg-cat
+tch135	Entidad	termino	lg-spa
+tch135	Entité	termino	lg-fra
+tch135	Entity	termino	lg-eng
+tch100	Fotografías	termino	lg-spa
+tch100	Photographs	termino	lg-eng
+tch100	Fotografies	termino	lg-cat
+tch100	Photographies	termino	lg-fra
+tch115	List	termino	lg-eng
+tch115	Liste	termino	lg-fra
+tch115	Listado	termino	lg-spa
+tch13	Nouveau	termino	lg-fra
+tch13	Nou	termino	lg-cat
+tch13	Nuevo	termino	lg-spa
+tch13	New	termino	lg-eng
+tch127	General information	termino	lg-eng
+tch127	Información general	termino	lg-spa
+tch127	Information générale	termino	lg-fra
 tch131	Id	termino	lg-eng
 tch131	Id	termino	lg-fra
 tch131	Id	termino	lg-spa
@@ -147,71 +148,19 @@ tch133	Caractéristique	termino	lg-fra
 tch133	Characteristic	termino	lg-eng
 tch133	Característica	termino	lg-spa
 tch133	Característica	termino	lg-cat
-tch134	Projet	termino	lg-fra
-tch134	Proyecto	termino	lg-spa
-tch134	Project	termino	lg-eng
-tch134	Projecte	termino	lg-cat
-tch135	Entidad	termino	lg-spa
-tch135	Entitat	termino	lg-cat
-tch135	Entité	termino	lg-fra
-tch135	Entity	termino	lg-eng
-tch138	Col·leccions	termino	lg-cat
-tch138	Collections	termino	lg-fra
-tch138	Collections	termino	lg-eng
-tch138	Colecciones	termino	lg-spa
-tch139	Historical photograph sheet	termino	lg-eng
-tch139	Document photographique historique	termino	lg-fra
-tch139	Fitxa fotografia històric	termino	lg-cat
-tch139	Ficha fotografía histórico	termino	lg-spa
-tch14	Supprimer	termino	lg-fra
-tch14	Borrar	termino	lg-spa
-tch14	Delete	termino	lg-eng
-tch14	Esborrar	termino	lg-cat
-tch140	Information générale	termino	lg-fra
-tch140	Información general	termino	lg-spa
-tch140	Informació general	termino	lg-cat
-tch140	General information	termino	lg-eng
-tch142	Liste de collections	termino	lg-fra
-tch142	Collection list	termino	lg-eng
-tch142	Llistat	termino	lg-cat
-tch142	Lista de colecciones	termino	lg-spa
 tch143	Històric	termino	lg-cat
 tch143	Historique	termino	lg-fra
-tch144	Nouveau	termino	lg-fra
-tch144	New	termino	lg-eng
-tch144	Nou	termino	lg-cat
-tch144	Nuevo	termino	lg-spa
-tch146	Delete	termino	lg-eng
-tch146	Borrar	termino	lg-spa
-tch146	Esborrar	termino	lg-cat
-tch146	Supprimer	termino	lg-fra
-tch147	Especificaciones de manipulación, transporte, exposición	termino	lg-spa
-tch147	Especificacions de manipulació, transport, exposició	termino	lg-cat
-tch147	Handling, transport, exposure specifications	termino	lg-eng
-tch147	Spécifications relatives à la manipulation, au transport et à l''affichage	termino	lg-fra
-tch148	Id	termino	lg-eng
-tch148	Id	termino	lg-spa
-tch148	Id	termino	lg-fra
-tch148	Id	termino	lg-cat
 tch149	Mesures	termino	lg-fra
 tch149	Mesures	termino	lg-cat
 tch149	LARGO. Medida perpendicular (altura) / ANCHO. Medida horizontal el frente (anchurado) / PROFUNDO. Medida horizontal de profundidad (espesor). Las medidas se darán preferentemente en centímetros. Pueden usarse otras unidades de medida, pero sea cual sea la unidad utilizada se indicará después de la cantidad. En caso de que las medidas incluyan peana, se pondrá:  180 x 26 x 32 cm ( con peana )	def	lg-spa
-tch15	Id	termino	lg-fra
-tch15	Id	termino	lg-eng
-tch15	Id	termino	lg-cat
-tch15	Id	termino	lg-spa
 tch150	Restaurada	termino	lg-spa
 tch150	Restauré	termino	lg-fra
 tch150	Restored	termino	lg-eng
 tch150	Restaurada	termino	lg-cat
-tch141	Imágenes	termino	lg-spa
 tch143	Histórico	termino	lg-spa
 tch149	Medidas	termino	lg-spa
 tch149	Measures	termino	lg-eng
 tch126	Characteristics	termino	lg-eng
-tch141	Images	termino	lg-fra
-tch141	Images	termino	lg-eng
-tch141	Imatges	termino	lg-cat
 tch137	Titularidad	termino	lg-spa
 tch137	Titularitat	termino	lg-cat
 tch137	Propriété	termino	lg-fra
@@ -224,6 +173,47 @@ tch152	Nom del bé	termino	lg-cat
 tch152	Nom du bien	termino	lg-fra
 tch152	Indica el terme o nom comú amb què es coneix al bé.	def	lg-cat
 tch152	Indica el término o nombre común con el que se conoce al bien.	def	lg-spa
+tch136	Important fitxas amb imatges	termino	lg-cat
+tch145	Movable property	termino	lg-eng
+tch145	Biens meubles	termino	lg-fra
+tch138	Col·leccions	termino	lg-cat
+tch138	Collections	termino	lg-fra
+tch138	Collections	termino	lg-eng
+tch138	Colecciones	termino	lg-spa
+tch139	Historical photograph sheet	termino	lg-eng
+tch139	Document photographique historique	termino	lg-fra
+tch139	Fitxa fotografia històric	termino	lg-cat
+tch139	Ficha fotografía histórico	termino	lg-spa
+tch140	Información general	termino	lg-spa
+tch140	Informació general	termino	lg-cat
+tch140	General information	termino	lg-eng
+tch142	Liste de collections	termino	lg-fra
+tch141	Imágenes	termino	lg-spa
+tch141	Images	termino	lg-fra
+tch141	Images	termino	lg-eng
+tch141	Imatges	termino	lg-cat
+tch14	Borrar	termino	lg-spa
+tch14	Delete	termino	lg-eng
+tch14	Esborrar	termino	lg-cat
+tch140	Information générale	termino	lg-fra
+tch142	Collection list	termino	lg-eng
+tch142	Llistat	termino	lg-cat
+tch142	Lista de colecciones	termino	lg-spa
+tch144	Nouveau	termino	lg-fra
+tch144	New	termino	lg-eng
+tch144	Nou	termino	lg-cat
+tch144	Nuevo	termino	lg-spa
+tch146	Delete	termino	lg-eng
+tch146	Borrar	termino	lg-spa
+tch146	Esborrar	termino	lg-cat
+tch146	Supprimer	termino	lg-fra
+tch148	Id	termino	lg-eng
+tch148	Id	termino	lg-spa
+tch148	Id	termino	lg-fra
+tch15	Id	termino	lg-fra
+tch15	Id	termino	lg-eng
+tch15	Id	termino	lg-cat
+tch15	Id	termino	lg-spa
 tch153	Col·lecció	termino	lg-cat
 tch153	Collection	termino	lg-eng
 tch153	Collection	termino	lg-fra
@@ -232,15 +222,14 @@ tch155	Projecte	termino	lg-cat
 tch155	Project	termino	lg-eng
 tch155	Projet	termino	lg-fra
 tch155	Proyecto	termino	lg-spa
-tch158	Historique	termino	lg-fra
 tch158	Històric	termino	lg-cat
 tch158	Histórico	termino	lg-spa
 tch158	Historical	termino	lg-eng
-tch160	Llistat	termino	lg-cat
 tch160	List	termino	lg-eng
 tch160	Liste	termino	lg-fra
 tch160	Listado	termino	lg-spa
 tch161	Identification	termino	lg-fra
+tch160	Llistat	termino	lg-cat
 tch161	Identificació	termino	lg-cat
 tch161	Identificación	termino	lg-spa
 tch161	Identification	termino	lg-eng
@@ -248,7 +237,6 @@ tch162	Id	termino	lg-cat
 tch162	Id	termino	lg-fra
 tch162	Id	termino	lg-spa
 tch162	Id	termino	lg-eng
-tch163	Tipo de medida	termino	lg-spa
 tch163	Tipus de mesura	termino	lg-cat
 tch163	Type of measure	termino	lg-eng
 tch163	Type de mesure	termino	lg-fra
@@ -259,17 +247,12 @@ tch164	Unidad	termino	lg-spa
 tch165	Projecte	termino	lg-cat
 tch165	Proyecto	termino	lg-spa
 tch165	Projet	termino	lg-fra
-tch136	Important fitxas amb imatges	termino	lg-cat
-tch145	Movable property	termino	lg-eng
-tch145	Biens meubles	termino	lg-fra
-tch165	Project	termino	lg-eng
+tch147	Especificacions de manipulació, transport, exposició	termino	lg-cat
+tch147	Handling, transport, exposure specifications	termino	lg-eng
+tch147	Spécifications relatives à la manipulation, au transport et à l''affichage	termino	lg-fra
 tch166	QDP	termino	lg-fra
 tch166	QDP	termino	lg-eng
 tch168	Se indicarán siempre que pueda saberse, todas las técnicas artísticas o artesanales que hayan sido empleadas en la ejecución de la pieza separadas por punto e introducidas por  estricto orden alfabético.	def	lg-spa
-tch17	Categoría	termino	lg-spa
-tch17	Categoria	termino	lg-cat
-tch17	Catégorie	termino	lg-fra
-tch17	Category	termino	lg-eng
 tch170	Autor de la fitxa	termino	lg-cat
 tch170	Auteur de la fiche	termino	lg-fra
 tch171	Interventions	termino	lg-fra
@@ -278,8 +261,6 @@ tch171	Interventions	termino	lg-eng
 tch171	Intervencions	termino	lg-cat
 tch172	Aquella que describa y/o reproduzca el objeto. En este campo se recogerán, siempre que exista, cualquier tipo de publicación en la que se haga mención específica de la obra objeto de la recogida de datos, incluyéndosebibliografía actualizada.	def	lg-spa
 tch172	Aquella que descriga i/o reproduesca l''objecte	def	lg-cat
-tch173	view_single_line	termino	lg-spa
-tch175	view_single_line	termino	lg-spa
 tch167	view_single_line	termino	lg-spa
 tch154	Descripció	termino	lg-cat
 tch152	Nombre del bien	termino	lg-spa
@@ -323,21 +304,8 @@ tch154	Descripción	termino	lg-spa
 tch154	Description	termino	lg-eng
 tch178	Ensembles	termino	lg-fra
 tch178	Conjunts	termino	lg-cat
-tch18	Proyecto	termino	lg-spa
-tch18	Projecte	termino	lg-cat
-tch18	Projet	termino	lg-fra
-tch18	Project	termino	lg-eng
-tch181	identifying_immovable	termino	lg-spa
 tch187	Col·lector/a	termino	lg-cat
 tch187	Collectionneur/neuse 	termino	lg-fra
-tch189	Listado	termino	lg-spa
-tch189	Llistat	termino	lg-cat
-tch189	Liste	termino	lg-fra
-tch189	List	termino	lg-eng
-tch19	General information	termino	lg-eng
-tch19	Información general	termino	lg-spa
-tch19	Information générale	termino	lg-fra
-tch19	Informació general	termino	lg-cat
 tch190	Indica el nombre de la persona, colectivo o institución de quien proviene el objeto al ingresar en el museo.	def	lg-spa
 tch190	Font d''ingrés	termino	lg-cat
 tch190	Indica el nom de la persona, col.lectiu o institució de qui prové l&#039;objecte en ingressar al museu.	def	lg-cat
@@ -354,27 +322,31 @@ tch194	Indica la data en què ha ingressat l’'objecte al museu.	def	lg-cat
 tch194	Data d''ingrés /referència recuperació	termino	lg-cat
 tch195	Lieux trouvés	termino	lg-fra
 tch195	Llocs de troballa	termino	lg-cat
-tch196	Listado	termino	lg-spa
-tch196	Liste	termino	lg-fra
-tch196	List	termino	lg-eng
 tch159	Edició	termino	lg-cat
 tch159	Edition	termino	lg-eng
 tch159	Édition	termino	lg-fra
-tch196	Llistat	termino	lg-cat
-tch197	Lieu de découverte	termino	lg-fra
-tch197	Place of discovery	termino	lg-eng
-tch197	Lugar de hallazgo	termino	lg-spa
-tch197	Lloc de troballa	termino	lg-cat
-tch198	Id	termino	lg-eng
-tch198	Id	termino	lg-cat
-tch198	Id	termino	lg-spa
-tch198	Id	termino	lg-fra
-tch199	Lugar de hallazgo	termino	lg-spa
-tch199	Place of discovery	termino	lg-eng
-tch199	Lieu de découverte	termino	lg-fra
-tch199	Lugar de hallazgo	termino	lg-cat
-tch20	Lista de temas	termino	lg-spa
-tch20	Topics list	termino	lg-eng
+tch165	Project	termino	lg-eng
+tch173	view_single_line	termino	lg-spa
+tch175	view_single_line	termino	lg-spa
+tch18	Proyecto	termino	lg-spa
+tch18	Projecte	termino	lg-cat
+tch18	Projet	termino	lg-fra
+tch18	Project	termino	lg-eng
+tch181	identifying_immovable	termino	lg-spa
+tch189	Listado	termino	lg-spa
+tch189	Llistat	termino	lg-cat
+tch189	Liste	termino	lg-fra
+tch189	List	termino	lg-eng
+tch19	General information	termino	lg-eng
+tch19	Información general	termino	lg-spa
+tch19	Informació general	termino	lg-cat
+tch196	Listado	termino	lg-spa
+tch196	Liste	termino	lg-fra
+tch196	List	termino	lg-eng
+tch17	Categoría	termino	lg-spa
+tch17	Categoria	termino	lg-cat
+tch17	Catégorie	termino	lg-fra
+tch17	Category	termino	lg-eng
 tch2	Registre	termino	lg-cat
 tch2	Registration	termino	lg-eng
 tch2	Enregistrement	termino	lg-fra
@@ -420,107 +392,75 @@ tch183	Mapa dels components	termino	lg-cat
 tch187	Collector	termino	lg-eng
 tch193	Documentació	termino	lg-cat
 tch193	Documentation	termino	lg-fra
-tch20	Llista de temes	termino	lg-cat
-tch20	Liste des thêmes 	termino	lg-fra
-tch200	Récupération des géolocalisations	termino	lg-fra
-tch200	Geolocalitzacions recuperació	termino	lg-cat
-tch200	Geolocalizaciones recuperación	termino	lg-spa
-tch200	Geolocations recovery	termino	lg-eng
-tch201	Geolocalización	termino	lg-spa
-tch201	Geolocation	termino	lg-eng
-tch201	Géolocalisation 	termino	lg-fra
-tch201	Geolocalització	termino	lg-cat
 tch204	Liste	termino	lg-fra
 tch204	Llistat	termino	lg-cat
-tch21	Nou	termino	lg-cat
-tch21	New	termino	lg-eng
-tch21	Nouveau	termino	lg-fra
-tch21	Nuevo	termino	lg-spa
-tch210	template_map	termino	lg-spa
-tch211	ts_web	termino	lg-spa
-tch213	documents_pdf	termino	lg-spa
 tch215	Liste	termino	lg-fra
-tch216	sets	termino	lg-spa
-tch217	items	termino	lg-spa
-tch218	Other identifying images	termino	lg-eng
-tch218	Otras imágenes identificativas	termino	lg-spa
-tch218	Altres imatges identificatives	termino	lg-cat
-tch218	Autres images d'identification	termino	lg-fra
-tch219	Identifying property	termino	lg-eng
-tch219	Inmoble identificatiu	termino	lg-cat
-tch219	Inmueble identificativo	termino	lg-spa
-tch219	Identification des biens	termino	lg-fra
-tch22	Esborrar	termino	lg-cat
-tch22	Borrar	termino	lg-spa
-tch22	Supprimer	termino	lg-fra
-tch22	Delete	termino	lg-eng
-tch220	Identifier les supports audiovisuels	termino	lg-fra
-tch220	Audivovisuales identificativos	termino	lg-spa
-tch220	Audiovisuals identificati	termino	lg-cat
-tch220	Identification audiovisuals	termino	lg-eng
-tch221	Llistat	termino	lg-cat
-tch221	List	termino	lg-eng
-tch221	Liste	termino	lg-fra
-tch221	Listado	termino	lg-spa
-tch222	identifying_audiovisual	termino	lg-spa
-tch223	PDF documents	termino	lg-eng
-tch223	Documentos PDF	termino	lg-spa
-tch223	Documents PDF	termino	lg-cat
 tch179	Bienes del conjunto	termino	lg-spa
 tch186	Fondo	termino	lg-spa
 tch186	Fond	termino	lg-eng
 tch186	Fons	termino	lg-cat
 tch186	Fond	termino	lg-fra
-tch223	Documents PDF	termino	lg-fra
-tch224	Audiovisuals	termino	lg-eng
-tch224	Audiovisuels	termino	lg-fra
-tch224	Audiovisuals	termino	lg-cat
-tch224	Audiovisuales	termino	lg-spa
-tch225	audiovisuals	termino	lg-spa
-tch226	Autres images	termino	lg-fra
-tch226	Other images	termino	lg-eng
-tch226	Altres imatges	termino	lg-cat
-tch226	Otras imágenes	termino	lg-spa
-tch227	identifying_other_images	termino	lg-spa
-tch228	other_images	termino	lg-spa
-tch229	List	termino	lg-eng
-tch229	Listado	termino	lg-spa
-tch229	Liste	termino	lg-fra
-tch23	Id	termino	lg-eng
-tch23	Id	termino	lg-cat
-tch23	Id	termino	lg-spa
-tch23	Id	termino	lg-fra
-tch230	Object	termino	lg-eng
-tch230	Objet	termino	lg-fra
-tch230	Objeto	termino	lg-spa
-tch230	Objecte	termino	lg-cat
-tch232	Relations	termino	lg-cat
-tch232	Relaciones	termino	lg-spa
-tch232	Relations	termino	lg-fra
-tch232	Relations	termino	lg-eng
-tch233	Project	termino	lg-eng
-tch233	Projet	termino	lg-fra
-tch233	Proyecto	termino	lg-spa
-tch233	Projecte	termino	lg-cat
-tch235	view_mosaic	termino	lg-spa
+tch196	Llistat	termino	lg-cat
+tch197	Lieu de découverte	termino	lg-fra
+tch197	Place of discovery	termino	lg-eng
+tch197	Lugar de hallazgo	termino	lg-spa
+tch197	Lloc de troballa	termino	lg-cat
+tch198	Id	termino	lg-eng
+tch198	Id	termino	lg-cat
+tch198	Id	termino	lg-spa
+tch198	Id	termino	lg-fra
+tch199	Lugar de hallazgo	termino	lg-spa
+tch199	Place of discovery	termino	lg-eng
+tch199	Lugar de hallazgo	termino	lg-cat
+tch20	Topics list	termino	lg-eng
+tch20	Llista de temes	termino	lg-cat
+tch20	Liste des thêmes	termino	lg-fra
+tch201	Exclus	termino	lg-fra
+tch201	excluidos	termino	lg-spa
+tch20	Lista de temas	termino	lg-spa
+tch21	New	termino	lg-eng
+tch21	Nouveau	termino	lg-fra
+tch21	Nuevo	termino	lg-spa
+tch210	template_map	termino	lg-spa
+tch21	Nou	termino	lg-cat
+tch211	ts_web	termino	lg-spa
+tch216	sets	termino	lg-spa
+tch217	items	termino	lg-spa
+tch218	Llistat	termino	lg-cat
+tch218	Liste	termino	lg-fra
+tch22	Esborrar	termino	lg-cat
+tch22	Borrar	termino	lg-spa
+tch22	Supprimer	termino	lg-fra
+tch22	Delete	termino	lg-eng
+tch221	List	termino	lg-eng
+tch221	Liste	termino	lg-fra
+tch221	Listado	termino	lg-spa
+tch218	Listado	termino	lg-spa
+tch219	Identifying property	termino	lg-eng
+tch219	Inmoble identificatiu	termino	lg-cat
+tch219	Inmueble identificativo	termino	lg-spa
+tch219	Identification des biens	termino	lg-fra
+tch220	Identifier les supports audiovisuels	termino	lg-fra
+tch220	Audivovisuales identificativos	termino	lg-spa
+tch220	Audiovisuals identificati	termino	lg-cat
+tch220	Identification audiovisuals	termino	lg-eng
+tch223	PDF documents	termino	lg-eng
+tch223	Documentos PDF	termino	lg-spa
+tch223	Documents PDF	termino	lg-cat
+tch221	Llistat	termino	lg-cat
+tch218	List	termino	lg-eng
+tch201	Exclossos	termino	lg-cat
+tch201	excluded	termino	lg-eng
 tch207	Tangible Heritage	termino	lg-spa
 tch208	Web tangible heritage	termino	lg-spa
-tch231	Publicación	termino	lg-spa
 tch209	web_tangible_heritage	termino	lg-spa
 tch204	Listado	termino	lg-spa
 tch204	List	termino	lg-eng
-tch231	Publicació	termino	lg-cat
-tch231	Publication	termino	lg-fra
-tch231	Publication	termino	lg-eng
-tch234	Marca	termino	lg-spa
-tch234	Marque	termino	lg-fra
-tch234	Marca	termino	lg-cat
 tch212	Fabricante	termino	lg-spa
 tch212	Maker	termino	lg-eng
 tch212	Fabricant	termino	lg-fra
 tch212	Fabricant	termino	lg-cat
 tch236	Datación de uso	termino	lg-spa
-tch236	Ese dating	termino	lg-eng
 tch236	Datació d'ús	termino	lg-cat
 tch214	Exclude	termino	lg-eng
 tch215	Listado	termino	lg-spa
@@ -538,6 +478,39 @@ tch205	Liste	termino	lg-fra
 tch205	List	termino	lg-eng
 tch214	exclude	termino	lg-spa
 tch214	exclure	termino	lg-fra
+tch24	Inscripcions	termino	lg-cat
+tch24	Inscriptions	termino	lg-fra
+tch241	Typologie	termino	lg-fra
+tch241	Tipologia	termino	lg-cat
+tch244	Géolocalisation 	termino	lg-fra
+tch244	Geolocalització	termino	lg-cat
+tch225	audiovisuals	termino	lg-spa
+tch228	other_images	termino	lg-spa
+tch229	List	termino	lg-eng
+tch229	Listado	termino	lg-spa
+tch229	Liste	termino	lg-fra
+tch230	Object	termino	lg-eng
+tch230	Objet	termino	lg-fra
+tch230	Objeto	termino	lg-spa
+tch230	Objecte	termino	lg-cat
+tch231	Publicación	termino	lg-spa
+tch231	Publicació	termino	lg-cat
+tch231	Publication	termino	lg-fra
+tch231	Publication	termino	lg-eng
+tch23	Id	termino	lg-eng
+tch23	Id	termino	lg-cat
+tch23	Id	termino	lg-spa
+tch23	Id	termino	lg-fra
+tch232	Relations	termino	lg-cat
+tch232	Relaciones	termino	lg-spa
+tch232	Relations	termino	lg-fra
+tch232	Relations	termino	lg-eng
+tch233	Project	termino	lg-eng
+tch233	Projet	termino	lg-fra
+tch233	Proyecto	termino	lg-spa
+tch234	Marca	termino	lg-spa
+tch234	Marque	termino	lg-fra
+tch234	Marca	termino	lg-cat
 tch238	Dernières modifications	termino	lg-fra
 tch238	Últims canvis	termino	lg-cat
 tch238	Últimos cambios	termino	lg-spa
@@ -546,17 +519,14 @@ tch239	Relaciones	termino	lg-spa
 tch239	Relations	termino	lg-eng
 tch239	Relations	termino	lg-fra
 tch239	Relacions	termino	lg-cat
-tch24	Inscripcions	termino	lg-cat
-tch24	Inscriptions	termino	lg-fra
 tch240	Dernières modifications	termino	lg-fra
 tch240	últimos cambios	termino	lg-spa
 tch240	Latest changes	termino	lg-eng
-tch240	Últims canvis	termino	lg-cat
-tch241	Typologie	termino	lg-fra
-tch241	Tipologia	termino	lg-cat
-tch244	Géolocalisation 	termino	lg-fra
-tch244	Geolocalització	termino	lg-cat
 tch246	image	termino	lg-spa
+tch25	Tema	termino	lg-cat
+tch25	Thème	termino	lg-fra
+tch25	Issue	termino	lg-eng
+tch25	Tema	termino	lg-spa
 tch248	Identificació	termino	lg-cat
 tch248	Identification	termino	lg-fra
 tch248	Identificación	termino	lg-spa
@@ -565,10 +535,6 @@ tch249	Id	termino	lg-spa
 tch249	Id	termino	lg-eng
 tch249	Id	termino	lg-fra
 tch249	Id	termino	lg-cat
-tch25	Tema	termino	lg-cat
-tch25	Thème	termino	lg-fra
-tch25	Issue	termino	lg-eng
-tch25	Tema	termino	lg-spa
 tch250	Publication	termino	lg-fra
 tch250	Publication	termino	lg-eng
 tch250	Publicable	termino	lg-cat
@@ -577,7 +543,6 @@ tch251	Titre	termino	lg-fra
 tch251	Title	termino	lg-eng
 tch251	Título	termino	lg-spa
 tch251	Titol	termino	lg-cat
-tch252	Resumen	termino	lg-cat
 tch252	Resume	termino	lg-eng
 tch252	Résumé	termino	lg-fra
 tch252	Resumen	termino	lg-spa
@@ -591,42 +556,15 @@ tch254	Proyecto	termino	lg-spa
 tch254	Project	termino	lg-eng
 tch255	Objecte identificatiu	termino	lg-cat
 tch255	Identification object	termino	lg-eng
-tch255	Objeto identificativo	termino	lg-spa
-tch255	Objet identifié	termino	lg-fra
-tch256	identification photograph	termino	lg-eng
-tch256	Fotografia identificativa	termino	lg-cat
-tch256	Fotografía identificativa	termino	lg-spa
-tch256	Photo d'identité	termino	lg-fra
-tch257	Descripción	termino	lg-cat
-tch257	Description	termino	lg-eng
-tch257	Description	termino	lg-fra
-tch257	Descripción	termino	lg-spa
-tch258	Objectos	termino	lg-spa
-tch258	Objets	termino	lg-fra
-tch258	Objectes	termino	lg-cat
-tch258	Objects	termino	lg-eng
-tch259	Photographies 	termino	lg-fra
-tch259	Photographs	termino	lg-eng
-tch259	Fotografías	termino	lg-spa
-tch259	Fotografias	termino	lg-cat
-tch26	Project	termino	lg-eng
-tch26	Proyecto	termino	lg-spa
-tch26	Projecte	termino	lg-cat
-tch26	Projet	termino	lg-fra
-tch260	Nou	termino	lg-cat
-tch260	Nuevo	termino	lg-spa
-tch260	Nouveau	termino	lg-fra
-tch260	New	termino	lg-eng
-tch261	Delete	termino	lg-eng
-tch261	Borrar	termino	lg-spa
-tch261	Supprimer	termino	lg-fra
-tch261	Esborrar	termino	lg-cat
-tch262	Liste	termino	lg-fra
-tch262	Listado	termino	lg-spa
-tch262	Llistat	termino	lg-cat
-tch262	List	termino	lg-eng
-tch263	Liste	termino	lg-fra
-tch263	Listado	termino	lg-spa
+tch226	Autres images	termino	lg-fra
+tch226	Other images	termino	lg-eng
+tch226	Otras imágenes	termino	lg-spa
+tch224	Audiovisuals	termino	lg-eng
+tch224	Audiovisuels	termino	lg-fra
+tch224	Audiovisuals	termino	lg-cat
+tch224	Audiovisuales	termino	lg-spa
+tch223	Documents PDF	termino	lg-fra
+tch235	view_mosaic	termino	lg-spa
 tch247	TCH	termino	lg-spa
 tch242	Graduación / escala / ratio	termino	lg-spa
 tch24	Inscripciones	termino	lg-spa
@@ -650,31 +588,19 @@ tch245	Municipality	termino	lg-eng
 tch245	Municipalité	termino	lg-fra
 tch243	Lugar de recuperación	termino	lg-spa
 tch243	Recovery place	termino	lg-eng
+tch266	Typologies of materials	termino	lg-eng
+tch266	Tipologies de materials	termino	lg-cat
+tch266	Typologies des matériaux	termino	lg-fra
+tch26	Project	termino	lg-eng
+tch26	Proyecto	termino	lg-spa
+tch26	Projecte	termino	lg-cat
+tch26	Projet	termino	lg-fra
+tch263	Liste	termino	lg-fra
+tch263	Listado	termino	lg-spa
 tch263	List	termino	lg-eng
 tch264	List	termino	lg-eng
 tch264	Listado	termino	lg-spa
 tch264	Liste	termino	lg-fra
-tch265	Typologie des panneaux	termino	lg-fra
-tch265	Tipología de panel	termino	lg-spa
-tch265	Tipologia de panel	termino	lg-cat
-tch265	Panel typology	termino	lg-eng
-tch266	Tipologias de paneles de exposición	termino	lg-spa
-tch266	Tipologies de panels d&#039;expositions	termino	lg-cat
-tch266	Typologies des panneaux d'exposition	termino	lg-fra
-tch266	Types of exhibition panels	termino	lg-eng
-tch267	Identificació	termino	lg-cat
-tch267	Identificación	termino	lg-spa
-tch267	Identification	termino	lg-eng
-tch267	Identification	termino	lg-fra
-tch268	Id	termino	lg-fra
-tch268	Id	termino	lg-eng
-tch268	Id	termino	lg-cat
-tch268	Id	termino	lg-spa
-tch269	Typology	termino	lg-eng
-tch269	TIpologia	termino	lg-cat
-tch269	Typologie	termino	lg-fra
-tch269	Tipología	termino	lg-spa
-tch27	Information générale	termino	lg-fra
 tch27	Informació general	termino	lg-cat
 tch27	Información general	termino	lg-spa
 tch27	General information	termino	lg-eng
@@ -693,7 +619,52 @@ tch272	Delete	termino	lg-eng
 tch273	List	termino	lg-eng
 tch273	Liste	termino	lg-fra
 tch273	List	termino	lg-cat
-tch273	Listado	termino	lg-spa
+tch265	Typologie des panneaux	termino	lg-fra
+tch265	Tipología de panel	termino	lg-spa
+tch265	Tipologia de panel	termino	lg-cat
+tch265	Panel typology	termino	lg-eng
+tch277	Descriptor	termino	lg-cat
+tch277	Descripteur	termino	lg-fra
+tch255	Objeto identificativo	termino	lg-spa
+tch255	Objet identifié	termino	lg-fra
+tch256	identification photograph	termino	lg-eng
+tch256	Fotografia identificativa	termino	lg-cat
+tch256	Fotografía identificativa	termino	lg-spa
+tch256	Photo d'identité	termino	lg-fra
+tch257	Description	termino	lg-eng
+tch257	Description	termino	lg-fra
+tch257	Descripción	termino	lg-spa
+tch258	Objectos	termino	lg-spa
+tch258	Objets	termino	lg-fra
+tch258	Objectes	termino	lg-cat
+tch258	Objects	termino	lg-eng
+tch259	Photographies	termino	lg-fra
+tch259	Photographs	termino	lg-eng
+tch259	Fotografías	termino	lg-spa
+tch259	Fotografias	termino	lg-cat
+tch260	Nou	termino	lg-cat
+tch260	Nuevo	termino	lg-spa
+tch260	Nouveau	termino	lg-fra
+tch260	New	termino	lg-eng
+tch261	Delete	termino	lg-eng
+tch261	Borrar	termino	lg-spa
+tch261	Supprimer	termino	lg-fra
+tch261	Esborrar	termino	lg-cat
+tch262	Liste	termino	lg-fra
+tch262	Listado	termino	lg-spa
+tch262	Llistat	termino	lg-cat
+tch262	List	termino	lg-eng
+tch267	Identificación	termino	lg-spa
+tch267	Identification	termino	lg-eng
+tch267	Identification	termino	lg-fra
+tch268	Id	termino	lg-fra
+tch268	Id	termino	lg-eng
+tch268	Id	termino	lg-cat
+tch268	Id	termino	lg-spa
+tch269	Typology	termino	lg-eng
+tch269	TIpologia	termino	lg-cat
+tch269	Typologie	termino	lg-fra
+tch269	Tipología	termino	lg-spa
 tch274	Relaciones	termino	lg-spa
 tch274	Relacions	termino	lg-cat
 tch274	Relations	termino	lg-eng
@@ -702,36 +673,28 @@ tch275	Father	termino	lg-eng
 tch275	Padre	termino	lg-spa
 tch275	Pare	termino	lg-cat
 tch275	Père	termino	lg-fra
-tch276	Enfants	termino	lg-fra
 tch276	Hijos	termino	lg-spa
 tch276	Fills	termino	lg-cat
 tch276	Children	termino	lg-eng
-tch277	Descriptor	termino	lg-cat
-tch277	Descripteur	termino	lg-fra
-tch277	Descriptor	termino	lg-eng
-tch277	Descriptor	termino	lg-spa
-tch278	Listado tesauro	termino	lg-spa
-tch278	Thesaurus list	termino	lg-eng
-tch278	Liste de thésaurus	termino	lg-fra
 tch279	mapa de sección	termino	lg-spa
 tch279	carte de la section	termino	lg-fra
 tch279	Section map	termino	lg-eng
+tch296	fondo	def	lg-spa
+tch297	fondo	def	lg-spa
+tch305	colector	def	lg-spa
+tch278	Listado tesauro	termino	lg-spa
+tch278	Thesaurus list	termino	lg-eng
+tch278	Liste de thésaurus	termino	lg-fra
 tch28	Locations list	termino	lg-eng
 tch28	Liste des emplacements	termino	lg-fra
 tch28	Lista de ubicaciones	termino	lg-spa
 tch28	Llistat	termino	lg-cat
-tch280	Exposicions	termino	lg-cat
-tch280	Expositions	termino	lg-fra
-tch280	Exposiciones	termino	lg-spa
-tch280	Exhibitions	termino	lg-eng
 tch281	catalog	termino	lg-spa
 tch282	publication	termino	lg-spa
 tch283	title	termino	lg-spa
 tch284	dating	termino	lg-spa
 tch285	outstanding	termino	lg-spa
-tch286	pictures	termino	lg-spa
 tch287	objects	termino	lg-spa
-tch288	identifying_images_data	termino	lg-spa
 tch289	identifying_images	termino	lg-spa
 tch29	Nou	termino	lg-cat
 tch29	Nuevo	termino	lg-spa
@@ -743,10 +706,8 @@ tch292	name_data	termino	lg-spa
 tch293	name	termino	lg-spa
 tch294	material_data	termino	lg-spa
 tch295	material	termino	lg-spa
-tch296	fondo	def	lg-spa
 tch296	fund_data	termino	lg-spa
-tch297	fondo	def	lg-spa
-tch298	collection_data	termino	lg-spa
+tch301	typology	termino	lg-spa
 tch299	collection	termino	lg-spa
 tch3	Categories	termino	lg-eng
 tch3	Catégories	termino	lg-fra
@@ -757,13 +718,11 @@ tch30	Borrar	termino	lg-spa
 tch30	Delete	termino	lg-eng
 tch30	Supprimer	termino	lg-fra
 tch300	typology_data	termino	lg-spa
-tch301	typology	termino	lg-spa
 tch302	technique_data	termino	lg-spa
 tch303	technique	termino	lg-spa
-tch304	recovery_mode	termino	lg-spa
-tch305	manifold	termino	lg-spa
-tch305	colector	def	lg-spa
 tch306	recovery_place	termino	lg-spa
+tch304	recovery_mode	termino	lg-spa
+tch305	colector	termino	lg-spa
 tch307	curator	termino	lg-spa
 tch308	recovery_date	termino	lg-spa
 tch309	source	termino	lg-spa
@@ -771,8 +730,6 @@ tch31	Id	termino	lg-fra
 tch31	Id	termino	lg-eng
 tch31	Id	termino	lg-cat
 tch31	Id	termino	lg-spa
-tch310	municipality	termino	lg-spa
-tch311	geolocation_data	termino	lg-spa
 tch312	map	termino	lg-spa
 tch313	description	termino	lg-spa
 tch314	inscriptions	termino	lg-spa
@@ -781,13 +738,12 @@ tch316	trademark	termino	lg-spa
 tch317	manufacturer	termino	lg-spa
 tch318	scale	termino	lg-spa
 tch319	measurements_data	termino	lg-spa
-tch32	mark_position	termino	lg-spa
 tch320	own_bibliography_data	termino	lg-spa
+tch310	municipality	termino	lg-spa
 tch321	related_bibliography	termino	lg-spa
 tch322	publications	termino	lg-spa
 tch323	interpretation	termino	lg-spa
 tch324	use_dating	termino	lg-spa
-tch325	indexation_data	termino	lg-spa
 tch326	indexation	termino	lg-spa
 tch327	QDP	termino	lg-eng
 tch327	QDP	termino	lg-fra
@@ -795,41 +751,65 @@ tch328	measurements	termino	lg-spa
 tch329	Publicable	termino	lg-cat
 tch329	publication	termino	lg-eng
 tch329	Publicable	termino	lg-spa
-tch329	Publication 	termino	lg-fra
+tch329	Publication	termino	lg-fra
+tch330	own_bibliography	termino	lg-spa
 tch33	Ubicació	termino	lg-cat
 tch33	Location	termino	lg-eng
 tch33	Localisation	termino	lg-fra
 tch33	Ubicación	termino	lg-spa
-tch330	own_bibliography	termino	lg-spa
 tch331	related_bibliography _data	termino	lg-spa
 tch332	publications_data	termino	lg-spa
 tch333	global_search	termino	lg-spa
-tch336	Inmobles	termino	lg-cat
 tch336	Estate	termino	lg-eng
-tch336	Biens immobiliers	termino	lg-fra
 tch336	Inmuebles	termino	lg-spa
 tch337	Excluded	termino	lg-eng
+tch336	Inmobles	termino	lg-cat
 tch337	exclus	termino	lg-fra
 tch337	exluidos	termino	lg-spa
 tch338	Liste	termino	lg-fra
 tch338	List	termino	lg-eng
 tch338	Listado	termino	lg-spa
 tch339	ts_technique	termino	lg-spa
+tch340	ts_material	termino	lg-spa
 tch34	Projecte	termino	lg-cat
 tch34	Projet	termino	lg-fra
 tch34	Project	termino	lg-eng
 tch34	Proyecto	termino	lg-spa
-tch340	ts_material	termino	lg-spa
 tch341	relations	termino	lg-spa
 tch342	relations	termino	lg-spa
 tch343	ts_onomastic	termino	lg-spa
 tch344	relations	termino	lg-spa
 tch345	ts_thematic	termino	lg-spa
 tch346	relations	termino	lg-spa
-tch35	Material's list	termino	lg-eng
+tch32	mark_position	termino	lg-spa
+tch277	Descriptor	termino	lg-eng
+tch277	Descriptor	termino	lg-spa
+tch280	Exposicions	termino	lg-cat
+tch280	Expositions	termino	lg-fra
+tch280	Exposiciones	termino	lg-spa
+tch280	Exhibitions	termino	lg-eng
+tch334	Documentos	termino	lg-spa
+tch334	Documents	termino	lg-cat
+tch334	Documents	termino	lg-fra
+tch334	Documents	termino	lg-eng
+tch335	Audiovisuels	termino	lg-fra
+tch335	Audiovisuals	termino	lg-eng
+tch335	Audiovisuals	termino	lg-cat
 tch35	Liste des matériaux	termino	lg-fra
 tch35	Llista de materials	termino	lg-cat
 tch35	Lista de materiales	termino	lg-spa
+tch350	Códigos QR	termino	lg-spa
+tch347	Anàlisi i interpretació simbòlica, social ...	termino	lg-cat
+tch347	Analysis and symbolic, social interpretation...	termino	lg-eng
+tch348	Ubicación (topográfico)	termino	lg-spa
+tch348	Ubicació (topográficos)	termino	lg-cat
+tch348	Localisation (topographique)	termino	lg-fra
+tch348	Location (topographic)	termino	lg-eng
+tch349	view_single_line	termino	lg-spa
+tch35	Material's list	termino	lg-eng
+tch350	QR Codes	termino	lg-fra
+tch350	Codis QR	termino	lg-cat
+tch350	QR codes	termino	lg-eng
 tch351	Add metadata	termino	lg-eng
 tch351	Add metadata	termino	lg-spa
 tch351	Ajouter des métadonnées / Ajout de métadonnées	termino	lg-fra
@@ -840,9 +820,11 @@ tch355	Inmueble	termino	lg-cat
 tch355	Inmueble	termino	lg-spa
 tch355	Property	termino	lg-eng
 tch355	Bien immobilier	termino	lg-fra
+tch356	Restauració	termino	lg-cat
+tch356	Restauration	termino	lg-fra
+tch356	Restoration	termino	lg-eng
 tch357	Indexación temática	termino	lg-spa
 tch357	Thematic indexation	termino	lg-eng
-tch357	Indexació temàtica	termino	lg-cat
 tch357	Indexation par thématique	termino	lg-fra
 tch358	informant	termino	lg-spa
 tch359	related	termino	lg-spa
@@ -856,28 +838,6 @@ tch362	publication	termino	lg-spa
 tch363	title	termino	lg-spa
 tch364	panel_typology	termino	lg-spa
 tch365	summary	termino	lg-spa
-tch334	Documentos	termino	lg-spa
-tch334	Documents	termino	lg-cat
-tch334	Documents	termino	lg-fra
-tch334	Documents	termino	lg-eng
-tch335	Audiovisuels	termino	lg-fra
-tch335	Audiovisuals	termino	lg-eng
-tch335	Audiovisuals	termino	lg-cat
-tch356	Restauració	termino	lg-cat
-tch356	Restauration	termino	lg-fra
-tch356	Restoration	termino	lg-eng
-tch348	Ubicación (topográfico)	termino	lg-spa
-tch348	Ubicació (topográficos)	termino	lg-cat
-tch348	Localisation (topographique)	termino	lg-fra
-tch348	Location (topographic)	termino	lg-eng
-tch349	view_single_line	termino	lg-spa
-tch347	Analyse et interprétation symbolique et sociale...	termino	lg-fra
-tch347	Anàlisi i interpretació simbòlica, social ...	termino	lg-cat
-tch347	Analysis and symbolic, social interpretation...	termino	lg-eng
-tch350	Códigos QR	termino	lg-spa
-tch350	QR Codes	termino	lg-fra
-tch350	Codis QR	termino	lg-cat
-tch350	QR codes	termino	lg-eng
 tch366	body	termino	lg-spa
 tch367	identifying_object	termino	lg-spa
 tch368	identifying_image	termino	lg-spa
@@ -886,7 +846,6 @@ tch37	Nou	termino	lg-cat
 tch37	Nouveau	termino	lg-fra
 tch37	New	termino	lg-eng
 tch37	Nuevo	termino	lg-spa
-tch370	images	termino	lg-spa
 tch371	immovable	termino	lg-spa
 tch372	father	termino	lg-spa
 tch373	children	termino	lg-spa
@@ -900,9 +859,8 @@ tch38	Borrar	termino	lg-spa
 tch38	Esborrar	termino	lg-cat
 tch38	Supprimer	termino	lg-fra
 tch38	Delete	termino	lg-eng
-tch380	section_tipo	termino	lg-spa
-tch381	geolocation_data_geojson	termino	lg-spa
 tch382	measure_type	termino	lg-spa
+tch380	section_tipo	termino	lg-spa
 tch383	measure_value	termino	lg-spa
 tch384	measure_unit	termino	lg-spa
 tch385	measure_element	termino	lg-spa
@@ -921,7 +879,6 @@ tch394	Liste	termino	lg-fra
 tch394	Llistat	termino	lg-cat
 tch394	Listado	termino	lg-spa
 tch395	Listado tesauro	termino	lg-spa
-tch395	Liste de thésaurus	termino	lg-fra
 tch395	Thesaurus list	termino	lg-eng
 tch396	news	termino	lg-spa
 tch397	Time frame	termino	lg-eng
@@ -940,6 +897,14 @@ tch4	Temas	termino	lg-spa
 tch40	Matériel	termino	lg-fra
 tch40	Material	termino	lg-eng
 tch40	Material	termino	lg-spa
+tch411	Documents	termino	lg-fra
+tch438	Annotacions	termino	lg-cat
+tch438	Notes	termino	lg-fra
+tch386	Images	termino	lg-fra
+tch386	images	termino	lg-eng
+tch387	Observaciones	termino	lg-spa
+tch387	Observacions	termino	lg-cat
+tch387	Observations	termino	lg-eng
 tch40	Material	termino	lg-cat
 tch400	Noticias	termino	lg-spa
 tch400	Nouvelles	termino	lg-fra
@@ -948,41 +913,13 @@ tch400	News	termino	lg-eng
 tch401	municipality	termino	lg-spa
 tch402	DIV	termino	lg-fra
 tch402	DIV	termino	lg-eng
+tch402	DIV	termino	lg-spa
 tch403	Συγγένειες	termino	lg-ell
 tch403	Relazioni	termino	lg-ita
 tch403	Relations	termino	lg-fra
 tch403	Relaciones	termino	lg-spa
-tch403	Relacions	termino	lg-cat
 tch403	Relations	termino	lg-eng
 tch404	parents	termino	lg-spa
-tch411	Documents	termino	lg-fra
-tch387	Observaciones	termino	lg-spa
-tch402	DIV	termino	lg-spa
-tch387	Observacions	termino	lg-cat
-tch387	Observations	termino	lg-eng
-tch386	imágenes	termino	lg-spa
-tch386	Images	termino	lg-fra
-tch386	images	termino	lg-eng
-tch386	Imatges	termino	lg-cat
-tch41	Fecha boletín declaración	termino	lg-spa
-tch41	Declaration bulletin date	termino	lg-eng
-tch41	Date du bulletin de déclaration	termino	lg-fra
-tch41	Data butlletí declaració	termino	lg-cat
-tch407	Régimen de protección	termino	lg-spa
-tch407	Régime de protection	termino	lg-fra
-tch407	Regimen de protecció	termino	lg-cat
-tch407	Protection regime	termino	lg-eng
-tch410	Medidas especiales	termino	lg-spa
-tch410	Mesures spéciales	termino	lg-fra
-tch410	Mesures especials	termino	lg-cat
-tch408	Numeración Nacional Registro de BIC	termino	lg-spa
-tch408	National Numbering Registry	termino	lg-eng
-tch408	Numeració Nacional Registre de BIC	termino	lg-cat
-tch408	Registre national de numérotation BIC	termino	lg-fra
-tch409	Otra numeración	termino	lg-spa
-tch409	Other numbering	termino	lg-eng
-tch409	Altra numeració	termino	lg-cat
-tch409	Autre numérotation	termino	lg-fra
 tch405	Protección administrativa	termino	lg-spa
 tch405	Protection administrative	termino	lg-fra
 tch405	Administrative protection	termino	lg-eng
@@ -991,15 +928,32 @@ tch406	Protección	termino	lg-spa
 tch406	Protecció	termino	lg-cat
 tch406	Protection	termino	lg-eng
 tch406	Protection	termino	lg-fra
-tch416	ts_chronological	termino	lg-spa
+tch407	Régimen de protección	termino	lg-spa
+tch407	Régime de protection	termino	lg-fra
+tch407	Regimen de protecció	termino	lg-cat
+tch407	Protection regime	termino	lg-eng
+tch408	National Numbering Registry	termino	lg-eng
+tch408	Numeració Nacional Registre de BIC	termino	lg-cat
+tch408	Registre national de numérotation BIC	termino	lg-fra
+tch409	Otra numeración	termino	lg-spa
+tch409	Other numbering	termino	lg-eng
+tch409	Altra numeració	termino	lg-cat
+tch409	Autre numérotation	termino	lg-fra
+tch41	Fecha boletín declaración	termino	lg-spa
+tch41	Declaration bulletin date	termino	lg-eng
+tch41	Date du bulletin de déclaration	termino	lg-fra
+tch41	Data butlletí declaració	termino	lg-cat
+tch410	Medidas especiales	termino	lg-spa
+tch410	Mesures spéciales	termino	lg-fra
+tch410	Mesures especials	termino	lg-cat
 tch417	relations	termino	lg-spa
+tch416	ts_chronological	termino	lg-spa
 tch418	term_id	termino	lg-spa
 tch419	source_name	termino	lg-spa
 tch42	Projet	termino	lg-fra
 tch42	Project	termino	lg-eng
 tch42	Projecte	termino	lg-cat
 tch42	Proyecto	termino	lg-spa
-tch420	source_surname	termino	lg-spa
 tch421	Picture	termino	lg-eng
 tch421	Imagen	termino	lg-spa
 tch421	Image	termino	lg-fra
@@ -1020,7 +974,6 @@ tch426	Liste	termino	lg-fra
 tch427	Registrations	termino	lg-eng
 tch427	Inscriptions	termino	lg-cat
 tch427	Inscriptions	termino	lg-fra
-tch427	Inscripciones	termino	lg-spa
 tch428	Identificación	termino	lg-spa
 tch428	Identification	termino	lg-eng
 tch428	Identification	termino	lg-fra
@@ -1033,7 +986,6 @@ tch430	Position	termino	lg-eng
 tch430	Posición	termino	lg-spa
 tch430	Position	termino	lg-fra
 tch430	Posició	termino	lg-cat
-tch431	Inscription	termino	lg-fra
 tch431	Inscripción	termino	lg-spa
 tch431	Inscripció	termino	lg-cat
 tch431	Inscription	termino	lg-eng
@@ -1052,36 +1004,16 @@ tch434	Liste	termino	lg-fra
 tch435	mark_data	termino	lg-spa
 tch436	mark_inscription	termino	lg-spa
 tch437	mark_images	termino	lg-spa
-tch438	Annotacions	termino	lg-cat
-tch438	Notes	termino	lg-fra
 tch439	Alt : mesure	termino	lg-fra
 tch439	Alt: mesures	termino	lg-cat
-tch439	Alt: medidas	termino	lg-spa
-tch439	Alt: measure	termino	lg-eng
-tch44	Liste	termino	lg-fra
-tch44	Llistat	termino	lg-cat
-tch444	Context of use	termino	lg-eng
-tch444	Contexte d'utilisation	termino	lg-fra
-tch444	Context d&#039;ús	termino	lg-cat
-tch444	Contexto de uso	termino	lg-spa
-tch445	Precisión d&#039;ús	termino	lg-cat
-tch445	Precisiones de uso	termino	lg-spa
 tch411	Documentos	termino	lg-spa
 tch411	Documents	termino	lg-eng
 tch413	Documentos	termino	lg-spa
 tch413	Documents	termino	lg-eng
 tch413	Documents	termino	lg-cat
 tch413	Documents	termino	lg-fra
-tch43	Identificación	termino	lg-spa
 tch438	Notas	termino	lg-spa
 tch438	Notes	termino	lg-eng
-tch43	Identification	termino	lg-fra
-tch43	Identification	termino	lg-eng
-tch43	Identificació	termino	lg-cat
-tch440	Valoración	termino	lg-spa
-tch440	Valoració	termino	lg-cat
-tch440	Assessment	termino	lg-eng
-tch440	Évaluation	termino	lg-fra
 tch441	view_single_line	termino	lg-spa
 tch442	Enlaces	termino	lg-spa
 tch442	Links	termino	lg-eng
@@ -1094,47 +1026,38 @@ tch412	Boletín o Diario Oficial	termino	lg-spa
 tch412	Bulletin or Official Gazette	termino	lg-eng
 tch412	Butlletí o Diari Oficial	termino	lg-cat
 tch412	Journal officiel	termino	lg-fra
-tch414	Fecha	termino	lg-spa
-tch414	Date	termino	lg-eng
-tch414	Date	termino	lg-fra
-tch414	Data	termino	lg-cat
 tch415	Procesos	termino	lg-spa
 tch415	Processes	termino	lg-eng
 tch415	Procédures	termino	lg-fra
 tch415	Processos	termino	lg-cat
-tch44	Listado	termino	lg-spa
-tch44	List	termino	lg-eng
-tch424	Relationships	termino	lg-eng
-tch424	Relacions	termino	lg-cat
-tch445	Accuracy of use	termino	lg-eng
-tch445	Précision de l'utilisation	termino	lg-fra
-tch446	Ús	termino	lg-cat
-tch446	Use	termino	lg-eng
-tch446	Utilisation	termino	lg-fra
-tch446	Uso	termino	lg-spa
 tch447	¿Cómo se usa?	termino	lg-spa
 tch447	Comment l'utilise-t-on ?	termino	lg-fra
 tch447	How is it used?	termino	lg-eng
 tch447	Com es fa servir?	termino	lg-cat
 tch448	Source d'information	termino	lg-fra
-tch449	¿Quien lo usa?	termino	lg-spa
-tch449	Qui ho fa servir?	termino	lg-cat
-tch449	Who uses it?	termino	lg-eng
-tch449	Qui l'utilise ?	termino	lg-fra
-tch450	Quand est-il utilisé ?	termino	lg-fra
-tch450	Quan es fa servir?	termino	lg-cat
-tch450	¿Cuando se usa?	termino	lg-spa
-tch450	When is it used?	termino	lg-eng
-tch451	A on es fa servir?	termino	lg-cat
-tch451	¿Donde se usa?	termino	lg-spa
-tch451	Où est-il utilisé ?	termino	lg-fra
-tch451	Where is it used?	termino	lg-eng
-tch452	documents_titles	termino	lg-spa
 tch453	Bibliographical reference	termino	lg-eng
 tch453	Referéncia bibliográficas	termino	lg-spa
 tch453	Referències bibliografiques	termino	lg-cat
 tch453	Références bibliographiques	termino	lg-fra
-tch454	Place of discovery - public information	termino	lg-eng
+tch414	Delete	termino	lg-eng
+tch414	Esborrar	termino	lg-cat
+tch414	Supprimer	termino	lg-fra
+tch424	Relationships	termino	lg-eng
+tch424	Relacions	termino	lg-cat
+tch43	Identification	termino	lg-fra
+tch43	Identification	termino	lg-eng
+tch43	Identificació	termino	lg-cat
+tch439	Alt: medidas	termino	lg-spa
+tch439	Alt: measure	termino	lg-eng
+tch44	Liste	termino	lg-fra
+tch44	Llistat	termino	lg-cat
+tch44	Listado	termino	lg-spa
+tch44	List	termino	lg-eng
+tch440	Valoración	termino	lg-spa
+tch440	Valoració	termino	lg-cat
+tch440	Assessment	termino	lg-eng
+tch440	Évaluation	termino	lg-fra
+tch452	documents_titles	termino	lg-spa
 tch454	Lloc de troballa - informació pública	termino	lg-cat
 tch454	Lugar de hallazgo - información pública	termino	lg-spa
 tch454	Lieu de la découverte - informations publiques	termino	lg-fra
@@ -1160,44 +1083,40 @@ tch459	Listado	termino	lg-spa
 tch460	Liste de thésaurus	termino	lg-fra
 tch460	Listado tesauro	termino	lg-spa
 tch460	Thesaurus list	termino	lg-eng
-tch461	didactic	termino	lg-spa
 tch462	exclude	termino	lg-spa
+tch461	didactic	termino	lg-spa
 tch462	exclure	termino	lg-fra
 tch462	Exclude	termino	lg-eng
 tch463	Color	termino	lg-eng
 tch463	Color	termino	lg-cat
-tch463	Color	termino	lg-spa
 tch463	Couleur	termino	lg-fra
-tch464	Tonalité	termino	lg-fra
-tch464	Tonalidades	termino	lg-spa
-tch464	Shades	termino	lg-eng
-tch464	Tonalitats	termino	lg-cat
-tch465	Identificació	termino	lg-cat
-tch465	Identificación	termino	lg-spa
-tch465	Identification	termino	lg-eng
-tch465	Identification	termino	lg-fra
-tch466	Id	termino	lg-cat
-tch466	Id	termino	lg-eng
-tch466	Id	termino	lg-spa
-tch466	Id	termino	lg-fra
-tch467	Name	termino	lg-eng
-tch467	Nom	termino	lg-cat
-tch467	Nombre	termino	lg-spa
-tch467	Prénom	termino	lg-fra
-tch468	css valeur 	termino	lg-fra
-tch468	css valor	termino	lg-spa
-tch468	css valor	termino	lg-cat
-tch468	css value	termino	lg-eng
-tch469	Proyecto	termino	lg-spa
-tch469	Projet	termino	lg-fra
-tch469	Project	termino	lg-eng
-tch469	Projecte	termino	lg-cat
+tch444	Context of use	termino	lg-eng
+tch444	Contexte d'utilisation	termino	lg-fra
+tch444	Context d&#039;ús	termino	lg-cat
+tch444	Contexto de uso	termino	lg-spa
+tch445	Precisión d&#039;ús	termino	lg-cat
+tch445	Precisiones de uso	termino	lg-spa
+tch445	Accuracy of use	termino	lg-eng
+tch446	Ús	termino	lg-cat
+tch446	Use	termino	lg-eng
+tch446	Utilisation	termino	lg-fra
+tch446	Uso	termino	lg-spa
+tch449	¿Quien lo usa?	termino	lg-spa
+tch449	Qui ho fa servir?	termino	lg-cat
+tch449	Who uses it?	termino	lg-eng
+tch449	Qui l'utilise ?	termino	lg-fra
+tch450	Quand est-il utilisé ?	termino	lg-fra
+tch450	Quan es fa servir?	termino	lg-cat
+tch450	¿Cuando se usa?	termino	lg-spa
+tch450	When is it used?	termino	lg-eng
+tch451	A on es fa servir?	termino	lg-cat
+tch451	¿Donde se usa?	termino	lg-spa
+tch451	Où est-il utilisé ?	termino	lg-fra
+tch451	Where is it used?	termino	lg-eng
 tch47	Id	termino	lg-cat
 tch47	Id	termino	lg-fra
 tch47	Indica el número de registro que identifica el objeto dentro de la colección. Todos los objetos de un museo han de tener un número de inventario propio, ya sea de forma individual o como parte de un conjunto mediante sufijos numéricos. Es importante que el museo informe correctamente el campo Fitxa/Conjunto para poder garantizar el buen funcionamiento del programa.	def	lg-spa
 tch47	Indica el número de registre que identifica l’objecte dins la col·lecció. Tots els objectes d’un museu han de tenir un número d’inventari propi, ja sigui de forma individual o com a part d’un conjunt mitjançant sufixos numèrics. És important que el museu informe correctament el camp Fitxa/Conjunt per poder garantir el bon funcionament del programa.	def	lg-cat
-tch470	Liste	termino	lg-fra
-tch470	Llidtst	termino	lg-cat
 tch45	Nuevo	termino	lg-spa
 tch47	Id	termino	lg-eng
 tch448	Source of information	termino	lg-eng
@@ -1208,52 +1127,35 @@ tch46	Borrar	termino	lg-spa
 tch46	Esborrar	termino	lg-cat
 tch46	Supprimer	termino	lg-fra
 tch46	Delete	termino	lg-eng
+tch464	Tonalidades	termino	lg-spa
+tch464	Shades	termino	lg-eng
+tch464	Tonalitats	termino	lg-cat
+tch469	Proyecto	termino	lg-spa
+tch469	Projet	termino	lg-fra
+tch469	Project	termino	lg-eng
+tch469	Projecte	termino	lg-cat
+tch470	Liste	termino	lg-fra
+tch470	Llidtst	termino	lg-cat
 tch470	List	termino	lg-eng
 tch470	Listado	termino	lg-spa
 tch471	color	termino	lg-spa
 tch472	Nou	termino	lg-cat
 tch472	Nuevo	termino	lg-spa
 tch472	New	termino	lg-eng
-tch472	Nouveau	termino	lg-fra
 tch473	images_footer	termino	lg-spa
 tch474	identifying_images_footer	termino	lg-spa
 tch475	Indexations	termino	lg-fra
 tch475	Indexaciones	termino	lg-spa
 tch475	Indexacions	termino	lg-cat
 tch475	Indexations	termino	lg-eng
-tch476	Usable en indexación	termino	lg-cat
-tch476	Utilisable pour l'indexation	termino	lg-fra
-tch476	Usable en indexación	termino	lg-spa
-tch476	Usable in indexing	termino	lg-eng
-tch477	Activity	termino	lg-eng
-tch477	Activitat	termino	lg-cat
-tch477	Activité	termino	lg-fra
-tch477	Actividad	termino	lg-spa
-tch478	Publicaciones	termino	lg-spa
-tch478	Publications	termino	lg-fra
-tch478	Publications	termino	lg-eng
-tch478	Publicacions	termino	lg-cat
 tch479	Tipologias de actividades	termino	lg-spa
 tch479	Tipologies d'activitats	termino	lg-cat
 tch479	Typologies d'activités	termino	lg-fra
 tch479	Typologies of activities	termino	lg-eng
 tch48	Diffusion	termino	lg-fra
 tch48	Publicable	termino	lg-cat
-tch480	Identification	termino	lg-eng
-tch480	Identificación	termino	lg-spa
-tch480	Identificació	termino	lg-cat
-tch480	Identification	termino	lg-fra
-tch481	Id	termino	lg-cat
-tch481	Id	termino	lg-eng
-tch481	Id	termino	lg-fra
-tch481	id	termino	lg-spa
-tch482	Tipo de actividad	termino	lg-spa
-tch482	Type of activity	termino	lg-eng
-tch482	Type d'activité	termino	lg-fra
-tch482	Tipus d'activitat	termino	lg-cat
 tch483	Projecte	termino	lg-cat
 tch483	Projet	termino	lg-fra
-tch483	Proyecto	termino	lg-spa
 tch483	Project	termino	lg-eng
 tch484	Nou	termino	lg-cat
 tch484	Nouveau	termino	lg-fra
@@ -1270,27 +1172,78 @@ tch486	List	termino	lg-cat
 tch487	Activities	termino	lg-eng
 tch487	Actividades	termino	lg-spa
 tch487	Activitats	termino	lg-cat
-tch487	Activités	termino	lg-fra
 tch488	Liste	termino	lg-fra
 tch488	Listado	termino	lg-spa
 tch488	Llistat	termino	lg-cat
 tch488	List	termino	lg-eng
 tch489	Listado tesauro	termino	lg-spa
 tch489	Thesaurus list	termino	lg-eng
-tch489	Liste de thésaurus	termino	lg-fra
-tch489	Llistat tesaure	termino	lg-cat
+tch477	Activity	termino	lg-eng
+tch477	Activitat	termino	lg-cat
+tch477	Activité	termino	lg-fra
+tch477	Actividad	termino	lg-spa
+tch476	Usable en indexación	termino	lg-cat
+tch476	Utilisable pour l'indexation	termino	lg-fra
+tch476	Usable en indexación	termino	lg-spa
+tch476	Usable in indexing	termino	lg-eng
+tch478	Publicaciones	termino	lg-spa
+tch478	Publications	termino	lg-fra
+tch478	Publicacions	termino	lg-cat
+tch465	Identificació	termino	lg-cat
+tch465	Identificación	termino	lg-spa
+tch465	Identification	termino	lg-eng
+tch465	Identification	termino	lg-fra
+tch466	Id	termino	lg-cat
+tch466	Id	termino	lg-eng
+tch466	Id	termino	lg-spa
+tch466	Id	termino	lg-fra
+tch467	Name	termino	lg-eng
+tch467	Nom	termino	lg-cat
+tch467	Nombre	termino	lg-spa
+tch467	Prénom	termino	lg-fra
+tch468	css valeur	termino	lg-fra
+tch468	css valor	termino	lg-spa
+tch468	css valor	termino	lg-cat
+tch480	Identificación	termino	lg-spa
+tch480	Identificació	termino	lg-cat
+tch480	Identification	termino	lg-fra
+tch481	Id	termino	lg-cat
+tch480	Identification	termino	lg-eng
+tch481	Id	termino	lg-eng
+tch481	Id	termino	lg-fra
+tch481	id	termino	lg-spa
+tch482	Tipo de actividad	termino	lg-spa
+tch482	Type of activity	termino	lg-eng
+tch482	Type d'activité	termino	lg-fra
+tch482	Tipus d'activitat	termino	lg-cat
 tch49	Campo donde se identifican las diferentes colecciones del museo, entendidas como los conjuntos ordenados de objetos y/o obras reunidos voluntariamente por su interés y valor artístico, científico y/o documental y que constituyen unas colecciones más o menos completas. La identificación de una colección puede responder a diferentes parámetros (orígen geográfico/cronológico, técnica, temática, etc.). Según los museos este mismo concepto puede ser denominado con otros términos (fondo, sección...)	def	lg-spa
 tch49	Pertanyent a: Camp on s’identifiquen les diferents col·leccions del museu, enteses com els conjunts ordenats d’objectes i/o obres reunits voluntàriament pel seu interès i valor artístic, científic i/o documental i que constitueixen uns reculls més o menys complets. L’identificació d’una col·lecció pot respondre a diferents paràmetres (origen geogràfic/cronològic, tècnica, temàtica, etc.). Segons els museus, aquest mateix concepte pot ser denominat amb altres termes (fons, secció...)	def	lg-cat
+tch50	Projet	termino	lg-fra
+tch50	Projecte	termino	lg-cat
+tch507	Inspecciones / Estado de conservación	termino	lg-spa
+tch507	Inspections / Conservation state	termino	lg-eng
+tch506	Biografía del bien	termino	lg-spa
+tch506	Biografia del bé	termino	lg-cat
+tch506	Biography of property	termino	lg-eng
+tch506	Biographie du bien	termino	lg-fra
+tch509	Tipos de material	termino	lg-spa
+tch48	Diffusion	termino	lg-eng
+tch489	Liste de thésaurus	termino	lg-fra
+tch489	Llistat tesaure	termino	lg-cat
+tch49	Collection	termino	lg-fra
+tch49	Collection	termino	lg-eng
 tch490	Encloses	termino	lg-cat
 tch490	Exluidos	termino	lg-spa
 tch490	exclus	termino	lg-fra
 tch490	Excluded	termino	lg-eng
-tch491	mvr	termino	lg-spa
+tch500	Description des interventions antérieures	termino	lg-fra
 tch492	Jugar amb foc	termino	lg-spa
 tch493	Web Fuego	termino	lg-spa
 tch493	Web Foc	termino	lg-cat
 tch494	web_foc	termino	lg-spa
 tch495	indexation	termino	lg-spa
+tch496	Estat anterior a la incorporació a la col·lecció	termino	lg-cat
+tch496	État avant l'adhésion à la collection	termino	lg-fra
 tch497	État de conservation initial	termino	lg-fra
 tch497	Estat de conservació inicial	termino	lg-cat
 tch497	Estado de conservación inicial	termino	lg-spa
@@ -1298,10 +1251,6 @@ tch497	Initial conservation state	termino	lg-eng
 tch498	Interveciones históricas	termino	lg-spa
 tch498	Interventions historiques	termino	lg-fra
 tch498	Historical interventions	termino	lg-eng
-tch48	Diffusion	termino	lg-eng
-tch496	Status prior to incorporation into the collection	termino	lg-eng
-tch496	Estat anterior a la incorporació a la col·lecció	termino	lg-cat
-tch496	État avant l'adhésion à la collection	termino	lg-fra
 tch498	Intervencions històriques	termino	lg-cat
 tch499	Description des modifications	termino	lg-fra
 tch499	Descripción de las alteraciones	termino	lg-spa
@@ -1311,33 +1260,8 @@ tch5	Materials	termino	lg-eng
 tch5	Materiales	termino	lg-spa
 tch5	Materials	termino	lg-cat
 tch5	Matériels	termino	lg-fra
-tch50	Projet	termino	lg-fra
-tch50	Projecte	termino	lg-cat
-tch500	Description des interventions antérieures	termino	lg-fra
-tch500	Descripción de antiguas intervenciones	termino	lg-spa
-tch500	Descripció d'antigues intervencions	termino	lg-cat
-tch500	Old interventions description	termino	lg-eng
-tch501	Documentación técnica	termino	lg-spa
-tch501	Documentació tècnica	termino	lg-cat
-tch501	Technical documentation	termino	lg-eng
-tch501	Documentation technique	termino	lg-fra
-tch502	Images	termino	lg-fra
-tch502	Imatges	termino	lg-cat
-tch502	Images	termino	lg-eng
-tch502	Imágenes	termino	lg-spa
-tch503	Audiovisuals	termino	lg-eng
-tch503	Audiovisuales	termino	lg-spa
-tch503	Audiovisuals	termino	lg-cat
-tch503	Audiovisuels	termino	lg-fra
-tch504	Technicien	termino	lg-fra
-tch504	Tècnic	termino	lg-cat
-tch504	Técnico	termino	lg-spa
-tch504	Technical	termino	lg-eng
-tch508	Recommendations and preventive conservation parameters (HR, Tª, Lux...)	termino	lg-eng
-tch508	Recommandations et paramètres de conservation préventive (HR, Tª, Lux...)	termino	lg-fra
-tch508	Recomanacions i paràmetres de conservació preventiva (HR, Tª, Lux...)	termino	lg-cat
 tch508	Recomendaciones y parámetros de conservación preventiva (HR, Tª, Lux...)	termino	lg-spa
-tch509	view_single_line	termino	lg-spa
+tch508	Recommandations et paramètres de conservation préventive (HR, Tª, Lux...)	termino	lg-fra
 tch51	Medidas	termino	lg-spa
 tch51	Mesures	termino	lg-cat
 tch51	Measures	termino	lg-eng
@@ -1358,75 +1282,33 @@ tch521	image	termino	lg-spa
 tch522	ts_technique	termino	lg-spa
 tch523	relations	termino	lg-spa
 tch524	ts_material	termino	lg-spa
-tch507	Inspecciones / Estado de conservación	termino	lg-spa
-tch507	Inspections / Conservation state	termino	lg-eng
-tch506	Biografía del bien	termino	lg-spa
-tch506	Biografia del bé	termino	lg-cat
-tch506	Biography of property	termino	lg-eng
-tch506	Biographie du bien	termino	lg-fra
-tch49	Colección	termino	lg-spa
-tch49	Collection	termino	lg-fra
-tch49	Collection	termino	lg-eng
-tch525	relations	termino	lg-spa
-tch526	ts_onomastic	termino	lg-spa
-tch527	relations	termino	lg-spa
-tch528	ts_chronological	termino	lg-spa
-tch529	relations	termino	lg-spa
-tch530	audiovisual	termino	lg-spa
-tch531	documents	termino	lg-spa
-tch532	publications	termino	lg-spa
-tch533	global_search	termino	lg-spa
-tch534	interview	termino	lg-spa
-tch535	informant	termino	lg-spa
-tch536	view_single_line	termino	lg-spa
-tch537	publications	termino	lg-spa
-tch539	use	termino	lg-spa
-tch540	use_details	termino	lg-spa
-tch541	Catàleg	termino	lg-spa
-tch542	Web catàleg	termino	lg-cat
-tch542	Web catálogo	termino	lg-spa
-tch543	web_cataleg_museum	termino	lg-spa
-tch544	bibliography_data	termino	lg-spa
-tch545	bibliographic_references	termino	lg-spa
-tch547	Web	termino	lg-spa
-tch548	Web preservem	termino	lg-spa
-tch52	Descripción	termino	lg-spa
-tch546	coib	termino	lg-spa
-tch52	Descripció	termino	lg-cat
-tch52	Description	termino	lg-eng
-tch52	Description	termino	lg-fra
-tch53	Conservación y restauración	termino	lg-spa
-tch53	Conservació i restauració	termino	lg-cat
-tch53	Conservation	termino	lg-fra
+tch491	mvr	termino	lg-spa
+tch500	Descripción de antiguas intervenciones	termino	lg-spa
+tch500	Descripció d'antigues intervencions	termino	lg-cat
+tch500	Old interventions description	termino	lg-eng
+tch501	Documentación técnica	termino	lg-spa
+tch501	Documentació tècnica	termino	lg-cat
+tch501	Technical documentation	termino	lg-eng
+tch501	Documentation technique	termino	lg-fra
+tch502	Images	termino	lg-fra
+tch502	Imatges	termino	lg-cat
+tch502	Images	termino	lg-eng
+tch502	Imágenes	termino	lg-spa
+tch503	Audiovisuals	termino	lg-eng
+tch503	Audiovisuales	termino	lg-spa
+tch503	Audiovisuals	termino	lg-cat
+tch503	Audiovisuels	termino	lg-fra
+tch504	Technicien	termino	lg-fra
+tch504	Tècnic	termino	lg-cat
+tch504	Técnico	termino	lg-spa
+tch504	Technical	termino	lg-eng
 tch505	Estado actual	termino	lg-spa
-tch53	Conservation and restoration	termino	lg-eng
 tch505	Actual estate	termino	lg-eng
 tch505	Estat actual	termino	lg-cat
 tch505	État actuel	termino	lg-fra
-tch54	Catalogación	termino	lg-spa
-tch54	Catalogage	termino	lg-fra
-tch54	Catalogació	termino	lg-cat
-tch549	web_coib	termino	lg-spa
-tch552	image	termino	lg-spa
-tch552	image	termino	lg-fra
-tch553	Causes	termino	lg-fra
-tch553	Causes	termino	lg-eng
-tch553	Causes	termino	lg-cat
-tch553	Causas	termino	lg-spa
-tch57	Sujet	termino	lg-fra
-tch57	Matèria	termino	lg-cat
-tch57	Materia	termino	lg-spa
 tch57	Se indicarán los materiales utilizados para realizar la pieza, teniendo en cuenta cuandosean más de uno citar en primer lugar el material que define o aglutina y, acontinuación, separado por “sobre”, el material de soporte. Las materias que conforman el objeto iránseparadas por punto y en estricto orden alfabético.	def	lg-spa
 tch58	Campo instrumental que se utiliza básicamente para la explotación web y que permite indicar las características del objeto de manera breve y sintética.	def	lg-spa
 tch58	Camp instrumental que s’utilitza bàsicament per a l’explotació web i que permet indicar les característiques de l’objecte de manera breu i sintètica.	def	lg-cat
-tch6	Localisations	termino	lg-fra
-tch6	Locations	termino	lg-eng
-tch6	Ubicacions	termino	lg-cat
-tch6	Ubicaciones	termino	lg-spa
-tch60	Historical inventory tab	termino	lg-eng
-tch60	Fitxa inventari històric	termino	lg-cat
-tch60	Ficha inventario histórico	termino	lg-spa
-tch60	Fiche d'inventaire historique	termino	lg-fra
 tch61	En vedette	termino	lg-fra
 tch61	Destacat	termino	lg-cat
 tch61	Destacado	termino	lg-spa
@@ -1436,10 +1318,54 @@ tch63	En este campo se recogerán todos los datos relativos al título (dado por
 tch63	Titre	termino	lg-fra
 tch63	Títol	termino	lg-cat
 tch63	Indica el nom o títol donat a l&#039;objecte pel creador, fabricant, curador o propietari, o el text d&#039;un títol que apareix a la imatge tant en gravats, en dibuixos com en fotografies.                                                         La fórmula “Sense títol” cal reservar-la per als objectes titulats d’aquesta manera pels seus creadors.	def	lg-cat
-tch64	Listado	termino	lg-spa
-tch64	List	termino	lg-eng
-tch64	Liste	termino	lg-fra
-tch65	view_mosaic	termino	lg-spa
+tch52	Descripción	termino	lg-spa
+tch52	Descripció	termino	lg-cat
+tch52	Description	termino	lg-eng
+tch52	Description	termino	lg-fra
+tch525	relations	termino	lg-spa
+tch526	ts_onomastic	termino	lg-spa
+tch527	relations	termino	lg-spa
+tch528	ts_chronological	termino	lg-spa
+tch53	Conservación y restauración	termino	lg-spa
+tch529	relations	termino	lg-spa
+tch53	Conservació i restauració	termino	lg-cat
+tch53	Conservation	termino	lg-fra
+tch53	Conservation and restoration	termino	lg-eng
+tch530	audiovisual	termino	lg-spa
+tch531	documents	termino	lg-spa
+tch532	publications	termino	lg-spa
+tch533	global_search	termino	lg-spa
+tch534	interview	termino	lg-spa
+tch536	view_single_line	termino	lg-spa
+tch537	publications	termino	lg-spa
+tch538	Other codes	termino	lg-eng
+tch538	Alres codis	termino	lg-cat
+tch538	Autres codes	termino	lg-fra
+tch539	use	termino	lg-spa
+tch540	use_details	termino	lg-spa
+tch54	Catalogación	termino	lg-spa
+tch54	Catalogage	termino	lg-fra
+tch54	Catalogació	termino	lg-cat
+tch541	Catàleg	termino	lg-spa
+tch542	Web catàleg	termino	lg-cat
+tch542	Web catálogo	termino	lg-spa
+tch543	web_cataleg_museum	termino	lg-spa
+tch545	bibliographic_references	termino	lg-spa
+tch546	coib	termino	lg-spa
+tch547	Web	termino	lg-spa
+tch548	Web preservem	termino	lg-spa
+tch549	web_coib	termino	lg-spa
+tch552	image	termino	lg-spa
+tch552	image	termino	lg-fra
+tch553	Causes	termino	lg-fra
+tch553	Causes	termino	lg-eng
+tch553	Causes	termino	lg-cat
+tch553	Causas	termino	lg-spa
+tch57	Sujet	termino	lg-fra
+tch60	Patrimonio Mueble	termino	lg-spa
+tch60	Moveable Heritage	termino	lg-eng
+tch60	Patrimoni Moble	termino	lg-cat
+tch60	Patrimoine mobilier	termino	lg-fra
 tch67	Información general	termino	lg-spa
 tch67	Information générale	termino	lg-fra
 tch67	Informació general	termino	lg-cat
@@ -1450,11 +1376,45 @@ tch68	Lista de estados de conservación	termino	lg-spa
 tch68	Llistat	termino	lg-cat
 tch69	Nuevo	termino	lg-spa
 tch69	New	termino	lg-eng
-tch538	Other codes	termino	lg-eng
-tch538	Alres codis	termino	lg-cat
-tch538	Autres codes	termino	lg-fra
+tch6	Localisations	termino	lg-fra
+tch6	Locations	termino	lg-eng
+tch6	Ubicacions	termino	lg-cat
+tch6	Ubicaciones	termino	lg-spa
+tch64	Listado	termino	lg-spa
+tch64	List	termino	lg-eng
+tch64	Liste	termino	lg-fra
+tch65	view_mosaic	termino	lg-spa
+tch61	Highlight	termino	lg-eng
+tch66	Imágenes identificativas	termino	lg-spa
+tch62	Estado de revisión	termino	lg-spa
+tch62	Revision status	termino	lg-eng
+tch63	Título	termino	lg-spa
+tch63	Title	termino	lg-eng
+tch66	Identification des images	termino	lg-fra
+tch66	Identifying images	termino	lg-eng
+tch66	Imatges identificatives	termino	lg-cat
+tch55	Autor	termino	lg-spa
+tch55	Autor	termino	lg-cat
+tch55	Auteur	termino	lg-fra
+tch55	Author	termino	lg-eng
+tch551	Registro	termino	lg-spa
+tch551	Enregistrer	termino	lg-fra
+tch56	Datación	termino	lg-spa
+tch56	Datació	termino	lg-cat
+tch56	Datation	termino	lg-fra
+tch56	Dating	termino	lg-eng
+tch57	Material	termino	lg-eng
+tch58	Relevant description	termino	lg-eng
+tch58	Description pertinente	termino	lg-fra
+tch59	Documentación interna	termino	lg-spa
+tch59	Documentation interne	termino	lg-fra
+tch59	Internal documentation	termino	lg-eng
+tch59	Documentació interna	termino	lg-cat
 tch69	Nouveau	termino	lg-fra
 tch69	Nou	termino	lg-cat
+tch7	Catálogo	termino	lg-spa
+tch7	Catalogue	termino	lg-eng
+tch7	Catàleg	termino	lg-cat
 tch70	Borrar	termino	lg-spa
 tch70	Supprimer	termino	lg-fra
 tch70	Delete	termino	lg-eng
@@ -1463,40 +1423,9 @@ tch71	Id	termino	lg-spa
 tch71	Id	termino	lg-cat
 tch71	Id	termino	lg-fra
 tch71	Id	termino	lg-eng
-tch551	Registro	termino	lg-spa
-tch551	Enregistrer	termino	lg-fra
-tch61	Highlight	termino	lg-eng
-tch57	Material	termino	lg-eng
-tch66	Imágenes identificativas	termino	lg-spa
-tch7	Catálogo	termino	lg-spa
-tch7	Catalogue	termino	lg-eng
-tch7	Catàleg	termino	lg-cat
-tch62	Estado de revisión	termino	lg-spa
-tch62	Revision status	termino	lg-eng
-tch63	Título	termino	lg-spa
-tch63	Title	termino	lg-eng
-tch66	Identification des images	termino	lg-fra
-tch66	Identifying images	termino	lg-eng
-tch66	Imatges identificatives	termino	lg-cat
-tch58	Descripción relevante	termino	lg-spa
-tch58	Relevant description	termino	lg-eng
-tch58	Description pertinente	termino	lg-fra
-tch55	Autor	termino	lg-spa
-tch55	Autor	termino	lg-cat
-tch55	Auteur	termino	lg-fra
-tch55	Author	termino	lg-eng
-tch56	Datación	termino	lg-spa
-tch56	Datació	termino	lg-cat
-tch56	Datation	termino	lg-fra
-tch56	Dating	termino	lg-eng
-tch59	Documentación interna	termino	lg-spa
-tch59	Documentation interne	termino	lg-fra
-tch59	Internal documentation	termino	lg-eng
-tch59	Documentació interna	termino	lg-cat
-tch72	Initiation bulletin date	termino	lg-eng
 tch73	Esta de conservació	termino	lg-cat
 tch73	Estado de conservación	termino	lg-spa
-tch73	État de conservation 	termino	lg-fra
+tch73	État de conservation	termino	lg-fra
 tch73	State of conservation	termino	lg-eng
 tch74	Projet	termino	lg-fra
 tch74	Proyecto	termino	lg-spa
@@ -1516,7 +1445,6 @@ tch78	Borrar	termino	lg-spa
 tch78	Supprimer	termino	lg-fra
 tch8	Tamaño	termino	lg-spa
 tch8	Size	termino	lg-eng
-tch8	Tamany	termino	lg-cat
 tch8	Taille	termino	lg-fra
 tch80	Diffusion	termino	lg-eng
 tch80	Publicable	termino	lg-cat
@@ -1526,12 +1454,11 @@ tch82	Categoría	termino	lg-spa
 tch82	Categoria	termino	lg-cat
 tch82	Category	termino	lg-eng
 tch82	Catégorie	termino	lg-fra
-tch83	Tema	termino	lg-spa
-tch83	Tema	termino	lg-cat
 tch83	Thème	termino	lg-fra
 tch83	Issue	termino	lg-eng
 tch85	Técnica	termino	lg-spa
 tch85	Technique	termino	lg-fra
+tch83	Tema	termino	lg-spa
 tch85	Technique	termino	lg-eng
 tch85	Tècnica	termino	lg-cat
 tch87	Marca	termino	lg-cat
@@ -1544,20 +1471,15 @@ tch88	Dating	termino	lg-eng
 tch88	Datation	termino	lg-fra
 tch89	Uso	termino	lg-spa
 tch89	Use	termino	lg-eng
-tch89	Utilisation	termino	lg-fra
 tch89	Ús	termino	lg-cat
 tch90	Description	termino	lg-fra
 tch90	Descripción	termino	lg-spa
 tch90	Description	termino	lg-eng
 tch90	Descripció	termino	lg-cat
-tch91	Procedencia	termino	lg-spa
-tch91	Origin	termino	lg-eng
-tch91	Provenance	termino	lg-fra
-tch91	Procedència	termino	lg-cat
 tch92	Estado de conservación	termino	lg-spa
 tch92	Estat de conservació	termino	lg-cat
 tch92	State of conservation	termino	lg-eng
-tch92	État de conservation 	termino	lg-fra
+tch92	État de conservation	termino	lg-fra
 tch94	Observaciones	termino	lg-spa
 tch94	Observations	termino	lg-eng
 tch94	Observations	termino	lg-fra
@@ -1565,179 +1487,126 @@ tch94	Observacions	termino	lg-cat
 tch95	Localización	termino	lg-spa
 tch95	Location	termino	lg-eng
 tch95	Localisation	termino	lg-fra
-tch95	Localització	termino	lg-cat
 tch96	Proyecto	termino	lg-spa
 tch96	Project	termino	lg-eng
 tch96	Projet	termino	lg-fra
 tch96	Projecte	termino	lg-cat
 tch97	Photographs	termino	lg-eng
 tch97	Fotografies	termino	lg-cat
-tch97	Fotografías	termino	lg-spa
-tch97	Photographies 	termino	lg-fra
-tch98	Importar fichas con imagen	termino	lg-spa
-tch98	Importer des fiches avec images	termino	lg-fra
-tch98	Import tabs with image	termino	lg-eng
-tch98	Importa fitxes amb imatge	termino	lg-cat
-tch550	RECYCLE TCH	termino	lg-spa
-tch424	Relaciones	termino	lg-spa
+tch91	Procedencia	termino	lg-spa
+tch91	Origin	termino	lg-eng
+tch91	Provenance	termino	lg-fra
+tch91	Procedència	termino	lg-cat
 tch206	tangible_default	termino	lg-spa
 tch188	TCH	termino	lg-spa
-tch93	Listado	termino	lg-spa
-tch93	List	termino	lg-eng
-tch93	Liste	termino	lg-fra
-tch93	Llistat	termino	lg-cat
 tch79	Nuevo	termino	lg-spa
 tch79	New	termino	lg-eng
 tch79	Nou	termino	lg-cat
 tch79	Nouveau	termino	lg-fra
-tch84	Borrar	termino	lg-spa
-tch84	Delete	termino	lg-eng
-tch84	Esborrar	termino	lg-cat
-tch84	Supprimer	termino	lg-fra
-tch99	Relaciones	termino	lg-spa
-tch86	view_single_line	termino	lg-spa
-tch81	Lista	termino	lg-spa
-tch81	List	termino	lg-eng
-tch81	Liste	termino	lg-fra
-tch81	Llistat	termino	lg-cat
+tch166	TCH	termino	lg-spa
+tch327	TCH	termino	lg-spa
+tch424	Relaciones	termino	lg-spa
+tch550	RECYCLE TCH	termino	lg-spa
+tch72	Fecha boletín Incoación	termino	lg-spa
+tch72	Date du bulletin d'initiation	termino	lg-fra
+tch72	Butlletí Incoació	termino	lg-cat
 tch75	Código	termino	lg-spa
 tch75	Code	termino	lg-eng
 tch75	Code	termino	lg-fra
 tch75	Codi	termino	lg-cat
+tch81	Lista	termino	lg-spa
+tch81	List	termino	lg-eng
+tch81	Liste	termino	lg-fra
+tch81	Llistat	termino	lg-cat
+tch84	Borrar	termino	lg-spa
+tch84	Delete	termino	lg-eng
+tch84	Esborrar	termino	lg-cat
+tch84	Supprimer	termino	lg-fra
 tch9	Tabs	termino	lg-spa
 tch9	tabs	termino	lg-eng
 tch9	Tabs	termino	lg-fra
-tch72	Fecha boletín Incoación	termino	lg-spa
-tch72	Date du bulletin d'initiation	termino	lg-fra
-tch72	Butlletí Incoació	termino	lg-cat
-tch327	TCH	termino	lg-spa
-tch166	TCH	termino	lg-spa
+tch93	Listado	termino	lg-spa
+tch93	List	termino	lg-eng
+tch93	Liste	termino	lg-fra
+tch93	Llistat	termino	lg-cat
+tch97	Photographies	termino	lg-fra
+tch98	Importar fichas con imagen	termino	lg-spa
+tch98	Importer des fiches avec images	termino	lg-fra
+tch98	Importa fitxes amb imatge	termino	lg-cat
+tch99	Relaciones	termino	lg-spa
 tch101	Listado	termino	lg-spa
 tch116	Latest changes	termino	lg-eng
-tch99	Relacions	termino	lg-cat
-tch99	Relations	termino	lg-eng
-tch99	Relations	termino	lg-fra
-tch114	Projecte	termino	lg-cat
-tch114	Project	termino	lg-eng
-tch114	Projet	termino	lg-fra
-tch551	Registre	termino	lg-cat
-tch551	Registration	termino	lg-eng
 tch411	Documents	termino	lg-cat
-tch7	Catalogue	termino	lg-fra
 tch47	Id	termino	lg-spa
-tch48	Publicable	termino	lg-spa
 tch50	Project	termino	lg-eng
 tch50	Proyecto	termino	lg-spa
 tch143	Historical	termino	lg-eng
 tch448	Fuente de información	termino	lg-spa
 tch241	Typology	termino	lg-eng
 tch170	Autor de la ficha	termino	lg-spa
-tch58	Descripció rellevant	termino	lg-cat
-tch234	Trademark	termino	lg-eng
-tch335	Audiovisuales	termino	lg-spa
-tch496	Estado anterior a la incorporación a la colección	termino	lg-spa
 tch185	Ubicación y movimientos	termino	lg-spa
-tch387	Observations	termino	lg-fra
 tch443	Uso y función	termino	lg-spa
 tch172	Bibliografía propia del bien	termino	lg-spa
-tch54	Cataloging	termino	lg-eng
+tch114	Project	termino	lg-eng
+tch114	Projet	termino	lg-fra
+tch335	Audiovisuales	termino	lg-spa
 tch347	Análisis e interpretación simbólica, social...	termino	lg-spa
-tch410	Special measures	termino	lg-eng
+tch387	Observations	termino	lg-fra
+tch48	Publicable	termino	lg-spa
+tch496	Estado anterior a la incorporación a la colección	termino	lg-spa
+tch54	Cataloging	termino	lg-eng
+tch551	Registre	termino	lg-cat
+tch551	Registration	termino	lg-eng
+tch7	Catalogue	termino	lg-fra
+tch99	Relacions	termino	lg-cat
+tch99	Relations	termino	lg-eng
+tch99	Relations	termino	lg-fra
 tch1	Objets	termino	lg-fra
 tch203	Exclosos	termino	lg-cat
-tch424	Réalités	termino	lg-fra
 tch154	Description	termino	lg-fra
+tch424	Réalités	termino	lg-fra
+tchi1	Inmuebles	termino	lg-spa
+tchi1	Immobles	termino	lg-cat
+tchi2	Tipologías de inmuebles	termino	lg-spa
+tchi8	Publiable	termino	lg-fra
+tchi8	Publicable	termino	lg-cat
+tchi8	Publishable	termino	lg-eng
+tchi8	Druckreif	termino	lg-deu
+tchi8	Pubblicabile	termino	lg-ita
 tchi5	Identificación	termino	lg-spa
-tchi8	Publicable	termino	lg-spa
-tchi5	Identificació	termino	lg-cat
-tchi5	Identification	termino	lg-eng
+tchi11	Usable en indexación	termino	lg-spa
+tchi11	Usable en indexació	termino	lg-cat
+tchi11	Verwendbar in Indexierung	termino	lg-deu
 tchi10	Id	termino	lg-spa
 tchi10	Id	termino	lg-eng
 tchi10	Id	termino	lg-cat
 tchi10	Id	termino	lg-fra
 tchi10	Id	termino	lg-ita
 tchi10	Id	termino	lg-deu
-tchi8	Publicable	termino	lg-cat
-tchi8	Publishable	termino	lg-eng
-tchi8	Publiable	termino	lg-fra
-tchi8	Druckreif	termino	lg-deu
-tchi8	Pubblicabile	termino	lg-ita
 tchi7	Is descriptor	termino	lg-eng
 tchi7	És descriptor	termino	lg-cat
 tchi7	Ist Deskriptor	termino	lg-deu
 tchi7	C'est un descripteur	termino	lg-fra
 tchi7	Descrittore	termino	lg-ita
-tchi7	Περιγραφέας αυτό	termino	lg-ell
-tchi11	Usable en indexación	termino	lg-spa
-tchi11	Usable in indexing	termino	lg-eng
-tchi11	Usable en indexació	termino	lg-cat
-tchi11	Verwendbar in Indexierung	termino	lg-deu
-tchi1	Inmuebles	termino	lg-spa
-tchi1	Immobles	termino	lg-cat
-tchi2	Tipologías de inmuebles	termino	lg-spa
-tchi11	Χρησιμοποιήσιμα στην ευρετηρίαση	termino	lg-ell
-tchi11	Utilisable pour l'indexation	termino	lg-fra
-tchi11	Utilizzabile nell' indicizzazione	termino	lg-ita
-tchi12	Estado	termino	lg-spa
-tchi12	Estat	termino	lg-cat
-tchi12	Zustand	termino	lg-deu
-tchi12	Status	termino	lg-eng
-tchi12	État	termino	lg-fra
-tchi12	Stato	termino	lg-ita
-tchi13	Código	termino	lg-spa
-tchi13	Codi	termino	lg-cat
-tchi13	Codice	termino	lg-ita
-tchi13	κωδικός	termino	lg-ell
-tchi13	Code	termino	lg-deu
-tchi13	Code	termino	lg-eng
-tchi13	Code	termino	lg-fra
+tchi8	Publicable	termino	lg-spa
+tchi5	Identificació	termino	lg-cat
+tchi5	Identification	termino	lg-eng
 tchi14	Otros códigos	termino	lg-spa
-tchi14	Other codes	termino	lg-eng
 tchi14	Altres codis	termino	lg-cat
 tchi14	Andere Codes	termino	lg-deu
 tchi14	Autres codes	termino	lg-fra
 tchi14	Altri codici	termino	lg-ita
-tchi15	Nombre	termino	lg-spa
-tchi15	Name	termino	lg-eng
-tchi15	Nom	termino	lg-cat
-tchi15	Name	termino	lg-deu
-tchi15	Nom	termino	lg-fra
-tchi15	Nome	termino	lg-ita
-tchi16	Tipología	termino	lg-spa
-tchi16	Tipologia	termino	lg-cat
-tchi16	Typology	termino	lg-eng
-tchi16	Tipologia	termino	lg-ita
-tchi16	Typologie	termino	lg-fra
-tchi16	Typologie	termino	lg-deu
 tchi17	Imagen identificativa	termino	lg-spa
 tchi17	Image identificativa	termino	lg-cat
 tchi17	Identifikationsbild	termino	lg-deu
-tchi17	Identifying image	termino	lg-eng
 tchi17	Image d'identification	termino	lg-fra
 tchi17	Immagine identificativa	termino	lg-ita
-tchi18	Indexación	termino	lg-spa
-tchi18	Indexació	termino	lg-cat
-tchi18	Indexation	termino	lg-eng
-tchi18	Indexierung	termino	lg-deu
-tchi18	Indexation	termino	lg-fra
-tchi18	Indicizzazione	termino	lg-ita
-tchi19	Descripción	termino	lg-spa
-tchi19	Descripció	termino	lg-cat
-tchi19	Beschreibung	termino	lg-deu
-tchi19	Description	termino	lg-eng
-tchi19	Description	termino	lg-fra
-tchi19	Descrizione	termino	lg-ita
-tchi5	αναγνώριση	termino	lg-ell
-tchi5	Identification	termino	lg-fra
-tchi5	Identificazione	termino	lg-ita
 tchi21	Localización	termino	lg-spa
 tchi21	Localització	termino	lg-cat
-tchi21	Location	termino	lg-eng
 tchi21	Standort	termino	lg-deu
 tchi21	Localisation	termino	lg-fra
 tchi21	Localizzazione	termino	lg-ita
 tchi22	Información pública	termino	lg-spa
-tchi22	Public information	termino	lg-eng
 tchi22	Informació pública	termino	lg-cat
 tchi20	Datación	termino	lg-spa
 tchi20	Datació	termino	lg-cat
@@ -1746,65 +1615,293 @@ tchi20	Datazione	termino	lg-ita
 tchi22	Öffentliche Information	termino	lg-deu
 tchi22	Information publique	termino	lg-fra
 tchi22	Informazione pubblica	termino	lg-ita
-tchi23	Resumen	termino	lg-spa
-tchi23	Resum	termino	lg-cat
-tchi23	Abstract	termino	lg-eng
-tchi23	Zusammenfassung	termino	lg-deu
-tchi23	Résumé	termino	lg-fra
-tchi23	Riassunto	termino	lg-ita
 tchi24	Notas	termino	lg-spa
 tchi24	Notes	termino	lg-cat
-tchi24	Notes	termino	lg-eng
 tchi24	Anmerkungen	termino	lg-deu
 tchi24	Notes	termino	lg-fra
 tchi24	Note	termino	lg-ita
 tchi25	Geolocalización	termino	lg-spa
 tchi25	Geolocalització	termino	lg-cat
-tchi25	Geolocation	termino	lg-eng
 tchi25	Geolokalisation	termino	lg-deu
 tchi25	Géolocalisation	termino	lg-fra
 tchi25	Geolocalizzazione	termino	lg-ita
 tchi26	Marco espacial	termino	lg-spa
 tchi26	Marc espacial	termino	lg-cat
-tchi26	Space frame	termino	lg-eng
 tchi26	Spatial Frame	termino	lg-deu
 tchi26	Cadre spatial	termino	lg-fra
 tchi26	Quadro spaziale	termino	lg-ita
 tchi27	Coordenadas	termino	lg-spa
-tchi27	Coordinates	termino	lg-eng
 tchi27	Coordenades	termino	lg-cat
 tchi27	Koordinaten	termino	lg-deu
 tchi27	Coordonnées	termino	lg-fra
 tchi27	Coordinate	termino	lg-ita
-tchi28	Documentación	termino	lg-spa
-tchi28	Documentació	termino	lg-cat
-tchi28	Documentation	termino	lg-eng
-tchi28	Dokumentation	termino	lg-deu
-tchi28	Documentation	termino	lg-fra
-tchi28	Documentazione	termino	lg-ita
 tchi29	Bibliografía	termino	lg-spa
 tchi29	Bibliografia	termino	lg-cat
-tchi29	Bibliography	termino	lg-eng
 tchi29	Literaturverzeichnis	termino	lg-deu
 tchi29	Bibliographie	termino	lg-fra
 tchi29	Bibliografia	termino	lg-ita
-tchi30	Bibliografía relacionada	termino	lg-spa
-tchi30	Related bibliography	termino	lg-eng
-tchi30	Bibliografia relacionada	termino	lg-cat
-tchi30	Zugehörige Bibliographie	termino	lg-deu
-tchi30	Bibliographie associée	termino	lg-fra
-tchi30	Bibliografia correlata	termino	lg-ita
 tchi31	Imágenes	termino	lg-spa
 tchi31	Imatges	termino	lg-cat
-tchi31	Images	termino	lg-eng
 tchi31	Bilder	termino	lg-deu
 tchi31	Images	termino	lg-fra
 tchi31	Immagini	termino	lg-ita
 tchi32	URI	termino	lg-spa
-tchi32	URI	termino	lg-eng
 tchi32	URI	termino	lg-deu
 tchi32	URI	termino	lg-fra
 tchi32	URI	termino	lg-ita
+tchi35	Autoría	termino	lg-spa
+tchi35	Autoria	termino	lg-cat
+tchi39	Dependiente de	termino	lg-spa
+tchi39	Dependent de	termino	lg-cat
+tchi39	Abhängig von	termino	lg-deu
+tchi39	Dépend de	termino	lg-fra
+tchi39	Dipendente da	termino	lg-ita
+tchi39	Dependent of	termino	lg-eng
+tchi38	Relations	termino	lg-eng
+tchi38	Beziehungen	termino	lg-deu
+tchi38	Relations	termino	lg-fra
+tchi38	Relazioni	termino	lg-ita
+tchi4	llistat	termino	lg-cat
+tchi4	List	termino	lg-eng
+tchi4	Liste	termino	lg-deu
+tchi4	Liste	termino	lg-fra
+tchi4	Elenco	termino	lg-ita
+tchi47	Listado	termino	lg-spa
+tchi47	List	termino	lg-eng
+tchi47	Llistat	termino	lg-eus
+tchi47	Liste	termino	lg-deu
+tchi47	Liste	termino	lg-fra
+tchi47	Elenco	termino	lg-ita
+tchi48	Periodo	termino	lg-spa
+tchi48	Periode	termino	lg-cat
+tchi48	Period	termino	lg-eng
+tchi48	Zeitraum	termino	lg-deu
+tchi48	Période	termino	lg-fra
+tchi48	Periodo	termino	lg-ita
+tch554	Periodo	termino	lg-spa
+tch554	Periode	termino	lg-cat
+tch554	Period	termino	lg-eng
+tch554	Zeitraum	termino	lg-deu
+tch554	Période	termino	lg-fra
+tch554	Periodo	termino	lg-ita
+tch555	Lugar	termino	lg-spa
+tch555	Lloc	termino	lg-cat
+tch555	Place	termino	lg-eng
+tch555	Luogo	termino	lg-ita
+tch555	Lieu	termino	lg-fra
+tch555	Ort	termino	lg-deu
+tch179	Elements in the set	termino	lg-eng
+tchi32	URI	termino	lg-cat
+tchi35	Autor	termino	lg-deu
+tchi35	Auteur	termino	lg-fra
+tchi35	Autore	termino	lg-ita
+tchi1	Immovables	termino	lg-eng
+tchi1	Immobiles	termino	lg-deu
+tchi1	Immobiles	termino	lg-ita
+tchi1	Immobiliers	termino	lg-fra
+tchi20	Datierung	termino	lg-deu
+tchi20	Ραντεβού	termino	lg-ell
+tchi49	Pestañas	termino	lg-spa
+tchi49	Tabs	termino	lg-eng
+tchi49	Pestanyes	termino	lg-cat
+tchi49	Taabs	termino	lg-deu
+tchi49	Onglets	termino	lg-fra
+tchi49	Schede	termino	lg-ita
+tch159	Edición	termino	lg-spa
+tch159	Auflage	termino	lg-deu
+tch159	Edizione	termino	lg-ita
+tchi50	Medidas	termino	lg-spa
+tchi50	Measures	termino	lg-eng
+tchi50	Mesures	termino	lg-cat
+tchi50	Maßnahmen	termino	lg-deu
+tchi50	Mesures	termino	lg-fra
+tchi50	Misure	termino	lg-ita
+tch149	Maßnahmen	termino	lg-deu
+tch149	Misure	termino	lg-ita
+tchi51	Ubicación	termino	lg-spa
+tchi51	Ubication	termino	lg-eng
+tchi51	Ubicació	termino	lg-cat
+tchi51	Ubikation	termino	lg-deu
+tchi51	Ubication	termino	lg-fra
+tchi51	Ubicazione	termino	lg-ita
+tchi52	Conservación y restauración	termino	lg-spa
+tchi52	Conservation and restoration	termino	lg-eng
+tchi52	Conservació i restauració	termino	lg-cat
+tchi52	Konservierung und Restaurierung	termino	lg-deu
+tchi52	Conservation et restauration	termino	lg-fra
+tchi52	Conservazione e restauro	termino	lg-ita
+tchi53	Estado actual	termino	lg-spa
+tchi20	Dating	termino	lg-eng
+tchi34	Auflage	termino	lg-deu
+tchi36	Proyecto	termino	lg-spa
+tchi36	Projecte	termino	lg-cat
+tchi36	Project	termino	lg-eng
+tchi36	Projekt	termino	lg-deu
+tchi36	Projet	termino	lg-fra
+tchi36	Progetto	termino	lg-ita
+tchi37	Lugar de registro	termino	lg-spa
+tchi37	Lloc de registre	termino	lg-cat
+tchi37	Register place	termino	lg-eng
+tchi37	Ort der Registrierung	termino	lg-deu
+tchi37	Lieu d'enregistrement	termino	lg-fra
+tchi37	Luogo di registrazione	termino	lg-ita
+tchi38	Relaciones	termino	lg-spa
+tchi38	Relacions	termino	lg-cat
+tchi44	Carte des sections	termino	lg-fra
+tchi5	Identifizierung	termino	lg-deu
+tchi53	Actual estate	termino	lg-eng
+tchi53	Estat actual	termino	lg-cat
+tchi53	Aktueller Stand	termino	lg-deu
+tchi53	État actuel	termino	lg-fra
+tchi53	Stato attuale	termino	lg-ita
+tchi56	Restauración	termino	lg-spa
+tchi56	Restoration	termino	lg-eng
+tchi56	Restauració	termino	lg-cat
+tchi56	Wiederherstellung	termino	lg-deu
+tchi56	Restauration	termino	lg-fra
+tchi56	Restauro	termino	lg-ita
+tchi57	Restaurada	termino	lg-spa
+tchi57	Restored	termino	lg-eng
+tchi57	Restaurada	termino	lg-cat
+tch150	Wiederhergestellt	termino	lg-deu
+tchi57	Wiederhergestellt	termino	lg-deu
+tchi57	Restauré	termino	lg-fra
+tch150	Ripristinato	termino	lg-ita
+tchi57	Ripristinato	termino	lg-ita
+tchi58	Intervenciones	termino	lg-spa
+tchi58	Interventions	termino	lg-eng
+tchi58	Intervencions	termino	lg-cat
+tch171	Interventioneng	termino	lg-deu
+tchi58	Interventioneng	termino	lg-deu
+tchi58	Interventions	termino	lg-fra
+tch171	Interventi	termino	lg-ita
+tchi58	Interventi	termino	lg-ita
+tch507	Inspections / État de conservation	termino	lg-fra
+tch507	Ispezioni / Stato di conservazione	termino	lg-ita
+tchi55	Inspections / Conservation state	termino	lg-eng
+tchi55	Inspeccions / Estat de conservació	termino	lg-cat
+tchi55	Inspektionen / Stand der Erhaltung	termino	lg-deu
+tchi55	Ispezioni / Stato di conservazione	termino	lg-ita
+tchi54	Biografía del bien	termino	lg-spa
+tchi54	Biography of property	termino	lg-eng
+tchi54	Biografia del bé	termino	lg-cat
+tchi54	Biographie du bien	termino	lg-fra
+tchi54	Biografia del bene	termino	lg-ita
+tchi54	Biographie des Guten	termino	lg-deu
+tch506	Biografia del bene	termino	lg-ita
+tch506	Biographie des Guten	termino	lg-deu
+tch356	Restauración	termino	lg-spa
+tch356	Wiederherstellung	termino	lg-deu
+tch356	Restauro	termino	lg-ita
+tchi2	Property typologies	termino	lg-eng
+tchi2	Tipologies d'inmobles	termino	lg-cat
+tchi2	Immobilientypologien	termino	lg-deu
+tchi2	Typologies des biens immobiliers	termino	lg-fra
+tchi2	Tipologie di immobili	termino	lg-ita
+tch556	Código	termino	lg-spa
+tch556	Code	termino	lg-eng
+tch556	Codi	termino	lg-cat
+tch556	Code	termino	lg-deu
+tch556	Code	termino	lg-fra
+tch556	Codice	termino	lg-ita
+tch75	Code	termino	lg-deu
+tch75	Codice	termino	lg-ita
+tch507	Inspeccions / Estat de conservació	termino	lg-cat
+tch507	Inspektionen / Stand der Erhaltung	termino	lg-deu
+tch136	Importar fichas con imagen	termino	lg-spa
+tch136	Import image files	termino	lg-eng
+tch136	Dateien mit Bildern importieren	termino	lg-deu
+tch136	Importer des fiches avec images	termino	lg-fra
+tch136	Importare schede con immagine	termino	lg-ita
+tch297	fund	termino	lg-spa
+tch145	Bienes muebles	termino	lg-spa
+tchi55	Inspecciones / Estado de conservación	termino	lg-spa
+tchi55	Inspections / État de conservation	termino	lg-fra
+tch414	Borrar	termino	lg-spa
+tch414	Löschen	termino	lg-deu
+tch414	Διαγραφή	termino	lg-ell
+tch414	Cancellare	termino	lg-ita
+tchi59	Patrimonio Inmueble	termino	lg-spa
+tchi59	Immovable heritage	termino	lg-eng
+tchi59	Patrimoni Immoble	termino	lg-cat
+tchi59	Immobiles Kulturerbe	termino	lg-deu
+tchi59	Patrimoine immobilier	termino	lg-fra
+tchi59	Patrimonio Immobile	termino	lg-ita
+tch557	Patrimonio Mueble	termino	lg-spa
+tch557	Moveable Heritage	termino	lg-eng
+tch557	Patrimoni Moble	termino	lg-cat
+tch557	Patrimoine mobilier	termino	lg-fra
+tch557	Patrimonio Mobile	termino	lg-ita
+tch60	Mobiles Kulturerbe	termino	lg-deu
+tch60	Patrimonio Mobile	termino	lg-ita
+tch236	Usage dating	termino	lg-eng
+tchi13	Code	termino	lg-eng
+tchi13	Code	termino	lg-fra
+tch266	Tipologías de materiales	termino	lg-spa
+tch266	Typologien von Materialien	termino	lg-deu
+tch266	Tipologie di materiali	termino	lg-ita
+tch509	Types of material	termino	lg-eng
+tch509	Tipus de materials	termino	lg-cat
+tch509	Arten von Material	termino	lg-deu
+tch509	Arten von Material	termino	lg-fra
+tch509	Tipi di materiale	termino	lg-ita
+tchi17	Identifying image	termino	lg-eng
+tchi31	Images	termino	lg-eng
+tchi24	Notes	termino	lg-eng
+tchi22	Public information	termino	lg-eng
+tchi29	Bibliography	termino	lg-eng
+tchi32	URI	termino	lg-eng
+tchi14	Other codes	termino	lg-eng
+tchi21	Location	termino	lg-eng
+tchi26	Space frame	termino	lg-eng
+tchi27	Coordinates	termino	lg-eng
+tchi25	Geolocation	termino	lg-eng
+tchi35	Authorship	termino	lg-eng
+tchi13	Código	termino	lg-spa
+tchi13	Codi	termino	lg-cat
+tchi13	Codice	termino	lg-ita
+tchi13	κωδικός	termino	lg-ell
+tchi13	Code	termino	lg-deu
+tchi15	Name	termino	lg-eng
+tchi15	Nombre	termino	lg-spa
+tchi15	Nom	termino	lg-cat
+tchi15	Name	termino	lg-deu
+tchi15	Nom	termino	lg-fra
+tchi15	Nome	termino	lg-ita
+tchi18	Indexation	termino	lg-eng
+tchi18	Indexación	termino	lg-spa
+tchi18	Indexació	termino	lg-cat
+tchi18	Indexierung	termino	lg-deu
+tchi18	Indexation	termino	lg-fra
+tchi18	Indicizzazione	termino	lg-ita
+tchi12	Status	termino	lg-eng
+tchi12	Estado	termino	lg-spa
+tchi12	Estat	termino	lg-cat
+tchi12	Zustand	termino	lg-deu
+tchi12	État	termino	lg-fra
+tchi12	Stato	termino	lg-ita
+tchi11	Usable in indexing	termino	lg-eng
+tchi11	Χρησιμοποιήσιμα στην ευρετηρίαση	termino	lg-ell
+tchi11	Utilisable pour l'indexation	termino	lg-fra
+tchi11	Utilizzabile nell' indicizzazione	termino	lg-ita
+tchi60	Total de objectos	termino	lg-spa
+tchi60	Total objects	termino	lg-eng
+tchi60	Objekte insgesamt	termino	lg-deu
+tchi60	Total des objets	termino	lg-fra
+tchi60	Totale oggetti	termino	lg-ita
+tchi60	Total d'objectes	termino	lg-cat
+tchi61	Descripción de la lista de objetos	termino	lg-spa
+tchi61	Object list description	termino	lg-eng
+tchi61	Descripció de la llista d'objectes	termino	lg-cat
+tchi61	Beschreibung der Objektliste	termino	lg-deu
+tchi61	Description de la liste d'objets	termino	lg-fra
+tchi61	Descrizione dell'elenco degli oggetti	termino	lg-ita
+tchi62	Patrimonio asociado	termino	lg-spa
+tchi62	Associated heritage	termino	lg-eng
+tchi62	Patrimoni associat	termino	lg-cat
+tchi62	Assoziiertes Kulturerbe	termino	lg-deu
+tchi62	Patrimoine associé	termino	lg-fra
+tchi62	Patrimonio associato	termino	lg-ita
 tchi33	Audiovisual	termino	lg-spa
 tchi33	Audiovisual	termino	lg-cat
 tchi33	Audiovisual	termino	lg-eng
@@ -1816,37 +1913,12 @@ tchi34	Edició	termino	lg-cat
 tchi34	Edition	termino	lg-eng
 tchi34	Édition	termino	lg-fra
 tchi34	Edizione	termino	lg-ita
-tchi35	Autoría	termino	lg-spa
-tchi35	Autoria	termino	lg-cat
-tchi35	Authorship	termino	lg-eng
-tch538	Otros códigos	termino	lg-spa
-tch538	Altri codici	termino	lg-ita
-tchi38	Relations	termino	lg-eng
-tchi38	Beziehungen	termino	lg-deu
-tchi38	Relations	termino	lg-fra
-tchi38	Relazioni	termino	lg-ita
-tchi39	Dependiente de	termino	lg-spa
-tchi39	Dependent de	termino	lg-cat
-tchi39	Dependent of	termino	lg-eng
-tchi39	Abhängig von	termino	lg-deu
-tchi39	Dépend de	termino	lg-fra
-tchi39	Dipendente da	termino	lg-ita
 tchi40	Hijos	termino	lg-spa
 tchi40	Fills	termino	lg-cat
 tchi40	Children	termino	lg-eng
 tchi40	Unterbegriffe	termino	lg-deu
 tchi40	Enfants	termino	lg-fra
 tchi40	Figli	termino	lg-ita
-tchi4	llistat	termino	lg-cat
-tchi4	List	termino	lg-eng
-tchi4	Liste	termino	lg-deu
-tchi4	Liste	termino	lg-fra
-tchi4	Elenco	termino	lg-ita
-tchi3	Llistat	termino	lg-cat
-tchi3	List	termino	lg-eng
-tchi3	Liste	termino	lg-deu
-tchi3	Liste	termino	lg-fra
-tchi3	Elenco	termino	lg-ita
 tchi41	Indexaciones	termino	lg-spa
 tchi41	Indexacions	termino	lg-cat
 tchi41	Indexations	termino	lg-eng
@@ -1881,155 +1953,132 @@ tchi46	List of relations	termino	lg-eng
 tchi46	Liste der Beziehungen	termino	lg-deu
 tchi46	Liste de relations	termino	lg-fra
 tchi46	Elenco delle relazioni	termino	lg-ita
-tch554	Periodo	termino	lg-spa
-tch554	Periode	termino	lg-cat
-tch554	Period	termino	lg-eng
-tch554	Zeitraum	termino	lg-deu
-tch554	Période	termino	lg-fra
-tch554	Periodo	termino	lg-ita
-tch555	Lugar	termino	lg-spa
-tch555	Lloc	termino	lg-cat
-tch555	Place	termino	lg-eng
-tch555	Luogo	termino	lg-ita
-tch555	Lieu	termino	lg-fra
-tch555	Ort	termino	lg-deu
-tchi47	Listado	termino	lg-spa
-tchi47	List	termino	lg-eng
-tchi47	Llistat	termino	lg-eus
-tchi47	Liste	termino	lg-deu
-tchi47	Liste	termino	lg-fra
-tchi47	Elenco	termino	lg-ita
-tchi48	Periodo	termino	lg-spa
-tchi48	Periode	termino	lg-cat
-tchi48	Period	termino	lg-eng
-tchi48	Zeitraum	termino	lg-deu
-tchi48	Période	termino	lg-fra
-tchi48	Periodo	termino	lg-ita
-tch179	Elements in the set	termino	lg-eng
-tchi5	Identifizierung	termino	lg-deu
-tchi32	URI	termino	lg-cat
-tchi34	Auflage	termino	lg-deu
-tchi35	Autor	termino	lg-deu
-tchi35	Auteur	termino	lg-fra
-tchi35	Autore	termino	lg-ita
-tchi36	Proyecto	termino	lg-spa
-tchi36	Projecte	termino	lg-cat
-tchi36	Project	termino	lg-eng
-tchi36	Projekt	termino	lg-deu
-tchi36	Projet	termino	lg-fra
-tchi36	Progetto	termino	lg-ita
-tchi37	Lugar de registro	termino	lg-spa
-tchi37	Lloc de registre	termino	lg-cat
-tchi37	Register place	termino	lg-eng
-tchi37	Ort der Registrierung	termino	lg-deu
-tchi37	Lieu d'enregistrement	termino	lg-fra
-tchi37	Luogo di registrazione	termino	lg-ita
-tchi38	Relaciones	termino	lg-spa
-tchi38	Relacions	termino	lg-cat
-tchi44	Carte des sections	termino	lg-fra
-tchi1	Immovables	termino	lg-eng
-tchi1	Immobiles	termino	lg-deu
-tchi1	Immobiles	termino	lg-ita
-tchi1	Immobiliers	termino	lg-fra
-tchi20	Datierung	termino	lg-deu
-tchi20	Ραντεβού	termino	lg-ell
-tchi20	Dating	termino	lg-eng
-tchi49	Pestañas	termino	lg-spa
-tchi49	Tabs	termino	lg-eng
-tchi49	Pestanyes	termino	lg-cat
-tchi49	Taabs	termino	lg-deu
-tchi49	Onglets	termino	lg-fra
-tchi49	Schede	termino	lg-ita
-tch159	Edición	termino	lg-spa
-tch159	Auflage	termino	lg-deu
-tch159	Edizione	termino	lg-ita
-tchi50	Medidas	termino	lg-spa
-tchi50	Measures	termino	lg-eng
-tchi50	Mesures	termino	lg-cat
-tchi50	Maßnahmen	termino	lg-deu
-tchi50	Mesures	termino	lg-fra
-tchi50	Misure	termino	lg-ita
-tch149	Maßnahmen	termino	lg-deu
-tch149	Misure	termino	lg-ita
-tchi51	Ubicación	termino	lg-spa
-tchi51	Ubication	termino	lg-eng
-tchi51	Ubicació	termino	lg-cat
-tchi51	Ubikation	termino	lg-deu
-tchi51	Ubication	termino	lg-fra
-tchi51	Ubicazione	termino	lg-ita
-tchi52	Conservación y restauración	termino	lg-spa
-tchi52	Conservation and restoration	termino	lg-eng
-tchi52	Conservació i restauració	termino	lg-cat
-tchi52	Konservierung und Restaurierung	termino	lg-deu
-tchi52	Conservation et restauration	termino	lg-fra
-tchi52	Conservazione e restauro	termino	lg-ita
-tchi53	Estado actual	termino	lg-spa
-tchi53	Actual estate	termino	lg-eng
-tchi53	Estat actual	termino	lg-cat
-tchi53	Aktueller Stand	termino	lg-deu
-tchi53	État actuel	termino	lg-fra
-tchi53	Stato attuale	termino	lg-ita
-tch356	Restauración	termino	lg-spa
-tchi56	Restauración	termino	lg-spa
-tchi56	Restoration	termino	lg-eng
-tchi56	Restauració	termino	lg-cat
-tch356	Wiederherstellung	termino	lg-deu
-tchi56	Wiederherstellung	termino	lg-deu
-tchi56	Restauration	termino	lg-fra
-tch356	Restauro	termino	lg-ita
-tchi56	Restauro	termino	lg-ita
-tchi57	Restaurada	termino	lg-spa
-tchi57	Restored	termino	lg-eng
-tchi57	Restaurada	termino	lg-cat
-tch150	Wiederhergestellt	termino	lg-deu
-tchi57	Wiederhergestellt	termino	lg-deu
-tchi57	Restauré	termino	lg-fra
-tch150	Ripristinato	termino	lg-ita
-tchi57	Ripristinato	termino	lg-ita
-tchi58	Intervenciones	termino	lg-spa
-tchi58	Interventions	termino	lg-eng
-tchi58	Intervencions	termino	lg-cat
-tch171	Interventioneng	termino	lg-deu
-tchi58	Interventioneng	termino	lg-deu
-tchi58	Interventions	termino	lg-fra
-tch171	Interventi	termino	lg-ita
-tchi58	Interventi	termino	lg-ita
-tch507	Inspections / État de conservation	termino	lg-fra
-tch507	Ispezioni / Stato di conservazione	termino	lg-ita
-tchi55	Inspections / Conservation state	termino	lg-eng
-tchi55	Inspeccions / Estat de conservació	termino	lg-cat
-tchi55	Inspektionen / Stand der Erhaltung	termino	lg-deu
-tchi55	Ispezioni / Stato di conservazione	termino	lg-ita
-tchi54	Biografía del bien	termino	lg-spa
-tchi54	Biography of property	termino	lg-eng
-tchi54	Biografia del bé	termino	lg-cat
-tchi54	Biographie du bien	termino	lg-fra
-tchi54	Biografia del bene	termino	lg-ita
-tchi54	Biographie des Guten	termino	lg-deu
-tch506	Biografia del bene	termino	lg-ita
-tch506	Biographie des Guten	termino	lg-deu
-tchi2	Property typologies	termino	lg-eng
-tchi2	Tipologies d'inmobles	termino	lg-cat
-tchi2	Immobilientypologien	termino	lg-deu
-tchi2	Typologies des biens immobiliers	termino	lg-fra
-tchi2	Tipologie di immobili	termino	lg-ita
-tch556	Código	termino	lg-spa
-tch556	Code	termino	lg-eng
-tch556	Codi	termino	lg-cat
-tch556	Code	termino	lg-deu
-tch556	Code	termino	lg-fra
-tch556	Codice	termino	lg-ita
-tch75	Code	termino	lg-deu
-tch75	Codice	termino	lg-ita
-tch507	Inspeccions / Estat de conservació	termino	lg-cat
-tch507	Inspektionen / Stand der Erhaltung	termino	lg-deu
-tch136	Importar fichas con imagen	termino	lg-spa
-tch136	Import image files	termino	lg-eng
-tch136	Dateien mit Bildern importieren	termino	lg-deu
-tch136	Importer des fiches avec images	termino	lg-fra
-tch136	Importare schede con immagine	termino	lg-ita
-tch297	fund	termino	lg-spa
-tch145	Bienes muebles	termino	lg-spa
-tchi55	Inspecciones / Estado de conservación	termino	lg-spa
-tchi55	Inspections / État de conservation	termino	lg-fra
+tchi7	Περιγραφέας αυτό	termino	lg-ell
+tch102	Dossier photographique	termino	lg-fra
+tch108	Importar fichas con imagen	termino	lg-spa
+tch114	Projecte	termino	lg-cat
+tch117	Measures	termino	lg-eng
+tch120	Année	termino	lg-fra
+tch124	Classificació	termino	lg-cat
+tch98	Import tabs with image	termino	lg-eng
+tch135	Entitat	termino	lg-cat
+tch14	Supprimer	termino	lg-fra
+tch148	Id	termino	lg-cat
+tch158	Historique	termino	lg-fra
+tch163	Tipo de medida	termino	lg-spa
+tch19	Information générale	termino	lg-fra
+tch199	Lieu de découverte	termino	lg-fra
+tch213	documents_pdf	termino	lg-spa
+tch222	identifying_audiovisual	termino	lg-spa
+tch227	identifying_other_images	termino	lg-spa
+tch233	Projecte	termino	lg-cat
+tch234	Trademark	termino	lg-eng
+tch240	Últims canvis	termino	lg-cat
+tch27	Information générale	termino	lg-fra
+tch273	Listado	termino	lg-spa
+tch286	pictures	termino	lg-spa
+tch298	collection_data	termino	lg-spa
+tch311	geolocation_data	termino	lg-spa
+tch325	indexation_data	termino	lg-spa
+tch336	Biens immobiliers	termino	lg-fra
+tch347	Analyse et interprétation symbolique et sociale...	termino	lg-fra
+tch357	Indexació temàtica	termino	lg-cat
+tch370	images	termino	lg-spa
+tch381	geolocation_data_geojson	termino	lg-spa
+tch386	imágenes	termino	lg-spa
+tch386	Imatges	termino	lg-cat
+tch395	Liste de thésaurus	termino	lg-fra
+tch403	Relacions	termino	lg-cat
+tch408	Numeración Nacional Registro de BIC	termino	lg-spa
+tch410	Special measures	termino	lg-eng
+tch420	source_surname	termino	lg-spa
+tch427	Inscripciones	termino	lg-spa
+tch43	Identificación	termino	lg-spa
+tch431	Inscription	termino	lg-fra
+tch454	Place of discovery - public information	termino	lg-eng
+tch463	Color	termino	lg-spa
+tch464	Tonalité	termino	lg-fra
+tch472	Nouveau	termino	lg-fra
+tch483	Proyecto	termino	lg-spa
+tch487	Activités	termino	lg-fra
+tch49	Colección	termino	lg-spa
 tch49	Col·lecció	termino	lg-cat
+tch496	Status prior to incorporation into the collection	termino	lg-eng
+tch535	informant	termino	lg-spa
+tch538	Otros códigos	termino	lg-spa
+tch538	Altri codici	termino	lg-ita
+tch544	bibliography_data	termino	lg-spa
+tch557	Mobiles Kulturerbe	termino	lg-deu
+tch58	Descripción relevante	termino	lg-spa
+tch58	Descripció rellevant	termino	lg-cat
+tch72	Initiation bulletin date	termino	lg-eng
+tch8	Tamany	termino	lg-cat
+tch83	Tema	termino	lg-cat
+tch86	view_single_line	termino	lg-spa
+tch89	Utilisation	termino	lg-fra
+tch95	Localització	termino	lg-cat
+tch97	Fotografías	termino	lg-spa
+tch98	छविको साथ ट्याबहरू आयात गर्नुहोस्	termino	lg-nep
+tch288	identifying_images_data	termino	lg-spa
+tchi19	Descripción	termino	lg-spa
+tchi19	Descripció	termino	lg-cat
+tchi19	Beschreibung	termino	lg-deu
+tchi19	Description	termino	lg-eng
+tchi19	Description	termino	lg-fra
+tchi19	Descrizione	termino	lg-ita
+tchi28	Documentación	termino	lg-spa
+tchi28	Documentació	termino	lg-cat
+tchi28	Documentation	termino	lg-eng
+tchi28	Dokumentation	termino	lg-deu
+tchi28	Documentation	termino	lg-fra
+tchi28	Documentazione	termino	lg-ita
+tchi30	Bibliografía relacionada	termino	lg-spa
+tchi30	Related bibliography	termino	lg-eng
+tchi30	Bibliografia relacionada	termino	lg-cat
+tchi30	Zugehörige Bibliographie	termino	lg-deu
+tchi30	Bibliographie associée	termino	lg-fra
+tchi30	Bibliografia correlata	termino	lg-ita
+tchi3	Llistat	termino	lg-cat
+tchi3	List	termino	lg-eng
+tchi3	Liste	termino	lg-deu
+tchi3	Liste	termino	lg-fra
+tchi3	Elenco	termino	lg-ita
+tchi5	αναγνώριση	termino	lg-ell
+tchi5	Identification	termino	lg-fra
+tchi5	Identificazione	termino	lg-ita
+tchi16	Tipología	termino	lg-spa
+tchi16	Tipologia	termino	lg-cat
+tchi16	Typology	termino	lg-eng
+tchi16	Tipologia	termino	lg-ita
+tchi16	Typologie	termino	lg-fra
+tchi16	Typologie	termino	lg-deu
+tchi23	Resumen	termino	lg-spa
+tchi23	Resum	termino	lg-cat
+tchi23	Abstract	termino	lg-eng
+tchi23	Zusammenfassung	termino	lg-deu
+tchi23	Résumé	termino	lg-fra
+tchi23	Riassunto	termino	lg-ita
+tch252	Resumen	termino	lg-cat
+tch257	Descripción	termino	lg-cat
+tch226	Altres imatges	termino	lg-cat
+tch478	Publications	termino	lg-eng
+tch127	Informació general	termino	lg-cat
+tch147	Especificaciones de manipulación, transporte, exposición	termino	lg-spa
+tch508	Recomanacions i paràmetres de conservació preventiva (HR, Tª, Lux...)	termino	lg-cat
+tch267	Identificació	termino	lg-cat
+tch276	Enfants	termino	lg-fra
+tch445	Précision de l'utilisation	termino	lg-fra
+tch468	css value	termino	lg-eng
+tch200	Inventario	termino	lg-spa
+tch200	Inventory	termino	lg-eng
+tch200	Inventari	termino	lg-cat
+tch200	Bestandsaufnahme	termino	lg-deu
+tch200	Inventaire	termino	lg-fra
+tch200	Inventario	termino	lg-ita
+tch218	Elenco	termino	lg-ita
+tch218	Liste	termino	lg-deu
+tch201	Ausgeschlossen	termino	lg-deu
+tch201	Escluso	termino	lg-ita
+tch57	Matèria	termino	lg-cat
+tch57	Materia	termino	lg-spa
+tch508	Recommendations and preventive conservation parameters (HR, Tª, Lux...)	termino	lg-eng

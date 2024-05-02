@@ -471,7 +471,8 @@ class ontology {
 				'component_security_administrator',
 				'section_list','search_list',
 				'component_semantic_node',
-				'box_elements',
+				'component_dataframe',
+				'box elements',
 				'exclude_elements'
 			);
 
@@ -539,7 +540,8 @@ class ontology {
 	public static function add_term(object $options) {
 
 		// options
-			$term_id = $options->term_id;
+			$term_id	= $options->term_id;
+			$json_item	= $options->json_item ?? null;
 
 		// term_id
 			if (empty($term_id)) {
@@ -561,7 +563,11 @@ class ontology {
 			// section_id. search and locate the ontology record by term_id
 			$section_id = ontology::get_section_id_by_term_id($term_id);
 			if (!empty($section_id)) {
-				debug_log(__METHOD__." Ignored add term request. Section: '$section_id' already exists! . term: ".to_string($term_id), logger::ERROR);
+				debug_log(__METHOD__
+					." Ignored add term request. Section: '$section_id' already exists!
+					. term: ".to_string($term_id)
+					, logger::ERROR
+				);
 				return false;
 			}
 
@@ -620,7 +626,9 @@ class ontology {
 			})($id);
 
 		// JSON Ontology Item
-			$json_item	= ontology::tipo_to_json_item($term_id);
+			if (empty($json_item)) {
+				$json_item	= ontology::tipo_to_json_item($term_id);
+			}
 			$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// returns object response
 
 		// component parent
@@ -766,9 +774,13 @@ class ontology {
 					$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 					$component_tipo	= (function($dato_tipo){
 						switch ($dato_tipo) {
-							case 'termino':	return ONTOLOGY_SECTION_TIPOS['term'];			break;
-							case 'def':		return ONTOLOGY_SECTION_TIPOS['definition'];	break;
-							case 'obs':		return ONTOLOGY_SECTION_TIPOS['observations'];	break;
+							case 'term':
+							case 'termino':
+								return ONTOLOGY_SECTION_TIPOS['term'];
+							case 'def':
+								return ONTOLOGY_SECTION_TIPOS['definition'];
+							case 'obs':
+								return ONTOLOGY_SECTION_TIPOS['observations'];
 						}
 						return null;
 					})($dato_tipo);
@@ -786,8 +798,8 @@ class ontology {
 																		 $lang,
 																		 $section_tipo);
 
-						$dato = ($modelo_name==='component_input_text') ? [$value] : $value;
-						$component->set_dato($dato);
+						$new_dato = ($modelo_name==='component_input_text') ? [$value] : $value;
+						$component->set_dato($new_dato);
 						$component->Save();
 						// (!) Note that on Save, section exec method post_save_component_processes that saves into RecordObj_descriptors_dd
 					})($dato);
@@ -936,7 +948,6 @@ class ontology {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 
-
 		$section_tipo = ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
 		// section_id. locate the ontology record by term_id
@@ -949,40 +960,46 @@ class ontology {
 				]);
 				// (!) Note that add_term also add self calculated JSON item
 				$response->msg = 'OK. Created a new ontology term record including JSON item '.$term_id.' successfully';
+			}
 
+
+			if (empty($json_item)) {
+				$json_item = ontology::tipo_to_json_item($term_id);
+			}
+
+			// updated existing record
+			$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
+			$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
+			$component		= component_common::get_instance(
+				$modelo_name,
+				$component_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$current_dato = $component->get_dato();
+
+			// Compare. Use always the comparison operator (==) to compare objects property by property
+				$is_equal_object = ($current_dato==$json_item);
+
+			if ($is_equal_object===false) {
+				$component->set_dato($json_item);
+				$component->Save();
+				$response->msg = 'OK. JSON item '.$term_id.' saved successfully';
 			}else{
-
-				if ($json_item===null) {
-					$json_item = ontology::tipo_to_json_item($term_id);
-				}
-
-				// updated existing record
-				$component_tipo	= ONTOLOGY_SECTION_TIPOS['json_item']; // expected dd1556
-				$modelo_name	= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true); // expected component_json
-				$component		= component_common::get_instance($modelo_name,
-																 $component_tipo,
-																 $section_id,
-																 'list',
-																 DEDALO_DATA_NOLAN,
-																 $section_tipo);
-				$current_dato = $component->get_dato();
-
-				// Compare. Use always the comparison operator (==) to compare objects property by property
-					$is_equal_object = ($current_dato==$json_item);
-
-				if ($is_equal_object===false) {
-					$component->set_dato($json_item);
-					$component->Save();
-					$response->msg = 'OK. JSON item '.$term_id.' saved successfully';
-				}else{
-					$response->msg = 'OK. JSON item '.$term_id.' save IGNORED. The new data is equal than already existing data';
-				}
+				$response->msg = 'OK. JSON item '.$term_id.' save IGNORED. The new data is equal than already existing data';
 			}
 
 
 		$response->result = true;
 
-		debug_log(__METHOD__." $response->msg ".to_string(), logger::DEBUG);
+		// debug
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::DEBUG
+			);
+
 
 		return $response;
 	}//end save_json_ontology_item

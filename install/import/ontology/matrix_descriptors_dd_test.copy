@@ -72,7 +72,6 @@ test22	BOX DESACTIVOS	termino	lg-spa
 test24	matrix_test	termino	lg-spa
 test31	geolocation	termino	lg-spa
 test37	autocomplete hi all options	termino	lg-spa
-test40	Portal mosaic imagen	termino	lg-spa
 test101	filter	termino	lg-spa
 test140	iri	termino	lg-spa
 test152	password	termino	lg-spa
@@ -107,7 +106,6 @@ test100	geolocation	termino	lg-spa
 test18	json	termino	lg-spa
 test102	section_id	termino	lg-spa
 test17	text_area	termino	lg-spa
-test41	view_mosaic	termino	lg-spa
 test5	Web CUNY Teach	termino	lg-spa
 test55	select	termino	lg-spa
 test61	autocomplete Zenon	termino	lg-spa
@@ -159,11 +157,13 @@ test183	Test autocomplete	termino	lg-spa
 test38	Test list section	termino	lg-spa
 test74	listado	termino	lg-spa
 test33	Borrar	termino	lg-spa
-test47	Borrar	termino	lg-spa
-test44	Countermarks case (numisdata575)	termino	lg-spa
-test4	Countermarks case (service_autocomplete)	termino	lg-spa
 test49	Observe cases (properties defined events)	termino	lg-spa
-test48	Toponomy	termino	lg-spa
+test44	Identification	termino	lg-spa
+test47	Nuevo	termino	lg-spa
+test4	Countermarks case (service_autocomplete) render_grid_choose	termino	lg-spa
+test41	Project filter	termino	lg-spa
+test48	Import images cases	termino	lg-spa
+test40	state_of_component deprecated/alternative cases	termino	lg-spa
 test70	filter_master	termino	lg-spa
 test19	myglobaltable	termino	lg-spa
 test9	location for map	termino	lg-spa
@@ -245,3 +245,5 @@ test2	Test section reference cases	termino	lg-spa
 test2	Test section reference cases	termino	lg-eng
 test33	Delete	termino	lg-eng
 test47	New	termino	lg-eng
+test216	Test Unit (data on matrix_test)	termino	lg-eng
+test216	Unit Test Section (using matrix_test table)	termino	lg-spa

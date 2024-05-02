@@ -24,7 +24,9 @@ export const view_tag_list_svg = function() {
 
 /**
 * RENDER
-* Render node for use in list
+* Render node for use in this view, mainly used in service_autocomplete grid choose
+* The default_quality (normally 'web') is preferred here but
+* a fallback to thumb is used just in case
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -32,49 +34,51 @@ export const view_tag_list_svg = function() {
 view_tag_list_svg.render = function(self, options) {
 
 	// short vars
-		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
-		const external_source	= data.external_source
-		const quality			= self.quality || self.context.features.quality
+		const data			= self.data || {}
+		const value			= data.value || [] // value is a files_info list
+		const files_info	= value
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {})
 
+	// quality. default quality is 'web'. Fallback to thumbnail
+		const quality = self.context?.features?.default_quality || page_globals.dedalo_quality_thumb
+
+	// media url from files_info based on selected context quality
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
+		const url		= file_info
+			? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
+
 	// svg elements
-		const inputs_value	= value // force one empty input at least
-		const value_length = inputs_value.length || 1
-		for (let i = 0; i < value_length; i++) {
+		if (file_info) {
 
-			// media url from files_info based on selected context quality
-				const file_info	= files_info.find(el => el.quality===quality)
-				const url		= file_info
-					? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
-					: page_globals.fallback_image
-
-			// convert the data_tag to string to be used it in html
-			// replace the " to ' to be compatible with the dataset of html5, the tag strore his data ref inside the data-data html
-			// json use " but it's not compatible with the data-data storage in html5
+			// convert the data_tag to string to be used it in HTML
+			// replace the " to ' to be compatible with the dataset of HTML5, the tag store his data ref inside the data-data HTML
+			// JSON use " but it's not compatible with the data-data storage in HTML5
 				const data_string = JSON.stringify({
 					section_tipo	: self.section_tipo,
 					section_id		: self.section_id,
 					component_tipo	: self.tipo
 				}).replace(/"/g, '\'')
 
+			// dataset (used by service_autocomplete grid choose)
+				const dataset = {
+					tag_id	: 1,
+					type	: 'svg',
+					state	: 'n',
+					data	: data_string
+				}
+
 			// image node
-				const image	= ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'img',
 					src				: url,
 					class_name		: 'svg',
-					dataset			:{
-						tag_id	: 1,
-						type	: 'svg',
-						state	: 'n',
-						data	: data_string
-					},
+					dataset			: dataset,
 					parent			: wrapper
 				})
-		}//end for (let i = 0; i < value_length; i++)
+		}
 
 
 	return wrapper
