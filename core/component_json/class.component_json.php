@@ -705,7 +705,8 @@ class component_json extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('*', '', $q);
 				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				// $query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
 				$query_object->unaccent	= true;
 				break;
 			# ENDS WITH
@@ -748,7 +749,7 @@ class component_json extends component_common {
 				$operator = '~*';
 				$q_clean  = str_replace('+', '', $q);
 				$query_object->operator	= $operator;
-				$query_object->q_parsed	= '\'.*\[".*'.$q_clean.'.*\'';
+				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
 				$query_object->unaccent	= true;
 				break;
 		}//end switch (true)
@@ -756,6 +757,31 @@ class component_json extends component_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* SEARCH_OPERATORS_INFO
+	* Return valid operators for search in current component
+	* @return array $ar_operators
+	*/
+	public function search_operators_info() : array {
+
+		$ar_operators = [
+			'*'			=> 'no_empty', // not null
+			'!*'		=> 'empty', // null
+			'='			=> 'similar_to',
+			'!='		=> 'different_from',
+			'-'			=> 'does_not_contain',
+			'!!'		=> 'duplicate',
+			'*text*'	=> 'contains',
+			'text*'		=> 'begins_with',
+			'*text'		=> 'end_with',
+			'\'text\''	=> 'literal'
+		];
+
+		return $ar_operators;
+	}//end search_operators_info
 
 
 
