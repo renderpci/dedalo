@@ -586,8 +586,9 @@ function exec_time_unit(float $start, string $unit='ms', int $round=3) : float {
 /**
 * EXEC_TIME_UNIT_AUTO
 * @param float $start
-* 	time expressed in minutes, seconds or milliseconds from function start_time()
+* 	time expressed in days, hours, minutes, seconds or milliseconds from function start_time()
 * @return string $result
+* 	as '3.521 hour'
 */
 function exec_time_unit_auto(float $start) : string {
 
@@ -596,26 +597,33 @@ function exec_time_unit_auto(float $start) : string {
 	// calculation is always in nanoseconds
 	$total_ns = start_time() - $start;
 
+	// milliseconds
 	$total_ms = $total_ns/1000000;
-	if ($total_ms>1000) {
-		$total_sec = $total_ns/1000000000;
-		if ($total_sec>60) {
-			$total_min = $total_ns/60000000000;
-		}
+	if ($total_ms<1000) {
+		return $total_ms .' ms';
 	}
 
-	if (isset($total_min)) {
-		$result = round($total_min, $round).' min';
-	}
-	elseif (isset($total_sec)) {
-		$result = round($total_sec, $round).' sec';
-	}
-	else {
-		$result = round($total_ms, $round).' ms';
+	// seconds
+	$total_sec = $total_ms/1000;
+	if ($total_sec<60) {
+		return round($total_sec, 0).' sec';
 	}
 
+	// minutes
+	$total_min = $total_sec/60;
+	if ($total_min<60) {
+		return round($total_min, $round).' min';
+	}
 
-	return $result;
+	// hours
+	$total_hour = $total_min/60;
+	if ($total_hour<24) {
+		return round($total_hour, $round).' hour';
+	}
+
+	// days
+	$total_day = $total_hour/24;
+	return round($total_day, $round).' day';
 }//end exec_time_unit_auto
 
 

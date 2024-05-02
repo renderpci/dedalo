@@ -900,7 +900,7 @@ class update {
 				while($row = pg_fetch_assoc($result)) {
 
 					$id	= $row['id'];
-					$callback( $row, $table ); // like 'convert_section_dato_to_data'
+					$callback( $row, $table, $max); // like 'convert_section_dato_to_data'
 
 				}// end while
 
@@ -921,7 +921,7 @@ class update {
 
 				// reset counter
 					$i_ref++;
-					if ($i_ref > 1001) {
+					if ($i_ref > 3001) {
 						$i_ref = 0;
 					}
 			}//end for ($i=$min; $i<=$max; $i++)

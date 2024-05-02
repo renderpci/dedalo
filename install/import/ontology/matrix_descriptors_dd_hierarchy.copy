@@ -412,7 +412,6 @@ hierarchy62	Pubblicabile	termino	lg-ita
 hierarchy62	Publicable	termino	lg-spa
 hierarchy117	Cambia a	termino	lg-spa
 hierarchy117	Canvia a	termino	lg-cat
-hierarchy117	Cambia in	termino	lg-ita
 hierarchy50	Συμβουλευτείτε τα κεφάλαια	termino	lg-ell
 hierarchy93	Biblioteca	termino	lg-spa
 hierarchy118	view_single_line	termino	lg-spa
@@ -659,3 +658,29 @@ hierarchy125	Activa al tesauro	termino	lg-cat
 hierarchy125	Aktiv im Thesaurus	termino	lg-deu
 hierarchy125	Actif dans le thésaurus	termino	lg-fra
 hierarchy125	Attivo nel thesaurus	termino	lg-ita
+hierarchy126	Patrimonio asociado	termino	lg-spa
+hierarchy126	Associated heritage	termino	lg-eng
+hierarchy126	Patrimoni associat	termino	lg-cat
+hierarchy126	Assoziiertes Kulturerbe	termino	lg-deu
+hierarchy126	Patrimoine associé	termino	lg-fra
+hierarchy126	Patrimonio associato	termino	lg-ita
+hierarchy127	Key	termino	lg-eng
+hierarchy127	Clave	termino	lg-spa
+hierarchy127	Clau	termino	lg-cat
+hierarchy127	Schlüssel	termino	lg-deu
+hierarchy127	Clé	termino	lg-fra
+hierarchy127	Chiave	termino	lg-ita
+hierarchy128	Other codes	termino	lg-eng
+hierarchy128	Otros códigos	termino	lg-spa
+hierarchy128	Autres codes	termino	lg-fra
+hierarchy128	Alres codis	termino	lg-cat
+hierarchy128	Altri codici	termino	lg-ita
+hierarchy128	Andere Codes	termino	lg-deu
+hierarchy129	Personas	termino	lg-spa
+hierarchy129	People	termino	lg-eng
+hierarchy129	Persones	termino	lg-cat
+hierarchy129	Menschen	termino	lg-deu
+hierarchy129	Personnes	termino	lg-fra
+hierarchy129	Persone	termino	lg-ita
+hierarchy117	Passa a	termino	lg-ita
+hierarchy117	Wechselt zu	termino	lg-deu

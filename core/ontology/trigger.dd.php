@@ -208,6 +208,21 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		$json_item	= (object)ontology::tipo_to_json_item($term_id);
 		$save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
 
+	// descriptors
+		// sync Dédalo ontology records. Returns boolean
+		$descriptors = $json_item->descriptors ?? [];
+		foreach ($descriptors as $current_item) {
+
+			if ($current_item->type==='term') {
+				ontology::edit_term((object)[
+					'term_id'	=> $terminoID,
+					'dato'		=> $current_item->value,
+					'dato_tipo'	=> 'termino',
+					'lang'		=> $current_item->lang
+				]);
+			}
+		}
+
 	// css structure . For easy css edit, save
 		if ( isset($form_data->{MAIN_PROPERTIES_COLUMN}) &&
 			 is_object($form_data->{MAIN_PROPERTIES_COLUMN}) &&
@@ -276,11 +291,22 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 
 	// }else{
 
+		// data sample:
+			// {
+			// 	"mode": "save_descriptor",
+			//     "parent": "tch47",
+			//     "lang": "lg-eng",
+			//     "tipo": "termino",
+			//     "dato": "Id/",
+			//     "terminoID": "tch47",
+			//     "top_tipo": null
+			// }
+
 		// sync Dédalo ontology records. Returns boolean
 			$result = ontology::edit_term((object)[
 				'term_id'	=> $data->parent,
 				'dato'		=> $data->dato,
-				'dato_tipo'	=> $data->tipo,
+				'dato_tipo'	=> $data->tipo, // normally 'termino'
 				'lang'		=> $data->lang
 			]);
 
@@ -708,9 +734,29 @@ if($accion==='duplicate') {
 			}
 
 	// JSON Ontology Item save
-		// $term_id	= $new_terminoID;
-		// $json_item	= (object)ontology::tipo_to_json_item($term_id);
-		// $save_item	= ontology::save_json_ontology_item($term_id, $json_item);	// return object response
+		// json_item build
+			$json_item	= (object)ontology::tipo_to_json_item($terminoID);
+			$json_item->tipo = $new_terminoID; // replace tipo
+		// add item to Ontology
+			ontology::add_term((object)[
+				'term_id'	=> $new_terminoID,
+				'json_item'	=> $json_item
+			]);
+
+	// descriptors
+		// sync Dédalo ontology records. Returns boolean
+		$descriptors = $json_item->descriptors ?? [];
+		foreach ($descriptors as $current_item) {
+
+			if ($current_item->type==='term') {
+				ontology::edit_term((object)[
+					'term_id'	=> $new_terminoID,
+					'dato'		=> $current_item->value,
+					'dato_tipo'	=> 'termino',
+					'lang'		=> $current_item->lang
+				]);
+			}
+		}
 
 	// response
 		$response = (object)[
