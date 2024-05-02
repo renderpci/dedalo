@@ -213,12 +213,14 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		$descriptors = $json_item->descriptors ?? [];
 		foreach ($descriptors as $current_item) {
 
-			ontology::edit_term((object)[
-				'term_id'	=> $terminoID,
-				'dato'		=> $current_item->value,
-				'dato_tipo'	=> 'termino',
-				'lang'		=> $current_item->lang
-			]);
+			if ($current_item->type==='term') {
+				ontology::edit_term((object)[
+					'term_id'	=> $terminoID,
+					'dato'		=> $current_item->value,
+					'dato_tipo'	=> 'termino',
+					'lang'		=> $current_item->lang
+				]);
+			}
 		}
 
 	// css structure . For easy css edit, save
@@ -289,11 +291,22 @@ if(!empty($data) && $data->mode==='save_descriptor') {
 
 	// }else{
 
+		// data sample:
+			// {
+			// 	"mode": "save_descriptor",
+			//     "parent": "tch47",
+			//     "lang": "lg-eng",
+			//     "tipo": "termino",
+			//     "dato": "Id/",
+			//     "terminoID": "tch47",
+			//     "top_tipo": null
+			// }
+
 		// sync Dédalo ontology records. Returns boolean
 			$result = ontology::edit_term((object)[
 				'term_id'	=> $data->parent,
 				'dato'		=> $data->dato,
-				'dato_tipo'	=> $data->tipo,
+				'dato_tipo'	=> $data->tipo, // normally 'termino'
 				'lang'		=> $data->lang
 			]);
 
@@ -735,12 +748,14 @@ if($accion==='duplicate') {
 		$descriptors = $json_item->descriptors ?? [];
 		foreach ($descriptors as $current_item) {
 
-			ontology::edit_term((object)[
-				'term_id'	=> $new_terminoID,
-				'dato'		=> $current_item->value,
-				'dato_tipo'	=> 'termino',
-				'lang'		=> $current_item->lang
-			]);
+			if ($current_item->type==='term') {
+				ontology::edit_term((object)[
+					'term_id'	=> $new_terminoID,
+					'dato'		=> $current_item->value,
+					'dato_tipo'	=> 'termino',
+					'lang'		=> $current_item->lang
+				]);
+			}
 		}
 
 	// response
