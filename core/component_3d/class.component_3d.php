@@ -342,34 +342,27 @@ class component_3d extends component_media_common implements component_media_int
 			}
 
 		// thumb_path
-			$file_name			= $this->get_id();
-
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
 		// thumb not exists case: generate from posterframe
-			$posterframe	= $this->get_posterframe_filepath();
+			$posterframe = $this->get_posterframe_filepath();
 			if (!file_exists($posterframe)) {
 				debug_log(__METHOD__
-					." posterframe file doesn't exists, is not possible to create a thumb"
+					." posterframe file doesn't exists, it is not possible to create a thumb"
 					, logger::WARNING
 				);
 
 				return false;
 			}
 
-			// thumb generate
+		// thumb generate
 			$result = ImageMagick::dd_thumb(
 				$posterframe, // source file
-				$target_file, // thumb file
+				$target_file // thumb file
 			);
 
-		// exec command
-			// exec($command.' 2>&1', $output, $result_code);
-			if ($result===false) {
-				return false;
-			}
 
 		return true;
 	}//end create_thumb

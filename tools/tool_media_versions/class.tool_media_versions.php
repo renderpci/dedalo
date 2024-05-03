@@ -284,4 +284,82 @@ class tool_media_versions extends tool_common {
 
 
 
+	/**
+	* DELETE_VERSION
+	* 	Delete the selected file version
+	* @param object $options
+	* @return object $response
+	*/
+	public static function delete_version(object $options) : object {
+
+		// options
+			$tipo			= $options->tipo;
+			$section_tipo	= $options->section_tipo;
+			$section_id		= $options->section_id;
+			$quality		= $options->quality;
+			$extension		= $options->extension;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed';
+				$response->errors	= [];
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model,
+				$tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+
+		// delete file method is based on quality / extension
+			switch (true) {
+				case ( $quality===$component->get_thumb_quality() ):
+
+					// thumb case
+					$result = $component->delete_thumb();
+
+					// update response object
+					$response->result	= $result;
+					$response->msg		= $result===false ? 'Error. Request failed' : 'OK file delete successfully';
+					$response->errors	= $result===false ? ['file not deleted'] : [];
+					break;
+
+				case ( strtolower($extension)===$component->get_extension() ):
+
+					// main file like 'rsc37_rsc176_25.pdf' for component_pdf
+					$delete_file_response = $component->delete_file($quality);
+
+					// update response object
+					$response->result	= $delete_file_response->result;
+					$response->msg		= $delete_file_response->msg;
+					$response->errors	= $delete_file_response->errors;
+					break;
+
+				default:
+
+					// alternative versions
+					// Note that this action is destructive
+					$result = $component->delete_alternative_version(
+						$quality,
+						$extension
+					);
+
+					// update response object
+					$response->result	= $result;
+					$response->msg		= $result===false ? 'Error. Request failed' : 'OK file delete successfully';
+					$response->errors	= $result===false ? ['file not deleted'] : [];
+					break;
+			}
+
+
+		return $response;
+	}//end delete_version
+
+
+
 }//end class tool_media_versions

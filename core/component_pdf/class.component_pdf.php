@@ -327,21 +327,15 @@ class component_pdf extends component_media_common implements component_media_in
 			}
 
 		// thumb_path
-			// $file_name	= $this->get_id();
-			// $target_path	= $this->get_media_path_dir('thumb');
-
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
-			// $target_file		= $target_path . '/' . $file_name . '.'. $thumb_extension;
-
-		// thumb not exists case: generate from PDF
-			$quality		= $this->get_default_quality();
-			$source_file	= $this->get_media_filepath($quality);
+		// thumb do not exists case: generate from PDF
+			$source_file = $this->get_media_filepath( $this->get_default_quality() );
 			if (!file_exists($source_file)) {
 				debug_log(__METHOD__
-					." default quality file doesn't exists, is not possible to create a thumb"
+					." default quality file doesn't exists, it is not possible to create a thumb"
 					, logger::WARNING
 				);
 
@@ -353,23 +347,19 @@ class component_pdf extends component_media_common implements component_media_in
 			$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
 			$dimensions	= $width.'x'.$height;
 
-			$thumb_pdf_options = new stdClass();
-				$thumb_pdf_options->source_file = $source_file;
-				$thumb_pdf_options->ar_layers 	= [0];
-				$thumb_pdf_options->target_file = $target_file;
-				$thumb_pdf_options->density		= 72;
-				$thumb_pdf_options->antialias	= true;
-				$thumb_pdf_options->quality		= 75;
-				$thumb_pdf_options->resize		= $dimensions;
-				$thumb_pdf_options->pdf_cropbox	= true;
+		// convert
+			$thumb_options = new stdClass();
+				$thumb_options->source_file	= $source_file;
+				$thumb_options->ar_layers	= [0];
+				$thumb_options->target_file	= $target_file;
+				$thumb_options->density		= 72;
+				$thumb_options->antialias	= true;
+				$thumb_options->quality		= 75;
+				$thumb_options->resize		= $dimensions;
+				$thumb_options->pdf_cropbox	= true;
 
-			$result = ImageMagick::convert($thumb_pdf_options);
+			$result = ImageMagick::convert($thumb_options);
 
-		// exec command
-			// exec($command.' 2>&1', $output, $result_code);
-			if ($result===false) {
-				return false;
-			}
 
 		return true;
 	}//end create_thumb
@@ -1110,7 +1100,7 @@ class component_pdf extends component_media_common implements component_media_in
 			$page = $options->page ?? 0;
 
 		// skip thumb quality
-			if ($quality===DEDALO_QUALITY_THUMB) {
+			if ($quality===$this->get_thumb_quality()) {
 				return false;
 			}
 
@@ -1164,6 +1154,10 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return true;
 	}//end create_alternative_version
+
+
+
+
 
 
 
