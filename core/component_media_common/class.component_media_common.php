@@ -33,6 +33,7 @@ interface component_media_interface {
 	public function get_size(string $quality);
 	public function restore_component_media_files();
 	public function create_alternative_versions(?object $options=null);
+	public function delete_alternative_version(string $quality, string $extension, ?object $options=null);
 
 
 	// others
@@ -2446,6 +2447,16 @@ class component_media_common extends component_common {
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
 
+		// thumb case
+			if($quality===$this->get_thumb_quality()){
+				// thumb quality
+				$result = $this->create_thumb();
+
+				$response->result	= $result;
+				$response->msg		= $result===false ? 'Error building version' : 'OK request done';
+				return $response;
+			}
+
 		// short vars
 			$id					= $this->get_id();
 			$original_quality	= $this->get_original_quality();
@@ -2492,17 +2503,11 @@ class component_media_common extends component_common {
 				}
 			}
 
-			if($quality===DEDALO_QUALITY_THUMB){
-				// thumb quality
-				$result = $this->create_thumb();
-
-			}else{
-				// copy file from source quality to target quality
+			// copy file from source quality to target quality
 				$result = copy(
 					$original_file_path, // from original quality directory
 					$target_quality_path // to default quality directory
 				);
-			}
 
 			if ($result===false) {
 				debug_log(__METHOD__ . PHP_EOL
@@ -2698,7 +2703,7 @@ class component_media_common extends component_common {
 		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 		$ar_quality				= $this->get_ar_quality();
 		foreach ($ar_quality as $quality) {
-			if ($quality===DEDALO_QUALITY_THUMB) {
+			if ($quality===$this->get_thumb_quality()) {
 				continue; // skip thumb quality
 			}
 			foreach ($alternative_extensions as $extension) {
@@ -2713,6 +2718,114 @@ class component_media_common extends component_common {
 
 		return true;
 	}//end create_alternative_versions
+
+
+
+	/**
+	* DELETE_ALTERNATIVE_VERSION
+	* Remove alternative version file from disk
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options = null
+	* @return bool
+	*/
+	public function delete_alternative_version(string $quality, string $extension, ?object $options=null) {
+
+		// options
+			// nothing to define yet
+
+		// skip thumb quality
+			if ($quality===$this->get_thumb_quality()) {
+				return false;
+			}
+
+		// skip non defined extensions
+			if ( !in_array($extension, $this->get_alternative_extensions()) ) {
+				debug_log(__METHOD__
+					. " Trying to create alternative version with invalid extension: '$extension' "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// short vars
+			$file_name		= $this->get_id();
+			$target_path	= $this->get_media_path_dir($quality);
+			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
+
+		// target_file check
+			if (!file_exists($target_file)) {
+				debug_log(__METHOD__
+					. " Ignored alternative_version deletion. Target file do not exists " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// unlink file
+			if ( !unlink($target_file) ) {
+				debug_log(__METHOD__
+					. " Error deleting alternative file. Unable to unlink file " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'DELETE FILE',
+					logger::INFO,
+					$this->tipo,
+					NULL,
+					[
+						'msg'		=> 'Deleted alternative media file (destructive)',
+						'tipo'		=> $this->tipo,
+						'parent'	=> $this->section_id,
+						'id'		=> $this->id,
+						'quality'	=> $quality,
+						'extension'	=> $extension
+					]
+				);
+
+			// save to force update dato files_info
+				$this->Save();
+
+
+		return true;
+	}//end delete_alternative_version
+
+
+
+	/**
+	* DELETE_thumb
+	* Remove thumb file version from disk
+	* @return bool
+	*/
+	public function delete_thumb() {
+
+		// short vars
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
+
+		// unlink file
+			if ( !unlink($target_file) ) {
+				debug_log(__METHOD__
+					. " Error deleting thumb file. Unable to unlink file " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// save to force update dato files_info
+			$this->Save();
+
+
+		return true;
+	}//end delete_thumb
 
 
 

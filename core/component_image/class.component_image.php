@@ -549,8 +549,7 @@ class component_image extends component_media_common implements component_media_
 	* @return object|null $result
 	* 	URL	path of thumb file path OR null if default quality file does not exists
 	*/
-	public function create_thumb() : ?object {
-		$start_time = start_time();
+	public function create_thumb() : bool {
 
 		// quality default
 			$quality_default	= $this->get_default_quality();
@@ -581,24 +580,11 @@ class component_image extends component_media_common implements component_media_
 		// thumb generate
 			ImageMagick::dd_thumb(
 				$default_image_path,
-				$image_thumb_path,
+				$image_thumb_path
 			);
 
-		// debug
-			debug_log(__METHOD__
-				." dd_thumb function called and executed in ". exec_time_unit($start_time,'ms').' ms'. PHP_EOL
-				." Created thumb file: " . to_string($image_thumb_path)
-				, logger::DEBUG
-			);
 
-		// result
-			$result = (object)[
-				'path'	=> $image_thumb_path,
-				'url'	=> $image_thumb_url
-			];
-
-
-		return $result;
+		return true;
 	}//end create_thumb
 
 

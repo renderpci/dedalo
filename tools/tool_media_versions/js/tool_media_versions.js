@@ -477,12 +477,9 @@ tool_media_versions.prototype.rotate = async function(quality, degrees) {
 
 /**
 * SYNC_FILES
-* 	Apply a rotation process to the selected file
-* @param string quality
-* @param string|int degrees
-* 	-90 / 90
+* 	Regenerate the component to force sync files between DB and HD
 * @return promise
-* 	resolve: array of objects
+* 	resolve: API response
 */
 tool_media_versions.prototype.sync_files = async function() {
 
@@ -519,6 +516,52 @@ tool_media_versions.prototype.sync_files = async function() {
 			})
 		})
 }//end sync_files
+
+
+
+/**
+* DELETE_VERSION
+* 	Delete the selected file version
+* @return promise
+* 	resolve: API response
+*/
+tool_media_versions.prototype.delete_version = async function(quality, extension) {
+
+	const self = this
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'delete_version')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				tipo			: self.main_element.tipo,
+				section_tipo	: self.main_element.section_tipo,
+				section_id		: self.main_element.section_id,
+				quality			: quality,
+				extension		: extension
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> delete_version API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end delete_version
 
 
 

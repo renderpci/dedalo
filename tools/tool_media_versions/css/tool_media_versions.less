@@ -92,7 +92,6 @@
 					// padding: 0.60rem;
 					display: contents;
 
-
 					>.label {
 						text-transform: capitalize;
 						text-align: right;
@@ -123,7 +122,7 @@
 						}
 
 						.button {
-							   background-color: #767676;
+							background-color: #767676;
 							&:active {
 								opacity: 0.5;
 							}
@@ -137,12 +136,29 @@
 							// margin-bottom: 0.33rem;
 							line-height: 1.5rem;
 							width: 100%;
+							padding: 0.25rem;
 
 							.file_info_extension {
 								padding-left: 0.33rem;
 								min-width: 2rem;
 								display: inline-block;
 								text-align: left;
+								background-color: transparent;
+								cursor: default;
+								width: auto;
+								font-size: 1rem;
+							}
+
+							>.button.delete {
+								vertical-align: text-bottom;
+
+								&.disable {
+									opacity: 0;
+									pointer-events: none;
+								}
+							}
+							.find {
+								margin-right: 0.5rem;
 							}
 						}
 					}
