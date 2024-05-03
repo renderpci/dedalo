@@ -20,8 +20,8 @@ mht32	mht23	dd177	no	si	si	4	mht	no	\N	\N	\N
 mht33	mht23	dd183	no	si	si	5	mht	no	\N	\N	\N
 mht39	mht37	dd6	no	si	si	1	mht	no	[{"dd626":"dd22"}]	\N	\N
 mht5	mht6	dd6	no	si	si	1	mht	no	\N	\N	\N
-mht62	mht3	dd347	no	si	si	8	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"rt1"}]	\N	\N
 mht61	mht3	dd347	no	si	si	7	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"hp1"}]	\N	\N
+mht62	mht3	dd347	no	si	si	8	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"rt1"}]	\N	\N
 mht44	mht39	dd247	no	si	si	4	mht	no	\N	\N	\N
 mht9	mht5	dd247	no	si	si	3	mht	no	\N	{\r\n  "dato_default": {\r\n    "1": "2"\r\n  }\r\n}	{"dato_default": {"1": "2"}}
 mht3	mht2	dd1259	no	si	si	1	mht	si	\N		\N
@@ -85,7 +85,6 @@ mht95	mht3	dd347	no	si	si	12	mht	no	[{"dd1229":"rsc1186"}]	\N	\N
 mht110	mht66	dd1229	no	si	si	7	mht	si	[{"dd6":"mht23"}]	\N	\N
 mht115	mht66	dd1229	no	si	si	8	mht	si	[{"dd6":"mht39"}]	\N	\N
 mht100	mht66	dd347	no	si	si	6	mht	si	[{"dd1229":"dd600"}]		\N
-mht36	mht30	dd592	no	si	si	1	mht	no	[{"dd6":"mht39"},{"dd339":"mht53"},{"dd11":"mht43"},{"dd635":"mht42"},{"dd9":"mht57"},{"dd592":"mht34"}]	\N	\N
 mht18	mht3	dd347	no	si	si	2	mht	si	[{"dd1229":"rsc275"}]	\N	\N
 mht126	mht39	dd177	no	si	si	5	mht	no	null	\N	\N
 mht45	mht39	dd91	no	si	si	3	mht	no	[{"dd339":"mht53"},{"dd9":"mht57"},{"dd11":"mht43"},{"dd635":"mht42"},{"dd530":"mht38"},{"dd442":"mht54"},{"dd10":"mht58"},{"dd592":"mht34"}]	\N	\N
@@ -152,24 +151,25 @@ mht157	mht96	dd1233	no	si	si	14	mht	si	[{"dd57":"mht153"}]	{\r\n  "varchar": 32,
 mht96	mht66	dd1229	no	si	si	1	mht	si	[{"dd6":"mht72"}]	\N	\N
 mht48	mht66	dd347	no	si	si	2	mht	no	[{"dd1229":"rsc275"}]		\N
 mht156	mht66	dd347	no	si	si	10	mht	si	[{"dd1229":"rsc902"}]	\N	\N
-mht131	ts11	dd440	no	si	si	10	mht	si	[{"dd6":"rsc170"}]		null
+mht131	ts11	dd440	no	si	si	11	mht	si	[{"dd6":"rsc170"}]		null
 mht159	mht160	dd91	no	si	si	2	mht	si	[{"dd339":"ww17"},{"dd9":"ww11"},{"dd9":"ww18"},{"dd318":"ww20"},{"dd318":"ww21"},{"dd592":"ww22"}]	\N	\N
 mht29	mht24	dd530	no	si	si	4	mht	no	[{"dd6":"rsc197"},{"dd9":"rsc85"},{"dd9":"rsc86"}]	{"source":{"divisor":" "},"css":{".wrap_component":{"mixin":[".vertical",".width_50"]}}}	{"css": {".wrapper_component": {"grid-column": "span 4"}}, "source": {"fields_separator": " "}}
 mht160	mht60	dd6	no	si	si	7	mht	si	[{"dd6":"ww10"}]	\N	\N
 mht161	mht160	dd1129	no	si	si	3	mht	no	\N	\N	\N
 mht162	mht3	dd347	no	si	si	11	mht	si	[{"dd6":"mht160"},{"dd1229":"dd622"}]	\N	\N
-mht19	mht3	dd347	no	si	si	5	mht	si	[{"dd1229":"rsc267"}]	\N	\N
-mht133	mht3	dd347	no	si	si	3	mht	si	[{"dd1229":"rsc264"}]	\N	\N
 mht4	mht3	dd1229	no	si	si	1	mht	si	[{"dd6":"mht5"}]	\N	\N
+mht133	mht3	dd347	no	si	si	3	mht	si	[{"dd1229":"rsc264"}]	\N	\N
+mht19	mht3	dd347	no	si	si	5	mht	si	[{"dd1229":"rsc267"}]	\N	\N
 mht65	mht131	dd347	no	si	si	5	mht	no	[{"dd1229":"rsc687"}]	\N	\N
 mht43	mht40	dd442	no	si	si	3	mht	no	null	{"source":{"mode":"tree","hierarchy_types":[1],"hierarchy_sections":["aa1"],"hierarchy_terms":[{"section_tipo":"aa1","section_id":"202","recursive":true}]},"value_with_parents":false,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"15%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 6"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [1], "source": "hierarchy_types"}, {"value": ["aa1"], "source": "section"}, {"value": [{"recursive": true, "section_id": "202", "section_tipo": "aa1"}], "source": "hierarchy_terms"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "sqo_config": {"limit": 30}, "fields_separator": ", "}}]}}
-mht37	dd68	dd4	no	si	si	17	mht	no	null	\N	\N
+mht37	dd68	dd4	no	si	si	18	mht	no	null	\N	\N
 mht175	mht3	dd347	no	si	si	13	mht	si	[{"dd1229":"rsc687"}]	\N	\N
-mht150	mht3	dd347	no	si	si	10	mht	si	[{"dd1229":"dd600"}]	\N	\N
 mht149	mht3	dd347	no	si	si	9	mht	si	[{"dd1229":"mht96"},{"dd6":"mht134"}]	\N	\N
+mht150	mht3	dd347	no	si	si	10	mht	si	[{"dd1229":"dd600"}]	\N	\N
 mht59	mht3	dd347	no	si	si	6	mht	si	[{"dd1229":"hierarchy65"},{"dd6":"aa1"}]	\N	\N
 mht22	dd351	dd4	no	si	si	2	mht	no	\N	\N	\N
 mht16	mht3	dd347	no	si	si	4	mht	si	[{"dd1229":"oh66"}]	\N	\N
 mht40	mht39	dd8	no	si	si	1	mht	no	\N	\N	{"css": {".content_data": {"grid-template-columns": "repeat(10, 1fr)"}}}
 mht54	mht40	dd442	no	si	si	6	mht	no	\N	{"source":{"mode":"autocomplete","hierarchy_types":[2]},"value_with_parents":true,"css":{".wrap_component":{"mixin":[".vertical"],"style":{"width":"25%"}}}}	{"css": {".wrapper_component": {"grid-column": "span 3"}}, "source": {"mode": "autocomplete", "request_config": [{"sqo": {"section_tipo": [{"value": [2], "source": "hierarchy_types"}]}, "show": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}], "fields_separator": ", "}, "choose": {"ddo_map": [{"tipo": "hierarchy25", "parent": "self", "section_tipo": "self", "value_with_parents": true}, {"tipo": "hierarchy27", "parent": "self", "section_tipo": "self"}], "sqo_config": {"limit": 30}, "fields_separator": " | "}}]}}
 mht67	mht34	dd91	no	si	si	1	mht	si	[{"dd6":"rsc170"},{"dd749":"rsc29"}]	\N	\N
+mht36	mht30	dd592	no	si	si	1	mht	no	[{"dd339":"mht53"},{"dd11":"mht43"},{"dd635":"mht42"},{"dd9":"mht57"},{"dd592":"mht34"}]	\N	\N

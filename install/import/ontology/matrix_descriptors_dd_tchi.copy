@@ -344,11 +344,6 @@ tchi30	Bibliografia relacionada	termino	lg-cat
 tchi30	Zugehörige Bibliographie	termino	lg-deu
 tchi30	Bibliographie associée	termino	lg-fra
 tchi30	Bibliografia correlata	termino	lg-ita
-tchi3	Llistat	termino	lg-cat
-tchi3	List	termino	lg-eng
-tchi3	Liste	termino	lg-deu
-tchi3	Liste	termino	lg-fra
-tchi3	Elenco	termino	lg-ita
 tchi5	αναγνώριση	termino	lg-ell
 tchi5	Identification	termino	lg-fra
 tchi5	Identificazione	termino	lg-ita
@@ -364,3 +359,8 @@ tchi23	Abstract	termino	lg-eng
 tchi23	Zusammenfassung	termino	lg-deu
 tchi23	Résumé	termino	lg-fra
 tchi23	Riassunto	termino	lg-ita
+tchi3	Llistat	termino	lg-cat
+tchi3	List	termino	lg-eng
+tchi3	Liste	termino	lg-deu
+tchi3	Liste	termino	lg-fra
+tchi3	Elenco	termino	lg-ita

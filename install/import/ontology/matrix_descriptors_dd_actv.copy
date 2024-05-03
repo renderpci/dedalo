@@ -88,13 +88,6 @@ actv16	Projecte	termino	lg-cat
 actv16	Projekt	termino	lg-deu
 actv16	Projet	termino	lg-fra
 actv16	Progetto	termino	lg-ita
-actv17	Descripción	termino	lg-spa
-actv17	Descripció	termino	lg-cat
-actv17	Description	termino	lg-eng
-actv17	Descrizione	termino	lg-ita
-actv17	Περιγραφή	termino	lg-ell
-actv17	Beschreibung	termino	lg-deu
-actv17	Description	termino	lg-fra
 actv6	Type	termino	lg-fra
 actv6	Tipologia	termino	lg-cat
 actv6	Typology	termino	lg-eng
@@ -131,6 +124,12 @@ actv22	εξαρτώμενος	termino	lg-ell
 actv22	Abhängig von	termino	lg-deu
 actv22	Dépend de	termino	lg-fra
 actv23	Hijos	termino	lg-spa
+actv17	Descripció	termino	lg-cat
+actv17	Description	termino	lg-eng
+actv17	Descrizione	termino	lg-ita
+actv17	Περιγραφή	termino	lg-ell
+actv17	Beschreibung	termino	lg-deu
+actv17	Description	termino	lg-fra
 actv23	Children	termino	lg-eng
 actv23	Fills	termino	lg-cat
 actv23	απόγονος	termino	lg-ell
@@ -185,10 +184,6 @@ actv33	Νέο	termino	lg-ell
 actv33	Nouveau	termino	lg-fra
 actv34	Borrar	termino	lg-spa
 actv34	Delete	termino	lg-eng
-actv27	People	termino	lg-eng
-actv27	Persones	termino	lg-cat
-actv27	Menschen	termino	lg-deu
-actv27	Les personnes	termino	lg-fra
 actv29	Οπτικοακουστικά μέσα	termino	lg-ell
 actv29	Audiovisuales	termino	lg-spa
 actv29	Audiovisuals	termino	lg-cat
@@ -243,6 +238,8 @@ actv39	Dernières modifications	termino	lg-fra
 actv39	Ultime modifiche	termino	lg-ita
 actv41	Actividades	termino	lg-spa
 actv40	Tipologías de visualización	termino	lg-spa
+actv27	Menschen	termino	lg-deu
+actv27	Les personnes	termino	lg-fra
 actv42	Identificación	termino	lg-spa
 actv42	Identification	termino	lg-eng
 actv42	Identificació	termino	lg-cat
@@ -350,21 +347,19 @@ actv58	Κλάση CSS3	termino	lg-ell
 actv58	CSS3-Klasse	termino	lg-deu
 actv58	Classe CSS3	termino	lg-ita
 actv58	Classe CSS3	termino	lg-fra
-actv59	Hora	termino	lg-spa
+actv60	Código	termino	lg-spa
+actv60	Code	termino	lg-eng
 actv59	Hour	termino	lg-eng
 actv59	Hora	termino	lg-cat
 actv59	Zeit	termino	lg-deu
 actv59	L'heure	termino	lg-fra
 actv59	Tempo	termino	lg-ita
 actv59	Χρόνος	termino	lg-ell
-actv60	Código	termino	lg-spa
-actv60	Code	termino	lg-eng
 actv60	Codi	termino	lg-cat
 actv60	Code	termino	lg-deu
 actv60	Κωδικός	termino	lg-ell
 actv60	Codice	termino	lg-ita
 actv6	Tipología	termino	lg-spa
-actv27	Personas	termino	lg-spa
 actv61	activities	termino	lg-spa
 actv62	publication	termino	lg-spa
 actv63	type	termino	lg-spa
@@ -384,7 +379,6 @@ actv76	motto	termino	lg-spa
 actv77	description	termino	lg-spa
 actv78	project	termino	lg-spa
 actv79	project_data	termino	lg-spa
-actv111	Ort	termino	lg-deu
 actv85	municipality	termino	lg-spa
 actv89	people	termino	lg-spa
 actv90	people_data	termino	lg-spa
@@ -405,12 +399,6 @@ actv104	dd_tm	termino	lg-spa
 actv105	people_role	termino	lg-spa
 actv106	people_community	termino	lg-spa
 actv107	images_caption	termino	lg-spa
-actv110	Mapa	termino	lg-spa
-actv110	Map	termino	lg-eng
-actv110	Map	termino	lg-cat
-actv110	Carte	termino	lg-fra
-actv110	Karte	termino	lg-deu
-actv110	Mappa	termino	lg-ita
 actv112	Entidad	termino	lg-spa
 actv112	Entity	termino	lg-eng
 actv112	Entitat	termino	lg-cat
@@ -418,7 +406,14 @@ actv112	Entität	termino	lg-deu
 actv112	Entité	termino	lg-fra
 actv112	Οντότητα	termino	lg-ell
 actv112	Entità	termino	lg-ita
+actv111	Ort	termino	lg-deu
 actv111	Luogo	termino	lg-ita
+actv27	Personas	termino	lg-spa
+actv110	Karte	termino	lg-deu
+actv110	Mapa	termino	lg-spa
+actv110	Map	termino	lg-eng
+actv110	Map	termino	lg-cat
+actv110	Carte	termino	lg-fra
 actv80	audiovisuals	termino	lg-spa
 actv81	audiovisuals_data	termino	lg-spa
 actv108	audiovisuals_subtitles	termino	lg-spa
@@ -426,11 +421,6 @@ actv93	documents	termino	lg-spa
 actv94	documents_data	termino	lg-spa
 actv109	entity	termino	lg-spa
 actv113	entity_data	termino	lg-spa
-actv111	Lugar	termino	lg-spa
-actv111	Place	termino	lg-eng
-actv111	Lloc	termino	lg-cat
-actv111	Τόπος	termino	lg-ell
-actv111	Lieu	termino	lg-fra
 actv114	time_end	termino	lg-spa
 actv88	time_start	termino	lg-spa
 actv83	date_start_year	termino	lg-spa
@@ -454,3 +444,13 @@ actv120	Löschen	termino	lg-deu
 actv120	Διαγραφή	termino	lg-ell
 actv120	Supprimer	termino	lg-fra
 actv120	Cancellare	termino	lg-ita
+actv59	Hora	termino	lg-spa
+actv111	Lugar	termino	lg-spa
+actv111	Place	termino	lg-eng
+actv111	Lloc	termino	lg-cat
+actv111	Τόπος	termino	lg-ell
+actv111	Lieu	termino	lg-fra
+actv27	People	termino	lg-eng
+actv27	Persones	termino	lg-cat
+actv17	Descripción	termino	lg-spa
+actv110	Mappa	termino	lg-ita
