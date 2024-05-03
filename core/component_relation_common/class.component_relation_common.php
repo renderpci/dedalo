@@ -2846,7 +2846,9 @@ class component_relation_common extends component_common {
 				foreach ($children as $current_ddo_child) {
 					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $current_data);
 					// join the result data with the siblings resolution.
-					$current_compnent_data = array_merge($current_compnent_data, $result_compnent_data);
+					if (!empty($result_compnent_data)) {
+						$current_compnent_data = array_merge($current_compnent_data, $result_compnent_data);
+					}
 				}
 			}
 			return $current_compnent_data;
