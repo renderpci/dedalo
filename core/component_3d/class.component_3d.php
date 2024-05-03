@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT_3D
 *
 */
-class component_3d extends component_media_common {
+class component_3d extends component_media_common implements component_media_interface {
 
 
 

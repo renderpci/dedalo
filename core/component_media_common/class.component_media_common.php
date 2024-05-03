@@ -1,9 +1,65 @@
 <?php
 declare(strict_types=1);
 /**
-* CLASS COMPONENT_RELATION_COMMON
+* INTERFACE COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media
-* like component_av, component_image, component_pdf, component_svg, etc..
+* like component_3d, component_av, component_image, component_pdf, component_svg
+*/
+interface component_media_interface {
+
+	// from component_media_common
+	public function get_id();
+	public function get_initial_media_path();
+	public function get_additional_path();
+	public function quality_file_exist(string $quality);
+	public function add_file(object $options);
+	public function valid_file_extension(string $file_extension);
+	public function get_files_info(bool $include_empty=false);
+	public function get_thumb_path();
+	public function get_thumb_extension();
+	public function delete_file(string $quality);
+	public function get_quality_files(string $quality);
+	public function get_normalized_name_from_files(string $quality);
+	public function get_uploaded_file(string $quality);
+	public function get_quality_file_info(string $quality, string $extension=null);
+	public function get_source_quality_to_build(string $target_quality);
+	public function get_original_extension(bool $exclude_converted=true);
+	public function get_original_file_path();
+	public function get_media_path_dir(string $quality);
+	public function get_media_url_dir(string $quality);
+	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false);
+	public function get_thumb_url();
+	public function get_media_filepath(?string $quality=null, string $extension=null);
+	public function get_size(string $quality);
+	public function restore_component_media_files();
+	public function create_alternative_versions(?object $options=null);
+
+
+	// others
+	public function get_ar_quality();
+	public function get_default_quality();
+	public function get_original_quality();
+	public function get_extension();
+	public function get_allowed_extensions();
+	public function get_folder();
+	public function get_best_extensions();
+	public function get_alternative_extensions();
+	public function build_version(string $quality, bool $async=true, bool $save=true);
+	public function create_thumb();
+	public function process_uploaded_file(object $file_data);
+	public static function update_dato_version(object $options);
+	public function remove_component_media_files(array $ar_quality=[]);
+	public function regenerate_component();
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null);
+
+}//end component_media_interface
+
+
+
+/**
+* CLASS COMPONENT_MEDIA_COMMON
+* Used as common base from all components that works with media
+* like component_3d, component_av, component_image, component_pdf, component_svg
 */
 class component_media_common extends component_common {
 

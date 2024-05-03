@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT IMAGE
 *
 */
-class component_image extends component_media_common {
+class component_image extends component_media_common implements component_media_interface {
 
 
 

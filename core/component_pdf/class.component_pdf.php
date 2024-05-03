@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT PDF
 *
 */
-class component_pdf extends component_media_common {
+class component_pdf extends component_media_common implements component_media_interface {
 
 
 
