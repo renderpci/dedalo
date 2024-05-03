@@ -378,7 +378,6 @@ class component_pdf extends component_media_common {
 
 	/**
 	* CREATE_IMAGE
-	*
 	* Once the full path is specified, the command is working as desired.
 	* @param object|null $options
 	* @return bool $result
@@ -405,11 +404,11 @@ class component_pdf extends component_media_common {
 			$file_name				= $this->get_id();
 			$folder					= $this->get_folder();
 			$target_path			= $this->get_media_path_dir($quality);
-			$alternative_extensions	= $this->get_alternative_extensions() ?? [DEDALO_IMAGE_EXTENSION];
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 
 			foreach ($alternative_extensions as $current_extension) {
 
-				$target_file =  $target_path . '/' . $file_name . '.' . $current_extension;
+				$target_file = $target_path . '/' . $file_name . '.' . $current_extension;
 
 				// no overwrite case
 					if ($overwrite===false) {
