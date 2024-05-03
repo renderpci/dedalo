@@ -310,7 +310,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* CREATE_THUMB
-	*
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
 	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
@@ -374,77 +373,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return true;
 	}//end create_thumb
-
-
-
-	/**
-	* CREATE_IMAGE
-	* Once the full path is specified, the command is working as desired.
-	* @param object|null $options
-	* @return bool $result
-	*/
-	public function create_image(?object $options=null) : string|bool {
-
-		// options
-			$page		= $options->page ?? 0;
-			$quality	= $options->quality ?? $this->get_original_quality();
-			$overwrite	= $options->overwrite ?? true;
-
-		// source file
-			$source_file = $this->get_media_filepath($quality);
-			if (!file_exists($source_file)) {
-				debug_log(__METHOD__
-					. " Ignored image creation. Source file do not exists " . PHP_EOL
-					. 'source_file: ' . to_string($source_file)
-					, logger::ERROR
-				);
-				return false;
-			}
-
-		// target file
-			$file_name				= $this->get_id();
-			$folder					= $this->get_folder();
-			$target_path			= $this->get_media_path_dir($quality);
-			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
-
-			foreach ($alternative_extensions as $current_extension) {
-
-				$target_file = $target_path . '/' . $file_name . '.' . $current_extension;
-
-				// no overwrite case
-					if ($overwrite===false) {
-						// check if file already exists
-						if (file_exists($target_file)) {
-							continue;
-						}
-					}
-
-				// generate from PDF
-				$image_pdf_options = new stdClass();
-					$image_pdf_options->source_file	= $source_file;
-					$image_pdf_options->ar_layers	= [$page];
-					$image_pdf_options->target_file	= $target_file;
-					$image_pdf_options->density		= 600;
-					$image_pdf_options->antialias	= true;
-					$image_pdf_options->quality		= 100;
-					$image_pdf_options->resize		= '50%';
-					$image_pdf_options->pdf_cropbox	= true;
-
-				ImageMagick::convert($image_pdf_options);
-
-				// check file
-				if (!file_exists($target_file)) {
-					debug_log(__METHOD__
-						. " Error on image creation. target file do not exists " . PHP_EOL
-						. 'target_file: ' . to_string($target_file)
-						, logger::ERROR
-					);
-					return false;
-				}
-			}
-
-		return true;
-	}//end create_image
 
 
 
@@ -529,9 +457,9 @@ class component_pdf extends component_media_common implements component_media_in
 				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
 				$default_extension	= $this->get_extension(); // normally .pdf
 				if ($file_extension!==$default_extension) {
-					// file is NOT pdf, probably a .doc or similar . Don't copy the file
+					// file is NOT PDF, probably a .doc or similar . Don't copy the file
 				}else{
-					// copying file pdf (original) to pdf (web)
+					// copying file PDF (original) to PDF (web)
 					$default_quality		= $this->get_default_quality();
 					$default_quality_path	= $this->get_media_path_dir($default_quality);
 					// check directory exists before copy
@@ -546,36 +474,33 @@ class component_pdf extends component_media_common implements component_media_in
 							return $response;
 						}
 					}
-					$target_file_path	= $default_quality_path . '/' . $full_file_name;
-					$copy_result		= copy(
-						$full_file_path, // from original quality directory
-						$target_file_path // to default quality directory
-					);
-					if ($copy_result===false) {
-						debug_log(__METHOD__ . PHP_EOL
-							. " Error: Unable to copy pdf file : " . PHP_EOL
-							. ' Source path: ' . $full_file_path . PHP_EOL
-							. ' Target path: ' . $target_file_path
-							, logger::ERROR
+					$target_file_path = $default_quality_path . '/' . $full_file_name;
+					// copy file if is not default quality
+					if ($target_file_path!==$full_file_path) {
+
+						$copy_result = copy(
+							$full_file_path, // from original quality directory
+							$target_file_path // to default quality directory
 						);
-					}else{
-
-						// create alternative image of versions the default quality
-						$create_image_options = new stdClass();
-						$create_image_options->quality = $default_quality;
-						$this->create_image($create_image_options);
-
-						debug_log(__METHOD__ . PHP_EOL
-							. " Copied pdf file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
-							. ' Source path: ' . $full_file_path . PHP_EOL
-							. ' Target path: ' . $target_file_path
-							, logger::DEBUG
-						);
-
+						if ($copy_result===false) {
+							debug_log(__METHOD__ . PHP_EOL
+								. " Error: Unable to copy PDF file : " . PHP_EOL
+								. ' Source path: ' . $full_file_path . PHP_EOL
+								. ' Target path: ' . $target_file_path
+								, logger::ERROR
+							);
+						}else{
+							debug_log(__METHOD__ . PHP_EOL
+								. " Copied PDF file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
+								. ' Source path: ' . $full_file_path . PHP_EOL
+								. ' Target path: ' . $target_file_path
+								, logger::DEBUG
+							);
+						}
 					}
 
 					// create alternative image versions of the PDF
-						$this->create_image();
+						$this->create_alternative_versions();
 
 					// thumb : Create pdf_thumb image
 						$this->create_thumb();
@@ -1106,16 +1031,6 @@ class component_pdf extends component_media_common implements component_media_in
 	*/
 	public function regenerate_component() : bool {
 
-		// quality
-			$ar_quality = $this->get_ar_quality();
-			foreach ($ar_quality as $quality) {
-				// create_image. Creates alternative images if they do not exists
-				$this->create_image((object)[
-					'overwrite'	=> false,
-					'quality'	=> $quality
-				]);
-			}
-
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
 
@@ -1182,10 +1097,17 @@ class component_pdf extends component_media_common implements component_media_in
 
 	/**
 	* CREATE_ALTERNATIVE_VERSION
-	* $this->create_alternative($current_quality, $current_extension);
+	* Render a new alternative_version file from given quality and target extension.
+	* This method overwrites any existing file with same path
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_version(string $quality, string $extension) : bool {
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+
+		// options
+			$page = $options->page ?? 0;
 
 		// skip thumb quality
 			if ($quality===DEDALO_QUALITY_THUMB) {
@@ -1213,22 +1135,21 @@ class component_pdf extends component_media_common implements component_media_in
 			}
 
 		// short vars
-			$page			= 0;
 			$file_name		= $this->get_id();
 			$target_path	= $this->get_media_path_dir($quality);
 			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
 
 		// generate from PDF
-			$image_pdf_options = new stdClass();
-				$image_pdf_options->source_file	= $source_file;
-				$image_pdf_options->ar_layers	= [$page];
-				$image_pdf_options->target_file	= $target_file;
-				$image_pdf_options->density		= 600;
-				$image_pdf_options->antialias	= true;
-				$image_pdf_options->quality		= 100;
-				$image_pdf_options->resize		= '50%';
+			$im_options = new stdClass();
+				$im_options->source_file	= $source_file;
+				$im_options->target_file	= $target_file;
+				$im_options->quality		= 100;
+				$im_options->ar_layers		= [$page];
+				$im_options->density		= 600;
+				$im_options->antialias		= true;
+				$im_options->resize			= '50%';
 
-			ImageMagick::convert($image_pdf_options);
+			ImageMagick::convert($im_options);
 
 		// check file
 			if (!file_exists($target_file)) {

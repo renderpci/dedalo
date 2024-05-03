@@ -2132,6 +2132,9 @@ class component_media_common extends component_common {
 		// re-create thumb always (from default quality file)
 			$this->create_thumb();
 
+		// force to re-create alternatives
+			$this->create_alternative_versions();
+
 		// files_info. Updates component dato files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it
 		// Note that this method is called again on save, but this is intentional
@@ -2432,10 +2435,11 @@ class component_media_common extends component_common {
 	* to real process, overwrite in each component !
 	* @param string $quality
 	* @param bool $async = true
+	* @param bool $save = true
 	* @return object $response
 	* @test true
 	*/
-	public function build_version(string $quality, bool $async=true) : object {
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2488,7 +2492,7 @@ class component_media_common extends component_common {
 				}
 			}
 
-			if($quality==='thumb'){
+			if($quality===DEDALO_QUALITY_THUMB){
 				// thumb quality
 				$result = $this->create_thumb();
 
@@ -2535,7 +2539,9 @@ class component_media_common extends component_common {
 			);
 
 		// update component dato files info and save
-			$this->Save();
+			if ($save===true) {
+				$this->Save();
+			}
 
 		// response
 			$response->result	= true;
@@ -2656,6 +2662,57 @@ class component_media_common extends component_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* CREATE_ALTERNATIVE_VERSION
+	* Render a new alternative_version file from given quality and target extension.
+	* This method overwrites any existing file with same path
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options
+	* @return bool
+	*/
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+
+		debug_log(__METHOD__
+			. " Use specific component method to overwrite this ! $quality - $extension"
+			, logger::WARNING
+		);
+
+		return true;
+	}//end create_alternative_version
+
+
+
+	/**
+	* CREATE_ALTERNATIVE_VERSIONS
+	* Render all alternative_version files in all quality versions.
+	* This method overwrites any existing file with same path
+	* @param object|null $options = null
+	* @return bool
+	*/
+	public function create_alternative_versions(?object $options=null) : bool {
+
+		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+		$ar_quality				= $this->get_ar_quality();
+		foreach ($ar_quality as $quality) {
+			if ($quality===DEDALO_QUALITY_THUMB) {
+				continue; // skip thumb quality
+			}
+			foreach ($alternative_extensions as $extension) {
+				$this->create_alternative_version(
+					$quality,
+					$extension,
+					$options
+				);
+			}
+		}
+
+
+		return true;
+	}//end create_alternative_versions
 
 
 
