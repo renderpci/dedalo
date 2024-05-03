@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT_AV
 *
 */
-class component_av extends component_media_common {
+class component_av extends component_media_common implements component_media_interface {
 
 
 
@@ -1404,7 +1404,7 @@ class component_av extends component_media_common {
 	* @param bool $async = true
 	* @return object $response
 	*/
-	public function build_version(string $quality, bool $async=true) : object {
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
