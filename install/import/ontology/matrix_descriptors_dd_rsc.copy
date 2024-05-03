@@ -196,10 +196,6 @@ rsc13	τοποθεσία	termino	lg-ell
 rsc130	Relaciones	termino	lg-spa
 rsc130	Relacions	termino	lg-cat
 rsc130	Relazioni	termino	lg-ita
-rsc131	Elenco	termino	lg-ita
-rsc131	Listado	termino	lg-spa
-rsc131	Llistat	termino	lg-cat
-rsc131	λίστα	termino	lg-ell
 rsc132	Descripció	termino	lg-cat
 rsc132	Descripción	termino	lg-spa
 rsc111	valore della posizione	termino	lg-ita
@@ -224,6 +220,9 @@ rsc138	Tipologia	termino	lg-cat
 rsc138	Tipologia bibliografica	termino	lg-ita
 rsc138	Tipología bibliográfica	termino	lg-spa
 rsc138	Βιβλιογραφική τυπολογία	termino	lg-ell
+rsc131	Listado	termino	lg-spa
+rsc131	Llistat	termino	lg-cat
+rsc131	λίστα	termino	lg-ell
 rsc139	] Los nombres de persona podrán abreviarse a sus iniciales. En el caso de obras anónimas, el primer elemento de referencia será el título. Después de los apellidos y nombre de los editores, directores, compiladores o coordinadores, hay que añadir la abreviatura correspondiente al tipo de función que realiza: comp., coord., ed., etc. Si el autor es una entidad se indicará el nombre de la misma tal y como aparece en la fuente	obs	lg-spa
 rsc139	Autore e responsabilità	termino	lg-ita
 rsc139	Autoria i responsabilitat	termino	lg-cat
@@ -489,9 +488,6 @@ rsc205	δημοσιεύσεις	termino	lg-ell
 rsc206	Esclusi	termino	lg-ita
 rsc206	Exclosos	termino	lg-cat
 rsc206	Excluidos	termino	lg-spa
-rsc207	Elenco	termino	lg-ita
-rsc207	Listado	termino	lg-spa
-rsc207	Llistat	termino	lg-cat
 rsc208	Elenco	termino	lg-ita
 rsc208	List	termino	lg-spa
 rsc208	Llistat	termino	lg-cat
@@ -503,6 +499,7 @@ rsc21	Codi	termino	lg-cat
 rsc21	Codice	termino	lg-ita
 rsc21	Código	termino	lg-spa
 rsc21	κωδικός	termino	lg-ell
+rsc207	Listado	termino	lg-spa
 rsc210	Transcripció / descripció	termino	lg-cat
 rsc210	Transcripción / descripción	termino	lg-spa
 rsc210	Trascrizione / descrizione	termino	lg-ita
@@ -3161,7 +3158,6 @@ rsc128	Kontaktperson	termino	lg-deu
 rsc129	Druckreif	termino	lg-deu
 rsc13	Lage	termino	lg-deu
 rsc130	Beziehungen	termino	lg-deu
-rsc131	Liste	termino	lg-deu
 rsc132	Beschreibung	termino	lg-deu
 rsc133	Liste Beziehungen	termino	lg-deu
 rsc136	Statistiken ansehen	termino	lg-deu
@@ -3240,7 +3236,6 @@ rsc203	Personen, Gruppen oder Gemeinschaften	termino	lg-deu
 rsc204	Administration	termino	lg-deu
 rsc205	Publikationen	termino	lg-deu
 rsc206	Ausgeschlossene	termino	lg-deu
-rsc207	Liste	termino	lg-deu
 rsc208	Liste	termino	lg-deu
 rsc209	Dokument	termino	lg-deu
 rsc21	Code	termino	lg-deu
@@ -4123,7 +4118,6 @@ rsc127	Address	termino	lg-eng
 rsc128	Contact person	termino	lg-eng
 rsc129	Publication	termino	lg-eng
 rsc130	Relations	termino	lg-eng
-rsc131	List	termino	lg-eng
 rsc132	Description	termino	lg-eng
 rsc133	Relation List	termino	lg-eng
 rsc136	View Statistics	termino	lg-eng
@@ -4192,7 +4186,6 @@ rsc200	Estate	termino	lg-eng
 rsc203	Individuals, groups and communities	termino	lg-eng
 rsc205	Publications	termino	lg-eng
 rsc206	Excluded	termino	lg-eng
-rsc207	List	termino	lg-eng
 rsc208	List	termino	lg-eng
 rsc209	Document	termino	lg-eng
 rsc215	List	termino	lg-eng
@@ -4207,6 +4200,8 @@ rsc135	Delete	termino	lg-eng
 rsc217	URL	termino	lg-eng
 rsc218	Source	termino	lg-eng
 rsc111	Location value	termino	lg-eng
+rsc131	List	termino	lg-eng
+rsc207	List	termino	lg-eng
 rsc219	Publisher	termino	lg-eng
 rsc220	Notes	termino	lg-eng
 rsc221	Abstract	termino	lg-eng
@@ -5006,7 +5001,6 @@ rsc128	Personne de contact	termino	lg-fra
 rsc129	Publication	termino	lg-fra
 rsc13	Localisation	termino	lg-fra
 rsc130	Relations	termino	lg-fra
-rsc131	Liste	termino	lg-fra
 rsc132	Description	termino	lg-fra
 rsc133	Liste de relations	termino	lg-fra
 rsc136	Voir les statistiques	termino	lg-fra
@@ -5027,6 +5021,7 @@ rsc149	Éditorial	termino	lg-fra
 rsc15	Cession de droits	termino	lg-fra
 rsc150	Identification	termino	lg-fra
 rsc151	Document	termino	lg-fra
+rsc131	Liste	termino	lg-fra
 rsc152	État 	termino	lg-fra
 rsc153	Description	termino	lg-fra
 rsc154	Observations	termino	lg-fra
@@ -5086,7 +5081,6 @@ rsc203	Individus, groupes ou communautés	termino	lg-fra
 rsc204	Administration	termino	lg-fra
 rsc205	Publications	termino	lg-fra
 rsc206	Exclus 	termino	lg-fra
-rsc207	Liste	termino	lg-fra
 rsc208	Liste	termino	lg-fra
 rsc209	Document	termino	lg-fra
 rsc21	Code	termino	lg-fra
@@ -7453,3 +7447,9 @@ rsc1296	Changer vers	termino	lg-fra
 rsc1296	Passa a	termino	lg-ita
 rsc1297	search_data	termino	lg-spa
 rsc1298	search_thesaurus	termino	lg-spa
+rsc131	Elenco	termino	lg-ita
+rsc131	Liste	termino	lg-deu
+rsc207	Liste	termino	lg-deu
+rsc207	Elenco	termino	lg-ita
+rsc207	Liste	termino	lg-fra
+rsc207	Llistat	termino	lg-cat

@@ -113,7 +113,7 @@ render29	render27	dd635	no	si	si	5	render	no	null	{\r\n  "date_mode99": "range"\
 render10	render58	dd1743	no	si	si	1	render	no	[{"dd6":"render2"},{"dd6":"rsc170"},{"dd6":"render59"},{"dd6":"render73"}]	{"diffusion":{"class_name":"diffusion_mysql"}}	\N
 render20	render22	dd1233	no	si	si	1	render	si	[{"dd57":"rsc20"}]	{\r\n  "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue",\r\n  "data_to_be_used": "dato",\r\n  "enum": {\r\n    "1": "yes",\r\n    "2": "no"\r\n  }\r\n}	{"enum": {"1": "yes", "2": "no"}, "info": "For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue", "data_to_be_used": "dato"}
 render78	render61	dd592	no	si	si	1	render	no	[{"dd6":"render73"},{"dd9":"render71"},{"dd10":"render72"},{"dd749":"render75"}]	\N	\N
-render57	ts11	dd524	no	si	si	5	render	no	[{"dd195":"dd196"},{"dd57":"render31"},{"dd9":"render28"},{"dd9":"render32"},{"dd635":"render29"},{"dd318":"render30"},{"dd247":"render35"},{"dd530":"render33"},{"dd530":"render34"},{"dd11":"render39"}]	\N	\N
+render57	ts11	dd524	no	si	si	7	render	no	[{"dd195":"dd196"},{"dd57":"render31"},{"dd9":"render28"},{"dd9":"render32"},{"dd635":"render29"},{"dd318":"render30"},{"dd247":"render35"},{"dd530":"render33"},{"dd530":"render34"},{"dd11":"render39"}]	\N	\N
 render15	render12	dd1231	no	si	si	3	render	si	[{"dd592":"render16"}]	\N	\N
 render13	render12	dd1233	no	si	si	1	render	si	[{"dd57":"render8"}]	{"info":"For construct the ENUM value of the field, it need to be changed from the -dato- (without language) to the final -enum- value, dato:enumvalue","data_to_be_used":"dato","enum":{"1":"yes","2":"no"}}	\N
 render121	render10	dd1259	no	si	si	1	render	si	\N	\N	\N
@@ -121,4 +121,4 @@ render122	render121	dd347	no	si	si	1	render	si	[{"dd1229":"dd622"}]	\N	\N
 render123	render121	dd347	no	si	si	2	render	si	[{"dd1229":"dd600"}]	\N	\N
 render124	render121	dd347	no	si	si	3	render	si	[{"dd1229":"rsc264"}]	\N	\N
 render90	render10	dd440	no	si	si	3	render	no	\N	\N	\N
-render42	dd68	dd4	no	si	si	14	render	no	\N	\N	\N
+render42	dd68	dd4	no	si	si	15	render	no	\N	\N	\N
