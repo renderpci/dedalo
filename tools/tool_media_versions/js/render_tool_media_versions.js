@@ -729,7 +729,7 @@ const render_file_versions = function(quality, self) {
 							e.stopPropagation()
 
 							open_window({
-								url : file_url
+								url : file_url + '?t=' + (new Date()).getTime()
 							})
 						})
 

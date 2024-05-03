@@ -325,7 +325,6 @@ class component_3d extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_THUMB
-	*
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
 	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
@@ -374,6 +373,7 @@ class component_3d extends component_media_common implements component_media_int
 
 		return true;
 	}//end create_thumb
+
 
 
 	/**

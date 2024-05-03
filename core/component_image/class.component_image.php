@@ -343,182 +343,6 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
-	* CONVERT_QUALITY
-	* Creates a version of source image file with target quality
-	* using ImageMagick.
-	* @param object $options
-	* @return bool
-	*/
-	public function convert_quality(object $options) : bool {
-
-		// options
-			$source_quality	= $options->source_quality;
-			$source_file	= $options->source_file;
-			$target_quality	= $options->target_quality;
-
-		// invalid targets check
-			$original_quality = $this->get_original_quality();
-			if ($target_quality===$original_quality) {
-				debug_log(__METHOD__
-					." Ignored wrong target quality [convert_quality]" .PHP_EOL
-					.' source_file: ' . to_string($source_file) .PHP_EOL
-					.' target_quality: ' . to_string($target_quality)
-					, logger::ERROR
-				);
-				return false;
-			}
-
-		// CLI process data
-			if ( running_in_cli()===true ) {
-				if (!isset(common::$pdata)) {
-					common::$pdata = new stdClass();
-				}
-			}
-
-		// source_quality files check and create it if they not are created before.
-			// original_file check (normalized Dédalo original viewable). If not exist, create it
-				$normalized_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
-
-			// normalized_file . create if not already exist
-				$normalized_file_exists = file_exists($normalized_file);
-				if (!$normalized_file_exists) {
-
-					$target_file = $normalized_file;
-
-					$options = new stdClass();
-						$options->source_file	= $source_file;
-						$options->target_file	= $target_file;
-						$options->quality		= 100;
-
-					ImageMagick::convert($options);
-				}
-			// alternative_files . create if not already exist
-				$alternative_extensions = $this->get_alternative_extensions();
-				if(is_array($alternative_extensions)){
-
-					$path = pathinfo($normalized_file);
-
-					foreach ($alternative_extensions as $alternative_extension) {
-						$start_time2=start_time();
-
-						$alternative_target_file = $path['dirname'] . '/' .  $path['filename'] . '.' .$alternative_extension;
-						if(!file_exists($alternative_target_file)){
-							$alt_options = new stdClass();
-								$alt_options->source_file	= $source_file;
-								$alt_options->target_file	= $alternative_target_file;
-								$alt_options->quality		= 100;
-
-							// CLI process data
-								if ( running_in_cli()===true ) {
-									common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $alternative_extension . ' | id: ' . $this->section_id;
-									common::$pdata->memory		= dd_memory_usage();
-									common::$pdata->target_file	= (SHOW_DEBUG===true) ? $alternative_target_file : $path['filename'];
-									// send to output
-									print_cli(common::$pdata);
-								}
-
-							ImageMagick::convert($alt_options);
-
-							// CLI process data
-								if ( running_in_cli()===true ) {
-									common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
-									common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
-									// send to output
-									print_cli(common::$pdata);
-								}
-						}
-					}
-				}
-
-		// Image source
-			$source_image			= $normalized_file;
-			$image_dimensions		= $this->get_image_dimensions($normalized_file);
-
-			$source_pixels_width	= $image_dimensions->width ?? null;
-			$source_pixels_height	= $image_dimensions->height ?? null;
-
-		// Image target
-			$target_image			= $this->get_media_filepath($target_quality);
-			$ar_target				= component_image::get_target_pixels_to_quality_conversion(
-				$source_pixels_width,
-				$source_pixels_height,
-				$target_quality
-			);
-			$target_pixels_width	= $ar_target[0] ?? null;
-			$target_pixels_height	= $ar_target[1] ?? null;
-
-		// Target folder verify (EXISTS AND PERMISSIONS)
-			$target_dir = $this->get_media_path_dir($target_quality) ;
-			if( !is_dir($target_dir) ) {
-				if(!mkdir($target_dir, 0775, true)) {
-					// throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
-					debug_log(__METHOD__
-						. " Error on read or create directory \"$target_quality\". Permission denied (2) " . PHP_EOL
-						. ' target_quality: ' . $target_quality . PHP_EOL
-						. ' target_dir: ' . $target_dir
-						, logger::ERROR
-					);
-					return false;
-				}
-			}
-
-		// Avoid enlarge images
-			if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
-				$target_pixels_width	= $source_pixels_width;
-				$target_pixels_height	= $source_pixels_height;
-			}
-
-		// defaults when no value is available
-			if($target_pixels_width<1)  $target_pixels_width  = 720;
-			if($target_pixels_height<1) $target_pixels_height = 720;
-
-		// convert options
-			$options = new stdClass();
-	 			$options->source_file = $source_image;
-	 			$options->target_file = $target_image;
-
-		// convert with ImageMagick command
-	 		$thumb_quality = $this->get_thumb_quality();
-			if ($target_quality===$thumb_quality) {
-				$options->thumbnail = true;
-			}else{
-				$options->resize = $target_pixels_width.'x'.$target_pixels_height;
-			}
-			ImageMagick::convert($options);
-
-		// alternative_extensions
-			$alternative_extensions = $this->get_alternative_extensions();
-			if (is_array($alternative_extensions)) {
-
-				$source_path	= pathinfo($source_image);
-				$target_path	= pathinfo($target_image);
-
-				foreach ($alternative_extensions as $alternative_extension) {
-
-					$source_image_file = $source_path['dirname'] . '/' .  $source_path['filename'] . '.' .$alternative_extension;
-					$current_source_file = file_exists($source_image_file)
-						? $source_image_file // his own extension file of the source quality
-						: $source_file; // check the original quality
-
-					$alt_options = new stdClass();
-						$alt_options->source_file	= $current_source_file;
-						$alt_options->target_file	= $target_path['dirname'] . '/' .  $target_path['filename'] . '.' .$alternative_extension;
-						$alt_options->resize		= $target_pixels_width.'x'.$target_pixels_height;
-
-					ImageMagick::convert($alt_options);
-				}
-			}
-
-			// $flags = '-thumbnail '.$target_pixels_width.'x'.$target_pixels_height;
-			// ImageMagick::process($source_image, $target_image, $flags);
-
-
-		return true;
-	}//end convert_quality
-
-
-
-	/**
 	* GENERATE_DEFAULT_QUALITY_FILE
 	* Generates the default quality image from retouched or original file
 	* @param bool $overwrite = true
@@ -1258,7 +1082,6 @@ class component_image extends component_media_common implements component_media_
 
 
 
-
 	/**
 	* CREATE_DEFAULT_SVG_STRING_NODE
 	* Generates the SVG code for default quality image and
@@ -1708,7 +1531,6 @@ class component_image extends component_media_common implements component_media_
 	* @param string $degrees
 	* 	0 to 360 (positive/negative)
 	* @return string $result
-	*
 	*/
 	public function rotate( $options) : ?string {
 
@@ -1747,13 +1569,173 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
+	* CONVERT_QUALITY
+	* Creates a version of source image file with target quality
+	* using ImageMagick.
+	* @param object $options
+	* @return bool
+	*/
+	public function convert_quality(object $options) : bool {
+
+		// options
+			$source_quality	= $options->source_quality;
+			$source_file	= $options->source_file;
+			$target_quality	= $options->target_quality;
+
+		// invalid targets check
+			$original_quality = $this->get_original_quality();
+			if ($target_quality===$original_quality) {
+				debug_log(__METHOD__
+					." Ignored wrong target quality [convert_quality]" .PHP_EOL
+					.' source_file: ' . to_string($source_file) .PHP_EOL
+					.' target_quality: ' . to_string($target_quality)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+			}
+
+		// source_quality files check and create it if they not are created before.
+			// original_file check (normalized Dédalo original viewable). If not exist, create it
+				$normalized_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
+
+			// normalized_file . create if not already exist
+				$normalized_file_exists = file_exists($normalized_file);
+				if (!$normalized_file_exists) {
+
+					$target_file = $normalized_file;
+
+					$options = new stdClass();
+						$options->source_file	= $source_file;
+						$options->target_file	= $target_file;
+						$options->quality		= 100;
+
+					ImageMagick::convert($options);
+				}
+
+			// alternative_files . create if not already exist
+				$normalized_file_path	= pathinfo($normalized_file);
+				$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+				foreach ($alternative_extensions as $alternative_extension) {
+					$start_time2=start_time();
+
+					$alternative_target_file = $normalized_file_path['dirname'] .'/'.  $normalized_file_path['filename'] .'.'. $alternative_extension;
+					if(!file_exists($alternative_target_file)){
+
+						// CLI process data
+							if ( running_in_cli()===true ) {
+								common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $alternative_extension . ' | id: ' . $this->section_id;
+								common::$pdata->memory		= dd_memory_usage();
+								common::$pdata->target_file	= (SHOW_DEBUG===true) ? $alternative_target_file : $normalized_file_path['filename'];
+								// send to output
+								print_cli(common::$pdata);
+							}
+
+						// create_alternative_version
+							$this->create_alternative_version(
+								$source_quality,
+								$alternative_extension
+							);
+
+						// CLI process data
+							if ( running_in_cli()===true ) {
+								common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
+								common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+								// send to output
+								print_cli(common::$pdata);
+							}
+					}
+				}
+
+		// Image source
+			$source_image			= $normalized_file;
+			$image_dimensions		= $this->get_image_dimensions($normalized_file);
+
+			$source_pixels_width	= $image_dimensions->width ?? null;
+			$source_pixels_height	= $image_dimensions->height ?? null;
+
+		// Image target
+			$target_image			= $this->get_media_filepath($target_quality);
+			$ar_target				= component_image::get_target_pixels_to_quality_conversion(
+				$source_pixels_width,
+				$source_pixels_height,
+				$target_quality
+			);
+			$target_pixels_width	= $ar_target[0] ?? null;
+			$target_pixels_height	= $ar_target[1] ?? null;
+
+		// Target folder verify (exists and permissions)
+			$target_dir = $this->get_media_path_dir($target_quality) ;
+			if( !is_dir($target_dir) ) {
+				if(!mkdir($target_dir, 0775, true)) {
+					// throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
+					debug_log(__METHOD__
+						. " Error on read or create directory \"$target_quality\". Permission denied (2) " . PHP_EOL
+						. ' target_quality: ' . $target_quality . PHP_EOL
+						. ' target_dir: ' . $target_dir
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+
+		// Avoid enlarge images
+			if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
+				$target_pixels_width	= $source_pixels_width;
+				$target_pixels_height	= $source_pixels_height;
+			}
+
+		// defaults when no value is available
+			if((int)$target_pixels_width<1)  $target_pixels_width  = 720;
+			if((int)$target_pixels_height<1) $target_pixels_height = 720;
+
+		// convert options
+			$options = new stdClass();
+	 			$options->source_file = $source_image;
+	 			$options->target_file = $target_image;
+
+		// convert with ImageMagick command
+	 		$thumb_quality = $this->get_thumb_quality();
+			if ($target_quality===$thumb_quality) {
+				$options->thumbnail = true;
+			}else{
+				$options->resize = $target_pixels_width.'x'.$target_pixels_height;
+			}
+			ImageMagick::convert($options);
+
+		// alternative_versions
+			$alternative_extensions = $this->get_alternative_extensions() ?? [];
+			foreach ($alternative_extensions as $current_extension) {
+				// create alternative version file
+				$this->create_alternative_version(
+					$target_quality,
+					$current_extension,
+					(object)[
+						'resize' => ($target_pixels_width.'x'.$target_pixels_height)
+					]
+				);
+			}
+
+
+		return true;
+	}//end convert_quality
+
+
+
+	/**
 	* BUILD_VERSION
 	* Creates a new version with IMAGEMAGICK conversion using settings based on target quality
 	* Source file is get from uploaded_modified_file. If not exists, use uploaded_original_file
 	* @param string $quality
 	* 	target quality file to build like '1.5MB'
 	* @param bool $async=true
-	* @param bool $save=true
+	* @param bool $save = true
 	* @return object $response
 	*/
 	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
@@ -2111,27 +2093,16 @@ class component_image extends component_media_common implements component_media_
 	*/
 	public function regenerate_component() : bool {
 
-		// files check
-			// create default quality file if not already exists
-				$default_quality		= $this->get_default_quality();
-				$image_default_filepath	= $this->get_media_filepath( $default_quality );
-				if (!file_exists($image_default_filepath)) {
-					// $this->generate_default_quality_file((object)[
-					// 	'overwrite' => true
-					// ]);
-					$this->build_version($default_quality, true, false);
+		// svg file. Create file if not exists
+			$svg_file_path = $this->get_svg_file_path();
+			if (!file_exists($svg_file_path)) {
+				// If default quality file exists, svg_string_node will be generated, else null
+				$svg_string_node = $this->create_default_svg_string_node();
+				if (!empty($svg_string_node)) {
+					// create the svg default file
+					$this->create_svg_file($svg_string_node);
 				}
-
-			// svg file. Create file if not exists
-				$svg_file_path = $this->get_svg_file_path();
-				if (!file_exists($svg_file_path)) {
-					// If default quality file exists, svg_string_node will be generated, else null
-					$svg_string_node = $this->create_default_svg_string_node();
-					if (!empty($svg_string_node)) {
-						// create the svg default file
-						$this->create_svg_file($svg_string_node);
-					}
-				}
+			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
@@ -2139,6 +2110,75 @@ class component_image extends component_media_common implements component_media_
 
 		return $result;
 	}//end regenerate_component
+
+
+
+	/**
+	* CREATE_ALTERNATIVE_VERSION
+	* Render a new alternative_version file from given quality and target extension.
+	* This method overwrites any existing file with same path
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options = null
+	* @return bool
+	*/
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+
+		// options
+			$resize = $options->resize ?? null;
+
+		// skip thumb quality
+			if ($quality===DEDALO_QUALITY_THUMB) {
+				return false;
+			}
+
+		// skip non defined extensions
+			if ( !in_array($extension, $this->get_alternative_extensions()) ) {
+				debug_log(__METHOD__
+					. " Trying to create alternative version with invalid extension: '$extension' "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// source file
+			$source_file = $this->get_media_filepath($quality);
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
+					. 'source_file: ' . to_string($source_file)
+					, logger::WARNING
+				);
+				return false;
+			}
+
+		// short vars
+			$file_name		= $this->get_id();
+			$target_path	= $this->get_media_path_dir($quality);
+			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
+
+		// generate from PDF
+			$im_options = new stdClass();
+				$im_options->source_file	= $source_file;
+				$im_options->target_file	= $target_file;
+				$im_options->quality		= 100;
+				$im_options->resize			= $resize;
+
+			ImageMagick::convert($im_options);
+
+		// check file
+			if (!file_exists($target_file)) {
+				debug_log(__METHOD__
+					. " Error on image creation. target file do not exists " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+
+		return true;
+	}//end create_alternative_version
 
 
 
