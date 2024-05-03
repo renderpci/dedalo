@@ -765,6 +765,11 @@ component_portal.prototype.add_value = async function(value) {
 			refresh			: false // not refresh here (!)
 		})
 
+		if (!api_response || !api_response.result) {
+			console.error('Invalid API response on add_value:', api_response);
+			return false
+		}
+
 	// total check (after save)
 		const current_data	= api_response.result.data.find(el => el.tipo===self.tipo)
 		const total			= current_data
