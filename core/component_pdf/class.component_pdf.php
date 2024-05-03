@@ -1179,4 +1179,70 @@ class component_pdf extends component_media_common {
 
 
 
+	/**
+	* CREATE_ALTERNATIVE_VERSION
+	* $this->create_alternative($current_quality, $current_extension);
+	* @return bool
+	*/
+	public function create_alternative_version(string $quality, string $extension) : bool {
+
+		// skip thumb quality
+			if ($quality===DEDALO_QUALITY_THUMB) {
+				return false;
+			}
+
+		// skip non defined extensions
+			if ( !in_array($extension, $this->get_alternative_extensions()) ) {
+				debug_log(__METHOD__
+					. " Trying to create alternative version with invalid extension: '$extension' "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// source file
+			$source_file = $this->get_media_filepath($quality);
+			if (!file_exists($source_file)) {
+				debug_log(__METHOD__
+					. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
+					. 'source_file: ' . to_string($source_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// short vars
+			$page			= 0;
+			$file_name		= $this->get_id();
+			$target_path	= $this->get_media_path_dir($quality);
+			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
+
+		// generate from PDF
+			$image_pdf_options = new stdClass();
+				$image_pdf_options->source_file	= $source_file;
+				$image_pdf_options->ar_layers	= [$page];
+				$image_pdf_options->target_file	= $target_file;
+				$image_pdf_options->density		= 600;
+				$image_pdf_options->antialias	= true;
+				$image_pdf_options->quality		= 100;
+				$image_pdf_options->resize		= '50%';
+
+			ImageMagick::convert($image_pdf_options);
+
+		// check file
+			if (!file_exists($target_file)) {
+				debug_log(__METHOD__
+					. " Error on image creation. target file do not exists " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+
+		return true;
+	}//end create_alternative_version
+
+
+
 }//end class component_pdf
