@@ -2834,7 +2834,7 @@ class component_relation_common extends component_common {
 		);
 		$component_data = $component->get_dato();
 		if(empty($component_data)){
-			return null;
+			return [];
 		};
 
 		// if the ddo has a $last property, it will be the component to get his data
