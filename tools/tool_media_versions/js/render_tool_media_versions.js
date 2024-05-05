@@ -47,6 +47,8 @@ render_tool_media_versions.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
+		// set pointer
+		wrapper.content_data = content_data
 
 
 	return wrapper
@@ -96,6 +98,9 @@ const get_content_data = async function(self) {
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
 
+	// activate tooltips
+		ui.activate_tooltips(content_data, 'button')
+
 
 	return content_data
 }//end get_content_data
@@ -142,6 +147,7 @@ const render_sync_data = function(self) {
 		// button_icon_show_data
 			const button_icon_show_data = ui.create_dom_element({
 				element_type	: 'span',
+				title			: 'Display component files_info',
 				class_name		: 'button icon ' + (is_sync ? 'eye' : 'exclamation'),
 				parent			: versions_container
 			})
@@ -167,7 +173,8 @@ const render_sync_data = function(self) {
 			const button_sync = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'gear button_sync_data ' + (is_sync ? 'light' : 'warning'),
-				inner_html		: self.get_tool_label('sync_data') || 'Sync data',
+				title			: 'Sync data and re-create alternatives and thumb',
+				inner_html		: (self.get_tool_label('regenerate') || 'Regenerate component'),
 				parent			: versions_container
 			})
 			button_sync.addEventListener('click', function(e) {
@@ -178,14 +185,14 @@ const render_sync_data = function(self) {
 					return false
 				}
 
-				versions_container.classList.add('loading')
+				self.node.content_data.classList.add('loading')
 
 				self.sync_files()
 				.then(function(response){
 					if (response.result===true) {
 						self.refresh()
 					}else{
-						versions_container.classList.remove('loading')
+						self.node.content_data.classList.remove('loading')
 						alert('Error: ' + (response.msg || 'Unknown') )
 					}
 				})
@@ -671,6 +678,8 @@ const render_file_upload = function(quality, self) {
 
 /**
 * RENDER_FILE_VERSIONS
+* Render all file versions of current quality as:
+*	Search | Download | Extension
 * @param string quality
 * @param object self
 * @return HTMLElement file_info_node
@@ -729,7 +738,7 @@ const render_file_versions = function(quality, self) {
 							e.stopPropagation()
 
 							open_window({
-								url : file_url
+								url : file_url + '?t=' + (new Date()).getTime()
 							})
 						})
 
@@ -755,10 +764,42 @@ const render_file_versions = function(quality, self) {
 					// file_info_extension
 						ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'file_info_extension',
+							class_name		: 'button file_info_extension',
+							title			: get_label.extension || 'Extension',
 							inner_html		: extension,
 							parent			: cell_node
 						})
+
+					// button_file_delete
+						const disable_style = extension===self.caller.context.features.extension
+							? ' disable'
+							: ''
+						const button_file_delete = ui.create_dom_element({
+							element_type	: 'span',
+							class_name		: 'button delete',
+							title			: get_label.delete || 'Delete',
+							parent			: cell_node
+						})
+						button_file_delete.addEventListener('click', function(e){
+							e.stopPropagation()
+
+							if (!confirm(get_label.sure + '\n\nFile: '+file_info.file_name)) {
+								return false
+							}
+
+							self.node.content_data.classList.add('loading')
+
+							self.delete_version(quality, extension)
+							.then(function(response){
+								if (response.result===true) {
+									self.refresh()
+								}else{
+									self.node.content_data.classList.remove('loading')
+									alert('Error: ' + (response.msg || 'Unknown') )
+								}
+							})
+						})
+
 				}
 		}//end for (let k = 0; k < files_info_length; k++)
 

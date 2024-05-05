@@ -20,9 +20,6 @@ ich102	Relazioni	termino	lg-ita
 ich103	Elenco	termino	lg-ita
 ich103	Listado	termino	lg-spa
 ich103	Llistat	termino	lg-cat
-ich104	Búsqueda	termino	lg-spa
-ich104	Cerca	termino	lg-cat
-ich104	Ricerca	termino	lg-ita
 ich105	Eliminar	termino	lg-spa
 ich105	Eliminare	termino	lg-ita
 ich105	Esborrar	termino	lg-cat
@@ -34,6 +31,7 @@ ich186	Elenco	termino	lg-ita
 ich186	Listado	termino	lg-spa
 ich186	λίστα	termino	lg-ell
 ich187	PCI	termino	lg-cat
+ich104	Esborrar	termino	lg-cat
 ich106	Incluye tanto los componentes como los procedimientos para la preparación, elaboración o ejecución, además de los resultados obtenidos. Ejemplos de uso: Actividades productivas: cortar, limar, moler a noria, nombre de la fuente de energía, cerámica... Creencias y rituales festivos: Pasos, entrega de llaves, tratamientos de sanación... Tradición oral: tipos de comunicación empleada, códigos, significados... Representaciones y juegos: primer acto, aparición del santo, nombre de la indumentaria, decorados, pintar en el suelo, se reparten los equipos... Manifestaciones musicales: preparación, primera estrofa, formaciones instrumentales... Formas de alimentación: materias primas, condimentar, preparar, degustar... Formas de sociabilidad: normas, composición, cargos, funciones...	def	lg-spa
 ich106	Nom de l'element / procés	termino	lg-cat
 ich106	Nombre del elemento / proceso	termino	lg-spa
@@ -202,12 +200,6 @@ ich144	διαγράψετε	termino	lg-ell
 ich145	Ambiti del Patrimonio Culturale Immateriale	termino	lg-ita
 ich145	Ámbitos del Patrimonio Cultural Inmaterial	termino	lg-spa
 ich145	Àmbits del Patrimoni Cultural Immaterial	termino	lg-cat
-ich146	Descripció	termino	lg-cat
-ich146	Descripción	termino	lg-spa
-ich146	Descrizione	termino	lg-ita
-ich147	Ambiti del progetto	termino	lg-ita
-ich147	Ámbitos de proyecto	termino	lg-spa
-ich147	Àmbits de projecte	termino	lg-cat
 ich148	Esclusi	termino	lg-ita
 ich148	excluidos	termino	lg-spa
 ich148	Excluits	termino	lg-cat
@@ -305,6 +297,11 @@ ich183	Progetto	termino	lg-ita
 ich183	Projecte	termino	lg-cat
 ich183	Proyecto	termino	lg-spa
 ich183	σχέδιο	termino	lg-ell
+ich147	Nuevo	termino	lg-spa
+ich147	Nuovo	termino	lg-ita
+ich147	Nou	termino	lg-cat
+ich146	Ultime modifiche	termino	lg-ita
+ich146	Últims canvis	termino	lg-cat
 ich188	Darrers canvis	termino	lg-cat
 ich188	Ultime modifiche	termino	lg-ita
 ich188	Últimos cambios	termino	lg-spa
@@ -350,8 +347,6 @@ ich201	Descrizioni	termino	lg-ita
 ich187	ICH	termino	lg-eng
 ich202	Des. fecha Inicio	termino	lg-spa
 ich203	Des. fecha finalización	termino	lg-spa
-ich204	Id	termino	lg-cat
-ich204	Id	termino	lg-spa
 ich205	Id	termino	lg-cat
 ich205	Id	termino	lg-spa
 ich206	Últimos cambios	termino	lg-spa
@@ -405,6 +400,7 @@ ich31	Idioma	termino	lg-cat
 ich31	Idioma	termino	lg-spa
 ich31	Idioma utilizado por la comunidad para la realización / ejecución del bien.	def	lg-spa
 ich31	Lingua	termino	lg-ita
+ich204	Nou	termino	lg-cat
 ich31	Se recomienda utilizar la nomenclatura y estructura de TLD de la ISO 639-6	obs	lg-spa
 ich32	Normalización tipológica a través de tesauro	def	lg-spa
 ich32	Tipologia	termino	lg-cat
@@ -440,7 +436,6 @@ ich38	Sistema cíclico del bien	def	lg-spa
 ich39	Datos textuales referentes a la periodicidad	def	lg-spa
 ich39	Descripció de la periodicitat	termino	lg-cat
 ich39	Descripción de la periodicidad	termino	lg-spa
-ich204	Id	termino	lg-eng
 ich39	Descrizione della periodicità	termino	lg-ita
 ich4	Marc temporal	termino	lg-cat
 ich4	Marco temporal	termino	lg-spa
@@ -746,11 +741,11 @@ ich142	Liste des enregistrements	termino	lg-fra
 ich143	Nouvelle typologie de participation/mise en œuvre	termino	lg-fra
 ich144	Supprimer la typologie de participation/exécution	termino	lg-fra
 ich145	Domaines du patrimoine culturel immatériel	termino	lg-fra
-ich146	Description	termino	lg-fra
-ich147	Domaines de protection	termino	lg-fra
 ich148	Exclus 	termino	lg-fra
 ich149	Liste	termino	lg-fra
 ich15	Nouvel actif PCI	termino	lg-fra
+ich147	Nouveau	termino	lg-fra
+ich146	Derniers changements	termino	lg-fra
 ich150	Liste	termino	lg-fra
 ich151	Patrimoine culturel immatériel	termino	lg-fra
 ich152	entête	termino	lg-fra
@@ -808,7 +803,6 @@ ich200	DIV image	termino	lg-fra
 ich201	Descriptions	termino	lg-fra
 ich202	Date de début des.	termino	lg-fra
 ich203	Date de fin dés.	termino	lg-fra
-ich204	Id	termino	lg-fra
 ich205	Id	termino	lg-fra
 ich206	Dernières modifications	termino	lg-fra
 ich21	DIV	termino	lg-fra
@@ -1035,8 +1029,6 @@ ich141	Relation list	termino	lg-eng
 ich142	List	termino	lg-eng
 ich144	Delete	termino	lg-eng
 ich145	Areas of Intangible Cultural Heritage	termino	lg-eng
-ich146	Description	termino	lg-eng
-ich147	Project areas	termino	lg-eng
 ich148	Excluded	termino	lg-eng
 ich149	List	termino	lg-eng
 ich150	List	termino	lg-eng
@@ -1092,6 +1084,7 @@ ich203	Des. end date	termino	lg-eng
 ich205	Id	termino	lg-eng
 ich206	last changes	termino	lg-eng
 ich137	Type of participation / performance	termino	lg-eng
+ich146	Latests changes	termino	lg-eng
 ich207	Estado de revisión	termino	lg-spa
 ich207	Review status	termino	lg-eng
 ich207	Estat de revisió	termino	lg-cat
@@ -1115,3 +1108,10 @@ ich143	New type of participation / performance	termino	lg-eng
 ich210	Listado de indexaciones	termino	lg-spa
 ich210	Indexing list	termino	lg-eng
 ich10	अमूर्त सांस्कृतिक सम्पदा - IPCE	termino	lg-nep
+ich146	Últimos cambios	termino	lg-spa
+ich204	Nuevo	termino	lg-spa
+ich204	New	termino	lg-eng
+ich204	Nouveau	termino	lg-fra
+ich104	Delete	termino	lg-eng
+ich104	Eliminar	termino	lg-spa
+ich147	New	termino	lg-eng

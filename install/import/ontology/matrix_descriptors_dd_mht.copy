@@ -40,7 +40,6 @@ mht128	imagen	termino	lg-spa
 mht129	Imagen	termino	lg-spa
 mht13	Nuevo	termino	lg-spa
 mht130	fecha_fin	termino	lg-spa
-mht131	RECYCLE MHT	termino	lg-spa
 mht132	Elenco	termino	lg-ita
 mht132	list	termino	lg-spa
 mht133	image	termino	lg-spa
@@ -149,6 +148,7 @@ mht77	es descriptor	termino	lg-spa
 mht78	General	termino	lg-spa
 mht78	Generale	termino	lg-ita
 mht126	Nuevo	termino	lg-spa
+mht131	RECYCLE MHT	termino	lg-spa
 mht79	Id	termino	lg-spa
 mht8	List	termino	lg-spa
 mht81	Titolo	termino	lg-ita

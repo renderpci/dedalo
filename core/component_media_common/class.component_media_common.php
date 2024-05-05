@@ -1,9 +1,66 @@
 <?php
 declare(strict_types=1);
 /**
-* CLASS COMPONENT_RELATION_COMMON
+* INTERFACE COMPONENT_MEDIA_COMMON
 * Used as common base from all components that works with media
-* like component_av, component_image, component_pdf, component_svg, etc..
+* like component_3d, component_av, component_image, component_pdf, component_svg
+*/
+interface component_media_interface {
+
+	// from component_media_common
+	public function get_id();
+	public function get_initial_media_path();
+	public function get_additional_path();
+	public function quality_file_exist(string $quality);
+	public function add_file(object $options);
+	public function valid_file_extension(string $file_extension);
+	public function get_files_info(bool $include_empty=false);
+	public function get_thumb_path();
+	public function get_thumb_extension();
+	public function delete_file(string $quality);
+	public function get_quality_files(string $quality);
+	public function get_normalized_name_from_files(string $quality);
+	public function get_uploaded_file(string $quality);
+	public function get_quality_file_info(string $quality, string $extension=null);
+	public function get_source_quality_to_build(string $target_quality);
+	public function get_original_extension(bool $exclude_converted=true);
+	public function get_original_file_path();
+	public function get_media_path_dir(string $quality);
+	public function get_media_url_dir(string $quality);
+	public function get_url(?string $quality=null, bool $test_file=false, bool $absolute=false, bool $default_add=false);
+	public function get_thumb_url();
+	public function get_media_filepath(?string $quality=null, string $extension=null);
+	public function get_size(string $quality);
+	public function restore_component_media_files();
+	public function create_alternative_versions(?object $options=null);
+	public function delete_alternative_version(string $quality, string $extension, ?object $options=null);
+
+
+	// others
+	public function get_ar_quality();
+	public function get_default_quality();
+	public function get_original_quality();
+	public function get_extension();
+	public function get_allowed_extensions();
+	public function get_folder();
+	public function get_best_extensions();
+	public function get_alternative_extensions();
+	public function build_version(string $quality, bool $async=true, bool $save=true);
+	public function create_thumb();
+	public function process_uploaded_file(object $file_data);
+	public static function update_dato_version(object $options);
+	public function remove_component_media_files(array $ar_quality=[]);
+	public function regenerate_component();
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null);
+
+}//end component_media_interface
+
+
+
+/**
+* CLASS COMPONENT_MEDIA_COMMON
+* Used as common base from all components that works with media
+* like component_3d, component_av, component_image, component_pdf, component_svg
 */
 class component_media_common extends component_common {
 
@@ -2076,6 +2133,9 @@ class component_media_common extends component_common {
 		// re-create thumb always (from default quality file)
 			$this->create_thumb();
 
+		// force to re-create alternatives
+			$this->create_alternative_versions();
+
 		// files_info. Updates component dato files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it
 		// Note that this method is called again on save, but this is intentional
@@ -2376,15 +2436,26 @@ class component_media_common extends component_common {
 	* to real process, overwrite in each component !
 	* @param string $quality
 	* @param bool $async = true
+	* @param bool $save = true
 	* @return object $response
 	* @test true
 	*/
-	public function build_version(string $quality, bool $async=true) : object {
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
+
+		// thumb case
+			if($quality===$this->get_thumb_quality()){
+				// thumb quality
+				$result = $this->create_thumb();
+
+				$response->result	= $result;
+				$response->msg		= $result===false ? 'Error building version' : 'OK request done';
+				return $response;
+			}
 
 		// short vars
 			$id					= $this->get_id();
@@ -2432,17 +2503,11 @@ class component_media_common extends component_common {
 				}
 			}
 
-			if($quality==='thumb'){
-				// thumb quality
-				$result = $this->create_thumb();
-
-			}else{
-				// copy file from source quality to target quality
+			// copy file from source quality to target quality
 				$result = copy(
 					$original_file_path, // from original quality directory
 					$target_quality_path // to default quality directory
 				);
-			}
 
 			if ($result===false) {
 				debug_log(__METHOD__ . PHP_EOL
@@ -2479,7 +2544,9 @@ class component_media_common extends component_common {
 			);
 
 		// update component dato files info and save
-			$this->Save();
+			if ($save===true) {
+				$this->Save();
+			}
 
 		// response
 			$response->result	= true;
@@ -2600,6 +2667,165 @@ class component_media_common extends component_common {
 
 		return $query_object;
 	}//end resolve_query_object_sql
+
+
+
+	/**
+	* CREATE_ALTERNATIVE_VERSION
+	* Render a new alternative_version file from given quality and target extension.
+	* This method overwrites any existing file with same path
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options
+	* @return bool
+	*/
+	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+
+		debug_log(__METHOD__
+			. " Use specific component method to overwrite this ! $quality - $extension"
+			, logger::WARNING
+		);
+
+		return true;
+	}//end create_alternative_version
+
+
+
+	/**
+	* CREATE_ALTERNATIVE_VERSIONS
+	* Render all alternative_version files in all quality versions.
+	* This method overwrites any existing file with same path
+	* @param object|null $options = null
+	* @return bool
+	*/
+	public function create_alternative_versions(?object $options=null) : bool {
+
+		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+		$ar_quality				= $this->get_ar_quality();
+		foreach ($ar_quality as $quality) {
+			if ($quality===$this->get_thumb_quality()) {
+				continue; // skip thumb quality
+			}
+			foreach ($alternative_extensions as $extension) {
+				$this->create_alternative_version(
+					$quality,
+					$extension,
+					$options
+				);
+			}
+		}
+
+
+		return true;
+	}//end create_alternative_versions
+
+
+
+	/**
+	* DELETE_ALTERNATIVE_VERSION
+	* Remove alternative version file from disk
+	* @param string $quality
+	* @param string $extension
+	* @param object|null $options = null
+	* @return bool
+	*/
+	public function delete_alternative_version(string $quality, string $extension, ?object $options=null) {
+
+		// options
+			// nothing to define yet
+
+		// skip thumb quality
+			if ($quality===$this->get_thumb_quality()) {
+				return false;
+			}
+
+		// skip non defined extensions
+			if ( !in_array($extension, $this->get_alternative_extensions()) ) {
+				debug_log(__METHOD__
+					. " Trying to create alternative version with invalid extension: '$extension' "
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// short vars
+			$file_name		= $this->get_id();
+			$target_path	= $this->get_media_path_dir($quality);
+			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
+
+		// target_file check
+			if (!file_exists($target_file)) {
+				debug_log(__METHOD__
+					. " Ignored alternative_version deletion. Target file do not exists " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// unlink file
+			if ( !unlink($target_file) ) {
+				debug_log(__METHOD__
+					. " Error deleting alternative file. Unable to unlink file " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+				logger::$obj['activity']->log_message(
+					'DELETE FILE',
+					logger::INFO,
+					$this->tipo,
+					NULL,
+					[
+						'msg'		=> 'Deleted alternative media file (destructive)',
+						'tipo'		=> $this->tipo,
+						'parent'	=> $this->section_id,
+						'id'		=> $this->id,
+						'quality'	=> $quality,
+						'extension'	=> $extension
+					]
+				);
+
+			// save to force update dato files_info
+				$this->Save();
+
+
+		return true;
+	}//end delete_alternative_version
+
+
+
+	/**
+	* DELETE_thumb
+	* Remove thumb file version from disk
+	* @return bool
+	*/
+	public function delete_thumb() {
+
+		// short vars
+			$thumb_quality		= $this->get_thumb_quality();
+			$thumb_extension	= $this->get_thumb_extension();
+			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
+
+		// unlink file
+			if ( !unlink($target_file) ) {
+				debug_log(__METHOD__
+					. " Error deleting thumb file. Unable to unlink file " . PHP_EOL
+					. 'target_file: ' . to_string($target_file)
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		// save to force update dato files_info
+			$this->Save();
+
+
+		return true;
+	}//end delete_thumb
 
 
 

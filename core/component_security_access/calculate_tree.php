@@ -27,6 +27,9 @@
 
 // lang
 	$lang = $data['lang'];
+	// force set application and data lang
+	$_REQUEST['dedalo_application_lang']	= $lang;
+	$_REQUEST['dedalo_data_lang']			= $lang;
 
 // session_id. Is used mainly to verify that user is logged or not.
 	// get current session id and force new session name as equal

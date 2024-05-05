@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT_3D
 *
 */
-class component_3d extends component_media_common {
+class component_3d extends component_media_common implements component_media_interface {
 
 
 
@@ -325,7 +325,6 @@ class component_3d extends component_media_common {
 
 	/**
 	* CREATE_THUMB
-	*
 	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
 	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
 	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
@@ -343,37 +342,31 @@ class component_3d extends component_media_common {
 			}
 
 		// thumb_path
-			$file_name			= $this->get_id();
-
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
 			$target_file		= $this->get_media_filepath($thumb_quality, $thumb_extension);
 
 		// thumb not exists case: generate from posterframe
-			$posterframe	= $this->get_posterframe_filepath();
+			$posterframe = $this->get_posterframe_filepath();
 			if (!file_exists($posterframe)) {
 				debug_log(__METHOD__
-					." posterframe file doesn't exists, is not possible to create a thumb"
+					." posterframe file doesn't exists, it is not possible to create a thumb"
 					, logger::WARNING
 				);
 
 				return false;
 			}
 
-			// thumb generate
+		// thumb generate
 			$result = ImageMagick::dd_thumb(
 				$posterframe, // source file
-				$target_file, // thumb file
+				$target_file // thumb file
 			);
 
-		// exec command
-			// exec($command.' 2>&1', $output, $result_code);
-			if ($result===false) {
-				return false;
-			}
 
 		return true;
 	}//end create_thumb
+
 
 
 	/**

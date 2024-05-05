@@ -1390,7 +1390,6 @@ dmm434	Episodi storici	termino	lg-ita
 dmm434	Episodios históricos	termino	lg-spa
 dmm434	Episodis històrics	termino	lg-cat
 dmm434	Historical episodes	termino	lg-eng
-dmm435	Identidicación	termino	lg-spa
 dmm435	Identificació	termino	lg-cat
 dmm435	Identificazione	termino	lg-ita
 dmm435	Identification	termino	lg-eng
@@ -1605,7 +1604,6 @@ dmm127	Id	termino	lg-spa
 dmm127	Id	termino	lg-cat
 dmm128	Causa de muerte	termino	lg-spa
 dmm128	Causa de mort	termino	lg-cat
-dmm129	Publicable	termino	lg-spa
 dmm129	Publicable	termino	lg-cat
 dmm130	Listado	termino	lg-spa
 dmm130	Llistat	termino	lg-cat
@@ -2898,10 +2896,6 @@ dmm1204	Consulta acabada	termino	lg-cat
 dmm1204	Consulta terminada	termino	lg-spa
 dmm1204	Consultation finished	termino	lg-eng
 dmm1204	Consultation terminée	termino	lg-fra
-dmm1205	Borrar	termino	lg-spa
-dmm1205	Esborrar	termino	lg-cat
-dmm1205	Delete	termino	lg-eng
-dmm1205	Supprimer	termino	lg-fra
 dmm1206	Borrar	termino	lg-spa
 dmm1206	Esborrar	termino	lg-cat
 dmm1206	Delete	termino	lg-eng
@@ -2959,6 +2953,8 @@ dmm1217	List	termino	lg-eng
 dmm1218	Indrets de desaparició	termino	lg-cat
 dmm1218	Lugares de desaparición	termino	lg-spa
 dmm1218	Luoghi della scomparsa	termino	lg-ita
+dmm1205	Latest changes	termino	lg-eng
+dmm1205	Dernières modifications	termino	lg-fra
 dmm1218	Lieux de disparition	termino	lg-fra
 dmm1218	Places of disappearance	termino	lg-eng
 dmm1219	Identificació	termino	lg-cat
@@ -5626,3 +5622,51 @@ dmm584	Anthropologie - Anthropologie	termino	lg-fra
 dmm584	Anthropology - Anthropology	termino	lg-eng
 dmm603	Listado	termino	lg-spa
 dmm603	Llistat	termino	lg-cat
+dmm1465	Nuevo	termino	lg-spa
+dmm1465	New	termino	lg-eng
+dmm1465	Nou	termino	lg-cat
+dmm1466	Borrar	termino	lg-spa
+dmm1466	Delete	termino	lg-eng
+dmm1466	Esborrar	termino	lg-cat
+dmm1467	Nuevo	termino	lg-spa
+dmm1467	New	termino	lg-eng
+dmm1467	Nou	termino	lg-cat
+dmm1468	Borrar	termino	lg-spa
+dmm1468	Delete	termino	lg-eng
+dmm1468	Esborrar	termino	lg-cat
+dmm1469	Nuevo	termino	lg-spa
+dmm1469	New	termino	lg-eng
+dmm1469	Nou	termino	lg-cat
+dmm1470	Borrar	termino	lg-spa
+dmm1470	Delete	termino	lg-eng
+dmm1470	Esborrar	termino	lg-cat
+dmm129	Publicable	termino	lg-spa
+dmm435	Identificación	termino	lg-spa
+dmm1471	Nuevo	termino	lg-spa
+dmm1471	New	termino	lg-eng
+dmm1471	Nou	termino	lg-cat
+dmm1472	Borrar	termino	lg-spa
+dmm1472	Delete	termino	lg-eng
+dmm1472	Esborrar	termino	lg-cat
+dmm1473	Nuevo	termino	lg-spa
+dmm1473	New	termino	lg-eng
+dmm1473	Nou	termino	lg-cat
+dmm1474	Borrar	termino	lg-spa
+dmm1474	Delete	termino	lg-eng
+dmm1474	Esborrar	termino	lg-cat
+dmm1475	Nuevo	termino	lg-spa
+dmm1475	New	termino	lg-eng
+dmm1475	Nou	termino	lg-cat
+dmm1476	Listado	termino	lg-spa
+dmm1476	List	termino	lg-eng
+dmm1476	Llistat	termino	lg-cat
+dmm1477	Nuevo	termino	lg-spa
+dmm1477	New	termino	lg-eng
+dmm1477	Nou	termino	lg-cat
+dmm1478	Borrar	termino	lg-spa
+dmm1478	Delete	termino	lg-eng
+dmm1478	Esborrar	termino	lg-cat
+dmm1205	Últimos cambios	termino	lg-spa
+dmm1205	Últims canvis	termino	lg-cat
+dmm1479	Listado relaciones	termino	lg-spa
+dmm1479	Llistat relacions	termino	lg-cat
