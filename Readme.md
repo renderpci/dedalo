@@ -4,7 +4,7 @@
 #### V6 transition state
 
 | ontology | state | use | interface | tools | comments | v5 compatibility until (dmy) |
-| --- | --- | --- | --- | --- | --- |
+| --- | --- | --- | --- | --- | --- | --- |
 | dd | production | 100% | 100% | 100% |All definitions are ready | October 2024 |
 | rsc | production | 100% | 100% | 100% | All definitions are ready| October 2024 |
 | hierarchy | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
