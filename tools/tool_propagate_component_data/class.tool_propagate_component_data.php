@@ -26,7 +26,7 @@ class tool_propagate_component_data extends tool_common {
 			$component_tipo			= $options->component_tipo;
 			$action					= $options->action;
 			$lang					= $options->lang;
-			$propagate_data_value	= $options->propagate_data_value;
+			$propagate_data_value	= $options->propagate_data_value ?? null;
 
 		// short vars
 			$mode			= 'list';
