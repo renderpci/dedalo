@@ -13,8 +13,8 @@
 | numisdata | production | 100% | 100% | 100% |  All definitions are ready | 30/04/2024 |
 | isad | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
 | ich | production | 100% | 100% | 100%  | All definitions are ready | October 2024 |
-| tch | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |  not compatible |
-| tchi | beta | 70% | 70% | 70%  | Install and test it, but don't use in production | not compatible |
+| tch | beta | 80% | 90% | 90%  | Install and test it, but don't use in production |  not compatible |
+| tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
 | dmm | beta | 70% | 60% | 80% | Install and test it, but don't use in production | October 2024 |
 | mdcat | alpha | 0% | 0% |0%  |  | October 2024 |
 
