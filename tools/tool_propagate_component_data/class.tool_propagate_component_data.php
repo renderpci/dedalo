@@ -1,7 +1,7 @@
 <?php
 /**
 * CLASS TOOL_PROPAGATE_COMPONENT_DATA
-* Manages Dédalo cache clean actions
+* Manages Dédalo propagation data
 *
 */
 class tool_propagate_component_data extends tool_common {
@@ -49,7 +49,7 @@ class tool_propagate_component_data extends tool_common {
 						$sqo->set_section_tipo([$section_tipo]);
 
 				debug_log(__METHOD__
-					. " Auto-created SQO from section:  $section_tipo" . PHP_EOL
+					. " Auto-created SQO from section: $section_tipo" . PHP_EOL
 					. to_string($sqo)
 					, logger::WARNING
 				);
@@ -109,7 +109,7 @@ class tool_propagate_component_data extends tool_common {
 					}
 
 				// current component
-					$current_component	= component_common::get_instance(
+					$current_component = component_common::get_instance(
 						$model,
 						$component_tipo,
 						$current_section_id,
@@ -167,7 +167,10 @@ class tool_propagate_component_data extends tool_common {
 						$current_component->set_dato($final_dato);
 						$current_component->Save();
 
-						debug_log(__METHOD__." Updated dato of $section_tipo - $current_section_id - $component_tipo ".to_string(), logger::DEBUG);
+						debug_log(__METHOD__
+							." Updated dato of $section_tipo - $current_section_id - $component_tipo "
+							, logger::DEBUG
+						);
 					}
 			}//end foreach ($records_data->result as $key => $ar_value)
 
