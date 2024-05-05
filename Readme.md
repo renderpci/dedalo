@@ -3,20 +3,20 @@
 
 #### V6 transition state
 
-| ontology | state | use | interface | tools | comments |
+| ontology | state | use | interface | tools | comments | v5 compatibility until (dmy) |
 | --- | --- | --- | --- | --- | --- |
-| dd | production | 100% | 100% | 100% |All definitions are ready |
-| rsc | production | 100% | 100% | 100% | All definitions are ready|
-| hierarchy | production | 100% | 100% | 100% | All definitions are ready |
-| ww | production | 100% | 100% | 100% | All definitions are ready |
-| oh | production | 100% | 100% | 100% | All definitions are ready |
-| numisdata | production | 100% | 100% | 100% |  All definitions are ready |
-| isad | production | 100% | 100% | 100% | All definitions are ready |
-| ich | production | 100% | 100% | 100%  | All definitions are ready |
-| tch | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |
-| tchi | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |
-| dmm | beta | 70% | 60% | 80% | Install and test it, but don't use in production |
-| mdcat | alpha | 0% | 0% |0%  |  |
+| dd | production | 100% | 100% | 100% |All definitions are ready | October 2024 |
+| rsc | production | 100% | 100% | 100% | All definitions are ready| October 2024 |
+| hierarchy | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
+| ww | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
+| oh | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
+| numisdata | production | 100% | 100% | 100% |  All definitions are ready | 30/04/2024 |
+| isad | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
+| ich | production | 100% | 100% | 100%  | All definitions are ready | October 2024 |
+| tch | beta | 70% | 70% | 70%  | Install and test it, but don't use in production |  not compatible |
+| tchi | beta | 70% | 70% | 70%  | Install and test it, but don't use in production | not compatible |
+| dmm | beta | 70% | 60% | 80% | Install and test it, but don't use in production | October 2024 |
+| mdcat | alpha | 0% | 0% |0%  |  | October 2024 |
 
 
 ## 1. What is Dédalo?
