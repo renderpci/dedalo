@@ -59,7 +59,7 @@
 
 				case 'list':
 				case 'tm':
-					$value				= $this->get_list_value();
+					$value				= [ $this->get_value() ];
 					break;
 
 				case 'edit':
