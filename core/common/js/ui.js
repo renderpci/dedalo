@@ -3330,7 +3330,7 @@ export const ui = {
 	* 	Element (page, section, component, inspector, etc.) wrapper
 	* @return void
 	*/
-	activate_tooltips : function(wrapper) {
+	activate_tooltips : function(wrapper, selector='.button') {
 
 		// mobile do not use tooltip
 		if (/Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
@@ -3342,7 +3342,7 @@ export const ui = {
 		}
 		const tooltip = ui.tooltip
 
-		const buttons = wrapper.querySelectorAll('.button')
+		const buttons = wrapper.querySelectorAll(selector)
 		const buttons_length = buttons.length
 		for (let i = 0; i < buttons_length; i++) {
 

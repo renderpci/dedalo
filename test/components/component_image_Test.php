@@ -607,21 +607,9 @@ final class component_image_test extends TestCase {
 		if (!is_null($result)) {
 
 			$this->assertTrue(
-				gettype($result)==='object',
-				'expected type object : ' . PHP_EOL
+				gettype($result)==='boolean',
+				'expected type boolean : ' . PHP_EOL
 					. gettype($result)
-			);
-
-			$this->assertTrue(
-				!empty($result->path),
-				'expected !empty($result->path) ' . PHP_EOL
-					. empty($result)
-			);
-
-			$this->assertTrue(
-				!empty($result->url),
-				'expected !empty($result->url) ' . PHP_EOL
-					. empty($result)
 			);
 		}
 	}//end test_create_thumb

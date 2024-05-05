@@ -323,11 +323,13 @@ abstract class backup {
 			switch ($table) {
 
 				case 'jer_dd':
-					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
+					// $command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM jer_dd WHERE ". '\"terminoID\"' ." LIKE '{$tld}%') TO '{$path_file}' \" " ;
+					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$jer_dd_columns)." FROM \"jer_dd\" WHERE tld = '{$tld}') TO '{$path_file}' \" " ;
 					break;
 
 				case 'matrix_descriptors_dd':
-					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
+					// $command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%') TO '{$path_file}' \" ";
+					$command = $command_base . " -c \"\copy (SELECT ".addslashes(backup::$descriptors_dd_columns)." FROM \"matrix_descriptors_dd\" WHERE parent SIMILAR TO '{$tld}[0-9]+') TO '{$path_file}' \" ";
 					break;
 
 				case 'matrix_dd':
@@ -365,15 +367,28 @@ abstract class backup {
 
 		$res='';
 
-		if (!file_exists($path_file)) {
-			// throw new Exception("Error Processing Request. File $path_file not found", 1);
-			debug_log(__METHOD__
-				. " Error Processing Request. File not found " . PHP_EOL
-				. ' path_file: ' . to_string($path_file)
-				, logger::ERROR
-			);
-			return '';
-		}
+		// file exists check
+			if (!file_exists($path_file)) {
+				// throw new Exception("Error Processing Request. File $path_file not found", 1);
+				debug_log(__METHOD__
+					. " Error Processing Request. File not found " . PHP_EOL
+					. ' path_file: ' . to_string($path_file)
+					, logger::ERROR
+				);
+				return '';
+			}
+
+		// tld mandatory for some tables check
+			if ($table==='jer_dd' || $table==='matrix_descriptors_dd') {
+				if (empty($tld)) {
+					debug_log(__METHOD__
+						. " Error Processing Request. tld is mandatory " . PHP_EOL
+						. ' tld: ' . to_string($tld)
+						, logger::ERROR
+					);
+					return '';
+				}
+			}
 
 		$command_history = array();
 
@@ -385,8 +400,8 @@ abstract class backup {
 
 			case 'jer_dd':
 				# DELETE . Remove previous records
-				#$strQuery  = "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE '{$tld}%'; "; #pg_query(DBi::_getConnection(), $strQuery);
-				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				// $command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE ".'\"terminoID\"'." LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				$command = $command_base . " -c \"DELETE FROM \"jer_dd\" WHERE tld = '{$tld}' \" ";
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;
@@ -400,8 +415,8 @@ abstract class backup {
 
 			case 'matrix_descriptors_dd':
 				# DELETE . Remove previous records
-				#$strQuery = "DELETE FROM \"matrix_descriptors_dd\" WHERE \"parent\" LIKE '{$tld}%';"; #pg_query(DBi::_getConnection(), $strQuery);
-				$command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				// $command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent LIKE '{$tld}%'\" "; # -c "DELETE FROM \"jer_dd\" WHERE \"terminoID\" LIKE 'dd%'"
+				$command = $command_base . " -c \"DELETE FROM \"matrix_descriptors_dd\" WHERE parent SIMILAR TO '{$tld}[0-9]+' \" ";
 				$res .= shell_exec($command);
 				#$res .= exec( $command );
 				$command_history[] = $command;

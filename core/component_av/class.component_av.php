@@ -4,7 +4,7 @@ declare(strict_types=1);
 * CLASS COMPONENT_AV
 *
 */
-class component_av extends component_media_common {
+class component_av extends component_media_common implements component_media_interface {
 
 
 
@@ -401,7 +401,7 @@ class component_av extends component_media_common {
 
 				if (!file_exists($posterframe)) {
 					debug_log(__METHOD__
-						." posterframe file doesn't exists, is not possible to create a thumb"
+						." posterframe file doesn't exists, it is not possible to create a thumb"
 						, logger::WARNING
 					);
 
@@ -410,16 +410,24 @@ class component_av extends component_media_common {
 			}
 
 			// thumb generate
-			$result = ImageMagick::dd_thumb(
-				$posterframe, // source file
-				$target_file, // thumb file
-			);
+				$result = ImageMagick::dd_thumb(
+					$posterframe, // source file
+					$target_file, // thumb file
+				);
 
-		// exec command
-			// exec($command.' 2>&1', $output, $result_code);
-			if ($result===false) {
-				return false;
-			}
+			// // dimensions . Like "102x57"
+			// 	$width		= defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+			// 	$height		= defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
+			// 	$dimensions	= $width.'x'.$height;
+
+			// // convert
+			// 	$thumb_options = new stdClass();
+			// 		$thumb_options->source_file	= $posterframe;
+			// 		$thumb_options->target_file	= $target_file;
+			// 		$thumb_options->resize		= $dimensions;
+			// 		$thumb_options->quality		= 96;
+			// 	$result = ImageMagick::convert($thumb_options);
+
 
 		return true;
 	}//end create_thumb
@@ -1404,21 +1412,12 @@ class component_av extends component_media_common {
 	* @param bool $async = true
 	* @return object $response
 	*/
-	public function build_version(string $quality, bool $async=true) : object {
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed';
 			$response->errors	= [];
-
-		// short vars
-			$id				= $this->get_id();
-			$source_quality	= $this->get_source_quality_to_build($quality);
-			if (empty($source_quality)) {
-				$response->msg .= ' Invalid source_quality';
-				$response->errors[] = 'invalid source_quality';
-				return $response;
-			}
 
 		// thumb case
 			if($quality===$this->get_thumb_quality()){
@@ -1436,6 +1435,15 @@ class component_av extends component_media_common {
 
 				$response->result	= true;
 				$response->msg		= 'Thumb file built';
+				return $response;
+			}
+
+		// short vars
+			$id				= $this->get_id();
+			$source_quality	= $this->get_source_quality_to_build($quality);
+			if (empty($source_quality)) {
+				$response->msg .= ' Invalid source_quality';
+				$response->errors[] = 'invalid source_quality';
 				return $response;
 			}
 

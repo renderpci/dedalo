@@ -234,7 +234,7 @@ final class ImageMagick {
 				, logger::DEBUG
 			);
 
-		// exe command
+		// exec command
 			$result = exec($command.' 2>&1', $output, $worked_result);
 
 		// error case

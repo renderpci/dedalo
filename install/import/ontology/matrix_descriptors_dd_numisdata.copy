@@ -1738,8 +1738,6 @@ numisdata1320	foaf:depiction	termino	lg-spa
 numisdata1321	nmo:hasReverse	termino	lg-spa
 numisdata1310	nmo:NumismaticObject	termino	lg-spa
 numisdata1330	nmo:NumismaticObject	termino	lg-spa
-numisdatacatalog1	Numisdata catalog	termino	lg-spa
-numisdatacatalog3	Listado	termino	lg-spa
 numisdata22	Dependiente de	termino	lg-spa
 numisdata876	map_global	termino	lg-spa
 numisdata22	Dependent of	termino	lg-eng
@@ -2365,8 +2363,6 @@ numisdata992	Projekt	termino	lg-deu
 numisdata993	Thesaurus-Marke	termino	lg-deu
 numisdata994	Schlüssel	termino	lg-deu
 numisdata999	Liste	termino	lg-deu
-numisdatacatalog1	Numisdata Katalog	termino	lg-deu
-numisdatacatalog3	Liste	termino	lg-deu
 numisdata821	RDF export	termino	lg-eng
 numisdata986	RDF export	termino	lg-eng
 numisdata4	Oggetto numismatico	termino	lg-ita
@@ -2983,8 +2979,6 @@ numisdata1281	Authorship	termino	lg-eng
 numisdata1282	list	termino	lg-eng
 numisdata1294	Active	termino	lg-eng
 numisdata1304	Role	termino	lg-eng
-numisdatacatalog1	Numisdata Catalog	termino	lg-eng
-numisdatacatalog3	List	termino	lg-eng
 numisdata1334	Cr	termino	lg-eng
 numisdata1	NUMISDATA	termino	lg-fra
 numisdata10	Titre	termino	lg-fra
@@ -3593,8 +3587,6 @@ numisdata992	Projet	termino	lg-fra
 numisdata993	Marque du thésaurus	termino	lg-fra
 numisdata994	Clé	termino	lg-fra
 numisdata999	Liste	termino	lg-fra
-numisdatacatalog1	Catalogue de Numisdata	termino	lg-fra
-numisdatacatalog3	Liste	termino	lg-fra
 numisdata1340	nomisma_rdf	termino	lg-spa
 numisdata713	Web numisdata_mib_portugal	termino	lg-spa
 numisdata1350	Publicable	termino	lg-spa

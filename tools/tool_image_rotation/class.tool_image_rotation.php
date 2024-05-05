@@ -83,6 +83,4 @@ class tool_image_rotation extends tool_common {
 
 
 
-
-
 }//end class tool_image_rotation

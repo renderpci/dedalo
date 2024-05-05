@@ -271,7 +271,6 @@ mdcat113	Presentació	termino	lg-cat
 mdcat113	Presentación	termino	lg-spa
 mdcat1130	Documentació	termino	lg-cat
 mdcat1130	Documentación	termino	lg-spa
-mdcat1131	cut_lloc_naixement_valor	termino	lg-spa
 mdcat1132	cut_lloc_defuncio_valor	termino	lg-spa
 mdcat1133	cens_simbologia_links	termino	lg-spa
 mdcat1134	titol	termino	lg-spa
@@ -287,7 +286,6 @@ mdcat114	Documento	termino	lg-spa
 mdcat1140	Descriptores	termino	lg-spa
 mdcat1140	Descriptors	termino	lg-cat
 mdcat1141	descriptors	termino	lg-spa
-mdcat1142	descriptors	termino	lg-spa
 mdcat1143	Cronologia	termino	lg-cat
 mdcat1143	Cronologia	termino	lg-ita
 mdcat1143	Cronología	termino	lg-spa
@@ -330,15 +328,11 @@ mdcat1170	condemna	termino	lg-spa
 mdcat1171	indult	termino	lg-spa
 mdcat1172	lloc_desterrament	termino	lg-spa
 mdcat1173	desterrament	termino	lg-spa
-mdcat1174	data_execucio	termino	lg-spa
-mdcat1175	lloc_execucio	termino	lg-spa
-mdcat1176	mort_preso	termino	lg-spa
 mdcat1177	temps_extingit_condemna	termino	lg-spa
 mdcat1178	data_llibertat_condicional	termino	lg-spa
 mdcat1179	data_llibertat_definitiva	termino	lg-spa
 mdcat118	Catàleg de fons	termino	lg-cat
 mdcat118	Listado de proyectos	termino	lg-spa
-mdcat1180	centre_privacio	termino	lg-spa
 mdcat1181	total_privacio	termino	lg-spa
 mdcat1182	document_pdf	termino	lg-spa
 mdcat4373	Place type	termino	lg-eng
@@ -365,31 +359,34 @@ mdcat1200	lloc	termino	lg-spa
 mdcat1201	companyia	termino	lg-spa
 mdcat1202	biblioteca	termino	lg-spa
 mdcat1203	publicacio	termino	lg-spa
-mdcat1204	tipologia	termino	lg-spa
 mdcat1205	descripcio	termino	lg-spa
-mdcat1206	titol	termino	lg-spa
-mdcat1207	titol_analitic	termino	lg-spa
 mdcat1208	collecio	termino	lg-spa
-mdcat1209	autor	termino	lg-spa
-mdcat1210	autor_corporatiu	termino	lg-spa
-mdcat1211	congres	termino	lg-spa
-mdcat1212	autor_addicional	termino	lg-spa
-mdcat1213	autor_addicional2	termino	lg-spa
-mdcat1214	autor_addicional3	termino	lg-spa
-mdcat1215	autoria	termino	lg-spa
 mdcat1216	edicio	termino	lg-spa
 mdcat1217	edicio2	termino	lg-spa
-mdcat1218	edicio3	termino	lg-spa
-mdcat1219	edicio4	termino	lg-spa
 mdcat122	Presentació	termino	lg-cat
 mdcat122	Presentación	termino	lg-spa
 mdcat1220	isbn_issn	termino	lg-spa
 mdcat1221	diposit_legal	termino	lg-spa
 mdcat1222	url	termino	lg-spa
 mdcat1223	url2	termino	lg-spa
-mdcat1224	sumari	termino	lg-spa
 mdcat1225	nota	termino	lg-spa
 mdcat1226	bibliografia	termino	lg-spa
+mdcat1175	lloc_execucio	termino	lg-spa
+mdcat1207	titol_analitic	termino	lg-spa
+mdcat1176	mort_preso	termino	lg-spa
+mdcat1174	data_execucio	termino	lg-spa
+mdcat1180	centre_privacio	termino	lg-spa
+mdcat1204	tipologia	termino	lg-spa
+mdcat1210	autor_corporatiu	termino	lg-spa
+mdcat1213	autor_addicional2	termino	lg-spa
+mdcat1215	autoria	termino	lg-spa
+mdcat1214	autor_addicional3	termino	lg-spa
+mdcat1218	edicio3	termino	lg-spa
+mdcat1224	sumari	termino	lg-spa
+mdcat1206	titol	termino	lg-spa
+mdcat1209	autor	termino	lg-spa
+mdcat1212	autor_addicional	termino	lg-spa
+mdcat1219	edicio4	termino	lg-spa
 mdcat1227	conte	termino	lg-spa
 mdcat1228	credits	termino	lg-spa
 mdcat1229	interprets	termino	lg-spa
@@ -399,7 +396,6 @@ mdcat1230	esdeveniment	termino	lg-spa
 mdcat1231	topografic	termino	lg-spa
 mdcat1232	volum	termino	lg-spa
 mdcat1233	codi_barres	termino	lg-spa
-mdcat1234	descriptors	termino	lg-spa
 mdcat1235	Espacios de memoria	termino	lg-spa
 mdcat1235	Espais de memòria	termino	lg-cat
 mdcat1235	Spazi della memoria	termino	lg-ita
@@ -463,9 +459,7 @@ mdcat1268	destacat	termino	lg-spa
 mdcat1269	image_path	termino	lg-spa
 mdcat127	Listado de entrevistados por proyecto	termino	lg-spa
 mdcat127	Llistat d'entrevistats per projecte	termino	lg-cat
-mdcat1270	ref_nom	termino	lg-spa
 mdcat1271	ref_nom	termino	lg-spa
-mdcat1272	ref_cognom	termino	lg-spa
 mdcat1273	ref_cognom_matrimoni	termino	lg-spa
 mdcat1274	ref_data_naixement	termino	lg-spa
 mdcat1275	ref_data_mort	termino	lg-spa
@@ -484,32 +478,27 @@ mdcat1285	ut_cognom_matrimoni	termino	lg-spa
 mdcat1286	ut_lloc_naixement_valor	termino	lg-spa
 mdcat1287	ut_lloc_defuncio_valor	termino	lg-spa
 mdcat1288	ut_lloc_residencia_valor	termino	lg-spa
-mdcat1289	ref_nom	termino	lg-spa
 mdcat129	tel	termino	lg-spa
-mdcat1290	ref_cognom	termino	lg-spa
-mdcat1291	ref_data_naixement	termino	lg-spa
 mdcat1292	ref_lloc_naixement_valor	termino	lg-spa
-mdcat1293	ref_veinatge_postguerra	termino	lg-spa
 mdcat1294	centre_nom	termino	lg-spa
-mdcat1295	centre_data_entrada	termino	lg-spa
 mdcat1251	space_marc	termino	lg-spa
 mdcat1296	centre_data_sortida	termino	lg-spa
-mdcat1297	centre_municipi	termino	lg-spa
 mdcat1298	ref_lloc_defuncio	termino	lg-spa
 mdcat1299	ref_lloc_residencia	termino	lg-spa
 mdcat13	Entrevistas a expertos	termino	lg-spa
+mdcat1290	ref_cognom	termino	lg-spa
+mdcat1270	ref_nom	termino	lg-spa
+mdcat1291	ref_data_naixement	termino	lg-spa
+mdcat1297	centre_municipi	termino	lg-spa
+mdcat1295	centre_data_entrada	termino	lg-spa
+mdcat1289	ref_nom	termino	lg-spa
+mdcat1293	ref_veinatge_postguerra	termino	lg-spa
+mdcat1234	descriptors	termino	lg-spa
 mdcat13	Entrevistes a experts	termino	lg-cat
 mdcat1326	Exili	termino	lg-cat
 mdcat1300	ref_data_mort	termino	lg-spa
-mdcat1301	titol_uniforme	termino	lg-spa
-mdcat1302	doc_titol	termino	lg-spa
-mdcat1303	img_titol	termino	lg-spa
 mdcat1304	plaques_cronologia	termino	lg-spa
 mdcat1305	model_de_placa	termino	lg-spa
-mdcat1306	ref_cognom	termino	lg-spa
-mdcat1307	ref_cognom_matrimoni	termino	lg-spa
-mdcat1308	ref_data_naixement	termino	lg-spa
-mdcat1309	ref_data_mort	termino	lg-spa
 mdcat131	Presentació	termino	lg-cat
 mdcat131	Presentación	termino	lg-spa
 mdcat1310	ref_lloc_naixement	termino	lg-spa
@@ -517,7 +506,6 @@ mdcat1311	ref_lloc_residencia	termino	lg-spa
 mdcat1312	ref_lloc_defuncio	termino	lg-spa
 mdcat1313	foto_identificativa_path	termino	lg-spa
 mdcat1314	document_pdf_image_path	termino	lg-spa
-mdcat1315	tr_transcripcio	termino	lg-spa
 mdcat1316	tr_tesauro	termino	lg-spa
 mdcat1318	Destacado	termino	lg-spa
 mdcat1318	Destacat	termino	lg-cat
@@ -606,6 +594,12 @@ mdcat1354	Proyecto	termino	lg-spa
 mdcat1355	Listado	termino	lg-spa
 mdcat1355	Llistat	termino	lg-cat
 mdcat1356	Nou	termino	lg-cat
+mdcat1307	ref_cognom_matrimoni	termino	lg-spa
+mdcat1315	tr_transcripcio	termino	lg-spa
+mdcat1309	ref_data_mort	termino	lg-spa
+mdcat1308	ref_data_naixement	termino	lg-spa
+mdcat1302	doc_titol	termino	lg-spa
+mdcat1303	img_titol	termino	lg-spa
 mdcat1356	Nuevo	termino	lg-spa
 mdcat1357	Projecte	termino	lg-cat
 mdcat1357	Proyecto	termino	lg-spa
@@ -883,7 +877,6 @@ mdcat1468	Nuovo	termino	lg-ita
 mdcat1469	Borrar	termino	lg-spa
 mdcat1469	Cancellare	termino	lg-ita
 mdcat1469	Esborrar	termino	lg-cat
-mdcat147	altres_elements	termino	lg-spa
 mdcat1470	Referencia	termino	lg-spa
 mdcat1470	Referència	termino	lg-cat
 mdcat1471	Data de tramitació	termino	lg-cat
@@ -2664,34 +2657,32 @@ mdcat2203	data_pas_per_frontera	termino	lg-spa
 mdcat2204	graduacio_militar	termino	lg-spa
 mdcat2205	unitat_militar	termino	lg-spa
 mdcat2206	frontera	termino	lg-spa
-mdcat2207	destinacio	termino	lg-spa
 mdcat2208	camps_francesos	termino	lg-spa
 mdcat2209	exercit_frances	termino	lg-spa
 mdcat221	Imágenes identificativa	termino	lg-spa
 mdcat221	Imatge identificativa	termino	lg-cat
 mdcat2210	resistencia	termino	lg-spa
 mdcat2211	lloc_lluita	termino	lg-spa
-mdcat2212	lloc_lluita_original	termino	lg-spa
-mdcat2213	data_detencio	termino	lg-spa
 mdcat2214	lloc_detencio	termino	lg-spa
-mdcat2215	lloc_detencio_original	termino	lg-spa
 mdcat2216	empresonament	termino	lg-spa
 mdcat2217	tren_salida	termino	lg-spa
 mdcat2218	camps_concentracio	termino	lg-spa
 mdcat2219	organizacio_todt	termino	lg-spa
 mdcat2199	publicacio	termino	lg-spa
 mdcat2220	kommando_extern	termino	lg-spa
-mdcat2221	situacio_deportat	termino	lg-spa
-mdcat2222	data_situacio	termino	lg-spa
-mdcat2223	lloc_situacio	termino	lg-spa
 mdcat2224	lloc_alliberacio_anterior	termino	lg-spa
-mdcat2225	obs_deportacio	termino	lg-spa
 mdcat2226	repatriacio_franca	termino	lg-spa
-mdcat2227	data_repatriacio_franca	termino	lg-spa
-mdcat2228	data_tornarda_espanya	termino	lg-spa
 mdcat2229	data_repatriacio_espanya	termino	lg-spa
 mdcat223	Text d'introducció	termino	lg-cat
 mdcat223	Texto de introducción	termino	lg-spa
+mdcat2213	data_detencio	termino	lg-spa
+mdcat2215	lloc_detencio_original	termino	lg-spa
+mdcat2221	situacio_deportat	termino	lg-spa
+mdcat2222	data_situacio	termino	lg-spa
+mdcat2225	obs_deportacio	termino	lg-spa
+mdcat2227	data_repatriacio_franca	termino	lg-spa
+mdcat2228	data_tornarda_espanya	termino	lg-spa
+mdcat2223	lloc_situacio	termino	lg-spa
 mdcat2230	adreca_coneguda	termino	lg-spa
 mdcat2231	lloc_residencia_posterior	termino	lg-spa
 mdcat2232	emigracio	termino	lg-spa
@@ -2700,17 +2691,10 @@ mdcat2234	indemnitzacions	termino	lg-spa
 mdcat2235	consultes_arxius	termino	lg-spa
 mdcat2236	publicacions	termino	lg-spa
 mdcat2237	publicacio_web	termino	lg-spa
-mdcat2238	ref_nom	termino	lg-spa
-mdcat2239	ref_cognom	termino	lg-spa
 mdcat224	Exposiciones virtuales	termino	lg-spa
 mdcat224	Exposicions virtuals	termino	lg-cat
-mdcat2240	ref_data_naixement	termino	lg-spa
-mdcat2241	ref_data_mort	termino	lg-spa
-mdcat2242	ref_lloc_naixement_dato	termino	lg-spa
-mdcat2243	ref_lloc_naixement_valor	termino	lg-spa
 mdcat2244	ref_lloc_defuncio_dato	termino	lg-spa
 mdcat2245	ref_lloc_defuncio_valor	termino	lg-spa
-mdcat2246	ref_observacions	termino	lg-spa
 mdcat2247	deportats_camps_francesos	termino	lg-spa
 mdcat2248	ref_camp	termino	lg-spa
 mdcat2249	data_entrada	termino	lg-spa
@@ -2800,6 +2784,12 @@ mdcat2316	ref_editor	termino	lg-spa
 mdcat2317	ref_any	termino	lg-spa
 mdcat2318	ref_url	termino	lg-spa
 mdcat2319	ref_data_actualitzacio	termino	lg-spa
+mdcat2240	ref_data_naixement	termino	lg-spa
+mdcat2241	ref_data_mort	termino	lg-spa
+mdcat2239	ref_cognom	termino	lg-spa
+mdcat2242	ref_lloc_naixement_dato	termino	lg-spa
+mdcat2243	ref_lloc_naixement_valor	termino	lg-spa
+mdcat2238	ref_nom	termino	lg-spa
 mdcat232	Text d'introducció	termino	lg-cat
 mdcat232	Texto de introducción	termino	lg-spa
 mdcat2328	publicacio	termino	lg-spa
@@ -2815,7 +2805,6 @@ mdcat2335	publicacio	termino	lg-spa
 mdcat2336	publicacio	termino	lg-spa
 mdcat2337	publicacio	termino	lg-spa
 mdcat2338	camp	termino	lg-spa
-mdcat2339	ref_lloc_lluita	termino	lg-spa
 mdcat234	Listado	termino	lg-spa
 mdcat234	Llistat	termino	lg-cat
 mdcat231	Publicable	termino	lg-spa
@@ -2835,49 +2824,12 @@ mdcat2326	Publicable	termino	lg-cat
 mdcat2326	Publicable	termino	lg-spa
 mdcat2327	Publicable	termino	lg-cat
 mdcat2327	Publicable	termino	lg-spa
-mdcat2340	ref_lloc_detencio	termino	lg-spa
-mdcat2341	ref_lloc_situacio	termino	lg-spa
-mdcat2342	ref_repatriacio_franca	termino	lg-spa
-mdcat2343	ref_lloc_residencia_posterior	termino	lg-spa
-mdcat2344	ref_emigracio	termino	lg-spa
-mdcat2345	ref_camps_francesos_camp	termino	lg-spa
-mdcat2346	ref_camps_francesos_data_entrada	termino	lg-spa
-mdcat2347	ref_camps_francesos_data_sortida	termino	lg-spa
-mdcat2348	ref_treballs_exercit_exercit_frances	termino	lg-spa
-mdcat2349	ref_treballs_exercit_cte	termino	lg-spa
 mdcat235	Nou	termino	lg-cat
 mdcat235	Nuevo	termino	lg-spa
-mdcat2350	ref_treballs_exercit_gte	termino	lg-spa
-mdcat2351	ref_treballs_exercit_data	termino	lg-spa
-mdcat2353	ref_treballs_exercit_feina	termino	lg-spa
-mdcat2354	ref_empresonament_data_entrada	termino	lg-spa
-mdcat2355	ref_empresonament_data_sortida	termino	lg-spa
-mdcat2356	ref_empresonament_nom_preso	termino	lg-spa
-mdcat2357	ref_empresonament_tipus_preso	termino	lg-spa
-mdcat2358	ref_empresonament_localitat	termino	lg-spa
-mdcat2359	ref_empresonament_localitat_anterior	termino	lg-spa
 mdcat236	Projecte	termino	lg-cat
 mdcat236	Proyecto	termino	lg-spa
-mdcat2360	ref_trens_data_sortida	termino	lg-spa
-mdcat2361	ref_trens_data_localitat	termino	lg-spa
-mdcat2362	ref_trens_data_nom_estacio	termino	lg-spa
-mdcat2363	ref_camps_concentracio_camp	termino	lg-spa
-mdcat2364	ref_camps_concentracio_data_entrada	termino	lg-spa
-mdcat2365	ref_camps_concentracio_data_sortida	termino	lg-spa
-mdcat2366	ref_camps_concentracio_kommando	termino	lg-spa
-mdcat2367	ref_camps_concentracio_data_entrada_kommando	termino	lg-spa
-mdcat2368	ref_camps_concentracio_data_sortida_kommando	termino	lg-spa
-mdcat2369	ref_todt_localitzacio	termino	lg-spa
 mdcat237	Historia oral	termino	lg-spa
 mdcat237	Història oral	termino	lg-cat
-mdcat2370	ref_todt_data	termino	lg-spa
-mdcat2371	ref_komando_extern_camp	termino	lg-spa
-mdcat2372	ref_komando_extern_feines	termino	lg-spa
-mdcat2373	ref_komando_extern_data_entrada	termino	lg-spa
-mdcat2374	ref_komando_extern_data_sortida	termino	lg-spa
-mdcat2375	ref_consultes_arxius_entitat	termino	lg-spa
-mdcat2376	ref_consultes_arxius_descripcio	termino	lg-spa
-mdcat2377	ref_informant_biografia_valor	termino	lg-spa
 mdcat2378	ref_camp	termino	lg-spa
 mdcat2379	Publicaciones DOGC	termino	lg-spa
 mdcat2379	Publicacions DOGC	termino	lg-cat
@@ -2903,8 +2855,42 @@ mdcat2388	Identificació	termino	lg-cat
 mdcat2388	Identificación	termino	lg-spa
 mdcat2389	Id	termino	lg-cat
 mdcat2389	Id	termino	lg-spa
-mdcat239	context_hist	termino	lg-spa
 mdcat2390	Perceptor / heredero/a	termino	lg-spa
+mdcat2340	ref_lloc_detencio	termino	lg-spa
+mdcat2341	ref_lloc_situacio	termino	lg-spa
+mdcat2342	ref_repatriacio_franca	termino	lg-spa
+mdcat2343	ref_lloc_residencia_posterior	termino	lg-spa
+mdcat2344	ref_emigracio	termino	lg-spa
+mdcat2346	ref_camps_francesos_data_entrada	termino	lg-spa
+mdcat2347	ref_camps_francesos_data_sortida	termino	lg-spa
+mdcat2348	ref_treballs_exercit_exercit_frances	termino	lg-spa
+mdcat2349	ref_treballs_exercit_cte	termino	lg-spa
+mdcat2350	ref_treballs_exercit_gte	termino	lg-spa
+mdcat2351	ref_treballs_exercit_data	termino	lg-spa
+mdcat2353	ref_treballs_exercit_feina	termino	lg-spa
+mdcat2354	ref_empresonament_data_entrada	termino	lg-spa
+mdcat2355	ref_empresonament_data_sortida	termino	lg-spa
+mdcat2357	ref_empresonament_tipus_preso	termino	lg-spa
+mdcat2358	ref_empresonament_localitat	termino	lg-spa
+mdcat2359	ref_empresonament_localitat_anterior	termino	lg-spa
+mdcat2360	ref_trens_data_sortida	termino	lg-spa
+mdcat2361	ref_trens_data_localitat	termino	lg-spa
+mdcat2362	ref_trens_data_nom_estacio	termino	lg-spa
+mdcat2363	ref_camps_concentracio_camp	termino	lg-spa
+mdcat2364	ref_camps_concentracio_data_entrada	termino	lg-spa
+mdcat2365	ref_camps_concentracio_data_sortida	termino	lg-spa
+mdcat2366	ref_camps_concentracio_kommando	termino	lg-spa
+mdcat2367	ref_camps_concentracio_data_entrada_kommando	termino	lg-spa
+mdcat2368	ref_camps_concentracio_data_sortida_kommando	termino	lg-spa
+mdcat2369	ref_todt_localitzacio	termino	lg-spa
+mdcat2370	ref_todt_data	termino	lg-spa
+mdcat2371	ref_komando_extern_camp	termino	lg-spa
+mdcat2372	ref_komando_extern_feines	termino	lg-spa
+mdcat2373	ref_komando_extern_data_entrada	termino	lg-spa
+mdcat2374	ref_komando_extern_data_sortida	termino	lg-spa
+mdcat2375	ref_consultes_arxius_entitat	termino	lg-spa
+mdcat2376	ref_consultes_arxius_descripcio	termino	lg-spa
+mdcat2345	ref_camps_francesos_camp	termino	lg-spa
 mdcat2390	Perceptor / Hereu	termino	lg-cat
 mdcat2391	Import	termino	lg-cat
 mdcat2391	Importe	termino	lg-spa
@@ -3032,7 +3018,6 @@ mdcat2445	Descriptions	termino	lg-cat
 mdcat2446	Estados	termino	lg-spa
 mdcat2446	Estats	termino	lg-cat
 mdcat2447	ut_lloc_residencia_dato	termino	lg-spa
-mdcat2448	ref_centre_nom_dato	termino	lg-spa
 mdcat2449	tipologia_nom	termino	lg-spa
 mdcat245	Projecte	termino	lg-cat
 mdcat245	Proyecto	termino	lg-spa
@@ -4839,7 +4824,6 @@ mdcat3298	Centurias	termino	lg-spa
 mdcat3298	Centúries	termino	lg-cat
 mdcat3299	Identificació	termino	lg-cat
 mdcat3299	Identificación	termino	lg-spa
-mdcat33	informacio	termino	lg-spa
 mdcat330	Listado	termino	lg-spa
 mdcat330	Llistat	termino	lg-cat
 mdcat3300	Nou	termino	lg-cat
@@ -5500,12 +5484,6 @@ mdcat3601	Tipo de división	termino	lg-spa
 mdcat3601	Tipus de divisió	termino	lg-cat
 mdcat3602	ref_lloc_residencia_dato_rec	termino	lg-spa
 mdcat3603	ut_lloc_residencia_dato_rec	termino	lg-spa
-mdcat3604	lloc_desterrament_rec	termino	lg-spa
-mdcat3605	lloc_execucio_rec	termino	lg-spa
-mdcat3606	centre_municipi_rec	termino	lg-spa
-mdcat3607	tr_tesauro_rec	termino	lg-spa
-mdcat3608	municipi_rec	termino	lg-spa
-mdcat3609	descriptors_rec	termino	lg-spa
 mdcat361	proyecto_video	termino	lg-spa
 mdcat3610	municipi_rec	termino	lg-spa
 mdcat3611	descriptors_rec	termino	lg-spa
@@ -5513,7 +5491,6 @@ mdcat3612	frontera_rec	termino	lg-spa
 mdcat3613	lloc_lluita_rec	termino	lg-spa
 mdcat3614	lloc_detencio_rec	termino	lg-spa
 mdcat3615	lloc_situacio_rec	termino	lg-spa
-mdcat3616	repatriacio_franca_rec	termino	lg-spa
 mdcat3617	lloc_residencia_posterior_rec	termino	lg-spa
 mdcat3618	emigracio_rec	termino	lg-spa
 mdcat3619	ref_camps_francesos_camp_rec	termino	lg-spa
@@ -5522,13 +5499,18 @@ mdcat3620	ref_treballs_exercit_localitzacio_rec	termino	lg-spa
 mdcat3621	ref_trens_data_localitat_rec	termino	lg-spa
 mdcat3622	ref_todt_localitzacio_rec	termino	lg-spa
 mdcat3623	ref_komando_extern_camp_rec	termino	lg-spa
-mdcat3624	ref_centre_nom_dato_rec	termino	lg-spa
 mdcat3625	Dignificació	termino	lg-cat
 mdcat3625	Dignificación	termino	lg-spa
 mdcat3626	Dignificació	termino	lg-cat
 mdcat3626	Dignificación	termino	lg-spa
 mdcat3627	Fotografías	termino	lg-spa
 mdcat3627	Fotografies	termino	lg-cat
+mdcat3609	descriptors_rec	termino	lg-spa
+mdcat3604	lloc_desterrament_rec	termino	lg-spa
+mdcat3605	lloc_execucio_rec	termino	lg-spa
+mdcat3606	centre_municipi_rec	termino	lg-spa
+mdcat3624	ref_centre_nom_dato_rec	termino	lg-spa
+mdcat3616	repatriacio_franca_rec	termino	lg-spa
 mdcat3628	Localització del lloc de dignificació	termino	lg-cat
 mdcat3628	Localitzación del lugar de dignificación	termino	lg-spa
 mdcat3629	No quiere recibir información	termino	lg-spa
@@ -5545,13 +5527,6 @@ mdcat3639	fons_code	termino	lg-spa
 mdcat364	documentales	termino	lg-spa
 mdcat364	Revisado publicación Ok 01-10-2017 (Aunque no se usa)	obs	lg-spa
 mdcat3640	ut_lloc_defuncio_dato_rec	termino	lg-spa
-mdcat3641	ref_lloc_naixement_dato_rec	termino	lg-spa
-mdcat3642	ref_lloc_residencia_dato_rec	termino	lg-spa
-mdcat3643	ref_lloc_defuncio_dato_rec	termino	lg-spa
-mdcat3644	ref_empresonament_num_matricula	termino	lg-spa
-mdcat3645	ref_komando_extern_num_matricula	termino	lg-spa
-mdcat3646	ref_camps_concentracio_num_matricula	termino	lg-spa
-mdcat3647	ref_treballs_exercit_notes_localitzacio	termino	lg-spa
 mdcat3648	biografia	termino	lg-spa
 mdcat3649	n_camp	termino	lg-spa
 mdcat365	publicacion	termino	lg-spa
@@ -5560,7 +5535,6 @@ mdcat3651	camp_parent	termino	lg-spa
 mdcat3652	camp_parent	termino	lg-spa
 mdcat3630	Personas homenajeadas	termino	lg-spa
 mdcat3653	ref_entitat_name	termino	lg-spa
-mdcat3654	ref_consultes_arxius_entitat_name	termino	lg-spa
 mdcat3655	tp_alemanya	termino	lg-spa
 mdcat3656	tp_belgica	termino	lg-spa
 mdcat3657	tp_austria	termino	lg-spa
@@ -5572,14 +5546,10 @@ mdcat3661	tp_italia	termino	lg-spa
 mdcat3662	tp_noruega	termino	lg-spa
 mdcat3663	tp_hongria	termino	lg-spa
 mdcat3664	tp_holanda	termino	lg-spa
-mdcat3665	ref_camps_concentracio_camp_dato	termino	lg-spa
-mdcat3666	ref_komando_extern_camp_dato	termino	lg-spa
-mdcat3667	situacio_deportat_dato	termino	lg-spa
 mdcat3668	deportats_situacio	termino	lg-spa
 mdcat3669	situacio	termino	lg-spa
 mdcat367	documentales_portal	termino	lg-spa
 mdcat3670	publicacio	termino	lg-spa
-mdcat3672	cut_lloc_lluita	termino	lg-spa
 mdcat3673	cut_empresonament_localitat	termino	lg-spa
 mdcat3674	cut_localitat	termino	lg-spa
 mdcat3675	destinacio_rec	termino	lg-spa
@@ -5588,10 +5558,7 @@ mdcat3676	Documents	termino	lg-spa
 mdcat3677	Idioma	termino	lg-cat
 mdcat3677	Idioma	termino	lg-spa
 mdcat3678	Listado	termino	lg-spa
-mdcat3679	ref_lloc_naixement_full	termino	lg-spa
 mdcat368	publicacion	termino	lg-spa
-mdcat3680	ref_lloc_residencia_full	termino	lg-spa
-mdcat3681	ref_lloc_naixement_dato_full	termino	lg-spa
 mdcat3682	Observaciones	termino	lg-spa
 mdcat3682	Observacions	termino	lg-cat
 mdcat3683	Importació	termino	lg-cat
@@ -5634,6 +5601,19 @@ mdcat3701	estat	termino	lg-spa
 mdcat3703	Estado de revisión	termino	lg-spa
 mdcat3703	Estat de revisió	termino	lg-cat
 mdcat3704	Organisme	termino	lg-cat
+mdcat3680	ref_lloc_residencia_full	termino	lg-spa
+mdcat3642	ref_lloc_residencia_dato_rec	termino	lg-spa
+mdcat3641	ref_lloc_naixement_dato_rec	termino	lg-spa
+mdcat3643	ref_lloc_defuncio_dato_rec	termino	lg-spa
+mdcat3672	cut_lloc_lluita	termino	lg-spa
+mdcat3646	ref_camps_concentracio_num_matricula	termino	lg-spa
+mdcat3645	ref_komando_extern_num_matricula	termino	lg-spa
+mdcat3647	ref_treballs_exercit_notes_localitzacio	termino	lg-spa
+mdcat3654	ref_consultes_arxius_entitat_name	termino	lg-spa
+mdcat3681	ref_lloc_naixement_dato_full	termino	lg-spa
+mdcat3667	situacio_deportat_dato	termino	lg-spa
+mdcat3665	ref_camps_concentracio_camp_dato	termino	lg-spa
+mdcat3644	ref_empresonament_num_matricula	termino	lg-spa
 mdcat3704	Organismo	termino	lg-spa
 mdcat3705	Descripció de la documentació rebuda	termino	lg-cat
 mdcat3705	Descripción de la documentació recibida	termino	lg-spa
@@ -5649,8 +5629,6 @@ mdcat3710	Consulta acabada	termino	lg-cat
 mdcat3710	Consulta terminada	termino	lg-spa
 mdcat3711	Estado de las consulta	termino	lg-spa
 mdcat3711	Estat de les consultes	termino	lg-cat
-mdcat3712	ref_genere	termino	lg-spa
-mdcat3713	ref_genere_dato	termino	lg-spa
 mdcat3714	genders	termino	lg-spa
 mdcat372	descripcion	termino	lg-spa
 mdcat373	video	termino	lg-spa
@@ -5743,6 +5721,7 @@ mdcat438	version	termino	lg-spa
 mdcat439	tesauro_jerarquico_logo	termino	lg-spa
 mdcat44	Listado	termino	lg-spa
 mdcat44	Llistat	termino	lg-cat
+mdcat3713	ref_genere_dato	termino	lg-spa
 mdcat440	logo	termino	lg-spa
 mdcat441	logo_pie	termino	lg-spa
 mdcat442	doc_pdf	termino	lg-spa
@@ -5916,9 +5895,6 @@ mdcat578	publicacio	termino	lg-spa
 mdcat579	fons	termino	lg-spa
 mdcat58	Búsqueda libre	termino	lg-spa
 mdcat58	Cerca lliure	termino	lg-cat
-mdcat580	titol	termino	lg-spa
-mdcat581	tipologia	termino	lg-spa
-mdcat582	ambits_tematics	termino	lg-spa
 mdcat583	lloc	termino	lg-spa
 mdcat584	Agrupació per categoria	termino	lg-cat
 mdcat584	Agrupación por categoría	termino	lg-spa
@@ -5935,7 +5911,6 @@ mdcat587	Filtro	termino	lg-spa
 mdcat588	Elenco	termino	lg-ita
 mdcat588	Listado	termino	lg-spa
 mdcat588	Llistat	termino	lg-cat
-mdcat589	municipi	termino	lg-spa
 mdcat59	Mapas	termino	lg-spa
 mdcat59	Mapes	termino	lg-cat
 mdcat590	Categoria	termino	lg-cat
@@ -5964,6 +5939,8 @@ mdcat600	Fons	termino	lg-cat
 mdcat601	Unidad de catalogación	termino	lg-spa
 mdcat601	Unitat de catalogació	termino	lg-cat
 mdcat603	Año de incio	termino	lg-spa
+mdcat582	ambits_tematics	termino	lg-spa
+mdcat581	tipologia	termino	lg-spa
 mdcat603	Any inici	termino	lg-cat
 mdcat604	Año final	termino	lg-spa
 mdcat604	Any final	termino	lg-cat
@@ -7029,11 +7006,9 @@ mdcat4392	Delete	termino	lg-eng
 mdcat4390	Lasts changes	termino	lg-eng
 mdcat4393	stolpersteine_dato	termino	lg-spa
 mdcat4390	Últims canvis	termino	lg-cat
-mdcat4394	ref_stolpersteine_data	termino	lg-spa
 mdcat4374	Address type	termino	lg-eng
 mdcat4395	ref_stolpersteine_municipi	termino	lg-spa
 mdcat4391	Listado	termino	lg-spa
-mdcat4396	ref_stolpersteine_municipi_rec	termino	lg-spa
 mdcat4391	List	termino	lg-eng
 mdcat4397	ref_stolpersteine_image	termino	lg-spa
 mdcat4391	Llistat	termino	lg-cat
@@ -7665,22 +7640,15 @@ mdcat4008	Identificació	termino	lg-cat
 mdcat4412	Nombre actual	termino	lg-spa
 mdcat4022	publicacio	termino	lg-spa
 mdcat4023	fons	termino	lg-spa
-mdcat4024	titol	termino	lg-spa
 mdcat3637	fons_code	termino	lg-spa
-mdcat4026	fons_code	termino	lg-spa
-mdcat4025	categoria_dato	termino	lg-spa
 mdcat4027	categoria_valor	termino	lg-spa
-mdcat4028	tipus_jaciment_dato	termino	lg-spa
 mdcat4030	notes	termino	lg-spa
-mdcat4031	conservacio_dato	termino	lg-spa
 mdcat4032	conservacio_valor	termino	lg-spa
 mdcat4033	conservacio_comentaris	termino	lg-spa
 mdcat4034	intervencions_dato	termino	lg-spa
-mdcat4035	senyalitzada_dato	termino	lg-spa
 mdcat4036	senyalitzada_valor	termino	lg-spa
 mdcat4037	senyalitzada_descripcio	termino	lg-spa
 mdcat4038	senyalitzada_fotos	termino	lg-spa
-mdcat4039	dignificada_dato	termino	lg-spa
 mdcat4040	dignificada_valor	termino	lg-spa
 mdcat4041	dignificada_data	termino	lg-spa
 mdcat156	georef	termino	lg-spa
@@ -7691,9 +7659,7 @@ mdcat4045	ref_espais_memoria_titol	termino	lg-spa
 mdcat4046	des_georef	termino	lg-spa
 mdcat4047	georef	termino	lg-spa
 mdcat4048	municipi	termino	lg-spa
-mdcat4049	municipi_rec	termino	lg-spa
 mdcat4051	dis_cementiri_valor	termino	lg-spa
-mdcat4050	dis_cementiri_dato	termino	lg-spa
 mdcat4052	jaciment_publicacio	termino	lg-spa
 mdcat4053	jaciment_uri	termino	lg-spa
 mdcat4054	context_historic	termino	lg-spa
@@ -7709,8 +7675,6 @@ mdcat4061	indexacio_unitat_militar_dato	termino	lg-spa
 mdcat4062	indexacio_unitat_militar_rec	termino	lg-spa
 mdcat4063	hospital_militar	termino	lg-spa
 mdcat4065	tipus_fossa_valor	termino	lg-spa
-mdcat4064	tipus_fossa_dato	termino	lg-spa
-mdcat4066	tipus_fossa_num_dato	termino	lg-spa
 mdcat4067	tipus_fossa_num_valor	termino	lg-spa
 mdcat4068	nombre_inhumats	termino	lg-spa
 mdcat4069	difunts_documentats	termino	lg-spa
@@ -7723,6 +7687,15 @@ mdcat4075	mapa_fosses_categoria	termino	lg-spa
 mdcat4079	categoria	termino	lg-spa
 mdcat4081	publicacio	termino	lg-spa
 mdcat4085	publicacio	termino	lg-spa
+mdcat4026	fons_code	termino	lg-spa
+mdcat4028	tipus_jaciment_dato	termino	lg-spa
+mdcat4031	conservacio_dato	termino	lg-spa
+mdcat4035	senyalitzada_dato	termino	lg-spa
+mdcat4039	dignificada_dato	termino	lg-spa
+mdcat4050	dis_cementiri_dato	termino	lg-spa
+mdcat4066	tipus_fossa_num_dato	termino	lg-spa
+mdcat4064	tipus_fossa_dato	termino	lg-spa
+mdcat4024	titol	termino	lg-spa
 mdcat4086	tipus_fosa	termino	lg-spa
 mdcat4089	publicacio	termino	lg-spa
 mdcat4091	ref_lloc_naixement_geojson	termino	lg-spa
@@ -7799,29 +7772,24 @@ mdcat4149	lloc_detencio_geojson	termino	lg-spa
 mdcat4151	georef_geojson	termino	lg-spa
 mdcat4152	georef_geojson	termino	lg-spa
 mdcat4154	ref_camps_francesos_camp_dato	termino	lg-spa
-mdcat2352	ref_treballs_exercit_localitzacio	termino	lg-spa
 mdcat4155	ref_treballs_exercit_localitzacio_dato	termino	lg-spa
 mdcat4156	parent_rec	termino	lg-spa
 mdcat4157	ref_identificacio_persona_imatge_valor	termino	lg-spa
 mdcat4159	ref_intervencions_pla_fosses	termino	lg-spa
 mdcat4160	ref_intervencions_direccio_arqueologica	termino	lg-spa
-mdcat4161	ref_intervencions_data_intervencio_inici	termino	lg-spa
-mdcat4162	ref_intervencions_data_intervencio_fin	termino	lg-spa
 mdcat4167	ref_difunts_cognoms	termino	lg-spa
 mdcat4164	ref_intervencions_exhumats_cognoms	termino	lg-spa
 mdcat4165	ts_unitats_militars	termino	lg-spa
+mdcat4161	ref_intervencions_data_intervencio_inici	termino	lg-spa
+mdcat4162	ref_intervencions_data_intervencio_fin	termino	lg-spa
 mdcat4158	ref_intervencions_codi	termino	lg-spa
 mdcat4166	ref_difunts_nom	termino	lg-spa
 mdcat4179	tipus_intervencio	termino	lg-spa
-mdcat4168	ref_intervencions_tipus_dato	termino	lg-spa
 mdcat4169	ref_intervencions_tipus_valor	termino	lg-spa
-mdcat4170	ref_intervencions_resultat_dato	termino	lg-spa
 mdcat4171	ref_intervencions_resultat_valor	termino	lg-spa
 mdcat4163	ref_intervencions_exhumats_noms	termino	lg-spa
 mdcat4180	mapa_fosses_resultat_intervencio	termino	lg-spa
 mdcat4173	ref_intervencions_exhumats_sexe_valor	termino	lg-spa
-mdcat4172	ref_intervencions_exhumats_sexe_dato	termino	lg-spa
-mdcat4174	ref_intervencions_exhumats_categoria_edat_dato	termino	lg-spa
 mdcat4175	ref_intervencions_exhumats_categoria_edat_valor	termino	lg-spa
 mdcat4178	publicacio	termino	lg-spa
 mdcat4181	publicacio	termino	lg-spa
@@ -7860,6 +7828,10 @@ mdcat4412	Nom actual	termino	lg-cat
 mdcat4203	Borrar	termino	lg-spa
 mdcat4203	Esborrar	termino	lg-cat
 mdcat4204	Borrar	termino	lg-spa
+mdcat4168	ref_intervencions_tipus_dato	termino	lg-spa
+mdcat4170	ref_intervencions_resultat_dato	termino	lg-spa
+mdcat4172	ref_intervencions_exhumats_sexe_dato	termino	lg-spa
+mdcat4174	ref_intervencions_exhumats_categoria_edat_dato	termino	lg-spa
 mdcat4204	Esborrar	termino	lg-cat
 mdcat4205	Borrar	termino	lg-spa
 mdcat4205	Esborrar	termino	lg-cat
@@ -7957,7 +7929,6 @@ mdcat4249	Nuevo	termino	lg-spa
 mdcat4249	Nou	termino	lg-cat
 mdcat4250	Borrar	termino	lg-spa
 mdcat4250	Esborrar	termino	lg-cat
-mdcat4252	context_defuncio_dato	termino	lg-spa
 mdcat4253	context_defuncio_valor	termino	lg-spa
 mdcat4254	mapa_fosses_context_defuncio	termino	lg-spa
 mdcat4255	publicacio	termino	lg-spa
@@ -14687,3 +14658,103 @@ mdcat4498	Expediente unif	termino	lg-spa
 mdcat4498	Expedient unif	termino	lg-cat
 mdcat4499	Resultado del cierre	termino	lg-spa
 mdcat4499	Resultat del tancament	termino	lg-cat
+mdcat4500	global_search2	termino	lg-spa
+mdcat4501	section_id	termino	lg-spa
+mdcat4502	ref_section_id	termino	lg-spa
+mdcat4503	ref_section_tipo	termino	lg-spa
+mdcat4505	municipality	termino	lg-spa
+mdcat4506	typology	termino	lg-spa
+mdcat4507	fons_code	termino	lg-spa
+mdcat4508	birth_place	termino	lg-spa
+mdcat4509	dead_at_prison	termino	lg-spa
+mdcat4510	end_date	termino	lg-spa
+mdcat4511	exile_place	termino	lg-spa
+mdcat4512	name_surname	termino	lg-spa
+mdcat4513	neighborhood	termino	lg-spa
+mdcat4514	prison_municipality	termino	lg-spa
+mdcat4515	prison	termino	lg-spa
+mdcat4516	project	termino	lg-spa
+mdcat4518	pub_author	termino	lg-spa
+mdcat4519	pub_editor	termino	lg-spa
+mdcat4520	pub_year	termino	lg-spa
+mdcat4521	region	termino	lg-spa
+mdcat4522	residence_place	termino	lg-spa
+mdcat4523	start_date	termino	lg-spa
+mdcat4524	theme	termino	lg-spa
+mdcat4526	title	termino	lg-spa
+mdcat4527	sort	termino	lg-spa
+mdcat4528	sort_id	termino	lg-spa
+mdcat4530	data_mod	termino	lg-spa
+mdcat4529	situation	termino	lg-spa
+mdcat4531	situation_place	termino	lg-spa
+mdcat4532	nazi_camp	termino	lg-spa
+mdcat4533	nazi_sub_camp	termino	lg-spa
+mdcat4534	prisoner_number	termino	lg-spa
+mdcat4535	symbol_state	termino	lg-spa
+mdcat4536	gender	termino	lg-spa
+mdcat4537	graves_category	termino	lg-spa
+mdcat4538	archeological_site_type	termino	lg-spa
+mdcat4539	conservation	termino	lg-spa
+mdcat4540	marked	termino	lg-spa
+mdcat4541	dignified	termino	lg-spa
+mdcat4542	inside_cemetery	termino	lg-spa
+mdcat4543	grave_by_number	termino	lg-spa
+mdcat4544	intervention_types	termino	lg-spa
+mdcat4504	ref_table	termino	lg-spa
+mdcat4525	search_thesaurus	termino	lg-spa
+mdcat4545	result	termino	lg-spa
+mdcat4546	graves_genders	termino	lg-spa
+mdcat4547	ages	termino	lg-spa
+mdcat4548	death_context	termino	lg-spa
+mdcat4549	buried_type	termino	lg-spa
+mdcat4550	stolpersteine	termino	lg-spa
+mdcat4551	stolpersteine_date	termino	lg-spa
+mdcat4552	stolpersteine_place	termino	lg-spa
+mdcat4553	link	termino	lg-spa
+mdcat1272	ref_cognom	termino	lg-spa
+mdcat4517	search_data	termino	lg-spa
+mdcat4564	search_data	termino	lg-spa
+mdcat4555	search_thesaurus	termino	lg-spa
+mdcat4565	search_thesaurus	termino	lg-spa
+mdcat4563	search_thesaurus	termino	lg-spa
+mdcat4562	search_data	termino	lg-spa
+mdcat4558	search_data	termino	lg-spa
+mdcat4568	search_data	termino	lg-spa
+mdcat239	context_hist	termino	lg-spa
+mdcat4561	search_thesaurus	termino	lg-spa
+mdcat4554	search_data	termino	lg-spa
+mdcat4560	search_data	termino	lg-spa
+mdcat147	altres_elements	termino	lg-spa
+mdcat4559	search_thesaurus	termino	lg-spa
+mdcat3679	ref_lloc_naixement_full	termino	lg-spa
+mdcat1306	ref_cognom	termino	lg-spa
+mdcat3607	tr_tesauro_rec	termino	lg-spa
+mdcat589	municipi	termino	lg-spa
+mdcat33	informacio	termino	lg-spa
+mdcat1142	descriptors	termino	lg-spa
+mdcat580	titol	termino	lg-spa
+mdcat3608	municipi_rec	termino	lg-spa
+mdcat2448	ref_centre_nom_dato	termino	lg-spa
+mdcat1301	titol_uniforme	termino	lg-spa
+mdcat1211	congres	termino	lg-spa
+mdcat2207	destinacio	termino	lg-spa
+mdcat2339	ref_lloc_lluita	termino	lg-spa
+mdcat2212	lloc_lluita_original	termino	lg-spa
+mdcat2246	ref_observacions	termino	lg-spa
+mdcat2352	ref_treballs_exercit_localitzacio	termino	lg-spa
+mdcat2356	ref_empresonament_nom_preso	termino	lg-spa
+mdcat4566	search_data	termino	lg-spa
+mdcat2377	ref_informant_biografia_valor	termino	lg-spa
+mdcat4569	search_thesaurus	termino	lg-spa
+mdcat4556	search_data	termino	lg-spa
+mdcat4557	search_thesaurus	termino	lg-spa
+mdcat1131	cut_lloc_naixement_valor	termino	lg-spa
+mdcat3712	ref_genere	termino	lg-spa
+mdcat3666	ref_komando_extern_camp_dato	termino	lg-spa
+mdcat4394	ref_stolpersteine_data	termino	lg-spa
+mdcat4396	ref_stolpersteine_municipi_rec	termino	lg-spa
+mdcat4567	search_thesaurus	termino	lg-spa
+mdcat4049	municipi_rec	termino	lg-spa
+mdcat4025	categoria_dato	termino	lg-spa
+mdcat4252	context_defuncio_dato	termino	lg-spa
+mdcat4570	data_mod	termino	lg-spa

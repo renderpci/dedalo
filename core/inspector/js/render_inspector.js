@@ -654,6 +654,8 @@ export const render_section_info = function(self) {
 		}
 		container.appendChild(fragment)
 
+	// re-activate tooltips
+	ui.activate_tooltips(container)
 
 	return fragment
 }//end render_section_info
@@ -947,6 +949,8 @@ export const render_component_info = function(self, component) {
 
 	container.appendChild(fragment)
 
+	// re-activate tooltips
+	ui.activate_tooltips(container)
 
 
 	return fragment

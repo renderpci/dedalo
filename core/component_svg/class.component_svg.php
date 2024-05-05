@@ -5,7 +5,7 @@ declare(strict_types=1);
 * Manage specific component input text logic
 * Common components properties and method are inherited of component_common class that are inherited from common class
 */
-class component_svg extends component_media_common {
+class component_svg extends component_media_common implements component_media_interface {
 
 
 
