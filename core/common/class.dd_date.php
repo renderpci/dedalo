@@ -910,17 +910,19 @@ class dd_date extends stdClass {
 
 	/**
 	* GET_UNIX_TIMESTAMP
+	* Get current dd_date in UNIX timestamp mode
+	* Note that hours, minutes and seconds are not defined here.
 	* Change the date to the unit (day, month, year)
 	* @return int $unix_timestamp
 	*/
 	public function get_unix_timestamp() : int {
 
-		$datetime		= new DateTime();
+		$datetime = new DateTime();
 
 		$datetime->setDate(
 			$this->get_year(),
-			$this->get_month() ?? 1, // if month is not set use 1 (not 0!, if 0 is used the second are wrong)
-			$this->get_day() ?? 1 // if day is not set use 1 (not 0!, if 0 is used the second are wrong)
+			$this->get_month() ?? 1, // if month is not set, use 1 (not 0!, if 0 is used the seconds are wrong)
+			$this->get_day() ?? 1 // if day is not set, use 1 (not 0!, if 0 is used the seconds are wrong)
 		);
 		$unix_timestamp	= $datetime->getTimestamp();
 
@@ -944,7 +946,7 @@ class dd_date extends stdClass {
 		$minute		= date('i', $unix_timestamp); // 58
 		$second		= date('s', $unix_timestamp); // 33
 
-		$dd_date	= new dd_date();
+		$dd_date = new dd_date();
 			$dd_date->set_day($day);
 			$dd_date->set_month($month);
 			$dd_date->set_year($year);
