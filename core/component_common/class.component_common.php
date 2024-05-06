@@ -1640,6 +1640,69 @@ abstract class component_common extends common {
 
 
 	/**
+	* REFRESH_DATA
+	* Get observable data to refresh the component_data, for ex:
+	* if the main component has deleted his value, check if the observer need to delete his own data because is not valid until his observable has empty.
+	* @param object $options
+	* {
+	* 	"actions" : [{
+	*		"condition": "on_empty",
+	*		"action": "empty_data"
+	* 	}]
+	* }
+	* @return bool
+	*/
+	public function refresh_data(object $options) : bool {
+
+		$actions = $options->actions;
+
+		foreach ($actions as $item) {
+
+			$condition	= $item->condition;
+			$action		= $item->action;
+			$args		= $item->arguments ?? [];
+
+			$user_fn = strpos($action, '::')===false
+				? [$this, $action] // non static case
+				: $action; // static function case
+
+			switch ($condition) {
+				case 'on_empty':
+					$observable_data = $this->get_observable_dato();
+
+					if(empty($observable_data)){
+						call_user_func_array($user_fn, $args);
+						$this->Save();
+					}
+					break;
+
+				default:
+					// code...
+					break;
+			}
+
+		}
+
+		return true;
+	}//end refresh_data
+
+
+
+	/**
+	* EMPTY_DATA
+	* Remove the component data in the current lang
+	* @return bool
+	*/
+	public function empty_data() : bool {
+
+		$this->set_dato(null);
+
+		return true;
+	}//end empty_data
+
+
+
+	/**
 	* GET_REQUIRED
 	*/
 	public function get_required() : bool {
