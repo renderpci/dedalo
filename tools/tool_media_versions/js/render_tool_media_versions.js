@@ -190,7 +190,10 @@ const render_sync_data = function(self) {
 				self.sync_files()
 				.then(function(response){
 					if (response.result===true) {
-						self.refresh()
+						self.refresh({
+							build_autoload	: false,
+							destroy			: false
+						})
 					}else{
 						self.node.content_data.classList.remove('loading')
 						alert('Error: ' + (response.msg || 'Unknown') )
@@ -795,7 +798,9 @@ const render_file_versions = function(quality, self) {
 							self.delete_version(quality, extension)
 							.then(function(response){
 								if (response.result===true) {
-									self.refresh()
+									self.refresh({
+										build_autoload : false
+									})
 								}else{
 									self.node.content_data.classList.remove('loading')
 									alert('Error: ' + (response.msg || 'Unknown') )
@@ -847,7 +852,9 @@ const render_file_delete = function(quality, self) {
 				const response = await self.delete_file(quality)
 				if (response===true) {
 					// self.main_element_quality = quality
-					self.refresh()
+					self.refresh({
+						build_autoload : false
+					})
 				}
 				self.node.classList.remove('loading')
 			})
@@ -985,6 +992,7 @@ const render_specific_actions = {
 			const button_build_version = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button repair',
+				title			: (get_label.conform_headers || 'Conform headers'),
 				parent			: file_info_node
 			})
 			button_build_version.addEventListener('click', async function(){
@@ -1013,23 +1021,25 @@ const render_specific_actions = {
 	rotate(quality, self) {
 
 		// info columns
-				const file_info_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_info rotate' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
-				})
+			const file_info_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_info rotate' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			})
 
-				// file_info
-				const file_info = self.files_info_safe.find(el => el.quality===quality)
+		// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+			if (file_info && file_info.file_exist===true) {
 
-				if (file_info && file_info.file_exist===true) {
-
-					// left rotate
+				// button_rotate_left
 					const button_rotate_left = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate',
+						title			: (get_label.rotate || 'Rotate') +' '+ (get_label.left || 'left') +' ('+ (get_label.destructive || 'destructive')+')',
 						parent			: file_info_node
 					})
-					button_rotate_left.addEventListener('click', async function(){
+					button_rotate_left.addEventListener('click', async function(e){
+						e.stopPropagation()
+
 						self.node.classList.add('loading')
 						// exec rotate
 						const result = await self.rotate(quality, -90)
@@ -1040,13 +1050,16 @@ const render_specific_actions = {
 						self.node.classList.remove('loading')
 					})
 
-					// right rotate
+				// button_rotate_right
 					const button_rotate_right = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate right',
+						title			: (get_label.rotate || 'Rotate') +' '+ (get_label.right || 'right') +' ('+ (get_label.destructive || 'destructive')+')',
 						parent			: file_info_node
 					})
-					button_rotate_right.addEventListener('click', async function(){
+					button_rotate_right.addEventListener('click', async function(e){
+						e.stopPropagation()
+
 						self.node.classList.add('loading')
 						// exec rotate
 						const result = await self.rotate(quality, 90)
@@ -1056,7 +1069,7 @@ const render_specific_actions = {
 						}
 						self.node.classList.remove('loading')
 					})
-				}
+			}
 
 
 		return file_info_node
