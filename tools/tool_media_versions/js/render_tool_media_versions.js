@@ -421,7 +421,7 @@ const render_file = function(quality, self) {
 	// info columns
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 		// file_info
@@ -525,7 +525,7 @@ const render_file_size = function(quality, self) {
 
 	const file_info_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+		class_name		: 'file_info render_file_size' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 	})
 
 	if (file_info && file_info.file_exist===true) {
@@ -625,7 +625,7 @@ const render_file_upload = function(quality, self) {
 	// info columns
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file_upload' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 		if(quality==='thumb'){
@@ -700,7 +700,7 @@ const render_file_versions = function(quality, self) {
 	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file_versions' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 		})
 
 		const files_info = custom_files_info.filter(el => el.quality===quality)
@@ -823,7 +823,7 @@ const render_file_delete = function(quality, self) {
 	// info columns
 	const file_info_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+		class_name		: 'file_info render_file_delete' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 	})
 
 	// file_info
@@ -868,7 +868,7 @@ const render_build_version = function(quality, self) {
 	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_build_version' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 	// exclude original quality button from list
@@ -971,7 +971,7 @@ const render_specific_actions = {
 		// file_info_node
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+				class_name		: 'file_info conform_headers' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 			})
 
 
@@ -1013,7 +1013,7 @@ const render_specific_actions = {
 		// info columns
 				const file_info_node = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+					class_name		: 'file_info rotate' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 				})
 
 				// file_info
