@@ -128,12 +128,13 @@ class security {
 			}
 
 		// permissions_table, get the value of the user profile (component_security_access)
+		// At this point, permissions_table is an assoc array as ["test38_test122"=> 2,"test38_test207"=> 2,..]
 			$permissions_table = security::get_permissions_table();
 
 		// permissions
 			$permissions_key	= $parent_tipo.'_'.$tipo;
 			$permissions		= isset($permissions_table[$permissions_key])
-				? $permissions_table[$permissions_key]->value
+				? $permissions_table[$permissions_key]
 				: 0;
 
 		// access to list of values: public (matrix_list) and private (matrix_dd)
@@ -182,33 +183,33 @@ class security {
 			}
 
 		// cache file (do NOT use the cache file here because the gain is not worth it)
-			// $use_cache = false;
-			// if ($use_cache===true) {
+			$use_cache = true;
+			if ($use_cache===true) {
 
-			// 	$cache_file_name = 'cache_permissions_table.json';
+				$cache_file_name = 'cache_permissions_table.json';
 
-			// 	// cache file
-			// 	$cache_data	= dd_cache::cache_from_file((object)[
-			// 		'file_name' => $cache_file_name
-			// 	]);
-			// 	if (!empty($cache_data)) {
+				// cache file
+				$cache_data	= dd_cache::cache_from_file((object)[
+					'file_name' => $cache_file_name
+				]);
+				if (!empty($cache_data)) {
 
-			// 		$json_data = json_decode($cache_data);
+					$permissions_table = json_decode(
+						$cache_data,
+						true // cast to associative array (JSON encoded as object)
+					);
 
-			// 		// cast to associative array (JSON encoded as object)
-			// 		$permissions_table = (array)$json_data;
+					// set static cache
+					security::$permissions_table_cache = $permissions_table;
 
-			// 		// set static cache
-			// 		security::$permissions_table_cache = $permissions_table;
+					debug_log(__METHOD__
+						." Returning permissions_table from cache disk file"
+						, logger::DEBUG
+					);
 
-			// 		debug_log(__METHOD__
-			// 			." Returning permissions_table from cache disk file"
-			// 			, logger::DEBUG
-			// 		);
-
-			// 		return $permissions_table;
-			// 	}
-			// }
+					return $permissions_table;
+				}
+			}
 
 		// get reliable component (assigned profile checked)
 			$user_id = logged_user_id(); // from session
@@ -224,20 +225,20 @@ class security {
 			$permissions_table = [];
 			foreach ($dato as $item) {
 				$permissions_key = $item->section_tipo.'_'.$item->tipo;
-				$permissions_table[$permissions_key] = $item;
+				$permissions_table[$permissions_key] = $item->value;
 			}
 
 		// set static cache
 			security::$permissions_table_cache = $permissions_table;
 
 		// cache file
-			// if ($use_cache===true) {
-			// 	// cache to file
-			// 	dd_cache::cache_to_file((object)[
-			// 		'file_name'	=> $cache_file_name,
-			// 		'data'		=> $permissions_table // will be convert to JSON object
-			// 	]);
-			// }
+			if ($use_cache===true) {
+				// cache to file
+				dd_cache::cache_to_file((object)[
+					'file_name'	=> $cache_file_name,
+					'data'		=> $permissions_table // will be convert to JSON object
+				]);
+			}
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -378,9 +379,13 @@ class security {
 
 		// cached permissions_table
 			$full_permissions_table = security::get_permissions_table();
-			foreach ($full_permissions_table as $item) {
-				if ($item->tipo===$item->section_tipo) {
-					$area_permissions[] = $item;
+			foreach ($full_permissions_table as $key => $value) {
+				$ar_parts = explode('_', $key);
+				if ($ar_parts[0]===$ar_parts[1]) {
+					$area_permissions[] = (object)[
+						'tipo'	=> $ar_parts[0],
+						'value'	=> $value
+					];
 				}
 			}
 
