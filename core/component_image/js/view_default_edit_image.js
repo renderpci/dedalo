@@ -38,8 +38,6 @@ view_default_edit_image.render = function(self, options) {
 	// content_data
 		const content_data = get_content_data(self)
 		if (render_level==='content') {
-			// set pointers
-			self.node.content_data = content_data
 			return content_data
 		}
 
