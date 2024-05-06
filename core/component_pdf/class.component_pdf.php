@@ -1129,15 +1129,17 @@ class component_pdf extends component_media_common implements component_media_in
 			$target_path	= $this->get_media_path_dir($quality);
 			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
 
+			$original_quality = $this->get_original_quality();
 		// generate from PDF
 			$im_options = new stdClass();
 				$im_options->source_file	= $source_file;
 				$im_options->target_file	= $target_file;
-				$im_options->quality		= 100;
+				$im_options->quality		= ($quality === $original_quality) ? 100 : 95;
 				$im_options->ar_layers		= [$page];
-				$im_options->density		= 600;
+				$im_options->density		= ($quality === $original_quality) ? 300 : 150;
 				$im_options->antialias		= true;
-				$im_options->resize			= '50%';
+				$im_options->resize			= ($quality === $original_quality) ? '100%' : '75%';;
+				$im_options->pdf_cropbox	= true;
 
 			ImageMagick::convert($im_options);
 
