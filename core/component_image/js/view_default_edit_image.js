@@ -390,6 +390,7 @@ const render_image_node = function(self, file_info, content_value) {
 		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
 		async function fn_img_quality_change (img_src) {
 
+			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
 			self.img_src = img_src
 
 			// svg document inside the object_node tag
