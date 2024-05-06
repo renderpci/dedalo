@@ -286,31 +286,42 @@ final class ImageMagick {
 	/**
 	* GET_LAYERS_FILE_INFO
 	* @param string $source_file
-	* @return array $ar_layers
+	* @return int $layer_number
 	*/
 	public static function get_layers_file_info( string $source_file ) : int {
 
-		$ar_layers = array();
-
 		// tiff info. Get the layer number of TIFF (PSD use the same property) :
-
 			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
+
+			debug_log(__METHOD__
+				. " get_layers_file_info command " . PHP_EOL
+				. 'command: ' .to_string($command) . PHP_EOL
+				. 'tiff_format: ' . json_encode($tiff_format)
+				, logger::WARNING
+			);
+
+			// empty case
+			if (empty($tiff_format)) {
+				return 1;
+			}
+
 			// the result could be:
 			// 1 		- without layer, for the flatten images
-			// 8 true 	- the number of the layers and bolean true, (PSD files doesn't has the bool)
+			// 8 true 	- the number of the layers and boolean true, (PSD files doesn't has the bool)
 			// the layer number include the layer 0, that is a flat image of all layers
-			$ar_lines		= explode(" ", $tiff_format);
+			$ar_lines		= explode(' ', $tiff_format);
 			$layer_number	= (int)$ar_lines[0];
 
 			// if layer number is greater than 1 send the number
 			if($layer_number > 1 ){
 				return $layer_number;
-			}else{
-				return 1; //$ar_lines[0]
 			}
 
+			return 1; //$ar_lines[0]
+
 		// // image format
+		// $ar_layers = array();
 		// 	$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
 		// 	$output		= shell_exec($command);
 		// // parse output
