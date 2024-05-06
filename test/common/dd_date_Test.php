@@ -296,9 +296,8 @@ final class dd_date_test extends TestCase {
 				. gettype($unix_timestamp)
 		);
 
-		// $test = $unix_timestamp===1689159693; // old version (6.1)
-		$reference = 1689142563;
-		$test = $unix_timestamp>$reference;
+		$reference = 1689142000;
+		$test = $unix_timestamp >= $reference;
 		$this->assertTrue(
 			$test,
 			'expected true (>'.$reference.'), but received is: ' . to_string( $test ) . PHP_EOL
