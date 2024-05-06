@@ -450,7 +450,7 @@ const render_file = function(quality, self) {
 					}
 
 					self.node.classList.add('loading')
-					// change component av quality and refresh
+					// change main_element quality and refresh it
 					self.main_element.quality = quality
 					await self.main_element.refresh()
 					self.node.classList.remove('loading')
@@ -710,12 +710,15 @@ const render_file_versions = function(quality, self) {
 
 			const file_info = files_info[k]
 
+			// size
+			const size = bytes_format(file_info.file_size)
+
 			// extension
 				const extension	= file_info && file_info.file_path
 					? file_info.file_path.split('.').pop()
 					: null;
 
-			// download button
+			// buttons
 				if (file_info && file_info.file_exist===true) {
 
 					const cell_node = ui.create_dom_element({
@@ -724,17 +727,17 @@ const render_file_versions = function(quality, self) {
 						parent			: file_info_node
 					})
 
-					// file_url
+					// button_link
 						const file_url = DEDALO_MEDIA_URL + file_info.file_path
 
 						// icon file
-						const link = ui.create_dom_element({
+						const button_link = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'button find',
 							title			: get_label.open || 'Open',
 							parent			: cell_node
 						})
-						link.addEventListener('click', function(e) {
+						button_link.addEventListener('click', function(e) {
 							e.stopPropagation()
 
 							open_window({
@@ -746,7 +749,7 @@ const render_file_versions = function(quality, self) {
 						const button_file_download = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button download',
-							title			: get_label.download || 'Download',
+							title			: (get_label.download || 'Download') + ' ' + size,
 							parent			: cell_node
 						})
 						button_file_download.addEventListener('click', function(e){
@@ -799,7 +802,6 @@ const render_file_versions = function(quality, self) {
 								}
 							})
 						})
-
 				}
 		}//end for (let k = 0; k < files_info_length; k++)
 
