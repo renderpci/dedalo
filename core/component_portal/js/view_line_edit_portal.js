@@ -49,9 +49,10 @@ view_line_edit_portal.render = async function(self, options) {
 
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
-			caller	: self,
-			mode	: 'list',
-			view	: children_view
+			caller		: self,
+			mode		: 'list',
+			view		: children_view,
+			id_variant	: self.id + '_' + (new Date()).getTime()
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
