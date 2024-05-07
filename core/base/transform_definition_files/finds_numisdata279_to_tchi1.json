@@ -1,5 +1,5 @@
 [
-{"old":"numisdata279"	,"new": "tchi1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Finds => Immobile"},
+{"old":"numisdata279"	,"new": "tchi1" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Finds => Immobile" , "skip_virtuals":["numisdata5"]},
 {"old":"numisdata500"	,"new": "tchi8" 		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Publishable => Publishable"},
 {"old":"numisdata211"	,"new": "tchi15"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Name => Name"},
 {"old":"numisdata260"	,"new": "tchi18"		,"type":"component"	,"perform":["replace_tipo"]	,"info": "Indexation => Indexation"},

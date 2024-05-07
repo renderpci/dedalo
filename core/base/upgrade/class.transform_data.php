@@ -760,6 +760,12 @@ class transform_data {
 				return $el->old;
 			}, $ar_section_elements, []);
 
+		// skip_virtuals
+			$skip_virtuals = array_map(function($el){
+				return $el->skip_virtuals;
+			}, $ar_section_elements, []);
+			$skip_virtuals = array_flatten($skip_virtuals);
+
 		// CLI process data
 			if ( running_in_cli()===true ) {
 				if (!isset(common::$pdata)) {
@@ -772,7 +778,7 @@ class transform_data {
 
 		update::tables_rows_iterator(
 			$ar_tables, // array of tables to iterate
-			function($row, $table, $max) use($ar_transform_map, $ar_old_section_tipo) { // callback function
+			function($row, $table, $max) use($ar_transform_map, $ar_old_section_tipo, $skip_virtuals) { // callback function
 
 				$id				= $row['id'];
 				$section_tipo	= $row['section_tipo'] ?? null;
@@ -871,7 +877,7 @@ class transform_data {
 							return;
 						}
 					}
-					else if ( !in_array($section_tipo, $ar_old_section_tipo)) {
+					else if ( in_array($section_tipo, $skip_virtuals) ) {
 						// check column section_tipo match for tables distinct to 'matrix_activity'
 						// skip non wanted sections records (column section_tipo is not included in the sections to change list)
 						return;
