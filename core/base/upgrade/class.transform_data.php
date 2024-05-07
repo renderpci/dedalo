@@ -1040,14 +1040,15 @@ class transform_data {
 		}
 
 		foreach ($ar_transform_map as $current_tipo => $transform_map_object) {
-			$string_value = str_replace(
+			$value = str_replace(
 				'"' . $current_tipo . '"',
 				'"' . $transform_map_object->new . '"',
 				$value
 			);
 		}
 
-		return $string_value;
+
+		return $value;
 	}//end replace_tm_data
 
 
