@@ -2111,7 +2111,7 @@ class search {
 
 					$string_query .= $this->get_sql_where($search_object);
 
-					if ($key+1 !== $total){
+					if ($key+1 !== $total) {
 						#$operator = strtoupper( substr($op, 1) );
 						#$string_query .= ") ".$operator." (";
 						$string_query .= ' '.$operator.' ';

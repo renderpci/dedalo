@@ -2087,6 +2087,7 @@ class component_text_area extends component_common {
 				$this->tipo,
 				true
 			);
+
 			if (empty($ar_related_by_model[0])) {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
