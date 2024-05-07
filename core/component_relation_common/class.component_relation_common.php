@@ -1433,7 +1433,58 @@ class component_relation_common extends component_common {
 	* RESOLVE_QUERY_OBJECT_SQL
 	* Parses given SQO to use it into the SQL query
 	* @param object $query_object
+		* 	sample:
+		* {
+		*		"q": {
+		*			"type": "dd151",
+		*			"section_id": "1",
+		*			"section_tipo": "dd64",
+		*			"from_component_tipo": "hierarchy24"
+		*		},
+		*		"path": [
+		*			{
+		*				"name": "Usable in indexing",
+		*				"model": "component_radio_button",
+		*				"section_tipo": "hierarchy20",
+		*				"component_tipo": "hierarchy24"
+		*			}
+		*		],
+		*		"q_operator": null,
+		*		"component_path": [
+		*			"components",
+		*			"hierarchy24",
+		*			"dato"
+		*		],
+		*		"lang": "all",
+		*		"type": "jsonb"
+		* }
 	* @return object $query_object
+		*  sample:
+		* {
+		*	"q": {
+		*		"type": "dd151",
+		*		"section_id": "1",
+		*		"section_tipo": "dd64",
+		*		"from_component_tipo": "hierarchy24"
+		*	},
+		*	"path": [
+		*		{
+		*			"name": "Usable in indexing",
+		*			"model": "component_radio_button",
+		*			"section_tipo": "hierarchy20",
+		*			"component_tipo": "hierarchy24"
+		*		}
+		*	],
+		*	"q_operator": null,
+		*	"component_path": [
+		*		"relations"
+		*	],
+		*	"lang": "all",
+		*	"type": "jsonb",
+		*	"unaccent": false,
+		*	"operator": "@>",
+		*	"q_parsed": "'[{\"type\":\"dd151\",\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"from_component_tipo\":\"hierarchy24\"}]'"
+		* }
 	*/
 	public static function resolve_query_object_sql( object $query_object ) : object {
 
@@ -1444,7 +1495,17 @@ class component_relation_common extends component_common {
 		// component path
 		$query_object->component_path = ['relations'];
 
+		// q . Object locator is expected
 		$q = $query_object->q;
+		if (!is_object($q)) {
+			debug_log(__METHOD__
+				. " Expected q type is object " . PHP_EOL
+				. ' type: ' . gettype($q) . PHP_EOL
+				. ' q: ' . json_encode($q) . PHP_EOL
+				. ' query_object: ' . to_string($query_object)
+				, logger::WARNING
+			);
+		}
 
 
 		// For unification, all non string are JSON encoded
@@ -1510,7 +1571,6 @@ class component_relation_common extends component_common {
 			if ($legacy_model==='component_autocomplete_hi'){
 				$query_object = component_relation_common::add_relations_search($query_object);
 			}
-
 
 		return $query_object;
 	}//end resolve_query_object_sql

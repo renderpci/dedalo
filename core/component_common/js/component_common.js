@@ -1133,6 +1133,11 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
 * @param object options
+* {
+* 	mode: string 'list',
+* 	view: string 'line'
+* 	autoload: bool 'true'
+* }
 * @return bool
 */
 component_common.prototype.change_mode = async function(options) {
@@ -1144,14 +1149,14 @@ component_common.prototype.change_mode = async function(options) {
 		const mode = (options.mode)
 			? options.mode
 			: self.mode === 'list' ? 'edit' : 'list'
-		const autoload = (typeof options.autoload!=='undefined')
-			? options.autoload
-			: true
 		const view = (options.view)
 			? options.view
 			: mode==='edit'
 				? 'line'
 				: self.mode
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
 
 	// check interface and permissions
 		if (self.permissions<1) {

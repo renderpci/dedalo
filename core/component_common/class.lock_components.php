@@ -425,8 +425,8 @@ class lock_components {
 		if ($num_rows<1) {
 
 			// response false
-				$response->result = false;
-				$response->msg 	  = sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+				$response->result	= false;
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
 
 			debug_log(__METHOD__
 				." $response->msg "
@@ -454,7 +454,7 @@ class lock_components {
 					$deleted_elements = true;
 					debug_log(__METHOD__
 						." Lock event for component: $event_element->component_tipo from ".$event_date->format('Y-m-d H:i:s')." has expired (> $hours hours). Removed from DB "
-						, logger::ERROR
+						, logger::WARNING
 					);
 				}else{
 					$new_dato[] = $event_element;

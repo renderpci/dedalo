@@ -140,7 +140,7 @@ const get_content_data = async function(self, ar_section_record) {
 		// fragment.appendChild(button_exit_edit)
 
 	// add all section_record rendered nodes
-		const ar_section_record_length	= ar_section_record.length
+		const ar_section_record_length = ar_section_record.length
 		if (ar_section_record_length===0) {
 
 			// no records found case
