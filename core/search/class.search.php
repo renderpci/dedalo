@@ -1902,9 +1902,10 @@ class search {
 		$ar_value	= $this->search_query_object->filter->{$operator};
 		if(!empty($ar_value)) {
 
-			$filter_query	.= ' AND (';
-			$filter_query	.= $this->filter_parser($operator, $ar_value);
-			$filter_query	.= ')';
+			$parsed_string = $this->filter_parser($operator, $ar_value);
+			if (!empty($parsed_string)) {
+				$filter_query .= ' AND (' . $parsed_string . ')';
+			}
 
 			#if (isset($this->global_group_query)) {
 			#	$filter_query .= "\n" . $this->global_group_query;
@@ -2090,12 +2091,15 @@ class search {
 				// if ($key > 1) {
 				// 	$string_query .= ' '.$operator2.'** ';
 				// }
-				$string_query .= ' (';
-				$string_query .= $this->filter_parser($op2, $ar_value2);
-				$string_query .= ' )';
 
-				if ($key+1 < $total) {
-					$string_query .= ' '.$operator.' ';
+				// recursion filter_parser
+				$parsed_string = $this->filter_parser($op2, $ar_value2);
+				if (!empty($parsed_string)) {
+					$string_query .= ' (' . $parsed_string . ' )';
+
+					if ($key+1 < $total) {
+						$string_query .= ' '.$operator.' ';
+					}
 				}
 
 			}else{
