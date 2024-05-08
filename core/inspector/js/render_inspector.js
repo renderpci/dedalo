@@ -1168,10 +1168,7 @@ const render_relation_list = function(self) {
 		})
 
 	// relation_list events
-		self.events_tokens.push(
-			event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-		)
-		function fn_relation_list_paginator(relation_list) {
+		const fn_relation_list_paginator = function(relation_list) {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
 			.then(function(){
@@ -1179,26 +1176,22 @@ const render_relation_list = function(self) {
 			})
 		}
 		self.events_tokens.push(
-			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+			event_manager.subscribe('relation_list_paginator_'+self.section_tipo, fn_relation_list_paginator)
 		)
-		function fn_updated_section() {
+
+		const fn_updated_section = function() {
 			// triggered after section pagination, it forces relation list update
 			const is_open = !relation_list_body.classList.contains('hide')
 			if (is_open) {
 				load_relation_list()
 			}
 		}
+		self.events_tokens.push(
+			event_manager.subscribe('render_' + self.caller.id, fn_updated_section)
+		)
 
 	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: relation_list_head,
-			container			: relation_list_body,
-			collapsed_id		: 'inspector_relation_list',
-			collapse_callback	: unload_relation_list,
-			expose_callback		: load_relation_list,
-			default_state		: 'closed'
-		})
-		async function load_relation_list( instance ) {
+		const load_relation_list = async function(instance) {
 
 			relation_list_head.classList.add('up')
 
@@ -1221,13 +1214,20 @@ const render_relation_list = function(self) {
 			}
 			relation_list_body.appendChild(relation_list_container)
 		}
-		function unload_relation_list() {
-
+		const unload_relation_list = function() {
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild);
 			}
 			relation_list_head.classList.remove('up')
 		}
+		ui.collapse_toggle_track({
+			toggler				: relation_list_head,
+			container			: relation_list_body,
+			collapsed_id		: 'inspector_relation_list',
+			collapse_callback	: unload_relation_list,
+			expose_callback		: load_relation_list,
+			default_state		: 'closed'
+		})
 
 
 	return relation_list_container
