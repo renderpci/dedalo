@@ -97,6 +97,15 @@ class update {
 				return $response;
 			}
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
 		// update log file
 			$update_log_file = defined('UPDATE_LOG_FILE')
 				? UPDATE_LOG_FILE
@@ -118,13 +127,14 @@ class update {
 				$counter = count($update->SQL_update);
 				foreach ((array)$update->SQL_update as $key => $current_query) {
 
-					// cli msg
-					if ( running_in_cli()===true ) {
-						print_cli((object)[
-							'msg'	=> 'Updating SQL_update ' . $key+1 . ' of ' . $counter,
-							'data'	=> 	to_string($current_query)
-						]);
-					}
+					// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg	= 'Updating SQL_update ' . $key+1 . ' of ' . $counter;
+							common::$pdata->data = $current_query;
+							common::$pdata->memory = dd_memory_usage();
+							// send to output
+							print_cli(common::$pdata);
+						}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -181,13 +191,14 @@ class update {
 				$counter = count($update->components_update);
 				foreach ((array)$update->components_update as $key => $current_model) {
 
-					// cli msg
-					if ( running_in_cli()===true ) {
-						print_cli((object)[
-							'msg'	=> 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model,
-							'data'	=> 	to_string($current_model)
-						]);
-					}
+					// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg	= 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model;
+							common::$pdata->data = $current_model;
+							common::$pdata->memory = dd_memory_usage();
+							// send to output
+							print_cli(common::$pdata);
+						}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -230,13 +241,14 @@ class update {
 				$counter = count($update->run_scripts);
 				foreach ((array)$update->run_scripts as $key => $current_script) {
 
-					// cli msg
-					if ( running_in_cli()===true ) {
-						print_cli((object)[
-							'msg'	=> 'Updating run_scripts ' . $key+1 . ' of ' . $counter,
-							'data'	=> 	to_string($current_script)
-						]);
-					}
+					// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg	= 'Updating run_scripts ' . $key+1 . ' of ' . $counter;
+							common::$pdata->data = $current_script;
+							common::$pdata->memory = dd_memory_usage();
+							// send to output
+							print_cli(common::$pdata);
+						}
 
 					debug_log(__METHOD__ . PHP_EOL
 						. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
@@ -510,6 +522,17 @@ class update {
 					, logger::WARNING
 				);
 
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					if (!isset(common::$pdata)) {
+						common::$pdata = new stdClass();
+					}
+					common::$pdata->table = $current_table;
+					common::$pdata->memory = '';
+					common::$pdata->counter = 0;
+					common::$pdata->section_tipo = $current_section_tipo;
+				}
+
 			// Iterate database resource directly to minimize memory requirements on large arrays
 				$i=0; // $tm=0;
 				while ($row = pg_fetch_assoc($result)) {
@@ -518,13 +541,16 @@ class update {
 
 					// CLI process data
 					if ( running_in_cli()===true ) {
-						$pdata = new stdClass();
-							$pdata->msg		= (label::get_label('processing') ?? 'Processing')
-								. ' '. $model_name
-								. ' | section: ' 	.$current_section_label. ' ('. $current_section_tipo.')'
-								. ' | section_id: '	. $section_id;
+						common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': components_update'
+							. ' | '. $model_name
+							. ' | section: ' 	.$current_section_label. ' ('. $current_section_tipo.')'
+							. ' | section_id: '	. $section_id;
+						common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+							? dd_memory_usage() // update memory information once every 5000 items
+							: common::$pdata->memory;
+						common::$pdata->counter++;
 						// send to output
-						print_cli($pdata);
+						print_cli(common::$pdata);
 					}
 
 					foreach($ar_component_tipo as $current_component_tipo) {
@@ -790,12 +816,39 @@ class update {
 			, logger::WARNING
 		);
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
 		update::tables_rows_iterator($ar_tables, function($row, $table) use($called_class, $action) {
 
 			$id				= $row['id'];
 			$section_id		= $row['section_id'];
 			$section_tipo	= $row['section_tipo'];
 			$datos			= json_handler::decode($row['datos']);
+
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': convert_table_data'
+						. ' | table: ' 			. $table
+						. ' | id: ' 			. $id
+						. ' | section_tipo: ' 	. $section_tipo
+						. ' | section_id: '  	. ($section_id);
+					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+						? dd_memory_usage() // update memory information once every 5000 items
+						: common::$pdata->memory;
+					common::$pdata->table = $table;
+					common::$pdata->section_tipo = $section_tipo;
+					common::$pdata->counter++;
+					// send to output
+					print_cli(common::$pdata);
+				}
 
 			if (!empty($datos)) {
 
@@ -843,6 +896,16 @@ class update {
 		// Maximum execution time
 		set_time_limit(0);
 
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
 		foreach ($ar_tables as $table) {
 
 			debug_log(__METHOD__ . PHP_EOL
@@ -855,13 +918,17 @@ class update {
 			);
 
 			// CLI process data
-			if ( running_in_cli()===true ) {
-				$pdata = new stdClass();
-					$pdata->msg		= (label::get_label('processing') ?? 'Processing') . ' table: ' . $table;
-					$pdata->table	= $table;
-				// send to output
-				print_cli($pdata);
-			}
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg = (label::get_label('processing') ?? 'Processing') . ': tables_rows_iterator'
+						. ' | table: ' . $table;
+					common::$pdata->table = $table;
+					common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+						? dd_memory_usage() // update memory information once every 5000 items
+						: common::$pdata->memory;
+					common::$pdata->counter++;
+					// send to output
+					print_cli(common::$pdata);
+				}
 
 			// Get last id in the table
 			$strQuery	= "SELECT id FROM $table ORDER BY id DESC LIMIT 1 ";
