@@ -5,6 +5,7 @@
 
 
 // imports
+	import {ui} from '../../common/js/ui.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {
 		render_column_component_info
@@ -64,10 +65,11 @@ view_text_list_portal.render = async function(self, options) {
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
 
-
 	// wrapper. Set as span
-		const wrapper = document.createElement('span')
-		wrapper.className = 'portal'
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} portal view_${self.view}`
+		})
 
 	// add all nodes
 		const ar_section_record_length = ar_section_record.length
@@ -83,7 +85,7 @@ view_text_list_portal.render = async function(self, options) {
 					wrapper.appendChild(node_records_separator)
 				}
 		}
-		
+
 
 	return wrapper
 }//end render

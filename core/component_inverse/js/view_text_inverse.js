@@ -2,7 +2,8 @@
 
 
 
-// import
+// imports
+	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -30,10 +31,14 @@ view_text_inverse.render = async function(self, options) {
 		const data			= self.data || {}
 		const value_string	= data.value && data.value[0] && data.value[0].locator
 			? data.value[0].locator.from_section_id
-			: null
+			: ''
 
-	const wrapper = document.createElement('span')
-	wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// wrapper. Set as span
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
+			inner_html		: value_string
+		})
 
 
 	return wrapper

@@ -35,9 +35,10 @@ view_text_list_select.render = async function(self) {
 
 	// const text_node = document.createTextNode(value_string)
 
-	// wrapper. Set as span to preserve html tags like mark, etc.
+	// wrapper. Set as span
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
 			inner_html		: value_string
 		})
 

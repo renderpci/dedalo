@@ -54,7 +54,6 @@ view_default_list_pdf.render = async function(self, options) {
 			? DEDALO_MEDIA_URL + thumb.file_path
 			: DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
 
-
 		const url = file_info
 			? thumb_file
 			: page_globals.fallback_image // page_globals.fallback_image

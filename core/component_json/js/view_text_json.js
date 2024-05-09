@@ -35,9 +35,11 @@ view_text_json.render = async function(self, options) {
 	// value_string
 		const value_string = get_value_string(self)
 
-	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			value_string : value_string
+	// wrapper. Set as span
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
+			inner_html		: value_string
 		})
 
 

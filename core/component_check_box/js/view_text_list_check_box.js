@@ -45,11 +45,14 @@ view_text_list_check_box.render = async function(self) {
 	// wrapper. Set as span to preserve html tags like mark, etc.
 		const wrapper = ui.create_dom_element({
 			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
 			inner_html		: value_string
 		})
 
+
 	return wrapper
 }//end render
+
 
 
 // @license-end
