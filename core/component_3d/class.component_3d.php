@@ -338,7 +338,10 @@ class component_3d extends component_media_common implements component_media_int
 		// check config constant definition
 			if (!defined('DEDALO_QUALITY_THUMB')) {
 				define('DEDALO_QUALITY_THUMB', 'thumb');
-				debug_log(__METHOD__." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value"
+					, logger::WARNING
+				);
 			}
 
 		// thumb_path
@@ -353,12 +356,11 @@ class component_3d extends component_media_common implements component_media_int
 					." posterframe file doesn't exists, it is not possible to create a thumb"
 					, logger::WARNING
 				);
-
 				return false;
 			}
 
 		// thumb generate
-			$result = ImageMagick::dd_thumb(
+			ImageMagick::dd_thumb(
 				$posterframe, // source file
 				$target_file // thumb file
 			);
