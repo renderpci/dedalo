@@ -323,7 +323,10 @@ class component_pdf extends component_media_common implements component_media_in
 		// check config constant definition
 			if (!defined('DEDALO_QUALITY_THUMB')) {
 				define('DEDALO_QUALITY_THUMB', 'thumb');
-				debug_log(__METHOD__." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value".to_string(), logger::WARNING);
+				debug_log(__METHOD__
+					." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value"
+					, logger::WARNING
+				);
 			}
 
 		// thumb_path
@@ -338,7 +341,6 @@ class component_pdf extends component_media_common implements component_media_in
 					." default quality file doesn't exists, it is not possible to create a thumb"
 					, logger::WARNING
 				);
-
 				return false;
 			}
 
@@ -358,7 +360,7 @@ class component_pdf extends component_media_common implements component_media_in
 				$thumb_options->resize		= $dimensions;
 				$thumb_options->pdf_cropbox	= true;
 
-			$result = ImageMagick::convert($thumb_options);
+			ImageMagick::convert($thumb_options);
 
 
 		return true;

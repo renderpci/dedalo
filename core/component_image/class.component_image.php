@@ -551,6 +551,15 @@ class component_image extends component_media_common implements component_media_
 	*/
 	public function create_thumb() : bool {
 
+		// check config constant definition
+			if (!defined('DEDALO_QUALITY_THUMB')) {
+				define('DEDALO_QUALITY_THUMB', 'thumb');
+				debug_log(__METHOD__
+					." Undefined config 'DEDALO_QUALITY_THUMB'. Using fallback 'thumb' value"
+					, logger::WARNING
+				);
+			}
+
 		// quality default
 			$quality_default	= $this->get_default_quality();
 			$default_image_path	= $this->get_media_filepath($quality_default);
@@ -560,27 +569,20 @@ class component_image extends component_media_common implements component_media_
 				debug_log(__METHOD__
 					." Default image quality file does not exists. Skip to create thumb. "
 					.' id: ' . $this->get_id()
-					, logger::DEBUG
+					, logger::WARNING
 				);
-				return null;
+				return false;
 			}
 
 		// old thumb rename
 			$thumb_quality		= $this->get_thumb_quality();
 			$thumb_extension	= $this->get_thumb_extension();
-
 			$image_thumb_path	= $this->get_media_filepath($thumb_quality, $thumb_extension);
-			$image_thumb_url	= $this->get_url(
-				$thumb_quality,
-				false,  // bool test_file
-				false,  // bool absolute
-				false // bool default_add
-			);
 
 		// thumb generate
 			ImageMagick::dd_thumb(
-				$default_image_path,
-				$image_thumb_path
+				$default_image_path, // source file
+				$image_thumb_path // thumb file
 			);
 
 

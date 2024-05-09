@@ -83,7 +83,6 @@ $updates->$v = new stdClass();
 			<br>
 			<code> ". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
 			</code>
-
 		";
 		$updates->$v->alert_update[] = $alert;
 
@@ -157,6 +156,7 @@ $updates->$v = new stdClass();
 				$table_to_update
 			]; // Note that only ONE argument encoded is sent
 		$updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=614; #####################################################################################
