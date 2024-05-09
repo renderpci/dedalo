@@ -92,6 +92,10 @@ class update {
 					}
 				}
 			}
+			if (empty($update)) {
+				$response->msg = 'Unable to get proper update. Check current version: '.$current_version;
+				return $response;
+			}
 
 		// update log file
 			$update_log_file = defined('UPDATE_LOG_FILE')
