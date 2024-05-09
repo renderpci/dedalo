@@ -6,6 +6,7 @@
 
 // imports
 	import {get_fallback_value} from '../../common/js/common.js'
+	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -36,8 +37,12 @@ view_text_input_text.render = async function(self, options) {
 		const fallback			= get_fallback_value(value, fallback_value)
 		const value_string		= fallback.join(self.context.fields_separator)
 
-	const wrapper = document.createElement('span')
-	wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// wrapper. Set as span
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
+			inner_html		: value_string
+		})
 
 
 	return wrapper

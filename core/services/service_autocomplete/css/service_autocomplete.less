@@ -186,12 +186,13 @@
 		// ul autocomplete_data
 		>.autocomplete_data {
 			// padding-top: 0.5em;
-			z-index		: 5;
-			width		: max-content;
-			min-width	: 100%;
-			background-color	: @color_grey_light;
-			border-left		: 1px solid @color_orange_dedalo;
-			border-right	: 1px solid @color_orange_dedalo;
+			z-index: 5;
+			width: max-content;
+			min-width: 100%;
+			background-color: @color_grey_light;
+			border-left: 1px solid @color_orange_dedalo;
+			border-right: 1px solid @color_orange_dedalo;
+			max-width: 100%;
 
 			.loading_label {
 				padding: 0.5rem;
@@ -227,14 +228,24 @@
 					// display: flex;
 					// justify-content: space-between;
 
+					// display: grid;
+					// grid-template-columns: 1fr 4px 8fr 4px 5rem;
+
+					display: flex;
+					align-items: center;
+
+					>* {
+						display: inline-block;
+					}
+
 					.column {
 						outline: none;
 					}
 
-					img {
-						height: var(--view_text_height);
-						vertical-align: middle;
-					}
+					// img {
+					// 	height: var(--view_text_height);
+					// 	vertical-align: middle;
+					// }
 				}
 
 				&:last-child{

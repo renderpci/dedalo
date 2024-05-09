@@ -31,14 +31,17 @@ export const view_text_list_pdf = function() {
 view_text_list_pdf.render = async function(self, options) {
 
 	// image append to wrapper
-		const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
+		// const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
+		const url = DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
 
 	// wrapper
-		const wrapper = document.createElement('span')
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} media view_${self.view}`
+		})
 
 	// image
 		const image	= document.createElement('img')
-		image.className	= 'component_pdf media view_' + self.view
 		image.src = url
 		wrapper.appendChild(image)
 

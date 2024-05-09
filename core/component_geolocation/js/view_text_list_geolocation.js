@@ -4,6 +4,11 @@
 
 
 
+// imports
+	import {ui} from '../../common/js/ui.js'
+
+
+
 /**
 * VIEW_TEXT_list_GEOLOCATION
 * Manages the component's logic and appearance in client side
@@ -32,8 +37,12 @@ view_text_list_geolocation.render = async function(self, options) {
 		})
 		const value_string	= string_values.join(self.context.fields_separator)
 
-	const wrapper = document.createElement('span')
-	wrapper.insertAdjacentHTML('afterbegin', value_string)
+	// wrapper. Set as span
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} view_${self.view}`,
+			inner_html		: value_string
+		})
 
 
 	return wrapper

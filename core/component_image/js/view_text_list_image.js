@@ -5,6 +5,8 @@
 
 
 // imports
+	import {ui} from '../../common/js/ui.js'
+
 
 
 /**
@@ -20,7 +22,7 @@ export const view_text_list_image = function() {
 
 /**
 * RENDER
-* Render node as text. URL is return as text node
+* Render node as text view
 * @param object self
 * @param object options
 * @return HTMLElement wrapper
@@ -42,26 +44,21 @@ view_text_list_image.render = function(self, options) {
 				? DEDALO_MEDIA_URL + file_info.file_path + '?t=' + (new Date()).getTime()
 				: page_globals.fallback_image
 
-	// image
-		const image	= document.createElement('img')
-		image.className	= 'component_image media view_' + self.view
-		image.addEventListener('error', function(e) {
-			if (image.src!==page_globals.fallback_image) {
-				image.src = page_globals.fallback_image
-			}
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} media view_${self.view}`
 		})
 
+	// image
+		const image	= document.createElement('img')
 		// error event
 		image.addEventListener('error', function(){
 			if (image.src!==page_globals.fallback_image) {
 				image.src = page_globals.fallback_image
 			}
-		}, false)
-
+		})
 		image.src = url
-
-	// wrapper
-		const wrapper = document.createElement('span')
 		wrapper.appendChild(image)
 
 

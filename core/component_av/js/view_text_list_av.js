@@ -5,6 +5,7 @@
 
 
 // imports
+	import {ui} from '../../common/js/ui.js'
 
 
 
@@ -50,11 +51,13 @@ view_text_list_av.render = async function(self, options) {
 			: posterframe_url
 
 	// wrapper
-		const wrapper = document.createElement('span')
+		const wrapper = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: `wrapper_component ${self.model} ${self.mode} media view_${self.view}`
+		})
 
 	// image
 		const image	= document.createElement('img')
-		image.className	= 'component_av media view_' + self.view
 		image.addEventListener('error', function(e) {
 			if (image.src!==page_globals.fallback_image) {
 				image.src = page_globals.fallback_image

@@ -119,7 +119,7 @@
 
 	&.list {
 		height: var(--view_text_height); //	2rem;
-		width: 100%;
+		// width: 100%;
 		cursor: pointer;
 
 		img {
@@ -169,8 +169,11 @@
 	}
 
 	&.view_text {
-		// height: 2rem;
-		// vertical-align: text-bottom;
+		display: inline-block;
+		width: auto;
+		>img {
+			height: 100%;
+		}
 	}
 
 	// used ??????
