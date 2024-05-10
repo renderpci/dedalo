@@ -2087,6 +2087,7 @@ class component_text_area extends component_common {
 				$this->tipo,
 				true
 			);
+
 			if (empty($ar_related_by_model[0])) {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
@@ -2117,7 +2118,7 @@ class component_text_area extends component_common {
 				return [];
 			}
 
-			// (!) Currently, consistency between area_text_component and geolocation_component cannot be guaranteed.
+			// (!) Currently, consistency between component_text_area and component_geolocation cannot be guaranteed.
 			// Therefore, the data in component_geolocation will be used
 			foreach ($lib_data as $layer) {
 
@@ -2157,7 +2158,7 @@ class component_text_area extends component_common {
 			}
 
 		// compare result
-			$geo_tags = [];
+			$geo_tags	= [];
 			$dato		= $this->get_dato();
 			$raw_text	= $dato[0] ?? '';
 			// split by pattern
@@ -2173,7 +2174,7 @@ class component_text_area extends component_common {
 					. " ERROR. The number of tags and geodata layers is different! " . PHP_EOL
 					. ' layers: ' .json_encode($ar_elements, JSON_PRETTY_PRINT) . PHP_EOL
 					. ' geo_tags: ' .json_encode($geo_tags, JSON_PRETTY_PRINT)
-					, logger::DEBUG
+					, logger::ERROR
 				);
 			}
 

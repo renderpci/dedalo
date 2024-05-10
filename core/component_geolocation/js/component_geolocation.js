@@ -486,6 +486,9 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 		}
 
 	// track changes in self.data.changed_data
+		// (!) DISABLED because, when changing the position of the map, it is not saved unintentionally.
+		// If you want to save, always use the save button.
+		/*
 		// changed_data
 			const changed_data_item = Object.freeze({
 				action	: 'update',
@@ -494,7 +497,7 @@ component_geolocation.prototype.update_input_values = function(key, data, map_co
 			})
 		// fix instance changed_data
 			self.set_changed_data(changed_data_item)
-
+		*/
 
 	return true
 }//end update_input_values

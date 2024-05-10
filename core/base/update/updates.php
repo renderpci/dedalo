@@ -83,7 +83,6 @@ $updates->$v = new stdClass();
 			<br>
 			<code> ". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
 			</code>
-
 		";
 		$updates->$v->alert_update[] = $alert;
 
@@ -159,6 +158,7 @@ $updates->$v = new stdClass();
 		$updates->$v->run_scripts[] = $script_obj;
 
 
+
 $v=614; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -187,6 +187,7 @@ $updates->$v = new stdClass();
 				$script_obj->script_method	= "update_hierarchy_view_in_thesaurus";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
+
 
 
 $v=610; #####################################################################################

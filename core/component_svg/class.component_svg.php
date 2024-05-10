@@ -221,7 +221,6 @@ class component_svg extends component_media_common implements component_media_in
 					." Ignored thumb creation. default quality file does not exist ($file_name)"
 					, logger::DEBUG
 				);
-
 				return false;
 			}
 
@@ -239,13 +238,8 @@ class component_svg extends component_media_common implements component_media_in
 				$thumb_pdf_options->quality		= 75;
 				$thumb_pdf_options->resize		= $dimensions;
 
-			$result = ImageMagick::convert($thumb_pdf_options);
+			ImageMagick::convert($thumb_pdf_options);
 
-		// exec command
-			// exec($command.' 2>&1', $output, $result_code);
-			if ($result===false) {
-				return false;
-			}
 
 		return true;
 	}//end create_thumb

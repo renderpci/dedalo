@@ -14,31 +14,34 @@ final class ImageMagick {
 	* Creates the thumb version file using the ImageMagick command line
 	* @param string $source_file (full source file path)
 	* @param string $target_file (full target thumb file path)
-	*
 	* @return string|bool $result
 	*/
-	public static function dd_thumb(string $source_file, string $target_file, $dimensions=false) : string|bool {
+	public static function dd_thumb(string $source_file, string $target_file) : string|bool {
 
-		# Valid path verify
+		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, 0750, true)) {
-				throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+				// throw new Exception(" Error on read or create dd_thumb directory. Permission denied");
+				debug_log(__METHOD__
+					. " Error on read or create dd_thumb directory. Permission denied  " . PHP_EOL
+					. ' folder_path: ' . to_string($folder_path)
+					, logger::ERROR
+				);
 			}
 		}
 
-		$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 102;
-		$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 57;
+		$width  = defined('DEDALO_IMAGE_THUMB_WIDTH')  ? DEDALO_IMAGE_THUMB_WIDTH  : 224;
+		$height = defined('DEDALO_IMAGE_THUMB_HEIGHT') ? DEDALO_IMAGE_THUMB_HEIGHT : 149;
 
-		# Like "102x57"
+		// Like "102x57"
 		$dimensions = $width.'x'.$height.'>';
 
 		#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
 		$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
 		$command = 'nice -n 19 '.$command;
 
-
-		# RUN COMMAND
+		// run command
 		$result = exec($command.' 2>&1', $output, $worked_result);
 
 		if ($worked_result!=0) {
@@ -49,6 +52,7 @@ final class ImageMagick {
 			);
 			return false;
 		}
+
 
 		return $result;
 	}//end dd_thumb
@@ -190,10 +194,20 @@ final class ImageMagick {
 
 					# Test profile exists
 					if(!file_exists($profile_source)) {
-						throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
+						// throw new Exception("Error Processing Request. Color profile not found in: $profile_source", 1);
+						debug_log(__METHOD__
+							. " Error Processing Request. Color profile not found in " . PHP_EOL
+							. ' profile_source: ' . to_string($profile_source)
+							, logger::ERROR
+						);
 					}
 					if(!file_exists($profile_file)) {
-						throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+						// throw new Exception("Error Processing Request. Color profile not found in: $profile_file", 1);
+						debug_log(__METHOD__
+							. " Error Processing Request. Color profile not found in " . PHP_EOL
+							. ' profile_file: ' . to_string($profile_file)
+							, logger::ERROR
+						);
 					}
 
 					// Remove possible '-thumbnail' flag when profile is used
@@ -286,31 +300,42 @@ final class ImageMagick {
 	/**
 	* GET_LAYERS_FILE_INFO
 	* @param string $source_file
-	* @return array $ar_layers
+	* @return int $layer_number
 	*/
 	public static function get_layers_file_info( string $source_file ) : int {
 
-		$ar_layers = array();
-
 		// tiff info. Get the layer number of TIFF (PSD use the same property) :
-
 			$command		= MAGICK_PATH . 'identify -quiet -format "%n %[tiff:has-layers]\n" '. $source_file .' | tail -1';
 			$tiff_format	= shell_exec($command);
+
+			debug_log(__METHOD__
+				. " get_layers_file_info command " . PHP_EOL
+				. 'command: ' .to_string($command) . PHP_EOL
+				. 'tiff_format: ' . json_encode($tiff_format)
+				, logger::WARNING
+			);
+
+			// empty case
+			if (empty($tiff_format)) {
+				return 1;
+			}
+
 			// the result could be:
 			// 1 		- without layer, for the flatten images
-			// 8 true 	- the number of the layers and bolean true, (PSD files doesn't has the bool)
+			// 8 true 	- the number of the layers and boolean true, (PSD files doesn't has the bool)
 			// the layer number include the layer 0, that is a flat image of all layers
-			$ar_lines		= explode(" ", $tiff_format);
+			$ar_lines		= explode(' ', $tiff_format);
 			$layer_number	= (int)$ar_lines[0];
 
 			// if layer number is greater than 1 send the number
 			if($layer_number > 1 ){
 				return $layer_number;
-			}else{
-				return 1; //$ar_lines[0]
 			}
 
+			return 1; //$ar_lines[0]
+
 		// // image format
+		// $ar_layers = array();
 		// 	$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
 		// 	$output		= shell_exec($command);
 		// // parse output

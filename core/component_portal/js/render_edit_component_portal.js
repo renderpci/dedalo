@@ -12,6 +12,7 @@
 	// import {create_source} from '../../common/js/common.js'
 	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
+	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {view_default_edit_portal} from './view_default_edit_portal.js'
 	import {view_line_edit_portal} from './view_line_edit_portal.js'
@@ -538,6 +539,18 @@ export const render_column_remove = function(options) {
 						inner_html		: ' '
 					})
 
+				// relation_list
+					const relation_list_placeholder = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'relation_list_placeholder',
+						parent			: body
+					})
+					const relation_list = render_relation_list({
+						section_id		: section_id,
+						section_tipo	: section_tipo
+					})
+					relation_list_placeholder.replaceWith(relation_list);
+
 				// footer
 					const footer = ui.create_dom_element({
 						element_type	: 'div',
@@ -639,9 +652,10 @@ export const render_column_remove = function(options) {
 						header		: header,
 						body		: body,
 						footer		: footer,
-						size		: 'normal', // string size big|normal
+						size		: 'small', // string size small|big|normal
 						callback	: (dd_modal) => {
-							dd_modal.modal_content.style.width = '30rem'
+							dd_modal.modal_content.style.width = '34rem'
+							dd_modal.modal_content.style.maxWidth = '100%'
 						}
 					})
 					// set the default button to be fired when the modal is active
@@ -688,7 +702,7 @@ export const render_column_remove = function(options) {
 
 /**
 * GET_BUTTONS
-* Render buttons DOM node
+* Render buttons DOM nodes
 * @param object self instance
 * @return HTMLElement buttons_container
 */
@@ -1227,6 +1241,4 @@ export const render_references = function(ar_references) {
 
 
 
-
 // @license-end
-
