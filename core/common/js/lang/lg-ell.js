@@ -35,7 +35,7 @@
     "propagar_marcas": "διαδίδονται μάρκες",
     "ver_ficha_existente": "Δείτε τα υπάρχοντα ρεκόρ",
     "geolocalizacion": "γεωεντοπισμός",
-    "si": "αν",
+    "yes": "αν",
     "no": "όχι",
     "search": "αναζήτησή",
     "modo": "τρόπος",
