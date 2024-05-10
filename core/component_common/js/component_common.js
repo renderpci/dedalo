@@ -1133,6 +1133,11 @@ component_common.prototype.update_node_contents = async (current_node, new_node)
 * Replace every old placed DOM node with the new one
 * Active element (using event manager publish)
 * @param object options
+* {
+* 	mode: string 'list',
+* 	view: string 'line'
+* 	autoload: bool 'true'
+* }
 * @return bool
 */
 component_common.prototype.change_mode = async function(options) {
@@ -1144,14 +1149,14 @@ component_common.prototype.change_mode = async function(options) {
 		const mode = (options.mode)
 			? options.mode
 			: self.mode === 'list' ? 'edit' : 'list'
-		const autoload = (typeof options.autoload!=='undefined')
-			? options.autoload
-			: true
 		const view = (options.view)
 			? options.view
 			: mode==='edit'
 				? 'line'
 				: self.mode
+		const autoload = (typeof options.autoload!=='undefined')
+			? options.autoload
+			: true
 
 	// check interface and permissions
 		if (self.permissions<1) {
@@ -1160,16 +1165,20 @@ component_common.prototype.change_mode = async function(options) {
 		}
 
 	// short vars
-		// set
 		const current_context		= self.context
 		const current_data			= self.data
 		const current_datum			= self.datum
 		const current_section_id	= self.section_id
 		const section_lang			= self.section_lang
 		const old_node				= self.node
-		const id_variant			= view+'_'+mode
 
-	// set the new view to context
+	// id_variant. Add view_mode pattern to id variant avoiding to duplicate additions
+		const pattern			= `_${view}_list|_${view}_edit`
+		const regex				= new RegExp(pattern, "g");
+		const id_variant_clean	= self.id_variant.replace(regex, '')
+		const id_variant		= id_variant_clean + `_${view}_${mode}`
+
+	// set the new view and mode to context
 		current_context.view = view
 		current_context.mode = mode
 

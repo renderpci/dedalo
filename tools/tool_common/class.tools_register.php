@@ -290,7 +290,15 @@ class tools_register {
 							);
 							$component->set_dato([$tool_object]);
 							$component->Save();
-							tools_register::create_tool_config($tool_object->name);
+							if (!empty($tool_object->name)) {
+								tools_register::create_tool_config($tool_object->name);
+							}else{
+								debug_log(__METHOD__
+									. " Ignored empty tool_object->name " . PHP_EOL
+									. ' tool_object: ' . to_string($tool_object)
+									, logger::ERROR
+								);
+							}
 					}
 			}
 

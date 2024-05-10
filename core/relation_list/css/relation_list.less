@@ -44,6 +44,8 @@
 
 			.relation_list_paginator_offset_off {
 				opacity: 0.1;
+				pointer-events: none;
+				cursor: default;
 			}
 		}
 	}
@@ -84,6 +86,8 @@
 
 			li {
 				padding: 0.25rem;
+				overflow: hidden;
+				text-overflow: ellipsis;
 
 				&.relation_list_data_row_center {
 					justify-self: center;

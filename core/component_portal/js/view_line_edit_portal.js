@@ -49,9 +49,10 @@ view_line_edit_portal.render = async function(self, options) {
 
 	// ar_section_record
 		const ar_section_record	= await get_section_records({
-			caller	: self,
-			mode	: 'list',
-			view	: children_view
+			caller		: self,
+			mode		: 'list',
+			view		: children_view,
+			id_variant	: self.id + '_' + (new Date()).getTime()
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
@@ -140,7 +141,7 @@ const get_content_data = async function(self, ar_section_record) {
 		// fragment.appendChild(button_exit_edit)
 
 	// add all section_record rendered nodes
-		const ar_section_record_length	= ar_section_record.length
+		const ar_section_record_length = ar_section_record.length
 		if (ar_section_record_length===0) {
 
 			// no records found case

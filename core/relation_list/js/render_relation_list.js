@@ -298,7 +298,8 @@ const parse_paginator_html = async function(self, wrapper) {
 			parent			: paginator_buttons
 		})
 		// create the event to go to the previous record
-		previous_button.addEventListener('click', ()=>{
+		previous_button.addEventListener('click', (e)=>{
+			e.stopPropagation()
 			previous_records(self)
 		})
 
@@ -309,7 +310,8 @@ const parse_paginator_html = async function(self, wrapper) {
 			parent			: paginator_buttons
 		})
 		// create the event to go to the next record
-		next_button.addEventListener('click', ()=>{
+		next_button.addEventListener('click', (e)=>{
+			e.stopPropagation()
 			next_records(self)
 		})
 }//end parse_paginator_html
@@ -328,7 +330,7 @@ const previous_records = function(self) {
 	// if the paginator is NOT in the first page the button can navigate to the previous page
 	if( self.offset >= 1) {
 		self.offset = self.offset - self.limit
-		event_manager.publish('relation_list_paginator', self)
+		event_manager.publish('relation_list_paginator_'+self.section_tipo, self)
 	}
 }//end previous_records
 
@@ -354,7 +356,7 @@ const next_records = function(self) {
 	// if the paginator is NOT in the last page the button can navigate to the next page
 		if(current_page < final_page){
 			self.offset = current_offset + current_limit
-			event_manager.publish('relation_list_paginator', self)
+			event_manager.publish('relation_list_paginator_'+self.section_tipo, self)
 		}
 }//end next_records
 

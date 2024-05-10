@@ -3135,7 +3135,7 @@ class section extends common {
 						$ar_deleted_locators[] = $current_locator;
 
 						debug_log(__METHOD__
-							. " Removed component_dataframe locator from section relations 😀" . PHP_EOL
+							. " Removed COMPONENT_DATAFRAME locator from section relations" . PHP_EOL
 							. ' current_locator: ' . to_string($current_locator)
 							, logger::WARNING
 						);
@@ -3153,11 +3153,12 @@ class section extends common {
 
 					$ar_deleted_locators[] = $current_locator;
 
-					debug_log(__METHOD__
-						. " Removed $model locator from section relations 😄" . PHP_EOL
-						. ' current_locator: ' . to_string($current_locator)
-						, logger::WARNING
-					);
+					// debug
+						// debug_log(__METHOD__
+						// 	. " Removed $model locator from section relations" . PHP_EOL
+						// 	. ' current_locator: ' . to_string($current_locator)
+						// 	, logger::WARNING
+						// );
 
 					$removed = true;
 

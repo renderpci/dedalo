@@ -462,7 +462,7 @@ class relation_list extends common {
 					if ($current_is_publicable!==true) {
 						debug_log(__METHOD__
 							." + Skipped locator not publishable: " . PHP_EOL
-							.' current_locator: ' . json_encode($custom_locator, JSON_PRETTY_PRINT)
+							. json_encode($custom_locator, JSON_PRETTY_PRINT)
 							, logger::DEBUG
 						);
 						continue;
@@ -581,7 +581,7 @@ class relation_list extends common {
 													$current_dato			= [$filtered_custom_locator];
 													$process_dato_arguments	= $map_obj->custom_arguments->process_dato_arguments;
 														$process_dato_arguments->lang = $lang;
-													$current_value 			= diffusion_sql::resolve_value(
+													$current_value = diffusion_sql::resolve_value(
 														$process_dato_arguments, // mixed options
 														$current_dato, // mixed dato
 														' | ' // string default_separator

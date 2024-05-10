@@ -190,7 +190,10 @@ const render_sync_data = function(self) {
 				self.sync_files()
 				.then(function(response){
 					if (response.result===true) {
-						self.refresh()
+						self.refresh({
+							build_autoload	: false,
+							destroy			: false
+						})
 					}else{
 						self.node.content_data.classList.remove('loading')
 						alert('Error: ' + (response.msg || 'Unknown') )
@@ -421,7 +424,7 @@ const render_file = function(quality, self) {
 	// info columns
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 		// file_info
@@ -450,7 +453,7 @@ const render_file = function(quality, self) {
 					}
 
 					self.node.classList.add('loading')
-					// change component av quality and refresh
+					// change main_element quality and refresh it
 					self.main_element.quality = quality
 					await self.main_element.refresh()
 					self.node.classList.remove('loading')
@@ -525,7 +528,7 @@ const render_file_size = function(quality, self) {
 
 	const file_info_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+		class_name		: 'file_info render_file_size' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 	})
 
 	if (file_info && file_info.file_exist===true) {
@@ -625,7 +628,7 @@ const render_file_upload = function(quality, self) {
 	// info columns
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file_upload' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 		if(quality==='thumb'){
@@ -700,7 +703,7 @@ const render_file_versions = function(quality, self) {
 	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_file_versions' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 		})
 
 		const files_info = custom_files_info.filter(el => el.quality===quality)
@@ -710,12 +713,15 @@ const render_file_versions = function(quality, self) {
 
 			const file_info = files_info[k]
 
+			// size
+			const size = bytes_format(file_info.file_size)
+
 			// extension
 				const extension	= file_info && file_info.file_path
 					? file_info.file_path.split('.').pop()
 					: null;
 
-			// download button
+			// buttons
 				if (file_info && file_info.file_exist===true) {
 
 					const cell_node = ui.create_dom_element({
@@ -724,17 +730,17 @@ const render_file_versions = function(quality, self) {
 						parent			: file_info_node
 					})
 
-					// file_url
+					// button_link
 						const file_url = DEDALO_MEDIA_URL + file_info.file_path
 
 						// icon file
-						const link = ui.create_dom_element({
+						const button_link = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'button find',
 							title			: get_label.open || 'Open',
 							parent			: cell_node
 						})
-						link.addEventListener('click', function(e) {
+						button_link.addEventListener('click', function(e) {
 							e.stopPropagation()
 
 							open_window({
@@ -746,7 +752,7 @@ const render_file_versions = function(quality, self) {
 						const button_file_download = ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'button download',
-							title			: get_label.download || 'Download',
+							title			: (get_label.download || 'Download') + ' ' + size,
 							parent			: cell_node
 						})
 						button_file_download.addEventListener('click', function(e){
@@ -792,14 +798,15 @@ const render_file_versions = function(quality, self) {
 							self.delete_version(quality, extension)
 							.then(function(response){
 								if (response.result===true) {
-									self.refresh()
+									self.refresh({
+										build_autoload : false
+									})
 								}else{
 									self.node.content_data.classList.remove('loading')
 									alert('Error: ' + (response.msg || 'Unknown') )
 								}
 							})
 						})
-
 				}
 		}//end for (let k = 0; k < files_info_length; k++)
 
@@ -823,7 +830,7 @@ const render_file_delete = function(quality, self) {
 	// info columns
 	const file_info_node = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'file_info' + (quality===self.caller.context.features.default_quality ? ' default' : '')
+		class_name		: 'file_info render_file_delete' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 	})
 
 	// file_info
@@ -845,7 +852,9 @@ const render_file_delete = function(quality, self) {
 				const response = await self.delete_file(quality)
 				if (response===true) {
 					// self.main_element_quality = quality
-					self.refresh()
+					self.refresh({
+						build_autoload : false
+					})
 				}
 				self.node.classList.remove('loading')
 			})
@@ -868,7 +877,7 @@ const render_build_version = function(quality, self) {
 	// file_info_node
 		const file_info_node = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			class_name		: 'file_info render_build_version' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 		})
 
 	// exclude original quality button from list
@@ -971,7 +980,7 @@ const render_specific_actions = {
 		// file_info_node
 			const file_info_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+				class_name		: 'file_info conform_headers' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
 			})
 
 
@@ -983,6 +992,7 @@ const render_specific_actions = {
 			const button_build_version = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button repair',
+				title			: (get_label.conform_headers || 'Conform headers'),
 				parent			: file_info_node
 			})
 			button_build_version.addEventListener('click', async function(){
@@ -1011,23 +1021,25 @@ const render_specific_actions = {
 	rotate(quality, self) {
 
 		// info columns
-				const file_info_node = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'file_info' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
-				})
+			const file_info_node = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'file_info rotate' + (quality===self.main_element.context.features.default_quality ? ' default' : '')
+			})
 
-				// file_info
-				const file_info = self.files_info_safe.find(el => el.quality===quality)
+		// file_info
+			const file_info = self.files_info_safe.find(el => el.quality===quality)
+			if (file_info && file_info.file_exist===true) {
 
-				if (file_info && file_info.file_exist===true) {
-
-					// left rotate
+				// button_rotate_left
 					const button_rotate_left = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate',
+						title			: (get_label.rotate || 'Rotate') +' '+ (get_label.left || 'left') +' ('+ (get_label.destructive || 'destructive')+')',
 						parent			: file_info_node
 					})
-					button_rotate_left.addEventListener('click', async function(){
+					button_rotate_left.addEventListener('click', async function(e){
+						e.stopPropagation()
+
 						self.node.classList.add('loading')
 						// exec rotate
 						const result = await self.rotate(quality, -90)
@@ -1038,13 +1050,16 @@ const render_specific_actions = {
 						self.node.classList.remove('loading')
 					})
 
-					// right rotate
+				// button_rotate_right
 					const button_rotate_right = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'button rotate right',
+						title			: (get_label.rotate || 'Rotate') +' '+ (get_label.right || 'right') +' ('+ (get_label.destructive || 'destructive')+')',
 						parent			: file_info_node
 					})
-					button_rotate_right.addEventListener('click', async function(){
+					button_rotate_right.addEventListener('click', async function(e){
+						e.stopPropagation()
+
 						self.node.classList.add('loading')
 						// exec rotate
 						const result = await self.rotate(quality, 90)
@@ -1054,7 +1069,7 @@ const render_specific_actions = {
 						}
 						self.node.classList.remove('loading')
 					})
-				}
+			}
 
 
 		return file_info_node

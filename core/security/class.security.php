@@ -183,7 +183,7 @@ class security {
 			}
 
 		// cache file (do NOT use the cache file here because the gain is not worth it)
-			$use_cache = true;
+			$use_cache = DEVELOPMENT_SERVER ? false : true;
 			if ($use_cache===true) {
 
 				$cache_file_name = 'cache_permissions_table.json';

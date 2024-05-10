@@ -68,9 +68,8 @@ render_common_section.prototype.delete_record = async (options) => {
 
 				// relation_list
 					const relation_list = render_relation_list({
-						section			: section,
-						section_id		: section_id,
-						section_tipo	: section_tipo
+						section_tipo	: section_tipo,
+						section_id		: section_id
 					})
 					body.appendChild(relation_list)
 			}else{
@@ -114,7 +113,9 @@ render_common_section.prototype.delete_record = async (options) => {
 				text_content 	: get_label.delete_data_and_record || 'Delete record',
 				parent			: footer
 			})
-			button_delete_record.addEventListener("click", function(){
+			button_delete_record.addEventListener('click', function(e){
+				e.stopPropagation()
+
 				if (!confirm(get_label.sure)) {
 					return
 				}
@@ -145,7 +146,9 @@ render_common_section.prototype.delete_record = async (options) => {
 				text_content	: get_label.delete_data_only || 'delete data',
 				parent			: footer
 			})
-			button_delete_data.addEventListener("click", function(){
+			button_delete_data.addEventListener('click', function(e){
+				e.stopPropagation()
+
 				if (!confirm(get_label.sure)) {
 					return
 				}
@@ -173,7 +176,11 @@ render_common_section.prototype.delete_record = async (options) => {
 			header	: header,
 			body	: body,
 			footer	: footer,
-			size	: 'small' // string size big|normal
+			size	: 'small', // string size small|big|normal
+			callback	: (dd_modal) => {
+				dd_modal.modal_content.style.width = '34rem'
+				dd_modal.modal_content.style.maxWidth = '100%'
+			}
 		})
 
 
@@ -185,18 +192,21 @@ render_common_section.prototype.delete_record = async (options) => {
 /**
 * RENDER_RELATION_LIST
 * @param object options
+* {
+* 	section_tipo: string 'oh1',
+* 	section_id: int 1
+* }
 * @return HTMLElement relation_list_container
 */
-const render_relation_list = function(options) {
+export const render_relation_list = function(options) {
 
 	// options
-		const section		= options.section
-		const section_id	= options.section_id
 		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
 
 	// short vars
-		const mode = 'edit'
-		const tipo = section.context['relation_list']
+		const mode			= 'edit'
+		const id_variant	= section_tipo +'_'+ section_id +'_'+ (new Date()).getTime()
 
 	// wrapper
 		const relation_list_container = ui.create_dom_element({
@@ -208,7 +218,7 @@ const render_relation_list = function(options) {
 		const relation_list_head = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_head icon_arrow',
-			inner_html		: get_label.relations || "Relations",
+			inner_html		: get_label.relations || 'Relations',
 			parent			: relation_list_container
 		})
 
@@ -220,25 +230,17 @@ const render_relation_list = function(options) {
 		})
 
 	// relation_list events
-		event_manager.subscribe('relation_list_paginator', fn_relation_list_paginator)
-		function fn_relation_list_paginator(relation_list) {
+		const fn_relation_list_paginator = function(relation_list) {
 			relation_list_body.classList.add('loading')
 			load_relation_list(relation_list)
 			.then(function(){
 				relation_list_body.classList.remove('loading')
 			})
 		}
+		event_manager.subscribe('relation_list_paginator_'+section_tipo, fn_relation_list_paginator)
 
 	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: relation_list_head,
-			container			: relation_list_body,
-			collapsed_id		: 'inspector_relation_list',
-			collapse_callback	: unload_relation_list,
-			expose_callback		: load_relation_list,
-			default_state		: 'closed'
-		})
-		async function load_relation_list( instance ) {
+		const load_relation_list = async function(instance) {
 
 			relation_list_head.classList.add('up')
 
@@ -249,8 +251,13 @@ const render_relation_list = function(options) {
 					tipo			: section_tipo,
 					section_tipo	: section_tipo,
 					section_id		: section_id,
-					mode			: mode
+					mode			: mode,
+					id_variant		:id_variant
 				})
+
+			// height preserve
+				const height = relation_list_body.getBoundingClientRect().height
+				relation_list_body.style.minHeight = height + 'px'
 
 			await relation_list.build()
 			const relation_list_container = await relation_list.render()
@@ -258,14 +265,27 @@ const render_relation_list = function(options) {
 				relation_list_body.removeChild(relation_list_body.firstChild)
 			}
 			relation_list_body.appendChild(relation_list_container)
+
+			// height preserve
+				setTimeout(function(){
+					relation_list_body.style.minHeight = null
+				}, 1)
 		}
-		function unload_relation_list() {
+		const unload_relation_list = function() {
 
 			while (relation_list_body.firstChild) {
 				relation_list_body.removeChild(relation_list_body.firstChild);
 			}
 			relation_list_head.classList.remove('up')
 		}
+		ui.collapse_toggle_track({
+			toggler				: relation_list_head,
+			container			: relation_list_body,
+			collapsed_id		: 'inspector_relation_list',
+			collapse_callback	: unload_relation_list,
+			expose_callback		: load_relation_list,
+			default_state		: 'closed'
+		})
 
 
 	return relation_list_container

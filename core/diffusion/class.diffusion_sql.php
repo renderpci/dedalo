@@ -4238,7 +4238,6 @@ class diffusion_sql extends diffusion  {
 	public static function build_geolocation_data_geojson($options, $dato) : string {
 
 		// options
-			$raw_text				= $options->raw_text ?? $dato; // maintain ->raw_text for compatibility only
 			// process_dato_arguments. (!) If call is from 'diffusion_sql::resolve_component_value' the path is 'options->process_dato_arguments'
 			// but if call is directly from 'diffusion_sql::build_geolocation_data_geojson' the path is inside 'propiedades'
 			$process_dato_arguments	= $options->process_dato_arguments ?? $options->properties->process_dato_arguments ?? null;

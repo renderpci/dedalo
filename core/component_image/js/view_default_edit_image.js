@@ -390,6 +390,7 @@ const render_image_node = function(self, file_info, content_value) {
 		// object_node.dataset.image_change_event = image_change_event // string like 'event_167'
 		async function fn_img_quality_change (img_src) {
 
+			// as '/dedalo/media/image/3MB/0/rsc29_rsc170_2.jpg?t=1714996905397'
 			self.img_src = img_src
 
 			// svg document inside the object_node tag
@@ -417,13 +418,13 @@ const render_image_node = function(self, file_info, content_value) {
 				const beats	= img_src.split('?')
 
 				// force to refresh image from svg
-				await fetch(beats[0], { cache: 'reload' })
+				// await fetch(beats[0], { cache: 'reload' })
 
 				// new_url
 				const new_url = beats[0] + '?t=' + (new Date()).getTime()
 
 				// set the new source to the image node into the svg
-				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'href', new_url)
+				image_node.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', new_url)
 			}
 
 			return true
