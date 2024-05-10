@@ -35,7 +35,7 @@
     "propagar_marcas": "Propagate marks",
     "ver_ficha_existente": "View existing record",
     "geolocalizacion": "Geolocation",
-    "si": "yes",
+    "yes": "yes",
     "no": "no",
     "search": "Search",
     "modo": "mode",
