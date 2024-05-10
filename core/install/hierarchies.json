@@ -1510,7 +1510,7 @@
 	{
 		"tld": "object",
 		"label": "Object",
-		"typology": 1,
+		"typology": 11,
 		"active_in_thesaurus": true
 	},
 	{
@@ -1676,5 +1676,19 @@
 		"typology": 2,
 		"active_in_thesaurus": false,
 		"install_checked_default": true
+	},
+	{
+		"tld": "fauna",
+		"label": "Fauna",
+		"typology": 11,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
+	},
+	{
+		"tld": "flora",
+		"label": "Flora",
+		"typology": 11,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
 	}
 ]
