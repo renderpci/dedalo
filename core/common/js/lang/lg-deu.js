@@ -35,7 +35,7 @@
     "propagar_marcas": "Zeichen verbreiten",
     "ver_ficha_existente": "Existierende Eintrag ansehen",
     "geolocalizacion": "Geolokalisation",
-    "si": "Ja",
+    "yes": "Ja",
     "no": "Nein",
     "search": "Suche",
     "modo": "Modus",
