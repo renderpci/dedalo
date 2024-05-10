@@ -297,13 +297,18 @@ class get_coins_by_period extends widget_common {
 					$duplicated_dato = array_find($relations, function($el) use($component_tipo_duplicated){
 						return $el->from_component_tipo === $component_tipo_duplicated;
 					});
-
-					if (!empty($duplicated_dato) && $duplicated_dato[0]->section_id==='2') continue;
+					// sample of duplicated dato: object|null
+						// {
+						//     "type": "dd151",
+						//     "section_id": "2",
+						//     "section_tipo": "numisdata341",
+						//     "from_component_tipo": "numisdata157"
+						// }
+					if (!empty($duplicated_dato) && $duplicated_dato->section_id=='2') continue;
 
 					$period_dato = array_filter($relations, function($el) use($component_tipo_period) {
 						return $el->from_component_tipo === $component_tipo_period;
 					});
-
 
 					if(empty($period_dato)){
 						$empty_perid_count++;
