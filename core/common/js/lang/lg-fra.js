@@ -35,7 +35,7 @@
     "propagar_marcas": "Répartir les marques",
     "ver_ficha_existente": "Voir le fichier existant",
     "geolocalizacion": "Géolocalisation ",
-    "si": "Oui",
+    "yes": "Oui",
     "no": "non",
     "search": "Recherche",
     "modo": "mode",

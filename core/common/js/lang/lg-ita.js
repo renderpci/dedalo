@@ -35,7 +35,7 @@
     "propagar_marcas": "Diffondere segnali",
     "ver_ficha_existente": "Guarda scheda esistente",
     "geolocalizacion": "Geolocalizzazione",
-    "si": "si",
+    "yes": "si",
     "no": "No",
     "search": "Ricerca",
     "modo": "modo",

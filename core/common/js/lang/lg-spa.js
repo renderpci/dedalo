@@ -35,7 +35,7 @@
     "propagar_marcas": "Propagar marcas",
     "ver_ficha_existente": "Ver ficha existente",
     "geolocalizacion": "Geolocalización",
-    "si": "si",
+    "yes": "si",
     "no": "no",
     "search": "Búsqueda",
     "modo": "modo",
