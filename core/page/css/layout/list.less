@@ -461,6 +461,8 @@
 		align-content: flex-start; // vertical distribution
 		height: auto;
 
+		@common_padding: 0.12rem;
+
 		// cell outline
 		// outline: 1px solid @color_grey_light;
 		box-shadow: 0px 1px 0px 0px #e6e6e6;
@@ -536,8 +538,12 @@
 			margin: 0px;
 		}
 
+		>.portal.view_text {
+			padding: @common_padding;
+		}
+
 		// components inside column
-		.wrapper_component {
+		div.wrapper_component {
 			display: inline-block;
 			flex: 1 1;
 			padding: 0px;
@@ -549,8 +555,8 @@
 				padding: 0.25rem;
 			}
 
-			>span {
-				padding: 0.3rem;
+			span {
+				padding: @common_padding;
 				display: inline-block;
 				word-break: break-word;
 
@@ -564,14 +570,18 @@
 			}
 			.list.view_text {
 				margin: 0px;
-				padding: 0.25rem;
+				padding: @common_padding;
 			}
+		}
+
+		.section_record.view_text {
+			padding: 0px;
 		}
 
 		// has section_record
 		// (!) has pseudo element its only supported by Chrome and Webkit, not by Firefox (October 2022)
 		// &:has(>.section_record) {
-			padding: 0.25rem;
+			padding: 0.2rem;
 			padding-bottom: 0.11rem;
 		// }
 
@@ -579,6 +589,7 @@
 		&:has(.list_body) {
 			.column {
 				box-shadow: none;
+				padding: 0px;
 			}
 		}
 
@@ -689,6 +700,7 @@
 			margin: 0px;
 			padding: 0.5rem;
 			padding-top: 0.25rem;
+			padding-bottom: 0.25rem;
 			border-radius: 0px;
 
 			// justify-content
@@ -706,7 +718,9 @@
 			}
 
 			&.button_delete {
-				padding: 0.63rem;
+				// padding: 0.63rem;
+				// padding: 0.4rem;
+				padding-right: 0.63rem;
 			}
 
 			&:hover {
@@ -738,6 +752,9 @@
 				--font_size: 1.25rem;
 				font-size: var(--font_size);
 
+				height: 1.4rem;
+				line-height: 1.4rem;
+
 				&.small {
 					font-size: 1rem;
 				}
@@ -753,8 +770,8 @@
 
 		>.section_id_container {
 			// padding: 0.75rem;
-			padding: 0.25rem;
-			font-size: 0.95rem;
+			padding: 0.12rem;
+			font-size: 0.96rem;
 			text-align: right;
 			width: 100%;
 		}

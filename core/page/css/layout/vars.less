@@ -1,6 +1,22 @@
 // vars
 
 
+// root. default values of vars could be overwritten from ontology CSS config
+	:root {
+		--component_height: auto; // default components wrapper height
+		--component_width: 50%; // default components wrapper width
+		// general sizes
+		--inspector_width: 18rem;
+		--component_label_height: 1.5rem;
+		--content_data_min_height: 2.66rem; // +/- 47.8px
+		// media heights (3d,av,image,pdf,svg)
+		--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf...) also component_text_area
+		--media_max_height: inherit; // Max height for a component wrapper of media (av, image, pdf...)
+		--view_text_height: 1.2rem;
+		--view_line_height: 5rem;
+	}
+
+
 
 // colors
 	@color_orange_dedalo			: #f78a1c; // Dédalo logo orange
