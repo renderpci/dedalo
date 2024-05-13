@@ -39,14 +39,47 @@ final class component_number_test extends TestCase {
 
 
 	/**
+	* BUILD_COMPONENT_INSTANCE
+	* @return
+	*/
+	private function build_component_instance() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'edit';
+		$lang			= DEDALO_DATA_NOLAN;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo
+		);
+
+		return $component;
+	}//end build_component_instance
+
+
+
+	/////////// ⬇︎ test start ⬇︎ ////////////////
+
+
+
+	/**
 	* TEST_IS_EMPTY
 	* @return void
 	*/
 	public function test_is_empty() {
 
+		$component = $this->build_component_instance();
+
 		// null
 			$value = null;
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				gettype($result)==='boolean',
 				'expected type boolean : ' . PHP_EOL
@@ -60,7 +93,7 @@ final class component_number_test extends TestCase {
 
 		// empty array
 			$value = [];
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===true,
 				'expected value : true' . PHP_EOL
@@ -69,7 +102,7 @@ final class component_number_test extends TestCase {
 
 		// empty array 2
 			$value = [null];
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===true,
 				'expected value : true' . PHP_EOL
@@ -78,7 +111,7 @@ final class component_number_test extends TestCase {
 
 		// non empty array 3
 			$value = [14,null,89];
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===false,
 				'expected value : false' . PHP_EOL
@@ -87,7 +120,7 @@ final class component_number_test extends TestCase {
 
 		// non empty array 4
 			$value = [0];
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===false,
 				'expected value : false' . PHP_EOL
@@ -96,7 +129,7 @@ final class component_number_test extends TestCase {
 
 		// empty 0
 			$value = 0;
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===false,
 				'expected value : false' . PHP_EOL
@@ -105,7 +138,7 @@ final class component_number_test extends TestCase {
 
 		// non empty 0
 			$value = 0;
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===false,
 				'expected value : false' . PHP_EOL
@@ -114,7 +147,7 @@ final class component_number_test extends TestCase {
 
 		// non empty '0'
 			$value = '0';
-			$result = component_number::is_empty($value);
+			$result = $component->is_empty($value);
 			$this->assertTrue(
 				$result===false,
 				'expected value : false' . PHP_EOL

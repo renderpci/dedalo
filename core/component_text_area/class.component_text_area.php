@@ -103,10 +103,10 @@ class component_text_area extends component_common {
 	* IS_EMPTY
 	* Check if given value is or not empty considering
 	* spaces and '<p></p>' as empty values
-	* @param string $value
+	* @param mixed $value
 	* @return bool
 	*/
-	public function is_empty( ?string $value ) : bool {
+	public function is_empty(mixed $value) : bool {
 
 		if(is_null($value)){
 			return true;
@@ -116,11 +116,11 @@ class component_text_area extends component_common {
 			? trim($value)
 			: $value;
 
-		if(empty($value)){
+		if (empty($value)) {
 			return true;
 		}
 
-		if($value === '<p></p>'){
+		if ($value==='<p></p>' || $value==='<br data-mce-bogus="1">') {
 			return true;
 		}
 

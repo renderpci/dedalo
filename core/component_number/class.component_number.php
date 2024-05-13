@@ -40,7 +40,7 @@ class component_number extends component_common {
 	* @param mixed $value
 	* @return bool
 	*/
-	public static function is_empty(mixed $value) : bool {
+	public function is_empty(mixed $value) : bool {
 
 		// null|string cases
 		if (is_null($value) || $value==='') {
@@ -49,12 +49,12 @@ class component_number extends component_common {
 
 		if (is_array($value)) {
 			// one empty element case
-			if (empty($value) || (count($value)===1 && self::is_empty($value[0]))) {
+			if ( empty($value) || (count($value)===1 && $this->is_empty($value[0])) ) {
 				return true;
 			}
 			// if any of the values is not empty, return false
 			foreach ($value as $current_value) {
-				if (self::is_empty($current_value)===false) {
+				if ($this->is_empty($current_value)===false) {
 					return false;
 				}
 			}
@@ -89,7 +89,7 @@ class component_number extends component_common {
 			? count($dato)
 			: 0;
 
-		foreach ((array)$dato as $key => $value) {
+		foreach ((array)$dato as $value) {
 			if($count === 1 && $value === null){
 				continue;
 			}
@@ -97,7 +97,7 @@ class component_number extends component_common {
 		}
 
 		// empty data case
-		if (self::is_empty($format_dato)) {
+		if ($this->is_empty($format_dato)) {
 			$format_dato = null;
 		}
 
@@ -113,7 +113,7 @@ class component_number extends component_common {
 	*/
 	public function set_dato( $dato ) : bool {
 
-		if (self::is_empty($dato)) {
+		if ($this->is_empty($dato)) {
 
 			$safe_dato = null;
 
@@ -136,7 +136,7 @@ class component_number extends component_common {
 			}
 
 			// empty dato case
-			if (self::is_empty($safe_dato)) {
+			if ($this->is_empty($safe_dato)) {
 				$safe_dato = null;
 			}
 		}
@@ -191,7 +191,7 @@ class component_number extends component_common {
 	*/
 	public function set_format_form_type( mixed $dato_value ) : int|float|string|null {
 
-		if( self::is_empty($dato_value) ) {
+		if( $this->is_empty($dato_value) ) {
 			return null;
 		}
 
