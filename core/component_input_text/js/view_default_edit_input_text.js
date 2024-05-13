@@ -133,6 +133,10 @@ const get_content_value = (i, current_value, self) => {
 			placeholder		: (current_value) ? '' : self.data.fallback_value[i],
 			parent			: content_value
 		})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 		// focus event
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
@@ -151,10 +155,6 @@ const get_content_value = (i, current_value, self) => {
 			// input.addEventListener('keyup', function(e) {
 			// 	keyup_handler(e, i, self)
 			// })
-		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
@@ -208,7 +208,11 @@ const get_content_value = (i, current_value, self) => {
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})
-			button_remove.addEventListener('mouseup', function(e) {
+			button_remove.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				e.preventDefault()
+			})
+			button_remove.addEventListener('click', function(e) {
 				e.stopPropagation()
 				remove_handler(input, i, self)
 			})

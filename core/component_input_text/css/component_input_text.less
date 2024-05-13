@@ -14,20 +14,20 @@
 				width: 100%;
 				min-height: 1rem;
 
-				// not first value
-				&:not(:first-of-type) {
-					.input_value:focus {
-						max-width: calc(100% - 2rem);
-					}
-				}
-
 				// input
 				.input_value {
+					width: 100%;
 					position: relative; // solve focus overlapping issues
 					text-overflow: ellipsis;
-
-					&:focus {
-						padding-right: 2rem;
+					padding-right: 0.5rem;
+					margin-right: 0px;
+					z-index: 1;
+					transition: none;
+				}
+				// not first input value
+				&:not(:first-of-type) {
+					.input_value:focus {
+						width: calc(100% - 2rem); // leave space for delete icon
 					}
 				}
 
@@ -36,9 +36,10 @@
 					// position: absolute;
 					// right: 0.5em;
 					// top: 0.5em;
-					// z-index: 1;
+					z-index: 2;
 
 					margin-top: 0.5em;
+					margin-left: 0.75rem;
 				}
 
 				&.has_dataframe {
