@@ -8,10 +8,10 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		input_element_range,
-		input_element_period,
-		input_element_time,
-		input_element_date
+		render_input_element_range,
+		render_input_element_period,
+		render_input_element_time,
+		render_input_element_date
 	} from './render_edit_component_date.js'
 
 
@@ -141,20 +141,20 @@ const get_input_element = (i, current_value, self) => {
 			// build date input  base don date_mode
 			switch(date_mode) {
 				case 'range':
-					return input_element_range(i, current_value, self)
+					return render_input_element_range(i, current_value, self)
 
 				case 'time_range':
-					return input_element_time_range(i, current_value, self)
+					return render_input_element_time_range(i, current_value, self)
 
 				case 'period':
-					return input_element_period(i, current_value, self)
+					return render_input_element_period(i, current_value, self)
 
 				case 'time':
-					return input_element_time(i, current_value, self)
+					return render_input_element_time(i, current_value, self)
 
 				case 'date':
 				default:
-					return input_element_date(i, current_value, self)
+					return render_input_element_date(i, current_value, self)
 			}
 		})()
 

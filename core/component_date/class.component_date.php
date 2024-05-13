@@ -1597,7 +1597,7 @@ class component_date extends component_common {
 				// by default the date order will be year/month/day ymd
 				$ar_tipos	= explode(locator::DELIMITER, $column_name);
 				$order		= $ar_tipos[1] ?? 'ymd';
-				
+
 				$value = [];
 				// explode the possibles rows of the date
 				$ar_date_rows	= explode('|', $import_value);

@@ -246,11 +246,18 @@ export const get_ar_raw_data_value = (self) => {
 
 /**
 * GET_INPUT_DATE_NODE
+* Generic node rendered of date field node
+* @param int i
+* 	component data value array key
+* @param string mode
+* 	values: start|end
+* @param string input_value
+* @param instance self
 * @return HTMLElement input_wrap
 */
 export const get_input_date_node = (i, mode, input_value, self) => {
 
-	// create div end
+	// input_wrap
 		const input_wrap = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'input-group'
@@ -265,8 +272,16 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 			placeholder		: self.get_placeholder_value(),
 			parent			: input_wrap
 		})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
 		// focus event
-			input.addEventListener('focus', function() {
+			input.addEventListener('focus', function(e) {
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
 					ui.component.activate(self, false)
@@ -278,10 +293,8 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					ui.component.deactivate(self)
 				}
 			})
-
 		// change event
-			input.addEventListener('change', fn_change)
-			function fn_change(e) {
+			const fn_change = function(e) {
 				return change_handler({
 					self		: self,
 					input_value	: input.value,
@@ -290,54 +303,47 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 					mode		: mode,
 					type		: 'date'
 				})
-			}//end fn_change
-		// click event. Capture event propagation
-			input.addEventListener('click', (e) => {
-				e.stopPropagation()
-			})
-		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
-			})
+			}
+			input.addEventListener('change', fn_change)
 
 	// button_calendar
-		const button_calendar = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'input-group-addon button calendar hidden_button ',
-			parent			: input_wrap
-		})
-		button_calendar.tabIndex = -1;
-		button_calendar.addEventListener('mousedown', function(e) {
-			e.stopPropagation()
-		})
-		button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
-		function fn_calendar_mouseup() {
-			const dd_date_format = page_globals.dedalo_date_order  || 'dmy'
+		const button_calendar = render_button_calendar()
+		// mouseup event
+			const fn_calendar_mouseup = function() {
 
-			const ar_date_format = (dd_date_format === 'dmy')
-				? ['d','m','Y']
-				: (dd_date_format === 'ymd')
-					? ['Y','m','d']
-					: (dd_date_format === 'mdy')
-						? ['m','d','Y']
-						: ''
-			const date_format = ar_date_format.join(self.date_separator)
-			const default_date = input.value
+				const dd_date_format	= page_globals.dedalo_date_order || 'dmy'
+				const input_wrap		= input.parentNode
 
-			// datePicker
-				const datePicker = flatpickr(button_calendar, {
-					dateFormat	: date_format,
-					defaultDate	: default_date,
-					allowInput	: true,
-					// onClose 	  : close_flatpickr,
-					onValueUpdate : function(selectedDates, dateStr){
-						ui.component.error(false, input_wrap)
-						input.value = dateStr
-						input.dispatchEvent(new Event('change'))
-					}
-				})
-				datePicker.open()
-		}//end fn_calendar_mouseup
+				const ar_date_format = (dd_date_format === 'dmy')
+					? ['d','m','Y']
+					: (dd_date_format === 'ymd')
+						? ['Y','m','d']
+						: (dd_date_format === 'mdy')
+							? ['m','d','Y']
+							: ''
+				const date_format = ar_date_format.join(self.date_separator)
+				const default_date = input.value
+
+				// datePicker
+					const datePicker = flatpickr(button_calendar, {
+						dateFormat	: date_format,
+						defaultDate	: default_date,
+						allowInput	: true,
+						// onClose	: close_flatpickr,
+						onValueUpdate : function(selectedDates, dateStr){
+							// reset style error
+							ui.component.error(false, input_wrap)
+							// set input value
+							input.value = dateStr
+							// fire change event
+							input.dispatchEvent(new Event('change'))
+						}
+					})
+					datePicker.open()
+			}//end fn_calendar_mouseup
+			button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
+		// add to input_wrap
+		input_wrap.appendChild(button_calendar)
 
 
 	return input_wrap
@@ -346,69 +352,191 @@ export const get_input_date_node = (i, mode, input_value, self) => {
 
 
 /**
-* INPUT_ELEMENT_DATE
-* @return HTMLElement node
+* GET_INPUT_TIME_NODE
+* @param int i
+* @param string mode
+* @param string input_value
+* @param instance self
+* @return HTMLElement input_wrap
 */
-export const input_element_date = (i, current_value, self) => {
+export const get_input_time_node = (i, mode, input_value, self) => {
+
+	// input_wrap
+		const input_wrap = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'input-group'
+		})
+
+	// input field
+		const input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_time',
+			value			: input_value,
+			placeholder		: self.get_placeholder_value(),
+			parent			: input_wrap
+		})
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
+		// click event. Capture event propagation
+			input.addEventListener('click', (e) => {
+				e.stopPropagation()
+			})
+		// focus event. Activate the component
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self)
+				}
+			})
+		// keydown event. Prevent to fire page events like open search panel
+			input.addEventListener('keydown', function(e) {
+				if(e.key==='Tab'){
+					ui.component.deactivate(self)
+					return
+				}
+			})
+		// change event
+			const fn_change = function(e) {
+				change_handler({
+					self		: self,
+					input_value	: input.value,
+					key			: i,
+					input_wrap	: input_wrap,
+					mode		: mode,
+					type		: 'time'
+				})
+			}
+			input.addEventListener('change', fn_change)
+
+	// button_calendar
+		const button_calendar = render_button_calendar()
+		// mouseup event
+			const fn_calendar_mouseup = function() {
+				// short vars
+					const default_time		= input.value
+					const ar_time_format	= ['H','i','S']
+					const time_format		= ar_time_format.join(self.time_separator)
+
+				// datePicker
+					const datePicker = flatpickr(button_calendar, {
+						enableTime		: true,
+						noCalendar		: true,
+						time_24hr		: true,
+						enableSeconds	: true,
+						dateFormat		: time_format,
+						defaultDate		: default_time,
+						// onClose		: close_flatpickr,
+						// onValueUpdate
+						onClose			: function(selectedDates, dateStr){
+							// reset style error
+							ui.component.error(false, input_wrap)
+							// set input value
+							input.value = dateStr
+							// fire change event
+							input.dispatchEvent(new Event('change'))
+							// self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
+						}
+					})
+					datePicker.open()
+			}
+			button_calendar.addEventListener('mouseup', fn_calendar_mouseup)
+		// add to input_wrap
+		input_wrap.appendChild(button_calendar)
+
+
+	return input_wrap
+}//end get_input_time_node
+
+
+
+/**
+* RENDER_INPUT_ELEMENT_DATE
+* Render input_element_date (one input)
+* @param int i
+* @param object|null current_value
+* @param instance self
+* @return HTMLElement date_node
+*/
+export const render_input_element_date = (i, current_value, self) => {
 
 	const input_value = (current_value && current_value.start)
 		? self.date_to_string(current_value.start)
 		: ''
 
-	const node = get_input_date_node(i, 'start', input_value, self)
+	// date_node
+		const date_node = get_input_date_node(i, 'start', input_value, self)
 
-	return node
-}//end input_element_date
+	// button_remove
+		if (i>0) {
+			date_node.appendChild(
+				render_button_remove(self, i)
+			)
+		}
+
+	return date_node
+}//end render_input_element_date
 
 
 
 /**
-* INPUT_ELEMENT_RANGE
+* RENDER_INPUT_ELEMENT_RANGE
+* Render inputs element date start and end (two inputs)
+* @param int i
+* @param object|null current_value
+* @param instance self
 * @return HTMLElement DocumentFragment
 */
-export const input_element_range = (i, current_value, self) => {
+export const render_input_element_range = (i, current_value, self) => {
 
 	const fragment = new DocumentFragment()
-
-	// const date_mode = self.get_date_mode()
 
 	const input_value_start	= (current_value && current_value.start)
 		? self.date_to_string(current_value.start)
 		: ''
-	const input_value_end	= (current_value && current_value.end)
+	const input_value_end = (current_value && current_value.end)
 		? self.date_to_string(current_value.end)
 		: ''
 
-	// start node
+	// node_start
 		const node_start = get_input_date_node(i, 'start', input_value_start, self)
 		fragment.appendChild(node_start)
 
 	// dates_separator node
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dates_separator',
-			text_content	: '<>',
-			parent			: fragment
-		})
+		fragment.appendChild(
+			render_dates_separator()
+		)
 
-	// end_node
+	// node_end
 		const node_end = get_input_date_node(i, 'end', input_value_end, self)
 		fragment.appendChild(node_end)
 
+		// button_remove
+			if (i>0) {
+				node_end.appendChild(
+					render_button_remove(self, i)
+				)
+			}
+
 
 	return fragment
-}//end input_element_range
+}//end render_input_element_range
+
 
 
 /**
-* INPUT_ELEMENT_TIME_RANGE
+* RENDER_INPUT_ELEMENT_TIME_RANGE
+* Render inputs element time start and end (two inputs)
+* @param int i
+* @param object|null current_value
+* @param instance self
 * @return HTMLElement DocumentFragment
 */
-export const input_element_time_range = (i, current_value, self) => {
+export const render_input_element_time_range = (i, current_value, self) => {
 
 	const fragment = new DocumentFragment()
-
-	// const date_mode = self.get_date_mode()
 
 	const input_value_start	= (current_value && current_value.start)
 		? self.date_time_to_string(current_value.start)
@@ -422,28 +550,38 @@ export const input_element_time_range = (i, current_value, self) => {
 		fragment.appendChild(node_start)
 
 	// dates_separator node
-		ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'dates_separator',
-			text_content	: '<>',
-			parent			: fragment
-		})
+		fragment.appendChild(
+			render_dates_separator()
+		)
 
 	// end_node
 		const node_end = get_input_time_node(i, 'end', input_value_end, self)
 		fragment.appendChild(node_end)
 
+		// button_remove
+			if (i>0) {
+				node_end.appendChild(
+					render_button_remove(self, i)
+				)
+			}
+
 
 	return fragment
-}//end input_element_time_range
+}//end render_input_element_time_range
 
 
 
 /**
-* INPUT_ELEMENT_PERIOD
-* @return HTMLElement input_wrap
+* RENDER_INPUT_ELEMENT_PERIOD
+* Render inputs element year, month, day (three inputs)
+* @param int i
+* @param object|null current_value
+* @param instance self
+* @return HTMLElement DocumentFragment
 */
-export const input_element_period = (i, current_value, self) => {
+export const render_input_element_period = (i, current_value, self) => {
+
+	const fragment = new DocumentFragment()
 
 	// period
 		const period = (current_value && current_value.period)
@@ -456,26 +594,57 @@ export const input_element_period = (i, current_value, self) => {
 		const day	= (period) ? period.day : ''
 
 	// labels
-		const label_year	= (year!=='' && year>1) 	? get_label.years : get_label.year
-		const label_month	= (month!=='' && month>1) 	? get_label.months : get_label.month
-		const label_day		= (day!=='' && day>1) 		? get_label.days : get_label.day
+		const label_year	= (year!=='' && year>1)		? get_label.years : get_label.year
+		const label_month	= (month!=='' && month>1)	? get_label.months : get_label.month
+		const label_day		= (day!=='' && day>1)		? get_label.days : get_label.day
+
+	// call_change_handler. Unified change_handler caller
+		const call_change_handler = function(e) {
+
+			// fit input width with value
+			ui.fit_input_width_to_value(e.target, e.target.value, 1)
+
+			change_handler({
+				self		: self,
+				input_value	: {
+					day		: input_day.value || null,
+					month	: input_month.value || null,
+					year	: input_year.value || null
+				},
+				key			: i,
+				input_wrap	: input_wrap,
+				mode		: 'period',
+				type		: 'period'
+			})
+		}
 
 	// input-group. create div grouper
 		const input_wrap = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'input-group period'
+			class_name		: 'input-group period',
+			parent			: fragment
 		})
 
 		// year
+			const year_pair_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'pair_container',
+				parent			: input_wrap
+			})
 			const input_year = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'input_period',
 				value			: year,
 				placeholder		: 'Y',
-				parent			: input_wrap
+				parent			: year_pair_container
 			})
-			input_year.addEventListener('focus', function() {
+			input_year.addEventListener('mousedown', (e) => {
+				// force focus before activate the component
+				input_year.focus()
+			})
+			input_year.addEventListener('focus', function(e) {
+				e.stopPropagation()
 				// force activate on input focus (tabulating case)
 				if (!self.active) {
 					ui.component.activate(self)
@@ -486,17 +655,28 @@ export const input_element_period = (i, current_value, self) => {
 			ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: label_year,
-				parent			: input_wrap
+				parent			: year_pair_container
 			})
+			// fit input width with value
+			ui.fit_input_width_to_value(input_year, input_year.value, 2)
 
 		// month
+			const month_pair_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'pair_container',
+				parent			: input_wrap
+			})
 			const input_month = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'input_period',
 				value			: month,
 				placeholder		: 'M',
-				parent			: input_wrap
+				parent			: month_pair_container
+			})
+			input_month.addEventListener('mousedown', (e) => {
+				// force focus before activate the component
+				input_month.focus()
 			})
 			input_month.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
@@ -509,17 +689,26 @@ export const input_element_period = (i, current_value, self) => {
 			ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: label_month,
-				parent			: input_wrap
+				parent			: month_pair_container
 			})
 
 		// day
+			const day_pair_container = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'pair_container',
+				parent			: input_wrap
+			})
 			const input_day = ui.create_dom_element({
 				element_type	: 'input',
 				type			: 'text',
 				class_name		: 'input_period',
 				value			: day,
 				placeholder		: 'D',
-				parent			: input_wrap
+				parent			: day_pair_container
+			})
+			input_day.addEventListener('mousedown', (e) => {
+				// force focus before activate the component
+				input_day.focus()
 			})
 			input_day.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
@@ -527,139 +716,52 @@ export const input_element_period = (i, current_value, self) => {
 					ui.component.activate(self)
 				}
 			})
-
 			input_day.addEventListener('change', call_change_handler)
 			// day label
 			ui.create_dom_element({
 				element_type	: 'label',
 				inner_html		: label_day,
-				parent			: input_wrap
+				parent			: day_pair_container
 			})
 
-		// call_change_handler. Unified change_handler caller
-			function call_change_handler() {
-				change_handler({
-					self		: self,
-					input_value	: {
-						day		: input_day.value || null,
-						month	: input_month.value || null,
-						year	: input_year.value || null
-					},
-					key			: i,
-					input_wrap	: input_wrap,
-					mode		: 'period',
-					type		: 'period'
-				})
-			}
+	// button_remove
+		if (i>0) {
+			input_wrap.appendChild(
+				render_button_remove(self, i)
+			)
+		}
 
-
-	return input_wrap
-}//end input_element_period
+	return fragment
+}//end render_input_element_period
 
 
 
 /**
-* INPUT_ELEMENT_TIME
-* @return HTMLElement node
+* RENDER_INPUT_ELEMENT_TIME
+* Render input element time (one input)
+* @param int i
+* @param object|null current_value
+* @param instance self
+* @return HTMLElement time_node
 */
-export const input_element_time = (i, current_value, self) => {
+export const render_input_element_time = (i, current_value, self) => {
 
 	const input_value = (current_value && current_value.start)
 		? self.time_to_string(current_value.start)
 		: ''
 
-	const node = get_input_time_node(i, 'start', input_value, self)
+	const time_node = get_input_time_node(i, 'start', input_value, self)
 
-	return node
-}//end input_element_time
-
-
-/**
-* GET_INPUT_TIME_NODE
-* @return HTMLElement input_wrap
-*/
-export const get_input_time_node = (i, mode, input_value, self) => {
-
-	// input_wrap. create div end
-		const input_wrap = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'flatpickr input-group'
-		})
-
-	// input
-		const input = ui.create_dom_element({
-			element_type	: 'input',
-			type			: 'text',
-			class_name		: 'input_time',
-			value			: input_value,
-			placeholder		: self.get_placeholder_value(),
-			parent			: input_wrap
-		})
-		input.addEventListener('focus', function() {
-			// force activate on input focus (tabulating case)
-			if (!self.active) {
-				ui.component.activate(self)
-			}
-		})
-		// keydown event. Prevent to fire page events like open search panel
-			input.addEventListener('keydown', function(e) {
-
-				if(e.key==='Tab' ){
-					ui.component.deactivate(self)
-					return
-				}
-			})
-		// change event
-			input.addEventListener('change', function(e){
-				change_handler({
-					self		: self,
-					input_value	: input.value,
-					key			: i,
-					input_wrap	: input_wrap,
-					mode		: mode,
-					type		: 'time'
-				})
-			})
-
-	// button_calendar
-		const button_calendar = ui.create_dom_element({
-			element_type	: 'a',
-			class_name		: 'input-group-addon button calendar hidden_button ',
-			parent			: input_wrap
-		})
-		button_calendar.addEventListener('mouseup', function() {
-
-			// short vars
-				const default_time		= input.value
-				const ar_time_format	= ['H','i','S']
-				const time_format		= ar_time_format.join(self.time_separator)
-
-			// datePicker
-				const datePicker = flatpickr(button_calendar, {
-					enableTime		: true,
-					noCalendar		: true,
-					time_24hr		: true,
-					enableSeconds	: true,
-					dateFormat		: time_format,
-					defaultDate		: default_time,
-					// onClose		: close_flatpickr,
-					// onValueUpdate
-					onClose			: function(selectedDates, dateStr){
-						// reset style error
-						ui.component.error(false, input_wrap)
-						// set input value
-						input.value = dateStr
-						// fire change event
-						input.dispatchEvent(new Event('change'))
-						// self.update_value_flatpickr(selectedDates, dateStr, instance, self, e.target)
-					}
-				})
-				datePicker.open()
-		})
+	// button_remove
+		if (i>0) {
+			time_node.appendChild(
+				render_button_remove(self, i)
+			)
+		}
 
 
-	return input_wrap
-}//end get_input_time_node
+	return time_node
+}//end render_input_element_time
 
 
 
@@ -754,6 +856,108 @@ export const change_handler = function(options) {
 
 	return true
 }//end change_handler
+
+
+
+/**
+* RENDER_BUTTON_REMOVE
+* @param object self
+* @param HTMLElement input_node
+* @param int key
+* @return HTMLELement button_remove_container
+*/
+const render_button_remove = function (self, key) {
+
+	// fn_mousedown manager
+		const fn_mousedown = (e) => {
+			e.stopPropagation()
+
+			// force possible input change before remove
+			document.activeElement.blur()
+
+			if (!confirm(get_label.sure)) {
+				return false
+			}
+
+			const changed_data = [Object.freeze({
+				action	: 'remove',
+				key		: key,
+				value	: null
+			})]
+			self.change_value({
+				changed_data	: changed_data,
+				label			: null,
+				refresh			: true
+			})
+		}
+
+	// button_remove_container
+		const button_remove_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button_container button_remove_container hidden_button'
+		})
+		// mousedown event
+		button_remove_container.addEventListener('mousedown', fn_mousedown)
+
+	// button_remove
+		const button_remove = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button remove',
+			parent			: button_remove_container
+		})
+		button_remove.tabIndex = -1;
+
+
+	return button_remove_container
+}//end render_button_remove
+
+
+
+/**
+* RENDER_BUTTON_CALENDAR
+* @return HTMLElement button_calendar_container
+*/
+const render_button_calendar = function () {
+
+	// button_calendar_container
+		const button_calendar_container = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button_container button_calendar_container hidden_button'
+		})
+		// mousedown event
+		button_calendar_container.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+		})
+
+	// button_calendar
+		const button_calendar = ui.create_dom_element({
+			element_type	: 'a',
+			class_name		: 'input-group-addon button calendar',
+			parent			: button_calendar_container
+		})
+		button_calendar.tabIndex = -1;
+
+
+	return button_calendar_container
+}//end render_button_calendar
+
+
+
+/**
+* RENDER_DATES_SEPARATOR
+* @return HTMLElement dates_separator_node
+*/
+const render_dates_separator = function () {
+
+	const dates_separator_node = ui.create_dom_element({
+		element_type	: 'span',
+		class_name		: 'dates_separator',
+		text_content	: '<>'
+	})
+
+
+	return dates_separator_node
+}//end render_dates_separator
 
 
 

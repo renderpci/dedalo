@@ -198,7 +198,9 @@ export const ui = {
 					const mousedown_handler = (e)=> {
 						e.stopPropagation()
 
-						ui.component.activate(instance)
+						if (!instance.active) {
+							ui.component.activate(instance)
+						}
 
 						if(SHOW_DEBUG===true) {
 							if (e.metaKey && e.altKey) {
@@ -703,23 +705,47 @@ export const ui = {
 						// custom function from component like component_text_area
 						component.focus_first_input()
 					}else{
-						// generic try of first input node
-						const first_input = component.node.content_data && component.node.content_data[0]
-							? component.node.content_data[0].querySelector('input, select')
-							: null;
-						if (first_input) {
-							setTimeout(function(){
-								if (component.active && first_input !== document.activeElement) {
 
-									// check another focus elements like q_operator
-									if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
-										return
-									}
-
-									first_input.focus()
+						// check if any component input is already focused
+							const already_focus = (()=>{
+								if (!document.activeElement) {
+									return false
 								}
-							}, 25)
-						}
+								const all_inputs = component.node.content_data && component.node.content_data
+									? component.node.content_data.querySelectorAll('input, select')
+									: [];
+								const all_inputs_length = all_inputs.length
+								for (let i = 0; i < all_inputs_length; i++) {
+									if (document.activeElement === all_inputs[i]) {
+										return true
+									}
+								}
+								return false
+							})()
+
+						// auto-focus first input
+							if (!already_focus) {
+								// generic try of first input node
+								// const first_input = component.node.content_data && component.node.content_data[0]
+								// 	? component.node.content_data[0].querySelector('input, select')
+								// 	: null;
+								const first_input = component.node.content_data && component.node.content_data[0]
+										? component.node.content_data[0].querySelector('input, select')
+										: null;
+								if (first_input) {
+									setTimeout(function(){
+										if (component.active && first_input !== document.activeElement) {
+
+											// check another focus elements like q_operator
+											if (document.activeElement && document.activeElement.classList.contains('q_operator')) {
+												return
+											}
+
+											first_input.focus()
+										}
+									}, 25)
+								}
+							}//end if (!already_focus)
 					}
 				}
 
@@ -3369,6 +3395,28 @@ export const ui = {
 			button.active_tooltip = true
 		}
 	},//end activate_tooltips
+
+
+
+	/**
+	* FIT_INPUT_WIDTH_TO_VALUE
+	* Set input element style width based on number length of chars
+	* (!) Use monospace font to preserve char width when fit
+	* @param DOM node input_node
+	* @param int|string value
+	* @param int plus = 0
+	* @return void
+	*/
+	fit_input_width_to_value : function(input_node, value, plus=0) {
+
+		const chars = value
+			? value.toString().length + plus
+			: 0 + plus
+
+		if (chars>0) {
+			input_node.style.width = chars + 'ch';
+		}
+	}//end fit_input_width_to_value
 
 
 
