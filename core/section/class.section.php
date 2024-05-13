@@ -2222,6 +2222,8 @@ class section extends common {
 	*/
 	public function get_publication_date(string $component_tipo) : ?string {
 
+		$local_date = null;
+
 		// tipos
 			$section_id		= $this->section_id;
 			$section_tipo	= $this->tipo;
@@ -2239,16 +2241,11 @@ class section extends common {
 			$dato = $component->get_dato();
 
 		// local_date
-			if (empty($dato)) {
+			if (!empty($dato) && !empty($dato[0]) && !empty($dato[0]->start)) {
 
-				$local_date = null;
-
-			}else{
-
-				$current_date	= reset($dato);
-				$dd_date		= new dd_date($current_date->start);
-				$timestamp		= $dd_date->get_dd_timestamp();
-				$local_date		= dd_date::timestamp_to_date($timestamp, true); // string|null
+				$dd_date	= new dd_date($dato[0]->start);
+				$timestamp	= $dd_date->get_dd_timestamp();
+				$local_date	= dd_date::timestamp_to_date($timestamp, true); // string|null
 			}
 
 

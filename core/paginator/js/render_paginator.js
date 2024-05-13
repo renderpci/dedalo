@@ -231,7 +231,7 @@ const get_content_data = async function(self) {
 						input_go_to_page.classList.remove('invalid')
 					}
 					input_go_to_page.value = null
-					fit_input_go_to_page_to_value(input_go_to_page, page_number)
+					fit_input_go_to_page_to_value(input_go_to_page, self.page_number)
 				})
 				input_go_to_page.addEventListener('input', function(e) {
 					e.preventDefault()

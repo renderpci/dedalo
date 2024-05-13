@@ -9,7 +9,7 @@ const t0 = performance.now()
 	import {events_init} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
+	// import {url_vars_to_object, JSON_parse_safely} from '../../common/js/utils/index.js'
 	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {render_page} from '../js/render_page.js'
 	// import {config_client} from '../../../config/config_client.js' // working here !
