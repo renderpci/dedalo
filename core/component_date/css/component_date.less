@@ -137,8 +137,10 @@
 						text-align: center;
 					}
 					&.input_date {
-						letter-spacing: 0.05em;
-						font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+						// letter-spacing: 0.05em;
+						// font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+						// date format (from general less) set common font family and letter-spacing
+						.fn_date_format()
 					}
 					&.input_time {
 						letter-spacing: 0.1em;
@@ -235,7 +237,8 @@
 
 
 	&.list {
-		// padding: 0.33rem;
+		// date format (from general less) set common font family and letter-spacing
+		.fn_date_format()
 	}
 
 	&.search {
