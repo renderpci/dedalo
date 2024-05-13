@@ -2958,11 +2958,14 @@ abstract class component_common extends common {
 
 	/**
 	* EXTRACT_COMPONENT_DATO_FALLBACK
+	* @param object $component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return array $dato_fb
 	*/
 	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
 
-		// get and store initial lang
+		// get and store initial lang to restore later
 			$inital_lang = $component->get_lang();
 
 		// Try direct dato

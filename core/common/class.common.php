@@ -2229,6 +2229,16 @@ abstract class common {
 											$new_request_config_object = array_find($component_request_config, function($el) use($api_engine){
 												return $el->api_engine===$api_engine;
 											});
+											if (empty($new_request_config_object) || !is_object($new_request_config_object)) {
+												// debug_log(__METHOD__
+												// 	. " Error. Expected request config but value is empty from component_request_config " . PHP_EOL
+												// 	. ' tipo: ' 	 . $this->tipo . PHP_EOL
+												// 	. ' dd_object: ' . to_string($dd_object) . PHP_EOL
+												// 	. ' component_request_config: ' .PHP_EOL. json_encode($component_request_config, JSON_PRETTY_PRINT) . PHP_EOL
+												// 	, logger::ERROR
+												// );
+												continue;
+											}
 
 										// set the ddo_map with the new config
 											if (!empty($children_show)) {
@@ -2673,7 +2683,7 @@ abstract class common {
 			$dedalo_request_config = array_find($request_config, function($el){
 				return isset($el->api_engine) && $el->api_engine==='dedalo';
 			});
-			if (!empty($dedalo_request_config)) {
+			if (is_object($dedalo_request_config)) {
 
 				// fix missing type
 				$dedalo_request_config->type = $dedalo_request_config->type ?? 'main';
@@ -3048,7 +3058,15 @@ abstract class common {
 					// show (mandatory). In list mode it's possible to create specific ddo_map in a section_list term child of the portal or section.
 
 						// set show with the parsed request_config
-							$parsed_item->show = $item_request_config->show;
+							$parsed_item->show = $item_request_config->show ?? null;
+							if (empty($parsed_item->show)) {
+								debug_log(__METHOD__
+									. " Error. Expected request_config->show but is empty. Adding empty object to prevent crash " . PHP_EOL
+									. ' parsed_item: ' .PHP_EOL. json_encode($parsed_item, JSON_PRETTY_PRINT) . PHP_EOL
+									, logger::ERROR
+								);
+								$parsed_item->show = new stdClass();
+							}
 
 						// get_ddo_map. Get the ddo_map from ontology, defined by specific term, like "section_map"
 						// see sample at 'numisdata656' or 'dmm26'
@@ -3491,7 +3509,11 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									# Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+										$current_term, // string tipo
+										true, // bool cache
+										true // bool simple
+									);
 								}
 							}
 							break;
@@ -3504,7 +3526,11 @@ abstract class common {
 								if(isset($ar_terms[0])) {
 									# Use found related terms as new list
 									$current_term = $ar_terms[0];
-									$ar_related   = (array)RecordObj_dd::get_ar_terminos_relacionados($current_term, $cache=true, $simple=true);
+									$ar_related   = RecordObj_dd::get_ar_terminos_relacionados(
+										$current_term, // string tipo
+										true, // bool cache
+										true // bool simple
+									);
 								}
 							}elseif (in_array($model, common::$groupers)) {
 								// groupers
@@ -3522,7 +3548,7 @@ abstract class common {
 									// Use found section_list related terms as new list
 									$current_term	= $ar_terms[0];
 									$ar_related		= RecordObj_dd::get_ar_terminos_relacionados(
-										$current_term,
+										$current_term, // string tipo
 										true, // bool cache
 										true // bool simple
 									);
@@ -3550,7 +3576,7 @@ abstract class common {
 								}else{
 									// Fallback related when section list is not defined; portal case.
 									$ar_related = RecordObj_dd::get_ar_terminos_relacionados(
-										$tipo,
+										$tipo, // string tipo
 										true, // bool cache
 										true // bool simple
 									);

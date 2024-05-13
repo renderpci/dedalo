@@ -179,7 +179,6 @@ class component_input_text extends component_common {
 		// flat_fallback_value (array of one value full resolved)
 			$flat_fallback_value = [implode($records_separator, $fallback_value)];
 
-
 		// class_list
 			$class_list = $ddo->class_list ?? null;
 

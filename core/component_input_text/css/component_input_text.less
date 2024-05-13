@@ -14,6 +14,13 @@
 				width: 100%;
 				min-height: 1rem;
 
+				// not first value
+				&:not(:first-of-type) {
+					.input_value:focus {
+						max-width: calc(100% - 2rem);
+					}
+				}
+
 				// input
 				.input_value {
 					position: relative; // solve focus overlapping issues
@@ -46,10 +53,16 @@
 					color: @color_orange_dedalo;
 					opacity: 0.65;
 					// font-style: oblique;
+					width: 100%;
+					padding-bottom: 0.5rem;
 				}
 
 			}
+
+
 		}
+
+
 	}//end .edit
 
 	&.view_ip {
