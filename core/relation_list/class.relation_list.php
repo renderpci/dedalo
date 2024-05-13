@@ -188,7 +188,8 @@ class relation_list extends common {
 						DEDALO_DATA_LANG,
 						$section_tipo
 					);
-					$value = $current_component->get_valor();
+					// $value = $current_component->get_valor();
+					$value = $current_component->get_value();
 
 					$component_object = new stdClass;
 						$component_object->section_tipo		= $section_tipo;
@@ -714,7 +715,8 @@ class relation_list extends common {
 							$this->section_tipo
 						);
 						$current_component->set_dato($current_locator); // force set dato
-						$ar_value[] = $current_component->get_valor();
+						// $ar_value[] = $current_component->get_valor();
+						$ar_value[] = $current_component->get_value();
 					}
 
 				// diffusion_value as string or array (default array)
