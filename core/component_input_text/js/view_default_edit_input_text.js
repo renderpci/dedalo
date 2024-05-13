@@ -140,7 +140,6 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self, false)
 				}
 			})
-
 		// keydown event
 			input.addEventListener('keydown', function(e) {
 				if(e.key==='Tab' ){
@@ -148,37 +147,22 @@ const get_content_value = (i, current_value, self) => {
 					return
 				}
 			})
-
 		// keyup event
 			// input.addEventListener('keyup', function(e) {
 			// 	keyup_handler(e, i, self)
 			// })
-
 		// mousedown event. Capture event propagation
 			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
 			})
-
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
-
 		// change event
 			input.addEventListener('change',(e) => {
 				change_handler(e, i, self)
 			})//end fn_change
-
-		// transliterate value
-			if(with_lang_versions){
-				const transliterate_value = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'transliterate_value',
-					inner_html		: self.data.transliterate_value,
-					parent			: content_value
-				})
-			}
-
 		// blur event
 			// input.addEventListener('blur', function() {
 			// 	// force to save current input if changed (prevents override changed_data
@@ -217,7 +201,7 @@ const get_content_value = (i, current_value, self) => {
 			// })
 
 	// button remove. Triggered by wrapper delegated events
-		if(i>0) {
+		if (i>0) {
 			// button_remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
@@ -229,6 +213,16 @@ const get_content_value = (i, current_value, self) => {
 				remove_handler(input, i, self)
 			})
 		}// end if(mode)
+
+	// transliterate_value
+		if (with_lang_versions) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'transliterate_value',
+				inner_html		: self.data.transliterate_value,
+				parent			: content_value
+			})
+		}
 
 
 	// component_dataframe
