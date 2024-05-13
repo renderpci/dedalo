@@ -18,34 +18,38 @@
 			float: right;
 			display: flex;
 
-			.relation_list_paginator_current {
+			// current paginator_page_info like 'Page 1'
+			>.paginator_page_info {
 				margin-left: 4px;
 			}
 
-			.relation_list_paginator_next {
-				.fn_build_button('play.svg', black, 1, 1em);
-				transform: scale(0.90);
-			}
-
-			.relation_list_paginator_previous {
-				.fn_build_button('play.svg', black, 1, 1em);
-				transform: scale(0.90) rotate(180deg);
-			}
-
-			.relation_list_paginator_next, .relation_list_paginator_previous {
+			// buttons
+			>.button {
 				display: inline-block;
+				z-index: 1;
 				// height: 1rem;
 				// width: 1rem;
 				margin: 0px;
 				margin-left: 0.5rem;
 				padding: 0px;
 				opacity: 0.5;
-			}
+				.fn_build_button('play.svg', black, 1, 1em);
+				cursor: pointer;
 
-			.relation_list_paginator_offset_off {
-				opacity: 0.1;
-				pointer-events: none;
-				cursor: default;
+				&.relation_list_paginator_next {
+					transform: scale(0.90);
+				}
+
+				&.relation_list_paginator_previous {
+					transform: scale(0.90) rotate(180deg);
+				}
+
+				// unactive case
+				&.relation_list_paginator_offset_off {
+					opacity: 0.1;
+					pointer-events: none;
+					cursor: default;
+				}
 			}
 		}
 	}
