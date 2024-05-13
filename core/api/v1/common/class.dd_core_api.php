@@ -1191,7 +1191,7 @@ final class dd_core_api {
 							case 'insert': // from service_autocomplete choose selection
 
 								// pagination
-									$total	= count($dato);
+									$total	= empty($dato) ? 0 : count($dato);
 									$limit	= isset($component->pagination->limit)
 										? (int)$component->pagination->limit
 										: 10;
