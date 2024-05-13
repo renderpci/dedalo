@@ -668,6 +668,12 @@ page.prototype.add_events = function() {
 					break;
 				}
 
+				case (evt.ctrlKey===true && evt.key==='i'): {
+					// inspector toggle
+						ui.toggle_inspector()
+					break;
+				}
+
 				default:
 					break;
 			}//end switch
