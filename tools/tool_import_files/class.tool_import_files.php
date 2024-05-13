@@ -411,6 +411,10 @@ class tool_import_files extends tool_common {
 			$target_ddo_component = array_find($ar_ddo_map, function($item){
 				return $item->role==='target_component';
 			});
+			if (!is_object($target_ddo_component)) {
+				$response->msg .= ' Invalid target_component';
+				return $response;
+			}
 			$target_component_tipo	= $target_ddo_component->tipo;
 			$target_component_model	= RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
 
@@ -419,7 +423,7 @@ class tool_import_files extends tool_common {
 
 		// init vars
 			$ar_msg							= [];	// messages for response info
-			$imput_components_section_tipo	= [];	// all different used section tipo in section_temp
+			$input_components_section_tipo	= [];	// all different used section tipo in section_temp
 			$total_processed				= 0;
 			$total							= count($files_data);	// n of files
 			$counter						= 0;
@@ -472,6 +476,7 @@ class tool_import_files extends tool_common {
 						common::$pdata->errors[] = $msg;
 						continue; // Skip file
 					}
+
 				// Check proper mode config
 					if ($import_file_name_mode==='enumerate' && $import_mode!=='section') {
 						$msg = "Invalid import mode: $import_mode . Ignored action";
@@ -512,7 +517,7 @@ class tool_import_files extends tool_common {
 								$file_data['regex']->base_name = empty($file_data['regex']->base_name)
 									? $file_data['regex']->section_id
 									: $file_data['regex']->base_name;
-						
+
 								$ar_filter_result = array_filter($ar_processed, function($element) use($file_data) {
 									return $file_data['regex']->base_name === $element->file_data['regex']->base_name;
 								});
@@ -658,18 +663,57 @@ class tool_import_files extends tool_common {
 
 							case 'input_component':
 
-								// imput_components_section_tipo store
-									if(!in_array($ddo->section_tipo, $imput_components_section_tipo)){
-										$imput_components_section_tipo[] = $ddo->section_tipo;
+								// input_components_section_tipo store
+									if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+										$input_components_section_tipo[] = $ddo->section_tipo;
 									}
 
-								// component_data. Get from request and save
-									$component_data = array_find($components_temp_data, function($item) use($ddo){
-										return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-									});
-									if(!empty($component_data) && !empty($component_data->value)){
-										$component->set_dato($component_data->value);
-										$component->Save();
+								// component_data save
+									$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
+									if ($is_translatable===false) {
+
+										// use value from request
+
+										// component_data. Get from request and save
+										$component_data = array_find($components_temp_data, function($item) use($ddo){
+											return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
+										});
+										if(is_object($component_data) && !empty($component_data->value)){
+											$component->set_dato($component_data->value);
+											$component->Save();
+										}
+
+									}else{
+
+										// get value from instances of the temporal component in each lang
+
+										$temp_component = component_common::get_instance(
+											$model,
+											$ddo->tipo,
+											DEDALO_SECTION_ID_TEMP,
+											'list',
+											$current_lang,
+											$ddo->section_tipo
+										);
+
+										$ar_langs		= $temp_component->get_component_ar_langs();
+										$original_lang	= $current_lang;
+										foreach ($ar_langs as $current_lang) {
+
+											$temp_component->set_lang($current_lang);
+											$temp_dato = $temp_component->get_dato();
+
+											if (empty($temp_dato)) {
+												continue;
+											}
+
+											// apply value
+											$component->set_lang($current_lang);
+											$component->set_dato($temp_dato);
+											$component->Save();
+										}
+										// restore lang
+										$component->set_lang($original_lang);
 									}
 
 								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
@@ -703,21 +747,21 @@ class tool_import_files extends tool_common {
 					}//end foreach ($ar_ddo_map as $ddo)
 
 				// file_processor
-					// Global var button properties json data array
+					// Global var button properties JSON data array
 					// Optional additional file script processor defined in button import properties
-					// Note that var $file_processor_properties is the button properties json data, NOT current element processor selection
+					// Note that var $file_processor_properties is the button properties JSON data, NOT current element processor selection
 					if (!empty($current_file_processor) && !empty($file_processor_properties)) {
 						$processor_options = new stdClass();
 							$processor_options->file_processor				= $current_file_processor;
 							$processor_options->file_processor_properties	= $file_processor_properties;
-							# Standard arguments
+							// Standard arguments
 							$processor_options->file_name					= $current_file_name;
 							$processor_options->file_path					= $tmp_dir;
 							$processor_options->section_tipo				= $section_tipo;
 							$processor_options->section_id					= $section_id;
 							$processor_options->target_section_tipo			= $target_section_tipo;
 							$processor_options->tool_config					= $tool_config;
-						$response_file_processor = tool_import_files::file_processor($processor_options);
+						tool_import_files::file_processor($processor_options);
 					}//end if (!empty($file_processor_properties))
 
 				// set_media_file. Move uploaded file to media folder and create default versions
@@ -764,7 +808,7 @@ class tool_import_files extends tool_common {
 			}//end foreach ((array)$files_data as $key => $value_obj)
 
 		// Reset the temporary section of the components, for empty the fields.
-			foreach ($imput_components_section_tipo as $current_section_tipo) {
+			foreach ($input_components_section_tipo as $current_section_tipo) {
 				$temp_data_uid = $current_section_tipo .'_'. DEDALO_SECTION_ID_TEMP; // Like 'rsc197_tmp'
 				if (isset($_SESSION['dedalo']['section_temp_data'][$temp_data_uid])) {
 					unset( $_SESSION['dedalo']['section_temp_data'][$temp_data_uid]);
