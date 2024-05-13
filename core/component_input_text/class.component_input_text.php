@@ -113,12 +113,12 @@ class component_input_text extends component_common {
 
 	/**
 	* IS_EMPTY
-	* @param string $value
+	* @param mixed $value
 	* Check if given value is or not empty considering
 	* spaces and '<p></p>' as empty values
 	* @return bool
 	*/
-	public function is_empty(?string $value) : bool {
+	public function is_empty(mixed $value) : bool {
 
 		if(is_null($value)) {
 			return true;

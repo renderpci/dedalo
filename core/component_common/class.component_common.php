@@ -4301,4 +4301,33 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* IS_EMPTY
+	* Generic check if given value is or not empty considering
+	* @param mixed $value
+	* @return bool
+	*/
+	public function is_empty(mixed $value) : bool {
+
+		// null case
+			if(is_null($value)){
+				return true;
+			}
+
+		// string length 0 case
+			$value = is_string($value)
+				? trim($value)
+				: $value;
+
+		// common empty check
+			if(empty($value)){
+				return true;
+			}
+
+
+		return false;
+	}//end is_empty
+
+
+
 }//end class component_common

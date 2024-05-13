@@ -122,7 +122,7 @@
 				case 'list':
 				case 'tm':
 					$value			= $this->get_list_value();
-					$fallback_value	= (empty($value[0]) || ($value[0]==='<br data-mce-bogus="1">'))
+					$fallback_value	= (empty($value[0]) || $this->is_empty($value[0]))
 						? $this->get_fallback_list_value((object)['max_chars'=>200])
 						: null;
 					break;
