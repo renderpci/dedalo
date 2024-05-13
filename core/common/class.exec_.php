@@ -315,11 +315,6 @@ class exec_ {
 			foreach ($params as $key => $value) {
 				$safe_params->{$key} = safe_xss($value);
 			}
-			$safe_params_string = json_encode($safe_params);
-			// replace single quotes by the URL encoding value %27
-			$safe_params_string = str_replace("'", '%27', $safe_params_string);
-			// restore object safe_params after escape it
-			$safe_params = json_decode($safe_params_string);
 
 		// server_vars
 			// sh_data mandatory vars
@@ -346,7 +341,7 @@ class exec_ {
 			$process_runner	= DEDALO_CORE_PATH . '/base/process_runner.php';
 
 		// command composition
-			$cmd		= PHP_BIN_PATH . " $process_runner '$server_vars' ";
+			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg($server_vars);
 			$command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
 
 			// debug
