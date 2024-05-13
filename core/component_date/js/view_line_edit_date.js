@@ -8,11 +8,11 @@
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_value_read,
-		input_element_date,
-		input_element_range,
-		input_element_time_range,
-		input_element_period,
-		input_element_time
+		render_input_element_date,
+		render_input_element_range,
+		render_input_element_time_range,
+		render_input_element_period,
+		render_input_element_time
 		// get_input_date_node
 	} from './render_edit_component_date.js'
 
@@ -133,20 +133,20 @@ const get_content_value = (i, current_value, self) => {
 			// build date base on date_mode
 			switch(date_mode) {
 				case 'range':
-					return input_element_range(i, current_value, self)
+					return render_input_element_range(i, current_value, self)
 
 				case 'time_range':
-					return input_element_time_range(i, current_value, self)
+					return render_input_element_time_range(i, current_value, self)
 
 				case 'period':
-					return input_element_period(i, current_value, self)
+					return render_input_element_period(i, current_value, self)
 
 				case 'time':
-					return input_element_time(i, current_value, self)
+					return render_input_element_time(i, current_value, self)
 
 				case 'date':
 				default:
-					return input_element_date(i, current_value, self)
+					return render_input_element_date(i, current_value, self)
 			}
 		})()
 

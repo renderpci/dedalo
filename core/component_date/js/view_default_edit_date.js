@@ -5,14 +5,16 @@
 
 
 // imports
+	// import {event_manager} from '../../common/js/event_manager.js'
+	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_value_read,
-		input_element_date,
-		input_element_range,
-		input_element_time_range,
-		input_element_period,
-		input_element_time
+		render_input_element_date,
+		render_input_element_range,
+		render_input_element_time_range,
+		render_input_element_period,
+		render_input_element_time
 	} from './render_edit_component_date.js'
 
 
@@ -90,6 +92,7 @@ export const get_content_data = function(self) {
 		const content_data = ui.component.build_content_data(self)
 
 	// build values
+		const input_nodes = []
 		const inputs_value	= (value.length<1) ? [''] : value
 		const value_length	= inputs_value.length
 		for (let i = 0; i < value_length; i++) {
@@ -99,6 +102,7 @@ export const get_content_data = function(self) {
 			content_data.appendChild(input_element_edit)
 			// set pointers
 			content_data[i] = input_element_edit
+			input_nodes.push(input_element_edit)
 		}
 
 
@@ -108,13 +112,16 @@ export const get_content_data = function(self) {
 
 
 /**
-* get_content_value
+* GET_CONTENT_VALUE
 * @param int i
 * @param object|null current_value
 * @param object self
 * @return HTMLElement content_value
 */
 export const get_content_value = (i, current_value, self) => {
+
+	// date mode
+		const date_mode	= self.get_date_mode()
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -123,57 +130,33 @@ export const get_content_value = (i, current_value, self) => {
 		})
 
 	// input node
-		const input_node = (()=>{
-
-			// date mode
-			const date_mode	= self.get_date_mode()
+		const input_node = ((date_mode)=>{
 
 			// build date base on date_mode
 			switch(date_mode) {
 				case 'range':
-					return input_element_range(i, current_value, self)
+					return render_input_element_range(i, current_value, self)
 
 				case 'time_range':
-					return input_element_time_range(i, current_value, self)
+					return render_input_element_time_range(i, current_value, self)
 
 				case 'period':
-					return input_element_period(i, current_value, self)
+					return render_input_element_period(i, current_value, self)
 
 				case 'time':
-					return input_element_time(i, current_value, self)
+					return render_input_element_time(i, current_value, self)
 
 				case 'date':
 				default:
-					return input_element_date(i, current_value, self)
+					return render_input_element_date(i, current_value, self)
 			}
-		})()
+		})(date_mode)
+
+	// set class selector
+		content_value.classList.add(date_mode)
 
 	// add input_node to the content_value
 		content_value.appendChild(input_node)
-
-	// button remove
-		const remove_node = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove hidden_button',
-			parent			: content_value
-		})
-		remove_node.addEventListener('mouseup', function(){
-			// force possible input change before remove
-			document.activeElement.blur()
-
-			const current_value = input_node.value ? input_node.value : null
-
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				key		: i,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				label			: current_value,
-				refresh			: true
-			})
-		})
 
 
 	return content_value
@@ -216,15 +199,6 @@ const get_buttons = (self) => {
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
-				})
-				.then(()=>{
-					const inputs_container = self.node.content_data.inputs_container
-
-					// add new DOM input element
-					const new_input = get_content_value(changed_data.key, changed_data.value, self)
-					inputs_container.appendChild(new_input)
-					// set the pointer
-					inputs_container[changed_data.key] = new_input
 				})
 			})
 		}
