@@ -2970,17 +2970,21 @@ abstract class component_common extends common {
 
 		// Try direct dato
 			$dato = $component->get_dato();
-			$dato = !empty($dato)
-				? $dato
-				: [null];
+			if (empty($dato)) {
+				// set one null value to force iterate data
+				$dato = [null];
+			}
 
+		// fallback if empty
 		$dato_fb = [];
-		// fallback if empty (or is annoying mce-bogus code from tinyMCE editor)
-		foreach ((array)$dato as $key => $value) {
-			if(empty($value) || $value==='<br data-mce-bogus="1">'){
+		foreach ($dato as $key => $value) {
+
+			// if(empty($value) || $value==='<br data-mce-bogus="1">'){
+			if( $component->is_empty($value)===true ){
 
 				// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
-					if ($lang!==$main_lang) {
+					if ($lang!==$main_lang || $component->with_lang_versions===true) {
+						// change temporally the component lang
 						$component->set_lang($main_lang);
 						$dato_lang = $component->get_dato();
 						$dato_fb[$key] = isset($dato_lang[$key])
@@ -2990,11 +2994,16 @@ abstract class component_common extends common {
 
 				// Try nolan
 					if (empty($dato_fb[$key])) {
+						// change temporally the component lang
 						$component->set_lang(DEDALO_DATA_NOLAN);
-						$dato_lang = $component->get_dato(DEDALO_DATA_NOLAN);
+						$dato_lang = $component->get_dato();
 						$dato_fb[$key] = isset($dato_lang[$key])
 							? $dato_lang[$key]
 							: null;
+
+							if ($component->tipo==='rsc116') {
+								dump($dato_fb, ' dato_fb ++ lang: '. DEDALO_DATA_NOLAN. ' - '.to_string($component->tipo));
+							}
 					}
 
 				// Try all projects langs sequence
@@ -3004,14 +3013,20 @@ abstract class component_common extends common {
 							if ($current_lang===$lang || $current_lang===$main_lang) {
 								continue; // Already checked
 							}
+							// change temporally the component lang
 							$component->set_lang($current_lang);
-							$dato_lang = $component->get_dato($current_lang);
+							$dato_lang = $component->get_dato();
 							$dato_fb[$key] = isset($dato_lang[$key])
 								? $dato_lang[$key]
 								: null;
-							if (!empty($dato_fb[$key])) break; # Stops when first data is found
+
+							// useful value is found
+							if (!empty($dato_fb[$key])) {
+								break; // Stops when any data is found
+							}
 						}
 					}
+
 				// empty case
 					if (empty($dato_fb[$key])) {
 						$dato_fb[$key] = null;
