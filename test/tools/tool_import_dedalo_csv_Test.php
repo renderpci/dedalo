@@ -435,7 +435,19 @@ final class tool_import_dedalo_csv_Test extends TestCase {
 				);
 
 			// target file
-				$target_file = tool_import_dedalo_csv::get_files_path() .'/'. $file_name;
+				$target_dir		= tool_import_dedalo_csv::get_files_path();
+				$target_file	= $target_dir .'/'. $file_name;
+
+			// target directory
+				if (!is_dir($target_dir)) {
+					if( !mkdir($target_dir, 0750, true) ) {
+						debug_log(__METHOD__
+							. " Error. Unable to create directory " . PHP_EOL
+							. ' target_dir: ' . to_string($target_dir)
+							, logger::ERROR
+						);
+					}
+				}
 
 				$copy = copy($source_test_file, $target_file);
 				if (!$copy) {
