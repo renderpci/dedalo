@@ -42,7 +42,7 @@ render_relation_list.prototype.edit = async function(options={render_level:'full
 	// wrapper relation_list
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'wrapper_relation_list relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
+			class_name		: 'wrapper_relation_list ' + self.model + ' ' + self.tipo + ' ' + self.mode
 		})
 		wrapper.appendChild(current_content_data)
 
@@ -275,11 +275,11 @@ const parse_paginator_html = async function(self, wrapper) {
 			parent			: paginator
 		})
 
-	// create a paginator current record
-		const currrent_record = ui.create_dom_element({
+	// create a paginator_page_info
+		const paginator_page_info = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'relation_list_paginator_current',
-			text_node		: get_label['page']+ ': ' +current_page,
+			class_name		: 'paginator_page_info',
+			text_node		: get_label['page'] + ': ' + current_page,
 			parent			: paginator_buttons
 		})
 
