@@ -1134,7 +1134,9 @@ export const activate_autocomplete = async function(self, wrapper) {
 			// document.body.appendChild(autocomplete_node)
 			self.autocomplete_active = true
 			// focus
-			self.autocomplete.search_input.focus({preventScroll:true});
+			if (self.autocomplete.search_input) {
+				self.autocomplete.search_input.focus({preventScroll:true});
+			}
 		}//end if(self.autocomplete_active!==undefined && self.autocomplete_active===false)
 
 

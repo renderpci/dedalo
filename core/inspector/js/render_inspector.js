@@ -502,7 +502,10 @@ export const render_section_info = function(self) {
 			})
 			tipo_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( section_tipo )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( section_tipo )
+				}
 			})
 
 	// info
@@ -541,7 +544,10 @@ export const render_section_info = function(self) {
 			})
 			model_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( section.model )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( section.model )
+				}
 			})
 
 	// matrix_table
@@ -562,7 +568,10 @@ export const render_section_info = function(self) {
 			})
 			matrix_table_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( matrix_table )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( matrix_table )
+				}
 			})
 
 	// section_id
@@ -728,7 +737,10 @@ export const render_component_info = function(self, component) {
 			})
 			tipo_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( tipo )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( tipo )
+				}
 			})
 
 	// info
@@ -840,7 +852,10 @@ export const render_component_info = function(self, component) {
 			})
 			model_info.addEventListener('mousedown', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( model )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( model )
+				}
 			})
 
 	// translatable
@@ -922,7 +937,10 @@ export const render_component_info = function(self, component) {
 			})
 			button_value_copy_node.addEventListener('click', function(e) {
 				e.stopPropagation()
-				navigator.clipboard.writeText( JSON.stringify(component.data.value) )
+				// only available in https context for security reasons
+				if (navigator && navigator.clipboard) {
+					navigator.clipboard.writeText( JSON.stringify(component.data.value) )
+				}
 			})
 		}, 50)
 

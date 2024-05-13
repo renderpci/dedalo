@@ -131,7 +131,7 @@ const get_value_element = (i, data, inputs_container, self) => {
 				// const date		= new Date(server_value.year, server_value.month -1, server_value.day);
 				// const locale	= page_globals.locale
 				// const result	= date.toLocaleString(locale, {year:"numeric",month:"numeric",day:"numeric"});
-				
+
 				const ar_date = []
 				if(server_value.day){
 					ar_date.push(server_value.day)

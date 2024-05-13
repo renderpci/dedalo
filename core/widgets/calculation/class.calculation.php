@@ -383,9 +383,10 @@ class calculation extends widget_common {
 
 	/**
 	* GET_SUM_FROM_COMPONENT_TIPO
-	* @return int|float
+	* @param object $search_options
+	* @return int|float $total
 	*/
-	public function get_sum_from_component_tipo(object $search_options) {
+	public function get_sum_from_component_tipo(object $search_options) : int|float {
 
 		$current_section_tipo	= $search_options->section_tipo;
 		$current_tipo			= $search_options->component_tipo;
@@ -586,7 +587,7 @@ class calculation extends widget_common {
 
 
 	/**
-	* resolve_logic
+	* RESOLVE_LOGIC
 	* @param object $process
 	* the paths to the file and method that will be used for process the calculation
 	* @param object $data
