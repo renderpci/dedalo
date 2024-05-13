@@ -301,7 +301,7 @@ final class dd_core_api {
 									$request_config = array_find($current_context->request_config, function($el){
 										return $el->api_engine==='dedalo';
 									});
-									if (!empty($request_config)) {
+									if (is_object($request_config)) {
 										// sqo
 										$sqo = new search_query_object();
 										$sqo->set_section_tipo([(object)[
@@ -1435,21 +1435,24 @@ final class dd_core_api {
 					// resolve tool from name and user
 						$user_id			= logged_user_id();
 						$registered_tools	= tool_common::get_user_tools($user_id);
-						$tool_found = array_find($registered_tools, function($el) use($model){
+						$tool_found			= array_find($registered_tools, function($el) use($model){
 							return $el->name===$model;
 						});
-						if (empty($tool_found)) {
+						if (!is_object($tool_found)) {
 							debug_log(__METHOD__
-								." Tool $model not found in tool_common::get_user_tools " .PHP_EOL
+								." Tool '$model' not found in tool_common::get_user_tools " .PHP_EOL
 								.' rqo: '.to_string($rqo)
 								, logger::ERROR
 							);
-						}else{
-							$section_tipo	= $tool_found->section_tipo;
-							$section_id		= $tool_found->section_id;
+							$response->msg = 'Error. tool not found: '.$model;
+							return $response;
 						}
 
-					$element = new $model($section_id, $section_tipo);
+					// create tool instance
+						$section_tipo	= $tool_found->section_tipo;
+						$section_id		= $tool_found->section_id;
+
+						$element = new $model($section_id, $section_tipo);
 					break;
 
 				default:
@@ -1808,6 +1811,7 @@ final class dd_core_api {
 							$sqo->limit = 0;
 							$sqo->offset = 0;
 							$full_data = [];
+
 							// 1 first get the data of the main component
 							// using the sqo sent by the client
 								$source_sections  = sections::get_instance(
@@ -1817,74 +1821,81 @@ final class dd_core_api {
 									$mode, // string $mode = 'list'
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
-							$full_data = array_merge($full_data, $source_sections->get_dato());
+								$full_data = array_merge($full_data, $source_sections->get_dato());
 
 							// 2 get the data of his dataframe
-							$original_ddo = array_find($rqo->show->ddo_map, function($item){
-								return isset($item->has_dataframe) && $item->has_dataframe===true;
-							});
-							if( isset($original_ddo->dataframe_ddo) ){
-								$dataframe_ddo = $original_ddo->dataframe_ddo;
-								// clone the $sqo to change without changes the original
-								// the sqo will be set with the dataframe tipo and lg-nolan as lang
-								// dataframe always are portals.
-								$dataframe_sqo = json_decode(json_encode($sqo));
-								foreach ($dataframe_sqo->filter_by_locators as $current_filter_by_locator) {
-										$current_filter_by_locator->tipo = $dataframe_ddo->tipo;
-										$current_filter_by_locator->lang = DEDALO_DATA_NOLAN;
-								}
-
-								// get the data of the dataframe component
-								// using the sqo sent by the client
-									$dataframe_sections = sections::get_instance(
-										null, // ?array $ar_locators
-										$dataframe_sqo, // object $search_query_object = null
-										$tipo, // string $caller_tipo = null (section/portal)
-										$mode, // string $mode = 'list'
-										$lang // string $lang = DEDALO_DATA_NOLAN
+								$original_ddo = array_find($rqo->show->ddo_map, function($item){
+									return isset($item->has_dataframe) && $item->has_dataframe===true;
+								});
+								if (empty($original_ddo)) {
+									debug_log(__METHOD__
+										. " Error: original_ddo (has_dataframe) not found in ddo_map!  " . PHP_EOL
+										. ' $rqo->show->ddo_map: ' . to_string($rqo->show->ddo_map)
+										, logger::ERROR
 									);
-								$full_data = array_merge($full_data, $dataframe_sections->get_dato());
-							}
-							// order the full data ASC by date
-							usort($full_data, function($a, $b) {
-								return strtotime($a->timestamp) - strtotime($b->timestamp);
-							});
+								}
+								if( isset($original_ddo->dataframe_ddo) ){
+									$dataframe_ddo = $original_ddo->dataframe_ddo;
+									// clone the $sqo to change without changes the original
+									// the sqo will be set with the dataframe tipo and lg-nolan as lang
+									// dataframe always are portals.
+									$dataframe_sqo = json_decode(json_encode($sqo));
+									foreach ($dataframe_sqo->filter_by_locators as $current_filter_by_locator) {
+											$current_filter_by_locator->tipo = $dataframe_ddo->tipo;
+											$current_filter_by_locator->lang = DEDALO_DATA_NOLAN;
+									}
+
+									// get the data of the dataframe component
+									// using the sqo sent by the client
+										$dataframe_sections = sections::get_instance(
+											null, // ?array $ar_locators
+											$dataframe_sqo, // object $search_query_object = null
+											$tipo, // string $caller_tipo = null (section/portal)
+											$mode, // string $mode = 'list'
+											$lang // string $lang = DEDALO_DATA_NOLAN
+										);
+									$full_data = array_merge($full_data, $dataframe_sections->get_dato());
+								}
+								// order the full data ASC by date
+								usort($full_data, function($a, $b) {
+									return strtotime($a->timestamp) - strtotime($b->timestamp);
+								});
 
 							// 3 mix the both data into one
 							// the source_data will be the data of the main component
 							// dataframe_data will be the data of the dataframe
 							// when the source_data changes will be set with the previous dataframe_data
 							// when the dataframe changes it will be set with previous source_data
-							// dataframe_data has a array wiht the key of his section_id_key, it will
+							// dataframe_data has a array with the key of his section_id_key, it will
 							// used to identify the value associated to the source_data and recreate it
-							$source_data	= null;
-							$dataframe_data	= [null];
-							foreach ($full_data as $current_data) {
-								if($current_data->tipo === $original_ddo->tipo ){
-									$source_data = $current_data->dato;
+								$source_data	= null;
+								$dataframe_data	= [null];
+								foreach ($full_data as $current_data) {
+									if($current_data->tipo === $original_ddo->tipo ){
+										$source_data = $current_data->dato;
+									}
+									if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
+										$dataframe_data[$current_data->section_id_key] = $current_data->dato;
+									}
+									$current_data->dato				= $source_data;
+									$current_data->dataframe_data	= $dataframe_data;
+									$current_data->tipo				= $original_ddo->tipo;
+									$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
 								}
-								if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
-									$dataframe_data[$current_data->section_id_key] = $current_data->dato;
-								}
-								$current_data->dato				= $source_data;
-								$current_data->dataframe_data	= $dataframe_data;
-								$current_data->tipo				= $original_ddo->tipo;
-								$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
-							}
 
-							// order the full data DESC by date
-							usort($full_data, function($a, $b) {
-								return strtotime($b->timestamp) - strtotime($a->timestamp);
-							});
+								// order the full data DESC by date
+								usort($full_data, function($a, $b) {
+									return strtotime($b->timestamp) - strtotime($a->timestamp);
+								});
 
-							// remove paginated rows as original sqo set
-							$offset	= (int)$original_offset;
-							$limit	= (int)$original_limit;
+								// remove paginated rows as original sqo set
+								$offset	= (int)$original_offset;
+								$limit	= (int)$original_limit;
 
-							$sqo->limit = $original_limit;
-							$full_data = array_slice($full_data, $offset, $limit);
+								$sqo->limit = $original_limit;
+								$full_data = array_slice($full_data, $offset, $limit);
 
-							// 3 get the data of the main component with the full data
+							// 4 get the data of the main component with the full data
 								$element  = sections::get_instance(
 									null, // ?array $ar_locators
 									$sqo, // object $search_query_object = null

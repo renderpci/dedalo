@@ -260,16 +260,16 @@ class menu extends common {
 			$info_data->dedalo_version		= DEDALO_VERSION;
 			$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
 			$info_data->pg_version			= (function() {
-												try {
-													$conn = DBi::_getConnection() ?? false;
-													if ($conn) {
-														return pg_version(DBi::_getConnection())['server'];
-													}
-													return 'Failed!';
-												}catch(Exception $e){
-													return 'Failed with Exception!';
-												}
-											  })();
+				try {
+					$conn = DBi::_getConnection() ?? false;
+					if ($conn) {
+						return pg_version(DBi::_getConnection())['server'];
+					}
+					return 'Failed!';
+				}catch(Exception $e){
+					return 'Failed with Exception! ' . $e->getMessage();
+				}
+			})();
 			$info_data->php_version			= PHP_VERSION;
 			$info_data->php_version			.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
 			$info_data->memory				= to_string(ini_get('memory_limit'));

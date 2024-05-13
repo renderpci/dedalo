@@ -169,9 +169,12 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$options, function($item){
+			$dedalo_prefix_tipos_item = array_find((array)$options, function($item){
 				return $item->name==='dedalo_prefix_tipos';
-			})->value ?? '';
+			});
+			$dedalo_prefix_tipos = isset($dedalo_prefix_tipos_item) && is_object($dedalo_prefix_tipos_item)
+				? $dedalo_prefix_tipos_item->value ?? ''
+				: '';
 			$ar_dedalo_prefix_tipos = array_map(function($item){
 				return trim($item);
 			}, explode(',', $dedalo_prefix_tipos));
@@ -184,12 +187,13 @@ final class dd_area_maintenance_api {
 		$json_data	= backup::structure_to_json($ar_tld);
 
 		$file_name	= 'structure.json';
-		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
+		$file_dir	= defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR;
+		$file_path	= $file_dir .'/'. $file_name;
 
 		if(!file_put_contents($file_path, json_encode($json_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), LOCK_EX)) {
 			// write error occurred
 			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write json file';
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']. Impossible to write JSON file';
 			return $response;
 		}
 
