@@ -75,6 +75,10 @@ component_info.prototype.get_widgets = async function() {
 		if (!value || value.length===0) {
 			return false
 		}
+		if (!Array.isArray(value)) {
+			console.error('Error. Invalid value (expected array):', value);
+			return false
+		}
 		const value_length = value.length
 		for (let i = 0; i < value_length; i++) {
 			if(!value[i]) {

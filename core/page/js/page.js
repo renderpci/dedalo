@@ -615,6 +615,8 @@ page.prototype.add_events = function() {
 						if (page_globals.component_active) {
 							ui.component.deactivate(page_globals.component_active)
 						}
+					// blur active input
+						document.activeElement.blur()
 					break;
 
 				case evt.key==='Enter': {

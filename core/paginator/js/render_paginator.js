@@ -336,11 +336,7 @@ const get_content_data = async function(self) {
 */
 const fit_input_go_to_page_to_value = function(input_node, page_number) {
 
-	const chars = page_number
-		? page_number.toString().length
-		: ''
-
-	input_node.style.width = (chars + 3) + 'ch';
+	ui.fit_input_width_to_value(input_node, page_number, 3)
 }//end fit_input_go_to_page_to_value
 
 
