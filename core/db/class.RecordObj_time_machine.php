@@ -68,7 +68,9 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 
 	public function get_dato() {
 		$dato = parent::get_dato();
-		$dato = json_handler::decode($dato);
+		if(!empty($dato)){
+			$dato = json_handler::decode($dato);
+		}
 		return $dato;
 	}//end get_dato
 
