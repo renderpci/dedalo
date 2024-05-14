@@ -288,9 +288,10 @@ service_autocomplete.prototype.render = async function(options={}) {
 
 /**
 * AUTOCOMPLETE_SEARCH
-* @return promise js_promise
+* @return object
+* 	promise js_promise
 */
-service_autocomplete.prototype.autocomplete_search = function() {
+service_autocomplete.prototype.autocomplete_search = async function() {
 
 	const self = this
 
@@ -300,19 +301,24 @@ service_autocomplete.prototype.autocomplete_search = function() {
 			// console.log('self.request_config_object', self.request_config_object);
 		}
 
-		const engine = self.search_engine+'_engine'
+	// engine name
+		const engine = self.search_engine + '_engine'
 
 	// check valid function name (defined in component properties search_engine)
 		if (typeof self[engine]!=='function') {
 			console.error('ERROR. Received search_engine function not exists. Review your component properties source->request_config->search_engine :', self.search_engine);
-			return new Promise(()=>{})
+			return {
+				result: false
+			}
 		}
 
 	// check valid filters_selector
 		if (self.ar_search_section_tipo.length<1) {
 			// const label = get_label.select_search_section || 'Select a search section'
 			// alert(label);
-			return new Promise(()=>{})
+			return {
+				result: false
+			}
 		}
 
 	// exec search self.search_engine = dedalo_engine || zenon_engine, the method that will called

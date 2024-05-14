@@ -341,6 +341,10 @@ const render_source_selector = function(self) {
 
 		// add listener to the select
 		select.addEventListener('change', async function(e){
+
+			// reset search cache
+			self.search_cache = []
+
 			const key = e.target.value
 
 			const request_config_object = clone(self.context.request_config[key])
@@ -484,10 +488,10 @@ const render_search_input = function(self) {
 					while (datalist.firstChild) {
 						datalist.removeChild(datalist.firstChild);
 					}
-					ui.create_dom_element({
+					const loading_label = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'loading_label',
-						inner_html		: get_label.loading || 'Loading..',
+						inner_html		: get_label.searching || 'Searching..',
 						parent			: datalist
 					})
 
@@ -502,6 +506,19 @@ const render_search_input = function(self) {
 							const api_response = q.length && self.search_cache[q]
 								? { result : self.search_cache[q] }
 								: await self.autocomplete_search()
+
+						// no result from API case
+							if (api_response.result===false) {
+								// loading styles. class searching
+								search_input.classList.remove('searching')
+								// spinner remove
+								spinner.remove()
+								// loading_label
+								loading_label.remove()
+								// unlock search
+								is_searching = false
+								return
+							}
 
 						// cache result. Add if not already exists
 							if (!self.search_cache[q]) {
@@ -574,6 +591,10 @@ const render_filters_selector = function(self) {
 					value	: section_tipo,
 					label	: label,
 					change	: function(input_node){
+
+						// reset search cache
+						self.search_cache = []
+
 						const index = ar_sections.indexOf(input_node.dd_value)
 						if (input_node.checked===true && index===-1) {
 							ar_sections.push(input_node.dd_value)
@@ -634,6 +655,9 @@ const render_filters_selector = function(self) {
 						},
 						label	: current_datalist.label,
 						change	: function(input_node){
+
+							// reset search cache
+							self.search_cache = []
 
 							const index = ar_filter_by_list.findIndex(item => item.id===input_node.id)
 							if (input_node.checked===true && index===-1) {
@@ -713,6 +737,9 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		})
 		all_section_checkbox.checked = false
 		all_section_checkbox.addEventListener('change', function(e){
+
+			// reset search cache
+			self.search_cache = []
 
 			const checked_value	= e.target.checked
 			const container		= e.target.parentNode.parentNode
@@ -796,6 +823,9 @@ const render_option_checkbox = function(self, datalist_item) {
 
 		// event change
 			input_checkbox.addEventListener('change', async function(){
+
+				// reset search cache
+				self.search_cache = []
 
 				change(this) // caller callback function
 
@@ -945,6 +975,10 @@ const render_operator_selector = function(self) {
 			e.stopPropagation()
 		})
 		select.addEventListener('change', async function(e){
+
+			// reset search cache
+			self.search_cache = []
+
 			// set the new operator selected
 			self.operator	= e.target.value
 
@@ -993,6 +1027,9 @@ const render_operator_selector = function(self) {
 		})
 		input_max.addEventListener('change', fn_change)
 		async function fn_change(e) {
+
+			// reset search cache
+			self.search_cache = []
 
 			const value = parseInt( e.target.value )
 			if (value<1) {
@@ -1043,6 +1080,11 @@ const render_datalist = async function(self, result) {
 	// clean the last list
 		while (datalist.firstChild) {
 			datalist.removeChild(datalist.firstChild)
+		}
+
+	// empty case
+		if (!result.data || !result.data.length) {
+			return datalist
 		}
 
 	// total
