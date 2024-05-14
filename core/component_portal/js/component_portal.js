@@ -621,11 +621,12 @@ component_portal.prototype.build = async function(autoload=false) {
 			self.columns_map = await get_columns_map(self.context)
 		// }
 
-	// component_info add
-		const rqo = self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-		self.add_component_info = rqo
-			? (rqo.show.ddo_map[0] ? rqo.show.ddo_map[0].value_with_parents : false)
-			: false
+	// component_info add set true if found it
+		if (self.datum && self.datum.data) {
+			self.add_component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.parent===self.tipo)
+				? true
+				: false
+		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
