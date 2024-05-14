@@ -2804,7 +2804,8 @@ class component_text_area extends component_common {
 					}
 
 				// convert the dato to html
-				$html_value = TR::add_tag_img_on_the_fly($current_value);
+				// $html_value = TR::add_tag_img_on_the_fly($current_value);
+				$html_value = TR::deleteMarks($current_value);
 
 				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
 				$list_value[] = !empty($html_value)
