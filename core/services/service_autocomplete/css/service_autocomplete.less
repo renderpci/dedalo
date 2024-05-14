@@ -1,265 +1,270 @@
-// included in main.less
+/**
+* service_autocomplete
+*
+* Included from main.less file
+*/
 
+@service_bg_color : @color_orange_dedalo;
 
-	// @service_bg_color : @color_grey_light;
-	@service_bg_color : @color_orange_dedalo;
-	// @service_bg_color : #f900ef;
+.wrapper_service_autocomplete {
+	background-color: @service_bg_color;
+	border: 0px;
+	border-bottom-left-radius: 5px;
+	border-bottom-right-radius: 5px;
+	// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
+	// box-shadow: 4px 4px 5px 0px rgb(38 38 38 / 30%);
+	// box-shadow: -1px 1px 0 @color_orange_dedalo, inset -1px 1px 0 @color_orange_dedalo; // orange
+	// box-shadow: 0px 1px 0 1px @color_orange_dedalo, inset -1px 1px 0 @color_orange_dedalo;
+	color: #444444;
+	position: absolute;
+	left: -1px;
+	margin-left: 0px;
+	top: 100%;
+	width: calc(100% + 1px);
+	min-width: 25rem;
+	// z-index: 3;
+	opacity: 0;
+	transition: opacity 0.1s ease-in-out;
+	z-index: 1;
 
-	.wrapper_service_autocomplete {
-		background-color: @service_bg_color;
-		border: 0px;
-		border-bottom-left-radius: 5px;
-		border-bottom-right-radius: 5px;
-		// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
-		// box-shadow: 4px 4px 5px 0px rgb(38 38 38 / 30%);
-		// box-shadow: -1px 1px 0 @color_orange_dedalo, inset -1px 1px 0 @color_orange_dedalo; // orange
-		// box-shadow: 0px 1px 0 1px @color_orange_dedalo, inset -1px 1px 0 @color_orange_dedalo;
-		color: #444444;
-		position: absolute;
-		left: -1px;
-		margin-left: 0px;
-		top: 100%;
-		width: calc(100% + 1px);
-		min-width: 25rem;
-		// z-index: 3;
-		opacity: 0;
-		transition: opacity 0.1s ease-in-out;
-		z-index: 1;
+	&.active {
+		opacity: 1;
+	}
 
-		&.active {
-			opacity: 1;
+	>.options_hidden {
+		display: none;
+
+		>.source_selector {
+			background-color: @color_grey_dark;
+			color: #ffff;
+			display: flex;
+			line-height: 1.25em;
+			>* {
+				margin: 0.25em;
+				padding: 0.5em;
+			}
+			select {
+				-webkit-appearance: caret;
+				appearance: caret;
+				background-color: transparent;
+				outline: none;
+				background: none;
+				appearance: auto;
+				height: auto;
+			}
 		}
 
-		>.options_hidden {
-			display: none;
+		>.filters_container {
+			// margin-bottom: 0.25em;
+			overflow: hidden;
+		}
 
-			>.source_selector {
-				background-color: @color_grey_dark;
-				color: #ffff;
+		// filter_node. Box of checkboxes with all available sections
+		ul.filter_node {
+			background-color: @color_grey_dark;
+			border-bottom: 1px solid #ffffff;
+			display: table;
+			padding: 0.5em;
+			width: 100%;
+
+			>li {
+				color: white;
+				direction: rtl;
 				display: flex;
-				line-height: 1.25em;
-				>* {
-					margin: 0.25em;
-					padding: 0.5em;
-				}
-				select {
-					-webkit-appearance: caret;
-					appearance: caret;
-					background-color: transparent;
-					outline: none;
-					background: none;
-					appearance: auto;
-					height: auto;
-				}
-			}
-
-			>.filters_container {
-				// margin-bottom: 0.25em;
+				float: left;
+				justify-content: flex-end;
+				margin-top: 1px;
 				overflow: hidden;
-			}
+				padding: 0.25em;
+				white-space: nowrap;
+				width: 33.2%;
 
-			// filter_node. Box of checkboxes with all available sections
-			ul.filter_node {
-				background-color: @color_grey_dark;
-				border-bottom: 1px solid #ffffff;
-				display: table;
-				padding: 0.5em;
-				width: 100%;
-
-				>li {
-					color: white;
-					direction: rtl;
-					display: flex;
-					float: left;
-					justify-content: flex-end;
-					margin-top: 1px;
-					overflow: hidden;
-					padding: 0.25em;
-					white-space: nowrap;
-					width: 33.2%;
-
-					&.all_selector {
-						// background-color: #efc8bf;
-						width: 100%;
-						// border-bottom: 1px solid @color_grey_light;
-
-						label {
-							font-weight: bold;
-						}
-					}
+				&.all_selector {
+					// background-color: #efc8bf;
+					width: 100%;
+					// border-bottom: 1px solid @color_grey_light;
 
 					label {
-						line-height: 0.75em;
-						padding-left: 0.5em;
-						padding-right: 0.5em;
-					}
-				}
-			}
-
-			>div.inputs_list {
-				background-color: @color_grey_light;
-				padding: 0.5em;
-			}
-
-			// search_operators_div
-			>div.search_operators_div {
-				background-color: @color_grey_light;
-				padding: 0.25em;
-				padding-left: 0.5em;
-				display: flex;
-				justify-content: space-between;
-
-				// select_container
-				.select_container {
-					>* {
-						height: 1.5em;
-						line-height: 1.5em;
-						padding-right: 0.5em;
-						width: auto;
+						font-weight: bold;
 					}
 				}
 
-				// max_container
-				.max_container {
-					>* {
-						height: 1.5em;
-						line-height: 1.5em;
-						padding-right: 0.5em;
-					}
-
-					.label_max {
-						margin-left: 1rem;
-					}
-					.input_max {
-						width: 4.5rem;
-					}
+				label {
+					line-height: 0.75em;
+					padding-left: 0.5em;
+					padding-right: 0.5em;
 				}
-			}//end search_operators_div
-
-
-		}//end >.options_hidden
-
-		// button to hide/show search options box
-		>.button_options {
-			// content: " ";
-			// .fn_build_button('gear.svg', black, 0.7, 2em);
-			margin: 0.5em;
-			margin-right: 0.75em;
-			margin-top: 1em;
-			position: absolute;
-			right: 0px;
-			top: 0px;
-			background-color: white;
-		}
-
-		>input.autocomplete_input {
-			background: #ffffff url('../../themes/default/icons/search.svg');
-			background-position: bottom 6px right 8px;
-			background-repeat: no-repeat;
-			background-size: auto 60%;
-			margin: 0.5em;
-			width: calc(100% - 3.25em);
-			outline: 1px solid #ffffff;
-
-			&:focus {
-				box-shadow: none;
-			}
-
-			&.searching {
-				background-image: none;
 			}
 		}
 
-		.spinner {
-			right: 3rem;
-			top: 0.6rem;
-			height: 1.75rem;
-			width: 1.75rem;
-			left: unset;
-			border-width: 3px;
-		}
-
-		>.visible {
-			display: block;
-		}
-
-		// ul autocomplete_data
-		>.autocomplete_data {
-			// padding-top: 0.5em;
-			z-index: 5;
-			width: max-content;
-			min-width: 100%;
+		>div.inputs_list {
 			background-color: @color_grey_light;
-			border-left: 1px solid @color_orange_dedalo;
-			border-right: 1px solid @color_orange_dedalo;
-			max-width: 100%;
+			padding: 0.5em;
+		}
 
-			.loading_label {
-				padding: 0.5rem;
-				background-color: #ffffff;
-				pointer-events: none;
-				border-bottom: 1px solid @color_orange_dedalo;
+		// search_operators_div
+		>div.search_operators_div {
+			background-color: @color_grey_light;
+			padding: 0.25em;
+			padding-left: 0.5em;
+			display: flex;
+			justify-content: space-between;
+
+			// select_container
+			.select_container {
+				>* {
+					height: 1.5em;
+					line-height: 1.5em;
+					padding-right: 0.5em;
+					width: auto;
+				}
 			}
 
-			// li autocomplete_data_li
-			>.autocomplete_data_li {
-				border-top: 0.07em solid #cdcdcd;
-				cursor: pointer;
-				padding: 0.5em;
-
-				&.selected {
-					// background-color: darken(@service_bg_color, 7%);
-					background-color: #d7d7d7;
+			// max_container
+			.max_container {
+				>* {
+					height: 1.5em;
+					line-height: 1.5em;
+					padding-right: 0.5em;
 				}
 
-				&:active {
-					background-color: darken(@service_bg_color, 14%);
-					// background-color: #d7d7d7;
+				.label_max {
+					margin-left: 1rem;
+				}
+				.input_max {
+					width: 4.5rem;
+				}
+			}
+		}//end search_operators_div
+
+
+	}//end >.options_hidden
+
+	// button to hide/show search options box
+	>.button_options {
+		// content: " ";
+		// .fn_build_button('gear.svg', black, 0.7, 2em);
+		margin: 0.5em;
+		margin-right: 0.75em;
+		margin-top: 1em;
+		position: absolute;
+		right: 0px;
+		top: 0px;
+		background-color: white;
+	}
+
+	>input.autocomplete_input {
+		background: #ffffff url('../../themes/default/icons/search.svg');
+		background-position: bottom 6px right 8px;
+		background-repeat: no-repeat;
+		background-size: auto 60%;
+		margin: 0.5em;
+		width: calc(100% - 3.25em);
+		outline: 1px solid #ffffff;
+
+		&:focus {
+			box-shadow: none;
+		}
+
+		&.searching {
+			background-image: none;
+		}
+	}
+
+	.spinner {
+		right: 3rem;
+		top: 0.6rem;
+		height: 1.75rem;
+		width: 1.75rem;
+		left: unset;
+		border-width: 3px;
+	}
+
+	>.visible {
+		display: block;
+	}
+
+	// ul autocomplete_data
+	>.autocomplete_data {
+		// padding-top: 0.5em;
+		z-index: 5;
+		width: max-content;
+		min-width: 100%;
+		background-color: @color_grey_light;
+		border-left: 1px solid @color_orange_dedalo;
+		border-right: 1px solid @color_orange_dedalo;
+		max-width: 100%;
+
+		.loading_label {
+			padding: 0.5rem;
+			background-color: #ffffff;
+			pointer-events: none;
+			border-bottom: 1px solid @color_orange_dedalo;
+		}
+
+		// li autocomplete_data_li
+		>.autocomplete_data_li {
+			border-top: 0.07em solid #cdcdcd;
+			cursor: pointer;
+			padding: 0.5em;
+			min-height: 2.04rem;
+
+			&.selected {
+				// background-color: darken(@service_bg_color, 7%);
+				background-color: #d7d7d7;
+			}
+
+			&:active {
+				background-color: darken(@service_bg_color, 14%);
+				// background-color: #d7d7d7;
+			}
+
+			&:first-child {
+			  border-top: 1px solid @color_orange_dedalo;
+			}
+
+			>.section_record {
+				pointer-events: none;
+
+				// distribute items horizontally (see ts Identify images autocomplete)
+				// display: flex;
+				// justify-content: space-between;
+
+				// display: grid;
+				// grid-template-columns: 1fr 4px 8fr 4px 5rem;
+
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+
+				>* {
+					display: inline-block;
 				}
 
-				&:first-child {
-				  border-top: 1px solid @color_orange_dedalo;
+				.separator {
+					// moved to general.less
 				}
 
-				>.section_record {
-					pointer-events: none;
-
-					// distribute items horizontally (see ts Identify images autocomplete)
-					// display: flex;
-					// justify-content: space-between;
-
-					// display: grid;
-					// grid-template-columns: 1fr 4px 8fr 4px 5rem;
-
-					display: flex;
-					align-items: center;
-					flex-wrap: wrap;
-
-					>* {
-						display: inline-block;
-					}
-
-					.column {
-						outline: none;
-					}
-
-					// img {
-					// 	height: var(--view_text_height);
-					// 	vertical-align: middle;
-					// }
+				.column {
+					outline: none;
 				}
 
-				&:last-child{
-					border-bottom: 1px solid @color_orange_dedalo;
-				}
-
-				// >span {
-				// 	padding-right: 0.5em;
-				// 	pointer-events: none;
+				// img {
+				// 	height: var(--view_text_height);
+				// 	vertical-align: middle;
 				// }
 			}
 
+			&:last-child{
+				border-bottom: 1px solid @color_orange_dedalo;
+			}
+
+			// >span {
+			// 	padding-right: 0.5em;
+			// 	pointer-events: none;
+			// }
 		}
+
 	}
 
 	.attenuated {
@@ -348,198 +353,4 @@
 			}
 		}
 	}
-
-	// .autocomplete_data {
-	// 	//position: absolute;
-	// 	//top: 44px;
-	// 	padding-top: 0.5em;
-	// }
-	// .autocomplete_data_li {
-	// 	padding: 0.5em;
-	// 	border-top: 0.07em solid #cdcdcd;
-	// 	//padding: 1em;
-	// }
-
-	// .autocomplete_data_li:first-child {
-	//   border-top: none;
-	// }
-	// .autocomplete_data_li:hover{
-	// 	background-color: #aaa;
-	// }
-
-
-
-
-
-// // autocomplete_wrapper
-// 	.autocomplete_wrapper {
-// 		width: 100%;
-// 		z-index: 10;
-// 		padding: 4px;
-// 		padding-bottom: 10px;
-// 	    padding-left: 5px;
-// 		left: 0px;
-
-// 		&.in_search_mode {
-// 			position: absolute;
-// 		    top: 0;
-// 		    left: 40px;
-// 		    padding: 0;
-// 		    width: 80%;
-// 		    @media screen and (max-width: 1490px) {
-// 				width: 72%;
-// 			}
-// 		}
-
-// 		> input.autocomplete_input {
-// 			//background-color: #C8F54D;
-// 			//float: right;
-// 			width: 100%;
-// 			background: #fff url("../../themes/default/lupa2.svg") right center no-repeat;
-// 			background-size: auto 100%;
-// 			//background-position-x: 95%;
-// 			background-position: bottom -1px right 5px;
-// 			//transition: all .2s ease-in-out;
-// 			//opacity: 0.5;
-
-// 			&:focus {
-// 				opacity: 1;
-// 				//width: 150px;
-// 				//background-position-x: 95%;
-// 			}
-// 		}
-
-// 	}//end .autocomplete_wrapper
-
-
-
-// // autocomplete_wrapper_edit_list
-// 	.autocomplete_wrapper_edit_list {
-// 		padding: 0;
-// 	}
-
-
-
-// // autocomplete_list_button_options
-// 	.autocomplete_list_button_options {
-// 		opacity: .3;
-// 		background-position: -432px 0;
-// 		//zoom: 120%;
-// 		-moz-transform: scale(1.20);
-// 		transform-origin: bottom;
-// 	}
-
-
-
-// // autosearch_options
-// 	.autosearch_options {
-// 		//background-color: #DFFE79;
-// 		//display: none;
-// 		//padding: 5px;
-// 		//padding-right: 0; //100px;
-// 		//background-color: #8e8e8e;
-// 		color: #9e9e9e;
-// 		border-bottom: 0.5px solid #ccc;
-// 		//border-radius: 4px;
-// 		//margin-top: 0; //10px;
-// 		//margin-bottom: 5px;
-// 		clear: both;
-// 		//background-color: #cdcdcd;
-// 		background-color: darken(@color_selected_wrap, 5%);
-
-// 		&.in_search_mode {
-// 			padding-right: 5px;
-// 			//padding-left: 150px;
-// 		}
-// 	}//end .autosearch_options
-
-
-
-// // search_sections_list
-// 	@column_width : 33%;
-// 	ul.search_sections_list {
-// 		display: table;
-// 		background-color: #8E8E8E;
-// 		padding: 10px;
-// 		z-index: 1001;
-// 		white-space: nowrap;
-// 		color: #ffffff !important;
-// 		width: 100%;
-// 		top: 5px;
-// 	    position: relative;
-// 		margin-bottom: 5px;
-
-// 		>li {
-// 			display: flex; // Important for text-overflow ellipsis
-// 			float: left;
-// 			width: @column_width;
-// 			white-space: nowrap;
-// 			overflow: hidden;
-
-// 			>input {
-// 				margin: 2px;
-// 				margin-right: 4px;
-// 			}
-
-// 			>label {
-// 				white-space: nowrap;
-// 				overflow: hidden;
-// 				text-overflow: ellipsis;
-// 				max-width: 90%;
-// 			}
-
-// 			mark {
-// 				color: #f5c39f !important;
-// 			}
-// 		}
-
-// 		&.one_column {
-// 			>li { width: 100%; }
-// 		}
-// 		&.two_column {
-// 			>li { width: 50%; }
-// 		}
-// 		&.three_column {
-// 			>li { width: 33%; }
-// 		}
-
-// 		hr {
-// 			width: 100%;
-// 			display: -webkit-inline-box;
-// 			margin: 3px;
-// 			padding: 0;
-// 			float: left;
-// 		}
-
-// 	}//end .search_sections_list
-
-// 	/*
-// 		.search_sections_list li {
-// 			//display: table;
-// 			float: left;
-// 			width: @column_width;
-// 			white-space: nowrap;
-// 			overflow: hidden;
-// 			display: flex; // Important for text-overflow ellipsis
-// 		}
-// 		.search_sections_list input {
-// 			margin: 2px;
-// 			margin-right: 4px;
-// 		}
-// 		.search_sections_list label {
-// 			white-space: nowrap;
-// 			overflow: hidden;
-// 			text-overflow: ellipsis;
-// 			max-width: 90%;
-// 		}
-// 		.search_sections_list hr {
-// 			width: 100%;
-// 			display: -webkit-inline-box;
-// 			margin: 3px;
-// 			padding: 0;
-// 			float: left;
-// 		}
-// 		.search_sections_list mark {
-// 			color: #f5c39f !important;
-// 		}
-// 	*/
+}
