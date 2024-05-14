@@ -364,7 +364,17 @@ component_text_area.prototype.tags_to_html = function(value) {
 		? tr.add_tag_img_on_the_fly(value)
 		: null
 
-	return html
+	// fix bug legacy data ../../../inc/btn.php/[geo-n-1-] => ../component_text_area/tag/?id=[geo-n-1-]
+		const html_safe = html.replace('../../../inc/btn.php/', '../component_text_area/tag/?id=')
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			if (html_safe!==html) {
+				console.error('Fixed found legacy error tags path (btn.php)');
+			}
+		}
+
+	return html_safe
 }//end tags_to_html
 
 
