@@ -606,7 +606,8 @@ section_record.prototype.get_component_data = function(options) {
 			if( el.tipo 					=== ddo.tipo // match tipo
 				&& parseInt(el.section_id)	=== parseInt(section_id)  // match section_id
 				&& el.section_tipo			=== section_tipo // match section_tipo
-				) {
+				&& el.mode					=== ddo.mode // match mode
+				){
 
 				// time machine case
 				if (el.matrix_id && matrix_id) {
