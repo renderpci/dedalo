@@ -3764,6 +3764,7 @@ abstract class component_common extends common {
 			$item->section_id			= $this->get_section_id();
 			$item->section_tipo			= $this->get_section_tipo();
 			$item->tipo					= $this->get_tipo();
+			$item->mode 				= $this->get_mode();
 			$item->lang					= $this->get_lang();
 			$item->from_component_tipo	= $this->from_component_tipo ?? $item->tipo;
 			$item->value				= $value;
@@ -3776,7 +3777,6 @@ abstract class component_common extends common {
 			if(SHOW_DEBUG===true) {
 				$item->debug_model = $this->get_model();
 				$item->debug_label = $this->get_label();
-				$item->debug_mode = $this->get_mode();
 				$item->debug_dataframe = $this->get_caller_dataframe() ?? null;
 			}
 
