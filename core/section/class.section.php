@@ -1293,27 +1293,26 @@ class section extends common {
 
 
 		// reset caches
-			// DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO
-			if ($this->tipo===DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO) {
-				if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'])) {
-					unset($_SESSION['dedalo']['config']['user_preset_layout_map']);
-				}
-			}
-			// DEDALO_REGISTER_TOOLS_SECTION_TIPO
-			else if ($this->tipo===DEDALO_REGISTER_TOOLS_SECTION_TIPO) {
-				if (isset($_SESSION['dedalo']['registered_tools'])) {
-					unset($_SESSION['dedalo']['registered_tools']);
-				}
-				dd_cache::delete_cache_files([
-					'cache_registered_tools.json'
-				]);
-			}
-			// DEDALO_SECTION_PROJECTS_TIPO
-			else if ($this->tipo===DEDALO_SECTION_PROJECTS_TIPO) {
-				filter::clean_caches(
-					logged_user_id(), // user id. Current logged user id
-					DEDALO_FILTER_MASTER_TIPO // dd170
-				);
+			switch ($this->tipo) {
+
+				case DEDALO_REQUEST_CONFIG_PRESETS_SECTION_TIPO:
+					request_config_presets::clean_cache();
+					break;
+
+				case DEDALO_REGISTER_TOOLS_SECTION_TIPO:
+					tools_register::clean_cache();
+					break;
+
+				case DEDALO_SECTION_PROJECTS_TIPO:
+					filter::clean_cache(
+						logged_user_id(), // user id. Current logged user id
+						DEDALO_FILTER_MASTER_TIPO // dd170
+					);
+					break;
+
+				default:
+					// no cache to delete here
+					break;
 			}
 
 		// debug

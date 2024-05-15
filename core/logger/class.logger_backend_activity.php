@@ -256,20 +256,14 @@ class logger_backend_activity extends logger_backend {
 				// value
 				$projects_dato = filter::get_user_projects($user_id);
 				if (!empty($projects_dato)) {
-
-					$project_relations = [];
-					foreach ((array)$projects_dato as $project_locator) {
+					foreach ($projects_dato as $project_locator) {
 						if (isset($project_locator->from_component_tipo)) {
 							// Override from_component_tipo
 							$project_locator_safe = clone $project_locator;
 							$project_locator_safe->from_component_tipo = $component_tipo;
-							$project_relations[] = $project_locator_safe;
-						}
-					}
-					// add value
-					if (empty($project_relations)) {
-						foreach ($project_relations as $current_locator) {
-							$relations[] = $current_locator;
+
+							// add to section->relations array
+							$relations[] = $project_locator_safe;
 						}
 					}
 				}
@@ -323,19 +317,6 @@ class logger_backend_activity extends logger_backend {
 
 			// Save. Returns created section_id (auto created by table sequence 'matrix_activity_section_id_seq')
 				$id_section = $section->Save( $save_options );
-
-			// post save actions
-				if (!empty($project_relations)) {
-
-					// (!) Note that here no relations are written to relations table automatically, we need launch action manually
-					// without pass by component
-					$relation_options = new stdClass();
-						$relation_options->section_tipo			= DEDALO_ACTIVITY_SECTION_TIPO;
-						$relation_options->section_id			= $id_section;
-						$relation_options->from_component_tipo	= self::$_COMPONENT_PROJECTS['tipo'];
-						$relation_options->ar_locators			= $project_relations;
-					search::propagate_component_dato_to_relations_table($relation_options);
-				}
 
 		// debug
 			if(SHOW_DEBUG===true) {

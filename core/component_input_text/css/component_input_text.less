@@ -15,29 +15,31 @@
 				min-height: 1rem;
 
 				// input
-				.input_value {
+				>.input_value {
 					width: 100%;
+					margin: 0px;
 					position: relative; // solve focus overlapping issues
 					text-overflow: ellipsis;
 					padding-right: 0.5rem;
 					margin-right: 0px;
-					z-index: 1;
-					transition: none;
+					&:focus {
+						z-index: 1;
+					}
 				}
 				// not first input value
 				&:not(:first-of-type) {
-					.input_value:focus {
+					>.input_value:focus {
+						transition: none;
 						width: calc(100% - 2rem); // leave space for delete icon
 					}
 				}
 
 				// button over each text input (right)
-				.button.remove {
+				>.button.remove {
 					// position: absolute;
 					// right: 0.5em;
 					// top: 0.5em;
-					z-index: 2;
-
+					// z-index: 1;
 					margin-top: 0.5em;
 					margin-left: 0.75rem;
 				}
@@ -57,10 +59,7 @@
 					width: 100%;
 					padding-bottom: 0.5rem;
 				}
-
 			}
-
-
 		}
 
 

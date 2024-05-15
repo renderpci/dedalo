@@ -169,6 +169,7 @@ const render_content_value = function(options) {
 		const button_new = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button add icon hide',
+			title			: get_label.new || 'New',
 			parent			: content_value
 		})
 		button_new.addEventListener('click', function (e) {

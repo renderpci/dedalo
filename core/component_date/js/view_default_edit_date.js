@@ -185,6 +185,7 @@ const get_buttons = (self) => {
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
+				title			: get_label.new || 'New',
 				parent			: fragment
 			})
 			// event to insert new input

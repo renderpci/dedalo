@@ -258,8 +258,8 @@ const get_content_value = (i, current_value, self) => {
 	// button remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
+			title			: get_label.delete || 'Delete',
 			class_name		: 'button remove hidden_button '+ active_check_class,
-			title			: get_label.vincular_recurso || 'Link resource',
 			parent			: content_value
 		})
 		button_remove.addEventListener('click', function(e) {
@@ -283,6 +283,7 @@ const get_content_value = (i, current_value, self) => {
 	// button link
 		const button_link = ui.create_dom_element({
 			element_type	: 'span',
+			title			: get_label.vincular_recurso || 'Link resource',
 			class_name		: 'button link hidden_button '+ active_check_class,
 			parent			: content_value
 		})
@@ -393,6 +394,7 @@ export const get_buttons = (self) => {
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
+				title			: get_label.new || 'New',
 				parent			: fragment
 			})
 			button_add_input.addEventListener('click', function(e) {

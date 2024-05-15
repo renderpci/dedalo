@@ -96,13 +96,30 @@ const get_format_number = function ( self, number ) {
 * Force unified number format.
 * Format used is floating point ( , used in Spanish or other languages are avoided, only . will be valid for decimals)
 * Example: Change 17,2 to 17.2
-* @return number new_number
+* @param value
+* @return number|null new_number
 */
-component_number.prototype.fix_number_format = function( number ) {
+component_number.prototype.fix_number_format = function( value ) {
 
 	const self = this
-	const fixed_number = number.replace(/,/g, ".");
-	const new_number = get_format_number(self, Number(fixed_number) )
+
+	// replace , by .
+	const fixed_value = value.replace(/,/g, '.');
+
+	// remove non accepted chars
+	const regex		= /[^0-9\.,]/gm;
+	const result	= fixed_value.replace(regex, '');
+	if (!result.length) {
+		return null
+	}
+
+	// format the number
+	const new_number = get_format_number(self, Number(result) )
+
+	// non number case
+	if(isNaN(new_number)) {
+		return null
+	}
 
 	return Number( new_number )
 }//end fix_number_format

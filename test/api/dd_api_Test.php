@@ -1552,10 +1552,9 @@ final class dd_api_Test extends TestCase {
 		            }
 		        ]
 		    },
-		    "sqo_options": {
-		        "fixed_filter": false,
-		        "operator": "$or"
-		    }
+			"sqo_options": {
+				"operator": "$or"
+			}
 		}
 		');
 
