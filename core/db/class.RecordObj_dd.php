@@ -1359,7 +1359,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 	* @param string $section_tiop
 	* @return string $color #ddddd
 	*/
-	public static function get_color($section_tipo) {
+	public static function get_color( string $section_tipo ) : string {
 
 		$RecordObj_dd	= new RecordObj_dd($section_tipo);
 		$properties		= $RecordObj_dd->get_properties();
