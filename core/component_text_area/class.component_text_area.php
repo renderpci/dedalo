@@ -2028,7 +2028,6 @@ class component_text_area extends component_common {
 		// Force loads dato always !IMPORTANT
 		$dato = $this->get_dato();
 
-
 		if (!empty($dato) && isset($dato[0])) {
 
 			$old_tc_pattern = '/(\[TC_([0-9]{1,2}:[0-9]{1,2}:[0-9]{1,2})_TC\])/';
@@ -2042,6 +2041,10 @@ class component_text_area extends component_common {
 
 				// Converts old timecodes
 				$new_value = preg_replace($old_tc_pattern, "[TC_$2.000_TC]", (string)$value);
+
+				// convert tag paths from ../../../inc/btn.php/[geo-n-1-] to ../component_text_area/tag/?id=[geo-n-1-]
+				// <img id="[geo-n-1-]" src="../../../inc/btn.php/[geo-n-1-]" class="geo" data-type="geo" data-tag_id="1" data-state="n" data-label="" data-data="{'type':'FeatureCollection','features':[{'type':'Feature','properties':{},'geometry':{'type':'Point','coordinates':[-2.01936392737486,42.645594932190519]}}]}" />
+				// @todo
 
 				$new_dato[] = $new_value;
 			}

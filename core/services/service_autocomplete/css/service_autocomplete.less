@@ -31,8 +31,24 @@
 		opacity: 1;
 	}
 
+	.spinner {
+		right: 3rem;
+		top: 0.6rem;
+		height: 1.75rem;
+		width: 1.75rem;
+		left: unset;
+		border-width: 3px;
+	}
+
+
+
+	// options_hidden (section selectors and check-boxes)
 	>.options_hidden {
 		display: none;
+
+		&.visible {
+			display: block;
+		}
 
 		>.source_selector {
 			background-color: @color_grey_dark;
@@ -97,13 +113,13 @@
 			}
 		}
 
-		>div.inputs_list {
+		>.inputs_list {
 			background-color: @color_grey_light;
 			padding: 0.5em;
 		}
 
 		// search_operators_div
-		>div.search_operators_div {
+		>.search_operators_div {
 			background-color: @color_grey_light;
 			padding: 0.25em;
 			padding-left: 0.5em;
@@ -111,49 +127,48 @@
 			justify-content: space-between;
 
 			// select_container
-			.select_container {
-				>* {
+			>.select_container {
+
+				>.css_label, >.operator_selector {
 					height: 1.5em;
 					line-height: 1.5em;
+				}
+
+				>.css_label {
 					padding-right: 0.5em;
 					width: auto;
+				}
+
+				>.operator_selector {
+					padding-left: 0.5rem;
+					padding-right: 1rem;
+					margin: 0;
+					margin-left: 0.5rem;
 				}
 			}
 
 			// max_container
-			.max_container {
-				>* {
+			>.max_container {
+
+				>.label_max, >.input_max {
 					height: 1.5em;
 					line-height: 1.5em;
 					padding-right: 0.5em;
 				}
 
-				.label_max {
+				>.label_max {
 					margin-left: 1rem;
 				}
-				.input_max {
-					width: 4.5rem;
+				>.input_max {
+					width: 3.8rem;
 				}
 			}
 		}//end search_operators_div
 
-
 	}//end >.options_hidden
 
-	// button to hide/show search options box
-	>.button_options {
-		// content: " ";
-		// .fn_build_button('gear.svg', black, 0.7, 2em);
-		margin: 0.5em;
-		margin-right: 0.75em;
-		margin-top: 1em;
-		position: absolute;
-		right: 0px;
-		top: 0px;
-		background-color: white;
-	}
-
-	>input.autocomplete_input {
+	// input autocomplete
+	>.autocomplete_input {
 		background: #ffffff url('../../themes/default/icons/search.svg');
 		background-position: bottom 6px right 8px;
 		background-repeat: no-repeat;
@@ -171,20 +186,20 @@
 		}
 	}
 
-	.spinner {
-		right: 3rem;
-		top: 0.6rem;
-		height: 1.75rem;
-		width: 1.75rem;
-		left: unset;
-		border-width: 3px;
+	// button to hide/show search options box
+	>.button_options {
+		// content: " ";
+		// .fn_build_button('gear.svg', black, 0.7, 2em);
+		margin: 0.5em;
+		margin-right: 0.75em;
+		margin-top: 1em;
+		position: absolute;
+		right: 0px;
+		top: 0px;
+		background-color: white;
 	}
 
-	>.visible {
-		display: block;
-	}
-
-	// ul autocomplete_data
+	// ul autocomplete_data : datalist;
 	>.autocomplete_data {
 		// padding-top: 0.5em;
 		z-index: 5;
@@ -271,6 +286,7 @@
 		opacity: 0.5;
 	}
 
+	// grid choose (used with svg media, etc.)
 	.grid_choose_container {
 		position: absolute;
 		background-color: #f8f8f8;
