@@ -6,11 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {
-		keyup_handler,
-		blur_handler,
-		remove_handler
-	} from './render_edit_component_number.js'
+	import { change_handler} from './render_edit_component_number.js'
 
 
 
@@ -120,24 +116,32 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
-		// keydown event. Prevent to fire page events like open search panel
-			input.addEventListener('keydown', function(e) {
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
 				e.stopPropagation()
 			})
-		// keyup event
-			input.addEventListener('keyup', function(e) {
-				// page unload event
-				keyup_handler(e, i, self)
-			})//end keyup
-		// blur event
-			input.addEventListener('blur', function(e) {
-				// saves changed data
-				blur_handler(e, i, self)
-			})//end blur
+		// focus event
+			input.addEventListener('focus', function() {
+				// force activate on input focus (tabulating case)
+				if (!self.active) {
+					ui.component.activate(self, false)
+				}
+			})
+		// keydown event
+			input.addEventListener('keydown', function(e) {
+				if(e.key==='Tab'){
+					ui.component.deactivate(self)
+					return
+				}
+			})
 		// click event
 			input.addEventListener('click', function(e) {
 				e.stopPropagation()
 			})//end click
+		// change event
+			input.addEventListener('change', (e) => {
+				change_handler(e, i, self)
+			})
 
 
 	return content_value
