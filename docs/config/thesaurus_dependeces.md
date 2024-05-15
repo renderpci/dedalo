@@ -29,10 +29,12 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Iconography | Thematic | icon | √ | √ | √ | √ | x | x | x |
 | Immovable property | Thematic | tchi | √ | √ | √ | √ | x | x | x |
 | Material | Thematic | material | √ | √ | √ | √ | x | x | x |
-| Object | Thematic | object | √ | √ | √ | √ | x | x | x |
 | Onomastic | Thematic | on | √ | √ | √ | √ | √ | √ | √ |
 | Technique | Thematic | technique | √ | √ | √ | √ | x | x | x |
 | Thematic | Thematic | ts | √ | √ | √ | √ | √ | √ | √ |
+| Object | Typology | object | √ | √ | √ | √ | x | x | x |
+| Flora | Typology | flora | √ | √ | √ | √ | x | x | x |
+| Fauna | Typology | fauna | √ | √ | √ | √ | x | x | x |
 | ISAD(g) | Catalog | isad | x | x | x | x | x | √ | x |
 | Location | Ubications | ubication | √ | √ | x | √ | x | x | x |
 | Cause of uncertainty | Semantics | uncertainty | x | x | x | √ | x | x | x |
