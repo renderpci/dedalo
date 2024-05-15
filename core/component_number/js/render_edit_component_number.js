@@ -5,7 +5,7 @@
 
 
 // imports
-	import {set_before_unload} from '../../common/js/events.js'
+	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
@@ -214,6 +214,7 @@ export const get_buttons = (self) => {
 			const button_add_input = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button add',
+				title			: get_label.new || 'New',
 				parent			: fragment
 			})
 			button_add_input.addEventListener('mouseup', function(e) {

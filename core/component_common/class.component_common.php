@@ -2364,8 +2364,17 @@ abstract class component_common extends common {
 					$sqo = new search_query_object();
 						$sqo->set_section_tipo($ar_sections_tipo);
 						$sqo->set_limit($limit);
-						if(isset($dedalo_request_config->sqo->fixed_filter)){
-							$sqo->set_filter(reset($dedalo_request_config->sqo->fixed_filter));
+						if(!empty($dedalo_request_config->sqo->fixed_filter)){
+							$fixed_filter = $dedalo_request_config->sqo->fixed_filter[0] ?? null;
+							if (is_object($fixed_filter)) {
+								$sqo->set_filter($fixed_filter);
+							}else{
+								debug_log(__METHOD__
+									. " Ignored fixed filter. Bad format " . PHP_EOL
+									. to_string($dedalo_request_config->sqo->fixed_filter)
+									, logger::ERROR
+								);
+							}
 						}
 
 				$search = search::get_instance($sqo);

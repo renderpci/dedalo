@@ -1171,15 +1171,16 @@ vector_editor.prototype.render_layer_selector = function(self) {
 		const add_layer = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button add',
+			title			: get_label.new || 'New',
 			parent			: fragment
 		})
-		add_layer.addEventListener('click', () =>{
+		add_layer.addEventListener('click', (e) =>{
+			e.stopPropagation()
 			// add the data in the instance
 			const new_layer	= this.add_layer(self)
 			const layer_li	= this.render_layer_row(self, new_layer)
 			// layer_ul.appendChild(layer_li)
 			layer_ul.insertBefore(layer_li, layer_ul.firstChild)
-
 		})
 
 	// close button
@@ -1352,6 +1353,7 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 		// layer_delete
 			const layer_delete = ui.create_dom_element({
 				element_type	: 'span',
+				title			: get_label.delete || 'Delete',
 				class_name		: 'button remove layer_delete',
 				parent			: layer_li,
 				text_node		: layer.layer_delete

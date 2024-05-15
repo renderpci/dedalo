@@ -902,6 +902,7 @@ const render_button_remove = function (self, key) {
 	// button_remove
 		const button_remove = ui.create_dom_element({
 			element_type	: 'span',
+			title			: get_label.delete || 'Delete',
 			class_name		: 'button remove',
 			parent			: button_remove_container
 		})
