@@ -1373,4 +1373,34 @@ class RecordObj_dd extends RecordDataBoundObject {
 
 
 
+	/**
+	* GET_ACTIVE_TLDS
+	* Get from jer_dd table all active/installed tlds.
+	* Used to check if the tipo has a valid definition in the ontology.
+	* If the tipo is not installed is not possible to resolve it
+	* The callers will decide if is necessary remove the tipo from definition, as remove from sqo, show error, or ...
+	* @return array $active_tlds
+	*/
+	public static function get_active_tlds() : array {
+
+		//Cache
+		static $active_tlds_cache;
+		if(isset($active_tlds_cache)){
+			return $active_tlds_cache;
+		}
+
+		$strQuery	= "SELECT tld FROM jer_dd GROUP BY tld";
+		$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+
+		$active_tlds = [];
+		while($row = pg_fetch_assoc($result)) {
+			$tld			= $row['tld'];
+			$active_tlds[]	= $tld;
+		}
+
+		$active_tlds_cache = $active_tlds;
+
+		return $active_tlds;
+	}//end get_active_tlds
+
 }//end class RecordObj_dd
