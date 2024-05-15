@@ -33,23 +33,44 @@ view_default_list_av.render = async function(self, options) {
 	// options
 		const render_level = options.render_level || 'full'
 
+	// content_data
+		const content_data = get_content_data(self)
+		if (render_level==='content') {
+			return content_data
+		}
+
+	// wrapper
+		const wrapper = ui.component.build_wrapper_list(self, {
+			autoload : false
+		})
+		wrapper.classList.add('media','media_wrapper')
+		wrapper.appendChild(content_data)
+		// set pointers to content_data
+		wrapper.content_data = content_data
+
+
+	return wrapper
+}//end render
+
+
+
+/**
+* GET_CONTENT_DATA
+* @param object self
+* @return HTMLElement content_data
+*/
+const get_content_data = function(self) {
+
 	// short vars
 		const data				= self.data || {}
 		const value				= data.value || [] // value is a files_info list
 		const files_info		= value
-		const external_source	= data.external_source
-
-	// wrapper
-		const wrapper = ui.component.build_wrapper_list(self, {})
-		wrapper.classList.add('media','media_wrapper')
 
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type	: 'div',
 			class_name 		: 'content_data'
 		})
-		// set pointers to content_data
-		wrapper.content_data = content_data
 
 	// posterframe (used as fallback)
 		const posterframe_url = data.posterframe_url
@@ -62,16 +83,17 @@ view_default_list_av.render = async function(self, options) {
 	// URL
 	// if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
 		const url = thumb?.file_path
-			? DEDALO_MEDIA_URL + thumb.file_path
+			? DEDALO_MEDIA_URL + thumb.file_path + '?t=' + (new Date()).getTime()
 			: posterframe_url
 
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'link',
-			parent			: wrapper
+			parent			: content_data
 		})
-		// image.loading = 'lazy'
+		image.draggable = false
+		image.loading = 'lazy'
 		// image.setAttribute('crossOrigin', 'Anonymous');
 		// ui.component.add_image_fallback(image)
 
@@ -90,11 +112,11 @@ view_default_list_av.render = async function(self, options) {
 				}
 			}, false)
 
-		// set image src
-		image.src = url
+		// set source url
+			image.src = url
 
 		// open viewer
-			image.addEventListener('mousedown', function (e) {
+			image.addEventListener('mouseup', function (e) {
 				e.stopPropagation();
 
 				const file_exist = files_info.find(item => item.file_exist===true)
@@ -131,8 +153,8 @@ view_default_list_av.render = async function(self, options) {
 			})
 
 
-	return wrapper
-}//end render
+	return content_data
+}//end get_content_data
 
 
 
