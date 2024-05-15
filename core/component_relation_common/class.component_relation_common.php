@@ -2677,7 +2677,25 @@ class component_relation_common extends component_common {
 					break;
 				case 'section':
 				default:
-					$ar_section_tipo = array_merge($ar_section_tipo, (array)$source_item->value);
+					// verify the section tld, if its active in the installation
+						//sometimes the definition is a string, sometimes is array, mix both into array
+						$current_item_values = (array)$source_item->value;
+						$valid_sections_tipo = [];
+						foreach ($current_item_values as $current_section_tipo) {
+							// get the tld from the current tipo to be checked with the active tlds
+							$is_active= RecordObj_dd::check_active_tld($current_section_tipo);
+							if($is_active === true){
+								$valid_sections_tipo[] = $current_section_tipo;
+							}else{
+								debug_log(__METHOD__
+									. " Removed tld from sqo section definition because the tld is not installed " . PHP_EOL
+									. to_string($current_section_tipo)
+									, logger::WARNING
+								);
+							}
+						}
+
+					$ar_section_tipo = array_merge($ar_section_tipo, $valid_sections_tipo);
 					break;
 			}
 		}//end foreach ((array)$ar_section_tipo_sources as $source_item)
