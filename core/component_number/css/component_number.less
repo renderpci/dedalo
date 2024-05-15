@@ -12,25 +12,50 @@
 			>.content_value {
 				position: relative;
 				width: 100%;
+				min-height: 1rem;
+				margin-bottom: 1px;
 
 				>.input_value {
+					width: 100%;
+					margin: 0px;
+					position: relative; // solve focus overlapping issues
+					text-overflow: ellipsis;
 					padding-right: 0.5rem;
-
 					&:focus {
-						padding-right: 1.66rem;
+						z-index: 1;
+					}
+				}
+				// not first input value
+				&:not(:first-of-type) {
+					>.input_value:focus {
+						transition: none;
+						width: calc(100% - 2rem); // leave space for delete icon
 					}
 				}
 
 				// button over each text input (right)
 				>.button.remove {
-					position: absolute;
-					right: 0.2em;
-					top: 0.5em;
-					z-index: 1;
+					// position: absolute;
+					// right: 0.2em;
+					// top: 0.5em;
+					// z-index: 1;
+					margin-top: 0.5em;
+					margin-left: 0.75rem;
 				}
 			}
 		}
 	}//end view_default
+
+	&.view_default {
+		&.edit {
+			>.content_data {
+				>.content_value {
+					display: flex;
+					flex-wrap: wrap;
+				}
+			}
+		}
+	}
 
 	&.view_line {
 		position: relative;
@@ -41,19 +66,20 @@
 
 			>.content_value {
 				// background-color:#2233aa;
-
-				/* Chrome, Safari, Edge, Opera */
+				/*
+				 // Chrome, Safari, Edge, Opera
 				input::-webkit-outer-spin-button,
 				input::-webkit-inner-spin-button {
 					-webkit-appearance: none;
 					margin: 0;
 				}
-				/* Firefox */
+				 // Firefox
 				input[type=number] {
 					 -moz-appearance: textfield;
 					  // -webkit-appearance: textfield;
 					  // appearance: textfield;
 				}
+				*/
 				>.input_value {
 					margin: 0px;
 					height: auto;
@@ -62,7 +88,6 @@
 					padding-left: 0.3rem;
 				}
 			}
-
 		}
 	}
 

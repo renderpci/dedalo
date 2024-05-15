@@ -399,6 +399,7 @@ const get_tag_info = function(self) {
 		// button delete tag
 			const button_delete = ui.create_dom_element({
 				element_type	: 'span',
+				title			: get_label.delete || 'Delete',
 				class_name		: 'button remove',
 				parent			: wrap_delete_tag
 			})
@@ -435,7 +436,6 @@ const get_tag_info = function(self) {
 			// show/hide info_container
 				if (self.tag_info_container.classList.contains('hide')) {
 					self.tag_info_container.classList.remove('hide')
-
 				}
 		})
 		self.active_value('state', function(value) {

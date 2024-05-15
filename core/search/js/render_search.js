@@ -554,7 +554,7 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			data_set		: { value : operator },
 			class_name		: "operator search_group_operator" + (operator==="$and" ? " and" : " or")
 		})
-		search_group_operator.addEventListener('click',function(e){
+		search_group_operator.addEventListener('click', function(e){
 			e.stopPropagation()
 			//console.log("Clicked search_group_operator:",search_group_operator );
 			toggle_operator_value(this)
@@ -569,7 +569,7 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 			parent			: search_group,
 			class_name		: "button close"
 		})
-		search_group_button_close.addEventListener('click',function(e){
+		search_group_button_close.addEventListener('click', function(e){
 			e.stopPropagation()
 			// remove from dom
 			search_group.parentNode.removeChild(search_group);
@@ -581,9 +581,9 @@ render_search.prototype.render_search_group = function(parent_div, options={}) {
 	// Add button + group
 		const search_group_button_plus = ui.create_dom_element({
 			element_type	: 'span',
-			parent			: search_group,
-			//inner_html	: "X",
-			class_name		: "button add"
+			title			: get_label.new || 'New',
+			class_name		: 'button add',
+			parent			: search_group
 		})
 		search_group_button_plus.addEventListener('click', function(e){
 			e.stopPropagation()
@@ -660,9 +660,9 @@ render_search.prototype.build_search_component = async function(options) {
 		const search_component_button_close = ui.create_dom_element({
 			element_type	: 'span',
 			parent			: search_component,
-			class_name		: "button close"
+			class_name		: 'button close'
 		})
-		search_component_button_close.addEventListener("click", function(e){
+		search_component_button_close.addEventListener('click', function(e){
 			e.stopPropagation()
 			// remove search box and content (component) from dom
 			search_component.parentNode.removeChild(search_component)
@@ -684,9 +684,9 @@ render_search.prototype.build_search_component = async function(options) {
 	// label component source if exists
 		if (first_item!==last_item) {
 			//console.log("first_item:",first_item);
-			const label_add = parent_div.querySelector("span.label_add")
+			const label_add = parent_div.querySelector('span.label_add')
 			if (label_add) {
-				label_add.innerHTML = first_item.name +" "+ label_add.innerHTML
+				label_add.innerHTML = first_item.name +' '+ label_add.innerHTML
 			}
 		}
 
@@ -814,10 +814,10 @@ render_search.prototype.render_user_preset_list = async function(ar_elements, pe
 			if (permissions>=2) {
 			const icon_delete = ui.create_dom_element({
 				element_type	: 'span',
-				parent			: li_element,
-				class_name		: 'icon_bs component_presets_button_delete'
+				class_name		: 'icon_bs component_presets_button_delete',
+				parent			: li_element
 			})
-			icon_delete.addEventListener('click',function(e){
+			icon_delete.addEventListener('click', function(e){
 				e.stopPropagation()
 				self.delete_preset(this)
 			})

@@ -155,12 +155,12 @@ abstract class filter {
 
 
 	/**
-	* CLEAN_CACHES
+	* CLEAN_CACHE
 	* @param int $user_id
 	* @param string $component_tipo
 	* @return bool
 	*/
-	public static function clean_caches(int $user_id, string $component_tipo) : bool {
+	public static function clean_cache(int $user_id, string $component_tipo) : bool {
 
 		// user_projects_cache
 		if( isset(filter::$user_projects_cache[$user_id]) ) {
@@ -192,7 +192,7 @@ abstract class filter {
 
 
 		return true;
-	}//end clean_caches
+	}//end clean_cache
 
 
 

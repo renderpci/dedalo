@@ -209,14 +209,14 @@ final class filter_test extends TestCase {
 
 
 	/**
-	* TEST_clean_caches
+	* TEST_clean_cache
 	* @return void
 	*/
-	public function test_clean_caches() {
+	public function test_clean_cache() {
 
 		$user_id = 1;
 
-		$result = filter::clean_caches(
+		$result = filter::clean_cache(
 			$user_id,
 			'test52'
 		);
@@ -234,7 +234,7 @@ final class filter_test extends TestCase {
 				. to_string($result) . PHP_EOL
 				. to_string($eq)
 		);
-	}//end test_clean_caches
+	}//end test_clean_cache
 
 
 
