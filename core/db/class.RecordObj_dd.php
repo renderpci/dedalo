@@ -1403,4 +1403,22 @@ class RecordObj_dd extends RecordDataBoundObject {
 		return $active_tlds;
 	}//end get_active_tlds
 
+
+
+	/**
+	* CHECK_ACTIVE_TLD
+	* Check if the tipo tld is available and installed in the ontology looking the jer_dd
+	* @param string $tipo
+	* @return bool
+	*/
+	public static function check_active_tld( string $tipo ) : bool {
+
+		$active_tlds = RecordObj_dd::get_active_tlds();
+		$current_tld = RecordObj_dd::get_prefix_from_tipo($tipo);
+
+		return in_array($current_tld, $active_tlds);
+	}//end check_active_tld
+
+
+
 }//end class RecordObj_dd
