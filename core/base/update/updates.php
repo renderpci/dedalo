@@ -86,6 +86,14 @@ $updates->$v = new stdClass();
 		";
 		$updates->$v->alert_update[] = $alert;
 
+	// DATABASE UPDATES
+		// Remove relations from activity->project (component_portal dd550)
+		// This data is huge (hundred of millions) in installations with many projects and is not really useful
+		// because normally, admins do not need to deep search across projects (JOINS)
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query("
+				DELETE FROM \"relations\" WHERE from_component_tipo = 'dd550';
+			");
+
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
 			'component_3d',
@@ -95,67 +103,68 @@ $updates->$v = new stdClass();
 			'component_image'
 		];	// Force convert from string to array
 
-	// DATA INSIDE DATABASE UPDATES
-	// clean_section_and_component_dato. Update 'datos' to section_data
-		$ar_tables = [
-			// 'new_matrix'
-			'matrix',
-			'matrix_activities',
-			'matrix_activity',
-			'matrix_counter',
-			'matrix_dataframe',
-			'matrix_dd',
-			'matrix_hierarchy',
-			'matrix_hierarchy_main',
-			'matrix_indexations',
-			'matrix_layout',
-			'matrix_layout_dd',
-			'matrix_list',
-			'matrix_nexus',
-			'matrix_nexus_main',
-			'matrix_notes',
-			'matrix_profiles',
-			'matrix_projects',
-			'matrix_stats',
-			'matrix_time_machine'
-		];
-		$json_files =[
-			'finds_numisdata279_to_tchi1.json'
-		];
-		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-		$script_obj = new stdClass();
-			$script_obj->info			= "Move data from section: Finds => Immobile | numisdata279 => tchi1";
-			$script_obj->script_class	= "transform_data";
-			$script_obj->script_method	= "changes_in_tipos";
-			$script_obj->script_vars	= [
-				$ar_tables,
-				$json_files
-			]; // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			$ar_tables = [
+				// 'new_matrix'
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_counter',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_time_machine'
+			];
+			$json_files =[
+				'finds_numisdata279_to_tchi1.json'
+			];
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Move data from section: Finds => Immobile | numisdata279 => tchi1";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "changes_in_tipos";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$json_files
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
 
-	// Update the relations table
-		$ar_tables_to_update = [
-			'matrix',
-			'matrix_activities',
-			'matrix_dataframe',
-			'matrix_dd',
-			'matrix_hierarchy',
-			'matrix_indexations',
-			'matrix_list',
-			'matrix_nexus',
-			'matrix_notes',
-			'matrix_projects'
-		];
-		$table_to_update = new stdClass();
-			$table_to_update->tables =  implode(',', $ar_tables_to_update);
-		$script_obj = new stdClass();
-			$script_obj->info			= "Recreate the relations table with new tipos";
-			$script_obj->script_class	= "area_maintenance";
-			$script_obj->script_method	= "regenerate_relations";
-			$script_obj->script_vars	= [
-				$table_to_update
-			]; // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
+		// Update the relations table
+			$ar_tables_to_update = [
+				'matrix',
+				'matrix_activities',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_indexations',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_notes',
+				'matrix_projects'
+			];
+			$table_to_update = new stdClass();
+				$table_to_update->tables =  implode(',', $ar_tables_to_update);
+			$script_obj = new stdClass();
+				$script_obj->info			= "Recreate the relations table with new tipos";
+				$script_obj->script_class	= "area_maintenance";
+				$script_obj->script_method	= "regenerate_relations";
+				$script_obj->script_vars	= [
+					$table_to_update
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
 
 
 
@@ -178,7 +187,8 @@ $updates->$v = new stdClass();
 		$alert->command			= '';
 		$updates->$v->alert_update[] = $alert;
 
-	// DATA INSIDE DATABASE UPDATES
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
@@ -221,7 +231,6 @@ $updates->$v = new stdClass();
 		$updates->$v->alert_update[] = $alert;
 
 	// DATABASE UPDATES
-
 		// Change the tipo column definition id matrix_counter
 			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
 				ALTER TABLE \"matrix_counter\"
@@ -409,7 +418,8 @@ $updates->$v = new stdClass();
 				UPDATE \"jer_dd\" SET \"parent\" = 'hierarchy122' WHERE \"terminoID\" = 'be2';
 			");
 
-	// DATA INSIDE DATABASE UPDATES
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
 		// clean_section_and_component_dato. Update 'datos' to section_data
 			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
 			$script_obj = new stdClass();
@@ -528,67 +538,68 @@ $updates->$v = new stdClass();
 		';
 		$updates->$v->alert_update[] = $alert;
 
-	// update time machine data. Update 'data' of time_machine
-		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-		$script_obj = new stdClass();
-			$script_obj->info			= "Transform data from portal 'Creators' (numisdata261) to new portal (numisdata1362)";
-			$script_obj->script_class	= "transform_data";
-			$script_obj->script_method	= "add_portal_level";
-			$script_obj->stop_on_error	= true;
-			$script_obj->script_vars	= json_decode('
-				{
-					"tld" : "numisdata",
-					"original" : [
-						{
-							"model" : "section",
-							"tipo" : "numisdata3",
-							"role" : "section",
-							"info" : "Types"
-						},
-						{
-							"model" : "component_portal",
-							"tipo" : "numisdata261",
-							"role" : "source_portal",
-							"info" : "Creators deprecated"
-						},
-						{
-							"model" : "component_portal",
-							"tipo" : "numisdata1362",
-							"role" : "target_portal",
-							"info" : "Creators (new)"
-						},
-						{
-							"model" : "component_portal",
-							"tipo" : "numisdata887",
-							"role" : "ds",
-							"info" : "Role"
-						}
-					],
-					"new" : [
-						{
-							"model" : "section",
-							"tipo" : "rsc1152",
-							"role" : "section",
-							"info" : "People references"
-						},
-						{
-							"model" : "component_portal",
-							"tipo" : "rsc1156",
-							"role" : "target_portal",
-							"info" : "People"
-						},
-						{
-							"model" : "component_portal",
-							"tipo" : "rsc1155",
-							"role" : "ds",
-							"info" : "Role"
-						}
-					],
-					"delete_old_data" : true,
-					"stop_on_error" : true
-				}
-		');
-		$updates->$v->run_scripts[] = $script_obj;
+	// RUN_SCRIPTS
+		// update time machine data. Update 'data' of time_machine
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Transform data from portal 'Creators' (numisdata261) to new portal (numisdata1362)";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "add_portal_level";
+				$script_obj->stop_on_error	= true;
+				$script_obj->script_vars	= json_decode('
+					{
+						"tld" : "numisdata",
+						"original" : [
+							{
+								"model" : "section",
+								"tipo" : "numisdata3",
+								"role" : "section",
+								"info" : "Types"
+							},
+							{
+								"model" : "component_portal",
+								"tipo" : "numisdata261",
+								"role" : "source_portal",
+								"info" : "Creators deprecated"
+							},
+							{
+								"model" : "component_portal",
+								"tipo" : "numisdata1362",
+								"role" : "target_portal",
+								"info" : "Creators (new)"
+							},
+							{
+								"model" : "component_portal",
+								"tipo" : "numisdata887",
+								"role" : "ds",
+								"info" : "Role"
+							}
+						],
+						"new" : [
+							{
+								"model" : "section",
+								"tipo" : "rsc1152",
+								"role" : "section",
+								"info" : "People references"
+							},
+							{
+								"model" : "component_portal",
+								"tipo" : "rsc1156",
+								"role" : "target_portal",
+								"info" : "People"
+							},
+							{
+								"model" : "component_portal",
+								"tipo" : "rsc1155",
+								"role" : "ds",
+								"info" : "Role"
+							}
+						],
+						"delete_old_data" : true,
+						"stop_on_error" : true
+					}
+			');
+			$updates->$v->run_scripts[] = $script_obj;
 
 
 
@@ -675,7 +686,14 @@ $updates->$v = new stdClass();
 				ALTER TABLE public.matrix_tools ALTER COLUMN id SET DEFAULT nextval('matrix_tools_id_seq'::regclass);
 
 				DROP INDEX IF EXISTS \"matrix_tools_expr_idx3\", \"matrix_tools_expr_idx2\", \"matrix_tools_expr_idx1\", \"matrix_tools_expr_idx\", \"matrix_tools_id_idx1\";
+
+				DROP INDEX IF EXISTS public.matrix_tools_datos_idx;
+				CREATE INDEX IF NOT EXISTS matrix_tools_datos_idx
+				    ON public.matrix_tools USING gin
+				    (datos jsonb_path_ops)
+				    TABLESPACE pg_default;
 			");
+			// re-create index matrix_tools_datos_idx because in some cases is wrong (inm v5 for example)
 
 		// create the matrix_test table
 			$updates->$v->SQL_update[] = PHP_EOL.sanitize_query("
@@ -821,17 +839,17 @@ $updates->$v = new stdClass();
 					USING gin(relations_flat_ty_st(datos) jsonb_path_ops);
 			");
 
-	// add the section_id_key to matrix_time_machine
-		// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			ALTER TABLE \"matrix_time_machine\"
-				ADD COLUMN IF NOT EXISTS \"section_id_key\" integer NULL;
-		");
-	// create new index into time_machine table to include section_id_key
-		// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
-		$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
-			CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
-		");
+		// add the section_id_key to matrix_time_machine
+			// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				ALTER TABLE \"matrix_time_machine\"
+					ADD COLUMN IF NOT EXISTS \"section_id_key\" integer NULL;
+			");
+		// create new index into time_machine table to include section_id_key
+			// (!) Note that this update id from 6.0.x to 6.1 but it is necessary here too for time machine running code 6.1
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query("
+				CREATE INDEX IF NOT EXISTS \"matrix_time_machine_section_id_key\" ON \"matrix_time_machine\" (\"section_id\", \"section_id_key\", \"section_tipo\", \"tipo\", \"lang\");
+			");
 
 	// UPDATE COMPONENTS
 		$updates->$v->components_update = [
@@ -846,124 +864,126 @@ $updates->$v = new stdClass();
 			'component_text_area', // (!) Run this at end because affect image and av data
 		];	// Force convert from string to array
 
-	// update time machine data. Update 'data' of time_machine
-		require_once dirname(dirname(__FILE__)) .'/upgrade/class.time_machine_v5_to_v6.php';
-		$script_obj = new stdClass();
-			$script_obj->info			= "Update data of time_machine, from 'txt' to array";
-			$script_obj->script_class	= "time_machine_v5_to_v6";
-			$script_obj->script_method	= "convert_table_data_time_machine";
-			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
-	// register tools. Before parse old data, we need to have the tools available
-		$script_obj = new stdClass();
-			$script_obj->info			= "Register all tools found in folder 'tools' ";
-			$script_obj->script_class	= "tools_register";
-			$script_obj->script_method	= "import_tools";
-			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
-	// component_relation_index. Update 'datos' with relation_index
-		require_once dirname(dirname(__FILE__)) .'/upgrade/class.relation_index_v5_to_v6.php';
-		$script_obj = new stdClass();
-			$script_obj->info			= "Change the component_relation_related_index data inside thesaurus to resources section data";
-			$script_obj->script_class	= "relation_index_v5_to_v6";
-			$script_obj->script_method	= "change_component_dato";
-			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
-	// component_pdf. rename media folder from 'standar' to 'web' and add a full copy as 'original'
-		$script_obj = new stdClass();
-			$script_obj->info			= "component_pdf: rename media folder from 'standar' to 'web' and creates a full copy as 'original'";
-			$script_obj->script_class	= "v5_to_v6";
-			$script_obj->script_method	= "update_component_pdf_media_dir";
-			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
-	// component_svg. rename media folder from 'standard' to 'web' and add a full copy as 'original'
-		$script_obj = new stdClass();
-			$script_obj->info			= "component_svg: rename media folder from 'standard' to 'web' and creates a full copy as 'original'";
-			$script_obj->script_class	= "v5_to_v6";
-			$script_obj->script_method	= "update_component_svg_media_dir";
-			$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
-	// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
+	// RUN_SCRIPTS
+		// update time machine data. Update 'data' of time_machine
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.time_machine_v5_to_v6.php';
 			$script_obj = new stdClass();
-				$script_obj->info			= "Remove unused section data and update/clean some properties";
-				$script_obj->script_class	= "data_v5_to_v6";
-				$script_obj->script_method	= "clean_section_and_component_dato";
+				$script_obj->info			= "Update data of time_machine, from 'txt' to array";
+				$script_obj->script_class	= "time_machine_v5_to_v6";
+				$script_obj->script_method	= "convert_table_data_time_machine";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
-		// convert_table_data_profiles. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
+		// register tools. Before parse old data, we need to have the tools available
 			$script_obj = new stdClass();
-				$script_obj->info			= "Convert dato of some components (component_security_areas, component_security_access), to new dato format";
-				$script_obj->script_class	= "security_v5_to_v6";
-				$script_obj->script_method	= "convert_table_data_profiles";
-				$script_obj->script_vars	= json_encode(['component_security_areas','component_security_access']); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
-
-		// convert_table_data_users. Update 'datos' to section_data
-			// require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Convert dato of some components (component_profile, component_security_administration, component_filter_records), to new standard locator format";
-				$script_obj->script_class	= "security_v5_to_v6";
-				$script_obj->script_method	= "convert_table_data_users";
-				$script_obj->script_vars	= json_encode(['component_profile','component_security_administration','component_filter_records']); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
-
-		// convert_table_data_activity. Update 'datos' to section_data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.activity_v5_to_v6.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Convert the old dato format of some components dd546, dd545 (component_autocomplete_ts), to new standard component_autocomplete format";
-				$script_obj->script_class	= "activity_v5_to_v6";
-				$script_obj->script_method	= "convert_table_data_activity";
-				$script_obj->script_vars	= json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
-
-		// publication media files. rename media files to use max_items_folder as additional path
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "publication media files: rename media files to use max_items_folder as additional path";
-				$script_obj->script_class	= "v5_to_v6";
-				$script_obj->script_method	= "update_publication_media_files";
-				$ar_items = [
-					// PDF publication files
-					(object)[
-						'ar_quality'		=> DEDALO_PDF_AR_QUALITY,
-						'element_dir'		=> DEDALO_PDF_FOLDER,
-						'max_items_folder'	=> 1000,
-						'ref_name'			=> 'rsc209_rsc205_' // find 'rsc209_rsc205_1.pdf'
-					],
-					// image publication files
-					(object)[
-						'ar_quality'		=> DEDALO_IMAGE_AR_QUALITY,
-						'element_dir'		=> DEDALO_IMAGE_FOLDER,
-						'max_items_folder'	=> 1000,
-						'ref_name'			=> 'rsc228_rsc205_' // find 'rsc228_rsc205_1.jpg'
-					]
-				];
-				$script_obj->script_vars	= json_encode($ar_items); // Note that only ONE argument encoded is sent
-			$updates->$v->run_scripts[] = $script_obj;
-
-		// Update search_presets data
-			require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
-			$script_obj = new stdClass();
-				$script_obj->info			= "Convert the old dato format from search presets";
-				$script_obj->script_class	= "v5_to_v6";
-				$script_obj->script_method	= "update_search_presets_data";
+				$script_obj->info			= "Register all tools found in folder 'tools' ";
+				$script_obj->script_class	= "tools_register";
+				$script_obj->script_method	= "import_tools";
 				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
 			$updates->$v->run_scripts[] = $script_obj;
 
-		// Fix v6 beta data errors (sample: modified_date, created_date, ...)
-			// require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
-			// $script_obj = new stdClass();
-			// 	$script_obj->info			= "Fix v6 beta issues";
-			// 	$script_obj->script_class	= "v5_to_v6";
-			// 	$script_obj->script_method	= "fix_v6_beta_issues";
-			// 	$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
-			// $updates->$v->run_scripts[] = $script_obj;
+		// component_relation_index. Update 'datos' with relation_index
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.relation_index_v5_to_v6.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Change the component_relation_related_index data inside thesaurus to resources section data";
+				$script_obj->script_class	= "relation_index_v5_to_v6";
+				$script_obj->script_method	= "change_component_dato";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// component_pdf. rename media folder from 'standar' to 'web' and add a full copy as 'original'
+			$script_obj = new stdClass();
+				$script_obj->info			= "component_pdf: rename media folder from 'standar' to 'web' and creates a full copy as 'original'";
+				$script_obj->script_class	= "v5_to_v6";
+				$script_obj->script_method	= "update_component_pdf_media_dir";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// component_svg. rename media folder from 'standard' to 'web' and add a full copy as 'original'
+			$script_obj = new stdClass();
+				$script_obj->info			= "component_svg: rename media folder from 'standard' to 'web' and creates a full copy as 'original'";
+				$script_obj->script_class	= "v5_to_v6";
+				$script_obj->script_method	= "update_component_svg_media_dir";
+				$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+		// DATA INSIDE DATABASE UPDATES
+			// clean_section_and_component_dato. Update 'datos' to section_data
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Remove unused section data and update/clean some properties";
+					$script_obj->script_class	= "data_v5_to_v6";
+					$script_obj->script_method	= "clean_section_and_component_dato";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// convert_table_data_profiles. Update 'datos' to section_data
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Convert dato of some components (component_security_areas, component_security_access), to new dato format";
+					$script_obj->script_class	= "security_v5_to_v6";
+					$script_obj->script_method	= "convert_table_data_profiles";
+					$script_obj->script_vars	= json_encode(['component_security_areas','component_security_access']); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// convert_table_data_users. Update 'datos' to section_data
+				// require_once dirname(dirname(__FILE__)) .'/upgrade/class.security_v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Convert dato of some components (component_profile, component_security_administration, component_filter_records), to new standard locator format";
+					$script_obj->script_class	= "security_v5_to_v6";
+					$script_obj->script_method	= "convert_table_data_users";
+					$script_obj->script_vars	= json_encode(['component_profile','component_security_administration','component_filter_records']); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// convert_table_data_activity. Update 'datos' to section_data
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.activity_v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Convert the old dato format of some components dd546, dd545 (component_autocomplete_ts), to new standard component_autocomplete format";
+					$script_obj->script_class	= "activity_v5_to_v6";
+					$script_obj->script_method	= "convert_table_data_activity";
+					$script_obj->script_vars	= json_encode(['component_autocomplete_ts']); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// publication media files. rename media files to use max_items_folder as additional path
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.data_v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "publication media files: rename media files to use max_items_folder as additional path";
+					$script_obj->script_class	= "v5_to_v6";
+					$script_obj->script_method	= "update_publication_media_files";
+					$ar_items = [
+						// PDF publication files
+						(object)[
+							'ar_quality'		=> DEDALO_PDF_AR_QUALITY,
+							'element_dir'		=> DEDALO_PDF_FOLDER,
+							'max_items_folder'	=> 1000,
+							'ref_name'			=> 'rsc209_rsc205_' // find 'rsc209_rsc205_1.pdf'
+						],
+						// image publication files
+						(object)[
+							'ar_quality'		=> DEDALO_IMAGE_AR_QUALITY,
+							'element_dir'		=> DEDALO_IMAGE_FOLDER,
+							'max_items_folder'	=> 1000,
+							'ref_name'			=> 'rsc228_rsc205_' // find 'rsc228_rsc205_1.jpg'
+						]
+					];
+					$script_obj->script_vars	= json_encode($ar_items); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// Update search_presets data
+				require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
+				$script_obj = new stdClass();
+					$script_obj->info			= "Convert the old dato format from search presets";
+					$script_obj->script_class	= "v5_to_v6";
+					$script_obj->script_method	= "update_search_presets_data";
+					$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				$updates->$v->run_scripts[] = $script_obj;
+
+			// Fix v6 beta data errors (sample: modified_date, created_date, ...)
+				// require_once dirname(dirname(__FILE__)) .'/upgrade/class.v5_to_v6.php';
+				// $script_obj = new stdClass();
+				// 	$script_obj->info			= "Fix v6 beta issues";
+				// 	$script_obj->script_class	= "v5_to_v6";
+				// 	$script_obj->script_method	= "fix_v6_beta_issues";
+				// 	$script_obj->script_vars	= json_encode([]); // Note that only ONE argument encoded is sent
+				// $updates->$v->run_scripts[] = $script_obj;
+

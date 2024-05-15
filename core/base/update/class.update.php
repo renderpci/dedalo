@@ -122,7 +122,7 @@ class update {
 				}
 			}
 
-		// SQL_update
+		// 1 SQL_update
 			if(isset($update->SQL_update)){
 				$counter = count($update->SQL_update);
 				foreach ((array)$update->SQL_update as $key => $current_query) {
@@ -186,7 +186,7 @@ class update {
 				}//end foreach ((array)$update->SQL_update as $current_query)
 			}
 
-		// components_update
+		// 2 components_update
 			if(isset($update->components_update)){
 				$counter = count($update->components_update);
 				foreach ((array)$update->components_update as $key => $current_model) {
@@ -236,7 +236,7 @@ class update {
 				}//end foreach ((array)$update->components_update as $current_model)
 			}
 
-		// run_scripts
+		// 3 run_scripts
 			if(isset($update->run_scripts)){
 				$counter = count($update->run_scripts);
 				foreach ((array)$update->run_scripts as $key => $current_script) {
