@@ -117,17 +117,18 @@ view_text_section_record.render = async function(self, options) {
 
 					const current_instance = ar_instances[j]
 
-					// last_data = {
-					// 	section_tipo	: current_instance.section_tipo,
-					// 	section_id		: current_instance.section_id
-					// }
+					// des
+						// last_data = {
+						// 	section_tipo	: current_instance.section_tipo,
+						// 	section_id		: current_instance.section_id
+						// }
 
 					// check instance is valid
 						if (typeof current_instance==='undefined') {
 							console.error('Undefined current_instance:', current_instance, j, ar_instances);
 							continue;
 						}
-					// check if the current_instance has column_id, if not, a error was done by the common creating the columns.
+					// check if the current_instance has column_id, if not, an error was done by the common creating the columns.
 						if(!current_instance.column_id) {
 							console.error('current_instance column_id not found:', current_instance);
 							continue;

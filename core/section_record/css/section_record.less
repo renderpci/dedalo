@@ -101,6 +101,13 @@
 			}
 		}
 
+		// last separator hide.
+		// This is a temporal measure to prevent to display last separator
+		// in some cases where last item is empty and is not detected by the section_record check mechanism
+		.separator:last-of-type {
+			display: none;
+		}
+
 	}//end list &.list
 
 	&.mini {
