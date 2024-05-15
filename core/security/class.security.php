@@ -351,6 +351,23 @@ class security {
 	*/
 	public static function reset_permissions_table() : bool {
 
+		// force clean cache (session and static vars)
+		security::clean_cache();
+
+		// force re-calculate values
+		security::get_permissions_table();
+
+		return true;
+	}//end reset_permissions_table
+
+
+
+	/**
+	* CLEAN_CACHE
+	* @return bool
+	*/
+	public static function clean_cache() {
+
 		// unset session var
 		if (isset($_SESSION['dedalo']['auth']['permissions_table'])) {
 			unset($_SESSION['dedalo']['auth']['permissions_table']);
@@ -359,11 +376,8 @@ class security {
 		// empty static var
 		security::$permissions_table_cache = null;
 
-		// force re-calculate values
-		security::get_permissions_table();
-
 		return true;
-	}//end reset_permissions_table
+	}//end clean_cache
 
 
 
