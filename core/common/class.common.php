@@ -3302,6 +3302,16 @@ abstract class common {
 										continue;
 									}
 
+									// check if the ddo is active into the ontology
+										$is_active = RecordObj_dd::check_active_tld($current_search_ddo_map->tipo);
+										if( $is_active === false ){
+											debug_log(__METHOD__
+												. " Removed ddo from ddo_map->search definition because the tld is not installed " . PHP_EOL
+												. to_string($current_search_ddo_map)
+												, logger::WARNING
+											);
+											continue;
+										}
 									// label. Add to all ddo_map items
 										$current_search_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
