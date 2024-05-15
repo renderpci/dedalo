@@ -220,7 +220,7 @@ const get_content_value = (i, current_value, self) => {
 		}// end if(mode)
 
 	// transliterate_value
-		if (with_lang_versions) {
+		if (with_lang_versions && self.data.transliterate_value) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'transliterate_value',
