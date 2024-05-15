@@ -2761,6 +2761,20 @@ class component_relation_common extends component_common {
 					// 	"source": "fixed_dato"
 					// }
 					foreach ($search_item->value as $object) {
+
+						$last_path = end($object->path);
+
+						// check if the ddo is active into the ontology
+							$is_active = RecordObj_dd::check_active_tld($last_path->component_tipo);
+							if( $is_active === false ){
+								debug_log(__METHOD__
+									. " Removed fixed filter value from sqo definition because the tld is not installed " . PHP_EOL
+									. to_string($object)
+									, logger::WARNING
+								);
+								continue;
+							}
+
 						$dato_filter->{$operator}[] = $object;
 					}
 					break;
