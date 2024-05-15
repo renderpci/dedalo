@@ -3312,6 +3312,9 @@ abstract class common {
 											);
 											continue;
 										}
+									// model. Calculated always to prevent errors
+										$current_search_ddo_map->model = RecordObj_dd::get_modelo_name_by_tipo($current_search_ddo_map->tipo, true);
+
 									// label. Add to all ddo_map items
 										$current_search_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_search_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
 
@@ -3384,6 +3387,9 @@ abstract class common {
 										);
 										continue;
 									}
+
+								// model. Calculated always to prevent errors
+									$current_choose_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo, true);
 
 								// section_tipo
 									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
