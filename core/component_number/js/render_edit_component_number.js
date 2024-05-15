@@ -116,6 +116,10 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		input.step = self.get_steps()
+		// mousedown event. Capture event propagation
+			input.addEventListener('mousedown', (e) => {
+				e.stopPropagation()
+			})
 		// focus event
 			input.addEventListener('focus', function() {
 				// force activate on input focus (tabulating case)
@@ -123,49 +127,49 @@ const get_content_value = (i, current_value, self) => {
 					ui.component.activate(self, false)
 				}
 			})
+		// keydown event
+			input.addEventListener('keydown', function(e) {
+				if(e.key==='Tab'){
+					ui.component.deactivate(self)
+					return
+				}
+			})
 		// keyup event
-			input.addEventListener('keyup', function(e) {
-				// page unload event
-				keyup_handler(e, i, self)
-			})//end keyup
+			// input.addEventListener('keyup', function(e) {
+			// 	// page unload event
+			// 	keyup_handler(e, i, self)
+			// })//end keyup
 		// blur event
-			input.addEventListener('blur', function(e) {
-				// saves changed data
-				blur_handler(e, i, self)
-			})//end blur
+			// input.addEventListener('blur', function(e) {
+			// 	// saves changed data
+			// 	blur_handler(e, i, self)
+			// })//end blur
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
-		// mousedown event. Capture event propagation
-			input.addEventListener('mousedown', (e) => {
-				e.stopPropagation()
+		// change event
+			input.addEventListener('change', (e) => {
+				change_handler(e, i, self)
 			})
 
 	// button remove
-		const button_remove = ui.create_dom_element({
-			element_type	: 'span',
-			class_name		: 'button remove hidden_button',
-			parent			: content_value
-		})
-		button_remove.addEventListener('mouseup', fn_remove_mouseup)
-		function fn_remove_mouseup() {
-			// force possible input change before remove
-			document.activeElement.blur()
-
-			const current_value = input.value ? input.value : null
-
-			const changed_data = [Object.freeze({
-				action	: 'remove',
-				key		: i,
-				value	: null
-			})]
-			self.change_value({
-				changed_data	: changed_data,
-				label			: current_value,
-				refresh			: true
+		if (i>0) {
+			const button_remove = ui.create_dom_element({
+				element_type	: 'span',
+				title			: get_label.delete || 'Delete',
+				class_name		: 'button remove hidden_button',
+				parent			: content_value
 			})
-		}//end fn_remove_mouseup
+			button_remove.addEventListener('mousedown', function(e) {
+				e.stopPropagation()
+				e.preventDefault()
+			})
+			button_remove.addEventListener('click', function(e){
+				e.stopPropagation()
+				remove_handler(input, i, self)
+			})
+		}
 
 
 	return content_value
@@ -261,7 +265,7 @@ export const get_buttons = (self) => {
 
 
 /**
-* KEYUP_HANDLER
+* CHANGE_HANDLER
 * Store current value in self.data.changed_data
 * If key pressed is 'Enter', force save the value
 * @param event e
@@ -269,40 +273,12 @@ export const get_buttons = (self) => {
 * @param object self
 * @return bool
 */
-export const keyup_handler = function(e, key, self) {
-	e.preventDefault()
-
-	// when tab is pressed the node and self is the target component,
-	// so the change data is not for the source component and user has enter (and don't changed nothing)
-		if (e.key==='Tab' || e.key==='Shift') {
-			return false
-		}
-
-	// Enter key force to save changes as the same way that blur
-		if (e.key==='Enter') {
-			blur_handler(e, key, self)
-		}
-
-	return true
-}//end keyup_handler
-
-
-
-/**
-* BLUR_HANDLER
-* Store current value in self.data.changed_data
-* @param event e
-* @param int key
-* @param object self
-* @return bool
-*/
-export const blur_handler = function(e, key, self) {
-	e.preventDefault()
+export const change_handler = function(e, key, self) {
 
 	// fix value to valid format as '5.21' from '5,21'
-	const safe_value = (e.target.value.length>0)
-		? self.fix_number_format(e.target.value)
-		: null
+		const safe_value = (e.target.value.length>0)
+			? self.fix_number_format(e.target.value)
+			: null
 
 	// if the safe_value is different than the value of user had enter set the safe_value
 		if(safe_value!=e.target.value) {
@@ -316,19 +292,87 @@ export const blur_handler = function(e, key, self) {
 			value	: safe_value
 		})
 
-	// fix instance changed_data
-		self.set_changed_data(changed_data_item)
-
-	// force to save current input if changed
-		const changed_data = self.data.changed_data || []
-		// change_value (save data)
+	// change_value (save data)
 		self.change_value({
-			changed_data	: changed_data,
+			changed_data	: [changed_data_item],
 			refresh			: false
 		})
 
+
 	return true
-}//end blur_handler
+}//end change_handler
+
+
+
+/**
+* KEYUP_HANDLER
+* Store current value in self.data.changed_data
+* If key pressed is 'Enter', force save the value
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+	// export const keyup_handler = function(e, key, self) {
+	// 	e.preventDefault()
+
+	// 	// when tab is pressed the node and self is the target component,
+	// 	// so the change data is not for the source component and user has enter (and don't changed nothing)
+	// 		if (e.key==='Tab' || e.key==='Shift') {
+	// 			return false
+	// 		}
+
+	// 	// Enter key force to save changes as the same way that blur
+	// 		if (e.key==='Enter') {
+	// 			blur_handler(e, key, self)
+	// 		}
+
+	// 	return true
+	// }//end keyup_handler
+
+
+
+/**
+* BLUR_HANDLER
+* Store current value in self.data.changed_data
+* @param event e
+* @param int key
+* @param object self
+* @return bool
+*/
+	// export const blur_handler = function(e, key, self) {
+	// 	e.preventDefault()
+
+	// 	// fix value to valid format as '5.21' from '5,21'
+	// 	const safe_value = (e.target.value.length>0)
+	// 		? self.fix_number_format(e.target.value)
+	// 		: null
+
+	// 	// if the safe_value is different than the value of user had enter set the safe_value
+	// 		if(safe_value!=e.target.value) {
+	// 			e.target.value = safe_value
+	// 		}
+
+	// 	// change data
+	// 		const changed_data_item = Object.freeze({
+	// 			action	: 'update',
+	// 			key		: key,
+	// 			value	: safe_value
+	// 		})
+
+	// 	// fix instance changed_data
+	// 		self.set_changed_data(changed_data_item)
+
+	// 	// force to save current input if changed
+	// 		const changed_data = self.data.changed_data || []
+	// 		// change_value (save data)
+	// 		self.change_value({
+	// 			changed_data	: changed_data,
+	// 			refresh			: false
+	// 		})
+
+	// 	return true
+	// }//end blur_handler
 
 
 
@@ -347,6 +391,11 @@ export const remove_handler = function(input, key, self) {
 
 	// value
 		const current_value = input.value ? input.value : null
+		if (current_value) {
+			if (!confirm(get_label.sure)) {
+				return
+			}
+		}
 
 	// changed_data
 		const changed_data = [Object.freeze({
