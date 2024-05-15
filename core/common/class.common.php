@@ -3376,7 +3376,8 @@ abstract class common {
 						if (isset($item_request_config->choose)) {
 
 							$choose_ddo_map = $item_request_config->choose->ddo_map;
-							foreach ($choose_ddo_map as $current_ddo_map) {
+							foreach ($choose_ddo_map as $current_choose_ddo) {
+
 								// check if the ddo is active into the ontology
 									$is_active = RecordObj_dd::check_active_tld($current_choose_ddo->tipo);
 									if( $is_active === false ){
@@ -3392,26 +3393,26 @@ abstract class common {
 									$current_choose_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_choose_ddo->tipo, true);
 
 								// section_tipo
-									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
+									$current_choose_ddo->section_tipo = $current_choose_ddo->section_tipo==='self'
 										? $ar_section_tipo
-										: $current_ddo_map->section_tipo;
+										: $current_choose_ddo->section_tipo;
 
 								// parent. Set the default "self" value to the current tipo (the parent)
-									$current_ddo_map->parent = $current_ddo_map->parent==='self'
+									$current_choose_ddo->parent = $current_choose_ddo->parent==='self'
 										? $tipo
-										: $current_ddo_map->parent;
+										: $current_choose_ddo->parent;
 
 								// label. Add to all ddo_map items
-									$current_ddo_map->label = RecordObj_dd::get_termino_by_tipo($current_ddo_map->tipo, DEDALO_APPLICATION_LANG, true, true);
+									$current_choose_ddo->label = RecordObj_dd::get_termino_by_tipo($current_choose_ddo->tipo, DEDALO_APPLICATION_LANG, true, true);
 
 								// mode
-									$current_ddo_map->mode = isset($current_ddo_map->mode)
-										? $current_ddo_map->mode
+									$current_choose_ddo->mode = isset($current_choose_ddo->mode)
+										? $current_choose_ddo->mode
 										: ($model !== 'section'
 											? 'list'
 											: $mode);
 
-								$final_ddo_map[] = $current_ddo_map;
+								$final_ddo_map[] = $current_choose_ddo;
 							}
 
 							// $parsed_item->show->ddo_map = $choose_ddo_map;
