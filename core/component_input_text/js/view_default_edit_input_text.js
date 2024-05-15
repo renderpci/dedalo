@@ -146,7 +146,7 @@ const get_content_value = (i, current_value, self) => {
 			})
 		// keydown event
 			input.addEventListener('keydown', function(e) {
-				if(e.key==='Tab' ){
+				if(e.key==='Tab'){
 					ui.component.deactivate(self)
 					return
 				}
@@ -205,6 +205,7 @@ const get_content_value = (i, current_value, self) => {
 			// button_remove
 			const button_remove = ui.create_dom_element({
 				element_type	: 'span',
+				title			: get_label.delete || 'Delete',
 				class_name		: 'button remove hidden_button',
 				parent			: content_value
 			})

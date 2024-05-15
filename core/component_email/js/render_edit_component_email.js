@@ -156,6 +156,7 @@ const get_content_value = (i, current_value, self) => {
 			if (i>0) {
 				const button_remove = ui.create_dom_element({
 					element_type	: 'span',
+					title			: get_label.delete || 'Delete',
 					class_name		: 'button remove hidden_button',
 					parent			: content_value
 				})

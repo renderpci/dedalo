@@ -1029,6 +1029,7 @@ const render_layer_selector = function(self, data_tag, tag_id, text_editor){
 		const add_layer = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'button add',
+			title			: get_label.new || 'New',
 			parent			: fragment
 		})
 		add_layer.addEventListener('click', (e) =>{
