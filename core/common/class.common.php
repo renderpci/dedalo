@@ -3152,6 +3152,17 @@ abstract class common {
 										continue;
 									}
 
+								// check if the ddo is active into the ontology
+									$is_active = RecordObj_dd::check_active_tld($current_ddo->tipo);
+									if( $is_active === false ){
+										debug_log(__METHOD__
+											. " Removed ddo from ddo_map->show definition because the tld is not installed " . PHP_EOL
+											. to_string($current_ddo)
+											, logger::WARNING
+										);
+										continue;
+									}
+
 								// model. Calculated always to prevent errors
 									$current_ddo->model = RecordObj_dd::get_modelo_name_by_tipo($current_ddo->tipo, true);
 
