@@ -3374,6 +3374,16 @@ abstract class common {
 
 							$choose_ddo_map = $item_request_config->choose->ddo_map;
 							foreach ($choose_ddo_map as $current_ddo_map) {
+								// check if the ddo is active into the ontology
+									$is_active = RecordObj_dd::check_active_tld($current_choose_ddo->tipo);
+									if( $is_active === false ){
+										debug_log(__METHOD__
+											. " Removed ddo from ddo_map->choose definition because the tld is not installed " . PHP_EOL
+											. to_string($current_choose_ddo)
+											, logger::WARNING
+										);
+										continue;
+									}
 
 								// section_tipo
 									$current_ddo_map->section_tipo = $current_ddo_map->section_tipo==='self'
