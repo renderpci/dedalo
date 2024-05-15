@@ -302,14 +302,8 @@ class tools_register {
 					}
 			}
 
-		// session. Remove previous stored data in session
-			// unset($_SESSION['dedalo']['tools']); // cache of already calculated tools
-			if (isset($_SESSION['dedalo']['registered_tools'])) {
-				unset($_SESSION['dedalo']['registered_tools']);
-			}
-			dd_cache::delete_cache_files([
-				'cache_registered_tools.json'
-			]);
+		// clean_cache. Remove previous stored data in session or files
+			tools_register::clean_cache();
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -1274,6 +1268,33 @@ class tools_register {
 
 		return $ar_client_config;
 	}//end get_all_default_config_tool_client
+
+
+
+	/**
+	* CLEAN_CACHE
+	* @return bool
+	*/
+	public static function clean_cache() {
+
+
+		// session. Remove previous stored data in session
+			// unset($_SESSION['dedalo']['tools']); // cache of already calculated tools
+			if (isset($_SESSION['dedalo']['registered_tools'])) {
+				unset($_SESSION['dedalo']['registered_tools']);
+			}
+
+		// delete_cache_files
+			$deleted_files = dd_cache::delete_cache_files([
+				'cache_registered_tools.json'
+			]);
+			if ($deleted_files===true) {
+				return true;
+			}
+
+
+		return false;
+	}//end clean_cache
 
 
 

@@ -213,4 +213,20 @@ class request_config_presets {
 
 
 
+	/**
+	* CLEAN_CACHE
+	* @return bool
+	*/
+	public static function clean_cache() {
+
+		if (isset($_SESSION['dedalo']['config']['user_preset_layout_map'])) {
+			unset($_SESSION['dedalo']['config']['user_preset_layout_map']);
+			return true;
+		}
+
+		return false;
+	}//end clean_cache
+
+
+
 }//end class request_config_presets
