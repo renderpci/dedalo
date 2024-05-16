@@ -145,6 +145,9 @@ class dd_grid_cell_object {
 	public $column;
 	// array ar_columns_obj
 	public $ar_columns_obj;
+	// object features
+	// Multipurpose container used to pass useful information, for example the section color
+	public $features;
 
 	// ar_value_type_allowed
 		// private static $ar_value_type_allowed = [
@@ -404,6 +407,18 @@ class dd_grid_cell_object {
 	public function set_column(?string $value) : void {
 		$this->column = $value;
 	}//end set_column
+
+
+
+	/**
+	* SET_FEATURES
+	* Multipurpose container used to pass useful information, for example the section color
+	* @param object|null $value
+	* @return void
+	*/
+	public function set_features(?object $value) : void {
+		$this->features = $value;
+	}//end set_features
 
 
 
