@@ -111,6 +111,18 @@ class indexation_grid {
 					'children' // string relation_type
 				);
 				$indexation_list = $ar_found[0] ?? null;
+				if (empty($indexation_list)) {
+					// try from real version indexation_list
+					$real_tipo = section::get_section_real_tipo_static($current_section_tipo);
+					if ($real_tipo!==$current_section_tipo) {
+						$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+							$real_tipo,
+							'indexation_list', // string model
+							'children' // string relation_type
+						);
+						$indexation_list = $ar_found[0] ?? null;
+					}
+				}
 				// check empty cases (misconfigured Ontology indexation_list children)
 					if (empty($indexation_list)) {
 						debug_log(__METHOD__
