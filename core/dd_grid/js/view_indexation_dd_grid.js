@@ -232,6 +232,7 @@ export const get_button_column = function(current_data) {
 				// ]
 
 			button.addEventListener(value.action.event, async (e)=>{
+				e.stopPropagation()
 
 				// options
 					const options			= value.action.options
@@ -256,6 +257,7 @@ export const get_button_column = function(current_data) {
 					}
 			})
 		}
+
 
 	return button
 }//end get_button_column
@@ -300,6 +302,7 @@ export const get_text_column = function(data_item, use_fallback) {
 		if (data_item.class_list==='text_fragment') {
 			// console.log('data_item:', data_item);
 			text_node.addEventListener('click', function(e) {
+				e.stopPropagation()
 				text_node.classList.toggle('full')
 			})
 		}

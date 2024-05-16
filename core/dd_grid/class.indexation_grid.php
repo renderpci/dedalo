@@ -123,6 +123,13 @@ class indexation_grid {
 				$RecordObj_dd	= new RecordObj_dd($indexation_list);
 				$properties		= $RecordObj_dd->get_properties();
 
+				// css selector add to section_grid if exists (like 'audiovisual')
+				// normally is a CSS grouper selector with correspondence with a LESS file like view_indexation_audiovisual.less
+				$class_list = $properties->class_list ?? null;
+				if (!empty($class_list)) {
+					$section_grid->set_class_list( $section_grid->class_list . ' '. $class_list);
+				}
+
 				$head_ddo_map = isset($properties->head)
 					? $this->process_ddo_map($properties->head->show->ddo_map, $current_section_tipo)
 					: null;
