@@ -88,11 +88,21 @@ class indexation_grid {
 					$section_grid->set_type('column');
 					$section_grid->set_label($label);
 					$section_grid->set_render_label(true);
-					$section_grid->set_class_list('caption section '.$current_section_tipo);
+					$section_grid->set_class_list('caption section '.$current_section_tipo); // will be extended with indexation_list class_list
 					// $section_grid->set_cell_type('text');
 
 			// add the column to the row
 				$section_grid_row->set_value([$section_grid]);
+
+			// grid features. Used to pass the section color when is defined
+				// section
+				$RecordObj_dd		= new RecordObj_dd($current_section_tipo);
+				$section_properties	= $RecordObj_dd->get_properties();
+				if (isset($section_properties->color)) {
+					$section_grid->set_features((object)[
+						'color' => $section_properties->color
+					]);
+				}
 
 			// indexation_list. Get the term in the section that has the indexation_list information
 				$ar_found = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(

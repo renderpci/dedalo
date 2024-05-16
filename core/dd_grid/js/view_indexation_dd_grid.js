@@ -39,7 +39,7 @@ export const view_indexation_dd_grid = function() {
 view_indexation_dd_grid.render = async function(self, options) {
 
 	// data
-		const data = self.data
+		const data = self.data || []
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -177,6 +177,14 @@ const get_div_container = function(current_data) {
 		element_type	: 'div',
 		class_name		: class_list
 	})
+
+	// --base_color. Is set only to div_container scope.
+	// Value comes from section properties and is set to dd_grid
+	// when section_grid is build (server side)
+		if (current_data.features && current_data.features.color) {
+			div_container.style.cssText = "--base_color: " + current_data.features.color
+		}
+
 
 	return div_container
 }//end get_div_container
