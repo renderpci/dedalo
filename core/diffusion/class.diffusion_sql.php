@@ -3291,9 +3291,14 @@ class diffusion_sql extends diffusion  {
 				# Set temporally to skip and force parent publication
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
-				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+				// tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+				tool_diffusion::export((object)[
+					'section_tipo'				=> $section_tipo,
+					'section_id'				=> $section_id,
+					'diffusion_element_tipo'	=> $diffusion_element_tipo
+				]);
 				debug_log(__METHOD__
-					." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) "
+					." Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id)"
 					, logger::DEBUG
 				);
 
