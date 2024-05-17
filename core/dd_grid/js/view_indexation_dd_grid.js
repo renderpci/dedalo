@@ -10,7 +10,7 @@
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_section_id_column,
+		// get_section_id_column,
 		get_av_column,
 		get_img_column,
 		get_label_column,
@@ -39,7 +39,7 @@ export const view_indexation_dd_grid = function() {
 view_indexation_dd_grid.render = async function(self, options) {
 
 	// data
-		const data = self.data
+		const data = self.data || []
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -178,6 +178,14 @@ const get_div_container = function(current_data) {
 		class_name		: class_list
 	})
 
+	// --base_color. Is set only to div_container scope.
+	// Value comes from section properties and is set to dd_grid
+	// when section_grid is build (server side)
+		if (current_data.features && current_data.features.color) {
+			div_container.style.cssText = "--base_color: " + current_data.features.color
+		}
+
+
 	return div_container
 }//end get_div_container
 
@@ -232,6 +240,7 @@ export const get_button_column = function(current_data) {
 				// ]
 
 			button.addEventListener(value.action.event, async (e)=>{
+				e.stopPropagation()
 
 				// options
 					const options			= value.action.options
@@ -256,6 +265,7 @@ export const get_button_column = function(current_data) {
 					}
 			})
 		}
+
 
 	return button
 }//end get_button_column
@@ -300,6 +310,7 @@ export const get_text_column = function(data_item, use_fallback) {
 		if (data_item.class_list==='text_fragment') {
 			// console.log('data_item:', data_item);
 			text_node.addEventListener('click', function(e) {
+				e.stopPropagation()
 				text_node.classList.toggle('full')
 			})
 		}
@@ -357,6 +368,40 @@ export const get_record_link_column = function(current_data) {
 
 	return button_edit
 }//end get_record_link_column
+
+
+
+/**
+* GET_SECTION_ID_COLUMN
+* @param object current_data
+* @return HTMLElement section_id_node (button|span)
+*/
+export const get_section_id_column = function(current_data) {
+
+	// record_link_column render
+		const id = current_data.ar_columns_obj[0]?.id || null
+		if (id) {
+
+			return get_record_link_column({
+				class_list : current_data.class_list,
+				value : [{
+					section_id		: current_data.value,
+					section_tipo	: id.split('_')[0]
+				}]
+			})
+		}
+
+	// default plain render
+		const section_id_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'link ' + (current_data.class_list || ''),
+			title			: get_label.open || 'Open',
+			inner_html		: current_data.value
+		})
+
+
+	return section_id_node
+}//end get_section_id_column
 
 
 
