@@ -10,7 +10,7 @@
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		get_section_id_column,
+		// get_section_id_column,
 		get_av_column,
 		get_img_column,
 		get_label_column,
@@ -368,6 +368,40 @@ export const get_record_link_column = function(current_data) {
 
 	return button_edit
 }//end get_record_link_column
+
+
+
+/**
+* GET_SECTION_ID_COLUMN
+* @param object current_data
+* @return HTMLElement section_id_node (button|span)
+*/
+export const get_section_id_column = function(current_data) {
+
+	// record_link_column render
+		const id = current_data.ar_columns_obj[0]?.id || null
+		if (id) {
+
+			return get_record_link_column({
+				class_list : current_data.class_list,
+				value : [{
+					section_id		: current_data.value,
+					section_tipo	: id.split('_')[0]
+				}]
+			})
+		}
+
+	// default plain render
+		const section_id_node = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'link ' + (current_data.class_list || ''),
+			title			: get_label.open || 'Open',
+			inner_html		: current_data.value
+		})
+
+
+	return section_id_node
+}//end get_section_id_column
 
 
 
