@@ -1892,3 +1892,91 @@
 		user-select: none;
 	}
 }
+
+// grid choose (used with svg media, etc.)
+// Note that grid_choose_container it a temporal top level div used
+// by service_autocomplete to display special datalist like in countermarks case
+.grid_choose_container {
+	position: absolute;
+	background-color: #f8f8f8;
+	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
+	width: 20rem;
+	min-width: 15rem;
+	max-height: 70vh;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	grid-gap: 1rem;
+	padding: 1.5rem;
+	padding-top: 0rem;
+	overflow: auto;
+	z-index: 4;
+	resize: auto;
+
+    min-height: 10rem;
+
+	.grid_choose_header {
+		height: 2.5rem;
+		width: 100%;
+		background-color: @service_bg_color;
+		cursor: move;
+		grid-column: span 2;
+		width: calc(100% + 3.5rem);
+		margin-left: -2rem;
+		margin-top: 0;
+		position: sticky;
+		top: 0;
+		z-index: 2;
+		padding: 0.75rem;
+		padding-left: 1.25rem;
+		padding-right: 2rem;
+		color: white;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.close {
+		position: absolute;
+		display: block;
+		right: 0.25rem;
+		top: 0.5rem;
+		cursor: pointer;
+		width: 1.4rem;
+		height: 1.4rem;
+		z-index: 2;
+	}
+
+	.selected_instance_node {
+		display: block;
+		grid-column: span 2;
+		text-align: center;
+		font-size: 1.1rem;
+		position: sticky;
+		top: -0.5rem;
+		background-color: #ffffff;
+		width: 100%;
+		z-index: 1;
+		padding-top: 0.5rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid #e7e6e6;
+
+		.column {
+			outline: none;
+		}
+	}
+
+	>.wrapper_component {
+		border: 1px solid #e7e6e6;
+		border-radius: 0.3em;
+	}
+
+	>.component_svg {
+		max-height: 8rem;
+		min-width: 4rem;
+
+		// image src svg
+		.svg {
+			cursor: move;
+		}
+	}
+}//end .grid_choose_container

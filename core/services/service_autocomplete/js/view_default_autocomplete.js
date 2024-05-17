@@ -10,7 +10,6 @@
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import * as instances from '../../../common/js/instances.js'
-	// import {when_in_dom} from '../../../common/js/events.js'
 	import {get_section_records} from '../../../section/js/section.js'
 
 
@@ -315,7 +314,7 @@ const render_source_selector = function(self) {
 			for (let i = 0; i < ar_search_length; i++) {
 
 				const source			= ar_source[i]
-				const current_sqo		= source.sqo//find(item => item.typo === 'sqo')
+				const current_sqo		= source.sqo //find(item => item.typo === 'sqo')
 				const ar_section		= current_sqo.section_tipo
 				// const request_ddo	= source.find(item => item.typo === 'request_ddo').value
 				// const ddo_section	= request_ddo.find(item => item.type === 'section' && item.typo === 'ddo')
@@ -1205,118 +1204,6 @@ const render_datalist = async function(self, result) {
 				.then(function(section_record_node){
 					li_node.appendChild(section_record_node)
 				})
-
-			// DES
-				// const instance_options = {
-				// 	model			: 'section_record',
-				// 	tipo			: self.caller.tipo,
-				// 	section_tipo	: section_tipo,
-				// 	section_id		: section_id,
-				// 	mode			: 'list',
-				// 	lang			: self.caller.lang,
-				// 	context			: {
-				// 			view				: 'text',
-				// 			request_config		: self.request_config,
-				// 			fields_separator	: fields_separator
-				// 		},
-				// 	caller			: self,
-				// 	// data			: current_element_data,
-				// 	datum			: result,
-				// 	columns_map		: self.columns_map,
-				// 	row_key			: i,
-				// 	locator			: current_locator,
-				// 	id_variant		: section_tipo +'_'+section_id+'_'+new Date().getTime()
-				// }
-
-				// const current_instance = await instances.get_instance(instance_options)
-				// current_instance.build(false)
-				// const node = await current_instance.render()
-
-				// li_node.appendChild(node)
-				// li_node.instance = current_instance
-
-
-				// // values. build the text of the row with label nodes in correct order (the ddo order in context).
-				// 	const columns_length = columns.length
-				// 	for (let i = 0; i < columns_length; i++) {
-				// 			const current_path = columns[i]
-				// 		// the columns has the last element in the chain in the first position of the array,
-				// 		// the first position is the only component that is necessary to build and show
-				// 			const ddo_item = current_path[0]
-				// 			const current_element_data = get_last_ddo_data_value(current_path, [current_locator], data)
-				// 		// if the element doesn't has data continue to the next element.
-				// 			if(current_element_data === false) continue;
-
-				// 		// context of the element
-				// 			const current_element_context = context.find( (item) =>
-				// 				item.tipo===ddo_item.tipo &&
-				// 				item.section_tipo===current_element_data.section_tipo
-				// 			)
-				// 			if (!current_element_context) {
-				// 				console.error('Ignored element: context not found. ddo_item:', ddo_item, 'context:', context);
-				// 				continue;
-				// 			}
-
-				// 			// mode and view
-				// 				current_element_context.mode	= 'list'
-				// 				current_element_context.view	= 'mini'
-
-				// 			if (typeof current_element_data==='undefined') {
-				// 				console.warn('[render_datalist] Ignored tipo not found in row:', ddo_item.tipo, ddo_item);
-				// 				continue
-				// 			}
-
-				// 			const instance_options = {
-				// 				context			: current_element_context,
-				// 				data			: current_element_data,
-				// 				datum			: {data : data, context: context},
-				// 				tipo			: current_element_context.tipo,
-				// 				section_tipo	: current_element_context.section_tipo,
-				// 				model			: current_element_context.model,
-				// 				section_id		: current_element_data.section_id,
-				// 				mode			: current_element_context.mode, // 'mini',
-				// 				lang			: current_element_context.lang,
-				// 				id_variant		: section_tipo +'_'+section_id+'_'+new Date().getTime()
-				// 			}
-
-				// 			const current_instance = await instances.get_instance(instance_options)
-				// 			// current_instance.build(false)
-				// 			const node = await current_instance.render()
-
-				// 			// append node (span)
-				// 			li_node.appendChild(node)
-				// 			li_node.instance = current_instance
-
-				// 		// span node
-				// 			// const current_value = current_value_element.value
-				// 			// ui.create_dom_element({
-				// 			// 	element_type	: 'span',
-				// 			// 	inner_html		: current_value,
-				// 			// 	parent			: li_node
-				// 			// })// end create dom node
-				// 	}//end for ddo_item
-
-			// dd_info: information about the row, like parents, model, etc, that help to identify the data.
-				// const current_dd_info = current_row.find((item)=> item.tipo==='ddinfo')
-				// if(current_dd_info){
-				// 	const current_dd_info_value = '- ' + current_dd_info.value.join(fields_separator)
-				// 	ui.create_dom_element({
-				// 		element_type	: 'span',
-				// 		class_name		: 'attenuated',
-				// 		inner_html		: current_dd_info_value,
-				// 		parent			: li_node
-				// 	})// end create dom node
-				// }// end if of check current_dd_info
-
-			// debug
-				// if(SHOW_DEBUG===true) {
-				// 	ui.create_dom_element({
-				// 		element_type	: 'span',
-				// 		class_name		: 'attenuated',
-				// 		inner_html		: ' [' + locator.section_tipo + '-' + locator.section_id + ']',
-				// 		parent			: li_node
-				// 	});
-				// }
 		}// end for of current_section (section_tipo)
 
 	// mouseenter_handler
@@ -1560,9 +1447,10 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 		// drag move set
 			let x, y, target, margin_left, margin_top = null
 
+			// mousedown event
 			// header is the drag area
-			header.addEventListener('mousedown', fn_mousedown)
-			function fn_mousedown(e) {
+			const fn_mousedown = function(e) {
+				e.stopPropagation()
 
 				const path = e.composedPath();
 
@@ -1590,18 +1478,20 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					}
 				}
 			}//end fn_mousedown
+			header.addEventListener('mousedown', fn_mousedown)
 
-			document.addEventListener('mouseup', fn_mouseup)
-			function fn_mouseup() {
-				// if (target !== null) {
+			// mouseup event
+			const fn_mouseup = function(e) {
+				e.stopPropagation()
 				if (target) {
 					target.classList.remove('dragging');
 				}
 				target = null;
 			}
+			document.addEventListener('mouseup', fn_mouseup)
 
-			document.addEventListener('mousemove', fn_mousemove)
-			function fn_mousemove(e) {
+			// end mousemove
+			const fn_mousemove = function(e) {
 				// no target case (mouse position changes but target is null or undefined)
 					if (!target) {
 						return;
@@ -1626,7 +1516,9 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 					if (tgtRect.bottom > (pRect.bottom)) {
 						target.style.top = (pRect.height - tgtRect.height - margin_top - 1) + 'px';
 					}
-			}
+			}//end fn_mousemove
+			document.addEventListener('mousemove', fn_mousemove)
+
 
 	// button_close
 		const button_close = ui.create_dom_element({
@@ -1634,8 +1526,7 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 			class_name		: 'button close white',
 			parent			: header
 		})
-		button_close.addEventListener('click', fn_function)
-		function fn_function(e) {
+		const fn_click = function(e) {
 			e.stopPropagation()
 			while (grid_choose_container.firstChild) {
 				grid_choose_container.removeChild(grid_choose_container.firstChild)
@@ -1647,7 +1538,8 @@ view_default_autocomplete.render_grid_choose = async function( self, section_rec
 
 			document.removeEventListener('mouseup', fn_mouseup)
 			document.removeEventListener('mousemove', fn_mousemove)
-		}
+		}//end fn_click
+		button_close.addEventListener('click', fn_click)
 
 	// ar_search_sections. get the sections that was searched
 		// const ar_search_sections = rqo_search.sqo.section_tipo
