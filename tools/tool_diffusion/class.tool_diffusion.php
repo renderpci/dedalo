@@ -198,7 +198,7 @@ class tool_diffusion extends tool_common {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= []; //'Error. Request failed ['.__FUNCTION__.']';
+				$response->msg		= [];
 				$response->errors	= [];
 
 		// options
@@ -268,7 +268,7 @@ class tool_diffusion extends tool_common {
 							$response->msg[]	= 'Not sqo_session found from id: '.$sqo_id;
 							$response->error[]	= 'no sqo session found';
 							debug_log(__METHOD__
-								."  " . implode(', '. $response->msg)
+								."  " . to_string($response->msg)
 								, logger::ERROR
 							);
 							return $response;
@@ -376,6 +376,11 @@ class tool_diffusion extends tool_common {
 			// 		// $debug->publication_schema = $publication_schema_result;
 			// 	$response->debug = $debug;
 			// }
+
+		// response OK
+			$response->result = true;
+			$response->msg[] = 'OK. Request done successfully';
+			$response->memory = dd_memory_usage();
 
 
 		return $response;
