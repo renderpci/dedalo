@@ -127,7 +127,7 @@ class dd_grid_cell_object {
 	public $records_separator;
 	// string cell_type. Type of the element to represent in the cell
 	public $cell_type;
-	// object action . Used but buttons to define the action will done by the user
+	// object action . Used by buttons to define the action will done by the user
 	//		method 	: string - name of the method will be used by the element
 	//		options : object - parameters to configure the method
 	// 		event 	: string - name of the user event
