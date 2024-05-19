@@ -372,13 +372,18 @@ class diffusion_sql extends diffusion  {
 				$diffusion_model_name = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 				switch ($diffusion_model_name) {
 					case 'field_enum':
-						if(SHOW_DEBUG===true) {
-							if (!isset($properties->enum)) {
-								throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
-							}
+						$properties_enum = $properties->enum ?? [];
+						if (empty($properties_enum)) {
+							// throw new Exception("Error Processing Request. Field enum $tipo is misconfigured. Please, set property 'enum' to current field", 1);
+							debug_log(__METHOD__
+								. " ERROR: Field enum '$tipo' is misconfigured. Please, set property 'enum' to current field " . PHP_EOL
+								. ' tipo: ' . to_string($tipo) . PHP_EOL
+								. ' properties: ' . to_string($properties)
+								, logger::ERROR
+							);
 						}
-						$ar_enum_options=array();
-						foreach ($properties->enum as $current_enum_value) {
+						$ar_enum_options = array();
+						foreach ($properties_enum as $current_enum_value) {
 							$ar_enum_options[] = '"'.$current_enum_value.'"';
 						}
 						$ar_field_data['field_options'] = (string)implode(',', $ar_enum_options); // Format: "enum":{"1":"si", "2":"no"}
@@ -535,8 +540,6 @@ class diffusion_sql extends diffusion  {
 			$ar_field_data['database_name']	= (string)$database_name;
 			$ar_field_data['table_name'] 	= (string)$table_name;
 			#$ar_field_data['ar_fields'] 	= array();
-				// dump($ar_field_data['table_name'], ' table_name ++ '.to_string());
-				#dump(debug_backtrace() , 'debug_backtrace()  ++ '.to_string());
 
 		#
 		# TABLE CHILDREN (FIELDS)
@@ -555,7 +558,6 @@ class diffusion_sql extends diffusion  {
 						$ar_table_children,
 						$ar_table_alias_children
 					);
-					// $ar_table_children = array_merge($ar_table_children, $ar_table_alias_children);
 				}
 			}
 
@@ -784,7 +786,7 @@ class diffusion_sql extends diffusion  {
 											. " section_id: $current_section_id"
 											, logger::DEBUG
 										);
-										dump($ar_field_data['ar_fields'][$current_section_id], ' $ar_field_data[ar_fields][$current_section_id] ++ '.to_string($curent_children_tipo));
+										// dump($ar_field_data['ar_fields'][$current_section_id], ' $ar_field_data[ar_fields][$current_section_id] ++ '.to_string($curent_children_tipo));
 									}
 								}
 						}//end foreach ($ar_table_children as $curent_children_tipo)
@@ -1119,19 +1121,23 @@ class diffusion_sql extends diffusion  {
 								}
 								if (empty($dato) || ($dato!=='1' && $dato!=='2') ) {
 									if(!empty($dato)) {
-										#dump($dato, ' dato ++ '.to_string());
-										trigger_error("WARNING: Set enum dato to default 'No' [2] for $model_name : $options->tipo !. <br>Received dato:".to_string($dato) );
-										debug_log(__METHOD__." WARNING: Set enum dato to default 'No' [2] for $model_name : $options->tipo !. <br>Received dato:".to_string($dato), logger::WARNING);
+										debug_log(__METHOD__
+											." WARNING: Set enum dato to default 'No' [2] for $model_name : $options->tipo !. <br>Received dato:".to_string($dato)
+											, logger::ERROR
+										);
 									}
-									$dato = 2;	# Value 'No' default
+									$dato = 2;	// Value 'No' default
 								}
 								if(SHOW_DEBUG===true) {
-									#dump($dato," dato"); #dump($properties->enum," dato");
 									if (!property_exists($properties, 'enum')) {
-										throw new Exception("Error Processing Request. Field enum $options->tipo is misconfigured. Please, set property 'enum' to current field", 1);
+										debug_log(__METHOD__
+											. " Error. Field enum '$options->tipo' is misconfigured. Please, set property 'enum' to current field " . PHP_EOL
+											. to_string()
+											, logger::ERROR
+										);
 									}
 								}
-								$ar_field_data['field_value'] = (string)$properties->enum->$dato;		# Format: "enum":{"1":"si", "2":"no"}
+								$ar_field_data['field_value'] = (string)$properties->enum->$dato; // Format: "enum":{"1":"si", "2":"no"}
 								break;
 							default:
 
@@ -1140,7 +1146,7 @@ class diffusion_sql extends diffusion  {
 									$ar_id = array();
 									foreach ($dato as $current_locator) {
 
-										// Check target is publicable
+										// Check target is publishable
 											$current_is_publicable = isset($properties->is_publicable)
 												? $properties->is_publicable
 												: diffusion::get_is_publicable($current_locator);
@@ -2711,6 +2717,7 @@ class diffusion_sql extends diffusion  {
 
 			$model_name = RecordObj_dd::get_modelo_name_by_tipo($current_table_tipo,true);
 			switch ($model_name) {
+
 				case 'table':
 					# Direct relation
 					$real_table				= $current_table_tipo;
@@ -2734,11 +2741,19 @@ class diffusion_sql extends diffusion  {
 				case 'table_alias':
 					# Indirect relation
 					$ar_related_tables	= common::get_ar_related_by_model('table', $current_table_tipo);
-					$real_table			= reset($ar_related_tables);
+					$real_table			= $ar_related_tables[0] ?? null;
 
 					if (empty($real_table)) {
 						// bad structure configuration for current diffusion element
-							throw new Exception("Error Processing Request. Bad structure configuration for 'real_table' of 'table_alias'. Expected 'table' related and nothing found for tipo: ".to_string($current_table_tipo), 1);
+						// throw new Exception("Error Processing Request. Bad structure configuration for 'real_table' of 'table_alias'. Expected 'table' related and nothing found for tipo: ".to_string($current_table_tipo), 1);
+						debug_log(__METHOD__
+							. " Ignored table '$current_table_tipo'. Bad structure configuration for 'real_table' of 'table_alias'. Empty real table" . PHP_EOL
+							. ' current_table_tipo: ' . to_string($current_table_tipo) . PHP_EOL
+							. ' current_table model: ' . to_string($model_name) . PHP_EOL
+							. ' current_table label: ' . RecordObj_dd::get_termino_by_tipo($current_table_tipo, true)
+							, logger::ERROR
+						);
+						continue 2;
 					}
 
 					# RELATED_SECTION . Direct related section case
@@ -2815,6 +2830,7 @@ class diffusion_sql extends diffusion  {
 
 		# Cache resolved map
 		$ar_diffusion_element_tables_map[$diffusion_element_tipo] = $diffusion_element_tables_map;
+
 
 		return (object)$diffusion_element_tables_map;
 	}//end get_diffusion_element_tables_map
@@ -3291,9 +3307,14 @@ class diffusion_sql extends diffusion  {
 				# Set temporally to skip and force parent publication
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
-				tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+				// tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
+				tool_diffusion::export((object)[
+					'section_tipo'				=> $section_tipo,
+					'section_id'				=> $section_id,
+					'diffusion_element_tipo'	=> $diffusion_element_tipo
+				]);
 				debug_log(__METHOD__
-					." *** Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id) "
+					." Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id)"
 					, logger::DEBUG
 				);
 
