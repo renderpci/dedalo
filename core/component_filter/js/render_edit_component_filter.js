@@ -28,7 +28,7 @@ export const render_edit_component_filter = function() {
 * EDIT
 * Render node for use in edit
 * @param object options
-* @return HTMLElement
+* @return HTMLElement component_wrapper
 */
 render_edit_component_filter.prototype.edit = async function(options) {
 
@@ -41,7 +41,6 @@ render_edit_component_filter.prototype.edit = async function(options) {
 
 		case 'line':
 			return view_line_edit_filter.render(self, options)
-			break;
 
 		case 'print':
 			// view print use the same view as default, except it will use read only to render content_value
@@ -67,9 +66,8 @@ render_edit_component_filter.prototype.edit = async function(options) {
 export const get_content_data = function(self) {
 
 	// short vars
-		const data					= self.data || {}
-		const datalist				= data.datalist || []
-		// const datalist_length	= datalist.length
+		const data		= self.data || {}
+		const datalist	= data.datalist || []
 
 	// content_data
 		const content_data = ui.component.build_content_data(self)
@@ -258,7 +256,6 @@ export const get_input_element = (element, self) => {
 			}
 
 
-
 	return li
 }//end get_input_element
 
@@ -323,6 +320,7 @@ export const get_input_element_read = (element, self) => {
 			})
 			li.branch = branch
 		}
+
 
 	return li
 }//end get_input_element_read
