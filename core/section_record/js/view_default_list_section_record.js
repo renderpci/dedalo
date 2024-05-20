@@ -7,7 +7,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {data_manager} from '../../common/js/data_manager.js'
-	import {pause} from '../../common/js/utils/index.js'
+	// import {pause} from '../../common/js/utils/index.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -28,9 +28,9 @@ export const view_default_list_section_record = function() {
 /**
 * RENDER
 * Render node for use in list with all columns and rendered components
-* @param array ar_instances
+* @param object self
 * @para object options
-* @return Promise DOM node wrapper
+* @return HTMLElement wrapper
 */
 view_default_list_section_record.render = async function(self, options) {
 
@@ -53,14 +53,6 @@ view_default_list_section_record.render = async function(self, options) {
 			'view_'+self.context.view
 		]
 		wrapper.classList.add(...ar_css)
-
-		// click event
-			// wrapper.addEventListener("click", (e) => {
-			// 	e.stopPropagation()
-			// 	if (!e.target.classList.contains("row_active")) {
-			// 		e.target.classList.add("row_active")
-			// 	}
-			// })
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
@@ -97,7 +89,6 @@ view_default_list_section_record.render = async function(self, options) {
 					console.log('/// selected instance:', self);
 				}
 			})
-			// wrapper.classList.add('_'+self.id)
 		}
 
 
@@ -109,7 +100,7 @@ view_default_list_section_record.render = async function(self, options) {
 /**
 * HILITE_ROW
 *
-* @param DON node wrapper
+* @param HTMLElement wrapper
 * 	section_record wrapper node
 * @return bool
 */
@@ -121,11 +112,6 @@ const hilite_row = function(wrapper) {
 		const fn_remove_hilite = () => {
 			// first column set vars. This affect ::after pseudo element
 			wrapper.firstChild.style.setProperty('--box_display', 'none');
-
-			// if (hilite_row_node) {
-			// 	hilite_row_node.remove()
-			// 	hilite_row_node = null
-			// }
 		}
 
 	// events
@@ -153,19 +139,8 @@ const hilite_row = function(wrapper) {
 				const firstChild_el_rect	= wrapper_first_column.getBoundingClientRect();
 				const lastChild_el_rect		= wrapper_last_column.getBoundingClientRect();
 				const row_style				= {
-					// left		: parseFloat(firstChild_el_rect.x) + 'px',
-					// top		: parseFloat(firstChild_el_rect.y + window.pageYOffset) + 'px',
-					// height	: parseFloat(firstChild_el_rect.height) + 'px',
-					width		: parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
+					width : parseFloat(lastChild_el_rect.x + lastChild_el_rect.width - firstChild_el_rect.x) + 'px'
 				}
-
-			// hilite_row_node. Create and append node
-				// hilite_row_node = ui.create_dom_element({
-				// 	element_type	: 'div',
-				// 	class_name		: 'hilite_row',
-				// 	style			: row_style
-				// })
-				// wrapper.prepend(hilite_row_node)
 
 			// hilite_row_node. First column set vars. This affect ::after pseudo element
 				wrapper_first_column.style.setProperty('--box_display', 'block');
@@ -198,9 +173,6 @@ const get_content_data = async function(self) {
 
 			const current_column = columns_map[i]
 
-			// console.log('current_column:', current_column);
-			// console.log('ar_columns_instances:', ar_columns_instances);
-
 			// callback column case
 			// (!) Note that many colum_id are callbacks (like tool_time_machine id column)
 				if(current_column.callback && typeof current_column.callback==='function'){
@@ -208,13 +180,12 @@ const get_content_data = async function(self) {
 					// column_node (standard section_record empty column to be filled with content_node)
 						const column_node = render_column_node_callback(current_column, self)
 
-					// content_node
+					// content_node. Normally a DocumentFragment
 						const content_node = current_column.callback({
 							section_tipo		: self.section_tipo,
 							section_id			: self.section_id,
 							row_key				: self.row_key,
 							paginated_key		: self.paginated_key,
-							// offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
 							modification_date	: self.modification_date || null, // tm var
@@ -315,298 +286,11 @@ const get_content_data = async function(self) {
 							console.error("current_instance column_id not found:",current_instance);
 						}
 				}//end for (let i = 0; i < ar_instances_length; i++)
-		}//end for (let i = 0; i < columns_map_length; i++) {
-
-
-	// component_info
-		// 	const component_info = self.get_component_info()
-		// 	if (component_info){
-		// 		const info_value = component_info.value.join('')
-		// 		const info = ui.create_dom_element({
-		// 			element_type	: 'div',
-		// 			class_name		: 'column column_info',
-		// 			inner_html		: info_value
-		// 		})
-		// 		//wrapper.appendChild(info)
-		// 		fragment.appendChild(info)
-		// 	}
+		}//end for (let i = 0; i < columns_map_length; i++)
 
 
 	return fragment
 }//end get_content_data
-
-
-
-/**
-* BUILD_ID_COLUMN
-* @param section_record instance self
-* @return DOM element id_column
-*/
-	// const build_id_column_DES = function(self) {
-
-	// 	const permissions = self.caller.permissions
-
-	// 	// offset
-	// 		const offset = self.offset
-
-	// 	// id_column
-	// 		const id_column = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'column id_column'
-	// 		})
-
-	// 	// edit_line
-	// 		const edit_line = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'edit_line',
-	// 			parent			: id_column
-	// 		})
-
-	// 		// section id
-	// 			ui.create_dom_element({
-	// 				element_type	: 'span',
-	// 				class_name		: 'section_id',
-	// 				text_content	: self.section_id,
-	// 				parent			: edit_line
-	// 			})
-
-	// 		// initiator. Caller section defined
-	// 			const initiator = self.caller.initiator || false
-	// 				// console.log("initiator:",initiator);
-	// 				// console.log("self.caller:",self.caller);
-
-	// 		// button
-	// 		switch(true) {
-
-	// 			case (initiator && initiator.indexOf('component_')!==-1):
-	// 				// case (self.caller.type==='component'):
-	// 				// component portal caller (link)
-	// 					const link_button = ui.create_dom_element({
-	// 						element_type	: 'span',
-	// 						class_name		: 'button link',
-	// 						parent			: edit_line
-	// 					})
-	// 					link_button.addEventListener("click", function(){
-	// 						// top window event
-	// 						top.event_manager.publish('initiator_link_' + initiator, {
-	// 							section_tipo	: self.section_tipo,
-	// 							section_id		: self.section_id
-	// 						})
-	// 					})
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button edit',
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", async function(e){
-	// 							// navigate link
-	// 								const user_navigation_options = {
-	// 									tipo		: self.section_tipo,
-	// 									section_id	: self.section_id,
-	// 									model		: self.caller.model,
-	// 									mode		: 'edit'
-	// 								}
-	// 								if(SHOW_DEBUG===true) {
-	// 									console.log("// section_record build_id_column user_navigation_options initiator component:",user_navigation_options);
-	// 								}
-	// 								event_manager.publish('user_navigation', user_navigation_options)
-
-	// 							// detail_section
-	// 								// ( async () => {
-	// 								// 	const options = {
-	// 								// 		model 			: 'section',
-	// 								// 		type 			: 'section',
-	// 								// 		tipo  			: self.section_tipo,
-	// 								// 		section_tipo  	: self.section_tipo,
-	// 								// 		section_id 		: self.section_id,
-	// 								// 		mode 			: 'edit',
-	// 								// 		lang 			: page_globals.dedalo_data_lang
-	// 								// 	}
-	// 								// 	const page_element_call 	= await data_manager.get_page_element(options)
-	// 								// 	const page_element 			= page_element_call.result
-
-	// 								// 	// detail_section instance. Create target section page element and instance
-	// 								// 		const detail_section = await get_instance(page_element)
-
-	// 								// 		// set self as detail_section caller (!)
-	// 								// 			detail_section.caller = initiator
-
-	// 								// 		// load data and render wrapper
-	// 								// 			await detail_section.build(true)
-	// 								// 			const detail_section_wrapper = await detail_section.render()
-
-	// 								// 	// modal container (header, body, footer, size)
-	// 								// 		const header = ui.create_dom_element({
-	// 								// 			element_type	: 'div',
-	// 								// 			text_content 	: detail_section.label
-	// 								// 		})
-	// 								// 		const modal = ui.attach_to_modal(header, detail_section_wrapper, null, 'big')
-	// 								// 		modal.on_close = () => {
-	// 								// 			detail_section.destroy(true, true, true)
-	// 								// 		}
-	// 								// })()
-
-	// 							// iframe
-	// 								// ( async () => {
-	// 								// 	const iframe = ui.create_dom_element({
-	// 								// 		element_type	: 'iframe',
-	// 								// 		src 			: DEDALO_CORE_URL + '/page/?tipo=' + self.section_tipo + '&section_id=' + self.section_id + '&mode=edit'
-	// 								// 	})
-	// 								// 	// modal container (header, body, footer, size)
-	// 								// 		const header = ui.create_dom_element({
-	// 								// 			element_type	: 'div',
-	// 								// 			text_content 	: detail_section.label
-	// 								// 		})
-	// 								// 		const modal = ui.attach_to_modal(header, iframe, null, 'big')
-	// 								// 		modal.on_close = () => {
-	// 								// 			detail_section.destroy(true, true, true)
-	// 								// 	}
-	// 								// })()
-	// 						})
-	// 					}
-	// 				break
-
-	// 			case (initiator && initiator.indexOf('tool_time_machine')!==-1):
-	// 				// button time machine preview (eye)
-	// 					const edit_button_tm = ui.create_dom_element({
-	// 						element_type	: 'span',
-	// 						class_name		: 'button eye',
-	// 						parent			: edit_line
-	// 					})
-	// 					edit_button_tm.addEventListener("click", function(e){
-	// 						// publish event
-	// 						event_manager.publish('tm_edit_record', {
-	// 							tipo		: self.section_tipo,
-	// 							section_id	: self.section_id,
-	// 							matrix_id	: self.matrix_id,
-	// 							date		: self.modification_date || null,
-	// 							mode		: 'tm'
-	// 						})
-	// 					})
-	// 				break
-
-	// 			case (self.caller.config && self.caller.config.source_model==='section_tool'):
-
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'div',
-	// 							class_name		: '',
-	// 							inner_html 		: " "+self.caller.config.tool_context.label,
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", function(e){
-	// 							e.stopPropagation();
-
-	// 							// tool_context (clone always to prevent modify original object)
-	// 								const tool_context = clone(self.caller.config.tool_context)
-	// 								// lang set
-	// 								tool_context.lang = self.lang
-
-	// 							// caller
-	// 								const caller = self.caller
-
-	// 							// section_id_selected (!) Important to allow parse 'self' values
-	// 								caller.section_id_selected = self.section_id
-
-	// 							// parse ddo_map section_id (!) Unnecessary. To be done at tool_common init
-	// 								// tool_context.tool_config.ddo_map.map(el => {
-	// 								// 	if (el.section_id==='self') {
-	// 								// 		el.section_id = self.section_id
-	// 								// 	}
-	// 								// })
-
-	// 							// open_tool (tool_common)
-	// 								open_tool({
-	// 									tool_context	: tool_context,
-	// 									caller			: caller
-	// 								})
-	// 						})
-	// 					}
-	// 				break;
-
-	// 			default:
-	// 				// button edit (pen)
-	// 					if (permissions>0) {
-	// 						const edit_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button edit',
-	// 							parent			: edit_line
-	// 						})
-	// 						edit_button.addEventListener("click", function(e){
-	// 							// edit_record(this, self)
-
-	// 							// rqo
-	// 							let user_navigation_rqo
-	// 							if (self.caller.type==='component') {
-	// 								user_navigation_rqo = {
-	// 									caller_id	: self.caller.id,
-	// 									source		: {
-	// 										action			: 'search',
-	// 										model			: 'section',
-	// 										tipo			: self.section_tipo,
-	// 										section_tipo	: self.section_tipo,
-	// 										mode			: 'edit',
-	// 										lang			: self.caller.lang
-	// 									},
-	// 									sqo : {
-	// 										section_tipo		: [{tipo : self.section_tipo}],
-	// 										filter				: null,
-	// 										limit				: 1,
-	// 										offset				: offset,
-	// 										filter_by_locators	: [{
-	// 											section_tipo : self.section_tipo,
-	// 											section_id : self.section_id,
-	// 										}]
-	// 									}
-	// 								}
-	// 							}else{
-	// 								user_navigation_rqo = {
-	// 									caller_id	: self.caller.id,
-	// 									source		: {
-	// 										action			: 'search',
-	// 										model			: self.caller.model,
-	// 										tipo			: self.section_tipo,
-	// 										section_tipo	: self.section_tipo,
-	// 										mode			: 'edit',
-	// 										lang			: self.caller.lang
-	// 									},
-	// 									sqo : {
-	// 										section_tipo	: [{tipo : self.section_tipo}],
-	// 										limit			: 1,
-	// 										offset			: offset,
-	// 										filter			: self.caller.rqo.sqo.filter || null
-	// 									}
-	// 								}
-	// 							}
-	// 							event_manager.publish('user_navigation', user_navigation_rqo)
-	// 						})
-	// 					}
-	// 				// delete_line
-	// 					if (permissions>1 && (initiator && initiator.indexOf('component_')!==-1)) {
-	// 						const delete_line = ui.create_dom_element({
-	// 							element_type	: 'div',
-	// 							class_name		: 'delete_line',
-	// 							parent			: id_column
-	// 						})
-	// 						const delete_button = ui.create_dom_element({
-	// 							element_type	: 'span',
-	// 							class_name		: 'button remove',
-	// 							parent			: delete_line
-	// 						})
-	// 						delete_button.addEventListener("click", function(e){
-
-	// 							delete_record(this, self)
-	// 						})
-	// 					}
-	// 				break
-	// 		}
-
-
-	// 	return id_column
-	// }//end build_id_column
 
 
 
@@ -648,7 +332,6 @@ const render_column_node = function(component_instance, self, ar_instances){
 				// get the grid column spaces
 				grid_template_columns_ar_value.push(width)
 			}
-			// console.log("grid_template_columns_ar_value:",grid_template_columns_ar_value, children_length);
 
 			Object.assign(
 				column_node.style,
@@ -659,7 +342,6 @@ const render_column_node = function(component_instance, self, ar_instances){
 		}
 	}
 
-	// console.log("+++ column_node model:",model, component_instance.tipo, column_node);
 
 	return column_node
 }//end render_column_node
@@ -668,8 +350,11 @@ const render_column_node = function(component_instance, self, ar_instances){
 
 /**
 * RENDER_COLUMN_NODE_CALLBACK
-* @param object column from the columns_map
-* @return DOM element column
+* @param object column_obj
+* 	column from the columns_map
+* @param object self
+* 	element instance
+* @return HTMLElement column_node
 */
 export const render_column_node_callback = function(column_obj, self){
 
@@ -681,7 +366,6 @@ export const render_column_node_callback = function(column_obj, self){
 		class_name		: 'column column_' + column_id + ' ' + model,
 		id				: `col_${column_id}`
 	})
-	// column_node.id = column_id
 
 	// column_responsive mobile add-ons
 		if (self.caller.model==='section') {
@@ -699,7 +383,9 @@ export const render_column_node_callback = function(column_obj, self){
 /**
 * RENDER_EMPTY_COLUMN_NODE
 * @param object column from the columns_map
-* @return DOM element column
+* @param object self
+* 	element instance
+* @return HTMLElement column_node
 */
 const render_empty_column_node = function(column_obj, self){
 
@@ -711,7 +397,6 @@ const render_empty_column_node = function(column_obj, self){
 		class_name		: 'column column_' + column_id + ' ' + model,
 		id				: `col_${column_id}`
 	})
-	// column_node.id = column_id
 
 	// column_responsive mobile add-ons
 		if (self.caller.model==='section') {
