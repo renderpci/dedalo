@@ -1692,8 +1692,8 @@
 		"install_checked_default": false
 	},
 	{
-		"tld": "dinasty",
-		"label": "Dinasty",
+		"tld": "dynasty",
+		"label": "Dynasty",
 		"typology": 1,
 		"active_in_thesaurus": true,
 		"install_checked_default": false
