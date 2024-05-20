@@ -468,10 +468,10 @@
 		box-shadow: 0px 1px 0px 0px #e6e6e6;
 
 		// mobile custom
-		@media screen and (max-width: @width_break_point_0) {
+		// @media screen and (max-width: @width_break_point_0) {
 			// width: 72%;
 			// padding-left: 0.3rem;
-		}
+		// }
 
 		// every column
 		&.column_section {
@@ -508,7 +508,11 @@
 		&.component_portal {
 		}
 
-		&.empty{
+		&.empty {
+			padding: 0px;
+			width: 0px;
+		}
+		&::empty {
 			padding: 0px;
 			width: 0px;
 		}

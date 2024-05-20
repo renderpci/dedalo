@@ -350,15 +350,18 @@ const render_tag_column = function(options) {
 
 			const current_locator = value_tags[i]
 
-			if (!current_locator.tag_id) {
-				console.warn('Ignored non tag_id locator:', current_locator);
-				continue;
-			}
+			const class_name = !current_locator.tag_id
+				? 'no_tag'
+				: 'tags'
+
+			const text_value = !current_locator.tag_id
+				? (get_label.full || 'Full')
+				: (current_locator.tag_id || null)
 
 			const tag_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'tags',
-				inner_html		: current_locator.tag_id || null,
+				class_name		: class_name,
+				inner_html		: text_value,
 				parent			: fragment
 			})
 			tag_node.addEventListener('click', function(e) {

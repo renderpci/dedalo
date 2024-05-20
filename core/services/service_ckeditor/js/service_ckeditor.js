@@ -980,7 +980,7 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_SELECTION_FROM_TAG
-	* @param tag_obj
+	* @param object|null tag_obj
 	* Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return void
 	*/
@@ -990,7 +990,7 @@ export const service_ckeditor = function() {
 			const self = this
 
 		// Check the tag to be the type indexXX
-			if(tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut'){
+			if(!tag_obj || (tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut')){
 				return false
 			}
 
