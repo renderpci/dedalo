@@ -3254,7 +3254,10 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* MAP_LOCATOR_TO_TERMINOID_PARENT
-	* @see Alias of map_to_terminoID
+	* Alias of map_to_terminoID
+	* @param object $options
+	* @param array|null $dato
+	* @return string|null $terminoID
 	* Used to trigger parent publication when children is published (useful in thesaurus web publications like mupreva)
 	*/
 	public static function map_locator_to_terminoID_parent($options, $dato) {
