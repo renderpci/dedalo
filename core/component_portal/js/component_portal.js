@@ -1038,7 +1038,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 		self.active_tag = options
 
 	// short vars
-		const tag_id = tag.tag_id
+		const tag_id = tag?.tag_id
 
 	// get all data from datum because if the user select one tag the portal data is filtered by the tag_id,
 	// in the next tag selection by user the data doesn't have all locators and is necessary get the original data
