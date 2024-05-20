@@ -639,6 +639,7 @@ section_record.prototype.get_component_data = function(options) {
 
 				return true
 			}
+
 			return false
 		})
 
