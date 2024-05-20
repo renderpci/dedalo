@@ -3645,11 +3645,11 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode, // expected 'tm'
 									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3687,7 +3687,7 @@ class section extends common {
 										$note_model,
 										$current_ddo_tipo,
 										$note_section_id,
-										'edit', // use edit mode to get full value
+										$mode, // use tm mode to preserve service_time_machine coherence
 										$ddo->lang ?? DEDALO_DATA_LANG,
 										$sqo->section_tipo
 									);
@@ -3778,11 +3778,10 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,
 									'value'					=> $ar_values,
-									'debug_model'			=> 'component_select',
 									'debug_label'			=> 'modified by user',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 
@@ -3817,11 +3816,11 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'lang'					=> DEDALO_DATA_LANG,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'value'					=> $current_value, // .' ['.$section_tipo.']'
 									'debug_model'			=> 'component_input_text',
 									'debug_label'			=> 'Where',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3846,12 +3845,12 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,
 									'from_section_tipo'		=> $section_tipo,
 									'value'					=> $dd_grid_value,
 									'debug_model'			=> $ddo->model,
 									'debug_label'			=> 'section',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[] = $data_item;
