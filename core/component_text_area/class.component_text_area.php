@@ -2094,7 +2094,9 @@ class component_text_area extends component_common {
 			if (empty($ar_related_by_model[0])) {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
-					. ' component_tipo: '. $this->tipo
+					. ' component_tipo: '. $this->tipo . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' section:id: '. $this->section_id
 					, logger::WARNING
 				);
 				return [];
@@ -2175,8 +2177,11 @@ class component_text_area extends component_common {
 			if (count($geo_tags)!==count($ar_elements)) {
 				debug_log(__METHOD__
 					. " ERROR. The number of tags and geodata layers is different! " . PHP_EOL
-					. ' layers: ' .json_encode($ar_elements, JSON_PRETTY_PRINT) . PHP_EOL
-					. ' geo_tags: ' .json_encode($geo_tags, JSON_PRETTY_PRINT)
+					. ' component_tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section:id: ' . $this->section_id . PHP_EOL
+					. ' geo_tags: ' . json_encode($geo_tags, JSON_PRETTY_PRINT) . PHP_EOL
+					. ' layers: '   . json_encode($ar_elements, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 			}

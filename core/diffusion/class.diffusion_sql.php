@@ -3414,6 +3414,7 @@ class diffusion_sql extends diffusion  {
 	/**
 	* MAP_LOCATOR_TO_TERM_ID
 	* Alias of map_locator_to_terminoID
+	* @see component_relation_common->map_locator_to_term_id
 	* @return string $section_tipo
 	*/
 	public static function map_locator_to_term_id($options, $dato) {
@@ -3424,7 +3425,7 @@ class diffusion_sql extends diffusion  {
 
 
 	/**
-	* MAP_LOCATOR_TO_section_tipo
+	* MAP_LOCATOR_TO_SECTION_TIPO
 	* Returns map first locator to plain "terminoID" like "es_2"
 	* @return string $terminoID
 	*/

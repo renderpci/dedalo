@@ -306,7 +306,7 @@ class lock_components {
 
 	/**
 	* GET_ACTIVE_USERS
-	* @return obj $response
+	* @return object $response
 	*/
 	public static function get_active_users() : object {
 

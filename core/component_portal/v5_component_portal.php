@@ -1,5 +1,7 @@
 <?php
 
+
+
 ///////// portal
 
 
@@ -174,7 +176,7 @@
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
-	* @return string $valor
+	* @return array $valor_export
 	*/
 	$_get_valor_export = function( $valor=null, $lang=DEDALO_DATA_LANG, $quotes='"', $add_id=false ) {
 
@@ -258,7 +260,7 @@
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|array|null $diffusion_value
 	*
