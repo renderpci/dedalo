@@ -293,7 +293,8 @@ class exec_ {
 
 	/**
 	* REQUEST_CLI
-	* Exec tool method in CLI
+	* Exec tool method in CLI using process runner file
+	* @see /core/base/process_runner.php
 	* @param object $options
 	* {
 	* 	class_name: string "request_cli"
