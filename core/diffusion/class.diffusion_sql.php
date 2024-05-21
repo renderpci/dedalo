@@ -1996,11 +1996,11 @@ class diffusion_sql extends diffusion  {
 								# prisoner_number_tipos . Added 01-05-2020 !!
 									if (in_array($column['tipo'], $prisoner_number_tipos)) {
 										// note $column['field_value'] is in format array flat '1452' or '1452 | 1453'
-										$ar_values = explode(' | ', $column['field_value']);
+										$ar_values = explode(' | ', ($column['field_value'] ?? '') );
 										// if (is_array($column['field_value'])) {
 										// 	$column['field_value'] = json_encode($column['field_value']);
 										// }
-										$prisoner_number_value = trim( strip_tags($column['field_value']) );
+										$prisoner_number_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($ar_values)) {
 											foreach ($ar_values as $prisoner_number_value) {
 												if (!empty($prisoner_number_value)) {
@@ -2030,7 +2030,7 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$sort_value = trim( strip_tags($column['field_value']) );
+										$sort_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($sort_value)) {
 											$sort_data[$lang][] = $sort_value;
 										}
@@ -2041,7 +2041,7 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$thesaurus_value = trim( strip_tags($column['field_value']) );
+										$thesaurus_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($thesaurus_value)) {
 											$thesaurus_data[$lang][] = $thesaurus_value;
 										}
@@ -2052,7 +2052,7 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$pub_author_value = trim( strip_tags($column['field_value']) );
+										$pub_author_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($pub_author_value)) {
 											$pub_author_data[$lang][] = $pub_author_value;
 										}
@@ -2063,7 +2063,7 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$title_generic_value = trim( strip_tags($column['field_value']) );
+										$title_generic_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($title_generic_value)) {
 											$title_generic_data[$lang][] = $title_generic_value;
 										}
@@ -2102,7 +2102,7 @@ class diffusion_sql extends diffusion  {
 										if (is_array($column['field_value'])) {
 											$column['field_value'] = json_encode($column['field_value']);
 										}
-										$prison_value = trim( strip_tags($column['field_value']) );
+										$prison_value = trim( strip_tags( ($column['field_value'] ?? '') ) );
 										if (!empty($prison_value)) {
 											$prison_data[$lang][] = $prison_value;
 										}
@@ -2293,7 +2293,7 @@ class diffusion_sql extends diffusion  {
 						];
 
 					# FILTER_DATE
-						$filter_date = isset($filter_date_data[$lang][0]) ? $filter_date_data[$lang][0] : null;
+						$filter_date = isset($filter_date_data[$lang][0]) ? $filter_date_data[$lang][0] : '';
 						// if (strpos($filter_date, '|')!==false) {
 							// $ar_filter_date = explode(' | ', $filter_date);
 							// $filter_date = isset($ar_filter_date[0]) ? $ar_filter_date[0] : null;
