@@ -3320,4 +3320,57 @@ class component_relation_common extends component_common {
 
 
 
+	/**
+	* MAP_LOCATOR_TO_TERM_ID [diffusion]
+	* Alias of diffusion_sql::map_locator_to_term_id
+	* Used in diffusion by component_autocomplete and component_portal (!)
+	* @see Ontology term properties 'rsc863' or 'mdcat2242'
+	* @return string|null $term_id
+	*/
+	public function map_locator_to_term_id() { // Diffusion method
+
+		$term_id = null;
+
+		$dato = $this->get_dato();
+
+		if (!empty($dato)) {
+
+			// arguments from properties->process_dato_arguments->custom_arguments
+				$args 	 = func_get_args(); // is array of objects
+				$options = new stdClass();
+				if (!empty($args)) {
+					foreach ($args as $value_obj) {
+						foreach ($value_obj as $key => $value) {
+							$options->{$key} = $value;
+						}
+					}
+				}
+
+			// add parents option
+				$new_dato = [];
+				if (isset($options->add_parents) && $options->add_parents===true) {
+					# calculate parents and add to dato
+					foreach ((array)$dato as $current_locator) {
+						// get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
+						$ar_parents = component_relation_parent::get_parents_recursive(
+							$current_locator->section_id,
+							$current_locator->section_tipo,
+							null
+						);
+						foreach ($ar_parents as $parent_locator) {
+							$new_dato[] = $parent_locator;
+						}
+					}
+					$dato = array_merge($dato, $new_dato);
+				}
+
+			// send to diffusion for normalize formats
+				$term_id = diffusion_sql::map_locator_to_term_id(null, $dato);
+		}
+
+		return $term_id;
+	}//end map_locator_to_term_id
+
+
+
 }//end class component_relation_common
