@@ -280,12 +280,12 @@
 				case isset($option_obj->divisor):
 					$fields_separator = $option_obj->divisor;
 					break;
-				case isset($propiedades->source->divisor):
-					$fields_separator = $propiedades->source->divisor;
-					break;
 				case isset($this->diffusion_properties->option_obj) &&
 					 isset($this->diffusion_properties->option_obj->divisor) :
 					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				case isset($propiedades->source->divisor):
+					$fields_separator = $propiedades->source->divisor;
 					break;
 				default:
 					$fields_separator = $fields_separator_default;
