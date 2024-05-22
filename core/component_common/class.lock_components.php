@@ -53,7 +53,7 @@ class lock_components {
 			}else{
 				$dato = pg_fetch_result($res, 0, 0);
 			}
-			$dato = (array)json_decode($dato);
+			$dato = json_decode($dato) ?? [];
 
 		// switch action
 			$new_dato = [];
