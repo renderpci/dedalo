@@ -2811,18 +2811,19 @@ class component_text_area extends component_common {
 						continue;
 					}
 
-				// convert the dato to html
-				// $html_value = TR::add_tag_img_on_the_fly($current_value);
-				$html_value = TR::deleteMarks($current_value);
+				// convert the value tags as [svg:...] to html tags as <img src="file.svg".../>
+				// (!) Note that some components are using images in view_mini and they
+				// need always render the images. E.g. 'numisdata71' in section Types (numisdata3)
+					$html_value = TR::add_tag_img_on_the_fly($current_value);
 
 				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
-				$list_value[] = !empty($html_value)
-					? common::truncate_html(
-						$max_chars,
-						$html_value,
-						true // isUtf8
-					  )
-					: '';
+					$list_value[] = !empty($html_value)
+						? common::truncate_html(
+							$max_chars,
+							$html_value,
+							true // isUtf8
+						  )
+						: '';
 			}
 
 		// restore lang ?
