@@ -12,14 +12,17 @@
 	$properties			= $this->get_properties() ?? new stdClass();
 	$caller_dataframe	= $this->get_caller_dataframe();
 	// debug. Check caller_dataframe
-	if (empty($caller_dataframe) || !isset($caller_dataframe->section_id_key)) {
+	if ($mode!=='search' && (empty($caller_dataframe) || !isset($caller_dataframe->section_id_key))) {
 		$bt = debug_backtrace();
-		dump($bt, ' bt ++ '.to_string($this->tipo));
 		debug_log(__METHOD__
 			. " Mandatory caller_dataframe not found " . PHP_EOL
-			. ' debug_backtrace 1 : ' . PHP_EOL . to_string($bt[1])
+			. ' tipo: ' . $tipo . PHP_EOL
+			. ' section_tipo: ' . $section_tipo . PHP_EOL
+			. ' section_id: ' . $this->get_section_id() . PHP_EOL
+			. ' mode: ' . $mode
 			, logger::ERROR
 		);
+		dump($bt, ' bt ++ '.to_string($this->tipo));
 	}
 
 // context
@@ -89,7 +92,9 @@
 					'offset'	=> $offset
 				];
 				// specific properties for dataframe
-				$item->section_id_key	= $caller_dataframe->section_id_key;
+				if (!empty($caller_dataframe) && isset($caller_dataframe->section_id_key)) {
+					$item->section_id_key = $caller_dataframe->section_id_key;
+				}
 				// $item->tipo_key		= $caller_dataframe->tipo_key;
 
 			$data[] = $item;
