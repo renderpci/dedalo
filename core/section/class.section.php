@@ -3577,9 +3577,6 @@ class section extends common {
 				// check record format
 					if (!is_object($db_record)) {
 						if(SHOW_DEBUG===true) {
-							// dump($db_record, ' db_record ++ '.to_string());
-							// dump($ar_db_record, ' ar_db_record ++ '.to_string());
-							// throw new Exception("Error Processing Request. db_record is not an object", 1);
 							debug_log(
 								__METHOD__." Error Processing Request. db_record is NOT an expected object. Ignored record ! ".to_string($db_record),
 								logger::ERROR
@@ -3645,11 +3642,11 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode, // expected 'tm'
 									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3687,7 +3684,7 @@ class section extends common {
 										$note_model,
 										$current_ddo_tipo,
 										$note_section_id,
-										'edit', // use edit mode to get full value
+										$mode, // use tm mode to preserve service_time_machine coherence
 										$ddo->lang ?? DEDALO_DATA_LANG,
 										$sqo->section_tipo
 									);
@@ -3778,11 +3775,10 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,
 									'value'					=> $ar_values,
-									'debug_model'			=> 'component_select',
 									'debug_label'			=> 'modified by user',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 
@@ -3817,11 +3813,11 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'lang'					=> DEDALO_DATA_LANG,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'value'					=> $current_value, // .' ['.$section_tipo.']'
 									'debug_model'			=> 'component_input_text',
 									'debug_label'			=> 'Where',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;
@@ -3846,12 +3842,12 @@ class section extends common {
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,
 									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode,
 									'from_component_tipo'	=> $current_ddo_tipo,
 									'from_section_tipo'		=> $section_tipo,
 									'value'					=> $dd_grid_value,
 									'debug_model'			=> $ddo->model,
 									'debug_label'			=> 'section',
-									'debug_mode'			=> $mode,
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[] = $data_item;
@@ -3996,7 +3992,7 @@ class section extends common {
 												// }
 
 												$new_caller_dataframe = new stdClass();
-													// $new_caller_dataframe->tipo_key			= $component_tipo;
+													// $new_caller_dataframe->tipo_key		= $component_tipo;
 													$new_caller_dataframe->section_id_key	= isset($current_dataframe_data[0])
 														? $current_dataframe_data[0]->section_id_key
 														: null;
@@ -4038,7 +4034,7 @@ class section extends common {
 											}
 										}
 									// parse component_data. Add matrix_id and unify output value
-										$component_data	= array_map(function($data_item) use($id, $section_id, $ddo, $current_component) {
+										$component_data	= array_map(function($data_item) use($id) {
 											$data_item->matrix_id = $id; // (!) needed to match context and data in tm mode section
 											return $data_item;
 										}, $element_json->data);
@@ -4168,9 +4164,9 @@ class section extends common {
 
 						$dato_tipo = (function() use($component_tipo){
 							switch ($component_tipo) {
-								case ONTOLOGY_SECTION_TIPOS['term']:		return 'termino';	break;
+								case ONTOLOGY_SECTION_TIPOS['term']:			return 'termino';	break;
 								// case ONTOLOGY_SECTION_TIPOS['definition']:	return 'def';		break;
-								// case ONTOLOGY_SECTION_TIPOS['observations']:return 'obs';		break;
+								// case ONTOLOGY_SECTION_TIPOS['observations']:	return 'obs';		break;
 							}
 							return null;
 						})();

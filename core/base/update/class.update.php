@@ -60,13 +60,24 @@ class update {
 	* UPDATE_VERSION
 	* Updates Dédalo data version.
 	* Allow change components data format or add new tables or index
+	* @param object $updates_checked
+	* {
+	*	"SQL_update_1": true,
+	*	"components_update_1": true,
+	*	"components_update_2": true,
+	*	"components_update_3": true,
+	*	"components_update_4": true,
+	*	"run_scripts_1": true,
+	*	"run_scripts_2": true
+	* }
 	* @return object $response
 	*/
-	public static function update_version() : object {
+	public static function update_version(object $updates_checked) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= '';
+			$response->errors	= [];
 
 		// short vars
 			$updates			= update::get_updates();
@@ -78,6 +89,7 @@ class update {
 			#RecordObj_time_machine::$save_time_machine_version  = false;
 
 		// update. Select the correct update object from the file 'updates.php'
+			$update = null;
 			foreach ($updates as $version_to_update) {
 				if($current_version[0] == $version_to_update->update_from_major){
 					if($current_version[1] == $version_to_update->update_from_medium){
@@ -93,7 +105,8 @@ class update {
 				}
 			}
 			if (empty($update)) {
-				$response->msg = 'Unable to get proper update. Check current version: '.$current_version;
+				$response->msg		= 'Unable to get proper update. Check current version: '.$current_version;
+				$response->errors[]	= 'Update item not found for version '.$current_version;
 				return $response;
 			}
 
@@ -113,6 +126,7 @@ class update {
 			if(!file_exists($update_log_file)) {
 				if(!file_put_contents($update_log_file, ' '.PHP_EOL)) {
 					$response->msg = 'Error (1). It\'s not possible set update_log file, review the PHP permissions to write in this directory';
+					$response->errors[] = 'update_log file is not available';
 					debug_log(__METHOD__
 						." ".$response->msg . PHP_EOL
 						. ' update_log_file: ' . $update_log_file
@@ -126,6 +140,19 @@ class update {
 			if(isset($update->SQL_update)){
 				$counter = count($update->SQL_update);
 				foreach ((array)$update->SQL_update as $key => $current_query) {
+
+					// updates_checked. checked test
+						$updates_checked_key = 'SQL_update_' . $key;
+						if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+							// skip checked false item
+							debug_log(__METHOD__
+								. " Skipped updates item " . PHP_EOL
+								. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+								. ' current_query : ' . to_string($current_query)
+								, logger::WARNING
+							);
+							continue;
+						}
 
 					// CLI process data
 						if ( running_in_cli()===true ) {
@@ -191,6 +218,19 @@ class update {
 				$counter = count($update->components_update);
 				foreach ((array)$update->components_update as $key => $current_model) {
 
+					// updates_checked. checked test
+						$updates_checked_key = 'components_update_' . $key;
+						if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+							// skip checked false item
+							debug_log(__METHOD__
+								. " Skipped updates item " . PHP_EOL
+								. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+								. ' current_model : ' . to_string($current_model)
+								, logger::WARNING
+							);
+							continue;
+						}
+
 					// CLI process data
 						if ( running_in_cli()===true ) {
 							common::$pdata->msg	= 'Updating components_update ' . $key+1 . ' of ' . $counter . ' | ' . $current_model;
@@ -240,6 +280,19 @@ class update {
 			if(isset($update->run_scripts)){
 				$counter = count($update->run_scripts);
 				foreach ((array)$update->run_scripts as $key => $current_script) {
+
+					// updates_checked. checked test
+						$updates_checked_key = 'run_scripts_' . $key;
+						if (!isset($updates_checked->{$updates_checked_key}) || $updates_checked->{$updates_checked_key}!==true) {
+							// skip checked false item
+							debug_log(__METHOD__
+								. " Skipped updates item " . PHP_EOL
+								. ' updates_checked_key : ' . $updates_checked_key . PHP_EOL
+								. ' current_script : ' . to_string($current_script)
+								, logger::WARNING
+							);
+							continue;
+						}
 
 					// CLI process data
 						if ( running_in_cli()===true ) {
@@ -298,6 +351,7 @@ class update {
 							if (isset($current_script->stop_on_error) && $current_script->stop_on_error===true) {
 								$response->result	= false ;
 								$response->msg		= $msg;
+								$response->errors[] = 'unable to run update script';
 								return $response;
 							}
 					}
@@ -315,9 +369,9 @@ class update {
 
 		// Table matrix_updates data
 			$version_to_update			= update::get_update_version();
-			$version_to_update_string	= implode(".", $version_to_update);
+			$version_to_update_string	= implode('.', $version_to_update);
 			$new_version				= update::update_dedalo_data_version($version_to_update_string);
-			$msg[]						= "Updated Dédalo data version: ".to_string($version_to_update_string);
+			$msg[]						= 'Updated Dédalo data version: '.to_string($version_to_update_string);
 
 		// response
 			array_push($msg, 'Updated version successfully');

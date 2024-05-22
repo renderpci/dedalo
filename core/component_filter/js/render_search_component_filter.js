@@ -62,7 +62,9 @@ const get_content_data = function(self) {
 	// short vars
 		const data		= self.data || {}
 		const datalist	= data.datalist || []
-		const fragment	= new DocumentFragment()
+
+	// content_data
+		const content_data = ui.component.build_content_data(self)
 
 	// q operator (search only)
 		const q_operator = self.data.q_operator
@@ -71,7 +73,7 @@ const get_content_data = function(self) {
 			type			: 'text',
 			value			: q_operator,
 			class_name		: 'q_operator',
-			parent			: fragment
+			parent			: content_data
 		})
 		input_q_operator.addEventListener('change',function () {
 			// value
@@ -82,16 +84,12 @@ const get_content_data = function(self) {
 				event_manager.publish('change_search_element', self)
 		})
 
-	// content_data
-		const content_data = ui.component.build_content_data(self)
-			  // content_data.classList.add('nowrap')
-
-		// ul
-			const ul_branch = ui.create_dom_element({
-				element_type	: 'ul',
-				class_name		: 'branch',
-				parent			: content_data
-			})
+	// ul
+		const ul_branch = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'branch',
+			parent			: content_data
+		})
 
 	// get_children_node. Get tree nodes with children recursively
 		const get_children_node = function(element){

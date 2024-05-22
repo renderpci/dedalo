@@ -13,9 +13,9 @@
 		display: block; // important because don't have label (default is grid)
 
 		>.content_data {
+			display: block;
 			padding: 0.5em;
 			padding-bottom: 1rem;
-			display: block;
 			overflow: auto;
 			max-height: 20rem;
 
@@ -72,19 +72,14 @@
 			}
 		}
 
-		&.active {
-			// >.buttons_container {
-			// 	left: calc(100% - 2.0rem);
-			// }
-		}
-
-		&.search {
-			>.content_data {
-				max-height: 7.5rem;
-			}
-		}
-
 	}//end .edit
+
+	&.search  {
+		>.content_data {
+			display: flex;
+			max-height: 7.5rem;
+		}
+	}
 
 	&.view_collapse {
 		cursor: n-resize;

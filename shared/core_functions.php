@@ -2457,13 +2457,16 @@ function is_empty_dato(mixed $dato) : bool {
 /**
 * GET_FILE_EXTENSION
 * @param string $name
+* @param bool $lowercase = true
 * @return string $extension
 */
 function get_file_extension(string $name, bool $lowercase=true) : string {
 
-	$extension = pathinfo($name)['extension'];
+	$path_parts = pathinfo($name);
 
-	if ($lowercase===true) {
+	$extension = $path_parts['extension'] ?? '';
+
+	if ($lowercase===true && !empty($extension)) {
 		return strtolower($extension);
 	}
 
