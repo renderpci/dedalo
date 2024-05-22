@@ -343,7 +343,8 @@ class exec_ {
 
 		// command composition
 			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg($server_vars);
-			$command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
+			// $command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
+			$command	= "nohup nice -n 19 $cmd >$file_path & echo $!";
 
 			// debug
 				debug_log(__METHOD__
