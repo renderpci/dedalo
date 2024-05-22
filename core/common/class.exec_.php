@@ -293,7 +293,8 @@ class exec_ {
 
 	/**
 	* REQUEST_CLI
-	* Exec tool method in CLI
+	* Exec tool method in CLI using process runner file
+	* @see /core/base/process_runner.php
 	* @param object $options
 	* {
 	* 	class_name: string "request_cli"
@@ -342,7 +343,8 @@ class exec_ {
 
 		// command composition
 			$cmd		= PHP_BIN_PATH . " $process_runner " . escapeshellarg($server_vars);
-			$command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
+			// $command	= "nohup nice -n 19 $cmd >$file_path 2>&1 & echo $!";
+			$command	= "nohup nice -n 19 $cmd >$file_path & echo $!";
 
 			// debug
 				debug_log(__METHOD__

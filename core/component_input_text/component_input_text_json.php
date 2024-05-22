@@ -93,7 +93,7 @@
 							// dump($value, ' value ++ '.$this->section_id.' - '.to_string($mode));
 							debug_log(__METHOD__." Fixed bad data (array of arrays) in $this->tipo - $this->section_id ".to_string(), logger::DEBUG);
 						}
-						$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true);
+						$term = RecordObj_dd::get_termino_by_tipo($first_value, DEDALO_DATA_LANG, true, true) ?? '';
 						$term = strip_tags($term);
 						$value = [$term . ' ['. $first_value."]"];
 					}

@@ -45,6 +45,13 @@
 				// display: contents;
 				padding-top: 0px;
 				padding-bottom: 2px;
+				padding-right: 0px;
+				padding-left: 0px;
+
+				&::empty {
+					padding: 0px;
+					width: 0px;
+				}
 
 				&.column_remove, &.column_section_id {
 					background-color: unset;
@@ -56,6 +63,7 @@
 
 				&.column_section_id {
 					padding-right: 0.25rem;
+					padding-top: 0.15rem;
 				}
 
 				&.column_info {
@@ -103,7 +111,8 @@
 					padding: 1px;
 
 					>.tags {
-						// padding-left: 0.5rem;
+						margin-left: 0.25rem;
+						margin-right: 0px;
 						// padding-right: 0.75rem;
 						// opacity: 0.6;
 						// background-color: @color_orange_dedalo;
@@ -128,6 +137,22 @@
 						// padding: 0px;
 						// padding-left: 5px;
 						// padding-right: 5px;
+					}
+				}
+
+				>.no_tag {
+					background-color: #4065ce;
+					color: white;
+					margin-left: 0.25rem;
+					border-radius: 3px;
+					padding: 0.25rem;
+					line-height: 0.96rem;
+					font-size: 0.8rem;
+					padding-top: 0.1rem;
+					padding-bottom: 0.1rem;
+					cursor: pointer;
+					&:active {
+						opacity: 0.5;
 					}
 				}
 			}

@@ -2094,7 +2094,9 @@ class component_text_area extends component_common {
 			if (empty($ar_related_by_model[0])) {
 				debug_log(__METHOD__
 					. " ERROR: Ignored not found component_geolocation related with current " . PHP_EOL
-					. ' component_tipo: '. $this->tipo
+					. ' component_tipo: '. $this->tipo . PHP_EOL
+					. ' section_tipo: '. $this->section_tipo . PHP_EOL
+					. ' section:id: '. $this->section_id
 					, logger::WARNING
 				);
 				return [];
@@ -2175,8 +2177,11 @@ class component_text_area extends component_common {
 			if (count($geo_tags)!==count($ar_elements)) {
 				debug_log(__METHOD__
 					. " ERROR. The number of tags and geodata layers is different! " . PHP_EOL
-					. ' layers: ' .json_encode($ar_elements, JSON_PRETTY_PRINT) . PHP_EOL
-					. ' geo_tags: ' .json_encode($geo_tags, JSON_PRETTY_PRINT)
+					. ' component_tipo: ' . $this->tipo . PHP_EOL
+					. ' section_tipo: ' . $this->section_tipo . PHP_EOL
+					. ' section:id: ' . $this->section_id . PHP_EOL
+					. ' geo_tags: ' . json_encode($geo_tags, JSON_PRETTY_PRINT) . PHP_EOL
+					. ' layers: '   . json_encode($ar_elements, JSON_PRETTY_PRINT)
 					, logger::ERROR
 				);
 			}
@@ -2806,18 +2811,19 @@ class component_text_area extends component_common {
 						continue;
 					}
 
-				// convert the dato to html
-				// $html_value = TR::add_tag_img_on_the_fly($current_value);
-				$html_value = TR::deleteMarks($current_value);
+				// convert the value tags as [svg:...] to html tags as <img src="file.svg".../>
+				// (!) Note that some components are using images in view_mini and they
+				// need always render the images. E.g. 'numisdata71' in section Types (numisdata3)
+					$html_value = TR::add_tag_img_on_the_fly($current_value);
 
 				// truncate the html to max_chars, ensure that the html is correct and tags will close in correct way
-				$list_value[] = !empty($html_value)
-					? common::truncate_html(
-						$max_chars,
-						$html_value,
-						true // isUtf8
-					  )
-					: '';
+					$list_value[] = !empty($html_value)
+						? common::truncate_html(
+							$max_chars,
+							$html_value,
+							true // isUtf8
+						  )
+						: '';
 			}
 
 		// restore lang ?

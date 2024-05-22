@@ -1,12 +1,15 @@
 <?php
 
 
+
 ///////// autocomplete
+
+
 
 	/**
 	* GET VALOR
 	* Get resolved string representation of current value (expected id_matrix of section or array)
-	* @return array $this->valor
+	* @return array|string $this->valor
 	*/
 	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=' | ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
@@ -32,7 +35,6 @@
 
 		$propiedades 	 = $this->get_propiedades();
 		$search_list_add = isset($propiedades->search_list_add) ? $propiedades->search_list_add : false;
-
 
 		# AR_COMPONETS_RELATED. By default, ar_related_terms is calculated. In some cases (diffusion for example) is needed overwrite ar_related_terms to obtain especific 'valor' form component
 			if ($ar_related_terms===false) {
@@ -159,15 +161,15 @@
 
 	/**
 	* GET_VALOR_EXPORT
-	* Return component value sended to export data
-	* @return string $valor
+	* Return component value sent to export data
+	* @return string $valor_export
 	*/
 	$_get_valor_export = function ($valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null) {
 
 		if (empty($valor)) {
 			$dato = $this->get_dato();				// Get dato from DB
 		}else{
-			$this->set_dato( json_decode($valor) );	// Use parsed json string as dato
+			$this->set_dato( json_decode($valor) );	// Use parsed JSON string as dato
 		}
 
 		$valor_export = $this->get_valor($lang);
@@ -182,16 +184,14 @@
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ($lang=null, $option_obj=null) : string {
+	$_get_diffusion_value = function($lang=null, $option_obj=null) : string {
 			// global $_get_valor;
-			// dump($this, ' this ++ '.to_string());
-			// dump($option_obj, ' option_obj ++ '.to_string());
 
 		// force recalculate for each lang
 			unset($this->valor);
@@ -203,6 +203,9 @@
 			$propiedades	= $this->get_propiedades(true);
 			$is_publicable	= (bool)(isset($propiedades->is_publicable) && $propiedades->is_publicable===true);
 
+		// diffusion_properties
+			$diffusion_properties = $this->get_diffusion_properties();
+
 		// fields_separator. (!) Note here that more than one value can be returned by this method. To avoid duplicity of ',' separator, use '-' as default
 			$fields_separator_default = ' | ';
 		// fields_separator
@@ -211,12 +214,15 @@
 				case isset($option_obj->divisor):
 					$fields_separator = $option_obj->divisor;
 					break;
-				case isset($propiedades->source->divisor):
-					$fields_separator = $propiedades->source->divisor;
-					break;
 				case isset($this->diffusion_properties->option_obj) &&
 					 isset($this->diffusion_properties->option_obj->divisor) :
 					$fields_separator = $this->diffusion_properties->option_obj->divisor;
+					break;
+				case isset($diffusion_properties->source->divisor):
+					$fields_separator = $diffusion_properties->source->divisor;
+					break;
+				case isset($propiedades->source->divisor):
+					$fields_separator = $propiedades->source->divisor;
 					break;
 				default:
 					$fields_separator = $fields_separator_default;
@@ -233,8 +239,8 @@
 				: diffusion::get_is_publicable($item->value);
 
 			if (true===$current_is_publicable) {
-				$diffusion_value_clean[] = strip_tags($item->label,'<img>');
-				// $diffusion_value_clean[] = $item->label;
+				$current_label = $item->label ?? '';
+				$diffusion_value_clean[] = strip_tags($current_label,'<img>');
 			}
 		}
 

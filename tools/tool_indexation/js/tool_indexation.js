@@ -175,7 +175,7 @@ tool_indexation.prototype.init = async function(options) {
 				}
 
 				// options
-					const tag				= options.tag // object
+					const tag				= options.tag || {} // object
 					// const caller			= options.caller // instance of component text area
 					// const text_editor	= options.text_editor // not used
 
