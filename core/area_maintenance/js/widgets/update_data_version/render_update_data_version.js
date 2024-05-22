@@ -55,7 +55,7 @@ render_update_data_version.prototype.list = async function(options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// hljs.highlightAll();
+	// highlight code tags
 		when_in_dom(wrapper, ()=>{
 			hljs.highlightAll();
 		})
@@ -110,6 +110,7 @@ const get_content_data = async function(self) {
 		})
 
 	// updates
+		const updates_checked = {}
 		if (updates) {
 			const updates_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -141,32 +142,65 @@ const get_content_data = async function(self) {
 					case 'components_update':
 					case 'run_scripts':
 						for (let i = 0; i < current_value_length; i++) {
+
 							const item = current_value[i]
-							if (i===0) {
-								ui.create_dom_element({
-									element_type	: 'h6',
-									class_name		: '',
-									inner_html		: key,
+
+							// key_name as 'components_update_1'
+							const key_name = key + '_' + i
+
+							// label as 'SQL_update', 'components_update', run_scripts'
+								if (i===0) {
+									ui.create_dom_element({
+										element_type	: 'h6',
+										class_name		: '',
+										inner_html		: key,
+										parent			: content_data
+									})
+								}
+
+							// command container
+								const command_node = ui.create_dom_element({
+									element_type	: 'div',
+									class_name		: 'command',
 									parent			: content_data
 								})
-							}
-							const command_node = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'command',
-								parent			: content_data
-							})
-							ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'vkey',
-								inner_html		: i+1,
-								parent			: command_node
-							})
-							ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'vkey_value',
-								inner_html		: typeof item==='string' ? item : JSON.stringify(item, null, 2),
-								parent			: command_node
-							})
+
+							// key as 1
+								ui.create_dom_element({
+									element_type	: 'span',
+									class_name		: 'vkey',
+									inner_html		: i+1,
+									parent			: command_node
+								})
+
+							// checkbox
+								const input_checkbox = ui.create_dom_element({
+									element_type	: 'input',
+									type			: 'checkbox',
+									class_name		: 'checkbox_selector',
+									parent			: command_node
+								})
+								input_checkbox.checked = true
+								input_checkbox.addEventListener('change', function(e) {
+									updates_checked[key_name] = input_checkbox.checked
+									if (!input_checkbox.checked) {
+										// unchecked case
+										command_node.classList.add('disable')
+									}else{
+										command_node.classList.remove('disable')
+									}
+								})
+
+							// value as 'component_3d'
+								const vkey_value_node = ui.create_dom_element({
+									element_type	: 'span',
+									class_name		: 'vkey_value',
+									inner_html		: typeof item==='string' ? item.trim() : JSON.stringify(item, null, 2),
+									parent			: command_node
+								})
+
+							// updates_checked set
+								updates_checked[key_name] = input_checkbox.checked // true // default
 						}
 						break;
 				}
@@ -207,15 +241,25 @@ const get_content_data = async function(self) {
 					body_info		: content_data,
 					body_response	: body_response,
 					on_submit	: () => {
+
+						// check empty selection
+							const empty_selection = Object.values(updates_checked).every((v) => v === false)
+							if (empty_selection) {
+								const msg = (get_label.empty_selection || 'Empty selection') + '. Continue?'
+								if (!confirm( msg )) {
+									return
+								}
+							}
+
 						// update_data_version
-						update_data_version()
-						.then(function(response){
-							update_process_status(
-								response.pid,
-								response.pfile,
-								body_response
-							)
-						})
+							update_data_version()
+							.then(function(response){
+								update_process_status(
+									response.pid,
+									response.pfile,
+									body_response
+								)
+							})
 					}
 				})
 				break;
@@ -223,6 +267,9 @@ const get_content_data = async function(self) {
 
 	// update_data_version
 		const update_data_version = async () => {
+			if(SHOW_DEBUG===true) {
+				console.log('))) updates_checked:', updates_checked);
+			}
 
 			// update_data_version process fire
 			const response = await data_manager.request({
@@ -233,7 +280,8 @@ const get_content_data = async function(self) {
 						action	: 'update_data_version',
 					},
 					options : {
-						background_running	: true // set run in background CLI
+						background_running	: true, // set run in background CLI
+						updates_checked		: updates_checked
 					}
 				}
 			})

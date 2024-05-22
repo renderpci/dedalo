@@ -3410,9 +3410,23 @@ class area_maintenance extends area_common {
 	* Triggered by Area Development button 'UPDATE DATA'
 	* Sample: Current data version: 5.8.2 -----> 6.0.0
 	* @param object $options
+	* {
+		"updates_checked": {
+			"SQL_update_1": true,
+			"components_update_1": true,
+			"components_update_2": true,
+			"components_update_3": true,
+			"components_update_4": true,
+			"run_scripts_1": true,
+			"run_scripts_2": true
+		}
+	* }
 	* @return object $response
 	*/
 	public static function update_data_version(object $options) : object {
+
+		// options
+			$updates_checked = $options->updates_checked;
 
 		// set time limit
 			set_time_limit ( 259200 );  // 3 days
@@ -3441,7 +3455,7 @@ class area_maintenance extends area_common {
 		try {
 
 			// exec update_data_version. return object response
-				$update_data_version_response = update::update_version();
+				$update_data_version_response = update::update_version($updates_checked);
 
 		} catch (Exception $e) {
 
