@@ -32,7 +32,6 @@ view_mini_text_area.render = async function(self, options) {
 		const data	= self.data
 		const value	= data.value || []
 
-
 	// fallback
 		const fallback_value	= data.fallback_value || []
 		const fallback			= get_fallback_value(value, fallback_value)
