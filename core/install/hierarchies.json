@@ -1704,5 +1704,19 @@
 		"typology": 1,
 		"active_in_thesaurus": true,
 		"install_checked_default": false
+	},
+	{
+		"tld": "ceramic",
+		"label": "Ceramic",
+		"typology": 11,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
+	},
+	{
+		"tld": "numismatic",
+		"label": "Numismatic",
+		"typology": 11,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
 	}
 ]
