@@ -6,6 +6,7 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {when_in_dom} from '../../../../common/js/events.js'
 	import {render_stream} from '../../../../common/js/render_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
@@ -53,6 +54,11 @@ render_update_data_version.prototype.list = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
+
+	// hljs.highlightAll();
+		when_in_dom(wrapper, ()=>{
+			hljs.highlightAll();
+		})
 
 
 	return wrapper

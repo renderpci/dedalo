@@ -48,7 +48,7 @@ export const area_maintenance = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	area_maintenance.prototype.init				= area_common.prototype.init
+	// area_maintenance.prototype.init			= area_common.prototype.init
 	// area_maintenance.prototype.build			= area_common.prototype.build
 	// area_maintenance.prototype.render		= common.prototype.render
 	area_maintenance.prototype.refresh			= common.prototype.refresh
@@ -56,6 +56,34 @@ export const area_maintenance = function() {
 	area_maintenance.prototype.build_rqo_show	= common.prototype.build_rqo_show
 	area_maintenance.prototype.edit				= render_area_maintenance.prototype.edit
 	area_maintenance.prototype.list				= render_area_maintenance.prototype.list
+
+
+
+/**
+* INIT
+* Custom init
+*/
+area_maintenance.prototype.init = async function(options) {
+
+	const self = this
+
+	// call the generic common tool init
+		const common_init = await area_common.prototype.init.call(this, options);
+
+	// set the self specific vars not defined by the generic init (in tool_common)
+
+		// load additional JS/CSS
+		// highlightjs from https://highlightjs.org/
+			common.prototype.load_style(
+				DEDALO_ROOT_WEB + '/core/area_maintenance/css/highlightjs/dark.min.css'
+			)
+			common.prototype.load_script(
+				DEDALO_ROOT_WEB + '/core/area_maintenance/css/highlightjs/highlight.min.js'
+			)
+
+
+	return common_init
+}//end init
 
 
 
