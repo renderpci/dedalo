@@ -1474,7 +1474,14 @@ final class dd_utils_api {
 					flush();
 
 				// stop on finish
-					if ($is_running===false) break;
+					if ($is_running===false) {
+						// delete database info about current process
+						processes::delete_process_item(
+							$pid,
+							logged_user_id()
+						);
+						break;
+					}
 
 				// break the loop if the client aborted the connection (closed the page)
 					if ( connection_aborted() ) break;
@@ -1485,6 +1492,28 @@ final class dd_utils_api {
 
 		die();
 	}//end get_process_status
+
+
+
+	/**
+	* STOP_PROCESS
+	* @param object $rqo
+	* @return object $response
+	*/
+	public static function stop_process(object $rqo) : object {
+
+		// session unlock
+			session_write_close();
+
+		// options
+			$pid		= $rqo->options->pid;
+			$user_id	= $rqo->options->user_id ?? logged_user_id();
+
+		$response = processes::stop($pid, $user_id);
+
+
+		return $response;
+	}//end stop_process
 
 
 

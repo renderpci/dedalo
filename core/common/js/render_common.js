@@ -428,6 +428,34 @@ export const render_stream = function(options) {
 			parent			: process_status_node
 		})
 
+	// button_stop_process
+		const button_stop_process = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'gear button_stop_process',
+			inner_html		: 'Stop',
+			parent			: process_status_node
+		})
+		button_stop_process.addEventListener('click', function(e) {
+			e.stopPropagation()
+			data_manager.request({
+				body : {
+					dd_api		: 'dd_utils_api',
+					action		: 'stop_process',
+					options		: {
+						pid	: pid
+					}
+				}
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log('stop_process API response:', response);
+				}
+				if (response.errors && response.errors.length) {
+					alert("Errors: " + response.errors.join('<br>') );
+				}
+			})
+		})
+
 	// store local info about this process
 		data_manager.set_local_db_data(
 			{
@@ -491,6 +519,8 @@ export const render_stream = function(options) {
 
 						ui.update_node_content(info_node.msg_node, msg)
 
+						button_stop_process.classList.remove('hide')
+
 					}else{
 
 						// avoid freezing the last message in cases where
@@ -504,6 +534,8 @@ export const render_stream = function(options) {
 						}
 
 						ui.update_node_content(info_node.msg_node, msg_end.join(' | '))
+
+						button_stop_process.classList.add('hide')
 					}
 				}
 
