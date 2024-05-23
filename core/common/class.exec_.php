@@ -357,6 +357,13 @@ class exec_ {
 			$process	= new process($command);
 			$pid		= $process->getPid();
 
+		// store process info
+			processes::add(
+				logged_user_id(),
+				$pid,
+				$pfile
+			);
+
 		// response OK
 			$response = new stdClass();
 				$response->result	= true;
@@ -432,7 +439,7 @@ class process {
     public function stop(){
         $command = 'kill '.$this->pid;
         exec($command);
-        if ($this->status() === false)return true;
+        if ($this->status() === false) return true;
         else return false;
     }
 
