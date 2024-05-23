@@ -91,7 +91,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// update_ontology *
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
@@ -111,6 +110,21 @@ class area_maintenance extends area_common {
 						.'!!!!!!!!!!!!!! DELETING ACTUAL ONTOLOGY !!!!!!!!!!!!!!!!!!!!!!!!!!!' . PHP_EOL
 						.'Are you sure you want to overwrite the current Ontology data?' .PHP_EOL
 						.'You will lose all changes made to the local Ontology.'
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+
+		// move_tld
+			$item = new stdClass();
+				$item->id		= 'move_tld';
+				$item->typo		= 'widget';
+				$item->label	= 'Move TLD';
+				$item->value	= (object)[
+					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
+							   Uses JSON file definitions located in /dedalo/core/base/transform_definition_files.<br>
+							   Note that this can be a very long process because it has to go through all the records in all the tables.',
+					'files' => area_maintenance::get_definitions_files()
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -3620,6 +3634,114 @@ class area_maintenance extends area_common {
 
 		return $response;
 	}//end set_congif_auto
+
+
+
+	/**
+	* GET_DEFINITIONS_FILES
+	* Get the list of JSON files in the directory:
+	* 	/dedalo/core/base/transform_definition_files
+	* @return array
+	*/
+	public static function get_definitions_files() : array {
+
+		$files_list = get_dir_files(
+			DEDALO_CORE_PATH . '/base/transform_definition_files',
+			['json'],
+			function($el) {
+
+				$path_parts	= pathinfo($el);
+				$basename	= $path_parts['basename'] ?? 'unknown';
+				$content	= file_get_contents($el);
+				if (!empty($content)) {
+					$content = json_decode($content);
+				}
+
+				return (object)[
+					'file_name'	=> $basename,
+					'content'	=> $content
+				];
+			}
+		);
+
+
+		return $files_list;
+	}//end get_definitions_files
+
+
+
+	/**
+	* MOVE_TLD
+	* Transform Dédalo data from all tables replacing tipos
+	* using selected JSON file map
+	* Is called from widget 'move_tld' as process
+	* @param object $options
+	* {
+	* 	file_selected : string 'finds_numisdata279_to_tchi1.json'
+	* }
+	* @return object $response
+	*/
+	public static function move_tld(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
+
+		// options
+			$file_selected = $options->file_selected;
+			if (empty($file_selected)) {
+				$response->errors[] = 'empty file_selected';
+				return $response;
+			}
+
+		// files
+			$definitions_files	= area_maintenance::get_definitions_files();
+			$found				= array_find($definitions_files, function($el) use($file_selected){
+				return $el->file_name===$file_selected;
+			});
+			if (!is_object($found)) {
+				$response->errors[] = 'file_selected not found';
+				return $response;
+			}
+
+		// process changes_in_tipos
+			$ar_tables = [
+				'matrix',
+				'matrix_activities',
+				'matrix_activity',
+				'matrix_counter',
+				'matrix_dataframe',
+				'matrix_dd',
+				'matrix_hierarchy',
+				'matrix_hierarchy_main',
+				'matrix_indexations',
+				'matrix_layout',
+				'matrix_layout_dd',
+				'matrix_list',
+				'matrix_nexus',
+				'matrix_nexus_main',
+				'matrix_notes',
+				'matrix_profiles',
+				'matrix_projects',
+				'matrix_stats',
+				'matrix_time_machine'
+			];
+			$json_files = [$found->file_name];
+			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
+			$result = transform_data::changes_in_tipos(
+				$ar_tables,
+				$json_files
+			);
+
+		$response->result	= $result;
+		$response->msg		= ($result===false)
+			? 'Error. changes_in_tipos failed'
+			: 'OK. request done successfully';
+
+
+		return $response;
+	}//end move_tld
 
 
 
