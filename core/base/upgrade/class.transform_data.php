@@ -1,4 +1,5 @@
 <?php
+require_once DEDALO_CORE_PATH . '/base/update/class.update.php';
 /**
 * CLASS TRANSFORM_DATA
 * This class is used to transform existing data, e.g. to migrate
