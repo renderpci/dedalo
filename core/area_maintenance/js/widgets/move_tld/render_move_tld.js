@@ -5,8 +5,14 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
+	import {when_in_dom} from '../../../../common/js/events.js'
 	import {render_stream} from '../../../../common/js/render_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+
+	// hljs
+	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
+	import json from '../../../../../lib/highlightjs/es/languages/json.js';
+	hljs.registerLanguage('json', json);
 
 
 
@@ -139,11 +145,13 @@ const get_content_data_edit = async function(self) {
 				inner_html		: 'File contents',
 				parent			: file_container
 			})
+
 			// file_content_container
+			const content_string = JSON.stringify(item.content, null, 2)
 			const file_content_container = ui.create_dom_element({
 				element_type	: 'pre',
-				class_name		: 'file_content_container hide',
-				inner_html		: JSON.stringify(item.content, null, 2),
+				class_name		: 'highlighted_code file_content_container language-json hide',
+				inner_html		: content_string,
 				parent			: file_container
 			})
 			// collapse file_content
@@ -159,8 +167,9 @@ const get_content_data_edit = async function(self) {
 				},
 				default_state : 'closed'
 			})
+			// highlight element
+			hljs.highlightElement(file_content_container);
 		}
-
 
 	// body_response
 		const body_response = ui.create_dom_element({

@@ -10,6 +10,11 @@
 	import {render_stream} from '../../../../common/js/render_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
+	// hljs
+	import hljs from '../../../../../lib/highlightjs/es/core.min.js';
+	import php from '../../../../../lib/highlightjs/es/languages/php.js';
+	hljs.registerLanguage('php', php);
+
 
 
 /**
@@ -54,11 +59,6 @@ render_update_data_version.prototype.list = async function(options) {
 		})
 		// set pointers
 		wrapper.content_data = content_data
-
-	// highlight code tags
-		when_in_dom(wrapper, ()=>{
-			hljs.highlightAll();
-		})
 
 
 	return wrapper
@@ -112,11 +112,13 @@ const get_content_data = async function(self) {
 	// updates
 		const updates_checked = {}
 		if (updates) {
+
 			const updates_container = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'updates_container',
 				parent			: content_data
 			})
+
 			for (const [key, current_value] of Object.entries(updates)) {
 				// console.log(`${key}: `, current_value);
 				// if (!Array.isArray(current_value)) {
@@ -129,6 +131,7 @@ const get_content_data = async function(self) {
 					case 'alert_update':
 						for (let i = 0; i < current_value_length; i++) {
 							const item = current_value[i]
+							// alert_update_node
 							ui.create_dom_element({
 								element_type	: 'h2',
 								class_name		: 'alert_update',
@@ -204,7 +207,14 @@ const get_content_data = async function(self) {
 						}
 						break;
 				}
-			}
+			}//end or (const [key, current_value] of Object.entries(updates))
+
+			// highlight code tags inside alert_update
+			when_in_dom(content_data, ()=>{
+				content_data.querySelectorAll('pre').forEach((el) => {
+					hljs.highlightElement(el);
+			  });
+			})
 		}
 
 	// body_response
