@@ -4,11 +4,9 @@
 * Included from main.less file
 */
 .area_maintenance {
-	// background-color: #ff1000;
 	display: table;
 	width: 100%;
 	padding: 1rem;
-
 
 	>.content_data {
 
@@ -34,6 +32,16 @@
 			font-size: 1em;
 			color: #212529 !important;
 			margin-bottom: 0.25rem;
+		}
+
+		pre {
+			margin-top: 0.5rem;
+			border-radius: 0.25rem;
+		}
+
+		// highlighted_code
+		.highlighted_code {
+			border-radius: 0.25rem;
 		}
 
 		.warning {
@@ -69,16 +77,10 @@
 		}
 
 		>.widget_container {
-			//background-color: #d9efd3;
-			// background-color: #fce8d2; // #fdf4ea
-			// border-radius: 0.5em;
 			margin: 0.35em;
-			//flex: 1 1 32.5%;
 			flex: 1 1 49%;
-
 			display: flex;
 			flex-direction: column;
-
 
 			&.danger {
 				>.widget_label {
@@ -96,12 +98,11 @@
 				}
 			}
 
+			// label
 			>.widget_label {
 				padding: 1em;
-				//background-color: #73A266;
 				background-color: @color_orange_dedalo;
 				color: #ffffff;
-				//font-weight: 600;
 				text-transform: uppercase;
 				letter-spacing: 0.025em;
 				user-select: none;
@@ -115,25 +116,17 @@
 					}
 				}
 
-				// &:before {
-				// 	content: " ";
-				// 	.fn_build_button('gear.svg', white, 0.7);
-				// 	float: right;
-				// 	margin: 0;
-				// 	cursor: default;
-				// }
-
 				>* {
 					pointer-events: none;
 				}
 			}
 
+			// body
 			>.widget_body {
 				padding: 1em;
 				background-color: #fce8d2;
 				min-height: 9.5rem;
 				flex-grow: 1; // grow vertical to fill
-
 				resize: vertical;
 				overflow: auto;
 				width: 100%;
@@ -158,21 +151,13 @@
 				}
 
 				.body_info {
-					// padding-top: 0.5em;
-					// padding-bottom: 0.5em;
 					font-size: 0.9em;
 					color: #676464;
 
 					h6 {
-						//font-weight: bold;
 						font-size: 1.33rem;
 						padding: 0.5em;
 						padding-left: 0px;
-					}
-
-					pre {
-						margin-top: 1em;
-						line-height: 1.1rem;
 					}
 
 					.alert_update {
@@ -182,13 +167,11 @@
 
 						// pre reset to allow highlightjs do the work
 						pre {
-							line-height: unset;
-							margin: 0;
-							padding: 0;
-							background-color: unset;
 							white-space: pre-line;
+							padding-top: 0;
+							padding-bottom: 0;
 
-							code {
+							>code {
 								padding-top: 0px;
 							}
 						}
@@ -251,15 +234,11 @@
 				.body_response {
 					position: relative;
 					border-top: 1px solid rgba(108, 108, 108, 0.27);
-					padding-top: 0.5em;
-					padding: 0.5em;
-					margin-top: 0.5em;
+					margin: 0px;
+					padding: 0px;
 					width: 100%;
 					max-width: 100%;
 					word-break: break-word;
-
-					padding: 0px;
-					margin: 0px;
 					border: none;
 
 					>* {
@@ -277,24 +256,16 @@
 					}
 
 					.api_response {
-						// background-color: #f2a188;
 						line-height: 1.2rem;
 						font-size: 1rem;
 						padding-top: 1rem;
 						padding-bottom: 1rem;
 					}
 
-
-					//* {
-					//	max-width: 100%;
-					//	white-space: normal;
-					//}
-
 					&.preload {
 						min-height: 3em;
 
 						>* {
-							//visibility: hidden;
 							opacity: 0.3;
 						}
 					}
@@ -305,30 +276,6 @@
 						margin-bottom: 1rem;
 					}
 
-					>.pre {
-
-						.json-container {
-
-						}
-
-						// margin-top: 0.25em;
-						// white-space: pre-wrap;
-						// word-break: break-word;
-						.pre {
-							// white-space: initial;
-							//white-space: pre-wrap;
-						}
-					}
-
-					// >.clean:after {
-					// 	// .icon_svg;
-					// 	// //background-image: url(../../themes/default/icons/eraser.svg);
-					// 	// .background_icon('eraser.svg');
-					// 	cursor: pointer;
-
-					// 	.fn_build_button('eraser.svg', white, 1)
-					// }
-
 					.error {
 						margin-top: 0.5rem;
 						margin-bottom: 0.5rem;
@@ -338,6 +285,7 @@
 						font-size: 1rem;
 					}
 
+					// button eraser
 					.eraser {
 						position: absolute;
 						right: 0px;
@@ -367,31 +315,7 @@
 					margin-top: 0.75rem;
 				}
 
-				.info_text {
-
-				}
-
 				.body_response {
-
-					.process_status_node {
-						// moved to layout.less !
-
-						// >.info_node {
-						// 	padding: 0px;
-						// 	margin-bottom: 1rem;
-
-						// 	>.msg {
-						// 		padding: 1rem;
-
-						// 		&.done {
-						// 			font-weight: bold;
-						// 		}
-						// 	}
-
-						// 	pre { }
-						// }
-					}
-
 					.backup_files_info {
 						margin: 0.5rem;
 						margin-top: 0px;
@@ -418,8 +342,6 @@
 					margin-top: 0.25rem;
 					margin-bottom: 0.25rem;
 					border-bottom: 1px solid #dad0c5;
-
-
 
 					>.label {
 						display: flex;
@@ -452,12 +374,6 @@
 
 			&#sqo_test_environment, &#dedalo_api_test_environment {
 				flex: 1 1 100%;
-				// min-height: 50vh;
-				// background-color: #3883fa;
-
-				.container {
-					// background-color: white;
-				}
 
 				.editor_json_container {
 					display: block;
@@ -469,9 +385,6 @@
 					}
 				}
 
-				>.widget_label {
-					//background-color: #3275e2;
-				}
 				>.widget_body {
 					padding: 0px;
 
@@ -522,10 +435,6 @@
 				.long_process_container {
 					margin-bottom: 1.25rem;
 
-					.button_run_long_process {
-						// margin-top: 1rem;
-					}
-
 					.long_process_response {
 						margin-top: 1rem;
 					}
@@ -548,6 +457,7 @@
 						padding: 0.25rem;
 						padding-left: 0;
 						font-weight: 400;
+
 						.tool_warning {
 							color: unset;
 						}
@@ -557,11 +467,9 @@
 						word-break: break-all;
 					}
 					.tool_version {
-						// background-color: #c2ad11;
 						text-align: right;
 					}
 					.tool_installed_version {
-						// background-color: #c2ad11;
 						text-align: right;
 					}
 					.developer {
@@ -583,7 +491,6 @@
 			&#php_info {
 				flex: 1 1 100%;
 				background-color: #9999cc;
-				// min-height: 100vh;
 
 				>.widget_label {
 					background-color: #777bb3;
@@ -739,7 +646,6 @@
 					>.error_pre {
 						background-color: unset;
 					}
-
 				}
 
 				.datalist_container {
@@ -795,7 +701,6 @@
 										font-weight: 300;
 									}
 								}
-
 							}
 						}
 					}
@@ -839,13 +744,7 @@
 					>.error_pre {
 						background-color: unset;
 					}
-
 				}
-
-				// .missing_total {
-				// 	padding-top: 0.5rem;
-				// 	padding-bottom: 0.5rem;
-				// }
 
 				// maintenance_mode & notifications
 				.container {
@@ -887,7 +786,6 @@
 					width: 100%;
 					display: grid;
 					grid-template-columns: 1fr 1fr;
-					// grid-gap: 0.75rem;
 				}
 
 				.missing_container, .obsolete_container {
@@ -906,14 +804,11 @@
 					>.file_container {
 
 						>.label {
-							// background-color: #f1a558;
-							// color: white;
 							padding: 0.5rem;
 							border-bottom: 1px solid #c2c2c2;
 						}
 
 						>.data {
-							// background-color: #ffffff;
 							padding: 0.5rem;
 							line-height: 1.2rem;
 							color: @color_green_success;
@@ -929,9 +824,7 @@
 							}
 						}
 					}
-
 				}
-
 
 				.datalist_container {
 					margin-bottom: 0.5rem;
@@ -949,11 +842,9 @@
 
 					.datalist_item_container {
 						display: grid;
-						// grid-template-columns: 10rem auto 8rem 8rem 8rem 8rem;
 						align-items: center;
 						gap: 0.5rem;
 						line-height: 1.1rem;
-						// border-bottom: 1px solid #b9b9b9;
 						margin-bottom: 0.25rem;
 						padding-bottom: 0.25rem;
 
@@ -1021,7 +912,6 @@
 				.info_node {
 					padding: 0px;
 					line-height: 1.1rem;
-					// white-space: pre-wrap;
 
 					.response_node {
 						padding: 1rem;
@@ -1033,5 +923,4 @@
 
 	}//end .content_data
 
-
-}
+}//end .area_maintenance
