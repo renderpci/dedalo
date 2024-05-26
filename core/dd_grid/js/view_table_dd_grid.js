@@ -131,6 +131,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 	// get the total rows will be created
 	// the top row has the total rows that is collected for every component, in a portal has two locators and other portal has 5 locators the amount of rows will be 5
 	const data_len = row.row_count
+
 	for (let row_key = 0; row_key < data_len; row_key++) {
 
 		// get the columns data
@@ -342,6 +343,8 @@ const render_row_container = function(class_name=null) {
 */
 const render_header_column = function(self, current_data) {
 
+	const show_tipo_in_label = self.config.show_tipo_in_label || false
+
 	const labels	= []
 	const len		= current_data.ar_columns_obj.ar_labels.length
 	for (let i = 0; i < len; i++) {
@@ -350,7 +353,7 @@ const render_header_column = function(self, current_data) {
 		}
 		const current_label	= current_data.ar_columns_obj.ar_labels[i] || ''
 		const current_tipo	= current_data.ar_columns_obj.ar_tipos[i]  || ''
-		const label = (self.show_tipo_in_label === true)
+		const label = (show_tipo_in_label === true)
 			? current_label + " ["+current_tipo+"]"
 			: current_label
 		labels.push(label)

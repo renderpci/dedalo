@@ -76,8 +76,11 @@ dd_grid.prototype.init	= async function(options) {
 		self.column_id = options.column_id
 	// view. When caller is section_record, the view is inside context
 		self.view = options.view || (options.context ? options.context.view : 'default')
-	// show_tipo_in_label
-		self.show_tipo_in_label = options.show_tipo_in_label || false
+	// set config
+		self.config = options.config
+	
+	// // show_tipo_in_label
+	// 	self.show_tipo_in_label = options.show_tipo_in_label || false
 
 
 	return common_init

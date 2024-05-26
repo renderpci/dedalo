@@ -213,7 +213,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 			// reset view
 			self.dd_grid.view = view
 			// reset show_tipo_in_label
-			self.dd_grid.show_tipo_in_label = show_tipo_in_label
+			self.dd_grid.config.show_tipo_in_label = show_tipo_in_label
 			// build
 			await self.dd_grid.build(false)
 			// reset node
@@ -230,7 +230,10 @@ tool_export.prototype.get_export_grid = async function(options) {
 			tipo				: self.caller.section_tipo,
 			mode				: 'list',
 			view				: view, // 'table',
-			show_tipo_in_label	: show_tipo_in_label, // true of false
+			config : {
+				show_tipo_in_label	: show_tipo_in_label, // true of false
+				fill_the_gaps		: fill_the_gaps, // true of false
+			},
 			lang				: page_globals.dedalo_data_lang,
 			data				: api_response.result
 		})
