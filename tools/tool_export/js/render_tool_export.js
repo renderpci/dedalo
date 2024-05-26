@@ -102,24 +102,40 @@ const get_content_data_edit = async function(self) {
 			// console.log("get_content_data_edit self.components_list:",self.components_list);
 
 	// user_selection_list (right side)
-		const user_selection_list = ui.create_dom_element({
+		const selection_list_contaniner = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'user_selection_list',
+			class_name		: 'selection_list_contaniner',
 			parent			: grid_top
 		})
-		// user_selection_list drag and drop events
-		user_selection_list.addEventListener('dragover', function(e){self.on_dragover(this,e)})
-		user_selection_list.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
-		// user_selection_list.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
-		user_selection_list.addEventListener('drop', function(e){self.on_drop(this,e)})
 
-		// title
+			// title
 			ui.create_dom_element({
 				element_type	: 'h1',
 				class_name		: 'list_title',
 				inner_html		: get_label.active_elements || 'Active elements',
-				parent			: user_selection_list
+				parent			: selection_list_contaniner
 			})
+
+			const user_selection_list = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'user_selection_list',
+				parent			: selection_list_contaniner
+			})
+
+
+			const empty_space = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'empty_space',
+				parent			: selection_list_contaniner
+			})
+
+			// empty_space drag and drop events
+			empty_space.addEventListener('dragover', function(e){self.on_dragover(user_selection_list,e)})
+			empty_space.addEventListener('dragleave', function(e){self.on_dragleave(this,e)})
+			// empty_space.addEventListener('dragend', function(e){self.on_drag_end(this,e)})
+			empty_space.addEventListener('drop', function(e){self.on_drop(user_selection_list,e)})
+
+
 
 		// read saved ddo in local DB and restore elements if found
 			const id = 'tool_export_config'
@@ -697,10 +713,17 @@ const do_sortable = function(element, self) {
 				event.preventDefault();
 
 				reset()
+				// const new_empty_node = document.createElement('div')
+				// new_empty_node.classList.add('new_empty_node')
+				// element.parentNode.insertBefore(new_empty_node, element)
 
 				element.classList.add('displaced')
 			});
 
+		// allow to be dropable the element
+		element.addEventListener('dragover', (event) => {
+			event.preventDefault();
+		})
 		// on drop
 			element.addEventListener('drop', (event) => {
 				event.preventDefault();
@@ -719,20 +742,19 @@ const do_sortable = function(element, self) {
 				if (parsed_data.drag_type==='sort') {
 
 					// sort case
-
 					// place drag item
 					const dragged = self.dragged
-					if(element.parentNode.lastChild===element) {
-						element.parentNode.appendChild(dragged)
-					}else{
+					// if(element.parentNode.lastChild===element) {
+					// 	element.parentNode.appendChild(dragged)
+					// }else{
 						element.parentNode.insertBefore(dragged, element)
-					}
+					// }
 
 					dragged.classList.add('active')
 
 					// Update the ddo_export. Move to the new array position
 						const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
-						const to_index		= [...element.parentNode.children].indexOf(dragged) -1 // exclude title node
+						const to_index		= [...element.parentNode.children].indexOf(dragged) // exclude title node
 						// remove
 						const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
 						// add

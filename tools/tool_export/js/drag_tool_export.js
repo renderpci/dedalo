@@ -43,7 +43,16 @@ export const on_dragover = function(obj, event) {
 	event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
 
 	// Add dragover class
-	obj.classList.add('dragover')
+	// obj.classList.add('dragover')
+
+	const element_children_length = obj.children.length
+	for (let i = 0; i < element_children_length; i++) {
+		const item = obj.children[i]
+		if (item.classList.contains('displaced')) {
+			item.classList.remove('displaced')
+		}
+	}
+
 }//end on_dragover
 
 
@@ -91,10 +100,30 @@ export const on_drop = function(container, event) {
 	// data transfer
 		const data			= event.dataTransfer.getData('text/plain');// element that move
 		const parsed_data	= JSON.parse(data)
-		console.log('[add] parsed_data.drag_type:', parsed_data);
+
 		if (parsed_data.drag_type!=='add') {
+
+			const dragged = self.dragged
+
+			const user_selection_list = container
+
+			// add DOM node
+			user_selection_list.appendChild(dragged)
+
+			dragged.classList.add('active')
+
+			// Update the ddo_export. Move to the new array position
+				const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
+				const to_index		= [...element.parentNode.children].indexOf(dragged) // exclude title node
+				// remove
+				const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
+				// add
+				self.ar_ddo_to_export.splice(to_index, 0, item_moving_ddo);
+
+				// save local db data
+				self.update_local_db_data()
 			// console.log('ignored drop of type different to add:', parsed_data.drag_type);
-			return false
+			return true
 		}
 
 	// short vars
