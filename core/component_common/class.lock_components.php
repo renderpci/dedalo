@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * LOCK_COMPONENTS
 *
@@ -10,6 +11,7 @@ class lock_components {
 
 	const LOCK_COMPONENTS_TABLE		= 'matrix_notifications';
 	const MAXIMUN_LOCK_EVENT_TIME	= 5; // hours
+	const RECORD_ID					= 1;
 
 
 
@@ -39,17 +41,20 @@ class lock_components {
 
 		$update_lock_elements = true;	// Default is true
 
+		// short vars
+			$id		= self::RECORD_ID;
+			$table	= self::LOCK_COMPONENTS_TABLE;
+
 		// load current db elements
-			$id 	  = 1;
-			$strQuery = "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-			$res 	  = JSON_RecordObj_matrix::search_free($strQuery, true);
-			$num_rows = pg_num_rows($res);
+			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
+			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
+			$num_rows	= pg_num_rows($res);
 
 			// create first row if empty table
 			if ($num_rows<1) {
 				$dato		= '[]';
-				$strQuery	= "INSERT INTO \"".lock_components::LOCK_COMPONENTS_TABLE."\" (id,datos) VALUES ($1,$2)";
-				pg_query_params(DBi::_getConnection(), $strQuery, array(1,$dato));
+				$strQuery	= "INSERT INTO \"$table\" (id, datos) VALUES ($1, $2)";
+				pg_query_params(DBi::_getConnection(), $strQuery, [$id, $dato]);
 			}else{
 				$dato = pg_fetch_result($res, 0, 0);
 			}
@@ -185,12 +190,11 @@ class lock_components {
 			if ($update_lock_elements===true) {
 
 				// recreate dato array keys
-					$new_dato = array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
-					$new_dato = json_encode($new_dato);		// Convert again to text before save to database
-					$strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-
-				// sync mode
-					pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+					$new_dato	= array_values($new_dato);	// Recreate array keys to avoid produce json objects instead array
+					$new_dato	= json_encode($new_dato);		// Convert again to text before save to database
+					$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
+					// sync mode
+					pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
 					pg_get_result(DBi::_getConnection());
 
 				// response
@@ -235,19 +239,21 @@ class lock_components {
 
 		$response = new stdClass();
 
+		// short vars
+			$id		= self::RECORD_ID;
+			$table	= self::LOCK_COMPONENTS_TABLE;
+
 		// load current db elements
-			$id			= 1;
-			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
+			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
 			$num_rows	= pg_num_rows($res);
-
 
 		// create first row on empty table
 		if ($num_rows<1) {
 
 			// response false
 				$response->result	= false;
-				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", $table);
 
 			debug_log(__METHOD__
 				." $response->msg "
@@ -286,11 +292,10 @@ class lock_components {
 			}//end foreach ($dato as $key => $current_event_element)
 
 			// Recreate dato array keys
-				$new_dato	= array_values($dato);		// Recreate array keys to avoid produce JSON objects instead array
-				$new_dato	= json_encode($new_dato);		// Convert again to text before save to database
-				$strQuery	= "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
-				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				$new_dato	= array_values($dato); // Recreate array keys to avoid produce JSON objects instead array
+				$new_dato	= json_encode($new_dato); // Convert again to text before save to database
+				$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
+				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
 				$res = pg_get_result(DBi::_getConnection());
 
 			// response OK
@@ -312,10 +317,13 @@ class lock_components {
 
 		$response = new stdClass();
 
+		// short vars
+			$id		= self::RECORD_ID;
+			$table	= self::LOCK_COMPONENTS_TABLE;
+
 		// load current db elements
-			$id			= 1;
-			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
-			$res		= JSON_RecordObj_matrix::search_free($strQuery, $wait=true);
+			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
+			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
 			$num_rows	= pg_num_rows($res);
 
 
@@ -324,7 +332,7 @@ class lock_components {
 
 			// response false
 				$response->result	= false;
-				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", $table);
 
 			debug_log(__METHOD__
 				." $response->msg "
@@ -349,7 +357,7 @@ class lock_components {
 			// Recreate dato array keys
 				// $new_dato = array_values($dato);		// Recreate array keys to avoid produce JSON objects instead array
 				// $new_dato = json_encode($new_dato);		// Convert again to text before save to database
-				// $strQuery = "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+				// $strQuery = "UPDATE \"".$table."\" SET datos = $1 WHERE id = $2";
 				// #$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
 				// pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
 				// $res = pg_get_result(DBi::_getConnection());
@@ -414,9 +422,12 @@ class lock_components {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed clean_locks_garbage';
 
+		// short vars
+			$id		= self::RECORD_ID;
+			$table	= self::LOCK_COMPONENTS_TABLE;
+
 		// load current db elements
-			$id			= 1;
-			$strQuery	= "SELECT datos FROM \"".lock_components::LOCK_COMPONENTS_TABLE."\" WHERE id = $id LIMIT 1";
+			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
 			$num_rows	= pg_num_rows($res);
 
@@ -426,7 +437,7 @@ class lock_components {
 
 			// response false
 				$response->result	= false;
-				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", lock_components::LOCK_COMPONENTS_TABLE);
+				$response->msg		= sprintf("Sorry. Record 1 on table %s not found. Ignored action.", $table);
 
 			debug_log(__METHOD__
 				." $response->msg "
@@ -465,9 +476,9 @@ class lock_components {
 				// Recreate dato array keys
 				$new_dato	= array_values($new_dato);	// Recreate array keys to avoid produce JSON objects instead array
 				$new_dato	= json_encode($new_dato);	// Convert again to text before save to database
-				$strQuery	= "UPDATE \"".lock_components::LOCK_COMPONENTS_TABLE."\" SET datos = $1 WHERE id = $2";
+				$strQuery	= "UPDATE \"$table\" SET datos = $1 WHERE id = $2";
 				// $result	= pg_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
-				pg_send_query_params(DBi::_getConnection(), $strQuery, array( $new_dato, $id ));
+				pg_send_query_params(DBi::_getConnection(), $strQuery, [$new_dato, $id]);
 				$res = pg_get_result(DBi::_getConnection());
 
 				// response OK Updated
@@ -478,7 +489,7 @@ class lock_components {
 					$response->result	= true;
 					$response->msg		= 'OK';
 			}
-		}
+		}//end if ($num_rows<1)
 
 
 		return $response;

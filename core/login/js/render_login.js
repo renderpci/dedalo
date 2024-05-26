@@ -90,15 +90,16 @@ const get_content_data = function(self) {
 	// select_lang
 		if (self.add_select_lang) {
 			const langs			= page_globals.dedalo_application_langs
+			const selected_lang = page_globals.dedalo_application_lang
 			const select_lang	= ui.build_select_lang({
 				langs 	 : langs,
-				selected : page_globals.dedalo_application_lang,
+				selected : selected_lang,
 				action 	 : async (e) => {
 					const lang = e.target.value || null
 					if (lang) {
 						// data_manager api call
 						await data_manager.request({
-							use_worker	: true,
+							use_worker	: false,
 							body		: {
 								action	: 'change_lang',
 								dd_api	: 'dd_utils_api',
