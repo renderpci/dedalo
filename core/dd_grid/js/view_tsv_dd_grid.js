@@ -7,7 +7,7 @@
 // imports
 	// import {ui} from '../../common/js/ui.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
-
+	import {get_columns} from './view_csv_dd_grid.js'
 
 
 /**
@@ -149,86 +149,6 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 	return portal_rows
 }// end get_portal_rows
-
-
-
-/**
-* GET_COLUMNS
-* the columns has the information of the components
-* is the component is a final component it will create a node
-* if the component is a relation component, portals, it could has other rows or portal columns with "sub-columns" of the final components
-* in the case of column has rows, extract the row with parent_row_key and star again
-* in the case of the column of a portal, extract his value and star again
-* @param array column_data
-* 	array of objects; full data with the columns to be processed, in the recursion it could be a part of this data to be processed
-* @param array ar_columns_object
-* 	array of object; the column map with all columns to be matched with the data
-* @param int parent_row_key
-* 	the current position of the row to be used to match with the portal data
-* @return array columns
-*/
-const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
-
-	const columns = []
-
-	// first we loop all map columns, independently of the data
-	const column_len = ar_columns_obj.length
-	for (let i = 0; i < column_len; i++) {
-		// specify the current column to be filled
-		const column = ar_columns_obj[i]
-		// find the data of the column, if it's not present, create a empty column
-		const column_value = column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
-			? column_data.find(item => item.ar_columns_obj.find(el => el.id === column.id))
-			: {
-				ar_columns_obj	: [column],
-				type			: 'column',
-				cell_type		: 'text',
-				value			: '',
-				class_list		:'empty_value'
-			  }
-		// if the column is the last column with data, identify by cell_type property, render the node
-		if(column_value && column_value.type === 'column' && column_value.cell_type){
-
-			const column_nodes = get_table_columns(column_value)
-			const node_len = column_nodes.length
-			for (let j = 0; j < node_len; j++) {
-				columns.push(column_nodes[j])
-			}
-		// else if the column is a portal column, it could has rows (the portal rows) or could be colum_portal, that has the column with the information.
-		// in the second case, the column of the portal, this column content the other components columns and if the sub component is a relation component it is created by the section_id in the portal
-		}else if(column_value && column_value.type === 'column'){
-			const sub_portal_values	= column_value.value
-			// if the column has rows:
-			// this case is the main portal in the section to export, sub-portals don't create rows
-			if(sub_portal_values[0].type === 'row'){
-				const current_ar_columns_obj = [column]
-				// some times sub_values could be empty, because the rows_columns created by section_id could be empty between different rows, it depends of the data
-				// if the data don't exist, create a empty node to be rendered
-				const sub_values	= sub_portal_values[parent_row_key]
-					? sub_portal_values[parent_row_key].value
-					: [{
-						ar_columns_obj	: [{id:current_ar_columns_obj}],
-						type			: 'column',
-						cell_type		: 'text',
-						value			: '',
-						class_list		: 'empty_value'
-					  }]
-				const sub_portal_nodes = get_columns(sub_values, current_ar_columns_obj, parent_row_key)
-				// fragment.appendChild(sub_portal_nodes)
-				columns.push(...sub_portal_nodes)
-
-			// else, the column don't has rows and is section_id column (portal inside portal doesn't create rows, it only create columns)
-			}else{
-				const current_ar_columns_obj = [column]
-				const sub_nodes = get_columns(sub_portal_values, current_ar_columns_obj, parent_row_key)
-				// fragment.appendChild(sub_nodes)
-				columns.push(...sub_nodes)
-			}
-		}
-	}
-
-	return columns
-}// end get_columns
 
 
 
