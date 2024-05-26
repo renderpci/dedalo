@@ -563,7 +563,7 @@ class component_relation_common extends component_common {
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$locator_count	= sizeof($data);
-			$row_count		= $locator_count + $sub_row_count;
+			$row_count		= max ($locator_count, $sub_row_count);
 			if($row_count === 0){
 				$row_count = 1;
 			}
