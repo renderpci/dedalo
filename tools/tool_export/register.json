@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057518074,
+              "day": 23,
+              "hour": 9,
+              "time": 65065627644,
               "year": 2024,
-              "month": 2,
-              "minute": 47,
-              "second": 54
+              "month": 5,
+              "minute": 27,
+              "second": 24
             }
           }
         ]
@@ -136,7 +136,8 @@
         ],
         "lg-spa": [
           "Exportar"
-        ]
+        ],
+        "lg-vlca": []
       }
     },
     "dd1326": {
@@ -151,7 +152,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -221,6 +222,105 @@
         ]
       }
     },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "fill_the_gaps",
+              "value": "Fill the gaps"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "fill_the_gaps",
+              "value": "Rellenar los huecos"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "fill_the_gaps",
+              "value": "Ampler els vuits"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "fill_the_gaps",
+              "value": "Combler les lacunes"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "fill_the_gaps",
+              "value": "Colmare le lacune"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "fill_the_gaps",
+              "value": "Συμπληρώστε τα κενά"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "fill_the_gaps",
+              "value": "Füllen Sie die Lücken"
+            },
+            {
+              "lang": "lg-por",
+              "name": "fill_the_gaps",
+              "value": "Preencher as lacunas"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "show_tipo_in_label",
+              "value": "Show ontology tipo"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "show_tipo_in_label",
+              "value": "Mostrar el tipo de la ontología"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "show_tipo_in_label",
+              "value": "Mostar el tipo de l'ontologia"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "show_tipo_in_label",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "show_tipo_in_label",
+              "value": "Mostrar tipo de ontologia"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "show_tipo_in_label",
+              "value": "Montrer l'ontologie tipo"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "show_tipo_in_label",
+              "value": "Mostra il tipo di ontologia"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "show_tipo_in_label",
+              "value": "Εμφάνιση οντολογίας tipo"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "show_tipo_in_label",
+              "value": "Ontologie anzeigen tipo"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "show_tipo_in_label",
+              "value": ""
+            }
+          ]
+        ]
+      }
+    },
     "dd1644": {
       "inf": "Desarollador [component_input_text]",
       "dato": {
@@ -233,7 +333,7 @@
   "section_id": 16,
   "created_date": "2023-10-09 19:37:41",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:47:54",
+  "modified_date": "2024-05-23 09:27:24",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

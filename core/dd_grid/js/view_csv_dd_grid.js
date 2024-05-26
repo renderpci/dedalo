@@ -220,14 +220,24 @@ export const get_columns = function(self, column_data, ar_columns_obj, parent_ro
 				// if the data don't exist, create a empty node to be rendered
 				const sub_values	= sub_portal_values[parent_row_key]
 					? sub_portal_values[parent_row_key].value
-					: [{
-						ar_columns_obj	: [{id:current_ar_columns_obj}],
-						type			: 'column',
-						cell_type		: 'text',
-						value			: '',
-						class_list		: 'empty_value'
-					  }]
-				const sub_portal_nodes = get_columns(sub_values, current_ar_columns_obj, parent_row_key)
+					: (fill_the_gaps === false)
+						? [{
+								ar_columns_obj	: [{id:current_ar_columns_obj}],
+								type			: 'column',
+								cell_type		: 'text',
+								value			: '',
+								class_list		: 'empty_value'
+							}]
+						: sub_portal_values[0].value
+							? sub_portal_values[0].value
+							: [{
+								ar_columns_obj	: [{id:current_ar_columns_obj}],
+								type			: 'column',
+								cell_type		: 'text',
+								value			: '',
+								class_list		: 'empty_value'
+							}]
+
 				const sub_portal_nodes = get_columns(self, sub_values, current_ar_columns_obj, parent_row_key)
 				// fragment.appendChild(sub_portal_nodes)
 				columns.push(...sub_portal_nodes)
