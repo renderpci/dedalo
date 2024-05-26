@@ -174,6 +174,7 @@ tool_export.prototype.get_export_grid = async function(options) {
 		const ar_ddo_to_export		= options.ar_ddo_to_export
 		const view					= options.view || 'table'
 		const show_tipo_in_label	= options.show_tipo_in_label
+		const fill_the_gaps			= options.fill_the_gaps
 
 	// sqo
 		const sqo = clone(self.sqo)
@@ -214,6 +215,8 @@ tool_export.prototype.get_export_grid = async function(options) {
 			self.dd_grid.view = view
 			// reset show_tipo_in_label
 			self.dd_grid.config.show_tipo_in_label = show_tipo_in_label
+			// reset fill_the_gaps
+			self.dd_grid.config.fill_the_gaps = fill_the_gaps
 			// build
 			await self.dd_grid.build(false)
 			// reset node

@@ -171,6 +171,11 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 
 	const fragment = new DocumentFragment()
 
+	// fill the gaps
+	// when data is breakdown, repeat the main section data in all portal rows
+	// fill the data in main section for every portal row, it helps to manage data in spreadsheets
+	const fill_the_gaps = self.config.fill_the_gaps
+
 	// first we loop all map columns, independently of the data
 	const column_len	= ar_columns_obj.length
 	for (let i = 0; i < column_len; i++) {
@@ -198,6 +203,7 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 		// in the second case, the column of the portal, this column content the other components columns and if the sub component is a relation component it is created by the section_id in the portal
 		}else if(column_value && column_value.type === 'column'){
 			const sub_portal_values	= column_value.value
+
 			// if the column has rows:
 			// this case is the main portal in the section to export, sub-portals don't create rows
 			if(sub_portal_values[0].type === 'row'){
@@ -206,13 +212,24 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 				// if the data don't exist, create a empty node to be rendered
 				const sub_values	= sub_portal_values[parent_row_key]
 					? sub_portal_values[parent_row_key].value
-					: [{
-						ar_columns_obj	: [{id:current_ar_columns_obj}],
-						type			: 'column',
-						cell_type		: 'text',
-						value			: '',
-						class_list		: 'empty_value'
-					}]
+					: (fill_the_gaps === false)
+						? [{
+								ar_columns_obj	: [{id:current_ar_columns_obj}],
+								type			: 'column',
+								cell_type		: 'text',
+								value			: '',
+								class_list		: 'empty_value'
+							}]
+						: sub_portal_values[0].value
+							? sub_portal_values[0].value
+							: [{
+								ar_columns_obj	: [{id:current_ar_columns_obj}],
+								type			: 'column',
+								cell_type		: 'text',
+								value			: '',
+								class_list		: 'empty_value'
+							}]
+
 				const sub_portal_nodes = get_columns(self, sub_values, current_ar_columns_obj, parent_row_key)
 				fragment.appendChild(sub_portal_nodes)
 

@@ -243,19 +243,40 @@ const get_content_data_edit = async function(self) {
 					parent			: select_data_format_export
 				})
 
-		// show labels check
-			const show_tipo_in_label = ui.create_dom_element({
+		// Options to check
+			const options_to_check = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: 'show_tipo_in_label',
-				inner_html		: get_label.show_tipo_in_label || 'Show ontology tipo',
+				class_name		: 'options_to_check',
 				parent			: export_buttons_config
 			})
-			const show_tipo_in_label_check = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox',
-				class_name		: 'show_tipo_in_label_check',
-				parent			: show_tipo_in_label
-			})
+			// Fill the gaps check_box
+				const fill_the_gaps_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'check_label fill_the_gaps',
+					inner_html		: self.get_tool_label('fill_the_gaps') || 'Fill the gaps',
+					parent			: options_to_check
+				})
+				const fill_the_gaps_check = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: 'option_check_box fill_the_gaps_check',
+					parent			: fill_the_gaps_node
+				})
+				fill_the_gaps_check.checked = true
+
+			// show labels check_box
+				const show_tipo_in_label = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'check_label show_tipo_in_label',
+					inner_html		: self.get_tool_label('show_tipo_in_label') || 'Show ontology tipo',
+					parent			: options_to_check
+				})
+				const show_tipo_in_label_check = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					class_name		: 'option_check_box show_tipo_in_label_check',
+					parent			: show_tipo_in_label
+				})
 
 		// button_export
 			const button_export = ui.create_dom_element({
@@ -299,10 +320,11 @@ const get_content_data_edit = async function(self) {
 						class_name		: 'spinner',
 						parent			: export_buttons_config
 					})
-					const show_tipo_in_label = show_tipo_in_label_check.checked;
+					const show_tipo_in_label	= show_tipo_in_label_check.checked;
+					const fill_the_gaps			= fill_the_gaps_check.checked;
 
 				// loading class elements
-					[components_list_container, user_selection_list, export_buttons_options].map(
+					[components_list_container, selection_list_contaniner, export_buttons_options].map(
 						el => el.classList.add('loading')
 					)
 
@@ -311,6 +333,7 @@ const get_content_data_edit = async function(self) {
 						data_format			: self.data_format,
 						ar_ddo_to_export	: self.ar_ddo_to_export,
 						show_tipo_in_label	: show_tipo_in_label,
+						fill_the_gaps		: fill_the_gaps,
 						view				: 'table'
 					}
 					const dd_grid				= await self.get_export_grid(export_grid_options)
@@ -329,7 +352,7 @@ const get_content_data_edit = async function(self) {
 					spinner.remove();
 
 				// loading class elements
-					[components_list_container, user_selection_list, export_buttons_options].map(
+					[components_list_container, selection_list_contaniner, export_buttons_options].map(
 						el => el.classList.remove('loading')
 					)
 			})
