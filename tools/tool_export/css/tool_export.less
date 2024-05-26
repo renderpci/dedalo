@@ -246,13 +246,17 @@
 							margin-left: 1rem;
 						}
 					}
-
-					>.show_tipo_in_label {
+					>.options_to_check {
 						margin-bottom: 2rem;
-
-						.show_tipo_in_label_check {
-							margin-left: 0.5rem;
-							cursor: pointer;
+						grid-template-columns: auto 1fr;
+						display: grid;
+						row-gap: 1em;
+						>.check_label{
+							display: contents;
+							.option_check_box {
+								// margin-left: 0.5rem;
+								cursor: pointer;
+							}
 						}
 					}
 
