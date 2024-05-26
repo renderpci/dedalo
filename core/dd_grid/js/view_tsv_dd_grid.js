@@ -140,7 +140,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 		// portal_rows.push(row_node)
 
 		// process the data column to get the cells
-		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
+		const row_columns = get_columns(self, column_data, ar_columns_obj, row_key)
 		portal_rows.push(
 			row_columns.join(column_separator)
 		)

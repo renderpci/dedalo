@@ -144,7 +144,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 		// portal_rows.push(row_node)
 
 		// process the data column to get the cells
-		const row_columns = get_columns(column_data, ar_columns_obj, row_key)
+		const row_columns = get_columns(self, column_data, ar_columns_obj, row_key)
 
 		const row_csv = row_columns.map(item => {
 			return '"'+item.toString().replace(/\"/g, '""') +'"'
@@ -176,9 +176,14 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 * 	the current position of the row to be used to match with the portal data
 * @return array columns
 */
-const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
+export const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) {
 
 	const columns = []
+
+	// fill the gaps
+	// when data is breakdown, repeat the main section data in all portal rows
+	// fill the data in main section for every portal row, it helps to manage data in spreadsheets
+	const fill_the_gaps = self.config.fill_the_gaps
 
 	// first we loop all map columns, independently of the data
 	const column_len = ar_columns_obj.length
@@ -223,13 +228,14 @@ const get_columns = function(column_data, ar_columns_obj, parent_row_key) {
 						class_list		: 'empty_value'
 					  }]
 				const sub_portal_nodes = get_columns(sub_values, current_ar_columns_obj, parent_row_key)
+				const sub_portal_nodes = get_columns(self, sub_values, current_ar_columns_obj, parent_row_key)
 				// fragment.appendChild(sub_portal_nodes)
 				columns.push(...sub_portal_nodes)
 
 			// else, the column don't has rows and is section_id column (portal inside portal doesn't create rows, it only create columns)
 			}else{
 				const current_ar_columns_obj = [column]
-				const sub_nodes = get_columns(sub_portal_values, current_ar_columns_obj, parent_row_key)
+				const sub_nodes = get_columns(self, sub_portal_values, current_ar_columns_obj, parent_row_key)
 				// fragment.appendChild(sub_nodes)
 				columns.push(...sub_nodes)
 			}
