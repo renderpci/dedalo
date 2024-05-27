@@ -6,7 +6,7 @@
 
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 

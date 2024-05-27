@@ -5,13 +5,12 @@
 
 
 // import
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
+	import {dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {render_tool_upload} from './render_tool_upload.js'
 
 
