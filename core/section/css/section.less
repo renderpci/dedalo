@@ -4,28 +4,9 @@
 * Included from main.less file
 */
 .section {
-	// background-color: #50f9af;
 	display: table;
 	width: 100%;
 	padding: 1rem;
-
-	// label
-	// >.label {
-	// 	// position: absolute;
-	// 	// left: 54px;
-	// 	// margin-top: 1px;
-	// 	margin-bottom: 0.2em;
-	// 	font-size: 1.2em;
-
-	// @media screen and (min-width: @width_break_point_0) {
-	//		overflow-x: hidden; // prevent scrollbars affect content
-	// }
-	// 	@media screen and (max-width: @width_break_point_0) {
-	// 		position: initial;
-	// 		margin-bottom: 1em;
-	// 	}
-	// }
-
 
 	// shared
 	>.search_container {
@@ -64,29 +45,22 @@
 		}
 
 		>.inspector_container {
-			// @top_distance : 75px;
 			overflow: auto;
 			height: 100%;
-			width: var(--inspector_width);
-			// background-color: @color_grey_ultralight;
-			// outline: 1px solid @color_grey_light;
+			width: var(--inspector_width);			//
 			position: fixed;
-			// top: @top_distance;
 			left: calc(100vw - var(--inspector_width) - 0.75rem);
 			z-index: 2;
-
 			// prevent content from shifting left when the vertical scrollbar appears
 			overflow-y: overlay;
 			padding-right: 13px;
 			padding-left: 1px;
 
 			@media screen and (max-width: @width_break_point_0) {
-				// display: contents;
 				display: inline;
 				width: 100%;
 				left: 0px;
 				position: initial;
-				// margin-bottom: 0.25rem;
 
 				>.wrapper_inspector {
 					>.label {
@@ -106,24 +80,9 @@
 			flex-wrap: wrap;
 			width: 100%;
 
-			//&:before {
-			//	content: "Section edit";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//}
-
 			>*:not(.full_width) {
 				flex: 1;
 			}
-
-			//&:before {
-			//	content: "Section edit";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//	flex-basis: 100%;
-			//}
 		}
 	}//end &.edit
 
@@ -133,17 +92,9 @@
 			display: flex;
 			justify-content: space-between;
 
-			// .search,
-			// .other_buttons_block,
-			// .show_other_buttons_button,
 			button {
 				margin-bottom: 0.25rem;
 			}
-
-			// button search
-			// >.search {
-
-			// }
 
 			// other_buttons_block
 			>.other_buttons_block {
@@ -176,34 +127,6 @@
 					}
 				}
 			}
-
-			// des
-				// >.button {
-				// 	background-color: @color_orange_dedalo;
-				// 	color: #ffffff;
-				// 	display: inherit;
-				// 	width: auto;
-				// 	height: auto;
-				// 	padding: 1em;
-				// 	padding-top: 0;
-				// 	padding-bottom: 0;
-				// 	border-radius: 0.25em;
-				// 	margin: 0.25em;
-				// 	// margin-top: 0.25em;
-				// 	// margin-bottom: 0.25em;
-
-				// 	// icons inside, like export icon
-				// 	>.button {
-				// 		margin-left: 0;
-				// 	}
-
-				// 	&:hover {
-				// 		color: #000000;
-				// 	}
-				// 	&:active {
-				// 		color: #ffffff;
-				// 	}
-				// }
 		}
 
 		>.search_container {
@@ -211,7 +134,6 @@
 		}
 
 		>.paginator_container {
-			// min-height: 2.96rem;
 			height: 39px;
 			@media screen and (max-width: @width_break_point_0) {
 				height: auto;
@@ -220,8 +142,6 @@
 		}
 
 		>.list_body >.content_data {
-			//display: flex;
-			//flex-wrap: wrap;
 			width: 100%;
 
 			@media screen and (max-width: @width_break_point_1) {
@@ -239,75 +159,11 @@
 					}
 				}
 			}
-
-			// (!) moved to list.less to allow shared use (time machine list, etc.)
-			// .column_section_id {
-			// 	display: flex;
-			// 	flex-direction: column;
-			// 	justify-content: flex-start;
-			// 	background-color: #f6f6f6;
-
-			// 	>button {
-			// 		display: flex;
-			// 		width: 100%;
-			// 		margin: 0;
-			// 		padding: 0.5em;
-			// 		border-radius: 0;
-
-			// 		// justify-content
-			// 		justify-content: flex-end;
-			// 		&.button_edit {
-			// 			justify-content: space-between;
-			// 			// justify-content: flex-end;
-			// 		}
-			// 		&.button_delete {
-			// 			// justify-content: flex-end;
-			// 		}
-
-			// 		>.section_id {
-			// 			font-size: 1.25rem;
-			// 			padding-right: 3px;
-			// 			padding-left: 2px;
-			// 		}
-			// 		>.icon {
-			// 			height: 1.4rem;
-			// 			width: 1.3rem;
-			// 			margin-right: -2px;
-			// 		}
-
-			// 		&:hover {
-			// 			z-index: 99999;
-
-			// 			// background-color
-			// 			background-color: @color_orange_dedalo;
-			// 			&.button_edit {
-			// 				background-color: @color_green_success;
-			// 			}
-			// 			&.button_delete {
-			// 				background-color: @color_danger;
-			// 			}
-
-			// 			>.section_id {
-			// 				color: #ffffff;
-			// 			}
-			// 			>.icon {
-			// 				background-color: #ffffff;
-			// 			}
-			// 		}
-			// 	}
-			// }//end .column_section_id
-
-			//&:before {
-			//	content: "Section list";
-			//	font-weight: bold;
-			//	width: 100%;
-			//	padding: 1em;
-			//	flex-basis: 100%;
-			//}
 		}
 
 	}//end &.list
-}
+
+}//end .section
 
 
 @import (once) './view_graph_section';

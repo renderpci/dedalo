@@ -4,9 +4,6 @@
 * Included from main.less file
 */
 .component_check_box {
-	// background-color: #d2baf6;
-
-
 
 	// view_default
 	&.view_default {
@@ -15,7 +12,6 @@
 
 			>.content_data {
 				overflow: auto;
-				// background-color: #d2baf6;
 
 				>.content_value {
 					display: flex;
@@ -38,7 +34,6 @@
 		}//end .edit
 	}//end .view_default
 
-
 	// view_line
 	&.view_line {
 
@@ -46,7 +41,6 @@
 			display: contents;
 
 			>.content_data {
-				// display: contents;
 				position: relative;
 				padding: 0px;
 
@@ -73,8 +67,6 @@
 		}//end .edit
 
 	}//end .view_line
-
-
 
 	&.view_mini {
 		background-color: transparent;
@@ -113,8 +105,6 @@
 		}
 
 	}//end .view_mini
-
-
 
 	// view_tools
 	&.view_tools {
@@ -155,17 +145,13 @@
 					width: 1.33rem;
 					margin-right: 0.5rem;
 					margin-left: 0px;
-					// vertical-align: text-bottom;
 				}
 
 				// label input
 				>.input_label {
-					// vertical-align: text-bottom;
-					// background-color: #ffffff;
 
 					>.input_checkbox {
 						margin-right: 0.33rem;
-						// vertical-align: top;
 					}
 
 					>span {
@@ -179,8 +165,6 @@
 			}
 		}
 	}
-
-
 
 	&.search {
 		>.content_data {
@@ -201,22 +185,19 @@
 
 				// label wraps the input too
 				>.label {
-					// width: 100%;
+					display: flex;
 					padding-top: 0.33rem;
 					padding-bottom: 0.33rem;
 					padding-right: 0.5rem;
-
-					display: flex;
 					cursor: pointer;
 
 					>input {
 						cursor: pointer;
-							margin-right: 0.33rem;
-							vertical-align: top;
+						margin-right: 0.33rem;
+						vertical-align: top;
 					}
 				}
 			}
 		}
 	}
-
 }

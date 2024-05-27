@@ -4,18 +4,15 @@
 * Included from main.less file
 */
 .component_pdf {
-	@color_grey_viewer: #3f3f3f;
 
+	@color_grey_viewer: #3f3f3f;
 
 	&.disabled_component {
 		>.content_data {
 			pointer-events: initial !important;
 
 			.fields {
-				// input {
-				// 	outline: initial !important;
-				// 	pointer-events: initial !important;
-				// }
+
 			}
 		}
 	}
@@ -112,10 +109,9 @@
 		align-items: center;
 
 		>img.icon_pdf {
-			// height: 3rem;
-			// margin: 0.33rem;
 			cursor: pointer;
 			padding: 1.2rem;
+
 			&:active {
 				opacity: 0.33;
 			}
@@ -137,12 +133,13 @@
 		height: 100%;
 
 		.content_data {
-			// height: 100vh;
+
 		}
 	}
 
 	&.view_line {
 		display: block;
+
 		>.content_data {
 			min-height: unset;
 		}
@@ -150,6 +147,7 @@
 
 	&.view_text {
 		display: inline-block;
+
 		>img {
 			height: 100%;
 		}
@@ -159,10 +157,10 @@
 	&_mini {
 		display: inline-block;
 		vertical-align: middle;
-		// margin-top: -0.4rem;
-		// margin-bottom: -0.4rem;
+
 		img {
 			height: 2rem;
 		}
 	}
+
 }//end .component_pdf

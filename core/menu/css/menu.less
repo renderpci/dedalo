@@ -6,17 +6,14 @@
 // variables
 @import (once) '../../page/css/layout/vars';
 @import (once) '../../page/css/layout/buttons';
+
 @menu_bg_color_active: #ffa43d;
 @menu_box_shadow: 5px 5px 15px rgba(0, 0, 0, 0.1);
 
-
-
 .menu {
 	// vars
-	// --menu_heigth: 2em;
 	--menu_heigth: 2.2rem;
 
-	// position: fixed;
 	position: -webkit-sticky;
 	position: sticky;
 	top: 0px;
@@ -30,7 +27,6 @@
 	color: #ffffff;
 	line-height: 1.2em;
 	z-index: 4;
-
 
 	// prevents menu don't scroll in mobile
 	@media screen and (max-width: @width_break_point_0) { // 1024px
@@ -60,8 +56,6 @@
 			}
 		}
 
-
-
 	// top_item shared items
 		>.top_item {
 			min-height: var(--menu_heigth);
@@ -69,8 +63,6 @@
 			font-size: 1.1rem;
 			margin-left: 1rem;
 		}
-
-
 
 	// quit button
 		>.quit {
@@ -86,8 +78,6 @@
 			}
 		}
 
-
-
 	// dedalo_icon link
 		>.dedalo_icon_top {
 			width: 1em;
@@ -97,8 +87,6 @@
 			background-position: center;
 			cursor: pointer;
 		}
-
-
 
 	// menu_hierarchy : Menu tree
 		>.menu_hierarchy {
@@ -126,7 +114,6 @@
 				display: block;
 				width: 100%;
 				margin: 0px;
-				// padding: 4px;
 				padding-left: 6px;
 				padding-right: 18px;
 				letter-spacing: 0.7px;
@@ -138,13 +125,10 @@
 			}
 
 			// level 1 root level
-			ul#dd1{
-				//font-family: system, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', 'Lucida Grande', "Oxygen-light", sans-serif;
-				//-webkit-font-smoothing: subpixel-antialiased;
+			ul#dd1 {
 				display: flex;
 				flex-wrap: wrap;
-				//
-				//float: left;
+
 				li {
 					display: inline-block;
 					padding: 0px;
@@ -178,9 +162,7 @@
 				min-width: 175px;
 				position: absolute;
 				top: var(--menu_heigth);
-				// left: -1px;
 				box-shadow: @menu_box_shadow;
-				/*left: -2px;*/
 				border: 1px solid #B4B4B4;
 				border-radius: 4px;
 				border-top-left-radius: 0;
@@ -196,11 +178,6 @@
 			>li >ul  {
 				border-radius: 0px 0px 4px 4px; /* top left, top right, bottom right, bottom left */
 			}
-
-			// dropdown
-			// li > ul {
-				// margin-top: 4px;
-			// }
 
 			ul li {
 				border: 1px solid #7F7F7F;
@@ -230,11 +207,6 @@
 				display: none;
 			}
 
-			// .menu_overflow::-webkit-scrollbar {
-			//    //This is the magic bit for WebKit
-			//   display: none;
-			// }
-
 			// active
 			.menu_li_active > a {
 				background: @menu_bg_color_active;
@@ -256,18 +228,16 @@
 			li.has-sub::after {
 				content: " ";
 				display: inline-block;
+				position: absolute;
+				right: 8px;
+				top: 12px;
 				width: 0px;
 				height: 0px;
 				margin-left: 3px;
 				vertical-align: middle;
-
 				border-bottom: 5px solid transparent;
 				border-top: 5px solid transparent;
 				border-left: 5px solid #000000;
-
-				position: absolute;
-				right: 8px;
-				top: 12px;
 				pointer-events: none;
 			}
 
@@ -284,15 +254,12 @@
 			// shadow for fir level when active
 			>li.menu_li_active {
 				box-shadow: @menu_box_shadow;
-				/*border-left: 1px solid #b4b4b4;*/
 			}
 
 			@media screen and (max-width: @width_break_point_0) { // 1024px
 				display: none;
 			}
 		}//end #menu_hierarchy
-
-
 
 	// menu_mobile version of menu
 		>.menu_mobile_icon {
@@ -365,8 +332,6 @@
 			}
 		}
 
-
-
 	// Ontology link
 		>.ontology {
 			color: #c9c9c9;
@@ -381,8 +346,6 @@
 			}
 		}
 
-
-
 	// username of current logged user
 		>.logged_user_name {
 			color: #a6a6a6;
@@ -394,30 +357,23 @@
 			}
 		}
 
-
-
 	// lang selectors
 		>.dedalo_aplication_langs_selector {
 			display: inline-block;
 			background-color: #2d2d2d;
 			height: auto;
 			max-width: 99.9%;
-
 			padding-left: 0.6em;
 			padding-right: 1em;
-
 			color: #cccccc;
 			border: none;
 			cursor: pointer;
 			font-size: 1.05rem;
-
 			height: var(--menu_heigth);
 			line-height: var(--menu_heigth);
-
 			-webkit-appearance: none;
 			-moz-appearance: none;
 			appearance: none;
-
 			background-image: url('../../themes/default/select_invert.svg');
 			background-position: top 50% right 3px;
 			background-size: 7px 12px;
@@ -439,8 +395,6 @@
 			}
 		}
 
-
-
 	// spacer
 		>.menu_spacer {
 			flex: 1;
@@ -450,18 +404,14 @@
 			}
 		}
 
-
-
 	// section label. Current section name
 		>.section_label {
 			cursor: pointer;
 			margin-right: 1rem;
 			user-select: none;
 
-
 			@media screen and (max-width: @width_break_point_0) { // 1024px
 				font-size: 1rem;
-				// line-height: 1.6rem;
 				text-align: right;
 				flex: 1;
 			}
@@ -479,8 +429,6 @@
 				opacity: 0.9;
 			}
 		}
-
-
 
 	// inspector toggle button
 		>.button_toggle_inspector {
@@ -502,8 +450,6 @@
 				display: none;
 			}
 		}
-
-
 
 	// debug info bar
 		>.debug_info_bar {
@@ -533,9 +479,7 @@
 					position: relative;
 					margin-left: 1rem;
 				}
-
 			}
 		}
-
 
 }//end .menu_wrapper

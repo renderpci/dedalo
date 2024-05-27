@@ -9,71 +9,58 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_hierarchy {
-		position: relative;
+.wrapper_tool.tool_hierarchy {
+	position: relative;
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+
+		>.components_container {
+			display: grid;
+			grid-template-columns: 1fr 1fr 1fr;
+
+			>.wrapper_component {
+
+			}
 		}
 
-		// &:before {
-		// 	background-image: url(../img/icon.svg);
-		// 	background-position: right;
-		// 	background-repeat: no-repeat;
-		// 	content: " ";
-		// 	position: absolute;
-		// 	height: 250%;
-		// 	width: 100%;
-		// 	opacity: .1;
-		// }
+		// h2 user_info
+		.user_info {
+			padding: 1rem;
+			padding-left: 0;
+		}
 
-		>.content_data {
+		>.buttons_container {
+			padding: 2rem;
+			padding-left: 0rem;
 
-			>.components_container {
-				display: grid;
-				grid-template-columns: 1fr 1fr 1fr;
-
-				>.wrapper_component {
-
-				}
+			button {
+				background-color: @tool_color;
+				border-color: darken(@tool_color, 5%);
 			}
+		}
 
-			// h2 user_info
-			.user_info {
-				padding: 1rem;
-				padding-left: 0;
+		>.messages_container {
+			padding: 1rem;
+			padding-left: 1rem;
+			line-height: 1.25rem;
+			color: #7a7a7a;
+			font-size: 1.05rem;
+
+			&.error {
+				background-color: transparent !important;
+				color: red;
 			}
-
-			>.buttons_container {
-				padding: 2rem;
-				padding-left: 0rem;
-
-				button {
-					background-color: @tool_color;
-					border-color: darken(@tool_color, 5%);
-				}
-			}
-
-			>.messages_container {
-				padding: 1rem;
-				padding-left: 1rem;
-				line-height: 1.25rem;
-				color: #7a7a7a;
-				font-size: 1.05rem;
-
-				&.error {
-					background-color: transparent !important;
-					color: red;
-				}
-			}
-		}//end content_data
+		}
+	}//end content_data
 
 
-	}//end wrapper_tool
-
-
+}//end wrapper_tool
 
 // modal and new window header tool modification
-	.tool_header.tool_hierarchy {
-		background-color: @tool_color;
-	}
+.tool_header.tool_hierarchy {
+	background-color: @tool_color;
+}

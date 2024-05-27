@@ -18,11 +18,8 @@
 	// content_data
 	>.content_data {
 		min-height: var(--content_data_min_height);
-		// flex-wrap: wrap !important;
-		// overflow-x: auto;
 
 		ul {
-			// background-color: #55f550;
 			flex: 0 0 100%;
 
 			.search& {
@@ -37,7 +34,6 @@
 
 		// ul
 		.references {
-			// background-color: #83e1ee;
 			margin-top: 0.75em;
 			margin-left: 1rem;
 
@@ -68,19 +64,16 @@
 	// drag selectors
 		.drag.icon {
 			// @see list.less for generic style
-			// display: flex;
-			// width: 100%;
 			margin: 0px;
 			padding: 0.5em;
 			background-image: url('../../themes/default/icons/move.svg');
-			background-position: center; // right 0.36rem top 0px;
+			background-position: center;
 			background-repeat: no-repeat;
 			background-size: 22px 22px;
 			height: auto;
 			min-height: 2rem;
 			min-width: 2rem;
 			opacity: 0.1;
-			// width: 1.5rem;
 			cursor: move;
 			z-index: 2;
 
@@ -101,21 +94,10 @@
 			}
 
 			&.dragging {
-				// position: relative;
 				 background-color: #d9f720;
-				// height: auto;
 				cursor: move;
 				border-radius: 0.33rem;
 			}
-
-
-			&:hover {
-				// opacity: 0.3;
-			}
-
-			// &.dragging {
-				// background-position: left;
-			// }
 		}
 
 		.drop {
@@ -132,14 +114,11 @@
 		}
 
 		.drag_section_id {
-			// position: absolute;
-			// height: 25px;
 			width: 100%;
 			text-align: left;
 			color: black;
 			font-size: 1.3em;
 			padding-left: 2px;
-			// margin-left: 1.2em;
 		}
 
 		.draggable {
@@ -163,19 +142,9 @@
 				z-index: 0;
 			}
 		}
-
 	}
+
 }//end &.component_portal, &.portal
-
-
-
-.button_sort_order {
-	margin-top: 1em;
-}
-.sort_order {
-	text-align: center;
-}
-
 
 // includes
 @import (once) './view_default_portal';

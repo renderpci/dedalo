@@ -4,7 +4,6 @@
 * Included from main.less file
 */
 .paginator {
-	// background-color: #7FFCEB;
 
 	>.content_data {
 		display: flex;
@@ -59,12 +58,10 @@
 
 		// buttons (nav_buttons)
 		>.nav_buttons {
-			// min-height: 1.5rem;
 			background-color: white;
-			// background-color: #89e9f2;
 			display: flex;
 			align-items: center;
-			// font-size: small;
+
 			@media screen and (max-width: @width_break_point_0) {
 				display: contents;
 			}
@@ -74,15 +71,12 @@
 				min-height: 1.5rem;
 				margin-right: 0px;
 				margin-left: 0px;
-				// user-select: none;
 				background-color: @color_grey_dark;
 				mask-size: contain;
-				// -webkit-mask-image: none;
-
 				transition: opacity 0.2s linear;
 
 				&.paginator_first_icon, &.paginator_last_icon {
-					// height: 1.2rem;
+
 				}
 
 				// inactive
@@ -102,11 +96,9 @@
 		>.paginator_info {
 			min-height: 1.5rem;
 			min-width: 10rem;
-			// background-color: orange;
 			margin-top: 0px;
 			@media screen and (max-width: @width_break_point_0) {
-				// margin-top: 0;
-				// margin-top: 0.5rem;
+
 			}
 
 			>.page_info {
@@ -128,9 +120,8 @@
 
 			input::-webkit-outer-spin-button,
 			input::-webkit-inner-spin-button {
-			    /* display: none; <- Crashes Chrome on hover */
 			    -webkit-appearance: none;
-			    margin: 0; /* <-- Apparently some margin are still there even though it's hidden */
+			    margin: 0;
 			}
 
 			>input.input_go_to_page {
@@ -142,9 +133,7 @@
 				width: 4ch;
 				border-radius: 0.2rem;
 				border: 1px solid #ececec;
-
 				-moz-appearance: textfield;
-
 
 				&.invalid {
 					background-color: @color_danger;
@@ -153,7 +142,6 @@
 
 			>.displayed_records {
 				padding-left: 0.5em;
-				//display: none;
 			}
 		}//end .paginator_info
 	}//end .content_data
@@ -173,8 +161,6 @@
 			padding: 0px;
 
 			>.btn {
-				// mask-size: contain;
-				// -webkit-mask-size: contain;
 				width: 1.6rem;
 				min-height: 1rem;
 			}
@@ -196,8 +182,6 @@
 			padding: 0px;
 
 			>.btn {
-				// mask-size: contain;
-				// -webkit-mask-size: contain;
 				margin: 0px;
 				width: 1.2rem;
 				min-height: unset;
@@ -210,4 +194,5 @@
 			min-height: unset;
 		}//end .paginator_info
 	}//end .content_data
+
 }//end .wrapper_paginator

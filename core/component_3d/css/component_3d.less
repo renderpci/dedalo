@@ -21,49 +21,14 @@
 
 		>.content_data {
 
-			// moved to layout.less.media_wrapper.edit
-				// // Note that height is always the media min height (392px)
-				// // (!) Do not use max o min height here to prevent to affect canvas reference size
-				// height: var(--media_min_height);
-				// display: table;
-
-				// justify-content: center;
-				// max-height: var(--media_max_height);
-				// min-height: var(--media_min_height);
-				// overflow: hidden;
-
-				// @media screen and (max-width: @width_break_point_1) {
-				// 	min-height: unset;
-				// }
-
 			// 3d_container
 			>.content_value {
 
-				// moved to layout.less.media_wrapper.edit
-					// display: flex;
-					// justify-content: center;
-					// width: 100%;
-					// height: inherit;
-					// flex-grow: 1;
-					// flex-shrink: 1;
-					// top: 0;
-					// min-height: var(--media_min_height); // 404px;
-
-					// resize: vertical;
-					// overflow: hidden;
-
-					// @media screen and (max-width: @width_break_point_1) {
-					// 	height: unset;
-					// 	max-height: 600px;
-					// }
-
 				canvas {
-					// background-color: #f5f5f5;
 					max-width: 100%;
 				}
 				.canvas[resize] {
-					// height: 100%;
-					// width: 100%;
+
 				}
 
 				.axes {
@@ -96,9 +61,6 @@
 				max-width: 100%;
 				min-width: 100%;
 
-				//min-height: 14em;
-				//background-position: initial;
-				//background-size: cover;
 				background-repeat: no-repeat;
 				background-size: contain;
 				background-position: center;
@@ -119,7 +81,6 @@
 
 	&.list {
 		height: var(--view_text_height); //	2rem;
-		// width: 100%;
 		cursor: pointer;
 
 		img {
@@ -171,6 +132,7 @@
 	&.view_text {
 		display: inline-block;
 		width: auto;
+
 		>img {
 			height: 100%;
 		}
@@ -220,12 +182,10 @@
 	&_mini {
 		display: inline-block;
 		vertical-align: middle;
-		// margin-top: -0.4rem;
-		// margin-bottom: -0.4rem;
+
 		img {
 			height: 2rem;
 		}
 	}
-
 
 }//end .component_3d

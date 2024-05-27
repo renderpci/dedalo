@@ -4,24 +4,6 @@
 * Included from main.less file
 */
 
-
-// colors
-	// selected_color
-	@selected_color: #ff9620; // @color_orange;	//
-	// Component color
-	@component_color: lighten(@selected_color, 25%);
-	// Component color hover
-	@component_color_hover: #ff9620;//darken(@selected_color, 15%);
-	// bg_color_global container
-	@bg_color_global: #efefef; //#F7F7F7;
-	// bg toggle_container_selector  #b9b9b9
-	@bg_toggle_container: #b9b9b9;
-	// unused
-	// @bg_component_color : #f6f6f6;
-	// @bg_section_group_color: #969ca1;
-
-
-
 // search_component (shared at least by unit_test preview)
 	.search_component {
 		background-color: rgba(251, 251, 251, 0.48);
@@ -57,8 +39,6 @@
 			}
 		}
 	}//end .search_component
-
-
 
 // wrapper_search
 	.wrapper_search {
@@ -136,7 +116,6 @@
 					position: -webkit-sticky;
 					position: -moz-sticky;
 					position: sticky;
-					// top: 62px;
 
 					@media screen and (max-width: @width_break_point_0) {
 						flex-wrap: wrap;
@@ -145,24 +124,12 @@
 					.search_group {
 						min-height: 5.8rem;
 						min-width: 165px;
-						// outline: 0.5px solid @bg_toggle_container;
 						margin: 0px;
 						padding: 1px;
 						padding-right: 17px;
 						padding-left: 23px;
-						//margin: 10px;
-						//margin-top: 0;
-						//margin-bottom: 0;
 						background-color: rgba(255, 255, 255, 0.5);
-						// resize: horizontal;
-						// overflow: -webkit-paged-x;
-						// overflow: hidden;
 						position: relative;
-
-						// display: flex;
-						// flex-grow: 2;
-						// flex-wrap: wrap;
-
 						width: 100%;
 						display: grid;
 						grid-template-columns: 1fr 1fr 1fr;
@@ -202,10 +169,6 @@
 							align-items: center;
 							font-size: 1.5rem;
 						}
-						// Last component
-						// >.search_component:last-of-type {
-							//margin-right: 10px !important;
-						// }
 
 						>.operator {
 							height: 100%;
@@ -256,7 +219,6 @@
 
 					// search_buttons_container
 					>.search_buttons_container {
-						//background-color: #ea9cd2;
 						min-height: 5em;
 						min-width: 12rem;
 						display: flex;
@@ -340,8 +302,6 @@
 
 						// reset group
 						>.reset_group{
-							// display: flex;
-							// flex-direction: column;
 							padding-left: 0.25em;
 							padding-right: 0.25em;
 
@@ -404,51 +364,6 @@
 				}
 			}
 
-
-			// left: components list
-				// // >.search_container_selector {
-				// .components_list_container {
-				// 	display: flex;
-
-				// 	// Standard section container (receive all json elements inside)
-				// 	ul.search_section_container {
-				// 		//background-color: #88D6E4;
-				// 		width: fit-content;
-
-				// 		// Section label bar
-				// 		>.search_section_bar_label {
-				// 			font-family: "Oxygen-light";
-				// 			padding: 0.25em;
-				// 			border-right: 1px solid #a5a5a5;
-				// 			background-color: #575a5c;;
-				// 			color: #ffffff;
-				// 			font-size: 1em;
-				//     		line-height: 1em;
-				// 			// Avoid click events affect here (received with :after)
-				// 			pointer-events: none;
-
-				// 			.target_container >.search_section_container &:after {
-				// 				content: "X";
-				// 				display: block;
-				// 				// background-color: #a0a0a0;
-				// 				float: right;
-				// 				width: 1em;
-				// 				text-align: center;
-				// 				//border-radius: 50%;
-				// 				//line-height: 15px;
-				// 				//position: relative;
-				// 				//top: 2px;
-				// 				cursor: pointer;
-				// 				// Allow receive here the click button of real dom element
-				// 				pointer-events: all;
-				// 				padding-left: 1em;
-				// 			}
-				// 		}
-
-				// 	}//end ul.search_section_container
-				// }
-
-
 			// right: user presets list
 			.search_container_selection_presets {
 				background-color: rgba(201,201,201,0.3);
@@ -481,7 +396,6 @@
 
 				// section list user presets
 				>.wrapper_section {
-					// background-color: #a5dfa0;
 					padding: 0.5rem;
 
 					>.paginator_container {
@@ -494,7 +408,7 @@
 						.section_record {
 							display: grid;
 							grid-template-columns: 1.5rem 1.1rem auto 1rem;
-							border-bottom: 1px solid @bg_toggle_container;
+							border-bottom: 1px solid @color_grey_dark;
 
 							&.selected {
 								background-color: @color_orange_dedalo;
@@ -505,19 +419,10 @@
 									color: white;
 								}
 							}
-
-							// &:after {
-							// 	content: " XXX ";
-							// 	display: block;
-							// 	width: 100%;
-							// 	height: 3px;
-							// 	border: 1px solid #eeeeee;
-							// }
 						}
 
 						// columns
 						.column {
-							// overflow: hidden;
 							outline: none;
 
 							&.column_delete {
@@ -525,7 +430,7 @@
 							}
 
 							.button.icon {
-								background-color: @bg_toggle_container;
+								background-color: @color_grey_dark;
 								margin: 0px;
 								margin-top: 0.27rem;
 								margin-right: 025rem;
@@ -534,22 +439,19 @@
 							}
 						}
 						.column_apply_preset {
-							// background-color: #dcb647;
 
 							.button_apply_preset {
 								transform: scaleX(-1);
-								background-color: @bg_toggle_container;
+								background-color: @color_grey_dark;
 							}
 						}
 						.column_edit {
-							// background-color: #db836f;
 
 							.button_edit {
 
 							}
 						}
 						.column_section {
-							// background-color: #	6ae0b1;
 							pointer-events: none;
 
 							.wrapper_component > span {
@@ -557,7 +459,6 @@
 							}
 						}
 						.column_delete {
-							// background-color: #b5a7dd;
 
 							.button_delete {
 
@@ -569,11 +470,9 @@
 		}//end .search_global_container
 	}//end .wrapper_search
 
-
-
 // button toggle container_selector (list of fields) and button toggle presets
 	.toggle_container_selector, .toggle_container_selection_presets {
-		background-color: @bg_toggle_container;
+		background-color: @color_grey_dark;
 		writing-mode: vertical-lr;
 		text-transform: uppercase;
 		cursor: pointer;
@@ -587,13 +486,8 @@
 		}
 	}
 
-
-
 // thesaurus_search_selector
 	.thesaurus_search_selector {
-		//display:inline-block;
-		//margin-left:20px;
-		//background-color:antiquewhite;
 		margin-top: 7px;
 		width: 100%;
 
@@ -604,13 +498,11 @@
 
 			> li {
 				padding-right: 10px;
-				//background-color: #D4DF93;
 				padding:5px;
 				white-space: nowrap;
 				cursor: pointer;
 
 				> input {
-					//margin-right: 5px;
 					cursor: pointer;
 				}
 
@@ -622,8 +514,6 @@
 		}
 	}//end thesaurus_search_selector
 
-
-
 // search_global_container
 // Prevent interactions with the text contents of draggable elements from being select able.
 	.search_global_container[draggable] {
@@ -631,156 +521,7 @@
 		-khtml-user-select: none;
 		-webkit-user-select: none;
 		user-select: none;
-		/* Required to make elements draggable in old WebKit */
+		// Required to make elements draggable in old WebKit
 		-khtml-user-drag: element;
 		-webkit-user-drag: element;
 	}
-
-
-
-// button open first list
-	// .button_open_search {
-	// 	//margin-bottom: 5px;
-	// 	margin-top: 2px;
-	// 	text-transform: capitalize;
-	// 	letter-spacing: 0.03em;
-	// 	border-color: #bbbbbb;
-	// 	background-color: rgba(239,239,239,0.7);
-	// }
-
-
-
-// Target section container (receive all JSON elements inside recursive)
-	// .search_section_container.target_container {
-	// 	display: flex;
-	// 	background-color: rgba(201,201,201,0.3);
-	// }
-
-
-
-// Items list generic
-	// ul.search_section_container ul {
-	// 	position: relative;
-
-	// 	//&:not(:last-of-type) {
-	// 	//    min-width: 140px;
-	// 	//    background-color: #EAEA00 !important;
-	// 	//}
-
-	// 	li {
-	// 		padding: 4px;
-	// 		padding-right: 1em;
-	// 		border-right: 1px solid #a5a5a5;
-	// 		-moz-user-select: none;
-	// 		-khtml-user-select: none;
-	// 		-webkit-user-select: none;
-	// 		user-select: none;
-	// 		display: grid;
-	// 		// line-height: 1em;
-
-	// 		// truncate text
-	// 			>* {
-	// 				display: grid;
-	// 				width: 99.99%;
-	// 				padding-right: 1em;
-	// 				white-space: nowrap;
-	// 				overflow: hidden;
-	// 				text-overflow: ellipsis;
-	// 				// line-height: inherit;
-	// 				height: inherit;
-	// 			}
-	// 	}
-	// }
-
-
-
-// Items list section_group
-	// li.search_section_group_label {
-	// 	background-color: @bg_section_group_color; //#575A5C;
-	// 	color: #ffffff;
-	// }
-	// Items list components
-	// li.search_component_label {
-	// 	background-color: @bg_component_color;
-	// 	//background-color: rgba(251, 251, 251, 0.48);
-	// 	border-bottom: 0.5px solid #666;
-
-	// 	&:hover {
-	// 		background-color: @component_color_hover;
-	// 		color: #ffffff;
-	// 	}
-	// 	&:active {
-	// 		//background-color: initial;
-	// 		//color: initial;
-	// 		opacity: 0.6;
-	// 	}
-	// }
-
-
-
-// has_subquery
-	// li.search_component_label.has_subquery {
-	// 	//background-color: #A71B0C
-	// 	cursor: pointer;
-	// 	background-position: right 17px bottom 7px;
-
-	// 	// Flecha
-	// 	&::after {
-	// 		content: " ";
-	// 		display: inline-block;
-	// 		width: 7px;
-	// 		height: 12px;
-	// 		border-bottom: 5px solid transparent;
-	// 		border-top: 5px solid transparent;
-	// 		border-left: 5px solid #000;
-	// 		pointer-events: none;
-	// 		position: absolute;
-	// 		right: 6px;
-	// 		margin-top: 4px;
-	// 	}
-
-
-	// 	&.active {
-	// 		background-color: @selected_color !important;
-	// 		//font-weight: bold;
-	// 		border-right: 1px solid @selected_color;
-	// 		color: #ffffff;
-
-	// 		&::after {
-	// 			border-left: 5px solid #ffffff;
-	// 		}
-	// 	}
-	// }//end li.search_component_label.has_subquery
-
-
-
-// draggable background svg
-	// .element_draggable {
-	// 	cursor: move;
-	// 	background: url('../../themes/default/draggable.svg');
-	// 	background-color: rgba(0, 0, 0, 0);
-	// 	background-repeat: repeat;
-	// 	background-position-x: 0%;
-	// 	background-position-y: 0%;
-	// 	background-size: auto auto;
-	// 	background-color: rgba(0,0,0,0);
-	// 	background-repeat: repeat;
-	// 	background-position-x: 0;
-	// 	background-position-y: 0;
-	// 	background-size: auto auto;
-	// 	background-position: right 5px bottom 7px;
-	// 	background-repeat: no-repeat;
-	// 	background-size: 12px;
-	// }
-
-
-
-// search presets
-	//.search_new_presets {
-	//	//background-color: #DEE0DE;
-	//
-	//	label, .content_data, .css_input_text_search {
-	//		max-width: 100%;
-	//		width: 100%;
-	//	}
-	//}

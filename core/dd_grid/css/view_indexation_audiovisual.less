@@ -49,16 +49,11 @@
 			>.row {
 				height: auto;
 				width: 100%;
-				// display: grid;
-				// grid-template-columns: 1fr 2fr;
 				display: flex;
-				// background-color: #f4ad80;
 
 				.column {
 					display: contents;
-					// .column {
-					// 	display: contents;
-					// }
+
 					span {
 						display: inline-block;
 						width: auto;
@@ -80,6 +75,7 @@
 				padding: 0;
 				padding: 0.25rem;
 			}
+
 			.row:not(:first-child, :last-child) {
 				&:after {
 					content: ", ";
@@ -101,8 +97,6 @@
 			line-height: 2rem;
 
 			>.column {
-				// height: 2.3rem;
-				// display: table;
 				overflow: visible;
 				box-shadow: none;
 				outline: none;
@@ -112,7 +106,6 @@
 				line-height: 2rem;
 
 				.icon {
-					// height: 1.05rem;
 					height: var(--icon_height);
 					padding: 0.5rem;
 				}
@@ -124,64 +117,38 @@
 
 			// column av section_id (reel)
 			>.column.section_id {
-				// background-color: #fa7a44;
-				// width: 4rem;
 				text-align: center;
 			}
 
 			// column tag_id
 			>.column.tag_id {
-				// background-color: #baf069;
-				// width: 3.5rem;
 
 				.tag_id {
-					// display: flex;
-					// align-items: center;
-					// justify-content: center;
-					// background-image: radial-gradient(30% 50%ellipse at 109% 50%,#fff 22px,transparent 10px,#fa0 0);
-					// border-bottom-left-radius: 8px;
-					// border-top-left-radius: 8px;
-					// color: #fff;
-					// padding: 0 5px;
-					// min-width: 20px;
-					// margin-top: 0.5rem;
-					// height: 0.8rem;
-					// width: 3rem;
-					// padding: 7px;
 
 					.fn_build_tag_indexation(
 						@color_tag_indexation_normal,
 						white
 					);
-					// height: 1rem;
-					// margin-top: 0.15rem;
 				}
 			}
 
 			// column button indexation
 			>.column.button_indexation {
-				// background-color: #4ff46d;
-				// padding: 0.75rem;
-				// width: 3.5rem;
+
 			}
 
 			// column button_transcription
 			>.column.button_transcription {
-				// background-color: #4bf2c8;
-				// padding: 0.75rem;
-				// width: 3.5rem;
+
 			}
 
 			// column button_av_player
 			>.column.button_av_player {
-				// background-color: #35c4f0;
-				// padding: 0.75rem;
-				// width: 3.5rem;
+
 			}
 
 			// column text_fragment
 			>.column.text_fragment {
-				// background-color: #eed9c5;
 				width: auto;
 
 				>.text_fragment {
@@ -194,7 +161,6 @@
 					text-overflow: ellipsis;
 					cursor: s-resize;
 					vertical-align: top;
-					// background-color: #fcf9b2;
 
 					&:hover {
 						background-color: #fcf8e2;
@@ -210,25 +176,23 @@
 
 			// column tc_in
 			>.column.tc_in {
-				// background-color: #c8edd5;
+
 			}
 
 			// column tc_out
 			>.column.tc_out {
-				// background-color: #c8edd5;
+
 			}
 
 			// column duration_tc
 			>.column.duration_tc {
-				// background-color: #c8edd5;
+
 			}
 
 			// column button_download_av
 			>.column.button_download_av {
-				// background-color: #f5b0d2;
 
 				.icon {
-					// width: 1.05rem; // prevent loading spinner deformation
 					width: var(--icon_height); // prevent loading spinner deformation
 				}
 
@@ -241,4 +205,4 @@
 		}//end .column.indexation
 	}
 
-}//end view_indexation
+}//end view_indexation .audiovisual

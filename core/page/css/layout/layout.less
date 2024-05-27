@@ -6,13 +6,11 @@
 * Included from main.less file
 */
 
-
-
 // hilite (used on focus)
 	.hilite_mixin(@outline_offset:0) {
 		outline-offset: @outline_offset;
 		outline: 1px solid @color_hilite;
-		box-shadow: 0px 0px 10px @color_hilite; //rgba(26, 154, 245, .5);
+		box-shadow: 0px 0px 10px @color_hilite;
 		opacity: 1;
 		z-index: 1;
 	}
@@ -25,8 +23,6 @@
 			color: #757575;
 		}
 	}
-
-
 
 // label_top. It's used in section group and inspector labels
 	.label_top {
@@ -43,21 +39,15 @@
 		}
 	}
 
-
-
 // generic html inputs appearance. Used by search, tools, etc.
 	.dd_input {
 		font-size: 1em;
 		height: 2.0em;
-
 		margin-right: 0.5em;
 		padding: 0.25em;
-		//border-radius: 3px;
 		border: none;
-		outline: 1px solid @color_grey_medium; // #eeebeb;
-
+		outline: 1px solid @color_grey_medium;
 		transition: all .5s ease, padding 0s;
-		//transition: padding 0s;
 		opacity: 0.75;
 		vertical-align: bottom;
 
@@ -71,8 +61,6 @@
 			.hilite_mixin;
 		}
 	}//end .dd_input
-
-
 
 // placeholder common style
 	input::-webkit-input-placeholder { /* Chrome/Opera/Safari */
@@ -92,10 +80,11 @@
 	  opacity: 0.95;
 	}
 
-
-
 // area common definitions
 	.wrapper_area {
+		display: table;
+		width: 100%;
+		padding: 1rem;
 
 		>.label {
 			font-size: 1.6rem;
@@ -116,9 +105,8 @@
 			margin: 0px;
 
 			>.button {
-				background-color: #FD891D;
-				color: #ffffff;
-				// display: block;
+				background-color: @color_orange_dedalo;
+				color: var(--color_white);
 				display: flex;
 				width: auto;
 				padding: 1em;
@@ -127,10 +115,10 @@
 				border-radius: 0.25em;
 
 				&:hover {
-					color: #000000;
+					color: var(--color_black);
 				}
 				&:active {
-					color: #ffffff;
+					color: var(--color_white);
 				}
 			}
 		}//end .buttons
@@ -144,8 +132,7 @@
 		margin: 0px;
 		padding: 0px;
 		z-index: auto; // (!) important to allow fullscreen configs
-		// color: @color_grey_dark; // #9e9e9e;
-		color: @color_grey_ultradark; // #353535
+		color: @color_grey_ultradark;
 
 		&.edit {
 			display: grid;
@@ -154,18 +141,6 @@
 			// grid-column: 1 / span 10; // default width is 100% (10 columns of 10)
 			align-content: start;
 		}
-
-		// flex config
-			/*
-			// display: flex;
-			flex-wrap: wrap;
-			// flex: 0 1 50%; // <'flex-grow'> <'flex-shrink'>? || <'flex-basis'>
-			// flex: 1 1 50%; // testing 11-06-2020
-			// flex: 1 1 var(--component_width); // 08-09-2021 var defined in :root (vars.less);
-			flex: 1 1 auto;
-			// height: var(--component_height);  // 08-09-2021 var defined in :root (vars.less);
-			align-content: flex-start; // maintain items flow from top to bottom
-			*/
 
 		&.modified {
 			&:after {
@@ -176,7 +151,6 @@
 				position: absolute;
 				left: 0px;
 				top: 0px;
-				// .fn_add_mask('alert.svg');
 				background-color: @color_orange_dedalo;
 				z-index: 2;
 			}
@@ -189,146 +163,44 @@
 			}
 		}
 
-		// >.paginator_container {
-		// 	min-height: 0.5rem;
-		// 	display: grid;
-		// 	margin: 0px;
-		// 	padding-left: 0.5em;
-		// }
-
 		// label
 		>.label {
-			// background-color: #fffce9;
 			padding: 1rem;
 			padding-bottom: 0px;
 			padding-top: 0.4rem;
-			// flex: 1 0 calc(20% - 2em);
 			flex: 1 1 100%;
-
-			// color: #7c7c7c;
-
 			letter-spacing: 0.5px;
 			text-overflow: ellipsis;
 			overflow: hidden;
 			white-space: nowrap;
 			cursor: default;
-			// font-family: Oxygen,"Helvetica Neue",Helvetica,Arial,sans-serif;
 			font-weight: 300;
-			// color: @color_grey_dark; // #9e9e9e;
-			// color: inherit;
-		}//end >.label
+		}
 
 		// buttons_container
 		>.buttons_container {
 			background-color: @color_orange_dedalo;
 			display: none;
 			flex: 0 1 1em;
-			// padding: 0; // 0.15em;
-			// padding-top: 0.5em;
 			position: absolute;
-			// top: 0;
-			// width: 2em;
-			// min-height: 100%;
-			// left: 100%;
 			z-index: 1;
-			// box-shadow: 2px 2px 5px 0 rgba(38, 38, 38, 0.3);
-			// border-top-right-radius: 0.25em;
-			// border-bottom-right-radius: 0.25em;
-
-			// background: linear-gradient(90deg, rgba(251,148,44,1) 0%, rgba(247,138,28,1) 100%);
-			// top: -1px;
-			// min-height: calc(100% + 2px);
-			// box-shadow: 2px 0 5px 0 rgba(38, 38, 38, 0.3);
-
-			// shadow: light line at top
-			// box-shadow: 0px -1px 0px 1px rgb(244 157 70);
 			box-shadow: 0px 0px 0px 1px #f49d46;
-
 			right: 0px;
 			width: auto;
-			// padding: 0.5rem;
 			padding: 0px;
-			// padding-bottom: 0px;
-			// top: -2rem;
 			top: -2rem;
 			max-height: 2rem;
 			border-top-left-radius: 0.25em;
 			border-top-right-radius: 0.25em;
 			font-size: 1.1rem;
 
-			// &.left {
-			// 	left: -2rem;
-			// 	box-shadow: -2px 0 5px 0 rgb(38 38 38 / 30%);
-			// 	border-radius: unset;
-			// 	border-top-left-radius: 0.25em;
-			// 	border-bottom-left-radius: 0.25em;
-			// }
-
 			.buttons_fold {
-				// position: -webkit-sticky;
-				// position: sticky;
-				// margin: 0;
-				// top: 68px;
-				// @media screen and (max-width: @width_break_point_1) {
-				// 	top: 0.5rem;
-				// }
+
 			}
 
 			.button {
-				// background-color: #000000;
-				// position:relative;
-				// overflow: visible;
 
-				// &:after {
-				// 	content: attr(title);
-				// 	position: absolute;
-				// 	top: 0px;
-				// 	right: 0p;
-				// 	background: #fffea1;
-				// }
 			}
-
-
-			// [data-title]:hover:after {
-			// 	opacity: 1;
-			// 	transition: all 0.1s ease 0.5s;
-			// 	visibility: visible;
-			// }
-			// [data-title]:after {
-			// 	content: attr(data-title);
-			// 	background-color: #333;
-			// 	color: #fff;
-			// 	font-size: 14px;
-			// 	font-family: Raleway;
-			// 	position: absolute;
-			// 	padding: 3px 20px;
-			// 	bottom: -1.6em;
-			// 	left: 100%;
-			// 	white-space: nowrap;
-			// 	box-shadow: 1px 1px 3px #222222;
-			// 	opacity: 0;
-			// 	border: 1px solid #111111;
-			// 	z-index: 99999;
-			// 	visibility: hidden;
-			// 	border-radius: 6px;
-
-			// }
-			// [data-title] {
-			// 	position: relative;
-			// }
-
-			// .button[title] {
-			// 	background-color: #000000;
-			// 	position: relative;
-			// }
-			// .button[title]:hover:after {
-			// 	content: attr(title);
-			// 	padding: 4px 8px;
-			// 	color: red;
-			// 	position: absolute;
-			// 	top: -100%;
-			// 	left: 0;
-			// }
 
 			// buttons inside
 			span {
@@ -347,26 +219,20 @@
 
 		// content_data
 		>.content_data {
-			color: @color_grey_ultradark; // #9e9e9e;
+			color: @color_grey_ultradark;
 			height: inherit;
 			display: flex;
-			// flex: 1 0 calc(80% - 2em);
-			// flex: 1 1 auto;
 			flex: 1 1 100%;
 			flex-wrap: wrap;
-			// flex-flow: column;
 			align-items: flex-start;
 			align-content: flex-start;
 			padding: 1em;
 			padding-top: 0.5em;
-			// overflow: hidden;
 			overflow-wrap: anywhere; // force break long text like URL
 		}//end >.content_data
 
-
 		&.edit, &.search, &.player {
 			// grey line left and down of wrapper
-			// box-shadow: -1px 1px 0 @color_grey_medium;
 			box-shadow: -1px 1px 0 @color_grey_light, inset -1px 1px 0 @color_grey_light;
 
 			// inside column, remove shadow
@@ -375,7 +241,6 @@
 					box-shadow: none;
 				}
 				.content_data {
-					// background-color: #f8ffc5;
 					padding: 0px;
 				}
 			}
@@ -402,7 +267,7 @@
 				}
 
 				.error& {
-					color: white !important;
+					color: var(--color_white) !important;
 				}
 
 				// label_info is used in search mode
@@ -418,20 +283,11 @@
 						content: ']';
 					}
 				}
-
-				// &.move_top {
-				// 	margin-top: -2rem;
-				// 	// background-color: white;
-				// 	background-image: linear-gradient(to bottom, rgb(255 255 255 / 0%), rgb(255 255 255));
-				// 	height: 2rem;
-				// }
 			}
 
 			.button_exit_edit {
 				display: none;
 				position: absolute;
-				// top: 0px;
-				// right: -3px;
 				top: -6px;
 				right: -9px;
 				z-index: 3;
@@ -454,36 +310,18 @@
 				display: none;
 			}
 			&.active {
-				// box-shadow: 3px 5px 8px 1px #c6c6c6;
-				// z-index: 1;
 				z-index: 3; // 3 allow over portal drag handlers
-				// outline: thin solid @color_orange_dedalo;
 				box-shadow: -1px 1px 0px @color_orange_dedalo, inset -1px 1px 0px @color_orange_dedalo;
 				color: @color_orange_dedalo;
 				// overflow. allow set flex-basis (properties width). Remember labels are 'text-overflow: ellipsis'
 				overflow: initial; // !important
-				// z-index: auto;
-				// background-color: rgb(255 252 249);
 				&:not(.hilite_element) {
 					background-color: lighten(@color_orange_dedalo, 45.1%);
 				}
 
-				// >.content_data >.content_value >.show_on_active {
 				.show_on_active {
 					display: block;
 				}
-
-				//transition: background-color 0.3s ease;
-				// background-color: @color_grey_medium !important; // rgb(230, 230, 230)
-				// background-color: @color_white_dirty !important;
-				// background-color: rgb(250 249 249 / 40%) !important;
-
-				// resizable
-					// resize: both;
-					// overflow: auto;
-					// 	flex: unset;
-					// 	flex-grow: 1;
-					// 	flex-basis: auto;
 
 				@media screen and (max-width: @width_break_point_1) {
 					flex: 0 0 calc(100% - 2em) !important;
@@ -498,15 +336,6 @@
 						margin-right: 0.75rem;
 					}
 				}
-				>.label {
-					// color: @color_orange_dedalo !important;
-				}
-
-				&.inside {
-					// >.buttons_container {
-					// 	left: calc(100% - 1.5rem);
-					// }
-				}
 			}//end &.active
 		}//end &.edit
 
@@ -517,16 +346,12 @@
 
 		&.list {
 
-			// wrapper
-			// &.component_image, &.component_av, &.component_svg {
+			// media_wrapper
 			&.media_wrapper {
 				display: inline-block;
 				padding: 0px;
-				// background-color: #ffffff;
 				text-align: center;
 				height: 100%;
-				// min-height: 5em;
-				// max-height: 5.5rem;
 				@media screen and (max-width: @width_break_point_0) {
 					height: auto;
 				}
@@ -537,20 +362,9 @@
 					padding: 0px;
 					width: 100%;
 					height: 100%;
-					// min-height: 5em;
-					// height: 5em;
-					// width: auto;
 					// fit image contains
 					object-fit: contain;
 					object-position: center;
-					/*
-					// center horizontally.
-					// Note that img not creates space because his position is absolute.
-					// Use the component wrapper to give the img size
-					position: absolute;
-					left: 50%;
-					transform: translate(-50%);
-					*/
 					cursor: pointer;
 					&:active {
 						opacity: 0.33;
@@ -559,41 +373,23 @@
 			}
 		}//end &.list
 
-		// resizable
-			// resize: both;
-			// overflow: auto;
-			// flex: unset;
-			// flex-grow: 1;
-			// flex-basis: auto;
-
 		&.error {
 			transition: background-color 0.3s ease;
 			background-color: red !important;
 		}
 
 		// inside .section_record.edit context
-		//.section_record.edit &, .components_container & { 22
-		.section_record &,
 		.wrapper_tool &,
 		.search_group &,
 		dd-modal &, // dd-modal .content &, //  dd-modal .content
 		.project_container & { // , .page &
-			// color: @color_grey_dark; // #9e9e9e;
-			// background-color: rgba(251, 251, 251, 0.70); // #FBFBFB;
-			// outline: 1px solid rgba(216, 216, 216, 0.43);
 
 			&.list {
-				// padding: 0.5em;
-				// outline: none;
 
-				// &.component_image, &.component_portal, &.component_av {
-				// 	padding: 0px;
-				// }
 			}
 
 			>.top {
 				display: flex;
-				// background-color: bisque;
 				flex: 0 1 100%;
 				align-items: center;
 				justify-content: flex-end;
@@ -608,9 +404,7 @@
 					appearance: none;
 					text-indent: 1px;
 					text-overflow: '';
-					/* text-align: right; */
 					width: auto;
-
 					pointer-events: none;
 				}
 			}//end >.top
@@ -631,8 +425,6 @@
 
 				.close99 {
 					position: absolute;
-					// top: 0px;
-					// right: -3px;
 					top: -6px;
 					right: -9px;
 					z-index: 3;
@@ -642,35 +434,25 @@
 
 				&.vertical {
 					flex: 1 1 100%;
-					background-color: #a1cccc5c;
+					background-color: var(--color_grey_dark_3);
 					justify-content: center;
 					flex-flow: unset;
 				}
-
-				//&.nowrap {
-				//	flex-wrap: nowrap;
-				//	flex-flow: nowrap;
-				//}
 			}//end >.content_data
 
 			@media screen and (max-width: 1280px) {
-				// flex-basis: 100% !important;
+
 			}
 		}//end .section_record &, .wrapper_tool &
 	}//end .wrapper_component
-
-
 
 // tool_container (where is place the tool)
 	.tool_container {
 
 	}//end tool_container
 
-
-
 // dd-modal
 	dd-modal {
-		// z-index: 10;
 		margin: 0px;
 		padding: 0px;
 		border: 0px;
@@ -678,10 +460,6 @@
 		font: inherit;
 		vertical-align: baseline;
 		z-index: unset;
-
-		// .modal-content {
-		// 	width: 100% !important;
-		// }
 
 		@media screen and (max-width: @width_break_point_0) {
 			width: 100%;
@@ -699,14 +477,9 @@
 			color: white;
 			font-weight: normal;
 			z-index: 2;
-			// min-width: 29rem;
-
 			// shadow like menu
 			box-shadow: 0 2px 3px rgba(0,0,0,.4);
 
-			// &.content {
-			// 	padding: 1rem;
-			// }
 			&.label, &.content, >div.label, >span.label {
 				font-size: 1.4em;
 				line-height: 1.5rem;
@@ -715,7 +488,6 @@
 				text-overflow: ellipsis;
 				overflow: hidden;
 				padding-right: 1rem;
-				// width: calc(100% - 2.75rem);
 
 				.button {
 					vertical-align: text-bottom;
@@ -723,22 +495,14 @@
 					display: inline-block;
 				}
 			}
-			// >span.label {
-			// 	padding: 0.5rem;
-			// }
+
 			.description {
 				font-size: 0.95rem;
 				font-weight: 300;
 				padding-top: 0.25rem;
 			}
 
-			span.mini_modal {
-				background-color: #36fd14;
-			}
-
 			&.mini {
-				// padding: 0.5rem;
-				// font-size: 1rem;
 				display: flex;
 				align-items: center;
 				padding: 0px;
@@ -746,7 +510,7 @@
 				width: 100%;
 
 				.close_modal {
-					color: black;
+					color: var(--color_black);
 				}
 				.label {
 					width: calc(100% - 1rem);
@@ -767,7 +531,6 @@
 		}
 
 		.header_custom {
-			// background-color: #3070d8;
 			position: absolute;
 			width: 100%;
 			padding: 0.5rem;
@@ -780,8 +543,6 @@
 			}
 
 			select {
-				// background-color: transparent;
-				// color: white;
 				outline: none;
 				border-radius: 4px;
 				padding-right: 2rem;
@@ -792,13 +553,8 @@
 
 			&.content {
 				padding: 1rem;
-				// padding-top: 1.5rem;
 				padding-bottom: 1.5rem;
 				padding-top: 3rem;
-
-				>.wrapper_component {
-					// margin-top: 1rem; // allow to show the component buttons at top when active
-				}
 			}
 
 			&.content_no_buttons {
@@ -833,16 +589,10 @@
 		}//end .body
 
 		.iframe_container {
-			// background-color: #96FD53;
 			padding-top: 17px;
 			>iframe {
 				height: calc(100vh - 68px);
-				// height: 100vh;
 				width: 100%;
-				// top: 0;
-				// left: 0;
-				// position: fixed;
-				// padding-top: 68px;
 				z-index: 1;
 				padding: 0px;
 
@@ -855,11 +605,6 @@
 		.footer {
 			text-align: right;
 
-			// >*{
-			// 	margin: 1em;
-			// 	margin-left: 0;
-			// }
-
 			button {
 				margin-bottom: 1rem;
 				margin-left: 0.5rem;
@@ -871,8 +616,6 @@
 			&.content {
 				padding: 1.5rem;
 				padding-top: 0px;
-				// padding-top: 1.5rem;
-				// padding-bottom: 1.5rem;
 				padding-bottom: 0px;
 			}
 
@@ -891,55 +634,6 @@
 			}
 		}
 	}//end dd-modal
-
-
-
-	// dd-modal parts
-		// dd-modal::part(header) {
-		// 	background-color: pink;
-		// 	// font-size: 10px;
-		// 	// font-weight: 300;
-		// }
-
-
-
-// input focus show next item (button remove)
-	// input:focus {
-	// 	padding-right: 1.75em;
-
-	// 	& ~ .remove.display_none {
-	// 		.display_block;
-	// 		//position: absolute;
-	// 		//right: 0.5em;
-	// 		//top: 0.5em;
-	// 		//opacity: 1;
-	// 		//background-color: #fefefe;
-	// 	}
-	// }
-
-	// .contenteditable:focus {
-
-	// 	& ~ .display_none.remove {
-	// 		.display_block;
-	// 		//position: absolute;
-	// 		//right: 1em;
-	// 		//top: 0.20em;
-	// 	}
-	// }
-
-	// input:focus ~ .display_none.email_send {
-	// 	.display_block;
-	// }
-
-	// input:focus ~ .display_none.go_link {
-	// 	.display_block;
-	// }
-
-	// .display_block {
-	// 	display: block !important;
-	// }
-
-
 
 // disabled_component
 	.disabled_component {
@@ -979,25 +673,9 @@
 				top: 4px;
 				right: 4px;
 				opacity: 0.5;
-				// color: #fd0000;
 			}
 		}
 	}
-	// lock is moved to general.less
-	// .lock {
-	// 	pointer-events: none !important;
-	// 	// lock icon at top right
-	// 	&:after {
-	// 		content: " ";
-	// 		.fn_build_button('lock.svg', red, 1);
-	// 		position: absolute;
-	// 		top: 4px;
-	// 		right: 4px;
-	// 		opacity: 0.5;
-	// 		// color: #fd0000;
-	// 	}
-	// }
-
 
 
 // component_message
@@ -1006,16 +684,9 @@
 		min-height: 3em;
 		top: -3em;
 		width: 100%;
-		//text-align: right;
-		color: white;
-		//padding-right: 1.5em !important;
+		color: var(--color_white);
 		user-select: none;
 		line-height: 1.5em;
-
-		// .wrapper_login & {
-		// 	position: relative !important;
-		// 	top: 0 !important;
-		// }
 
 		&.error {
 			background-color: rgba(228, 8, 8, 0.90);
@@ -1031,10 +702,6 @@
 
 		.text {
 			padding: 0.5em;
-
-			//&:last-of-type {
-			//	padding-bottom: 0;
-			//}
 		}
 
 		.close {
@@ -1046,11 +713,9 @@
 			right: 0.25em;
 			top: 0px;
 			height: 1.5em;
-			// font-weight: bold;
 			margin: 0px;
 		}
 	}//end .component_message
-
 
 
 // EXPERIMENTAL . singular for checking assignments only
@@ -1073,8 +738,6 @@
 		}
 	}
 
-
-
 // EXPERIMENTAL section custom test
 	.green {
 		&[class^="wrapper_"] { // affects all classes starting with 'wrapper_' (wrapper_section, wrapper_component, etc.)
@@ -1087,16 +750,8 @@
 	.red {
 		&.content_data {
 			background-color: #ffbcaa !important;
-			// background-color: #d35d40 !important;
-			// color: white !important;
-
-			.label {
-				// color: white !important;
-			}
 		}
 	}
-
-
 
 // EXPERIMENTAL component custom test
 	.full {
@@ -1106,57 +761,24 @@
 		}
 	}
 
-
-
 // input_tex_area contenteditable
 	.input_tex_area {
 		width: 100%;
-		//height: 100%;
-		background-color: #fff;
-		margin-right: .25em;
-		padding: .5em;
+		background-color: var(--color_white);
+		margin-right: 0.25em;
+		padding: 0.5em;
 		padding-right: 1em;
 		min-height: 8em;
 		overflow: auto;
 		max-height: 14em;
 		word-break: break-word;
-		//margin-top: 1.5em;
-
-		// &:after {
-		// 	content: " ";
-		// 	clear: both;
-		// 	width: 100%;
-		// 	height: 1em;
-		// 	background-color: #F1AA36;
-		// }
-
-		&:active {
-			//background-color: #BCFEC2;
-		}
-
-		&:focus {
-			//padding-top: 2em;
-			//margin-top: 1.5em;
-			//border: 1px solid #1a9af5;
-			//outline: 0px solid transparent;
-		}
-	}// .input_tex_area
-
-
+	}//.input_tex_area
 
 // components wrapper modifiers
-	// .section_record .wrapper_component,
-	// .wrapper_tool .wrapper_component {
-
-	// 	&.width_100 {
-	// 		flex: 1 1 100%;
-	// 	}
-	// }
 	&.width_100 {
 		flex: 1 1 100% !important;
 		width: 100%;
 	}
-
 
 // full screen
 	.fullscreen {
@@ -1167,7 +789,7 @@
 		height: 100% !important;
 		z-index: 10 !important;
 		max-height: unset !important;
-		background-color: #ffffff !important;
+		background-color: var(--color_white) !important;
 
 		.buttons_container {
 			left: unset !important;
@@ -1182,15 +804,11 @@
 			>ul{
 				width: 100% !important;
 				>li{
-					height: calc(100% - var(--component_label_height)) !important; // 1.75em
+					height: calc(100% - var(--component_label_height)) !important;
 
 					.canvas[resize] {
 						height: 100%;
 						width: 100%;
-						// max-height: 100%;
-						// max-width: 100%;
-						// object-fit: contain;
-						// object-position: center;
 					}
 				}
 			}
@@ -1240,8 +858,6 @@
 		}
 	}//end .content_data
 
-
-
 // json_editor
 	.jsoneditor {
 		resize: vertical;
@@ -1275,16 +891,13 @@
 			>.jsoneditor-menu {
 				background-color: @color_danger !important;
 			}
-
 		}
 	}//end .jsoneditor
-
-
 
 // json-container. Is the JSON data viewer used to show fold-able data like
 // server messages in area_development widgets
 	.json-container {
-		background-color: #f8fcff;
+		background-color: @color_white_dirty;
 		margin: 0px;
 		margin-top: 1em;
 		padding: 0.5rem;
@@ -1296,8 +909,6 @@
 		}
 	}
 
-
-
 // components_list_container (used in search and tool_export)
 	.components_list_container {
 		display: flex;
@@ -1306,62 +917,45 @@
 		font-size: 1em;
 		background-color: @color_white_dirty;
 
-
 		ul {
 			display: block;
 			position: relative;
-			// width: fit-content;
-
-			// limit height
 			max-height: 80vh;
 			overflow: auto;
 
-			// Standard section container (receive all json elements inside)
+			// Standard section container (receive all JSON elements inside)
 			&.list_container {
-				// background-color: #e27b5e;
+
 			}
+
 			&.target_list_container {
 				display: flex;
 				border-left: 1px solid @color_grey_dark;
 			}
-
 
 			li {
 				position: relative;
 				line-height: 1em;
 				padding: 0.307rem;
 				display: block;
-				// // padding: 4px;
-				// // padding-right: 1em;
-				// border-right: 1px solid #a5a5a5;
 				user-select: none;
-				// display: grid;
-
 
 				// Section label bar
 				&.section_bar_label {
 					display: block;
-					background-color: #575a5c;
-					color: #ffffff;
-					// font-family: "Oxygen-light";
-					// border-right: 1px solid #a5a5a5;
-					// line-height: 1em;
+					background-color: var(--color_grey_dark_3);
+					color: var(--color_white);
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
 
 					&:after {
 						content: 'X';
 						display: block;
-						// background-color: #a0a0a0;
 						float: right;
 						width: 1em;
 						text-align: center;
-						//border-radius: 50%;
-						//line-height: 15px;
-						//position: relative;
-						//top: 2px;
 						cursor: pointer;
-						// Allow receive here the click button of real dom element
+						// Allow receive here the click button of real DOM element
 						pointer-events: all;
 					}
 
@@ -1373,58 +967,34 @@
 
 				// section_group_label
 				&.section_group_label {
-					background-color: @color_grey_dark; //#575A5C;
-					color: #ffffff;
+					background-color: @color_grey_dark;
+					color: var(--color_white);
 				}
 
 				// component_label
 				&.component_label {
-					background-color: #ffffff;
-					//background-color: rgba(251, 251, 251, 0.48);
-					border-bottom: 0.5px solid #666;
+					background-color: var(--color_white);
+					border-bottom: 0.5px solid var(--color_grey_dark_3);
 
-					// // truncate text
-					// 	>* {
-						// display: block;
-						// width: 100%;
-						padding-right: 2.0em;
-						white-space: nowrap;
-						overflow: hidden;
-						text-overflow: ellipsis;
-						// line-height: inherit;
-						// height: inherit;
-						// background-color: #30d305 !important;
-					// 	}
+					// truncate text
+					padding-right: 2.0em;
+					white-space: nowrap;
+					overflow: hidden;
+					text-overflow: ellipsis;
 
 					&:hover {
 						background-color: @color_orange_dedalo !important;
-						color: #ffffff;
+						color: var(--color_white);
 					}
 					&:active {
-						//background-color: initial;
-						//color: initial;
 						opacity: 0.6;
 					}
-
-					// // truncate text
-					// >* {
-						// display: grid;
-						// width: 99.99%;
-						// padding-right: 1em;
-						// white-space: nowrap;
-						// overflow: hidden;
-						// text-overflow: ellipsis;
-						// // line-height: inherit;
-						// height: inherit;
-						// background-color: #30d305 !important;
-					// }
 
 					@background-top: 5px;
 
 					// Drag-gable background svg
 					&.element_draggable {
 						cursor: move;
-						// background: url('../../themes/default/draggable.svg');
 						background-image: url('../../themes/default/draggable.svg');
 						background-color: rgba(0, 0, 0, 0);
 						background-position-x: 0%;
@@ -1437,7 +1007,6 @@
 
 					// has_subquery
 					&.has_subquery {
-						// background-color: #29ae03;
 						cursor: pointer;
 						background-position: right 1em bottom @background-top;
 
@@ -1447,7 +1016,6 @@
 							display: block;
 							pointer-events: none;
 							position: absolute;
-							// background: url('../../themes/default/icons/play.svg');
 							background-image: url('../../themes/default/icons/play.svg');
 							background-repeat: no-repeat;
 							background-position: center;
@@ -1455,23 +1023,14 @@
 							width: 1em;
 							height: 1em;
 							right: 0px;
-							// top: 3px;
 							top: 0.308rem;
 							cursor: pointer;
 						}
 
 						&.active {
 							background-color: @color_orange_dedalo !important;
-							//font-weight: bold;
-							// border-right: 1px solid @selected_color;
-							// color: #ffffff;
-
-							&:after {
-								// border-left: 5px solid #ffffff;
-							}
 						}
-					}//end li.component_label.has_subquery
-
+					}
 
 				}//end component_label
 
@@ -1479,144 +1038,16 @@
 		}//end ul.components_list_container
 	}//end .components_list_container
 
-
-
-// id_column
-	/*
-	.id_column {
-		//display: flex;
-		//flex-wrap: wrap;
-		//align-self: flex-start;
-		display: table;
-		padding-left: 0.25em !important;
-		padding-right: 0.5em !important;
-
-		@height_line : 1.2em;
-
-		>* {
-			flex: 1 1 100%;
-			display: flex;
-			align-items: center;
-			justify-content: flex-end;
-			height: @height_line;
-		}
-
-		a {
-			background-size: cover;
-			background-repeat: no-repeat;
-			background-position: center;
-			width: @height_line + 0.1;
-			height: @height_line;
-			margin-left: 0.3em;
-			opacity: 0.7;
-		}
-
-
-		>.edit_line {
-			//background-color: #CDFFA9;
-			//flex-direction: row-reverse;
-
-			>span {
-				display: inline-block;
-				font-size: @height_line + 0.02;
-				//height: @height_line;
-			}
-
-			>a {
-				//.icon_svg;
-				background-image: url(../../themes/default/icons/edit_mini.svg);
-			}
-		}
-
-		>.delete_line {
-			//background-color: #FA913B;
-			//flex-direction: row-reverse;
-			margin-top: 0.5em;
-
-			>a {
-				//.icon_svg;
-				background-image: url(../../themes/default/icons/trash-o.svg);
-			}
-		}
-	}//end id_column
-	*/
-
-
-
-	/*
-		.tooltip_toggle {
-		  cursor: pointer;
-		  position: relative;
-		  z-index: 9999999999999999999;
-		}
-
-		.tooltip_toggle::before {
-		  position: absolute;
-		  top: -80px;
-		  left: -80px;
-		  background-color: green;
-		  border-radius: 5px;
-		  color: #fff;
-		  content: attr(data-tooltip);
-		  padding: 1rem;
-		  text-transform: none;
-		  -webkit-transition: all 0.5s ease;
-		  transition: all 0.5s ease;
-		  width: 15em;
-		}
-
-		.tooltip_toggle::after {
-		  position: absolute;
-		  top: -12px;
-		  left: 9px;
-		  border-left: 5px solid transparent;
-		  border-right: 5px solid transparent;
-		  border-top: 5px solid green;
-		  content: " ";
-		  font-size: 0;
-		  line-height: 0;
-		  margin-left: -5px;
-		  width: 0;
-		}
-
-		.tooltip_toggle::before,
-		.tooltip_toggle::after {
-		  color: #efefef;
-		  font-family: monospace;
-		  font-size: 16px;
-		  opacity: 0;
-		  pointer-events: none;
-		  text-align: center;
-		}
-
-		.tooltip_toggle:hover::before,
-		.tooltip_toggle:hover::after {
-		  opacity: 1;
-		  -webkit-transition: all 0.75s ease;
-		  transition: all 0.75s ease;
-		}
-		*/
-
-
-
 .bg_warning {
-	// background-color: @color_orange_dedalo ;
 	background-color: #ffe9e9;
-	border: 1px dashed #ef9b9b;
-	// overflow: auto;
 	background-image: url('../../themes/default/dedalo_logo.svg');
+	border: 1px dashed #ef9b9b;
 	background-size: 5rem;
 	background-repeat: space;
 }
 
-
-
 // media components base CSS unified
 .media_wrapper.edit.wrapper_component {
-
-	// resize vertical
-		// resize: vertical;
-		// overflow: hidden;
 
 	// shared quality_selector
 	.quality_selector {
@@ -1633,9 +1064,9 @@
 		border: 0px;
 		outline: none;
 		border-radius: 4px;
-
 		z-index: 1;
 		box-shadow: rgba(99, 99, 99, 0.2) 0px 2px 8px 0px;
+		cursor: pointer;
 
 		.fullscreen& {
 			width: auto !important;
@@ -1645,18 +1076,6 @@
 	}
 
 	.media_content_data {
-		// Note that height is always the media min height (392px)
-		// (!) Do not use max o min height here to prevent to affect canvas reference size
-			// height: var(--media_min_height);
-			// display: table;
-
-			// justify-content: center;
-			// max-height: var(--media_max_height);
-			// min-height: var(--media_min_height);
-
-			// @media screen and (max-width: @width_break_point_1) {
-			// 	min-height: unset;
-			// }
 		display: contents;
 	}
 
@@ -1664,22 +1083,16 @@
 		display: flex;
 		flex-wrap: wrap;
 		justify-content: center;
-		// width: 100%;
 		height: var(--media_min_height);
-		// min-height: var(--media_min_height); // 404px;
 
 		// with margin option
-			margin: 1rem;
-			// margin-top: 0.5rem;
-			margin-top: 0.25rem;
-			width: calc(100% - 2rem);
-
-		// without margin option
-			// margin-top: 0.5rem;
+		margin: 1rem;
+		margin-top: 0.25rem;
+		width: calc(100% - 2rem);
 
 		// resize vertical
-			resize: vertical;
-			overflow: hidden;
+		resize: vertical;
+		overflow: hidden;
 
 		@media screen and (max-width: @width_break_point_1) {
 			height: unset;
@@ -1696,7 +1109,7 @@
 
 .media_wrapper.list.wrapper_component {
 	&.view_default, &.view_mosaic {
-		height: var(--view_line_height); // 5rem;
+		height: var(--view_line_height);
 		@media screen and (max-width: @width_break_point_0) {
 			background-color: unset !important;
 		}
@@ -1716,16 +1129,13 @@
 // affects all media components span wrapper (3d,av,image,pdf,svg)
 .media.view_text {
 	display: inline-block;
-	height: var(--view_text_height); //	2rem;
+	height: var(--view_text_height);
 	vertical-align: middle;
 }
-
-
 
 .page_error_container {
 	padding: 4rem;
 	line-height: 2.5rem;
-	// position: relative;
 
 	// only apply to page error, is not generic
 	&.raspa_error {
@@ -1758,7 +1168,6 @@
 		}
 	}
 
-
 	h1 {
 		font-size: 1.7rem;
 		margin: 0.67em 0;
@@ -1775,42 +1184,6 @@
 		display: block;
 	}
 
-	// overlay
-		// &:after {
-		// 	content: ' ';
-		// 	height: 100%;
-		// 	width: 100%;
-		// 	position: absolute;
-		// 	background-color: orange;
-		// 	position: absolute;
-		// 	top: 0px;
-		// 	left: 0px;
-		// 	background-color: rgb(255 255 255 / 39%);
-		// }
-
-	// >* {
-	// 	z-index: 3;
-	// }
-
-	// &:before {
-	// 	content: ' ';
-	// 	// background-image: url('../../themes/default/dedalo_icon_big.png');
-
-	// 	background-repeat: no-repeat;
-	// 	background-position: 0 top;
-	// 	// background-size: 527px 1024px;
-	// 	position: absolute;
-	// 	width: 100%;
-	// 	height: 100%;
-	// 	min-height: 1024px;
-	// 	z-index: -1;
-	// 	opacity: 0.5;
-	// 	-moz-transform: scaleX(-1);
-	// 	-o-transform: scaleX(-1);
-	// 	-webkit-transform: scaleX(-1);
-	// 	transform: scaleX(-1);
-	// }
-
 	>.icon_dedalo {
 		height: 7rem;
 	}
@@ -1820,7 +1193,6 @@
 	}
 }
 
-
 // process_status_node. Display process info while is running
 .process_status_node {
 	position: relative;
@@ -1828,12 +1200,8 @@
 	margin-top: 0.5rem !important;
 
 	>.spinner {
-		// position		: relative;
-		// top				: unset;
-		// margin-bottom	: 2rem;
 		position: absolute !important;
 		top: 0.48rem !important;
-		// left: unset !important;
 		left: 0.5rem !important;
 		margin: 0px !important;
 		scale: 0.82;
@@ -1844,8 +1212,7 @@
 		display: flex;
 		top: 0.72rem;
 		right: 0.5rem;
-		// background-color: #eeeeee;
-		background-color: #f7f7f7;
+		background-color: @color_grey_light;
 		border-radius: 2.5rem;
 		z-index: 1;
 		height: 2.6rem;
@@ -1914,7 +1281,7 @@
 // by service_autocomplete to display special datalist like in countermarks case
 .grid_choose_container {
 	position: absolute;
-	background-color: #f8f8f8;
+	background-color: @color_light;
 	box-shadow: rgba(0, 0, 0, 0.35) 0px 5px 15px;
 	width: 20rem;
 	min-width: 15rem;
@@ -1945,7 +1312,7 @@
 		padding: 0.75rem;
 		padding-left: 1.25rem;
 		padding-right: 2rem;
-		color: white;
+		color: var(--color_white);
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -1969,7 +1336,7 @@
 		font-size: 1.1rem;
 		position: sticky;
 		top: -0.5rem;
-		background-color: #ffffff;
+		background-color: var(--color_white);
 		width: 100%;
 		z-index: 1;
 		padding-top: 0.5rem;

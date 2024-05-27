@@ -1,4 +1,10 @@
-// functions
+/**
+* functions
+*
+* Common button styles
+*
+* Included from main.less file
+*/
 
 
 // truncate_text
@@ -8,7 +14,6 @@
 		white-space: nowrap;
 		width: @width;
 	}
-
 
 // fn_build_tag_indexation. indexation tag builder
 	.fn_build_tag_indexation(@bg_color:@color_orange_dedalo, @text_color:#ffffff) {
@@ -23,20 +28,12 @@
 		padding-left: 5px;
 		padding-right: 0.65rem;
 		background-color: @bg_color;
-		// background-image: radial-gradient(30% 50% ellipse at 109% 50%, #ffffff 22px, transparent 10px, #ffab01 23px);
-		// background-image: radial-gradient(
-		// 	30% 50% ellipse at 109% 50%,
-		// 	@text_color 22px,
-		// 	transparent 10px,
-		// 	@bg_color 0px
-		// );
 		background-image: radial-gradient(
 			42% 56% ellipse at 129% 50%,
 			@text_color 117%,
 			transparent 36%,
 			@bg_color 5%
 		);
-
 		border-bottom-left-radius: 6px;
 		border-top-left-radius: 6px;
 		color: @text_color;
@@ -47,14 +44,11 @@
 		}
 	}//end .fn_build_tag_indexation(
 
-
-
 // fn_build_tag_tc. tc tag builder
 	.fn_build_tag_tc(@bg_color:#000000, @text_color:#00e500) {
 		display: flex;
 		align-items: center;
 		justify-content: center;
-		// background-image: radial-gradient(30% 50% ellipse at 109% 50%, @text_color 22px, transparent 10px, @bg_color 0px);
 		background-color: @bg_color;
 		border-radius: 4.5px;
 		color: @text_color;
@@ -65,8 +59,6 @@
 		min-width: 20px;
 	}//end .fn_build_tag_tc
 
-
-
 // fn_build_tag_note. tc tag builder
 	.fn_build_tag_note(@bg_color:@color_orange_dedalo, @text_color:#ffffff) {
 		display: flex;
@@ -76,7 +68,6 @@
 		background-color: @bg_color;
 		color: @text_color;
 		font-size: 0.85rem;
-		// border: 1px solid @bg_color;
 		border-radius: 2px;
 		padding: 0px;
 		padding-left: 5px;

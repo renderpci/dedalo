@@ -12,64 +12,61 @@
 @text_color : #00e801;
 
 // wrapper_tool
-	.wrapper_tool.tool_tc {
+.wrapper_tool.tool_tc {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+
+		.components_container {
+			display: grid;
+			grid-template-columns: 1fr;
+			grid-gap: 1em;
 		}
 
-		>.content_data {
+		.tc_management_container {
 
-			.components_container {
-				display: grid;
-				grid-template-columns: 1fr;
-				grid-gap: 1em;
+			>* {
+				margin-right: 0.5em;
+				vertical-align: middle;
+				font-size: 1em;
 			}
 
-			.tc_management_container {
+			select, input {
+				height: 2.25em;
+			}
 
-				>* {
-					margin-right: 0.5em;
-					vertical-align: middle;
-					font-size: 1em;
-				}
+			// offset seconds input
+			.input_offset {
+				height: 2em;
+				width: 10em;
+				text-align: center;
+				padding: 0;
+			}
 
-				select, input {
-					height: 2.25em;
-				}
+			.button_apply {
+				color: @text_color;
+				text-transform: capitalize;
+				background-color: @tool_color;
+				border-color: darken(@tool_color, 5%);
 
-				// offset seconds input
-				.input_offset {
-					height: 2em;
-					width: 10em;
-					text-align: center;
-					padding: 0;
-				}
-
-				.button_apply {
-					color: @text_color;
-					text-transform: capitalize;
-					background-color: @tool_color;
-					border-color: darken(@tool_color, 5%);
-
-					&:focus {
-						border: 1.2px solid darken(@tool_color, 8%) !important;
-						opacity: 0.7;
-						// color: #ffffff !important;
-					}
+				&:focus {
+					border: 1.2px solid darken(@tool_color, 8%) !important;
+					opacity: 0.7;
 				}
 			}
-		}
-	}//end wrapper_tool
-
-
-
-// modal header tool modification
-	.tool_header.tool_tc {
-		background-color: @tool_color;
-		color: @text_color;
-
-		.button.white {
-			background-color: @text_color !important;
 		}
 	}
+}//end wrapper_tool
+
+// modal header tool modification
+.tool_header.tool_tc {
+	background-color: @tool_color;
+	color: @text_color;
+
+	.button.white {
+		background-color: @text_color !important;
+	}
+}

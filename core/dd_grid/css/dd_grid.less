@@ -5,13 +5,11 @@
 * Included from main.less file
 */
 .wrapper_dd_grid {
-	// background-color: #f0f0f0;
 	width: 100%;
 	display: block;
 
 	@padding_left: 140px;
 	@color_grey_light: #bfbfbf;
-
 
 	// view_default.
 	&.view_default {
@@ -42,16 +40,13 @@
 
 		// column
 		.column {
-			// background-color: #a3dfac8c;
 			display: flex;
 			flex-wrap: wrap;
 			flex: 1 1 auto;
 			outline: 1px solid @color_grey_light;
 			max-height: 100%;
-			// overflow: hidden;
 
 			&.caption {
-				// background-color: #f2f2f2;
 				color: #ffffff;
 				font-weight: 400;
 				outline: none;
@@ -70,7 +65,6 @@
 
 		// label
 		label {
-			// background-color: #343434;
 			width: 100%;
 			display: block;
 			font-size: 0.95rem;
@@ -79,7 +73,6 @@
 
 		// value (text values)
 		span {
-			// background-color: #e6e6e6;
 			color: #000000;
 			padding: 0.5em;
 			display: inline-block;
@@ -90,7 +83,7 @@
 
 		// img
 		img {
-			background-color: #e6e6e6;
+			background-color: @color_grey_medium;
 			object-fit: cover;
 			object-position: center;
 			width: 100%;
@@ -101,7 +94,7 @@
 
 		// button
 		img.button {
-			background-color: #e6e6e6;
+			background-color: @color_grey_medium;
 			display: inline-block;
 			object-fit: contain;
 			object-position: center;
@@ -116,23 +109,16 @@
 	&.view_table {
 		border-collapse: collapse;
 		display: table;
-		// background-color: #dfe0f0;
 		background-color: white;
 
 		// tr
 		.row_header {
-			// border: 1px solid #ccc;
-			// position: sticky;
-			// top: 4rem;
+
 			th {
 				background-color: @color_grey_dark;
 				color: white;
 			}
 		}
-
-		// >tr {
-
-		// }
 
 		>tr:nth-child(even) {
 			background-color: #f9f9f9;
@@ -150,7 +136,6 @@
 		}
 
 		td {
-			// background-color: #e6e6e6;
 			color: black;
 
 			>img {
@@ -160,7 +145,6 @@
 				min-width: 3rem;
 				object-fit: contain;
 				object-position: center;
-				// background-color: #e1e1e1;
 			}
 
 			&.text_column {
@@ -175,7 +159,6 @@
 
 	// view_mini
 	&.view_mini {
-		// background-color: #ecdcf5;
 
 		>img {
 			width: 100%;
@@ -183,7 +166,6 @@
 			max-height: 5rem;
 			object-fit: contain;
 			object-position: center;
-			// background-color: #e1e1e1;
 		}
 
 		// tag images
@@ -195,7 +177,5 @@
 
 }//end .wrapper_dd_grid
 
-
-
 // includes './view_indexation'
-// @import (once) './view_indexation';
+@import (once) './view_indexation';

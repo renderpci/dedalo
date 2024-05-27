@@ -4,7 +4,6 @@
 * Included from main.less file
 */
 .component_date {
-	// background-color: #fea7e5;
 
 	// calendar
 	.calendar {
@@ -20,19 +19,6 @@
 			flex-wrap: wrap;
 			width: 100%;
 			align-items: center;
-
-			// des
-				// &.wrapped {
-				// 	// background-color: #96c85f;
-				// 	>.dates_separator {
-				// 		font-size: 5px;
-				// 		padding: 0px;
-				// 		margin: 0px;
-				// 		// display: none;
-				// 		width: 5px;
-				// 	}
-				// }
-
 			container-type: inline-size;
 
 			// date content_value
@@ -42,60 +28,18 @@
 
 			// range content_value
 			&.range {
-				/*
-				// container way
-				// @see https://ishadeed.com/article/say-hello-to-css-container-queries/
-				// container-type: inline-size;
-				@container (max-width: 225px) {
-					.button.remove {
-						position: absolute;
-						right: -0.15rem;
-						z-index: 1;
-					}
-				}
-				@container (max-width: 204px) {
-					.button.remove {
-						position: unset;
-					}
-				}
-				*/
+
 			}
 
 			// period content_value
 			&.period {
-				/*
-				.button.remove {
-					position: relative;
-					margin-right: 0px;
-					margin-left: 0.15rem;
-					top: -2px;
-					z-index: 1;
-				}
-				// container-type: inline-size;
-				@container (max-width: 225px) {
-					.button.remove {
-						// background-color: #3a8554;
-						position: absolute;
-						margin-left: 0px;
-						right: 0.15rem;
-						top: 0.55rem;
-					}
-				}
-				*/
-				// @container (max-width: 204px) {
-				// 	.button.remove {
-				// 		background-color: #d7b3f1;
-				// 		position: unset;
-				// 	}
-				// }
+
 			}
 
 			>.input-group {
 				position: relative;
-				// width: 8.75rem;
 				width: 7.1rem;
 				display: flex;
-				// flex-wrap: wrap;
 				align-items: center;
 
 				&.period {
@@ -108,11 +52,6 @@
 						right: 0px !important;
 					}
 				}
-				// @container (max-width: 225px) {
-				// 	&.period {
-				// 		max-width: calc(100% - 1rem);
-				// 	}
-				// }
 
 				input {
 					position: relative;
@@ -137,8 +76,6 @@
 						text-align: center;
 					}
 					&.input_date {
-						// letter-spacing: 0.05em;
-						// font-family: 'date_separator', apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 						// date format (from general less) set common font family and letter-spacing
 						.fn_date_format()
 					}
@@ -149,16 +86,10 @@
 
 				label {
 					display: inline-block;
-					// margin-right: 1rem;
 					display: inline-block;
 					opacity: 0.6;
 					padding-right: 2px;
 					padding-left: 2px;
-
-					// &:last-of-type {
-					// 	margin-right: 0px;
-					// 	padding-left: 0px;
-					// }
 				}
 
 				>.pair_container {
@@ -173,8 +104,7 @@
 					z-index: 1;
 					opacity: 1;
 					background-color: #ffffff;
-					// outline: 1px solid #f4f4f3;
-					outline: 1px solid #3b87fd;
+					outline: 1px solid @color_primary;
 					height: 1.8rem;
 					width: 1.8rem;
 					border-radius: 50%;
@@ -218,7 +148,6 @@
 
   				@font-face {
 					font-family: 'date_separator';
-					// src: local("Times New Roman");
 					src: local("Helvetica Neue UltraLight"),
 						 local("HelveticaNeue-UltraLight");
 					unicode-range: U+002F;
@@ -226,7 +155,6 @@
 			}//end >.input-group
 
 			.dates_separator {
-				// width: 1.5rem;
 				font-size: 0.78rem;
 				padding: 0.2rem;
 				line-height: 0.78rem;
@@ -234,7 +162,6 @@
 
 		}//end >.content_value
 	}
-
 
 	&.list {
 		// date format (from general less) set common font family and letter-spacing
@@ -272,4 +199,5 @@
 	&_mini {
 
 	}
+
 }//end .component_date

@@ -8,16 +8,12 @@
 	&.edit {
 		box-shadow: none;
 		background-color: @color_grey_dark;
-		color: white;
+		color: #ffffff;
 		border-bottom-right-radius: 1rem;
 		max-height: 5.5rem;
-		// display: flex;
-		// flex: 0 0 20%;
-		// flex-direction: row-reverse;
 
 		&.active {
-			// background-color: @color_grey_dark !important;
-			// color: white;
+
 		}
 
 		>.label {
@@ -36,11 +32,10 @@
 				text-align: center;
 			}
 		}
+
 	}//end .edit
 
-
 	&.search {
-		// background-color: initial !important;
 		color: initial;
 		flex-grow: initial !important;
 
@@ -48,9 +43,11 @@
 			flex: initial;
 			color: @color_grey_dark;
 		}
+
 		>.content_data {
 			flex: auto;
 		}
+
 	}//end search
 
 	&.view_line {

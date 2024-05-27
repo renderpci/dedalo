@@ -258,7 +258,6 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 				done
 			}) => {
 
-
 				// Check if the stream is done
 				if (done) {
 					// Log a message
@@ -268,6 +267,7 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 					// Return from the function
 					return;
 				}
+
 				// CHEKING THE STRING TO DETERMINATE THE MSG SENT
 				// The event message always begins with "data:\n" and end with "\n\n"
 				// PHP create the message correctly, but http server can split it or merge it into a chunk

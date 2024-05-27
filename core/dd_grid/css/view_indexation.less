@@ -5,8 +5,6 @@
 * Included from dd_grid.less file
 */
 
-// @import (once) '../../../core/page/css/layout/vars';
-
 // view_indexation
 .wrapper_dd_grid.view_indexation {
 
@@ -14,21 +12,14 @@
 	@color_grey_light: #bfbfbf;
 	--icon_height: 1.05rem;
 
-
 	// column common
 	.column {
-		// background-color: #a3dfac8c;
 		display: flex;
 		flex-wrap: wrap;
 		flex: 1 1 auto;
-		// outline: 1px solid @color_grey_light;
 		max-height: 100%;
 		min-height: 2rem;
 		padding: 0.15rem;
-
-		&:last-of-type {
-			// box-shadow: none;
-		}
 
 		>img {
 			height: 100%;
@@ -58,10 +49,9 @@
 
 	// img
 	img:not(.tc, .index) {
-		background-color: #e6e6e6;
+		background-color: @color_grey_medium;
 		object-fit: cover;
 		object-position: center;
-		// width: 100%;
 		width: 8rem;
 		height: 5em;
 		padding: 0px;
@@ -70,7 +60,7 @@
 
 	// button
 	img.button {
-		background-color: #e6e6e6;
+		background-color: @color_grey_medium;
 		display: inline-block;
 		object-fit: contain;
 		object-position: center;
@@ -87,7 +77,7 @@
 		height: inherit;
 
 		>.caption {
-			color: #ffffff;
+			color: var(--color_white);
 			font-weight: 400;
 			outline: none;
 			padding: 0px;
@@ -228,9 +218,6 @@
 					grid-template-columns: 4rem 20rem auto;
 					align-items: center;
 				}//end >.row
-				>.row.head {
-
-				}//end >.row.head
 			}//end .ich100
 
 			// rsc197 . People under study
@@ -243,19 +230,11 @@
 					grid-template-columns: 4rem 4fr 4fr 2fr;
 					align-items: center;
 				}//end >.row
-				>.row.head {
-
-				}//end >.row.head
 			}//end .rsc197
-
 		}//end >.caption
 	}//end >.row
 
-
-
 }//end view_indexation
-
-
 
 // includes
 @import (once) './view_indexation_audiovisual';
