@@ -935,7 +935,12 @@ class component_image extends component_media_common implements component_media_
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
 	* @param object $file_data
-	*	Data from trigger upload file
+	*	Data from trigger upload file. Sample:
+	*   {
+	*	  "original_file_name": "my file 1.jpg",
+	*	  "full_file_name": "rsc29_rsc170_1.jpg",
+	*	  "full_file_path": "/full dedalo path/media/image/1.5MB/0/rsc29_rsc170_1.jpg"
+	*   }
 	* @return object $response
 	*/
 	public function process_uploaded_file(object $file_data) : object {
@@ -1026,7 +1031,7 @@ class component_image extends component_media_common implements component_media_
 					$result = custom_postprocessing_image($this);
 				}
 
-			// original and retouched cases rewrites default and thumb files
+			// original and retouched cases rewrites default, svg and thumb files
 				$original_quality	= $this->get_original_quality();
 				$modified_quality	= $this->get_modified_quality();
 				$overwrite_default = ($this->quality===$original_quality || $this->quality===$modified_quality);
@@ -1041,6 +1046,32 @@ class component_image extends component_media_common implements component_media_
 							." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default)
 							, logger::DEBUG
 						);
+				}else{
+
+					// case uploaded image is different from original_quality and modified_quality,
+					// but NO original_quality / modified_quality files already exits
+					// e.g. user upload file directly to any quality from tool media versions
+					// In these cases, create a svg file if is not already created
+					$default_quality = $this->get_default_quality();
+					if ($this->quality!==$default_quality) {
+						// force to create the default quality
+						$this->build_version($default_quality, true, false);
+					}
+
+					$svg_file_path = $this->get_svg_file_path();
+					if (!file_exists($svg_file_path)) {
+						$svg_string_node = $this->create_default_svg_string_node();
+						if (!empty($svg_string_node)) {
+							// create the svg default file
+							$this->create_svg_file($svg_string_node);
+						}
+
+						// debug
+						debug_log(__METHOD__
+							." GENERATING SVG FILE for default quality"
+							, logger::DEBUG
+						);
+					}
 				}
 
 			// Generate thumb image quality from default always (if default exits)
@@ -1685,11 +1716,11 @@ class component_image extends component_media_common implements component_media_
 
 		// convert options
 			$options = new stdClass();
-	 			$options->source_file = $source_image;
-	 			$options->target_file = $target_image;
+				$options->source_file = $source_image;
+				$options->target_file = $target_image;
 
 		// convert with ImageMagick command
-	 		$thumb_quality = $this->get_thumb_quality();
+			$thumb_quality = $this->get_thumb_quality();
 			if ($target_quality===$thumb_quality) {
 				$options->thumbnail = true;
 			}else{
@@ -1754,6 +1785,25 @@ class component_image extends component_media_common implements component_media_
 				}
 			}
 
+			// try to use non original / modified / default qualities
+			// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
+			if(empty($source_file)){
+				// iterate qualities from high to low until
+				foreach ($this->get_ar_quality() as $current_quality) {
+					if ($current_quality!==$quality) {
+						if (file_exists($this->get_media_filepath($current_quality))) {
+							$source_quality	= $current_quality;
+							$source_file	= $this->get_media_filepath($current_quality);
+							break;
+						}
+					}
+					if ($current_quality===$this->quality) {
+						// do not use quality smaller than current instance quality
+						break;
+					}
+				}
+			}
+
 		// source file not found case
 			if(empty($source_file)){
 
@@ -1789,7 +1839,7 @@ class component_image extends component_media_common implements component_media_
 				if (file_exists($svg_file_path)) {
 					unlink($svg_file_path);
 				}
-				// If default quality file exists, svg_string_node will be generated, else null
+				// If default quality file already exists, svg_string_node will be generated, else null
 				$svg_string_node = $this->create_default_svg_string_node();
 				if (!empty($svg_string_node)) {
 					// create the svg default file
