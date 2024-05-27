@@ -85,6 +85,12 @@ export const get_quality_selector = (self) => {
 			class_name		: 'quality_selector',
 			parent			: fragment
 		})
+		quality_selector.addEventListener('mousedown', function(e) {
+			e.stopPropagation()
+		})
+		quality_selector.addEventListener('click', function(e) {
+			e.stopPropagation()
+		})
 		quality_selector.addEventListener('change', (e) =>{
 			const img_src = e.target.value
 			event_manager.publish('image_quality_change_'+self.id, img_src)
