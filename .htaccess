@@ -46,7 +46,7 @@ Options -Indexes
 </IfModule>
 
 # Various header fixes.
-<IfModule mod_headers.c>
+# <IfModule mod_headers.c>
 	# Disable content sniffing, since it's an attack vector.
 	# Header always set X-Content-Type-Options nosniff
 	# Disable Proxy header, since it's an attack vector.
@@ -57,12 +57,11 @@ Options -Indexes
   # Header set Cache-Control: stale-while-revalidate=604800
 
   # DEVELOPMENT
-  <If "%{HTTP_HOST} =~ /(127\.0\.0\.1.+|localhost.+)$/">
-	Header set Cache-Control: "no-store, max-age=0"
-	Header unset ETag
-  </If>
-</IfModule>
-
+  # <If "%{HTTP_HOST} =~ /(127\.0\.0\.1.+|localhost.+)$/">
+	#  Header set Cache-Control: "no-store, max-age=0"
+	#  Header unset ETag
+  # </If>
+# </IfModule>
 
 # rewrite allow version in url path
 # <IfModule mod_rewrite.c>
