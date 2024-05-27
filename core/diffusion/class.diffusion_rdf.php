@@ -207,16 +207,23 @@ class diffusion_rdf extends diffusion {
 
 				if( file_put_contents($save_to_file_path, $data) ){
 
-					$msg  = '';
-					$msg .= '&nbsp;<a class="btn btn-primary btn-sm" role="button" href="'.$url_file.'" target="_blank"><span class="glyphicon glyphicon-save"></span> Download</a>';
-					if(SHOW_DEBUG===true) {
-						$msg .= '<hr>DEBUG:<br> File path: ' . $save_to_file_path;
-					}
-					$response->msg[] = $msg;
-				}
+					debug_log(__METHOD__
+						. " Save file to " . PHP_EOL
+						. ' save_to_file_path: ' . to_string($save_to_file_path)
+						, logger::DEBUG
+					);
 
-				// response add URL
-				$response->url = $url_file;
+					// response add URL
+					$response->url = $url_file;
+
+				}else{
+
+					debug_log(__METHOD__
+						. " Fail to save file " . PHP_EOL
+						. ' save_to_file_path: ' . to_string($save_to_file_path)
+						, logger::ERROR
+					);
+				}
 			}
 
 
@@ -667,7 +674,7 @@ class diffusion_rdf extends diffusion {
 											return $item->lang===$default_alpha2_lang && $item->id === $current_id;
 										});
 										// if empty the main language add empty text
-										$current_value = $fallback_value
+										$current_value = is_object($fallback_value)
 											? $fallback_value->value
 											: '';
 										// create the ddo and save with the array of values to be joined

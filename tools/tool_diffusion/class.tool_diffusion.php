@@ -9,6 +9,10 @@ class tool_diffusion extends tool_common {
 
 
 
+	public static $last_update_record_response;
+
+
+
 	/**
 	* GET_DIFFUSION_INFO
 	* Collect basic tool info needed to create user options
@@ -260,7 +264,7 @@ class tool_diffusion extends tool_common {
 
 						// list case
 
-						$sqo_id			= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]);
+						$sqo_id			= section::build_sqo_id($section_tipo, 'list');
 						$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 						if ( empty($sqo_session) ) {
 
@@ -366,21 +370,11 @@ class tool_diffusion extends tool_common {
 				);
 			}
 
-		// debug
-			// if(SHOW_DEBUG===true) {
-			// 	$debug = new stdClass();
-			// 		$debug->exec_time	= exec_time_unit($start_time,'sec')." secs";
-			// 		foreach($vars as $name) {
-			// 			$debug->{$name} = $$name;
-			// 		}
-			// 		// $debug->publication_schema = $publication_schema_result;
-			// 	$response->debug = $debug;
-			// }
-
 		// response OK
-			$response->result = true;
-			$response->msg[] = 'OK. Request done successfully';
-			$response->memory = dd_memory_usage();
+			$response->result						= true;
+			$response->msg[]						= 'OK. Request done successfully';
+			$response->memory						= dd_memory_usage();
+			$response->last_update_record_response	= tool_diffusion::$last_update_record_response ?? null;
 
 
 		return $response;
@@ -451,6 +445,9 @@ class tool_diffusion extends tool_common {
 					);
 				}
 			}
+
+			// fix current response as last_update_record_response
+			tool_diffusion::$last_update_record_response = $update_record_response;
 
 			// CLI process data. Echo the text msg as line and flush object buffers
 			// only if current environment is CLI

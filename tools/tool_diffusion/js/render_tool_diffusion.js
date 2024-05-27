@@ -7,7 +7,7 @@
 // imports
 	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {object_to_url_vars, time_unit_auto} from '../../../core/common/js/utils/index.js'
+	import {object_to_url_vars, time_unit_auto, open_window} from '../../../core/common/js/utils/index.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_dom} from '../../../core/common/js/events.js'
@@ -214,24 +214,6 @@ const get_content_data = async function(self) {
 			inner_html		: self.get_tool_label('publish_selected_records', total_label),
 			parent			: diffusion_info_container
 		})
-
-	// buttons_container
-		// const buttons_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'buttons_container',
-		// 	parent			: fragment
-		// })
-
-	// button_apply
-		// const button_apply = ui.create_dom_element({
-		// 	element_type	: 'button',
-		// 	class_name		: 'success button_apply',
-		// 	inner_html		: 'OK',
-		// 	parent			: buttons_container
-		// })
-		// button_apply.addEventListener('click', function(e){
-		// 	e.preventDefault()
-		// })
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -623,45 +605,6 @@ const publish_content = async (self, options) => {
 			container	: response_message,
 			lock_items	: [publication_button]
 		})
-
-		/* DES
-			// update_record_response
-				if (api_response.update_record_response) {
-
-					const detail_container = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'detail_container',
-						parent			: response_message
-					})
-					const update_record_response		= api_response.update_record_response
-					const update_record_response_length	= update_record_response.length
-					for (let i = 0; i < update_record_response_length; i++) {
-
-						const item = update_record_response[i]
-
-						const class_add = item.result===true ? 'green' : 'red'
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: class_add,
-							inner_html		: item.msg,
-							parent			: detail_container
-						})
-					}
-				}
-
-			// time
-				if (api_response.time) {
-					ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'detail_container',
-						inner_html		: 'Total secs: ' + api_response.time,
-						parent			: response_message
-					})
-				}
-
-			spinner.remove()
-			publication_button.classList.remove('hide')
-			*/
 }//end publish_content
 
 
@@ -728,68 +671,76 @@ const update_process_status = (options) => {
 				return Math.ceil( sum / arr_length );
 			}
 
+		// last_sse_response
+		let last_sse_response
+
 		// on_read event (called on every chunk from stream reader)
 		const on_read = (sse_response) => {
 
 			// fire update_info_node on every reader read chunk
-			render_response.update_info_node(sse_response, (info_node) => {
+			render_response.update_info_node(
+				sse_response,
+				(info_node) => { // callback
 
-				const is_running = sse_response?.is_running ?? true
+					const is_running = sse_response?.is_running ?? true
 
-				const compound_msg = (sse_response) => {
-					const data = sse_response.data
-					const parts = []
-					parts.push(data.msg)
-					if (data.counter) {
-						parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
-					}
-					if (data.section_label) {
-						parts.push(data.section_label)
-					}
-					if (data.current) {
-						if (data.current.section_id) {
-							parts.push('id: ' + data.current.section_id)
+					const compound_msg = (sse_response) => {
+						const data = sse_response.data
+						const parts = []
+						parts.push(data.msg)
+						if (data.counter) {
+							parts.push(data.counter +' '+ (get_label.of || 'of') +' '+ data.total)
 						}
-					}
-					if (data.total_ms) {
-						parts.push( time_unit_auto(data.total_ms) )
-					}else{
-						parts.push(sse_response.total_time)
-					}
-					if (data.current && data.current.time) {
-						// save in samples array to make average
-						if (ar_samples.length>50) {
-							ar_samples.shift() // remove older element
+						if (data.section_label) {
+							parts.push(data.section_label)
 						}
-						ar_samples.push(data.current.time)
+						if (data.current) {
+							if (data.current.section_id) {
+								parts.push('id: ' + data.current.section_id)
+							}
+						}
+						if (data.total_ms) {
+							parts.push( time_unit_auto(data.total_ms) )
+						}else{
+							parts.push(sse_response.total_time)
+						}
+						if (data.current && data.current.time) {
+							// save in samples array to make average
+							if (ar_samples.length>50) {
+								ar_samples.shift() // remove older element
+							}
+							ar_samples.push(data.current.time)
 
-						const average			= get_average(ar_samples)
-						const remaining_ms		= ((data.total - data.counter) * average)
-						const remaining_time	= time_unit_auto(remaining_ms)
-						parts.push('Time remaining: ' + remaining_time)
+							const average			= get_average(ar_samples)
+							const remaining_ms		= ((data.total - data.counter) * average)
+							const remaining_time	= time_unit_auto(remaining_ms)
+							parts.push('Time remaining: ' + remaining_time)
+						}
+
+						return parts.join(' | ')
 					}
 
-					return parts.join(' | ')
-				}
+					const msg = sse_response
+								&& sse_response.data
+								&& sse_response.data.msg
+								&& sse_response.data.msg.length>5
+						? compound_msg(sse_response)
+						: is_running
+							? 'Process running... please wait'
+							: 'Process completed in ' + sse_response.total_time
 
-				const msg = sse_response
-							&& sse_response.data
-							&& sse_response.data.msg
-							&& sse_response.data.msg.length>5
-					? compound_msg(sse_response)
-					: is_running
-						? 'Process running... please wait'
-						: 'Process completed in ' + sse_response.total_time
-
-				if(!info_node.msg_node) {
-					info_node.msg_node = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
-						parent			: info_node
-					})
+					if(!info_node.msg_node) {
+						info_node.msg_node = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'msg_node' + (is_running===false ? ' done' : ''),
+							parent			: info_node
+						})
+					}
+					ui.update_node_content(info_node.msg_node, msg)
 				}
-				ui.update_node_content(info_node.msg_node, msg)
-			})
+			)
+
+			last_sse_response = sse_response
 		}
 
 		// on_done event (called once at finish or cancel the stream read)
@@ -799,6 +750,11 @@ const update_process_status = (options) => {
 			// unlock lock_items
 			lock_items.map(el =>{
 				el.classList.remove('loading')
+			})
+			// render_process_report
+			render_process_report({
+				last_sse_response,
+				container
 			})
 		}
 
@@ -813,10 +769,55 @@ const update_process_status = (options) => {
 
 /**
 * RENDER_PROCESS_REPORT
-* @return
+* Manages last_update_record_response from process when
+* read_stream finishes (on done)
+* In some cases, like RDF export, a file is created and we need to get
+* user access to the file download
+* @param object options
+* {
+* 	last_sse_response: {data:last_update_record_response,..},
+* 	container: HTMLElement
+* }
+* @return bool
 */
 const render_process_report = function(options) {
 
+	// options
+		const last_update_record_response	= options.last_sse_response?.data?.last_update_record_response
+		const container						= options.container
+
+	// last_sse_response
+		if (!last_update_record_response) {
+			return false
+		}
+
+	// case
+		switch (true) {
+			case (last_update_record_response.url!==undefined):
+				// RDF export case (return a url from created RDF file)
+				const name = last_update_record_response.url.split('\\').pop().split('/').pop();
+				// download button
+				const button_download = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'download warning',
+					inner_html		: (get_label.download || 'Download') + ' ' + name,
+					parent			: container
+				})
+				button_download.addEventListener('click', function(e) {
+					e.stopPropagation()
+					open_window({
+						url : last_update_record_response.url
+					})
+				})
+				break;
+
+			default:
+
+				break;
+		}
+
+
+	return true
 }//end render_process_report
 
 
