@@ -9,45 +9,41 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_upload {
+.wrapper_tool.tool_upload {
 
-		.spinner {
-			border-top-color: @tool_color;
-		}
+	.spinner {
+		border-top-color: @tool_color;
+	}
 
-		>.service_upload_container {
-			// background-color: #e7ff2d;
-			width: 100%;
-		}
+	>.service_upload_container {
+		width: 100%;
+	}
 
-		>.content_data {
-			// background-color: #8dff93;
-			padding: 1rem;
+	>.content_data {
+		padding: 1rem;
+		position: relative;
+		display: grid;
+
+		>.process_file {
 			position: relative;
-			display: grid;
+			padding-bottom: 1rem;
 
-			>.process_file {
-				position: relative;
-				padding-bottom: 1rem;
+			// response_msg
+			.info {
 
-				// response_msg
-				.info {
-
-					&.success {
-						color: green;
-					}
-					&.failed {
-						color: red;
-					}
+				&.success {
+					color: green;
+				}
+				&.failed {
+					color: red;
 				}
 			}
+		}
 
-		}//end content_data
-	}//end .wrapper_tool
-
-
+	}//end content_data
+}//end .wrapper_tool
 
 // modal header tool modification
-	.tool_header.tool_upload {
-		background-color: @tool_color;
-	}
+.tool_header.tool_upload {
+	background-color: @tool_color;
+}

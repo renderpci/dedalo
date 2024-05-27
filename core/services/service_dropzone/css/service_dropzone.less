@@ -3,6 +3,7 @@
 *
 * Included from main.less file
 */
+
 .service_dropzone {
 
 	>.content_data {
@@ -13,9 +14,6 @@
 		>.button.info {
 			background-color: #000000;
 			position: absolute;
-			// right: 0.75rem;
-			// top: 6.5rem;
-
 			right: 0;
 			top: 0;
 		}
@@ -26,15 +24,6 @@
 			margin-bottom: 1rem;
 			display: grid;
 			grid-template-columns: 1fr 3fr;
-
-			// padding: 1rem;
-			// display: grid;
-			// grid-template-columns: 1fr 1fr;
-			// width: 35rem;
-			// background-color: #e6e6e6;
-			// margin: 0.25rem;
-			// border-radius: 6px;
-			// line-height: 1.2rem;
 
 			>label, >div {
 				padding: 0.75em;
@@ -69,11 +58,9 @@
 				// each column inside
 				>* {
 					margin-right: 1em;
-					// min-width: 128px;
 				}
 
 				.details_wrapp {
-					// width: 23%;
 					padding: 0.5rem;
 					padding-right: 1rem;
 
@@ -99,8 +86,6 @@
 						width: 100%;
 						height: 100%;
 						object-fit: contain;
-						// background-color: #f9f5f5;
-						// border: 1px solid #f9f5f5;
 						background-image: url(../../themes/default/dedalo_logo_grey.svg);
 						background-repeat: no-repeat;
 						background-size: contain;
@@ -110,149 +95,6 @@
 				}
 			}//end >.file-row
 		}
-
-
-
-		// DES
-			// >form {
-			// 	display: flex;
-			//     flex-wrap: wrap;
-			// 	align-items: center;
-
-			// 	>label {
-			// 		padding: 1.5rem;
-			// 		padding-left: 1.75em;
-			// 		padding-right: 1.75em;
-			// 		background-color: #ececec;
-			// 		border: 1px dashed #f78a1c;
-			// 		border-radius: 0.25em;
-			// 		cursor: pointer;
-			// 		width: 100%;
-
-			// 		&.hover {
-			// 			// border: 1px dashed #20F41B;
-			// 			background-color: #ff9800;
-			// 			color: #ffffff;
-			// 			cursor: move !important;
-			// 			// cursor: grab;
-			// 		}
-
-			// 		&.loading_file {
-			// 			opacity: 0.25;
-			// 			pointer-events: none;
-			// 		}
-
-			// 		img, span {
-			// 			pointer-events: none;
-			// 		}
-
-			// 		>img {
-			// 			height: 1.5em;
-			// 			padding-right: 1em;
-			// 			vertical-align: text-bottom;
-			// 		}
-			// 	}
-
-			// 	// >label, >.filedrag {
-			// 	// 	line-height: 1em;
-			// 	// 	background-color: #ececec;
-			// 	// 	border-radius: 0.25em;
-			// 	// 	padding: 3em;
-			// 	// }
-
-			// 	>input {
-			// 		width: 0.1px;
-			// 		height: 0.1px;
-			// 		opacity: 0;
-			// 		overflow: hidden;
-			// 		position: absolute;
-			// 		z-index: -1;
-			// 	}
-
-			// 	// >.filedrag {
-			// 	// 	padding-top: 0.5em;
-			// 	// 	padding-bottom: 0.5em;
-			// 	// 	border: 1px dashed #ff9800;
-			// 	// 	color: #494949;
-
-			// 	// 	&.hover {
-			// 	// 		// border: 1px dashed #20F41B;
-			// 	// 		background-color: #ff9800;
-			// 	// 		color: #ffffff;
-			// 	// 		cursor: move;
-			// 	// 		// cursor: grab;
-			// 	// 	}
-			// 	// }
-
-			// 	// Removed for the time being
-			// 	// .file_info {
-			// 	// 	margin-left: 2em;
-			// 	// 	display: flex;
-			// 	// 	flex: 1 1;
-			// 	// 	align-items: center;
-			// 	// 	flex-wrap: wrap;
-
-			// 	// 	>div {
-			// 	// 		line-height: 1em;
-			// 	// 	}
-
-			// 	// 	img {
-			// 	// 		max-height: 100px;
-			// 	// 	}
-			// 	// }
-			// }
-
-		// DES
-			// >.progress_bar_container {
-			// 	padding: 0;
-
-			// 	>div.progress_info {
-			// 		font-size: 1.25em;
-			// 		color: #787878;
-			// 		font-weight: 300;
-			// 		padding-top: 0.75em;
-			// 		padding-bottom: 0.25em;
-			// 		height: 2.5rem;
-			// 	}
-
-			// 	>progress.progress_line {
-			// 		 width: 100%;
-			// 		 margin-bottom: 0.5em;
-			// 		 // -webkit-appearance: none;
-			// 		 // height: 3px;
-			// 	}
-			// 	// ::-webkit-progress-bar {
-			// 	//   background-color: grey;
-			// 	// }
-			// }//end >.progress_bar_container
-
-		// response_container
-			// >.response_container {
-			// 	padding-top: 0.5em;
-			// 	// padding-bottom: 1.5em;
-			// 	display: flex;
-
-
-			// 	>.response_msg {
-			// 		flex: 1 1 70%;
-
-			// 		&.success {
-			// 			color: green;
-			// 		}
-			// 		&.failed {
-			// 			color: red;
-			// 		}
-
-			// 		.blink {
-			// 		  animation: blinker 1s linear infinite;
-			// 		}
-			// 		@keyframes blinker {
-			// 		  50% {
-			// 		    opacity: 0;
-			// 		  }
-			// 		}
-			// 	}
-			// }
-
 	}//end content_data
+
 }//end .service_dropzone

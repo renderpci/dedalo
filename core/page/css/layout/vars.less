@@ -1,23 +1,41 @@
-// vars
-
+/**
+* vars
+*
+* Common vars definitions
+*
+* Included from main.less file
+*/
 
 // root. default values of vars could be overwritten from ontology CSS config
-	:root {
-		--component_height: auto; // default components wrapper height
-		--component_width: 50%; // default components wrapper width
-		// general sizes
-		--inspector_width: 18rem;
-		--component_label_height: 1.5rem;
-		--content_data_min_height: 2.66rem; // +/- 47.8px
-		// media heights (3d,av,image,pdf,svg)
-		--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf...) also component_text_area
-		--media_max_height: inherit; // Max height for a component wrapper of media (av, image, pdf...)
-		--media_min_width: 102px;
-		--view_text_height: 1.2rem;
-		--view_line_height: 5rem;
-	}
+:root {
+	--component_height: auto; // default components wrapper height
+	--component_width: 50%; // default components wrapper width
+	// general sizes
+	--inspector_width: 18rem;
+	--component_label_height: 1.5rem;
+	--content_data_min_height: 2.66rem; // +/- 47.8px
+	// media heights (3d,av,image,pdf,svg)
+	--media_min_height: 392px; // Min height for a component wrapper of media (av, image, pdf...) also component_text_area
+	--media_max_height: inherit; // Max height for a component wrapper of media (av, image, pdf...)
+	--media_min_width: 102px;
+	--view_text_height: 1.2rem;
+	--view_line_height: 5rem;
 
-
+	// grey_dark_1 (used in buttons text default)
+	--color_grey_dark_1: #212529;
+	// grey_dark_2. used as background for code blocks
+	--color_grey_dark_2: #2c313a;
+	// grey_dark_3. used as background for list header
+	--color_grey_dark_3: #5c5b5b;
+	// grey_medium_1. used by spinner base
+	--color_grey_medium_1: #d1d5db;
+	// grey_medium_2. used by separator
+	--color_grey_medium_2: #b0b0b0;
+	// white
+	--color_white: #ffffff;
+	// black
+	--color_black: #000000;
+}
 
 // colors
 	@color_orange_dedalo			: #f78a1c; // Dédalo logo orange
@@ -52,27 +70,7 @@
 	@color_tag_indexation_removed	: #2f8fff;
 	@color_tag_indexation_to_review	: #fc461a;
 
-// General sizes
-	// @media_min_height : 392px; // Min height for a component wrapper of media (av, image, pdf...) also component_text_area
-	// @media_max_height : inherit; // Max height for a component wrapper of media (av, image, pdf...)
-	// @text_area_min_height : 250px;
-	// @content_data_min_height: 3.5rem; // +/- 47.8px
-	// @content_data_min_height: 2.66rem; // +/- 47.8px
-
-	// @component_label_height : 1.5rem;
-	// @inspector_width : 18rem;
-
-	// media heights (images)
-	// @view_mini_height : 2rem;
-	// @view_line_height : 5rem;
-
-
 // break points
 	@width_break_point_0 : 1024px; // desktop small;
 	@width_break_point_1 : 960px; // mobile
 	@width_break_point_2 : 780px; // images minimum width
-
-
-// root vars are in main.less (!)
-
-

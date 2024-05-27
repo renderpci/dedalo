@@ -12,99 +12,83 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_propagate_component_data {
+.wrapper_tool.tool_propagate_component_data {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+
+		>.section_info {
+			display: flex;
+			justify-content: space-between;
+
+			.section_name {
+				font-size: 1.5rem;
+				padding: 1rem;
+			}
+			.section_tipo {
+				font-size: 1.5rem;
+				padding: 1rem;
+				color: #959595;
+				font-weight: 200;
+			}
 		}
 
-		>.content_data {
+		>.components_list_container {
+			display: block;
+			width: 100%;
+			border: none;
+			min-height: 8rem;
+			background-color: transparent;
 
-			>.section_info {
-				display: flex;
-				justify-content: space-between;
+			>.container_placeholder {
 
-				.section_name {
-					font-size: 1.5rem;
-					padding: 1rem;
-				}
-				.section_tipo {
-					font-size: 1.5rem;
-					padding: 1rem;
-					color: #959595;
-					font-weight: 200;
+			}
+
+			.wrapper_component {
+
+			}
+		}
+
+		>.buttons_container {
+			display: block;
+			padding: 1rem;
+
+			.info_text {
+				text-align: center;
+				font-size: 1.2rem;
+				padding-bottom: 1rem;
+			}
+
+			button {
+				@media screen and (max-width: @width_break_point_1) {
+					width: 100%;
+					margin-bottom: 1rem;
 				}
 			}
 
-			>.components_list_container {
-				display: block;
-				width: 100%;
-				border: none;
-				min-height: 8rem;
-				background-color: transparent;
-
-				>.container_placeholder {
-					// height: 8rem;
-				}
-
-				.wrapper_component {
-					// width: 100% !important;
-
-
-					// >.buttons_container {
-					// 	display: none !important;
-					// }
-				}
+			.button_add {
+				float: right;
 			}
-
-			>.buttons_container {
-				display: block;
-				padding: 1rem;
-
-				.info_text {
-					text-align: center;
-					font-size: 1.2rem;
-					padding-bottom: 1rem;
-				}
-
-				button {
-					@media screen and (max-width: @width_break_point_1) {
-						width: 100%;
-						margin-bottom: 1rem;
-					}
-				}
-
-				.button_add {
-					float: right;
-				}
-				.button_delete {
-					float: right;
-				}
+			.button_delete {
+				float: right;
 			}
+		}
 
-			>.response_message {
-				// padding-bottom: 1rem;
-				// color: #505050;
-				// font-weight: 300;
-				// font-size: 1.5rem;
-				// text-align: center;
-				// line-height: 3rem;
-				// letter-spacing: .05rem;
+		>.response_message {
+			margin-top: 0.5rem;
 
-				margin-top: 0.5rem;
-				// margin-bottom: 1rem;
-
-				.successfully {
-					font-weight: 600;
-				}
+			.successfully {
+				font-weight: 600;
 			}
+		}
 
-		}//end content_data
-	}//end wrapper_tool
-
-
+	}//end content_data
+}//end wrapper_tool
 
 // modal header tool modification
-	.tool_header.tool_propagate_component_data {
-		background-color: @tool_color;
-	}
+.tool_header.tool_propagate_component_data {
+	background-color: @tool_color;
+}

@@ -4,48 +4,18 @@
 * Included from main.less file
 */
 .component_json {
-	// background-color: #76fcc1 !important;
-	// z-index: 1;
 
 	// shared button save
 	// button save
 	.button_save {
-		// display: none; // init hidden
 		position: absolute;
 		right: 0px;
 		top: 1px;
 		z-index: 1;
 		height: 35px;
 		margin: 0;
-		background-color: #949494;
-		border: none;
-
-		// &:before {
-		// 	background-color: #2e6cd0;
-		// }
-		// padding-left: 1.7em;
-		// padding-right: 1.7em;
-		// background-color: #b7d2fd;
-		// border: 1px solid #3883fa;
-		// color: #3883fa;
-		// line-height: 28px;
-		// border-radius: 3px;
-		// cursor: pointer;
-		// &:active {
-		// 	background-color: #8FA3C4;
-		// 	color: #ffffff;
-		// }
-
-		// &.warning {
-		// 	display: flex;
-		// 	background-color: #e8e0e1;
-		// 	border: 1px solid darken(@color_danger, 5%);
-		// 	color: @color_danger;
-
-		// 	&:before {
-		// 		background-color: @color_danger !important;
-		// 	}
-		// }
+		background-color: transparent;
+		border-color: transparent;
 	}//end .button_save
 
 	//.edit
@@ -68,7 +38,6 @@
 
 			// editor container
 			>.content_value {
-				// align-items: initial;
 				width: 100%;
 				height: 100%;
 				position: relative;
@@ -84,8 +53,6 @@
 					display: table;
 					width: 100%;
 					height: 100%;
-					// height: inherit;
-					// height: calc(100% - var(--component_label_height));
 					min-height: var(--media_min_height); // 404px;
 				}
 			}
@@ -123,6 +90,7 @@
 	}
 
 	&.view_default {
+
 	}
 
 	&.view_line {
@@ -155,6 +123,5 @@
 			overflow: hidden;
 		}
 	}
-
 
 }//end .component_json

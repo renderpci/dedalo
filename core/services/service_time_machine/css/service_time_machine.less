@@ -3,11 +3,12 @@
 *
 * Included from main.less file
 */
+
 .service_time_machine {
-	// background-color: #d5fe9a;
 
 	&.view_default {
 		background-color: #fdf2dc;
+
 		.head_column {
 			text-align: left;
 
@@ -29,14 +30,13 @@
 				-webkit-box-orient: vertical;
 			}
 		}
-	}
+	}//end &.view_default
 
 	// view_mini. Used in inspector section and component changes history
 	&.view_mini {
 		.head_column {
 			font-size: 0.85rem;
 			text-align: left;
-			// padding: 0.25rem;
 
 			.name {
 			    margin-left: 0.1rem;
@@ -44,7 +44,6 @@
 		}
 
 		.column_service_time_machine {
-			// align-items: center; // vertical alignment
 			font-size: 0.85rem;
 			padding: 0.25rem;
 			overflow: hidden;
@@ -64,7 +63,7 @@
 			.column:nth-child(4) {
 				img {
 					max-height: 3rem;
-					// vertical-align: text-bottom;
+
 					&.tc, &.index, &.note, &.person, &.lang, &.geo {
 						max-height: 1rem;
 					}
@@ -79,37 +78,33 @@
 					}
 				}
 			}
-	}
+	}//end &.view_mini
 
-	&.time_machine_list{
+	&.time_machine_list {
 		// value
-			.column:nth-child(4) {
-				img {
-					max-height: 4rem;
-					// vertical-align: text-bottom;
+		.column:nth-child(4) {
+			img {
+				max-height: 4rem;
 
-					&.view_text {
-						max-height: 4rem;
-					}
-					&.svg {
-						min-height: 2rem;
-					}
-					&.draw{
-						max-height: 1.2rem;
-					}
+				&.view_text {
+					max-height: 4rem;
+				}
+				&.svg {
+					min-height: 2rem;
+				}
+				&.draw{
+					max-height: 1.2rem;
 				}
 			}
-
-	}
+		}
+	}//end &.time_machine_list
 
 	// view_tool. Used in tool_time_machine section and components list
 	&.view_tool {
-		// background-color: #ced9fd
 
 		.content_data > .section_record {
 
 			.column_service_time_machine {
-				// max-height: 5rem;
 				max-height: unset;
 
 				&:has(.component_image) {
@@ -130,14 +125,12 @@
 				.component_image {
 					height: 5rem;
 					max-height: 5rem;
-					// max-height: 4rem;
-					// background-color: #f0f0f0;
 					width: 100%;
 					object-fit: contain;
 				}
 			}
 		}
-	}
+	}//end &.view_tool
 
 	&.view_history {
 
@@ -151,7 +144,6 @@
 		}
 
 		.content_data > .section_record {
-			// pointer-events: none;
 			display: grid;
 			grid-template-columns: 1fr 1fr 1fr 2.65rem;
 			border-left: 2px solid @color_orange_dedalo;
@@ -181,6 +173,7 @@
 				grid-column: span 4;
 				font-size: 90%;
 				word-break: break-all;
+
 				img {
 					max-height: 1rem;
 					vertical-align: text-bottom;
@@ -201,6 +194,6 @@
     			background-color: @bg_color;
 			}
 		}
-	}
+	}//end &.view_history
 
 }//end .wrapper_service_time_machine

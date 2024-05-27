@@ -11,108 +11,88 @@
 @tool_color: #f78a1c;
 
 // wrapper_tool
-	.wrapper_tool.tool_time_machine {
+.wrapper_tool.tool_time_machine {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-template-rows: auto auto auto;
+
+		// component containers
+		.current_component_container, .preview_component_container {
+			position: relative;
+			display: block;
+
+			>.wrapper_component {
+				min-height: 4.2rem;
+			}
+
+			.time_label {
+				padding-top: 0.5em;
+				width: 100%;
+				text-align: center;
+			}
 		}
 
-		>.content_data {
+		.current_component_container {
+			margin-right: 0.5em;
+		}
+
+		.preview_component_container {
+			margin-left: 0.5em;
+		}
+
+		.tool_bar {
+			grid-column-start: 1;
+			grid-column-end: 3;
+			overflow: hidden;
+
+			@media screen and (max-width: @width_break_point_0) {
+				margin-top: 0px;
+			}
+
+			label {
+				text-transform: capitalize;
+				padding: 0.5em;
+				height: 2em;
+			}
+
+			select {
+
+			}
+
+			.button_apply {
+				float: right;
+			}
+		}//end .tool_bar
+
+		// time_machine container (list)
+		.wrapper_service_time_machine {
 			display: grid;
-			grid-template-columns: 1fr 1fr;
-			// grid-template-rows: auto 2em 1fr;
-			grid-template-rows: auto auto auto;
+			height: 100%;
+			grid-column-start: 1;
+			grid-column-end: 3;
+		}//end .wrapper_tm
 
-			// component containers
-			.current_component_container, .preview_component_container {
-				// flex: 1 1 50%;
-				position: relative;
+		// header section list
+		.header_wrapper_list {
+			top: 0px;
+		}
 
-				// display: grid;
-				// grid-template-rows: 1fr auto;
-				display: block;
+		// list button view
+		.button_view {
+			height: 100%;
+			width: 100%;
+		}
 
-				>.wrapper_component {
-					min-height: 4.2rem;
-				}
-
-				.time_label {
-					padding-top: 0.5em;
-					width: 100%;
-					text-align: center;
-				}
-			}
-
-			.current_component_container {
-				// background-color: #FAF55D;
-				margin-right: 0.5em;
-			}
-
-			.preview_component_container {
-				// background-color: #8AF9FA;
-				margin-left: 0.5em;
-			}
-
-			.tool_bar {
-				// background-color: #f0f0f0;
-				grid-column-start: 1;
-				grid-column-end: 3;
-				// padding-top: 0.5em;
-				// padding-bottom: 0.5em;
-				overflow: hidden;
-				// margin-top: -46px;
-				@media screen and (max-width: @width_break_point_0) {
-					margin-top: 0px;
-				}
-
-				label {
-					text-transform: capitalize;
-					padding: 0.5em;
-					height: 2em;
-				}
-
-				select {
-					// padding: 0.5em;
-					// height: 2em;
-				}
-
-				.button_apply {
-					// background-color: #ff9800;
-					// color: white;
-					// padding: 0.15em;
-					// padding-left: 1em;
-					// padding-right: 1em;
-					float: right;
-				}
-			}//end .tool_bar
-
-			// time_machine container (list)
-			.wrapper_service_time_machine {
-				// background-color: #f9fcf6;
-				display: grid;
-				// flex: 1 1 100%;
-				height: 100%;
-				// overflow: auto;
-				grid-column-start: 1;
-				grid-column-end: 3;
-			}//end .wrapper_tm
-
-			// header section list
-			.header_wrapper_list {
-				top: 0px;
-			}
-
-			// list button view
-			.button_view {
-				height: 100%;
-				width: 100%;
-			}
-		}//end >.content_data
-	}//end wrapper_tool
-
-
+	}//end >.content_data
+}//end wrapper_tool
 
 // modal header tool modification
-	.tool_header.tool_time_machine {
-		background-color: @tool_color;
-	}
+.tool_header.tool_time_machine {
+	background-color: @tool_color;
+}

@@ -6,6 +6,80 @@ global $updates;
 $updates = new stdClass();
 
 
+
+$v=621; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 1;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 0;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// DATABASE UPDATES
+		// Remove relations from activity->project (component_portal dd550)
+		// This data is huge (hundred of millions) in installations with many projects and is not really useful
+		// because normally, admins do not need to deep search across projects (JOINS)
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query("
+				DELETE FROM \"relations\" WHERE from_component_tipo = 'dd550';
+			");
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+		$ar_tables = [
+			'matrix',
+			'matrix_activities',
+			'matrix_activity',
+			'matrix_counter',
+			'matrix_dataframe',
+			'matrix_dd',
+			'matrix_hierarchy',
+			'matrix_hierarchy_main',
+			'matrix_indexations',
+			'matrix_layout',
+			'matrix_layout_dd',
+			'matrix_list',
+			'matrix_nexus',
+			'matrix_nexus_main',
+			'matrix_notes',
+			'matrix_profiles',
+			'matrix_projects',
+			'matrix_stats',
+			'matrix_time_machine'
+		];
+		$json_files =[
+			'objet_to_object.json', // @todo working here (!)
+			'cult_to_culture.json', // @todo working here (!)
+			'peri_to_dc.json', // @todo working here (!)
+		];
+		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+		$script_obj = new stdClass();
+			$script_obj->info			= "Move tld from objet => object, cult => culture, peri => dc";
+			$script_obj->script_class	= "transform_data";
+			$script_obj->script_method	= "changes_in_tipos";
+			$script_obj->script_vars	= [
+				$ar_tables,
+				$json_files
+			]; // Note that only ONE argument encoded is sent
+		$updates->$v->run_scripts[] = $script_obj;
+
+
+
 $v=620; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -29,16 +103,20 @@ $updates->$v = new stdClass();
 			<br>Add them to your 'config' file to enable new features, such as unified thumbnails and image versions of PDF documents.
 			<br>
 			<br>
-			<code>// thumb common. This block is used by all components to create and display thumbnail images
-			<br>// dedalo_thumb_extension. Default: 'jpg'
-			<br>define('DEDALO_THUMB_EXTENSION',			'jpg');
-			<br>// dedalo_quality_thumb. Default: 'thumb')
-			<br>define('DEDALO_QUALITY_THUMB',				'thumb');
-			<br>
-			<br>// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
-			<br>// Allows you to create image versions of the PDF, useful for previews or web versions
-			<br>define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
+
+			<pre class=\"language-php\">
+			<code>
+			// thumb common. This block is used by all components to create and display thumbnail images
+			// dedalo_thumb_extension. Default: 'jpg'
+			define('DEDALO_THUMB_EXTENSION',	'jpg');
+			// dedalo_quality_thumb. Default: 'thumb')
+			define('DEDALO_QUALITY_THUMB',	'thumb');
+			// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
+			// Allows you to create image versions of the PDF, useful for previews or web versions
+			define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
 			</code>
+			</pre>
+
 			<br>DEDALO_IMAGE_THUMB_DEFAULT is changed by generic DEDALO_QUALITY_THUMB
 			<br>See sample.config.php file to review all changes.
 			<br>More help in <a href='https://dedalo.dev/docs/config/config/' target='_blank'>Config documentation</a>
@@ -50,8 +128,13 @@ $updates->$v = new stdClass();
 			<br>therefore change your config.php file to include the new tld: tchi
 			<br>
 			<br>
-			<code>define('DEDALO_PREFIX_TIPOS', ['tchi']
+
+			<pre class=\"language-php\">
+			<code>
+			define('DEDALO_PREFIX_TIPOS', ['tchi']
 			</code>
+			</pre>
+
 			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/#defining-prefix-tipos' target='_blank'>defining-prefix-tipos</a>
 			<br>Note: When the update will finish, review your hierarchies to include the new tchi as your previous numisdata279 (Finds).
 			<br>
@@ -63,9 +146,14 @@ $updates->$v = new stdClass();
 			<br>In some configuration the update can not create the thumbs for PDF files and you will get an error as:
 			<br>
 			<br>
-			<code>convert: attempt to perform an operation not allowed by the security policy `PDF' @
-			<br>error/constitute.c/IsCoderAuthorized/421.|convert: no images defined
+
+			<pre class=\"language-php\">
+			<code>
+			convert: attempt to perform an operation not allowed by the security policy `PDF' @
+			error/constitute.c/IsCoderAuthorized/421.|convert: no images defined
 			</code>
+			</pre>
+
 			<br> To solve this issue you will need to change the ImageMagick policy for PDF.
 			<br>
 			<br><b>IMPORTANT NOTE: Changing the ImageMagick policy.xml rules can be dangerous for your server!.
@@ -76,13 +164,22 @@ $updates->$v = new stdClass();
 			<br>Usually in Ubuntu servers the file will be in:
 			<br>
 			<br>
-			<code>/etc/ImageMagick-6/policy.xml
+
+			<pre class=\"language-php\">
+			<code>
+			/etc/ImageMagick-6/policy.xml
 			</code>
+			</pre>
+
 			<br> An the line to comment or remove is:
 			<br>
 			<br>
-			<code> ". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
+
+			<pre class=\"language-php\">
+			<code>
+			". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
 			</code>
+			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
 

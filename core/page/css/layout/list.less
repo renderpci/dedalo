@@ -5,8 +5,6 @@
 * Shared by section and portal.
 */
 
-
-
 // list_body. Used in sections and portals in list mode
 	.list_body {
 		display: grid;
@@ -22,70 +20,10 @@
 		}
 		>.content_data {
 			display: contents;
-			// outline: 1px solid @color_grey_light;
 
 			.no_records {
-				// position: absolute;
-				// top: 2rem;
 				grid-column: 1/-1; // expand across all empty columns
 			}
-
-			// DES
-				// .column_section_id {
-				// 	display: flex;
-				// 	flex-direction: column;
-				// 	justify-content: flex-start;
-				// 	background-color: #f6f6f6;
-
-				// 	>button {
-				// 		display: flex;
-				// 		width: 100%;
-				// 		margin: 0px;
-				// 		padding: 0.5em;
-				// 		border-radius: 0px;
-
-				// 		// justify-content
-				// 		justify-content: flex-end;
-				// 		&.button_edit {
-				// 			justify-content: space-between;
-				// 			// justify-content: flex-end;
-				// 		}
-				// 		&.button_delete {
-				// 			// justify-content: flex-end;
-				// 		}
-
-				// 		>.section_id {
-				// 			font-size: 1.25rem;
-				// 			padding-right: 3px;
-				// 			padding-left: 2px;
-				// 		}
-				// 		>.icon {
-				// 			height: 1.4rem;
-				// 			width: 1.3rem;
-				// 			margin-right: -2px;
-				// 		}
-
-				// 		&:hover {
-				// 			z-index: 99999;
-
-				// 			// background-color
-				// 			background-color: @color_orange_dedalo;
-				// 			&.button_edit {
-				// 				background-color: @color_green_success;
-				// 			}
-				// 			&.button_delete {
-				// 				background-color: @color_danger;
-				// 			}
-
-				// 			>.section_id {
-				// 				color: #ffffff;
-				// 			}
-				// 			>.icon {
-				// 				background-color: #ffffff;
-				// 			}
-				// 		}
-				// 	}
-				// }//end .column_section_id
 		}
 
 		// list_body columns inside list_body are always flex (!)
@@ -123,26 +61,18 @@
 	.wrapper_component.edit >.list_body {
 		padding: 1rem;
 		padding-top: 0.5rem; // padding to label (on top)
-		// header must be auto to prevent equal height than body
-		// grid-template-rows: 1.8rem auto;
 	}
-
-
 
 // hilite_row
 	.hilite_row {
-		@line_color : #acacac; // #f78a1c
+		@line_color : #acacac;
 		background-color: #dedede42;
 		display: block;
 		position: absolute;
-
 		z-index: 1;
 		box-shadow: 0px 2px 4px 0px #8e8e8e;
-
 		pointer-events: none;
 	}
-
-
 
 // section record mobile version
 	.column:before {
@@ -158,7 +88,6 @@
 		.content_data.list.section {
 			display: block;
 			padding-top: 0.25rem;
-			// margin-top: -2rem; // compensate section_record margin-top
 
 			.section_record:first-of-type {
 				.column:first-of-type {
@@ -185,8 +114,7 @@
 						display: contents;
 					}
 
-					.section_record  {
-						// display: contents;
+					.section_record {
 						display: block;
 					}
 
@@ -195,7 +123,6 @@
 						align-items: center;
 						height: 100%;
 						width: 22%;
-						// width: auto;
 						background-color: #eeeeee;
 						padding: 0.25rem;
 						padding-left: 0.5rem;
@@ -207,21 +134,18 @@
 						left: -0.2rem;
 						top: -0.5rem;
 						height: calc(100% + 0.5rem);
-						border-bottom: 1px solid #e6e6e6;
+						border-bottom: 1px solid @color_grey_medium;
 					}
 					&.column_section_id {
 						position: -webkit-sticky;
 						position: sticky;
 						top: 0px;
 						z-index: 1;
-						// border-bottom: 1px solid #cfcfcf;
 						box-shadow: 0px 4px 2px 0px #afafaf;
 						font-size: 1.5rem;
 						overflow: hidden;
-
 						margin-top: 2rem;
 						margin-bottom: 0.25rem;
-
 						grid-template-columns: 22% 1fr 1fr;
 						display: grid;
 
@@ -238,8 +162,6 @@
 						}
 
 						span {
-							// height: 1.5rem;
-							// min-width: 1.5rem;
 
 							&.section_id {
 								font-size: 1.3rem;
@@ -255,32 +177,13 @@
 							}
 						}
 					}
-				}
-			}
-		}
-	}
-
-
+				}//end >.column
+			}//end >.section_record.list
+		}//end .content_data.list.section
+	}//end @media screen and (max-width: @width_break_point_0)
 
 // header_wrapper_list
 	.header_wrapper_list {
-		// position: -webkit-sticky;
-		// // position: sticky;
-		// position: relative;
-		// top: 2em; // default
-		// color: @color_grey_ultradark;
-		// width: 100%;
-		// display: grid;
-		// line-height: 1.1em;
-		// z-index: 1;
-		// font-size: 13px;
-
-		// &.with_debug_info_bar {
-		// 	top: 3.9em;
-		// }
-		// &.with_initiator {
-		// 	top: 0px;
-		// }
 
 		// head_column
 		.head_column {
@@ -289,7 +192,7 @@
 			border-right: 1px solid @color_grey_medium;
 			box-shadow: 0px 1px 0px 0px #e5e5e5;
 			overflow: hidden;
-			color: #5c5b5b;
+			color: var(--color_grey_dark_3);
 			font-weight: 300;
 			padding: 0px;
 			padding-left: 0.25rem;
@@ -344,13 +247,9 @@
 
 			// header column sub-labels inside sub_header container
 			.sub_header {
-				// display: flex;
-				// flex-wrap: nowrap;
-
 				display: grid;
 
 				>.head_column {
-					// border-right: 1px solid @color_grey_medium;
 					padding: 0px;
 					height: 100%;
 					flex: 1;
@@ -365,8 +264,6 @@
 				display: block;
 				padding: 0px;
 				margin: 0.33rem;
-				// margin-top: 0.3rem;
-				// margin-bottom: 0.4rem;
 				margin-top: 0.25rem;
 				margin-bottom: 0.25rem;
 			}
@@ -383,7 +280,6 @@
 			// order. column_order_group
 			>.order {
 				width: 13px;
-				// min-width: 13px;
 				height: 15px;
 				margin-left: 0px;
 				vertical-align: text-bottom;
@@ -408,48 +304,12 @@
 
 				&.desc {
 					opacity: 0.8;
-					// background-image: url('../../themes/default/icons/sort_desc.svg');
 					background-image: url('../../themes/default/icons/sort_asc.svg');
 					transform: rotate(180deg);
 				}
 			}//end >.order
 		}
-
-		// header column labels
-			// >.head_column {
-			// 	display: flex;
-			// 	padding: 0px;
-
-			// 	&.with_sub_header {
-			// 		display: block;
-			// 		padding-left: 0px;
-			// 		padding-right: 0px;
-			// 		padding-bottom: 0px;
-			// 		span {
-			// 			opacity: 0.7;
-			// 			padding-left: 0.5em;
-			// 		}
-			// 	}
-
-			// 	&.id {
-			// 		text-align: right;
-			// 		padding-right: 0.75em !important;
-			// 	}
-
-			// 	// inside component (portal case)
-			// 	.wrapper_component & {
-			// 		outline: 1px solid @color_grey_light;
-			// 		padding: 0.5em;
-			// 		padding-top: 0.25em;
-			// 		padding-bottom: 0.25em;
-			// 		padding-left: 0.25em;
-			// 		background-color: @color_grey_light;
-			// 		color: @color_grey_dark;
-			// 	}
-			// }
 	}//end header_wrapper_list
-
-
 
 // column
 	.column {
@@ -460,18 +320,13 @@
 		justify-content: flex-start; // vertical distribution
 		align-content: flex-start; // vertical distribution
 		height: auto;
+		padding: 0.2rem;
+		padding-bottom: 0.11rem;
 
 		@common_padding: 0.12rem;
 
 		// cell outline
-		// outline: 1px solid @color_grey_light;
-		box-shadow: 0px 1px 0px 0px #e6e6e6;
-
-		// mobile custom
-		// @media screen and (max-width: @width_break_point_0) {
-			// width: 72%;
-			// padding-left: 0.3rem;
-		// }
+		box-shadow: 0px 1px 0px 0px @color_grey_medium;
 
 		// every column
 		&.column_section {
@@ -486,7 +341,7 @@
 		}
 
 		&.column_info {
-			// padding: 0.5em;
+
 		}
 
 		&.column_ddinfo {
@@ -499,13 +354,6 @@
 					padding-left: 0.3rem;
 				}
 			}
-		}
-
-		&.remove_column {
-			// padding-top: 0.25em;
-		}
-
-		&.component_portal {
 		}
 
 		&.empty {
@@ -529,15 +377,6 @@
 			height: 0.9rem;
 		}
 
-		// >*:not(.media):not(.portal):not(.edit_button) {
-		// >* {
-		// 	margin: 0.25rem;
-
-		// 	@media screen and (max-width: @width_break_point_0) {
-		// 		padding-left: 0.3rem;
-		// 	}
-		// }
-
 		>.media, >.portal, >.edit_button {
 			margin: 0px;
 		}
@@ -552,7 +391,6 @@
 			flex: 1 1;
 			padding: 0px;
 			margin: 0px;
-			// height: inherit;
 			height: 100%;
 
 			@media screen and (max-width: @width_break_point_0) {
@@ -582,13 +420,6 @@
 			padding: 0px;
 		}
 
-		// has section_record
-		// (!) has pseudo element its only supported by Chrome and Webkit, not by Firefox (October 2022)
-		// &:has(>.section_record) {
-			padding: 0.2rem;
-			padding-bottom: 0.11rem;
-		// }
-
 		// columns inside another list_body do not have box-shadow (https://developer.mozilla.org/en-US/docs/Web/CSS/:has)
 		&:has(.list_body) {
 			.column {
@@ -602,27 +433,6 @@
 			box-shadow: none;
 		}
 	}//end .column
-
-	// .autocomplete_data_li {
-	// 	.column {
-
-	// 	}
-	// }
-
-
-	// rows in section in list mode must be min-height: 3rem;
-	// .wrapper_section.list {
-	// 	.column {
-
-	// 		&.column_section_id {
-	// 			min-width: 70px;
-
-	// 			--font_size : 1.1vw;
-	// 			font-size: var(--font_size);
-	// 		}
-	// 	}
-	// }
-
 
 	// view_line case
 	.wrapper_component.view_line > .content_data >.section_record >.column {
@@ -686,8 +496,6 @@
 		}
 	}//end id_column
 
-
-
 // column_section_id
 	.column.column_section_id {
 		background-color: #f6f6f6;
@@ -706,12 +514,9 @@
 			padding-top: 0.25rem;
 			padding-bottom: 0.25rem;
 			border-radius: 0px;
-
-			// justify-content
 			justify-content: flex-end;
 
 			&.link_button {
-				// padding-right: 0.33rem;
 				font-size: 1.25rem;
 				height: 3rem;
 				height: 100%;
@@ -722,8 +527,6 @@
 			}
 
 			&.button_delete {
-				// padding: 0.63rem;
-				// padding: 0.4rem;
 				padding-right: 0.63rem;
 			}
 
@@ -748,14 +551,11 @@
 			}
 
 			>.section_id {
-				// font-size: 1.25rem;
 				padding-right: 3px;
 				padding-left: 2px;
 				pointer-events: none;
-
 				--font_size: 1.25rem;
 				font-size: var(--font_size);
-
 				height: 1.4rem;
 				line-height: 1.4rem;
 
@@ -773,7 +573,6 @@
 		}//end >button
 
 		>.section_id_container {
-			// padding: 0.75rem;
 			padding: 0.12rem;
 			font-size: 0.96rem;
 			text-align: right;
@@ -781,8 +580,6 @@
 		}
 
 	}//end .column_section_id
-
-
 
 // column_remove
 	.column.column_remove {
@@ -797,12 +594,10 @@
 			width: 100%;
 			margin: 0px;
 			padding: 0.5em;
-			// padding-top: 0.75rem;
-			// padding-bottom: 0.75rem;
 			padding-bottom: 1rem;
 			border-radius: 0px;
 			justify-content: space-between;
-			// justify-content: flex-end;
+
 			@media screen and (max-width: @width_break_point_0) {
 				justify-content: flex-start;
 			}

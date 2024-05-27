@@ -12,36 +12,34 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_dev_template {
+.wrapper_tool.tool_dev_template {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+
+		>.info_container {
+			padding: 2rem;
+			padding-left: 0px;
+			line-height: 1.5rem;
+			font-size: 1.1rem;
 		}
 
-		>.content_data {
+		>.footer_buttons_container {
+			padding-top: 2rem;
+		}
 
-			>.info_container {
-				padding: 2rem;
-				padding-left: 0px;
-				line-height: 1.5rem;
-				font-size: 1.1rem;
-			}
+		>.value_container {
+			margin: 1rem;
+			min-height: 7rem;
+		}
 
-			>.footer_buttons_container {
-				padding-top: 2rem;
-			}
-
-			>.value_container {
-				margin: 1rem;
-				min-height: 7rem;
-			}
-
-		}//end content_data
-	}//end wrapper_tool
-
-
+	}//end content_data
+}//end wrapper_tool
 
 // modal and new window header tool modification
-	.tool_header.tool_dev_template {
-		background-color: @tool_color;
-	}
+.tool_header.tool_dev_template {
+	background-color: @tool_color;
+}

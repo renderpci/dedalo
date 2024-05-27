@@ -3,8 +3,8 @@
 *
 * Included from main.less file
 */
+
 .wrapper_widget.descriptors {
-	// background-color: #fcefe6;
 	display: block;
 	width: 100%;
 	padding: 0px;
@@ -14,11 +14,10 @@
 	>.content_data {
 		padding: 0px;
 		position: relative;
-	}//end .content_data
+	}
 	.button_display {
 		padding: 0px;
 		padding-left: 0.5rem;
-		// background-color: #d1e7ab;
 	}
 	.spinner {
 		position: relative;
@@ -26,30 +25,22 @@
 		margin-top: 0;
 	}
 
-
-	&.list {
-		>.content_data {
-
-		}
-	}
-
 	&.edit {
 
 		.values_container {
-			// background-color: #ebbcc5;
 
 			>.label {
 				padding: 0.5rem;
 				text-align: right;
-				background-color: #b9b9b9;
-				color: white;
+				background-color: @color_grey_dark;
+				color: var(--color_white);
 			}
 
 			>.descriptors_list_container {
 				padding: 0px;
 				margin: 0px;
 				margin-bottom: 1rem;
-				outline: 1px solid #e6e6e6;
+				outline: 1px solid @color_grey_medium;
 
 				>.wrapper_dd_grid {
 
@@ -69,60 +60,6 @@
 					}
 				}
 			}
-
-			// li
-				// >.widget_item.descriptors {
-				// 	// background-color: #fcefe6;
-				// 	display: flex;
-				// 	align-items: center;
-				// 	flex-wrap: wrap;
-				// 	padding: 0.25rem;
-				// 	padding-left: 0rem;
-				// 	padding-right: 0rem;
-				// 	// color: @color_grey_dark;
-				// 	opacity: 0.6;
-				// 	padding-top: 0;
-				// 	padding-bottom: 2px;
-
-				// 	>.value {
-				// 		// background-color: #c4dbfd;
-				// 		margin-right: 2px;
-				// 		padding: 0px;
-				// 		padding-left: 2px;
-				// 		padding-right: 2px;
-				// 		line-height: 1rem;
-
-				// 		&.link:hover {
-				// 			opacity: 1 !important;
-				// 			cursor: pointer;
-				// 			background-color: @color_orange_dedalo;
-				// 			color: white;
-				// 		}
-				// 	}
-
-				// 	>.descriptors_list_container {
-				// 		// background-color: #c7c8fe;
-				// 		margin: 0px;
-				// 		padding: 0px;
-				// 		width: 100%;
-				// 		// z-index: 999;
-				// 		// overflow: auto;
-				// 		>.wrapper_dd_grid {
-				// 			padding: 0.25rem;
-				// 			padding-bottom: 0px;
-
-				// 			.column {
-				// 				outline: none;
-				// 				display: block;
-
-				// 				// span
-				// 				.empty {
-				// 					display: contents;
-				// 				}
-				// 			}
-				// 		}
-				// 	}
-				// }
 		}
 	}
 

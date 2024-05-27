@@ -4,57 +4,24 @@
 * Included from main.less file
 */
 .section_group {
-	// background-color: #50f9af;
 
 	&.edit {
-		// grid-column: 1 / span 10;
 
 		// inside .section_record.edit context
 		.section_record.edit & {
-			//background-color: bisque;
-			//outline: 1px solid rgba(216, 216, 216, 0.43);
 			width: 100%;
 			margin-bottom: 0.5rem;
-			//border: 1px solid #BFBFBF;
 
 			@media screen and (max-width: @width_break_point_1) {
 				width: 100% !important;
 			}
 
 			>.label {
-				// background-color: @color_grey_dark;
-				// //background-image: url('../../themes/default/bg_black.png');
-				// color: #ffffff;
-				// padding: 1em;
-				// cursor: pointer;
-				// &:active {
-				// 	opacity: 0.5;
-				// }
 				.label_top; // defined in layout
 			}
 			>.content_data {
-				/* FLEX MODEL
-					// flex base config
-					// .section_group_body_base;
-					margin: 0;
-					padding: 0;
-					// flex config
-					display: flex;
-					justify-content: flex-start;
-					align-items: stretch;
-					align-content: stretch;
-					flex-wrap: wrap;
-					// box-shadow: 1px 0px 0 @color_grey_medium;
-					*/
-
-				// grid model test
-				// background-color: #f4ece2;
 				display: grid;
-				// grid-template-columns: repeat(10, 10%);
-				// grid-template-rows: repeat(10, auto);
-				// grid-gap: 2px;
 				align-content: stretch;
-				// grid-template-columns: repeat(4, 1fr);
 
 				@media screen and (max-width: @width_break_point_1) {
 					display: block;
@@ -64,4 +31,4 @@
 
 	}//end &.edit
 
-}
+}//end .section_group

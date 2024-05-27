@@ -12,292 +12,269 @@
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_import_files {
+.wrapper_tool.tool_import_files {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.content_data {
+
+		// common
+		input[type='checkbox'] {
+			margin-left: 0.5rem;
+			vertical-align: middle;
+			transform: scale(1.2);
 		}
 
-		>.content_data {
+		>.options_container {
+			display: flex;
+			justify-content: space-around;
+			align-items: center;
 
-			// common
-			input[type='checkbox'] {
+			// IOS style switch
+			@switch_height: 20px;
+			@switch_width: 40px;
+
+			.switcher {
+				cursor: pointer;
+				display: inline-block;
+				-webkit-tap-highlight-color: transparent;
+				flex: 0 0 @switch_width !important;
+				padding: 0.25rem;
+
+				>i {
+					position: relative;
+					display: inline-block;
+					margin-right: .5rem;
+					width: @switch_width;
+					height: @switch_height;
+					background-color: @color_grey_medium;
+					border-radius: 23px;
+					vertical-align: text-bottom;
+					transition: all 0.3s linear;
+
+					&:before {
+						content: '';
+						left: 0px;
+						position: absolute;
+						width: 37px;
+						height: 16px;
+						background-color: #eee;
+						border-radius: 11px;
+						transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
+						transition: all 0.25s linear;
+					}
+
+					&:after {
+						content: '';
+						left: 0px;
+						position: absolute;
+						height: 16px;
+						width: 16px;
+						background-color: #ffffff;
+						border-radius: 11px;
+						box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
+						transform: translate3d(2px, 2px, 0);
+						transition: all 0.2s ease-in-out;
+					}
+				}
+
+				&:active i::after {
+					transform: translate3d(2px, 2px, 0);
+					width: 28px;
+				}
+
+				&:active input:checked + i::after {
+					transform: translate3d(16px, 2px, 0);
+				}
+
+				input {
+					display: none;
+
+					&:checked + i {
+						background-color: @color_green_switch_active;
+					}
+
+					&:checked + i::before {
+						transform: translate3d(18px, 2px, 0) scale3d(0, 0, 0);
+					}
+
+					&:checked + i::after {
+						transform: translate3d(22px, 2px, 0);
+					}
+				}
+			}//end .switcher
+		}
+
+		>.tool_configuration_options {
+
+			.checkbox-label {
 				margin-left: 0.5rem;
-				vertical-align: middle;
-				transform: scale(1.2);
+				margin-right: 0.5rem;
 			}
 
-			>.options_container {
+			.name_control {
+				margin-bottom: 1px;
+				height: 1.5rem;
 				display: flex;
-				justify-content: space-around;
+				align-items: center;
+			}
+
+			>.name_control_field {
+
+			}
+
+			>.name_control_section_id {
+
+			}
+
+			>.same_name_same_section {
+
+			}
+		}
+
+		>.drop_zone {
+			background-color: #b0feee;
+		}
+
+		// template_container. Where de rows are placed
+		>.template_container {
+			outline: 1px solid @color_grey_medium;
+			padding: 0.25rem;
+			padding-left: 0.25rem;
+			padding-bottom: 0.25rem;
+			margin-top: 1em;
+			border-radius: 1em;
+
+			&.name_id{
+				background-color: #e3bf75a1;
+			}
+			&.same_name_section{
+				background-color: #aa6a9ea1;
+			}
+
+			// container for buttons and progress bar
+			>.row {
+				display: flex;
+				margin: 1rem;
+				margin-bottom: 0px;
+				padding-bottom: 0px;
+
+				// buttons add files etc.
+				>.column_left {
+
+				}
+				// progress bar
+				>.column_right {
+
+				}
+			}
+
+			>.table {
+				margin-top: 1rem;
+				margin-bottom: 1rem;
+			}
+
+			// file-row. Each row line
+			.file-row {
+				margin: 1em;
+				margin-bottom: 0px;
+				margin-top: 0.5rem;
+				min-height: 72px;
+				display: grid;
+				grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem 1.5rem;
 				align-items: center;
 
-				// ios style switch
-				@switch_height: 20px;
-				@switch_width: 40px;
-
-				.switcher {
-					cursor: pointer;
-					display: inline-block;
-					-webkit-tap-highlight-color: transparent;
-					flex: 0 0 @switch_width !important;
-					padding: 0.25rem;
-
-					>i {
-						position: relative;
-						display: inline-block;
-						margin-right: .5rem;
-						width: @switch_width;
-						height: @switch_height;
-						background-color: @color_grey_medium;
-						border-radius: 23px;
-						vertical-align: text-bottom;
-						transition: all 0.3s linear;
-
-						&:before {
-							content: '';
-							left: 0px;
-							position: absolute;
-							width: 37px;
-							height: 16px;
-							background-color: #eee;
-							border-radius: 11px;
-							transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
-							transition: all 0.25s linear;
-						}
-
-						&:after {
-							content: '';
-							left: 0px;
-							position: absolute;
-							height: 16px;
-							width: 16px;
-							background-color: #ffffff;
-							border-radius: 11px;
-							box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
-							transform: translate3d(2px, 2px, 0);
-							transition: all 0.2s ease-in-out;
-						}
-					}
-
-					&:active i::after {
-						transform: translate3d(2px, 2px, 0);
-						width: 28px;
-					}
-
-					&:active input:checked + i::after {
-						transform: translate3d(16px, 2px, 0);
-					}
-
-					input {
-						display: none;
-
-						&:checked + i {
-							background-color: @color_green_switch_active;
-						}
-
-						&:checked + i::before {
-							transform: translate3d(18px, 2px, 0) scale3d(0, 0, 0);
-						}
-
-						&:checked + i::after {
-							transform: translate3d(22px, 2px, 0);
-						}
-					}
-				}//end .switcher
-			}
-
-			>.tool_configuration_options {
-
-				.checkbox-label {
-					margin-left: 0.5rem;
-					margin-right: 0.5rem;
+				// each column inside
+				>* {
+					margin-right: 1em;
 				}
 
-				.name_control {
-					margin-bottom: 1px;
-					height: 1.5rem;
-					display: flex;
-					align-items: center;
-				}
+				>.preview_wrapp {
+					overflow: hidden;
+					height: 100%;
 
-				>.name_control_field {
-
-				}
-
-				>.name_control_section_id {
-
-				}
-
-				>.same_name_same_section {
-
-				}
-			}
-
-			>.drop_zone {
-				background-color: #b0feee;
-			}
-
-			// template_container. Where de rows are placed
-			>.template_container {
-				outline: 1px solid @color_grey_medium;
-				padding: 0.25rem;
-				padding-left: 0.25rem;
-				padding-bottom: 0.25rem;
-				margin-top: 1em;
-				border-radius: 1em;
-
-				&.name_id{
-					background-color: #e3bf75a1;
-				}
-				&.same_name_section{
-					background-color: #aa6a9ea1;
-				}
-
-				// container for buttons and progress bar
-				>.row {
-					display: flex;
-					margin: 1rem;
-					margin-bottom: 0px;
-					padding-bottom: 0px;
-					// background-color: #fdfcc0;
-
-					// buttons add files etc.
-					>.column_left {
-
-					}
-					// progress bar
-					>.column_right {
-
-					}
-				}
-
-				>.table {
-					margin-top: 1rem;
-					margin-bottom: 1rem;
-				}
-
-				// file-row. Each row line
-				.file-row {
-					margin: 1em;
-					margin-bottom: 0px;
-					margin-top: 0.5rem;
-					// display: flex;
-					// flex-wrap: wrap;
-					// justify-content: left;
-					// align-items: center;
-					// outline: 1px solid #f9f5f5;
-					min-height: 72px;
-
-					// grid way
-					display: grid;
-    				grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem 1.5rem;
-					align-items: center;
-
-					// each column inside
-					>* {
-						margin-right: 1em;
-						// min-width: 128px;
-					}
-
-					>.preview_wrapp {
-						overflow: hidden;
+					img {
+						width: 100%;
 						height: 100%;
-
-						img {
-							width: 100%;
-							height: 100%;
-							object-fit: contain;
-							// background-color: #f9f5f5;
-							// border: 1px solid #f9f5f5;
-						}
+						object-fit: contain;
 					}
+				}
 
-					.details_wrapp {
-						// width: 23%;
-						padding: 0.5rem;
-						padding-left: 1rem;
-						padding-right: 1rem;
-
-						>.name {
-							margin-right: 0.33rem;
-						}
-						>.error {
-							margin-right: 0.33rem;
-						}
-						>.size {
-							margin-right: 0.33rem;
-						}
-					}
-				}//end .file-row
-			}
-
-			>.inputs_container {
-				margin-top: 1.5rem;
-				margin-bottom: 1.5rem;
-
-				.inputs_container_caption {
-					display: inline-block;
-					background-color: #e6e6e6;
-					width: auto;
+				.details_wrapp {
 					padding: 0.5rem;
-					padding-left: 2rem;
-					padding-right: 2rem;
-					border-top-left-radius: 0.33rem;
-					border-top-right-radius: 0.33rem;
-					margin-left: -1px;
+					padding-left: 1rem;
+					padding-right: 1rem;
+
+					>.name {
+						margin-right: 0.33rem;
+					}
+					>.error {
+						margin-right: 0.33rem;
+					}
+					>.size {
+						margin-right: 0.33rem;
+					}
 				}
-			}
-
-			>.response_message {
-				padding-left: 1rem;
-				padding-right: 1rem;
-				margin-top: 0.5rem;
-				margin-bottom: 0.5rem;
-
-				.container.error {
-					padding: 1rem;
-				}
-			}
-
-			>.buttons_bottom_container {
-				display: flex;
-				justify-content: center;
-				margin-bottom: 5rem;
-
-				// button_process_import
-				>.button_process_import {
-					margin: 2rem;
-					padding-left: 1.5em;
-					padding-right: 1.5em;
-					background-color: @tool_color;
-					border-color: darken(@tool_color, 3%);
-				}
-			}
-
-			// inputs_container. Temporal sections container ???????????? REVIEW (!)
-				// .inputs_container {
-				// 	padding: 1em;
-				// 	margin-top: 2em;
-				// 	background-color: #f1f1f1;
-				// 	display: flex;
-				// 	flex-wrap: wrap;
-				// }//end .inputs_container
-
-
-		}//end content_data
-
-		.msg_container {
-			position: absolute;
-			top: 50%;
-			left: 50%;
-			font-size: 4em;
-			transform: translate(-50%, -50%);
+			}//end .file-row
 		}
-	}//end wrapper_tool
 
+		>.inputs_container {
+			margin-top: 1.5rem;
+			margin-bottom: 1.5rem;
+
+			.inputs_container_caption {
+				display: inline-block;
+				background-color: #e6e6e6;
+				width: auto;
+				padding: 0.5rem;
+				padding-left: 2rem;
+				padding-right: 2rem;
+				border-top-left-radius: 0.33rem;
+				border-top-right-radius: 0.33rem;
+				margin-left: -1px;
+			}
+		}
+
+		>.response_message {
+			padding-left: 1rem;
+			padding-right: 1rem;
+			margin-top: 0.5rem;
+			margin-bottom: 0.5rem;
+
+			.container.error {
+				padding: 1rem;
+			}
+		}
+
+		>.buttons_bottom_container {
+			display: flex;
+			justify-content: center;
+			margin-bottom: 5rem;
+
+			// button_process_import
+			>.button_process_import {
+				margin: 2rem;
+				padding-left: 1.5em;
+				padding-right: 1.5em;
+				background-color: @tool_color;
+				border-color: darken(@tool_color, 3%);
+			}
+		}
+
+	}//end content_data
+
+	.msg_container {
+		position: absolute;
+		top: 50%;
+		left: 50%;
+		font-size: 4em;
+		transform: translate(-50%, -50%);
+	}
+}//end wrapper_tool
 
 // modal header tool modification
-	.tool_header.tool_import_files {
-		background-color: @tool_color;
-	}
+.tool_header.tool_import_files {
+	background-color: @tool_color;
+}

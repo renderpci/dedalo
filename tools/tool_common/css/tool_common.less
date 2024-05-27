@@ -5,192 +5,150 @@
 * Included from main.less file
 */
 
-
 // wrapper_tool
-	.wrapper_tool {
-		// background-color: #F5EBB5;
-		margin: 0px;
-		padding: 0px;
-		display: flex;
-		flex-wrap: wrap;
-		align-content: flex-start;
-		min-height: inherit;
+.wrapper_tool {
+	margin: 0px;
+	padding: 0px;
+	display: flex;
+	flex-wrap: wrap;
+	align-content: flex-start;
+	min-height: inherit;
 
-		// @header_height: 5rem;
+	>.content_data {
+		width: 100%;
+		padding: 1rem;
+	}
 
-		>.tool_header {
-			// height: @header_height;
-			// padding: 1em;
-			// moded outside. see bellow
-
-			// button close (only outside modal)
-			// >.button.close {
-			// 	position: absolute;
-			// 	display: block;
-			// 	right: 0.5rem;
-			// 	top: 0.5rem;
-			// 	cursor: pointer;
-			// 	width: 1.4rem;
-			// 	height: 1.4rem;
-
-			// 	&:hover {
-			// 		background-color: #000000 !important;
-			// 	}
-			// 	&:active {
-			// 		background-color: #ffffff !important;
-			// 	}
-			// }
+	>.content_data.content_data_error.tool_error {
+		display: block;
+		background-color: var(--color_white);
+		color: @color_danger;
+		>.icon {
+			vertical-align: bottom;
+			margin-right: 0.75rem;
 		}
-
-		>.content_data {
-			// background-color: #B7F9BB;
-			width: 100%;
-			padding: 1rem;
-			// max-height: calc(100vh - @header_height);
-
-			// >* {
-				//padding: 1em;
-			// }
-		}
-
-		>.content_data.content_data_error.tool_error {
-			display: block;
-			background-color: #ffffff;
-			color: @color_danger;
-			>.icon {
-				vertical-align: bottom;
-				margin-right: 0.75rem;
-			}
-		}
-	}//end .wrapper_tool
-
-
+	}
+}//end .wrapper_tool
 
 // tool_header
 // (!) Note that is defined outside wrapper_tool to be compatible with modal and new tab window
-	.tool_header {
-		background-color: @color_orange_dedalo;
-		position: relative;
-		color: #ffffff;
-		width: 100%;
+.tool_header {
+	background-color: @color_orange_dedalo;
+	position: relative;
+	color: var(--color_white);
+	width: 100%;
+	display: flex;
+	padding: 1rem;
+
+	// select
+	.selector {
+		max-width: 19rem;
+		border-radius: 3px;
+	}
+
+	// error messages for example
+	.msg {
+		padding: 0.5rem;
+		border-radius: 0.25rem;
+	}
+
+	>.tool_name_container {
+		margin-right: 1em;
+		padding-right: 1rem;
+
+		>.label {
+			font-size: 1.5rem;
+
+			>.button {
+				font-size: 1.25rem;
+				vertical-align: baseline;
+				margin-right: 0.75rem;
+			}
+		}
+
+		>.description {
+			font-weight: 200;
+			margin-top: 0.3rem;
+		}
+	}
+
+	>.tool_buttons_container {
 		display: flex;
-		padding: 1rem;
+		align-items: center;
+	}
 
-		// select
-		.selector {
-			max-width: 19rem;
-			border-radius: 3px;
-		}
+	>.activity_info_container {
+		z-index: 2;
 
-		// error messages for example
-		.msg {
-			padding: 0.5rem;
-			border-radius: 0.25rem;
-		}
-
-		>.tool_name_container {
-			margin-right: 1em;
-			padding-right: 1rem;
-			>.label {
-				font-size: 1.5rem;
-
-				>.button {
-					font-size: 1.25rem;
-					vertical-align: baseline;
-					margin-right: 0.75rem;
-				}
-			}
-
-			>.description {
-				font-weight: 200;
-				margin-top: 0.3rem;
-			}
-		}
-
-		>.tool_buttons_container {
-			display: flex;
-			align-items: center;
-		}
-
-		>.activity_info_container {
-			// background-color: #f0f8ff78;
-			// flex: 1;
-			// position: relative;
-			// padding-top: 0;
-			z-index: 2;
-
-			>.activity_info_body {
-				position: absolute;
-				top: 0px;
-				right: 0px;
-
-				// bubble message info
-				>.node_info_save_msg {
-					background-color: @color_orange_dedalo;
-					position: relative;
-					font-size: 0.96rem;
-					box-shadow: 2px 2px 4px 0px rgb(0 0 0 / 50%);
-					padding: 0.75rem;
-					outline: 1px solid #e6e6e65e;
-					border-radius: 4px;
-					margin-top: 0.5rem;
-					margin-right: 0.5rem;
-					padding-right: 1.5rem;
-					user-select: none;
-
-					&.ok {
-						background-color: @color_success;
-					}
-					&.error, &.warning {
-						background-color: @color_danger;
-					}
-
-					&:after {
-						content: ' x ';
-						width: 15px;
-						height: 15px;
-						display: block;
-						position: absolute;
-						right: 0px;
-						top: 3px;
-						font-family: Arial, sans-serif;
-						cursor: pointer;
-						color: white;
-						// font-weight: bold;
-						//background-image: url("../../themes/default/close.png");
-
-						&:hover {
-							color: black;
-						}
-					}
-				}
-			}
-		}
-
-		>.button.close {
+		>.activity_info_body {
 			position: absolute;
-			display: block;
-			right: 0.5rem;
-			top: 0.5rem;
-			cursor: pointer;
-			width: 1.4rem;
-			height: 1.4rem;
-			transition: transform 0.25s ease-in-out;
+			top: 0px;
+			right: 0px;
 
-			&:hover {
-				background-color: #000000 !important;
-				transform: rotate(90deg);
-			}
-			&:active {
-				background-color: #ffffff !important;
+			// bubble message info
+			>.node_info_save_msg {
+				background-color: @color_orange_dedalo;
+				position: relative;
+				font-size: 0.96rem;
+				box-shadow: 2px 2px 4px 0px rgb(0 0 0 / 50%);
+				padding: 0.75rem;
+				outline: 1px solid @color_grey_medium;
+				border-radius: 4px;
+				margin-top: 0.5rem;
+				margin-right: 0.5rem;
+				padding-right: 1.5rem;
+				user-select: none;
+
+				&.ok {
+					background-color: @color_success;
+				}
+				&.error, &.warning {
+					background-color: @color_danger;
+				}
+
+				&:after {
+					content: ' x ';
+					width: 15px;
+					height: 15px;
+					display: block;
+					position: absolute;
+					right: 0px;
+					top: 3px;
+					font-family: Arial, sans-serif;
+					cursor: pointer;
+					color: var(--color_white);
+
+					&:hover {
+						color: var(--color_black);
+					}
+				}
 			}
 		}
+	}
 
-		// inside modal case
-		&.header {
-			// background-color: #bf55eb !important;
-			>.button.close {
-				display: none;
-			}
+	>.button.close {
+		position: absolute;
+		display: block;
+		right: 0.5rem;
+		top: 0.5rem;
+		cursor: pointer;
+		width: 1.4rem;
+		height: 1.4rem;
+		transition: transform 0.25s ease-in-out;
+
+		&:hover {
+			background-color: var(--color_black) !important;
+			transform: rotate(90deg);
 		}
-	}//end .tool_header
+		&:active {
+			background-color: var(--color_white) !important;
+		}
+	}
+
+	// inside modal case
+	&.header {
+		>.button.close {
+			display: none;
+		}
+	}
+}//end .tool_header

@@ -8,22 +8,13 @@
 		display: inline-table;
 		float: left;
 		font-size: 1rem;
-		// height: @ts_object_line_height;
-		// line-height: 1.5rem;
 	}
 
-
 // wrap_ts_object
-	.wrap_ts_object {
-		//background-color: rgba(198, 179, 227, 0.39);
-		//width: 100%;
+.wrap_ts_object {
 		clear: both;
 		display: table;
 		position: relative;
-		//margin-left: 52px;
-		//height: 1em;
-		//border-bottom: 1px #E0E0E0 solid;
-		//width: inherit;
 		width: 100%;
 
 		&:hover > .id_column_content {
@@ -46,7 +37,6 @@
 			}
 		}//end hierarchy_root_node
 
-
 		// mixin ts_icons_all. icons common
 		.ts_icons_all {
 			background-position: center;
@@ -59,7 +49,6 @@
 
 		.id_column_content {
 			.inline_common;
-			//margin-left: 5px;
 			opacity: 0.5;
 			display: inline-flex;
 			flex-wrap: nowrap;
@@ -79,8 +68,6 @@
 
 		a.id_column_link div {
 			height: @ts_object_line_height;
-			//vertical-align: middle;
-			//margin-top: 5px;
 			margin-right: 6px;
 		}
 
@@ -105,7 +92,6 @@
 				background-color: #b5a83a;
 				border-radius: 3px;
 				filter: invert(100%);
-				//cursor: move;
 			}
 		}
 
@@ -115,8 +101,6 @@
 			//margin-right: 3px;
 			.ts_object_delete_icon {
 				.ts_icons_all;
-				//background-image: url(../../themes/default/icon_delete.svg);
-				//background-size: 52%;
 				background-image: url('../../themes/default/icons/trash.svg');
 				background-size: 76%;
 				margin-right: 2px;
@@ -137,17 +121,15 @@
 			margin-right: 3px;
 			font-size: 9px;
 			font-family: monospace;
-			// background-color: aqua;
 		}
+
 		.input_order {
 			text-align: center;
 			width: 22px;
 			margin-right: 5px;
 			margin-left: 3px;
-			//background-color: black;
 			border: 1px solid #fd7f26;
 			border-radius: 2px;
-			//color: #ffffff;
 			opacity: 1 !important;
 			position: relative;
 			top: 1px;
@@ -155,7 +137,7 @@
 
 		 // edit_button
 		.ts_object_edit {
-			//width: 50%;
+
 			&:hover {
 				background-color: #ff7ef3;
 				border-radius: 3px;
@@ -164,7 +146,6 @@
 			 // id number
 			.ts_object_section_id_number {
 				height: @ts_object_line_height;
-				//min-width: 42px;
 				min-width: 36px;
 				float: left;
 				padding: 2px;
@@ -195,8 +176,6 @@
 				opacity: 1;
 				overflow: hidden;
 				zoom: 1.25;
-				//top: 1px;
-				//background-color: #FDEAC9;
 
 				&:active {
 					opacity: 0.4;
@@ -219,18 +198,12 @@
 				display: table-cell;
 				min-width: 24px;
 				padding: 2px;
-				//padding-left: 5px;
 				padding-right: 5px;
 				font-size: 1.1em;
 				text-align: center;
 				cursor: pointer;
 				border-left: 1px solid #c3c3c3;
-
-				//padding-top: 4px;
-				//font-family: 'Menlo',monospace;
 				opacity: 0.3;
-
-				// En pruebas
 				width: 29px;
 				vertical-align: top;
 
@@ -271,34 +244,25 @@
 						left: 30%;
 						width: 1.1rem;
 						height: 1.1rem;
-
-						// background: url('../../themes/default/icons/spinner.svg');
-						// background-repeat: no-repeat;
-
 						border: 2px solid #d1d5db;
 						border-top-color: @color_orange_dedalo;
 						border-radius: 50%;
-
 						animation: run_spinner 800ms linear infinite;
 					}
 				}
 			}
 
 			// term
-			// .list_thesaurus_element[data-type='term'] {
 			.list_thesaurus_element.term {
-				//background-color: #FEFF33;
 				border: 0px;
-				//min-width: 200px;
 				opacity: 1;
 				text-align: left;
-				// white-space: nowrap;
 				inline-size: auto;
 				overflow-wrap: break-word;
 				hyphens: auto;
 
 				&.loading {
-					// background-color: transparent;
+
 					>span {
 						opacity: 0.12;
 					}
@@ -311,14 +275,9 @@
 						left: 0px;
 						width: 1.1rem;
 						height: 1.1rem;
-
-						// background: url('../../themes/default/icons/spinner.svg');
-						// background-repeat: no-repeat;
-
 						border: 2px solid #d1d5db;
 						border-top-color: @color_orange_dedalo;
 						border-radius: 50%;
-
 						animation: run_spinner 800ms linear infinite;
 					}
 				}
@@ -335,8 +294,6 @@
 			.id_info {
 				color: #a6a6a6;
 				font-size: 80%;
-				/* font-family: 'Menlo',monospace; */
-				/* word-wrap: break-word; */
 				vertical-align: text-top;
 				padding-left: 5px;
 				padding-right: 0.25rem;
@@ -347,40 +304,34 @@
 			// indexations
 			.list_thesaurus_element.show_indexations,
 			.list_thesaurus_element.default	{
-				// background-color: @color_grey_medium;
 				background-color: @color_orange_dedalo;
 				opacity: 0.6;
 				border: 0px;
 				padding-left: 4px;
 				padding-right: 3px;
-				// color: #717171;
 				color: #ffffff;
 				border-radius: 3px;
-				// display: inline-block;
 				margin: 0px;
 				height: 19px;
 				width: initial;
 				font-size: 12px;
 				margin-right: 5px;
 				line-height: 1.2rem;
-
 				display: inline-flex;
 				align-items: center;
 				justify-content: center;
 
 				&.default {
-					// background-color: transparent;
+
 				}
 
 				&:hover {
-					// background-color: #ffb666;
 					color: #ffffff !important;
 					opacity: 1;
 				}
 				&:active {
 					background-color: @color_grey_medium;
 					color: #717171 !important;
-					// opacity: 0.5;
 				}
 
 				&.loading {
@@ -397,21 +348,16 @@
 						left: 32%;
 						width: 1.1rem;
 						height: 1.1rem;
-
-						// background: url('../../themes/default/icons/spinner.svg');
-						// background-repeat: no-repeat;
-
 						border: 2px solid #d1d5db;
 						border-top-color: @color_orange_dedalo;
 						border-radius: 50%;
-
 						animation: run_spinner 800ms linear infinite;
 					}
 				}
 			}
 
 			// ts_object_children_arrow_icon mixins
-			@triangle_color: @color_orange_dedalo; // #ff8600;
+			@triangle_color: @color_orange_dedalo;
 			.triangle_down {
 				width: 0px;
 				height: 0px;
@@ -429,12 +375,12 @@
 
 			.ts_object_children_arrow_icon {
 				height: 1.4em;
-				// position: relative;
 				position: static;
 				width: 1.4em;
 				margin: 3px;
 				.triangle_right;
 				opacity: 0.6;
+
 				&:hover {
 					opacity: 1;
 				}
@@ -460,11 +406,6 @@
 				opacity: 1;
 			}
 
-			// nd_button
-			// .list_thesaurus_element[data-type='link_children_nd'] {
-				//background-color: #E1F01B
-			// }
-
 		}//end .elements_container
 
 		.arrow_spinner {
@@ -478,26 +419,19 @@
 				content: " ";
 				display: block;
 				position: absolute;
-				// top: -1rem;
-				// left: 0.75rem;
 				top: 0.17rem;
 				left: 0.27rem;
+				width: 1.1rem;
+				height: 1.1rem;
+				border: 2px solid #d1d5db;
+				border-top-color: @color_orange_dedalo;
+				border-radius: 50%;
+				animation: run_spinner 800ms linear infinite;
+
 				@media screen and (max-width: @width_break_point_0) {
 					top: 0.10rem;
 					left: 0.17rem;
 				}
-
-				width: 1.1rem;
-				height: 1.1rem;
-
-				// background: url('../../themes/default/icons/spinner.svg');
-				// background-repeat: no-repeat;
-
-				border: 2px solid #d1d5db;
-				border-top-color: @color_orange_dedalo;
-				border-radius: 50%;
-
-				animation: run_spinner 800ms linear infinite;
 			}
 		}
 
@@ -524,8 +458,7 @@
 			}
 		}
 
-
-		 // ts_object_children_arrow_icon
+		// ts_object_children_arrow_icon
 		.term_img {
 			padding: 0px !important;
 
@@ -534,27 +467,14 @@
 			}
 		}
 
-
 		// data_container
 		>.data_container {
-			// background-color: rgba(156, 156, 156, 0.15);
-			// .inline_common ;
-			// height: 0px;
 			width: 100%;
 			padding-left: 4rem;
 			display: block;
 			height: auto;
 			margin-top: 1rem;
 			margin-bottom: 1rem;
-
-
-			// only first level of inside divs
-			// > div {
-			// 	padding: 1rem;
-			// 	// border-bottom: 1px solid #c2c2c2;
-			// 	float: left;
-			// 	width: 100%;
-			// }
 
 			// all components showed inside
 			>.wrapper_component {
@@ -565,11 +485,7 @@
 				margin-top: 0.5rem;
 				margin-bottom: 0.5rem;
 				float: left;
-				// background-color: #dc9ebd;
 				clear: both;
-
-				// padding: 0px;
-				// box-shadow: none;
 			}
 
 		}//end .data_container
@@ -577,12 +493,10 @@
 
 		// children_container
 		>.children_container {
-			//background-color: rgba(248, 182, 175, 0.49);
 			.inline_common ;
 			height: 0px;
 			padding-left: 27px;
 			width: 100%;
-			//margin-left: 30px-3;
 		}
 
 		// children_toogle_view
@@ -629,7 +543,6 @@
 
 		// drag and drop
 		.drag_over > .elements_container {
-			// background-color: rgb(236, 236, 236);
 			background-color: #4a57c5;
 			border-radius: 3px;
 			color: #ffffff;
@@ -644,36 +557,16 @@
 		}
 
 		.wrap_ts_object_nd {
-			// background-color: #f5f5f5;
 			color: #797979;
 			padding: 2px;
 			padding-left: 0px;
 			padding-right: 0px;
 	    	width: auto;
-			//opacity: 0.7;
 
 			> .id_column_content > .ts_object_edit {
 				margin-left: 17px;
 			}
 		}
-
-		// loading
-			// .loading_list_thesaurus_data {
-			// 	min-height: 42px;
-			// 	//background-color: transparent !important;
-
-			// 	&:after {
-			// 		background: url('../../themes/default/icons/spinner.svg');
-			// 		background-position: 10px;
-			// 		background-repeat: no-repeat;
-			// 		background-size: 30px;
-			// 		content: ' loading... ';
-			// 		display: table-cell;
-			// 		margin-left: 50px;
-			// 		padding: 10px;
-			// 		padding-left: 45px;
-			// 	}
-			// }
 
 		.visible_element {
 			background-color: #81c943;

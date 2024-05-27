@@ -4,8 +4,6 @@
 * Included from main.less file
 */
 
-
-
 // ddEdit custom toolbar
 .toolbar_container {
 	// container details defined in component_text_area
@@ -13,17 +11,11 @@
 	flex-wrap: wrap;
 	position: absolute;
 	background-color: #ffffff;
-	// outline: 1px solid @color_grey_medium;
-	// bottom blue shadow line
 	box-shadow: 0px 1px 0px 0px @color_grey_medium;
-	// border-bottom: 1px solid @color_grey_medium;
-
-	// version mini	(fit heigth)
 	left: 6px;
 	top: 6px;
 	height: auto;
 	padding: 0.05rem;
-	// width: calc(100% - 2rem);
 	width: calc(100% - 12px);
 	z-index: 1;
 
@@ -56,33 +48,6 @@
 		img {
 			height: 100%;
 		}
-
-		// height: 100%;
-		// padding: 0.33rem;
-		// padding-left: 0.5em;
-		// padding-right: 0.5em;
-		// cursor: pointer;
-		// border-radius: 0.33em;
-
-		// &.separator {
-		// 	pointer-events: none;
-		// }
-		// &:hover {
-		// 	background-color: #dddddd;
-		// }
-		// &:active {
-		// 	opacity: 0.6;
-		// }
-		// &.active {
-		// 	background-color: #dddddd;
-		// }
-		// &.disable {
-		// 	opacity: 25%;
-		// }
-
-		// img {
-		// 	height: 100%;
-		// }
 	}
 
 	// standard ckeditor inline toolbar moved inside toolbar_container
@@ -98,7 +63,6 @@
 
 		.ck-toolbar.ck-toolbar_grouping {
 			outline: none;
-			// padding: 0px !important;
 			margin: 0px !important;
 			height: 1.70rem;
 
@@ -130,7 +94,6 @@
 			}
 
 			.ck-splitbutton.ck-dropdown__button {
-				// min-width: 4rem;
 				white-space: nowrap;
 			}
 
@@ -149,8 +112,6 @@
 			// separators
 			.ck-toolbar__separator {
 				height: 16px;
-				// top: 0px;
-				// position: relative;
 			}
 			input, label {
 				height: unset;
@@ -178,142 +139,78 @@
 	}
 }
 
-
-
-.ck.ck-content {
-
-	// (!) Moved to component text area to allow view before init the editor
-		// @image_height: 15px;
-
-		// // editor tags
-		// .image-inline {
-		// 	img {
-		// 		cursor: pointer;
-		// 		height: @image_height;
-
-		// 		&.person {
-
-		// 		}
-
-		// 		&.note {
-		// 			margin-left: 2px;
-		// 			margin-right: 2px;
-		// 		}
-
-		// 		&.index {
-
-		// 		}
-
-		// 		&.tc {
-		// 			margin-right: 3px;
-		// 		}
-
-		// 		&.tc2 {
-		// 			filter: invert(80%);
-		// 			margin-right: 3px;
-		// 		}
-		// 		&.svg {
-
-		// 		}
-
-		// 		&.draw {
-
-		// 		}
-		// 		&.page {
-
-		// 		}
-
-		// 		&.geo {
-
-		// 		}
-
-		// 		&.lang {
-
-		// 		}
-
-		// 		&.struct {
-		// 			//display: none;
-		// 		}
-		// 	}
-		// }
-}//end .ck.ck-content
-
-
-
 .ck-placeholder {
 	opacity: 0.33;
 }
 
-
-
 dd-modal .find_and_replace {
-		// .find_and_replace {
-		// 	padding: 1.5em;
-		// }
-		input{
-			margin-bottom: 1px;
-			&:focus{
-				background-color: #fff3e7;
-				outline		: 1px solid #ff7b0e;
-				box-shadow	: none;
-			}
+
+	input{
+		margin-bottom: 1px;
+		&:focus{
+			background-color: #fff3e7;
+			outline: 1px solid #ff7b0e;
+			box-shadow: none;
 		}
-		.replace_container {
-			padding-top	: 1.5em;
+	}
+
+	.replace_container {
+		padding-top	: 1.5em;
+	}
+
+	.options_container {
+		display: flex;
+		align-items: center;
+		padding-top: 1.5em;
+
+		.label_match_case{
+			padding-right:0.3em;
 		}
-		.options_container {
-			display: flex;
-			align-items: center;
-			padding-top: 1.5em;
-			.label_match_case{
-				padding-right:0.3em;
-			}
-			.label_whole_words {
-				padding-left:1.0em;
-				padding-right:0.3em;
-			}
-			/* toggle-pill-color */
-			.check input[type="checkbox"] {
-				display: none;
-			}
-			.check input[type="checkbox"] + label {
-				display: inline-block;
-				position: relative;
-				width: 3em;
-				height: 1.6em;
-				// margin-bottom: 20px;
-				border-radius: 1em;
-				// background: #e84d4d;
-				background: #eeeeee;
-				// box-shadow: inset 0px 0px 5px rgba(0, 0, 0, 0.3);
-				cursor: pointer;
-				-webkit-user-select: none;
-				-moz-user-select: none;
-				-ms-user-select: none;
-				-webkit-transition: background 0.1s ease-in-out;
-				transition: background 0.1s ease-in-out;
-			}
-			.check input[type="checkbox"] + label:before {
-				content: "";
-				display: inline-block;
-				width: 1.2em;
-				height: 1.2em;
-				border-radius: 1em;
-				background: #fff;
-				box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
-				position: absolute;
-				left: 0.2em;
-				top: 0.2em;
-				-webkit-transition: all 0.2s ease-in-out;
-				transition: all 0.2s ease-in-out;
-			}
-			.check input[type="checkbox"]:checked + label {
-				background: #47cf73;
-			}
-			.check input[type="checkbox"]:checked + label:before {
-				box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
-				left: 1.6em;
-			}
-	 		/* toggle-pill-color end */
+
+		.label_whole_words {
+			padding-left:1.0em;
+			padding-right:0.3em;
 		}
-	}//end dd-modal
+
+		/* toggle-pill-color */
+		.check input[type="checkbox"] {
+			display: none;
+		}
+		.check input[type="checkbox"] + label {
+			display: inline-block;
+			position: relative;
+			width: 3em;
+			height: 1.6em;
+			border-radius: 1em;
+			background: #eeeeee;
+			cursor: pointer;
+			-webkit-user-select: none;
+			-moz-user-select: none;
+			user-select: none;
+			-webkit-transition: background 0.1s ease-in-out;
+			transition: background 0.1s ease-in-out;
+		}
+		.check input[type="checkbox"] + label:before {
+			content: "";
+			display: inline-block;
+			width: 1.2em;
+			height: 1.2em;
+			border-radius: 1em;
+			background: #fff;
+			box-shadow: 2px 0px 5px rgba(0, 0, 0, 0.2);
+			position: absolute;
+			left: 0.2em;
+			top: 0.2em;
+			-webkit-transition: all 0.2s ease-in-out;
+			transition: all 0.2s ease-in-out;
+		}
+		.check input[type="checkbox"]:checked + label {
+			background: #47cf73;
+		}
+		.check input[type="checkbox"]:checked + label:before {
+			box-shadow: -2px 0px 5px rgba(0, 0, 0, 0.2);
+			left: 1.6em;
+		}
+ 		/* toggle-pill-color end */
+	}
+}//end dd-modal

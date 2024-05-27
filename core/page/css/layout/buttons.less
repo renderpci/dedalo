@@ -1,339 +1,289 @@
-// buttons
-
-
+/**
+* buttons
+*
+* Common button styles
+*
+* Included from main.less file
+*/
 
 // fn_add_mask . buttons with icons
-	.fn_add_mask(@icon_name) {
+.fn_add_mask(@icon_name) {
 
-		-webkit-mask-image: url('../../themes/default/icons/@{icon_name}');
-				mask-image: url('../../themes/default/icons/@{icon_name}');
+	-webkit-mask-image: url('../../themes/default/icons/@{icon_name}');
+			mask-image: url('../../themes/default/icons/@{icon_name}');
+	-webkit-mask-size: contain;
+			mask-size: contain;
+	-webkit-mask-repeat: no-repeat;
+			mask-repeat: no-repeat;
+	-webkit-mask-position: center;
+			mask-position: center;
+}
+
+// fn_build_button
+.fn_build_button(@icon_name, @color:black, @opacity:0.7, @size:1em) {
+
+	// create base standard button
+	.button;
+
+	// custom icon color
+	background: @color;
+
+	// custom size overwrite
+	height: @size;
+	width: @size;
+
+	// custom size overwrite
+	opacity: @opacity;
+
+	// custom icon svg name
+	.fn_add_mask(@icon_name);
+}
+
+// fn_append_icon (used by tag element 'button')
+.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
+
+	--icon-path : url('../../themes/default/icons/@{icon_name}');
+
+	&:before {
+		background-color: @color;
+		content: ' ';
+		display: inline-block;
+		height: 1em;
+		margin-right: 0.25em;
+		opacity: @opacity;
+		vertical-align: baseline;
+		width: 1em;
+		// .fn_add_mask(@icon_name);
+		-webkit-mask-image: var(--icon-path);
+				mask-image: var(--icon-path);
 		-webkit-mask-size: contain;
 				mask-size: contain;
 		-webkit-mask-repeat: no-repeat;
 				mask-repeat: no-repeat;
 		-webkit-mask-position: center;
 				mask-position: center;
-	}
 
-
-
-// fn_build_button
-	.fn_build_button(@icon_name, @color:black, @opacity:0.7, @size:1em) {
-
-		// create base standard button
-		.button;
-
-		// custom icon color
-		background: @color;
-
-		// custom size overwrite
-		height: @size;
-		width: @size;
-
-		// custom size overwrite
-		opacity: @opacity;
-
-		// custom icon svg name
-		.fn_add_mask(@icon_name);
-	}
-
-
-
-// fn_append_icon (used by tag element 'button')
-	.fn_append_icon(@icon_name, @color:#3f3f3f, @opacity:1) {
-
-		--icon-path : url('../../themes/default/icons/@{icon_name}');
-
-		&:before {
-			background-color: @color;
-			content: ' ';
-			display: inline-block;
-			height: 1em;
-			margin-right: 0.25em;
-			opacity: @opacity;
-			vertical-align: baseline;
-			width: 1em;
-			// .fn_add_mask(@icon_name);
-			-webkit-mask-image: var(--icon-path);
-					mask-image: var(--icon-path);
-			-webkit-mask-size: contain;
-					mask-size: contain;
-			-webkit-mask-repeat: no-repeat;
-					mask-repeat: no-repeat;
-			-webkit-mask-position: center;
-					mask-position: center;
-
-			@media screen and (max-width: @width_break_point_1) {
-				margin-right: 2px;
-			}
+		@media screen and (max-width: @width_break_point_1) {
+			margin-right: 2px;
 		}
 	}
-
-
+}
 
 // button : generic to apply to span elements and get a icon button without text
-	.button, .icon_button { // @icon_name:null, @color:black, @opacity:0.7, @size:1em
-		background-color: #000000;
-		cursor: pointer;
-		// display: inline-block;
-		display: inline-flex;
-		height: 1em;
-		line-height: 1em;
-		margin: 0px;
-		margin-left: 0.25rem;
-		margin-right: 0.25rem;
-		min-width: 1em;
-		opacity: 1;
-		user-select: none;
-		// vertical-align: middle;
-		width: 1em;
-		font-weight: 300;
+// @icon_name:null, @color:black, @opacity:0.7, @size:1em
+.button, .icon_button {
+	background-color: #000000;
+	cursor: pointer;
+	display: inline-flex;
+	height: 1em;
+	line-height: 1em;
+	margin: 0px;
+	margin-left: 0.25rem;
+	margin-right: 0.25rem;
+	min-width: 1em;
+	opacity: 1;
+	user-select: none;
+	width: 1em;
+	font-weight: 300;
 
-		// height: fit-content;
-		// margin-top: 0.25rem;
-		// margin-left: 0.5em;
-		// margin-right: 0.5em;
-		// background-repeat: no-repeat;
-		// background-position: center;
-		// background-size: contain;
-		//padding: 0.5em;
-		// margin-top: 0.25em;
-		// margin-bottom: 0.25em;
+	&:hover {
+		opacity: 1 !important;
+	}
+	&:active {
+		opacity: 0.4 !important;
+	}
 
-		&:hover {
-			opacity: 1 !important;
-		}
-		&:active {
-			opacity: 0.4 !important;
-		}
-
-	// inside buttons_container, all buttons are white
-		.buttons_container & {
-			background-color: #ffffff;
-			margin-top: 0px;
-		}
-	// variants after create button
-		&.white {
-			background-color: #ffffff !important;
-		}
-		&.grey {
-			background-color: @color_grey_dark;
-			opacity: 0.75;
-		}
-		&.transparent {
-			background-color: transparent !important;
-		}
-	}//end .button
-
-
+// inside buttons_container, all buttons are white
+	.buttons_container & {
+		background-color: #ffffff;
+		margin-top: 0px;
+	}
+// variants after create button
+	&.white {
+		background-color: #ffffff !important;
+	}
+	&.grey {
+		background-color: @color_grey_dark;
+		opacity: 0.75;
+	}
+	&.transparent {
+		background-color: transparent !important;
+	}
+}//end .button
 
 // icon
-	.icon {
-		&.loading {
-			// spinner
-			border: 1px solid #d1d5db;
-			border-top-color: @color_orange_dedalo;
-			border-radius: 50%;
-			mask: unset !important;
-			-webkit-mask: unset !important;
-			background-color: transparent !important;
+.icon {
+	&.loading {
+		// spinner
+		border: 1px solid #d1d5db;
+		border-top-color: @color_orange_dedalo;
+		border-radius: 50%;
+		mask: unset !important;
+		-webkit-mask: unset !important;
+		background-color: transparent !important;
+		animation: run_spinner 800ms linear infinite;
+	}
+}
 
-			animation: run_spinner 800ms linear infinite;
+// button tag. explicit buttons (dialog box etc.)
+button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: max-content;
+	height: min-content;
+	line-height: 1.5;
+	font-size: 1rem;
+	font-weight: 400;
+	margin-right: 0.25em;
+	padding: 0.275rem;
+	padding-left: 0.75rem;
+	padding-right: 0.75rem;
+	text-align: center;
+	cursor: pointer;
+	-webkit-user-select: none;
+	-moz-user-select: none;
+	-ms-user-select: none;
+	user-select: none;
+	background-color: transparent;
+	border: 1px solid transparent;
+	border-radius: 0.25rem;
+	transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+
+	// color
+	color: var(--color_grey_dark_1); // default dark grey
+
+	&.folding {
+		@media screen and (max-width: @width_break_point_1) {
+			text-indent: -9999em;
 		}
 	}
 
-
-
-// button tag. explicit buttons (dialog box etc.)
-	button {
-		// appearance: none;
-		// font-size: .9em;
-		// background-color: #a6a6a6;
-		// border-radius: 0.30em;
-		// color: #ffff;
-		// border: none;
-		height: min-content;
-		margin-right: 0.25em;
-		padding-bottom: 0.275rem;
-		padding-left: 0.75rem;
-		padding-right: 0.75rem;
-		padding-top: 0.275rem;
-		width: max-content;
-
-		// bootstrap
-		// display: inline-block;
-
-		text-align: center;
-		// vertical-align: middle;
-		cursor: pointer;
-		-webkit-user-select: none;
-		-moz-user-select: none;
-		-ms-user-select: none;
-		user-select: none;
-		background-color: transparent;
-		border: 1px solid transparent;
-		// padding: .375rem .75rem;
-		font-size: 1rem;
+	&.primary {
+		@color: @color_primary;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.secondary {
+		@color: @color_secondary;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.success {
+		@color: @color_success;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.danger {
+		@color: @color_danger;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.warning {
+		@color: @color_orange_dedalo;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.info {
+		@color: @color_info;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.light {
+		@color: @color_light;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #212529;
+		&:before {
+			background-color: #212529 !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.dark {
+		@color: @color_dark;
+		background-color: @color;
+		border-color: darken(@color, 2%);
+		color: #ffffff;
+		&:before {
+			background-color: #ffffff !important;
+		}
+		&:hover {
+			background-color: darken(@color, 5%);
+			border-color: darken(@color, 7%);
+		}
+	}
+	&.link {
+		// no background for link button
+		color: @color_primary;
 		font-weight: 400;
-		line-height: 1.5;
-		border-radius: 0.25rem;
-		transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+		text-decoration: none;
+	}
 
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
+	&:active {
+		opacity: 0.5;
+	}
 
-		&.folding {
-			@media screen and (max-width: @width_break_point_1) {
-				// padding-right: 0.25rem;
-				text-indent: -9999em;
-			}
-		}
-		// @media screen and (max-width: @width_break_point_1) {
-		// 	// padding-right: 0.25rem;
-		// 	text-indent: -9999em;
-		// }
-
-		// color
-		color: #212529; // default dark grey
-
-		&.primary {
-			@color: @color_primary;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.secondary {
-			@color: @color_secondary;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.success {
-			@color: @color_success;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.danger {
-			@color: @color_danger;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.warning {
-			@color: @color_orange_dedalo;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.info {
-			@color: @color_info;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.light {
-			@color: @color_light;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #212529;
-			&:before {
-				background-color: #212529 !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.dark {
-			@color: @color_dark;
-			background-color: @color;
-			border-color: darken(@color, 2%);
-			color: #ffffff;
-			&:before {
-				background-color: #ffffff !important;
-			}
-			&:hover {
-				background-color: darken(@color, 5%);
-				border-color: darken(@color, 7%);
-			}
-		}
-		&.link {
-			// no background for link button
-			color: @color_primary;
-			font-weight: 400;
-			text-decoration: none;
-		}
-
-		// bg means the button have a custom background image
-		// &.bg {
-		// 	background-repeat: no-repeat;
-		// 	background-size: contain;
-		// 	background-position: -1.5em 0;
-		// 	background-origin: content-box;
-		// 	padding-left: 2em !important;
-		// }
-
-		&:active {
-			opacity: 0.5;
-		}
-
-		&:focus {
-			// background-color: #c45527 !important;
-			border: 1.2px solid #0059fa !important;
-			opacity: 1;
-			// color: #ffffff;
-		}
-	}//end button
-
-
+	&:focus {
+		border: 1.2px solid #0059fa !important;
+		opacity: 1;
+	}
+}//end button
 
 // generic recyclable icons for buttons
+// add alphabetically
 	.add_light {
-		@icon_name : 'add_light.svg'; // add_light, add
+		@icon_name : 'add_light.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -425,7 +375,7 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.diffusion {
-		@icon_name : 'diffusion_light.svg'; // diffusion
+		@icon_name : 'diffusion_light.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -609,7 +559,7 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 	.search {
-		@icon_name : 'search_light.svg'; // search
+		@icon_name : 'search_light.svg';
 		button&  { .fn_append_icon(@icon_name); }
 		.button& { .fn_add_mask(@icon_name); }
 	}
@@ -639,53 +589,38 @@
 		.button& { .fn_add_mask(@icon_name); }
 	}
 
-
-
 // .contenteditable_buttons (used by content editable)
-	.contenteditable_buttons {
-		// position: absolute;
-		// height: 1.5em;
-		// top: -1.54em;
-		// z-index: 9;
-		display: flex;
-		// background-color: @color_grey_dark;
-		padding: 0px;
-		border-top-left-radius: 0.25em;
-		border-top-right-radius: 0.25em;
+.contenteditable_buttons {
+	display: flex;
+	padding: 0px;
+	border-top-left-radius: 0.25em;
+	border-top-right-radius: 0.25em;
 
-		>.button {
-			color: white;
+	>.button {
+		color: white;
 
-			&:before {
-				content: ' ';
-				background-size: contain;
-				background-repeat: no-repeat;
-				height: 1em;
-				width: 1em;
-				margin-right: 0.25em;
-				padding-right: 1em;
-				vertical-align: text-bottom;
-			}
-
-			&.bold:before {
-				//background-image: url(../../themes/default/icons/bold.svg);
-				// .background_icon('bold.svg');
-				.fn_build_button('bold.svg', black, 1);
-			}
-			&.italic:before {
-				//background-image: url(../../themes/default/icons/italic.svg);
-				// .background_icon('italic.svg');
-				.fn_build_button('italic.svg', black, 1);
-			}
-			&.underline:before {
-				//background-image: url(../../themes/default/icons/underline.svg);
-				// .background_icon('underline.svg');
-				.fn_build_button('underline.svg', black, 1);
-			}
-			&.replace:before {
-				//background-image: url(../../themes/default/icons/exchange.svg);
-				// .background_icon('exchange.svg');
-				.fn_build_button('exchange.svg', black, 1);
-			}
+		&:before {
+			content: ' ';
+			background-size: contain;
+			background-repeat: no-repeat;
+			height: 1em;
+			width: 1em;
+			margin-right: 0.25em;
+			padding-right: 1em;
+			vertical-align: text-bottom;
 		}
-	}//end .contenteditable_buttons
+
+		&.bold:before {
+			.fn_build_button('bold.svg', black, 1);
+		}
+		&.italic:before {
+			.fn_build_button('italic.svg', black, 1);
+		}
+		&.underline:before {
+			.fn_build_button('underline.svg', black, 1);
+		}
+		&.replace:before {
+			.fn_build_button('exchange.svg', black, 1);
+		}
+	}
+}//end .contenteditable_buttons

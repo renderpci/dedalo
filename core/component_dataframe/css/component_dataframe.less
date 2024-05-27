@@ -5,56 +5,51 @@
 */
 .component_dataframe, .component_dataframe_mini {
 
-	// &.view_default, &.view_text {
-		>.content_data {
+	>.content_data {
+		display: flex;
+		align-content: center;
+		padding: 0px;
+
+		>.content_value {
+			height: 2rem;
+			width: 2rem;
 			display: flex;
-			align-content: center;
-			padding: 0px;
+			align-items: center;
+			justify-content: center;
+			text-align: center;
 
-			// height: 2rem;
-
-			>.content_value {
-				height: 2rem;
-				width: 2rem;
+			>.button {
+				width: 1.1rem;
+				min-width: 1.1rem;
+				height: 1.2rem;
 				display: flex;
+				justify-content: center;
 				align-items: center;
-    			justify-content: center;
-				text-align: center;
+				cursor: pointer !important;
 
-				>.button {
-					width: 1.1rem;
-					min-width: 1.1rem;
-					height: 1.2rem;
-					display: flex;
-					justify-content: center;
-					align-items: center;
-					cursor: pointer !important;
+				&:hover {
 
-					&:hover {
-						// background-color: @color_grey_light;
-					}
-					&:active {
-						opacity: 0.4;
-					}
+				}
+				&:active {
+					opacity: 0.4;
+				}
 
-					// button activate specifics
-					&.activate {
-						border-radius: 50%;
-						background-color: white;
-						font-weight: 500;
-						font-size: 0.95rem;
-					}
+				// button activate specifics
+				&.activate {
+					border-radius: 50%;
+					background-color: white;
+					font-weight: 500;
+					font-size: 0.95rem;
+				}
 
-					// button add specifics
-					&.add {
-						// width: 1.1rem;
-						// height: 1.1rem;
-					}
-				}//end .button
-			}//end .content_value
+				// button add specifics
+				&.add {
 
-		}
-	// }//end view_default
+				}
+			}//end .button
+		}//end .content_value
+
+	}
 
 	&.list {
 		>.content_data >.content_value {
@@ -62,22 +57,19 @@
 			width: unset;
 
 			.button.add {
+				display: inline-block;
+				position: relative;
 				height: 1rem;
 				vertical-align: top;
 				top: 0.25rem;
-				display: inline-block;
-				position: relative;
 			}
 		}
 	}
-
 
 	&.component_dataframe_mini {
 		>.content_data {
 			display: inline-flex !important;
 		}
 	}
-
-
 
 }//end component_dataframe

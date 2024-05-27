@@ -3,6 +3,7 @@
 *
 * Loaded on tool init
 */
+
 // imports
 @import (once) '../../../core/page/css/layout/vars';
 
@@ -22,198 +23,168 @@
 	}
 
 // wrapper_tool
-	.wrapper_tool.tool_numisdata_epigraphy {
+.wrapper_tool.tool_numisdata_epigraphy {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	>.tool_header {
+		position: relative;
+
+		@media screen and (max-width: @width_break_point_0) {
+			flex-wrap: wrap;
 		}
 
-		>.tool_header {
-			position: relative;
+		>.tool_buttons_container {
+			display: flex;
+			align-items: flex-start;
 
 			@media screen and (max-width: @width_break_point_0) {
 				flex-wrap: wrap;
+				margin-top: 1rem;
 			}
 
-			>.tool_buttons_container {
-				display: flex;
-				align-items: flex-start;
+			>div, button {
+
+				margin: 0rem;
+				margin-left: 0.5rem;
+				margin-right: 0rem;
+				min-height: 2rem;
 
 				@media screen and (max-width: @width_break_point_0) {
-					flex-wrap: wrap;
-					margin-top: 1rem;
-				}
-
-				>div, button {
-
-					margin: 0rem;
-					margin-left: 0.5rem;
-					margin-right: 0rem;
-					min-height: 2rem;
-
-					@media screen and (max-width: @width_break_point_0) {
-						margin-bottom: 1rem;
-						flex: 1 0 auto;
-					}
-				}
-
-				select {
-					opacity: 1;
-					padding: 0.33rem;
-					background-color: #f8f9fa;
-					border-radius: 3px;
-					margin-right: 0px;
-					max-width: 20rem;
-					min-width: 7rem;
-
-					@media screen and (max-width: @width_break_point_0) {
-						// max-width: unset;
-					}
-				}
-
-				// select top tipo / id
-				>.related_list_container {
-
-					>select {
-
-					}
-				}
-
-				// component lang selector
-				>.lang_selector {
-					display: flex;
-					align-items: center;
-					margin-left: 0.75rem;
-					margin-right: 0.12rem;
-					@media screen and (max-width: @width_break_point_0) {
-						padding-right: 0.5rem;
-					}
-
-					>.lang_label {
-						padding-right: 0.33rem;
-					}
-					>select {
-
-					}
-				}
-
-				// buttons of tools (tool print, tool time machine..)
-				>.tool_button {
-					// background-color: #fde2c6;
-					// border-color: #e9ecef;
-					// color: #212529;
-					// // width: 12em;
-					// padding: 0.5em;
-					// cursor: pointer;
-					// border-radius: 0.25rem;
-					// // display: inline-flex;
-					// // align-items: center;
-					// // justify-content: space-evenly;
-
-					>.icon {
-						height: 1rem;
-						margin-right: 0.33rem;
-					}
+					margin-bottom: 1rem;
+					flex: 1 0 auto;
 				}
 			}
-		}//end >.tool_header
 
-		>.content_data {
-			display: grid;
-			grid-template-columns: 20em auto;
-			column-gap: 1rem;
-			align-items: start;
-			width: calc(100% - 1rem);
-			@media screen and (max-width: @width_break_point_0) {
+			select {
+				opacity: 1;
+				padding: 0.33rem;
+				background-color: #f8f9fa;
+				border-radius: 3px;
+				margin-right: 0px;
+				max-width: 20rem;
+				min-width: 7rem;
+
+				@media screen and (max-width: @width_break_point_0) {
+
+				}
+			}
+
+			// select top tipo / id
+			>.related_list_container {
+
+			}
+
+			// component lang selector
+			>.lang_selector {
 				display: flex;
-				width: 100%;
-				flex-wrap: wrap;
-				// flex-direction: column-reverse;
-			}
+				align-items: center;
+				margin-left: 0.75rem;
+				margin-right: 0.12rem;
 
-			// left and right commons
-			.left_container,
-			.right_container {
-				// height: calc(100vh - 8rem);
-				// background-color: #e4ca4f;
-				>.wrapper_component {
-					// background-color: #dee789;
-					// box-shadow: none;
+				@media screen and (max-width: @width_break_point_0) {
+					padding-right: 0.5rem;
+				}
+
+				>.lang_label {
+					padding-right: 0.33rem;
 				}
 			}
 
-			// left only
-			.left_container {
-				>.wrapper_component {
-					height: 100%;
-					z-index: 4;
-					>.content_data {
+			// buttons of tools (tool print, tool time machine..)
+			>.tool_button {
 
-						@media screen and (max-width: @width_break_point_0) {
-							min-height: 50vh;
-						}
+				>.icon {
+					height: 1rem;
+					margin-right: 0.33rem;
+				}
+			}
+		}
+	}//end >.tool_header
+
+	>.content_data {
+		display: grid;
+		grid-template-columns: 20em auto;
+		column-gap: 1rem;
+		align-items: start;
+		width: calc(100% - 1rem);
+
+		@media screen and (max-width: @width_break_point_0) {
+			display: flex;
+			width: 100%;
+			flex-wrap: wrap;
+		}
+
+		// left and right commons
+		.left_container,
+		.right_container {
+
+			>.wrapper_component {
+
+			}
+		}
+
+		// left only
+		.left_container {
+			>.wrapper_component {
+				height: 100%;
+				z-index: 4;
+
+				>.content_data {
+
+					@media screen and (max-width: @width_break_point_0) {
+						min-height: 50vh;
 					}
 				}
 			}
+		}
 
-			// right only
-			.right_container {
-				.coins_container{
-					position: sticky;
-					top: -1px;
-					background: white;
-					z-index: 3;
-				}
-				.portal_container {
-					display: grid;
-					grid-template-columns: 50% 50%;
+		// right only
+		.right_container {
 
-					>* {
-						grid-area: unset;
-					}
-				}
-				.text_container {
-					>.wrapper_component >.content_data {
-						min-height: 1.5em;
-					}
+			.coins_container{
+				position: sticky;
+				top: -1px;
+				background: white;
+				z-index: 3;
+			}
+			.portal_container {
+				display: grid;
+				grid-template-columns: 50% 50%;
 
-					>.wrapper_component >.count {
-						color: #a8a8a8;
-						margin: 0.5em;
-						z-index: 2;
-					}
+				>* {
+					grid-area: unset;
 				}
 			}
-		}//end .content_data
-	}//end .wrapper_tool
+			.text_container {
+				>.wrapper_component >.content_data {
+					min-height: 1.5em;
+				}
 
-
+				>.wrapper_component >.count {
+					color: #a8a8a8;
+					margin: 0.5em;
+					z-index: 2;
+				}
+			}
+		}
+	}//end .content_data
+}//end .wrapper_tool
 
 // tool_numismatic_epigraphy_icon
-	.tool_numisdata_epigraphy_icon {
-		background-color: @tool_color;
-		background-image: url('../../themes/default/icon_transcription_hover.svg');
-		// Adjust icon size
-		background-size: 18px !important;
-	    background-position-y: 3px !important;
-	    background-position-x: 6px !important;
-	}
+.tool_numisdata_epigraphy_icon {
+	background-color: @tool_color;
+	background-image: url('../../themes/default/icon_transcription_hover.svg');
+	// Adjust icon size
+	background-size: 18px !important;
+    background-position-y: 3px !important;
+    background-position-x: 6px !important;
+}
 
 // modal and new window header tool modification
-	.tool_header.tool_numisdata_epigraphy {
-		background-color: @tool_color;
-	}
+.tool_header.tool_numisdata_epigraphy {
+	background-color: @tool_color;
+}
 
-
-/* HEADER
------------------------------------------------------- */
-	// .header_tool {
-	// 	#header_info {
-	// 		display:block;
-	// 		float: left;
-	// 		position: relative;
-	// 		margin-left: 15px;
-	// 		top: 8px;
-	// 		line-height: 1em;
-	// 	}
-	// }

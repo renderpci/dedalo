@@ -10,122 +10,66 @@
 // local vars
 @color_bg_tool : #5e77b3;
 
-
-
 // tool wrapper
-	.wrapper_tool.tool_import_rdf {
+.wrapper_tool.tool_import_rdf {
+
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	// section label
+	.section_label {
+		display: flex;
+		justify-content: center;
+		padding: 1em;
+		font-size: 2em;
+		padding-top: 0;
+		font-weight: bold;
+		min-height: 100vh;
+	}
+
+	// components_container
+	.components_container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		padding-top: 2rem;
+
+		.default_lang{
+			margin: 2em;
+			font-size: 1.2em;
+		}
+
+		.button_apply {
+			width: 8rem;
+			margin-top: 2rem;
+			background-color: @color_bg_tool;
+			border-color: darken(@color_bg_tool, 10%);
+		}
+		.component_data_label {
+			font-size: 16px;
+			.component_data {
+				margin-right: 0.3em;
+			}
+		}
+	}//end .components_container
+
+	.view_rdf_data_wrapper {
+		position: relative;
+		margin-top: 2rem;
+		margin-bottom: 1rem;
+		padding: 1rem;
+		width: 100%;
+		min-height: 3rem;
 
 		.spinner {
-			border-top-color: @tool_color;
+			left: calc(50% - 1.5rem);
+			top: 0.5rem;
 		}
-
-		// section label
-		.section_label {
-			display: flex;
-			justify-content: center;
-			padding: 1em;
-			font-size: 2em;
-			padding-top: 0;
-			font-weight: bold;
-			min-height: 100vh;
-		}
-
-		// components_container
-		.components_container {
-			display: flex;
-			flex-direction: column;
-			align-items: center;
-			padding-top: 2rem;
-
-			.default_lang{
-				margin: 2em;
-				font-size: 1.2em;
-			}
-
-			.button_apply {
-				width: 8rem;
-				margin-top: 2rem;
-				background-color: @color_bg_tool;
-    			border-color: darken(@color_bg_tool, 10%);
-			}
-			.component_data_label {
-				font-size: 16px;
-				.component_data {
-					margin-right: 0.3em;
-				}
-			}
-		}//end .components_container
-
-		.view_rdf_data_wrapper {
-			position: relative;
-			margin-top: 2rem;
-			margin-bottom: 1rem;
-			padding: 1rem;
-			width: 100%;
-			min-height: 3rem;
-
-			.spinner {
-				left: calc(50% - 1.5rem);
-				top: 0.5rem;
-			}
-		}
-
-		// spinner loading
-			.spinner99 {
-				@border_size: 7px;
-				display: block;
-				position: absolute;
-				top: 50%;
-				left: 50%;
-				height: 90px;
-				width: 90px;
-				margin: -45px 0 0 -45px;
-				border: @border_size transparent solid; // rgba(0, 0, 0, 0.25)
-				border-top: @border_size #e1e1e1 solid;
-				border-right: @border_size #e1e1e1 solid;
-				border-bottom: @border_size #e1e1e1 solid;
-				border-radius: 50%;
-				-webkit-animation: spin3 1.25s infinite linear;
-				animation: spin3 1.25s infinite linear;
-			}
-			@-webkit-keyframes spin3 {
-				from {
-					-webkit-transform: rotate(0deg);
-					transform: rotate(0deg);
-				}
-				to {
-					-webkit-transform: rotate(359deg);
-					transform: rotate(359deg);
-				}
-				}
-				@keyframes spin3 {
-				from {
-					-webkit-transform: rotate(0deg);
-					transform: rotate(0deg);
-					-webkit-transform: rotate(0deg);
-					transform: rotate(0deg);
-				}
-				to {
-					-webkit-transform: rotate(359deg);
-					transform: rotate(359deg);
-					-webkit-transform: rotate(359deg);
-					transform: rotate(359deg);
-				}
-			}
-
-			@media print{
-
-			}
-
-			@page {
-			   // size: 7in 9.25in;
-			   // margin: 27mm 16mm 27mm 16mm;
-			}
-	}//end tool_wrapper
-
-
+	}
+}//end tool_wrapper
 
 // modal header tool modification
-	.tool_header.tool_import_rdf {
-		background-color: @color_bg_tool;
-	}
+.tool_header.tool_import_rdf {
+	background-color: @color_bg_tool;
+}

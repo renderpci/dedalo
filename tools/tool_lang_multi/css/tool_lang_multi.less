@@ -5,86 +5,77 @@
 */
 
 // local vars
-// @tool_color: #ce8e0c;
 @tool_color : #7859ae;
-
 
 // tool wrapper
 // Encapsulate all tool content to prevent core collisions
-	.wrapper_tool.tool_lang_multi {
+.wrapper_tool.tool_lang_multi {
 
-		.spinner {
-			border-top-color: @tool_color;
+	.spinner {
+		border-top-color: @tool_color;
+	}
+
+	// content_data
+	>.content_data {
+		padding-right: 1em;
+	}
+
+	.top_container {
+		width: 100%;
+		padding: 0.5rem;
+		padding-top: 0.5rem;
+		padding-bottom: 1rem;
+		display: flex;
+		align-items: center;
+
+		>.icon {
+			margin-right: 0.5rem;
+			font-size: 1.4rem;
 		}
 
-		// content_data
-		>.content_data {
-			padding-right: 1em;
+		>.automatic_label {
+			padding-right: 1rem;
 		}
+	}
 
-		.top_container {
-			// background-color: #d0fbd4;
-			width: 100%;
-			padding: 0.5rem;
-			padding-top: 0.5rem;
-			padding-bottom: 1rem;
-			display: flex;
-			align-items: center;
+	// components_container
+	.components_container {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		grid-gap: 1em;
 
-			>.icon {
-				margin-right: 0.5rem;
-				font-size: 1.4rem;
+		.target_component_container {
+			min-height: 110px;
+
+			&.source {
+				.wrapper_component {
+					border-left: 2px solid @tool_color;
+				}
 			}
 
-			>.automatic_label {
-				padding-right: 1rem;
+			.label {
+
+			}
+
+			.target_component_title  {
+				padding: 0.5em;
+				padding-left: 0;
+
+				&.bold {
+					font-weight: 600;
+					letter-spacing: 1px;
+					color: @tool_color;
+				}
+			}
+
+			>.wrapper_component {
+
 			}
 		}
-
-		// components_container
-		.components_container {
-			display: grid;
-			grid-template-columns: 1fr 1fr;
-			grid-gap: 1em;
-
-			.target_component_container {
-				min-height: 110px;
-
-				&.source {
-					.wrapper_component {
-						// outline: 1px solid @tool_color;
-						border-left: 2px solid @tool_color;
-					}
-				}
-
-				.label {
-					// visibility: hidden;
-				}
-
-				.target_component_title  {
-					padding: 0.5em;
-					padding-left: 0;
-
-					&.bold {
-						font-weight: 600;
-						letter-spacing: 1px;
-						// text-transform: uppercase;
-						// color: darken(@tool_color, 5%);
-						color: @tool_color;
-					}
-				}
-
-				>.wrapper_component {
-					// background-color: #7094c3;
-					// min-height: 71.5px;
-				}
-			}
-		}//end components_container
-	}//end wrapper_tool
-
-
+	}//end components_container
+}//end wrapper_tool
 
 // modal header tool modification
-	.tool_header.tool_lang_multi {
-		background-color: @tool_color;
-	}
+.tool_header.tool_lang_multi {
+	background-color: @tool_color;
+}

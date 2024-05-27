@@ -4,9 +4,6 @@
 * Included from main.less file
 */
 .component_text_area {
-	// display: grid;
-	// grid-template-rows: 1fr 1fr;
-	// background-color: #ecf564;
 
 	&.edit {
 		align-content: unset;
@@ -18,64 +15,33 @@
 		}
 
 		>.content_data {
-			// background-color: #c0f5b8;
 			display: block;
 			min-height: 200px;
 			margin: 0px;
 			padding: 0px;
 			overflow: hidden;
-			// min-width: 30rem;
 
 			>.content_value {
 				display: contents;
 				height: inherit;
 				z-index: inherit;
-				// padding-bottom: 2rem;
 				position: relative;
 				line-height: 1.3rem;
 
 				>.toolbar_container {
 
 					>.toolbar_button {
-						// height: 1.8em;
-						// padding: 0.33rem;
-						// padding-right: 0.5em;
-						// padding-left: 0.5em;
-						// cursor: pointer;
-						// border-radius: 0.25em;
 
-						// &:hover {
-						// 	background-color: #dddddd;
-						// }
-						// &:active {
-						// 	opacity: 0.6;
-						// }
-						// &.active {
-						// 	background-color: #dddddd;
-						// }
-						// &.disable {
-						// 	opacity: 25%;
-						// }
-
-						// img {
-						// 	height: 100%;
-						// }
 					}
 				}
 
 				>.value_container {
-					// p, div {
-					// 	line-height: 1.4rem;
-					// 	// &:first-of-type {
-					// 	// 	margin-top: 1rem;
-					// 	// }
-					// }
+
 				}
 
 				// value_container
 				// Where component value is placed and parsed by the editor inline
 				&.editor_container, >.editor_container {
-					// background-color: #d9fdaf;
 					display: block;
 					margin: 0.5rem;
 					margin-bottom: 1.5rem;
@@ -84,9 +50,6 @@
 					padding-bottom: 0px;
 					height: calc(100% - 1.5rem);
 					overflow: auto;
-					// outline: 1px solid #e6e6e6;
-					// resize: vertical;
-
 					// remove border outlines
 					border: 0px;
 					outline: 0px;
@@ -99,14 +62,6 @@
 					.image-inline {
 						vertical-align: text-bottom;
 					}
-
-					// figure
-					// .image_resized {
-					// 	>img {
-					// 		width: 100%;
-					// 	}
-					// }
-
 
 					p {
 						min-height: 1.3rem;
@@ -157,21 +112,9 @@
 					}
 				}//end >.value_container
 
-				// editor_container
-					// >.editor_container {
-					// 	margin-top: 0.5rem;
-					// 	padding-top: 0px;
-
-					// 	// background-color: antiquewhite;
-					// 	// width: inherit;
-					// 	// min-width: 28rem;
-					// 	// margin: 0;
-					// 	// padding: 0;
-					// 	height: 100%;
-					// }
-
 				// source ckeditor
 				>.ck-source-editing-area {
+					background-color: #f8f9fa;
 					width: calc(100% - 2rem);
 					height: calc(100% - 2rem);
 					margin: 0.5rem;
@@ -179,7 +122,6 @@
 					margin-right: 1rem;
 					margin-top: 0.33rem;
 					z-index: 0;
-					background-color: #f8f9fa;
 
 					>textarea {
 						overflow: auto;
@@ -190,7 +132,6 @@
 						padding: 0px;
 						padding-top: 0.5rem;
 						box-shadow: none;
-						// background-color: #f8f9fa;
 					}
 				}
 
@@ -203,18 +144,18 @@
 					height: 33px;
 				}
 
-			// .ck.ck-editor__editable_inline>:first-child {
-			.ck.ck-editor__editable_inline>p:first-of-type {
-				 margin-top: unset;
-			}
+				// .ck.ck-editor__editable_inline>:first-child {
+				.ck.ck-editor__editable_inline>p:first-of-type {
+					 margin-top: unset;
+				}
 
-			.ck .ck-placeholder {
-				opacity: 0.15;
-			}
+				.ck .ck-placeholder {
+					opacity: 0.15;
+				}
 
 			}//end >content_value
-		}//end >.content_data
 
+		}//end >.content_data
 
 		// layer_selector (editing images)
 		.layer_selector {
@@ -240,7 +181,6 @@
 			>.layer_ul {
 				text-align: left;
 				clear: both;
-				// border: 0.5px solid #777;
 
 				>li {
 					display: grid;
@@ -271,14 +211,6 @@
 					.user_layer_name {
 
 					}
-					// .layer_color_box {
-					// 	background-color: #ffffff;
-					// 	.layer_color {
-					// 		width: 80%;
-					// 		height: 20px;
-					// 		border-radius: 19px;
-					// 	}
-					// }
 				}
 			}
 		}
@@ -293,8 +225,6 @@
 
 
 	&.list {
-		// background-color: #bc00ae;
-		// max-height: 6.3rem;
 
 		>.content_data {
 			padding: 0px;
@@ -346,6 +276,7 @@
 			z-index: 1;
 
 			>.toolbar_button {
+
 				&.button_save {
 					padding: 1px;
 					padding-right: 0.5rem;
@@ -377,23 +308,13 @@
 	}
 }//end .component_text_area
 
-
-
 // modal inside specifics
 dd-modal {
 
 	// persons_list_container into modal
 	>.text_area_persons_list_container {
 		color: initial;
-		// padding: 1rem;
 		line-height: 1.6rem;
-		// background-color: rgb(240 240 240 / 87%);
-		// z-index: 1;
-		// width: calc(100% + 2px);
-		// height: calc(100% - 30px);
-		// -webkit-backdrop-filter: blur(30px);
-		// backdrop-filter: blur(30px);
-		// overflow: auto;
 
 		.section_container {
 			border-bottom: 1px solid #e4e4e4;
@@ -463,4 +384,5 @@ dd-modal {
 			}
 		}
 	}
+
 }//end dd-modal
