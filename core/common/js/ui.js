@@ -894,18 +894,23 @@ export const ui = {
 		*
 		* @param boolean error
 		*	Boolean value obtained from previous component validation functions
-		* @param object component
+		* @param HTMLElemant input_wrap
 		*	Component that has to be set as valid or with data errors
 		* @return boolean
 		*/
-		error : (error, component) => {
+		error : (error, input_wrap) => {
 
 			if (error) {
-					console.error("ERRROR IN component:------////////-----------------",component);
-				component.classList.add('error')
+				
+				input_wrap.classList.add('error')
+
+				const input_node = input_wrap.querySelector('input')
+				if(input_node){
+					input_node.focus();
+				}
 
 			}else{
-				component.classList.remove('error')
+				input_wrap.classList.remove('error')
 			}
 
 			return true
