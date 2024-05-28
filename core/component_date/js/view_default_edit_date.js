@@ -172,8 +172,6 @@ export const get_content_value = (i, current_value, self) => {
 const get_buttons = (self) => {
 
 	// short vars
-		const data				= self.data || {}
-		const value				= data.value || []
 		const show_interface	= self.show_interface
 
 	// fragment
@@ -192,11 +190,14 @@ const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
+				const key = self.data.value.length
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: value.length,
+					key		: key,
 					value	: null
 				})]
+
 				self.change_value({
 					changed_data	: changed_data,
 					refresh			: true
