@@ -439,6 +439,14 @@
 		background-color: @color_danger !important;
 		transition: background-color 0.3s ease;
 		color: var(--color_white);
+		// add icon :before
+		.fn_append_icon('alert.svg', var(--color_white), 1);
+		&:before {
+			margin-right: 0.75rem;
+		}
+		display: flex;
+		padding: 1rem;
+		border-radius: 3px;
 	}
 	.success_text {
 		color: @color_success;
