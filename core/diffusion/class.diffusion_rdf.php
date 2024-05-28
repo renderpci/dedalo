@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * DIFFUSION_RDF
 * Used to publish data to RDF
