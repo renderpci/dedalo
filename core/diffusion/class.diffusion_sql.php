@@ -1344,15 +1344,16 @@ class diffusion_sql extends diffusion  {
 	* }
 	* @return object $response
 	*/
-	public function update_record(object $options) : object {
-		// $start_time = start_time();
+	public function update_record( object $options ) : object {
 
 		set_time_limit ( 259200 );  // 3 days
 
-		$response = new stdClass();
-			$response->result			= false;
-			$response->msg				= [];
-			$response->errors			= [];
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= [];
+				$response->errors	= [];
+				$response->class	= get_called_class();
 
 		// options
 			$section_tipo				= $options->section_tipo;
