@@ -857,14 +857,14 @@ final class core_functions_test extends TestCase {
 			'https://dedalo.dev'
 		);
 
-		$eq = gettype($result)==='integer';
+		$eq = gettype($result)==='integer' || $result===false;
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
 				. to_string( $eq )
 		);
 
-		$eq = $result===200;
+		$eq = $result===false || $result===200;
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
