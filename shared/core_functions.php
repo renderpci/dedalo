@@ -1350,10 +1350,10 @@ function br2nl(string $string) : string {
 
 /**
 * GET_HTTP_RESPONSE_CODE
-* @param string $theURL
-* @return int
+* @param string $url
+* @return int|false
 */
-function get_http_response_code(string $theURL) : int {
+function get_http_response_code(string $url) : int|false {
 	stream_context_set_default(
 		array(
 			'http' => array(
@@ -1361,7 +1361,11 @@ function get_http_response_code(string $theURL) : int {
 			)
 		)
 	);
-	$headers = get_headers($theURL);
+	$headers = get_headers($url);
+
+	if ($headers===false || !isset($headers[0])) {
+		return false;
+	}
 
 	return (int)substr($headers[0], 9, 3);
 }//end get_http_response_code
