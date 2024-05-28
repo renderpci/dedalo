@@ -302,7 +302,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 		const dd_date = {}
 
 		// dd_date.year = date_obj.year
-		if(typeof date_obj.year==='number'){
+		if(typeof date_obj.year==='number' && !Number.isNaN(date_obj.year) ){
 			dd_date.year = date_obj.year
 		}
 		if(date_obj.month){
@@ -315,7 +315,7 @@ component_date.prototype.parse_string_date = function(string_date) {
 	// errors
 		const error = []
 		// when the user intro other things than dates
-		if(string_date.length >1 && !date_obj.year){
+		if(string_date.length >1 && !dd_date.year){
 			const error_msg		= get_label.error_invalid_date_format || 'Error: Date format is invalid'
 				error.push({
 					msg		: error_msg +'. '+ string_date +': '+ date_obj.day,
