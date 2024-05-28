@@ -7,13 +7,13 @@ $updates = new stdClass();
 
 
 
-$v=621; #####################################################################################
+$v=622; #####################################################################################
 $updates->$v = new stdClass();
 
 	# UPDATE TO
 	$updates->$v->version_major			= 6;
 	$updates->$v->version_medium		= 2;
-	$updates->$v->version_minor			= 1;
+	$updates->$v->version_minor			= 2;
 
 	# MINIMUM UPDATE FROM
 	$updates->$v->update_from_major		= 6;
@@ -33,10 +33,15 @@ $updates->$v = new stdClass();
 	// DATABASE UPDATES
 		// Remove relations from activity->project (component_portal dd550)
 		// This data is huge (hundred of millions) in installations with many projects and is not really useful
-		// because normally, admins do not need to deep search across projects (JOINS)
+		// because normally, admins do not need to deep search across projects (JOINS data from activity to projects section)
 			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query("
 				DELETE FROM \"relations\" WHERE from_component_tipo = 'dd550';
 			");
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_date'
+		];	// Force convert from string to array
 
 	// RUN_SCRIPTS
 		// DATA INSIDE DATABASE UPDATES
