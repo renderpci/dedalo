@@ -117,12 +117,6 @@ function print_cli(object $process_info) : void {
 		}
 
 		echo json_handler::encode($process_info, JSON_UNESCAPED_UNICODE) . PHP_EOL;
-
-		// flush the output buffer and send echoed messages to the console
-		// while (ob_get_level() > 0) {
-		// 	ob_end_flush();
-		// }
-		// flush();
 	}
 }//end print_cli
 
@@ -1026,27 +1020,6 @@ function array_key_path(string $needle, array $haystack, array $forbidden=array(
 
 
 /**
-* Given a path, return a reference to the array entry.
-* @param $array
-*   A keyed array.
-* @param $path
-*   An array path, represented as an array where entries are consecutive keys.
-* @return
-*   A reference to the entry that corresponds to the given path.
-* by http://thereisamoduleforthat.com/content/dealing-deep-arrays-php
-*/
-	// function &array_path(&$array, $path) {
-	//   $offset =& $array;
-	//   if ($path) foreach ($path as $index) {
-	// 	$offset =& $offset[$index];
-	//   }
-
-	//   return $offset;
-	// }//end array_path
-
-
-
-/**
 * ARRAY_KEYS_RECURSIVE
 * Flat an array selecting keys
 * @param array $array
@@ -1285,7 +1258,7 @@ function array_get_by_key_r(mixed $array, $key, &$results) {
 // with zeros out to 32 characters - IP addresses are 32 bit numbers
 function decbin32(int $dec) : string {
 
-  return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
+	return str_pad(decbin($dec), 32, '0', STR_PAD_LEFT);
 }
 
 
@@ -1377,10 +1350,10 @@ function br2nl(string $string) : string {
 
 /**
 * GET_HTTP_RESPONSE_CODE
-* @param string $theURL
-* @return int
+* @param string $url
+* @return int|false
 */
-function get_http_response_code(string $theURL) : int {
+function get_http_response_code(string $url) : int|false {
 	stream_context_set_default(
 		array(
 			'http' => array(
@@ -1388,7 +1361,11 @@ function get_http_response_code(string $theURL) : int {
 			)
 		)
 	);
-	$headers = get_headers($theURL);
+	$headers = get_headers($url);
+
+	if ($headers===false || !isset($headers[0])) {
+		return false;
+	}
 
 	return (int)substr($headers[0], 9, 3);
 }//end get_http_response_code
@@ -1458,41 +1435,6 @@ function str_lreplace(string $search, string $replace, string $subject) : string
 
 	return $subject;
 }//end str_lreplace
-
-
-
-/**
-* CAST
-* @param string|object $destination
-* @param object $sourceObject
-* @return object
-*/
-	// function cast($destination, $sourceObject) : object {
-
-	// 	if (is_string($destination)) {
-	// 		$destination = new $destination();
-	// 	}
-	// 	$sourceReflection		= new ReflectionObject($sourceObject);
-	// 	$destinationReflection	= new ReflectionObject($destination);
-	// 	$sourceProperties		= $sourceReflection->getProperties();
-
-	// 	foreach ($sourceProperties as $sourceProperty) {
-
-	// 		$sourceProperty->setAccessible(true);
-	// 		$name	= $sourceProperty->getName();
-	// 		$value	= $sourceProperty->getValue($sourceObject);
-
-	// 		if ($destinationReflection->hasProperty($name)) {
-	// 			$propDest = $destinationReflection->getProperty($name);
-	// 			$propDest->setAccessible(true);
-	// 			$propDest->setValue($destination,$value);
-	// 		} else {
-	// 			$destination->$name = $value;
-	// 		}
-	// 	}
-
-	// 	return $destination;
-	// }//end cast
 
 
 
@@ -1868,13 +1810,6 @@ function safe_tipo(string $tipo) : string|bool {
 		return false;
 	}
 
-	/*
-	if ( strpos($tipo,',')!==false || strpos($tipo,';')!==false || strpos($tipo,'\'')!==false || strpos($tipo,'"')!==false ) {
-		#exit("bad tipo ".htmlentities($tipo));
-		debug_log(__METHOD__." bad tipo ".to_string($tipo), logger::ERROR);
-		return false;
-	}*/
-
 	return $tipo;
 }//end safe_tipo
 
@@ -2144,54 +2079,6 @@ function array_find(array $ar_value=null, callable $fn) : mixed {
 
 
 /**
-* WRITE_SESSION_VALUE
-* Simple assign value $_SESSION['xx'] = value
-* Write the received value into target session
-* Used to control session writes only
-* @return bool false | value mixed
-*/
-	// function write_session_value(array $session_keys, $value) {
-
-	// 	if(session_status()===PHP_SESSION_ACTIVE){
-	// 		// write ready
-	// 		// $result = $session = $value;
-	// 		// $result = $_SESSION['dedalo'][$session_keys] = $value;
-	// 		$result = insert_into($_SESSION['dedalo'], $session_keys, $value);
-
-	// 	}else{
-
-	// 		trigger_error( '!!!!!!!!!!!!!!!!!! SESSION WRITE IS DISABLE '. json_encode($session_keys) . ' - value: '. json_encode($value) );
-	// 		$result = false;
-	// 	}
-
-	// 	return $result;
-	// }//end write_session_value
-
-
-
-/**
-* INSERT_INTO
-* Insert value into array using any number of keys sequence
-* like $_SESSION['dedalo']['config']['ddo'][$section_tipo][$ddo_key]
-*/
-	// function insert_into(&$array, array $keys, $value) {
-	// 	$last = array_pop($keys);
-
-	// 	foreach($keys as $key) {
-	// 		if(!array_key_exists($key, $array) ||
-	// 			array_key_exists($key, $array) && !is_array($array[$key])) {
-	// 				$array[$key] = array();
-	// 		}
-	// 		$array = &$array[$key];
-	// 	}
-	// 	$array[$last] = $value;
-
-	// 	return $array;
-	// }//end insert_into
-
-
-
-/**
 * GET_OBJECT_PROPERTY
 * Extract value from a object using dynamic path array
 * @param object $object
@@ -2276,37 +2163,6 @@ function test_php_version_supported(string $minimum_php_version='8.1.0') : bool 
 	}
 }//end test_php_version_supported
 
-
-
-/**
-* FILTER_FILENAME
-* Sanitize filenames for user uploaded files
-* From Sean Vieira
-* @param string $filename
-* @param bool $beautify = true
-* @return string $filename
-*/
-	// function filter_filename(string $filename, bool $beautify=true) : string {
-	// 	// sanitize filename
-	// 	$filename = preg_replace(
-	// 		'~
-	// 		[<>:"/\\\|?*]|           # file system reserved https://en.wikipedia.org/wiki/Filename#Reserved_characters_and_words
-	// 		[\x00-\x1F]|             # control characters http://msdn.microsoft.com/en-us/library/windows/desktop/aa365247%28v=vs.85%29.aspx
-	// 		[\x7F\xA0\xAD]|          # non-printing characters DEL, NO-BREAK SPACE, SOFT HYPHEN
-	// 		[#\[\]@!$&\'()+,;=]|     # URI reserved https://www.rfc-editor.org/rfc/rfc3986#section-2.2
-	// 		[{}^\~`]                 # URL unsafe characters https://www.ietf.org/rfc/rfc1738.txt
-	// 		~x',
-	// 		'X', $filename);
-	// 	// avoids ".", ".." or ".hiddenFiles"
-	// 	$filename = ltrim($filename, '.-');
-	// 	// optional beautification
-	// 	if ($beautify) $filename = beautify_filename($filename);
-	// 	// maximize filename length to 255 bytes http://serverfault.com/a/9548/44086
-	// 	$ext = pathinfo($filename, PATHINFO_EXTENSION);
-	// 	$filename = mb_strcut(pathinfo($filename, PATHINFO_FILENAME), 0, 255 - ($ext ? strlen($ext) + 1 : 0), mb_detect_encoding($filename)) . ($ext ? '.' . $ext : '');
-
-	// 	return $filename;
-	// }//end filter_filename
 
 
 /**
@@ -2521,7 +2377,7 @@ function get_cookie_properties() : object {
 	// Cookie properties
 	$domain		= $_SERVER['SERVER_NAME'] ?? '';
 	$secure		= stripos(DEDALO_PROTOCOL,'https')!==false ? true : false;
-	$httponly	= true; // Not accessible for javascript, only for http/s requests
+	$httponly	= true; // Not accessible for Javascript, only for http/s requests
 
 	$cookie_properties = new stdClass();
 		$cookie_properties->domain		= $domain;
@@ -2531,34 +2387,3 @@ function get_cookie_properties() : object {
 
 	return $cookie_properties;
 }//end get_cookie_properties
-
-
-
-/**
-* MANAGE_CACHE_OVERLOAD
-* @return array
-*/
-	// function manage_cache_overload($current_array, $max_cache_items, $cache_slice_on) {
-
-	// 	$total = count($current_array);
-	// 	if ( $total > $max_cache_items ) {
-	// 		// self::$ar_section_instances = array_slice(self::$ar_section_instances, $cache_slice_on, null, true);
-	// 		// new array
-	// 		$new_array = [];
-	// 		$i = 1;
-	// 		foreach ($current_array as $inst_key => $inst_value) {
-	// 			if ($i > $cache_slice_on) {
-	// 				$new_array[$inst_key] = $inst_value;
-	// 			}else{
-	// 				$i++;
-	// 			}
-	// 		}
-	// 		// replace matrix_instances array
-	// 		$current_array = $new_array;
-
-	// 		error_log('))))))))))))))))))))))))))))))))))))))))) Replaced items cache from n '.$total.' to '.count($new_array));
-	// 		error_log('))))))))))))))))))))))))))))))))))))))))) Replaced items ('.$max_cache_items.'/'.$cache_slice_on.')');
-	// 	}
-
-	// 	return $current_array;
-	// }//end manage_cache_overload

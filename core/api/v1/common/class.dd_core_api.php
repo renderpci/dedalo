@@ -139,6 +139,7 @@ final class dd_core_api {
 				$mode			= $locator->mode ?? 'list';
 				$lang			= $search_obj->lang	?? $search_obj->lang ?? DEDALO_DATA_LANG;
 				$view			= $search_obj->view ?? null;
+				$session_key	= $search_obj->session_key ?? null;
 
 			}else{
 
@@ -149,6 +150,7 @@ final class dd_core_api {
 				$mode			= $search_obj->m	?? $search_obj->mode			?? 'list';
 				$lang			= $search_obj->lang	?? $search_obj->lang			?? DEDALO_DATA_LANG;
 				$view			= $search_obj->view ?? null;
+				$session_key	= $search_obj->session_key ?? null;
 			}
 
 		// context
@@ -256,7 +258,7 @@ final class dd_core_api {
 									$tool_info = array_find($user_tools, function($el) use($tool_name) {
 										return $el->name===$tool_name;
 									});
-									if (empty($tool_info)) {
+									if (!is_object($tool_info)) {
 										debug_log(__METHOD__
 											." ERROR. No tool found for tool '$tool_name' in section_tool_tipo: ".to_string($section_tool_tipo)
 											, logger::ERROR
@@ -290,8 +292,23 @@ final class dd_core_api {
 								$current_context->config = $config;
 							}
 
+							// session_key. Restore previous SQO from session when it exists
+							if (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
+
+								// request_config
+									$request_config = array_find($current_context->request_config, function($el){
+										return $el->api_engine==='dedalo';
+									});
+									if (is_object($request_config)) {
+										// overwrite default SQO with previously saved session SQO
+										// This allows to refresh the page without loosing the last SQO (filter, pagination, etc.)
+										// Is normally called as iframe from component_portal link button in order to select a item
+										$request_config->sqo = $_SESSION['dedalo']['config']['sqo'][$session_key];
+									}
+							}
+
 							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
-							// and override default request_config sqo into the section context
+							// and override default request_config SQO into the section context
 							if (!empty($section_id)) {
 
 								$current_context->mode			= 'edit'; // force edit mode
@@ -360,7 +377,7 @@ final class dd_core_api {
 								$tool_found = array_find($registered_tools, function($el) use($model){
 									return $el->name===$model;
 								});
-								if (empty($tool_found)) {
+								if (!is_object($tool_found)) {
 									debug_log(__METHOD__
 										." Tool $model not found in tool_common::get_user_tools "
 										, logger::ERROR
@@ -1827,14 +1844,13 @@ final class dd_core_api {
 								$original_ddo = array_find($rqo->show->ddo_map, function($item){
 									return isset($item->has_dataframe) && $item->has_dataframe===true;
 								});
-								if (empty($original_ddo)) {
+								if (!is_object($original_ddo)) {
 									debug_log(__METHOD__
 										. " Error: original_ddo (has_dataframe) not found in ddo_map!  " . PHP_EOL
 										. ' $rqo->show->ddo_map: ' . to_string($rqo->show->ddo_map)
 										, logger::ERROR
 									);
-								}
-								if( isset($original_ddo->dataframe_ddo) ){
+								}else if ( isset($original_ddo->dataframe_ddo) ) {
 									$dataframe_ddo = $original_ddo->dataframe_ddo;
 									// clone the $sqo to change without changes the original
 									// the sqo will be set with the dataframe tipo and lg-nolan as lang
@@ -1870,17 +1886,19 @@ final class dd_core_api {
 							// used to identify the value associated to the source_data and recreate it
 								$source_data	= null;
 								$dataframe_data	= [null];
-								foreach ($full_data as $current_data) {
-									if($current_data->tipo === $original_ddo->tipo ){
-										$source_data = $current_data->dato;
+								if (is_object($original_ddo)) {
+									foreach ($full_data as $current_data) {
+										if($current_data->tipo === $original_ddo->tipo ){
+											$source_data = $current_data->dato;
+										}
+										if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
+											$dataframe_data[$current_data->section_id_key] = $current_data->dato;
+										}
+										$current_data->dato				= $source_data;
+										$current_data->dataframe_data	= $dataframe_data;
+										$current_data->tipo				= $original_ddo->tipo;
+										$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
 									}
-									if($current_data->tipo === $original_ddo->dataframe_ddo->tipo ){
-										$dataframe_data[$current_data->section_id_key] = $current_data->dato;
-									}
-									$current_data->dato				= $source_data;
-									$current_data->dataframe_data	= $dataframe_data;
-									$current_data->tipo				= $original_ddo->tipo;
-									$current_data->dataframe_tipo	= $original_ddo->dataframe_ddo->tipo ;
 								}
 
 								// order the full data DESC by date

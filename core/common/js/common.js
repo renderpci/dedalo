@@ -1538,9 +1538,9 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 
 	// ar_sections. Get ar_sections from sqo and map to string from object
 		const ar_sections = (sqo && sqo.section_tipo)
-			? sqo.section_tipo.map(el=>el.tipo)
+			? sqo.section_tipo.map(el => el.tipo ? el.tipo : el)
 			: sqo_config && sqo_config.section_tipo
-				? sqo_config.section_tipo.map(el=>el.tipo)
+				? sqo_config.section_tipo.map(el => el.tipo ? el.tipo : el)
 				: [self.section_tipo]
 
 		sqo.section_tipo = ar_sections
@@ -1642,9 +1642,9 @@ common.prototype.build_rqo_search = async function(request_config_object, action
 
 	// get the ar_sections
 		const ar_sections = request_config_object.sqo && request_config_object.sqo.section_tipo
-			? request_config_object.sqo.section_tipo.map(el=>el.tipo)
+			? request_config_object.sqo.section_tipo.map(el => el.tipo ? el.tipo : el)
 			: ( sqo_config.section_tipo)
-					? sqo_config.section_tipo.map(el=>el.tipo)
+					? sqo_config.section_tipo.map(el => el.tipo ? el.tipo : el)
 					: [self.section_tipo]
 
 	// limit and offset

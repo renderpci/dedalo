@@ -258,86 +258,46 @@ export const render_column_id = function(options) {
 				break;
 			}
 
-			// case (self.initiator && self.initiator.indexOf('tool_time_machine')!==-1):
-				// 	// button time machine preview (eye)
-				// 		const button_edit = ui.create_dom_element({
-				// 			element_type	: 'button',
-				// 			class_name		: 'button_edit',
-				// 			parent			: fragment
-				// 		})
-				// 		button_edit.addEventListener("click", function(){
-				// 			// publish event
-				// 			event_manager.publish('tm_edit_record', {
-				// 				tipo		: section_tipo,
-				// 				section_id	: section_id,
-				// 				matrix_id	: matrix_id,
-				// 				date		: modification_date || null,
-				// 				mode		: 'tm'
-				// 			})
-				// 		})
-				// 		button_edit.appendChild(section_id_node)
-				// 		// eye_icon
-				// 			ui.create_dom_element({
-				// 				element_type	: 'span',
-				// 				class_name		: 'button eye icon',
-				// 				parent			: button_edit
-				// 			})
-				// 	break
-
 			case (self.config && self.config.source_model==='section_tool'): {
 
-				// edit button (pen)
-					if (self.permissions>1) {
-						// const text_edit_button = ui.create_dom_element({
-						// 	element_type	: 'div',
-						// 	class_name		: 'self.config.tool_context.name',
-						// 	inner_html 		: ' ' + self.config.tool_context.label,
-						// 	parent			: fragment
-						// })
+				// button_edit (pen)
+				if (self.permissions>1) {
 
-						const button_edit = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'button_edit list_'+ self.config.tool_context.name,
-							parent			: fragment
-						})
-						button_edit.addEventListener('click', function(e){
-							e.stopPropagation();
+					const button_edit = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'button_edit list_'+ self.config.tool_context.name,
+						parent			: fragment
+					})
+					button_edit.addEventListener('click', function(e){
+						e.stopPropagation();
 
-							// tool_context
-								const tool_context = self.config.tool_context
+						// tool_context
+							const tool_context = self.config.tool_context
 
-							// section_id_selected (!) Important to allow parse 'self' values
-								self.section_id_selected = section_id
+						// section_id_selected (!) Important to allow parse 'self' values
+							self.section_id_selected = section_id
 
-							// parse ddo_map section_id. (!) Unnecessary. To be done at tool_common init
-								// tool_context.tool_config.ddo_map.map(el => {
-								// 	if (el.section_id==='self') {
-								// 		el.section_id = section_id
-								// 	}
-								// })
-
-							// open_tool (tool_common)
-								open_tool({
-									tool_context	: tool_context,
-									caller			: self
-								})
-						})
-						button_edit.appendChild(section_id_node)
-
-							// const tool_icon = ui.create_dom_element({
-							// 	element_type	: 'img',
-							// 	class_name		: self.config.tool_context.name,
-							// 	src 			: self.config.tool_context.icon,
-							// 	parent			: button_edit
+						// parse ddo_map section_id. (!) Unnecessary. To be done at tool_common init
+							// tool_context.tool_config.ddo_map.map(el => {
+							// 	if (el.section_id==='self') {
+							// 		el.section_id = section_id
+							// 	}
 							// })
 
-						// edit_icon
-							ui.create_dom_element({
-								element_type	: 'span',
-								class_name		: 'button edit icon',
-								parent			: button_edit
+						// open_tool (tool_common)
+							open_tool({
+								tool_context	: tool_context,
+								caller			: self
 							})
-					}
+					})
+					button_edit.appendChild(section_id_node)
+					// edit_icon
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'button edit icon',
+						parent			: button_edit
+					})
+				}
 				break;
 			}
 
@@ -359,6 +319,7 @@ export const render_column_id = function(options) {
 
 				// button_edit (pen)
 					if (permissions>1) {
+
 						// button_edit
 							const button_edit = ui.create_dom_element({
 								element_type	: 'button',
@@ -367,7 +328,7 @@ export const render_column_id = function(options) {
 							})
 							// open_window action
 							button_edit.open_window = (features) => {
-								
+
 								// open a new window
 								const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 									tipo			: section_tipo,
@@ -544,7 +505,7 @@ export const render_column_id = function(options) {
 					}
 
 				// button_delete (trash can)
-					const button_delete = self.context.buttons
+					const button_delete = self.context.buttons && self.context.buttons.length
 						? self.context.buttons.find(el => el.model==='button_delete')
 						: null
 					if (button_delete, self.show_interface.button_delete===true) {

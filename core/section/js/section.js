@@ -436,12 +436,8 @@ section.prototype.init = async function(options) {
 * @return bool
 */
 section.prototype.build = async function(autoload=false) {
-	// const t0 = performance.now()
 
 	const self = this
-
-	// previous status
-		const previous_status = clone(self.status)
 
 	// status update
 		self.status = 'building'
@@ -451,7 +447,7 @@ section.prototype.build = async function(autoload=false) {
 			data	: [],
 			context	: []
 		}
-		self.data	= self.data || {}
+		self.data = self.data || {}
 
 	// rqo
 		const generate_rqo = async function(){
@@ -470,7 +466,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// check request_config_object misconfigured issues (type = 'main' missed in request_config cases)
 				if (self.request_config && !self.request_config_object) {
-					console.warn('Warning: no request_config was found into the request_config. Maybe the request_config type is not set to "main" ');
+					console.warn('Warning: no request_config was found into the request_config. Maybe the request_config type is not set to "main"');
 					console.warn('self.request_config:', self.request_config);
 				}
 
@@ -510,7 +506,7 @@ section.prototype.build = async function(autoload=false) {
 			// Use unified way to load context and data with
 			// errors and not login situation managing
 				const api_response = await build_autoload(self)
-				
+
 				// server: wrong response
 				if (!api_response) {
 					return false
@@ -569,7 +565,6 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo regenerate
 				await generate_rqo()
-				// console.log('SECTION self.rqo after load:", clone(self.rqo) );
 
 			// update rqo.sqo.limit. Note that it may have been updated from the API response
 			// Paginator takes limit from: self.rqo.sqo.limit
@@ -676,7 +671,7 @@ section.prototype.build = async function(autoload=false) {
 								})
 
 							// show
-								debug.classList.remove("hide")
+								debug.classList.remove('hide')
 						}
 					const event_token = event_manager.subscribe('render_'+self.id, fn_show_debug_info)
 					self.events_tokens.push(event_token)
@@ -697,8 +692,8 @@ section.prototype.build = async function(autoload=false) {
 	// initiator . URL defined var or Caller of parent section
 	// this is a param that defined who is calling to the section, sometimes it can be a tool or page or ...,
 		const searchParams = new URLSearchParams(window.location.href);
-		const initiator = searchParams.has("initiator")
-			? searchParams.get("initiator")
+		const initiator = searchParams.has('initiator')
+			? searchParams.get('initiator')
 			: self.caller!==null
 				? self.caller.id
 				: false
@@ -725,7 +720,7 @@ section.prototype.build = async function(autoload=false) {
 
 					// navigate section rows
 						self.navigate({
-							callback			: () => { // callback
+							callback : () => { // callback
 
 								// (!) This code is unified in function 'navigate' ⬇︎
 

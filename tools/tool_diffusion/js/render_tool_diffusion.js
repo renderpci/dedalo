@@ -783,37 +783,65 @@ const update_process_status = (options) => {
 const render_process_report = function(options) {
 
 	// options
-		const last_update_record_response	= options.last_sse_response?.data?.last_update_record_response
+		const last_sse_response				= options.last_sse_response || {}
+		const last_update_record_response	= last_sse_response.data?.last_update_record_response
 		const container						= options.container
 
-	// last_sse_response
+	// last_update_record_response
+		// {
+		//   "result": true,
+		//   "msg": [
+		// 		"Record updated section_id: 1. Number of references: 8 in levels: 2"
+		//   ],
+		//   "errors": [],
+		//   "class": "diffusion_mysql"
+		// }
 		if (!last_update_record_response) {
 			return false
 		}
 
-	// case
-		switch (true) {
-			case (last_update_record_response.url!==undefined):
+	// class_name based actions
+		const class_name = last_update_record_response.class
+		// cases
+		switch (class_name) {
+			case 'diffusion_rdf':
 				// RDF export case (return a url from created RDF file)
-				const name = last_update_record_response.url.split('\\').pop().split('/').pop();
-				// download button
-				const button_download = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'download warning',
-					inner_html		: (get_label.download || 'Download') + ' ' + name,
-					parent			: container
-				})
-				button_download.addEventListener('click', function(e) {
-					e.stopPropagation()
-					open_window({
-						url : last_update_record_response.url
+				if (last_update_record_response.url) {
+					const name = last_update_record_response.url.split('\\').pop().split('/').pop();
+					// download button
+					const button_download = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'download warning',
+						inner_html		: (get_label.download || 'Download') + ' ' + name,
+						parent			: container
 					})
-				})
+					button_download.addEventListener('click', function(e) {
+						e.stopPropagation()
+						open_window({
+							url : last_update_record_response.url
+						})
+					})
+				}
+				break;
+
+			case 'diffusion_mysql':
+				// Nothing specific to do
 				break;
 
 			default:
-
+				// Nothing specific to do
 				break;
+		}
+
+	// errors manager
+		const errors = last_update_record_response.errors || []
+		if (errors.length>0) {
+			ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'error',
+				inner_html		: errors.join(' | '),
+				parent			: container
+			})
 		}
 
 

@@ -1,4 +1,5 @@
 <?php
+// declare(strict_types=1); // NOT IN UNIT TEST !
 /**
 * DIFFUSION_RDF
 * Used to publish data to RDF
@@ -8,7 +9,7 @@ class diffusion_rdf extends diffusion {
 
 
 	public $section_id;
-	public $rdf_wrapper;	// Array of rdf wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
+	public $rdf_wrapper;	// Array of RDF wrapper lines to inject body content at element $rdf_wrapper[rdf_value]
 
 	public $service_name;	// From propiedades of diffusion_element (Fixed on update_record)
 	public $service_type;	// From propiedades of diffusion_element (Fixed on update_record)
@@ -88,16 +89,19 @@ class diffusion_rdf extends diffusion {
 	*/
 	public function update_record( object $options, bool $resolve_references=false ) : object {
 
-		// options
-			$section_tipo			= $options->section_tipo ?? null;
-			$section_id				= $options->section_id ?? null;
-			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
-			$save_file				= $options->save_file ?? true;
+		set_time_limit ( 259200 );  // 3 days
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= [];
+				$response->class	= get_called_class();
+
+		// options
+			$section_tipo			= $options->section_tipo ?? null;
+			$section_id				= $options->section_id ?? null;
+			$diffusion_element_tipo	= $options->diffusion_element_tipo ?? null;
+			$save_file				= $options->save_file ?? true;
 
 		// target_section_tipo
 			$RecordObj_dd			= new RecordObj_dd($diffusion_element_tipo);
@@ -242,7 +246,7 @@ class diffusion_rdf extends diffusion {
 		// Maximum execution time seconds
 		set_time_limit(600);
 
-		$start_time=microtime(1);
+		$start_time=start_time();
 
 		// options
 			$owl_class_tipo			= $options->owl_class_tipo		?? null;
@@ -321,8 +325,8 @@ class diffusion_rdf extends diffusion {
 			$response->data		= $data;
 
 		// debug
-			$total_time=round(microtime(1)-$start_time,3);
-			$response->debug = "Generated [".count($ar_section_id)." elements] in $total_time secs";
+			$response->debug = "Generated [".count($ar_section_id)." elements] in "
+				. exec_time_unit_auto($start_time);
 
 
 		return $response;
@@ -1231,9 +1235,9 @@ class diffusion_rdf extends diffusion {
 	* it's stored in the Publication services section (dd1010) in the component_json
 	* @param object $configuration_entity
 	* @param string|int|null $section_id = null
-	* @return string|null $result
+	* @return string|null|false $result
 	*/
-	public function resolve_configuration(object $configuration_entity, $section_id=null) : ?string {
+	public function resolve_configuration(object $configuration_entity, $section_id=null) {
 
 		$result = null;
 
