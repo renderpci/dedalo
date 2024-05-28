@@ -35,7 +35,7 @@
     "propagar_marcas": "<mark>Propagar marcas<\/mark>",
     "ver_ficha_existente": "अवस्थित रेकर्ड हेर्नुहोस्",
     "geolocalizacion": "<mark>Geolocalización<\/mark>",
-    "si": "हो",
+    "yes": "हो",
     "no": "छैन",
     "search": "खोज्नुहोस्",
     "modo": "मोड",

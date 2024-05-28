@@ -2556,8 +2556,8 @@ export const ui = {
 
 		// header_wrapper
 			const searchParams = new URLSearchParams(window.location.href);
-			const initiator = searchParams.has("initiator")
-				? searchParams.get("initiator")
+			const initiator = searchParams.has('initiator')
+				? searchParams.get('initiator')
 				: false
 
 			if (initiator!==false) {
