@@ -684,11 +684,10 @@ class dd_date extends stdClass {
 
 
 
-
 	/**
-	* set_from_timestamp
+	* SET_FROM_TIMESTAMP
 	* @param string $timestamp
-	* @return dd_date object
+	* @return bool
 	*/
 	public function set_from_timestamp( string $timestamp ) : bool {
 
@@ -810,12 +809,12 @@ class dd_date extends stdClass {
 
 		$dd_date = clone $source_dd_date; // IMPORTANT : Clone always dd_date when you manipulate it
 
-		$year  	= !empty($dd_date->year)   ? (int)$dd_date->year	: 0;
-		$month 	= !empty($dd_date->month)  ? (int)$dd_date->month  	: 0;
-		$day 	= !empty($dd_date->day)    ? (int)$dd_date->day    	: 0;
-		$hour 	= !empty($dd_date->hour)   ? (int)$dd_date->hour    : 0;
-		$minute = !empty($dd_date->minute) ? (int)$dd_date->minute  : 0;
-		$second = !empty($dd_date->second) ? (int)$dd_date->second  : 0;
+		$year	= !empty($dd_date->year)   ? (int)$dd_date->year	: 0;
+		$month	= !empty($dd_date->month)  ? (int)$dd_date->month  	: 0;
+		$day	= !empty($dd_date->day)    ? (int)$dd_date->day    	: 0;
+		$hour	= !empty($dd_date->hour)   ? (int)$dd_date->hour    : 0;
+		$minute	= !empty($dd_date->minute) ? (int)$dd_date->minute  : 0;
+		$second	= !empty($dd_date->second) ? (int)$dd_date->second  : 0;
 
 			// Rectified 25-11-2017
 			if(!empty($month)) {
@@ -825,7 +824,6 @@ class dd_date extends stdClass {
 				$day--; // Remove 1
 			}
 
-			$year 	= $year   >= 0 ? $year   : 0;
 			$month 	= $month  >= 0 ? $month  : 0;
 			$day 	= $day 	  >= 0 ? $day 	 : 0;
 			$hour 	= $hour   >= 0 ? $hour 	 : 0;
