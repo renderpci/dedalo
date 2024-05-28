@@ -1,10 +1,24 @@
 <?php
 declare(strict_types=1);
+ini_set( 'display_errors', 0 );
+error_reporting(0);
 $global_start_time = hrtime(true);
 // PREVENT_SESSION_LOCK
 define('PREVENT_SESSION_LOCK', true);
 // CONFIG
-include_once dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php';
+if( !include_once dirname(dirname(dirname(dirname(__FILE__)))).'/config/config.php' ) {
+	header('Content-type: application/javascript; charset=utf-8');
+	echo '
+	window.page_globals = { "error" : "Error loading config file" };
+	const SHOW_DEBUG = false;
+	const SHOW_DEVELOPER = false;
+	const DEDALO_CORE_URL = "";
+	const DEDALO_ROOT_WEB = "";
+	const get_label={};
+	alert("Error: loading environment config file!");
+	';
+	exit();
+}
 
 // close session to unlock php tread
 session_write_close();
