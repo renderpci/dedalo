@@ -1217,10 +1217,53 @@ class component_date extends component_common {
 			$update_version = $options->update_version;
 			$dato_unchanged = $options->dato_unchanged;
 			$reference_id 	= $options->reference_id;
+			$section_tipo 	= $options->section_tipo ?? '';
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
+			case '6.2.2':
+				$table = common::get_matrix_table_from_tipo($section_tipo);
+
+				// skip the time_machine because the recovery data will added the time.
+				if($table === 'matrix_time_machine' || $table === 'matrix_activity'){
+					$response = new stdClass();
+						$response->result	= 0;
+						$response->msg		= "Ignored table";
+
+					return $response;
+				}
+				// default response as ignore
+				$response = new stdClass();
+						$response->result	= 0;
+						$response->msg		= "Ignored data, empty data";
+
+				if(empty($dato_unchanged)){
+
+					return $response;
+				}
+				// set a clone of the original data unchanged
+				$clone_data_unchange = json_decode(json_encode( $dato_unchanged ));
+
+				// set the time into the new_data
+				$new_data = array_map(function($item) {
+					return is_object($item)
+						? self::add_time( $item )
+						: $item;
+				}, $clone_data_unchange );
+
+				// if the new_data is not the same that $dato_unchange save it.
+				// time will be added into the new_data
+				if($new_data != $dato_unchanged){
+					$response = new stdClass();
+						$response->result	= 1;
+						$response->new_dato	= $new_data;
+						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_data).".<br />";
+				}
+
+				return $response;
+
+				break;
 			case '6.0.0':
 				// break;
 			default:
