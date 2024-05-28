@@ -825,15 +825,17 @@ export const change_handler = function(options) {
 			: {mode}
 
 	// replace value only in current mode
-		data_value[mode] = new_value
+		if(new_value){
+			data_value[mode] = new_value
+		}else{
+			delete data_value[mode]
+		}
 
 	// changed_data_item
 		const changed_data_item = Object.freeze({
 			action	: 'update',
 			key		: key,
-			value	: new_value
-				? data_value
-				: null
+			value	: data_value
 		})
 
 	if (self.mode==='search') {
