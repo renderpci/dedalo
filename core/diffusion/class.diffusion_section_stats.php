@@ -310,7 +310,7 @@ class diffusion_section_stats extends diffusion {
 
 			// what
 				$key = $what_key;
-				if (!empty($key)) {
+				if (!empty($key) && is_object($what_key)) {
 
 					$key = $what_key->from_component_tipo;
 
@@ -696,45 +696,57 @@ class diffusion_section_stats extends diffusion {
 
 				$datos	= $row->datos;
 				$totals	= $datos->components->{USER_ACTIVITY_TOTALS_TIPO}->dato->{DEDALO_DATA_NOLAN};
+
+				// legacy values check
+					if (is_array($totals) && isset($totals[0]) && is_string($totals[0])) {
+						$totals[0] = json_decode($totals[0]);
+					}
+					if (is_string($totals)) {
+						$totals = json_decode($totals);
+					}
+
 				// format legacy data to one level
 				$totals	= array_flatten($totals);
 
 				// who
 				if ($add_who_data===true) {
 					// user
-						$user = array_find($datos->relations, function($item){
-							return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
-						});
+					$user = array_find($datos->relations, function($item){
+						return $item->from_component_tipo===USER_ACTIVITY_USER_TIPO && $item->section_tipo===DEDALO_SECTION_USERS_TIPO;
+					});
+					if (is_object($user)) {
 
-					// actions totals (extracted from where totals)
-						$actions_totals = array_reduce($totals, function($carry, $item) {
-							if ($item->type==='where') {
-								$carry += $item->value;
+						// actions totals (extracted from where totals)
+							$actions_totals = array_reduce($totals, function($carry, $item) {
+								if ($item->type==='where') {
+									$carry += $item->value;
+								}
+								return $carry;
+							}, 0);
+
+						// add data
+							$item_key = $user->section_id;
+							if (isset($who_data_obj->{$item_key})) {
+								$who_data_obj->{$item_key}->value += $actions_totals;
+							}else{
+
+								$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
+								$component	= component_common::get_instance(
+									$model_name,
+									DEDALO_USER_NAME_TIPO,
+									$user->section_id,
+									'list',
+									$lang,
+									$user->section_tipo
+								);
+								$label = $component->get_valor();
+
+								$who_data_obj->{$item_key} = new stdClass();
+									$who_data_obj->{$item_key}->value	= $actions_totals;
+									$who_data_obj->{$item_key}->label	= $label;
+									$who_data_obj->{$item_key}->key		= $user->section_id;
 							}
-							return $carry;
-						}, 0);
-					// add data
-						$item_key = $user->section_id;
-						if (isset($who_data_obj->{$item_key})) {
-							$who_data_obj->{$item_key}->value += $actions_totals;
-						}else{
-
-							$model_name	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_USER_NAME_TIPO, true);
-							$component	= component_common::get_instance(
-								$model_name,
-								DEDALO_USER_NAME_TIPO,
-								$user->section_id,
-								'list',
-								$lang,
-								$user->section_tipo
-							);
-							$label = $component->get_valor();
-
-							$who_data_obj->{$item_key} = new stdClass();
-								$who_data_obj->{$item_key}->value	= $actions_totals;
-								$who_data_obj->{$item_key}->label	= $label;
-								$who_data_obj->{$item_key}->key		= $user->section_id;
-						}
+					}//end if (is_object($user))
 				}
 
 				// what
@@ -764,7 +776,6 @@ class diffusion_section_stats extends diffusion {
 						$where_totals = array_filter($totals, function($item){
 							return $item->type==='where';
 						});
-						// dump($where_totals, ' where_totals ++ '.to_string());
 					// add data
 						foreach ($where_totals as $item) {
 
@@ -883,7 +894,7 @@ class diffusion_section_stats extends diffusion {
 			return [];
 
 		// who
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUIEN['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHO['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -904,7 +915,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// what
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_QUE['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHAT['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -925,7 +936,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// where
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_DONDE['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHERE['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
@@ -973,7 +984,7 @@ class diffusion_section_stats extends diffusion {
 			$ar_js_obj[] = $current_obj;
 
 		// when
-			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_CUANDO['tipo'], DEDALO_DATA_LANG, true, true);
+			$title = RecordObj_dd::get_termino_by_tipo(logger_backend_activity::$_COMPONENT_WHEN['tipo'], DEDALO_DATA_LANG, true, true);
 			$current_obj = new stdClass();
 				$current_obj->title			= $title;
 				$current_obj->tipo			= $tipo;
