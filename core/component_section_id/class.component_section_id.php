@@ -171,8 +171,13 @@ class component_section_id extends component_common {
 				? $query_object->q->section_id
 				: $query_object->q;
 
-		// set the q
-		$q = $query_object->q;
+		// set the q. Force string always
+		$q = $query_object->q . "";
+
+		// q_operator. Prepend q_operator if exists
+		if (isset($query_object->q_operator)) {
+			$q = $query_object->q_operator . $q;
+		}
 
 		// Always set fixed values
 		$query_object->type = 'number';
@@ -244,6 +249,13 @@ class component_section_id extends component_common {
 				$query_object->operator	= $operator;
 				$query_object->q_parsed	= implode(',', $q_clean);
 				$query_object->format	= 'in_column';
+				break;
+			# DISTINCT OF
+			case (substr($q, 0, 2)==='!='):
+				$operator = '!=';
+				$q_clean  = (int)str_replace($operator, '', $q);
+				$query_object->operator = $operator;
+				$query_object->q_parsed	= $q_clean;
 				break;
 			# BIGGER OR EQUAL THAN
 			case (substr($q, 0, 2)==='>='):
