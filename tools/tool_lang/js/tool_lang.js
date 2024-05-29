@@ -215,9 +215,7 @@ tool_lang.prototype.automatic_translation = async function(translator, source_la
 
 				// user messages
 					const msg_type = (response.result===false) ? 'error' : 'ok'
-					//if (trigger_response.result===false) {
-						ui.show_message(buttons_container, response.msg, msg_type)
-					//}
+					ui.show_message(buttons_container, response.msg, msg_type)
 
 				// reload target lang
 					const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)

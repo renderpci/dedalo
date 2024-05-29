@@ -38,7 +38,7 @@ export const ui = {
 
 	/**
 	* SHOW_MESSAGE
-	* @param DOM node wrapper
+	* @param HTMLElement wrapper
 	*	component wrapper where message is placed
 	* @param string message
 	*	Text message to show inside message container

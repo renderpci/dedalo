@@ -43,46 +43,6 @@ $updates->$v = new stdClass();
 			'component_date'
 		];	// Force convert from string to array
 
-	// RUN_SCRIPTS
-		// DATA INSIDE DATABASE UPDATES
-		// clean_section_and_component_dato. Update 'datos' to section_data
-		$ar_tables = [
-			'matrix',
-			'matrix_activities',
-			'matrix_activity',
-			'matrix_counter',
-			'matrix_dataframe',
-			'matrix_dd',
-			'matrix_hierarchy',
-			'matrix_hierarchy_main',
-			'matrix_indexations',
-			'matrix_layout',
-			'matrix_layout_dd',
-			'matrix_list',
-			'matrix_nexus',
-			'matrix_nexus_main',
-			'matrix_notes',
-			'matrix_profiles',
-			'matrix_projects',
-			'matrix_stats',
-			'matrix_time_machine'
-		];
-		$json_files =[
-			'objet_to_object.json', // @todo working here (!)
-			'cult_to_culture.json', // @todo working here (!)
-			'peri_to_dc.json', // @todo working here (!)
-		];
-		require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
-		$script_obj = new stdClass();
-			$script_obj->info			= "Move tld from objet => object, cult => culture, peri => dc";
-			$script_obj->script_class	= "transform_data";
-			$script_obj->script_method	= "changes_in_tipos";
-			$script_obj->script_vars	= [
-				$ar_tables,
-				$json_files
-			]; // Note that only ONE argument encoded is sent
-		$updates->$v->run_scripts[] = $script_obj;
-
 
 
 $v=620; #####################################################################################

@@ -1,43 +1,32 @@
+/**
+* ts_object
+*
+* Included from main.less file
+*/
+
 // Import general vars
 @import (once) '../../page/css/layout/vars';
 
-@ts_object_line_height: 20px;
 
-// mixin
-	.inline_common {
-		display: inline-table;
-		float: left;
-		font-size: 1rem;
-	}
 
 // wrap_ts_object
 .wrap_ts_object {
-		clear: both;
-		display: table;
-		position: relative;
-		width: 100%;
+	clear: both;
+	display: table;
+	position: relative;
+	width: 100%;
 
-		&:hover > .id_column_content {
-			opacity: 1;
+	// local vars
+	@ts_object_line_height: 20px;
+
+	// mixins
+		// inline_common
+		.inline_common {
+			display: inline-table;
+			float: left;
+			font-size: 1rem;
 		}
-
-		>.hierarchy_elements_container {
-			padding: 0px;
-		}
-
-		>.children_container {
-
-		}
-
-		&.hierarchy_root_node {
-			padding-left: 1rem;
-
-			>.children_container {
-				padding-left: 0px;
-			}
-		}//end hierarchy_root_node
-
-		// mixin ts_icons_all. icons common
+		// ts_icons_all. icons common
 		.ts_icons_all {
 			background-position: center;
 			background-repeat: no-repeat;
@@ -47,530 +36,551 @@
 			width: @ts_object_line_height;
 		}
 
-		.id_column_content {
-			.inline_common;
+	&:hover > .id_column_content {
+		opacity: 1;
+	}
+
+	>.hierarchy_elements_container {
+		padding: 0px;
+	}
+
+	>.children_container {
+
+	}
+
+	&.hierarchy_root_node {
+		padding-left: 1rem;
+
+		>.children_container {
+			padding-left: 0px;
+		}
+	}//end hierarchy_root_node
+
+	.id_column_content {
+		.inline_common;
+		opacity: 0.5;
+		display: inline-flex;
+		flex-wrap: nowrap;
+	}
+
+	.id_column_link {
+		display: inline-table;
+		float: left;
+		height: 1.4em;
+		line-height: 1.5rem;
+		z-index: 1; // overlap term hilite
+
+		&:active {
 			opacity: 0.5;
-			display: inline-flex;
-			flex-wrap: nowrap;
 		}
+	}
 
-		.id_column_link {
-			display: inline-table;
-			float: left;
-			height: 1.4em;
-			line-height: 1.5rem;
-			z-index: 1; // overlap term hilite
+	a.id_column_link div {
+		height: @ts_object_line_height;
+		margin-right: 6px;
+	}
 
-    		&:active {
-    			opacity: 0.5;
-    		}
+	.ts_object_add_icon {
+		.ts_icons_all;
+		background-image: url('../../themes/default/icons/add_light.svg');
+		&:hover {
+			background-color: #b5a83a;
+			border-radius: 3px;
+			filter: invert(100%);
 		}
+	}
 
-		a.id_column_link div {
+	 // drag_button
+	.ts_object_drag {
+		margin-right: 4px;
+	}
+	.ts_object_drag_icon {
+		.ts_icons_all;
+		background-image: url('../../themes/default/icons/move.svg');
+
+		&:hover {
+			background-color: #b5a83a;
+			border-radius: 3px;
+			filter: invert(100%);
+		}
+	}
+
+	 // delete_button
+	.ts_object_delete {
+
+		.ts_object_delete_icon {
+			.ts_icons_all;
+			background-image: url('../../themes/default/icons/trash.svg');
+			background-size: 76%;
+			margin-right: 2px;
+
+			&:hover {
+				background-color: #3dfff5;
+				border-radius: 3px;
+				filter: invert(100%);
+			}
+		}
+	}
+
+	 // order_number
+	.ts_object_order_number {
+		min-width: 14px;
+		text-align: right;
+		padding-top: 0px;
+		margin-right: 3px;
+		font-size: 9px;
+		font-family: monospace;
+	}
+
+	.input_order {
+		text-align: center;
+		width: 22px;
+		margin-right: 5px;
+		margin-left: 3px;
+		border: 1px solid #fd7f26;
+		border-radius: 2px;
+		opacity: 1 !important;
+		position: relative;
+		top: 1px;
+	}
+
+	 // edit_button
+	.ts_object_edit {
+
+		&:hover {
+			background-color: #ff7ef3;
+			border-radius: 3px;
+			filter: invert(100%);
+		}
+		 // id number
+		.ts_object_section_id_number {
 			height: @ts_object_line_height;
-			margin-right: 6px;
-		}
-
-		.ts_object_add_icon {
-			.ts_icons_all;
-			background-image: url('../../themes/default/icons/add.svg');
-			&:hover {
-				background-color: #b5a83a;
-				border-radius: 3px;
-				filter: invert(100%);
-			}
-		}
-
-		 // drag_button
-		.ts_object_drag {
-			margin-right: 4px;
-		}
-		.ts_object_drag_icon {
-			.ts_icons_all;
-			background-image: url('../../themes/default/icons/move.svg');
-			&:hover {
-				background-color: #b5a83a;
-				border-radius: 3px;
-				filter: invert(100%);
-			}
-		}
-
-		 // delete_button
-		.ts_object_delete {
-			//width: 25%;
-			//margin-right: 3px;
-			.ts_object_delete_icon {
-				.ts_icons_all;
-				background-image: url('../../themes/default/icons/trash.svg');
-				background-size: 76%;
-				margin-right: 2px;
-
-				&:hover {
-					background-color: #3dfff5;
-					border-radius: 3px;
-					filter: invert(100%);
-				}
-			}
-		}
-
-		 // order_number
-		.ts_object_order_number {
-			min-width: 14px;
+			min-width: 36px;
+			float: left;
+			padding: 2px;
+			font-size: 1.05em;
+			padding-right: 4px;
 			text-align: right;
-			padding-top: 0px;
-			margin-right: 3px;
-			font-size: 9px;
-			font-family: monospace;
+			display: none;
 		}
 
-		.input_order {
-			text-align: center;
-			width: 22px;
-			margin-right: 5px;
-			margin-left: 3px;
-			border: 1px solid #fd7f26;
-			border-radius: 2px;
-			opacity: 1 !important;
-			position: relative;
-			top: 1px;
+		// edit_icon
+		.ts_object_edit_icon {
+			background-image: url('../../themes/default/icons/edit.svg');
+			background-repeat: no-repeat;
+			background-size: 70%;
+			background-position: center;
+			float: left;
+			width: 24px;
+			height: @ts_object_line_height;
+			cursor: pointer;
 		}
+	}//end ts_object_edit
 
-		 // edit_button
-		.ts_object_edit {
+	// related_icon
+	.ts_object_related {
 
-			&:hover {
-				background-color: #ff7ef3;
-				border-radius: 3px;
-				filter: invert(100%);
-			}
-			 // id number
-			.ts_object_section_id_number {
-				height: @ts_object_line_height;
-				min-width: 36px;
-				float: left;
-				padding: 2px;
-				font-size: 1.05em;
-				padding-right: 4px;
-				text-align: right;
-				display: none;
-			}
-
-			// edit_icon
-			.ts_object_edit_icon {
-				background-image: url('../../themes/default/icons/edit.svg');
-				background-repeat: no-repeat;
-				background-size: 70%;
-				background-position: center;
-				float: left;
-				width: 24px;
-				height: @ts_object_line_height;
-				cursor: pointer;
-			}
-		}//end ts_object_edit
-
-		// related_icon
-		.ts_object_related {
-
-			.ts_object_related_icon {
-				background-position: -336px -94px;
-				opacity: 1;
-				overflow: hidden;
-				zoom: 1.25;
-
-				&:active {
-					opacity: 0.4;
-				}
-			}
-		}//end .ts_object_related
-
-
-		 // elements_container
-		.elements_container {
-			.inline_common;
-			min-width: 150px;
-			margin-left: 0px;
-			min-height: 22px;
-			display: flex;
-
-			// list_thesaurus commons
-			.list_thesaurus_element {
-				position: relative;
-				display: table-cell;
-				min-width: 24px;
-				padding: 2px;
-				padding-right: 5px;
-				font-size: 1.1em;
-				text-align: center;
-				cursor: pointer;
-				border-left: 1px solid #c3c3c3;
-				opacity: 0.3;
-				width: 29px;
-				vertical-align: top;
-
-				&.term_img {
-					height: 1.3rem;
-					opacity: 1;
-				}
-
-				&:hover {
-					color: #ef7d00 !important;
-					opacity: 1;
-				}
-
-				mark {
-					color: #333333 !important;
-					font-style: italic;
-				}
-
-				img {
-					height: 100%;
-				}
-
-				&.loading {
-					background-color: transparent;
-					>span {
-						opacity: 0.12;
-					}
-
-					img {
-						opacity: 0;
-					}
-
-					&:after {
-						content: " ";
-						display: block;
-						position: absolute;
-						top: 2px;
-						left: 30%;
-						width: 1.1rem;
-						height: 1.1rem;
-						border: 2px solid #d1d5db;
-						border-top-color: @color_orange_dedalo;
-						border-radius: 50%;
-						animation: run_spinner 800ms linear infinite;
-					}
-				}
-			}
-
-			// term
-			.list_thesaurus_element.term {
-				border: 0px;
-				opacity: 1;
-				text-align: left;
-				inline-size: auto;
-				overflow-wrap: break-word;
-				hyphens: auto;
-
-				&.loading {
-
-					>span {
-						opacity: 0.12;
-					}
-
-					&:after {
-						content: " ";
-						display: block;
-						position: absolute;
-						top: 2px;
-						left: 0px;
-						width: 1.1rem;
-						height: 1.1rem;
-						border: 2px solid #d1d5db;
-						border-top-color: @color_orange_dedalo;
-						border-radius: 50%;
-						animation: run_spinner 800ms linear infinite;
-					}
-				}
-			}
-
-			.element_hilite > span {
-				background-color: #FFEF3D;
-				color: #000000;
-				padding-left: 7px;
-				padding-right: 7px;
-				margin-left: -7px;
-			}
-
-			.id_info {
-				color: #a6a6a6;
-				font-size: 80%;
-				vertical-align: text-top;
-				padding-left: 5px;
-				padding-right: 0.25rem;
-				user-select: auto;
-				line-height: 1.4rem;
-			}
-
-			// indexations
-			.list_thesaurus_element.show_indexations,
-			.list_thesaurus_element.default	{
-				background-color: @color_orange_dedalo;
-				opacity: 0.6;
-				border: 0px;
-				padding-left: 4px;
-				padding-right: 3px;
-				color: #ffffff;
-				border-radius: 3px;
-				margin: 0px;
-				height: 19px;
-				width: initial;
-				font-size: 12px;
-				margin-right: 5px;
-				line-height: 1.2rem;
-				display: inline-flex;
-				align-items: center;
-				justify-content: center;
-
-				&.default {
-
-				}
-
-				&:hover {
-					color: #ffffff !important;
-					opacity: 1;
-				}
-				&:active {
-					background-color: @color_grey_medium;
-					color: #717171 !important;
-				}
-
-				&.loading {
-					background-color: transparent;
-					>span {
-						opacity: 0;
-					}
-
-					&:after {
-						content: " ";
-						display: block;
-						position: absolute;
-						top: 2px;
-						left: 32%;
-						width: 1.1rem;
-						height: 1.1rem;
-						border: 2px solid #d1d5db;
-						border-top-color: @color_orange_dedalo;
-						border-radius: 50%;
-						animation: run_spinner 800ms linear infinite;
-					}
-				}
-			}
-
-			// ts_object_children_arrow_icon mixins
-			@triangle_color: @color_orange_dedalo;
-			.triangle_down {
-				width: 0px;
-				height: 0px;
-				border-style: solid;
-				border-width: 10.4px 6px 0px 6px;
-				border-color: @triangle_color transparent transparent transparent;
-			}
-			.triangle_right {
-				height: 0px;
-				width: 0px;
-				border-style: solid;
-				border-width: 6px 0px 6px 10.4px;
-				border-color: transparent transparent transparent @triangle_color;
-			}
-
-			.ts_object_children_arrow_icon {
-				height: 1.4em;
-				position: static;
-				width: 1.4em;
-				margin: 3px;
-				.triangle_right;
-				opacity: 0.6;
-
-				&:hover {
-					opacity: 1;
-				}
-			}
-
-			.ts_object_children_arrow_icon_open {
-				.triangle_down;
-				left: -2px;
-				top: 1px;
-
-				&.arrow_spinner {
-					border-color: transparent;
-					pointer-events: none;
-				}
-			}
-
-			.arrow_unactive {
-				display: none;
-			}
-
-			[data-type='link_children'] {
-				border: 0px;
-				opacity: 1;
-			}
-
-		}//end .elements_container
-
-		.arrow_spinner {
-			border: none;
-			margin: 0px;
-			padding: 0px;
+		.ts_object_related_icon {
+			background-position: -336px -94px;
 			opacity: 1;
-			position: relative;
+			overflow: hidden;
+			zoom: 1.25;
 
-			&:after {
-				content: " ";
-				display: block;
-				position: absolute;
-				top: 0.17rem;
-				left: 0.27rem;
-				width: 1.1rem;
-				height: 1.1rem;
-				border: 2px solid #d1d5db;
-				border-top-color: @color_orange_dedalo;
-				border-radius: 50%;
-				animation: run_spinner 800ms linear infinite;
-
-				@media screen and (max-width: @width_break_point_0) {
-					top: 0.10rem;
-					left: 0.17rem;
-				}
-			}
-		}
-
-		// button show_more (thesaurus pagination)
-		.show_more {
-			width: auto;
-			background-color: #ffffff;
-			line-height: 1rem;
-			margin: 0.5rem;
-			margin-left: 9.25rem;
-			margin-top: 0.25rem;
-			margin-bottom: 0.6rem;
-			padding-right: 1.5rem;
-
-			&.arrow_spinner {
-				&:after {
-					left: unset;
-					right: 0px;
-				}
-			}
-
-			&.active {
+			&:active {
 				opacity: 0.4;
 			}
 		}
+	}//end .ts_object_related
 
-		// ts_object_children_arrow_icon
-		.term_img {
-			padding: 0px !important;
+	 // elements_container
+	.elements_container {
+		.inline_common;
+		min-width: 150px;
+		margin-left: 0px;
+		min-height: 22px;
+		display: flex;
 
-			>img {
-				height: 22px;
-			}
-		}
-
-		// data_container
-		>.data_container {
-			width: 100%;
-			padding-left: 4rem;
-			display: block;
-			height: auto;
-			margin-top: 1rem;
-			margin-bottom: 1rem;
-
-			// all components showed inside
-			>.wrapper_component {
-				min-height: initial;
-				padding: 1rem;
-				width: auto;
-				min-width: 50%;
-				margin-top: 0.5rem;
-				margin-bottom: 0.5rem;
-				float: left;
-				clear: both;
-			}
-
-		}//end .data_container
-
-
-		// children_container
-		>.children_container {
-			.inline_common ;
-			height: 0px;
-			padding-left: 27px;
-			width: 100%;
-		}
-
-		// children_toogle_view
-		.removed_from_view {
-			display: none;
-		}
-
-		// nd_container
-		.nd_container {
-			display: none;
-			.inline_common ;
-			height: 0px;
-			margin-left: 50px;
-			width: 100%;
-
-			>.wrap_ts_object {
-				width: calc(100% - 4rem);
-			}
-
-			.data_container {
-				padding-left: 3rem;
-			}
-		}
-
-		// indexations_container
-		.indexations_container {
-			.inline_common ;
-			height: 0px;
-			width: 100%;
-
-			.css_spinner {
-				float: left;
-				width: 21px;
-				margin-left: 80px;
-				min-height: 24px;
-			}
-			.blink {
-				position: relative;
-				top: 2px;
-				color: #727272;
-				font-size: 13px;
-			}
-		}//end .indexations_container
-
-		// drag and drop
-		.drag_over > .elements_container {
-			background-color: #4a57c5;
-			border-radius: 3px;
-			color: #ffffff;
-		}
-
-		// no_descriptor term span
-		.no_descriptor {
-			color: #a5a5a5;
-			&:before {
-				content: '[ND] ';
-			}
-		}
-
-		.wrap_ts_object_nd {
-			color: #797979;
+		// list_thesaurus commons
+		.list_thesaurus_element {
+			position: relative;
+			display: table-cell;
+			min-width: 24px;
 			padding: 2px;
-			padding-left: 0px;
-			padding-right: 0px;
-	    	width: auto;
+			padding-right: 5px;
+			font-size: 1.1em;
+			text-align: center;
+			cursor: pointer;
+			border-left: 1px solid #c3c3c3;
+			opacity: 0.3;
+			width: 29px;
+			vertical-align: top;
 
-			> .id_column_content > .ts_object_edit {
-				margin-left: 17px;
+			&.term_img {
+				height: 1.3rem;
+				opacity: 1;
+			}
+
+			&:hover {
+				color: #ef7d00 !important;
+				opacity: 1;
+			}
+
+			mark {
+				color: #333333 !important;
+				font-style: italic;
+			}
+
+			img {
+				height: 100%;
+			}
+
+			&.loading {
+				background-color: transparent;
+
+				>span {
+					opacity: 0.12;
+				}
+
+				img {
+					opacity: 0;
+				}
+
+				&:after {
+					content: " ";
+					display: block;
+					position: absolute;
+					top: 2px;
+					left: 30%;
+					width: 1.1rem;
+					height: 1.1rem;
+					border: 2px solid #d1d5db;
+					border-top-color: @color_orange_dedalo;
+					border-radius: 50%;
+					animation: run_spinner 800ms linear infinite;
+				}
 			}
 		}
 
-		.visible_element {
-			background-color: #81c943;
-			visibility: visible !important;
+		// term
+		.list_thesaurus_element.term {
+			border: 0px;
+			opacity: 1;
+			text-align: left;
+			inline-size: auto;
+			overflow-wrap: break-word;
+			hyphens: auto;
+
+			&.loading {
+
+				>span {
+					opacity: 0.12;
+				}
+
+				&:after {
+					content: " ";
+					display: block;
+					position: absolute;
+					top: 2px;
+					left: 0px;
+					width: 1.1rem;
+					height: 1.1rem;
+					border: 2px solid #d1d5db;
+					border-top-color: @color_orange_dedalo;
+					border-radius: 50%;
+					animation: run_spinner 800ms linear infinite;
+				}
+			}
 		}
 
-	}//end .wrap_ts_object
+		.element_hilite > span {
+			background-color: #FFEF3D;
+			color: #000000;
+			padding-left: 7px;
+			padding-right: 7px;
+			margin-left: -7px;
+		}
+
+		.id_info {
+			color: #a6a6a6;
+			font-size: 80%;
+			vertical-align: text-top;
+			padding-left: 5px;
+			padding-right: 0.25rem;
+			user-select: auto;
+			line-height: 1.4rem;
+		}
+
+		// indexations
+		.list_thesaurus_element.show_indexations,
+		.list_thesaurus_element.default	{
+			background-color: @color_orange_dedalo;
+			opacity: 0.6;
+			border: 0px;
+			padding-left: 4px;
+			padding-right: 3px;
+			color: #ffffff;
+			border-radius: 3px;
+			margin: 0px;
+			height: 19px;
+			width: initial;
+			font-size: 12px;
+			margin-right: 5px;
+			line-height: 1.2rem;
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+
+			&.default {
+
+			}
+
+			&:hover {
+				color: #ffffff !important;
+				opacity: 1;
+			}
+			&:active {
+				background-color: @color_grey_medium;
+				color: #717171 !important;
+			}
+
+			&.loading {
+				background-color: transparent;
+				>span {
+					opacity: 0;
+				}
+
+				&:after {
+					content: " ";
+					display: block;
+					position: absolute;
+					top: 2px;
+					left: 32%;
+					width: 1.1rem;
+					height: 1.1rem;
+					border: 2px solid #d1d5db;
+					border-top-color: @color_orange_dedalo;
+					border-radius: 50%;
+					animation: run_spinner 800ms linear infinite;
+				}
+			}
+		}
+
+		// ts_object_children_arrow_icon mixins
+		@triangle_color: @color_orange_dedalo;
+		.triangle_down {
+			width: 0px;
+			height: 0px;
+			border-style: solid;
+			border-width: 10.4px 6px 0px 6px;
+			border-color: @triangle_color transparent transparent transparent;
+		}
+		.triangle_right {
+			height: 0px;
+			width: 0px;
+			border-style: solid;
+			border-width: 6px 0px 6px 10.4px;
+			border-color: transparent transparent transparent @triangle_color;
+		}
+
+		.ts_object_children_arrow_icon {
+			height: 1.4em;
+			position: static;
+			width: 1.4em;
+			margin: 3px;
+			.triangle_right;
+			opacity: 0.6;
+
+			&:hover {
+				opacity: 1;
+			}
+		}
+
+		.ts_object_children_arrow_icon_open {
+			.triangle_down;
+			left: -2px;
+			top: 1px;
+
+			&.arrow_spinner {
+				border-color: transparent;
+				pointer-events: none;
+			}
+		}
+
+		.arrow_unactive {
+			display: none;
+		}
+
+		[data-type='link_children'] {
+			border: 0px;
+			opacity: 1;
+		}
+
+	}//end .elements_container
+
+	.arrow_spinner {
+		border: none;
+		margin: 0px;
+		padding: 0px;
+		opacity: 1;
+		position: relative;
+
+		&:after {
+			content: " ";
+			display: block;
+			position: absolute;
+			top: 0.17rem;
+			left: 0.27rem;
+			width: 1.1rem;
+			height: 1.1rem;
+			border: 2px solid #d1d5db;
+			border-top-color: @color_orange_dedalo;
+			border-radius: 50%;
+			animation: run_spinner 800ms linear infinite;
+
+			@media screen and (max-width: @width_break_point_0) {
+				top: 0.10rem;
+				left: 0.17rem;
+			}
+		}
+	}
+
+	// button show_more (thesaurus pagination)
+	.show_more {
+		width: auto;
+		background-color: #ffffff;
+		line-height: 1rem;
+		margin: 0.5rem;
+		margin-left: 9.25rem;
+		margin-top: 0.25rem;
+		margin-bottom: 0.6rem;
+		padding-right: 1.5rem;
+
+		&.arrow_spinner {
+			&:after {
+				left: unset;
+				right: 0px;
+			}
+		}
+
+		&.active {
+			opacity: 0.4;
+		}
+	}
+
+	// ts_object_children_arrow_icon
+	.term_img {
+		padding: 0px !important;
+
+		>img {
+			height: 22px;
+		}
+	}
+
+	// data_container
+	>.data_container {
+		width: 100%;
+		padding-left: 4rem;
+		display: block;
+		height: auto;
+		margin-top: 1rem;
+		margin-bottom: 1rem;
+
+		// all components showed inside
+		>.wrapper_component {
+			min-height: initial;
+			padding: 1rem;
+			width: auto;
+			min-width: 50%;
+			margin-top: 0.5rem;
+			margin-bottom: 0.5rem;
+			float: left;
+			clear: both;
+		}
+
+	}//end .data_container
+
+
+	// children_container
+	>.children_container {
+		.inline_common;
+		height: 0px;
+		padding-left: 27px;
+		width: 100%;
+	}
+
+	// children_toogle_view
+	.removed_from_view {
+		display: none;
+	}
+
+	// nd_container
+	.nd_container {
+		display: none;
+		.inline_common;
+		height: 0px;
+		margin-left: 50px;
+		width: 100%;
+
+		>.wrap_ts_object {
+			width: calc(100% - 4rem);
+		}
+
+		.data_container {
+			padding-left: 3rem;
+		}
+	}
+
+	// indexations_container
+	.indexations_container {
+		.inline_common;
+		height: 0px;
+		width: 100%;
+
+		.css_spinner {
+			float: left;
+			width: 21px;
+			margin-left: 80px;
+			min-height: 24px;
+		}
+		.blink {
+			position: relative;
+			top: 2px;
+			color: #727272;
+			font-size: 13px;
+		}
+	}//end .indexations_container
+
+	// drag and drop
+	.drag_over > .elements_container {
+		background-color: #4a57c5;
+		border-radius: 3px;
+		color: #ffffff;
+	}
+
+	// no_descriptor term span
+	.no_descriptor {
+		color: #a5a5a5;
+
+		&:before {
+			content: '[ND] ';
+		}
+	}
+
+	.wrap_ts_object_nd {
+		color: #797979;
+		padding: 2px;
+		padding-left: 0px;
+		padding-right: 0px;
+    	width: auto;
+
+		> .id_column_content > .ts_object_edit {
+			margin-left: 17px;
+		}
+	}
+
+	.visible_element {
+		background-color: #81c943;
+		visibility: visible !important;
+	}
+
+}//end .wrap_ts_object

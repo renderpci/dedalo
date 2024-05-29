@@ -130,7 +130,7 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 	const self = this
 
 	// to_delete_instances. Select instances with different lang to main_element
-		const to_delete_instances = null // self.ar_instances.filter(el => el.lang!==self.main_element.lang)
+		const to_delete_instances = null
 
 	// instance_options (clone context and edit)
 		const options = Object.assign(clone(self.main_element.context),{
@@ -143,9 +143,6 @@ tool_lang_multi.prototype.get_component = async function(lang) {
 
 	// call generic common tool build
 		const component_instance = await load_component(options);
-
-	// show_interface configure
-		// component_instance.show_interface.button_fullscreen = false
 
 
 	return component_instance
@@ -206,7 +203,6 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 			const msg_type = (api_response.result===false) ? 'error' : 'ok'
 			ui.show_message(buttons_container, api_response.msg, msg_type)
 
-
 		// reload target lang
 			const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
 			target_component.refresh()
@@ -217,77 +213,6 @@ tool_lang_multi.prototype.automatic_translation = async function(translator, sou
 	return api_response
 }//end automatic_translation
 
-
-
-/**
-* AUTOMATIC_TRANSLATION
-*/
-	// tool_lang_multi.prototype.automatic_translation = async function(translator, source_lang, target_lang, buttons_container) {
-
-	// 	const self = this
-
-	// 	const body = {
-	// 		url 			: self.trigger_url,
-	// 		mode 			: 'automatic_translation',
-	// 		source_lang 	: source_lang,
-	// 		target_lang 	: target_lang,
-	// 		component_tipo	: self.caller.tipo,
-	// 		section_id  	: self.caller.section_id,
-	// 		section_tipo  	: self.caller.section_tipo,
-	// 		translator 		: JSON.parse(translator)
-	// 	}
-
-	// 	const handle_errors = function(response) {
-	// 		if (!response.ok) {
-	// 			throw Error(response.statusText);
-	// 		}
-	// 		return response;
-	// 	}
-
-	// 	const trigger_response = await fetch(
-	//  		self.trigger_url,
-	//  		{
-	// 			method		: 'POST',
-	// 			mode		: 'cors',
-	// 			cache		: 'no-cache',
-	// 			credentials	: 'same-origin',
-	// 			headers		: {'Content-Type': 'application/json'},
-	// 			redirect	: 'follow',
-	// 			referrer	: 'no-referrer',
-	// 			body		: JSON.stringify(body)
-	// 		})
-	// 		.then(handle_errors)
-	// 		.then(response => response.json()) // parses JSON response into native Javascript objects
-	// 		.catch(error => {
-	// 			console.error("!!!!! REQUEST ERROR: ",error)
-	// 			return {
-	// 				result 	: false,
-	// 				msg 	: error.message,
-	// 				error 	: error
-	// 			}
-	// 		});
-
-	// 		//trigger_fetch.then((trigger_response)=>{
-
-	// 			// user messages
-	// 				const msg_type = (trigger_response.result===false) ? 'error' : 'ok'
-	// 				//if (trigger_response.result===false) {
-	// 					ui.show_message(buttons_container, trigger_response.msg, msg_type)
-	// 				//}
-
-	// 			// reload target lang
-	// 				const target_component_container = self.node.querySelector('.target_component_container')
-	// 				add_component(self, target_component_container, target_lang)
-
-	// 			// debug
-	// 				if(SHOW_DEBUG===true) {
-	// 					console.log("trigger_response:",trigger_response);
-	// 				}
-	// 		//})
-
-
-	// 	return trigger_response
-	// }//end automatic_translation
 
 
 // @license-end
