@@ -901,7 +901,7 @@ export const ui = {
 		error : (error, input_wrap) => {
 
 			if (error) {
-				
+
 				input_wrap.classList.add('error')
 
 				const input_node = input_wrap.querySelector('input')
@@ -984,14 +984,14 @@ export const ui = {
 		*
 		* @return HTMLElement warning_wrap
 		*/
-		add_component_warning : (wrapper_component, message, msg_type='alert', clean=false, on_click) => {
+		add_component_warning : (wrapper_component, message, msg_type='alert', clean=true, on_click) => {
 
 			// warning_wrap. always check if already exists, else, create a new one and recycle it
 				const warning_wrap = wrapper_component.querySelector('.component_warning') || (()=>{
 
 					const new_warning_wrap = ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: 'component_warning',
+						class_name		: 'component_warning fade-in-fast',
 						parent			: wrapper_component
 					})
 					new_warning_wrap.addEventListener('dblclick', (e) => {
@@ -1027,10 +1027,20 @@ export const ui = {
 					button.addEventListener('click', on_click)
 				}
 
-				// activate_tooltips title message
+			// when_in_dom event actions
 				when_in_dom(warning_wrap, () => {
+
+					// activate_tooltips title message
 					ui.activate_tooltips(warning_wrap)
+
+					// adjust position
+					const el_rect = wrapper_component.getBoundingClientRect();
+					if (el_rect.left<50) {
+						// move to right side
+						warning_wrap.classList.add('right_side')
+					}
 				})
+
 
 			return warning_wrap
 		},//end add_component_warning
