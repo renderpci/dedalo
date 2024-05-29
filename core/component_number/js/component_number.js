@@ -96,7 +96,7 @@ const get_format_number = function ( self, number ) {
 * Force unified number format.
 * Format used is floating point ( , used in Spanish or other languages are avoided, only . will be valid for decimals)
 * Example: Change 17,2 to 17.2
-* @param value
+* @param string value
 * @return number|null new_number
 */
 component_number.prototype.fix_number_format = function( value ) {
