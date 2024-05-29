@@ -16,8 +16,6 @@
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import * as instances from '../../common/js/instances.js'
-	// import {get_instance, get_all_instances} from '../../common/js/instances.js'
-	// import {set_before_unload} from '../../common/js/events.js'
 	import '../../common/js/dd-modal.js'
 	import '../../../lib/codex-tooltip/tooltip.js';
 
@@ -56,7 +54,7 @@ export const ui = {
 
 				const new_message_wrap = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: message_node, // + msg_type,
+					class_name		: message_node,
 					parent			: wrapper
 				})
 
@@ -214,7 +212,6 @@ export const ui = {
 							}
 							if (e.altKey) {
 								e.preventDefault()
-								// common.render_tree_data(instance, document.getElementById('debug'))
 								console.log(`/// selected instance ${instance.model}:`, instance);
 								return
 							}
@@ -243,8 +240,7 @@ export const ui = {
 					wrapper.appendChild(component_label)
 					// set pointer
 					wrapper.label = component_label
-					// state_of_component
-						// sample:
+					// state_of_component. sample:
 						// {
 						// "deprecated": {
 						// 	"msg": "component_deprecated",
@@ -279,8 +275,10 @@ export const ui = {
 						class_name		: 'filter',
 						parent			: fragment
 					})
-					instance.filter.build().then(function(){
-						instance.filter.render().then(filter_wrapper =>{
+					instance.filter.build()
+					.then(function(){
+						instance.filter.render()
+						.then(filter_wrapper =>{
 							filter.appendChild(filter_wrapper)
 						})
 					})
@@ -317,7 +315,7 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* Component
+		* Unified component content_data container render
 		* @param object instance
 		* @param object options = {}
 		* @return HTMLElement content_data
@@ -350,33 +348,26 @@ export const ui = {
 
 		/**
 		* BUILD_BUTTON_EXIT_EDIT
+		* Unified render for component button_exit_edit
+		* @param object instance
 		* @param object options = {}
 		* @return HTMLElement content_data
 		*/
 		build_button_exit_edit : (instance, options={}) => {
 
-			const autoload		= options.autoload || true
-			const target_mode	= options.target_mode || 'list'
+			// options
+				const autoload		= options.autoload || true
+				const target_mode	= options.target_mode || 'list'
 
 			const button_close_node = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button close button_exit_edit show_on_active'
 			})
-			button_close_node.addEventListener('click', fn_click)
-			async function fn_click(e) {
+			// click event
+			const fn_click = async function(e) {
 				e.stopPropagation()
 
 				await ui.component.deactivate(instance)
-
-				const change_mode = instance.context.properties.with_value
-				&& instance.context.properties.with_value.mode !== instance.mode
-					? instance.context.properties.with_value.mode
-					: instance.context.properties.mode
-
-				const change_view = instance.context.properties.with_value
-					&& instance.context.properties.with_value.view !== instance.context.view
-						? instance.context.properties.with_value.view
-						: instance.context.properties.view
 
 				// change mode destroy current instance and render a fresh full element node in the new mode
 				instance.change_mode({
@@ -384,6 +375,8 @@ export const ui = {
 					autoload	: autoload
 				})
 			}
+			button_close_node.addEventListener('click', fn_click)
+
 
 			return button_close_node;
 		},//end build_button_exit_edit
@@ -392,6 +385,7 @@ export const ui = {
 
 		/**
 		* BUILD_BUTTONS_CONTAINER
+		* Unified component buttons container render
 		* @param object instance
 		* @return HTMLElement buttons_container
 		*/
@@ -429,6 +423,7 @@ export const ui = {
 
 			// wrapper
 				const wrapper = document.createElement('div')
+
 				// css
 					const ar_css = [
 						'wrapper_' + type,
@@ -440,16 +435,6 @@ export const ui = {
 					]
 					wrapper.classList.add(...ar_css)
 
-				// properties CSS of view
-					// const element_css	= instance.context.css || {}
-					// console.log('element_css:', element_css, view);
-					// if (element_css && element_css['view_'+view]
-					// 	) {
-					// 	// const selector = `${section_tipo}_${tipo}.${tipo}.list`
-					// 	const selector = `${section_tipo}_${tipo}.${tipo}.view_${view}`
-					// 	set_element_css(selector, element_css['view_'+view])
-					// }
-
 				// Ontology CSS definition
 				// Get the ontology CSS defined into the ontology properties.
 				// And insert the rules into CSS style set.
@@ -460,7 +445,7 @@ export const ui = {
 							const selector = `${section_tipo}_${tipo}.${tipo}.${'list'}`
 							set_element_css(selector, element_css)
 						}
-					}//end if (model!=='component_filter')
+					}
 
 			// value_string. span value. Add span if value_string is received
 				if (value_string) {
@@ -471,35 +456,12 @@ export const ui = {
 					})
 				}
 
-			// event dblclick change component mode
-				// if(edit_in_list) {
-				// 	wrapper.addEventListener('click', function(e){
-				// 		// check level
-				// 			const is_first_level = function(wrapper){
-				// 				const parent_list_body = wrapper.parentNode.parentNode.parentNode.parentNode
-				// 				return (parent_list_body && parent_list_body.classList.contains('list_body'))
-				// 			}
-				// 			if (!is_first_level(wrapper)) {
-				// 				// ignore click and continue bubble event
-				// 				return
-				// 			}
-				// 		e.stopPropagation()
-				// 		// change mode (from 'list' to 'edit_in_list')
-				// 			if (instance.change_mode) {
-				// 				instance.change_mode('edit_in_list', autoload)
-				// 			}else{
-				// 				console.warn('WARNING: change_mode method its not available for instance: ', instance)
-				// 			}
-				// 	})
-				// }
-
 			// debug
 				if(SHOW_DEBUG===true) {
 					wrapper.addEventListener('click', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
-							// common.render_tree_data(instance, document.getElementById('debug'))
 							console.log('/// selected instance:', instance);
 						}
 					})
@@ -514,6 +476,7 @@ export const ui = {
 
 		/**
 		* BUILD_WRAPPER_MINI
+		* Render mini wrapper version of given component
 		* @param object instance
 		* @param object options = {}
 		* @return HTMLElement wrapper
@@ -525,6 +488,7 @@ export const ui = {
 
 			// wrapper
 				const wrapper = document.createElement('span')
+
 				// css
 					const ar_css = [
 						instance.model + '_mini' // add suffix '_mini'
@@ -575,23 +539,20 @@ export const ui = {
 					// default
 					const component_label = ui.create_dom_element({
 						element_type	: 'div',
-						//class_name	: 'label'  + tipo + (label_structure_css ? ' ' + label_structure_css : ''),
-						// inner_html	: label + ' [' + instance.lang.substring(3) + ']' + ' ' + tipo + ' ' + (model.substring(10)) + ' [' + instance.permissions + ']',
 						inner_html		: label,
 						title			: tipo + ' ' + model.substring(10) + ' [' + instance.lang.substring(3) + ']',
 						parent			: fragment
 					})
 					// parent_grouper_label
-					const parent_grouper_label = instance.context.config?.parent_grouper_label
-					if (parent_grouper_label) {
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'label_info',
-							text_content	: instance.context.config?.parent_grouper_label,
-							parent			: component_label
-						})
-					}
-
+						const parent_grouper_label = instance.context.config?.parent_grouper_label
+						if (parent_grouper_label) {
+							ui.create_dom_element({
+								element_type	: 'span',
+								class_name		: 'label_info',
+								text_content	: instance.context.config?.parent_grouper_label,
+								parent			: component_label
+							})
+						}
 					// css
 						const label_structure_css = typeof element_css.label!=="undefined" ? element_css.label : []
 						const ar_css = ['label', ...label_structure_css]
@@ -650,9 +611,9 @@ export const ui = {
 		/**
 		* ACTIVATE
 		* Set component state as active/inactive and publish activation event
-		*
 		* @param object component
 		*	Full component instance
+		* @param bool focus = true
 		* @return bool
 		* 	If component is undefined or already active return false, else true
 		*/
@@ -666,7 +627,6 @@ export const ui = {
 
 			// already active case
 				if (component.active===true) {
-					// console.log('Ignored already active component: ', component.id);
 					return false
 				}
 
@@ -686,15 +646,10 @@ export const ui = {
 					const inspector	= document.getElementById('inspector')
 					if (inspector) {
 						const inspector_rect = inspector.getBoundingClientRect();
-						// console.log("/// inspector_rect:",inspector_rect);
 						if (inspector_rect.left > 50 // prevent affects responsive mobile view
 							&& el_rect.right > inspector_rect.left-20
 							) {
 							wrapper.classList.add('inside')
-							// const buttons_container = wrapper.querySelector(':scope > .buttons_container')
-							// if (buttons_container) {
-							// 	buttons_container.classList.add('left')
-							// }
 						}
 					}
 				}
@@ -726,9 +681,6 @@ export const ui = {
 						// auto-focus first input
 							if (!already_focus) {
 								// generic try of first input node
-								// const first_input = component.node.content_data && component.node.content_data[0]
-								// 	? component.node.content_data[0].querySelector('input, select')
-								// 	: null;
 								const first_input = component.node.content_data && component.node.content_data[0]
 										? component.node.content_data[0].querySelector('input, select')
 										: null;
@@ -763,8 +715,6 @@ export const ui = {
 			// usually happens in component_text_area editions because the delay (500 ms) to set as changed
 				check_unsaved_data()
 
-				// console.log('ui Activating component:', component.id);
-
 
 			return true
 		},//end activate
@@ -786,7 +736,6 @@ export const ui = {
 
 			// check already inactive
 				if (component.active!==true) {
-					// console.log('Ignored component. It\'s not active:', component.id);
 					return false
 				}
 
@@ -822,8 +771,6 @@ export const ui = {
 			// publish event deactivate_component
 				event_manager.publish('deactivate_component', component)
 
-				// console.log('ui Deactivating component:', component.id);
-
 
 			return true
 		},//end deactivate
@@ -832,6 +779,7 @@ export const ui = {
 
 		/**
 		* LOCK
+		* Sets component as locked
 		* @param object component
 		*	Full component instance
 		* @return promise
@@ -850,9 +798,6 @@ export const ui = {
 			// component lock status
 				component.lock = true
 
-			// publish event lock_component
-				// event_manager.publish('lock_component', component)
-
 
 			return true
 		},//end lock
@@ -861,6 +806,7 @@ export const ui = {
 
 		/**
 		* UNLOCK
+		* Sets component as unlocked
 		* @param object component
 		*	Full component instance
 		* @return promise
@@ -879,9 +825,6 @@ export const ui = {
 			// component lock status
 				component.lock = false
 
-			// publish event lock_component
-				// event_manager.publish('unlock_component', component)
-
 
 			return true
 		},//end lock
@@ -891,11 +834,10 @@ export const ui = {
 		/**
 		* ERROR
 		* Set component state as valid or error
-		*
 		* @param boolean error
 		*	Boolean value obtained from previous component validation functions
-		* @param HTMLElemant input_wrap
-		*	Component that has to be set as valid or with data errors
+		* @param HTMLElement input_wrap
+		*	Component wrapper that has to be set as valid or with data errors
 		* @return boolean
 		*/
 		error : (error, input_wrap) => {
@@ -920,17 +862,12 @@ export const ui = {
 
 		/**
 		* REGENERATE
+		* Replace DOM element node from parent node
+		* @param HTMLElement current_node
+		* @param HTMLElement new_node
+		* @return HTMLElement current_node
 		*/
 		regenerate : (current_node, new_node) => {
-
-			//// clean
-			//	while (current_node.firstChild) {
-			//		current_node.removeChild(current_node.firstChild)
-			//	}
-			//// set children nodes
-			//	while (new_node.firstChild) {
-			//		current_node.appendChild(new_node.firstChild)
-			//	}
 
 			current_node.parentNode.replaceChild(new_node, current_node);
 
@@ -942,6 +879,8 @@ export const ui = {
 		/**
 		* ADD_IMAGE_FALLBACK
 		* Unified fallback image adds event listener error and changes the image src when event error is triggered
+		* @param HTMLElement img_node
+		* @param function callback
 		* @return bool
 		*/
 		add_image_fallback : (img_node, callback) => {
@@ -978,11 +917,12 @@ export const ui = {
 		* @param string message
 		*	Text message to show inside message container
 		* @param string msg_type = 'alert'
-		* @param bool clean = false
+		* @param bool clean = true
+		* 	On true, remove previous icons inside warning_wrap
 		* @param function|null on_click
-		* 	manages on click event
-		*
+		* 	optional callback to manage on click event
 		* @return HTMLElement warning_wrap
+		* 	note that warning_wrap node is created once and recycled
 		*/
 		add_component_warning : (wrapper_component, message, msg_type='alert', clean=true, on_click) => {
 
@@ -1031,7 +971,7 @@ export const ui = {
 				}
 
 			// when_in_dom event actions
-				when_in_dom(warning_wrap, () => {
+				when_in_dom(button, () => {
 
 					// activate_tooltips title message
 					ui.activate_tooltips(warning_wrap)
@@ -1039,7 +979,7 @@ export const ui = {
 					// adjust position
 					const el_rect = wrapper_component.getBoundingClientRect();
 					if (el_rect.left<50) {
-						// move to right side
+						// move from left (default) to right side
 						warning_wrap.classList.add('right_side')
 					}
 				})
@@ -1087,12 +1027,12 @@ export const ui = {
 					// success. add save_success class to component wrappers (green line animation)
 						if (self.node) {
 							self.node.classList.add('save_success')
-							// animationPlayState.
+							// animationPlayState sets
 							self.node.style.animationPlayState			= 'running';
 							self.node.style.webkitAnimationPlayState	= 'running';
 						}
 
-					// remove save_success. after 2000ms, remove wrapper class to avoid issues on refresh
+					// remove save_success. after 2000 ms, remove wrapper class to avoid issues on refresh
 						setTimeout(()=>{
 
 							if (self.node) {
@@ -1133,6 +1073,8 @@ export const ui = {
 		/**
 		* BUILD_WRAPPER_EDIT
 		* Common method to create element wrapper in current mode
+		* @param object instance
+		* @param object items = {}
 		* @return HTMLElement wrapper
 		*/
 		build_wrapper_edit : (instance, items={}) => {
@@ -1158,7 +1100,7 @@ export const ui = {
 					fragment.appendChild(items.label)
 				}else{
 					// default
-					const component_label = ui.create_dom_element({
+					ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: 'label',
 						inner_html		: label + ' [' + instance.lang.substring(3) + ']',
@@ -1166,34 +1108,8 @@ export const ui = {
 					})
 				}
 
-			// buttons
-				// if (items.buttons) {
-				// 	const buttons = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'buttons',
-				// 		parent			: fragment
-				// 	})
-				// 	const items_buttons_length = items.buttons.length
-				// 	for (let i = 0; i < items_buttons_length; i++) {
-				// 		buttons.appendChild(items.buttons[i])
-				// 	}
-				// }
-
-			// filter
-				// if (instance.filter) {
-				// 	const filter = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'filter',
-				// 		parent			: fragment
-				// 	})
-				// 	instance.filter.render().then(filter_wrapper =>{
-				// 		filter.appendChild(filter_wrapper)
-				// 	})
-				// }
-
 			// content_data
 				if (content_data) {
-					// content_data.classList.add("content_data", type)
 					fragment.appendChild(content_data)
 				}
 
@@ -1259,10 +1175,9 @@ export const ui = {
 		build_wrapper_edit : (instance, items={})=>{
 
 			// short vars
-				const model			= instance.model 	// like component_input_text
-				const type			= instance.type || 'tool' 	// like 'component'
-				// const tipo		= instance.tipo 	// like 'rsc26'
-				const mode			= instance.mode 	// like 'edit'
+				const model			= instance.model // like 'tool_lang'
+				const type			= instance.type || 'tool' // like 'tool'
+				const mode			= instance.mode // like 'edit'
 				const view			= instance.view || instance.context.view || null
 				const context		= instance.context || {}
 				const label			= context.label || ''
@@ -1314,7 +1229,7 @@ export const ui = {
 						if (context.icon) {
 							const icon = ui.create_dom_element({
 								element_type	: 'span',
-								class_name		: 'button white', // gear
+								class_name		: 'button white',
 								style : {
 									'-webkit-mask'	: "url('" +context.icon +"')",
 									'mask'			: "url('" +context.icon +"')"
@@ -1368,19 +1283,6 @@ export const ui = {
 					})
 			}//end if (mode!=='mini')
 
-			// buttons (not used anymore)
-				// if (items.buttons) {
-				// 	const buttons = ui.create_dom_element({
-				// 		element_type	: 'div',
-				// 		class_name		: 'buttons',
-				// 		parent			: fragment
-				// 	})
-				// 	const items_buttons_length = items.buttons.length
-				// 	for (let i = 0; i < items_buttons_length; i++) {
-				// 		buttons.appendChild(items.buttons[i])
-				// 	}
-				// }
-
 			// content_data
 				if (items.content_data) {
 					fragment.appendChild(items.content_data)
@@ -1399,13 +1301,15 @@ export const ui = {
 
 		/**
 		* BUILD_CONTENT_DATA
-		* @param object tool instance
+		* Unified tool content data container render
+		* @param object instance
+		* @param object options
 		* @return HTMLElement content_data
 		*/
 		build_content_data : (instance, options) => {
 
 			// short vars
-				const type = instance.type // expected tool
+				const type = instance.type // expected 'tool'
 				const mode = instance.mode
 
 			// node
@@ -1423,7 +1327,9 @@ export const ui = {
 		/**
 		* BUILD_SECTION_TOOL_BUTTON
 		* Generate button element for open the target tool
-		* @return DOM element tool_button
+		* @param object tool_context
+		* @param object self
+		* @return HTMLElement tool_button
 		*/
 		build_section_tool_button : (tool_context, self) => {
 
@@ -1431,13 +1337,9 @@ export const ui = {
 				const tool_button = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'warning ' + tool_context.model,
-					// text_content	: tool_context.label,
 					dataset			: {
 						tool : tool_context.name
 					}
-					// style			: {
-					// 	"background-image"		: "url('" +tool_context.icon +"')"
-					// }
 				})
 				// tool_icon (icon inside)
 				ui.create_dom_element({
@@ -1472,13 +1374,16 @@ export const ui = {
 		/**
 		* BUILD_COMPONENT_TOOL_BUTTON
 		* Generate button element for open the target tool
-		* @return DOM element tool_button
+		* @param object tool_context
+		* @param object self
+		* @return HTMLElement tool_button
 		*/
 		build_component_tool_button : (tool_context, self) => {
 
-			if (tool_context.show_in_component===false) {
-				return null
-			}
+			// prevent to display into component
+				if (tool_context.show_in_component===false) {
+					return null
+				}
 
 			// button
 				const tool_button = ui.create_dom_element({
@@ -1493,14 +1398,6 @@ export const ui = {
 						tool : tool_context.name
 					}
 				})
-				// const tool_button = ui.create_dom_element({
-				// 	element_type	: 'img',
-				// 	class_name		: 'button tool',
-				// 	// style		: { "background-image": "url('" +tool_context.icon +"')" },
-				// 	src				: tool_context.icon,
-				// 	dataset			: { tool : tool_context.name },
-				// 	title_label		: tool_context.label
-				// })
 
 			// Events
 				tool_button.addEventListener('mousedown', function(e){
@@ -1524,11 +1421,17 @@ export const ui = {
 
 
 
+		/**
+		* BUILD_WRAPPER_EDIT
+		* Render unified wrapper for widgets in edit mode
+		* @param object instance
+		* @param object items
+		* @return HTMLElement wrapper
+		*/
 		build_wrapper_edit : (instance, items)=>{
 
 			// short vars
-				// const id	= instance.id || 'id is not set'
-				const mode	= instance.mode 	// like 'edit'
+				const mode	= instance.mode // like 'edit'
 				const type	= 'widget'
 				const name	= instance.constructor.name
 
@@ -1558,42 +1461,6 @@ export const ui = {
 			return wrapper
 		}//end build_wrapper_edit
 	},//end widget
-
-
-
-	// DES
-		// button : {
-
-		// 	/**
-		// 	* BUILD_BUTTON
-		// 	* Generate button element for open the target tool
-		// 	* @return dom element tool_button
-		// 	*/
-		// 	build_button : (options) => {
-
-		// 		const class_name = 'button' + (options.class_name ? (' ' + options.class_name) : '')
-		// 		const label 	 = options.label || "undefined"
-
-		// 		// button
-		// 			const button = ui.create_dom_element({
-		// 				element_type	: 'span',
-		// 				class_name		: class_name,
-		// 				text_content	: label
-		// 				//style			: { "background-image": "url('" +tool_object.icon +"')" },
-		// 			})
-
-		// 		// Events
-		// 			//button.addEventListener('mouseup', (e) => {
-		// 			//	e.stopPropagation()
-		// 			//	alert("Click here! "+label)
-		// 			//})
-
-		// 		return button
-		// 	}//build_button
-
-
-
-		// },//end button
 
 
 
@@ -1650,58 +1517,52 @@ export const ui = {
 			}
 
 		// style. Add CSS style property to element
-			if(style) {
+			if (style) {
 				for(let key in style) {
-					// element.style[key] = style[key]
-					element.style.setProperty(key, style[key]) // changed 22-03-2023
-					//element.setAttribute("style", key +":"+ style[key]+";");
+					element.style.setProperty(key, style[key])
 				}
 			}
 
 		// title . Add title attribute to element
-			if(title_label) {
+			if (title_label) {
 				element.title = strip_tags(title_label)
 			}
 
 		// dataset Add dataset values to element
-			if(data_set) {
+			if (data_set) {
 				for (let key in data_set) {
 					element.dataset[key] = data_set[key]
 				}
 			}
 
 		// value
-			if(value!==undefined) {
+			if (value!==undefined) {
 				element.value = value
 			}
 
 		// Text content: + span,
-			if(text_node){
-				//element.appendChild(document.createTextNode(TextNode));
+			if(inner_html) {
+				element.insertAdjacentHTML('afterbegin', inner_html)
+			}else if (text_node) {
 				// Parse HTML text as object
 				if (element_type==='span') {
 					element.textContent = text_node
 				}else{
 					const el = document.createElement('span')
 						  // Note that prepend a space to span to prevent Chrome bug on selection
-						  // el.innerHTML = " "+text_node
 						  el.insertAdjacentHTML('afterbegin', " "+text_node)
 					element.appendChild(el)
 				}
 			}else if(text_content) {
 				element.textContent = text_content
-			}else if(inner_html) {
-				// element.innerHTML = inner_html
-				element.insertAdjacentHTML('afterbegin', inner_html)
 			}
-
 
 		// draggable
 			if(draggable) {
 				element.draggable = draggable
 			}
 
-		// src
+		// src. Source for images etc.
 			if(src) {
 				element.src = src
 			}
@@ -1740,8 +1601,9 @@ export const ui = {
 	/**
 	* UPDATE_NODE_CONTENT
 	* Clean node container and add the new content as HTML
-	* @param object options
-	* @return HTMLElement element
+	* @param HTMLElement node
+	* @param string value
+	* @return void
 	*/
 	update_node_content : function(node, value) {
 		while (node.firstChild) {
@@ -1756,7 +1618,7 @@ export const ui = {
 	* ADD_TOOLS
 	* Adds all the existent tools for the selected component
 	* @param object self
-	* @param DOM node buttons_container
+	* @param HTMLElement buttons_container
 	* @return array tools
 	*/
 	add_tools : function(self, buttons_container) {
@@ -1778,13 +1640,8 @@ export const ui = {
 			if (tool_node) {
 				buttons_container.appendChild(tool_node)
 			}
-
-			// if(self.type === 'component' && tools[i].show_in_component){
-			// 	buttons_container.appendChild( ui.tool.build_component_tool_button(tools[i], self) )
-			// }else if(self.type === 'section'){
-			// 	buttons_container.appendChild( ui.tool.build_section_tool_button(tools[i], self) )
-			// }
 		}
+
 
 		return tools
 	},//end add_tools
@@ -1826,24 +1683,20 @@ export const ui = {
 				console.error('Error. Instance node not found:', target_instance);
 			}
 
-			// instance node already exists case
-			// const node_length = target_instance.node.length;
-			// for (let i = 0; i < node_length; i++) {
-
-				const target_container	= target_instance.node.querySelector(container_selector)
-				const target_node		= target_container.querySelector(target_selector)
-				if (!target_node) {
-					// first set inside container. Append
+			const target_container	= target_instance.node.querySelector(container_selector)
+			const target_node		= target_container.querySelector(target_selector)
+			if (!target_node) {
+				// first set inside container. Append
+				target_container.appendChild(source_node)
+			}else{
+				// already exist target node like 'wrapper_x'. Replace or add
+				if (place_mode==='add') {
 					target_container.appendChild(source_node)
 				}else{
-					// already exist target node like 'wrapper_x'. Replace or add
-					if (place_mode==='add') {
-						target_container.appendChild(source_node)
-					}else{
-						target_node.parentNode.replaceChild(source_node, target_node)
-					}
+					target_node.parentNode.replaceChild(source_node, target_node)
 				}
-			// }
+			}
+
 		}else{
 
 			// target_instance node not ready case
@@ -1867,14 +1720,14 @@ export const ui = {
 		const inspector_wrapper = document.querySelector('.inspector')
 		if (inspector_wrapper) {
 
-			const wrapper_section = document.querySelector(".wrapper_section.edit")
+			const wrapper_section = document.querySelector('.wrapper_section.edit')
 
-			if (inspector_wrapper.classList.contains("hide")) {
-				inspector_wrapper.classList.remove("hide")
-				wrapper_section.classList.remove("full_width")
+			if (inspector_wrapper.classList.contains('hide')) {
+				inspector_wrapper.classList.remove('hide')
+				wrapper_section.classList.remove('full_width')
 			}else{
-				inspector_wrapper.classList.add("hide")
-				wrapper_section.classList.add("full_width")
+				inspector_wrapper.classList.add('hide')
+				wrapper_section.classList.add('full_width')
 			}
 		}
 	},//end toggle_inspector
@@ -1887,6 +1740,7 @@ export const ui = {
 	* Manages a persistent view ob content (body) based on user selection
 	* Uses local DB to track the state of current element
 	* @param object options
+	* @return bool
 	*/
 	collapse_toggle_track : (options) => {
 
@@ -1911,8 +1765,6 @@ export const ui = {
 					? false
 					: true
 
-				// console.log(default_state, "ui_status:", ui_status, 'is_collapsed', is_collapsed);
-
 				if (is_collapsed) {
 
 					if (!container.classList.contains('hide')) {
@@ -1929,7 +1781,6 @@ export const ui = {
 					if (default_state==='closed' && !ui_status) {
 
 						// Nothing to do. Is the first time access. Not is set the local_db_data yet
-						// console.log("stopped open:",default_state, collapsed_id);
 
 					}else{
 
@@ -2064,20 +1915,6 @@ export const ui = {
 				}
 			}
 
-		// des
-			// for (const lang in langs) {
-			// 	const option = ui.create_dom_element({
-			// 		element_type	: 'option',
-			// 		value			: lang,
-			// 		text_content	: langs[lang],
-			// 		parent			: fragment
-			// 	})
-			// 	// selected options set on match
-			// 	if (lang===reference_lang) {
-			// 		option.selected = true
-			// 	}
-			// }
-
 		// select
 			const select_lang = ui.create_dom_element({
 				id				: id,
@@ -2092,85 +1929,6 @@ export const ui = {
 
 		return select_lang
 	},//end build_select_lang
-
-
-
-	/**
-	* GET_CONTENTEDITABLE_BUTTONS
-	* @return HTMLElement contenteditable_buttons
-	*/
-	get_contenteditable_buttons : () => {
-
-		const fragment = new DocumentFragment()
-
-		// bold
-			const button_bold = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'button bold',
-				text_content	: "Bold",
-				parent			: fragment
-			})
-			button_bold.addEventListener("click", (e)=>{
-				e.stopPropagation()
-				ui.do_command('bold', null)
-			})
-		// italic
-			const button_italic = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'button italic',
-				text_content	: "Italic",
-				parent			: fragment
-			})
-			button_italic.addEventListener("click", (e)=>{
-				e.stopPropagation()
-				ui.do_command('italic', null)
-			})
-		// underline
-			const button_underline = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'button underline',
-				text_content	: "Underline",
-				parent			: fragment
-			})
-			button_underline.addEventListener("click", (e)=>{
-				e.stopPropagation()
-				ui.do_command('underline', null)
-			})
-		// find and replace
-			const button_replace = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'button replace',
-				text_content	: "Replace",
-				parent			: fragment
-			})
-			button_replace.addEventListener("click", (e)=>{
-				e.stopPropagation()
-
-				//replace_selected_text('nuevooooo')
-				//const editor = document.activeElement.innerHTML
-				//.textContent
-				//.inner
-				console.log("editor:",contenteditable_buttons.target);
-					//console.log("editor:",editor);
-
-				ui.do_search('palabras',contenteditable_buttons.target)
-
-				ui.do_command('insertText', 'nuevoooooXXX')
-			})
-
-		// contenteditable_buttons
-			const contenteditable_buttons = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'contenteditable_buttons'
-			})
-			contenteditable_buttons.addEventListener("mousedown", (e)=>{
-				e.preventDefault()
-			})
-			contenteditable_buttons.appendChild(fragment)
-
-
-		return contenteditable_buttons
-	},//end get_contenteditable_buttons
 
 
 
@@ -2225,18 +1983,10 @@ export const ui = {
 			const callback			= options.callback || null
 
 		// page_y_offset. Current window scroll position (used to restore later)
-			const page_y_offset = window.pageYOffset || 0
+			const page_y_offset = window.scrollY || 0
 
-		// modal container select from DOM (created hidden when page is built)
-			// const modal_container = document.querySelector('dd-modal')
 		// modal container build new DOM on each call and remove on close
-			// const previous_modal  	= document.querySelector('dd-modal')
-			// if (previous_modal) {
-			// 	previous_modal.remove()
-			// }
-			const modal_container	= document.createElement('dd-modal')
-			// document.body.appendChild(modal_container)
-			// const wrapper_page		= document.querySelector('.wrapper.page')
+			const modal_container = document.createElement('dd-modal')
 			modal_parent.appendChild(modal_container)
 
 		// modal_node
@@ -2299,24 +2049,21 @@ export const ui = {
 			switch(size) {
 				case 'big' : {
 					// hide contents to avoid double scrollbars
-						const content_data_page = document.querySelector(".content_data.page")
-							  // content_data_page.classList.add("hide")
-						// const menu_wrapper = document.querySelector(".menu_wrapper")
-							  // menu_wrapper.classList.add("hide")
-						const debug_div = document.getElementById("debug")
-							  // if(debug_div) debug_div.classList.add("hide")
+						const content_data_page	= document.querySelector('.content_data.page')
+						const debug_div			= document.getElementById('debug')
 
 					// show hidden elements again on close
 						event_manager.subscribe('modal_close', () => {
-							content_data_page.classList.remove("hide")
-							// menu_wrapper.classList.remove("hide")
-							if(debug_div) debug_div.classList.remove("hide")
+							content_data_page.classList.remove('hide')
+							if(debug_div) {
+								debug_div.classList.remove('hide')
+							}
 
 							// scroll window to previous scroll position
-								window.scrollTo({
-									top			: page_y_offset,
-									behavior	: "auto"
-								})
+							window.scrollTo({
+								top			: page_y_offset,
+								behavior	: 'auto'
+							})
 						})
 
 					modal_container._showModalBig();
@@ -2330,15 +2077,6 @@ export const ui = {
 					modal_container._showModal();
 					break;
 			}
-
-		// navigation
-			// const state	= {
-			// 	event_in_history : false
-			// }
-			// const title	= 'modal'
-			// const url	= null // 'Modal url'
-			// 	console.log("history:",history, this);
-			// history.pushState(state, title, url)
 
 		// remove on close
 			modal_container.on_close = () => {
@@ -2367,8 +2105,7 @@ export const ui = {
 	* ACTIVATE_FIRST_COMPONENT
 	* This is used when a new record is created, to focus first component suitable for edit
 	* avoiding to select some models like component_publication, component_info...
-	* @param object ddo_map
-	* @param array avoid_models
+	* @param object options
 	* @return bool
 	*/
 	activate_first_component : (options) => {
@@ -2421,17 +2158,6 @@ export const ui = {
 
 		return true
 	},//end activate_first_component
-
-
-
-	/**
-	* DO_COMMAND
-	* Exec document 'execCommand' https://developer.mozilla.org/en-US/docs/Web/API/Document/execCommand
-	* Obsolete (!)
-	*/
-	do_command : (command, val) => {
-		document.execCommand(command, false, (val || ""));
-	},
 
 
 
@@ -2538,15 +2264,14 @@ export const ui = {
 			// label
 				const label = []
 				const current_label = SHOW_DEBUG
-					? column.label //+ " [" + component.tipo + "]"
+					? column.label
 					: column.label
 				label.push(current_label)
 
 			// node header_item
-				const id			= column.id //component.tipo + "_" + component.section_tipo +  "_"+ component.parent
+				const id			= column.id
 				const header_item	= ui.create_dom_element({
 					element_type	: 'div',
-					// id			: id,
 					class_name		: 'head_column ' + id
 				})
 				// item_text
@@ -2562,7 +2287,6 @@ export const ui = {
 				if(column.columns_map){
 
 					header_item.classList.add('with_sub_header')
-					// header_item.innerHTML = '<span>' + label.join(' ') + '</span>'
 					if (!header_item.hasChildNodes()) {
 						// item_text include once
 						ui.create_dom_element({
@@ -2591,17 +2315,15 @@ export const ui = {
 						const selector = 'head_column.'+id
 						set_element_css(selector, css_object)
 
-
 					const current_column_map	= column.columns_map
 					const columns_map_length	= current_column_map.length
 					for (let j = 0; j < columns_map_length; j++) {
 						const current_column  = current_column_map[j]
 						// node header_item
-						const id				= current_column.id //component.tipo + '_' + component.section_tipo +  '_'+ component.parent
+						const id				= current_column.id
 						const sub_header_item	= ui.create_dom_element({
 							element_type	: 'div',
-							// id			: id,
-							class_name		: 'head_column '+id,
+							class_name		: 'head_column ' + id,
 							parent			: sub_header
 						})
 						// item_text
@@ -2653,15 +2375,6 @@ export const ui = {
 				header_wrapper.appendChild(ar_nodes[i])
 			}
 
-		// css calculation
-			// Object.assign(
-			// 	header_wrapper.style,
-			// 	{
-			// 		//display: 'grid',
-			// 		//"grid-template-columns": "1fr ".repeat(ar_nodes_length),
-			// 		"grid-template-columns": self.id_column_width + " repeat("+(ar_nodes_length)+", 1fr)",
-			// 	}
-			// )
 
 		return header_wrapper
 	},//end render_list_header
@@ -2674,9 +2387,9 @@ export const ui = {
 	* place it into the header_item node
 	* @param object self
 	* 	Instance of section/component_portal
-	* @param DOM node header_item
-	* 	Container where place the sort buttons
 	* @param object column
+	* @param HTMLElement header_wrapper
+	* 	Container where place the sort buttons
 	* @return HTMLElement sort_node
 	*/
 	add_column_order_set(self, column, header_wrapper) {
@@ -2705,7 +2418,6 @@ export const ui = {
 					}
 				}
 			}
-			// console.log("current_direction:", column.tipo, current_direction);
 
 		// exec_order function
 			const exec_order = (direction) => {
@@ -2728,13 +2440,8 @@ export const ui = {
 				// order sqo build
 					const order = [{
 						direction: direction, // ASC|DESC
-						// path : [{
-						// 	component_tipo	: column.tipo || column.id,
-						// 	section_tipo	: column.section_tipo
-						// }]
 						path : path
 					}]
-					// console.log("order:",order);
 
 				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
 				// note that navigate only refresh current instance content_data, not the whole page
@@ -2750,7 +2457,7 @@ export const ui = {
 					current_direction = direction
 
 				// reset all other sort nodes styles
-					const sort_nodes		= header_wrapper.sort_nodes // header_wrapper.querySelectorAll('.order')
+					const sort_nodes		= header_wrapper.sort_nodes
 					const sort_nodes_length	= sort_nodes.length
 					for (let i = 0; i < sort_nodes_length; i++) {
 						sort_nodes[i].classList.remove('asc','desc')
@@ -2789,11 +2496,10 @@ export const ui = {
 
 				// check if any other sort item is used
 				// if true, change default action from desc to asc
-				const sort_nodes		= header_wrapper.sort_nodes // header_wrapper.querySelectorAll('.order')
+				const sort_nodes		= header_wrapper.sort_nodes
 				const sort_nodes_length	= sort_nodes.length
 				for (let i = 0; i < sort_nodes_length; i++) {
 					if (sort_nodes[i].classList.contains('asc') || sort_nodes[i].classList.contains('desc')) {
-						// console.log("---------------------- sort_nodes[i]:", sort_nodes[i]);
 						default_direction = 'ASC'
 						sort_node.title = title_asc
 						break;
@@ -2819,9 +2525,12 @@ export const ui = {
 
 	/**
 	* FLAT_COLUMN_ITEMS
-	* create the css grid columns to build list items
+	* Creates the css grid columns to build list items
 	* @param array list
 	*	Array of column items
+	* @param int level_max = 3
+	* @param string type = 'fr'
+	* @param int level = 1
 	* @return array ar_elements
 	*/
 	flat_column_items : (list, level_max=3, type='fr', level=1) => {
@@ -2867,6 +2576,7 @@ export const ui = {
 			}
 		}
 
+
 		return ar_elements
 	},//end flat_column_items
 
@@ -2874,15 +2584,11 @@ export const ui = {
 
 	/**
 	* SET_BACKGROUND_IMAGE
-	* @param DOM node image
-	* @param DOM node target_node
+	* @param HTMLElement image
+	* @param HTMLElement target_node
 	* @return bool
 	*/
 	set_background_image : (image, target_node) => {
-
-		// Deactivate, it's not useful repeat the first pixel of image.
-		// to discus
-		// return false
 
 		// Firefox skip. (prevents erratic Firefox behavior about canvas bg color)
 		if(navigator.userAgent.toLowerCase().indexOf('firefox') > -1){
@@ -2983,12 +2689,6 @@ export const ui = {
 				canvas.remove()
 
 
-		// loading style remove
-			// if (image.classList.contains('loading')) {
-			// 	image.classList.remove('loading')
-			// }
-
-
 		return true
 	},//end set_background_image
 
@@ -3008,41 +2708,6 @@ export const ui = {
 
 		// strip label HTML tags
 			const label_text = strip_tags(label);
-
-		// const add_css_rule = function (selector, css) {
-
-		// 	// css_style_sheet
-		// 		// create new styleSheet if not already exists
-		// 		// if (!window.css_style_sheet) {
-		// 		// 	const style = document.createElement("style");
-		// 		// 	style.type = 'text/css'
-		// 		// 	document.head.appendChild(style);
-		// 		// 	window.css_style_sheet = style.sheet;
-		// 		// }
-		// 		// const css_style_sheet	= window.css_style_sheet
-		// 		const css_style_sheet		= get_elements_style_sheet()
-
-		// 	const rules			= css_style_sheet.rules
-		// 	const rules_length	= rules.length
-		// 	for (let i = rules_length - 1; i >= 0; i--) {
-
-		// 		const current_selector = rules[i].selectorText
-		// 		if(current_selector===selector) {
-		// 			// already exists
-		// 			// console.warn("/// stop current_selector:",current_selector);
-		// 			return false
-		// 		}
-		// 	}
-
-		// 	const propText = typeof css==='string'
-		// 		? css
-		// 		: Object.keys(css).map(function (p) {
-		// 			return p + ':' + (p==='content' ? "'" + css[p] + "'" : css[p]);
-		// 		  }).join(';');
-		// 	css_style_sheet.insertRule(selector + '{' + propText + '}', css_style_sheet.cssRules.length);
-
-		// 	return true
-		// };
 
 		// const width  = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
 		// if (width<960) {
@@ -3082,6 +2747,7 @@ export const ui = {
 	/**
 	* HILITE
 	* Hilite/un-hilite and element (usually a component) in the DOM
+	* Used mainly by components in search mode
 	* @param object options
 	* @return bool
 	*/
@@ -3120,8 +2786,10 @@ export const ui = {
 	* ENTER_FULLSCREEN
 	* Set element as full screen size
 	* To exit, press key 'Escape'
-	* @param DOM none
+	* @param HTMLElement node
 	* 	Usually the component wrapper
+	* @param function exit_callback
+	* 	optional callback executed on exit from fullscreen
 	* @return bool
 	*/
 	enter_fullscreen : function(node, exit_callback) {
@@ -3154,7 +2822,7 @@ export const ui = {
 			class_name		: 'exit_button',
 			parent			: node
 		})
-		exit_button.addEventListener('click', function(e) {
+		const fn_click = function(e) {
 			e.stopPropagation()
 
 			node.classList.remove('fullscreen')
@@ -3163,11 +2831,12 @@ export const ui = {
 			if(exit_callback){
 				exit_callback()
 			}
-		})
+		}
+		exit_button.addEventListener('click', fn_click)
 
 		// set exit event
-		document.addEventListener('keyup', exit_fullscreen, { passive : true })
-		function exit_fullscreen(e) {
+		const exit_fullscreen = function(e) {
+
 			if (e.key==='Escape') {
 				document.removeEventListener('keyup', exit_fullscreen, { passive : true })
 
@@ -3181,6 +2850,7 @@ export const ui = {
 				}
 			}
 		}
+		document.addEventListener('keyup', exit_fullscreen, { passive : true })
 
 
 		return true
@@ -3190,7 +2860,9 @@ export const ui = {
 
 	/**
 	* GET_ONTOLY_TERM_LINK
-	* @return HTMLElement ontoly_link
+	* Render a unified DOM node as Ontology link open in new window
+	* @param string tipo
+	* @return HTMLElement ontoly_term_link
 	*/
 	get_ontoly_term_link(tipo) {
 
@@ -3198,18 +2870,13 @@ export const ui = {
 
 		const ontoly_term_link = ui.create_dom_element({
 			element_type	: 'a',
-			// class_name		: 'button pen',
 			href			: url,
 			text_content	: tipo,
 			title			: 'Local Ontology'
 		})
 		ontoly_term_link.target	= '_blank'
 		ontoly_term_link.rel	= 'noopener'
-		// ontoly_term_link.addEventListener('click', function(e){
-		// 	e.stopPropagation()
-		// 	const custom_url = DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + section_tipo
-		// 	open_ontology_window(section_tipo, custom_url)
-		// })
+
 
 		return ontoly_term_link
 	},//end get_ontoly_term_link
@@ -3301,6 +2968,7 @@ export const ui = {
 	* Always return a black or white color, the most
 	* appropriated in current case for good visibility
 	* @see https://wunnle.com/dynamic-text-color-based-on-background
+	* @param string background_color
 	* @return string text_color
 	* 	"#ffffff" | "#000000"
 	*/
@@ -3357,13 +3025,12 @@ export const ui = {
 	* 		callback	: function,
 	* 		lang		: string
 	* 	}
-	* @return HTMLElement result_node
+	* @return HTMLElement modal_node
 	*/
 	render_edit_modal : async function(options) {
 
 		// options
 			const self		= options.self // component instance
-			const e			= options.e // mouse event
 			const callback	= options.callback // function optional
 			const lang		= options.lang // string optional
 
@@ -3392,7 +3059,7 @@ export const ui = {
 				section_tipo	: self.section_tipo || self.tipo,
 				section_id		: self.section_id,
 				mode			: 'edit',
-				view			: null, // self.view || self.context?.view || null, // 'default',
+				view			: null,
 				lang			: lang || self.lang
 			})
 			await instance.build(true)
@@ -3407,26 +3074,23 @@ export const ui = {
 			})
 
 		const modal_node = ui.attach_to_modal({
-			header	: header,
-			body	: body,
-			footer	: footer,
+			header	 : header,
+			body	 : body,
+			footer	 : footer,
 			on_close : () => {
-				// refresh whole component
-				// self.refresh({
-				// 	autoload : false
-				// })
+				// Nothing to do
 			},
 			callback : (dd_modal) => {
+
 				// re-size and position the modal content
 				dd_modal.modal_content.classList.add('center')
 				dd_modal.modal_content.style.width = '30rem'
-				// dd_modal.modal_content.style.top = (e.clientY + 25) + 'px'
 
 				if (callback) {
 					callback(dd_modal)
 				}
 			},
-			size	: 'normal' // string size big|normal|small
+			size : 'normal' // string size: big|normal|small
 		})
 
 
@@ -3440,6 +3104,7 @@ export const ui = {
 	* Add tooltip to buttons based on title attribute
 	* @param HTMLElement wrapper
 	* 	Element (page, section, component, inspector, etc.) wrapper
+	* @param string selector = '.button'
 	* @return void
 	*/
 	activate_tooltips : function(wrapper, selector='.button') {
@@ -3461,7 +3126,6 @@ export const ui = {
 			const button = buttons[i]
 
 			if (button.active_tooltip) {
-				// console.log(')) activate_tooltips ignored already activated button:', button);
 				continue;
 			}
 
@@ -3488,7 +3152,7 @@ export const ui = {
 	* FIT_INPUT_WIDTH_TO_VALUE
 	* Set input element style width based on number length of chars
 	* (!) Use monospace font to preserve char width when fit
-	* @param DOM node input_node
+	* @param HTMLElement input_node
 	* @param int|string value
 	* @param int plus = 0
 	* @return void
@@ -3506,120 +3170,7 @@ export const ui = {
 
 
 
-	/**
-	* SET_PARENT_CHECKED_VALUE
-	* Set input check value based on direct children checked values
-	* Could be checked, unchecked or indeterminate
-	* @return bool
-	*/
-		// set_parent_checked_value : (input_node, all_direct_children, callback) => {
-
-		// 	// look children status until find checked value false
-		// 		const all_children_checked = (()=>{
-
-		// 			const all_direct_children_length = all_direct_children.length
-		// 			for (let i = 0; i < all_direct_children_length; i++) {
-		// 				if(all_direct_children[i].checked!==true) {
-		// 					return false
-		// 				}
-		// 			}
-
-		// 			return true
-		// 		})()
-
-		// 	// set checked value
-		// 		if (all_children_checked===true) {
-		// 			// full checked
-		// 			input_node.indeterminate	= false
-		// 			input_node.checked			= true
-		// 		}else{
-		// 			// intermediate
-		// 			input_node.checked			= false
-		// 			input_node.indeterminate	= true
-		// 		}
-
-		// 	// callback
-		// 		if (callback) {
-		// 			callback(input_node)
-		// 		}
-
-		// 	return true
-		// },//end set_parent_checked_value
-
-
-
-	/**
-	* EXEC_SCRIPTS_INSIDE
-	* @return js promise
-	*/
-		// exec_scripts_inside( element ) {
-		// 	console.log("context:",context);
-
-		// 	const scripts 		 = Array.prototype.slice.call(element.getElementsByTagName("script"))
-		// 	const scripts_length = scripts.length
-		// 	if (scripts_length<1) return false
-
-		// 	const js_promise = new Promise((resolve, reject) => {
-
-		// 		const start = new Date().getTime()
-
-		// 		for (let i = 0; i < scripts_length; i++) {
-
-		// 			if(SHOW_DEBUG===true) {
-		// 				var partial_in = new Date().getTime()
-		// 			}
-
-		// 			if (scripts[i].src!=="") {
-		// 				const tag 	  = document.createElement("script")
-		// 					  tag.src = scripts[i].src
-		// 				document.getElementsByTagName("head")[0].appendChild(tag)
-
-		// 			}else{
-		// 				//eval(scripts[i].innerHTML);
-		// 				console.log(scripts[i].innerHTML); //continue;
-
-		// 				// Encapsulate code in a function and execute as well
-		// 				const my_func = new Function(scripts[i].innerHTML)
-		// 					//console.log("my_func:",my_func); continue;
-		// 					my_func() // Exec
-		// 			}
-
-		// 			if(SHOW_DEBUG===true) {
-		// 				const end  	= new Date().getTime()
-		// 				const time 	= end - start
-		// 				const partial = end - partial_in
-		// 				//console.log("->insertAndExecute: [done] "+" - script time: " +time+' ms' + ' (partial:'+ partial +')')
-		// 			}
-		// 		}
-
-		// 	});//end js_promise
-
-
-		// 	return js_promise;
-		// }//end  exec_scripts_inside
-
-
-
 }//end ui
-
-
-
-/**
-* EXECUTE_FUNCTION_BY_NAME
-*
-*//*
-export const execute_function_by_name = function(functionName, context /*, args *\/) {
-
-	const args 		 = Array.prototype.slice.call(arguments, 2);
-	const namespaces = functionName.split(".");
-	const func = namespaces.pop();
-	for(let i = 0; i < namespaces.length; i++) {
-		context = context[namespaces[i]];
-	}
-
-	return context[func].apply(context, args);
-}//end execute_function_by_name
-*/
 
 
 
