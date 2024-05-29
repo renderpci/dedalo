@@ -179,10 +179,11 @@
 
 		// buttons_container
 		>.buttons_container {
+			position: absolute;
 			background-color: @color_orange_dedalo;
+			user-select: none;
 			display: none;
 			flex: 0 1 1em;
-			position: absolute;
 			z-index: 1;
 			box-shadow: 0px 0px 0px 1px #f49d46;
 			right: 0px;
@@ -216,6 +217,39 @@
 				}
 			}
 		}//end >.buttons_container
+
+		// component_warning
+		>.component_warning {
+			position: absolute;
+			display: flex;
+			justify-content: center;
+			background-color: @color_danger;
+			color: var(--color_white);
+			user-select: none;
+			left: -2rem;
+			top: 0px;
+			width: 2rem;
+			z-index: 1;
+			border-top-left-radius: 0.25em;
+			border-bottom-left-radius: 0.25em;
+			font-size: 1.1rem;
+			overflow: hidden;
+
+			&.right_side {
+				left: 100%;
+				border-top-left-radius: unset;
+				border-bottom-left-radius: unset;
+				border-top-right-radius: 0.25em;
+				border-bottom-right-radius: 0.25em;
+			}
+
+			// buttons inside
+			span {
+				margin-top: 0.25em;
+				margin-bottom: 0.25rem;
+				background-color: var(--color_white);
+			}
+		}
 
 		// content_data
 		>.content_data {
