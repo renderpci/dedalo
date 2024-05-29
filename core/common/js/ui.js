@@ -987,7 +987,7 @@ export const ui = {
 		add_component_warning : (wrapper_component, message, msg_type='alert', clean=true, on_click) => {
 
 			// warning_wrap. always check if already exists, else, create a new one and recycle it
-				const warning_wrap = wrapper_component.querySelector('.component_warning') || (()=>{
+				const warning_wrap = wrapper_component.warning_wrap || (()=>{
 
 					const new_warning_wrap = ui.create_dom_element({
 						element_type	: 'div',
@@ -998,6 +998,9 @@ export const ui = {
 						e.stopPropagation()
 						warning_wrap.remove()
 					})
+
+					// set pointer to component wrapper
+					wrapper_component.warning_wrap = new_warning_wrap
 
 					return new_warning_wrap
 				})()
