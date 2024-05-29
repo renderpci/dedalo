@@ -970,6 +970,74 @@ export const ui = {
 
 
 		/**
+		* ADD_COMPONENT_WARNING
+		* Builds an alert icon at left of the component wrapper with
+		* the message as tooltip
+		* @param HTMLElement wrapper_component
+		*	component wrapper where message is placed
+		* @param string message
+		*	Text message to show inside message container
+		* @param string msg_type = 'alert'
+		* @param bool clean = false
+		* @param function|null on_click
+		* 	manages on click event
+		*
+		* @return HTMLElement warning_wrap
+		*/
+		add_component_warning : (wrapper_component, message, msg_type='alert', clean=false, on_click) => {
+
+			// warning_wrap. always check if already exists, else, create a new one and recycle it
+				const warning_wrap = wrapper_component.querySelector('.component_warning') || (()=>{
+
+					const new_warning_wrap = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'component_warning',
+						parent			: wrapper_component
+					})
+					new_warning_wrap.addEventListener('dblclick', (e) => {
+						e.stopPropagation()
+						warning_wrap.remove()
+					})
+
+					return new_warning_wrap
+				})()
+
+			// clean previous buttons
+				if (clean===true) {
+					// clean
+					const items = warning_wrap.querySelectorAll('.button')
+					for (let i = items.length - 1; i >= 0; i--) {
+						items[i].remove()
+					}
+				}
+
+			// icon_name. class name of button (defines the icon)
+				const icon_name = msg_type==='alert'
+					? 'exclamation'
+					: msg_type
+
+			// add icon with message text
+				const button = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button ' + icon_name,
+					title			: message,
+					parent			: warning_wrap
+				})
+				if (on_click) {
+					button.addEventListener('click', on_click)
+				}
+
+				// activate_tooltips title message
+				when_in_dom(warning_wrap, () => {
+					ui.activate_tooltips(warning_wrap)
+				})
+
+			return warning_wrap
+		},//end add_component_warning
+
+
+
+		/**
 		* EXEC_SAVE_SUCCESSFULLY_ANIMATION
 		* Used on component save successfully
 		* @param object self
