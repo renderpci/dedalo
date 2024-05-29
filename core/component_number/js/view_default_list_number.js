@@ -24,6 +24,8 @@ export const view_default_list_number = function() {
 /**
 * LIST
 * Render node for use in list
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_number.render = async function(self, options) {

@@ -24,6 +24,7 @@ export const render_search_component_number = function() {
 /**
 * SEARCH
 * Render node for use in modes: edit, edit_in_list
+* @param object options
 * @return HTMLElement wrapper
 */
 render_search_component_number.prototype.search = async function(options) {
@@ -54,6 +55,7 @@ render_search_component_number.prototype.search = async function(options) {
 
 /**
 * GET_CONTENT_DATA
+* @param object self
 * @return HTMLElement content_data
 */
 const get_content_data = function(self) {
@@ -80,7 +82,7 @@ const get_content_data = function(self) {
 				const value = this.value
 			// q_operator. Fix the data in the instance previous to save
 				self.data.q_operator = value
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		})
 
