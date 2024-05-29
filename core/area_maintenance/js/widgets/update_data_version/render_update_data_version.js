@@ -211,7 +211,7 @@ const get_content_data = async function(self) {
 
 			// highlight code tags inside alert_update
 			when_in_dom(content_data, ()=>{
-				content_data.querySelectorAll('pre').forEach((el) => {
+				content_data.querySelectorAll('code').forEach((el) => {
 					hljs.highlightElement(el);
 			  });
 			})

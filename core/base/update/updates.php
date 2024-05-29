@@ -69,18 +69,16 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 
-			<pre class=\"language-php\">
-			<code>
-			// thumb common. This block is used by all components to create and display thumbnail images
-			// dedalo_thumb_extension. Default: 'jpg'
-			define('DEDALO_THUMB_EXTENSION',	'jpg');
-			// dedalo_quality_thumb. Default: 'thumb')
-			define('DEDALO_QUALITY_THUMB',	'thumb');
-			// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
-			// Allows you to create image versions of the PDF, useful for previews or web versions
-			define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
+			<code class=\"language-php\">
+				// thumb common. This block is used by all components to create and display thumbnail images
+				// dedalo_thumb_extension. Default: 'jpg'
+				define('DEDALO_THUMB_EXTENSION',	'jpg');
+				// dedalo_quality_thumb. Default: 'thumb')
+				define('DEDALO_QUALITY_THUMB',	'thumb');
+				// dedalo_pdf_alternative_extensions. Array with the optional compression formats extension
+				// Allows you to create image versions of the PDF, useful for previews or web versions
+				define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
 			</code>
-			</pre>
 
 			<br>DEDALO_IMAGE_THUMB_DEFAULT is changed by generic DEDALO_QUALITY_THUMB
 			<br>See sample.config.php file to review all changes.
@@ -94,11 +92,9 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 
-			<pre class=\"language-php\">
-			<code>
-			define('DEDALO_PREFIX_TIPOS', ['tchi']
+			<code class=\"language-php\">
+				define('DEDALO_PREFIX_TIPOS', ['tchi']
 			</code>
-			</pre>
 
 			<br>More help in config documentation: <a href='https://dedalo.dev/docs/config/config/#defining-prefix-tipos' target='_blank'>defining-prefix-tipos</a>
 			<br>Note: When the update will finish, review your hierarchies to include the new tchi as your previous numisdata279 (Finds).
@@ -112,12 +108,10 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 
-			<pre class=\"language-php\">
-			<code>
-			convert: attempt to perform an operation not allowed by the security policy `PDF' @
-			error/constitute.c/IsCoderAuthorized/421.|convert: no images defined
+			<code class=\"language-php\">
+				convert: attempt to perform an operation not allowed by the security policy `PDF' @
+				error/constitute.c/IsCoderAuthorized/421.|convert: no images defined
 			</code>
-			</pre>
 
 			<br> To solve this issue you will need to change the ImageMagick policy for PDF.
 			<br>
@@ -130,21 +124,17 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 
-			<pre class=\"language-php\">
-			<code>
-			/etc/ImageMagick-6/policy.xml
+			<code class=\"language-php\">
+				/etc/ImageMagick-6/policy.xml
 			</code>
-			</pre>
 
 			<br> An the line to comment or remove is:
 			<br>
 			<br>
 
-			<pre class=\"language-php\">
-			<code>
-			". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
+			<code class=\"language-php\">
+				". htmlentities('<policy domain="coder" rights="none" pattern="PDF" />')."
 			</code>
-			</pre>
 		";
 		$updates->$v->alert_update[] = $alert;
 
