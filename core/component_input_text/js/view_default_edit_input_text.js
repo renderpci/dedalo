@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
+	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {change_handler, remove_handler} from './render_edit_component_input_text.js'
 	import {get_dataframe} from '../../component_common/js/component_common.js'
@@ -151,54 +152,43 @@ const get_content_value = (i, current_value, self) => {
 					return
 				}
 			})
-		// keyup event
-			// input.addEventListener('keyup', function(e) {
-			// 	keyup_handler(e, i, self)
-			// })
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
 			})
 		// change event
-			input.addEventListener('change',(e) => {
+			input.addEventListener('change', (e) => {
 				change_handler(e, i, self)
-			})//end fn_change
-		// blur event
-			// input.addEventListener('blur', function() {
-			// 	// force to save current input if changed (prevents override changed_data
-			// 	// in multiple values cases)
-			// 	if (self.data.changed_data) {
-			// 		// change_value
-			// 		self.change_value({
-			// 			changed_data	: self.data.changed_data,
-			// 			refresh			: false
-			// 		})
-			// 	}
-			// })
-		// change event
-			// input.addEventListener('change', async function() {
-			// 	// is_unique check
-			// 		if (self.context.properties.unique && input.value!=='') {
-			// 			const unique = await self.is_unique(input.value)
-			// 			if (typeof unique!=="undefined") {
-			// 				ui.show_message(
-			// 					self.node,
-			// 					`Warning. Duplicated value '${input.value}' in id: ` + unique.section_id,
-			// 					'warning'
-			// 				)
-			// 			}
-			// 		}
-			// 	// change data
-			// 		const changed_data = [Object.freeze({
-			// 			action	: 'update',
-			// 			key		: i,
-			// 			value	: (input.value.length>0) ? input.value : null
-			// 		})]
-			// 		self.change_value({
-			// 			changed_data	: changed_data,
-			// 			refresh			: false
-			// 		})
-			// })
+				// mandatory stye update
+				if (e.target.value && e.target.value.length) {
+					if (input.classList.contains('mandatory')) {
+						input.classList.remove('mandatory')
+					}
+				}else{
+					if (!input.classList.contains('mandatory')) {
+						input.classList.add('mandatory')
+					}
+				}
+
+				// is_unique check
+				if (self.context.properties.unique) {
+					check_duplicates(self, e.target.value)
+				}
+			})
+
+		// check duplicates
+			if (self.context.properties.unique) {
+				// first check
+				setTimeout(function(){
+					check_duplicates(self, input.value)
+				}, 100)
+				// check again on each component activation
+				event_manager.subscribe('activate_component', (el) => {
+					if (el.id===self.id) {
+						check_duplicates(self, input.value)
+					}
+				})
+			}
 
 	// button remove. Triggered by wrapper delegated events
 		if (i>0) {
@@ -361,6 +351,59 @@ const get_buttons = (self) => {
 
 	return buttons_container
 }//end get_buttons
+
+
+
+/**
+* CHECK_DUPLICATES
+*  Search duplicates from database
+* @param object self
+* @param string|null value
+* @return void
+*/
+const check_duplicates = async function(self, value) {
+
+	// empty case
+		if (!value || value.length<1) {
+			return
+		}
+
+	const equal_value = await self.find_equal(value)
+	if (equal_value) {
+		const warning_wrap = ui.component.add_component_warning(
+			self.node,
+			`Warning. Duplicated value '${value}' in id: ${equal_value}`,
+			'alert',
+			true, // clean buttons
+			function(e) {
+				e.stopPropagation()
+				const section_id = equal_value
+				// open new window
+				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: self.section_tipo,
+					id				: section_id,
+					mode			: 'edit',
+					menu			: false,
+					session_save	: false
+				})
+				open_window({
+					url		: url,
+					name	: 'section_id_' + section_id,
+					on_blur : function(e) {
+						// check again
+						check_duplicates(self, value)
+					}
+				})
+			}
+		)
+		// set pointer
+		self.node.warning_wrap = warning_wrap
+	}else{
+		if (self.node.warning_wrap) {
+			self.node.warning_wrap.remove()
+		}
+	}
+}//end check_duplicates
 
 
 
