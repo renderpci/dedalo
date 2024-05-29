@@ -6,6 +6,7 @@
 
 // default values
 	$create_dir_permissions = 0750;
+	$php_user = exec('whoami');
 
 
 
@@ -63,7 +64,7 @@
 	if (defined('DEDALO_SESSIONS_PATH')) {
 		// verify directory already exists
 		if( !check_sessions_directory() ){
-			die('Unable to write sessions. Review your permissions for sessions directory path');
+			die("Unable to write sessions. Review your permissions for sessions directory path (php user: $php_user)");
 		}
 		// clean old files (sessions and caches)
 		$cache_life	= 4 * 24 * 60 * 60; // caching time, in seconds - 2 days -
@@ -103,7 +104,7 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-			$init_response->msg[]	= 'Error on read or create backups directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create backups directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -128,7 +129,7 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-			$init_response->msg[]	= 'Error on read or create backup_path_ontology directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create backup_path_ontology directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -153,7 +154,7 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700, true)) {
 
-			$init_response->msg[]	= 'Error on read or create backups_ontology_download_dir directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create ONTOLOGY_DOWNLOAD_DIR directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -178,7 +179,7 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-			$init_response->msg[]	= 'Error on read or create backup temp directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create backup temp directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -205,7 +206,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create backup ' . ONTOLOGY_DOWNLOAD_DIR . ' directory. Permission denied';
+				$init_response->msg[]	= 'Error on read or create backup ' .ONTOLOGY_DOWNLOAD_DIR. ' directory. Permission denied '."(php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					."  ".implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -233,7 +234,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create "extras" directory ("'.$current_tipo.'"). Permission denied';
+				$init_response->msg[]	= "Error on read or create 'extras' directory ($current_tipo). Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -259,7 +260,7 @@
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions,true)) {
 
-			$init_response->msg[]	= 'Error on read or create "media" directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create 'media' directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -287,7 +288,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create media quality: "'.$quality.'" directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create media quality: '$quality' directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -316,7 +317,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create image quality "'.$quality.'" directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create image quality '$quality' directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -353,7 +354,7 @@
 				if( !is_dir($folder_path) ) {
 					if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-						$init_response->msg[]	= 'Error on read or create pdf quality "'.$quality.'" directory. Permission denied';
+						$init_response->msg[]	= "Error on read or create pdf quality '$quality' directory. Permission denied (php user: $php_user)";
 						$init_response->errors	= true;
 						debug_log(__METHOD__
 							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -383,7 +384,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create 3d quality "'.$quality.'" directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create 3d quality '$quality' directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -418,7 +419,7 @@
 			if( !is_dir($folder_path) ) {
 				if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-					$init_response->msg[]	= 'Error on read or create SVG directory. Permission denied';
+					$init_response->msg[]	= "Error on read or create SVG directory. Permission denied (php user: $php_user)";
 					$init_response->errors	= true;
 					debug_log(__METHOD__
 						.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -442,7 +443,7 @@
 				if( !is_dir($folder_path) ) {
 					if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-						$init_response->msg[]	= 'Error on read or create svg quality "'.$quality.'" directory. Permission denied';
+						$init_response->msg[]	= "Error on read or create svg quality '$quality' directory. Permission denied (php user: $php_user)";
 						$init_response->errors	= true;
 						debug_log(__METHOD__
 							.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -470,7 +471,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create media DEDALO_HTML_FILES_FOLDER default directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -497,7 +498,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create media DEDALO_IMAGE_WEB_FOLDER default directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -524,7 +525,7 @@
 		if( !is_dir($folder_path) ) {
 			if(!mkdir($folder_path, $create_dir_permissions, true)) {
 
-				$init_response->msg[]	= 'Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied';
+				$init_response->msg[]	= "Error on read or create media DEDALO_TOOL_EXPORT_FOLDER_PATH default directory. Permission denied (php user: $php_user)";
 				$init_response->errors	= true;
 				debug_log(__METHOD__
 					.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
@@ -562,7 +563,7 @@
 	$folder_path = DEDALO_UPLOAD_TMP_DIR;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, $create_dir_permissions, true)) {
-			$init_response->msg[]	= 'Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied';
+			$init_response->msg[]	= "Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied (php user: $php_user)";
 			$init_response->errors	= true;
 			debug_log(__METHOD__
 				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
