@@ -5,8 +5,8 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
-	import {common} from '../../common/js/common.js'
+	import {data_manager} from '../../common/js/data_manager.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {events_subscription} from './events_subscription.js'
 	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
@@ -100,137 +100,95 @@ component_input_text.prototype.init = async function(options) {
 
 
 /**
-* IS_UNIQUE
+* FIND_EQUAL
 * Check the value of the input_text with the all values in the database
-* @result bool
+* @param string value
+* @return int|null
 * result:
 * 	true : unique value, it not has any record inside the section.
 * 	false: the value has almost 1 record inside the database, but it is not unique.
 */
-component_input_text.prototype.is_unique = async function(new_value){
+component_input_text.prototype.find_equal = async function(value) {
 
 	const self = this
 
-	if (new_value.length<1) {
-		return false
-	}
+	// empty case
+		if (!value || value.length<1) {
+			return null
+		}
 
-	// (!) UNFINISHED METHOD. STOP HERE !
-	return true
-
-
-	/* Working here !
-	// const unique_config = self.context.properties.unique
-
-	// search item rebuild filter q param and others
-		const sqo = self.dd_request.search.find(item => item.typo==='sqo')
-		// set limit on sqo
-		sqo.limit = 1
-		// set skip_projects_filter as true
-		sqo.skip_projects_filter = true
-
-		const filter = sqo.filter['$and']
-
-		// filter item (expected one, under '$and' operator)
-			const filter_item = filter[0]
-			// add received value to filter
-			filter_item.q = "=" + new_value
-			// set the split words by spaces to false
-			filter_item.q_split = false
-
-		// exclude self record of search once
-			if (filter.length===1) {
-				const new_item_filter = {
-					q 	 : '!=' + self.section_id,
-					path : [
-						{
-							component_tipo	: 'section_id',
-							model			: 'component_section_id',
-							name			: 'Dummy section id',
-							section_tipo	: [self.section_tipo]
-						}
-					]
-				}
-				filter.push(new_item_filter)
+	// sqo
+		const sqo = {
+			section_tipo			: [self.section_tipo],
+			skip_projects_filter	: true,
+			limit					: 1,
+			filter					: {
+				$and : [
+					{
+						q			: value,
+						q_operator	: '=',
+						q_split		: false,
+						path		: [
+							{
+								component_tipo	: self.tipo,
+								model			: self.model,
+								name			: self.label,
+								section_tipo	: self.section_tipo
+							}
+						]
+					},
+					{
+						q			: self.section_id,
+						q_operator	: '!=',
+						path		: [
+							{
+								component_tipo	: 'section_id',
+								model			: 'component_section_id',
+								name			: 'Dummy section id',
+								section_tipo	: self.section_tipo
+							}
+						]
+					}
+				]
 			}
-			//console.log("filter_item:",filter_item);
-			//console.log("new_item_filter:",new_item_filter);
-			// console.log("sqo:",sqo);
+		}
+
+	// source
+		const source = create_source(self, 'search')
+		// prevent to write session for this temporal SQO
+		source.session_save = false
+
+	// show. Add empty ddo_map to minimize server resources use
+		const show = {
+			ddo_map : []
+		}
 
 	// load data
-		const api_response	= await data_manager.read(self.dd_request.search)
-		const data			= api_response.result.data
+		const api_response = await data_manager.request({
+			use_worker	: true,
+			body		: {
+				dd_api	: 'dd_core_api',
+				action	: 'read',
+				source	: source,
+				show	: show,
+				sqo		: sqo
+			}
+		})
+
+	// data
+		const data = api_response.result.data || []
 
 	// record data results from search
 		const record = data.find(item => item.tipo===self.tipo)
+		if (record && record.value) {
+			const section_id = record.value[0]?.section_id || null
 
-	// result. If results are found, value is NOT unique
-		//const result = (typeof record==="undefined") ? true : false
-
-		if(SHOW_DEBUG===true) {
-			console.log("+++++ is_unique api_response data:",data, record);
+			return section_id
 		}
-	// render_views
-		// Definition of the rendering views that could de used.
-		// Tools or another components could add specific views dynamically
-		// Sample:
-		// {
-		// 		view	: 'default',
-		// 		mode	: 'edit',
-		// 		render	: 'view_default_edit_portal'
-		// 		path 	: './view_default_edit_portal.js'
-		// }
-		self.render_views = [
-			{
-				view	: 'text',
-				mode	: 'edit',
-				render	: 'view_text_input_text'
-			},
-			{
-				view	: 'line',
-				mode	: 'edit',
-				render	: 'view_line_edit_input_text'
-			},
-			{
-				view	: 'mini',
-				mode	: 'edit',
-				render	: 'view_mini_input_text'
-			},
-			{
-				view	: 'print',
-				mode	: 'edit',
-				render	: 'view_default_edit_input_text'
-			},
-			{
-				view	: 'default',
-				mode	: 'edit',
-				render	: 'view_default_edit_input_text',
-				path 	: './view_default_edit_input_text.js'
-			},
-			{
-				view	: 'ip',
-				mode	: 'list',
-				render	: 'view_ip_list_input_text'
-			},
-			{
-				view	: 'mini',
-				mode	: 'list',
-				render	: 'view_mini_input_text'
-			},
-			{
-				view	: 'text',
-				mode	: 'list',
-				render	: 'view_text_input_text'
-			},
-			{
-				view	: 'default',
-				mode	: 'list',
-				render	: 'view_default_list_input_text'
-			}
-		]
-	return record
-	*/
-}//end is_unique
+
+
+	return null
+}//end find_equal
 
 
 
