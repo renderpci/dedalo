@@ -368,6 +368,11 @@ const check_duplicates = async function(self, value) {
 			return
 		}
 
+	// into tool case
+		if (self.caller.type==='tool') {
+			return
+		}
+
 	const equal_value = await self.find_equal(value)
 	if (equal_value) {
 		ui.component.add_component_warning(
