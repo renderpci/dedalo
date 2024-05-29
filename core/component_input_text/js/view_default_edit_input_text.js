@@ -370,7 +370,7 @@ const check_duplicates = async function(self, value) {
 
 	const equal_value = await self.find_equal(value)
 	if (equal_value) {
-		const warning_wrap = ui.component.add_component_warning(
+		ui.component.add_component_warning(
 			self.node,
 			`Warning. Duplicated value '${value}' in id: ${equal_value}`,
 			'alert',
@@ -396,8 +396,6 @@ const check_duplicates = async function(self, value) {
 				})
 			}
 		)
-		// set pointer
-		self.node.warning_wrap = warning_wrap
 	}else{
 		if (self.node.warning_wrap) {
 			self.node.warning_wrap.remove()
