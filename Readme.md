@@ -15,8 +15,8 @@
 | ich | production | 100% | 100% | 100%  | All definitions are ready | October 2024 |
 | tch | beta | 90% | 90% | 90%  | Install and test it, but don't use in production |  not compatible |
 | tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
-| dmm | beta | 100% | 100% | 90% | Install and test it, but don't use in production | October 2024 |
-| mdcat | alpha | 30% | 0% |0%  |  | October 2024 |
+| dmm | beta | 100% | 100% | 100% | Install and test it, but don't use in production | October 2024 |
+| mdcat | alpha | 30% | 30% |0%  |  | October 2024 |
 
 
 ## 1. What is Dédalo?
