@@ -175,17 +175,6 @@ tool_import_dedalo_csv.prototype.load_csv_files_list = async function() {
 
 				const result = response.result // array of objects
 
-				// user messages
-					// const msg_type = (response.result===false) ? 'error' : 'ok'
-					//if (trigger_response.result===false) {
-						// ui.show_message(buttons_container, response.msg, msg_type)
-					//}
-
-				// reload target lang
-					// const target_component = self.ar_instances.find(el => el.tipo===self.main_element.tipo && el.lang===target_lang)
-					// target_component.refresh()
-					// dd_console('target_component', 'DEBUG', target_component)
-
 				resolve(result)
 			})
 		})
@@ -234,12 +223,6 @@ tool_import_dedalo_csv.prototype.remove_file = function(item) {
 				}
 
 				const result = response.result // array of objects
-
-				// user messages
-					// const msg_type = (response.result===false) ? 'error' : 'ok'
-					// if (response.result===false) {
-					// 	ui.show_message(self.user_msg_container, response.msg, msg_type)
-					// }
 
 				resolve(result)
 			})
