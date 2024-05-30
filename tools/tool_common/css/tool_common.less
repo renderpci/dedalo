@@ -21,7 +21,7 @@
 
 	>.content_data.content_data_error.tool_error {
 		display: block;
-		background-color: var(--color_white);
+		background-color: @color_white;
 		color: @color_danger;
 		>.icon {
 			vertical-align: bottom;
@@ -35,7 +35,7 @@
 .tool_header {
 	background-color: @color_orange_dedalo;
 	position: relative;
-	color: var(--color_white);
+	color: @color_white;
 	width: 100%;
 	display: flex;
 	padding: 1rem;
@@ -116,10 +116,10 @@
 					top: 3px;
 					font-family: Arial, sans-serif;
 					cursor: pointer;
-					color: var(--color_white);
+					color: @color_white;
 
 					&:hover {
-						color: var(--color_black);
+						color: @color_black;
 					}
 				}
 			}
@@ -137,11 +137,11 @@
 		transition: transform 0.25s ease-in-out;
 
 		&:hover {
-			background-color: var(--color_black) !important;
+			background-color: @color_black !important;
 			transform: rotate(90deg);
 		}
 		&:active {
-			background-color: var(--color_white) !important;
+			background-color: @color_white !important;
 		}
 	}
 

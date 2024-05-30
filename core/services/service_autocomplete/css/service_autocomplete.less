@@ -72,7 +72,7 @@
 		// filter_node. Box of checkboxes with all available sections
 		ul.filter_node {
 			background-color: @color_grey_dark;
-			border-bottom: 1px solid #ffffff;
+			border-bottom: 1px solid @color_white;
 			display: table;
 			padding: 0.5em;
 			width: 100%;
@@ -161,13 +161,13 @@
 
 	// input autocomplete
 	>.autocomplete_input {
-		background: #ffffff url('../../themes/default/icons/search.svg');
+		background: @color_white url('../../themes/default/icons/search.svg');
 		background-position: bottom 6px right 8px;
 		background-repeat: no-repeat;
 		background-size: auto 60%;
 		margin: 0.5em;
 		width: calc(100% - 3.25em);
-		outline: 1px solid #ffffff;
+		outline: 1px solid @color_white;
 
 		&:focus {
 			box-shadow: none;
@@ -201,7 +201,7 @@
 
 		.loading_label {
 			padding: 0.5rem;
-			background-color: #ffffff;
+			background-color: @color_white;
 			pointer-events: none;
 			border-bottom: 1px solid @color_orange_dedalo;
 		}

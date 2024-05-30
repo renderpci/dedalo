@@ -114,7 +114,7 @@
 
 				// source ckeditor
 				>.ck-source-editing-area {
-					background-color: #f8f9fa;
+					background-color: @color_light;
 					width: calc(100% - 2rem);
 					height: calc(100% - 2rem);
 					margin: 0.5rem;
@@ -186,19 +186,19 @@
 					display: grid;
 					grid-template-columns: 1em 1em auto 1em;
 					align-items: center;
-					border-bottom: 1px solid #777;
-					border-left: 1px solid #777;
-					border-right: 1px solid #777;
+					border-bottom: 1px solid #777777;
+					border-left: 1px solid #777777;
+					border-right: 1px solid #777777;
 					cursor: pointer;
-					background-color: #ffffff;
+					background-color: @color_white;
 					height: 30px;
 
 					&:hover {
 						background-color: @color_orange_dedalo;
-						color: #ffffff;
+						color: @color_white;
 					}
 					&:active {
-						background-color: #ffffff;
+						background-color: @color_white;
 						color: initial;
 					}
 					&:first-child {
@@ -254,7 +254,7 @@
 			background-color: @color_grey_dark;
 
 			&.green {
-				background-color: #23ab48;
+				background-color: @color_green_success;
 			}
 		}
 	}
@@ -266,7 +266,7 @@
 			display: flex;
 			flex-wrap: wrap;
 			position: absolute;
-			background-color: #fff;
+			background-color: @color_white;
 			outline: 1px solid @color_orange_dedalo;
 			left: 0px;
 			top: -21px;
@@ -380,7 +380,7 @@ dd-modal {
 			}
 
 			>.label_keyboard {
-				color: #7f7f7f;
+				color: @color_grey_darken;
 			}
 		}
 	}

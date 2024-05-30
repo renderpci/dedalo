@@ -106,7 +106,7 @@
 
 			>.button {
 				background-color: @color_orange_dedalo;
-				color: var(--color_white);
+				color: @color_white;
 				display: flex;
 				width: auto;
 				padding: 1em;
@@ -115,10 +115,10 @@
 				border-radius: 0.25em;
 
 				&:hover {
-					color: var(--color_black);
+					color: @color_black;
 				}
 				&:active {
-					color: var(--color_white);
+					color: @color_white;
 				}
 			}
 		}//end .buttons
@@ -224,7 +224,7 @@
 			display: flex;
 			justify-content: center;
 			background-color: @color_danger;
-			color: var(--color_white);
+			color: @color_white;
 			user-select: none;
 			left: -2rem;
 			top: 0px;
@@ -247,7 +247,7 @@
 			span {
 				margin-top: 0.25em;
 				margin-bottom: 0.25rem;
-				background-color: var(--color_white);
+				background-color: @color_white;
 			}
 		}
 
@@ -301,7 +301,7 @@
 				}
 
 				.error& {
-					color: var(--color_white) !important;
+					color: @color_white !important;
 				}
 
 				// label_info is used in search mode
@@ -409,7 +409,7 @@
 
 		&.error {
 			transition: background-color 0.3s ease;
-			background-color: red !important;
+			background-color: @color_danger !important;
 		}
 
 		// inside .section_record.edit context
@@ -468,7 +468,7 @@
 
 				&.vertical {
 					flex: 1 1 100%;
-					background-color: var(--color_grey_dark_3);
+					background-color: @color_grey_dark_3;
 					justify-content: center;
 					flex-flow: unset;
 				}
@@ -544,7 +544,7 @@
 				width: 100%;
 
 				.close_modal {
-					color: var(--color_black);
+					color: @color_black;
 				}
 				.label {
 					width: calc(100% - 1rem);
@@ -702,7 +702,7 @@
 			// lock icon at top right
 			&:after {
 				content: " ";
-				.fn_build_button('lock.svg', red, 1);
+				.fn_build_button('lock.svg', @color_danger, 1);
 				position: absolute;
 				top: 4px;
 				right: 4px;
@@ -718,20 +718,20 @@
 		min-height: 3em;
 		top: -3em;
 		width: 100%;
-		color: var(--color_white);
+		color: @color_white;
 		user-select: none;
 		line-height: 1.5em;
 
 		&.error {
-			background-color: rgba(228, 8, 8, 0.90);
+			background-color: @color_danger;
 		}
 
 		&.warning {
-			background-color: #ed6223;
+			background-color: @color_warning;
 		}
 
 		&.ok {
-			background-color: rgba(10, 150, 74, 0.90);
+			background-color: @color_success;
 		}
 
 		.text {
@@ -798,7 +798,7 @@
 // input_tex_area contenteditable
 	.input_tex_area {
 		width: 100%;
-		background-color: var(--color_white);
+		background-color: @color_white;
 		margin-right: 0.25em;
 		padding: 0.5em;
 		padding-right: 1em;
@@ -823,7 +823,7 @@
 		height: 100% !important;
 		z-index: 10 !important;
 		max-height: unset !important;
-		background-color: var(--color_white) !important;
+		background-color: @color_white !important;
 
 		.buttons_container {
 			left: unset !important;
@@ -977,8 +977,8 @@
 				// Section label bar
 				&.section_bar_label {
 					display: block;
-					background-color: var(--color_grey_dark_3);
-					color: var(--color_white);
+					background-color: @color_grey_dark_3;
+					color: @color_white;
 					// Avoid click events affect here (received with :after)
 					pointer-events: none;
 
@@ -1002,13 +1002,13 @@
 				// section_group_label
 				&.section_group_label {
 					background-color: @color_grey_dark;
-					color: var(--color_white);
+					color: @color_white;
 				}
 
 				// component_label
 				&.component_label {
-					background-color: var(--color_white);
-					border-bottom: 0.5px solid var(--color_grey_dark_3);
+					background-color: @color_white;
+					border-bottom: 0.5px solid @color_grey_dark_3;
 
 					// truncate text
 					padding-right: 2.0em;
@@ -1018,7 +1018,7 @@
 
 					&:hover {
 						background-color: @color_orange_dedalo !important;
-						color: var(--color_white);
+						color: @color_white;
 					}
 					&:active {
 						opacity: 0.6;
@@ -1346,7 +1346,7 @@
 		padding: 0.75rem;
 		padding-left: 1.25rem;
 		padding-right: 2rem;
-		color: var(--color_white);
+		color: @color_white;
 		overflow: hidden;
 		text-overflow: ellipsis;
 		white-space: nowrap;
@@ -1370,7 +1370,7 @@
 		font-size: 1.1rem;
 		position: sticky;
 		top: -0.5rem;
-		background-color: var(--color_white);
+		background-color: @color_white;
 		width: 100%;
 		z-index: 1;
 		padding-top: 0.5rem;

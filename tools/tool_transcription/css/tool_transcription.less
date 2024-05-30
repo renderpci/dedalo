@@ -62,14 +62,14 @@
 				opacity: 1;
 				padding: 0.33rem;
 				padding-right: 2rem;
-				background-color: #f8f9fa;
+				background-color: @color_light;
 				border-radius: 3px;
 				margin-right: 0px;
 				max-width: 20rem;
 				min-width: 7rem;
 
 				@media screen and (max-width: @width_break_point_0) {
-					// max-width: unset;
+
 				}
 			}
 
@@ -87,6 +87,7 @@
 				align-items: center;
 				margin-left: 0.75rem;
 				margin-right: 0.12rem;
+
 				@media screen and (max-width: @width_break_point_0) {
 					padding-right: 0.5rem;
 				}
@@ -101,16 +102,6 @@
 
 			// buttons of tools (tool print, tool time machine..)
 			>.tool_button {
-				// background-color: #fde2c6;
-				// border-color: #e9ecef;
-				// color: #212529;
-				// // width: 12em;
-				// padding: 0.5em;
-				// cursor: pointer;
-				// border-radius: 0.25rem;
-				// // display: inline-flex;
-				// // align-items: center;
-				// // justify-content: space-evenly;
 
 				>.icon {
 					height: 1rem;
@@ -122,7 +113,7 @@
 				background-color: transparent;
 
 				>.label, label {
-					color: #ffffff;
+					color: @color_white;
 				}
 			}
 		}
@@ -134,21 +125,20 @@
 		column-gap: 1rem;
 		align-items: start;
 		width: calc(100% - 1rem);
+
 		@media screen and (max-width: @width_break_point_0) {
 			display: flex;
 			width: 100%;
 			flex-wrap: wrap;
-			// flex-direction: column-reverse;
 		}
 
 		// left and right commons
 		.left_container,
 		.right_container {
 			height: calc(100vh - 8rem);
-			// background-color: #e4ca4f;
+
 			.wrapper_component {
-				// background-color: #dee789;
-				// box-shadow: none;
+
 			}
 		}
 
@@ -156,9 +146,6 @@
 			>.wrapper_component {
 				height: 100%;
 
-				// >.move_top {
-				// 	visibility: hidden;
-				// }
 				>.buttons_container {
 					visibility: hidden;
 				}
@@ -175,13 +162,10 @@
 
 		.right_container {
 			>.wrapper_component {
-				// height: 100%; // calc(100vh - 8rem);
-				// min-height: 525px; // prevents to cut component_av player
 
 				// addons. Additional elements like video slider, keys map, etc.
 				&.with_addons {
-					// max-height: 50%;
-					// padding-bottom: 3.5rem;
+
 					@media screen and (max-width: @width_break_point_1) {
 						height: unset;
 					}
@@ -193,14 +177,12 @@
 				}
 
 				>.content_data {
-					// overflow: auto;
 					height: 100%;
-					// min-height: 528px;
-					// max-height: 404px;
 					display: block;
 				}
 
 				&.component_pdf {
+
 					.content_value {
 						height: 100%;
 					}
@@ -212,11 +194,8 @@
 			}
 
 			.slider_container {
-				// display: flex;
 				margin: 1em;
-				// padding-left: 10%;
-				// padding-right: 10%;
-				text-alignt: center;
+				text-align: center;
 
 				.slider_label {
 					font-size: 14px;
@@ -230,6 +209,7 @@
 
 					input[type="range"] {
 						-webkit-appearance: none !important;
+						appearance: none !important;
 						width: 100%;
 						height: 15px;
 						background-color: #fbfbfb;;
@@ -289,15 +269,10 @@
 					text-align: center;
 					padding: 4px;
 				}
-				// li span {
-				// 	display: inline-block;
-				// 	padding: 4px;
-				// 	text-transform: uppercase;
-				// }
 			}
 
 			.block_separator {
-				border-top: 1px solid @color_grey_light; // #f2f2f2;
+				border-top: 1px solid @color_grey_light;
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -308,18 +283,20 @@
 					width: 12rem;
 					margin: 1rem;
 					height: 3em;
+
 					&:hover{
 						background-color: @tool_color;
 						border-color: darken(@tool_color, 10%);
 						color: #ffffff;
 					}
 				}
-				>input{
+				>input {
 					margin: 1rem;
 					width: 6rem;
 					text-align: center;
 					padding: 4px;
 				}
+
 				>.label {
 
 				}
@@ -328,34 +305,35 @@
 					width: 14rem;
 					margin: 1rem;
 					height: 3em;
-					&:hover{
+
+					&:hover {
 						background-color: @tool_color;
 						border-color: darken(@tool_color, 10%);
 						color: #ffffff;
 					}
-					&.disable{
+
+					&.disable {
 						opacity: 25%;
 					}
 				}
 
-				>.server_status_container{
+				>.server_status_container {
 					width: 100%;
 					text-align: center;
 					font-size: 1.5rem;
 					font-weight: 200;
 
-					&.processing{
+					&.processing {
 						color: #13bb87;
 						font-weight: 400;
 						animation: 1s blink ease infinite;
 						animation-direction: alternate;
 					}
-
 					@keyframes blink {
 
-						from{
+						from {
 							opacity: 1;
-							}
+						}
 						to {
 							opacity: 0;
 						}
