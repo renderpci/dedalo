@@ -47,7 +47,7 @@
 		>.inspector_container {
 			overflow: auto;
 			height: 100%;
-			width: var(--inspector_width);			//
+			width: var(--inspector_width);
 			position: fixed;
 			left: calc(100vw - var(--inspector_width) - 0.75rem);
 			z-index: 2;
@@ -135,6 +135,7 @@
 
 		>.paginator_container {
 			height: 39px;
+
 			@media screen and (max-width: @width_break_point_0) {
 				height: auto;
 				min-height: 39px;
@@ -148,14 +149,14 @@
 				padding: 0;;
 			}
 
-			.column{
-				&.column_drag{
-					justify-content	: center;
-					align-items		: center;
-					align-content	: center;
+			.column {
+				&.column_drag {
+					justify-content: center;
+					align-items: center;
+					align-content: center;
 					.button.move{
-						height	: 1.5rem;
-						width	: 1.5rem;
+						height: 1.5rem;
+						width: 1.5rem;
 					}
 				}
 			}

@@ -32,7 +32,7 @@
 				position: absolute;
 				width: 42px;
 				height: 22px;
-				background-color: #ffffff;
+				background-color: @color_white;
 				border-radius: 11px;
 				transform: translate3d(2px, 2px, 0) scale3d(1, 1, 1);
 				transition: all 0.25s linear;
@@ -44,7 +44,7 @@
 				position: absolute;
 				height: 22px;
 				width: 22px;
-				background-color: #ffffff;
+				background-color: @color_white;
 				border-radius: 11px;
 				box-shadow: 0px 2px 2px rgba(0, 0, 0, 0.24);
 				transform: translate3d(2px, 2px, 0);
@@ -65,7 +65,7 @@
 			display: none;
 
 			&:checked + i {
-				background-color: @color_green_switch_active;
+				background-color: @color_green_success;
 			}
 
 			&:checked + i::before {
