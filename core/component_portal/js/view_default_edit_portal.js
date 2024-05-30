@@ -112,7 +112,6 @@ view_default_edit_portal.render = async function(self, options) {
 			add_styles	: ['portal'] // added to the wrapper before view style
 		}
 		const wrapper = ui.component.build_wrapper_edit(self, wrapper_options)
-		// wrapper.classList.add('portal', 'view_'+self.context.view)
 
 	// set pointers
 		wrapper.list_body		= list_body
@@ -231,8 +230,6 @@ const get_content_data = async function(self, ar_section_record) {
 
 	return content_data
 }//end get_content_data
-
-
 
 
 
