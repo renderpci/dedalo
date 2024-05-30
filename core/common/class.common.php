@@ -1321,7 +1321,7 @@ abstract class common {
 			$get_request_config	= $options->get_request_config ?? false;
 
 		// short vars
-			$called_model	= get_class($this); // get_called_class(); // static::class
+			$called_model	= get_class($this);
 			$called_tipo	= $this->get_tipo();
 
 		// cache context
@@ -1363,25 +1363,12 @@ abstract class common {
 
 		// Debug
 			if(SHOW_DEBUG===true) {
-				// $exec_time = exec_time_unit($get_json_start_time,'ms').' ms';
+
 				$exec_time = exec_time_unit($get_json_start_time).' ms';
-				#$element = json_decode($json);
-				#	$element->debug = new stdClass();
-				#	$element->debug->exec_time = $exec_time;
-				#$json = json_encode($element, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
 				$json->debug = new stdClass();
 					$json->debug->exec_time = $exec_time;
 
-					if (strpos($called_model, 'component_')!==false && $get_data===true && !empty($json->data)) {
-
-						$current = reset($json->data);
-							// $current->debug_time_json	= $exec_time;
-							$current->debug_model			= $called_model;
-							$current->debug_label			= $this->get_label();
-							$current->debug_mode			= $this->get_mode();
-						// $bt = debug_backtrace()[0];
-						// dump($json->data, ' json->data ++ '.to_string($bt));
-					}
 				$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo ?? '';
 				$current_section_id		= $this->get_section_id() ?? '';
 
