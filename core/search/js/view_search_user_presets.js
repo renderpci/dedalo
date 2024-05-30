@@ -356,7 +356,9 @@ export const render_column_remove = function(options) {
 			element_type	: 'span',
 			class_name		: 'button_delete button delete_light icon'
 		})
-		delete_button.addEventListener('click', function(){
+		delete_button.addEventListener('click', function(e){
+			e.stopPropagation()
+
 			// delete_record
 				self.delete_record({
 					section			: self,
