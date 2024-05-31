@@ -279,7 +279,7 @@ const get_content_data = async function(self) {
 			const update_total = (value) => {
 				const total_label = new Intl.NumberFormat(locale, {}).format(value);
 				// displayed_records_label . Using legacy format label from v5 in PHP
-				const displayed_records_label = get_label.registros_mostrados
+				const displayed_records_label = get_label.records_displayed
 					? (() => {
 						// ref: Registros mostrados de X a Y de Z.
 						const map = {
@@ -287,7 +287,7 @@ const get_content_data = async function(self) {
 							Y	: new Intl.NumberFormat(locale, {}).format(self.page_row_end),
 							Z	: total_label
 						};
-						return get_label.registros_mostrados.replace(/X|Y|Z/g, (matched)=> {
+						return get_label.records_displayed.replace(/X|Y|Z/g, (matched)=> {
 							return map[matched];
 						})
 				      })()
