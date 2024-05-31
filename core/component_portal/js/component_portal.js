@@ -596,12 +596,20 @@ component_portal.prototype.build = async function(autoload=false) {
 			context : self.context
 		})
 
-	// component_info add set true if found it
-		if (self.datum && self.datum.data) {
-			self.add_component_info = self.datum.data.find(item => item.tipo==='ddinfo' && item.parent===self.tipo)
-				? true
-				: false
-		}
+	// self.add_component_info. Indicates if exists any ddinfo (value_with_parents) in the ddo_map items list
+		// (!) This is used by service_autocomplete to decide whether to add ddinfo or not
+		// sample item
+		// {
+		//	 "tipo": "hierarchy25",
+		//	 "parent": "self",
+		//	 "section_tipo": "self",
+		//	 "value_with_parents": true
+		// }
+		const show_ddo_map				= self.request_config_object.show?.ddo_map || []
+		const ddo_value_with_parents	= show_ddo_map.find(el => el.value_with_parents)
+		self.add_component_info			= ddo_value_with_parents
+			? ddo_value_with_parents.value_with_parents
+			: false
 
 	// debug
 		if(SHOW_DEBUG===true) {
