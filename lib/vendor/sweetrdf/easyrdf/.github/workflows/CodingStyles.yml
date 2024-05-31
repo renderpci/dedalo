@@ -33,6 +33,3 @@ jobs:
 
             -   name: Coding styles
                 run: php vendor/bin/php-cs-fixer fix --verbose --dry-run
-
-            -   name: Static Analysis
-                run: vendor/bin/phpstan analyse

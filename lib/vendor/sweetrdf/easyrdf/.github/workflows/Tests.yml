@@ -31,6 +31,9 @@ jobs:
             -   name: Tests
                 run: vendor/bin/phpunit
 
+            -   name: Static Analysis
+                run: vendor/bin/phpstan analyse
+
     windows-tests:
         name: Windows-Tests with PHP ${{ matrix.php-versions }}
         runs-on: windows-2019
