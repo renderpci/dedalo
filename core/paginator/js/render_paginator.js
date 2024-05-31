@@ -291,7 +291,7 @@ const get_content_data = async function(self) {
 							return map[matched];
 						})
 				      })()
-				     : `Showing ${page_row_begin}-${page_row_end} of ${total_label}`
+				     : `Showing ${self.page_row_begin}-${self.page_row_end} of ${total_label}`
 				displayed_records_node.innerHTML = displayed_records_label
 			}
 			active_values.push({
