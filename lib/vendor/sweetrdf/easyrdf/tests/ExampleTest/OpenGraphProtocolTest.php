@@ -43,7 +43,7 @@ class OpenGraphProtocolTest extends TestCase
     {
         $output = executeExample('open_graph_protocol.php');
         $this->assertStringContainsString('<dd><a href="https://www.rottentomatoes.com/m/oceans_eleven"', $output);
-        $this->assertStringContainsString('<dt>Title:</dt> <dd>Ocean\'s Eleven</dd>', $output);
+        $this->assertStringContainsString('<dt>Title:</dt> <dd>Ocean\'s Eleven', $output);
         $this->assertStringContainsString('<dt>Description:</dt>', $output);
     }
 }

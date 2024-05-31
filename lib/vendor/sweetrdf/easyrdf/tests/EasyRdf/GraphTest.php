@@ -42,6 +42,7 @@ namespace Tests\EasyRdf;
 use EasyRdf\Format;
 use EasyRdf\Graph;
 use EasyRdf\Http;
+use EasyRdf\Http\Client;
 use EasyRdf\Literal;
 use EasyRdf\ParsedUri;
 use EasyRdf\RdfNamespace;
@@ -273,7 +274,7 @@ class GraphTest extends TestCase
     public function testLoadWithContentType()
     {
         $checkRequest = function ($client) {
-            $this->assertStringContainsString(',application/json,', $client->getHeader('Accept'));
+            $this->assertStringContainsString('application/ld+json,', $client->getHeader('Accept'));
 
             return true;
         };
@@ -390,6 +391,20 @@ class GraphTest extends TestCase
             'Joe Bloggs',
             $graph->get('http://www.example.com/joe#me', 'foaf:name')
         );
+    }
+
+    /**
+     * Set up a Graph instance using a real Client to load a CONSTRUCT result.
+     *
+     * @see https://github.com/sweetrdf/easyrdf/pull/48
+     */
+    public function testIssue47GraphLoadRdfFile(): void
+    {
+        Http::setDefaultHttpClient(new Client());
+        $graph = new Graph();
+        $url = 'https://query.wikidata.org/sparql?query=construct+%7B+%3Fs+%3Fq+%3Fr+%7D+where+%7B+%3Fs+%3Fp+%3Fo+.+%3Fo+%3Fq+%3Fr+%7D+limit+1';
+        $tripleCount = $graph->load($url);
+        $this->assertTrue(0 < $tripleCount);
     }
 
     public function testNewAndLoad()
