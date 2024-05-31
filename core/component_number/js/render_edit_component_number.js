@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {set_before_unload} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_number} from './view_default_edit_number.js'
 	import {view_line_edit_number} from './view_line_edit_number.js'
@@ -134,16 +133,6 @@ const get_content_value = (i, current_value, self) => {
 					return
 				}
 			})
-		// keyup event
-			// input.addEventListener('keyup', function(e) {
-			// 	// page unload event
-			// 	keyup_handler(e, i, self)
-			// })//end keyup
-		// blur event
-			// input.addEventListener('blur', function(e) {
-			// 	// saves changed data
-			// 	blur_handler(e, i, self)
-			// })//end blur
 		// click event. Capture event propagation
 			input.addEventListener('click', (e) => {
 				e.stopPropagation()
@@ -224,9 +213,11 @@ export const get_buttons = (self) => {
 			button_add_input.addEventListener('mouseup', function(e) {
 				e.stopPropagation()
 
+				const key = self.data.value.length
+
 				const changed_data = [Object.freeze({
 					action	: 'insert',
-					key		: self.data.value.length,
+					key		: key,
 					value	: null
 				})]
 				self.change_value({
@@ -234,7 +225,9 @@ export const get_buttons = (self) => {
 					refresh			: true
 				})
 				.then(()=>{
-					const input_node = self.node.content_data[changed_data.key].querySelector('input')
+					const input_node = self.node.content_data[key]
+						? self.node.content_data[key].querySelector('input')
+						: null
 					if (input_node) {
 						input_node.focus()
 					}
@@ -305,81 +298,9 @@ export const change_handler = function(e, key, self) {
 
 
 /**
-* KEYUP_HANDLER
-* Store current value in self.data.changed_data
-* If key pressed is 'Enter', force save the value
-* @param event e
-* @param int key
-* @param object self
-* @return bool
-*/
-	// export const keyup_handler = function(e, key, self) {
-	// 	e.preventDefault()
-
-	// 	// when tab is pressed the node and self is the target component,
-	// 	// so the change data is not for the source component and user has enter (and don't changed nothing)
-	// 		if (e.key==='Tab' || e.key==='Shift') {
-	// 			return false
-	// 		}
-
-	// 	// Enter key force to save changes as the same way that blur
-	// 		if (e.key==='Enter') {
-	// 			blur_handler(e, key, self)
-	// 		}
-
-	// 	return true
-	// }//end keyup_handler
-
-
-
-/**
-* BLUR_HANDLER
-* Store current value in self.data.changed_data
-* @param event e
-* @param int key
-* @param object self
-* @return bool
-*/
-	// export const blur_handler = function(e, key, self) {
-	// 	e.preventDefault()
-
-	// 	// fix value to valid format as '5.21' from '5,21'
-	// 	const safe_value = (e.target.value.length>0)
-	// 		? self.fix_number_format(e.target.value)
-	// 		: null
-
-	// 	// if the safe_value is different than the value of user had enter set the safe_value
-	// 		if(safe_value!=e.target.value) {
-	// 			e.target.value = safe_value
-	// 		}
-
-	// 	// change data
-	// 		const changed_data_item = Object.freeze({
-	// 			action	: 'update',
-	// 			key		: key,
-	// 			value	: safe_value
-	// 		})
-
-	// 	// fix instance changed_data
-	// 		self.set_changed_data(changed_data_item)
-
-	// 	// force to save current input if changed
-	// 		const changed_data = self.data.changed_data || []
-	// 		// change_value (save data)
-	// 		self.change_value({
-	// 			changed_data	: changed_data,
-	// 			refresh			: false
-	// 		})
-
-	// 	return true
-	// }//end blur_handler
-
-
-
-/**
 * REMOVE_HANDLER
 * Handle button remove actions
-* @param DOM  node input
+* @param HTMLElement input
 * @param int key
 * @param object self
 * @return promise response

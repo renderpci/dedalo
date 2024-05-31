@@ -115,7 +115,7 @@
 .icon {
 	&.loading {
 		// spinner
-		border: 1px solid #d1d5db;
+		border: 1px solid @color_grey_medium_1;
 		border-top-color: @color_orange_dedalo;
 		border-radius: 50%;
 		mask: unset !important;
@@ -151,7 +151,7 @@ button {
 	transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out, border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 
 	// color
-	color: var(--color_grey_dark_1); // default dark grey
+	color: @color_grey_dark_1; // default dark grey
 
 	&.folding {
 		@media screen and (max-width: @width_break_point_1) {
@@ -241,9 +241,9 @@ button {
 		@color: @color_light;
 		background-color: @color;
 		border-color: darken(@color, 2%);
-		color: #212529;
+		color: @color_grey_dark_1;
 		&:before {
-			background-color: #212529 !important;
+			background-color: @color_grey_dark_1 !important;
 		}
 		&:hover {
 			background-color: darken(@color, 5%);

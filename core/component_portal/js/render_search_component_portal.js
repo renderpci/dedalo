@@ -9,7 +9,6 @@
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		// render_column_remove,
 		activate_autocomplete,
 		render_column_component_info
 	} from './render_edit_component_portal.js'
@@ -183,7 +182,7 @@ const rebuild_columns_map = async function(self) {
 			id			: 'remove',
 			label		: get_label.delete || 'Delete',
 			width		: 'auto',
-			callback	: render_column_remove // self.render_column_remove
+			callback	: render_column_remove
 		})
 
 	// fixed as calculated
@@ -205,12 +204,7 @@ const rebuild_columns_map = async function(self) {
 export const render_column_remove = function(options) {
 
 	// options
-		const self				= options.caller
-		// const row_key		= options.row_key
-		// const paginated_key	= options.paginated_key
-		// const section_id		= options.section_id
-		// const section_tipo	= options.section_tipo
-		// const locator		= options.locator
+		const self = options.caller
 
 	// DocumentFragment
 		const fragment = new DocumentFragment()
