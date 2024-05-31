@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057516187,
+              "day": 31,
+              "hour": 9,
+              "time": 65066317586,
               "year": 2024,
-              "month": 2,
-              "minute": 16,
-              "second": 27
+              "month": 5,
+              "minute": 6,
+              "second": 26
             }
           }
         ]
@@ -88,8 +88,17 @@
     },
     "dd612": {
       "dato": {
+        "lg-deu": [
+          "<p>Tool zum Übersetzen des Inhalts in jede andere konfigurierte Sprache.</p>"
+        ],
+        "lg-ell": [
+          "<p>Εργαλείο για τη μετάφραση του περιεχομένου σε οποιαδήποτε άλλη διαμορφωμένη γλώσσα.</p>"
+        ],
         "lg-eng": [
           "<p>Tool to translate the content to any other configured language.</p>"
+        ],
+        "lg-nep": [
+          "<p>कुनै पनि अन्य कन्फिगर गरिएको भाषामा सामग्री अनुवाद गर्न उपकरण।</p>"
         ]
       }
     },
@@ -144,6 +153,55 @@
         ]
       }
     },
+    "dd1372": {
+      "inf": "Etiquetas [component_json]",
+      "dato": {
+        "lg-nolan": [
+          [
+            {
+              "lang": "lg-eng",
+              "name": "automatic_translation",
+              "value": "Automatic translation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "automatic_translation",
+              "value": "Traducción automática"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "automatic_translation",
+              "value": "Traducció automàtica"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "automatic_translation",
+              "value": "Traduction automatique"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "automatic_translation",
+              "value": "Traduzione automatica"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "automatic_translation",
+              "value": "Automatische Übersetzung"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "automatic_translation",
+              "value": "Αυτόματη μετάφραση"
+            },
+            {
+              "lang": "lg-por",
+              "name": "automatic_translation",
+              "value": "Tradução automática"
+            }
+          ]
+        ]
+      }
+    },
     "dd1644": {
       "inf": "Desarollador [component_input_text]",
       "dato": {
@@ -156,7 +214,7 @@
   "section_id": 4,
   "created_date": "2020-02-17 18:04:18",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:16:27",
+  "modified_date": "2024-05-31 09:06:26",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
