@@ -2461,135 +2461,196 @@ final class dd_core_api {
 	public static function get_environment() : object {
 
 		// page_globals
-			$page_globals = (function() {
+			$page_globals = dd_core_api::get_page_globals(); // return object
 
-				$user_id			= logged_user_id();
-				$username			= logged_user_username();
-				$mode				= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
-				$full_username		= logged_user_full_username();
-				$is_global_admin	= logged_user_is_global_admin();
-				$is_root			= $user_id==DEDALO_SUPERUSER;
-
-				$obj = new stdClass();
-					// logged informative only
-					$obj->is_logged							= login::is_logged();
-					$obj->is_global_admin					= $is_global_admin;
-					$obj->is_root							= $is_root;
-					$obj->user_id							= $user_id;
-					$obj->username							= $username;
-					$obj->full_username						= $full_username;
-					// version
-					$obj->dedalo_entity						= DEDALO_ENTITY;
-					// version
-					$obj->dedalo_version					= DEDALO_VERSION;
-					// build
-					$obj->dedalo_build						= DEDALO_BUILD;
-					// mode
-					$obj->mode								= $mode ?? null;
-					// lang
-					$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
-					$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
-					$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
-					$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
-					// dedalo_projects_default_langs
-					if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-						$obj->dedalo_projects_default_langs	= array_map(function($current_lang) {
-							$lang_obj = new stdClass();
-								$lang_obj->label = lang::get_name_from_code($current_lang);
-								$lang_obj->value = $current_lang;
-							return $lang_obj;
-						}, DEDALO_PROJECTS_DEFAULT_LANGS);
-					}
-					// quality defaults
-					$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
-					$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
-					$obj->dedalo_quality_thumb			= defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
-
-					// tag_id
-					$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;
-					// dedalo_protect_media_files
-					$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
-					// notifications
-					$obj->DEDALO_NOTIFICATIONS			= defined('DEDALO_NOTIFICATIONS') ? (int)DEDALO_NOTIFICATIONS : 0;
-					// float_window_features
-					// $obj->float_window_features		= json_decode('{"small":"menubar=no,location=no,resizable=yes,scrollbars=yes,status=no,width=600,height=540"}');
-					$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/0.jpg';
-					$obj->locale						= DEDALO_LOCALE;
-					$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
-					$obj->component_active				= null;
-					// debug only
-					if(SHOW_DEBUG===true) {
-						$obj->dedalo_db_name	= DEDALO_DATABASE_CONN;
-						if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
-							$obj->pg_version = (function() {
-								try {
-									$conn = DBi::_getConnection() ?? false;
-									if ($conn) {
-										return pg_version(DBi::_getConnection())['server'];
-									}
-									return 'Failed!';
-								}catch(Exception $e){
-									debug_log(__METHOD__
-										." Exception Error: " . PHP_EOL
-										. $e->getMessage()
-										, logger::ERROR
-									);
-									return 'Failed with Exception!';
-								}
-							})();
-						}
-						$obj->php_version		= PHP_VERSION;
-						// $obj->php_version	.= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
-						$obj->php_memory		= to_string(ini_get('memory_limit'));
-					}
-
-
-				return $obj;
-			})();
+		// plain vars. Plain global vars
+			$plain_vars = dd_core_api::get_js_plain_vars(); // return array assoc
 
 		// lang labels
-			$lang_file_content = file_get_contents(DEDALO_CORE_PATH . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js');
+			$lang_labels_json = dd_core_api::get_lang_labels(DEDALO_APPLICATION_LANG); // return string
 
-		// environment object
-			$environment = (object)[
-				// page_globals
-				'page_globals'						=> $page_globals,
-				// plain global vars
-				'DEDALO_ENVIRONMENT'				=> true,
-				// 'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
-				'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
-				'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
-				'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
-				'SHOW_DEBUG'						=> SHOW_DEBUG,
-				'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
-				'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
-				'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
-				'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
-				'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
-				// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
-				'DD_TIPOS' => [
-					// 'DEDALO_SECTION_USERS_TIPO'			=> DEDALO_SECTION_USERS_TIPO,
-					// 'DEDALO_USER_PROFILE_TIPO'			=> DEDALO_USER_PROFILE_TIPO,
-					// 'DEDALO_FULL_USER_NAME_TIPO'			=> DEDALO_FULL_USER_NAME_TIPO,
-					// 'DEDALO_USER_EMAIL_TIPO'				=> DEDALO_USER_EMAIL_TIPO,
-					// 'DEDALO_FILTER_MASTER_TIPO'			=> DEDALO_FILTER_MASTER_TIPO,
-					// 'DEDALO_USER_IMAGE_TIPO'				=> DEDALO_USER_IMAGE_TIPO,
-					'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
-					'DEDALO_SECTION_INFO_INVERSE_RELATIONS'	=> DEDALO_SECTION_INFO_INVERSE_RELATIONS
-				],
-				// labels
-				// 'get_label' => include DEDALO_CORE_PATH . '/common/js/lang/'.DEDALO_APPLICATION_LANG.'.js'
-				'get_label' => json_decode($lang_file_content)
-			];
-
-		$response = new stdClass();
-			$response->result	= $environment;
-			$response->msg		= 'OK. Successful request';
-			$response->error	= null;
+		// environment
+			$environment = new stdClass();
+				$environment->page_globals		= $page_globals; // object
+				$environment->plain_vars		= $plain_vars; // array assoc
+				$environment->lang_labels_json	= $lang_labels_json; // string (JSON stringified)
 
 
-		return $response;
+		return $environment;
 	}//end get_environment
+
+
+
+	/**
+	* GET_PAGE_GLOBALS
+	* Builds whole environment page_globals object
+	* It is used as window.page_globals in environment.j.php file
+	* @return object $obj
+	*/
+	public static function get_page_globals() : object {
+
+		$obj = new stdClass();
+			$obj->dedalo_last_error					= $_ENV['DEDALO_LAST_ERROR'] ?? null;
+			// logged informative only
+			$obj->is_logged							= login::is_logged();
+			$obj->is_global_admin					= logged_user_is_global_admin();
+			$obj->is_developer						= logged_user_is_developer();
+			$obj->is_root							= logged_user_id()==DEDALO_SUPERUSER;
+			$obj->user_id							= logged_user_id();
+			$obj->username							= logged_user_username();
+			$obj->full_username						= logged_user_full_username();
+			// entity
+			$obj->dedalo_entity						= DEDALO_ENTITY;
+			$obj->dedalo_entity_id					= DEDALO_ENTITY_ID;
+			// version
+			$obj->dedalo_version					= DEDALO_VERSION;
+			$obj->dedalo_build						= DEDALO_BUILD;
+			// mode
+			$obj->mode								= $_GET['m'] ?? $_GET['mode'] ?? (!empty($_GET['id']) ? 'edit' : 'list');
+			// lang
+			$obj->dedalo_application_langs_default	= DEDALO_APPLICATION_LANGS_DEFAULT;
+			$obj->dedalo_application_lang			= DEDALO_APPLICATION_LANG;
+			$obj->dedalo_data_lang					= DEDALO_DATA_LANG;
+			$obj->dedalo_data_lang_selector			= defined('DEDALO_DATA_LANG_SELECTOR') ? DEDALO_DATA_LANG_SELECTOR : true;
+			$obj->dedalo_data_lang_sync				= defined('DEDALO_DATA_LANG_SYNC') ? DEDALO_DATA_LANG_SYNC : false;
+			$obj->dedalo_data_nolan					= DEDALO_DATA_NOLAN;
+			$obj->dedalo_application_langs			= array_map(function($label, $value) {
+				return [
+					'label'	=> $label,
+					'value'	=> $value
+				];
+			}, DEDALO_APPLICATION_LANGS, array_keys(DEDALO_APPLICATION_LANGS));
+			$obj->dedalo_projects_default_langs		= array_map(function($current_lang) {
+				return [
+					'label'	=> lang::get_name_from_code($current_lang),
+					'value'	=> $current_lang,
+					'tld2'	=> lang::get_alpha2_from_code($current_lang)
+				];
+			}, DEDALO_PROJECTS_DEFAULT_LANGS);
+			// quality defaults
+			$obj->dedalo_image_quality_default	= DEDALO_IMAGE_QUALITY_DEFAULT;
+			$obj->dedalo_av_quality_default		= DEDALO_AV_QUALITY_DEFAULT;
+			$obj->dedalo_quality_thumb			= defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
+			// tag_id
+			$obj->tag_id						= isset($_REQUEST['tag_id']) ? safe_xss($_REQUEST['tag_id']) : null;
+			// dedalo_protect_media_files
+			$obj->dedalo_protect_media_files	= (defined('DEDALO_PROTECT_MEDIA_FILES') && DEDALO_PROTECT_MEDIA_FILES===true) ? 1 : 0;
+			// notifications
+			$obj->DEDALO_NOTIFICATIONS			= defined('DEDALO_NOTIFICATIONS') ? (int)DEDALO_NOTIFICATIONS : 0;
+			// ip_api
+			$obj->ip_api						= defined('IP_API') ? IP_API : null;
+			$obj->fallback_image				= DEDALO_CORE_URL . '/themes/default/default.svg';
+			$obj->locale						= DEDALO_LOCALE;
+			$obj->dedalo_date_order				= DEDALO_DATE_ORDER;
+			$obj->component_active				= null;
+			$obj->stream_readers				= [];
+			// maintenance mode
+			$obj->maintenance_mode				= defined('DEDALO_MAINTENANCE_MODE_CUSTOM')
+				? DEDALO_MAINTENANCE_MODE_CUSTOM
+				: (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : false);
+			$obj->dedalo_notification			= defined('DEDALO_NOTIFICATION_CUSTOM')
+				? DEDALO_NOTIFICATION_CUSTOM
+				: (defined('DEDALO_NOTIFICATION') ? DEDALO_NOTIFICATION : false);
+
+			// debug only
+			if(SHOW_DEBUG===true || SHOW_DEVELOPER===true) {
+				$obj->dedalo_db_name = DEDALO_DATABASE_CONN;
+				if ($obj->is_logged===true && defined('DEDALO_INSTALL_STATUS') && DEDALO_INSTALL_STATUS==='installed') {
+					$obj->pg_version = (function() {
+						try {
+							$conn = DBi::_getConnection() ?? false;
+							if ($conn) {
+								return pg_version(DBi::_getConnection())['server'];
+							}
+							return 'Failed!';
+						}catch(Exception $e){
+							return 'Failed with Exception!';
+						}
+					})();
+				}
+				$obj->php_version	= PHP_VERSION;
+				// $obj->php_version .= ' jit:'. (int)(opcache_get_status()['jit']['enabled'] ?? false);
+				$obj->php_memory	= ini_get('memory_limit') ?? 'Unknown';
+				if ( strpos(DEDALO_HOST, 'localhost')===0 ) {
+					$obj->dedalo_root_path = DEDALO_ROOT_PATH;
+				}
+			}
+
+
+		return $obj;
+	}//end get_page_globals
+
+
+
+	/**
+	* GET_JS_PLAIN_VARS
+	* Builds whole environment JS plain vars
+	* They are used as constants declared in environment.j.php file
+	* @return array $plain_vars
+	*/
+	public static function get_js_plain_vars() : array {
+
+		$plain_vars = [
+			'DEDALO_ENVIRONMENT'				=> true,
+			'DEDALO_API_URL'					=> defined('DEDALO_API_URL') ? DEDALO_API_URL : (DEDALO_CORE_URL . '/api/v1/json/'),
+			'DEDALO_CORE_URL'					=> DEDALO_CORE_URL,
+			'DEDALO_ROOT_WEB'					=> DEDALO_ROOT_WEB,
+			'DEDALO_MEDIA_URL'					=> DEDALO_MEDIA_URL,
+			'DEDALO_TOOLS_URL'					=> DEDALO_TOOLS_URL,
+			'SHOW_DEBUG'						=> SHOW_DEBUG,
+			'SHOW_DEVELOPER'					=> SHOW_DEVELOPER,
+			'DEVELOPMENT_SERVER'				=> DEVELOPMENT_SERVER,
+			'DEDALO_SECTION_ID_TEMP'			=> DEDALO_SECTION_ID_TEMP,
+			'DEDALO_UPLOAD_SERVICE_CHUNK_FILES'	=> DEDALO_UPLOAD_SERVICE_CHUNK_FILES,
+			'DEDALO_LOCK_COMPONENTS'			=> DEDALO_LOCK_COMPONENTS,
+			'DEDALO_MAINTENANCE_MODE'			=> (defined('DEDALO_MAINTENANCE_MODE') ? DEDALO_MAINTENANCE_MODE : null), // DEPRECATED . legacy support only (remove early)
+			'DEDALO_NOTIFICATION'				=> null, // DEPRECATED . legacy support only (remove early)
+			// DD_TIPOS . Some useful dd tipos (used in client by tool_user_admin for example)
+			'DD_TIPOS' => [
+				'DEDALO_RELATION_TYPE_INDEX_TIPO'		=> DEDALO_RELATION_TYPE_INDEX_TIPO,
+				'DEDALO_SECTION_INFO_INVERSE_RELATIONS'	=> DEDALO_SECTION_INFO_INVERSE_RELATIONS,
+				'DEDALO_RELATION_TYPE_LINK'				=> DEDALO_RELATION_TYPE_LINK,
+				'DEDALO_SECTION_RESOURCES_IMAGE_TIPO'	=> DEDALO_SECTION_RESOURCES_IMAGE_TIPO,
+				'DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO'	=> DEDALO_COMPONENT_RESOURCES_IMAGE_TIPO
+			]
+		];
+
+
+		return $plain_vars;
+	}//end get_js_plain_vars
+
+
+
+	/**
+	* GET_LANG_LABELS
+	* Load requested lang file content
+	* (JSON object generated on update Ontology)
+	* @param string $lang
+	* 	Normally DEDALO_APPLICATION_LANG like 'lg-eng'
+	* @return string $lang_labels
+	* {
+	* 	"diameter": "Diameter",
+    *	"code": "Code",
+    * 	...
+	* }
+	*/
+	public static function get_lang_labels(string $lang) : string {
+
+		$lang_path		= '/common/js/lang/' . $lang . '.js';
+		$lang_labels	= file_get_contents(DEDALO_CORE_PATH . $lang_path);
+
+		// file not found case
+		if ($lang_labels===false) {
+			debug_log(__METHOD__
+				.' File not found: ' . DEDALO_CORE_PATH . $lang_path
+				, logger::ERROR
+			);
+			$lang_labels = '{"invalid_lang_file" : "Error on get current lang file: '.$lang_path.'"};' . PHP_EOL;
+		}
+
+
+		return $lang_labels;
+	}//end get_lang_labels
 
 
 
