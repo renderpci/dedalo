@@ -955,14 +955,14 @@ class search {
 							$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 							// from where
 								$sql_query .= PHP_EOL . 'WHERE ';
-								if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-									$sql_query .= ' ( SELECT  count(*)';
-									$sql_query .= PHP_EOL . 'FROM '.$main_from_sql.'_dup';
-								}else{
+								// if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
+									// $sql_query .= $this->main_section_tipo_alias.'datos#>>\'{'. .'} in (';
+									// $sql_query .= PHP_EOL . 'FROM '.$main_from_sql.'_dup';
+								// }else{
 									$sql_query .= $this->main_section_tipo_alias.'.id in (';
 									$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id,'.$this->main_section_tipo_alias.'.section_tipo) '.$this->main_section_tipo_alias.'.id ';
 									$sql_query .= 'FROM '.$main_from_sql;
-								}
+								// }
 								// join virtual tables
 									$sql_query .= $sql_joins;
 								// join filter projects
@@ -2370,34 +2370,47 @@ class search {
 						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 
+					$json_sql_component_path = "";
+
 					if($search_object_unaccent===true) {
-						$sql_where .= 'f_unaccent(';
+						$json_sql_component_path .= 'f_unaccent(';
 					}
 
-					$sql_where .= $table_alias . '.datos';
+					$json_sql_component_path .= $table_alias . '.datos';
 
-					$sql_where .= ($search_object_type==='string')
+					$json_sql_component_path .= ($search_object_type==='string')
 						? '#>>'
 						: '#>';
 
 					# json path
-					$sql_where .= '\'{' . $component_path . '}\'';
+					$json_sql_component_path .= '\'{' . $component_path . '}\'';
 
 					if($search_object_unaccent===true) {
-						$sql_where .= ')';
-					}
-
-					# operator
-					$sql_where .= ' '.$search_object->operator.' ';
-
-					if($search_object_unaccent===true) {
-						$sql_where .= 'f_unaccent(';
+						$json_sql_component_path .= ')';
 					}
 
 					if($search_object_duplicated===true){
-						$sql_where .= $table_alias . '_dup.datos#>>\'{' . $component_path . '}\'';
+						$main_from_sql = $this->build_main_from_sql();
+
+						$sql_where .= '(';
+							$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
+							$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
+							$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
+							$sql_where .= PHP_EOL . 'WHERE section_tipo = \''.$table_alias .'\'';
+							$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
+							$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
+						$sql_where .= ')';
 						break;
 					}
+
+					# operator
+					$json_sql_component_path .= ' '.$search_object->operator.' ';
+
+					if($search_object_unaccent===true) {
+						$json_sql_component_path .= 'f_unaccent(';
+					}
+
+					$sql_where .= $json_sql_component_path;
 
 					// q. Escape parenthesis inside regex
 					$q_parsed_clean = ($search_object_type==='string')
