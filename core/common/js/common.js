@@ -1229,7 +1229,6 @@ export const get_columns_map = function(options) {
 			}//end for (let j = 0; j < ar_first_level_ddo_len; j++)
 		}//end for (let i = 0; i < request_config_length; i++)
 
-
 	// parse_columns
 		// Resolve the label of the all columns recursively, columns could has sub-columns (in the columns_map properties)
 		// here will be using the full_ddo_map to find the specific ddo
