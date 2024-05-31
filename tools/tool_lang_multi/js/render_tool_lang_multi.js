@@ -79,7 +79,7 @@ const get_content_data_edit = async function(self) {
 		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'automatic_label',
-			inner_html		: get_label.automatic_translation || 'Automatic translation',
+			inner_html		: self.get_tool_label('automatic_translation') || 'Automatic translation',
 			parent			: top_container
 		})
 		const translator_engine = (self.context.config)
@@ -189,7 +189,7 @@ export const create_target_component = (lang, self) => {
 							const button_translate = ui.create_dom_element({
 								element_type	: 'span',
 								class_name		: 'button lang',
-								title			: get_label.traduccion_automatica || 'Automatic translation',
+								title			: self.get_tool_label('automatic_translation') || 'Automatic translation',
 								parent			: buttons_fold
 							})
 							const fn_click = function(e) {
