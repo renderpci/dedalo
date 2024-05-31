@@ -380,14 +380,14 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 
 					const request_config_item = request_config[j]
 
-					// get the ddo map to be used
-					const ddo_map = (self.mode !== 'search')
-						? request_config_item.show.ddo_map
-						: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+				// ddo_map. Get the ddo map to be used
+				const ddo_map = (self.mode === 'search')
+					? (
+						request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
 							? request_config_item.search.ddo_map
 							: request_config_item.show.ddo_map
-
-					// get the direct components of the caller (component or section)
+					  )
+					: request_config_item.show.ddo_map
 					const ar_first_level_ddo = ddo_map.filter(item => item.parent === self.tipo)
 
 					// with every child, match it with the column and assign to it.

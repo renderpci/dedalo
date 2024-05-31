@@ -245,7 +245,10 @@ service_time_machine.prototype.build = async function(autoload=false) {
 		self.fixed_columns_map = false
 
 	// columns_map. Get the columns_map to use into the list
-		self.columns_map = get_columns_map(self.context, self.datum.context)
+		self.columns_map = get_columns_map({
+			context			: self.context,
+			datum_context	: self.datum.context
+		})
 
 	// status update
 		self.status = 'built'

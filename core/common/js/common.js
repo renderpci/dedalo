@@ -1047,13 +1047,27 @@ common.prototype.load_script = async function(src, content=null) {
 * GET_COLUMNS
 * Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
 * and create the columns to be render by the section or portals
-* @param object context
-* @param object datum_context
+* @param object options
+* {
+* 	context : object instance.context,
+* 	datum_context : object instance.datum.context,
+* 	ddo_map_sequence : array ['show']
+* }
+* context:
+* 	instance (component, service, etc.) context
+* datum_context:
 * 	optional parameter send by section, to be used to find the sort-able ddo.
+* ddo_map_sequence:
+* 	optional parameter to define ddo_map property fallback order
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
-export const get_columns_map = function(context, datum_context) {
+export const get_columns_map = function(options) {
+
+	// options
+		const context			= options.context
+		const datum_context		= options.datum_context
+		const ddo_map_sequence	= options.ddo_map_sequence || ['show']
 
 	const columns_map = []
 
@@ -1076,6 +1090,9 @@ export const get_columns_map = function(context, datum_context) {
 	// set itself as ddo
 		full_ddo_map.push(context)
 
+	// ddo_map_sequence. calculate length once
+		const ddo_map_sequence_length = ddo_map_sequence.length
+
 	// request_config could be multiple (Dédalo, Zenon, etc), all columns need to be compatible to create
 	// the final grid.
 		const request_config_length	= request_config.length
@@ -1083,14 +1100,27 @@ export const get_columns_map = function(context, datum_context) {
 
 			const request_config_item = request_config[i]
 
-			// get the ddo map to be used
-			const ddo_map = (context.mode !== 'search')
-				? request_config_item.show.ddo_map
-				: request_config_item.choose && request_config_item.choose.ddo_map && request_config_item.choose.ddo_map.length > 0
-					? request_config_item.choose.ddo_map
-					: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
-						? request_config_item.search.ddo_map
-						: request_config_item.show.ddo_map
+			// ddo_map. Get the ddo map to be used.
+			// @see section_record.get_ar_columns_instances_list for a better overview
+
+				// Reference legacy sequence < 30-05-2024
+				// const ddo_map = (context.mode !== 'search')
+				// 	? request_config_item.show.ddo_map
+				// 	: request_config_item.choose && request_config_item.choose.ddo_map && request_config_item.choose.ddo_map.length > 0
+				// 		? request_config_item.choose.ddo_map
+				// 		: request_config_item.search && request_config_item.search.ddo_map && request_config_item.search.ddo_map.length > 0
+				// 			? request_config_item.search.ddo_map
+				// 			: request_config_item.show.ddo_map
+
+				const ddo_map = (()=>{
+					for (let k = 0; k < ddo_map_sequence_length; k++) {
+						const el = ddo_map_sequence[k]
+						if (request_config_item[el] && request_config_item[el].ddo_map && request_config_item[el].ddo_map.length > 0) {
+							return request_config_item[el].ddo_map
+						}
+					}
+					return []
+				})();
 
 			// get the direct components of the caller (component or section)
 			const ar_first_level_ddo		= ddo_map.filter(item => item.parent === tipo)
