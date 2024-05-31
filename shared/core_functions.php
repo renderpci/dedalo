@@ -1565,55 +1565,54 @@ function check_sessions_directory() : bool {
 
 /**
 * SESSION_START_MANAGER
-* Starts a session with a specific timeout and a specific GC probability.
-* @param int $timeout The number of seconds until it should time out.
-* @param int $probability The probability, in int percentage, that the garbage
-*        collection routine will be triggered right now.
-* @param string $cookie_path The base path for the cookie.
+* Starts a session with a specific timeout, path, GC probability...
+* @param array $options
+* [
+* 	save_handler: string (default 'files')
+* 	timeout_seconds: int 1400 (The number of seconds until it should time out)
+* 	probability: int|null (PHP session.gc_probability)
+* 	gc_divisor : int|null (PHP session.gc_divisor)
+* 	cookie_path: string (default '/')
+* 	cookie_domain: string (default '')
+* 	cookie_secure: bool (default false)
+* 	cookie_samesite: string|null (None|Lax|Strict)
+* 	save_path: string|false
+* 	additional_save_path: string|false
+* 	session_name: string|false
+* 	prevent_session_lock: bool (default false)
+* ]
 * @return bool
 */
-// $sessiondb = null;
-function session_start_manager(array $request_options) : bool {
-	// global $sessiondb;
-	#if (session_status()===PHP_SESSION_ACTIVE) return false;
-
-	// options
-		$options = new stdClass();
-			$options->save_handler			= 'files';
-			$options->timeout_seconds		= 1400;
-			$options->probability			= null;
-			$options->gc_divisor			= null;
-			$options->cookie_path			= '/';
-			$options->cookie_domain			= '';
-			$options->cookie_secure			= false;
-			$options->cookie_samesite		= null;
-			$options->save_path				= false; # /tmp/php
-			$options->additional_save_path	= false; # /session_custom_sec
-			$options->session_name			= false;
-			$options->prevent_session_lock	= false;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+function session_start_manager(array $options) : bool {
 
 	// check already started session case
 		if(session_status()===PHP_SESSION_ACTIVE) {
 			return false;
 		}
 
+	// options
+		$save_handler			= $options['save_handler'] ?? 'files';
+		$timeout_seconds		= $options['timeout_seconds'] ?? 1400;
+		$probability			= $options['probability'] ?? null;
+		$gc_divisor				= $options['gc_divisor'] ?? null;
+		$cookie_path			= $options['cookie_path'] ?? '/';
+		$cookie_domain			= $options['cookie_domain'] ?? '';
+		$cookie_secure			= $options['cookie_secure'] ?? false;
+		$cookie_samesite		= $options['cookie_samesite'] ?? null;
+		$save_path				= $options['save_path'] ?? false; // /tmp/php
+		$additional_save_path	= $options['additional_save_path'] ?? false; // /session_custom_sec
+		$session_name			= $options['session_name'] ?? false;
+		$prevent_session_lock	= $options['prevent_session_lock'] ?? false;
+
 	// switch by save_handler
-	switch ($options->save_handler) {
+	switch ($save_handler) {
 
 		case 'files':
 			// short vars
-				$timeout			= $options->timeout_seconds;
-				$probability		= $options->probability;
-				$gc_divisor			= $options->gc_divisor;
-				$cookie_path		= $options->cookie_path;
-				$cookie_domain		= $options->cookie_domain;
-				$save_path			= $options->save_path;
-				$cookie_secure		= $options->cookie_secure;
-				$cookie_samesite	= $options->cookie_samesite;
+				$timeout = $timeout_seconds;
 
 			// cache_expire. Set lifetime of cache (this no affect to session duration)
-				session_cache_expire( intval($timeout*60) ); 	#in minutes (*60)	Default php usually : 180
+				session_cache_expire( intval($timeout*60) ); // in minutes (*60). Default PHP is usually 180
 
 			// gc_maxlifetime. Set the max lifetime
 				ini_set('session.gc_maxlifetime', $timeout);
@@ -1622,26 +1621,31 @@ function session_start_manager(array $request_options) : bool {
 				ini_set('session.cookie_lifetime', $timeout);
 
 			// save_path
-				if ($options->save_path!==false) {
+				if ($save_path!==false) {
 					ini_set('session.save_path', $save_path);
 				}
 
 			// session_name
-				if ($options->session_name!==false) {
-					session_name($options->session_name);
+				if ($session_name!==false) {
+					session_name($session_name);
 				}
 
 			// additional_save_path
-				if ($options->additional_save_path!==false) {
+				if ($additional_save_path!==false) {
 					// Change the save path. Sessions stored in the same path
 					// all share the same lifetime; the lowest lifetime will be
 					// used for all. Therefore, for this to work, the session
 					// must be stored in a directory where only sessions sharing
 					// it's lifetime are. Best to just dynamically create on.
-					$path = ini_get('session.save_path') . $options->additional_save_path;
+					$path = ini_get('session.save_path') . $additional_save_path;
 					if(!file_exists($path)) {
 						if(!mkdir($path, 0700)) {
 							trigger_error("Failed to create session save path directory '$path'. Check permissions.", E_USER_ERROR);
+							debug_log(__METHOD__
+								. " Failed to create session save path directory. Check permissions." . PHP_EOL
+								. ' path: ' . to_string($path)
+								, logger::ERROR
+							);
 						}
 					}
 					ini_set('session.save_path', $path);
@@ -1658,26 +1662,29 @@ function session_start_manager(array $request_options) : bool {
 				}
 
 			// session start
-				$session_ok = function() use($options) {
-
-					if ($options->prevent_session_lock===true) {
-						// read only but non locking session
-						return @\session_start([
-							'read_and_close' => true
-						]);
-					}else{
-						return @\session_start();
-					}
-				};
-				if ($session_ok()!==true) {
+				$session_is_ok = ($prevent_session_lock===true)
+					? session_start(['read_and_close' => true])
+					: session_start();
+				// error starting session case
+				if ( $session_is_ok !== true ) {
 					if (defined('DEDALO_SESSIONS_PATH')) {
 						if( !check_sessions_directory() ){
-							die('Unable to write sessions. Review your permissions for sessions directory path 1');
+							$msg = 'Unable to write sessions. Review your permissions for sessions directory path 1';
+							debug_log(__METHOD__
+								. $msg . PHP_EOL
+								, logger::ERROR
+							);
+							die($msg);
 						}
-						// try again
-						$session_ok();
+						// try again, after DEDALO_SESSIONS_PATH directory is forced to create
+						session_start();
 					}else{
-						die('Unable to write sessions. Review your permissions for sessions directory path 2');
+						$msg = 'Unable to write sessions. Review your permissions for sessions directory path 2';
+						debug_log(__METHOD__
+							. $msg . PHP_EOL
+							, logger::ERROR
+						);
+						die($msg);
 					}
 				}
 
@@ -1687,8 +1694,6 @@ function session_start_manager(array $request_options) : bool {
 				// on the time when it was created, rather than when
 				// it was last used.
 				if(isset($_COOKIE[session_name()])) {
-					#setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain);
-					// setcookie(session_name(), $_COOKIE[session_name()], time() + $timeout, $cookie_path, $cookie_domain, TRUE, TRUE);
 
 					$cookie_values = (object)[
 						// name. The name of the cookie.
@@ -1707,22 +1712,14 @@ function session_start_manager(array $request_options) : bool {
 						'httponly'	=> true
 					];
 
-					// setcookie(
-						// 	$cookie_values->name,		// string $name
-						// 	$cookie_values->value,		// string $value = ""
-						// 	$cookie_values->expires,	// int $expires = 0
-						// 	$cookie_values->path,		// string $path = ""
-						// 	$cookie_values->domain,		// string $domain = ""
-						// 	$cookie_values->secure,		// bool $secure = false
-						// 	$cookie_values->httponly	// bool $httponly = false
-						// );
+					// set cookie
 						$arr_cookie_options = array (
 							'expires'	=> $cookie_values->expires,
 							'path'		=> '/',
 							'domain'	=> $cookie_values->domain,	// leading dot for compatibility or use subdomain. ex. .example.com
 							'secure'	=> $cookie_values->secure,	// true or false
 							'httponly'	=> $cookie_values->secure,	// true or false
-							'samesite'	=> $cookie_samesite					// None || Lax || Strict
+							'samesite'	=> $cookie_samesite			// None|Lax|Strict
 						);
 						setcookie($cookie_values->name, $cookie_values->value, $arr_cookie_options);
 				}
@@ -1730,31 +1727,27 @@ function session_start_manager(array $request_options) : bool {
 
 		case 'memcached':
 			ini_set('session.save_handler', 'memcached');
-			# Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
-			ini_set('session.save_path', $options->save_path);
+			// Connection type: '127.0.0.1:11211' , '/usr/local/var/memcached/memcached.sock'
+			ini_set('session.save_path', $save_path);
 
 			// Start the session!
 			session_start();
 			break;
 
 		case 'postgresql':
-			#
-			# session manager
-			#
+			// session manager
 			require_once 'session/PGSessions.php';
 			$connectionString = 'pgsql:host='.DEDALO_HOSTNAME_CONN.' port='.DEDALO_DB_PORT_CONN.' dbname='.DEDALO_DATABASE_CONN.' user='.DEDALO_USERNAME_CONN.' password='.DEDALO_PASSWORD_CONN;
 			$pdo_connection   = new PDO($connectionString);
-
-			#use \PGSessions\PGSessions;
+			// use \PGSessions\PGSessions;
 			$sessions_handler = new PGSessions($pdo_connection);
 			session_set_save_handler($sessions_handler, true);
-			#session_name('MySessionName');
-			#session_start();
-			#session_regenerate_id(true);
 
+			// Start the session!
 			session_start();
 			break;
 	}
+
 
 	return true;
 }//end session_start_manager
