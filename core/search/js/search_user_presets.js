@@ -49,7 +49,7 @@ export const get_editing_preset_json_filter = async function(self) {
 			filter			: {
 				"$and": [
 					{
-						q		: [self.section_tipo],
+						q		: self.section_tipo,
 						path	: [
 							{
 								name			: "Section tipo",
@@ -61,12 +61,10 @@ export const get_editing_preset_json_filter = async function(self) {
 						type : "jsonb"
 					},
 					{
-						q 		: [
-							{
-								section_id		: '' + page_globals.user_id,
-								section_tipo	: "dd128"
-							}
-						],
+						q : {
+							section_id		: '' + page_globals.user_id,
+							section_tipo	: "dd128"
+						},
 						path : [
 							{
 								name			: "User",
@@ -193,7 +191,7 @@ export const load_user_search_presets = async function(self) {
 		const fiter = {
 			"$and": [
 				{
-					q		: [ self.section_tipo ],
+					q		: self.section_tipo,
 					path	: [{
 						component_tipo	: presets_component_section_value_tipo, // 'dd642',
 						section_tipo	: presets_section_tipo, // 'dd623'
@@ -205,7 +203,7 @@ export const load_user_search_presets = async function(self) {
 				{
 					"$or": [
 						{
-							q		: [ locator_public_true ],
+							q		: locator_public_true,
 							path	: [{
 								component_tipo	: presets_component_public_value_tipo, // 'dd640',
 								section_tipo	: presets_section_tipo, // 'dd623'
@@ -215,7 +213,7 @@ export const load_user_search_presets = async function(self) {
 							type: 'jsonb'
 						},
 						{
-							q		: [ locator_user ],
+							q		: locator_user,
 							path	: [{
 								component_tipo	: presets_component_user_id_value_tipo, // 'dd654',
 								section_tipo	: presets_section_tipo, // 'dd623'

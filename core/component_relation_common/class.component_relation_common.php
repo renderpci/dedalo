@@ -2434,7 +2434,7 @@ class component_relation_common extends component_common {
 				$active_locator->set_from_component_tipo(DEDALO_HIERARCHY_ACTIVE_TIPO);
 
 			$active_filter = '{
-				"q": '.json_encode(json_encode($active_locator)).',
+				"q": '.json_encode($active_locator).',
 				"path": [
 					{
 						"section_tipo": "'.$hierarchy_section_tipo.'",
@@ -2456,7 +2456,7 @@ class component_relation_common extends component_common {
 					$typology_locator->set_from_component_tipo(DEDALO_HIERARCHY_TYPOLOGY_TIPO);
 
 				$typology_filter[] = '{
-					"q": '.json_encode(json_encode($typology_locator)).',
+					"q": '.json_encode($typology_locator).',
 					"path": [
 						{
 							"section_tipo": "hierarchy1",

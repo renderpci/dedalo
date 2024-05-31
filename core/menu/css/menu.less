@@ -24,7 +24,7 @@
 	box-shadow: 0 2px 3px rgba(0, 0, 0, 0.4);
 	background-color: darken(@color_grey_ultradark, 3%);
 	font-size: 1rem;
-	color: #ffffff;
+	color: @color_white;
 	line-height: 1.2em;
 	z-index: 4;
 
@@ -180,7 +180,7 @@
 			}
 
 			ul li {
-				border: 1px solid #7F7F7F;
+				border: 1px solid @color_grey_darken;
 				border-style: none none inset;
 				float: none;
 				margin: 0px;
@@ -210,7 +210,7 @@
 			// active
 			.menu_li_active > a {
 				background: @menu_bg_color_active;
-				color: #ffffff !important;
+				color: @color_white !important;
 			}
 			.menu_li_active ul {
 				display: block !important;
@@ -243,7 +243,7 @@
 
 			// arrow white on active
 			li.has-sub.menu_li_active::after {
-				border-left: 5px solid #FFFFFF;
+				border-left: 5px solid @color_white;
 			}
 
 			// Hides arrow in first level of li (fisrt menu line)
