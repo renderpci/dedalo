@@ -505,13 +505,6 @@ component_portal.prototype.build = async function(autoload=false) {
 				if (self.data.pagination && !self.total) {
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
-
-					// set_local_db_data updated rqo
-						// const rqo = self.rqo
-						// data_manager.set_local_db_data(
-						// 	rqo,
-						// 	'rqo'
-						// )
 				}
 
 			// paginator
@@ -578,27 +571,10 @@ component_portal.prototype.build = async function(autoload=false) {
 					// self.paginator.render()
 				}
 
-			// autocomplete destroy. change the autocomplete service to false and deactivates it
-				// if(self.autocomplete && self.autocomplete_active===true){
-				// 	self.autocomplete.destroy(
-				// 		true, // bool delete_self
-				// 		true, // bool delete_dependencies
-				// 		true // bool remove_dom
-				// 	)
-				// 	self.autocomplete_active	= false
-				// 	self.autocomplete			= null
-				// }
 		}else if(self.mode==='search') {
 
 			// active / prepare the autocomplete in search mode
 
-			// (!) Used ?
-			// autocomplete destroy. change the autocomplete service to false and deactivate it.
-				// if(self.autocomplete && self.autocomplete_active===true){
-				// 	self.autocomplete.destroy()
-				// 	self.autocomplete_active = false
-				// 	self.autocomplete 		 = null
-				// }
 		}// end if(self.mode==="edit")
 
 	// check self.context.request_config
@@ -611,7 +587,6 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.target_section = self.request_config_object && self.request_config_object.sqo
 			? self.request_config_object.sqo.section_tipo
 			: null
-		// self.target_section = self.rqo.sqo.section_tipo
 
 	// reset fixed_columns_map (prevents to apply rebuild_columns_map more than once)
 		self.fixed_columns_map = false
@@ -1016,14 +991,14 @@ component_portal.prototype.update_pagination_values = function(action) {
 * @param object options
 * sample
 * {
-    "tag": {
-        "node_name": "img",
-        "type": "indexOut",
-        "tag_id": "4",
-        "state": "d",
-        "label": "",
-        "data": ""
-    }
+	"tag": {
+		"node_name": "img",
+		"type": "indexOut",
+		"tag_id": "4",
+		"state": "d",
+		"label": "",
+		"data": ""
+	}
 * }
 * @return promise self.render
 */
