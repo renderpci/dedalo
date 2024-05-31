@@ -854,12 +854,18 @@ const get_custom_events = (self, i, text_editor) => {
 
 				// 'Escape'
 				case features.av_player && evt.code===features.av_player.av_play_pause_code: {
+					evt.stopPropagation()
+					evt.preventDefault()
+
 					event_manager.publish('key_up_esc' +'_'+ self.id_base, features.av_player.av_rewind_seconds)
 					break;
 				}
 
 				// 'F2'
 				case features.av_player && evt.code===features.av_player.av_insert_tc_code: {
+					evt.stopPropagation()
+					evt.preventDefault()
+
 					// publish event and receive subscription responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -904,6 +910,9 @@ const get_custom_events = (self, i, text_editor) => {
 
 				// ctrl + 0
 				case evt.ctrlKey && !evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')): {
+					evt.stopPropagation()
+					evt.preventDefault()
+
 					// resolve the key number pressed by the user, it will be the key of the person array
 					const key_person_number	= evt.code.match(/\d+/g);
 					// get the person with the number pressed
@@ -918,6 +927,9 @@ const get_custom_events = (self, i, text_editor) => {
 
 				// ctrl + Shift + 0
 				case evt.ctrlKey && evt.shiftKey && (evt.code.startsWith('Digit') || evt.code.startsWith('Numpad')): {
+					evt.stopPropagation()
+					evt.preventDefault()
+
 					// get the project langs
 					const ar_project_langs	= page_globals.dedalo_projects_default_langs
 					// resolve the key number pressed by user, it will match with the key of the array of languages
@@ -943,6 +955,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 				// Tab
 				case evt.code==='Tab': {
+					evt.stopPropagation()
 					// prevent to jump cursor to another input
 					evt.preventDefault()
 					break;
