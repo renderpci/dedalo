@@ -60,10 +60,10 @@ final class environment_test extends TestCase {
 				. to_string( $eq )
 		);
 
-		$eq = gettype($lang_path)==='string';
+		$eq = gettype($lang_labels)==='string';
 		$this->assertTrue(
 			$eq,
-			'expected gettype($lang_path)==="string" true, but received is: '
+			'expected gettype($lang_labels)==="string" true, but received is: '
 				. to_string( $eq )
 		);
 	}//end test_include_file
