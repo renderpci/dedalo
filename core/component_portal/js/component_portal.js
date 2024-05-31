@@ -617,7 +617,9 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.fixed_columns_map = false
 
 	// columns
-		self.columns_map = get_columns_map(self.context)
+		self.columns_map = get_columns_map({
+			context : self.context
+		})
 
 	// component_info add set true if found it
 		if (self.datum && self.datum.data) {

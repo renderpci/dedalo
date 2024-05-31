@@ -82,7 +82,8 @@ service_autocomplete.prototype.init = async function(options) {
 			view			: self.view,
 			children_view	: self.children_view,
 			request_config	: self.request_config,
-			mode			: self.mode
+			mode			: self.mode,
+			type			: 'autocomplete'
 		}
 		self.filter_free_nodes = []
 
@@ -153,7 +154,10 @@ service_autocomplete.prototype.build = async function(options={}) {
 
 	// columns_map
 	// use the rqo_search as request_config, and the columns of rqo_search as columns_maps
-		self.columns_map = await get_columns_map(self.context)
+		self.columns_map = get_columns_map({
+			context				: self.context,
+			ddo_map_sequence	: ['choose','search','show'] // array ddo_map_source
+		})
 
 	// column component_info
 		if (self.caller.add_component_info===true) {
