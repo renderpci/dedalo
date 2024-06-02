@@ -62,34 +62,70 @@ final class dd_ts_api {
 
 			}else{
 
-				// Calculate children from parent
-					$model							= 'component_relation_children';
-					$mode							= 'list_thesaurus';
-					$lang							= DEDALO_DATA_NOLAN;
-					$component_relation_children	= component_common::get_instance(
-						$model,
-						$tipo,
-						$section_id,
-						$mode,
-						$lang,
-						$section_tipo
-					);
+				// thesaurus_node. section case (from current term children, usually 'hierarchy45')
 
-				$dato = $component_relation_children->get_dato();
+				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
 
-				// pagination. Set default if is not defined
-					$current_pagination = !empty($pagination)
-						? $pagination
-						: (object)[
-							'limit'		=> 100,
-							'offset'	=> 0,
-							'total'		=> (is_array($dato) ? count($dato) : 0)
-						];
-					$component_relation_children->pagination = $current_pagination;
+					// sqo. children_search
+					$sqo = $target_section_properties->children_search->sqo;
 
-				// dato_paginated
-					$dato_paginated	= $component_relation_children->get_dato_paginated();
-					$children		= $dato_paginated;
+					// pagination. Set default if is not defined
+						$current_pagination = !empty($pagination)
+							? $pagination
+							: (object)[
+								'limit'		=> 100,
+								'offset'	=> 0
+							];
+
+					// add pagination
+					$sqo->limit		= $current_pagination->limit;
+					$sqo->offset	= $current_pagination->offset;
+
+					$section_search	= new search($sqo);
+					$rows_data		= $section_search->search();
+
+					$children = array_map(function($item){
+
+						$locator = new stdClass();
+							$locator->section_tipo	= $item->section_tipo;
+							$locator->section_id	= $item->section_id;
+
+						return $locator;
+
+					},$rows_data->ar_records);
+
+
+				}else{
+
+					// Calculate children from parent
+						$model							= 'component_relation_children';
+						$mode							= 'list_thesaurus';
+						$lang							= DEDALO_DATA_NOLAN;
+						$component_relation_children	= component_common::get_instance(
+							$model,
+							$tipo,
+							$section_id,
+							$mode,
+							$lang,
+							$section_tipo
+						);
+
+					$dato = $component_relation_children->get_dato();
+
+					// pagination. Set default if is not defined
+						$current_pagination = !empty($pagination)
+							? $pagination
+							: (object)[
+								'limit'		=> 100,
+								'offset'	=> 0,
+								'total'		=> (is_array($dato) ? count($dato) : 0)
+							];
+						$component_relation_children->pagination = $current_pagination;
+
+					// dato_paginated
+						$dato_paginated	= $component_relation_children->get_dato_paginated();
+						$children		= $dato_paginated;
+				}
 			}
 
 		// thesaurus_view_mode
