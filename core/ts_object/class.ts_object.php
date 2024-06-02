@@ -459,6 +459,12 @@ class ts_object {
 	public function have_children_of_type( array $ar_children, string $type ) : bool {
 
 		if (empty($ar_children)) {
+
+			// options forced have_children cases (persons for example from trigger.ts_object.php)
+			if ($type==='descriptor') {
+				return $this->options->have_children ?? false;
+			}
+
 			return false;
 		}
 
