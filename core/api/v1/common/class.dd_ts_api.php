@@ -50,6 +50,12 @@ final class dd_ts_api {
 			$pagination				= $options->pagination ?? null;
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
 
+
+		// target_section_properties check
+			$RecordObj_dd				= new RecordObj_dd($section_tipo);
+			$target_section_properties	= $RecordObj_dd->get_properties(true);
+
+
 		// children
 			if($node_type==='hierarchy_node') {
 
@@ -59,6 +65,11 @@ final class dd_ts_api {
 						$locator->set_section_id($section_id);
 					$dato		= [$locator];
 					$children	= $dato;
+
+				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
+				// options add to use as exception in check children
+					$options->have_children = true;
+				}
 
 			}else{
 
