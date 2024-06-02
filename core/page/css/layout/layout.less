@@ -386,12 +386,17 @@
 				padding: 0px;
 				text-align: center;
 				height: 100%;
+
 				@media screen and (max-width: @width_break_point_0) {
 					height: auto;
 				}
 
+				>.content_data {
+					display: contents;
+				}
+
 				// image, content_data>img
-				>img, >.content_data>img {
+				>img, >.content_data > img {
 					display: inline-block;
 					padding: 0px;
 					width: 100%;

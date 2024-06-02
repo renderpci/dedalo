@@ -130,11 +130,10 @@ const get_content_data = async function(self) {
 				// render base nodes and set functions to manage
 				// the stream reader events
 				const render_response = render_stream({
-					container		: container,
-					id				: 'process_make_backup',
-					pid				: pid,
-					pfile			: pfile,
-					// display_json	: false
+					container	: container,
+					id			: 'process_make_backup',
+					pid			: pid,
+					pfile		: pfile
 				})
 
 				// on_read event (called on every chunk from stream reader)

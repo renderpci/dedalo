@@ -143,6 +143,7 @@
 			flex: 0 0 auto;
 			height: 100%;
 			min-height: var(--content_data_min_height);
+			// (!) Never use overflow: hidden here !
 
 			.wrapper_component {
 				padding: 0px;
@@ -168,6 +169,7 @@
 
 		>.list_body >.content_data >.section_record {
 			outline: 1px solid @color_grey_light;
+			overflow: hidden;
 
 			// button info
 			.button.info {
@@ -192,6 +194,7 @@
 			// first level co
 			>.column {
 				height: inherit;
+				padding: 0px;
 			}
 
 			.column {
@@ -222,6 +225,7 @@
 			}
 
 			>.section_record {
+				// (!) Never use overflow: hidden here !
 
 				>.column {
 					>.wrapper_component {
