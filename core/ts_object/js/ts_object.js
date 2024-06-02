@@ -121,10 +121,11 @@ export const ts_object = new function() {
 					prevent_lock	: true,
 					action			: 'get_children_data',
 					source			: {
-						section_id		: parent_section_id,
-						section_tipo	: parent_section_tipo,
-						node_type		: node_type,
-						tipo			: tipo,
+						section_id			: parent_section_id,
+						section_tipo		: parent_section_tipo,
+						node_type			: node_type,
+						target_section_tipo	: target_section_tipo,
+						tipo				: tipo,
 						build_options : {
 							terms_are_model : self.thesaurus_view_mode==='model'
 						}
