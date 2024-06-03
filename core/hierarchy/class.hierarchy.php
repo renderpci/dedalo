@@ -583,6 +583,42 @@ class hierarchy {
 
 
 	/**
+	/**
+	* GET_HIERARCHY_TLD
+	* Get the tld, in lowercase, of the hierarchy main section (hierarchy1)
+	* @param int|string $section_id
+	* @param string $section_tipo
+	* @return string $tld
+	*/
+	public static function get_hierarchy_tld(string|int $section_id, string $section_tipo) : ?string {
+
+		// tld
+			$tld2_tipo	= DEDALO_HIERARCHY_TLD2_TIPO;	// 'hierarchy6';
+			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tld2_tipo, true);
+			$component	= component_common::get_instance(
+				$model_name,
+				$tld2_tipo,
+				$section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$section_tipo
+			);
+			$dato		= $component->get_dato();
+			$first_dato	= $dato[0] ?? null;
+
+			if (empty($first_dato)) {
+				return null;
+			}
+
+		// always in lowercase
+			$tld = strtolower( $first_dato );
+
+		return $tld;
+	}//end get_hierarchy_tld
+
+
+
+	/**
 	* CREATE_ROOT_TERMS
 	* @param object $request_options
 	* @return bool
