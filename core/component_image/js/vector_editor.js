@@ -898,14 +898,13 @@ vector_editor.prototype.set_color_picker = function() {
 			? this.selected_element.getAttribute('opacity')
 			: stage.getOpacity()
 
-		if(this.button_color_picker){
+		if(this.button_color_picker && this.active_fill_color){
 			// set the icon of color picker with the selected path color
 				this.button_color_picker.style.backgroundColor = this.active_fill_color
 			// set the color picker with the selected path color
 				this.color_picker.color.hexString	= this.active_fill_color
 				this.color_picker.color.alpha		= this.active_opacity
 		}
-
 }//end set_color_picker
 
 
