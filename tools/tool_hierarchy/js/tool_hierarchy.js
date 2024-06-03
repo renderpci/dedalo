@@ -9,11 +9,9 @@
 // by default you will need the tool_common to init, build and render.
 // use tool_common is not mandatory, but it can help to do typical task as open tool window, or load the section and components defined in ontology.
 // import dd_console if you want to use dd_console with specific console.log messages
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
+	import {dd_console} from '../../../core/common/js/utils/index.js'
 // import data_manager if you want to access to Dédalo API
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-// import get_instance to create and init sections or components.
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 // import common to use destroy, render, refresh and other useful methods
 	import {common, create_source} from '../../../core/common/js/common.js'
 // tool_common, basic methods used by all the tools
@@ -104,19 +102,6 @@ tool_hierarchy.prototype.build = async function(autoload=false) {
 	// })}
 	// it will assign or create the context of the tool calling to get_element_context
 		const common_build = await tool_common.prototype.build.call(this, autoload);
-
-	try {
-		// when the tool_common load the component you could assign to the tool instance with specific actions.
-		// Like fix main_element for convenience
-		// main_element could be any component that you need to use inside the tool.
-		// use the 'role' property in ddo_map to define and locate the ddo
-			// const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==='main_element')
-			// self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
-
-	} catch (error) {
-		self.error = error
-		console.error(error)
-	}
 
 
 	return common_build

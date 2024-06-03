@@ -93,6 +93,60 @@ class tool_common {
 			);
 			$simple_tool_obj_dato	= $simple_tool_component->get_dato();
 			$tool_object			= reset($simple_tool_obj_dato);
+
+			// sample tool object
+				// {
+				//   "name": "tool_transcription",
+				//   "label": [
+				// 	{
+				// 	  "lang": "lg-cat",
+				// 	  "value": "Transcripció"
+				// 	}
+				//   ],
+				//   "labels": [
+				// 	{
+				// 	  "lang": "lg-spa",
+				// 	  "name": "babel_transcriber",
+				// 	  "value": "Babel"
+				// 	}
+				//   ],
+				//   "version": "2.0.2",
+				//   "ontology": null,
+				//   "developer": [
+				// 	{
+				// 	  "lang": "lg-nolan",
+				// 	  "value": [
+				// 		"Dédalo team"
+				// 	  ]
+				// 	}
+				//   ],
+				//   "dd_version": "6.0.0",
+				//   "properties": {
+				// 	"open_as": "window",
+				// 	"windowFeatures": null
+				//   },
+				//   "section_id": 26,
+				//   "description": [
+				// 	{
+				// 	  "lang": "lg-cat",
+				// 	  "value": [
+				// 		"<p>Transcribir qualsevol tipus de media a text.</p>"
+				// 	  ]
+				// 	}
+				//   ],
+				//   "section_tipo": "dd1324",
+				//   "always_active": false,
+				//   "affected_tipos": null,
+				//   "affected_models": [
+				// 	"component_av",
+				// 	"component_image",
+				// 	"component_pdf"
+				//   ],
+				//   "show_in_component": true,
+				//   "show_in_inspector": true,
+				//   "requirement_translatable": false
+				// }
+
 			// tool_object check
 			if (empty($tool_object)) {
 				debug_log(__METHOD__
@@ -106,9 +160,15 @@ class tool_common {
 			}
 
 		// label. (JSON list) Try match current lang else use the first lang value
-			$tool_label = array_find($tool_object->label, function($el){
+			$ar_labels = $tool_object->label ?? [];
+			$tool_label_object = array_find($ar_labels, function($el){
 				return $el->lang===DEDALO_APPLICATION_LANG;
-			})->value ?? reset($tool_object->label)->value;
+			});
+			$tool_label = is_object($tool_label_object) && isset($tool_label_object->value)
+				? $tool_label_object->value
+				: (is_object($ar_labels[0])
+					? ($ar_labels[0]->value ?? null)
+					: null);
 			if (!is_string($tool_label)) {
 				debug_log(__METHOD__
 					. " Fixed invalid tool label " . PHP_EOL
@@ -123,18 +183,24 @@ class tool_common {
 			$developer_data = array_find($tool_object->developer, function($el){
 				return $el->lang===DEDALO_DATA_NOLAN;
 			});
-			$developer = !empty($developer_data)
-				? $developer_data->value
-				: [];
+			$developer = is_object($developer_data) && !empty($developer_data->value)
+				? $developer_data->value[0]
+				: null;
 
 		// description. (text_area) Try match current lang else use the first lang value
-			$description = array_find((array)$tool_object->description, function($el){
+			$ar_description = $tool_object->description ?? [];
+			$tool_description_object = array_find($ar_description, function($el){
 				return $el->lang===DEDALO_APPLICATION_LANG;
-			})->value[0] ?? reset($tool_object->description)->value[0];
+			});
+			$description = is_object($tool_description_object) && !empty($tool_description_object->value)
+				? $tool_description_object->value[0]
+				: (is_object($ar_description[0]->value)
+					? ($ar_description[0]->value ?? null)
+					: null);
 
 		// labels. take care of empty objects like '{}'
 			$labels = [];
-			if(!empty($tool_object->labels) && !empty((array)$tool_object->labels)) {
+			if(!empty($tool_object->labels) && !empty($tool_object->labels[0])) {
 
 				// add label with lang fallback
 				foreach ($tool_object->labels as $current_label_value) {
@@ -185,12 +251,17 @@ class tool_common {
 				return $el->name===$name;
 			});
 			// fallback to default config
-			if(empty($config_data) || empty($config_data->config)){
+			if(!is_object($config_data) || empty($config_data->config)){
 				$ar_config		= tools_register::get_all_default_config_tool_client();
 				$config_data	= array_find($ar_config, function($el) use($name) {
 					return $el->name===$name;
 				});
 			}
+
+		// config
+			$config = is_object($config_data)
+				? $config_data->config
+				: null;
 
 		// lang
 			$lang = DEDALO_APPLICATION_LANG;
@@ -207,10 +278,9 @@ class tool_common {
 			$dd_object = new dd_object((object)[
 				'name'				=> $name,
 				'label'				=> $tool_label,
-				'developer'			=> $developer[0] ?? null,
+				'developer'			=> $developer,
 				'tipo'				=> $component_tipo,
 				'section_tipo'		=> $tool_object->section_tipo,
-				// 'section_id'		=> $tool_object->section_id,
 				'model'				=> $name,
 				'lang'				=> $lang,
 				'mode'				=> 'edit',
@@ -221,7 +291,7 @@ class tool_common {
 				'description'		=> $description,
 				'show_in_inspector'	=> $tool_object->show_in_inspector ?? null,
 				'show_in_component'	=> $tool_object->show_in_component ?? null,
-				'config'			=> !empty($config_data) ? $config_data->config : null
+				'config'			=> $config
 			]);
 
 
@@ -241,17 +311,19 @@ class tool_common {
 
 		// old way. (!) Unification with context in progress..
 			// label. (JSON list) Try match current lang else use the first lang value
-				$tool_label = array_find($tool_object->label, function($el){
+				$ar_labels = $tool_object->label ?? [];
+				$tool_label_object = array_find($ar_labels, function($el){
 					return $el->lang===DEDALO_APPLICATION_LANG;
-				})->value ?? reset($tool_object->label)->value;
-				if (empty($tool_label)) {
+				});
+				$tool_label = is_object($tool_label_object) && isset($tool_label_object->value)
+					? $tool_label_object->value
+					: (is_object($ar_labels[0])
+						? $ar_labels[0]->value ?? null
+						: null);
+				// fallback label to tool name
+				if(empty($tool_label)) {
 					$tool_label = $tool_object->name ?? 'Unknown';
 				}
-
-			// description. (text_area) Try match current lang else use the first lang value
-				// $description = array_find((array)$tool_object->description, function($el){
-				// 	return $el->lang===DEDALO_DATA_LANG;
-				// })->value[0] ?? reset($tool_object->description)->value[0];
 
 			// css
 				$css = (object)[
@@ -343,6 +415,23 @@ class tool_common {
 
 
 	/**
+	* GET_STRUCTURE_CONTEXT_SIMPLE
+	* @param int $permissions = 0
+	* @param bool $add_request_config = false
+	* @return dd_object $full_ddo
+	*/
+	public function get_structure_context_simple(int $permissions=0, bool $add_request_config=false) : dd_object {
+
+		// call general method
+		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
+
+
+		return $full_ddo;
+	}//end get_structure_context_simple
+
+
+
+	/**
 	* GET_REGISTERED_TOOLS
 	* Get the full or filtered list data of current registered tools in database
 	* @return array $registered_tools
@@ -362,7 +451,7 @@ class tool_common {
 					}
 
 				// cache file (moved to tool_common::get_user_tools)
-			 		// $file_cache = dd_cache::cache_from_file((object)[
+					// $file_cache = dd_cache::cache_from_file((object)[
 					// 	'file_name'	=> 'cache_registered_tools.json'
 					// ]);
 					// if (!empty($file_cache)) {
@@ -454,13 +543,13 @@ class tool_common {
 					// 	}
 					// });
 
-					if(empty($current_config)){
+					if(!is_object($current_config)){
 						$ar_config		= tools_register::get_all_default_config_tool_client();
 						$current_config	= array_find($ar_config, function($el) use($current_value) {
 							return $el->name===$current_value->name;
 						});
 					}
-					$current_value->config = !empty($current_config)
+					$current_value->config = is_object($current_config)
 						? $current_config->config
 						: null;
 
@@ -501,12 +590,17 @@ class tool_common {
 				return $el->name===$tool_name;
 			});
 
-			if(empty($config)){
+			if(!is_object($config)){
 				// get all tools config sections
 				$ar_config = tools_register::get_all_default_config();
 				$config = array_find($ar_config, function($el) use($tool_name) {
 					return $el->name===$tool_name;
 				});
+
+				// no config is found at all
+				if(!is_object($config)){
+					return null;
+				}
 			}
 
 		return $config;
@@ -756,7 +850,7 @@ class tool_common {
 
 				// cache file
 					$cache_file_name = 'cache_user_tools.json';
-			 		$file_cache = dd_cache::cache_from_file((object)[
+					$file_cache = dd_cache::cache_from_file((object)[
 						'file_name'	=> $cache_file_name
 					]);
 					if (!empty($file_cache)) {

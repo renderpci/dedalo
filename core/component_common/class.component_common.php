@@ -620,12 +620,6 @@ abstract class component_common extends common {
 	*/
 	protected function set_dato_default() : bool {
 
-		// Data default only can be saved by users than have permissions to save.
-		// Read users can not change component data.
-			if($this->get_component_permissions() < 2){
-				return false;
-			}
-
 		// tm mode case
 			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
@@ -660,7 +654,7 @@ abstract class component_common extends common {
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
-						if (!empty($found)) {
+						if (is_object($found)) {
 							$dato_default = $found->value;
 						}
 					}
@@ -686,6 +680,12 @@ abstract class component_common extends common {
 
 		// set default dato (only when own dato is empty)
 			if (!empty($dato_default)) {
+
+				// Data default only can be saved by users than have permissions to save.
+				// Read users can not change component data.
+					if($this->get_component_permissions() < 2){
+						return false;
+					}
 
 				// matrix data : force load matrix data
 					$this->load_component_dato();
@@ -717,6 +717,7 @@ abstract class component_common extends common {
 							return true;
 					}
 			}//end if (!empty($dato_default))
+
 
 		// data default is not fixed
 		return false;
