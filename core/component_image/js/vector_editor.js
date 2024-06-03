@@ -8,12 +8,15 @@
 	import SvgCanvas from '../../../lib/svgedit/svgcanvas.js'
 	import '../../../lib/iro/dist/iro.min.js';
 	import {ui} from '../../common/js/ui.js'
-	// import {common} from '../../common/js/common.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 
 
 
+/**
+* VECTOR_EDITOR
+* @return bool
+*/
 export const vector_editor = function() {
 
 	this.id
@@ -205,19 +208,20 @@ vector_editor.prototype.init_canvas = async function(self) {
 }//end init_canvas
 
 
-// called when we've selected a different element
+
 /**
-*
+* SELECTED_CHANGED
+* Called when we've selected a different element
 * @param {external:Window} win
 * @param {module:svgcanvas.SvgCanvas#event:selected} elems Array of elements that were selected
 * @listens module:svgcanvas.SvgCanvas#event:selected
 * @fires module:svgcanvas.SvgCanvas#event:ext_selectedChanged
-* @returns {void}
+* @returns void
 */
 vector_editor.prototype.selected_changed = function(win, elems) {
 
-	const stage		= this.stage
-	const layer		= this.active_layer
+	const stage	= this.stage
+	const layer	= this.active_layer
 	this.selected_element = elems.length === 1 || !elems[1] ? elems[0] : null
 
 	this.set_color_picker()
@@ -260,15 +264,18 @@ vector_editor.prototype.selected_changed = function(win, elems) {
 	// 	: null
 		// console.log("stage.getSegType():",stage.setSegType());
 		// console.log("path:",stage.getSegData());
+}//end selected_changed
 
-}
 
 
+/**
+* ELEMENT_TRANSITION
+* @return void
+*/
 vector_editor.prototype.element_transition = function(win, elems) {
 
-	const stage		= this.stage
-	const layer		= this.active_layer
-	// this.selected_element = elems.length === 1 || !elems[1] ? elems[0] : null
+	const stage	= this.stage
+	const layer	= this.active_layer
 
 	const path = stage.getPathObj()
 
@@ -276,7 +283,6 @@ vector_editor.prototype.element_transition = function(win, elems) {
 
 	if(drawnPath){
 		const seglist = drawnPath.pathSegList
-
 	}
 
 	const current_mode = stage.getMode()
@@ -301,7 +307,8 @@ vector_editor.prototype.element_transition = function(win, elems) {
 	// 	: null
 		// console.log("stage.getSegType():",stage.setSegType());
 		// console.log("path:",stage.getSegData());
-}
+}//end element_transition
+
 
 
 /**
@@ -356,7 +363,8 @@ vector_editor.prototype.keyboard_shortcuts = function() {
 			e.preventDefault()
 		}
 	})
-}
+}//end keyboard_shortcuts
+
 
 
 /**
@@ -390,8 +398,8 @@ vector_editor.prototype.pointer = function() {
 
 vector_editor.prototype.create_rectangle = function () {
 
-	const stage			= this.stage
-	const layer			= this.active_layer
+	const stage	= this.stage
+	const layer	= this.active_layer
 
 	// deselection any other selected
 	stage.clearSelection()
@@ -407,7 +415,8 @@ vector_editor.prototype.create_rectangle = function () {
 	stage.setOpacity(0.3)
 
 	stage.setMode('rect')
-}
+}//end create_rectangle
+
 
 
 vector_editor.prototype.create_circle = function () {
@@ -424,7 +433,8 @@ vector_editor.prototype.create_circle = function () {
 	stage.setOpacity(0.3)
 
 	stage.setMode('ellipse')
-}
+}//end create_circle
+
 
 
 vector_editor.prototype.create_vector = function () {
@@ -462,24 +472,26 @@ vector_editor.prototype.create_vector = function () {
 	  // this.click(element, handler) => {
 	  // 	console.log("e:----", e);
 	  // }
-}
+}//end create_vector
+
 
 
 vector_editor.prototype.activate_zoom = function () {
 
-	const stage			= this.stage
+	const stage = this.stage
 	stage.setMode('zoom');
+}//end activate_zoom
 
-}
+
 
 /**
- * ZOOM_CHANGED
- * @function module:svgcanvas.SvgCanvas#zoom_changed
- * @param {external:Window} win
- * @param {module:svgcanvas.SvgCanvas#event:zoomed} bbox
- * @param {boolean} autoCenter
- * @listens module:svgcanvas.SvgCanvas#event:zoomed
- * @returns {void}
+* ZOOM_CHANGED
+* @function module:svgcanvas.SvgCanvas#zoom_changed
+* @param {external:Window} win
+* @param {module:svgcanvas.SvgCanvas#event:zoomed} bbox
+* @param {boolean} autoCenter
+* @listens module:svgcanvas.SvgCanvas#event:zoomed
+* @returns {void}
 */
 vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
 
@@ -523,13 +535,14 @@ vector_editor.prototype.zoom_changed = function(win, bbox, autoCenter) {
 	image_container.scrollLeft	= newCtr.x - w / 2
 	image_container.scrollTop	= newCtr.y - h / 2
 	image_container.scroll()
+}//end zoom_changed
 
-}
 
 
 /**
 * UPDATE_CANVAS
 * Fit the canvas and image to the space
+* @return void
 */
 vector_editor.prototype.update_canvas = function(){
 
@@ -573,8 +586,7 @@ vector_editor.prototype.update_canvas = function(){
 	this.image_container.scrollTop = scroll_Y
 
 	stage.updateCanvas(w, h)
-
-}
+}//end update_canvas
 
 
 /**
@@ -862,6 +874,10 @@ vector_editor.prototype.render_tools_buttons = function(self) {
 
 
 
+/**
+* EXPORT_HANDLER
+* @return void
+*/
 vector_editor.prototype.export_handler = function(win, data){
 	const {
 		issues,
@@ -869,7 +885,9 @@ vector_editor.prototype.export_handler = function(win, data){
 	} = data;
    const exportWindow = window.open('', WindowName);
    exportWindow.location.href = data.bloburl || data.datauri;
-}
+}//end export_handler
+
+
 
 /**
 * SET_COLOR_PICKER
@@ -878,17 +896,17 @@ vector_editor.prototype.export_handler = function(win, data){
 */
 vector_editor.prototype.set_color_picker = function() {
 
-	const stage			= this.stage
-	const layer			= this.active_layer
+	// stage
+		const stage	= this.stage
 
 	// check if the selected element is a image
 	// image doesn't has the fill attribute
-	const element_name = this.selected_element
-		? this.selected_element.nodeName
-		: ''
-	if( ['image', 'use'].includes(element_name) ){
-		return
-	}
+		const element_name = this.selected_element
+			? this.selected_element.nodeName
+			: ''
+		if( ['image','use'].includes(element_name) ){
+			return
+		}
 
 	// get the item selected color
 		this.active_fill_color = (this.selected_element)
@@ -1076,14 +1094,14 @@ vector_editor.prototype.add_layer = function(self) {
 
 
 /**
-* save_data
+* SAVE_DATA
 * get the layers loaded and save it
 * @return object new_layer
 */
 vector_editor.prototype.save_data = async function(self) {
 
-	const stage				= this.stage
-	const drawing			= stage.getCurrentDrawing();
+	const stage		= this.stage
+	const drawing	= stage.getCurrentDrawing();
 
 	const all_layers = drawing.all_layers
 	const len = drawing.all_layers.length
@@ -1123,7 +1141,6 @@ vector_editor.prototype.save_data = async function(self) {
 		changed_data	: [changed_data],
 		refresh			: false
 	})
-
 }//end save_data
 
 
@@ -1131,6 +1148,7 @@ vector_editor.prototype.save_data = async function(self) {
 /**
 * ACTIVATE_LAYER
 * @param int layer_id
+* @return void
 */
 vector_editor.prototype.activate_layer = function(layer_id) {
 
@@ -1149,8 +1167,6 @@ vector_editor.prototype.activate_layer = function(layer_id) {
 		this.active_layer	= viewed_layer
 		drawing.setLayerOpacity(viewed_layer, opacity)
 	}
-
-
 }//end activate_layer
 
 
@@ -1450,4 +1466,3 @@ vector_editor.prototype.render_layer_row = function(self, layer) {
 
 
 // @license-end
-
