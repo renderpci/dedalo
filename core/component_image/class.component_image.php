@@ -2140,6 +2140,31 @@ class component_image extends component_media_common implements component_media_
 					// create the svg default file
 					$this->create_svg_file($svg_string_node);
 				}
+			}else{
+				// svg file already exists. Check image path for fix if needed
+				$content = file_get_contents($svg_file_path);
+				// sample :
+				// <svg version="1.1" ..><g id="raster"><image width="1366" height="1024" xlink:href="/v6/media/media_development/image/1.5MB/0/rsc29_rsc170_1.jpg"/></g></svg>
+				if (is_string($content)) {
+					$ext		= $this->get_extension();
+					$quality	= $this->get_default_quality();
+					preg_match('/xlink:href="(\S+\.'.$ext.')"/', $content, $output_array);
+					if (isset($output_array[1])) {
+						// sample: '/v6/media/media_development/image/1.5MB/0/rsc29_rsc170_1.jpg'
+						$image_url = $this->get_media_url_dir($quality) .'/'. $this->get_id() .'.'. $ext; // relative path
+						if ($image_url!==$output_array[1]) {
+							// replace string
+							$svg_string_node = str_replace($output_array[1], $image_url, $content);
+							$this->create_svg_file($svg_string_node);
+							debug_log(__METHOD__
+								. " Updated SVG image path " . PHP_EOL
+								. ' old path: ' . to_string($output_array[1]) .PHP_EOL
+								. ' new pah:' 	. to_string($image_url)
+								, logger::WARNING
+							);
+						}
+					}
+				}
 			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
