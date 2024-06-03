@@ -2346,6 +2346,7 @@ class search {
 							$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
 							$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
 							$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
+							$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
 							$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
 							$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
 						$sql_where .= ')';
