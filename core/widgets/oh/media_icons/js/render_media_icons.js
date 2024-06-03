@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {event_manager} from '../../../../common/js/event_manager.js'
 	import {open_tool} from '../../../../../tools/tool_common/js/tool_common.js'
 	import {object_to_url_vars, open_window} from '../../../../common/js/utils/index.js'
 
@@ -132,10 +131,8 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, self, current_ipo) => {
 
-	console.log('data:', data);
-
-	// data
-		const data_id	= data.id
+	// data_id
+		const data_id = data.id
 		// {
 		// 	"id": "id",
 		// 	"key": 0,

@@ -969,11 +969,11 @@ class component_relation_parent extends component_relation_common {
 
 				// skip already added
 					if (locator::in_array_locator($current_locator, $parents_recursive, ['section_tipo','section_id'])) {
-						debug_log(__METHOD__
-							. " Already added locator is omitted (current_locator) " . PHP_EOL
-							. ' current_locator: ' . to_string($current_locator)
-							, logger::WARNING
-						);
+						// debug_log(__METHOD__
+						// 	. " Already added locator is omitted (current_locator) " . PHP_EOL
+						// 	. ' current_locator: ' . to_string($current_locator)
+						// 	, logger::WARNING
+						// );
 						continue;
 					}
 
@@ -1003,11 +1003,11 @@ class component_relation_parent extends component_relation_common {
 
 							// skip already added
 								if (locator::in_array_locator($parent_locator, $parents_recursive, ['section_tipo','section_id'])) {
-									debug_log(__METHOD__
-										. " Already added locator is omitted (parent_locator) " . PHP_EOL
-										. ' parent_locator: ' . to_string($parent_locator)
-										, logger::WARNING
-									);
+									// debug_log(__METHOD__
+									// 	. " Already added locator is omitted (parent_locator) " . PHP_EOL
+									// 	. ' parent_locator: ' . to_string($parent_locator)
+									// 	, logger::WARNING
+									// );
 									continue;
 								}
 

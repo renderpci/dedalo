@@ -13,7 +13,6 @@
 	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		clone,
 		dd_console,
 		find_up_node,
 		url_vars_to_object,
@@ -101,27 +100,27 @@ page.prototype.init = async function(options) {
 					return false
 				}
 
-			// check valid vars
-				if (!source) {
-					console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
-					return false
-				}
+				// check valid vars
+					if (!source) {
+						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
+						return false
+					}
 
-			// reset status to prevent errors lock
-				self.status = 'rendered'
+				// reset status to prevent errors lock
+					self.status = 'rendered'
 
-			// loading css add
-				const container = self.node
-					? self.node.content_data
-					: null
-					if (container) { container.classList.add('loading') }
+				// loading css add
+					const container = self.node
+						? self.node.content_data
+						: null
+						if (container) { container.classList.add('loading') }
 
-			// stream_readers. If any stream reader is active, stop it
-				if (page_globals.stream_readers && page_globals.stream_readers.length) {
-					page_globals.stream_readers.forEach((el)=>{
-						el.cancel('abort')
-					})
-				}
+				// stream_readers. If any stream reader is active, stop it
+					if (page_globals.stream_readers && page_globals.stream_readers.length) {
+						page_globals.stream_readers.forEach((el)=>{
+							el.cancel('abort')
+						})
+					}
 
 			try {
 
@@ -174,19 +173,19 @@ page.prototype.init = async function(options) {
 							)
 						}
 
-					// spinner
-						// const spinner = ui.create_dom_element({
-						// 	element_type	: 'div',
-						// 	class_name		: 'spinner',
-						// 	parent			: self.node[0]
-						// })
-						// // self.events_tokens.push(
-						// 	event_manager.subscribe('render_'+new_page_element_instance.id , fn_render_target)
-						// // )
-						// function fn_render_target() {
-						// 	spinner.remove()
-						// }
+						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
+							const base_models				= ['menu']
+							const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
+							// add current source from options
+								context_elements_to_stay.push(source)
+							// fix new page clean context
+								self.context = context_elements_to_stay
 
+						// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
+							const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+							for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+								instances_to_stay[i].destroyable = false
+							}
 					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
 						const base_models				= ['menu']
 						const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
