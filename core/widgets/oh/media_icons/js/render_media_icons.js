@@ -148,6 +148,12 @@ const get_value_element = (i, data, self, current_ipo) => {
 		const locator	= data_id.locator
 		const value		= data_id.value
 
+	// data
+		const data_transcription	= data.transcription
+		const data_indexation		= data.indexation
+		const data_translation		= data.translation
+		const data_tc				= data.tc
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
@@ -161,7 +167,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 			inner_html		: data_id.value,
 			parent			: li
 		})
-		column_id_value.addEventListener('click', e => {
+		column_id_value.addEventListener('click', (e) => {
 			e.stopPropagation();
 
 			// open a new window
@@ -194,17 +200,16 @@ const get_value_element = (i, data, self, current_ipo) => {
 			class_name		: 'button file_av icon',
 			parent			: icon_media_node
 		})
-		icon_media_node.addEventListener('click', e => {
+		icon_media_node.addEventListener('click', (e) => {
 			e.stopPropagation();
 
-			const ipo_input_paths	= current_ipo.input.paths[0][0];
-			const id_el				= data.id // find(el => el.id==='id')
+			const ipo_input_paths = current_ipo.input.paths[0][0];
 
 			// open a new window
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: ipo_input_paths.component_tipo,
 					section_tipo	: ipo_input_paths.section_tipo,
-					id				: id_el.value,
+					id				: value,
 					mode			: 'edit',
 					view			: 'viewer',
 					menu			: false
@@ -218,7 +223,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 		})
 
 	// transcription
-		const data_transcription = data.transcription // find(item => item.id==='transcription')
+
 		const transcription_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value tr link',
@@ -226,7 +231,7 @@ const get_value_element = (i, data, self, current_ipo) => {
 			parent			: li
 		})
 		if(data_transcription.tool_context){
-			transcription_value.addEventListener('click', e => {
+			transcription_value.addEventListener('click', (e) => {
 				e.stopPropagation();
 
 				const tool_context = data_transcription.tool_context
@@ -240,7 +245,6 @@ const get_value_element = (i, data, self, current_ipo) => {
 		}
 
 	// indexation
-		const data_indexation = data.indexation // find(item => item.id==='indexation')
 		const indexation_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value in link',
@@ -262,7 +266,6 @@ const get_value_element = (i, data, self, current_ipo) => {
 		}
 
 	// translation
-		const data_translation = data.translation // find(item => item.id==='translation')
 		const translation_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value tl link',
@@ -284,24 +287,12 @@ const get_value_element = (i, data, self, current_ipo) => {
 		}
 
 	// time code
-		const data_tc = data.tc //find(item => item.id==='tc')
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value tc',
 			inner_html		: data_tc.value || '',
 			parent			: li
 		})
-
-	// DES
-		// even manager model to use in other widgets_properties
-		// this widget don't use it, because the info is not in the same section
-		// than the components that changed our value
-		// the user don't see the info and the imput componets at same time
-		// self.events_tokens.push(
-		// 	event_manager.subscribe('update_widget_value_'+i+'_'+self.id, (changed_data) =>{
-		// 		media_weight_value.innerHTML 	= changed_data.find(item => item.id==='media_weight').value
-		// 	})
-		// )
 
 
 	return li
