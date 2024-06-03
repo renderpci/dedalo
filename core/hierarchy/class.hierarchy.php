@@ -226,6 +226,9 @@ class hierarchy {
 
 			$default_section_tipo_term  = self::get_default_section_tipo_term($tld2);
 
+			$real_section_RecordObj_dd	= new RecordObj_dd($real_section_tipo);
+			$real_section_properties	= $real_section_RecordObj_dd->get_properties() ?? null;
+
 			$create_term_options = new stdClass();
 				$create_term_options->terminoID		= $default_section_tipo_term; // $tld2.'1';
 				$create_term_options->parent		= $current_parent;	// 'dd101'; // 'hierarchy56'
@@ -239,7 +242,7 @@ class hierarchy {
 					: [(object)[
 						'dd6' => $real_section_tipo // section. add real section. example: 'Thesaurus' hierarchy20
 					  ]];
-				$create_term_options->properties	= null;
+				$create_term_options->properties	= $real_section_properties;
 				$create_term_options->tld2			= $tld2;
 				$create_term_options->name			= $name;
 
@@ -476,6 +479,7 @@ class hierarchy {
 					$section_list_tipo			= $ar_section_list[0];
 					$RecordObj_dd				= new RecordObj_dd($section_list_tipo);
 					$section_list_relaciones	= $RecordObj_dd->get_relaciones();
+					$section_list_properties	= $RecordObj_dd->get_properties() ?? null;
 				}
 
 			// virtual section model . model term
@@ -490,7 +494,7 @@ class hierarchy {
 					$options->visible		= 'si';
 					$options->traducible	= 'no';
 					$options->relaciones	= json_decode('[{"dd6":"'.$real_section_tipo.'"}]');
-					$options->properties 	= null;
+					$options->properties 	= $real_section_properties;
 					$options->tld2 			= $tld2;
 					$options->name 			= $name . ' [m]';
 
@@ -513,7 +517,7 @@ class hierarchy {
 						$options->visible		= 'si';
 						$options->traducible	= 'no';
 						$options->relaciones	= $section_list_relaciones;
-						$options->properties	= null;
+						$options->properties	= $section_list_properties;
 						$options->tld2			= $tld2;
 						$options->name			= 'List';
 
@@ -540,7 +544,7 @@ class hierarchy {
 						$options->visible		= 'si';
 						$options->traducible	= 'no';
 						$options->relaciones	= $section_list_relaciones;
-						$options->properties	= null;
+						$options->properties	= $section_list_properties;
 						$options->tld2			= $tld2;
 						$options->name			= 'List';
 
