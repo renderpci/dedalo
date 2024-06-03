@@ -1850,6 +1850,10 @@ abstract class common {
 
 		// buttons_context. Force to avoid calculate buttons_context (also involves calculating permissions)
 		$this->buttons_context = [];
+
+		// permissions. Force set $this->permissions to prevent calculate permissions in simple mode
+		$this->set_permissions($permissions);
+
 		// call general method
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
