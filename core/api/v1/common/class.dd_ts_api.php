@@ -62,7 +62,7 @@ final class dd_ts_api {
 			$target_section_properties	= $RecordObj_dd->get_properties(true);
 
 		// limit
-			$default_limit = 10;
+			$default_limit = 300;
 
 		// children
 			if($node_type==='hierarchy_node') {
