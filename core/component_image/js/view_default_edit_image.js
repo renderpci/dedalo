@@ -541,6 +541,10 @@ const fit_image = function(self) {
 
 	// object_node
 		const object_node	= image_container.object_node
+		if (!object_node) {
+			console.error('object_node not found in image_container!', image_container);
+			return
+		}
 		const layers		= object_node.contentDocument.querySelectorAll('.layer')
 		const main_image	= object_node.contentDocument.querySelector('#main_image')
 			|| object_node.contentDocument.querySelector('image')
