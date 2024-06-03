@@ -1720,6 +1720,10 @@ abstract class common {
 					// set the show_interface of shared sections
 					// check if the matrix table of the target section is matrix_dd (shared table between installations as yes/no list)
 					// if target section is a shared section, remove the button edit and button list of the interface
+					// Note 03-06-2024: To prevent unneeded calculations (permissions too), restrict target_section_ddo to
+					// calls with add_request_config = true
+					if ($add_request_config===true) {
+
 						$ar_target_section_ddo = $this->get_ar_target_section_ddo();
 
 						// user id
@@ -1739,6 +1743,7 @@ abstract class common {
 								$properties->show_interface->button_list = false;
 							}
 						}
+					}
 
 				}else if($model==='section') {
 
