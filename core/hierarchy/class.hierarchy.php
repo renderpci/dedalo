@@ -583,6 +583,45 @@ class hierarchy {
 
 
 	/**
+	* DELETE_VIRTUAL_SECTION
+	* Note that virtual sections not contains components, only a exclude elements list term
+	* @param object $options
+	* Sample:
+	* {
+	* 	section_id : 3,
+	* 	section_tipo : 'hierarchy1'
+	* }
+	* @return object $response
+	*/
+	public static function delete_virtual_section(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= [];
+
+		// options
+			$section_id		= $options->section_id;
+			$section_tipo	= $options->section_tipo;
+
+		// tld
+			$tld = hierarchy::get_hierarchy_tld($section_id, $section_tipo);
+
+		// check if the tld ontology is empty
+			if( empty($tld) ){
+				return (object)$response;
+			}
+
+		// delete the virtual section
+			$deleted = ontology::clean_structure_data($tld);
+
+			$response->result = $deleted;
+			
+		return (object)$response;
+	}//end delete_virtual_section
+
+
+
+
 	/**
 	* GET_HIERARCHY_TLD
 	* Get the tld, in lowercase, of the hierarchy main section (hierarchy1)
