@@ -660,7 +660,7 @@ abstract class component_common extends common {
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
-						if (!empty($found)) {
+						if (is_object($found)) {
 							$dato_default = $found->value;
 						}
 					}
@@ -717,6 +717,7 @@ abstract class component_common extends common {
 							return true;
 					}
 			}//end if (!empty($dato_default))
+
 
 		// data default is not fixed
 		return false;

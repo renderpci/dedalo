@@ -228,7 +228,6 @@ final class dd_core_api {
 
 						// add to page context
 							$context[] = $menu->get_structure_context();
-								// dump($context, ' MENU $context ++ '.to_string());
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
@@ -288,52 +287,52 @@ final class dd_core_api {
 							);
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set, inject the config into the context.
-							if (isset($config)) {
-								$current_context->config = $config;
-							}
+								if (isset($config)) {
+									$current_context->config = $config;
+								}
 
 							// session_key. Restore previous SQO from session when it exists
-							if (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
+								if (isset($session_key) && isset($_SESSION['dedalo']['config']['sqo'][$session_key])) {
 
-								// request_config
-									$request_config = array_find($current_context->request_config, function($el){
-										return $el->api_engine==='dedalo';
-									});
-									if (is_object($request_config)) {
-										// overwrite default SQO with previously saved session SQO
-										// This allows to refresh the page without loosing the last SQO (filter, pagination, etc.)
-										// Is normally called as iframe from component_portal link button in order to select a item
-										$request_config->sqo = $_SESSION['dedalo']['config']['sqo'][$session_key];
-									}
-							}
+									// request_config
+										$request_config = array_find($current_context->request_config, function($el){
+											return $el->api_engine==='dedalo';
+										});
+										if (is_object($request_config)) {
+											// overwrite default SQO with previously saved session SQO
+											// This allows to refresh the page without loosing the last SQO (filter, pagination, etc.)
+											// Is normally called as iframe from component_portal link button in order to select a item
+											$request_config->sqo = $_SESSION['dedalo']['config']['sqo'][$session_key];
+										}
+								}
 
 							// section_id given case. If is received section_id, we build a custom sqo with the proper filter
 							// and override default request_config SQO into the section context
-							if (!empty($section_id)) {
+								if (!empty($section_id)) {
 
-								$current_context->mode			= 'edit'; // force edit mode
-								$current_context->section_id	= $section_id; // set section_id in context
+									$current_context->mode			= 'edit'; // force edit mode
+									$current_context->section_id	= $section_id; // set section_id in context
 
-								// request_config
-									$request_config = array_find($current_context->request_config, function($el){
-										return $el->api_engine==='dedalo';
-									});
-									if (is_object($request_config)) {
-										// sqo
-										$sqo = new search_query_object();
-										$sqo->set_section_tipo([(object)[
-											'tipo'	=> $tipo,
-											'label'	=> ''
-										]]);
-										$sqo->set_filter_by_locators([(object)[
-											'section_tipo'	=> $tipo,
-											'section_id'	=> $section_id
-										]]);
+									// request_config
+										$request_config = array_find($current_context->request_config, function($el){
+											return $el->api_engine==='dedalo';
+										});
+										if (is_object($request_config)) {
+											// sqo
+											$sqo = new search_query_object();
+											$sqo->set_section_tipo([(object)[
+												'tipo'	=> $tipo,
+												'label'	=> ''
+											]]);
+											$sqo->set_filter_by_locators([(object)[
+												'section_tipo'	=> $tipo,
+												'section_id'	=> $section_id
+											]]);
 
-										// overwrite default sqo
-										$request_config->sqo = $sqo;
-									}
-							}//end if (!empty($section_id))
+											// overwrite default sqo
+											$request_config->sqo = $sqo;
+										}
+								}//end if (!empty($section_id))
 
 							// add to page context
 								$context[] = $current_context;
@@ -343,10 +342,11 @@ final class dd_core_api {
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
+
 							// set view
-							if (!empty($view)) {
-								$area->set_view($view);
-							}
+								if (!empty($view)) {
+									$area->set_view($view);
+								}
 
 							// add to page context
 								$current_context = $area->get_structure_context(1, true);
@@ -402,10 +402,11 @@ final class dd_core_api {
 
 							$area = area::get_instance($model, $tipo, $mode);
 							$area->set_lang(DEDALO_DATA_LANG);
+
 							// set view
-							if (!empty($view)) {
-								$area->set_view($view);
-							}
+								if (!empty($view)) {
+									$area->set_view($view);
+								}
 
 							$current_context = $area->get_structure_context(1, true);
 
@@ -430,9 +431,9 @@ final class dd_core_api {
 								);
 
 							// set view
-							if (!empty($view)) {
-								$element->set_view($view);
-							}
+								if (!empty($view)) {
+									$element->set_view($view);
+								}
 
 							// element JSON
 								$get_json_options = new stdClass();
@@ -440,13 +441,12 @@ final class dd_core_api {
 									$get_json_options->get_data		= false;
 								$element_json = $element->get_json($get_json_options);
 
-							// component_context
-								$component_context = $element_json->context[0];
-								$component_context->section_id = $section_id; // section_
+							// add section_id
+								$current_context->section_id = $section_id;
 
 							// view. Overwrite default if is passed
 								if (!empty($view)) {
-									$component_context->view = $view;
+									$current_context->view = $view;
 								}
 
 							// test minimal context
