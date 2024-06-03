@@ -118,6 +118,10 @@ abstract class common {
 		// tools. Array of element tools. If defined, they will not be recalculated
 		public $tools;
 
+		// buttons_context. Used to store calculated buttons context value
+		// Note that on get_structure_context_simple case, is set to [] to prevent calculate it
+		public $buttons_context;
+
 		// required methods
 			// abstract protected function define_id($id);
 			// abstract protected function define_tipo();
@@ -1844,6 +1848,8 @@ abstract class common {
 		// tools. Force set $this->tools to prevent calculate tools in simple mode
 		$this->tools = [];
 
+		// buttons_context. Force to avoid calculate buttons_context (also involves calculating permissions)
+		$this->buttons_context = [];
 		// call general method
 		$full_ddo = $this->get_structure_context($permissions, $add_request_config);
 
@@ -4584,13 +4590,19 @@ abstract class common {
 	*/
 	public function get_buttons_context() : array {
 
+		// already calculated
+			if (isset($this->buttons_context)) {
+				return $this->buttons_context;
+			}
+
+		// ar_button_ddo is array always
+			$ar_button_ddo = [];
+
 		// model validation (only areas and section are allowed)
 			$model = get_called_class();
 			if ($model!=='section' && strpos($model, 'area')===false) {
 				return []; // null;
 			}
-
-		$ar_button_ddo = [];
 
 		// tipo
 			$tipo = $this->tipo;
@@ -4663,6 +4675,9 @@ abstract class common {
 				// add button ddo
 				$ar_button_ddo[] = $button_obj;
 			}//end foreach ($ar_buttons_tipo as $current_button_tipo)
+
+		// fix value
+			$this->buttons_context = $ar_button_ddo;
 
 
 		return $ar_button_ddo;
