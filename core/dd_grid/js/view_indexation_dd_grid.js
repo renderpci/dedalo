@@ -345,6 +345,7 @@ export const get_record_link_column = function(current_data) {
 				section_tipo	: section_tipo,
 				id				: section_id,
 				mode			: 'edit',
+				session_save	: false, // prevent to overwrite current section session
 				menu			: false
 			})
 			open_window({
