@@ -5,12 +5,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {when_in_dom} from '../../common/js/events.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
-	import {clone, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
@@ -29,6 +26,7 @@
 		on_drop
 	} from './drag_and_drop.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
+
 
 
 /**
@@ -133,10 +131,10 @@ export const render_column_id = function(options) {
 		// Prevent to show the context menu
 		// open new window with the content
 		// if user has alt pressed, open new tab
-		button_edit.addEventListener("contextmenu", (e) => {
+		button_edit.addEventListener('contextmenu', (e) => {
 			e.preventDefault();
 
-			// if alt is pressed open new tab instead new window
+			// if alt is pressed, open new tab instead new window
 			const features = e.altKey===true
 				? 'new_tab'
 				: null
@@ -170,57 +168,11 @@ export const render_column_id = function(options) {
 					return
 				}
 
-			// user_navigation event
-				// const user_navigation_rqo = {
-				// 	caller_id	: self.id,
-				// 	source		: {
-				// 		action			: 'search',
-				// 		model			: 'section',
-				// 		tipo			: section_tipo,
-				// 		section_tipo	: section_tipo,
-				// 		mode			: 'edit',
-				// 		lang			: self.lang
-				// 	},
-				// 	sqo : {
-				// 		section_tipo		: [{tipo : section_tipo}],
-				// 		filter				: null,
-				// 		limit				: 1,
-				// 		filter_by_locators	: [{
-				// 			section_tipo	: section_tipo,
-				// 			section_id		: section_id
-				// 		}]
-				// 	}
-				// }
-				// event_manager.publish('user_navigation', user_navigation_rqo)
-
-			/*
-			// open a new window
-				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-					tipo			: section_tipo,
+			// handler
+				self.edit_record_handler({
 					section_tipo	: section_tipo,
-					id				: section_id,
-					mode			: 'edit',
-					menu			: false
+					section_id		: section_id
 				})
-				const new_window = open_window({
-					url		: url,
-					name	: 'record_view'
-				})
-				new_window.addEventListener('blur', async function() {
-					await self.refresh({
-						build_autoload : true
-					})
-					// fire window_bur event
-					event_manager.publish('window_bur_'+self.id, self)
-				})
-
-			// button_edit_click event. Subscribed to close current modal if exists (mosaic view case)
-				event_manager.publish('button_edit_click', this)
-			*/
-			self.edit_record_handler({
-				section_tipo	: section_tipo,
-				section_id		: section_id
-			})
 		})
 		button_edit.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
@@ -294,6 +246,7 @@ const render_drag_node = function(options) {
 			element_type	: 'div',
 			class_name		: 'drag icon hide'
 		})
+		// event mouseenter
 		drag_node.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
 
@@ -301,6 +254,7 @@ const render_drag_node = function(options) {
 				drag_node.classList.remove('hide')
 			}
 		});
+		// event mouseout
 		drag_node.addEventListener('mouseout', function(e) {
 			e.stopPropagation()
 
@@ -308,107 +262,107 @@ const render_drag_node = function(options) {
 				drag_node.classList.add('hide')
 			// }
 		});
-
-	drag_node.draggable	= true
+		// drag-able options and events
+		drag_node.draggable	= true
 		drag_node.addEventListener('dragstart', function(e) { return on_dragstart(this, e, options)})
 		drag_node.addEventListener('dragend', function(e) { return on_dragend(this, e, options)})
+		// event dblclick
+		drag_node.addEventListener('dblclick', function(e) {
+			e.stopPropagation()
 
-	drag_node.addEventListener('dblclick', function(e) {
-		e.stopPropagation()
-
-		// header
-			const header = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'header'
-			})
-			ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label',
-				text_node		: get_label.change_order_for || 'Change order for '+ section_id,
-				parent			: header
-			})
-
-		// body
-			const body = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'content body'
-			})
-			const target_key_input = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'number',
-				value			: options.paginated_key + 1,
-				class_name		: 'target_key',
-				parent			: body
-			})
-
-		// footer
-			const footer = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'footer content'
-			})
-			// button_ok
-				const button_ok = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'button_sort_order success',
-					text_content	: 'OK',
-					parent			: footer
+			// header
+				const header = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'header'
 				})
-				button_ok.addEventListener('click', function(e){
-					e.stopPropagation()
-					change_order_modal()
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'label',
+					text_node		: get_label.change_order_for || 'Change order for '+ section_id,
+					parent			: header
 				})
-				// CHANGE_ORDER_MODAL
-				// get the user data and check it to be correct before sort data
-				// sort data if the new position is ok.
-				const change_order_modal = function() {
-					// user input data has not the array data order, the user will introduce the natural order 1,2,3,etc
-					// it's necessary subtract one position to get the array position 0,1,2,etc
-					const user_target_key = parseInt(target_key_input.value) -1
-					// fix enter values with data boundaries,
-					// the new position has to be between 0 (first array key of the data) and the last section_records (last key)
-					const last_key = total_records - 1
-					// check the position entered to be correct in boundaries
-					const target_key = user_target_key < 0
-						? 0
-						: (user_target_key > last_key)
-							? last_key
-							: user_target_key
-					// if the user enter the same position didn't nothing and close
-					if(paginated_key===target_key){
-						modal.close()
-						return false
-					}
-					// change the order by the normal way
-					const sort_data = {
-						value		: locator,
-						source_key	: paginated_key,
-						target_key	: target_key
-					}
-					self.sort_data(sort_data)
 
-					modal.close()
-				}
+			// body
+				const body = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'content body'
+				})
+				const target_key_input = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'number',
+					value			: options.paginated_key + 1,
+					class_name		: 'target_key',
+					parent			: body
+				})
 
-		// modal
-			const modal = ui.attach_to_modal({
-				header		: header,
-				body		: body,
-				footer		: footer,
-				size		: 'small', // string size big|normal|small
-				minimizable	: false
-			})
-			// set the input field active
-			target_key_input.focus()
-			// add events to modal options
-			target_key_input.addEventListener('keyup',function(evt){
-				switch(true) {
-					// Enter
-					case evt.code==='Enter' || evt.code==='NumpadEnter':
+			// footer
+				const footer = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'footer content'
+				})
+				// button_ok
+					const button_ok = ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'button_sort_order success',
+						text_content	: 'OK',
+						parent			: footer
+					})
+					button_ok.addEventListener('click', function(e){
+						e.stopPropagation()
 						change_order_modal()
-					break;
-				}
-			})
-	})//end drag_node.addEventListener('dblclick', function(e)
+					})
+					// CHANGE_ORDER_MODAL
+					// get the user data and check it to be correct before sort data
+					// sort data if the new position is ok.
+					const change_order_modal = function() {
+						// user input data has not the array data order, the user will introduce the natural order 1,2,3,etc
+						// it's necessary subtract one position to get the array position 0,1,2,etc
+						const user_target_key = parseInt(target_key_input.value) -1
+						// fix enter values with data boundaries,
+						// the new position has to be between 0 (first array key of the data) and the last section_records (last key)
+						const last_key = total_records - 1
+						// check the position entered to be correct in boundaries
+						const target_key = user_target_key < 0
+							? 0
+							: (user_target_key > last_key)
+								? last_key
+								: user_target_key
+						// if the user enter the same position didn't nothing and close
+						if(paginated_key===target_key){
+							modal.close()
+							return false
+						}
+						// change the order by the normal way
+						const sort_data = {
+							value		: locator,
+							source_key	: paginated_key,
+							target_key	: target_key
+						}
+						self.sort_data(sort_data)
+
+						modal.close()
+					}
+
+			// modal
+				const modal = ui.attach_to_modal({
+					header		: header,
+					body		: body,
+					footer		: footer,
+					size		: 'small', // string size big|normal|small
+					minimizable	: false
+				})
+				// set the input field active
+				target_key_input.focus()
+				// add events to modal options
+				target_key_input.addEventListener('keyup', function(evt) {
+					switch(true) {
+						// Enter
+						case evt.code==='Enter' || evt.code==='NumpadEnter':
+							change_order_modal()
+						break;
+					}
+				})
+		})//end drag_node.addEventListener('dblclick', function(e)
 
 
 	return drag_node
@@ -481,25 +435,6 @@ export const render_column_remove = function(options) {
 		const fragment = new DocumentFragment()
 
 	// button_remove
-		// section_buttons. Get target section_buttons (defined in request config -> sqo -> section). Sample
-			// {
-			//     "typo": "ddo",
-			//     "tipo": "rsc170",
-			//     "model": "section",
-			//     "label": "Image",
-			//     "color": "#b9b9b9",
-			//     "permissions": 2,
-			//     "buttons": [
-			//         {
-			//             "model": "button_new",
-			//             "permissions": 1
-			//         },
-			//         {
-			//             "model": "button_delete",
-			//             "permissions": 1
-			//         }
-			//     ]
-			// }
 		const target_section_ddo	= self.target_section.find(el => el.tipo===section_tipo) || {}
 		const section_buttons		= target_section_ddo.buttons || []
 		const button_delete			= section_buttons.find(el => el.model==='button_delete')
@@ -512,6 +447,7 @@ export const render_column_remove = function(options) {
 				parent			: fragment
 			})
 			button_remove.tabIndex = -1;
+			// event click
 			button_remove.addEventListener('click', function(e){
 				e.stopPropagation()
 
@@ -633,8 +569,7 @@ export const render_column_remove = function(options) {
 							self			: self,
 							section_id		: self.section_id,
 							section_tipo	: self.section_tipo,
-							section_id_key	: section_id,
-							// tipo_key		: self.tipo
+							section_id_key	: section_id
 						})
 
 						// refresh the component. Don't wait here
@@ -686,7 +621,7 @@ export const render_column_remove = function(options) {
 							: 0
 					}
 			})
-			// remove_icon
+			// icon delete
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button delete_light icon',
@@ -734,6 +669,7 @@ export const get_buttons = (self) => {
 				class_name		: 'button sync',
 				parent			: buttons_fold
 			})
+			// event click
 			const fn_update_data_external = async function(e) {
 				e.stopPropagation()
 				// force server data to calculate external data
@@ -741,10 +677,7 @@ export const get_buttons = (self) => {
 				source.build_options = {
 					get_dato_external : true
 				}
-				// const built = await self.build(true)
-				// if (built) {
-				// 	self.render({render_level : 'content'})
-				// }
+				// refresh
 				self.refresh({
 					build_autoload	: true,
 					render_level	: 'content'
@@ -786,6 +719,7 @@ export const get_buttons = (self) => {
 					title			: get_label.new || 'New',
 					parent			: buttons_fold
 				})
+				// event click
 				const fn_add = async function(e) {
 					e.stopPropagation()
 
@@ -859,13 +793,15 @@ export const get_buttons = (self) => {
 				title			: get_label.vincular_recurso || 'Link resource',
 				parent			: buttons_fold
 			})
+			// event mousedown
 			const fn_link = async function(e) {
 				e.stopPropagation()
 
-				// const section_tipo	= select_section.value
-				// const section_label	= select_section.options[select_section.selectedIndex].innerHTML;
-				const section_tipo		= target_section[0].tipo;
-				// const section_label	= target_section[0].label;
+				const section_tipo = target_section[0]?.tipo;
+				if (!section_tipo) {
+					alert("Error on get section_tipo");
+					return
+				}
 
 				// iframe
 					( () => {
@@ -970,6 +906,7 @@ export const get_buttons = (self) => {
 					title			: label.replace( /(<([^>]+)>)/ig, ''),
 					parent			: buttons_fold
 				})
+				// event mousedown
 				const fn_click = function(e){
 					e.stopPropagation()
 
@@ -1004,7 +941,7 @@ export const get_buttons = (self) => {
 				class_name		: 'button tree',
 				parent			: buttons_fold
 			})
-			// add listener to the select
+			// event mouseup. Add listener to the select
 			button_tree_selector.addEventListener('mouseup', fn_mousedown)
 			function fn_mousedown(e){
 				e.stopPropagation()
@@ -1068,8 +1005,10 @@ export const get_buttons = (self) => {
 				title			: get_label.full_screen || 'Full screen',
 				parent			: buttons_fold
 			})
+			// event click
 			button_fullscreen.addEventListener('click', function(e) {
 				e.stopPropagation()
+
 				ui.enter_fullscreen(self.node, ()=>{
 					event_manager.publish('full_screen_'+self.id, false)
 				})
@@ -1129,9 +1068,7 @@ export const activate_autocomplete = async function(self, wrapper) {
 
 			await self.autocomplete.build()
 			// render. Build_autocomplete_input nodes
-			const autocomplete_node = await self.autocomplete.render()
-			// removed attach to document 02-08-2023. see view_default_autocomplete.render()
-			// document.body.appendChild(autocomplete_node)
+			await self.autocomplete.render()
 			self.autocomplete_active = true
 			// focus
 			if (self.autocomplete.search_input) {
@@ -1214,8 +1151,6 @@ export const render_references = function(ar_references) {
 			button_link.addEventListener('click', function(e){
 				e.stopPropagation()
 
-				// window.location.href = DEDALO_CORE_URL + '/page/?tipo=' + reference.value.section_tipo + '&mode=edit&id='+ reference.value.section_id
-
 				const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 					tipo			: reference.value.section_tipo,
 					id				: reference.value.section_id,
@@ -1228,8 +1163,8 @@ export const render_references = function(ar_references) {
 					name	: 'record_view_' + reference.value.section_tipo +'_'+ reference.value.section_id
 				})
 			})
-		// label
-			const button_edit = ui.create_dom_element({
+		// button_edit label
+			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
 				inner_html		: reference.label,
