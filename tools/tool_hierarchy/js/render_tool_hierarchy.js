@@ -5,8 +5,7 @@
 
 
 // imports
-	import {event_manager} from '../../../core/common/js/event_manager.js'
-	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
+	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {pause} from '../../../core/common/js/utils/index.js'
 
@@ -81,6 +80,30 @@ const get_content_data = async function(self) {
 			parent 			: fragment
 		});
 
+	// active
+		// component instance_options
+		const active_instance_options = {
+			model			: 'component_radio_button',
+			mode			: 'edit',
+			tipo			: 'hierarchy4',
+			section_tipo	: self.caller.section_tipo,
+			section_id		: self.caller.section_id,
+			lang			: page_globals.dedalo_data_nolan,
+			id_variant		: self.name, // id_variant prevents id conflicts
+			caller			: self // set current tool as component caller (to check if component is inside tool or not)
+		}
+		// get instance and init
+		const active_component_instance = await get_instance(active_instance_options)
+		self.ar_instances.push(active_component_instance)
+		// build
+		await active_component_instance.build(true)
+		// show_interface
+		active_component_instance.show_interface.tools = false
+		active_component_instance.show_interface.button_add = false
+		// render
+		const active_component_node = await active_component_instance.render()
+		components_container.appendChild(active_component_node)
+
 	// real_section_tipo
 		// component instance_options
 		const real_st_instance_options = {
@@ -144,12 +167,20 @@ const get_content_data = async function(self) {
 				parent			: buttons_container
 			})
 			button_generate.addEventListener('click', async function(e){
-				e.stopPropagation()
+				e.stopPropagation();
 
 				// reset component error class
-					real_st_component_instance.node.classList.remove('error')
-					tld_component_instance.node.classList.remove('error')
-					messages_container.classList.remove('error')
+					// real_st_component_instance.node.classList.remove('error')
+					// tld_component_instance.node.classList.remove('error')
+					// active_component_instance.node.classList.remove('error')
+					// messages_container.classList.remove('error')
+					[
+						real_st_component_instance.node,
+						tld_component_instance.node,
+						active_component_instance.node,
+						messages_container
+					]
+					.map(el => el.classList.remove('error'))
 
 				let spinner
 				function set_loading( set ) {
@@ -182,6 +213,10 @@ const get_content_data = async function(self) {
 						tld_component_instance.node.classList.add('error')
 						return false
 					}
+					if (!active_component_instance.data.value || active_component_instance.data.value[0]?.section_id!=1) {
+						active_component_instance.node.classList.add('error')
+						return false
+					}
 
 				// confirm twice
 					if (!confirm(get_label.sure || 'Sure?')) {
@@ -191,6 +226,7 @@ const get_content_data = async function(self) {
 					await pause(1000)
 					const warning = self.get_tool_label('absolute_sure')
 					if (!confirm(warning)) {
+						content_data.classList.remove('loading')
 						return false
 					}
 
@@ -232,8 +268,6 @@ const get_content_data = async function(self) {
 					parent			: label_field_check_box
 				})
 
-
-
 	// messages_container
 		const messages_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -248,6 +282,7 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
 
 
 // @license-end

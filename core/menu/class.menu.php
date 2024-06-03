@@ -147,7 +147,7 @@ class menu extends common {
 								$tool_info = array_find($user_tools, function($el) use($tool_name) {
 									return $el->name===$tool_name;
 								});
-								if (empty($tool_info)) {
+								if (!is_object($tool_info)) {
 									debug_log(__METHOD__
 										." WARNING. Ignored area '$current_area->tipo'. No tool found for tool name '$tool_name' in current_area: ".to_string($current_area)
 										, logger::WARNING
@@ -297,6 +297,10 @@ class menu extends common {
 	*/
 	public function get_structure_context(int $permissions=1, bool $add_request_config=false) : dd_object {
 
+		if(SHOW_DEBUG===true) {
+			$start_time = start_time();
+		}
+
 		// short vars
 			$tipo	= $this->get_tipo();
 			$mode	= $this->get_mode();
@@ -336,6 +340,17 @@ class menu extends common {
 				'permissions'	=> $permissions,
 				'tools'			=> $tools
 			]);
+
+		// Debug
+			if(SHOW_DEBUG===true) {
+				$time = exec_time_unit($start_time,'ms');
+
+				$debug = new stdClass();
+					$debug->exec_time = $time.' ms';
+
+				$dd_object->debug = $debug;
+
+			}
 
 
 		return $dd_object;

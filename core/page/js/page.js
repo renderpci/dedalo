@@ -13,7 +13,6 @@
 	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		clone,
 		dd_console,
 		find_up_node,
 		url_vars_to_object,
@@ -66,359 +65,289 @@ page.prototype.init = async function(options) {
 
 	self.model			= 'page'
 	self.type			= 'page'
-	self.mode			= 'edit' // options.mode // mode like 'section', 'tool', 'thesaurus'...
+	self.mode			= 'edit' // mode like 'section', 'tool', 'thesaurus'...
 	self.node			= null
 	self.ar_instances	= []
 	self.context		= options.context // mixed items types like 'sections', 'tools'..
-	// self.dd_request	= self.context ? self.context.dd_request : []
 	self.status			= null
 	self.events_tokens	= []
 	self.menu_data		= options.menu_data
 
-	// update value, subscription to the changes: if the section or area was changed, observers DOM elements will be changed own value with the observable value
+	// events subscriptions
+		// event user_navigation. Menu navigation (not pagination)
+			const fn_user_navigation = async function(user_navigation_options) {
 
-	// user_navigation. Menu navigation (not pagination)
-		self.events_tokens.push(
-			event_manager.subscribe('user_navigation', fn_user_navigation)
-		)
-		// fn_user_navigation
-		async function fn_user_navigation(user_navigation_options) {
-			if(SHOW_DEVELOPER===true) {
-				dd_console(`// page user_navigation received user_navigation_options`, 'DEBUG', user_navigation_options)
-			}
+				// options
+					const source			= user_navigation_options.source
+					const sqo				= user_navigation_options.sqo || null
+					const event_in_history	= user_navigation_options.event_in_history ?? false
 
-			// options
-				const source			= user_navigation_options.source
-				const sqo				= user_navigation_options.sqo || null
-				const event_in_history	= user_navigation_options.event_in_history ?? false
-
-			// check_unsaved_data
-				const result = await check_unsaved_data({
-					confirm_msg : 'page: ' + (get_label.discard_changes || 'Discard unsaved changes?')
-				})
-				if (!result) {
-					// user selects 'cancel' in dialog confirm. Stop navigation
-					return false
-				}
-
-			// check valid vars
-				if (!source) {
-					console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
-					return false
-				}
-
-			// reset status to prevent errors lock
-				self.status = 'rendered'
-
-			// loading css add
-				const container = self.node
-					? self.node.content_data
-					: null
-					if (container) { container.classList.add('loading') }
-
-			// stream_readers. If any stream reader is active, stop it
-				if (page_globals.stream_readers && page_globals.stream_readers.length) {
-					page_globals.stream_readers.forEach((el)=>{
-						el.cancel('abort')
+				// check_unsaved_data
+					const result = await check_unsaved_data({
+						confirm_msg : 'page: ' + (get_label.discard_changes || 'Discard unsaved changes?')
 					})
-				}
+					if (!result) {
+						// user selects 'cancel' in dialog confirm. Stop navigation
+						return false
+					}
 
-			try {
+				// check valid vars
+					if (!source) {
+						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
+						return false
+					}
 
-				// do the work
-				return new Promise(async function(resolve){
+				// reset status to prevent errors lock
+					self.status = 'rendered'
 
-					// basic vars
-						// Only source is mandatory but if sqo is received, is placed in a new request_config
-						// to allow sections and components manage properly the offset and limit
-						if (!source.request_config && sqo) {
-							source.request_config = [{
-								api_engine	: 'dedalo',
-								type		: 'main',
-								sqo			: sqo
-							}]
-						}
-						// const context = source
+				// loading css add
+					const container = self.node
+						? self.node.content_data
+						: null
+						if (container) { container.classList.add('loading') }
 
-					// destroy previous page instances
-						// await self.ar_instances.map(async function(el){
-						// 	if (el.model!=='menu') {
-						// 		// console.log("destroying el:", el);
-						// 		await el.destroy(
-						// 			true, // delete_self
-						// 			true, // delete_dependencies
-						// 			true // remove_dom
-						// 		)
-						// 	}
-						// })
-
-					// new_page_element_instance. Like 'section'
-						const new_page_element_instance = await instantiate_page_element(
-							self, // object page instance
-							source // object source
-						)
-					// check valid element. Only checks if new source of page element is actually valid for instantiation
-					// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
-						if (!new_page_element_instance) {
-							console.error("error on get new_page_element_instance:", new_page_element_instance);
-							// loading css remove
-							if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
-							console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
-							return false
-						}else{
-							// remove instance from cache to prevent to use old request_config
-							await new_page_element_instance.destroy(
-								true, // delete_self
-								true, // delete_dependencies
-								true // remove_dom
-							)
-						}
-
-					// spinner
-						// const spinner = ui.create_dom_element({
-						// 	element_type	: 'div',
-						// 	class_name		: 'spinner',
-						// 	parent			: self.node[0]
-						// })
-						// // self.events_tokens.push(
-						// 	event_manager.subscribe('render_'+new_page_element_instance.id , fn_render_target)
-						// // )
-						// function fn_render_target() {
-						// 	spinner.remove()
-						// }
-
-					// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
-						const base_models				= ['menu']
-						const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
-						// add current source from options
-							context_elements_to_stay.push(source)
-						// fix new page clean context
-							self.context = context_elements_to_stay
-
-					// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
-						const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-						for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-							instances_to_stay[i].destroyable = false
-						}
-
-					// refresh page. Force to load new context elements data from DDBB
-						const refresh_result = await self.refresh({
-							build_autoload	: false,
-							render_level	: 'content'
+				// stream_readers. If any stream reader is active, stop it
+					if (page_globals.stream_readers && page_globals.stream_readers.length) {
+						page_globals.stream_readers.forEach((el)=>{
+							el.cancel('abort')
 						})
+					}
 
-					// reset page scroll
-						window.scrollTo(0, 0);
+				try {
 
-					// browser history track
-						if(refresh_result===true && event_in_history!==true) {
+					// do the work
+					return new Promise(async function(resolve){
 
-							// page tile
-								const title	= new_page_element_instance.id
+						// basic vars
+							// Only source is mandatory but if sqo is received, is placed in a new request_config
+							// to allow sections and components manage properly the offset and limit
+							if (!source.request_config && sqo) {
+								source.request_config = [{
+									api_engine	: 'dedalo',
+									type		: 'main',
+									sqo			: sqo
+								}]
+							}
 
-							// page url
-								const current_tipo = (source.config && source.config.source_section_tipo)
-									? source.config.source_section_tipo
-									: source.tipo
-								// const url_params	= Object.entries(options_url).map(([key, val]) => `${key}=${val}`).join('&');
-								// const url = "?tipo="+ current_tipo + '&m=' + source.mode
+						// new_page_element_instance. Like 'section'
+							const new_page_element_instance = await instantiate_page_element(
+								self, // object page instance
+								source // object source
+							)
+							// check valid element. Only checks if new source of page element is actually valid for instantiation
+							// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
+							if (!new_page_element_instance) {
+								console.error("error on get new_page_element_instance:", new_page_element_instance);
+								// loading css remove
+								if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
+								console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
+								return false
+							}else{
+								// remove instance from cache to prevent to use old request_config
+								await new_page_element_instance.destroy(
+									true, // delete_self
+									true, // delete_dependencies
+									true // remove_dom
+								)
+							}
 
-								// url search. Append section_id if exists
-									const current_url_vars = url_vars_to_object(location.search)
-									const url_vars = {} // url_vars_to_object(location.search)
-										  url_vars.tipo = current_tipo
-										  url_vars.mode = source.mode
-									if(source.mode==='list' && url_vars.id){
-										delete url_vars.id
-									}
-									// source.config.url_vars add if they exists
-									// used by menu thesaurus_view_mode
-									if (source.config?.url_vars) {
-										for (const property in source.config.url_vars) {
-											url_vars[property] = source.config.url_vars[property]
+						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
+							const base_models				= ['menu']
+							const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
+							// add current source from options
+								context_elements_to_stay.push(source)
+							// fix new page clean context
+								self.context = context_elements_to_stay
+
+						// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
+							const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+							for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+								instances_to_stay[i].destroyable = false
+							}
+
+						// refresh page. Force to load new context elements data from DDBB
+							const refresh_result = await self.refresh({
+								build_autoload	: false,
+								render_level	: 'content'
+							})
+
+						// reset page scroll
+							window.scrollTo(0, 0);
+
+						// browser history track
+							if(refresh_result===true && event_in_history!==true) {
+
+								// page tile
+									const title	= new_page_element_instance.id
+
+								// page url
+									const current_tipo = (source.config && source.config.source_section_tipo)
+										? source.config.source_section_tipo
+										: source.tipo
+									// url search. Append section_id if exists
+										const current_url_vars = url_vars_to_object(location.search)
+										const url_vars = {} // url_vars_to_object(location.search)
+											  url_vars.tipo = current_tipo
+											  url_vars.mode = source.mode
+										if(source.mode==='list' && url_vars.id){
+											delete url_vars.id
 										}
-									}
-									// preserve URL vars
-									const preserve_url_vars = [
-										'menu',
-										'session_save'
-									]
-									preserve_url_vars.forEach(name => {
-										if (typeof current_url_vars[name]!=='undefined') {
-											url_vars[name] = current_url_vars[name]
+										// source.config.url_vars add if they exists
+										// used by menu thesaurus_view_mode
+										if (source.config?.url_vars) {
+											for (const property in source.config.url_vars) {
+												url_vars[property] = source.config.url_vars[property]
+											}
 										}
+										// preserve URL vars
+										const preserve_url_vars = [
+											'menu',
+											'session_save'
+										]
+										preserve_url_vars.forEach(name => {
+											if (typeof current_url_vars[name]!=='undefined') {
+												url_vars[name] = current_url_vars[name]
+											}
+										})
+										const url = '?' + object_to_url_vars(url_vars)
+
+								// browser navigation update
+									push_browser_history({
+										source				: source,
+										sqo					: sqo,
+										event_in_history	: false,
+										title				: title,
+										url					: url
 									})
-									const url = '?' + object_to_url_vars(url_vars)
+							}
 
-							// browser navigation update
-								push_browser_history({
-									source				: source,
-									sqo					: sqo,
-									event_in_history	: false,
-									title				: title,
-									url					: url
+						// remove aux items
+							if (window.page_globals.service_autocomplete) {
+								window.page_globals.service_autocomplete.destroy(true, true, true)
+							}
+
+						// loading css remove
+							if (container) { container.classList.remove('loading') }
+
+						// clean previous locks of current user in current section
+							setTimeout(()=>{
+								data_manager.request({
+									use_worker	: true,
+									body		: {
+										dd_api	: 'dd_utils_api',
+										action	: 'update_lock_components_state',
+										options	: {
+											component_tipo	: null,
+											section_tipo	: source.section_tipo || source.tipo,
+											section_id		: null,
+											action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+										}
+									}
+								})
+								.then(function(api_response){
+									// dedalo_notification from config file
+									// update page_globals
+									page_globals.dedalo_notification = api_response.dedalo_notification || null
+									// dedalo_notification from config file
+									event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+								})
+							}, 0)
+
+						resolve(new_page_element_instance.id)
+					})
+
+				} catch (error) {
+					// loading css remove
+					if (container) {
+						container.classList.remove('loading')
+					}
+					console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
+					console.error(error)
+					return false
+				}
+			}//end fn_user_navigation
+			self.events_tokens.push(
+				event_manager.subscribe('user_navigation', fn_user_navigation)
+			)
+
+		// event activate_component
+			const fn_activate_component = function(component_instance) {
+
+				// lock_component. launch worker
+				if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
+					data_manager.request({
+						use_worker	: true,
+						body		: {
+							dd_api	: 'dd_utils_api',
+							action	: 'update_lock_components_state',
+							options	: {
+								component_tipo	: component_instance.tipo,
+								section_tipo	: component_instance.section_tipo,
+								section_id		: component_instance.section_id,
+								action			: 'focus' // delete_user_section_locks|blur|focus
+							}
+						}
+					})
+					.then(function(api_response){
+
+						if (api_response.in_use===true) {
+							document.activeElement.blur()
+
+							ui.component.deactivate(component_instance)
+
+							// clean previous locks of current user in current section
+								data_manager.request({
+									use_worker	: true,
+									body		: {
+										dd_api	: 'dd_utils_api',
+										action	: 'update_lock_components_state',
+										options	: {
+											component_tipo	: null,
+											section_tipo	: component_instance.section_tipo,
+											section_id		: null,
+											action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+										}
+									}
+								})
+
+							// show warning
+								ui.attach_to_modal({
+									header	: get_label.warning || 'Warning',
+									body	: api_response.msg,
+									size	: 'small'
 								})
 						}
 
-					// remove aux items
-						if (window.page_globals.service_autocomplete) {
-							window.page_globals.service_autocomplete.destroy(true, true, true)
-						}
+						// dedalo_notification from config file
+						// update page_globals
+						page_globals.dedalo_notification = api_response.dedalo_notification || null
+						// dedalo_notification from config file
+						event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+					})
+				}
+			}//end fn_activate_component
+			self.events_tokens.push(
+				event_manager.subscribe('activate_component', fn_activate_component)
+			)
 
-					// loading css remove
-						if (container) { container.classList.remove('loading') }
+		// event dedalo_notification
+			const fn_dedalo_notification = (data) => {
+				setTimeout(()=>{
+					render_notification_msg(self, data)
+				}, 0)
+			}//end fn_dedalo_notification
+			self.events_tokens.push(
+				event_manager.subscribe('dedalo_notification', fn_dedalo_notification)
+			)
 
-					// clean previous locks of current user in current section
-						setTimeout(()=>{
-							data_manager.request({
-								use_worker	: true,
-								body		: {
-									dd_api	: 'dd_utils_api',
-									action	: 'update_lock_components_state',
-									options	: {
-										component_tipo	: null,
-										section_tipo	: source.section_tipo || source.tipo,
-										section_id		: null,
-										action			: 'delete_user_section_locks' // delete_user_section_locks | blur | focus
-									}
-								}
-							})
-							.then(function(api_response){
-								// dedalo_notification from config file
-								// update page_globals
-								page_globals.dedalo_notification = api_response.dedalo_notification || null
-								// dedalo_notification from config file
-								event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-							})
-						}, 0)
-
-
-					resolve(new_page_element_instance.id)
-				})
-
-			} catch (error) {
-				// loading css remove
-				if (container) { container.classList.remove('loading') }
-				// spinner.remove()
-				console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
-				console.error(error)
-				return false
-			}
-		}//end fn_user_navigation
-
-	// activate_component
-		self.events_tokens.push(
-			event_manager.subscribe('activate_component', fn_activate_component)
-		)
-		// fn_activate_component
-		function fn_activate_component(component_instance) {
-			dd_console(`// page activate_component received component_instance`, 'DEBUG', component_instance)
-
-			// lock_component. launch worker
-			if (DEDALO_LOCK_COMPONENTS===true && component_instance.mode==='edit') {
-				data_manager.request({
-					use_worker	: true,
-					body		: {
-						dd_api	: 'dd_utils_api',
-						action	: 'update_lock_components_state',
-						options	: {
-							component_tipo	: component_instance.tipo,
-							section_tipo	: component_instance.section_tipo,
-							section_id		: component_instance.section_id,
-							action			: 'focus' // delete_user_section_locks | blur | focus
-						}
-					}
-				})
-				.then(function(api_response){
-
-					if (api_response.in_use===true) {
-						document.activeElement.blur()
-
-						ui.component.deactivate(component_instance)
-						// component_instance.node.classList.add('disabled_component')
-						// ui.component.lock(component_instance)
-
-						// clean previous locks of current user in current section
-							data_manager.request({
-								use_worker	: true,
-								body		: {
-									dd_api	: 'dd_utils_api',
-									action	: 'update_lock_components_state',
-									options	: {
-										component_tipo	: null,
-										section_tipo	: component_instance.section_tipo,
-										section_id		: null,
-										action			: 'delete_user_section_locks' // delete_user_section_locks | blur | focus
-									}
-								}
-							})
-
-						// show warning
-							ui.attach_to_modal({
-								header	: get_label.warning || 'Warning',
-								body	: api_response.msg,
-								size	: 'small'
-							})
-					}
-
-					// dedalo_notification from config file
-					// update page_globals
-					page_globals.dedalo_notification = api_response.dedalo_notification || null
-					// dedalo_notification from config file
-					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-				})
-			}
-		}//end fn_activate_component
-
-	// dedalo_notification
-		const fn_dedalo_notification = (data) => {
-			setTimeout(()=>{
-				render_notification_msg(self, data)
-			}, 0)
-		}
-		self.events_tokens.push(
-			event_manager.subscribe('dedalo_notification', fn_dedalo_notification)
-		)
-
-	// observe tool calls
-		// load_tool
-		// The event is fired by the tool button created with method ui.build_tool_button.
-		// When the user triggers the click event, a publish 'load_tool' is made
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('load_tool', load_tool) // fire tool_common.load_tool function
-			// )
-
-	// events. Add window/document general events
+	// events listeners. Add window/document general events
 		self.add_events()
 
 	// update main CSS url to avoid cache
-		update_css_file('main')
+		// update_css_file('main')
 
 	// status update
 		self.status = 'initialized'
-
-	// test
-		// elements_css.rsc75 = {
-		// 	children : {
-		// 		height : '150px',
-		// 		width : '100%'
-		// 	}
-		// }
-		// elements_css.oh1_rsc75 = {
-		//        ".wrap_component": {
-		//            "style": {
-		//            	"width": "12%",
-		//                "@media screen and (min-width: 900px)" : {
-		//             	"width": "50%"
-		//             }
-		//         }
-		// 	},
-		//        ".content_data": {
-		//            "style": {
-		//                "width": "3620px"
-		//            }
-		//        }
-		//    }
 
 
  	return true
