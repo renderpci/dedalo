@@ -435,11 +435,13 @@ class update {
 	* @return bool
 	*/
 	public static function components_update( string $model_name, array $update_version ) : bool {
-		# Existing db tables
-		# Gets array of all db tables
+
+		// Existing db tables
+		// Gets array of all db tables
 		$tables = (array)backup::get_tables();
 
-		$ar_section_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$ar_section_tipo	= RecordObj_dd::get_ar_terminoID_by_modelo_name('section');
+		$n_sections			= count($ar_section_tipo);
 		foreach ($ar_section_tipo as $current_section_tipo) {
 
 			debug_log(__METHOD__ . PHP_EOL
@@ -585,6 +587,10 @@ class update {
 					common::$pdata->memory = '';
 					common::$pdata->counter = 0;
 					common::$pdata->section_tipo = $current_section_tipo;
+					common::$pdata->section_n_rows = $n_rows;
+					common::$pdata->n_sections = $n_sections;
+					common::$pdata->current_table = $current_table;
+					common::$pdata->tables = $tables;
 				}
 
 			// Iterate database resource directly to minimize memory requirements on large arrays
@@ -708,7 +714,7 @@ class update {
 					}//end foreach($ar_component_tipo as $current_component_tipo)
 
 					if ($i===0) {
-						// wait for 15 milliseconds every 1000 records
+						// wait for 15 milliseconds every 3000 records
 						usleep(15000);
 						// Forces collection of any existing garbage cycles
 						gc_collect_cycles();
@@ -719,7 +725,7 @@ class update {
 						);
 					}
 					$i++;
-					if ($i>1000) {
+					if ($i>3000) {
 						$i = 0;
 					}
 				}//end while ($row = pg_fetch_assoc($result))
@@ -880,7 +886,7 @@ class update {
 				common::$pdata->counter = 0;
 			}
 
-		update::tables_rows_iterator($ar_tables, function($row, $table) use($called_class, $action) {
+		update::tables_rows_iterator($ar_tables, function($row, $table) use($called_class, $action, $ar_tables) {
 
 			$id				= $row['id'];
 			$section_id		= $row['section_id'];
@@ -900,6 +906,7 @@ class update {
 					common::$pdata->table = $table;
 					common::$pdata->section_tipo = $section_tipo;
 					common::$pdata->counter++;
+					common::$pdata->ar_tables = $ar_tables;
 					// send to output
 					print_cli(common::$pdata);
 				}
@@ -1060,7 +1067,6 @@ class update {
 
 		return true;
 	}//end tables_rows_iterator
-
 
 
 
