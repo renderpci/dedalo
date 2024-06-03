@@ -892,23 +892,7 @@ class search {
 					if (count($this->ar_section_tipo)>1) {
 						$sql_query = $this->build_union_query($sql_query);
 					}
-				// final count query
-					// duplicates
-					if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-						$sql_query = 'SELECT COUNT(*) as full_count';
-						$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-						$sql_query .= PHP_EOL . 'WHERE ( SELECT  count(*)';
-						$sql_query .= PHP_EOL . 'FROM '.$main_from_sql.'_dup';
-						$sql_query .= PHP_EOL . 'WHERE ' . $main_where_sql;
-						if (!empty($sql_filter)) {
-							$sql_query .= $sql_filter;
-						}
-						$sql_query .= PHP_EOL . ') > 1 ';
-						$sql_query .= PHP_EOL . ' AND ' . $main_where_sql;
-					}else{
-						// without duplicates
-						$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
-					}
+					$sql_query = 'SELECT COUNT(*) as full_count FROM (' . PHP_EOL . $sql_query . PHP_EOL. ') x';
 
 					if(SHOW_DEBUG===true) {
 						$sql_query = '-- Only for count '. $this->matrix_table . PHP_EOL . $sql_query;
@@ -955,14 +939,10 @@ class search {
 							$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
 							// from where
 								$sql_query .= PHP_EOL . 'WHERE ';
-								if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-									$sql_query .= ' ( SELECT  count(*)';
-									$sql_query .= PHP_EOL . 'FROM '.$main_from_sql.'_dup';
-								}else{
-									$sql_query .= $this->main_section_tipo_alias.'.id in (';
-									$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id,'.$this->main_section_tipo_alias.'.section_tipo) '.$this->main_section_tipo_alias.'.id ';
-									$sql_query .= 'FROM '.$main_from_sql;
-								}
+								$sql_query .= $this->main_section_tipo_alias.'.id in (';
+								$sql_query .= PHP_EOL . 'SELECT DISTINCT ON('.$this->main_section_tipo_alias.'.section_id,'.$this->main_section_tipo_alias.'.section_tipo) '.$this->main_section_tipo_alias.'.id ';
+								$sql_query .= 'FROM '.$main_from_sql;
+
 								// join virtual tables
 									$sql_query .= $sql_joins;
 								// join filter projects
@@ -1015,23 +995,18 @@ class search {
 								$sql_query .= $limit_query;
 							}
 						// offset
-							if(!isset($this->search_query_object->duplicated) || $this->search_query_object->duplicated!==true){
-								$offset_query = '';
-								if ($this->search_query_object->offset>0) {
-									$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
-									$sql_query .= $offset_query;
-								}
+							$offset_query = '';
+							if ($this->search_query_object->offset>0) {
+								$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
+								$sql_query .= $offset_query;
 							}
+
 
 						// sub select (window) close
 							if($this->allow_sub_select_by_id===true) {
 								$sql_query .= PHP_EOL . ') ';
 							}
-						// if sub select is used for duplicates
-							if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-								$sql_query .= ' > 1 '; // get only the rows with more than 1
-								$sql_query .= PHP_EOL . ' AND ' . $main_where_sql;
-							}
+
 						// multi section union case
 							if (count($this->ar_section_tipo)>1) {
 								$sql_query = $this->build_union_query($sql_query);
@@ -1039,16 +1014,8 @@ class search {
 						// order/limit general for sub query
 							$sql_query .= PHP_EOL . 'ORDER BY ' . str_replace('mix.', '', $sql_query_order);
 
-						// if sub select is used for duplicates
-							if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-								$offset_query = '';
-								if ($this->search_query_object->offset>0) {
-									$offset_query = PHP_EOL . 'OFFSET ' . $sql_offset;
-									$sql_query .= $offset_query;
-								}
-							}
 							if ($this->search_query_object->limit>0) {
-							$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
+								$sql_query .= PHP_EOL . 'LIMIT ' . $sql_limit;
 							}
 
 				// disallow window selector
@@ -1135,17 +1102,12 @@ class search {
 
 				// query_inside
 					$query_inside = '';
-					if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-						$query_inside .= PHP_EOL . 'WHERE ( SELECT  count(*)';
-						$query_inside .= PHP_EOL . 'FROM '.$main_from_sql.'_dup';
-					}else{
-						// select
-						$query_inside .= 'SELECT ' . $sql_query_select;
-						// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
-						// from
-						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
-					}
 
+					// select
+						$query_inside .= 'SELECT ' . $sql_query_select;
+					// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
+					// from
+						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
 					// join virtual tables
 						$query_inside .= $sql_joins;
 					// where
@@ -1171,29 +1133,11 @@ class search {
 						}
 
 				// query wrap
-					// duplicated with order
-					if(isset($this->search_query_object->duplicated) && $this->search_query_object->duplicated===true){
-						$sql_query = 'SELECT * FROM (' ;
-							$sql_query .= 'SELECT ' . $sql_query_select;
-							$sql_query .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
-							$sql_query .= PHP_EOL . 'FROM ' . $main_from_sql;
-								$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-							$sql_query .= PHP_EOL . ') > 1 ';
-							$sql_query .= PHP_EOL . ' AND ' . $main_where_sql;
-							$sql_query .= $order_query;
-							if ($sql_limit>0) {
-								$limit_query = PHP_EOL . 'LIMIT ' . $sql_limit;
-								$sql_query .= $limit_query;
-							}
-						$sql_query .= ') main_select';
-					}else{
-						// without duplicates
-						$query_inside .= $order_query;
+					$query_inside .= $order_query;
 
-						$sql_query .= 'SELECT * FROM (';
-						$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
-						$sql_query .= ') main_select';
-					}
+					$sql_query .= 'SELECT * FROM (';
+					$sql_query .= PHP_EOL . $query_inside. PHP_EOL;
+					$sql_query .= ') main_select';
 					// order
 						if(isset($this->sql_query_order_custom)) {
 							$sql_query .= PHP_EOL . $this->sql_query_order_custom;
@@ -2370,34 +2314,53 @@ class search {
 						$sql_where .= "-- DIRECT FORMAT - table_alias:$table_alias - $component_tipo - $component_name - $component_path - ".strtoupper($model_name)."\n";
 					}
 
+					$json_sql_component_path = "";
+
 					if($search_object_unaccent===true) {
-						$sql_where .= 'f_unaccent(';
+						$json_sql_component_path .= 'f_unaccent(';
 					}
 
-					$sql_where .= $table_alias . '.datos';
+					$json_sql_component_path .= $table_alias . '.datos';
 
-					$sql_where .= ($search_object_type==='string')
+					$json_sql_component_path .= ($search_object_type==='string')
 						? '#>>'
 						: '#>';
 
 					# json path
-					$sql_where .= '\'{' . $component_path . '}\'';
+					$json_sql_component_path .= '\'{' . $component_path . '}\'';
 
 					if($search_object_unaccent===true) {
+						$json_sql_component_path .= ')';
+					}
+					// create a search duplicated
+					// create a column with all duplicated records and check if the component is inside the column
+					// if the record is in the column return it.
+					// the window will us the id as other where clauses.
+					if($search_object_duplicated===true){
+						// get the main from and main where
+						$main_from_sql	= $this->build_main_from_sql();
+						$main_where_sql	= $this->build_main_where_sql();
+
+						$sql_where .= '(';
+							$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
+							$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
+							$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
+							$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
+							$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
+							$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
+							$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
 						$sql_where .= ')';
+						break;
 					}
 
 					# operator
-					$sql_where .= ' '.$search_object->operator.' ';
+					$json_sql_component_path .= ' '.$search_object->operator.' ';
 
 					if($search_object_unaccent===true) {
-						$sql_where .= 'f_unaccent(';
+						$json_sql_component_path .= 'f_unaccent(';
 					}
 
-					if($search_object_duplicated===true){
-						$sql_where .= $table_alias . '_dup.datos#>>\'{' . $component_path . '}\'';
-						break;
-					}
+					$sql_where .= $json_sql_component_path;
 
 					// q. Escape parenthesis inside regex
 					$q_parsed_clean = ($search_object_type==='string')
