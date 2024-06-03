@@ -499,22 +499,45 @@ class area_thesaurus extends area_common {
 				$section_tipo	= $row->section_tipo;
 				$section_id		= $row->section_id;
 
-				$ar_parents = component_relation_parent::get_parents_recursive(
-					$section_id,
-					$section_tipo,
-					(object)[
-						'skip_root'						=> false,
-						'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo,
-						'search_in_main_hierarchy'		=> true
-					]
-				);
+				// properties children_search check (case rsc197 persons)
+					$RecordObj_dd		= new RecordObj_dd($section_tipo);
+					$section_properties	= $RecordObj_dd->get_properties();
 
-				$locator = new locator();
-					$locator->set_section_tipo($section_tipo);
-					$locator->set_section_id($section_id);
+					switch (true) {
+						case (!empty($section_properties) && isset($section_properties->children_search)):
 
-				$ar_path   = array_reverse($ar_parents);
-				$ar_path[] = $locator; // add self at end
+							// defined section properties 'children_search' case
+
+							$ar_path = [];
+
+							// root locator
+							$root_locator	= self::get_root_locator($section_tipo);
+							$ar_path[]		= $root_locator;
+							break;
+
+						default:
+
+							// default case
+
+							$ar_parents = component_relation_parent::get_parents_recursive(
+								$section_id,
+								$section_tipo,
+								(object)[
+									'skip_root'						=> false,
+									'hierarchy_from_component_tipo'	=> $hierarchy_from_component_tipo,
+									'search_in_main_hierarchy'		=> true
+								]
+							);
+							// add
+							$ar_path = array_reverse($ar_parents);
+							break;
+					}//end switch (true)
+
+				// add self at end
+					$locator = new locator();
+						$locator->set_section_tipo($section_tipo);
+						$locator->set_section_id($section_id);
+					$ar_path[] = $locator;
 
 				$ar_path_mix[] = $ar_path;
 			}
@@ -542,6 +565,37 @@ class area_thesaurus extends area_common {
 
 		return $response;
 	}//end search_thesaurus
+
+
+
+	/**
+	* GET_ROOT_LOCATOR
+	* Builds a root locator from section_tipo
+	* searching hierarchy with target section tipo match
+	* and return a standard locator
+	* @param string $section_tipo
+	* @return object locator $root_locator
+	*/
+	public static function get_root_locator(string $section_tipo) : locator {
+
+		static $hierarchy_section_id = [];
+
+		// root locator. Calculate once from current section_tipo
+		if (!isset($hierarchy_section_id[$section_tipo])) {
+			$hierarchy_section_id[$section_tipo] = hierarchy::get_hierarchy_section(
+				$section_tipo,
+				DEDALO_HIERARCHY_TARGET_SECTION_TIPO
+			);
+		}
+
+		// root_locator
+		$root_locator = new locator();
+			$root_locator->section_tipo	= DEDALO_HIERARCHY_SECTION_TIPO; // 'hierarchy1'
+			$root_locator->section_id	= $hierarchy_section_id[$section_tipo];
+
+
+		return $root_locator;
+	}//end get_root_locator
 
 
 
