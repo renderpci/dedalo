@@ -132,6 +132,25 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, self, current_ipo) => {
 
+	console.log('data:', data);
+
+	// data
+		const data_id	= data.id
+		// {
+		// 	"id": "id",
+		// 	"key": 0,
+		// 	"value": "13",
+		// 	"widget": "media_icons",
+		// 	"locator": {
+		// 		"type": "dd151",
+		// 		"section_id": "13",
+		// 		"section_tipo": "rsc167",
+		// 		"from_component_tipo": "oh25"
+		// 	}
+		// }
+		const locator	= data_id.locator
+		const value		= data_id.value
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
@@ -139,7 +158,6 @@ const get_value_element = (i, data, self, current_ipo) => {
 		})
 
 	// column_id
-		const data_id = data.id // find(item => item.id==='id')
 		const column_id_value = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'value id link',
@@ -148,28 +166,24 @@ const get_value_element = (i, data, self, current_ipo) => {
 		})
 		column_id_value.addEventListener('click', e => {
 			e.stopPropagation();
-			// event_manager
-				// event_manager.publish('user_navigation', {
-				// 	source : {
-				// 		tipo		: data_id.locator.section_tipo,
-				// 		section_id	: data_id.locator.section_id,
-				// 		model		: 'section',
-				// 		mode		: 'edit'
-				// 	}
-				// })
+
 			// open a new window
-				const url_vars = {
-					tipo			: data_id.locator.section_tipo,
-					section_tipo	: data_id.locator.section_id,
-					id				: data_id.locator.section_id,
+				const width		= window.screen.width < 1350 ? window.screen.width : 1350;
+				const height	= window.screen.height < 1024 ? window.screen.height : 1024;
+				const url		= DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+					tipo			: locator.section_tipo,
+					section_tipo	: locator.section_id,
+					id				: locator.section_id,
 					mode			: 'edit',
+					session_save	: false, // prevent to overwrite current section session
 					menu			: false
-				}
-				const width				= window.screen.width < 1350 ? window.screen.width : 1350;
-				const height			= window.screen.height < 1024 ? window.screen.height : 1024;
-				const url				= DEDALO_CORE_URL + '/page/?' + object_to_url_vars(url_vars)
-				const current_window	= window.open(url, 'record_viewer', `width=${width},height=${height}`)
-				current_window.focus()
+				})
+				open_window({
+					url		: url,
+					target	: 'record_viewer',
+					width	: width,
+					height	: height
+				})
 		})
 
 	// icon media

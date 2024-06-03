@@ -49,12 +49,20 @@ final class dd_ts_api {
 			$options				= $rqo->options;
 			$pagination				= $options->pagination ?? null;
 			$thesaurus_view_mode	= $options->thesaurus_view_mode ?? 'default'; // string thesaurus_view_mode. Values: model|default
+			$target_section_tipo	= $source->target_section_tipo;
 
+		// ts_object_options. thesaurus_view_mode
+			$ts_object_options = new stdClass();
+				$ts_object_options->model = $thesaurus_view_mode==='model'
+					? true
+					: false; // get from URL as thesaurus_view_mode=model
 
 		// target_section_properties check
-			$RecordObj_dd				= new RecordObj_dd($section_tipo);
+			$RecordObj_dd				= new RecordObj_dd($target_section_tipo);
 			$target_section_properties	= $RecordObj_dd->get_properties(true);
 
+		// limit
+			$default_limit = 10;
 
 		// children
 			if($node_type==='hierarchy_node') {
@@ -68,7 +76,7 @@ final class dd_ts_api {
 
 				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
 				// options add to use as exception in check children
-					$options->have_children = true;
+					$ts_object_options->have_children = true;
 				}
 
 			}else{
@@ -77,24 +85,25 @@ final class dd_ts_api {
 
 				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
 
-					// sqo. children_search
-					$sqo = $target_section_properties->children_search->sqo;
-
 					// pagination. Set default if is not defined
 						$current_pagination = !empty($pagination)
 							? $pagination
 							: (object)[
-								'limit'		=> 100,
-								'offset'	=> 0
+								'limit'		=> $default_limit,
+								'offset'	=> 0,
+								'total'		=> null
 							];
 
-					// add pagination
-					$sqo->limit		= $current_pagination->limit;
-					$sqo->offset	= $current_pagination->offset;
+					// sqo. children_search
+						$sqo = $target_section_properties->children_search->sqo;
+						// add pagination
+						$sqo->limit		= $current_pagination->limit;
+						$sqo->offset	= $current_pagination->offset;
 
-					$section_search	= new search($sqo);
-					$rows_data		= $section_search->search();
-
+					$section_search	= search::get_instance(
+						$sqo, // object sqo
+					);
+					$rows_data = $section_search->search();
 					$children = array_map(function($item){
 
 						$locator = new stdClass();
@@ -102,9 +111,16 @@ final class dd_ts_api {
 							$locator->section_id	= $item->section_id;
 
 						return $locator;
+					}, $rows_data->ar_records);
 
-					},$rows_data->ar_records);
-
+					// count
+					if (!isset($current_pagination->total)) {
+						$section_search	= search::get_instance(
+							$target_section_properties->children_search->sqo, // basic SQO as {section_tipo:["rsc97"]}
+						);
+						$result = $section_search->count();
+						$current_pagination->total = $result->total;
+					}
 
 				}else{
 
@@ -127,7 +143,7 @@ final class dd_ts_api {
 						$current_pagination = !empty($pagination)
 							? $pagination
 							: (object)[
-								'limit'		=> 100,
+								'limit'		=> $default_limit,
 								'offset'	=> 0,
 								'total'		=> (is_array($dato) ? count($dato) : 0)
 							];
@@ -139,12 +155,6 @@ final class dd_ts_api {
 				}
 			}
 
-		// thesaurus_view_mode
-			$options = new stdClass();
-			$options->model = $thesaurus_view_mode==='model'
-				? true
-				: false; // get from URL as thesaurus_view_mode=model
-
 		try {
 
 			$children_data = array();
@@ -153,13 +163,10 @@ final class dd_ts_api {
 				$section_id		= $locator->section_id;
 				$section_tipo	= $locator->section_tipo;
 
-				$ts_object		= new ts_object( $section_id, $section_tipo, $options );
+				$ts_object		= new ts_object( $section_id, $section_tipo, $ts_object_options );
 				$child_object	= $ts_object->get_child_data();
 
-				# Add only descriptors
-				#if ($child_object->is_descriptor===true) {
-					$children_data[] = $child_object;
-				#}
+				$children_data[] = $child_object;
 			}
 
 			// response
