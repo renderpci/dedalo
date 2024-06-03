@@ -37,7 +37,7 @@
 	// root paths
 		define('DEDALO_ROOT_PATH',	dirname(dirname(__FILE__)));
 		define('DEDALO_ROOT_WEB',	php_sapi_name()==='cli'
-			? ''
+			? '/dedalo'
 			: '/' . explode('/', $_SERVER["REQUEST_URI"])[1]
 		);
 
