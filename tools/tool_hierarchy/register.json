@@ -75,13 +75,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057517946,
+              "day": 3,
+              "hour": 13,
+              "time": 65066591153,
               "year": 2024,
-              "month": 2,
-              "minute": 45,
-              "second": 46
+              "month": 6,
+              "minute": 5,
+              "second": 53
             }
           }
         ]
@@ -192,14 +192,54 @@
         "lg-nolan": [
           [
             {
-              "lang": "lg-spa",
+              "lang": "lg-deu",
+              "name": "generate",
+              "value": "Abzug"
+            },
+            {
+              "lang": "lg-cat",
               "name": "user_info",
-              "value": "Esta acción genera una nueva Ontología basada en la de referencia."
+              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
+            },
+            {
+              "lang": "lg-vlca",
+              "name": "user_info",
+              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
             },
             {
               "lang": "lg-eng",
+              "name": "absolute_sure",
+              "value": "Are you absolutely sure?"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "absolute_sure",
+              "value": "Bist du dir absolut sicher?"
+            },
+            {
+              "lang": "lg-fra",
               "name": "user_info",
-              "value": "This action generates a new Ontology based on the reference one."
+              "value": "Cette action génère une nouvelle ontologie basée sur celle de référence."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "user_info",
+              "value": "Diese Aktion generiert eine neue Ontologie basierend auf der Referenz-Ontologie."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "user_info",
+              "value": "Ekintza honek erreferentziazko Ontologia berri bat sortzen du."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "absolute_sure",
+              "value": "Erabat ziur al zaude?"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "user_info",
+              "value": "Esta acción genera una nueva Ontología basada en la de referencia."
             },
             {
               "lang": "lg-por",
@@ -208,43 +248,13 @@
             },
             {
               "lang": "lg-cat",
-              "name": "user_info",
-              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
+              "name": "absolute_sure",
+              "value": "Està absolutament segur?"
             },
             {
               "lang": "lg-vlca",
-              "name": "user_info",
-              "value": "Aquesta acció genera una nova Ontologia basada en la de referència."
-            },
-            {
-              "lang": "lg-eus",
-              "name": "user_info",
-              "value": "Ekintza honek erreferentziazko Ontologia berri bat sortzen du."
-            },
-            {
-              "lang": "lg-fra",
-              "name": "user_info",
-              "value": "Cette action génère une nouvelle ontologie basée sur celle de référence."
-            },
-            {
-              "lang": "lg-ita",
-              "name": "user_info",
-              "value": "Questa azione genera una nuova Ontologia basata su quella di riferimento."
-            },
-            {
-              "lang": "lg-ara",
-              "name": "user_info",
-              "value": ""
-            },
-            {
-              "lang": "lg-ell",
-              "name": "user_info",
-              "value": "Αυτή η ενέργεια δημιουργεί μια νέα Οντολογία που βασίζεται στην αναφορά."
-            },
-            {
-              "lang": "lg-deu",
-              "name": "user_info",
-              "value": "Diese Aktion generiert eine neue Ontologie basierend auf der Referenz-Ontologie."
+              "name": "absolute_sure",
+              "value": "Està absolutament segur?"
             },
             {
               "lang": "lg-spa",
@@ -257,29 +267,9 @@
               "value": "Generar"
             },
             {
-              "lang": "lg-deu",
-              "name": "generate",
-              "value": "Abzug"
-            },
-            {
-              "lang": "lg-ell",
-              "name": "generate",
-              "value": "Δώσει το έναυσμα για"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "generate",
-              "value": "Grilletto"
-            },
-            {
               "lang": "lg-vlca",
               "name": "generate",
               "value": "Generar"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "generate",
-              "value": "Trigger"
             },
             {
               "lang": "lg-eng",
@@ -292,49 +282,19 @@
               "value": "Gerar"
             },
             {
+              "lang": "lg-ita",
+              "name": "generate",
+              "value": "Grilletto"
+            },
+            {
               "lang": "lg-fra",
               "name": "generate",
               "value": "Générer"
             },
             {
-              "lang": "lg-ara",
-              "name": "generate",
-              "value": ""
-            },
-            {
-              "lang": "lg-spa",
-              "name": "absolute_sure",
-              "value": "¿Está absolutamente seguro?"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "absolute_sure",
-              "value": "Està absolutament segur?"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "absolute_sure",
-              "value": "Êtes-vous absolument sûr?"
-            },
-            {
-              "lang": "lg-por",
-              "name": "absolute_sure",
-              "value": "Você tem certeza absoluta?"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "absolute_sure",
-              "value": "Are you absolutely sure?"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "absolute_sure",
-              "value": "Erabat ziur al zaude?"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "absolute_sure",
-              "value": "Està absolutament segur?"
+              "lang": "lg-ita",
+              "name": "user_info",
+              "value": "Questa azione genera una nuova Ontologia basata su quella di riferimento."
             },
             {
               "lang": "lg-ita",
@@ -342,19 +302,44 @@
               "value": "Sei assolutamente sicuro?"
             },
             {
+              "lang": "lg-eng",
+              "name": "user_info",
+              "value": "This action generates a new Ontology based on the reference one."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "generate",
+              "value": "Trigger"
+            },
+            {
+              "lang": "lg-por",
+              "name": "absolute_sure",
+              "value": "Você tem certeza absoluta?"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "absolute_sure",
+              "value": "¿Está absolutamente seguro?"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "absolute_sure",
+              "value": "Êtes-vous absolument sûr?"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "user_info",
+              "value": "Αυτή η ενέργεια δημιουργεί μια νέα Οντολογία που βασίζεται στην αναφορά."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "generate",
+              "value": "Δώσει το έναυσμα για"
+            },
+            {
               "lang": "lg-ell",
               "name": "absolute_sure",
               "value": "Είσαι απολύτως σίγουρος;"
-            },
-            {
-              "lang": "lg-deu",
-              "name": "absolute_sure",
-              "value": "Bist du dir absolut sicher?"
-            },
-            {
-              "lang": "lg-nep",
-              "name": "user_info",
-              "value": "यो कार्यले सन्दर्भमा आधारित नयाँ ओन्टोलजी उत्पन्न गर्दछ।"
             },
             {
               "lang": "lg-nep",
@@ -365,6 +350,61 @@
               "lang": "lg-nep",
               "name": "absolute_sure",
               "value": "के तपाई पक्कै पक्का हुनुहुन्छ?"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "user_info",
+              "value": "यो कार्यले सन्दर्भमा आधारित नयाँ ओन्टोलजी उत्पन्न गर्दछ।"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "force_to_create",
+              "value": "Forzar a crear"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "force_to_create",
+              "value": "Force to create"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "force_to_create",
+              "value": "Forçar a crear"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "force_to_create",
+              "value": "Sortzera behartu"
+            },
+            {
+              "lang": "lg-por",
+              "name": "force_to_create",
+              "value": "Força para criar"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "force_to_create",
+              "value": "Force à créer"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "force_to_create",
+              "value": "Forza per creare"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "force_to_create",
+              "value": "Δύναμη δημιουργίας"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "force_to_create",
+              "value": "Δύναμη δημιουργίας"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "force_to_create",
+              "value": "सिर्जना गर्न बाध्य पार्नुहोस्"
             }
           ]
         ]
@@ -382,7 +422,7 @@
   "section_id": 15,
   "created_date": "2023-03-16 16:43:35",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:45:46",
+  "modified_date": "2024-06-03 13:05:53",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
