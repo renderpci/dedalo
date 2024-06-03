@@ -266,7 +266,6 @@ final class dd_core_api {
 										$tool_config	= $properties->tool_config->{$tool_name} ?? false;
 										$tool_context	= tool_common::create_tool_simple_context($tool_info, $tool_config);
 										$config->tool_context = $tool_context;
-										// dump($current_area->config, ' ++++++++++++++++++++++++++++++++++++++ current_area->config ++ '.to_string($section_tool_tipo));
 									}
 								}
 							// (!) note non break switch here. It will continue with section normally.
@@ -274,17 +273,26 @@ final class dd_core_api {
 
 						case ($model==='section'):
 
-							$section = section::get_instance($section_id, $tipo, $mode);
-							$section->set_lang(DEDALO_DATA_LANG);
-							// set view
-							if (!empty($view)) {
-								$section->set_view($view);
-							}
-
-							$current_context = $section->get_structure_context(
-								1, // permissions
-								true // add_request_config
+							$section = section::get_instance(
+								$section_id,
+								$tipo,
+								$mode
 							);
+							$section->set_lang(DEDALO_DATA_LANG);
+
+							// set view
+								if (!empty($view)) {
+									$section->set_view($view);
+								}
+
+							// structure_context
+							// Using 'get_structure_context_simple' instead 'get_structure_context'
+							// skips the calculation of tools and buttons that are not needed in the current step
+								$current_context = $section->get_structure_context_simple(
+									1, // permissions
+									false // add_request_config
+								);
+
 							// section_tool config
 							// the config is used by section_tool to set the tool to open, if is set, inject the config into the context.
 								if (isset($config)) {
@@ -348,8 +356,13 @@ final class dd_core_api {
 									$area->set_view($view);
 								}
 
-							// add to page context
-								$current_context = $area->get_structure_context(1, true);
+							// structure_context
+							// Using 'get_structure_context_simple' instead 'get_structure_context'
+							// skips the calculation of tools and buttons that are not needed in the current step
+								$current_context = $area->get_structure_context_simple(
+									1, // permissions
+									false // add_request_config
+								);
 
 							// set properties with received vars
 								if (isset($search_obj->thesaurus_mode)) {
@@ -387,14 +400,16 @@ final class dd_core_api {
 									$section_id		= $tool_found->section_id;
 
 									$element = new $model($section_id, $section_tipo);
-									// element JSON
-									$get_json_options = new stdClass();
-										$get_json_options->get_context	= true;
-										$get_json_options->get_data		= false;
-									$element_json = $element->get_json($get_json_options);
 
-									// context add
-									$context[] = $element_json->context[0];
+									// structure_context
+									// Using 'get_structure_context_simple' instead 'get_structure_context'
+									// skips the calculation of tools and buttons that are not needed in the current step
+										$current_context = $element->get_structure_context_simple(
+											1, // permissions
+											false // add_request_config
+										);
+									// add to page context
+										$context[] = $current_context;
 								}
 							break;
 
@@ -408,7 +423,13 @@ final class dd_core_api {
 									$area->set_view($view);
 								}
 
-							$current_context = $area->get_structure_context(1, true);
+							// structure_context
+							// Using 'get_structure_context_simple' instead 'get_structure_context'
+							// skips the calculation of tools and buttons that are not needed in the current step
+								$current_context = $area->get_structure_context_simple(
+									1, // permissions
+									false // add_request_config
+								);
 
 							// add to page context
 								$context[] = $current_context;
@@ -424,7 +445,7 @@ final class dd_core_api {
 								$element = component_common::get_instance(
 									$model,
 									$tipo,
-									$section_id,
+									null, // do not use section_id here because force unneeded load dato
 									$mode,
 									$component_lang,
 									$section_tipo
@@ -435,11 +456,13 @@ final class dd_core_api {
 									$element->set_view($view);
 								}
 
-							// element JSON
-								$get_json_options = new stdClass();
-									$get_json_options->get_context	= true;
-									$get_json_options->get_data		= false;
-								$element_json = $element->get_json($get_json_options);
+							// structure_context
+							// Using 'get_structure_context_simple' instead 'get_structure_context'
+							// skips the calculation of tools and buttons that are not needed in the current step
+								$current_context = $element->get_structure_context_simple(
+									1, // permissions
+									false // add_request_config
+								);
 
 							// add section_id
 								$current_context->section_id = $section_id;
@@ -449,19 +472,8 @@ final class dd_core_api {
 									$current_context->view = $view;
 								}
 
-							// test minimal context
-								// $component_context = (object)[
-								// 	'typo'			=> 'source',
-								// 	'model'			=> $model,
-								// 	'tipo'			=> $tipo,
-								// 	'section_tipo'	=> $section_tipo,
-								// 	'section_id'	=> $section_id,
-								// 	'mode'			=> $mode,
-								// 	'lang'			=> $component_lang
-								// ];
-
 							// context add
-								$context[] = $component_context;
+								$context[] = $current_context;
 							break;
 
 						default:
