@@ -197,7 +197,9 @@ const get_content_data = async function(self) {
 				set_loading(true)
 				await pause(3000)
 
-				self.generate_virtual_section()
+				self.generate_virtual_section({
+					force_to_create : check_force_to_create.checked
+				})
 				.then(function(api_response){
 
 					// user messages
@@ -215,6 +217,22 @@ const get_content_data = async function(self) {
 					set_loading(false)
 				})
 			})//end button_generate.addEventListener('click'
+
+		// check box force to create
+
+			const label_field_check_box = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'checkbox-label',
+					inner_html		: self.get_tool_label('force_to_create') || 'Force to create',
+					parent			: buttons_container
+				})
+				const check_force_to_create = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox',
+					parent			: label_field_check_box
+				})
+
+
 
 	// messages_container
 		const messages_container = ui.create_dom_element({

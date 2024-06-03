@@ -22,8 +22,17 @@ class tool_hierarchy extends tool_common {
 			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// options
-			$section_id		= $options->section_id;
-			$section_tipo	= $options->section_tipo;
+			$section_id			= $options->section_id;
+			$section_tipo		= $options->section_tipo;
+			$force_to_create	= $options->force_to_create;
+
+		// check if is necessary to delete the previous ontology terms before added new ones
+			if($force_to_create===true){
+				$delete_response = hierarchy::delete_virtual_section((object)[
+					'section_id'	=> $section_id,
+					'section_tipo'	=> $section_tipo
+				]);
+			}
 
 		// create a new virtual section from real
 			$hierarchy_response = hierarchy::generate_virtual_section((object)[

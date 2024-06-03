@@ -129,9 +129,11 @@ tool_hierarchy.prototype.build = async function(autoload=false) {
 * Call the API to generate a new Ontology
 * @return promise response
 */
-tool_hierarchy.prototype.generate_virtual_section = async function() {
+tool_hierarchy.prototype.generate_virtual_section = async function(options) {
 
 	const self = this
+
+	const force_to_create = options.force_to_create || false
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -144,7 +146,8 @@ tool_hierarchy.prototype.generate_virtual_section = async function() {
 			source	: source,
 			options	: {
 				section_id		: self.caller.section_id,
-				section_tipo	: self.caller.section_tipo
+				section_tipo	: self.caller.section_tipo,
+				force_to_create : force_to_create
 			}
 		}
 
