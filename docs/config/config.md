@@ -2128,10 +2128,24 @@ define('DEDALO_PDF_THUMB_DEFAULT', 'thumb');
 
 PDF_AUTOMATIC_TRANSCRIPTION_ENGINE `string`
 
-This parameter defines the path to the library, normally xpdf (pdftotext), to be used for process the pdf to extract the information, this library will be used get the text fo the pdf files and store in the component_text_area. The text will be use to search inside the pdf information.
+This parameter defines the path to the library, usually [xpdf](http://www.xpdfreader.com/download.html) (pdftotext), to be used for process the pdf to extract the information, this library will be used get the text fo the pdf files and store in the component_text_area. The text will be use to search inside the pdf information.
 
 ```php
 define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE', '/usr/bin/pdftotext');
+```
+
+---
+
+#### Pdf OCR process
+
+./dedalo/config/config.php
+
+PDF_OCR_ENGINE `string`
+
+This parameter defines the path to the library, usually [ocrmypdf](https://ocrmypdf.readthedocs.io/en/latest/index.html) that will be used for OCR processing of the pdf uploaded files. Optical Character Recognition or OCR is a technology that converts images of typed or handwritten text, such as in a scanned document, into computer text that can be selected, searched and copied.
+
+```php
+define('PDF_OCR_ENGINE', '/usr/bin/ocrmypdf');
 ```
 
 ---
