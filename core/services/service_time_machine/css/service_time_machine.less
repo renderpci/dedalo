@@ -107,6 +107,17 @@
 			.column_service_time_machine {
 				max-height: unset;
 
+				>span {
+					// default column item padding
+					// used for matrix_id, when, who, where, annotation
+					padding: 0.12rem;
+				}
+
+				>.wrapper_component {
+					// components padding (they have self padding)
+					padding: 0px;
+				}
+
 				&:has(.component_image) {
 					padding: 1px;
 				}
