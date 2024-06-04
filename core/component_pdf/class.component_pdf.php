@@ -808,7 +808,10 @@ class component_pdf extends component_media_common implements component_media_in
 				break;
 		}
 
-		$command  = PDF_OCR_ENGINE.' --pdfa-image-compression lossless -l '.$lang.' --force-ocr '.$pdf_file.' '.$pdf_file;
+		$command  = escapeshellcmd(PDF_OCR_ENGINE.' --pdfa-image-compression lossless -l '
+			.escapeshellarg($lang).' --force-ocr '
+			.escapeshellarg($pdf_file).' '
+			.escapeshellarg($pdf_file));
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
