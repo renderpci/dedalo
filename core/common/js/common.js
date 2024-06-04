@@ -1046,7 +1046,7 @@ common.prototype.load_script = async function(src, content=null) {
 /**
 * GET_COLUMNS
 * Resolve the paths into the request_config_object with all dependencies (portal into portals, portals into sections, etc)
-* and create the columns to be render by the section or portals
+* and create the columns to be rendered by the section or portals
 * @param object options
 * {
 * 	context : object instance.context,
@@ -1059,6 +1059,7 @@ common.prototype.load_script = async function(src, content=null) {
 * 	optional parameter send by section, to be used to find the sort-able ddo.
 * ddo_map_sequence:
 * 	optional parameter to define ddo_map property fallback order
+* @see section_record.get_ar_columns_instances_list for a better overview
 * @return array columns_map
 * 	The the specific columns to render into the list.
 */
@@ -1067,7 +1068,11 @@ export const get_columns_map = function(options) {
 	// options
 		const context			= options.context
 		const datum_context		= options.datum_context
-		const ddo_map_sequence	= options.ddo_map_sequence || ['show']
+		const ddo_map_sequence	= options.ddo_map_sequence
+			? options.ddo_map_sequence // service_autocomplete gives this value as [choose,search,show]
+			: context.mode==='search'
+				? ['search','show'] // normally portals in search mode
+		 		: ['show'] // default value
 
 	const columns_map = []
 
@@ -1174,6 +1179,7 @@ export const get_columns_map = function(options) {
 							// if the column exist add general column to ddo information,
 							// else create the general column and add the id to the component.
 							if(found){
+
 								dd_object.column_id = found.id
 
 							}else{

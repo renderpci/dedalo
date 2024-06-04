@@ -592,6 +592,8 @@ component_portal.prototype.build = async function(autoload=false) {
 		self.fixed_columns_map = false
 
 	// columns
+	// @see common.get_columns_map ddo_map_sequence
+	// Note that default ddo_map_sequence is [show], but in search mode is [search,show]
 		self.columns_map = get_columns_map({
 			context : self.context
 		})
