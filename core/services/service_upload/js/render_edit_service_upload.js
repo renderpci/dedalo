@@ -145,7 +145,7 @@ export const get_content_data = function(self) {
 		// combobox_label
 			const combobox_label = ui.create_dom_element({
 				element_type	: 'label',
-				class_name		: 'label',
+				class_name		: 'label combobox_label',
 				inner_html		: get_label.language || 'Language',
 				parent			: ocr_options_container
 			})
