@@ -125,7 +125,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 	const self = this
 
 	// options
-		const file_data = options.file_data
+		const file_data			= options.file_data;
+		const process_options	= options.process_options;
 
 	// process_file loading
 		while (self.process_file.firstChild) {
@@ -145,7 +146,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		self.process_file.appendChild(spinner)
 
 	// process uploaded file (move temp uploaded file to definitive location and name)
-		const response = await self.process_uploaded_file(file_data)
+		const response = await self.process_uploaded_file(file_data, process_options)
 
 	// spinner remove
 		spinner.remove()
@@ -249,103 +250,103 @@ render_tool_upload.prototype.upload_done = async function (options) {
 * RENDER_FILEDRAG
 * @return HTMLElement filedrag
 */
-	// export const render_filedrag = function(self) {
+// export const render_filedrag = function(self) {
 
-	// 	// filedrag node
-	// 		const filedrag = ui.create_dom_element({
-	// 			element_type	: 'label',
-	// 			class_name		: 'filedrag'
-	// 			// text_content	: 'Select a file to upload or drop it here', // get_label.select_a_file ||
-	// 			// parent		: form
-	// 		})
-	// 		filedrag.setAttribute('for','file_to_upload')
-	// 		filedrag.addEventListener("dragover", file_drag_hover, false);
-	// 		filedrag.addEventListener("dragleave", file_drag_hover, false);
-	// 		filedrag.addEventListener("drop", function(e){
+// 	// filedrag node
+// 		const filedrag = ui.create_dom_element({
+// 			element_type	: 'label',
+// 			class_name		: 'filedrag'
+// 			// text_content	: 'Select a file to upload or drop it here', // get_label.select_a_file ||
+// 			// parent		: form
+// 		})
+// 		filedrag.setAttribute('for','file_to_upload')
+// 		filedrag.addEventListener("dragover", file_drag_hover, false);
+// 		filedrag.addEventListener("dragleave", file_drag_hover, false);
+// 		filedrag.addEventListener("drop", function(e){
 
-	// 			// cancel event and hover styling
-	// 			file_drag_hover(e);
+// 			// cancel event and hover styling
+// 			file_drag_hover(e);
 
-	// 			// fetch FileList object
-	// 			const files = e.target.files || e.dataTransfer.files;
+// 			// fetch FileList object
+// 			const files = e.target.files || e.dataTransfer.files;
 
-	// 			// process all File objects
-	// 			// for (let i = 0; i < files.length; i++) {
+// 			// process all File objects
+// 			// for (let i = 0; i < files.length; i++) {
 
-	// 				// const file = files[i]
+// 				// const file = files[i]
 
-	// 				// parse file info
-	// 				// parse_local_file(file);
+// 				// parse file info
+// 				// parse_local_file(file);
 
-	// 				// upload
-	// 				// self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
-
-
-	// 				const file = files[0] || null
-	// 				if (!file) {
-	// 					return false
-	// 				}
-
-	// 				file_selected(self, file)
-
-	// 				filedrag.classList.add('loading_file')
-
-	// 				// reset preview_image
-	// 				if (self.preview_image) {
-	// 					self.preview_image.src = ''
-	// 				}
-
-	// 				self.upload_file({
-	// 					file : file
-	// 				})
-	// 				.then(function(response){
-	// 					// show filedrag again
-	// 						filedrag.classList.remove('loading_file')
-
-	// 					// on success actions
-	// 						if (response.result===true) {
-	// 							if (response.preview_url && self.preview_image) {
-	// 								self.preview_image.src = response.preview_url
-	// 								self.caller.refresh()
-	// 							}
-	// 							self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
-	// 						}else{
-	// 							self.response_msg.innerHTML = response.msg || 'Error on upload file'
-	// 						}
-	// 				})
-
-	// 				// break; // only one is allowed
-	// 			// }
-	// 		})
-	// 		// fix
-	// 		self.filedrag = filedrag
-
-	// 	// label icon
-	// 		ui.create_dom_element({
-	// 			element_type	: 'img',
-	// 			src				: DEDALO_TOOLS_URL + '/' + self.model + '/img/icon.svg',
-	// 			parent			: filedrag
-	// 		})
-
-	// 	// label text
-	// 		ui.create_dom_element({
-	// 			element_type	: 'span',
-	// 			class_name		: '',
-	// 			text_content	: 'Select or drop a file it here',
-	// 			parent			: filedrag
-	// 		})
-
-	// 	// filedrag
-	// 		// const filedrag = ui.create_dom_element({
-	// 		// 	element_type	: 'div',
-	// 		// 	class_name		: 'filedrag',
-	// 		// 	text_content 	: 'or drop a file here',
-	// 		// 	parent 			: form
-	// 		// })
+// 				// upload
+// 				// self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 
 
-	// 	return filedrag
-	// }//end render_filedrag
+// 				const file = files[0] || null
+// 				if (!file) {
+// 					return false
+// 				}
+
+// 				file_selected(self, file)
+
+// 				filedrag.classList.add('loading_file')
+
+// 				// reset preview_image
+// 				if (self.preview_image) {
+// 					self.preview_image.src = ''
+// 				}
+
+// 				self.upload_file({
+// 					file : file
+// 				})
+// 				.then(function(response){
+// 					// show filedrag again
+// 						filedrag.classList.remove('loading_file')
+
+// 					// on success actions
+// 						if (response.result===true) {
+// 							if (response.preview_url && self.preview_image) {
+// 								self.preview_image.src = response.preview_url
+// 								self.caller.refresh()
+// 							}
+// 							self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
+// 						}else{
+// 							self.response_msg.innerHTML = response.msg || 'Error on upload file'
+// 						}
+// 				})
+
+// 				// break; // only one is allowed
+// 			// }
+// 		})
+// 		// fix
+// 		self.filedrag = filedrag
+
+// 	// label icon
+// 		ui.create_dom_element({
+// 			element_type	: 'img',
+// 			src				: DEDALO_TOOLS_URL + '/' + self.model + '/img/icon.svg',
+// 			parent			: filedrag
+// 		})
+
+// 	// label text
+// 		ui.create_dom_element({
+// 			element_type	: 'span',
+// 			class_name		: '',
+// 			text_content	: 'Select or drop a file it here',
+// 			parent			: filedrag
+// 		})
+
+// 	// filedrag
+// 		// const filedrag = ui.create_dom_element({
+// 		// 	element_type	: 'div',
+// 		// 	class_name		: 'filedrag',
+// 		// 	text_content 	: 'or drop a file here',
+// 		// 	parent 			: form
+// 		// })
+
+
+// 	return filedrag
+// }//end render_filedrag
 
 
 
@@ -353,168 +354,168 @@ render_tool_upload.prototype.upload_done = async function (options) {
 * FILE_SELECTED
 * Manages user drag file or user file selection
 */
-	// export const file_selected = async function(self, file) {
+// export const file_selected = async function(self, file) {
 
-	// 	self.filedrag.classList.add('loading_file')
+// 	self.filedrag.classList.add('loading_file')
 
-	// 	// reset preview_image if exists
-	// 		if (self.preview_image) {
-	// 			self.preview_image.src = ''
-	// 		}
+// 	// reset preview_image if exists
+// 		if (self.preview_image) {
+// 			self.preview_image.src = ''
+// 		}
 
-	// 	// upload file to server
-	// 		const response = await self.upload_file({
-	// 			file : file
-	// 		})
+// 	// upload file to server
+// 		const response = await self.upload_file({
+// 			file : file
+// 		})
 
-	// 	// show filedrag again
-	// 		self.filedrag.classList.remove('loading_file')
+// 	// show filedrag again
+// 		self.filedrag.classList.remove('loading_file')
 
-	// 	// on success actions
-	// 		if (response.result===true) {
-	// 			if (response.preview_url && self.preview_image) {
-	// 				self.preview_image.src = response.preview_url
-	// 			}
-	// 			self.caller.refresh()
-	// 			self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
-	// 		}else{
-	// 			self.response_msg.innerHTML = response.msg || 'Error on upload file'
-	// 		}
+// 	// on success actions
+// 		if (response.result===true) {
+// 			if (response.preview_url && self.preview_image) {
+// 				self.preview_image.src = response.preview_url
+// 			}
+// 			self.caller.refresh()
+// 			self.response_msg.innerHTML = response.msg || 'OK. File uploaded'
+// 		}else{
+// 			self.response_msg.innerHTML = response.msg || 'Error on upload file'
+// 		}
 
 
-	// 	return response
-	// }//end file_selected
+// 	return response
+// }//end file_selected
 
 
 
 /**
 * RENDER_PROGRESS_BAR
 */
-	// export const render_progress_bar = function(self) {
+// export const render_progress_bar = function(self) {
 
-	// 	// progress_bar_container
-	// 		const progress_bar_container = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'progress_bar_container'
-	// 		})
+// 	// progress_bar_container
+// 		const progress_bar_container = ui.create_dom_element({
+// 			element_type	: 'div',
+// 			class_name		: 'progress_bar_container'
+// 		})
 
-	// 	// progress_info
-	// 		const progress_info = ui.create_dom_element({
-	// 			element_type	: 'div',
-	// 			class_name		: 'progress_info',
-	// 			parent 			: progress_bar_container
-	// 		})
-	// 		// fix
-	// 		self.progress_info = progress_info
+// 	// progress_info
+// 		const progress_info = ui.create_dom_element({
+// 			element_type	: 'div',
+// 			class_name		: 'progress_info',
+// 			parent 			: progress_bar_container
+// 		})
+// 		// fix
+// 		self.progress_info = progress_info
 
-	// 	// progress_line
-	// 		const progress_line = ui.create_dom_element({
-	// 			element_type	: 'progress',
-	// 			class_name		: 'progress_line',
-	// 			parent 			: progress_bar_container
-	// 		})
-	// 		progress_line.max   = 100;
-	// 		progress_line.value = 0;
-	// 		// fix
-	// 		self.progress_line = progress_line
+// 	// progress_line
+// 		const progress_line = ui.create_dom_element({
+// 			element_type	: 'progress',
+// 			class_name		: 'progress_line',
+// 			parent 			: progress_bar_container
+// 		})
+// 		progress_line.max   = 100;
+// 		progress_line.value = 0;
+// 		// fix
+// 		self.progress_line = progress_line
 
 
-	// 	return progress_bar_container
-	// }//end render_progress_bar
+// 	return progress_bar_container
+// }//end render_progress_bar
 
 
 
 /**
 * FILE_DRAG_HOVER
 */
-	// export const file_drag_hover = function(e) {
+// export const file_drag_hover = function(e) {
 
-	// 	e.stopPropagation();
-	// 	e.preventDefault();
+// 	e.stopPropagation();
+// 	e.preventDefault();
 
-	// 	if (e.type==="dragover") {
-	// 		e.target.classList.add("hover")
-	// 	}else{
-	// 		e.target.classList.remove("hover")
-	// 	}
+// 	if (e.type==="dragover") {
+// 		e.target.classList.add("hover")
+// 	}else{
+// 		e.target.classList.remove("hover")
+// 	}
 
-	// 	return true
-	// }//end file_drag_hover
+// 	return true
+// }//end file_drag_hover
 
 
 
 /**
 * FILE_SELECT_HANDLER
 */
-	// export const file_select_handler = function(e) {
+// export const file_select_handler = function(e) {
 
-	// 	// cancel event and hover styling
-	// 	file_drag_hover(e);
+// 	// cancel event and hover styling
+// 	file_drag_hover(e);
 
-	// 	// fetch FileList object
-	// 	const files = e.target.files || e.dataTransfer.files;
+// 	// fetch FileList object
+// 	const files = e.target.files || e.dataTransfer.files;
 
-	// 	// process all File objects
-	// 	for (let i = 0; i < files.length; i++) {
+// 	// process all File objects
+// 	for (let i = 0; i < files.length; i++) {
 
-	// 		const file = files[i]
+// 		const file = files[i]
 
-	// 		// parse file info
-	// 		// parse_local_file(file);
+// 		// parse file info
+// 		// parse_local_file(file);
 
-	// 		// upload
-	// 		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
+// 		// upload
+// 		self.upload_file(file, content_data, response_msg, preview_image, progress_bar_container)
 
-	// 		break; // only one is allowed
-	// 	}
+// 		break; // only one is allowed
+// 	}
 
-	// 	return true
-	// }//end file_select_handler
+// 	return true
+// }//end file_select_handler
 
 
 
 // Removed for the time being (!)
-	// // output information
-	// function msg_output(msg) {
-	// 	// file_info.innerHTML = msg + file_info.innerHTML;
-	// 	file_info.innerHTML += msg;
-	// }
+// // output information
+// function msg_output(msg) {
+// 	// file_info.innerHTML = msg + file_info.innerHTML;
+// 	file_info.innerHTML += msg;
+// }
 
-	// // output file information
-	// function parse_local_file(file) {
+// // output file information
+// function parse_local_file(file) {
 
-	// 	msg_output(
-	// 		"<div><span>Name:</span> <strong>" + file.name + "</strong></div>" +
-	// 		"<div><span>Type:</span> <strong>" + file.type + "</strong></div>" +
-	// 		"<div><span>Size:</span> <strong>" + parseInt(file.size/1024) + "</strong> Kbytes</div>"
-	// 	);
+// 	msg_output(
+// 		"<div><span>Name:</span> <strong>" + file.name + "</strong></div>" +
+// 		"<div><span>Type:</span> <strong>" + file.type + "</strong></div>" +
+// 		"<div><span>Size:</span> <strong>" + parseInt(file.size/1024) + "</strong> Kbytes</div>"
+// 	);
 
-	// 	// display an image
-	// 	if (file.type.indexOf("image") == 0) {
-	// 		var reader = new FileReader();
-	// 		reader.onload = function(e) {
-	// 			msg_output(
-	// 				'<div><img src="' + e.target.result + '" /></div>'
-	// 			);
-	// 		}
-	// 		reader.readAsDataURL(file);
-	// 	}
+// 	// display an image
+// 	if (file.type.indexOf("image") == 0) {
+// 		var reader = new FileReader();
+// 		reader.onload = function(e) {
+// 			msg_output(
+// 				'<div><img src="' + e.target.result + '" /></div>'
+// 			);
+// 		}
+// 		reader.readAsDataURL(file);
+// 	}
 
-	// 	// display text
-	// 	if (file.type.indexOf("text") == 0) {
-	// 		var reader = new FileReader();
-	// 		reader.onload = function(e) {
-	// 			msg_output(
-	// 				"<p><strong>" + file.name + ":</strong></p><pre>" +
-	// 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
-	// 				"</pre>"
-	// 			);
-	// 		}
-	// 		reader.readAsText(file);
-	// 	}
+// 	// display text
+// 	if (file.type.indexOf("text") == 0) {
+// 		var reader = new FileReader();
+// 		reader.onload = function(e) {
+// 			msg_output(
+// 				"<p><strong>" + file.name + ":</strong></p><pre>" +
+// 				e.target.result.replace(/</g, "&lt;").replace(/>/g, "&gt;") +
+// 				"</pre>"
+// 			);
+// 		}
+// 		reader.readAsText(file);
+// 	}
 
-	// 	return true
-	// }//end parse_local_file
+// 	return true
+// }//end parse_local_file
 
 
 

@@ -27,13 +27,14 @@ class tool_upload extends tool_common {
 				$response->msg		= 'Error. Request failed. '.__METHOD__.' ';
 
 		// options
-			$file_data		= $options->file_data;
-			$tipo			= $options->tipo ?? null;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id ?? null;
-			$caller_type	= $options->caller_type; // string as 'component'
-			$quality		= $options->quality ?? null;
-			$target_dir		= $options->target_dir ?? null;
+			$file_data			= $options->file_data;
+			$process_options	= $options->process_options ?? new stdClass();
+			$tipo				= $options->tipo ?? null;
+			$section_tipo		= $options->section_tipo;
+			$section_id			= $options->section_id ?? null;
+			$caller_type		= $options->caller_type; // string as 'component'
+			$quality			= $options->quality ?? null;
+			$target_dir			= $options->target_dir ?? null;
 
 		// manage uploaded file
 			switch ($caller_type) {
@@ -79,7 +80,7 @@ class tool_upload extends tool_common {
 						}
 
 					// post processing file (add_file returns final renamed file with path info)
-						$process_file = $component->process_uploaded_file($add_file->ready);
+						$process_file = $component->process_uploaded_file($add_file->ready, $process_options);
 						if ($process_file->result===false) {
 							$response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
 							return $response;
