@@ -546,7 +546,7 @@ class component_pdf extends component_media_common implements component_media_in
 										$this->section_tipo,
 										false
 									);
-									$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
+									$component_text_area->set_dato([$text_from_pdf_response->result]); // Text with page numbers
 									$component_text_area->Save();
 								}
 
