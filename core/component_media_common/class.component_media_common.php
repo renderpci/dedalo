@@ -47,7 +47,7 @@ interface component_media_interface {
 	public function get_alternative_extensions();
 	public function build_version(string $quality, bool $async=true, bool $save=true);
 	public function create_thumb();
-	public function process_uploaded_file(object $file_data);
+	public function process_uploaded_file(object $file_data, object $process_options);
 	public static function update_dato_version(object $options);
 	public function remove_component_media_files(array $ar_quality=[]);
 	public function regenerate_component();
@@ -855,11 +855,12 @@ class component_media_common extends component_common {
 	/**
 	* PROCESS_UPLOADED_FILE
 	* Dummy method. Overwrite it in each component
-	* @param object $options
+	* @param object $file_data
+	* @param object $process_options
 	* @return object $response
 	* @test true
 	*/
-	public function process_uploaded_file(object $options) : object {
+	public function process_uploaded_file(object $file_data, ?object $process_options) : object {
 
 		$response = new stdClass();
 			$response->result	= true;
