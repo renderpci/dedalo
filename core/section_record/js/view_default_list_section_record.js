@@ -50,7 +50,7 @@ view_default_list_section_record.render = async function(self, options) {
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') { //  || self.caller.model==='service_time_machine'
+			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') {
 				when_in_dom(wrapper, function(){
 					hilite_row(wrapper)
 				})
@@ -236,33 +236,30 @@ const get_content_data = async function(self) {
 							continue;
 						}
 						// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
-						if (current_instance.column_id) {
-
-							const ar_sub_columns_map = current_instance.columns_map || ar_instances
-
-							// column. If column already exists, place the component node into the column.
-							// Else, creates a new column and place it into the fragment
-							const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
-							const column_node	= found_node
-								? found_node
-								: (()=>{
-									const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
-									// push column in ar_column_nodes
-									ar_column_nodes.push(new_column_node)
-									// add node to fragment
-									fragment.appendChild(new_column_node)
-
-									return new_column_node
-								  })()
-
-							const current_instance_node	= current_instance.node
-
-							// append child node
-							column_node.appendChild(current_instance_node)
-
-						}else{
+						if (!current_instance.column_id) {
 							console.error("current_instance column_id not found:",current_instance);
+							continue;
 						}
+
+					// ar_sub_columns_map
+						const ar_sub_columns_map = current_instance.columns_map || ar_instances
+
+					// column_node. If column already exists, place the component node into the column.
+					// Else, creates a new column and place it into the fragment
+						const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
+						const column_node	= found_node
+							? found_node
+							: (()=>{
+								const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
+								// push column in ar_column_nodes
+								ar_column_nodes.push(new_column_node)
+								// add node to fragment
+								fragment.appendChild(new_column_node)
+
+								return new_column_node
+							  })()
+						// append current_instance wrapper node
+						column_node.appendChild( current_instance.node )
 				}//end for (let j = 0; j < ar_instances_length; j++)
 
 		}//end for (let i = 0; i < columns_map_length; i++)

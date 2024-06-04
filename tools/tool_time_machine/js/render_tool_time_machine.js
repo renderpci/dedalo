@@ -170,7 +170,7 @@ const get_content_data = async function(self) {
 				})
 		}//end if (self.caller!=='section')
 
-	// service_time_machine
+	// service_time_machine. Render instance
 		const time_machine_list_node = await self.service_time_machine.render()
 		fragment.appendChild(time_machine_list_node)
 
