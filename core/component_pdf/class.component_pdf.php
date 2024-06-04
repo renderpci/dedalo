@@ -510,7 +510,6 @@ class component_pdf extends component_media_common implements component_media_in
 							$ocr_options->ocr_lang	= $ocr_lang;		# lang used to process the file
 
 						$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
-	dump($ocr_response, ' ocr +--------------------------+ '.to_string());
 					}
 
 					// create alternative image versions of the PDF
