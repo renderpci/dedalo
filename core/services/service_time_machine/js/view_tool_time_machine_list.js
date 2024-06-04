@@ -47,7 +47,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 		const ar_section_record	= await get_section_records({
 			caller : self // service_time_machine instance
 		})
-		self.ar_instances		= ar_section_record
+		self.ar_instances = ar_section_record
 
 	// content_data
 		const content_data = await get_content_data(ar_section_record, self)
@@ -242,7 +242,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM DocumentFragment
+* @return HTMLElement DocumentFragment
 */
 const render_column_id = function(options) {
 
@@ -250,15 +250,13 @@ const render_column_id = function(options) {
 		const service_time_machine	= options.caller
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		// const offset				= options.offset
 		const matrix_id				= options.matrix_id
 		const modification_date		= options.modification_date
 
 	// short vars
-		// const permissions	= service_time_machine.permissions
-		const tool				= service_time_machine.caller
-		const main_caller		= tool.caller
-		const fragment			= new DocumentFragment()
+		const tool			= service_time_machine.caller
+		const main_caller	= tool.caller
+		const fragment		= new DocumentFragment()
 
 	// button_view
 		const button_view = ui.create_dom_element({
@@ -291,11 +289,6 @@ const render_column_id = function(options) {
 							main_caller.refresh()
 							.then(function(){
 								service_time_machine.refresh()
-								// success case
-								// if (window.opener) {
-								// 	// close this window when was opened from another
-								// 	window.close()
-								// }
 							})
 						}else{
 							// error case

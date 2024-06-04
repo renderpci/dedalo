@@ -209,7 +209,9 @@ const get_content_data = async function(self, ar_section_record) {
 			fragment.appendChild(row_item)
 
 		}else{
+
 			// rows
+
 			// parallel mode
 				const ar_promises = []
 				for (let i = 0; i < ar_section_record_length; i++) {
@@ -218,7 +220,10 @@ const get_content_data = async function(self, ar_section_record) {
 					})
 					ar_promises.push(render_promise_node)
 				}
-				await Promise.all(ar_promises).then(function(values) {
+
+			// once rendered, append it preserving the order
+				await Promise.all(ar_promises)
+				.then(function(values) {
 				  for (let i = 0; i < ar_section_record_length; i++) {
 				  	const section_record_node = values[i]
 					fragment.appendChild(section_record_node)

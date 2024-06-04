@@ -6,8 +6,7 @@
 
 // import
 	import {event_manager} from '../../../../core/common/js/event_manager.js'
-	// import {get_instance} from '../../../../core/common/js/instances.js'
-	import {clone, dd_console} from '../../../../core/common/js/utils/index.js'
+	import {clone} from '../../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../../core/common/js/data_manager.js'
 	import {common, get_columns_map, create_source} from '../../../../core/common/js/common.js'
 	import {paginator} from '../../../paginator/js/paginator.js'
@@ -91,7 +90,7 @@ service_time_machine.prototype.init = async function(options) {
 	self.limit			= options.limit ?? 10
 	self.offset			= options.offset ?? 0
 
-	self.request_config	= await self.build_request_config()
+	self.request_config	= self.build_request_config()
 
 	// status update
 	self.status = 'initialized'
@@ -146,9 +145,9 @@ service_time_machine.prototype.build = async function(autoload=false) {
 			// set the ddo_map with mode = list and permissions = 1
 			// This change is important because the components could be configured in edit mode
 			// if the component is loaded in edit mode it will fire the default data and save the section
-			// IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
+			// (!) IT'S A VERY BAD SITUATION, BECAUSE THE SECTION IS SAVED WITH THE TM DATA (OLD DATA)
 				self.rqo.show.ddo_map.map(ddo => {
-
+					// change ddo properties to safe mode and permissions
 					ddo.mode		= 'tm'
 					ddo.permissions	= 1
 
@@ -178,14 +177,14 @@ service_time_machine.prototype.build = async function(autoload=false) {
 					body		: self.rqo,
 					use_worker	: true
 				})
-
 				// server: wrong response
-				if (!api_response) {
+				if (!api_response || !api_response.result) {
+					console.error('Error: Invalid API response', api_response);
 					return false
 				}
 				// server: bad build context
 				if(!api_response.result.context.length){
-					console.error("Error!!!!, service_time_machine without context:", api_response);
+					console.error("Error: service_time_machine context unavailable", api_response);
 					return false
 				}
 
@@ -222,13 +221,6 @@ service_time_machine.prototype.build = async function(autoload=false) {
 
 					// fix new offset value
 						self.rqo.sqo.offset = offset
-
-					// set_local_db_data updated rqo
-						// const rqo = self.rqo
-						// data_manager.set_local_db_data(
-						// 	rqo,
-						// 	'rqo'
-						// )
 
 					// refresh
 						await self.refresh()
@@ -471,7 +463,7 @@ service_time_machine.prototype.build_request_config = function() {
 /**
 * GET_TOTAL
 * Exec a async API call to count the current sqo records
-* @return int total
+* @return int self.total
 */
 service_time_machine.prototype.get_total = async function() {
 
@@ -516,7 +508,7 @@ service_time_machine.prototype.get_total = async function() {
 			if(main_ddo && main_ddo.dataframe_ddo){
 				dataframe_locator.tipo = main_ddo.dataframe_ddo.tipo
 				count_sqo.filter_by_locators.push(dataframe_locator)
-				}
+			}
 		}
 		const source	= create_source(self, null)
 		const rqo_count = {
@@ -538,7 +530,6 @@ service_time_machine.prototype.get_total = async function() {
 
 	// set result
 		self.total = api_count_response.result.total
-
 
 	// loading status update
 		self.loading_total_status = 'resolved'

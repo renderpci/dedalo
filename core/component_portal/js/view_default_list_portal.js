@@ -97,12 +97,6 @@ view_default_list_portal.render = async function(self, options) {
 		list_body.appendChild(content_data)
 
 	// wrapper
-		// const wrapper = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	id				: self.id,
-		// 	//class_name	: self.model + ' ' + self.tipo + ' ' + self.mode
-		// 	class_name		: 'wrapper_' + self.type + ' ' + self.model + ' ' + self.tipo + ' portal ' + self.mode
-		// })
 		const wrapper = ui.component.build_wrapper_list(self, {
 			autoload : true // bool set build autoload param on mode change (close button)
 		})
