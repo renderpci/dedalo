@@ -344,6 +344,7 @@ section_record.prototype.get_ar_instances_edit = async function() {
 * Iterate all request_config building an instance for each ddo_map item
 * All instances are stored in self.ar_instances array container
 * (Used in list mode and time machine too)
+* @see common.get_columns_map for a better overview
 * @return array self.ar_instances
 * [
 * 	{model: "component_input_text", tipo: "dd374", ...} component instance,
@@ -363,6 +364,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 		const matrix_id	= self.matrix_id
 
 	// columns_map. Build from ddo_map
+	// @see common.get_columns_map for a better overview
 		const columns_map = await self.columns_map || []
 
 	// request config
