@@ -128,6 +128,7 @@ service_upload.prototype.build = async function(autoload=false) {
 			self.upload_tmp_perms			= system_info.upload_tmp_perms
 			self.session_cache_expire		= system_info.session_cache_expire
 			self.upload_service_chunk_files	= system_info.upload_service_chunk_files
+			self.pdf_ocr_engine				= system_info.pdf_ocr_engine
 
 
 	return true
@@ -552,7 +553,7 @@ service_upload.prototype.upload_file = async function(options) {
 	const self = this
 
 	// options
-		const file = options.file
+		const file = options.file;
 
 	// short vars
 		const allowed_extensions	= self.allowed_extensions
@@ -583,7 +584,8 @@ service_upload.prototype.upload_file = async function(options) {
 
 	// event upload_file_done_
 		event_manager.publish('upload_file_done_' + self.caller.id, {
-			file_data : api_response.file_data
+			file_data		: api_response.file_data,
+			process_options	: self.process_options
 		})
 
 

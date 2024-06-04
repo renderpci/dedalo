@@ -60,7 +60,12 @@ render_edit_service_upload.prototype.edit = async function (options) {
 */
 export const get_content_data = function(self) {
 
-	const fragment = new DocumentFragment()
+	const fragment = new DocumentFragment();
+
+	self.process_options = {
+		ocr			: false,
+		ocr_lang	: null
+	}
 
 	// form
 		const form = ui.create_dom_element({
@@ -90,6 +95,7 @@ export const get_content_data = function(self) {
 
 			file_selected(self, file)
 		})
+		input_file.accept = self.allowed_extensions.map((ext) => {return '.'+ext}).join(", ");
 
 	// filedrag (add node to form)
 		const filedrag = render_filedrag(self)
@@ -102,6 +108,70 @@ export const get_content_data = function(self) {
 			text_content	: '',
 			parent			: form
 		})
+
+
+	if(self.allowed_extensions.includes('pdf') && self.pdf_ocr_engine) {
+
+		// OCR_options
+			const ocr_options_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'ocr_options_container',
+				parent			: form
+			})
+
+		// checkbox_label
+			const checkbox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label checkbox_label',
+				inner_html		: 'OCR',
+				parent			: ocr_options_container
+			})
+
+		// input checkbox
+			const checkbox_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				name			: 'checkbox_active'
+			})
+
+			checkbox_label.prepend(checkbox_input)
+
+			checkbox_input.addEventListener('click', function(e) {
+				e.stopPropagation()
+
+				self.process_options.ocr = checkbox_input.checked
+			})
+
+		// combobox_label
+			const combobox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label',
+				inner_html		: get_label.language || 'Language',
+				parent			: ocr_options_container
+			})
+
+		// input combobox
+			const combobox_input = ui.create_dom_element({
+				element_type	: 'select',
+				name			: 'combobox_active'
+			})
+
+			combobox_label.prepend(combobox_input)
+
+		// input Languages (from dedalo config)
+			page_globals.dedalo_application_langs.forEach((lang) => {
+				var lang_option = ui.create_dom_element({
+					element_type	: 'option',
+					value			: lang.value,
+					text_content	: lang.label,
+					parent			: combobox_input
+				});
+			});
+
+			combobox_input.addEventListener('click', function(e) {
+				self.process_options.ocr_lang = combobox_input.value;
+			})
+	}
 
 	// progress_bar_container
 		const progress_bar_container = render_progress_bar(self)
