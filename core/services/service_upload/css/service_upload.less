@@ -12,9 +12,10 @@
 		padding-bottom: 0;
 
 		>form {
-			display: flex;
-		    flex-wrap: wrap;
-			align-items: center;
+			display			: flex;
+			flex-wrap		: wrap;
+			align-items		: center;
+			justify-content	: center;
 
 			>label {
 				padding: 1.5rem;
@@ -63,10 +64,18 @@
 			}
 
 			>.ocr_options_container {
-				padding: 1.5rem;
-				padding-left: 1.75em;
-				padding-right: 1.75em;
-				background-color: #ececec;
+				padding-top: 1.5rem;
+				background-color: #ffffff;
+
+				.checkbox_label input{
+					margin-right: 0.5rem;
+				}
+				.combobox_label{
+					margin-left: 1.5rem;
+					input{
+						margin-right: 0.5rem;
+					}
+				}
 			}
 		}
 
