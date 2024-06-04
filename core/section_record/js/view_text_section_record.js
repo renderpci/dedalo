@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -46,13 +45,9 @@ view_text_section_record.render = async function(self, options) {
 			self.model,
 			self.tipo,
 			self.mode,
-			// (self.mode==='tm' ? ' list' : ''),
-			'view_'+self.context.view
+			'view_' + self.context.view
 		]
 		wrapper.classList.add(...ar_css)
-
-	// last data
-		// let last_data = null
 
 	// columns. Render the columns_map items
 		const columns_map_length = columns_map.length
@@ -116,12 +111,6 @@ view_text_section_record.render = async function(self, options) {
 				for (let j = 0; j < ar_instances_length; j++) {
 
 					const current_instance = ar_instances[j]
-
-					// des
-						// last_data = {
-						// 	section_tipo	: current_instance.section_tipo,
-						// 	section_id		: current_instance.section_id
-						// }
 
 					// check instance is valid
 						if (typeof current_instance==='undefined') {
@@ -191,25 +180,6 @@ view_text_section_record.render = async function(self, options) {
 				}
 
 		}//end for (let i = 0; i < columns_map_length; i++)
-
-		// empty values case. Only button edit is present
-		// Indexation case could not resolve references values. In that case, fallback value to
-		// section_tipo + section_id.
-		// Note that checked node length take into account the button edit node, because is < 2 and not < 1
-		// const current_child_text_nodes = [...wrapper.childNodes].filter(el => el.nodeType === Node.TEXT_NODE)
-		// if (current_child_text_nodes.length===0 && last_data) {
-		// 	wrapper.insertAdjacentHTML('beforeend', ' ' + (last_data.section_tipo || '') +'_'+ (last_data.section_id || '') )
-		// }
-
-
-	// component_info add if exists. (!) Removed 22-11-202 because is already added by the component (portal)
-		// const component_info = self.get_component_info()
-		// if (component_info){
-		// 	const info_value	= '&nbsp;' + component_info.value.join('&nbsp;')
-		// 	const info			= document.createElement('span')
-		// 		  info.innerHTML= info_value
-		// 	wrapper.append(...info.childNodes)
-		// }
 
 
 	return wrapper
