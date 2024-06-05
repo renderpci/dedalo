@@ -4659,14 +4659,45 @@ abstract class common {
 						$tools = [];
 						foreach ($tools_list as $tool_object) {
 
+							// get the tool_config definition in the ontology
+							// the tool_config has the tool_name to identify the tool
+							// get the definition that match with the current button.
 							$tool_config = isset($button_properties->tool_config->{$tool_object->name})
 								? $button_properties->tool_config->{$tool_object->name}
 								: null;
 
+							// specific tool config in registered tools or tool configuration
+							// when the tool has a specific properties in the register or in his configuration records
+							// overwrite the ontology properties with them
+							// flow of overwrite: the most specific overwrite the most generic
+							//
+							// configuration -> configuration register -> ontology
+							// 1 if the configuration isset use it
+							// 2 else get the configuration in register, if isset use it
+							// 3 else get the ontology properties
+
+							// get the config, get_config check is the specific configuration isset
+							// else get the configuration in register record
+								$tool_config_options = new stdClass();
+									$tool_config_options->tool_name		= $tool_object->name;
+									$tool_config_options->tipo			= $current_button_tipo;
+									$tool_config_options->section_tipo	= $tipo;
+								$specific_tool_config = tool_common::get_tool_configuration($tool_config_options);
+
+							// if the configuration was defined, replace the ddo_map of the ontology with it.
+								if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
+									$tool_config->ddo_map = $specific_tool_config->ddo_map;
+								}
+
 							if(!isset($tool_config)) continue;
 
 							$current_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
-							$tool_context			= tool_common::create_tool_simple_context($tool_object, $tool_config, $this->tipo, $current_section_tipo );
+							$tool_context			= tool_common::create_tool_simple_context(
+								$tool_object,
+								$tool_config,
+								$this->tipo,
+								$current_section_tipo
+							);
 
 							$tools[] = $tool_context;
 						}//end foreach ($tools_list as $item)
