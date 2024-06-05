@@ -402,7 +402,11 @@ const get_buttons = function(self) {
 							// open_tool (tool_common)
 							open_tool({
 								tool_context	: current_button.tools[0],
-								caller			: self
+								caller			: self,
+								caller_options	: {
+									section_tipo	: self.section_tipo,
+									button_tipo		: current_button.tipo
+								}
 							})
 							break;
 
