@@ -45,7 +45,8 @@ view_tool_time_machine_list.render = async function(self, options) {
 
 	// ar_section_record. section_record instances (initialized and built)
 		const ar_section_record	= await get_section_records({
-			caller : self // service_time_machine instance
+			caller	: self, // service_time_machine instance
+			mode	: 'list'
 		})
 		self.ar_instances = ar_section_record
 
