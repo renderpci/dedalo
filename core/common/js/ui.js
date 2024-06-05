@@ -441,9 +441,12 @@ export const ui = {
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
 					if (model!=='component_filter') {
 						// CSS is moved from properties to specific property in context
-						if (instance.context.css) {
-							const selector = `${section_tipo}_${tipo}.${tipo}.${'list'}`
-							set_element_css(selector, element_css)
+						// Into tool time machine visualization case, do not add custom CSS from properties
+						if (instance.context.css && instance.context.mode!=='tm') {
+							set_element_css(
+								`${section_tipo}_${tipo}.${tipo}.${'list'}`, // CSS selector
+								element_css // properties CSS object
+							)
 						}
 					}
 
