@@ -63,35 +63,22 @@ view_default_list_portal.render = async function(self, options) {
 			class_name		: 'list_body ' + self.mode +  ' view_'+self.view,
 			parent			: fragment
 		})
-		// const items				= flat_column_items(columns_map)
-		// const template_columns	= `auto ${items.join(' ')}`
-		// const template_columns = `repeat(${columns_map.length}, 1fr)`
 		// flat columns create a sequence of grid widths taking care of sub-column space
 		// like 1fr 1fr 1fr 3fr 1fr
 		const items				= ui.flat_column_items(columns_map)
 		const template_columns	= `${items.join(' ')}`
-		// old way inline
-			// Object.assign(
-			// 	list_body.style,
-			// 	{
-			// 		"grid-template-columns": template_columns
-			// 	}
-			// )
-		// new way to on-the fly js
+		// set CSS on-the fly js
 			if (self.view!=='mosaic') {
 				const css_object = {
 					'.list_body' : {
 						'grid-template-columns': template_columns
 					}
 				}
-				const selector = `${self.section_tipo}_${self.tipo}.list.view_${self.view}`
-				set_element_css(selector, css_object)
+				set_element_css(
+					`${self.section_tipo}_${self.tipo}.list.view_${self.view}`, // selector
+					css_object
+				)
 			}
-
-	// header
-		// const list_header_node = build_header(columns_map, ar_section_record, self)
-		// const list_header_node = ui.render_list_header(columns_map, self, false)
-		// list_body.appendChild(list_header_node)
 
 	// content_data append
 		list_body.appendChild(content_data)
