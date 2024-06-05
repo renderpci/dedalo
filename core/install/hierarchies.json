@@ -1587,31 +1587,31 @@
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "coanalysis",
+		"tld": "resanalysis",
 		"label": "Analysis",
 		"typology": 10,
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "cocause",
+		"tld": "rescause",
 		"label": "Cause",
 		"typology": 10,
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "comaterial",
+		"tld": "resmaterial",
 		"label": "Job material",
 		"typology": 10,
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "copathology",
+		"tld": "respathology",
 		"label": "Pathology",
 		"typology": 10,
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "cotreatment",
+		"tld": "restreatment",
 		"label": "Treatment",
 		"typology": 10,
 		"active_in_thesaurus": true
