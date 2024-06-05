@@ -91,6 +91,7 @@ tool_common.prototype.init = async function(options) {
 						const url_data_object	= JSON.parse(url_data_string)
 						const caller_ddo		= url_data_object.caller_ddo
 						const tool_config		= url_data_object.tool_config
+						const caller_options	= url_data_object.caller_options
 
 						// debug
 							if(SHOW_DEBUG===true) {
@@ -108,6 +109,9 @@ tool_common.prototype.init = async function(options) {
 
 						// set current tool as caller
 							self.caller.caller = self
+
+						// set caller options
+							self.caller_options = caller_options ?? null
 
 						if(caller_ddo.model!=='section'){
 							// build only when the caller is a component, section will build by tm
@@ -754,7 +758,7 @@ const view_window = async function(options) {
 			})
 		)
 		const url = DEDALO_CORE_URL + `/page/?tool=${name}&menu=false&raw_data=` + raw_data
-		if (url.length>2000) {
+		if (url.length>3000) {
 			console.warn('Warning. The URL is too long:', url.length);
 		}
 
