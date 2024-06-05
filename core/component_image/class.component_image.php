@@ -54,8 +54,6 @@ class component_image extends component_media_common implements component_media_
 			foreach ($dato as $dato_item) {
 				if(isset($dato_item->svg_file_data)) {
 					$this->create_svg_file($dato_item->svg_file_data);
-					// remove property, its only temporal
-					// unset($dato_item->svg_file_data);
 				}
 			}
 		}
@@ -92,7 +90,7 @@ class component_image extends component_media_common implements component_media_
 				return $id;
 			}
 
-		// case 2 referenced name : If is set properties "image_id" overwrite name with field ddx content
+		// case 2 referenced name : If is set properties "image_id", overwrite name with field ddx content
 			$properties = $this->get_properties();
 			if(isset($properties->image_id)){
 				$component_tipo	= $properties->image_id;
@@ -617,7 +615,7 @@ class component_image extends component_media_common implements component_media_
 	*/
 	public static function convert_quality_to_megabytes(string $quality) : float {
 
-		// pastern : '1MB' | '1.5MB' | <1MB | >100MB
+		// quality sample : '1MB'|'1.5MB'|<1MB|>100MB
 
 		// We removed the megabytes ('MB') text in the quality name
 		$string = substr($quality, 0,-2);
@@ -625,7 +623,7 @@ class component_image extends component_media_common implements component_media_
 		switch (true) {
 
 			case ( strpos($string, '>')===0 ):
-				# Sample: >100 will be 100
+				// Sample: >100 will be 100
 				$number = intval(substr($string,1)) + 1;
 				break;
 
@@ -635,7 +633,7 @@ class component_image extends component_media_common implements component_media_
 				break;
 
 			default:
-				# Default 1.5 will be 1.5
+				// Default 1.5 will be 1.5
 				$number = $string;
 				break;
 		}
@@ -950,9 +948,9 @@ class component_image extends component_media_common implements component_media_
 			$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 
 		// short vars
-			$original_file_name			= $file_data->original_file_name;	// kike "my photo785.jpg"
-			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
-			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.jpg"
+			$original_file_name			= $file_data->original_file_name; // kike "my photo785.jpg"
+			$full_file_path				= $file_data->full_file_path; // like "/mypath/media/image/1.5MB/test175_test65_1.jpg"
+			$full_file_name				= $file_data->full_file_name; // like "test175_test65_1.jpg"
 			$original_normalized_name	= $full_file_name;
 
 		// check full_file_path
@@ -1111,16 +1109,14 @@ class component_image extends component_media_common implements component_media_
 	public function create_default_svg_string_node() : ?string {
 
 		// short vars
-			$id						= $this->get_id();
-			$source_quality			= $this->get_default_quality(); // DEDALO_IMAGE_QUALITY_DEFAULT;
-			// $additional_path		= $this->get_additional_path();
-			// $initial_media_path	= $this->get_initial_media_path();
+			$id				= $this->get_id();
+			$source_quality	= $this->get_default_quality();
 
 		// default quality check file
 			$file_path = $this->get_media_filepath($source_quality);
 			if (!file_exists($file_path)) {
 				debug_log(__METHOD__
-					." Unable to create create_default_svg_string_node. Default quality file does not exists: ". PHP_EOL
+					." Unable to create create_default_svg_string_node. Default quality file does not exists:". PHP_EOL
 					.' file_path: ' . $file_path,
 					logger::ERROR
 				);
