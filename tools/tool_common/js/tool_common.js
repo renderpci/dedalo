@@ -99,7 +99,7 @@ tool_common.prototype.init = async function(options) {
 							}
 
 						// set and build caller
-							self.caller = await get_instance( caller_ddo )
+							// self.caller = await get_instance( caller_ddo )
 
 						// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
