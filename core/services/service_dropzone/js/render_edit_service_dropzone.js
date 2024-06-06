@@ -253,10 +253,10 @@ const render_template = async function(self) {
 			parent			: fragment
 		})
 
-	// column_left
-		const column_left = ui.create_dom_element({
+	// buttons_container
+		const buttons_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'col-lg-7 column_left',
+			class_name		: 'buttons_container',
 			parent			: actions
 		})
 
@@ -265,7 +265,7 @@ const render_template = async function(self) {
 				element_type	: 'button',
 				class_name		: 'success add dz-clickable',
 				inner_html		: get_label.add_file || 'Add files',
-				parent			: column_left
+				parent			: buttons_container
 			})
 
 		// button_start_upload
@@ -273,7 +273,7 @@ const render_template = async function(self) {
 				element_type	: 'button',
 				class_name		: 'primary upload start',
 				inner_html		: get_label.start_upload || 'Start upload',
-				parent			: column_left
+				parent			: buttons_container
 			})
 			// button_submit_files.addEventListener('click', function(e) {
 			// 	e.stopPropagation()
@@ -284,7 +284,7 @@ const render_template = async function(self) {
 				element_type	: 'button',
 				class_name		: 'warning cancel',
 				inner_html		: get_label.cancel_upload || 'Cancel upload',
-				parent			: column_left
+				parent			: buttons_container
 			})
 			button_cancel_upload.addEventListener('click', function() {
 				current_dropzone.removeAllFiles(true);
@@ -296,7 +296,7 @@ const render_template = async function(self) {
 				class_name		: 'danger delete',
 				inner_html		: get_label.delete_file || 'Delete file',
 				dataset			: {dzRemove : ""},
-				parent			: column_left
+				parent			: buttons_container
 			})
 
 		// delete_check_box
@@ -304,7 +304,7 @@ const render_template = async function(self) {
 				element_type	: 'input',
 				type			: 'checkbox',
 				class_name		: 'all_delete_checkbox',
-				parent			: column_left
+				parent			: buttons_container
 			})
 			delete_check_box.addEventListener('change', function(){
 				const delete_check_nodes	= document.querySelectorAll('.delete_checkbox')
@@ -538,7 +538,7 @@ const render_template = async function(self) {
 					parent			: row_buttons
 				})
 
-	// Get the template HTML and remove it from the document the template HTML and remove it from the document
+	// Get the template HTML and remove it from the document
 		const previewNode		= template;
 		previewNode.id			= '';
 		const previewTemplate	= previewNode.parentNode.innerHTML;
