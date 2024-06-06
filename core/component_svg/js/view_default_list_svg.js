@@ -85,24 +85,39 @@ export const get_content_data = function(self) {
 				: file
 
 		// image
-			ui.create_dom_element({
+			const image = ui.create_dom_element({
 				element_type	: 'img',
 				src				: file_url,
 				parent			: content_data
 			})
 
-		if (svg_file) {
+	// open viewer
+		const fn_mousedown = function (e) {
+			e.stopPropagation();
 
-			// open viewer on click
-				const fn_mousedown = function(e) {
-					e.stopPropagation();
-					// open a new window
+			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so
+			// it could be used, else open the player to show the image
+			const file_exist = files_info.find(item => item.file_exist===true)
+			if(!file_exist){
+
+				// get the upload tool to be fired
+					const tool_upload_context = self.tools.find(el => el.model === 'tool_upload')
+
+				// open_tool (tool_common)
+					open_tool({
+						tool_context	: tool_upload_context || 'tool_upload',
+						caller			: self
+					})
+			}else{
+
+				// open a new window
 					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
 						tipo			: self.tipo,
 						section_tipo	: self.section_tipo,
 						id				: self.section_id,
 						mode			: 'edit',
 						view			: 'viewer',
+						session_save	: false,
 						menu			: false
 					})
 					open_window({
@@ -111,25 +126,9 @@ export const get_content_data = function(self) {
 						width	: 1024,
 						height	: 720
 					})
-				}//end fn_mousedown
-				content_data.addEventListener('mousedown', fn_mousedown)
-		}else{
-
-			// open tool upload on click
-				const fn_open_tool = function(e) {
-					e.stopPropagation();
-
-					// get the tool context to be opened
-						const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_upload,
-							caller			: self
-						})
-				}//end fn_open_tool
-				content_data.addEventListener('mousedown', fn_open_tool)
+			}
 		}
+		image.addEventListener('mousedown', fn_mousedown)
 
 
 	return content_data

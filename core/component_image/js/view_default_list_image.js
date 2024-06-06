@@ -6,8 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -39,12 +38,11 @@ view_default_list_image.render = function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			autoload : false
+			add_styles : ['media','media_wrapper']
 		})
-		wrapper.classList.add('media','media_wrapper')
 
 	// url
-		const quality	= page_globals.dedalo_quality_thumb // '1.5MB'
+		const quality	= page_globals.dedalo_quality_thumb
 		const file_info	= files_info.find(item => item.quality===quality)
 		const url		= external_source
 			? external_source
@@ -60,6 +58,11 @@ view_default_list_image.render = function(self, options) {
 		})
 		image.draggable	= false
 		image.loading	= 'lazy'
+		// tells handler_open_viewer window dimensions
+		image.open_window_features = {
+			width	: 720,
+			height	: 540
+		}
 
 	// load event
 		image.addEventListener('load', set_bg_color, false)
@@ -79,42 +82,8 @@ view_default_list_image.render = function(self, options) {
 	// set source url
 		image.src = url
 
-	// open viewer
-		image.addEventListener('mousedown', function (e) {
-			e.stopPropagation();
-
-			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so
-			// it could be used, else open the player to show the image
-			const file_exist = files_info.find(item => item.file_exist===true)
-			if(!file_exist){
-
-				// get the upload tool to be fired
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			}else{
-
-				// open a new window
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						menu			: false
-					})
-					open_window({
-						url		: url,
-						target	: 'viewer',
-						width	: 320,
-						height	: 240
-					})
-			}
-		})
+	// open viewer. Media common handler for 3d, av, image, pdf, svg
+			image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return wrapper
