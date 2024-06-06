@@ -15,7 +15,7 @@
 | ich | production | 100% | 100% | 100%  | All definitions are ready | October 2024 |
 | tch | beta | 90% | 90% | 90%  | Install and test it, but don't use in production |  not compatible |
 | tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
-| dmm | beta | 100% | 100% | 100% | Install and test it, but don't use in production | October 2024 |
+| dmm | production | 100% | 100% | 100% | Install and test it, but don't use in production | October 2024 |
 | mdcat | alpha | 30% | 30% |0%  |  | October 2024 |
 
 
@@ -104,15 +104,21 @@ Here are some projects that use Dédalo to manage their Cultural Heritage and/or
 
 ## 5. Installation
 
-### 5.1. Ready-to-use Virtual Machine for V5
+### 5.1. Ready-to-use Virtual Machine
 
-Then, you can use our V5 ready-to-use Virtual Machine for development:
-[Dedalo V5](https://dedalo.dev/v5)
+Then, you can use our ready-to-use Virtual Machine for development:
 
-### 5.2. Video-guide for V5 installation
+**Virtual machine with v6**
 
-Then, you can follow the steps in the V5 installation video (similar for V6):
-[Dedalo V5 installation video on CentOS](https://dedalo.dev/v5_install)
+[Dedalo V6](https://dedalo.dev/docs/install/install_help/#video-guide-for-v6-installation)
+
+### 5.2. Video-guide for installation
+
+Then, you can follow the steps in the installation video:
+
+V6 video installation
+[Dédalo V6 installation video on Ubuntu](https://dedalo.dev/docs/install/install_help)
+
 
 ### 5.3. Manual installation
 
@@ -168,39 +174,15 @@ In a nutshell, Dédalo has three main updates procedures:
 
 ## 7. Importing toponymy
 
-1. Create the toponymy into the Hierarchy menu into Thesaurus:
-    - Log in into Dédalo
-    - Go to the "Thesaurus -> Hierarchy" section
-    - Find the country that you want import
-    - Edit the country
-    - Change the "active" field to "Yes"
-    - Press the "Generate" button
+1. Dédalo has a 147 official counties toponyms, and, as other thesaurus, toponymy can be import following this steps:
 
-2. The toponymy is ready for import the data in SQL.
-
-     - Log out from Dédalo
-     - Go to: /dedalo/install/import/hierarchy
-     - Select the hierarchies to be imported with the postgreSQL copy command, similar to:
-        - psql dedalo4_XXX -U YYY -p 5432 -h localhost -c "\copy matrix_hierarchy(section_id, section_tipo, datos) from es1.copy "
-        - XXX: the name of your installation
-        - YYY: the name of your user
-     - You can list all exported tables and change the "es1.copy" to the hierarchies that you want import
-     - When you are import the toponymy data, you will need change the counters of the tables that you were imported.
-     - Login to Dédalo with developer user
-     - Go to the "administration tool" and see the:
-        - DEDALO COUNTERS STATE
-     - You will see the diferences and Dédalo show the SQL command to apply into the postgreSQL, similar to this:
-        - UPDATE "matrix_counter" SET dato = 75845 WHERE tipo = 'es1';
-     - This command will change the counters to the new imported values in SQL
-     - Change the profiles to access users to the new hierarchy.
-
-    Done! you new hierarchy was imported and ready to use.
+[Installing new hierarchies](https://dedalo.dev/docs/management/install_new_hierarchies)
 
 ## 8. Server system
 
 The backend of Dédalo is tested in:
 
-- Ubuntu Server 22.04 LTS or 20.04 LTS
+- Ubuntu Server 24.04 LTS or 22.04 LTS
 - Debian 11.0+
 - MacOs X 12.0+
 - CentOS, Fedora and RedHat situation. We are no longer testing Dédalo in RedHat/CenOS/Fedora model since the CentOS project focus was shifted. The main OS to test Dédalo will be Ubuntu. RedHat/CentOS/Fedora will become part of the "all other Linux that we do not test" category.
