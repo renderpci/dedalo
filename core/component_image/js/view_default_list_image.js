@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
@@ -25,7 +24,9 @@ export const view_default_list_image = function() {
 
 /**
 * RENDER
-* Render node for use in list
+* Renders the component node for use in this view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_image.render = function(self, options) {
@@ -54,12 +55,11 @@ view_default_list_image.render = function(self, options) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'hidden', // loading
+			class_name		: 'hidden',
 			parent			: wrapper
 		})
 		image.draggable	= false
 		image.loading	= 'lazy'
-		// image.setAttribute('crossOrigin', 'Anonymous');
 
 	// load event
 		image.addEventListener('load', set_bg_color, false)

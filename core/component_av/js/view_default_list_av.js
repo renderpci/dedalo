@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
@@ -26,6 +25,8 @@ export const view_default_list_av = function() {
 /**
 * RENDER
 * Render node for use in list as column
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_default_list_av.render = async function(self, options) {
@@ -62,9 +63,9 @@ view_default_list_av.render = async function(self, options) {
 const get_content_data = function(self) {
 
 	// short vars
-		const data				= self.data || {}
-		const value				= data.value || [] // value is a files_info list
-		const files_info		= value
+		const data			= self.data || {}
+		const value			= data.value || [] // value is a files_info list
+		const files_info	= value
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -94,8 +95,6 @@ const get_content_data = function(self) {
 		})
 		image.draggable = false
 		image.loading = 'lazy'
-		// image.setAttribute('crossOrigin', 'Anonymous');
-		// ui.component.add_image_fallback(image)
 
 		// load event
 			// image.addEventListener('load', set_bg_color, false)

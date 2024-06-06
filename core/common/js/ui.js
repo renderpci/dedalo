@@ -163,19 +163,16 @@ export const ui = {
 						model,
 						tipo,
 						section_tipo +'_'+ tipo,
-						mode
+						mode,
+						'view_' + view
 					]
-					// view style
-					if (view) {
-						ar_css.push('view_' + view)
+					// custom added styles
+					if (add_styles) {
+						ar_css.push(...add_styles)
 					}
 					// search styles
 					if (mode==='search') {
 						ar_css.push('tooltip_toggle')
-					}
-					// custom added styles
-					if (add_styles) {
-						ar_css.push(...add_styles)
 					}
 					// set wrapper direct styles
 					wrapper.classList.add(...ar_css)
@@ -205,8 +202,8 @@ export const ui = {
 								e.preventDefault()
 								console.log('/// refreshing instance (build_autoload=true, render_level=content):', instance);
 								instance.refresh({
-									build_autoload : true,
-									render_level : 'content'
+									build_autoload	: true,
+									render_level	: 'content'
 								})
 								return
 							}
@@ -412,6 +409,7 @@ export const ui = {
 
 			// options
 				const value_string	= options.value_string
+				const add_styles	= options.add_styles || null
 
 			// short vars
 				const model			= instance.model 		// like component_input-text
@@ -433,6 +431,10 @@ export const ui = {
 						'list',
 						'view_' + view
 					]
+					// custom added styles
+					if (add_styles) {
+						ar_css.push(...add_styles)
+					}
 					wrapper.classList.add(...ar_css)
 
 				// Ontology CSS definition
@@ -461,14 +463,16 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener('click', function(e){
+					wrapper.addEventListener('contextmenu', function(e){
+						e.stopPropagation()
+					})
+					wrapper.addEventListener('mousedown', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
 							console.log('/// selected instance:', instance);
 						}
 					})
-					wrapper.classList.add('_'+instance.id)
 				}
 
 
@@ -581,7 +585,7 @@ export const ui = {
 				const wrapper = document.createElement('div')
 					  wrapper.id = id
 				// css
-					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const wrapper_structure_css = typeof element_css.wrapper!=='undefined' ? element_css.wrapper : []
 					const ar_css = [
 						'wrapper_' + type,
 						model,

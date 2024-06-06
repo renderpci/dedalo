@@ -18,7 +18,7 @@
 
 /**
 * VIEW_TOOL_TIME_MACHINE_LIST
-* Manages the component's logic and appearance in client side
+* Manages the section's appearance in client side
 */
 export const view_tool_time_machine_list = function() {
 
@@ -113,62 +113,6 @@ view_tool_time_machine_list.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-
-/**
-* GET_CONTENT_DATA
-* Render previously built section_records into a content_data div container
-* @param array ar_section_record
-* 	Array of section_record instances
-* @param object self
-* 	service_time_machine instance
-* @return HTMLElement content_data
-*/
-	// const get_content_data = async function(ar_section_record, self) {
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// add all section_record rendered nodes
-	// 		const ar_section_record_length = ar_section_record.length
-	// 		if (ar_section_record_length===0) {
-
-	// 			// no records found case
-	// 			const no_records_found_node = ui.create_dom_element({
-	// 				element_type	: 'div',
-	// 				class_name		: 'no_records',
-	// 				inner_html		: get_label.no_records || 'No records found'
-	// 			})
-	// 			fragment.appendChild(no_records_found_node)
-
-	// 		}else{
-	// 			// rows
-
-	// 			// parallel render
-	// 				const ar_promises = []
-	// 				for (let i = 0; i < ar_section_record_length; i++) {
-	// 					const render_promise_node = ar_section_record[i].render()
-	// 					ar_promises.push(render_promise_node)
-	// 				}
-
-	// 			// once rendered, append it preserving the order
-	// 				await Promise.all(ar_promises)
-	// 				.then(function(section_record_nodes) {
-	// 					for (let i = 0; i < ar_section_record_length; i++) {
-	// 						const section_record_node = section_record_nodes[i]
-	// 						fragment.appendChild(section_record_node)
-	// 					}
-	// 				});
-	// 		}
-
-	// 	// content_data
-	// 		const content_data = document.createElement('div')
-	// 			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
-	// 			  content_data.appendChild(fragment)
-
-
-	// 	return content_data
-	// }//end get_content_data
 
 
 
