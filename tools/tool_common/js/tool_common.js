@@ -151,13 +151,7 @@ tool_common.prototype.init = async function(options) {
 
 					const tool_found = self.caller.tools.find(el => el.model===self.model)
 
-					if(SHOW_DEBUG===true) {
-						// console.log("component case tool_found:", tool_found);
-						// console.log("component case self.caller.tools:",self.caller.tools);
-						// console.log("component case tool_found:",tool_found);
-					}
-
-					self.tool_config = tool_found.tool_config
+					self.tool_config = tool_found?.tool_config || null
 				}
 
 				// final fallback
@@ -516,6 +510,12 @@ export const load_component = async function(options) {
 * The event is fired by the tool button created with method ui.build_tool_button.
 * When the user triggers the click event, a publish 'open_tool' is made
 * @param object options
+* {
+* 	caller: object caller (instance)
+* 	tool_context: object
+* 	caller_options: object|null
+* 	open_as: string|null window|modal
+* }
 * @return object|bool
 * 	object is a tool instance
 */

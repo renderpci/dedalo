@@ -151,8 +151,8 @@ view_tool_cataloging_mosaic.render = async function(self, options) {
 		list_body.appendChild(content_data)
 
 		// list_body css
-			const selector 			= `${self.section_tipo}_${self.tipo}.view_tool_cataloging_mosaic`
-			const css_object = {}
+			const selector		= `${self.section_tipo}_${self.tipo}.view_tool_cataloging_mosaic`
+			const css_object	= {}
 			if (self.context.css) {
 				// use defined section css
 				for(const property in self.context.css) {

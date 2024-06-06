@@ -5,10 +5,8 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -48,7 +46,7 @@ view_default_list_pdf.render = async function(self, options) {
 		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension && el.file_exist===true) //
 
 		// thumb
-		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 		const thumb_file = thumb?.file_path
 			? DEDALO_MEDIA_URL + thumb.file_path
@@ -56,7 +54,7 @@ view_default_list_pdf.render = async function(self, options) {
 
 		const url = file_info
 			? thumb_file
-			: page_globals.fallback_image // page_globals.fallback_image
+			: page_globals.fallback_image
 
 		const image = ui.create_dom_element({
 			element_type	: 'img',
