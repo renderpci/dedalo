@@ -46,7 +46,7 @@ render_list_component_3d.prototype.list = async function(options) {
 		case 'column':
 		case 'default':
 		default:
-			return view_column_list_3d.render(self, options)
+			return view_default_list_3d.render(self, options)
 	}
 }//end list
 
