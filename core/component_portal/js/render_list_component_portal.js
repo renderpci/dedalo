@@ -64,6 +64,7 @@ render_list_component_portal.prototype.list = async function(options) {
 		case 'dataframe_mini':
 			return view_mini_list_dataframe.render(self, options)
 
+		case 'mosaic':
 		case 'default':
 		default:
 			return view_default_list_portal.render(self, options)
