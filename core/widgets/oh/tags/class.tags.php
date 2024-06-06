@@ -33,6 +33,14 @@ class tags extends widget_common {
 			$transcription_source = array_find($source, function($item){
 				return ($item->var_name==='transcription');
 			});
+			if (!is_object($transcription_source)) {
+				debug_log(__METHOD__
+					. " Ignored current_ipo because transcription source was not found " . PHP_EOL
+					. ' source: ' . to_string($source)
+					, logger::ERROR
+				);
+				continue;
+			}
 
 			$current_component_tipo = $transcription_source->component_tipo;
 

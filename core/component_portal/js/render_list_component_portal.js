@@ -5,13 +5,10 @@
 
 
 // imports
-	// import {ui} from '../../common/js/ui.js'
-	// import {set_element_css} from '../../page/js/css.js'
 	import {view_default_list_portal} from './view_default_list_portal.js'
 	import {view_mini_portal} from './view_mini_portal.js'
 	import {view_text_list_portal} from './view_text_list_portal.js'
 	import {view_line_list_portal} from './view_line_list_portal.js'
-
 	// dataframe
 	import {view_default_list_dataframe} from '../../component_dataframe/js/view_default_list_dataframe.js'
 	import {view_mini_list_dataframe} from '../../component_dataframe/js/view_mini_list_dataframe.js'
@@ -31,6 +28,7 @@ export const render_list_component_portal = function() {
 /**
 * LIST
 * Render node for use in list
+* @param object options
 * @return HTMLElement|null
 */
 render_list_component_portal.prototype.list = async function(options) {

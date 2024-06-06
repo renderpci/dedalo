@@ -13,6 +13,8 @@ abstract class common {
 	*/
 		// string tipo. like 'dd4525'
 		public $tipo;
+		// string section_tipo. like 'oh1'
+		public $section_tipo;
 		// string mode. like 'edit'
 		public $mode;
 		// string model. like 'component_date'
@@ -2827,13 +2829,6 @@ abstract class common {
 			$requested_source	= dd_core_api::$rqo->source ?? null;
 			$requested_sqo		= dd_core_api::$rqo->sqo ?? null;
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				// if (to_string($section_tipo)==='self') {
-				// 	throw new Exception("Error Processing get_request_config (6) unresolved section_tipo:".to_string($section_tipo), 1);
-				// }
-			}
-
 		// check section tipo model (allow areas)
 			if ($section_tipo!=='self') {
 				$section_model = RecordObj_dd::get_modelo_name_by_tipo($section_tipo,true);
@@ -2896,11 +2891,9 @@ abstract class common {
 
 						// section_list. Use properties from section list instead self properties
 
-						$current_term	= $ar_terms[0];
-						$RecordObj_dd	= new RecordObj_dd($current_term);
-
 						// override properties var
-						$source_properties	=  $RecordObj_dd->get_properties();
+						$RecordObj_dd		= new RecordObj_dd($ar_terms[0]);
+						$source_properties	= $RecordObj_dd->get_properties();
 					}
 					break;
 
@@ -2929,7 +2922,7 @@ abstract class common {
 						$found = array_find($properties->source->request_config, function($el){
 							return isset($el->api_engine) && $el->api_engine==='dedalo';
 						});
-						if (!empty($found) && isset($found->sqo) && isset($found->sqo->limit)) {
+						if (is_object($found) && isset($found->sqo) && isset($found->sqo->limit)) {
 							return $found->sqo->limit;
 						}
 					}
@@ -2943,7 +2936,7 @@ abstract class common {
 
 		// ar_request_query_objects
 			$ar_request_query_objects = [];
-			if( isset($properties->source->request_config) ) { //  || $model==='component_autocomplete_hi'
+			if( isset($properties->source->request_config) ) {
 
 				// V6, properties request_config is defined case
 
@@ -3115,8 +3108,9 @@ abstract class common {
 														$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
 															return $ddo->tipo === $current_component_tipo;
 														});
-
-														$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+														if (is_object($to_change_ddo)) {
+															$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+														}
 
 													}else{
 														// $column_name = end($current_column_path);
@@ -3645,31 +3639,14 @@ abstract class common {
 							$ar_related_clean[] = $current_tipo;
 						}
 					}
-					// check ar_related_clean is legal.
-					// (!) Removed 20-10-2022 because it's no longer necessary this check
-						// $without_related_term_models = [
-						// 	'component_relation_index',
-						// 	'component_select_lang',
-						// 	'component_input_text'
-						// ];
-						// if (empty($ar_related_clean) && !in_array($model, $without_related_term_models)) {
-						// 	// $ar_related_clean = [$tipo]; Loop de la muerte (!)
-						// 	debug_log(__METHOD__
-						// 		." Empty related items. Review your structure config to fix this error. model:$model - tipo:$tipo - ar_related_clean:"
-						// 		.to_string($ar_related_clean)
-						// 		, logger::ERROR
-						// 	);
-						// }
 
 				// sqo_config
 					$sqo_config = new stdClass();
-						$sqo_config->full_count		= false;
-						// $sqo_config->add_select	= false;
-						// $sqo_config->direct		= true;
-						$sqo_config->limit			= $limit;
-						$sqo_config->offset			= $offset;
-						$sqo_config->mode			= $mode;
-						$sqo_config->operator		= '$or';
+						$sqo_config->full_count	= false;
+						$sqo_config->limit		= $limit;
+						$sqo_config->offset		= $offset;
+						$sqo_config->mode		= $mode;
+						$sqo_config->operator	= '$or';
 
 				// fix the limit in the instance.
 				// Note that some instances do not have pagination property, like areas
@@ -3826,19 +3803,12 @@ abstract class common {
 
 				// set var (TEMPORAL TO GIVE ACCESS FROM GET_SUB_DATA)
 					dd_core_api::$context_dd_objects = $ddo_map;
-			}//end if(isset($properties->source->request_config) || $model==='component_autocomplete_hi')
+			}//end if(isset($properties->source->request_config) v5/v6 switch
 
 
 		// cache
 			if ($use_cache===true) {
 				$resolved_request_properties_parsed[$resolved_key] = $ar_request_query_objects;
-			}
-
-		// debug
-			if(SHOW_DEBUG===true) {
-				// if ($this->tipo=='oh17') {
-					// dump($ar_request_query_objects, ' ar_request_query_objects ++ '.to_string($this->tipo));
-				// }
 			}
 
 
@@ -4964,6 +4934,10 @@ abstract class common {
 		$request_config_item	= array_find($request_config, function($el){
 			return $el->api_engine==='dedalo';
 		});
+
+		if (!is_object($request_config_item)) {
+			return null;
+		}
 
 		// sqo try
 		if (isset($request_config_item->sqo) && isset($request_config_item->sqo->limit)) {

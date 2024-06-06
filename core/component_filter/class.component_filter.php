@@ -215,7 +215,7 @@ class component_filter extends component_relation_common {
 						$found = array_find($defaults, function($el){
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
-						if (!empty($found)) {
+						if (is_object($found)) {
 							$default_dato = is_array($found->value)
 								? $found->value
 								: [$found->value];

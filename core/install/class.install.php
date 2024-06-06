@@ -2296,15 +2296,12 @@ class install extends common {
 
 			$current_hierachy = array_find($hierarchies, function($el) use($tld){
 				return strtolower($el->tld)===strtolower($tld);
-			});
-			$label			= isset($current_hierachy) ? $current_hierachy->label : 'undefined ['.$tld.']';
-			$type			= strpos($section_tipo, '2')!==false ? 'model' : 'term';
-			// if ($type==='model') {
-			// 	$label .= ' [model]';
-			// }
+			}) ?? new stdClass();
 
-			$typology				= isset($current_hierachy) ? $current_hierachy->typology : 'undefined typology ['.$tld.']';
-			$active_in_thesaurus	= isset($current_hierachy) ? $current_hierachy->active_in_thesaurus : 'undefined typology ['.$tld.']';
+			$label					= $current_hierachy->label ?? 'undefined ['.$tld.']';
+			$type					= strpos($section_tipo, '2')!==false ? 'model' : 'term';
+			$typology				= $current_hierachy->typology ?? 'undefined typology ['.$tld.']';
+			$active_in_thesaurus	= $current_hierachy->active_in_thesaurus ?? 'undefined typology ['.$tld.']';
 
 			$item = (object)[
 				'file'					=> $file,

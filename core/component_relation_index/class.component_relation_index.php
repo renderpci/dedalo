@@ -158,7 +158,7 @@ class component_relation_index extends component_relation_common {
 				});
 
 				// invalid or empty request_config case
-					if (empty($section_request_config) || !is_object($section_request_config)) {
+					if (!is_object($section_request_config)) {
 						debug_log(__METHOD__
 							. " Error. Invalid request_config " . PHP_EOL
 							. " No valid api_engine dedalo request config found ! Ignored current_context " . PHP_EOL
@@ -171,17 +171,20 @@ class component_relation_index extends component_relation_common {
 				// update the component request_config ddo_map and section_tipo with the current subcontext
 				// because ddo_map if fulfilled with calculated subcontext ddo
 				// add once the section_tipo
-					foreach ((array)$section_request_config->sqo->section_tipo as $current_sr_section_tipo) {
-						if (!in_array($current_sr_section_tipo, $final_request_config->sqo->section_tipo)) {
+					if (is_object($final_request_config)) {
+						foreach ((array)$section_request_config->sqo->section_tipo as $current_sr_section_tipo) {
 
-							// add section tipo
-							$final_request_config->sqo->section_tipo[] = $current_sr_section_tipo;
+							if (!in_array($current_sr_section_tipo, $final_request_config->sqo->section_tipo)) {
 
-							// add ddo_map
-							$final_request_config->show->ddo_map = array_merge(
-								$final_request_config->show->ddo_map,
-								$section_request_config->show->ddo_map
-							);
+								// add section tipo
+								$final_request_config->sqo->section_tipo[] = $current_sr_section_tipo;
+
+								// add ddo_map
+								$final_request_config->show->ddo_map = array_merge(
+									$final_request_config->show->ddo_map,
+									$section_request_config->show->ddo_map
+								);
+							}
 						}
 					}
 

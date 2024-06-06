@@ -49,7 +49,7 @@ class tool_lang extends tool_common {
 			// search current translator config in tool config (stored in database, section 'dd996' Tools configuration)
 			$translator_config = array_find($ar_translator_configs, function($item) use($translator_name) {
 				return $item->name===$translator_name;
-			});
+			}) ?? new stdClass();
 
 			// check config
 				if (empty($translator_config->uri)) {
