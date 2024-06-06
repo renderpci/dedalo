@@ -1623,16 +1623,16 @@ abstract class common {
 
 						// get the config, get_config check is the specific configuration isset
 						// else get the configuration in register record
-						// 	$tool_config_options = new stdClass();
-						// 		$tool_config_options->tool_name		= $tool_object->name;
-						// 		$tool_config_options->tipo			= $tipo;
-						// 		$tool_config_options->section_tipo	= $section_tipo;
-						// 	$specific_tool_config = tool_common::get_tool_configuration($tool_config_options);
+							$tool_config_options = new stdClass();
+								$tool_config_options->tool_name		= $tool_object->name;
+								$tool_config_options->tipo			= $tipo;
+								$tool_config_options->section_tipo	= $section_tipo;
+							$specific_tool_config = tool_common::get_tool_configuration($tool_config_options);
 
-						// // if the configuration was defined, replace the ddo_map of the ontology with it.
-						// 	if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
-						// 		$tool_config->ddo_map = $specific_tool_config->ddo_map;
-						// 	}
+						// if the configuration was defined, replace the ddo_map of the ontology with it.
+							if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
+								$tool_config->ddo_map = $specific_tool_config->ddo_map;
+							}
 
 					// tool context
 					$current_tool_section_tipo	= $this->get_section_tipo() ?? $this->tipo;
