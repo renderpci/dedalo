@@ -37,6 +37,26 @@
 		}
 
 		>.row {
+			font-size: 1.3rem;
+			.buttons_container {
+				button {
+					font-size: 1.3rem;
+					padding: .3rem 2rem;
+				}
+				@media screen and (max-width: @width_break_point_0) { // 1024px
+					display: flex;
+					align-items: center;
+					flex-direction: column;
+					button{
+						width: 100%;
+						margin-top: .5rem;
+					}
+					.all_delete_checkbox{
+						margin-top: .5rem;
+					}
+				}
+			}
+
 
 			.progress {
 				margin-top: 1rem;
@@ -54,7 +74,6 @@
 				display: grid;
 				grid-template-columns: 128px 2fr 1fr 1fr 1fr 3rem;
 				align-items: center;
-
 				// each column inside
 				>* {
 					margin-right: 1em;

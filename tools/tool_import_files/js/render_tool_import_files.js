@@ -495,6 +495,11 @@ const render_options_container = function (self, content_data) {
 					control_field_check_box.addEventListener('change', function(e) {
 						set_import_mode(self, this.checked)
 					})
+					// when the images was added (drop) set the import mode
+					// (check the name and assign the field)
+					event_manager.subscribe('drop_zone_addedfile',() => {
+						set_import_mode(self, control_field_check_box.checked)
+					})
 
 					// switch_label
 					ui.create_dom_element({

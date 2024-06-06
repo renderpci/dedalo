@@ -21,6 +21,9 @@
 	opacity: 0;
 	transition: opacity 0.1s ease-in-out;
 	z-index: 1;
+	@media screen and (max-width: @width_break_point_0) { // 1024px
+		min-width: unset;
+	}
 
 	&.active {
 		opacity: 1;
