@@ -2870,6 +2870,7 @@ abstract class common {
 			// of the list (for sections and portals) by default or edit mode get the properties of the term itself.
 			switch ($mode) {
 				case 'list':
+				case 'tm':
 					// default. Properties from self element
 					$source_properties = $this->get_properties();
 
@@ -3552,6 +3553,7 @@ abstract class common {
 							}
 							break;
 						case 'list':
+						case 'tm':
 						case 'search':
 						default:
 							if ($model==='section') {
