@@ -103,7 +103,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `wrapper_${self.model} ${self.model} ${self.config.id} ${self.section_tipo+'_'+self.tipo} view_${self.view}`
+			class_name		: `wrapper_${self.model} ${self.model} ${self.config.id} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
