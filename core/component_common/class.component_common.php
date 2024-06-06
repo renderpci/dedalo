@@ -18,7 +18,6 @@ abstract class component_common extends common {
 		// string parent. Component's section section_id (alias of $section_id)
 		public $parent;
 		// string section_tipo. Component's section tipo
-		public $section_tipo;
 		public $valor_lang;				// string language of the final value of the component (if it is a list of values, the language of the field it points to that can be translated even if the component is not data "1" value: "Si" or "yes"
 		// protected $dato;				// object dato (JSON encoded in db)
 		public $valor;					// string usually dato

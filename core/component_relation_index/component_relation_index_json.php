@@ -106,17 +106,23 @@
 				$found = array_find($context, function($el){
 					return $el->tipo===$this->tipo;
 				});
-				$found_request_config = array_find($found->request_config, function($el){
-					return $el->api_engine==='dedalo';
-				});
-				$ar_section_tipo = array_map(function($el){
-					return $el->tipo;
-				}, $found_request_config->sqo->section_tipo);
-				foreach ($found_request_config->show->ddo_map as $current_ddo) {
-					// change the ddo parent of the section to the component, only if the parent is the section_tipo
-					// is necessary don't change the ddo with deep dependence
-					if (in_array($current_ddo->parent, $ar_section_tipo)) {
-						$current_ddo->parent = $tipo;
+				if (is_object($found)) {
+					$found_request_config = array_find($found->request_config, function($el){
+						return $el->api_engine==='dedalo';
+					});
+					if (is_object($found_request_config)) {
+
+						$ar_section_tipo = array_map(function($el){
+							return $el->tipo;
+						}, $found_request_config->sqo->section_tipo);
+
+						foreach ($found_request_config->show->ddo_map as $current_ddo) {
+							// change the ddo parent of the section to the component, only if the parent is the section_tipo
+							// is necessary don't change the ddo with deep dependence
+							if (in_array($current_ddo->parent, $ar_section_tipo)) {
+								$current_ddo->parent = $tipo;
+							}
+						}
 					}
 				}
 

@@ -8,12 +8,15 @@ class tool_common {
 
 
 
-	public $name;
-	public $config;
-	// string section_tipo
-	public $section_tipo;
-	// string section_id
-	public $section_id;
+	/**
+	* CLASS VARS
+	*/
+		public $name;
+		public $config;
+		// string section_tipo
+		public $section_tipo;
+		// string section_id
+		public $section_id;
 
 
 

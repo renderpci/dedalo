@@ -13,8 +13,6 @@ class menu extends common {
 	*/
 		// id
 		protected $id;
-		// section_tipo
-		public $section_tipo;
 
 
 

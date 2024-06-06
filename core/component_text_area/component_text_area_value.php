@@ -264,7 +264,7 @@ declare(strict_types=1);
 							$av_tools					= $av_structure_context->tools ?? [];
 							$tool_transcription_context	= array_find($av_tools, function($el){
 								return $el->name==='tool_transcription';
-							});
+							}) ?? new stdClass();
 
 						// cell
 						$data[] = new dd_grid_cell_object((object)[
