@@ -628,6 +628,12 @@ const render_template = async function(self) {
 				size			: file.size
 			})
 
+			event_manager.publish('drop_zone_addedfile', {
+				file			: file
+			})
+			// reset the global progress bar to 0
+			global_progress_bar.style.width = '0%';
+
 		});
 
 	// event removedfile
@@ -701,6 +707,7 @@ const render_template = async function(self) {
 		current_dropzone.on('queuecomplete', function(progress) {
 			// document.querySelector("#total-progress").style.opacity = "0";
 			global_progress.style.opacity = '0';
+			global_progress_bar.style.width = '0%';
 		});
 
 	// Setup the buttons for all transfers
