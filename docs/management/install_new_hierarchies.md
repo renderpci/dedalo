@@ -52,19 +52,19 @@ Some common and shared TLD's: (list ordered by type and name)
 | Users jobs  | Defines the different jobs for people  | Semantic (4)  | hierarchy20  | rolejob |
 | Users roles  | Defines the different roles of Dédalo users  | Semantic (4)  | hierarchy20  | roleusr |
 | Special  | Defines a restrictions for indexation  | Special (5)  | hierarchy20  | special |
-| Analysis  | Defines the different analysis techniques applied to objects.  | Conservation (10)  | hierarchy20  | coanalysis |
-| Cause  | Defines the reasons of the affectation  | Conservation (10)  | hierarchy20  | cocause |
+| Analysis  | Defines the different analysis techniques applied to objects.  | Restoration (10)  | hierarchy20  | resanalysis |
+| Cause  | Defines the reasons of the affectation  | Restoration (10)  | hierarchy20  | rescause |
 | Countermark  | Defines symbols used as countermarks  | Epigraphy (7)  | hierarchy20  | sccmk |
 | Greek  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scell |
-| Job material  | Defines the work materials to be used in the restoration process  | Conservation (10)  | hierarchy20  | comaterial |
+| Job material  | Defines the work materials to be used in the restoration process  | Restoration (10)  | hierarchy20  | resmaterial |
 | Latin  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | sclat |
 | Northern Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxibo |
-| Pathology  | Defines the affectations in the objects  | Conservation (10)  | hierarchy20  | copathology |
+| Pathology  | Defines the affectations in the objects  | Restoration (10)  | hierarchy20  | respathology |
 | Punic  | Defines especial symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxpu |
 | South-Western Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | sctxr |
 | Southern Paleo Hispanic  | Defines Iberian symbols not defined into Unicode  | Epigraphy (7)  | hierarchy20  | scxibm |
 | Symbols  | Defines symbols  | Epigraphy (7)  | hierarchy20  | scsym |
-| Treatment  | Defines the processes that can be applied into the restoration process  | Conservation (10)  | hierarchy20  | cotreatment |
+| Treatment  | Defines the processes that can be applied into the restoration process  | Restoration (10)  | hierarchy20  | restreatment |
 | Web sites  | Website structure, menus, etc  | Websites (6)  | ww10  | ww |
 | Ubication  | Topographic, to identify the location of objects  | Ubications (9)  | hierarchy20  | ubication |
 
