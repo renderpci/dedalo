@@ -5,21 +5,19 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
 /**
-* VIEW_COLUMN_LIST_3D
+* VIEW_DEFAULT_LIST_3D
 * Manages the component's logic and appearance in client side
 */
-export const view_column_list_3d = function() {
+export const view_default_list_3d = function() {
 
 	return true
-}//end  view_column_list_3d
+}//end  view_default_list_3d
 
 
 
@@ -30,7 +28,7 @@ export const view_column_list_3d = function() {
 * @param object options
 * @return HTMLElement wrapper
 */
-view_column_list_3d.render = async function(self, options) {
+view_default_list_3d.render = async function(self, options) {
 
 	// options
 		const render_level = options.render_level || 'full'
@@ -64,7 +62,6 @@ export const get_content_data = function(self) {
 		const files_info		= value
 		const quality	= self.quality || self.context.features.quality
 
-
 	// content_data
 		const content_data = ui.component.build_content_data(self)
 
@@ -90,9 +87,12 @@ export const get_content_data = function(self) {
 			class_name		: 'link',
 			parent			: content_data
 		})
-		// image.loading = 'lazy'
-		// image.setAttribute('crossOrigin', 'Anonymous');
-		// ui.component.add_image_fallback(image)
+		image.loading = 'lazy'
+		// tells handler_open_viewer window dimensions
+		image.open_window_features = {
+			width	: 1024,
+			height	: 720
+		}
 
 		// load event . image background color
 			image.addEventListener('load', set_bg_color, false)
@@ -108,44 +108,10 @@ export const get_content_data = function(self) {
 			}, false)
 
 		// set image src
-		image.src = url
+			image.src = url
 
-	// open viewer
-		content_data.addEventListener('mousedown', fn_mousedown)
-		function fn_mousedown(e) {
-			e.stopPropagation();
-
-			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
-			// else open the player to show the image
-			if(!file_info) {
-
-				// get the tool context to be opened
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			}else{
-
-				// open a new window
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						menu			: false
-					})
-					open_window({
-						url		: url,
-						target	: 'viewer',
-						width	: 1024,
-						height	: 720
-					})
-			}
-		}//end fn_mousedown
+		// open viewer. Media common handler for 3d, av, image, pdf, svg
+			image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return content_data
