@@ -6,8 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -95,6 +94,11 @@ const get_content_data = function(self) {
 		})
 		image.draggable = false
 		image.loading = 'lazy'
+		// tells handler_open_viewer window dimensions
+		image.open_window_features = {
+			width	: 1024,
+			height	: 860
+		}
 
 		// load event
 			// image.addEventListener('load', set_bg_color, false)
@@ -114,42 +118,8 @@ const get_content_data = function(self) {
 		// set source url
 			image.src = url
 
-		// open viewer
-			image.addEventListener('mouseup', function (e) {
-				e.stopPropagation();
-
-				const file_exist = files_info.find(item => item.file_exist===true)
-				// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
-				// else open the player to show the image
-				if(!file_exist) {
-
-					// get the tool context to be opened
-						const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-					// open_tool (tool_common)
-						open_tool({
-							tool_context	: tool_upload,
-							caller			: self
-						})
-				}else{
-
-					// open a new window
-						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-							tipo			: self.tipo,
-							section_tipo	: self.section_tipo,
-							id				: self.section_id,
-							mode			: 'edit',
-							view			: 'viewer',
-							menu			: false
-						})
-						open_window({
-							url		: url,
-							target	: 'viewer',
-							width	: 1024,
-							height	: 860
-						})
-				}
-			})
+		// open viewer. Media common handler for 3d, av, image, pdf, svg
+			image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return content_data

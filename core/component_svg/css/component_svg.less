@@ -30,9 +30,6 @@
 	}
 
 	&.list {
-		height: var(--view_line_height);
-		width: 100%;
-		cursor: pointer;
 
 		>.content_data {
 
@@ -42,9 +39,23 @@
 		}
 	}
 
+	&.search {
+
+	}
+
 	&.view_default {
 
-	}//end .view_default
+	}
+
+	&.view_viewer {
+
+		.content_data {
+
+			.content_value {
+				height: calc(100vh - 3rem);
+			}
+		}
+	}
 
 	&.view_line {
 
