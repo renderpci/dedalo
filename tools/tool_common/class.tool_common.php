@@ -933,4 +933,47 @@ class tool_common {
 
 
 
+	/**
+	* GET_TOOL_CONFIG
+	* 	Get the specific tool config in registered tools or tool configuration
+	*	when the tool has a specific properties in the register or in his configuration records
+	*	overwrite the ontology properties with them
+	*	flow of overwrite: the most specific overwrite the most generic
+	*		configuration -> configuration register -> ontology
+	*	1 if the configuration isset use it
+	*	2 else get the configuration in register, if isset use it
+	*	3 else get the ontology properties
+	* 
+	* @param object $options
+	* @return object|null $tool_config
+	*/
+	public static function get_tool_configuration(object $options) : ?object {
+
+		$tool_name 		= $options->tool_name;
+		$tipo			= $options->tipo;
+		$section_tipo	= $options->section_tipo;
+
+		// get the config, get_config check is the specific configuration isset
+		// else get the configuration in register record
+			$tool_configuration = tool_common::get_config($tool_name);
+
+			// check if has a properties and tool_config definition
+			if( isset($tool_configuration->config)
+				&& isset($tool_configuration->config->properties)
+				&& isset($tool_configuration->config->properties->tool_config) ){
+				// tool config is an array with specific object for tipo and section_tipo
+				// (that need to match with the button_import definition and his section)
+				// find the definition that match with current section
+				$ar_tool_config = $tool_configuration->config->properties->tool_config;
+
+				$tool_config = array_find( $ar_tool_config, function($item) use($section_tipo, $tipo) {
+					return $item->section_tipo === $section_tipo && $item->tipo === $tipo;
+				});
+
+				return $tool_config;
+			}
+
+		return null;
+	}//end get_tool_config
+
 }//end class tool_common
