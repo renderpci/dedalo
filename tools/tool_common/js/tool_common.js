@@ -525,21 +525,43 @@ export const open_tool = async (options) => {
 	}
 
 	// options
-		const caller			= options.caller
-		const caller_options	= options.caller_options || null
-		const tool_context		= clone(options.tool_context) // (!) full clone here to avoid circular references
+		// tool_context. Is is string, resolve context from API using value as model
+		const tool_context = typeof options.tool_context==='string'
+			? await (async ()=>{
+				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+				const rqo = {
+					action	: 'get_element_context',
+					source : {
+						model : options.tool_context // expected name as 'tool_upload'
+					},
+					prevent_lock : true
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				if (api_response.result && api_response.result[0]) {
+					return api_response.result[0] // tool context object
+				}
+				return null
+			  })()
+			 : clone(options.tool_context) // (!) full clone here to avoid circular references
+		// caller. Instance that calls the tool, normally a component or section
+		const caller = options.caller
+		// caller_options. Object with additional data for the the tool
+		const caller_options = options.caller_options || null
 		// open_as. Mode of tool visualization: modal, tab, popup
-		const open_as			= options.open_as
-			? options.open_as // overwrite context value
+		const open_as = options.open_as
+			? options.open_as // overwrite context value when is passed
 			: tool_context && tool_context.properties && tool_context.properties.open_as
 				? tool_context.properties.open_as
 				: 'modal' // default is 'modal'
-
-	// windowFeatures. Features to pass to the tool visualizer
-	// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
-		const windowFeatures = tool_context && tool_context.properties && tool_context.properties.windowFeatures
-			? tool_context.properties.windowFeatures
-			: null
+		// windowFeatures. Features to pass to the tool visualizer
+		// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
+		const current_windowFeatures = options.windowFeatures
+			? options.windowFeatures // overwrite context value when is passed
+			: tool_context && tool_context.properties && tool_context.properties.windowFeatures
+				? tool_context.properties.windowFeatures
+				: null
 
 	// open tool visualization
 		const js_promise = (open_as==='window')
@@ -548,14 +570,14 @@ export const open_tool = async (options) => {
 				caller			: caller, // object like component_input_text instance
 				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
 			: view_modal({
 				tool_context	: tool_context, // object
 				caller			: caller, // object like component_input_text instance
 				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
 
 
