@@ -585,6 +585,13 @@ class tool_common {
 	*/
 	public static function get_config(string $tool_name) : ?object {
 
+		// cache
+			static $cache_config_tool = [];
+
+			if( array_key_exists( $tool_name, $cache_config_tool) ){
+				return $cache_config_tool[$tool_name];
+			}
+
 		// get all tools config sections
 			$ar_config = tools_register::get_all_config_tool();
 
@@ -602,9 +609,16 @@ class tool_common {
 
 				// no config is found at all
 				if(!is_object($config)){
+					//cache
+					$cache_config_tool[$tool_name] = null;
+
 					return null;
 				}
 			}
+
+
+		// save the result into the cache
+			$cache_config_tool[$tool_name] = $config;
 
 		return $config;
 	}//end get_config
