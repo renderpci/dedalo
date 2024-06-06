@@ -81,9 +81,9 @@ export const get_content_data = async function(self) {
 				info_node.classList.toggle('hide')
 			})
 		// info container
-			const info_container = render_info_container(self)
-			info_container.classList.add('hide')
-			content_data.appendChild(info_container)
+			const info_node = render_info_container(self)
+			info_node.classList.add('hide')
+			content_data.appendChild(info_node)
 
 	// template_node
 		const template_node = await render_template(self)
