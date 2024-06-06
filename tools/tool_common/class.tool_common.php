@@ -587,8 +587,7 @@ class tool_common {
 
 		// cache
 			static $cache_config_tool = [];
-
-			if( array_key_exists( $tool_name, $cache_config_tool) ){
+			if( array_key_exists($tool_name, $cache_config_tool) ){
 				return $cache_config_tool[$tool_name];
 			}
 
@@ -616,9 +615,9 @@ class tool_common {
 				}
 			}
 
-
-		// save the result into the cache
+		// cache. save the result into the cache
 			$cache_config_tool[$tool_name] = $config;
+
 
 		return $config;
 	}//end get_config
@@ -957,7 +956,7 @@ class tool_common {
 	*	1 if the configuration isset use it
 	*	2 else get the configuration in register, if isset use it
 	*	3 else get the ontology properties
-	* 
+	*
 	* @param object $options
 	* @return object|null $tool_config
 	*/
