@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+
+
 /**
 * CLASS COMPONENT PDF
 *
@@ -384,9 +386,15 @@ class component_pdf extends component_media_common implements component_media_in
 	* 	full_file_name : string like 'rsc37_rsc176_18.doc',
 	* 	full_file_path : string like '/../dedalo/media/pdf/original/0/rsc37_rsc176_18.doc'
 	* }
+	* @param object $process_options
+	* optional parameters to process the file
+	* {
+	* 	ocr : true // true||false  process the file with the OCR engine
+	* 	ocr_lang : 'lg-eng' // to be used in the OCR process
+	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data) : object {
+	public function process_uploaded_file(object $file_data, ?object $process_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -412,6 +420,8 @@ class component_pdf extends component_media_common implements component_media_in
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$first_page					= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 			$original_normalized_name	= $full_file_name;
+			$ocr 						= $process_options->ocr ?? false;
+			$ocr_lang 					= $process_options->ocr_lang ?? null;
 
 		// check full_file_path
 			if (!file_exists($full_file_path)) {
@@ -491,6 +501,16 @@ class component_pdf extends component_media_common implements component_media_in
 						}
 					}
 
+
+					if( $ocr===true && file_exists($target_file_path) ){
+
+						$ocr_options = new stdClass();
+							$ocr_options->path_pdf	= (string)$target_file_path;	# full source pdf file path
+							$ocr_options->ocr_lang	= $ocr_lang;		# lang used to process the file
+
+						$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
+					}
+
 					// create alternative image versions of the PDF
 						$this->create_alternative_versions();
 
@@ -525,7 +545,7 @@ class component_pdf extends component_media_common implements component_media_in
 										$this->section_tipo,
 										false
 									);
-									$component_text_area->set_dato($text_from_pdf_response->result); // Text with page numbers
+									$component_text_area->set_dato([$text_from_pdf_response->result]); // Text with page numbers
 									$component_text_area->Save();
 								}
 
@@ -740,6 +760,80 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return $response;
 	}//end build_pdf_transcription
+
+
+
+
+	/**
+	* PROCESS_OCR_FILE
+	* @param object $options
+	* @return object $response
+	*/
+	public function process_ocr_file(object $options) : object {
+
+		$response = new stdClass();
+
+		// options vars
+		$pdf_file = $options->path_pdf;
+		$ocr_lang = $options->ocr_lang;
+
+		// test OCR engine
+			if (defined('PDF_OCR_ENGINE')===false) {
+				$response->result	= 'error';
+				$response->msg		= "Error OCR Processing Request: config PDF_OCR_ENGINE is not defined";
+				return $response;
+			}else{
+				$ocr_engine = shell_exec('type -P '.PDF_OCR_ENGINE);
+				if (empty($ocr_engine)) {
+					$response->result	= 'error';
+					$response->msg		= "Error OCR Processing Request: daemon engine not found";
+					return $response;
+				}
+			}
+
+		// lang
+		// get the 3 tld of the lang, when it not set get the data lang.
+		$lang = isset($ocr_lang)
+			? str_replace('lg-', '' , $ocr_lang)
+			: str_replace('lg-', '' , DEDALO_DATA_LANG);
+
+		// Lang exceptions
+		switch($lang) {
+			// Valencià languge exception, when is set change it for cat - Català
+			case 'vlca':
+				$lang = 'cat';
+				break;
+			default:
+				break;
+		}
+
+		$command  = escapeshellcmd(PDF_OCR_ENGINE.' --pdfa-image-compression lossless -l '
+			.escapeshellarg($lang).' --force-ocr '
+			.escapeshellarg($pdf_file).' '
+			.escapeshellarg($pdf_file));
+		debug_log(__METHOD__
+			. " Executing PDF command:" . PHP_EOL
+			. $command . PHP_EOL
+			, logger::WARNING
+		);
+		$output = exec("$command 2>&1", $result); // Generate OCR pdf file in the same directory, replace the input file (usually the web version)
+		if ( strpos( strtolower($output), 'error') ) {
+			$response->result	= 'error';
+			$response->msg		= "$output";
+			return $response;
+		}
+
+		if (!file_exists($pdf_file)) {
+			$response->result	= 'error';
+			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
+			return $response;
+		}
+
+		$response->result	= 'ok';
+		$response->msg		= PHP_EOL.json_encode($result). PHP_EOL. "Done! OCR Processing Request was finished";
+
+		return $response;
+	}//end process_ocr_file
 
 
 

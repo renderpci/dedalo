@@ -125,10 +125,15 @@ tool_upload.prototype.build = async function(autoload=false) {
 *	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
 *	type: "image/tiff"
 * }
+* @param object process_options
+* {
+* 	ocr	 : true
+* 	ocr_lang : 'lg-spa',
+* }
 * @return promise
 * 	Resolve: object API response
 */
-tool_upload.prototype.process_uploaded_file = function(file_data) {
+tool_upload.prototype.process_uploaded_file = function(file_data, process_options) {
 
 	const self = this
 
@@ -143,6 +148,7 @@ tool_upload.prototype.process_uploaded_file = function(file_data) {
 			source	: source,
 			options	: {
 				file_data		: file_data,
+				process_options : process_options,
 				tipo			: self.caller.tipo,
 				section_tipo	: self.caller.section_tipo,
 				section_id		: self.caller.section_id,
