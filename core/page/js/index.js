@@ -35,7 +35,7 @@ const t0 = performance.now()
 		// check environment
 			if (typeof page_globals==='undefined') {
 				const error_node = render_server_response_error([{
-					msg		: 'Error: the <a href="../../environment.js.php">environment</a> is not available. Check that PHP server is running and configuration files are correct',
+					msg		: 'Error: the <a href="../common/js/environment.js.php?v=1">environment</a> is not available. Check that PHP server is running and configuration files are correct',
 					error	: null
 				}], false)
 				document.getElementById('main').appendChild(error_node)
