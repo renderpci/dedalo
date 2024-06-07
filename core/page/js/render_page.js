@@ -9,7 +9,6 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_server_response_error} from '../../common/js/render_common.js'
 	import {instantiate_page_element} from './page.js'
-	// import {clone} from '../../common/js/utils/index.js'
 
 
 
@@ -61,17 +60,16 @@ render_page.prototype.edit = async function(options) {
 /**
 * GET_CONTENT_DATA
 * @param object self
+* 	page instance
 * @return HTMLElement content_data
 */
 const get_content_data = async function(self) {
-
-	// const fragment = new DocumentFragment()
 
 	// content_data
 		const content_data = document.createElement('div')
 			  content_data.classList.add('content_data', self.type)
 
-	// check page context is valid
+	// check page context is valid. If not, return special error node
 		if (!self.context) {
 
 			// running_with_errors.
@@ -80,16 +78,17 @@ const get_content_data = async function(self) {
 			// the instance could be built and rendered again replacing the temporal wrapper
 				self.running_with_errors = [
 					{
-						msg		: 'Invalid context',
-						error	: 'invalid_context'
+						error	: 'invalid_context', // error type
+						msg		: 'Invalid context'
 					}
 				]
 
-			const wrapper_page = render_server_response_error(
+			const error_node = render_server_response_error(
 				self.running_with_errors
 			)
+			content_data.appendChild(error_node)
 
-			return wrapper_page
+			return content_data
 		}
 
 	// dedalo_maintenance_mode. maintenance_msg (defined in config and get from environment.js.php)
@@ -104,111 +103,92 @@ const get_content_data = async function(self) {
 		}
 
 	// add all instance rendered nodes
-		// const ar_instances_length = self.ar_instances.length;
-
-		// sequential mode
-			// for (let i = 0; i < ar_instances_length; i++) {
-
-			// 	const current_instance = self.ar_instances[i]
-
-			// 	// exclude menu already added
-			// 	if(current_instance.model==='menu') continue;
-
-			// 	const child_item = current_instance.render({
-			// 		render_level : 'full'
-			// 	})
-
-			// 	content_data.appendChild(await child_item)
-			// }
-
-		// parallel mode
-			// const ar_promises = []
-			// for (let i = 0; i < ar_instances_length; i++) {
-
-			// 	const current_instance = self.ar_instances[i]
-
-			// 	// exclude menu already added to wrapper
-			// 	if(current_instance.model==='menu') continue;
-
-			// 	const render_promise = current_instance.render()
-			// 	ar_promises.push(render_promise)
-			// }
-			// await Promise.all(ar_promises).then(function(child_items) {
-			//   for (let i = 0; i < child_items.length; i++) {
-			//   	content_data.appendChild(child_items[i])
-			//   }
-			// });
-
 		// async mode
-			const render_promises = []
-			const context_length = self.context.length
-			for (let i = 0; i < context_length; i++) {
+		const render_promises = []
+		const context_length = self.context.length
+		for (let i = 0; i < context_length; i++) {
 
-				const current_context = self.context[i]
+			const current_context = self.context[i]
 
-				// component check
-					// if (current_context.type==='component') {
-					// 	console.log('Ignored component context in page:', current_context);
-					// 	self.running_with_errors = [
-					// 		{
-					// 			msg		: 'Invalid page element: ' + current_context.type + ' - ' + current_context.label,
-					// 			error	: 'invalid_page_element'
-					// 		}
-					// 	]
-					// 	const error_node = render_server_response_error(
-					// 		self.running_with_errors
-					// 	)
-					// 	content_data.appendChild(error_node)
-					// 	continue;
-					// }
+			// component check
+				// if (current_context.type==='component') {
+				// 	console.log('Ignored component context in page:', current_context);
+				// 	self.running_with_errors = [
+				// 		{
+				// 			msg		: 'Invalid page element: ' + current_context.type + ' - ' + current_context.label,
+				// 			error	: 'invalid_page_element'
+				// 		}
+				// 	]
+				// 	const error_node = render_server_response_error(
+				// 		self.running_with_errors
+				// 	)
+				// 	content_data.appendChild(error_node)
+				// 	continue;
+				// }
 
-				// menu case. Prevent to render again on refresh page
-					// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
-					const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
-					if (non_destroyable_instance) {
-						content_data.appendChild(non_destroyable_instance.node)
-						continue;
+			// menu case. Prevent to render again on refresh page
+				// const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model)
+				const non_destroyable_instance = self.ar_instances.find(el => el.model===current_context.model && el.destroyable===false)
+				if (non_destroyable_instance) {
+					content_data.appendChild(non_destroyable_instance.node)
+					continue;
+				}
+
+			// load_item_with_spinner
+				const render_promise = ui.load_item_with_spinner({
+					container			: content_data,
+					preserve_content	: true,
+					label				: current_context.label || current_context.model,
+					model				: current_context.model,
+					callback			: async () => {
+						// instance
+						const current_instance = await instantiate_page_element(
+							self, // object page instance
+							current_context // object is used as source
+						)
+
+						// store instance to locate on destroy
+						self.ar_instances.push(current_instance)
+
+						// build (load data)
+						const autoload = true // Note that it's necessary to load data here (in addition to context)
+						await current_instance.build(autoload)
+
+						// render node
+						const node = await current_instance.render()
+
+						return node || ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'error',
+							inner_html		: 'Error on render element ' + current_instance.model
+						})
 					}
+				})
+				render_promises.push(render_promise)
+		}//end for (let i = 0; i < elements_length; i++)
 
-				// load_item_with_spinner
-					const render_promise = ui.load_item_with_spinner({
-						container			: content_data,
-						preserve_content	: true,
-						label				: current_context.label || current_context.model,
-						model				: current_context.model,
-						callback			: async () => {
-							// instance
-							const current_instance = await instantiate_page_element(
-								self, // object page instance
-								current_context // object is used as source
-							)
+	// check start page errors
+	// start_errors was set by data_manager on API response result error cases
+	// as 'window.dd_page.start_errors = [msg]'
+	// @see data_manager.request
+		if (self.start_errors) {
 
-							// store instance to locate on destroy
-							self.ar_instances.push(current_instance)
-
-							// build (load data)
-							const autoload = true // Note that it's necessary to load data here (in addition to context)
-							await current_instance.build(autoload)
-
-							// render node
-							const node = await current_instance.render()
-
-							// debug
-							// console.log('))) PAGE RENDERED NODE )))', node);
-
-							return node || ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'error',
-								inner_html		: 'Error on render element ' + current_instance.model
-							})
-						}
-					})
-					render_promises.push(render_promise)
-			}//end for (let i = 0; i < elements_length; i++)
+			// render a running_with_errors node to add to the content_data
+			self.running_with_errors = [
+				{
+					error	: 'invalid_page_element', // error type
+					msg		: self.start_errors.join('\n ')
+				}
+			]
+			const error_node = render_server_response_error(
+				self.running_with_errors
+			)
+			content_data.appendChild(error_node)
+		}
 
 	// render is complete
 		Promise.all(render_promises)
-		.then(function(response){
+		.then(function(){
 			// event publish
 			// event_manager.publish('render_'+self.id, wrapper)
 			event_manager.publish('render_page')

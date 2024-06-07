@@ -477,7 +477,15 @@ final class dd_core_api {
 							break;
 
 						default:
-							// ..
+							// other cases
+							if (empty($model)) {
+								debug_log(__METHOD__
+									. " Invalid tipo is received. The model cannot be resolved " . PHP_EOL
+									. ' tipo: ' . to_string($tipo)
+									, logger::ERROR
+								);
+								$response->error = 'Invalid tipo ' . $tipo;
+							}
 							break;
 					}//end switch (true)
 
@@ -493,7 +501,9 @@ final class dd_core_api {
 				'context'	=> $context,
 				'data'		=> []
 			];
-			$response->msg = 'OK. Request done ['.__FUNCTION__.']';
+			$response->msg = empty($response->error)
+				? 'OK. Request done'
+				: 'Error: ' . to_string($response->error);
 
 
 		return $response;
