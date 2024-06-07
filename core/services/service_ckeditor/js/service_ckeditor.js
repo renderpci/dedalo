@@ -1908,6 +1908,10 @@ export const service_ckeditor = function() {
 	this.focus = function() {
 
 		const editorInstance = this.editor
+		if (!editorInstance) {
+			console.warn('Editor is available', this);
+			return
+		}
 
 		editorInstance.model.change( writer => {
 			writer.setSelection( writer.createPositionAt( editorInstance.model.document.getRoot(), 'end' ));
