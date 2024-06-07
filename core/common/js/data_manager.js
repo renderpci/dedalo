@@ -134,14 +134,17 @@ data_manager.request = async function(options) {
 
 					// alert msg to user
 						const msg = result.msg || result.error
-						if (!window.dd_page.request_message || window.dd_page.request_message!==msg) {
+						if (!window.dd_page?.request_message || window.dd_page?.request_message!==msg) {
 							alert("An error has occurred in the API connection (data_manager.request). \n" + msg);
 						}
 						// save message to prevent duplication for x seconds
-						window.dd_page.request_message = msg
-						setTimeout(function(){
-							window.dd_page.request_message = null
-						}, 2000)
+						if (window.dd_page) {
+							window.dd_page.start_errors		= [msg]
+							window.dd_page.request_message	= msg
+							setTimeout(function(){
+								window.dd_page.request_message = null
+							}, 3000)
+						}
 				}
 
 				return result

@@ -285,8 +285,11 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 						})
 						link_home.addEventListener('click', function(e) {
 							e.stopPropagation()
-							// location.href = DEDALO_ROOT_WEB
 						})
+					// raspa_error add once
+						if (!error_container.classList.contains('raspa_error')) {
+							error_container.classList.add('raspa_error')
+						}
 					break;
 				}
 
@@ -331,7 +334,6 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 						})
 						link_home.addEventListener('click', function(e) {
 							e.stopPropagation()
-							// location.href = DEDALO_ROOT_WEB
 						})
 					// more_info
 						ui.create_dom_element({
@@ -340,7 +342,6 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							inner_html		: 'Received data format is not as expected. See your server log for details',
 							parent			: error_container
 						})
-
 					// raspa_error add once
 						if (!error_container.classList.contains('raspa_error')) {
 							error_container.classList.add('raspa_error')

@@ -346,6 +346,9 @@ page.prototype.init = async function(options) {
 	// update main CSS url to avoid cache
 		// update_css_file('main')
 
+	// set page instance as global to be available
+		window.dd_page = self
+
 	// status update
 		self.status = 'initialized'
 
@@ -469,9 +472,6 @@ page.prototype.build = async function(autoload=false) {
 
 			document.title =  'V6 ' + tipo + ' ' + label
 		}
-
-	// set page instance as global to be available
-		window.dd_page = self
 
 	// status update
 		self.status = 'built'
