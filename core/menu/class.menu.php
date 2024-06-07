@@ -69,7 +69,7 @@ class menu extends common {
 				// get authorized areas for the current user with the data of component_security_access
 				$ar_permisions_areas = security::get_ar_authorized_areas_for_user();
 
-				// foreach ($ar_full_areas as $area_item) {
+				// filter areas excluding by permissions and special tipos
 				$ar_full_areas_length = sizeof($ar_full_areas);
 				for ($i=0; $i < $ar_full_areas_length ; $i++) {
 
@@ -256,6 +256,7 @@ class menu extends common {
 		$info_data = new stdClass();
 			// vars already included in environment
 			$info_data->dedalo_version		= DEDALO_VERSION;
+			$info_data->dedalo_build		= DEDALO_BUILD;
 			$info_data->dedalo_db_name		= DEDALO_DATABASE_CONN;
 			$info_data->pg_version			= (function() {
 				try {
@@ -279,7 +280,6 @@ class menu extends common {
 			$info_data->pg_db				= pg_version(DBi::_getConnection())['server'];
 			$info_data->server_software		= $_SERVER['SERVER_SOFTWARE'] ?? 'unknown';
 			$info_data->ip_server			= $_SERVER['SERVER_ADDR'] ?? 'unknown';
-			$info_data->dedalo_build		= DEDALO_BUILD;
 
 
 		return $info_data;
@@ -289,6 +289,7 @@ class menu extends common {
 
 	/**
 	* GET_STRUCTURE_CONTEXT
+	* Resolve menu context dd_object
 	* @param int $permissions = 1
 	* @param bool $add_request_config = false
 	* @return dd_object $dd_object
@@ -347,7 +348,6 @@ class menu extends common {
 					$debug->exec_time = $time.' ms';
 
 				$dd_object->debug = $debug;
-
 			}
 
 
