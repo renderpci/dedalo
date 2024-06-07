@@ -700,12 +700,28 @@ const view_modal = async function(options) {
 		modal.on_close	= () => {
 
 			if (typeof tool_instance.on_close_actions==='function') {
+
 				// custom actions
 				tool_instance.on_close_actions('modal')
+				// re-select the caller component
+				if (caller.type==='component') {
+					setTimeout(()=>{
+						ui.component.activate(caller)
+					}, 1)
+				}
+
 			}else{
 
 				caller.refresh({
 					refresh_id_base_lang : true
+				})
+				.then(()=>{
+					// re-select the caller component
+					if (caller.type==='component') {
+						setTimeout(()=>{
+							ui.component.activate(caller)
+						}, 1)
+					}
 				})
 				tool_instance.destroy(true, true, true)
 			}
