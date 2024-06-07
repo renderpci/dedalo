@@ -941,7 +941,7 @@ class component_image extends component_media_common implements component_media_
 	*   }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data, ?object $process_options) : object {
+	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

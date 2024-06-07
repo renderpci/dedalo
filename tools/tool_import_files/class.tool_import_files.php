@@ -191,7 +191,10 @@ class tool_import_files extends tool_common {
 					}
 
 				// post processing file (add_file returns final renamed file with path info)
-					$process_file = $component->process_uploaded_file($add_file->ready);
+					$process_file = $component->process_uploaded_file(
+						$add_file->ready,
+						null
+					);
 					if ($process_file->result===false) {
 						// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
 						// return $response;
