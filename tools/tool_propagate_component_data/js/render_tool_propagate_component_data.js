@@ -102,7 +102,6 @@ const get_content_data = async function(self) {
 		ui.load_item_with_spinner({
 			container	: components_list_container,
 			callback	: async () => {
-				// await pause(2000)
 				await self.get_component_to_propagate()
 				const component_node = await self.component_to_propagate.render()
 				return component_node
