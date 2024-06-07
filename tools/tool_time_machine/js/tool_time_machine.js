@@ -12,8 +12,7 @@
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_time_machine, add_component} from './render_tool_time_machine.js'
-	// import {render_time_machine_view} from './render_time_machine_view.js'
-	// import {paginator} from '../../../core/paginator/js/paginator.js'
+
 
 
 /**
@@ -34,13 +33,9 @@ export const tool_time_machine = function () {
 
 	this.caller					= null
 	this.service_time_machine	= null
-	// this.section				= null// custom section generated in tm mode on build
 	this.button_apply			= null
 	this.selected_matrix_id		= null
 	this.modal_container		= null
-
-
-	return true
 }//end tool_time_machine
 
 
@@ -77,11 +72,9 @@ tool_time_machine.prototype.init = async function(options) {
 			? self.caller.lang
 			: null
 
-	// events subscribe. User click over list record eye icon (preview)
-		self.events_tokens.push(
-			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
-		)
-		async function fn_tm_edit_record(data) {
+	// events subscribe. Published when user clicks on list record eye icon (preview)
+		const fn_tm_edit_record = async function(data) {
+
 			const matrix_id			= data.matrix_id
 			const date				= data.date
 			const caller_dataframe	= data.caller_dataframe || null
@@ -96,16 +89,19 @@ tool_time_machine.prototype.init = async function(options) {
 			if( self.main_element.properties.has_dataframe && self.main_element.properties.has_dataframe === true){
 
 				const selected_instace = data.caller.ar_instances.find(el => el.tipo===self.main_element.tipo && el.matrix_id === matrix_id)
-				const new_node = await selected_instace.node.cloneNode(true)
+				if (selected_instace) {
 
-				const component_container = self.preview_component_container
-				// empty the preview container
-				while (self.preview_component_container.firstChild) {
-					// remove node from DOM (not component instance)
-					self.preview_component_container.removeChild(self.preview_component_container.firstChild)
+					const new_node = selected_instace.node.cloneNode(true)
+
+					// empty the preview container
+					while (self.preview_component_container.firstChild) {
+						// remove node from DOM (not component instance)
+						self.preview_component_container.removeChild(self.preview_component_container.firstChild)
+					}
+
+					// add the new node
+					self.preview_component_container.appendChild(new_node)
 				}
-
-				self.preview_component_container.appendChild(new_node)
 			}else{
 				// render. Create and add new component to preview container
 				const load_mode = 'tm' // (!) Remember use tm mode to force component to load data from time machine table
@@ -125,6 +121,9 @@ tool_time_machine.prototype.init = async function(options) {
 			// show Apply button
 			self.button_apply.classList.remove('hide','lock')
 		}//end fn_tm_edit_record
+		self.events_tokens.push(
+			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
+		)
 
 
 	return common_init
@@ -166,7 +165,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 			// section case. (!) note that section is not loaded automatically from tool common build
 				if (main_element_ddo.model==='section') {
-					const element_options = {
+					const section_options = {
 						model			: main_element_ddo.model,
 						mode			: main_element_ddo.mode,
 						tipo			: main_element_ddo.tipo,
@@ -178,13 +177,16 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 						id_variant		: self.model,  // id_variant prevents id conflicts
 						caller			: self // set tool as caller of the element :-)
 					}
-					const instance = await get_instance(element_options) // load and init
+					const instance = await get_instance(section_options) // load and init
 					await instance.build(true)
 					self.ar_instances.push(instance)
 				}
 
 			// fix main_element
 				self.main_element = self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
+				if (!self.main_element) {
+					console.error('Error: main_element_ddo not found in self.ar_instances', self.ar_instances)
+				}
 
 			// ddo_map for service_time_machine. Section uses is request_config_object show
 			// NOTE: The ddo_map will be changed in service_time_machine to mode = list
@@ -199,6 +201,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					mode			: 'tm',
 					view			: 'text'
 				}
+
 			// check if the main component has a dataframe associated
 			// if yes, assign the has_dataframe property
 			// has_dataframe will use in API build_json_rows() in search action to calculate the component and dataframe data
@@ -249,8 +252,6 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 						'5fr' // tm value
 					  ].join(' ')
 
-					'5rem 8rem 11.2rem 16rem 1fr 1fr 5fr'
-
 			// time_machine. Create, build and assign the time machine service to the instance
 			// config is used in service_time_machine to get the ddo_map and send it to API
 				const config = {
@@ -278,7 +279,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 
 				self.service_time_machine = await get_instance(instance_options)
 
-			// build
+			// build service_time_machine
 				await self.service_time_machine.build(true)
 
 			// add to self instances list
@@ -305,10 +306,10 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 * @param string lang
 * @param string mode
 * @param string|int|null matrix_id
+* @param object caller_dataframe
 * @return object component_instance
 */
 tool_time_machine.prototype.get_component = async function(lang, mode, matrix_id=null, caller_dataframe) {
-	// console.log("))))))))))) get_component:",lang, mode, matrix_id);
 
 	const self = this
 
@@ -406,13 +407,6 @@ tool_time_machine.prototype.apply_value = function(options) {
 				if(SHOW_DEVELOPER===true) {
 					dd_console("-> apply_value API response:",'DEBUG',response);
 				}
-				// // reload source component on finish close
-				// 	if (self.caller) {
-				// 		self.caller.refresh()
-				// 	}
-
-				// // close tool modal (implies destroy current tool instance)
-				// 	self.modal_container.close()
 
 				resolve(response)
 			})

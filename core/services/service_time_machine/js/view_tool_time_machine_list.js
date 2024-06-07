@@ -18,7 +18,7 @@
 
 /**
 * VIEW_TOOL_TIME_MACHINE_LIST
-* Manages the component's logic and appearance in client side
+* Manages the section's appearance in client side
 */
 export const view_tool_time_machine_list = function() {
 
@@ -45,9 +45,10 @@ view_tool_time_machine_list.render = async function(self, options) {
 
 	// ar_section_record. section_record instances (initialized and built)
 		const ar_section_record	= await get_section_records({
-			caller : self // service_time_machine instance
+			caller	: self, // service_time_machine instance
+			mode	: 'list'
 		})
-		self.ar_instances		= ar_section_record
+		self.ar_instances = ar_section_record
 
 	// content_data
 		const content_data = await get_content_data(ar_section_record, self)
@@ -102,7 +103,7 @@ view_tool_time_machine_list.render = async function(self, options) {
 	// wrapper
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: `wrapper_${self.model} ${self.model} ${self.config.id} ${self.section_tipo+'_'+self.tipo} view_${self.view}`
+			class_name		: `wrapper_${self.model} ${self.model} ${self.config.id} ${self.section_tipo+'_'+self.tipo} ${self.mode} view_${self.view}`
 		})
 		wrapper.appendChild(fragment)
 		// set pointers
@@ -112,62 +113,6 @@ view_tool_time_machine_list.render = async function(self, options) {
 
 	return wrapper
 }//end render
-
-
-
-/**
-* GET_CONTENT_DATA
-* Render previously built section_records into a content_data div container
-* @param array ar_section_record
-* 	Array of section_record instances
-* @param object self
-* 	service_time_machine instance
-* @return HTMLElement content_data
-*/
-	// const get_content_data = async function(ar_section_record, self) {
-
-	// 	const fragment = new DocumentFragment()
-
-	// 	// add all section_record rendered nodes
-	// 		const ar_section_record_length = ar_section_record.length
-	// 		if (ar_section_record_length===0) {
-
-	// 			// no records found case
-	// 			const no_records_found_node = ui.create_dom_element({
-	// 				element_type	: 'div',
-	// 				class_name		: 'no_records',
-	// 				inner_html		: get_label.no_records || 'No records found'
-	// 			})
-	// 			fragment.appendChild(no_records_found_node)
-
-	// 		}else{
-	// 			// rows
-
-	// 			// parallel render
-	// 				const ar_promises = []
-	// 				for (let i = 0; i < ar_section_record_length; i++) {
-	// 					const render_promise_node = ar_section_record[i].render()
-	// 					ar_promises.push(render_promise_node)
-	// 				}
-
-	// 			// once rendered, append it preserving the order
-	// 				await Promise.all(ar_promises)
-	// 				.then(function(section_record_nodes) {
-	// 					for (let i = 0; i < ar_section_record_length; i++) {
-	// 						const section_record_node = section_record_nodes[i]
-	// 						fragment.appendChild(section_record_node)
-	// 					}
-	// 				});
-	// 		}
-
-	// 	// content_data
-	// 		const content_data = document.createElement('div')
-	// 			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
-	// 			  content_data.appendChild(fragment)
-
-
-	// 	return content_data
-	// }//end get_content_data
 
 
 
@@ -242,7 +187,7 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
-* @return DOM DocumentFragment
+* @return HTMLElement DocumentFragment
 */
 const render_column_id = function(options) {
 
@@ -250,15 +195,13 @@ const render_column_id = function(options) {
 		const service_time_machine	= options.caller
 		const section_id			= options.section_id
 		const section_tipo			= options.section_tipo
-		// const offset				= options.offset
 		const matrix_id				= options.matrix_id
 		const modification_date		= options.modification_date
 
 	// short vars
-		// const permissions	= service_time_machine.permissions
-		const tool				= service_time_machine.caller
-		const main_caller		= tool.caller
-		const fragment			= new DocumentFragment()
+		const tool			= service_time_machine.caller
+		const main_caller	= tool.caller
+		const fragment		= new DocumentFragment()
 
 	// button_view
 		const button_view = ui.create_dom_element({
@@ -291,11 +234,6 @@ const render_column_id = function(options) {
 							main_caller.refresh()
 							.then(function(){
 								service_time_machine.refresh()
-								// success case
-								// if (window.opener) {
-								// 	// close this window when was opened from another
-								// 	window.close()
-								// }
 							})
 						}else{
 							// error case

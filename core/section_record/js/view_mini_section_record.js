@@ -6,14 +6,13 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 	import {render_column_node_callback} from './view_default_list_section_record.js'
 
 
+
 /**
-* view_mini_section_record
+* VIEW_MINI_SECTION_RECORD
 * Manage the components logic and appearance in client side
 */
 export const view_mini_section_record = function() {
@@ -26,7 +25,8 @@ export const view_mini_section_record = function() {
 /**
 * MINI
 * Render node for use in list
-* @param array ar_instances
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_mini_section_record.render = async function(self, options) {
@@ -43,22 +43,14 @@ view_mini_section_record.render = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id				: self.id
-			// class_name	: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 		const ar_css = [
 			self.model,
 			self.tipo,
 			self.mode,
-			// (self.mode==='tm' ? ' list' : ''),
 			'view_'+self.context.view
 		]
 		wrapper.classList.add(...ar_css)
-
-	// // id column
-	// 	if (self.caller.model==='section' || self.caller.mode==='edit') {
-	// 		const id_column = build_id_column(self)
-	// 		fragment.appendChild(id_column)
-	// 	}
 
 	// render the columns
 		const columns_map_length = columns_map.length
@@ -79,7 +71,6 @@ view_mini_section_record.render = async function(self, options) {
 							section_id			: self.section_id,
 							row_key				: self.row_key,
 							paginated_key		: self.paginated_key,
-							// offset				: self.offset,
 							caller				: self.caller,
 							matrix_id			: self.matrix_id, // tm var
 							modification_date	: self.modification_date || null, // tm var
@@ -92,7 +83,6 @@ view_mini_section_record.render = async function(self, options) {
 					fragment.appendChild(column_node)
 					continue;
 				}
-
 
 			// instances.get the specific instances for the current column
 				const ar_instances = ar_columns_instances.filter(el => el.column_id === current_column.id)
@@ -156,7 +146,8 @@ view_mini_section_record.render = async function(self, options) {
 							column_node.appendChild(current_instance_node)
 
 							if(j === ar_instances_length-1) continue
-							const node_fields_separator = ui.create_dom_element({
+							// node_fields_separator
+							ui.create_dom_element({
 								element_type	: 'span',
 								inner_html		: self.context.fields_separator || ' | ',
 								parent			: column_node
@@ -166,28 +157,14 @@ view_mini_section_record.render = async function(self, options) {
 							console.error("current_instance column_id not found:",current_instance);
 						}
 				}//end for (let j = 0; j < ar_instances_length; j++)
-		}//end for (let i = 0; i < columns_map_length; i++) {
 
-
-	// component_info. (!) Removed 22-11-202 because is already added by the component (portal)
-		// const component_info = self.get_component_info()
-		// if (component_info){
-		// 	const info_value = component_info.value.join(' ')
-		// 	const info = ui.create_dom_element({
-		// 		element_type	: 'div',
-		// 		class_name		: 'column column_info',
-		// 		text_node		: info_value // wrap into span the text
-		// 	})
-		// 	fragment.appendChild(info)
-		// }
-
+		}//end for (let i = 0; i < columns_map_length; i++)
 
 	// wrapper filling
 		wrapper.appendChild(fragment)
 
 	// events
 		wrapper.addEventListener('click', (e) => {
-			// e.stopPropagation()
 			if (!e.target.classList.contains('row_active')) {
 				e.target.classList.add('row_active')
 			}
@@ -201,7 +178,8 @@ view_mini_section_record.render = async function(self, options) {
 
 /**
 * BUILD_ID_COLUMN
-* @param section_record instance self
+* @param object self
+* 	section_record instance
 * @return DOM element id_column
 */
 const build_id_column = function(self) {
@@ -217,60 +195,60 @@ const build_id_column = function(self) {
 			class_name		: 'column'
 		})
 
-		// button edit (pen)
-			if (permissions>0) {
-				const button_edit = ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'button edit',
-					parent			: id_column
-				})
-				button_edit.addEventListener('click', function(){
-					// edit_record(this, self)
+	// button edit (pen)
+		if (permissions>0) {
+			const button_edit = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button edit',
+				parent			: id_column
+			})
+			button_edit.addEventListener('click', function(e){
+				e.stopPropagation();
 
-					// rqo
-					const user_navigation_rqo = (self.caller.type==='component')
-						? {
-							caller_id	: self.caller.id,
-							source		: {
-								action			: 'search',
-								model			: 'section',
-								tipo			: self.section_tipo,
+				// rqo
+				const user_navigation_rqo = (self.caller.type==='component')
+					? {
+						caller_id	: self.caller.id,
+						source		: {
+							action			: 'search',
+							model			: 'section',
+							tipo			: self.section_tipo,
+							section_tipo	: self.section_tipo,
+							mode			: 'edit',
+							lang			: self.caller.lang
+						},
+						sqo : {
+							section_tipo		: [{tipo : self.section_tipo}],
+							filter				: null,
+							limit				: 1,
+							offset				: offset,
+							filter_by_locators	: [{
 								section_tipo	: self.section_tipo,
-								mode			: 'edit',
-								lang			: self.caller.lang
-							},
-							sqo : {
-								section_tipo		: [{tipo : self.section_tipo}],
-								filter				: null,
-								limit				: 1,
-								offset				: offset,
-								filter_by_locators	: [{
-									section_tipo	: self.section_tipo,
-									section_id		: self.section_id
-								}]
-							}
+								section_id		: self.section_id
+							}]
 						}
-						: {
-							caller_id	: self.caller.id,
-							source		: {
-								action			: 'search',
-								model			: self.caller.model,
-								tipo			: self.section_tipo,
-								section_tipo	: self.section_tipo,
-								mode			: 'edit',
-								lang			: self.caller.lang
-							},
-							sqo : {
-								section_tipo	: [{tipo : self.section_tipo}],
-								limit			: 1,
-								offset			: offset,
-								filter			: self.caller.rqo.sqo.filter || null
-							}
+					}
+					: {
+						caller_id	: self.caller.id,
+						source		: {
+							action			: 'search',
+							model			: self.caller.model,
+							tipo			: self.section_tipo,
+							section_tipo	: self.section_tipo,
+							mode			: 'edit',
+							lang			: self.caller.lang
+						},
+						sqo : {
+							section_tipo	: [{tipo : self.section_tipo}],
+							limit			: 1,
+							offset			: offset,
+							filter			: self.caller.rqo.sqo.filter || null
 						}
-					event_manager.publish('user_navigation', user_navigation_rqo)
-				})
+					}
+				event_manager.publish('user_navigation', user_navigation_rqo)
+			})
+		}
 
-			}
 
 	return id_column
 }//end build_id_column
@@ -279,10 +257,12 @@ const build_id_column = function(self) {
 
 /**
 * BUILD_COLUMN_NODE
-* @param object column from the columns_map
-* @return DOM element column
+* @param object column_instance
+* 	column from the columns_map
+* @param object self
+* @return HTMLElement column_node
 */
-const build_column_node = function(column_instance, self, ar_instances){
+const build_column_node = function(column_instance, self) {
 
 	const column_id	= column_instance.column_id
 	const model		= self.caller.model
@@ -292,6 +272,7 @@ const build_column_node = function(column_instance, self, ar_instances){
 		class_name		: 'column column_' + column_id + ' ' + model + ' ' + self.mode
 	})
 	column_node.id = column_id
+
 
 	return column_node
 }// end build_column_node

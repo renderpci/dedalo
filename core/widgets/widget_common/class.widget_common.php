@@ -7,11 +7,14 @@ class widget_common {
 
 
 
-	public $section_tipo;
-	public $section_id;
-	public $mode;
-	public $lang;
-	public $ipo;
+	/**
+	* CLASS VARS
+	*/
+		public $section_tipo;
+		public $section_id;
+		public $mode;
+		public $lang;
+		public $ipo;
 
 
 

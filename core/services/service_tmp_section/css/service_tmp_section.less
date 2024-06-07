@@ -16,6 +16,9 @@
 		padding-bottom: 0;
 		display: flex;
 		flex-wrap: wrap;
+		@media screen and (max-width: @width_break_point_0) { // 1024px
+			flex-direction: column;
+		}
 
 		.wrapper_component{
 			flex-basis: 25%;

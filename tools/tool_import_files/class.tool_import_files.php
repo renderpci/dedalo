@@ -104,7 +104,7 @@ class tool_import_files extends tool_common {
 			// | 3 | A                  | A         |        |                 | A               |               | target field map (A,B,C..) |
 			// | 4 | tiff               | tiff      | jpg    | tif             | tiff            | tiff          | extension |
 
-			preg_match("/^(\d*)?-?(?(?=.\.)|(.*?))(?(?=-)-([a-zA-Z])|)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
+			preg_match("/^(\d*)?-?(?(?=.\.)|(.*?))(?(?=-)-([a-zA-Z]{1,2})|)\.([a-zA-Z]{3,4})$/", $file, $ar_match);
 			$regex_data = new stdClass();
 				$regex_data->full_name		= $ar_match[0] ?? null;
 				$regex_data->section_id		= $ar_match[1] ?? null;

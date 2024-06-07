@@ -141,7 +141,6 @@ final class dd_tools_api {
 				case ($background_running===true):
 
 					// running in CLI
-
 					$cli_options = new stdClass();
 						$cli_options->class_name	= $tool_name;
 						$cli_options->method_name	= $tool_method;

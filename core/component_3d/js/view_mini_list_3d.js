@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -24,6 +23,8 @@ export const view_mini_list_3d = function() {
 /**
 * RENDER
 * Render node to be used in this view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_mini_list_3d.render = async function(self, options) {
@@ -40,7 +41,7 @@ view_mini_list_3d.render = async function(self, options) {
 		const files_info = value
 
 	// thumb, if thumb doesn't exist get the posterframe then if the posterframe doesn't exist get the default image.
-		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 	// posterframe (used as fallback)
 		const posterframe_url = data.posterframe_url

@@ -619,7 +619,7 @@ class hierarchy {
 			$deleted = ontology::clean_structure_data($tld);
 
 			$response->result = $deleted;
-			
+
 		return (object)$response;
 	}//end delete_virtual_section
 
@@ -1298,7 +1298,7 @@ class hierarchy {
 					$main_lang_locator = array_find( (array)$relations, function($el){
 						return (isset($el->from_component_tipo) && $el->from_component_tipo===DEDALO_HIERARCHY_LANG_TIPO);
 					});
-					if (empty($main_lang_locator)) {
+					if (!is_object($main_lang_locator)) {
 						debug_log(__METHOD__
 							. " Empty main_lang_locator. not found into section relations. Fallback will be applied ($fallback_value)" . PHP_EOL
 							.' section_tipo: ' . $section_tipo . PHP_EOL

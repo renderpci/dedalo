@@ -302,7 +302,9 @@ class component_relation_common extends component_common {
 			});
 
 		// ddo_map. Get the ddo_map to be used to create the components related to the portal
-			$ddo_map = $dedalo_request_config->show->ddo_map;
+			$ddo_map = is_object($dedalo_request_config) && isset($dedalo_request_config->show)
+				? ($dedalo_request_config->show->ddo_map ?? [])
+				: [];
 
 		// short vars
 			$ar_cells				= [];
@@ -384,7 +386,7 @@ class component_relation_common extends component_common {
 
 				$section_context = array_find($context, function($el) use ($locator){
 					return $el->section_tipo === $locator->section_tipo;
-				});
+				}) ?? (object)['request_config'=>[]];
 
 				// get the correct rqo (use only the dedalo api_engine)
 				$dd_request_config = array_find($section_context->request_config, function($el){
@@ -408,7 +410,10 @@ class component_relation_common extends component_common {
 					$ddo_section_id->set_parent($this->tipo);
 
 				// ddo_map. Get the ddo_map to be used to create the components related to the portal
-				$ddo_map = array_merge([$ddo_section_id], $dd_request_config->show->ddo_map);
+				$current_ddo_map = is_object($dd_request_config) && isset($dd_request_config->show)
+					? ($dd_request_config->show->ddo_map ?? [])
+					: [];
+				$ddo_map = array_merge([$ddo_section_id], $current_ddo_map);
 				$ddo_direct_children = array_filter($ddo_map, function($el){
 					return $el->parent === $this->tipo;
 				});
@@ -2838,7 +2843,9 @@ class component_relation_common extends component_common {
 						});
 
 						// set the ddo to be resolve as last, is used by the recursion to stop the resolution
-						$resolve_ddo->last = true;
+						if (is_object($resolve_ddo)) {
+							$resolve_ddo->last = true;
+						}
 
 						$ar_ddo = $current_value->ddo_map;
 
@@ -2849,7 +2856,9 @@ class component_relation_common extends component_common {
 							$current_data->section_id	= $section_id;
 
 						// resolve the ddo_chain recursively
-						$component_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $init_ddo, $current_data) ?? [];
+						$component_data = is_object($init_ddo)
+							? component_relation_common::resolve_component_data_recursively($ar_ddo, $init_ddo, $current_data)
+							: [];
 
 						// if the fixed_filter is used to search into a section_id, join the result of the locators into a flat string separated by commas.
 						// this action optimize the search by using an IN SQL statement.
@@ -2895,6 +2904,7 @@ class component_relation_common extends component_common {
 			}
 		}//end foreach ($ar_fixed as $search_item)
 
+
 		return $ar_fixed_filter;
 	}//end get_fixed_filter
 
@@ -2906,9 +2916,9 @@ class component_relation_common extends component_common {
 	* @param array $ar_ddo // full array with all ddo
 	* @param dd_object $dd_object // parent ddo to get his children
 	* @param locator $data // data of the previous recursion
-	* @return array|null $component_data
+	* @return array $component_data
 	*/
-	private static function resolve_component_data_recursively(array $ar_ddo, object $dd_object, object $data) : ?array {
+	private static function resolve_component_data_recursively(array $ar_ddo, object $dd_object, object $data) : array {
 
 		$last			= $dd_object->last ?? null;
 		$tipo			= $dd_object->tipo;
@@ -2925,15 +2935,17 @@ class component_relation_common extends component_common {
 			$section_tipo
 		);
 		$component_data = $component->get_dato();
-		if(empty($component_data)){
+		if (empty($component_data)) {
 			return [];
-		};
+		}
 
 		// if the ddo has a $last property, it will be the component to get his data
 		// but if the ddo in not the $last ddo, do recursion to resolve the next level into the ddo chain.
-		if(!isset($last)){
-			$children = component_relation_common::get_ddo_children_recursive($ar_ddo, $dd_object);
+		if (!isset($last)) {
+
 			$current_compnent_data = [];
+
+			$children = component_relation_common::get_ddo_children_recursive($ar_ddo, $dd_object);
 			foreach($component_data as $current_data){
 				foreach ($children as $current_ddo_child) {
 					$result_compnent_data = component_relation_common::resolve_component_data_recursively($ar_ddo, $current_ddo_child, $current_data);
@@ -2945,6 +2957,7 @@ class component_relation_common extends component_common {
 			}
 			return $current_compnent_data;
 		}
+
 
 		return $component_data;
 	}//end resolve_component_data_recursively

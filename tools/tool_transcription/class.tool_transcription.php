@@ -188,7 +188,7 @@ class tool_transcription extends tool_common {
 			// search current transcriber config in tool config (stored in database, section 'dd996' Tools configuration)
 			$transcriber_config = array_find($ar_transcriber_configs, function($item) use($transcriber_name) {
 				return $item->name===$transcriber_name;
-			});
+			}) ?? new stdClass();
 
 		// data from transcriber
 			$url	= $transcriber_config->uri;
@@ -310,7 +310,7 @@ class tool_transcription extends tool_common {
 			// search current transcriber config in tool config (stored in database, section 'dd996' Tools configuration)
 			$transcriber_config = array_find($ar_transcriber_configs, function($item) use($transcriber_name) {
 				return $item->name===$transcriber_name;
-			});
+			}) ?? new stdClass();
 
 		// data from transcriber
 			$url	= $transcriber_config->uri;

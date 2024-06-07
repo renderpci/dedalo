@@ -37,9 +37,11 @@ final class ImageMagick {
 		// Like "102x57"
 		$dimensions = $width.'x'.$height.'>';
 
-		#$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\"[0] -thumbnail {$dimensions} -gravity center -extent {$dimensions} -unsharp 0x.5 jpg -quality 90 \"$target_file\" ";
-		$command = MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" ";
-		$command = 'nice -n 19 '.$command;
+		// command
+		$command = implode(' ', [
+			'nice -n 19',
+			MAGICK_PATH."convert -define jpeg:size=400x400 \"$source_file\" -thumbnail '$dimensions' -auto-orient -gravity center -unsharp 0x.5 -quality 90 \"$target_file\" "
+		]);
 
 		// run command
 		$result = exec($command.' 2>&1', $output, $worked_result);
@@ -48,7 +50,7 @@ final class ImageMagick {
 			debug_log(__METHOD__
 				."  worked_result : output: ".to_string($output)." - worked_result:"
 				.to_string($worked_result)
-				, logger::DEBUG
+				, logger::WARNING
 			);
 			return false;
 		}
@@ -108,9 +110,12 @@ final class ImageMagick {
 			}
 		}
 
-		// convert 21900.jpg json: : Get info about source file color space
-		$colorspace_command	= MAGICK_PATH . "identify -quiet -format '%[colorspace]' " .$source_file. "[0]";
-		$colorspace_info	= shell_exec($colorspace_command);	//-format "%[EXIF:DateTimeOriginal]"
+		// Get info about source file color space
+		$command = implode(' ', [
+			'nice -n 19',
+			MAGICK_PATH . "identify -quiet -format '%[colorspace]' " .$source_file. "[0]"
+		]);
+		$colorspace_info = shell_exec($command);	//-format "%[EXIF:DateTimeOriginal]"
 
 		# Layers info
 		# get thumbnail identification
@@ -239,8 +244,10 @@ final class ImageMagick {
 				: '';
 
 		// command
-			$command = MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" ';	# -negate -profile Profiles/sRGB.icc -colorspace sRGB -colorspace sRGB
-			// $command = 'nice -n 19 '.$command;
+			$command = implode(' ', [
+				'nice -n 19',
+				MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" '
+			]);
 
 		// debug
 			debug_log(__METHOD__
@@ -393,14 +400,20 @@ final class ImageMagick {
 				if(isset($alpha) && $alpha === true){
 					$color =  "-alpha set -virtual-pixel transparent -interpolate Mesh";
 				};
-				$command	= MAGICK_PATH ."convert '$source' $color -distort SRT $degrees '$target'";
+				$command = MAGICK_PATH ."convert '$source' $color -distort SRT $degrees '$target'";
 			}else{
-				$command	= MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
+				$command = MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
 			}
 
 			$result = shell_exec($command);
 
-		debug_log(__METHOD__." Exec Command:" . PHP_EOL . $command, logger::DEBUG);
+		// debug
+			debug_log(__METHOD__
+				." Exec Command:" . PHP_EOL
+				. $command
+				, logger::DEBUG
+			);
+
 
 		return $result;
 	}//end rotate
@@ -429,10 +442,14 @@ final class ImageMagick {
 	public static function get_media_attributes( string $file_path ) : ?array {
 
 		// convert image.jpg[1x1+0+0] json:
-		$command		= MAGICK_PATH . "convert '$file_path' json: ";
-		$exec_result	= shell_exec($command);
+			$command		= MAGICK_PATH . "convert '$file_path' json: ";
+			$exec_result	= shell_exec($command);
 
-		debug_log(__METHOD__." Exec Command:" . PHP_EOL . $command, logger::DEBUG);
+		// debug
+			debug_log(__METHOD__
+				." Exec Command:" . PHP_EOL . $command
+				, logger::DEBUG
+			);
 
 		$result = !empty($exec_result)
 			? json_decode($exec_result)
@@ -445,7 +462,7 @@ final class ImageMagick {
 
 
 	/**
-	* is_opaque
+	* IS_OPAQUE
 	* Check all layers of the image to determinate if the image is transparent or is opaque
 	* @param string $source_file
 	* @return bool $is_opaque
@@ -474,8 +491,8 @@ final class ImageMagick {
 	* EXIF try to get date from file metadata
 	* @param string $file
 	* 	full file path
-	* @return dd_date|null
-	* dd_date object
+	* @return dd_date|null $dd_date
+	* 	dd_date object
 	*/
 	public static function get_date_time_original(string $file) : ?dd_date {
 
@@ -511,6 +528,7 @@ final class ImageMagick {
 
 		return null;
 	}//end get_date_time_original
+
 
 
 }//end ImageMagick class

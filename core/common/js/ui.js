@@ -12,11 +12,11 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
+	import '../../common/js/dd-modal.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import * as instances from '../../common/js/instances.js'
-	import '../../common/js/dd-modal.js'
 	import '../../../lib/codex-tooltip/tooltip.js';
 
 
@@ -163,19 +163,16 @@ export const ui = {
 						model,
 						tipo,
 						section_tipo +'_'+ tipo,
-						mode
+						mode,
+						'view_' + view
 					]
-					// view style
-					if (view) {
-						ar_css.push('view_' + view)
+					// custom added styles
+					if (add_styles) {
+						ar_css.push(...add_styles)
 					}
 					// search styles
 					if (mode==='search') {
 						ar_css.push('tooltip_toggle')
-					}
-					// custom added styles
-					if (add_styles) {
-						ar_css.push(...add_styles)
 					}
 					// set wrapper direct styles
 					wrapper.classList.add(...ar_css)
@@ -205,8 +202,8 @@ export const ui = {
 								e.preventDefault()
 								console.log('/// refreshing instance (build_autoload=true, render_level=content):', instance);
 								instance.refresh({
-									build_autoload : true,
-									render_level : 'content'
+									build_autoload	: true,
+									render_level	: 'content'
 								})
 								return
 							}
@@ -412,6 +409,7 @@ export const ui = {
 
 			// options
 				const value_string	= options.value_string
+				const add_styles	= options.add_styles || null
 
 			// short vars
 				const model			= instance.model 		// like component_input-text
@@ -433,6 +431,10 @@ export const ui = {
 						'list',
 						'view_' + view
 					]
+					// custom added styles
+					if (add_styles) {
+						ar_css.push(...add_styles)
+					}
 					wrapper.classList.add(...ar_css)
 
 				// Ontology CSS definition
@@ -441,9 +443,12 @@ export const ui = {
 				// this not apply to component_filter (project) use specific CSS because it's inside inspector.
 					if (model!=='component_filter') {
 						// CSS is moved from properties to specific property in context
-						if (instance.context.css) {
-							const selector = `${section_tipo}_${tipo}.${tipo}.${'list'}`
-							set_element_css(selector, element_css)
+						// Into tool time machine visualization case, do not add custom CSS from properties
+						if (instance.context.css && instance.context.mode!=='tm') {
+							set_element_css(
+								`${section_tipo}_${tipo}.${tipo}.${'list'}`, // CSS selector
+								element_css // properties CSS object
+							)
 						}
 					}
 
@@ -458,14 +463,16 @@ export const ui = {
 
 			// debug
 				if(SHOW_DEBUG===true) {
-					wrapper.addEventListener('click', function(e){
+					wrapper.addEventListener('contextmenu', function(e){
+						e.stopPropagation()
+					})
+					wrapper.addEventListener('mousedown', function(e){
 						if (e.altKey) {
 							e.stopPropagation()
 							e.preventDefault()
 							console.log('/// selected instance:', instance);
 						}
 					})
-					wrapper.classList.add('_'+instance.id)
 				}
 
 
@@ -578,7 +585,7 @@ export const ui = {
 				const wrapper = document.createElement('div')
 					  wrapper.id = id
 				// css
-					const wrapper_structure_css = typeof element_css.wrapper!=="undefined" ? element_css.wrapper : []
+					const wrapper_structure_css = typeof element_css.wrapper!=='undefined' ? element_css.wrapper : []
 					const ar_css = [
 						'wrapper_' + type,
 						model,

@@ -67,6 +67,8 @@ final class dd_ts_api {
 		// children
 			if($node_type==='hierarchy_node') {
 
+				// hierarchy_node: hierarchy case
+
 				// Children are the same current data
 					$locator = new locator();
 						$locator->set_section_tipo($section_tipo);
@@ -75,13 +77,13 @@ final class dd_ts_api {
 					$children	= $dato;
 
 				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
-				// options add to use as exception in check children
+					// options add to use as exception in check children
 					$ts_object_options->have_children = true;
 				}
 
 			}else{
 
-				// thesaurus_node. section case (from current term children, usually 'hierarchy45')
+				// thesaurus_node: section case (from current term children, usually 'hierarchy45')
 
 				if (!empty($target_section_properties) && isset($target_section_properties->children_search)) {
 

@@ -22,8 +22,12 @@ export const render_search_component_av = function() {
 
 
 /**
-* search
-* Render node for use in modes: search
+* SEARCH
+* Render node for use in mode search
+* @param object options
+* {
+* 	render_level : string
+* }
 * @return HTMLElement wrapper
 */
 render_search_component_av.prototype.search = async function(options) {
@@ -84,6 +88,11 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int key
+* 	data value array key
+* @param string current_value
+* @param object self
+* 	component instance
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -102,8 +111,8 @@ const get_content_value = (i, current_value, self) => {
 			value			: current_value,
 			parent			: content_value
 		})
-		input.addEventListener('change', fn_change)
-		function fn_change() {
+		// event change
+		const fn_change = function() {
 
 			// parsed_value
 				const parsed_value = (input.value.length>0) ? input.value : null
@@ -117,11 +126,12 @@ const get_content_value = (i, current_value, self) => {
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
+
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
-		}//end fn_change
+		}
+		input.addEventListener('change', fn_change)
+
 
 
 	return content_value

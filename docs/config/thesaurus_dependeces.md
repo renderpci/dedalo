@@ -43,11 +43,11 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Semantic | Semantics | ds | √ | √ | √ | √ | √ | √ | √ |
 | User roles | Semantics | roleusr | √ | √ | √ | √ | √ | √ | √ |
 | Special | Special | special | x | x | x | x | √ | x | x |
-| Analysis | Conservation | coanalysis | √ | √ | x | x | x | x | x |
-| Cause | Conservation | cocause | √ | √ | x | x | x | x | x |
-| Job material | Conservation | comaterial | √ | √ | x | x | x | x | x |
-| Pathology | Conservation | copathology | √ | √ | x | x | x | x | x |
-| Treatment | Conservation | cotreatment | √ | √ | x | x | x | x | x |
+| Analysis | Restoration | resanalysis | √ | √ | x | x | x | x | x |
+| Cause | Restoration | rescause | √ | √ | x | x | x | x | x |
+| Job material | Restoration | resmaterial | √ | √ | x | x | x | x | x |
+| Pathology | Restoration | respathology | √ | √ | x | x | x | x | x |
+| Treatment | Restoration | restreatment | √ | √ | x | x | x | x | x |
 | Countermarks | Epigraphy | sccmk | x | x | x | √ | x | x | x |
 | Greek | Epigraphy | scell | x | x | x | √ | x | x | x |
 | Latin | Epigraphy | sclat | x | x | x | √ | x | x | x |

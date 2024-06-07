@@ -207,7 +207,7 @@ class tools_register {
 								$info_file_processed_item = array_find($info_file_processed, function($el) use($basename){
 									return ($el->name===$basename || substr($el->dir, 1)===$basename);
 								});
-								if ($info_file_processed_item!==null) {
+								if (is_object($info_file_processed_item)) {
 									$info_file_processed_item->errors	= [$msg];
 									$info_file_processed_item->imported	= false;
 								}
@@ -261,7 +261,7 @@ class tools_register {
 							$info_file_processed_item = array_find($info_file_processed, function($el) use($tool_name){
 								return $el->name===$tool_name;
 							});
-							if ($info_file_processed_item!==null) {
+							if (is_object($info_file_processed_item)) {
 								$info_file_processed_item->existing_tool	= $current_section_id==$created_section_id;
 								$info_file_processed_item->section_id		= $created_section_id;
 								$info_file_processed_item->imported			= true;
