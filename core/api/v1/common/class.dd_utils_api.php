@@ -172,7 +172,7 @@ final class dd_utils_api {
 				$system_info->upload_tmp_perms				= fileperms($upload_tmp_dir);
 				$system_info->session_cache_expire			= (int)ini_get('session.cache_expire');
 				$system_info->upload_service_chunk_files	= DEDALO_UPLOAD_SERVICE_CHUNK_FILES;
-
+				$system_info->pdf_ocr_engine				= defined('PDF_OCR_ENGINE') ? true : false;
 
 		// response
 			$response->result 	= $system_info;

@@ -1646,11 +1646,11 @@ class tool_import_dedalo_csv extends tool_common {
 	* Sample:
 	* {
 	*	error: 0
-	*	extension: "tiff"
-	*	name: "proclamacio.tiff"
+	*	extension: "csv"
+	*	name: "name-rsc197.csv"
 	*	size: 184922784
-	*	tmp_name: "/hd/media/upload/service_upload/tmp/image/phpPJQvCp"
-	*	type: "image/tiff"
+	*	tmp_name: "/hd/media/upload/service_upload/tmp/csv/phpPJQvCp"
+	*	type: "text/csv"
 	* }
 	* @return object $response
 	*/
@@ -1667,18 +1667,18 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// file_data sample
 			// {
-			// 	"name": "IMG_3007.jpg",
-			// 	"type": "image/jpeg",
+			// 	"name": "name-rsc197.csv",
+			// 	"type": "text/csv",
 			// 	"tmp_dir": "DEDALO_UPLOAD_TMP_DIR",
 			// 	"key_dir": "tool_upload",
 			// 	"tmp_name": "phpJIQq4e",
 			// 	"error": 0,
 			// 	"size": 22131522,
-			// 	"extension": "jpg"
+			// 	"extension": "csv"
 			// }
 
 		// short vars
-			$name		= $file_data->name; // string original file name like 'IMG_3007.jpg'
+			$name		= $file_data->name; // string original file name like 'name-rsc197.csv'
 			$key_dir	= $file_data->key_dir; // string upload caller name like 'tool_upload'
 			$tmp_name	= $file_data->tmp_name; // string like 'phpJIQq4e'
 

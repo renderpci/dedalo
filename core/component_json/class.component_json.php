@@ -462,7 +462,7 @@ class component_json extends component_common {
 	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data) : object {
+	public function process_uploaded_file(object $file_data, ?object $process_options) : object {
 
 		$response = new stdClass();
 			$response->result	= false;

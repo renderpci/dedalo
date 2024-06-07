@@ -164,6 +164,15 @@ Then, install Dédalo manually, commands are for Ubuntu 22.04 (only as reference
         sudo mv xpdf-tools-linux-4.05/bin64/pdf* /usr/local/bin
         ```
 
+        > Optional: you can use the OCR library if you wish. This will allow to process PDF files automatically after uploading.
+
+         ```shell
+        sudo apt install ocrmypdf
+         ```
+
+        !!!note About using multiple languages for OCR
+            If you want to install additional languages for OCR processing, please read the official instructions [here.](https://ocrmypdf.readthedocs.io/en/latest/languages.html)
+
 3. Download Dédalo and place it under the httpdocs directory of the web server.
 
     ```shell
