@@ -28,10 +28,11 @@ export const view_mini_number = function() {
 view_mini_number.render = async function(self, options) {
 
 	// short vars
-		const data = self.data
+		const data = self.data || {}
+		const value = data.value || []
 
 	// Value as string
-		const value_string = data.value.join(self.context.fields_separator)
+		const value_string = value.join(self.context.fields_separator)
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_mini(self, {
