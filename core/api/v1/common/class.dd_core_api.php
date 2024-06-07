@@ -231,7 +231,8 @@ final class dd_core_api {
 					}
 
 				// section/area/section_tool. Get the page element from get URL vars
-					$model = $tool_name ?? RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$model		= $tool_name ?? RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+					$last_error	= $_ENV['DEDALO_LAST_ERROR'] ?? '';
 					switch (true) {
 						// Section_tool is depended of section, the order of the cases are important, section_tool need to be first, before section,
 						// because section_tool depends of the section process and this case only add the config from properties.
@@ -476,9 +477,19 @@ final class dd_core_api {
 								$context[] = $current_context;
 							break;
 
+						case (strpos($last_error, 'get_connection')!==false):
+							// DB connection error
+							// This case could be caused by database connection error
+							// such as PostgreSQL unavailable
+							// Normally comes from RecordDataBoundObject::get_connection
+							$response->error = 'Invalid database connection. Check that PostgreSQL is running and is available.';
+							break;
+
 						default:
 							// other cases
+
 							if (empty($model)) {
+								// Bad tipo error case
 								debug_log(__METHOD__
 									. " Invalid tipo is received. The model cannot be resolved " . PHP_EOL
 									. ' tipo: ' . to_string($tipo)
