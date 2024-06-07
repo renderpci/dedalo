@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -16,10 +15,6 @@
 		dd_console,
 		printf,
 		open_window
-		// object_to_url_vars,
-		// url_vars_to_object,
-		// JSON_parse_safely,
-		// open_window_with_post
 		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
@@ -520,9 +515,11 @@ export const load_component = async function(options) {
 * 	object is a tool instance
 */
 export const open_tool = async (options) => {
-	if(SHOW_DEBUG===true) {
-		console.warn("------ open_tool call options:",options);
-	}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn("------ open_tool call options:",options);
+		}
 
 	// options
 		// tool_context. Is is string, resolve context from API using value as model
@@ -597,32 +594,6 @@ const view_modal = async function(options) {
 	// options
 		const tool_context	= options.tool_context || {}
 		const caller		= options.caller
-
-	// (!) Moved to tool_common init unified parse
-	// tool_config. If is received, parse section_id. Else create a new one on the fly
-		// to preserve the format of tool_context.tool_config ddo_map
-		// if (!tool_context.tool_config) {
-		// 	// create a new one on the fly
-		// 	tool_context.tool_config = {
-		// 		ddo_map : [{
-		// 			tipo			: caller.tipo,
-		// 			section_tipo	: caller.section_tipo,
-		// 			section_id		: caller.section_id,
-		// 			model			: caller.model,
-		// 			mode			: 'edit',
-		// 			role			: 'main_element'
-		// 		}]
-		// 	}
-		// }else{
-		// if (tool_context.tool_config) {
-
-		// 	// parse ddo_map section_id
-		// 	tool_context.tool_config.ddo_map.map(el => {
-		// 		if (el.section_id==='self' && el.section_tipo===caller.section_tipo) {
-		// 			el.section_id = caller.section_id
-		// 		}
-		// 	})
-		// }
 
 	// tool context additional properties
 		tool_context.lang		= caller.lang
