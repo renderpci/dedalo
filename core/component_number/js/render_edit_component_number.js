@@ -33,6 +33,11 @@ render_edit_component_number.prototype.edit = async function(options) {
 
 	const self = this
 
+	// field separator
+		if (!self.context.fields_separator) {
+			self.context.fields_separator = ' | '
+		}
+
 	// view
 		const view = self.context.view || 'default'
 
