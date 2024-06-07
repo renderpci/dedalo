@@ -1343,7 +1343,7 @@ component_text_area.prototype.focus_first_input = function() {
 
 	const self = this
 
-	const service = self.text_editor[0] ?? null
+	const service = self.text_editor[0]?.editor
 	if (service) {
 
 		service.focus()

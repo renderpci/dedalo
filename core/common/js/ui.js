@@ -12,11 +12,11 @@
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import * as instances from '../../common/js/instances.js'
+	import '../../common/js/dd-modal.js'
 	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
-	import * as instances from '../../common/js/instances.js'
-	import '../../common/js/dd-modal.js'
 	import '../../../lib/codex-tooltip/tooltip.js';
 
 

@@ -32,8 +32,6 @@ class DDModal extends HTMLElement {
 					top: 0;
 					width: 100%;
 					height: 100%;
-					overflow: auto;
-					overflow-x: hidden;
 					background-color: rgba(0,0,0,0.4);
 				}
 				.remove_overlay {
@@ -161,16 +159,8 @@ class DDModal extends HTMLElement {
 					z-index: 9999;
 				}
 				.modal_big > .modal-content {
-					/*
-					width: 99.79%;
-					min-height: 99.8%;
-					width: calc(100vw - 16px);
-					min-height: 100vh;
-					top: 1.5vh;
-					*/
 					width: 97vw;
 					height: 97vh;
-					margin-top: 1.5vh;
 					overflow: auto;
 				}
 				.modal_big .modal-body {
