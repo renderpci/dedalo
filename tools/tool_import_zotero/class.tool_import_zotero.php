@@ -564,7 +564,10 @@ class tool_import_zotero extends tool_common {
 			// add the temporal file uploaded to original directory of the component
 			$file_info = $component_pdf->add_file($file_data);
 			// process file to create default version or get the text into text_area field.
-			$process_uploaded_file_response = $component_pdf->process_uploaded_file($file_info->ready);
+			$process_uploaded_file_response = $component_pdf->process_uploaded_file(
+				$file_info->ready,
+				null
+			);
 			if($process_uploaded_file_response->result==false){
 				$response->msg .= ' Error on process pdf file ! ';
 				return $response;
@@ -598,7 +601,10 @@ class tool_import_zotero extends tool_common {
 
 					$component_image->set_quality(DEDALO_IMAGE_QUALITY_ORIGINAL);
 				// process file to create default version or get the text into text_area field.
-					$component_image->process_uploaded_file($file_info->ready);
+					$component_image->process_uploaded_file(
+						$file_info->ready,
+						null
+					);
 			}
 
 		// delete thumbnails files

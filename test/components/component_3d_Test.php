@@ -534,9 +534,12 @@ final class component_3d_test extends TestCase {
 
 		$component = $this->build_component_instance();
 
-		$response = $component->process_uploaded_file((object)[
-			'empty_vars' => null
-		]);
+		$response = $component->process_uploaded_file(
+			(object)[
+				'empty_vars' => null,
+			],
+			null
+		);
 		$result = $response->result;
 
 		$this->assertTrue(

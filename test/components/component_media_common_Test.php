@@ -896,7 +896,10 @@ final class component_media_common_test extends TestCase {
 				$fake_options->full_file_path		= 'fake_full_file_path';
 				$fake_options->full_file_name		= 'fake_full_file_name';
 
-			$result = $component->process_uploaded_file($fake_options);
+			$result = $component->process_uploaded_file(
+				$fake_options,
+				null
+			);
 
 			$this->assertTrue(
 				gettype($result)==='object',

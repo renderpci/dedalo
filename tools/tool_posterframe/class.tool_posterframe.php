@@ -238,11 +238,14 @@ class tool_posterframe extends tool_common {
 			$full_file_path		= $posterframe_filepath; // full path to file
 			$full_file_name		= $original_file_name; // same as original_file_name
 			// process create default and thumb files and save component files info
-			$process_response = $component_image->process_uploaded_file((object)[
-				'original_file_name'	=> $original_file_name, // like rsc35_rsc167_1.jpg
-				'full_file_path'		=> $full_file_path,
-				'full_file_name'		=> $full_file_name
-			]);
+			$process_response = $component_image->process_uploaded_file(
+				(object)[
+					'original_file_name'	=> $original_file_name, // like rsc35_rsc167_1.jpg
+					'full_file_path'		=> $full_file_path,
+					'full_file_name'		=> $full_file_name
+				],
+				null
+			);
 
 		// response
 			if ($process_response->result===false) {

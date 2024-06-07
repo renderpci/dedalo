@@ -313,7 +313,8 @@ final class component_json_test extends TestCase {
 		];
 
 		$response = $component->process_uploaded_file(
-			$file_data
+			$file_data,
+			null
 		);
 
 		$this->assertTrue(
