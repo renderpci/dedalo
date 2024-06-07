@@ -141,14 +141,12 @@ tool_propagate_component_data.prototype.get_component_to_propagate = function() 
 			self.component_to_propagate.show_interface.save_animation	= false
 			self.component_to_propagate.show_interface.tools			= false
 
-		// set value
-			self.component_to_propagate.changed_data = [Object.freeze({
+		// set value and save to tmp section (temporal session stored)
+			const changed_data_item = Object.freeze({
 				action	: 'set_data',
 				value	: self.main_element.data.value || []
-			})]
-
-		// save
-			await self.component_to_propagate.save()
+			})
+			await self.component_to_propagate.save([changed_data_item])
 
 		resolve(true)
 	})
