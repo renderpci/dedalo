@@ -225,10 +225,13 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 		})
 
 	// icon_dedalo
+		const icon_url = typeof DEDALO_CORE_URL!=='undefined'
+			? DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg'
+			: '../themes/default/dedalo_logo.svg'
 		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'icon_dedalo',
-			src				: DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg',
+			src				: icon_url,
 			parent			: error_container
 		})
 
@@ -325,10 +328,13 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							})
 						}
 					// link home
+						const home_url = typeof DEDALO_ROOT_WEB!=='undefined'
+							? DEDALO_ROOT_WEB
+							: '../../../'
 						const link_home = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'link home',
-							href			: DEDALO_ROOT_WEB,
+							href			: home_url,
 							inner_html		: 'Home',
 							parent			: error_container
 						})
@@ -350,7 +356,6 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 				}
 			}
 		}
-
 
 	// add_wrapper false  case
 		if (add_wrapper===false) {

@@ -135,7 +135,7 @@ data_manager.request = async function(options) {
 					// alert msg to user
 						const msg = result.msg || result.error
 						if (!window.dd_page?.request_message || window.dd_page?.request_message!==msg) {
-							alert("An error has occurred in the API connection (data_manager.request). \n" + msg);
+							alert("An error has occurred in the API connection\n[data_manager.request] \n\n" + msg);
 						}
 						// save message to prevent duplication for x seconds
 						if (window.dd_page) {
