@@ -79,7 +79,7 @@ const get_content_data = async function(self) {
 				self.running_with_errors = [
 					{
 						error	: 'invalid_context', // error type
-						msg		: 'Invalid context'
+						msg		: 'Invalid context. ' + (window.dd_page?.request_message ?? '')
 					}
 				]
 

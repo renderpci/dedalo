@@ -2363,7 +2363,7 @@ class section extends common {
 			$n_rows = pg_num_rows($result);
 			if ($n_rows>1000) {
 				debug_log(__METHOD__
-					." WARNING: TOO MUCH RESULTS IN QUERY. TO OPTIMIZE MEMORY NOT STORE RESULTS IN ARRAY IN THIS SEARCH. BETTER USE 'get_resource_all_section_records_unfiltered' "
+					." WARNING: TOO MANY RESULTS IN THE QUERY. TO OPTIMISE MEMORY, DO NOT STORE RESULTS IN ARRAY IN THIS SEARCH. BEST USE 'get_resource_all_section_records_unfiltered' "
 					, logger::ERROR
 				);
 			}
