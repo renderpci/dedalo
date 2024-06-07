@@ -427,7 +427,7 @@ page.prototype.build = async function(autoload=false) {
 					const api_response = await data_manager.request({
 						body : rqo
 					});
-					if(SHOW_DEBUG===true) {
+					if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
 						console.log('page build api_response:', api_response);
 					}
 

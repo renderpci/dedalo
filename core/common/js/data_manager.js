@@ -22,7 +22,7 @@ export const data_manager = function() {
 * @return api_response
 */
 data_manager.request = async function(options) {
-	if(SHOW_DEBUG===true) {
+	if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
 		const action = options.body && options.body.action
 			? options.body.action
 			: null;

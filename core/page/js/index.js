@@ -8,29 +8,40 @@ const t0 = performance.now()
 	import '../js/page.js'
 	import {events_init} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
+	// import {data_manager} from '../../common/js/data_manager.js' (environment from API case)
 	import {render_server_response_error} from '../../common/js/render_common.js'
 
 // page start
 	( async () => {
 
 		// environment from API
-			// // config_client. Set vars as global
-			// 	// for (const [key, value] of Object.entries(config_client)) {
-			// 	// 	window[key] = value
-			// 	// }
-			// // dedalo_environment
-			// 	const rqo_environment = { // rqo (request query object)
-			// 		action			: 'get_environment',
-			// 		prevent_lock	: true
-			// 	}
-			// 	const api_response_environment = await data_manager.request({
-			// 		body : rqo_environment
-			// 	});
-			// 	console.log('api_response_environment:', api_response_environment);
-			// 	// set vars as global
-			// 	for (const [key, value] of Object.entries(api_response_environment.result)) {
-			// 		window[key] = value
-			// 	}
+			// config_client. Set vars as global
+				// for (const [key, value] of Object.entries(config_client)) {
+				// 	window[key] = value
+				// }
+			// dedalo_environment
+				// const rqo_environment = { // rqo (request query object)
+				// 	action			: 'get_environment',
+				// 	prevent_lock	: true
+				// }
+				// const api_response_environment = await data_manager.request({
+				// 	body : rqo_environment
+				// });
+				// console.log('api_response_environment:', api_response_environment.result);
+				// // set vars as global
+				// for (const [key, value] of Object.entries(api_response_environment.result)) {
+				// 	switch (key) {
+				// 		case 'plain_vars':
+				// 			for (const property in value) {
+				// 				window[property] = value[property]
+				// 			}
+				// 			break;
+
+				// 		default:
+				// 			window[key] = value
+				// 			break;
+				// 	}
+				// }
 
 		// check environment
 			if (typeof page_globals==='undefined') {

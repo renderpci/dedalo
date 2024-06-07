@@ -2489,9 +2489,15 @@ final class dd_core_api {
 	* GET_ENVIRONMENT -> WORK IN PROGRESS
 	* Calculate the minimum Dédalo environment to work
 	* Note that the value is different from logged and not logged cases
-	* @return object $environment
+	* @return object $response
 	*/
 	public static function get_environment() : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// page_globals
 			$page_globals = dd_core_api::get_page_globals(); // return object
@@ -2504,12 +2510,16 @@ final class dd_core_api {
 
 		// environment
 			$environment = new stdClass();
-				$environment->page_globals		= $page_globals; // object
-				$environment->plain_vars		= $plain_vars; // array assoc
-				$environment->lang_labels_json	= $lang_labels_json; // string (JSON stringified)
+				$environment->page_globals	= $page_globals; // object
+				$environment->plain_vars	= $plain_vars; // array assoc
+				$environment->get_label		= $lang_labels_json; // string (JSON stringified)
+
+		// response
+			$response->result	= $environment;
+			$response->msg		= 'OK. Request done';
 
 
-		return $environment;
+		return $response;
 	}//end get_environment
 
 
