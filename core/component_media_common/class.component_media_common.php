@@ -1550,7 +1550,7 @@ class component_media_common extends component_common {
 					$found = array_find($ar_file_object, function($current_file) use($current_extension){
 						return $current_file->extension === $current_extension;
 					});
-					if(isset($found)){
+					if(is_object($found)){
 						$file = $found->file;
 						break;
 					}

@@ -10,36 +10,6 @@ class tool_import_rdf extends tool_common {
 
 
 
-	// section_tipo
-	public $section_tipo;
-
-
-
-	/**
-	* __CONSTRUCT
-	*/
-		// public function __construct(string $section_tipo, string $mode='button') {
-
-		// 	# Fix mode
-		// 	$this->mode = $mode;
-
-		// 	// fix section tipo. (!) To unify tools vars, param section_tipo could be a full section object in some cases
-		// 	$this->section_tipo = (is_object($section_tipo))
-		// 		? $section_tipo->get_tipo()
-		// 		: $section_tipo;
-
-		// 	# Fix search options
-		// 	// $search_options_id		= $this->section_tipo; // section tipo like oh1
-		// 	// $saved_search_options	= section_records::get_search_options( $search_options_id );
-
-		// 	// save cloned version of saved_search_options
-		// 	// $this->search_options = unserialize(serialize($saved_search_options));
-
-		// 	return true;
-		// }//end __construct
-
-
-
 	/**
 	* GET_ONTOLOGY
 	* Get the ontology tipo associated with a given component tipo.

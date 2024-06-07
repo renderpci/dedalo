@@ -97,15 +97,15 @@ class calculation extends widget_common {
 				$found = array_find($result,function($item) use($current_id){
 					return $item->id===$current_id;
 				});
-				if ($found) {
+				if (is_object($found)) {
 
 					$value = $found->value;
 
 					$current_data = new stdClass();
-						$current_data->widget 	= get_class($this);
-						$current_data->key  	= $key;
-						$current_data->id 		= $current_id;
-						$current_data->value 	= $value;
+						$current_data->widget	= get_class($this);
+						$current_data->key		= $key;
+						$current_data->id		= $current_id;
+						$current_data->value	= $value;
 
 					$dato[] = $current_data;
 				}

@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
@@ -16,10 +15,6 @@
 		dd_console,
 		printf,
 		open_window
-		// object_to_url_vars,
-		// url_vars_to_object,
-		// JSON_parse_safely,
-		// open_window_with_post
 		} from '../../../core/common/js/utils/index.js'
 	import {render_error} from './render_tool_common.js'
 
@@ -91,6 +86,7 @@ tool_common.prototype.init = async function(options) {
 						const url_data_object	= JSON.parse(url_data_string)
 						const caller_ddo		= url_data_object.caller_ddo
 						const tool_config		= url_data_object.tool_config
+						const caller_options	= url_data_object.caller_options
 
 						// debug
 							if(SHOW_DEBUG===true) {
@@ -98,7 +94,7 @@ tool_common.prototype.init = async function(options) {
 							}
 
 						// set and build caller
-							self.caller = await get_instance( caller_ddo )
+							// self.caller = await get_instance( caller_ddo )
 
 						// dataframe
 							self.caller_dataframe = caller_ddo.caller_dataframe ?? null
@@ -108,6 +104,9 @@ tool_common.prototype.init = async function(options) {
 
 						// set current tool as caller
 							self.caller.caller = self
+
+						// set caller options
+							self.caller_options = caller_options ?? null
 
 						if(caller_ddo.model!=='section'){
 							// build only when the caller is a component, section will build by tm
@@ -147,13 +146,7 @@ tool_common.prototype.init = async function(options) {
 
 					const tool_found = self.caller.tools.find(el => el.model===self.model)
 
-					if(SHOW_DEBUG===true) {
-						// console.log("component case tool_found:", tool_found);
-						// console.log("component case self.caller.tools:",self.caller.tools);
-						// console.log("component case tool_found:",tool_found);
-					}
-
-					self.tool_config = tool_found.tool_config
+					self.tool_config = tool_found?.tool_config || null
 				}
 
 				// final fallback
@@ -512,30 +505,60 @@ export const load_component = async function(options) {
 * The event is fired by the tool button created with method ui.build_tool_button.
 * When the user triggers the click event, a publish 'open_tool' is made
 * @param object options
+* {
+* 	caller: object caller (instance)
+* 	tool_context: object
+* 	caller_options: object|null
+* 	open_as: string|null window|modal
+* }
 * @return object|bool
 * 	object is a tool instance
 */
 export const open_tool = async (options) => {
-	if(SHOW_DEBUG===true) {
-		console.warn("------ open_tool call options:",options);
-	}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			console.warn("------ open_tool call options:",options);
+		}
 
 	// options
-		const caller			= options.caller
-		const caller_options	= options.caller_options || null
-		const tool_context		= clone(options.tool_context) // (!) full clone here to avoid circular references
+		// tool_context. Is is string, resolve context from API using value as model
+		const tool_context = typeof options.tool_context==='string'
+			? await (async ()=>{
+				// tool rqo. Create the basic rqo to load tool config data stored in component_json tipo 'dd1353'
+				const rqo = {
+					action	: 'get_element_context',
+					source : {
+						model : options.tool_context // expected name as 'tool_upload'
+					},
+					prevent_lock : true
+				}
+				const api_response = await data_manager.request({
+					body : rqo
+				})
+				if (api_response.result && api_response.result[0]) {
+					return api_response.result[0] // tool context object
+				}
+				return null
+			  })()
+			 : clone(options.tool_context) // (!) full clone here to avoid circular references
+		// caller. Instance that calls the tool, normally a component or section
+		const caller = options.caller
+		// caller_options. Object with additional data for the the tool
+		const caller_options = options.caller_options || null
 		// open_as. Mode of tool visualization: modal, tab, popup
-		const open_as			= options.open_as
-			? options.open_as // overwrite context value
+		const open_as = options.open_as
+			? options.open_as // overwrite context value when is passed
 			: tool_context && tool_context.properties && tool_context.properties.open_as
 				? tool_context.properties.open_as
 				: 'modal' // default is 'modal'
-
-	// windowFeatures. Features to pass to the tool visualizer
-	// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
-		const windowFeatures = tool_context && tool_context.properties && tool_context.properties.windowFeatures
-			? tool_context.properties.windowFeatures
-			: null
+		// windowFeatures. Features to pass to the tool visualizer
+		// (normally standard JAVASCRIPT text features like: "left=100,top=100,width=320,height=320")
+		const current_windowFeatures = options.windowFeatures
+			? options.windowFeatures // overwrite context value when is passed
+			: tool_context && tool_context.properties && tool_context.properties.windowFeatures
+				? tool_context.properties.windowFeatures
+				: null
 
 	// open tool visualization
 		const js_promise = (open_as==='window')
@@ -544,14 +567,14 @@ export const open_tool = async (options) => {
 				caller			: caller, // object like component_input_text instance
 				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
 			: view_modal({
 				tool_context	: tool_context, // object
 				caller			: caller, // object like component_input_text instance
 				caller_options	: caller_options,
 				open_as			: open_as, // string like 'tab' | 'popup'
-				windowFeatures	: windowFeatures // string like 'left=100,top=100,width=320,height=320'
+				windowFeatures	: current_windowFeatures // string like 'left=100,top=100,width=320,height=320'
 			  })
 
 
@@ -571,32 +594,6 @@ const view_modal = async function(options) {
 	// options
 		const tool_context	= options.tool_context || {}
 		const caller		= options.caller
-
-	// (!) Moved to tool_common init unified parse
-	// tool_config. If is received, parse section_id. Else create a new one on the fly
-		// to preserve the format of tool_context.tool_config ddo_map
-		// if (!tool_context.tool_config) {
-		// 	// create a new one on the fly
-		// 	tool_context.tool_config = {
-		// 		ddo_map : [{
-		// 			tipo			: caller.tipo,
-		// 			section_tipo	: caller.section_tipo,
-		// 			section_id		: caller.section_id,
-		// 			model			: caller.model,
-		// 			mode			: 'edit',
-		// 			role			: 'main_element'
-		// 		}]
-		// 	}
-		// }else{
-		// if (tool_context.tool_config) {
-
-		// 	// parse ddo_map section_id
-		// 	tool_context.tool_config.ddo_map.map(el => {
-		// 		if (el.section_id==='self' && el.section_tipo===caller.section_tipo) {
-		// 			el.section_id = caller.section_id
-		// 		}
-		// 	})
-		// }
 
 	// tool context additional properties
 		tool_context.lang		= caller.lang
@@ -674,12 +671,28 @@ const view_modal = async function(options) {
 		modal.on_close	= () => {
 
 			if (typeof tool_instance.on_close_actions==='function') {
+
 				// custom actions
 				tool_instance.on_close_actions('modal')
+				// re-select the caller component
+				if (caller.type==='component') {
+					setTimeout(()=>{
+						ui.component.activate(caller)
+					}, 1)
+				}
+
 			}else{
 
 				caller.refresh({
 					refresh_id_base_lang : true
+				})
+				.then(()=>{
+					// re-select the caller component
+					if (caller.type==='component') {
+						setTimeout(()=>{
+							ui.component.activate(caller)
+						}, 1)
+					}
 				})
 				tool_instance.destroy(true, true, true)
 			}
@@ -754,7 +767,7 @@ const view_window = async function(options) {
 			})
 		)
 		const url = DEDALO_CORE_URL + `/page/?tool=${name}&menu=false&raw_data=` + raw_data
-		if (url.length>2000) {
+		if (url.length>3000) {
 			console.warn('Warning. The URL is too long:', url.length);
 		}
 

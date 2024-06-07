@@ -5,10 +5,8 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 
@@ -48,7 +46,7 @@ view_default_list_pdf.render = async function(self, options) {
 		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension && el.file_exist===true) //
 
 		// thumb
-		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true) //
+		const thumb	= files_info.find(el => el.quality==='thumb' && el.file_exist===true)
 
 		const thumb_file = thumb?.file_path
 			? DEDALO_MEDIA_URL + thumb.file_path
@@ -56,7 +54,7 @@ view_default_list_pdf.render = async function(self, options) {
 
 		const url = file_info
 			? thumb_file
-			: page_globals.fallback_image // page_globals.fallback_image
+			: page_globals.fallback_image
 
 		const image = ui.create_dom_element({
 			element_type	: 'img',
@@ -64,42 +62,19 @@ view_default_list_pdf.render = async function(self, options) {
 			src				: url,
 			parent			: wrapper
 		})
-		image.addEventListener('error', function() {
-			console.log('pdf icon load error:', url);
-		})
-		// open viewer
-		image.addEventListener('mousedown', function (e) {
-			e.stopPropagation();
+		// tells handler_open_viewer window dimensions
+		image.open_window_features = {
+			width	: 1024,
+			height	: 800
+		}
 
-			if(!file_info){
+		// error event
+			image.addEventListener('error', function() {
+				console.log('pdf icon load error:', url);
+			})
 
-				// get the upload tool to be fired
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			}else{
-
-				// open a new window
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						menu			: false
-					})
-					open_window({
-						url		: url,
-						target	: 'viewer',
-						width	: 1024,
-						height	: 800
-					})
-			}
-		})
+		// open viewer. Media common handler for 3d, av, image, pdf, svg
+			image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return wrapper

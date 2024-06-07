@@ -629,8 +629,10 @@
 
 		.iframe_container {
 			padding-top: 17px;
+
 			>iframe {
-				height: calc(100vh - 68px);
+				// height: calc(100vh - 68px);
+				height: calc(100vh - 8rem);
 				width: 100%;
 				z-index: 1;
 				padding: 0px;
@@ -1147,8 +1149,20 @@
 }
 
 .media_wrapper.list.wrapper_component {
-	&.view_default, &.view_mosaic {
+	cursor: pointer;
+
+	img {
+		display: block;
+		padding: 0px;
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+		object-position: center;
+	}
+
+	&.view_default, &.view_mosaic, &.view_tool {
 		height: var(--view_line_height);
+
 		@media screen and (max-width: @width_break_point_0) {
 			background-color: unset !important;
 		}
@@ -1170,6 +1184,13 @@
 	display: inline-block;
 	height: var(--view_text_height);
 	vertical-align: middle;
+
+	img {
+		cursor: zoom-in;
+		height: 100%;
+		width: 100%;
+		object-fit: contain;
+	}
 }
 
 .page_error_container {

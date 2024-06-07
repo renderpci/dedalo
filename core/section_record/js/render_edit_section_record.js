@@ -5,10 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance} from '../../common/js/instances.js'
-	// import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_section_record} from './view_default_edit_section_record.js'
 	import {view_text_section_record} from './view_text_section_record.js'
 	import {view_mini_section_record} from './view_mini_section_record.js'

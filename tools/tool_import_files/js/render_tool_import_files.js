@@ -495,6 +495,11 @@ const render_options_container = function (self, content_data) {
 					control_field_check_box.addEventListener('change', function(e) {
 						set_import_mode(self, this.checked)
 					})
+					// when the images was added (drop) set the import mode
+					// (check the name and assign the field)
+					event_manager.subscribe('drop_zone_addedfile',() => {
+						set_import_mode(self, control_field_check_box.checked)
+					})
 
 					// switch_label
 					ui.create_dom_element({
@@ -808,13 +813,13 @@ const set_import_mode = function (self, apply) {
 		const current_value = files_data[i]
 
 		if(apply===true){
-			const regex = /^(.*?)-(.*?)-?([a-zA-Z])\.([a-zA-Z]{3,4})$/gm;
+			const regex = /^(.*?)-(.*?)-?([a-zA-Z]{1,2})\.([a-zA-Z]{3,4})$/gm;
 			// const name = current_value.name; //`123 85-456 fd-a.jpg`;
 			const map_name = regex.exec(current_value.name)
 			if ( map_name!==null && map_name[3]!==null ) {
 
 				const map_name_upper = map_name[3].toUpperCase();
-				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name===map_name_upper)
+				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name.toUpperCase()===map_name_upper)
 				if (target_portal) {
 					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
 				}

@@ -8,8 +8,6 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
-	// import {instances} from '../../common/js/instances.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import * as menu_tree from './render_menu_tree.js'
 	import * as menu_mobile from './render_menu_mobile.js'
@@ -61,7 +59,8 @@ render_menu.prototype.edit = async function() {
 			parent			: fragment
 		})
 		dedalo_icon.addEventListener('click', fn_click_open)
-		function fn_click_open() {
+		function fn_click_open(e) {
+			e.stopPropagation()
 			window.open('https://dedalo.dev', 'Dédalo Site', []);
 		}
 
@@ -135,13 +134,12 @@ render_menu.prototype.edit = async function() {
 				// tool_user_admin Get the user_admin tool to be fired
 				const tool_user_admin = self.context.tools.find(el => el.model==='tool_user_admin')
 				if (!tool_user_admin) {
-					console.error('Tool user admin is not available in tools:', self.context.tools);
-					return
+					console.log('Tool user admin is not available in tools:', self.context.tools);
 				}
 
 				// open_tool (tool_common)
 					open_tool({
-						tool_context	: tool_user_admin,
+						tool_context	: tool_user_admin || 'tool_user_admin',
 						caller			: self
 					})
 			}//end fn_open_tool
@@ -192,7 +190,7 @@ render_menu.prototype.edit = async function() {
 		}
 
 	// menu_spacer
-		const menu_spacer = ui.create_dom_element({
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'menu_spacer top_item',
 			parent			: fragment
@@ -218,22 +216,24 @@ render_menu.prototype.edit = async function() {
 
 	// menu_wrapper
 		const menu_wrapper = document.createElement('div')
-			  menu_wrapper.classList.add('menu_wrapper','menu')
 			  menu_wrapper.appendChild(fragment)
 			  menu_wrapper.section_label	= section_label
 			  menu_wrapper.toggle_inspector	= toggle_inspector
-		// menu left band
+		// menu classes
+			const classes = ['menu_wrapper','menu']
+			// menu left band
 			switch (true) {
 				case page_globals.is_root===true:
-					menu_wrapper.classList.add('is_root')
+					classes.push('is_root')
 					break;
 				case page_globals.is_global_admin===true:
-					menu_wrapper.classList.add('is_global_admin')
+					classes.push('is_global_admin')
 					break;
 				default:
 					// nothing to add
 					break;
 			}
+			menu_wrapper.classList.add(...classes)
 
 
 	return menu_wrapper
@@ -251,6 +251,7 @@ const render_debug_info_bar = (self) => {
 	// short vars
 		const info_data			= self.data.info_data || {}
 		const dedalo_version	= info_data.dedalo_version || page_globals.dedalo_version
+		const dedalo_build		= info_data.dedalo_build || page_globals.dedalo_build
 		const dedalo_db_name	= info_data.dedalo_db_name || page_globals.dedalo_db_name
 		const pg_version		= info_data.pg_version || page_globals.pg_version
 		const php_version		= info_data.php_version || page_globals.php_version
@@ -268,7 +269,7 @@ const render_debug_info_bar = (self) => {
 		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'dedalo_version',
-			text_content	: 'Code v. ' + dedalo_version,
+			text_content	: 'Code v. ' + dedalo_version + ' ' + dedalo_build,
 			parent			: debug_info_bar
 		})
 

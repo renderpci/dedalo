@@ -5,12 +5,8 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {pause} from '../../common/js/utils/index.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 
 
 
@@ -43,37 +39,22 @@ view_default_list_section_record.render = async function(self, options) {
 		const wrapper = ui.create_dom_element({
 			element_type	: 'div',
 			id				: self.id
-			// class_name	: self.model + ' ' + self.tipo + ' ' + self.mode + (self.mode==='tm' ? ' list' : '')
 		})
 		const ar_css = [
 			self.model,
 			self.tipo,
 			self.mode,
-			// (self.mode==='tm' ? ' list' : ''),
 			'view_'+self.context.view
 		]
 		wrapper.classList.add(...ar_css)
 
 		// hilite_row. User mouse enter/mouseleave creates an DOM node to hilite current row
 		// Note that only is activated when self.caller is a section to prevent deep portals issues
-			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') { //  || self.caller.model==='service_time_machine'
+			if (add_hilite_row===true && self.caller.model==='section' || self.caller.model==='service_time_machine') {
 				when_in_dom(wrapper, function(){
-					// pause 200 ms to prevent redraw issues on slow machines
-					// setTimeout(function(){
-						hilite_row(wrapper)
-					// }, 200)
+					hilite_row(wrapper)
 				})
-			}//end if (self.caller.model==='section' || self.caller.model==='time_machine')
-
-	// wrapper css
-		// const css = self.caller.context.css && self.caller.context.css.section_record
-		// 	? self.caller.context.css.section_record
-		// 	: null
-		// if (css) {
-		// 	for(const key in css) {
-		// 		wrapper.style[key] = css[key]
-		// 	}
-		// }
+			}
 
 	// content_data render_columns
 		const fragment = await get_content_data(self)
@@ -85,7 +66,6 @@ view_default_list_section_record.render = async function(self, options) {
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
-					// common.render_tree_data(instance, document.getElementById('debug'))
 					console.log('/// selected instance:', self);
 				}
 			})
@@ -99,30 +79,15 @@ view_default_list_section_record.render = async function(self, options) {
 
 /**
 * HILITE_ROW
-*
+* Add the necessary events to the row to hilite when mouseenter /  mouseleave
 * @param HTMLElement wrapper
 * 	section_record wrapper node
 * @return bool
 */
 const hilite_row = function(wrapper) {
 
-	let hilite_row_node
-
-	// fn_remove_hilite (if is set)
-		const fn_remove_hilite = () => {
-			// first column set vars. This affect ::after pseudo element
-			wrapper.firstChild.style.setProperty('--box_display', 'none');
-		}
-
-	// events
-		wrapper.addEventListener('mouseleave', fn_remove_hilite);
-		// wrapper.addEventListener('mousedown', fn_remove_hilite);
-		wrapper.addEventListener('mouseenter', fn_hilite);
-		// fn_hilite. Add hilite
-		function fn_hilite() {
-			if (hilite_row_node) {
-				return
-			}
+	// fn_hilite. Add hilite
+		const fn_hilite = function() {
 
 			// remove previous hilite if exist
 				fn_remove_hilite()
@@ -146,6 +111,17 @@ const hilite_row = function(wrapper) {
 				wrapper_first_column.style.setProperty('--box_display', 'block');
 				wrapper_first_column.style.setProperty('--box_width', row_style.width);
 		}
+
+	// fn_remove_hilite (if is set)
+		const fn_remove_hilite = () => {
+			// first column set vars. This affect ::after pseudo element
+			wrapper.firstChild.style.setProperty('--box_display', 'none');
+		}
+
+	// events
+		wrapper.addEventListener('mouseenter', fn_hilite);
+		wrapper.addEventListener('mouseleave', fn_remove_hilite);
+
 
 	return true
 }//end hilite_row
@@ -243,7 +219,8 @@ const get_content_data = async function(self) {
 						}
 					})
 					ar_promises.push(current_promise)
-				}
+				}//end for (let k = 0; k < ar_instances_length; k++)
+
 				// nodes. Await all instances are parallel rendered
 				await Promise.all(ar_promises)// render work done safely
 
@@ -259,33 +236,32 @@ const get_content_data = async function(self) {
 							continue;
 						}
 						// check if the current_instance has column_id. If not, an error was occur on common creating the columns.
-						if (current_instance.column_id) {
-
-							const ar_sub_columns_map = current_instance.columns_map || ar_instances
-
-							// column. If column already exists, place the component node into the column.
-							// Else, creates a new column and place it into the fragment
-							const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
-							const column_node	= found_node
-								? found_node
-								: (()=>{
-									const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
-									// push column in ar_column_nodes
-									ar_column_nodes.push(new_column_node)
-									// add node to fragment
-									fragment.appendChild(new_column_node)
-
-									return new_column_node
-								  })()
-
-							const current_instance_node	= current_instance.node
-							// console.log("// current_instance_node:", i, j, current_instance_node);
-							column_node.appendChild(current_instance_node)
-
-						}else{
+						if (!current_instance.column_id) {
 							console.error("current_instance column_id not found:",current_instance);
+							continue;
 						}
-				}//end for (let i = 0; i < ar_instances_length; i++)
+
+					// ar_sub_columns_map
+						const ar_sub_columns_map = current_instance.columns_map || ar_instances
+
+					// column_node. If column already exists, place the component node into the column.
+					// Else, creates a new column and place it into the fragment
+						const found_node	= ar_column_nodes.find(el => el.column_id === current_instance.column_id)
+						const column_node	= found_node
+							? found_node
+							: (()=>{
+								const new_column_node = render_column_node(current_instance, self, ar_sub_columns_map)
+								// push column in ar_column_nodes
+								ar_column_nodes.push(new_column_node)
+								// add node to fragment
+								fragment.appendChild(new_column_node)
+
+								return new_column_node
+							  })()
+						// append current_instance wrapper node
+						column_node.appendChild( current_instance.node )
+				}//end for (let j = 0; j < ar_instances_length; j++)
+
 		}//end for (let i = 0; i < columns_map_length; i++)
 
 
@@ -296,8 +272,10 @@ const get_content_data = async function(self) {
 
 /**
 * RENDER_COLUMN_NODE
-* @param object column from the columns_map
-* @return DOM element column
+* @param object component_instance
+* @param object self
+* @param array ar_instances
+* @return HTMLElement column_node
 */
 const render_column_node = function(component_instance, self, ar_instances){
 
@@ -375,6 +353,7 @@ export const render_column_node_callback = function(column_obj, self){
 			})
 		}//end mobile add-ons
 
+
 	return column_node
 }// end render_column_node_callback
 
@@ -382,7 +361,8 @@ export const render_column_node_callback = function(column_obj, self){
 
 /**
 * RENDER_EMPTY_COLUMN_NODE
-* @param object column from the columns_map
+* @param object column_obj
+* 	column from the columns_map
 * @param object self
 * 	element instance
 * @return HTMLElement column_node
@@ -405,6 +385,7 @@ const render_empty_column_node = function(column_obj, self){
 				label		: column_obj.label
 			})
 		}//end mobile add-ons
+
 
 	return column_node
 }// end render_empty_column_node

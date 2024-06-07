@@ -5,7 +5,6 @@
 
 
 // imports
-	//import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import * as instances from '../../common/js/instances.js'
@@ -35,8 +34,6 @@ export const section_record = function() {
 
 	this.paginated_key	= null
 	this.row_key		= null
-	// control
-	//this.built		= false
 
 	this.node			= null
 
@@ -78,52 +75,44 @@ section_record.prototype.init = async function(options) {
 	const self = this
 
 	// options vars
-	self.model						= options.model
-	self.tipo						= options.tipo
-	self.section_tipo				= options.section_tipo
-	self.section_id					= options.section_id
-	self.mode						= options.mode
-	self.lang						= options.lang
-	self.id_variant					= options.id_variant
-	self.node						= null
-	self.columns_map				= options.columns_map
+		self.model						= options.model
+		self.tipo						= options.tipo
+		self.section_tipo				= options.section_tipo
+		self.section_id					= options.section_id
+		self.mode						= options.mode
+		self.lang						= options.lang
+		self.id_variant					= options.id_variant
+		self.node						= null
+		self.columns_map				= options.columns_map
 
-	self.datum						= options.datum
-	self.context					= options.context
-	// fields_separator
-	self.context.fields_separator	= self.context.fields_separator || ' + '
-	self.context.view				= self.context.view || 'line'
-	// self.data					= options.data
-	self.paginated_key				= options.paginated_key
-	self.row_key					= options.row_key
+		self.datum						= options.datum
+		self.context					= options.context
+		// fields_separator
+		self.context.fields_separator	= self.context.fields_separator || ' + '
+		self.context.view				= self.context.view || 'line'
 
-	self.events_tokens				= []
-	self.ar_instances				= []
+		self.paginated_key				= options.paginated_key
+		self.row_key					= options.row_key
 
-	self.type						= self.model
-	self.label						= null
+		self.events_tokens				= []
+		self.ar_instances				= []
 
-	self.caller						= options.caller || null
+		self.type						= self.model
+		self.label						= null
 
-	self.matrix_id					= options.matrix_id || null
-	self.column_id					= options.column_id
+		self.caller						= options.caller || null
 
-	self.modification_date			= options.modification_date || null
+		self.matrix_id					= options.matrix_id || null
+		self.column_id					= options.column_id
 
-	self.offset						= options.offset
+		self.modification_date			= options.modification_date || null
 
-	self.locator					= options.locator
+		self.offset						= options.offset
+
+		self.locator					= options.locator
 
 	// permissions
-	self.permissions 				= self.caller.permissions
-
-	// events subscription
-		// event active (when user focus in dom)
-		//event_manager.subscribe('section_record_rendered', (active_section_record) => {
-			//if (active_section_record.id===self.id) {
-			//	console.log("-- event section_record_rendered: active_section_record:",active_section_record.tipo, active_section_record.section_id);
-			//}
-		//})
+		self.permissions 				= self.caller.permissions
 
 	// status update
 		self.status = 'initialized'
@@ -143,8 +132,8 @@ section_record.prototype.init = async function(options) {
 * @param string section_id
 * @param object current_data
 * @param int column_id
-*
-* @return promise current_instance
+* @param bool autoload
+* @return object current_instance
 * 	Instance of component / section_group initialized and built
 */
 const build_instance = async (self, context, section_id, current_data, column_id, autoload) => {
@@ -162,8 +151,6 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			const mode = (current_context.fixed_mode===true)
 				? current_context.mode
 				: self.mode
-		// new fallback
-			// const mode = current_context.mode || self.mode
 
 	// component / section group instance_options
 		const instance_options = {
@@ -209,10 +196,8 @@ const build_instance = async (self, context, section_id, current_data, column_id
 
 		// dataframe
 			instance_options.id_variant = (instance_options.model==='component_dataframe')
-				// ? `${section_record_id_variant}_${current_data.tipo_key}_${current_data.section_id_key}`
 				? `${section_record_id_variant}_${current_data.section_id_key}`
 				: instance_options.id_variant
-
 
 	// component / section group. Create the instance options for build it, the instance is reflect of the context and section_id
 		const current_instance = await instances.get_instance(instance_options)
@@ -221,19 +206,8 @@ const build_instance = async (self, context, section_id, current_data, column_id
 			return
 		}
 
-		// portals case
-			// if (current_context.legacy_model==='component_portal') {
-			// 	autoload = true
-			// }
-
 	// build. instance build await
 		await current_instance.build(autoload)
-		// if (current_context.legacy_model==='component_portal') {
-		// 	console.log('autoload:', autoload, current_instance);
-		// }
-	// add
-		// ar_instances.push(current_instance)
-		// dd_console(`__Time to build_instance section_record: ${(performance.now()-t0).toFixed(3)} ms`,'DEBUG', [current_context.tipo,current_context.model])
 
 
 	return current_instance
@@ -244,7 +218,7 @@ const build_instance = async (self, context, section_id, current_data, column_id
 /**
 * GET_AR_INSTANCES_EDIT (USED IN EDIT MODE)
 * @see render_section get_content_data
-* @return promise
+* @return array self.ar_instances
 * 	Resolve: array ar_instances
 * 	Initialized and built instances
 */
@@ -254,7 +228,6 @@ section_record.prototype.get_ar_instances_edit = async function() {
 
 	// already calculated case
 		if (self.ar_instances && self.ar_instances.length>0) {
-			// console.warn("Returning already calculated instances:",self.ar_instances, self.id)
 			return self.ar_instances
 		}
 
@@ -265,16 +238,12 @@ section_record.prototype.get_ar_instances_edit = async function() {
 		const tipo			= self.tipo
 
 	// items. Get the items inside the section/component of the record to render it
-		// const items = (mode==="list")
-		// 	? self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component') && el.parent===tipo && el.mode===mode)
-		// 	: self.datum.context.filter(el => el.section_tipo===section_tipo && (el.type==='component' || el.type==='grouper') && el.parent===tipo && el.mode===mode)
-
 		const items = (self.caller.model === 'section')
 			? self.datum.context.filter(el =>
 				el.section_tipo===section_tipo
 				&& el.parent===tipo
 				&& (el.type==='component' || el.type==='grouper')
-				&& el.model!=='component_dataframe' //
+				&& el.model!=='component_dataframe'
 				&& el.mode===mode)
 			: self.datum.context.filter(el =>
 				el.section_tipo===section_tipo
@@ -286,50 +255,43 @@ section_record.prototype.get_ar_instances_edit = async function() {
 		const ar_promises	= []
 		const items_length	= items.length
 		for (let i = 0; i < items_length; i++) {
-			//console.groupCollapsed("section: section_record " + self.tipo +'-'+ ar_section_id[i]);
-			// const current_context = items[i]
-			// const current_data		= self.get_component_data(current_context.tipo, current_context.section_tipo, section_id)
-
-			// sequential mode
-				// const current_instance = await build_instance(self, current_context, section_id, current_data)
-				// ar_instances.push(current_instance)
 
 			// parallel mode
-				const current_promise = new Promise(function(resolve){
+			const current_promise = new Promise(function(resolve){
 
-					const current_context	= items[i]
+				const current_context = items[i]
 
-					const current_data		= self.get_component_data({
-						ddo				: current_context,
-						section_tipo	: current_context.section_tipo,
-						section_id		: (current_context.model==='component_dataframe')
-							? self.caller.section_id
-							: self.section_id
-					})
-
-					build_instance(
-						self,
-						current_context,
-						section_id,
-						current_data,
-						null, // column_id
-						false // autoload
-					)
-					.then(function(current_instance){
-						// current_instance.instance_order_key = i
-						resolve(current_instance)
-					}).catch((errorMsg) => {
-						console.error('build_instance error: ', errorMsg);
-					})
+				const current_data = self.get_component_data({
+					ddo				: current_context,
+					section_tipo	: current_context.section_tipo,
+					section_id		: (current_context.model==='component_dataframe')
+						? self.caller.section_id
+						: self.section_id
 				})
-				ar_promises.push(current_promise)
-		}//end for (let i = 0; i < items_length; i++) {
+
+				// build_instance
+				build_instance(
+					self,
+					current_context,
+					section_id,
+					current_data,
+					null, // column_id
+					false // autoload
+				)
+				.then(function(current_instance){
+					resolve(current_instance)
+				})
+				.catch((errorMsg) => {
+					console.error('build_instance error: ', errorMsg);
+				})
+			})
+			ar_promises.push(current_promise)
+		}//end for (let i = 0; i < items_length; i++)
 
 	// instances. Await all instances are parallel built and fix
-		await Promise.all(ar_promises).then(function(ar_instances){
-			// sort by instance_order_key asc to guarantee original order
-			// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
-			// fix
+		await Promise.all(ar_promises)
+		.then(function(ar_instances){
+			// set self.ar_instances
 			self.ar_instances = ar_instances
 		})
 
@@ -344,6 +306,7 @@ section_record.prototype.get_ar_instances_edit = async function() {
 * Iterate all request_config building an instance for each ddo_map item
 * All instances are stored in self.ar_instances array container
 * (Used in list mode and time machine too)
+* @see common.get_columns_map for a better overview
 * @return array self.ar_instances
 * [
 * 	{model: "component_input_text", tipo: "dd374", ...} component instance,
@@ -363,6 +326,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 		const matrix_id	= self.matrix_id
 
 	// columns_map. Build from ddo_map
+	// @see common.get_columns_map for a better overview
 		const columns_map = await self.columns_map || []
 
 	// request config
@@ -447,10 +411,8 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 							const current_context = current_ddo_section_tipo.length > 1
 								? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 								: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo_section_tipo[0])
-							// (!) Unified 09-11-2022 because time machine portal sub-context does not match in cases where section_tipo is not array (case oh18)
-							// const current_context = self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
 
-							// check is valid context
+								// check is valid context
 								if (!current_context) {
 
 									if(SHOW_DEBUG===true) {
@@ -465,11 +427,13 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 										console.log("self:", self);
 										console.groupEnd()
 									}
+
+									// ignore invalid context
 									continue;
 								}
 
 						// new_context. clone the current_context to prevent changes in the original.
-							const new_context = clone(current_context) //Object.freeze(current_context);
+							const new_context = clone(current_context)
 							new_context.properties = new_context.properties || {}
 							new_context.columns_map = (current_column.columns_map)
 								? current_column.columns_map
@@ -550,12 +514,7 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 * GET_COMPONENT_DATA
 * Compares received section_tipo, section_id, matrix_id with elements inside datum.data trying to get match.
 * If no elements matches, a empty object is created to prevent gaps
-* @param object ddo
-* 	Could be an ddo or and full context from datum
-* @param string section_tipo
-* @param string|int section_id
-* @param string|int|null matrix_id = null
-*
+* @param object options
 * @return object|null component_data
 * 	If no component data is found, a special component data for empty cases is created
 */
@@ -563,18 +522,18 @@ section_record.prototype.get_component_data = function(options) {
 
 	const self = this
 
-	const ddo				= options.ddo
-	const section_tipo		= options.section_tipo
-	const section_id		= options.section_id
-	const section_id_key	= (ddo.caller_dataframe)
-		? ddo.caller_dataframe.section_id_key
-		: self.section_id
-	const matrix_id			= options.matrix_id || null
-	// const tipo_key 			= (ddo.caller_dataframe)
-	// 	? ddo.caller_dataframe.tipo_key
-	// 	: self.tipo
+	// options
+		const ddo			= options.ddo
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
+		const matrix_id		= options.matrix_id || null
 
-	// prevent no data elements find
+	// section_id_key
+		const section_id_key = (ddo.caller_dataframe)
+			? ddo.caller_dataframe.section_id_key
+			: self.section_id
+
+	// no data elements case (groupers)
 		if (ddo.model==='section_group') {
 			return null;
 		}
@@ -592,14 +551,13 @@ section_record.prototype.get_component_data = function(options) {
 				if (el.matrix_id && matrix_id) {
 
 					if (ddo.model==='component_dataframe') {
-						// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+
 						return (
-							parseInt(el.matrix_id)			=== parseInt(matrix_id)
-							&& parseInt(el.section_id_key)	=== parseInt(section_id_key)
-							// && el.tipo_key					=== tipo_key
+							parseInt(el.matrix_id)		=== parseInt(matrix_id)	&&
+							parseInt(el.section_id_key)	=== parseInt(section_id_key)
 						)
 					}
-					// console.error("match matrix_id:", el.matrix_id);
+
 					return parseInt(el.matrix_id)===parseInt(matrix_id)
 				}
 
@@ -611,9 +569,8 @@ section_record.prototype.get_component_data = function(options) {
 				// data of components inside dataframe sections are conditioned by his caller section_tipo and section_id and his own section_tipo and section_id
 
 				if (ddo.model==='component_dataframe') {
-					// return parseInt(el.row_section_id)===parseInt(self.caller.section_id)
+
 					return parseInt(el.section_id_key)===parseInt(section_id_key)
-						// && el.tipo_key===tipo_key
 				}
 
 				return true
@@ -621,18 +578,6 @@ section_record.prototype.get_component_data = function(options) {
 
 			return false
 		})
-
-	// debug
-		// if (self.mode==='tm' || self.caller.mode==='tm') {
-			// if (!component_data) {
-			// 	console.warn("not found component_data ddo, section_tipo, section_id, matrix_id:", ddo, section_tipo, section_id, matrix_id);
-			// }else{
-			// 	if (component_data.debug_model==='component_portal') {
-			// 		// console.log("component_data.debug_model:", component_data.debug_model);
-			// 		console.log("--- get_component_data section_tipo, section_id, matrix_id, component_data:", component_data, section_tipo, section_id, matrix_id);
-			// 	}
-			// }
-		// }
 
 	// undefined case. If the current item don't has data will be instantiated with the current section_id
 		if(!component_data) {
@@ -648,11 +593,13 @@ section_record.prototype.get_component_data = function(options) {
 			}
 
 			if (ddo.model==='component_dataframe') {
-				empty_data.section_id_key	= section_id_key
-				// empty_data.tipo_key			= tipo_key
+				// add section_id_key
+				empty_data.section_id_key = section_id_key
+
 			}
 			return empty_data
 		}
+
 
 	return component_data
 }//end get_component_data
@@ -661,328 +608,20 @@ section_record.prototype.get_component_data = function(options) {
 
 /**
 * GET_COMPONENT_INFO
-* @return object component_data
+* Find ddinfo item into self.datum.data
+* @return object|undefined component_info
 */
-section_record.prototype.get_component_info = function(){
+section_record.prototype.get_component_info = function() {
 
 	const self = this
 
 	const component_info = self.datum.data.find(item => item.tipo==='ddinfo'
-										&& item.section_id===self.section_id
-										&& item.section_tipo===self.section_tipo)
+													 && item.section_id===self.section_id
+													 && item.section_tipo===self.section_tipo)
 
 	return component_info
 }//end get_component_info
 
 
 
-/**
-* GET_AR_COLUMNS_INSTANCES (USED IN LIST MODE. TIME MACHINE TOO)
-* @return array ar_instances
-*/
-	// section_record.prototype.get_ar_columns_instances_DES = async function(){
-
-	// 	const self = this
-
-	// 	// already calculated case
-	// 		if (self.ar_instances && self.ar_instances.length>0) {
-	// 			// console.warn("Returning already calculated instances:",self.ar_instances, self.id)
-	// 			return self.ar_instances
-	// 		}
-
-	// 	// short vars
-	// 		const mode				= self.mode
-	// 		const tipo				= self.tipo
-	// 		const section_tipo		= self.section_tipo
-	// 		const section_id		= self.section_id
-	// 		const matrix_id			= self.matrix_id // time machine 'tm' mode only
-	// 		const caller_column_id	= self.column_id
-	// 		const ar_columns		= await self.columns || []
-
-	// 		// console.log("section_tipo:",section_tipo);
-	// 		// console.log("matrix_id:",matrix_id, self.caller.mode, self.caller.tipo);
-	// 		// console.log("_________________________________________________ ar_columns:", clone(ar_columns));
-
-	// 	// // valid_columns
-	// 	// 	// Get the columns that can be used with the current locator
-	// 	// 	// check the section_tipo of the last column and match with the current locator section_tipo
-	// 	// 	// the columns has reverse order, the last columns match with the component locator, (and the first columns is the most deep component in the path)
-	// 	// 	const get_valid_columns = function(section_tipo, ar_columns){
-
-	// 	// 		const ar_column = []
-
-	// 	// 		const ar_columns_length = ar_columns.length
-	// 	// 		for (let i = 0; i < ar_columns_length; i++) {
-
-	// 	// 			const current_column	= ar_columns[i];
-	// 	// 			const last_column		= current_column[current_column.length - 1];
-	// 	// 			// if the column has multiple section_tipo like [es1, fr1, ...], check if someone is the section_tipo of the locator
-	// 	// 			if(last_column && Array.isArray(last_column.section_tipo)){
-	// 	// 				const ddo_check = last_column.section_tipo.find(item => item===section_tipo)
-	// 	// 				if(ddo_check) {
-	// 	// 					ar_column.push(current_column)
-	// 	// 				}
-	// 	// 			}else if(last_column && last_column.section_tipo===section_tipo){
-	// 	// 				ar_column.push(current_column)
-	// 	// 			}
-	// 	// 		}
-	// 	// 		return ar_column
-	// 	// 	}
-	// 	// 	const valid_columns = get_valid_columns(section_tipo, ar_columns)
-
-	// 	// request config
-	// 	// get the request_config with all ddo
-	// 		const request_config		= self.caller.context.request_config
-	// 		const request_config_length	= request_config.length
-
-
-	// 	// instances
-	// 		const ar_promises		= []
-	// 		const ar_columns_length	= ar_columns.length
-	// 		for (let i = 0; i < ar_columns_length; i++) {
-	// 				const current_ddo_path	= ar_columns[i]
-	// 				const current_ddo		= current_ddo_path[current_ddo_path.length - 1];
-	// 				if (!current_ddo) {
-	// 					console.warn("ignored empty current_ddo: [i, tipo, section_tipo, section_id, matrix_id]", i, tipo, section_tipo, section_id, matrix_id);
-	// 					continue;
-	// 				}
-
-	// 			// new_path
-	// 				const new_path = [...current_ddo_path]
-	// 				new_path.pop()
-
-	// 			// the component has direct data into the section
-	// 			// if(current_context.parent===tipo){
-	// 				const current_data		= self.get_component_data(current_ddo, section_tipo, section_id, matrix_id)
-
-	// 				const current_context	= Array.isArray(current_ddo.section_tipo)
-	// 					? self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode)
-	// 					: self.datum.context.find(el => el.tipo===current_ddo.tipo && el.mode===current_ddo.mode && el.section_tipo===current_ddo.section_tipo)
-
-	// 				// check is valid context
-	// 					if (!current_context) {
-	// 						console.error(`[get_ar_columns_instances] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}, ddo:`, current_ddo);
-	// 						console.warn("self.datum.context:", self.datum.context);
-	// 						continue;
-	// 					}
-
-	// 				current_context.columns = [new_path] //[new_path.splice(-1)] // the format is : [[{column_item1},{column_item2}]]
-
-	// 			// context section tipo
-	// 				// if the component has multiple section_tipo like hierarchy25, get the current section_tipo and inject to the context
-	// 				// multiple sections [on1, ts1, es1,...] has the same component and server only send 1 version of it.
-	// 				// it's necessary to create different instances for the same component, to maintain the coherence with the data.
-	// 				if(current_context.section_tipo!==section_tipo){
-	// 					current_context.section_tipo = section_tipo
-	// 				}
-
-	// 			// new_context. clone the current_context to prevent changes in it.
-	// 				const new_context = clone(current_context) //Object.freeze(current_context);
-
-	// 				const column_id = caller_column_id
-	// 					? caller_column_id
-	// 					: i+1
-
-	// 				// get built instance
-	// 					// sequential mode
-	// 						// const current_instance = await build_instance(self, new_context, section_id, current_data, column_id)
-	// 						// self.ar_instances.push(current_instance)
-
-	// 					// parallel mode
-	// 						const current_promise = new Promise(function(resolve){
-	// 							build_instance(self, new_context, section_id, current_data, column_id)
-	// 							.then(function(current_instance){
-	// 								// current_instance.instance_order_key = i
-	// 								resolve(current_instance)
-	// 							}).catch((errorMsg) => {
-	// 								console.error(errorMsg);
-	// 							})
-	// 						})
-	// 						ar_promises.push(current_promise)
-
-	// 			// }else{
-	// 			// 	// the component don't has direct data into the section, it has a locator that will use for located the data of the column
-	// 			// 	const current_data		= self.get_component_relation_data(current_context, section_id)
-
-	// 			// 	// sometimes the section_tipo can be different (es1, fr1, ...)
-	// 			// 	//the context get the first component, but the instance can be with the section_tipo data
-	// 			// 	current_context.section_tipo = current_data.section_tipo
-	// 			// 	const current_instance	= await build_instance(self, current_context, current_data.section_id, current_data)
-	// 			// 	//add
-	// 			// 	ar_instances.push(current_instance)
-	// 			// }
-
-	// 		}//end for loop
-
-	// 		// instances. Await all instances are parallel built and fix
-	// 			await Promise.all(ar_promises).then(function(ar_instances){
-	// 				// sort by instance_order_key asc to guarantee original order
-	// 				// ar_instances.sort((a,b) => (a.instance_order_key > b.instance_order_key) ? 1 : ((b.instance_order_key > a.instance_order_key) ? -1 : 0))
-	// 				// fix
-	// 				self.ar_instances = ar_instances
-	// 			})
-
-
-	// 	return self.ar_instances
-	// }//end get_ar_columns_instances
-
-
-
-/**
-* GET_COMPONENT_RELATION_DATA
-* Don't used now (!)
-* @return object component_data
-*/
-	// section_record.prototype.get_component_relation_data = function(component, section_id){
-
-	// 	const self = this
-
-	// 		console.log("self.mode:",self.mode);
-
-	// 	const parent			= component.parent
-	// 	const section_tipo		= component.section_tipo
-	// 	const component_tipo	= component.tipo
-	// 	const component_data	= self.datum.data.find(item => item.tipo===component_tipo && item.row_section_id===section_id)
-	// 	// console.log("component_data:",component_data);
-
-	// 	// // get the f_path it has full path from the main section to last component in the chain, (sectui b¡)
-	// 	// const f_path 			= component.parent_f_path
-	// 	// // get the first compoment, position 2, this component has the locator into the data of the main section.
-	// 	// const component_tipo 	= f_path[1]
-	// 	// const first_locator 	= self.data.find(item => item.tipo===component_tipo && item.section_id===section_id)
-
-	// 	// Get the data of the component selected in the show, normally the last compoment of the chain.
-	// 	// It's the column in the list
-	// 	// const parent_data = (first_locator)
-	// 	// 	? self.datum.data.find(item =>
-	// 	// 		item.tipo===component.tipo
-	// 	// 		&& item.parent_section_id 	=== section_id
-	// 	// 		&& item.parent_tipo 		=== first_locator.tipo)
-	// 	// 	: null
-	// 	// if the component has data set it, if not create a null data
-	// 	// component_data.value = (parent_data)
-	// 	// 	? parent_data
-	// 	// 	: null
-
-	// 	// undefined case. If the current item don't has data will be instanciated with the current section_id
-	// 	if (component_data.value===null) {
-	// 		// empy component data build
-	// 		component_data.value = {
-	// 			section_id				: section_id,
-	// 			section_tipo			: section_tipo,
-	// 			tipo					: component.tipo,
-	// 			from_component_tipo		: parent,
-	// 			parent					: parent,
-	// 			value					: [],
-	// 			fallback_value			: [""]
-	// 		}
-	// 	}
-	// 	// self.data.push(component_data.value)
-
-	// 	return component_data
-	// }//end get_component_relation_data
-
-
-
-/**
-* GET_COMPONENT_CONTEXT
-* @return object context
-*/
-	// section_record.prototype.get_component_context = function(component_tipo) {
-
-	// 	const self = this
-
-	// 	const context = self.context.filter(item => item.tipo===component_tipo && item.section_tipo===self.section_tipo)[0]
-
-	// 	return context
-	// }//end get_component_context
-
-
-
-/**
-* BUILD
-* @return promise
-*/
-	// section_record.prototype.build = function() {
-
-	// 	const self = this
-
-	// 	const components = self.load_items()
-	// 	//const groupers 	 = self.load_groupers()
-
-	// 	return Promise.all([components]).then(function(){
-	// 		self.built = true
-	// 	})
-	// }//end build
-
-
-
-/**
-* LOAD_ITEMS
-* @return promise load_items_promise
-*/
-	// section_record.prototype.load_items = function() {
-
-	// 	const self = this
-
-	// 	const context 			= self.context
-	// 	const context_lenght 	= context.length
-	// 	const data 				= self.data
-	// 	const section_tipo 		= self.section_tipo
-	// 	const section_id 		= self.section_id
-
-	// 	const load_items_promise = new Promise(function(resolve){
-
-	// 		const instances_promises = []
-
-	// 		// for every item in the context
-	// 		for (let j = 0; j < context_lenght; j++) {
-
-	// 			const current_item = context[j]
-
-	// 			// remove the section of the create item instances (the section is instanciated, it's the current_section)
-	// 				if(current_item.tipo===section_tipo) continue;
-
-	// 			// item_data . Select the data for the current item. if current item is a grouper, it don't has data and will need the childrens for instance it.
-	// 				let item_data = (current_item.type==='grouper') ? {} : data.filter(item => item.tipo===current_item.tipo && item.section_id===section_id)[0]
-
-	// 				// undefined case. If the current item don't has data will be instanciated with the current section_id
-	// 				if (typeof(item_data)==='undefined') {
-	// 					item_data = {
-	// 						section_id: section_id,
-	// 						value: []
-	// 					}
-	// 				}
-
-	// 			// build instance with the options
-	// 				const item_options = {
-	// 					model 			: current_item.model,
-	// 					data			: item_data,
-	// 					context 		: current_item,
-	// 					section_tipo	: current_item.section_tipo,
-	// 					section_id		: section_id,
-	// 					tipo 			: current_item.tipo,
-	// 					parent			: current_item.parent,
-	// 					mode			: current_item.mode,
-	// 					lang			: current_item.lang,
-	// 					section_lang 	: self.lang,
-	// 				}
-	// 				const current_instance = instances.get_instance(item_options)
-
-	// 			// add the instance to the array of instances
-	// 				instances_promises.push(current_instance)
-	// 		}
-
-	// 		return Promise.all(instances_promises).then(function(){
-	// 			resolve(true)
-	// 		})
-	// 	})
-
-
-	// 	return load_items_promise
-	// }//end load_items
-
-
-
 // @license-end
-

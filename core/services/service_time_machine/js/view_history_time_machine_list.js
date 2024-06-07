@@ -5,9 +5,6 @@
 
 
 // imports
-	// import {ui} from '../../../../core/common/js/ui.js'
-	// import {set_element_css} from '../../../../core/page/js/css.js'
-	// import {event_manager} from '../../../../core/common/js/event_manager.js'
 	import {
 		common_render
 	} from './render_service_time_machine_list.js'

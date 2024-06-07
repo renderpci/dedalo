@@ -719,7 +719,7 @@ class component_security_access extends component_common {
 				$found = array_find($component_security_access_dato, function($el) use($value) {
 					return ($el->tipo===$value->tipo && $el->section_tipo===$value->section_tipo);
 				});
-				if ($found!==null) {
+				if (is_object($found)) {
 					$found->permissions = $permissions;
 					debug_log(__METHOD__." Updated already existing value ".to_string($found), logger::WARNING);
 				}else{

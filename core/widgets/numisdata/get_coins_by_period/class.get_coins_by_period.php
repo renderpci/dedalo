@@ -199,14 +199,12 @@ class get_coins_by_period extends widget_common {
 							return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_MODEL_TIPO;
 						});
 
-						$hierachy_object->model_section_id = (isset($model))
+						$hierachy_object->model_section_id = (is_object($model))
 							? $model->section_id
 							: $target_model_section_id+1; // something different to the target_model
 
 					$ar_hierarchies[] = $hierachy_object;
-
 				}
-				// dump($ar_hierarchies, ' ar_hierarchies ++ '.to_string()); die();
 
 
 			// data
@@ -304,19 +302,18 @@ class get_coins_by_period extends widget_common {
 						//     "section_tipo": "numisdata341",
 						//     "from_component_tipo": "numisdata157"
 						// }
-					if (!empty($duplicated_dato) && $duplicated_dato->section_id=='2') continue;
+					if ( is_object($duplicated_dato) && $duplicated_dato->section_id=='2') {
+						continue;
+					}
 
 					$period_dato = array_filter($relations, function($el) use($component_tipo_period) {
 						return $el->from_component_tipo === $component_tipo_period;
 					});
-
 					if(empty($period_dato)){
 						$empty_perid_count++;
 					}
-					// $component = $component + (start_time()-$component_time);
 
 					foreach ($period_dato as $current_period) {
-						// $tesa = start_time();
 
 						$ts_term = array_find($ar_hierarchies, function($el) use($current_period){
 							return $el->section_tipo === $current_period->section_tipo
@@ -337,24 +334,17 @@ class get_coins_by_period extends widget_common {
 
 						}else{
 							// count the coin into the term
-							if(isset($ts_term)){
+							if(is_object($ts_term)){
 								$ts_term->count = $ts_term->count + 1;
 							}
 						}
-
-						// $tesauro = $tesauro + (start_time()-$tesa);
-
 					}
 				}
 
-				// check the time of the current processes
-					// dump($tesauro/1000000, ' tesauro ++ '.to_string());
-					// dump($component/1000000, ' component_time ++ '.to_string());
 
 				$period = array_filter($ar_hierarchies, function($el){
 					return $el->count !== null;
 				});
-
 				// add empty period hierarchy at end of the
 				if(isset($empty_perid_count)){
 					$empty_hierarchy = new stdClass();

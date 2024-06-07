@@ -588,18 +588,6 @@ section.prototype.build = async function(autoload=false) {
 					}
 				}
 
-			// count rows
-				// if (!self.total) {
-				// 	self.get_total()
-				// }
-
-			// set_local_db_data updated rqo
-				// const rqo = self.rqo
-				// data_manager.set_local_db_data(
-				// 	rqo,
-				// 	'rqo'
-				// )
-
 			// view
 				if (self.context.view) {
 					self.view = self.context.view
@@ -677,14 +665,6 @@ section.prototype.build = async function(autoload=false) {
 					self.events_tokens.push(event_token)
 				}
 		}//end if (autoload===true)
-
-	// Update section mode/label with context declarations
-		// const section_context = self.context || {
-		// 	mode		: 'edit',
-		// 	label		: 'Section without permissions '+self.tipo,
-		// 	permissions	: 0
-		// }
-		// self.mode 	= section_context.mode
 
 	// update instance properties from context
 		set_context_vars(self, self.context)
@@ -781,7 +761,7 @@ section.prototype.build = async function(autoload=false) {
 			}
 			data_manager.set_local_db_data(
 				{
-					id		: self.session_key, //+ '_' + self.mode,
+					id		: self.session_key,
 					value	: self.rqo.sqo
 				},
 				'sqo'
@@ -1082,10 +1062,6 @@ section.prototype.navigate = async function(options) {
 	// callback execute
 		if (callback) {
 			await callback()
-
-			if(SHOW_DEBUG===true) {
-				// console.log("-> Executed section navigate received callback:", callback);
-			}
 		}
 
 	// loading
@@ -1140,7 +1116,7 @@ section.prototype.navigate = async function(options) {
 						component_tipo	: null,
 						section_tipo	: self.tipo,
 						section_id		: null,
-						action			: 'delete_user_section_locks' // delete_user_section_locks | blur | focus
+						action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
 					}
 				}
 			})
@@ -1253,11 +1229,6 @@ section.prototype.get_total = async function() {
 
 	const self = this
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			// console.warn('section get_total self.total:', self.total);
-		}
-
 	// already calculated case
 		if (self.total || self.total==0) {
 			return self.total
@@ -1316,7 +1287,7 @@ section.prototype.get_total = async function() {
 /**
 * GOTO_LIST
 * Navigates from edit mode to list mode, usually from the Inspector or the Menu
-* @return void
+* @return bool
 */
 section.prototype.goto_list = async function() {
 
@@ -1324,14 +1295,15 @@ section.prototype.goto_list = async function() {
 
 	// only edit mode is accepted here
 		if (self.mode!=='edit') {
-			return
+			return false
 		}
 
-	/* MODE USING PAGE user_navigation */
-		// saved_sqo
-		// Note that section build method store SQO in local DDBB to preserve user
-		// navigation section filter and pagination. It's recovered here when exists,
-		// to pass values to API server
+	// MODE USING PAGE user_navigation
+
+	// saved_sqo
+	// Note that section build method store SQO in local DDBB to preserve user
+	// navigation section filter and pagination. It's recovered here when exists,
+	// to pass values to API server
 		const session_key = 'section_' + self.tipo + '_' + 'list'
 		const saved_sqo	= await data_manager.get_local_db_data(
 			session_key, // self.session_key + '_list',
@@ -1347,58 +1319,26 @@ section.prototype.goto_list = async function() {
 		// always use section request_config_object format instead parsed sqo format
 		sqo.section_tipo = self.request_config_object.sqo.section_tipo
 
-		// source
-			const source = {
-				action			: 'search',
-				model			: self.model, // section
-				tipo			: self.tipo,
-				section_tipo	: self.section_tipo,
-				mode			: 'list',
-				lang			: self.lang
-			 }
+	// source
+		const source = {
+			action			: 'search',
+			model			: self.model, // section
+			tipo			: self.tipo,
+			section_tipo	: self.section_tipo,
+			mode			: 'list',
+			lang			: self.lang
+		 }
 
-		// navigation
-			const user_navigation_rqo = {
-				caller_id			: self.id,
-				source				: source,
-				sqo					: sqo  // new sqo to use in list mode
-				// event_in_history	: false // writes browser navigation step to allow back
-			}
-			event_manager.publish('user_navigation', user_navigation_rqo)
+	// user_navigation event publish
+		const user_navigation_rqo = {
+			caller_id	: self.id,
+			source		: source,
+			sqo			: sqo  // new sqo to use in list mode
+		}
+		event_manager.publish('user_navigation', user_navigation_rqo)
 
-	/* MODE USING SECTION change_mode
-		// change section mode. Creates a new instance and replace DOM node wrapper
-			self.change_mode({
-				mode : 'list'
-			})
-			.then(function(new_instance){
 
-				// update_section_label value
-					menu.update_section_label({
-						value					: new_instance.label,
-						mode					: new_instance.mode,
-						goto_list	: null
-					})
-
-				// update browser url and navigation history
-					const source	= create_source(new_instance, null)
-					const sqo		= new_instance.request_config_object.sqo
-					const title		= new_instance.id
-					// url search. Append section_id if exists
-					const url_vars = url_vars_to_object({
-						tipo : new_instance.tipo,
-						mode : new_instance.mode
-					})
-					const url = '?' + object_to_url_vars(url_vars)
-					// browser navigation update
-					push_browser_history({
-						source	: source,
-						sqo		: sqo,
-						title	: title,
-						url		: url
-					})
-			})//end then
-			*/
+	return true
 }//end goto_list
 
 

@@ -108,7 +108,7 @@ class sections extends common {
 						$found = array_find($request_config, function($el){
 							return isset($el->api_engine) && $el->api_engine==='dedalo';
 						});
-						if (!empty($found)) {
+						if (is_object($found)) {
 							if (isset($found->sqo) && isset($found->sqo->limit)) {
 								$search_query_object->limit = $found->sqo->limit;
 							}

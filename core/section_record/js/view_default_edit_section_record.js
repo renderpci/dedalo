@@ -6,8 +6,6 @@
 
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {get_instance} from '../../common/js/instances.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -60,16 +58,12 @@ view_default_edit_section_record.render = async function(self, options) {
 	// debug
 		if(SHOW_DEBUG===true) {
 			const fn_click_debug = function(e) {
-				e.stopPropagation()
 				if (e.altKey) {
 					e.stopPropagation()
 					e.preventDefault()
-					// common.render_tree_data(instance, document.getElementById('debug'))
-					console.log("/// selected instance:", self);
 				}
 			}//end fn_click_debug
 			wrapper.addEventListener('click', fn_click_debug)
-			// wrapper.classList.add('_'+self.id)
 		}
 
 
@@ -91,7 +85,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 	const fragment = new DocumentFragment()
 
-	// render . Render all instances node in parallel
+	// render. Render all instances node in parallel
 		const ar_instances_length = ar_instances.length
 		const ar_promises = []
 		for (let i = 0; i < ar_instances_length; i++) {
@@ -139,14 +133,15 @@ const get_content_data_edit = async function(self, ar_instances) {
 					continue;
 				}
 
-			const current_instance_node	= current_instance.node || await current_instance.render()
+			// instance_node
+				const current_instance_node	= current_instance.node || await current_instance.render()
 
 			// parent_grouper. get the parent node inside the context
 				const parent_grouper = current_instance.context.parent_grouper
 
 			// if the item has the parent, the section_tipo is direct children of the section_record
 			// else it has another item parent
-			if(parent_grouper===self.section_tipo) { //  || self.mode==='list'
+			if(parent_grouper===self.section_tipo){
 
 				// direct root level case
 				fragment.appendChild(current_instance_node)
@@ -164,14 +159,9 @@ const get_content_data_edit = async function(self, ar_instances) {
 
 					const parent_node = parent_instance.node || await parent_instance.render()
 					// move the node to his father
-					if (parent_instance.type==='grouper') { //  && self.mode!=='list'
-						// check valid parameters
-							// if (!parent_node || !current_instance_node) {
-							// 	console.error("---error: parent_node:",parent_node, ' - current_instance_node:',current_instance_node);
-							// }
+					if (parent_instance.type==='grouper') {
 						// append inside content data of grouper
 						// Note that 'content_data' is attached to grouper wrapper as a property to avoid DOM search
-						// const grouper_content_data_node = parent_node.querySelector(':scope >.content_data')
 						const grouper_content_data_node = parent_node.content_data
 						grouper_content_data_node.appendChild(current_instance_node)
 					}else{
@@ -183,16 +173,7 @@ const get_content_data_edit = async function(self, ar_instances) {
 					fragment.appendChild(current_instance_node)
 				}
 			}
-
-			// portals case
-			// if (current_instance.context.legacy_model==='component_portal') {
-				// setTimeout(async function(){
-					// current_instance.standalone = true
-				 	  // current_instance.refresh()
-				 // }, 1000)
-			// }
 		}//end for (let i = 0; i < ar_instances_length; i++)
-
 
 	// content_data (section_record)
 		const content_data = document.createElement('div')

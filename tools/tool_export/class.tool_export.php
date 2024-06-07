@@ -8,14 +8,9 @@ declare(strict_types=1);
 class tool_export extends tool_common {
 
 
-	// class properties
-		// public $section_tipo;
-		// public $section_obj;		// received section
-		// public static $quotes 	 		  = '"';
-		// public static $delimiter 		  = ';';
-		// public static $internal_separator = PHP_EOL;
-		// public $section_list_custom;
-
+	/**
+	* CLASS VARS
+	*/
 		// string data_format. Values: 'standard', 'dedalo'
 		public $data_format;
 		// array ar_ddo_map

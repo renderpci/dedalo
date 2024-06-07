@@ -3949,7 +3949,7 @@ class section extends common {
 											'get_data'		=> true
 										]);
 
-									// Check if the element json has his own request_config to change it as list
+									// Check if the element JSON has his own request_config to change it as list
 									// when the component has his own definition in ontology, it can had a components in edit mode
 									// all this components need to be set to mode = list
 									// this change is important to maintain the data as is in time machine
@@ -3961,7 +3961,7 @@ class section extends common {
 													return $el->api_engine==='dedalo';
 												});
 												// if the component has his own show and ddo_map, change it to mode = list
-												if(isset($new_request_config_object->show) && isset($new_request_config_object->show->ddo_map)){
+												if(is_object($new_request_config_object) && isset($new_request_config_object->show) && isset($new_request_config_object->show->ddo_map)){
 													foreach ($new_request_config_object->show->ddo_map as $new_ddo) {
 														$new_ddo->mode = 'tm';
 													}
