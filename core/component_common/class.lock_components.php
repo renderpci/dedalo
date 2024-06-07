@@ -48,7 +48,9 @@ class lock_components {
 		// load current db elements
 			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
-			$num_rows	= pg_num_rows($res);
+			$num_rows	= $res===false
+				? 0
+				: pg_num_rows($res);
 
 			// create first row if empty table
 			if ($num_rows<1) {
@@ -246,7 +248,9 @@ class lock_components {
 		// load current db elements
 			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
-			$num_rows	= pg_num_rows($res);
+			$num_rows	= $res===false
+				? 0
+				: pg_num_rows($res);
 
 		// create first row on empty table
 		if ($num_rows<1) {
@@ -324,7 +328,9 @@ class lock_components {
 		// load current db elements
 			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
-			$num_rows	= pg_num_rows($res);
+			$num_rows	= $res===false
+				? 0
+				: pg_num_rows($res);
 
 
 		// create first row on empty table
@@ -429,7 +435,9 @@ class lock_components {
 		// load current db elements
 			$strQuery	= "SELECT datos FROM \"$table\" WHERE id = $id LIMIT 1";
 			$res		= JSON_RecordObj_matrix::search_free($strQuery, true);
-			$num_rows	= pg_num_rows($res);
+			$num_rows	= $res===false
+				? 0
+				: pg_num_rows($res);
 
 
 		// create FIRST ROW ON EMPTY TABLE
