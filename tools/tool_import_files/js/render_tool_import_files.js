@@ -8,7 +8,6 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {time_unit_auto} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {create_source} from '../../../core/common/js/common.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
 
 
@@ -75,8 +74,8 @@ const get_content_data_edit = async function(self) {
 		lock_items.push(options_container)
 		content_data.appendChild(options_container)
 
-	// components container
-		const drop_zone = ui.create_dom_element({
+	// drop_zone
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'drop_zone',
 			parent			: content_data
@@ -90,7 +89,6 @@ const get_content_data_edit = async function(self) {
 		})
 		lock_items.push(template_container)
 
-		// const template = await create_template(self)
 		const template = await self.service_dropzone.render()
 		template_container.appendChild(template)
 
@@ -188,70 +186,13 @@ const get_content_data_edit = async function(self) {
 					lock_items	: lock_items,
 					self		: self
 				})
+		})//end button_process_import.addEventListener('click')
 
-			/*
-				// source. Note that second argument is the name of the function to manage the tool request like 'delete_tag'
-				// this generates a call as my_tool_name::my_function_name(options)
-					const source = create_source(self, 'import_files')
-
-				// process the images in the server (uploaded previously)
-				// rqo
-					const rqo = {
-						dd_api	: 'dd_tools_api',
-						action	: 'tool_request',
-						source	: source,
-						options	: {
-							background_running		: true, // set run in background CLI
-							tipo					: self.caller.tipo,
-							section_tipo			: self.caller.section_tipo,
-							section_id				: self.caller.section_id,
-							tool_config				: self.tool_config,
-							files_data				: self.files_data,
-							components_temp_data	: components_temp_data,
-							key_dir					: self.key_dir,
-							custom_target_quality	: self.custom_target_quality
-						}
-					}
-
-				// call to the API, fetch data and get response
-					return new Promise(function(resolve){
-
-						data_manager.request({
-							body : rqo
-						})
-						.then(function(api_response){
-
-							if(SHOW_DEBUG===true) {
-								console.warn("-> API api_response:",api_response);
-							}
-							// change the loading to content_data to show message
-							self.node.classList.remove('loading')
-							self.node.content_data.classList.add('loading')
-							// get message
-							const msg = (api_response.result===true)
-								? self.get_tool_label('upload_done') || 'Files imported successfully'
-								: self.get_tool_label('upload_error') || 'Files no imported!'
-							// add the message to wrapper (outside content_data that has loading class)
-							const msg_container = ui.create_dom_element({
-								element_type	: 'div',
-								class_name		: 'msg_container',
-								inner_html 		: msg,
-								parent			: self.node
-							})
-							// when user click reload the tool
-							self.node.addEventListener('click',function(){
-								window.location.reload();
-							})
-
-							resolve(api_response)
-						})
-					})
-				*/
-		})//end button_process_import.addEventListener('click',)
 		// drop_zone_success. On upload file success, re-activate button
 		event_manager.subscribe('drop_zone_success',() => {
 			button_process_import.classList.remove('loading')
 		})
+
 		// on reload page, if files_data exists, activate button
 		if(self.files_data.length > 0){
 			button_process_import.classList.remove('loading')
@@ -278,6 +219,7 @@ const get_content_data_edit = async function(self) {
 		}
 		check_process_data()
 
+
 	return content_data
 }//end get_content_data_edit
 
@@ -287,6 +229,7 @@ const get_content_data_edit = async function(self) {
 * RENDER_OPTIONS_CONTAINER
 * @param object self
 * 	component instance
+* @param HTMLElement content_data
 * @return HTMLElement options_container
 */
 const render_options_container = function (self, content_data) {
@@ -323,7 +266,7 @@ const render_options_container = function (self, content_data) {
 				})
 
 				select_process.addEventListener('change', function(){
-					const file_processor_nodes = document.querySelectorAll("select.file_processor_select")
+					const file_processor_nodes = document.querySelectorAll('select.file_processor_select')
 					const len = file_processor_nodes.length
 					for (let i = len - 1; i >= 0; i--) {
 						file_processor_nodes[i].value = select_process.value
@@ -343,8 +286,8 @@ const render_options_container = function (self, content_data) {
 						parent			: select_process
 					})
 					option_procesor_node.value = option.function_name
-			}// end for
-		}// end if(ar_file_processor)
+			}//end for
+		}//end if(ar_file_processor)
 
 	// component options to store the file, normally the component_portal,
 	// it could be defined in the preferences or could be the caller
@@ -363,6 +306,7 @@ const render_options_container = function (self, content_data) {
 				}
 			]
 
+			// target_componet
 			const target_componet = ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'target_componet',
@@ -401,7 +345,6 @@ const render_options_container = function (self, content_data) {
 					inner_html		: option.label,
 					parent			: select_options
 				})
-
 				if(option.default){
 					option_node.selected = true
 				}
@@ -416,11 +359,12 @@ const render_options_container = function (self, content_data) {
 			const default_target_quality	= features.default_target_quality || 'original'
 			self.custom_target_quality		= default_target_quality || null
 
-			const target_componet = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'target_componet',
-				parent			: options_container
-			})
+			// target_componet
+				const target_componet = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'target_componet',
+					parent			: options_container
+				})
 
 			// label
 				const quality_label = self.get_tool_label('quality') || 'Quality'
@@ -456,8 +400,8 @@ const render_options_container = function (self, content_data) {
 						parent			: select_quality
 					})
 					option_procesor_node.value = option
-				}// end for
-		}// end if(ar_quality)
+				}//end for (let i = 0; i < ar_quality.length; i++)
+		}//end if(ar_quality)
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
@@ -507,6 +451,7 @@ const render_options_container = function (self, content_data) {
 						parent			: control_field_switcher
 					})
 
+					// label_field_check_box
 					const label_field_check_box = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'checkbox-label',
@@ -800,7 +745,9 @@ const update_process_status = (options) => {
 
 /**
 * SET_IMPORT_MODE
+* Updates DOM options selectors
 * @param object self
+*  tool instance
 * @param bool apply
 * @return bool
 */
@@ -812,7 +759,11 @@ const set_import_mode = function (self, apply) {
 
 		const current_value = files_data[i]
 
+		// current element selector options node
+		const option_component_select = current_value.previewElement.querySelector('.option_component_select')
+
 		if(apply===true){
+
 			const regex = /^(.*?)-(.*?)-?([a-zA-Z]{1,2})\.([a-zA-Z]{3,4})$/gm;
 			// const name = current_value.name; //`123 85-456 fd-a.jpg`;
 			const map_name = regex.exec(current_value.name)
@@ -820,19 +771,26 @@ const set_import_mode = function (self, apply) {
 
 				const map_name_upper = map_name[3].toUpperCase();
 				const target_portal = self.tool_config.ddo_map.find(el => el.role==='component_option' && el.map_name.toUpperCase()===map_name_upper)
-				if (target_portal) {
-					current_value.previewElement.querySelector(".option_component_select").value = target_portal.tipo;
+				if (target_portal && option_component_select) {
+					option_component_select.value = target_portal.tipo
 				}
 			}
 		}else{
-			const default_target_portal = self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
-			if(default_target_portal){
-				current_value.previewElement.querySelector(".option_component_select").value = default_target_portal.tipo;
-			}else{
-				current_value.previewElement.querySelector(".option_component_select").options[0].selected = true ;
+
+			if (option_component_select) {
+				const default_target_portal	= self.tool_config.ddo_map.find(el => el.role === 'component_option' && el.default === true)
+				if(default_target_portal){
+					option_component_select.value = default_target_portal.tipo
+				}else{
+					// note that option_component_select.options may not exists
+					if (option_component_select.options[0]) {
+						option_component_select.options[0].selected = true
+					}
+				}
 			}
 		}
 	}
+
 
 	return true
 }//end set_import_mode
@@ -840,4 +798,3 @@ const set_import_mode = function (self, apply) {
 
 
 // @license-end
-
