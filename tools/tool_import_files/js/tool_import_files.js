@@ -5,15 +5,11 @@
 
 
 // import
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_import_files} from './render_tool_import_files.js'
-	// import {service_dropzone} from '../../../core/services/service_dropzone/js/service_dropzone.js'
-	// import {service_tmp_section} from '../../../core/services/service_tmp_section/js/service_tmp_section.js'
 
 
 
@@ -208,8 +204,7 @@ tool_import_files.prototype.import_files = function(options) {
 		return new Promise(function(resolve){
 			// request
 			data_manager.request({
-				// use_worker	: true,
-				body		: rqo
+				body : rqo
 			})
 			.then(function(api_response){
 				if(SHOW_DEBUG===true) {
