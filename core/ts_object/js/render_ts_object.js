@@ -142,7 +142,9 @@ export const render_ts_line = function(options) {
 							section_id		: child_data.section_id,
 							component_tipo	: child_data.ar_elements[j].tipo,
 							container_id	: indexations_container_id,
-							value			: null
+							value			: null,
+							total			: parseInt( child_data.ar_elements[j].count_result.total ),
+							totals_group	: child_data.ar_elements[j].count_result.totals_group
 						})
 						.then(function(){
 							element_show_indexations.classList.remove('loading')

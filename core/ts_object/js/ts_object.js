@@ -1456,8 +1456,14 @@ export const ts_object = new function() {
 			const component_tipo	= options.component_tipo
 			const container_id		= options.container_id
 			const value				= options.value || null
-			// const button_obj		= options.button_obj // not used
-			// const event			= options.event
+			const pagination		= options.pagination || {}
+			const totals_group		= options.totals_group || [{key: ['all']}]
+
+		// pagination vars
+			const total 			= options.total || null
+
+		// get the filter section
+			const filter_section = totals_group.map(el => el.key)
 
 		// target_div
 			const target_div = document.getElementById(container_id);
@@ -1486,20 +1492,40 @@ export const ts_object = new function() {
 					section_id		: section_id,
 					tipo			: component_tipo,
 					value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+				},
+				sqo: {
+					mode 			: 'related',
+					section_tipo	: filter_section,
+					total			: total,
+					limit			: 200,
+					offset			: 0,
+					filter_by_locators: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id,
+						tipo			: component_tipo,
+					}]
 				}
+
 			}
 
 		// dd_grid
 			const dd_grid = await instances.get_instance({
-				model			: 'dd_grid',
-				section_tipo	: section_tipo,
-				section_id		: section_id,
-				tipo			: component_tipo,
-				mode			: 'list',
-				view			: 'indexation',
-				lang			: page_globals.dedalo_data_lang,
-				rqo				: rqo,
-				id_variant		: container_id// (new Date()).getTime()
+				model				: 'dd_grid',
+				section_tipo		: section_tipo,
+				section_id			: section_id,
+				tipo				: component_tipo,
+				mode				: 'list',
+				view				: 'indexation',
+				lang				: page_globals.dedalo_data_lang,
+				rqo					: rqo,
+				id_variant			: container_id,
+				totals_group 		: totals_group,
+				paginator_options	: {
+					view 				: 'micro',
+					show_interface 		: {
+						show_all : false
+					}
+				}
 			})
 			await dd_grid.build(true)
 			dd_grid.render()

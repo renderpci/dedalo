@@ -311,7 +311,12 @@ class ts_object {
 							$lang,
 							$this->section_tipo
 						);
-						$dato = $component->get_dato();
+						// get the data when the component is not a relation_index
+						// relation index get full data when get_dato() is called
+						// but this component needs a pagination data
+						$dato = ($model_name!=='component_relation_index')
+							? $component->get_dato()
+							: [];
 
 					// re-format dato in some cases:
 						switch (true) {
@@ -391,15 +396,29 @@ class ts_object {
 								# icon Not need more info. Value is property 'type'
 								$element_obj->value = $render_vars->icon;
 
-								// dato check
+								if ($model_name==='component_relation_index') {
+									// get the total sections that are calling and the total of every specific section
+									$count_data_group_by = $component->count_data_group_by(['section_tipo']);
+
+									if($count_data_group_by->total === 0){
+										continue 3;
+									}
+									$element_obj->value .= ':' . $count_data_group_by->total;
+
+									array_map(function($item){
+										$item->label	= RecordObj_dd::get_termino_by_tipo($item->key[0]);
+										$item->key		= $item->key[0]; // flat the key to be more useful in JavaScript, only 1 section is received
+									}, $count_data_group_by->totals_group);
+
+									$element_obj->count_result = $count_data_group_by;
+
+								}else{
+
+									// dato check
 									$considered_empty_dato = (bool)is_empty_dato($dato);
 									if($considered_empty_dato===true) {
 										continue 3; // Skip empty icon value links
 									}
-
-								if ($model_name==='component_relation_index') {
-									$total = count($dato);
-									$element_obj->value .= ':' . $total;
 								}
 								break;
 
