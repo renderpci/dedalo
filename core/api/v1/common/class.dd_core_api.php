@@ -1352,7 +1352,7 @@ final class dd_core_api {
 			$tipo	= $rqo->source->tipo;
 			$model	= $rqo->source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$sqo	= $rqo->sqo;
-			$mode	= $rqo->source->mode;
+			$mode	= $rqo->source->mode ?? 'list'; //set default for section count
 
 		// prevent_lock. Close session if not already closed
 			if (!isset($rqo->prevent_lock)) {
