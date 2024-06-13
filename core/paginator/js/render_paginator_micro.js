@@ -124,28 +124,29 @@ const get_content_data = async function(self) {
 		const fragment = new DocumentFragment()
 
 	// show_all_button. Don't show in mosaics of 1 item (limit 1)
-		if (total_pages>1) {
+		if ( total_pages>1 ) {
 
-			if (self.limit>1) {
-				if (!self.show_all_status && total_pages>1) {
+			// show all
+				if (self.limit>1 && self.show_interface.show_all ) {
+					if (!self.show_all_status && total_pages>1) {
 
-					const show_all_button = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'show_all_button',
-						inner_html		: get_label.show_all || 'Show all',
-						parent			: fragment
-					})
-					show_all_button.addEventListener('mousedown', function(e) {
-						e.stopPropagation()
-						// fix show_all_status (store the previous limit value to use wen reset)
-						self.show_all_status = {
-							limit : self.limit
-						}
-						// trigger show_all (publish a event listened by the section)
-						self.show_all()
-					})
+						const show_all_button = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'show_all_button',
+							inner_html		: get_label.show_all || 'Show all',
+							parent			: fragment
+						})
+						show_all_button.addEventListener('mousedown', function(e) {
+							e.stopPropagation()
+							// fix show_all_status (store the previous limit value to use wen reset)
+							self.show_all_status = {
+								limit : self.limit
+							}
+							// trigger show_all (publish a event listened by the section)
+							self.show_all()
+						})
+					}
 				}
-			}
 
 		// navigation
 			const paginator_div_links = ui.create_dom_element({
