@@ -476,7 +476,7 @@ class RecordObj_dd extends RecordDataBoundObject {
 				$model='section_tab';
 			}
 			elseif ($model==='component_relation_struct') {
-				$model='component_relation_index';
+				$model='box elements';
 			}
 			elseif ($model==='component_security_tools') {
 				$model='component_check_box';
