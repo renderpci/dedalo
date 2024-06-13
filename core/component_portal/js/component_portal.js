@@ -505,6 +505,7 @@ component_portal.prototype.build = async function(autoload=false) {
 				if (self.data.pagination && !self.total) {
 					self.total			= self.data.pagination.total
 					self.rqo.sqo.offset	= self.data.pagination.offset
+					self.rqo.sqo.total	= self.data.pagination.total
 				}
 
 			// paginator
