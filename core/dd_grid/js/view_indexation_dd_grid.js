@@ -7,6 +7,7 @@
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
 	// import {clone,dd_console} from '../../common/js/utils/index.js'
+	import {paginator} from '../../paginator/js/paginator.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -38,8 +39,57 @@ export const view_indexation_dd_grid = function() {
 */
 view_indexation_dd_grid.render = async function(self, options) {
 
+	// options
+		const render_level = options.render_level || 'full'
+
 	// data
 		const data = self.data || []
+
+	// content_data
+		const grid = get_grid_nodes( data )
+		const content_data = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'content_data'
+		})
+		content_data.appendChild(grid)
+
+		if (render_level==='content') {
+
+			// self.paginator.refresh()
+			return content_data
+		}
+
+	// top container
+		const top_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'top_container',
+		})
+
+
+	// paginator
+		const paginator_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'paginator_container'
+		})
+		init_paginator(self)
+		.then(async function(response){
+			const paginator_node = await self.paginator.render()
+			paginator_container.appendChild(paginator_node)
+		})
+
+	// filter_section
+		const filter_section_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'filter_section_container'
+		})
+		get_filter_section(self, filter_section_container)
+		.then(function(filter_section_node){
+			filter_section_container.appendChild(filter_section_node)
+		})
+
+		top_container.appendChild(filter_section_container)
+		top_container.appendChild(paginator_container)
+
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -47,10 +97,11 @@ view_indexation_dd_grid.render = async function(self, options) {
 			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
 		})
 
-	// grid. Value as string
-		const grid = get_grid_nodes( data )
-		wrapper.appendChild(grid)
 
+	// grid. Value as string
+		wrapper.appendChild(top_container)
+		wrapper.appendChild(content_data)
+		wrapper.content_data	= content_data
 
 	return wrapper
 }//end render
@@ -404,6 +455,137 @@ export const get_section_id_column = function(current_data) {
 	return section_id_node
 }//end get_section_id_column
 
+
+/**
+* INIT_PAGINATOR
+* Init and build the paginator if it was not initiated previously
+* and subscribe to paginator events, to refresh the dd_grid when the user navigate the records
+* @param object self
+* @return promise
+*/
+const init_paginator = async function(self){
+
+	// paginator
+		if (!self.paginator) {
+
+			// paginator_options
+			const paginator_view = self.paginator_options.view
+				? self.paginator_options.view
+				: 'micro'
+
+			const show_interface = self.paginator_options.show_interface
+				? self.paginator_options.show_interface
+				: {}
+
+			// create new one
+			self.paginator = new paginator()
+			self.paginator.init({
+				caller			: self,
+				mode			: paginator_view,
+				show_interface	: show_interface
+			})
+			await self.paginator.build()
+
+			// paginator_goto_ event
+				const fn_paginator_goto = function(offset) {
+					self.rqo.sqo.offset = offset
+					// refresh
+					self.refresh()
+				}//end fn_paginator_goto
+				self.events_tokens.push(
+					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+				)//end events push
+
+		}else{
+			// refresh existing
+			self.paginator.offset = self.rqo.sqo.offset
+			self.paginator.total  = self.rqo.sqo.total
+		}
+}//end init_paginator
+
+
+
+/**
+* GET_FILTER_SECTION
+* Create the buttons as check boxes to select/deselect the calling sections rows
+* Use the totals_group property to get the section, his label
+* when the user change the check boxes status, refresh the content data and paginator
+* @param object self
+* @param HTMLElement filter_section_container
+* @return HTMLElement fragment
+*/
+const get_filter_section = async function (self, filter_section_container){
+
+	const fragment = new DocumentFragment()
+
+	// get all sections
+	const totals_group = self.totals_group || []
+	const total_len = totals_group.length
+
+	// Order by label the sections to show.
+	totals_group.sort(function(a, b) {
+		return a.label.localeCompare(b.label);
+	});
+	// subscribe the filter_section_contanier to changes in the paginator
+	// block the node and all actions until the paginator is ready.
+	// prevent user actions before the paginator is ready
+	// if the user change the state of the section in middle of pagination refresh
+	// and the new paginator is empty (less than limit)
+	// previous paginator could be set erroneously.
+	event_manager.subscribe('render_'+self.paginator.id, function(){
+		filter_section_container.classList.remove('loading')
+	})
+
+	// create the nodes for the sections
+	for (let i = 0; i < total_len; i++) {
+		const current_section = totals_group[i]
+
+		// checkbox_label
+			const checkbox_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'label checkbox_label',
+				inner_html		: `${current_section.label}: ${current_section.value}`,
+				parent			: fragment
+			})
+
+		// input checkbox
+			const checkbox_input = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				name			: 'checkbox_active'
+			})
+			checkbox_input.checked = true
+			checkbox_input.key = current_section.key
+
+			checkbox_label.prepend(checkbox_input)
+
+			// when the user change the checkbox refresh the content_data
+			checkbox_input.addEventListener('change', function(e) {
+				e.stopPropagation()
+				filter_section_container.classList.add('loading')
+
+				if(checkbox_input.checked === false){
+					// if the checkbox is not set remove the section_tipo of the sqo
+					const new_ar_section = self.rqo.sqo.section_tipo.filter(item => item !== checkbox_input.key)
+					self.rqo.sqo.section_tipo = new_ar_section
+
+				}else{
+					// if the checkbox is checked add the section_tipo to the sqo
+					const found = self.rqo.sqo.section_tipo.find(item => item === checkbox_input.key)
+					if(!found){
+						self.rqo.sqo.section_tipo.push(checkbox_input.key)
+					}
+				}
+				// reset the offset and total to force to refresh the paginator
+				self.rqo.sqo.offset = 0
+				self.rqo.sqo.total = null
+
+				self.refresh()
+			})
+	}
+
+	return fragment
+}//end get_filter_section
 
 
 // @license-end
