@@ -288,7 +288,11 @@ class ts_object {
 				foreach ($ar_element_tipo as $element_tipo) {
 
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
-
+					// remove the box elements
+					// it could be any old component not used as old component_relation_struct
+					if($model_name === 'box elements'){
+						continue 2;
+					}
 					// ignore v5 component_relation_struct
 						if ($model_name==='component_relation_index') {
 							$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
