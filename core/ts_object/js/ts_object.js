@@ -1252,14 +1252,6 @@ export const ts_object = new function() {
 
 						// all is OK
 
-						// Remove all DOM appearances of current wrap_ts_object
-							/*
-							var len = ar_wrap_ts_object.length
-							for (var i = 0; i < ar_wrap_ts_object.length; i++) {
-								ar_wrap_ts_object[i].parentNode.removeChild(ar_wrap_ts_object[i])
-							}
-							*/
-
 						// refresh wrap
 							ts_object.refresh_element(wrap.dataset.section_tipo, wrap.dataset.section_id)
 					}
@@ -1297,40 +1289,6 @@ export const ts_object = new function() {
 
 		return true
 	}//end select_first_input_in_editor
-
-
-
-	/**
-	* SHOW_EDIT_OPTIONS
-	*/
-		// this.show_edit_options = function(object){
-		// 	return false;
-		// 	//var parent_wrap = object.parentNode.parentNode.querySelectorAll('.id_column_content')[0]
-		// 	var parent_wrap = document.querySelectorAll('.id_column_content')
-		// 	var len = parent_wrap.length
-		// 	for (var i = len - 1; i >= 0; i--) {
-		// 		parent_wrap[i].classList.remove('visible_element')
-		// 	}
-		// 	//parent_wrap.classList.remove('visible_element')
-		// 		//console.log(parent_wrap);
-
-
-		// 	var id_column_content = object.querySelectorAll('.id_column_content')[0];
-		// 	id_column_content.classList.add('visible_element')
-		// 		//console.log('entrar');
-		// };//show_edit_options
-
-
-
-	/**
-	* HIDE_EDIT_OPTIONS
-	*/
-		// this.hide_edit_options = function(object){
-		// 	return false;
-		// 	var id_column_content = object.querySelectorAll('.id_column_content')[0];
-		// 	id_column_content.classList.remove('visible_element')
-		// 		//console.log('salir');
-		// };//hide_edit_options
 
 
 
@@ -1437,7 +1395,6 @@ export const ts_object = new function() {
 
 		// data_contanier
 			const wrapper					= button_obj.parentNode.parentNode;
-			// const element_data_contanier	= wrapper.querySelector(':scope > [data-role="data_container"]')
 			const element_data_contanier	= [...wrapper.childNodes].find(el => el.classList.contains('data_container'))
 			const all_element_data_div		= element_data_contanier.children // childNodes;
 
@@ -1480,7 +1437,7 @@ export const ts_object = new function() {
 			}
 
 
-		return true // component_node;
+		return true
 	}//end show_component_in_ts_object
 
 
@@ -1575,71 +1532,6 @@ export const ts_object = new function() {
 
 		// 	return true
 		// }//end link_term
-
-
-
-	/**
-	* GET_JSON (REMOVED. NOW, 'data_manager' FETCH IS USED INSTEAD)
-	* XMLHttpRequest to trigger
-	* @return Promise
-	*/
-		// this.get_json_data = function(trigger_url, trigger_vars, async, content_type) {
-
-		// 	const url = trigger_url;	//?mode=get_children_data';
-		// 	console.log("url:",url);
-
-		// 	// ASYNC
-		// 	if (typeof async==="undefined" || async!==false) {
-		// 		async = true
-		// 	}
-
-		// 	const data_send = JSON.stringify(trigger_vars)
-		// 	//console.log("[get_json_data] data_send:",data_send);
-
-		// 	// Create new promise with the Promise() constructor;
-		// 	// This has as its argument a function
-		// 	// with two parameters, resolve and reject
-		// 	return new Promise(function(resolve, reject) {
-		// 		// Standard XHR to load an image
-		// 		const request = new XMLHttpRequest();
-
-		// 			// Open connection as post
-		// 				request.open("POST", url, async);
-
-		// 			//request.timeout = 30 * 1000 * 60 ; // time in milliseconds
-		// 			//request.ontimeout = function () {
-		// 			//    console.error("The request for " + url + " timed out.");
-		// 			//};
-
-		// 			// codification of the header for POST method, in GET no is necessary
-		// 				if (typeof content_type==="undefined") {
-		// 					content_type = "application/json"
-		// 				}
-		// 				request.setRequestHeader("Content-type", content_type); // application/json OR application/x-www-form-urlencoded
-
-		// 			request.responseType = 'json';
-		// 			// When the request loads, check whether it was successful
-		// 			request.onload = function(e) {
-		// 			  if (request.status === 200) {
-		// 				// If successful, resolve the promise by passing back the request response
-		// 				// console.log("+++++++++++++++++++++++++++++ request.response:",request.response);
-		// 				resolve(request.response);
-		// 			  }else{
-		// 				// If it fails, reject the promise with a error message
-		// 				reject(Error('Reject error don\'t load successfully; error code: ' + request.statusText));
-		// 			  }
-		// 			};
-		// 			request.onerror = function(e) {
-		// 			  // Also deal with the case when the entire request fails to begin with
-		// 			  // This is probably a network error, so reject the promise with an appropriate message
-		// 			  reject(Error('There was a network error. data_send: '+url+"?"+ data_send + "statusText:" + request.statusText));
-		// 			};
-
-		// 			// Send the request
-		// 			request.send(data_send);
-		// 	});
-		// }//end get_json
-
 
 
 	/**

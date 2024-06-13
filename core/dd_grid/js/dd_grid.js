@@ -106,7 +106,6 @@ dd_grid.prototype.build	= async function(autoload=false) {
 			const api_response = await data_manager.request({
 				body : self.rqo
 			})
-			console.log('dd_grid build api_response:', api_response);
 			self.data = api_response.result || null
 		}
 
