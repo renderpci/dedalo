@@ -6,6 +6,7 @@
 
 // imports
 	// import {event_manager} from '../../common/js/event_manager.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	// import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
@@ -78,6 +79,11 @@ dd_grid.prototype.init	= async function(options) {
 		self.view = options.view || (options.context ? options.context.view : 'default')
 	// set config
 		self.config = options.config
+	// paginator options
+		self.paginator_options = options.paginator_options || {}
+	// totals group options
+		self.totals_group = options.totals_group || {}
+
 	
 	// // show_tipo_in_label
 	// 	self.show_tipo_in_label = options.show_tipo_in_label || false
@@ -115,6 +121,52 @@ dd_grid.prototype.build	= async function(autoload=false) {
 
 	return true
 }//end build
+
+
+
+
+/**
+* GET_TOTAL
+* called by the paginator when is initiated or refreshed
+*
+* @return int self.total
+*/
+dd_grid.prototype.get_total = async function() {
+
+
+	const self = this
+
+	// already calculated case
+		if (self.rqo.sqo.total || self.rqo.sqo.total===0) {
+			return self.rqo.sqo.total
+		}
+
+	const rqo_count = clone(self.rqo)
+
+	rqo_count.action = 'count'
+	delete rqo_count.sqo.limit
+	delete rqo_count.sqo.offset
+	delete rqo_count.sqo.total
+
+	const api_count_response = await data_manager.request({
+		body		: rqo_count,
+		use_worker	: true
+	})
+
+	// API error case
+		if ( api_count_response.result===false || api_count_response.error ) {
+			console.error('Error on count total : api_count_response:', api_count_response);
+			return
+		}
+
+	// set result
+		self.rqo.sqo.total = api_count_response.result.total
+
+		console.warn(self.rqo.sqo.total)
+
+
+	return self.rqo.sqo.total
+}//end get_total
 
 
 
