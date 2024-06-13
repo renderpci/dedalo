@@ -45,6 +45,8 @@ export const paginator = function() {
 	this.status				= null
 
 	this.id_variant			= null
+
+	this.show_interface 	= null
 }//end paginator
 
 
@@ -87,6 +89,28 @@ paginator.prototype.init = function(options) {
 
 	// serialize the paginator.Create the unique token
 		self.id = 'paginator_'+self.caller.id
+
+	// show_interface. object . Defines useful view custom properties to take control
+	// of some common component behaviors
+	// if show_interface is defined in properties used the definition, else use this default
+		const default_show_interface = {
+			show_all	: true, // bool true
+		}
+		// set the instance show_interface
+		self.show_interface = (!options.show_interface)
+			? default_show_interface
+			: (()=>{
+				const new_show_interface = options.show_interface
+				// add missing keys
+				for (const [key, value] of Object.entries(default_show_interface)) {
+					if (new_show_interface[key]===undefined) {
+						new_show_interface[key] = value
+					}
+				}
+
+				return new_show_interface
+				}
+			  )()
 
 	// status update
 		self.status = 'initialized'
