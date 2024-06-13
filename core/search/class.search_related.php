@@ -33,6 +33,9 @@ class search_related extends search {
 			$limit	= $this->search_query_object->limit;
 			$offset	= $this->search_query_object->offset;
 
+		// group_by
+			$group_by	= $this->search_query_object->group_by ?? null;
+
 		// reference locator is the locator of the source section that will be
 		// used to obtain the sections with calls to it.
 			$ar_locators = $this->filter_by_locators;
@@ -55,10 +58,23 @@ class search_related extends search {
 			foreach ($ar_tables_to_search as $table) {
 
 				$query	 = '';
+				// SELECT
+				$query	 = PHP_EOL . 'SELECT ';
+				// add group_by
+				// every concept need to be separated by commas
+				$query	.= ( isset($group_by) )
+					? implode(', ', $group_by).', '
+					: '';
+				// add full count when is set
+				// else get the row
 				$query	.= ($full_count===true)
-					? PHP_EOL . 'SELECT COUNT(*) as full_count'
-					: PHP_EOL . 'SELECT section_tipo, section_id, datos';
+					? 'COUNT(*) as full_count'
+					: 'section_tipo, section_id, datos';
+
+				// FROM
 				$query	.= PHP_EOL . 'FROM "'.$table.'"';
+
+				// WHERE
 				$query	.= PHP_EOL . 'WHERE ';
 
 				$locators_query = [];
@@ -98,6 +114,11 @@ class search_related extends search {
 				if ($section_filter!==false) {
 					$query .= PHP_EOL . ' AND (' . $section_filter . ')';
 				}
+				// group by
+				// when is set use GROUP BY clause
+				$query	.= ( isset($group_by) )
+					? PHP_EOL . 'GROUP BY '.implode(', ', $group_by)
+					: '';
 
 				$ar_query[] = $query;
 			}
@@ -138,7 +159,7 @@ class search_related extends search {
 	*
 	* @return array $ar_inverse_locators
 	*/
-	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false ) : array {
+	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false, array $filter_section=['all'] ) : array {
 		$start_time = start_time();
 
 		// cache
@@ -152,7 +173,7 @@ class search_related extends search {
 
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
-				$sqo->set_section_tipo(['all']);
+				$sqo->set_section_tipo($filter_section);
 				$sqo->set_mode('related');
 				$sqo->set_full_count(false);
 				$sqo->set_limit($limit);

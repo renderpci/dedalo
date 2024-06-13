@@ -511,8 +511,24 @@ class search {
 			// Note that in some cases, such as "relationship search", more than one total is given.
 			// because UNION is used for tables
 			$total = 0;
-			while($rows = pg_fetch_assoc($count_result)) {
-				$total = $total + (int)$rows['full_count'];
+			$totals_group = [];
+			while($row = pg_fetch_assoc($count_result)) {
+				// get the total as the sum of all rows
+				$total = $total + (int)$row['full_count'];
+
+				// group by
+				// get the specific total of the group_by concept (as section_tipo)
+				if( isset($this->search_query_object->group_by) ){
+					$current_totals_object = new stdClass();
+					$ar_keys = [];
+					foreach($this->search_query_object->group_by as $current_group){
+						$ar_keys[] = $row[$current_group];
+					}
+					$current_totals_object->key		= $ar_keys;
+					$current_totals_object->value	= (int)$row['full_count'];
+
+					$totals_group[] = $current_totals_object;
+				}
 			}
 
 		// debug
@@ -538,6 +554,10 @@ class search {
 		// $records_data->search_query_object	= $this->search_query_object;
 			$records_data->total = $total;
 
+		// if the sqo has group_by set the result
+			if( isset($this->search_query_object->group_by) ){
+				$records_data->totals_group = $totals_group;
+			}
 
 		return $records_data;
 	}//end count
