@@ -6,7 +6,7 @@ declare(strict_types=1);
 */
 class component_relation_index extends component_relation_common {
 
-
+	public $filter_section;
 
 	/**
  	* @var
@@ -37,7 +37,7 @@ class component_relation_index extends component_relation_common {
 
 		// reference_locator
 			$reference_locator = new locator();
-				$reference_locator->set_type(DEDALO_RELATION_TYPE_INDEX_TIPO); // dd96
+				$reference_locator->set_type( $this->relation_type ); // set a dinamic assignation to get any relation type as dd151 or dd96
 				$reference_locator->set_section_tipo($this->section_tipo);
 				$reference_locator->set_section_id($this->section_id);
 
@@ -45,7 +45,7 @@ class component_relation_index extends component_relation_common {
 			// $ar_inverse_locators = search_related::get_referenced_locators($reference_locator);
 			$ar_inverse_locators = component_relation_index::get_referended_locators_with_cache(
 				$reference_locator,
-				DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
+				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
 
 		// format result like own dato
@@ -87,6 +87,144 @@ class component_relation_index extends component_relation_common {
 
 		return $this->dato;
 	}//end get_dato
+
+
+
+	/**
+	* GET_DATO_PAGINATED
+	* Resolve indexation references data
+	* Note that this component data is always EXTERNAL
+	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
+	* to current section
+	* But, values are saved too to allow easy search
+	* @return array|null $dato
+	*/
+	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+
+		// pagination
+			$limit			= $custom_limit ?? $this->pagination->limit;
+			$offset			= $this->pagination->offset;
+			$filter_section	= $this->filter_section ?? ['all'];
+
+		// reference_locator
+			$reference_locator = new locator();
+				$reference_locator->set_type( $this->relation_type ); // dd96
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
+
+		// ar_inverse_locators locators. Get calculated inverse locators for all matrix tables
+		// referenced_locators from search_related
+			$ar_inverse_locators = search_related::get_referenced_locators(
+				$reference_locator,
+				$limit,
+				$offset,
+				false,
+				$filter_section
+			);
+
+		// format result like own dato
+			$new_dato_paginated = [];
+			foreach ($ar_inverse_locators as $current_locator) {
+
+				$locator = new locator();
+					$locator->set_type($current_locator->type);
+					$locator->set_section_tipo($current_locator->from_section_tipo);
+					$locator->set_section_id($current_locator->from_section_id);
+					if(isset($current_locator->tag_component_tipo)){
+						$locator->set_component_tipo($current_locator->tag_component_tipo);
+					}
+					if(isset($current_locator->tag_id)){
+						$locator->set_tag_id($current_locator->tag_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_id($current_locator->section_top_id);
+					}
+					if(isset($current_locator->section_top_id)){
+						$locator->set_section_top_tipo($current_locator->section_top_tipo);
+					}
+					if(isset($current_locator->from_component_tipo)){
+						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
+					}
+
+					$new_dato_paginated[] = $locator;
+			}
+
+		return $new_dato_paginated;
+	}//end get_dato_paginated
+
+
+
+
+	/**
+	* COUNT_DATA
+	* Full count of data.
+	* Get the total sections that are calling the component (usually a thesaurus term)
+	* @return int $total
+	*/
+	public function count_data() : int {
+
+		if(isset($this->pagination->total)){
+			return $this->pagination->total;
+		}
+
+		// reference_locator
+			$reference_locator = new locator();
+				$reference_locator->set_type( $this->relation_type ); // dd96
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
+
+		// create a sqo to count all the references
+			$sqo_count = new search_query_object();
+				$sqo_count->set_section_tipo(['all']);
+				$sqo_count->set_mode('related');
+				$sqo_count->set_filter_by_locators([$reference_locator]);
+
+		// search to get
+			$search		= search::get_instance($sqo_count);
+			$count_data	= $search->count();
+
+
+		// fix total
+			$total	= $count_data->total;
+
+			$this->pagination->total = $total;
+
+		return $total;
+	}//end count_data
+
+
+
+	/**
+	* COUNT_DATA_GROUP_BY
+	* Full count of records, but breakdown by a criteria
+	* Use the group_by variable to count by any criteria the records
+	* the result include the total as sum of all.
+	* @param array $group_by
+	* ['section_tipo']
+	* @return object $count_data_group_by
+	*/
+	public function count_data_group_by(array $group_by) : object {
+
+		// reference_locator
+			$reference_locator = new locator();
+				$reference_locator->set_type( $this->relation_type ); // dd96
+				$reference_locator->set_section_tipo($this->section_tipo);
+				$reference_locator->set_section_id($this->section_id);
+
+		// create a sqo to count all the references
+			$sqo_count = new search_query_object();
+				$sqo_count->set_section_tipo(['all']);
+				$sqo_count->set_mode('related');
+				$sqo_count->set_filter_by_locators([$reference_locator]);
+				$sqo_count->set_group_by($group_by);
+
+		// search to get
+			$search					= search::get_instance($sqo_count);
+			$count_data_group_by	= $search->count();
+
+		return $count_data_group_by;
+	}//end count_data_group_by
+
 
 
 
@@ -281,7 +419,7 @@ class component_relation_index extends component_relation_common {
 			$locator = new locator();
 
 			// type
-			$locator->set_type($current_locator->type ?? DEDALO_RELATION_TYPE_INDEX_TIPO);
+			$locator->set_type($current_locator->type ?? $this->relation_type );
 
 			// tag_id
 			if (isset($current_locator->tag_id)) {
@@ -471,23 +609,26 @@ class component_relation_index extends component_relation_common {
 	* This is used as intermediate search to get indexations from another
 	* sections to current section
 	* @param string $section_tipo
+	* @param string $relation_type
 	* @return array $references
 	*/
-	public static function get_references_to_section( string $section_tipo ) : array {
+	public static function get_references_to_section( string $section_tipo, string $relation_type=null ) : array {
 		$start_time=start_time();
 
 		$references = [];
 
+		$type = $relation_type ?? DEDALO_RELATION_TYPE_INDEX_TIPO;
+
 		// locator
 			$locator = new stdClass();
-				$locator->type			= DEDALO_RELATION_TYPE_INDEX_TIPO;
+				$locator->type			= $type;
 				$locator->section_tipo	= $section_tipo;
 
 		// referenced_locators
 			// $referenced_locators = search_related::get_referenced_locators($locator);
 			$referenced_locators = component_relation_index::get_referended_locators_with_cache(
 				$locator,
-				DEDALO_RELATION_TYPE_INDEX_TIPO . '_' . $section_tipo // cache_key
+				$type . '_' . $section_tipo // cache_key
 			);
 
 		// references. Add section_id once

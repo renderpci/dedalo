@@ -63,14 +63,19 @@
 
 	if($permissions>0) {
 
-		$dato = $this->get_dato();
+		// relation index use his own data_paginated
+		// data of get_dato is a full data as others portals
+		// and it can't be get all references of all calling sections
+		// sometimes it could be thousands records and is better paginated it.
+		$dato = $this->get_dato_paginated();
 
 		if (!empty($dato)) {
 
-			$value		= $this->get_dato_paginated();
+			$value		= $dato;
 			$section_id	= $this->get_parent();
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;
+			$total 		= $this->pagination->total ?? null;
 
 			// data item
 				$item = $this->get_data_item($value);
@@ -78,7 +83,10 @@
 					$item->parent_section_id	= $section_id;
 					// fix pagination vars
 						$pagination = new stdClass();
-							$pagination->total	= count($dato);
+						// if total is set, use it, else calculate
+							$pagination->total	= isset($total)
+								? $total
+								: $this->count_data();
 							$pagination->limit	= $limit;
 							$pagination->offset	= $offset;
 					$item->pagination = $pagination;
