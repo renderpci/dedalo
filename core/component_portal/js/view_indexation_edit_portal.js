@@ -355,7 +355,7 @@ const render_tag_column = function(options) {
 				: 'tags'
 
 			const text_value = !current_locator.tag_id
-				? (get_label.full || 'Full')
+				? (get_label.provisional || 'Provisional')
 				: (current_locator.tag_id || null)
 
 			const tag_node = ui.create_dom_element({
