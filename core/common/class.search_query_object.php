@@ -33,6 +33,7 @@
 		limit					: 1 // int
 		offset					: 2 // int
 		full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
+		group_by 				: ['section_tipo'] // array with the columns or the paths to components (used to count values)
 		order					: [{
 										direction 	: (ASC || DESC) // string
 										path		: [{
@@ -70,6 +71,7 @@ class search_query_object {
 		public $offset;
 		public $total;
 		public $full_count;
+		public $group_by;
 		public $order;
 		public $order_custom;
 		public $filter_by_locators;
@@ -284,6 +286,22 @@ class search_query_object {
 
 		return true;
 	}//end set_full_count
+
+
+
+	/**
+	* GROUP_BY
+	* Group the search by any criteria as 'section_tipo'
+	* @param array $value
+	* ['section_tipo']
+	* @return
+	*/
+	public function set_group_by(array $value) {
+
+		$this->group_by = $value;
+
+		return true;
+	}//end group_by
 
 
 
