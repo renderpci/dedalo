@@ -15,9 +15,8 @@ class indexation_grid {
 		protected $section_id;
 		protected $section_tipo;
 		protected $value;
-		protected $limit;
-		protected $offset;
-		protected $count;
+		protected $pagination;
+		protected $filter_section;
 
 
 
@@ -30,17 +29,42 @@ class indexation_grid {
 		$this->section_id	= $section_id;
 		$this->section_tipo	= $section_tipo;
 		$this->value		= ($value!==false) ? $value : null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
+
+		// set pagination
+		if (!isset($this->pagination)) {
+
+			$this->pagination = new stdClass();
+				$this->pagination->limit	= 500;
+				$this->pagination->offset	= 0;
+				$this->pagination->total	= null;
+		}
+
 	}//end __construct
 
 
 
 	/**
 	* BUILD_INDEXATION_GRID
+	* @param int $limit
+	* @param int $offset
+	* @param int|null $total
 	* @return array $ar_indexation_grid
 	*/
-	public function build_indexation_grid() : array {
+	public function build_indexation_grid( ?int $limit=500, ?int $offset=0, ?int $total=null, array $filter_section=null) : array {
 
 		$ar_indexation_grid = [];
+
+		// set pagination
+			$this->pagination->limit	= $limit;
+			$this->pagination->offset	= $offset;
+			$this->pagination->total	= $total;
+
+		// set filter section
+			if( empty($filter_section) ){
+				return $ar_indexation_grid;
+			}
+			$this->filter_section = $filter_section;
+
 
 		// ar_section_top_tipo
 			$ar_section_top_tipo = $this->get_ar_section_top_tipo();
@@ -525,6 +549,11 @@ class indexation_grid {
 	*/
 	public function get_ar_locators() : array {
 
+		// short vars
+		$limit			= $this->pagination->limit;
+		$offset			= $this->pagination->offset;
+		$filter_section	= $this->filter_section;
+
 		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
 
 		// indexations
@@ -538,9 +567,17 @@ class indexation_grid {
 			true // bool cache
 		);
 
-		$ar_locators = $component->get_dato();
+		// set the pagination into the component
+		$component->pagination->limit	= $limit;
+		$component->pagination->offset	= $offset;
 
-		return (array)$ar_locators;
+		// set the filter section, is used to get specific sections
+		$component->filter_section		= $filter_section;
+
+		// use the data paginated instead the data, sometimes the data could be huge (thousands)
+		$ar_locators = $component->get_dato_paginated();
+
+		return $ar_locators;
 	}//end get_ar_locators
 
 
