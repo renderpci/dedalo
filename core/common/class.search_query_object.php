@@ -68,6 +68,7 @@ class search_query_object {
 		// public $select;
 		public $limit;
 		public $offset;
+		public $total;
 		public $full_count;
 		public $order;
 		public $order_custom;
@@ -246,6 +247,22 @@ class search_query_object {
 
 		return true;
 	}//end set_offset
+
+
+
+	/**
+	* SET_TOTAL
+	* Total records found
+	* Total could be a int or null
+	* @param int|null $value like 0
+	* @return bool true
+	*/
+	public function set_total(?int $value) {
+
+		$this->total = $value;
+
+		return true;
+	}//end set_total
 
 
 
