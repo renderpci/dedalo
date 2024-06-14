@@ -2521,7 +2521,10 @@ final class dd_core_api {
 			$plain_vars = dd_core_api::get_js_plain_vars(); // return array assoc
 
 		// lang labels
-			$lang_labels_json = dd_core_api::get_lang_labels(DEDALO_APPLICATION_LANG); // return string
+			$lang_labels_string = dd_core_api::get_lang_labels(DEDALO_APPLICATION_LANG); // return string
+			$lang_labels_json = !empty($lang_labels_string)
+				? json_decode($lang_labels_string)
+				: new stdClass();
 
 		// environment
 			$environment = new stdClass();
