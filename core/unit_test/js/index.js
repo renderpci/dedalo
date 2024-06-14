@@ -28,6 +28,8 @@
 				// API response last message
 				request_message : null
 			}
+			window.get_label = {}
+			window.SHOW_DEBUG = false
 
 		const rqo = { // rqo (request query object)
 			action			: 'get_environment',
