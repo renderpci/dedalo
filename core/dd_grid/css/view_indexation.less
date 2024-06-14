@@ -16,28 +16,33 @@
 	overflow: auto;
 	position: relative;
 
-	.top_container{
+	.top_container {
 		display: grid;
 		grid-template-columns: 1fr auto;
 		align-items: center;
 
-		.filter_section_container{
+		.filter_section_container {
 			margin-left: 4rem;
 			padding-top: 1rem;
 			padding-bottom: 1rem;
 
-			.checkbox_label{
+			.checkbox_label {
 				margin-right: 0.5rem;
+				padding: 1rem;
 				padding-top: 0.5rem;
 				padding-bottom: 0.5rem;
-				padding-left: 1.0rem;
-				padding-right: 1.0rem;
 				border: 1px solid #c9c9c9;
-				border-radius: 0.7rem;
+				border-radius: 0.5rem;
 				background-color: #f9f9f9;
 				cursor: pointer;
-				input{
-					margin-right: 0.2rem;
+
+				&.unchecked {
+					opacity: 0.5;
+				}
+
+				input {
+					margin-right: .25rem;
+					vertical-align: bottom;
 				}
 			}
 		}
@@ -49,7 +54,8 @@
 			position: sticky;
 			top: 0;
 			z-index: 1;
-			.wrapper_paginator{
+
+			.wrapper_paginator {
 				background-color: #ffffff;
 				padding-bottom: .2rem;
 				padding-left: 0.75rem;
@@ -64,7 +70,6 @@
 	}
 
 	.content_data {
-
 		margin: 0;
 		padding: 0;
 
@@ -288,20 +293,22 @@
 					}//end >.row
 				}//end .rsc197
 
-				// tch tangible cultural heritage mobile
+				// tch tangible cultural heritage mobile generic
 				&.tch {
 					>.row {
 						display: grid;
 						grid-template-columns: auto 13.4rem 1fr 1fr 1fr 1fr 1fr;
 						border-bottom: 1px solid @color_grey_medium;
-						img{
+
+						img {
 							width: 6.7rem;
 							height: 5rem;
 							background-color: @color_white ;
 							object-fit: contain;
 						}
 					}
-				}
+				}//end .tch
+
 			}//end >.caption
 		}//end >.row
 

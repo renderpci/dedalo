@@ -5,13 +5,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {paginator} from '../../paginator/js/paginator.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		// get_section_id_column,
 		get_av_column,
 		get_img_column,
 		get_label_column,
@@ -35,6 +32,8 @@ export const view_indexation_dd_grid = function() {
 /**
 * RENDER
 * Render node for use in this view
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_indexation_dd_grid.render = async function(self, options) {
@@ -54,17 +53,14 @@ view_indexation_dd_grid.render = async function(self, options) {
 		content_data.appendChild(grid)
 
 		if (render_level==='content') {
-
-			// self.paginator.refresh()
 			return content_data
 		}
 
 	// top container
 		const top_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'top_container',
+			class_name		: 'top_container'
 		})
-
 
 	// paginator
 		const paginator_container = ui.create_dom_element({
@@ -86,10 +82,9 @@ view_indexation_dd_grid.render = async function(self, options) {
 		.then(function(filter_section_node){
 			filter_section_container.appendChild(filter_section_node)
 		})
-
+		// top_container append items in proper order
 		top_container.appendChild(filter_section_container)
 		top_container.appendChild(paginator_container)
-
 
 	// wrapper
 		const wrapper = ui.create_dom_element({
@@ -97,11 +92,12 @@ view_indexation_dd_grid.render = async function(self, options) {
 			class_name		: `wrapper_dd_grid ${self.tipo} ${self.mode} view_${self.view}`
 		})
 
-
-	// grid. Value as string
+	// wrapper append nodes
 		wrapper.appendChild(top_container)
 		wrapper.appendChild(content_data)
-		wrapper.content_data	= content_data
+		// set pointers
+		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end render
@@ -456,6 +452,7 @@ export const get_section_id_column = function(current_data) {
 }//end get_section_id_column
 
 
+
 /**
 * INIT_PAGINATOR
 * Init and build the paginator if it was not initiated previously
@@ -465,42 +462,45 @@ export const get_section_id_column = function(current_data) {
 */
 const init_paginator = async function(self){
 
-	// paginator
-		if (!self.paginator) {
+	// paginator check
+	if (!self.paginator) {
 
-			// paginator_options
-			const paginator_view = self.paginator_options.view
-				? self.paginator_options.view
-				: 'micro'
+		// paginator_options
+		const paginator_view = self.paginator_options.view
+			? self.paginator_options.view
+			: 'micro'
 
-			const show_interface = self.paginator_options.show_interface
-				? self.paginator_options.show_interface
-				: {}
+		const show_interface = self.paginator_options.show_interface
+			? self.paginator_options.show_interface
+			: {}
 
-			// create new one
-			self.paginator = new paginator()
-			self.paginator.init({
-				caller			: self,
-				mode			: paginator_view,
-				show_interface	: show_interface
-			})
-			await self.paginator.build()
+		// create new one
+		self.paginator = new paginator()
+		self.paginator.init({
+			caller			: self,
+			mode			: paginator_view,
+			show_interface	: show_interface
+		})
+		await self.paginator.build()
 
-			// paginator_goto_ event
-				const fn_paginator_goto = function(offset) {
-					self.rqo.sqo.offset = offset
-					// refresh
-					self.refresh()
-				}//end fn_paginator_goto
-				self.events_tokens.push(
-					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
-				)//end events push
+		// paginator_goto_ event
+			const fn_paginator_goto = function(offset) {
+				self.rqo.sqo.offset = offset
+				// refresh
+				self.refresh()
+			}//end fn_paginator_goto
+			self.events_tokens.push(
+				event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
+			)//end events push
 
-		}else{
-			// refresh existing
-			self.paginator.offset = self.rqo.sqo.offset
-			self.paginator.total  = self.rqo.sqo.total
-		}
+	}else{
+		// refresh existing
+		self.paginator.offset = self.rqo.sqo.offset
+		self.paginator.total  = self.rqo.sqo.total
+	}
+
+
+	return true
 }//end init_paginator
 
 
@@ -512,9 +512,9 @@ const init_paginator = async function(self){
 * when the user change the check boxes status, refresh the content data and paginator
 * @param object self
 * @param HTMLElement filter_section_container
-* @return HTMLElement fragment
+* @return DocumentFragment fragment
 */
-const get_filter_section = async function (self, filter_section_container){
+const get_filter_section = async function (self, filter_section_container) {
 
 	const fragment = new DocumentFragment()
 
@@ -556,18 +556,19 @@ const get_filter_section = async function (self, filter_section_container){
 			})
 			checkbox_input.checked = true
 			checkbox_input.key = current_section.key
-
+			// prepend input to label
 			checkbox_label.prepend(checkbox_input)
 
 			// when the user change the checkbox refresh the content_data
 			checkbox_input.addEventListener('change', function(e) {
-				e.stopPropagation()
+
 				filter_section_container.classList.add('loading')
 
 				if(checkbox_input.checked === false){
 					// if the checkbox is not set remove the section_tipo of the sqo
 					const new_ar_section = self.rqo.sqo.section_tipo.filter(item => item !== checkbox_input.key)
 					self.rqo.sqo.section_tipo = new_ar_section
+					checkbox_label.classList.add('unchecked')
 
 				}else{
 					// if the checkbox is checked add the section_tipo to the sqo
@@ -575,17 +576,21 @@ const get_filter_section = async function (self, filter_section_container){
 					if(!found){
 						self.rqo.sqo.section_tipo.push(checkbox_input.key)
 					}
+					checkbox_label.classList.remove('unchecked')
 				}
+
 				// reset the offset and total to force to refresh the paginator
 				self.rqo.sqo.offset = 0
 				self.rqo.sqo.total = null
 
 				self.refresh()
 			})
-	}
+	}//end for (let i = 0; i < total_len; i++)
+
 
 	return fragment
 }//end get_filter_section
+
 
 
 // @license-end
