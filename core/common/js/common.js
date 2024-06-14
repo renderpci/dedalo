@@ -2848,6 +2848,7 @@ export const build_autoload = async function(self) {
 * SET_ENVIRONMENT
 * Set global environment vars to window global vars
 * Substitution for old file 'environment.js.php'
+* @todo Unify all vars into a window.dd_environment unique object ?
 * @param object api_response_environment
 *  Usually API response environment result
 * {
