@@ -23,6 +23,7 @@ const t0 = performance.now()
 			}
 			window.get_label = {}
 			window.SHOW_DEBUG = false
+			window.DEVELOPMENT_SERVER = false
 
 		// main events init (visibility change, save,..)
 			events_init()
