@@ -610,6 +610,7 @@ const view_modal = async function(options) {
 	// instance load / recover
 		const tool_instance = await get_instance(instance_options)
 
+
 	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initialized') {
 			return false
