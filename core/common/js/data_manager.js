@@ -22,12 +22,14 @@ export const data_manager = function() {
 * @return api_response
 */
 data_manager.request = async function(options) {
-	if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
-		const action = options.body && options.body.action
-			? options.body.action
-			: null;
-		console.warn('request options:', action, options);
-	}
+
+	// debug
+		if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
+			const action = options.body && options.body.action
+				? options.body.action
+				: null;
+			console.warn('request options:', action, options);
+		}
 
 	// options
 		this.url			= options.url || (typeof DEDALO_API_URL!=='undefined' ? DEDALO_API_URL : '../api/v1/json/')
@@ -41,6 +43,8 @@ data_manager.request = async function(options) {
 		this.body			= options.body // body data type must match "Content-Type" header
 		this.use_worker		= options.use_worker ?? false
 
+	// reset page_globals.api_errors
+		page_globals.api_errors = []
 
 	// using worker cases.
 	// Note that execution is slower, but it is useful for low priority
@@ -120,12 +124,12 @@ data_manager.request = async function(options) {
 		.then(handle_errors)
 		.then(response => {
 			const json_parsed = response.json()
-			.then((result)=>{
+			.then((api_response)=>{
 
-				if (result.error) {
+				if (api_response.error) {
 
 					// debug console message
-						console.error("data_manager request result:", result);
+						console.error("data_manager request api_response:", api_response);
 
 					// update_lock_components_state fails. Do not send alert here
 						if (options.body.action && options.body.action==='update_lock_components_state') {
@@ -133,21 +137,30 @@ data_manager.request = async function(options) {
 						}
 
 					// alert msg to user
-						const msg = result.msg || result.error
-						if (!window.dd_page?.request_message || window.dd_page?.request_message!==msg) {
-							alert("An error has occurred in the API connection\n[data_manager.request] \n\n" + msg);
+						const msg = api_response.msg || api_response.error
+						if (!page_globals.request_message || page_globals.request_message!==msg) {
+							alert("An error has occurred in the API connection\n[data_manager.request]\n\n" + msg);
 						}
-						// save message to prevent duplication for x seconds
-						if (window.dd_page) {
-							window.dd_page.start_errors		= [msg]
-							window.dd_page.request_message	= msg
+
+					// save error message. This is captured by page rendering to display the proper error
+
+						// request_message. Store request message temporally
+							page_globals.request_message = msg
 							setTimeout(function(){
-								window.dd_page.request_message = null
+								page_globals.request_message = null
 							}, 3000)
-						}
+
+						// api_errors. store api_errors. Used to render error page_globals
+							page_globals.api_errors.push(
+								{
+									error	: api_response.error || 'data_manager', // error type
+									msg		: msg,
+									trace	: 'data_manager json_parsed'
+								}
+							)
 				}
 
-				return result
+				return api_response
 			})
 
 			return json_parsed
@@ -157,9 +170,19 @@ data_manager.request = async function(options) {
 			console.warn("request options:", options);
 			console.error("!!!!! [data_manager.request] SERVER ERROR. Received data is not JSON valid. See your server log for details. catch ERROR:\n")
 			console.error('error:', error);
+
+			// api_errors. store api_errors. Used to render error page_globals
+				page_globals.api_errors.push(
+					{
+						error	: api_response?.error || 'data_manager', // error type
+						msg		: (api_response?.msg || api_response?.error || error),
+						trace	: 'data_manager catch error'
+					}
+				)
+
 			return {
 				result	: false,
-				msg		: error.message,
+				msg		: error.message || null,
 				error	: error
 			}
 		});
