@@ -538,12 +538,14 @@ const get_filter_section = async function (self, filter_section_container) {
 
 	// create the nodes for the sections
 	for (let i = 0; i < total_len; i++) {
+
 		const current_section = totals_group[i]
 
 		// checkbox_label
 			const checkbox_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'label checkbox_label',
+				title			: current_section.key,
 				inner_html		: `${current_section.label}: ${current_section.value}`,
 				parent			: fragment
 			})
@@ -563,6 +565,7 @@ const get_filter_section = async function (self, filter_section_container) {
 			checkbox_input.addEventListener('change', function(e) {
 
 				filter_section_container.classList.add('loading')
+				self.node.content_data.classList.add('loading')
 
 				if(checkbox_input.checked === false){
 					// if the checkbox is not set remove the section_tipo of the sqo
