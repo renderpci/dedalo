@@ -260,7 +260,9 @@ export const set_context_vars = function(self) {
 /**
 * RENDER
 * @param object options = {}
-*	render_level : level of deep that is rendered (full | content)
+* {
+*   render_level : level of deep that is rendered (full | content)
+* }
 * @return HTMLElement|bool node
 *	node first DOM node stored in instance 'node' array
 */
@@ -273,10 +275,15 @@ common.prototype.render = async function (options={}) {
 		const render_mode	= options.render_mode || self.mode
 		const render_level	= options.render_level || 'full'
 
-	// running_with_errors case
-		if (self.running_with_errors) {
+	// api_errors case
+		if (page_globals.api_errors.length) {
+
+			// debug
+			console.warn('))) render page_globals.api_errors:', self.model, page_globals.api_errors);
+
+			// render generic response_error node
 			const node = render_server_response_error(
-				self.running_with_errors
+				page_globals.api_errors
 			);
 			self.node = node
 
@@ -474,7 +481,7 @@ common.prototype.render = async function (options={}) {
 		}
 
 	// debug
-		if(SHOW_DEBUG===true) {
+		if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
 			// const total = (performance.now()-t0).toFixed(3)
 
 			// if (self.model==='section') {
@@ -2769,12 +2776,10 @@ export const push_browser_history = function(options) {
 * BUILD_AUTOLOAD
 * Unified way to manage section, area and portals build API request
 * @param object self
+* 	Instance of area, section, component_portal
 * @return bool
 */
 export const build_autoload = async function(self) {
-
-	// reset errors
-		self.running_with_errors = null
 
 	// load context and data
 		const api_response = self.tmp_api_response || await data_manager.request({
@@ -2791,22 +2796,6 @@ export const build_autoload = async function(self) {
 
 	// response check
 		if (!api_response || !api_response.result) {
-
-			// running_with_errors.
-				// It's important to set instance as running_with_errors because this
-				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
-				// the instance could be built and rendered again replacing the temporal wrapper
-				self.running_with_errors = [
-					{
-						msg					: `${self.model} build autoload api_response: `+ (api_response.msg),
-						error				: api_response.error || 'unknown',
-						dedalo_last_error	: api_response.dedalo_last_error || null
-					}
-				]
-				// debug
-				if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
-				}
 
 			// previous_status
 				const previous_status = 'initialized'
@@ -2852,6 +2841,46 @@ export const build_autoload = async function(self) {
 
 	return api_response
 }//end build_autoload
+
+
+
+/**
+* SET_ENVIRONMENT
+* Set global environment vars to window global vars
+* Substitution for old file 'environment.js.php'
+* @param object api_response_environment
+*  Usually API response environment result
+* {
+* 	get_label: string (object stringified)
+*	page_globals: object {dedalo_application_lang: "lg-eng", ...}
+* 	plain_vars: object {DEDALO_CORE_URL:"/v6/core", ...}
+* }
+* @return void
+*/
+export const set_environment = function (api_response_environment) {
+
+	// set vars as global
+	for (const [key, value] of Object.entries(api_response_environment)) {
+		switch (key) {
+			case 'plain_vars':
+				// assign one by one
+				for (const property in value) {
+					window[property] = value[property]
+				}
+				break;
+
+			case 'page_globals':
+				// assign to existing object
+				page_globals = Object.assign(page_globals, value);
+				break;
+
+			default:
+				// set whole value
+				window[key] = value
+				break;
+		}
+	}
+}//end set_environment
 
 
 
