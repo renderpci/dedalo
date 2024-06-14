@@ -2874,6 +2874,11 @@ export const set_environment = function (api_response_environment) {
 				page_globals = Object.assign(page_globals, value);
 				break;
 
+			case 'get_label':
+				// value is already server parsed JSON value
+				get_label = value;
+				break;
+
 			default:
 				// set whole value
 				window[key] = value
