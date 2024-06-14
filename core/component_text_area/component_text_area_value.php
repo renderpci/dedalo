@@ -153,7 +153,7 @@ declare(strict_types=1);
 				// tool_indexation_context. This component have a 'tool_indexation' tool
 					$tool_indexation_context = array_find($tools, function($el){
 						return $el->name==='tool_indexation';
-					});
+					}) ?? new stdClass();
 
 				// columns
 					// section_id
@@ -256,7 +256,7 @@ declare(strict_types=1);
 								$component_av_model, // string model
 								$component_av_tipo, // string tipo
 								$this->section_id, // string section_id
-								'list', // string mode
+								$this->mode, // string mode
 								DEDALO_DATA_NOLAN, // string lang
 								$this->section_tipo // string section_tipo
 							);
