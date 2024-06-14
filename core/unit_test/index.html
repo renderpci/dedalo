@@ -4,15 +4,22 @@
 	<meta charset="utf-8">
 	<title>Dédalo V6 unit test</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="shortcut icon" href="../../favicon.ico" />
-	<link rel="stylesheet" href="../page/css/main.css" />
-	<script defer="defer" src="../common/js/environment.js.php"></script>
+	<link rel="shortcut icon" href="../../favicon.ico?ckcachebust=20C9E48A97F649F6FCA9500A5AEA9416" />
+	<link rel="stylesheet" href="../page/css/main.css?ckcachebust=0C5CA69DBEA881633BEDC22CBD6CCD4F" />
 	<!-- add unit_test custom styles -->
-	<link rel="stylesheet" href="css/unit_test.css" media="print" onload="this.media='all'; this.onload=null;">
+	<link rel="stylesheet" href="css/unit_test.css?ckcachebust=EFDB08ED8C67B96B777CC843B68F34F7" media="print" onload="this.media='all'; this.onload=null;">
 	<!-- add mocha css, to show results https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
-	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
+	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css?ckcachebust=F68A5C09509644BEFECB37A5B89F60C4">
+	<script type="importmap">
+		{
+			"imports": {
+				"three"			: "../../lib/threejs/build/three.module.js",
+				"three/addons/"	: "../../lib/threejs/jsm/"
+			}
+		}
+	</script>
 	<!-- add mocha framework code https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
-	<script src="../../lib/mocha/dist/mocha.js"></script>
+	<script src="../../lib/mocha/dist/mocha.js?ckcachebust=811B98F04B30ADB2056D4CEDE44C858D"></script>
 	<script>
 		// mocha.setup. Use "tdd" interface, check global leaks, and force all tests to be asynchronous
 		mocha.setup({
@@ -23,18 +30,10 @@
 		//mocha.growl(); // <-- Enables web notifications
 	</script>
 	<!-- add chai  https://unpkg.com/chai/chai.js | https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js -->
-	<script src="../../lib/mocha/dist/chai.js"></script>
+	<script src="../../lib/mocha/dist/chai.js?ckcachebust=034175E1821DABB295186A771572EBEB"></script>
 	<script>
 		// chai has a lot of stuff, let's make assert global
 		let assert = chai.assert;
-	</script>
-	<script type="importmap">
-		{
-			"imports": {
-				"three"			: "../../lib/threejs/build/three.module.js",
-				"three/addons/"	: "../../lib/threejs/jsm/"
-			}
-		}
 	</script>
 </head>
 <body>
@@ -45,6 +44,6 @@
 		<div id="content" class="section_record"></div>
 
 	<!-- tests file -->
-		<script defer="defer" type="module" src="js/index.js"></script>
+		<script defer="defer" type="module" src="js/index.js?ckcachebust=322301CE77EAC2F933AB99F5923491B0"></script>
 </body>
 </html>

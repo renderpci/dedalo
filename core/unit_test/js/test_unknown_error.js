@@ -3,10 +3,8 @@
 /*eslint no-undef: "error"*/
 
 
-import {section} from '../../section/js/section.js'
+
 import {get_instance} from '../../common/js/instances.js'
-import {ui} from '../../common/js/ui.js'
-import {render_relogin} from '../../login/js/render_login.js'
 
 
 
@@ -26,10 +24,11 @@ describe("SECTION FORCED TEST_UNKNOWN_ERROR", async function() {
 
 	await section.build(true)
 
-	section.running_with_errors = [
+	page_globals.api_errors = [
 		{
+			error	: 'unknown', // type
 			msg		: `Unknown error`,
-			error	: 'unknown_error'
+			trace	: 'test SECTION FORCED TEST_UNKNOWN_ERROR'
 		}
 	]
 

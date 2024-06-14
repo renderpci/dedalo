@@ -8,49 +8,18 @@ const t0 = performance.now()
 	import '../js/page.js'
 	import {events_init} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
-	// import {data_manager} from '../../common/js/data_manager.js' (environment from API case)
-	import {render_server_response_error} from '../../common/js/render_common.js'
+
+
 
 // page start
 	( async () => {
 
-		// environment from API
-			// config_client. Set vars as global
-				// for (const [key, value] of Object.entries(config_client)) {
-				// 	window[key] = value
-				// }
-			// dedalo_environment
-				// const rqo_environment = { // rqo (request query object)
-				// 	action			: 'get_environment',
-				// 	prevent_lock	: true
-				// }
-				// const api_response_environment = await data_manager.request({
-				// 	body : rqo_environment
-				// });
-				// console.log('api_response_environment:', api_response_environment.result);
-				// // set vars as global
-				// for (const [key, value] of Object.entries(api_response_environment.result)) {
-				// 	switch (key) {
-				// 		case 'plain_vars':
-				// 			for (const property in value) {
-				// 				window[property] = value[property]
-				// 			}
-				// 			break;
-
-				// 		default:
-				// 			window[key] = value
-				// 			break;
-				// 	}
-				// }
-
-		// check environment
-			if (typeof page_globals==='undefined') {
-				const error_node = render_server_response_error([{
-					msg		: 'Error: the <a href="../common/js/environment.js.php?v=1">environment</a> is not available. Check that PHP server is running and configuration files are correct',
-					error	: null
-				}], false)
-				document.getElementById('main').appendChild(error_node)
-				return
+		// page_globals. Set basic properties
+			window.page_globals = {
+				// API response errors
+				api_errors : [],
+				// API response last message
+				request_message : null
 			}
 
 		// main events init (visibility change, save,..)
@@ -65,18 +34,18 @@ const t0 = performance.now()
 				model : 'page'
 			});
 
-		// page instance build and render
-			const build			= await page_instance.build(true)
-			const wrapper_page	= await page_instance.render()
+		// page instance build (exec a start request to API)
+			await page_instance.build(true)
 
-		// main. Add wrapper page node and restore class
+		// page instance render
+			const wrapper_page = await page_instance.render()
+			// main. Add wrapper page node and restore class
 			main.appendChild(wrapper_page)
 			main.classList.remove('loading','hide')
 
 		// debug
-			if(SHOW_DEBUG===true) {
-				// console.log("%c + Page instantiated and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
-				// dd_console(`__Time to Page init, build and render: ${Math.round(performance.now()-t0)} ms`)
+			if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
+				console.log("%c + Page instantiated, built and rendered total (ms): ", 'background: #000000; color: violet', performance.now()-t0 )
 			}
 	})()
 
@@ -88,7 +57,7 @@ const t0 = performance.now()
 	}
 	function onScroll (evt) {
 
-		// Store the scroll value for laterz.
+		// Store the scroll value for use later.
 		lastScrollY = window.scrollY;
 
 		// Prevent multiple rAF callbacks.

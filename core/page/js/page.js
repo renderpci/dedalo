@@ -8,17 +8,15 @@
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {get_instance} from '../../common/js/instances.js'
-	import {common, push_browser_history} from '../../common/js/common.js'
-	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
-	import {render_server_response_error} from '../../common/js/render_common.js'
+	import {common, push_browser_history, set_environment} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
-		dd_console,
 		find_up_node,
 		url_vars_to_object,
 		JSON_parse_safely,
 		object_to_url_vars
 	} from '../../common/js/utils/index.js'
+	import {check_unsaved_data, deactivate_components} from '../../component_common/js/component_common.js'
 	import {render_page, render_notification_msg} from './render_page.js'
 
 
@@ -343,9 +341,6 @@ page.prototype.init = async function(options) {
 	// events listeners. Add window/document general events
 		self.add_events()
 
-	// update main CSS url to avoid cache
-		// update_css_file('main')
-
 	// set page instance as global to be available
 		window.dd_page = self
 
@@ -373,6 +368,7 @@ page.prototype.build = async function(autoload=false) {
 
 	// (!) Note that normally page only needs load once. Later, only sections/areas will be updated
 		if (autoload===true) {
+
 			if (self.context) {
 				// catch invalid call. Page build must be false except the first start page
 				console.error('Error. Ignored call to page build with autoload=true. Page already have context!', self.context);
@@ -423,43 +419,93 @@ page.prototype.build = async function(autoload=false) {
 						}
 					}
 
-				// request page context (usually menu and section context)
+				// request page context (usually menu and section/area context)
 					const api_response = await data_manager.request({
 						body : rqo
 					});
 					if(typeof SHOW_DEBUG!=='undefined' && SHOW_DEBUG===true) {
-						console.log('page build api_response:', api_response);
+						console.log('))) page build api_response:', api_response);
 					}
 
-				// error case
-					if (!api_response || !api_response.result) {
+				// errors check
 
-						// running_with_errors
-							const running_with_errors = [
+					// error generic case starting the page
+						if (!api_response || !api_response.result) {
+							// api_response do not exists or result is false
+							console.error('!!! STOP build: page build api_response:', api_response);
+							// API start_error
+							page_globals.api_errors.push(
 								{
-									msg		: api_response.msg || 'Invalid API result',
-									error	: api_response.error || 'unknown'
+									error	: 'start_error', // error type
+									msg		: api_response.msg || 'Error: Unable to start page. Check that PHP server is running and configuration files are correct [1]',
+									trace	: 'page build'
 								}
-							]
-						const wrapper_page = render_server_response_error(
-							running_with_errors
-						)
+							)
 
-						return false
-					}
-					// server_errors check (page and environment)
-					if (api_response.dedalo_last_error) {
-						console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
-					}
-					if (page_globals.dedalo_last_error) {
-						console.error('Environment running with server errors. dedalo_last_error: ', page_globals.dedalo_last_error);
-					}
+							return false
+						}
+
+					// environment API data check
+						if (!api_response.environment || !api_response.environment.result) {
+							// API environment data is not available
+							page_globals.api_errors.push(
+								{
+									error	: 'start_error', // error type
+									msg		: api_response.msg || 'Error: Unable to start page: environment is unavailable. Check that PHP server is running and configuration files are correct [2]',
+									trace	: 'page build'
+								}
+							)
+
+							return false
+						}
+
+					// fix API environment vars to window (page_globals, plain_vars, get_label)
+						set_environment(api_response.environment.result)
+
+					// check environment (var DEDALO_ENVIRONMENT is set from API environment result plain_vars. Expected bool true)
+						if (typeof DEDALO_ENVIRONMENT==='undefined') {
+							// environment vars are not set correctly
+							console.error('!!! STOP build: environment unavailable. DEDALO_ENVIRONMENT var is not defined');
+
+							page_globals.api_errors.push(
+								{
+									error	: 'start_error', // error type
+									msg		: 'Error: The environment is not available. Check that PHP server is running and configuration files are correct [3]',
+									trace	: 'page build'
+								}
+							)
+
+							return false
+						}
+
+					// server_errors check (minor page and environment errors)
+						if (api_response.dedalo_last_error) {
+							console.error('Page running with server errors. dedalo_last_error: ', api_response.dedalo_last_error);
+						}
 
 				// set context and data to current instance
 					self.context	= api_response.result.context
 					self.data		= {}
 			}
 		}//end if (autoload===true)
+
+	// check page context is valid. If not, return special error node
+		if (!self.context) {
+
+			// api_errors.
+			// It's important to set instance as api_errors because this
+			// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
+			// the instance could be built and rendered again replacing the temporal wrapper
+				page_globals.api_errors.push(
+					{
+						error	: 'invalid_context', // error type
+						msg		: 'Invalid context. ' + (page_globals.request_message ?? ''),
+						trace	: 'page build'
+					}
+				)
+
+			return false
+		}
 
 	// page title update
 		const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)

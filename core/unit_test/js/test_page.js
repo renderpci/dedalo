@@ -23,13 +23,6 @@ describe("PAGE TEST", async function() {
 
 	await page.build(true)
 
-	// page.running_with_errors = [
-	// 	{
-	// 		msg		: `Unknown error`,
-	// 		error	: 'unknown_error'
-	// 	}
-	// ]
-
 	const node = await page.render()
 	container.appendChild(node)
 });
