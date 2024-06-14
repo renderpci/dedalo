@@ -541,7 +541,9 @@ export const open_tool = async (options) => {
 				}
 				return null
 			  })()
-			 : clone(options.tool_context) // (!) full clone here to avoid circular references
+			 : options.tool_context
+			 	? clone(options.tool_context) // (!) full clone here to avoid circular references
+			 	: null
 		// caller. Instance that calls the tool, normally a component or section
 		const caller = options.caller
 		// caller_options. Object with additional data for the the tool
