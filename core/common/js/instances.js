@@ -270,7 +270,8 @@ export const delete_instance = async function(options) {
 	}
 	const found_instances = instances.filter(check_options)
 	if (found_instances.length===0) {
-		console.log('Instance not found from options:', options);
+		// No instances found for deletion
+		// console.log('Instance not found from options:', options);
 	}
 
 

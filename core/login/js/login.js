@@ -132,12 +132,6 @@ login.prototype.build = async function(autoload=false) {
 				self.data		= {}
 		}
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			// console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-		}
-
 	// status update
 		self.status = 'built'
 
@@ -262,7 +256,10 @@ login.prototype.action_dispatch = async function(api_response) {
 					})();
 					// CSS
 					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
-					if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1 && DEVELOPMENT_SERVER===true) {
+					if (api_response.result_options?.user_id &&
+						api_response.result_options?.user_id===-1 &&
+						typeof DEVELOPMENT_SERVER!=='undefined' && DEVELOPMENT_SERVER===true
+						) {
 						self.node.classList.add('raspa_loading')
 					}
 					await (()=>{
@@ -346,7 +343,7 @@ login.prototype.action_dispatch = async function(api_response) {
 					}
 				}
 				// load_finish()
-		}//end if (api_response.result===true) {
+		}//end if (api_response.result===true)
 
 
 	return true
