@@ -2294,14 +2294,14 @@ class install extends common {
 			$section_tipo	= explode('.', $file_name)[0];
 			$tld			= preg_replace('/\d/', '', $section_tipo);
 
-			$current_hierachy = array_find($hierarchies, function($el) use($tld){
+			$current_hierarchy = array_find($hierarchies, function($el) use($tld){
 				return strtolower($el->tld)===strtolower($tld);
 			}) ?? new stdClass();
 
-			$label					= $current_hierachy->label ?? 'undefined ['.$tld.']';
+			$label					= $current_hierarchy->label ?? 'undefined ['.$tld.']';
 			$type					= strpos($section_tipo, '2')!==false ? 'model' : 'term';
-			$typology				= $current_hierachy->typology ?? 'undefined typology ['.$tld.']';
-			$active_in_thesaurus	= $current_hierachy->active_in_thesaurus ?? 'undefined typology ['.$tld.']';
+			$typology				= $current_hierarchy->typology ?? 'undefined typology ['.$tld.']';
+			$active_in_thesaurus	= $current_hierarchy->active_in_thesaurus ?? 'undefined typology ['.$tld.']';
 
 			$item = (object)[
 				'file'					=> $file,

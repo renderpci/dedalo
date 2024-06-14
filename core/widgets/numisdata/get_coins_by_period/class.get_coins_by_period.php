@@ -78,15 +78,15 @@ class get_coins_by_period extends widget_common {
 		// $time = 0;
 		// $widget_time = start_time();
 
-		$section_tipo 	= $this->section_tipo;
-		$section_id 	= $this->section_id;
-		$ipo 			= $this->ipo;
+		$section_tipo	= $this->section_tipo;
+		$section_id		= $this->section_id;
+		$ipo			= $this->ipo;
 
 		$data = [];
 		foreach ($ipo as $key => $current_ipo) {
 
-			$input 		= $current_ipo->input;
-			$output		= $current_ipo->output;
+			$input	= $current_ipo->input;
+			$output	= $current_ipo->output;
 
 			// get the components from the input object
 				// source - the source component with data to be used
@@ -97,7 +97,7 @@ class get_coins_by_period extends widget_common {
 					return $carry;
 				});
 
-				// period -  the thesaurus of the periods to be used and match with datq
+				// period -  the thesaurus of the periods to be used and match with data
 				$component_period = array_reduce($input, function ($carry, $item){
 
 					if ($item->type==='period') {
@@ -146,7 +146,7 @@ class get_coins_by_period extends widget_common {
 
 
 				// main term of ts, search in hierarchies section to get the main terms of the thesaurus
-				// create a OR statment of sqo for each thesaurus section_tipo
+				// create a OR statement of sqo for each thesaurus section_tipo
 				$filter_or = [];
 				foreach ($target_sections as $current_section_tipo) {
 					$filter = new stdClass();
@@ -167,10 +167,10 @@ class get_coins_by_period extends widget_common {
 
 				$hierarchies_search = search::get_instance($search_query_object);
 					$hierarchies_search_result	= $hierarchies_search->search();
-					$hierachies_records			= $hierarchies_search_result->ar_records;
+					$hierarchies_records		= $hierarchies_search_result->ar_records;
 
 				$ordered_hierarchy = [];
-				foreach ($hierachies_records as $current_hierarchy_section_data) {
+				foreach ($hierarchies_records as $current_hierarchy_section_data) {
 
 					$root_hierarchy_children = array_filter($current_hierarchy_section_data->datos->relations, function($el) {
 						return $el->from_component_tipo === DEDALO_HIERARCHY_CHILDREN_TIPO;
@@ -178,7 +178,7 @@ class get_coins_by_period extends widget_common {
 
 					foreach ($root_hierarchy_children as $current_locator) {
 
-						$result = $this->get_hierarcy_children_recursive($ts_ar_records, $current_locator, null);
+						$result = $this->get_hierarchy_children_recursive($ts_ar_records, $current_locator, null);
 						if (!empty($result)) {
 							$ordered_hierarchy = array_merge($ordered_hierarchy, $result);
 						}
@@ -187,23 +187,23 @@ class get_coins_by_period extends widget_common {
 
 				$ar_hierarchies = [];
 				foreach ($ordered_hierarchy as $section) {
-					$hierachy_object = new stdClass();
-						$hierachy_object->section_id	= $section->section_id;
-						$hierachy_object->section_tipo	= $section->section_tipo;
-						$hierachy_object->parent		= $section->parent;
-						$period_label					= ts_object::get_term_by_locator( $hierachy_object, DEDALO_DATA_LANG, true );
-						$hierachy_object->label			= $period_label;
-						$hierachy_object->count			= null;
+					$hierarchy_object = new stdClass();
+						$hierarchy_object->section_id	= $section->section_id;
+						$hierarchy_object->section_tipo	= $section->section_tipo;
+						$hierarchy_object->parent		= $section->parent;
+						$period_label					= ts_object::get_term_by_locator( $hierarchy_object, DEDALO_DATA_LANG, true );
+						$hierarchy_object->label		= $period_label;
+						$hierarchy_object->count		= null;
 
 						$model = array_find($section->datos->relations, function($el){
 							return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_MODEL_TIPO;
 						});
 
-						$hierachy_object->model_section_id = (is_object($model))
+						$hierarchy_object->model_section_id = (is_object($model))
 							? $model->section_id
 							: $target_model_section_id+1; // something different to the target_model
 
-					$ar_hierarchies[] = $hierachy_object;
+					$ar_hierarchies[] = $hierarchy_object;
 				}
 
 
@@ -267,7 +267,6 @@ class get_coins_by_period extends widget_common {
 						}]}
 					');
 
-
 				$sqo = new search_query_object();
 					$sqo->set_section_tipo([$target_component_section_id->section_tipo]);
 					$sqo->offset	= 0;
@@ -281,10 +280,7 @@ class get_coins_by_period extends widget_common {
 
 			// get the value of the component using portal dato
 				$periods = [];
-				// check the time takes by every process
-					// $tesauro = 0;
-					// $component = 0;
-				$empty_perid_count = null;
+				$empty_period_count = null;
 
 				foreach ($ar_records as $current_section_data) {
 					// $component_time = start_time();
@@ -310,7 +306,7 @@ class get_coins_by_period extends widget_common {
 						return $el->from_component_tipo === $component_tipo_period;
 					});
 					if(empty($period_dato)){
-						$empty_perid_count++;
+						$empty_period_count++;
 					}
 
 					foreach ($period_dato as $current_period) {
@@ -326,7 +322,7 @@ class get_coins_by_period extends widget_common {
 
 							// if the term do not has any parent with the model to find add it to the unknown term (?)
 							if(!isset($area_term)){
-								$empty_perid_count + 1;
+								$empty_period_count + 1;
 							}else{
 								// count the coin into the term
 								$area_term->count = $area_term->count + 1;
@@ -341,18 +337,17 @@ class get_coins_by_period extends widget_common {
 					}
 				}
 
-
 				$period = array_filter($ar_hierarchies, function($el){
 					return $el->count !== null;
 				});
 				// add empty period hierarchy at end of the
-				if(isset($empty_perid_count)){
+				if(isset($empty_period_count)){
 					$empty_hierarchy = new stdClass();
 						$empty_hierarchy->section_id	= null;
 						$empty_hierarchy->section_tipo	= null;
 						$empty_hierarchy->parent		= null;
 						$empty_hierarchy->label			= '?';
-						$empty_hierarchy->count			= $empty_perid_count;
+						$empty_hierarchy->count			= $empty_period_count;
 
 					$period[] = $empty_hierarchy;
 				}
@@ -378,7 +373,7 @@ class get_coins_by_period extends widget_common {
 
 
 	/**
-	* GET_HIERARCY_CHILDREN_RECURSIVE
+	* GET_HIERARCHY_CHILDREN_RECURSIVE
 	*
 	* get the children recursively of the term
 	* this function is used to get all children of all terms (thesaurus section) in flat way (not nested)
@@ -388,7 +383,7 @@ class get_coins_by_period extends widget_common {
 	* @param object|null $parent // current parent term of the locator
 	* @return array $ar_children
 	*/
-	private	function get_hierarcy_children_recursive(array $ts_ar_records, object $locator, ?object $parent) : array {
+	private	function get_hierarchy_children_recursive(array $ts_ar_records, object $locator, ?object $parent) : array {
 							// find the section with the current component inside the whole thesaurus.
 		$ar_children = [];
 		$ts_term_section = array_find($ts_ar_records, function($el) use($locator){
@@ -396,21 +391,21 @@ class get_coins_by_period extends widget_common {
 					&& $el->section_id === $locator->section_id;
 		});
 		// if find it, save into the children and get all children of them.
-		if(!empty($ts_term_section)){
+		if(is_object($ts_term_section)){
 
-			$ar_children[]				= $ts_term_section;
+			$ar_children[] = $ts_term_section;
 			// set the parent as himself to be used as reference.
-			$ts_term_section->parent	= $parent;
+			$ts_term_section->parent = $parent;
 
 			// filter all children of the current thesaurus section.
-			$root_hierarchy_children 	= array_filter($ts_term_section->datos->relations, function($el){
+			$root_hierarchy_children = array_filter($ts_term_section->datos->relations, function($el){
 				return $el->from_component_tipo === DEDALO_THESAURUS_RELATION_CHIDRENS_TIPO;
 			});
 			// if this section has children do recursion
 			if(!empty($root_hierarchy_children)){
 
 				foreach ($root_hierarchy_children as $current_locator) {
-					$result = $this->get_hierarcy_children_recursive($ts_ar_records, $current_locator, $locator);
+					$result = $this->get_hierarchy_children_recursive($ts_ar_records, $current_locator, $locator);
 					// save the result in a flat array
 					if (!empty($result)) {
 						$ar_children = array_merge($ar_children, $result);
@@ -419,7 +414,7 @@ class get_coins_by_period extends widget_common {
 			}
 		}
 		return $ar_children;
-	}// end get_hierarcy_children_recursive
+	}// end get_hierarchy_children_recursive
 
 
 
@@ -451,6 +446,9 @@ class get_coins_by_period extends widget_common {
 				return $el->section_tipo === $parent->section_tipo
 						&& $el->section_id === $parent->section_id;
 			});
+			if(!is_object($parent_term)){
+				return null;
+			}
 
 			return $this->get_parent_with_specific_model($ar_hierarchies, $parent_term, $target_model_section_id);
 		}else{
@@ -458,5 +456,7 @@ class get_coins_by_period extends widget_common {
 			return $ts_term;
 		}
 	}//end get_parent_with_specific_model
+
+
 
 }//end get_coins_by_period

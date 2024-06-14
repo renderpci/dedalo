@@ -456,7 +456,7 @@
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE','/usr/bin/pdftotext');
 		// OCR engine (path of daemon of OCR) Using ocrmypdf https://ocrmypdf.readthedocs.io/en/latest/index.html
-		define('PDF_OCR_ENGINE',					'/usr/bin/ocrmypdf');
+		// define('PDF_OCR_ENGINE',					'/usr/bin/ocrmypdf');
 
 
 
