@@ -18,7 +18,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $timestamp;
 	protected $userID;
 	protected $state;
-	protected $section_id_key; // used by comopnent_dataframe
+	protected $section_id_key; // used by component_dataframe
 
 	public $dato;
 

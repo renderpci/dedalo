@@ -8,7 +8,6 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {strip_tags} from '../../../core/common/js/utils/index.js'
 	import {component_password} from '../../component_password/js/component_password.js'
 	import {get_instance} from '../../common/js/instances.js'
 
@@ -353,7 +352,6 @@ const render_help_block = function(self) {
 			parent			: install_config_node
 		})
 		link_configuration.target	= '_blank'
-		// link_configuration.rel	= 'noopener noreferrer'
 
 
 	return fragment
@@ -1237,18 +1235,18 @@ export const render_hierarchies_import_block = function(options) {
 		})
 
 		// hierarchies
-		const hierachy_container = ui.create_dom_element({
+		const hierarchy_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'hierachy_container',
+			class_name		: 'hierarchy_container',
 			parent			: fragment
 		})
 
 		const hierarchies_to_install = []
 		const hierarchy_typologies_length = hierarchy_typologies.length
 		for (var i = hierarchy_typologies_length - 1; i >= 0; i--) {
-			const current_hierachy_typology = hierarchy_typologies[i]
+			const current_hierarchy_typology = hierarchy_typologies[i]
 
-			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierachy_typology.typology)
+			const found_hierarchies = hierarchies.filter(el => el.typology === current_hierarchy_typology.typology)
 
 			if(found_hierarchies.length < 1){
 				continue
@@ -1257,15 +1255,15 @@ export const render_hierarchies_import_block = function(options) {
 			const typology_label = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'typology_label',
-				inner_html		: current_hierachy_typology.label,
-				parent			: hierachy_container
+				inner_html		: current_hierarchy_typology.label,
+				parent			: hierarchy_container
 			})
 
 			// list of hierarchies
-			const hierachy_ul = ui.create_dom_element({
+			const hierarchy_ul = ui.create_dom_element({
 				element_type	: 'ul',
-				class_name		: 'hierachy_ul',
-				parent			: hierachy_container
+				class_name		: 'hierarchy_ul',
+				parent			: hierarchy_container
 			})
 
 			const hierarchies_len = found_hierarchies.length
@@ -1284,24 +1282,24 @@ export const render_hierarchies_import_block = function(options) {
 						: false
 
 				// li element
-					const hierachy_li = ui.create_dom_element({
+					const hierarchy_li = ui.create_dom_element({
 						element_type	: 'li',
-						parent			: hierachy_ul
+						parent			: hierarchy_ul
 					})
 
 				// label
-					const hierachy_label = ui.create_dom_element({
+					const hierarchy_label = ui.create_dom_element({
 						element_type	: 'label',
 						class_name		: 'hierarchy_label',
 						inner_html		: current_hierarchy.label + ' [' + current_hierarchy.tld + ']',
-						parent			: hierachy_li
+						parent			: hierarchy_li
 					})
 					if (active_hierarchies.includes( current_hierarchy.tld.toLowerCase() )) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'active_hierarchy',
 							inner_html		: ' [active]',
-							parent			: hierachy_label
+							parent			: hierarchy_label
 						})
 					}
 
@@ -1311,7 +1309,7 @@ export const render_hierarchies_import_block = function(options) {
 						type			: 'checkbox',
 						class_name		: 'hierarchy_checkbox'
 					})
-					hierachy_label.prepend(hierarchy_checkbox)
+					hierarchy_label.prepend(hierarchy_checkbox)
 					hierarchy_checkbox.checked = checked ? 'checked' : ''
 					hierarchy_checkbox.addEventListener('change', function() {
 
@@ -1333,7 +1331,7 @@ export const render_hierarchies_import_block = function(options) {
 			element_type	: 'button',
 			class_name		: 'primary import_hierarchies_button',
 			inner_html		: get_label.import_hierarchies_button || ' Import hierarchies ',
-			parent			: hierachy_container
+			parent			: hierarchy_container
 		})
 		import_hierarchies_button.addEventListener('mouseup', fn_import_hierarchies)
 		async function fn_import_hierarchies(){
@@ -1351,13 +1349,13 @@ export const render_hierarchies_import_block = function(options) {
 
 			// lock button
 				import_hierarchies_button.classList.add('loading')
-				hierachy_container.classList.add('loading')
+				hierarchy_container.classList.add('loading')
 
 			// add spinner
 				const spinner = ui.create_dom_element({
 					element_type	: 'div',
 					class_name		: 'spinner',
-					parent			: import_hiearachies_status
+					parent			: import_hierarchies_status
 				})
 
 			// data_manager API call
@@ -1380,8 +1378,8 @@ export const render_hierarchies_import_block = function(options) {
 
 					console.error(api_response.msg);
 
-					import_hiearachies_status.classList.add('error')
-					import_hiearachies_status.innerHTML = api_response.msg
+					import_hierarchies_status.classList.add('error')
+					import_hierarchies_status.innerHTML = api_response.msg
 
 				}else{
 
@@ -1390,15 +1388,15 @@ export const render_hierarchies_import_block = function(options) {
 
 						// some import file fail case
 
-						import_hiearachies_status.classList.add('error')
-						import_hiearachies_status.innerHTML = false_check.msg
+						import_hierarchies_status.classList.add('error')
+						import_hierarchies_status.innerHTML = false_check.msg
 
 					}else{
 
 						// all is OK case
 
-						import_hiearachies_status.classList.add('ok')
-						import_hiearachies_status.innerHTML = api_response.msg
+						import_hierarchies_status.classList.add('ok')
+						import_hierarchies_status.innerHTML = api_response.msg
 
 						import_hierarchies_button.remove()
 
@@ -1411,12 +1409,12 @@ export const render_hierarchies_import_block = function(options) {
 
 			// unlock button
 				import_hierarchies_button.classList.remove('loading')
-				hierachy_container.classList.remove('loading')
+				hierarchy_container.classList.remove('loading')
 				spinner.remove()
 		}
 
-	// import_hiearachies_status msg
-		const import_hiearachies_status = ui.create_dom_element({
+	// import_hierarchies_status msg
+		const import_hierarchies_status = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'msg',
 			parent			: fragment
