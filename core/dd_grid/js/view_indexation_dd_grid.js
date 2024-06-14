@@ -265,7 +265,6 @@ export const get_button_column = function(current_data) {
 			icon.innerHTML = value.value
 		}
 
-
 	// event
 		if (value.action && value.action.event) {
 

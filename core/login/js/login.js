@@ -7,9 +7,7 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import * as instances from '../../common/js/instances.js'
 	import {common, create_source} from '../../common/js/common.js'
-	// import {pause} from '../../common/js/utils/index.js'
 	import {
 		render_login,
 		render_files_loader
@@ -74,7 +72,6 @@ login.prototype.init = async function(options) {
 	self.mode					= options.mode
 	self.lang					= options.lang
 	self.add_select_lang		= options.add_select_lang ?? true
-
 
 	// DOM
 	self.node					= null

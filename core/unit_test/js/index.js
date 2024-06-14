@@ -30,6 +30,7 @@
 			}
 			window.get_label = {}
 			window.SHOW_DEBUG = false
+			window.DEVELOPMENT_SERVER = false
 
 		const rqo = { // rqo (request query object)
 			action			: 'get_environment',
