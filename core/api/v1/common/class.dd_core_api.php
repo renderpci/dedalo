@@ -76,9 +76,10 @@ final class dd_core_api {
 
 		// response
 			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-				$response->error	= null;
+				$response->result		= false;
+				$response->msg			= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error		= null;
+				$response->environment	= dd_core_api::get_environment();
 
 		// fix rqo
 		// Note that this RQO is used later in common->build_request_config to recover SQO and source if they exists

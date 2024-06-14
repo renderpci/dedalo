@@ -120,9 +120,6 @@ area.prototype.build = async function(autoload=true) {
 					return false
 				}
 
-			// reset errors
-				self.running_with_errors = null
-
 			// destroy dependencies
 				await self.destroy(
 					false, // bool delete_self

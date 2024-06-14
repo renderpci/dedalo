@@ -202,32 +202,23 @@ export const render_components_list = function(options) {
 * 	sample:
 * 	[
 * 		{
+*	 		error : 'not_logged',
 * 			msg : 'Invalid result',
-* 			error : 'not_logged'
+* 			trace : 'page build',
 * 		}
 * 	]
-* @param add_wrapper = false
-* @return HTMLElement wrapper|error_container
+* @return HTMLElement error_container
 */
-export const render_server_response_error = function(errors, add_wrapper=false) {
-
-	// wrapper
-		const wrapper = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'wrapper page'
-		})
+export const render_server_response_error = function(errors) {
 
 	// error_container
 		const error_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'page_error_container',
-			parent			: wrapper
+			class_name		: 'page_error_container'
 		})
 
 	// icon_dedalo
-		const icon_url = typeof DEDALO_CORE_URL!=='undefined'
-			? DEDALO_CORE_URL + '/themes/default/dedalo_logo.svg'
-			: '../themes/default/dedalo_logo.svg'
+		const icon_url = '../themes/default/dedalo_logo.svg'
 		ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'icon_dedalo',
@@ -235,15 +226,24 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 			parent			: error_container
 		})
 
+	// short vars
+		const home_url	= '../../core/page/'
+		let added_header_node = false
+
 	// errors
 		const errors_length = errors.length
 		for (let i = 0; i < errors_length; i++) {
 
-			const msg				= errors[i].msg
 			const error				= errors[i].error
+			const trace				= errors[i].trace || ''
+			const msg				= errors[i].msg
+				? errors[i].msg   + '<br> (' + trace + ')'
+				: 'Unknown error' + '<br> (' + trace + ')'
+
 			const dedalo_last_error	= errors[i].dedalo_last_error || null
 
 			switch (error) {
+
 				case 'not_logged': {
 					// server_response_error h1
 						ui.create_dom_element({
@@ -263,7 +263,7 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							e.stopPropagation()
 							location.reload()
 						})
-					// not_logged_error add once
+					// styles not_logged_error add once
 						if (!error_container.classList.contains('not_logged_error')) {
 							error_container.classList.add('not_logged_error')
 						}
@@ -282,29 +282,32 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 						const link_home = ui.create_dom_element({
 							element_type	: 'a',
 							class_name		: 'link home',
-							href			: DEDALO_ROOT_WEB,
+							href			: home_url,
 							inner_html		: 'Home',
 							parent			: error_container
 						})
 						link_home.addEventListener('click', function(e) {
 							e.stopPropagation()
 						})
-					// raspa_error add once
+					// styles raspa_error add once
 						if (!error_container.classList.contains('raspa_error')) {
 							error_container.classList.add('raspa_error')
 						}
 					break;
 				}
 
+				case 'data_manager':
 				default: {
 					// server_response_error h1
 						if (msg) {
-							ui.create_dom_element({
-								element_type	: 'h1',
-								class_name		: 'server_response_error',
-								inner_html		: 'Server response msg: ',
-								parent			: error_container
-							})
+							if (!added_header_node) {
+								ui.create_dom_element({
+									element_type	: 'h1',
+									class_name		: 'server_response_error',
+									inner_html		: 'Server response msg: ',
+									parent			: error_container
+								})
+							}
 							ui.create_dom_element({
 								element_type	: 'h2',
 								class_name		: 'server_response_error',
@@ -328,42 +331,40 @@ export const render_server_response_error = function(errors, add_wrapper=false) 
 							})
 						}
 					// link home
-						const home_url = typeof DEDALO_ROOT_WEB!=='undefined'
-							? DEDALO_ROOT_WEB
-							: '../../../'
-						const link_home = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'link home',
-							href			: home_url,
-							inner_html		: 'Home',
-							parent			: error_container
-						})
-						link_home.addEventListener('click', function(e) {
-							e.stopPropagation()
-						})
+						if (!added_header_node) {
+							const link_home = ui.create_dom_element({
+								element_type	: 'a',
+								class_name		: 'link home',
+								href			: home_url,
+								inner_html		: 'Home',
+								parent			: error_container
+							})
+							link_home.addEventListener('click', function(e) {
+								e.stopPropagation()
+							})
+						}
 					// more_info
-						ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'more_info',
-							inner_html		: 'Received data format is not as expected. See your server log for details',
-							parent			: error_container
-						})
-					// raspa_error add once
+						if (!added_header_node) {
+							ui.create_dom_element({
+								element_type	: 'div',
+								class_name		: 'more_info',
+								inner_html		: 'Received data format is not as expected. See your server log for details',
+								parent			: error_container
+							})
+						}
+					// styles raspa_error add once
 						if (!error_container.classList.contains('raspa_error')) {
 							error_container.classList.add('raspa_error')
 						}
+
+					added_header_node = true
 					break;
 				}
 			}
 		}
 
-	// add_wrapper false  case
-		if (add_wrapper===false) {
-			return error_container
-		}
 
-
-	return wrapper
+	return error_container
 }//end render_server_response_error
 
 

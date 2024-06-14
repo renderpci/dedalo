@@ -110,19 +110,20 @@ export const get_editing_preset_json_filter = async function(self) {
 	// response check
 		if (!api_response || !api_response.result) {
 
-			// running_with_errors.
-				// It's important to set instance as running_with_errors because this
+			// api_errors.
+				// It's important to set instance as api_errors because this
 				// generates a temporal wrapper. Once solved the problem, (usually a not login scenario)
 				// the instance could be built and rendered again replacing the temporal wrapper
-				self.running_with_errors = [
+				page_globals.api_errors.push(
 					{
-						msg		: `${self.model} build get_editing_preset_json_filter api_response: `+ (api_response.msg),
-						error	: api_response.error || 'unknown'
+						error	: 'request', // error type
+						msg		: `${self.model} build get_editing_preset_json_filter api_response: `+ (api_response.msg || api_response.error),
+						trace	: 'search user preset get_editing_preset_json_filter'
 					}
-				]
+				)
 				// debug
 				if(SHOW_DEVELOPER===true) {
-					console.error('SERVER: self.running_with_errors:', self.running_with_errors);
+					console.error('SERVER: page_globals.api_errors:', page_globals.api_errors);
 				}
 
 			return null

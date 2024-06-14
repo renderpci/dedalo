@@ -3,9 +3,8 @@
 /*eslint no-undef: "error"*/
 
 
-import {section} from '../../section/js/section.js'
+
 import {get_instance} from '../../common/js/instances.js'
-import {ui} from '../../common/js/ui.js'
 import {render_relogin} from '../../login/js/render_login.js'
 
 
@@ -24,10 +23,11 @@ describe("SECTION TEST_NO_LOGGED_ERROR", async function() {
 
 	await section.build(true)
 
-	section.running_with_errors = [
+	page_globals.api_errors = [
 		{
+			error	: 'no_logged', // type
 			msg		: `User is not logged (fake message)`,
-			error	: 'no_logged'
+			trace	: 'test SECTION TEST_NO_LOGGED_ERROR'
 		}
 	]
 

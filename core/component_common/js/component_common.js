@@ -226,7 +226,7 @@ component_common.prototype.build = async function(autoload=false) {
 					return false
 				}
 				// server: bad build component context
-				if(!api_response.result.context.length){
+				if(!api_response.result.context?.length){
 					console.error("Error!!!!, component without context:", api_response, rqo);
 					return false
 				}

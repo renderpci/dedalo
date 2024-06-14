@@ -59,7 +59,7 @@ export const get_instance = async function(options){
 	// options. optional vars (only mandatory for build the instance)
 		const direct_path		= options.direct_path
 		const mode				= options.mode  || 'list'
-		const lang				= options.lang  || page_globals.dedalo_data_lang
+		const lang				= options.lang  || page_globals.dedalo_data_lang || null
 		const model				= options.model || await ( async () => {
 
 			const element_context_response = await data_manager.get_element_context({
