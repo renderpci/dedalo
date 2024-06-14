@@ -20,10 +20,14 @@
 		display: grid;
 		grid-template-columns: 1fr auto;
 		align-items: center;
+		position: sticky;
+		top: 0;
+		z-index: 1;
+		background-color: #ffffff;
 
 		.filter_section_container {
 			margin-left: 4rem;
-			padding-top: 1rem;
+			padding-top: 1.02rem;
 			padding-bottom: 1rem;
 
 			.checkbox_label {
@@ -51,16 +55,8 @@
 			display: flex;
 			justify-content: flex-end;
 			padding-right: 0.5rem;
-			position: sticky;
-			top: 0;
-			z-index: 1;
 
 			.wrapper_paginator {
-				background-color: #ffffff;
-				padding-bottom: .2rem;
-				padding-left: 0.75rem;
-				border-bottom-left-radius: 1rem;
-				padding-right: 0.5rem;
 
 				.content_data{
 					font-size: 1rem;
