@@ -21,6 +21,8 @@ const t0 = performance.now()
 				// API response last message
 				request_message : null
 			}
+			window.get_label = {}
+			window.SHOW_DEBUG = false
 
 		// main events init (visibility change, save,..)
 			events_init()
