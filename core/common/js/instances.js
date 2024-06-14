@@ -48,9 +48,6 @@ export const instances = []
 */
 export const get_instance = async function(options){
 
-	// if(options.model==='section') console.log("=========================================== get_instance options:",options);
-	// key values ['model','tipo','section_tipo','section_id','mode','lang']
-
 	// options. mandatory vars
 		const tipo				= options.tipo
 		const section_tipo		= options.section_tipo
@@ -101,10 +98,6 @@ export const get_instance = async function(options){
 
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options)
-		//if (model!=='section_record') {
-		//	key = key_instances_builder(options) + "_" + Date.now()
-		//}
-		// console.log("key:",key, options);
 
 	// if the instance is not in the cache, build one new instance of the element
 		// DES
@@ -183,19 +176,9 @@ export const get_instance = async function(options){
 
 			const path = direct_path
 				? direct_path
-				: base_path + model + '/js/' + name + '.js' // + '?v=' + page_globals.dedalo_version
+				: base_path + model + '/js/' + name + '.js'
 
 		// import element mod file once (and wait until finish)
-			// let current_element
-			// try {
-			// 	current_element = await import(path)
-			// }catch(error){
-			// 	console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
-
-			// 	resolve(false)
-			// 	return
-			// }
-
 		import(path)
 		.then(async function(module){
 
@@ -211,10 +194,9 @@ export const get_instance = async function(options){
 
 			// serialize element id
 			// add the id for init the instance with the id
-				instance_element.id = key
-				//instance_element.id_base = key_instances_builder(options, false)
-				instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-			// id_variant . Propagate a custom instance id to children
+				instance_element.id			= key
+				instance_element.id_base	= section_tipo +'_'+ section_id +'_'+ tipo
+			// id_variant. Propagate a custom instance id to children
 				if (options.id_variant) {
 					instance_element.id_variant = options.id_variant
 				}
@@ -224,7 +206,6 @@ export const get_instance = async function(options){
 
 			// add to the instances cache
 				instances.push(instance_element)
-				// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element)
 
 			// return the new created instance
 				resolve(instance_element)
@@ -260,38 +241,6 @@ export const get_all_instances = function() {
 */
 export const delete_instance = async function(options) {
 
-	// DES
-		// const delete_id = options.id
-		// const found_instance_index = instances.findIndex(item => item.id === delete_id)
-
-		// // let deleted = 0;
-		// // if(found_instance_index){
-		// // 	instances.splice(found_instance_index, 1)
-		// // 	deleted++
-		// // }
-
-		// const deleted = async (found_instance_index) => {
-		// 	if(found_instance_index!==-1){
-		// 		instances.splice(found_instance_index, 1)
-		// 		return true
-		// 	}
-		// 	return false
-		// }
-		// const delete_value = await deleted(found_instance_index)
-
-		// // debug
-		// if (delete_value!==true) {
-		// 	console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
-		// }
-
-		// //console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
-		// //console.log(" ++++++++ instances:",instances)
-
-		// return delete_value
-
-	// debug
-		// console.log('found_instances A:', structuredClone(instances));
-
 	let deleted = 0;
 	function check_options(item, index) {
 
@@ -308,33 +257,21 @@ export const delete_instance = async function(options) {
 				result = true
 			}else{
 				result = false
-				// console.log('Break loop on property:', key, item[key], value, options);
 				break;
 			}
 		}
 
 		if (result===true) {
-			//root_instance = instances[index].root_instance
-			//console.log("deleted instance:", clone(instances[index]));
 			instances.splice(index, 1)
 			deleted++
-			// console.log(" ++++++++ [delete_instance] deleted:", index, options);
 		}
 
 		return result
 	}
 	const found_instances = instances.filter(check_options)
 	if (found_instances.length===0) {
-		// console.log('Instance not found from options:', options);
+		console.log('Instance not found from options:', options);
 	}
-
-	// debug
-		// if (deleted<1) {
-		// 	console.warn("+ [delete_instance] NOT deleted instance. Not found instance with options:", options);
-		// }
-		// console.log("+ [instances.delete_instance] deleted n:", deleted, options.model, options.tipo);
-		// console.log(" ++++++++ instances:",instances, deleted)
-		// console.log(' ++++++++ [delete_instance] instances B:', structuredClone(instances));
 
 
 	return deleted
@@ -366,6 +303,7 @@ export const key_instances_builder = function(options) {
 
 	return key
 }//end key_instances_builder
+
 
 
 // @license-end
