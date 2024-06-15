@@ -108,6 +108,12 @@ view_indexation_dd_grid.render = async function(self, options) {
 * GET_GRID_NODES
 * (!) Note that data comes from server class indexation_grid->build_indexation_grid()
 * @param array data
+* 	Array of grid objects like
+* [{
+* 	cell_type: "text",
+*	label: "Dating",
+* 	...
+* }]
 * @return DocumentFragment
 */
 const get_grid_nodes = function(data) {

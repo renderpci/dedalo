@@ -86,9 +86,11 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 		// caller function
 			if (isset($bt[2]) && isset($bt[2]['file'])) {
 				$msg .= PHP_EOL . ' Caller 2: ';
-				$msg .= ' '. print_r($bt[2]['file'],true);
+				$msg .= ' '. print_r($bt[2]['file'], true);
 				$msg .= PHP_EOL . ' Function: '. print_r($bt[2]['function'], true);
-				$msg .= ' [Line: '. print_r($bt[2]['line'], true)."]";
+				$msg .= ' [Line: ';
+				$msg .= print_r($bt[2]['line'], true);
+				$msg .= ']';
 			}
 
 	// console error log always

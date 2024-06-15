@@ -81,6 +81,16 @@ data_manager.request = async function(options) {
 			})
 			.catch(error => {
 				console.error(error)
+
+				// api_errors. store api_errors. Used to render error page_globals
+				page_globals.api_errors.push(
+					{
+						error	: 'data_manager', // error type
+						msg		: error,
+						trace	: 'data_manager worker catch error'
+					}
+				)
+
 				return {
 					result	: false,
 					msg		: error.message,
