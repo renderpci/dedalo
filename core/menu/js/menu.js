@@ -7,7 +7,7 @@
 // imports
 	import {common,create_source} from '../../common/js/common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-	// import {pause} from '../../common/js/utils/index.js'
+	import {open_window} from '../../common/js/utils/index.js'
 	import {quit} from '../../login/js/login.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {render_menu} from './render_menu.js'
@@ -114,13 +114,6 @@ menu.prototype.build = async function(autoload=true) {
 				// set the result to the datum
 					self.datum = menu_cache_data.value
 
-				// debug
-					// const total = (performance.now()-t0).toFixed(3)
-					// if (total>20) {
-					// 	// console.warn(msg, total, self);
-					// 	console.log("__Time [menu.build] returned menu datum from local_db ", self.id, total);
-					// }
-
 			}else{
 
 				// rqo build
@@ -188,13 +181,17 @@ menu.prototype.build = async function(autoload=true) {
 * OPEN_ONTOLOGY
 * Shared function to manage open Ontology window
 * from regular menu and mobile menu
+* @param event e
 * @return void
 */
-menu.prototype.open_ontology = function() {
+menu.prototype.open_ontology = function(e) {
+	e.stopPropagation()
 
-	const url = DEDALO_CORE_URL + '/ontology'
-	const win = window.open(url, '_blank');
-		  win.focus();
+	open_window({
+		url			: DEDALO_CORE_URL + '/ontology',
+		target		: '_blank',
+		features	: 'new_tab'
+	})
 }//end open_ontology
 
 
