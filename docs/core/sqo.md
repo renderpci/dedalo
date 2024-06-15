@@ -2,13 +2,13 @@
 
 ## Introduction
 
-Search Query Object or SQO, is a JSON object to use as an abstraction of classical SQL. To create a flexible system with NoSQL and dependent on an ontology, it becomes necessary to use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way as classical SQL. We changed SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduced JSON format but with a very simple JSON query.
+Search Query Object or SQO, is a JSON object definition to be used as an abstraction of classical SQL. To create a flexible system with NoSQL and dependent on Dédalo ontology, it becomes necessary to use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way as classical SQL. We changed SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduced JSON format but with a very simple JSON query.
 
 So we came to define a search query object, because we knew that early PostgreSQL JSON search definitions will be replaced with a more robust system. And we want to make searches compatible with ontology changes, we don't want to use predefined searches.
 
 ## Search Query Object - SQO definition
 
-./core/common/class.search_query_object.php
+> ./core/common/class.search_query_object.php
 
 **search_query_object** `object`
 
@@ -65,7 +65,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
     - **type** : `string` ('jsonb' || 'string)  defines the type of data to be searched **optional**, ex: 'jsonb'
 - **limit** : `int` records limit **optional**, ex: 10
 - **offset** : `int` records offset **optional**, ex: 10
-- **full_count** : `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+- **full_count** : `bool` (true || false) get the total records found and set the total with it **optional**, ex: true
 - **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
   - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
   - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
@@ -85,7 +85,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
 
 ```json
 id                      : 'oh1' // optional. section_tipo and other params to define the unique id
-section_tipo            : ['oh1'] // array of section_tipo for search
+section_tipo            : ["oh1"] // array of section_tipo for search
 mode                    : ('edit' || 'list' || 'tm' || 'related') // configure the sqo for search witch different models of matrix tables into the DDBB
 filter                  : {
                                 operator : // string ('$and' || '$or')
@@ -105,7 +105,9 @@ filter                  : {
                             } || null
 limit                   : 1 // int
 offset                  : 2 // int
-full_count              : (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
+total                   : (null || int ) // by default total is null to be calculate, when int is set the sqo don't count and return his value
+full_count              : (true || false ) // boolean
+group_by                : ["section_tipo"] // array with "section_tipo" or specific literal component as "dd199"
 order                   : [{
                                 direction   : (ASC || DESC) // string
                                 path        : [{
@@ -152,7 +154,7 @@ If you want to get any person with name "Ana" the sqo will be:
 }
 ```
 
-The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the Ana text. SQO will parse the filter with the component_input_text rsc85 and will render into SQL to be used in postgreSQL:
+The SQO say: search in people under study (section_tipo [rsc197](https://dedalo.dev/ontology/rsc197)) with the path to name field (component_tipo [rsc85](https://dedalo.dev/ontology/rsc85)) with the Ana text. SQO will parse the filter with the component_input_text `rsc85 and will render into SQL to be used in postgreSQL:
 
 ```sql
 
@@ -210,7 +212,7 @@ Definition : `array || string` array of section_tipo or string with the section_
 Section is a mandatory property, it define where we want to do the search, where the data is that we are looking for.
 Is possible use a string or array when the section to search is only one, but it's recommendable to use always a array definition. Using the array is extensible and it's possible add new section easily.
 
-Example with one section: Search '87C_g25' in the field Code [oh14](https://dedalo.dev/ontology/oh14) of the section Oral History [oh1](https://dedalo.dev/ontology/oh1)
+Example with one section: Search '87C_g25' in the field `Code` [oh14](https://dedalo.dev/ontology/oh14) of the section `Oral History` [oh1](https://dedalo.dev/ontology/oh1)
 
 ```json
 {
@@ -253,7 +255,7 @@ In previous example, the section_tipo is an array: `["es1", "fr1"]` with multipl
 
 #### all
 
-In some cases is not possible to define the section_tipo to be searcher because you want to get any result in any place that match with your query. For this situations is possible to define the section_tipo as `all`. The result will be; all sections fonded with the query. Take account that the result will be not consistent, every section will have his own components(fields).
+In some cases is not possible to define the section_tipo to be searcher because you want to get any result in any place that match with your query. For this situations is possible to define the section_tipo as `all`. The result will be; all sections founded with the query. Take account that the result will be not consistent, every section will have his own components(fields).
 
 Example with multiple sections, using `all` section: Search 'Benimamet' in the field Term [hierarchy25](https://dedalo.dev/ontology/hierarchy25) of all sections.
 
@@ -275,7 +277,7 @@ the result will be a mix of data from different sections:
   "result":[
     {
       "section_tipo" : "oh1",
-      "section_id" : "2"
+      "section_id" : "2",
       "datos":{
         "components":{
           "oh16":{
@@ -289,7 +291,7 @@ the result will be a mix of data from different sections:
     },
     {
       "section_tipo" : "rsc197",
-      "section_id" : "88"
+      "section_id" : "88",
       "datos":{
         "relations":[{
           "section_tipo" : "rsc197",
@@ -483,7 +485,7 @@ See this situation:
     B-->C(("People under study :: section"))
 ```
 
-The Oral History section [rsc85](https://dedalo.dev/ontology/rsc85) is linked to People under study section [rsc197](https://dedalo.dev/ontology/rsc197) by the component Informants [oh24](https://dedalo.dev/ontology/oh24).
+The `Oral History` section [rsc85](https://dedalo.dev/ontology/rsc85) is linked to `People under study` section [rsc197](https://dedalo.dev/ontology/rsc197) by the component `Informants` [oh24](https://dedalo.dev/ontology/oh24).
 
 !!! note "SQL equivalence"
     Path is equivalent to JOIN statement into SQL, the sections are equivalent to tables and the components are the columns that linked this tables.
@@ -565,7 +567,7 @@ And it will be passed:
 SELECT * 
 FROM matrix AS oh1
 WHERE (oh1.section_tipo='oh1') AND 
-  (oh1.section_id = 1 OR oh1.section_id = 6)
+    (oh1.section_id = 1 OR oh1.section_id = 6)
 ORDER BY oh1.section_id ASC 
 LIMIT 10
 ```
@@ -599,7 +601,7 @@ And it will be passed:
 SELECT *
 FROM matrix AS oh1
 WHERE (oh1.section_tipo='oh1') AND 
-  (oh1.section_id IN(1,6))
+    (oh1.section_id IN(1,6))
 ORDER BY oh1.section_id ASC
 LIMIT 10
 ```
@@ -613,9 +615,9 @@ The function will be applied to WHERE statement enclosing the q and the main ope
 
 Definition: `string` if format is function use_function define the PostgreSQL function to be used. **optional**, ex: 'relations_flat_fct_st_si'
 
-Example: Search the types [numisdata3](https://dedalo.dev/ontology/numisdata3) with the catalog [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1.
+Example: Search the `Type` section [numisdata3](https://dedalo.dev/ontology/numisdata3) with the `Catalog` [numisdata309](https://dedalo.dev/ontology/numisdata309) value = 1.
 
-Noramally this search will use a locator in this way:
+Usually this search will use a locator in this way:
 
 ```json
 {
@@ -656,18 +658,33 @@ It will be format as SQL:
 SELECT * 
 FROM matrix AS nu3
 WHERE (nu3.section_tipo='numisdata3') AND nu3.section_id>0  AND (
-relations_flat_fct_st_si(nu3.datos)@> '["numisdata309_numisdata300_1"]')
+   relations_flat_fct_st_si(nu3.datos)@> '["numisdata309_numisdata300_1"]')
 ORDER BY nu3.section_id ASC 
 LIMIT 10
 ```
 
 This search is around x100 times faster than the same search with the full locator.
 
+!!! note "About the flat nomenclature"
+    - `fct` : contraction of `from_component_tipo`
+    - `st`  : contraction of `section_tipo`
+    - `si`  : contraction of `section_id`
+    - `ty`  : contraction of `type`
+
+Functions implemented:
+
+- relations_flat_st_si
+- relations_flat_fct_st_si
+- relations_flat_ty_st_si
+- relations_flat_ty_st
+- f_unaccent
+
+
 ##### q_split
 
 Defines if the words or the query (in [q](#q) parameter) need to be split into multiple WHERE statements. When q_split is set to true, it create multiple WHERE for every word in the query and add a AND operator between them because the words will be searched at any place of the text, be default it set in true.
 
-Defintion : `bool` (true || false) defines if the q need to be split into multiple WHERE queries. Default : true **optional**, ex: 'false'
+Definition : `bool` (true || false) defines if the q need to be split into multiple WHERE queries. Default : true **optional**, ex: 'false'
 
 Example: Search the interviews [oh1](https://dedalo.dev/ontology/oh1) abstract [oh23](https://dedalo.dev/ontology/oh23) has the words "war 1939"
 
@@ -702,8 +719,8 @@ With q_split set in false the search will not find it, because the words "war" a
 SELECT *
 FROM matrix AS oh1
 WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND ( (
-  f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*war.*') AND
-  f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*1939.*') 
+    f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*war.*') AND
+    f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*1939.*')
 ))
 ORDER BY oh1.section_id ASC
 LIMIT 10
@@ -901,11 +918,42 @@ Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) wi
 }
 ```
 
+### total
+
+Defines the total records counted in a search. This parameter is not used into a SQL statement, total has not equivalent use into SQL language because total is a result of count, but SQO defines total to set the previous count and is used to reduce the count of pagination, if the query doesn't change the total is maintained and the count is not necessary, SQO store the total and reuse it.
+`total` says how many records was found in previous query. When is defined and has a `int` > 0, the count will be ignored. Used in pagination when the filter is the same.
+
+Definition: `null` or `int` of records founded **optional**, ex: 10
+
+Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` after the first 10 interviews that match the criteria (it will return the 11 to 20 interviews) but do not use the count statement.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ]
+            }
+        ]
+    },
+    "limit": 10,
+    "offset" : 10,
+    "total" : 745
+}
+```
+
 ### full_count
 
-Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, normally only is active in the first query, the following requests set this parameter with the total perviously calculated, this action remove the execution of get the total at every requests.
+Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, usually is active in the first query only, the following requests set this parameter to false and the total previously calculated, this action remove the execution of get the total at every requests.
 
-Definition: `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+Definition: `bool` (true || false) get the total records founded and fix the number as total **optional**, ex: true
 
 Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` and count the total matches.
 
@@ -935,19 +983,105 @@ Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) w
 SELECT *
 FROM matrix AS oh1
 WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
-  (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
+    (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
 ORDER BY oh1.section_id ASC 
 LIMIT 10;
 
 -- 2 count the total
 SELECT COUNT(*) as full_count FROM (
-  SELECT DISTINCT oh1.section_id
-  FROM matrix AS oh1
-  WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
-    (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
+    SELECT DISTINCT oh1.section_id
+    FROM matrix AS oh1
+    WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
+      (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
 )
 x;
 ```
+
+### group_by
+
+Defines if the query will count the result by any criteria.
+
+!!! note "About the `group_by` implementation"
+    In current version the property `group_by` is not totally equivalent to the SQL `GROUP BY` clause, `group_by` is used only for count records and grouped by concepts. SQO can create `GROUP BY` clause in other context of the query, but it's not directly controlled by this parameter.
+
+Definition: array of strings as "section_tipo" or specific literal component as "dd199" **optional**, ex: \["section_tipo"\]
+
+Example: count the sections `Objects` [tch1](https://dedalo.dev/ontology/tch1) and `Publications` [rsc205](https://dedalo.dev/ontology/rsc205) that are calling to the chronological descriptor (section_tipo = dc1) with section_id = 1 and return the total grouped by section_tipo
+
+```json
+{
+    "mode": "related",
+    "section_tipo": ["tch1","rsc205"],
+    "filter_by_locators": [
+      {
+        "section_tipo": "dc1",
+        "section_id": "1",
+        "tipo": "hierarchy40"
+      }
+    ],
+    "full_count": true,
+    "group_by": ["section_tipo"]
+}
+```
+
+```sql
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_activities"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_hierarchy"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_list"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_test"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205');
+GROUP BY section_tipo
+```
+
+The query result will be something like:
+
+| section_tipo | full_count |
+| --- | --- |
+| "tch1" | 5523 |
+| "rsc205" | 1297 |
+
+And the API will return something like:
+
+```json
+{
+  "total" : 6820,
+  "totals_group" : [
+    {
+      "key" : ["tch1"],
+      "value" : 5523
+    },
+    {
+      "key" : ["rsc205"],
+      "value" : 1297
+    }
+  ]
+}
+
+```
+
 
 ### order
 
@@ -987,16 +1121,16 @@ It will be processed as SQL:
 ```sql
 SELECT *
 FROM (
-  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-  nu4.section_tipo,
-  nu4.datos,
-  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
-  FROM matrix AS nu4
-  -- join Numisamtic object with the relations with Collections section
-  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
-  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
-  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
-  ORDER BY nu4.section_id ASC
+    SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+    nu4.section_tipo,
+    nu4.datos,
+    nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+    FROM matrix AS nu4
+    -- join Numisamtic object with the relations with Collections section
+    LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+    LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+    WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+    ORDER BY nu4.section_id ASC
 ) main_select
 ORDER BY rsc85_order DESC NULLS LAST , section_id ASC
 LIMIT 10;
@@ -1040,16 +1174,16 @@ It will be processed as SQL:
 ```sql
 SELECT * 
 FROM (
-  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-  nu4.section_tipo,
-  nu4.datos,
-  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
-  FROM matrix AS nu4
- -- join Numisamtic object with the relations with Collections section
-  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
-  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
-  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
-  ORDER BY nu4.section_id ASC
+    SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+    nu4.section_tipo,
+    nu4.datos,
+    nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+    FROM matrix AS nu4
+    -- join Numisamtic object with the relations with Collections section
+    LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+    LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+    WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+    ORDER BY nu4.section_id ASC
 ) main_select
 ORDER BY rsc85_order ASC NULLS LAST , section_id ASC
 LIMIT 10;
@@ -1121,16 +1255,16 @@ It will be processed as SQL:
 ```sql
 SELECT * 
 FROM (
-  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-  nu4.section_tipo,
-  nu4.datos,
-  nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
-  FROM matrix AS nu4
- -- join Numisamtic object with the relations with Collections section
-  LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
-  LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
-  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
-  ORDER BY nu4.section_id ASC
+    SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+    nu4.section_tipo,
+    nu4.datos,
+    nu4_nu159_rs194.datos#>>'{components,rsc85,dato,lg-nolan}' as rsc85_order
+    FROM matrix AS nu4
+    -- join Numisamtic object with the relations with Collections section
+    LEFT JOIN relations AS r_nu4_nu159_rs194 ON (nu4.section_id=r_nu4_nu159_rs194.section_id AND nu4.section_tipo=r_nu4_nu159_rs194.section_tipo AND r_nu4_nu159_rs194.from_component_tipo='numisdata159')
+    LEFT JOIN matrix AS nu4_nu159_rs194 ON (r_nu4_nu159_rs194.target_section_id=nu4_nu159_rs194.section_id AND r_nu4_nu159_rs194.target_section_tipo=nu4_nu159_rs194.section_tipo)
+    WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+    ORDER BY nu4.section_id ASC
 ) main_select
 ORDER BY rsc85_order ASC NULLS LAST , section_id ASC
 LIMIT 10;
@@ -1160,12 +1294,12 @@ The equivalent SQL:
 ```sql
 SELECT * 
 FROM (
-  SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-  nu4.section_tipo,
-  nu4.datos
-  FROM matrix AS nu4
-  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0 
-  ORDER BY nu4.section_id ASC
+    SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
+    nu4.section_tipo,
+    nu4.datos
+    FROM matrix AS nu4
+    WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+    ORDER BY nu4.section_id ASC
 ) main_select
 LEFT JOIN (VALUES ('numisdata4',5,1),('numisdata4',3,2),('numisdata4',1,3)) as x(ordering_section_tipo, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section_tipo 
 ORDER BY x.ordering ASC
@@ -1217,22 +1351,22 @@ The SQL equivalent:
 SELECT section_tipo, section_id, datos
 FROM "matrix"
 WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
-  AND (section_tipo = 'numisdata3')
+    AND (section_tipo = 'numisdata3')
 UNION ALL
 SELECT section_tipo, section_id, datos
 FROM "matrix_activities"
 WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
-  AND (section_tipo = 'numisdata3')
+    AND (section_tipo = 'numisdata3')
 UNION ALL
 SELECT section_tipo, section_id, datos
 FROM "matrix_hierarchy"
 WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
-  AND (section_tipo = 'numisdata3')
+    AND (section_tipo = 'numisdata3')
 UNION ALL
 SELECT section_tipo, section_id, datos
 FROM "matrix_list"
 WHERE (relations_flat_st_si(datos) @> '["rsc170_69"]'::jsonb)
-  AND (section_tipo = 'numisdata3')
+    AND (section_tipo = 'numisdata3')
 ORDER BY section_tipo, section_id ASC
 LIMIT 10
 OFFSET 0;
@@ -1258,8 +1392,8 @@ The SQL equivalent:
 
 ```sql
 SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-nu4.section_tipo,
-nu4.datos
+    nu4.section_tipo,
+    nu4.datos
 FROM matrix AS nu4
 WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
 ORDER BY nu4.section_id ASC
@@ -1280,15 +1414,15 @@ The SQL equivalent:
 
 ```sql
 SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
-nu4.section_tipo,
-nu4.datos
+    nu4.section_tipo,
+    nu4.datos
 FROM matrix AS nu4
 WHERE nu4.id in (
-  SELECT DISTINCT ON(nu4.section_id,nu4.section_tipo) nu4.id 
-  FROM matrix AS nu4
-  WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
-  ORDER BY nu4.section_id ASC
-  LIMIT 5
+    SELECT DISTINCT ON(nu4.section_id,nu4.section_tipo) nu4.id
+    FROM matrix AS nu4
+    WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
+    ORDER BY nu4.section_id ASC
+    LIMIT 5
 )
 ORDER BY nu4.section_id ASC
 LIMIT 5;
@@ -1315,8 +1449,8 @@ The SQL equivalent:
 
 ```sql
 SELECT nu4.section_id,
-nu4.section_tipo,
-nu4.datos
+    nu4.section_tipo,
+    nu4.datos
 FROM matrix AS nu4
 WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
 ORDER BY nu4.section_id ASC -- allow_sub_select_by_id=false
