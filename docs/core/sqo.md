@@ -665,6 +665,21 @@ LIMIT 10
 
 This search is around x100 times faster than the same search with the full locator.
 
+!!! note "About the flat nomenclature"
+    - `fct` : contraction of `from_component_tipo`
+    - `st`  : contraction of `section_tipo`
+    - `si`  : contraction of `section_id`
+    - `ty`  : contraction of `type`
+
+Functions implemented:
+
+- relations_flat_st_si
+- relations_flat_fct_st_si
+- relations_flat_ty_st_si
+- relations_flat_ty_st
+- f_unaccent
+
+
 ##### q_split
 
 Defines if the words or the query (in [q](#q) parameter) need to be split into multiple WHERE statements. When q_split is set to true, it create multiple WHERE for every word in the query and add a AND operator between them because the words will be searched at any place of the text, be default it set in true.
