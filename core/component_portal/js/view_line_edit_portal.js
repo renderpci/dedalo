@@ -266,11 +266,13 @@ view_line_edit_portal.render_column_id = function(options) {
 		})
 
 	// edit icon
+		const pen_title = SHOW_DEBUG
+			? (get_label.open || 'Open') + ` ${section_tipo}-${section_id}`
+			: (get_label.open || 'Open')
 		ui.create_dom_element({
 			element_type	: 'span',
-			// class_name	: 'button pen icon grey',
 			class_name		: 'button pen icon grey',
-			title			: (get_label.open || 'Open'),
+			title			: pen_title,
 			parent			: button_edit
 		})
 
