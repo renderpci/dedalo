@@ -65,7 +65,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
     - **type** : `string` ('jsonb' || 'string)  defines the type of data to be searched **optional**, ex: 'jsonb'
 - **limit** : `int` records limit **optional**, ex: 10
 - **offset** : `int` records offset **optional**, ex: 10
-- **full_count** : `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+- **full_count** : `bool` (true || false) get the total records found and set the total with it **optional**, ex: true
 - **order** : `array of objects` set the order of the records, every object in the array will be a column with his paths and direction **optional** `[{"direction": "ASC", "path":[{ddo},{ddo}]}]]`
   - **direction** : `string` (ASC || DESC) sort direction of the column **optional**, ex: 'DESC'
   - **path** : `array of objects` the [ddo](dd_object.md) object that defines the path of the column beginning from the main section of the filter and path of ddo to the component in related section/s. **optional** `[{"section_tipo":"oh1","component_tipo":"oh24"},{"section_tipo":"rsc197", "component_tipo":"rsc85"}]`
@@ -901,11 +901,42 @@ Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) wi
 }
 ```
 
+### total
+
+Defines the total records counted in a search. This parameter is not used into a SQL statement, total has not equivalent use into SQL language because total is a result of count, but SQO defines total to set the previous count and is used to reduce the count of pagination, if the query doesn't change the total is maintained and the count is not necessary, SQO store the total and reuse it.
+`total` says how many records was found in previous query. When is defined and has a `int` > 0, the count will be ignored. Used in pagination when the filter is the same.
+
+Definition: `null` or `int` of records founded **optional**, ex: 10
+
+Example: search the next 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` after the first 10 interviews that match the criteria (it will return the 11 to 20 interviews) but do not use the count statement.
+
+```json
+{
+ "section_tipo": ["oh1"],
+    "filter": {
+        "$and": [
+            {
+                "q": [ "mother" ],
+                "path": [
+                    {
+                        "section_tipo": "oh1",
+                        "component_tipo": "oh16"
+                    }
+                ]
+            }
+        ]
+    },
+    "limit": 10,
+    "offset" : 10,
+    "total" : 745
+}
+```
+
 ### full_count
 
-Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, normally only is active in the first query, the following requests set this parameter with the total perviously calculated, this action remove the execution of get the total at every requests.
+Defines if the search will count the total records found. When full_count is enable, SQO will create 2 different SQL, first one with the search and second one to count the records, both SQL will be processed in parallel. This parameter is used to get the total records found, as this SQL could take lot of time and server resources, usually is active in the first query only, the following requests set this parameter to false and the total previously calculated, this action remove the execution of get the total at every requests.
 
-Definition: `bool || int` (true || false || 1) get the total records find . When int is passed disable the function for full count and get the number as total **optional**, ex: true
+Definition: `bool` (true || false) get the total records founded and fix the number as total **optional**, ex: true
 
 Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) with title [oh16](https://dedalo.dev/ontology/oh16) `mother` and count the total matches.
 
