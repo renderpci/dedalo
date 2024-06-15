@@ -2,13 +2,13 @@
 
 ## Introduction
 
-Search Query Object or SQO, is a JSON object to use as an abstraction of classical SQL. To create a flexible system with NoSQL and dependent on an ontology, it becomes necessary to use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way as classical SQL. We changed SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduced JSON format but with a very simple JSON query.
+Search Query Object or SQO, is a JSON object definition to be used as an abstraction of classical SQL. To create a flexible system with NoSQL and dependent on Dédalo ontology, it becomes necessary to use a flexible definition of the database query. Dédalo doesn't have columns and we need to search data in the same way as classical SQL. We changed SQL model to NoSQL in v4 in 2012, at this time PostgreSQL(v9.2) introduced JSON format but with a very simple JSON query.
 
 So we came to define a search query object, because we knew that early PostgreSQL JSON search definitions will be replaced with a more robust system. And we want to make searches compatible with ontology changes, we don't want to use predefined searches.
 
 ## Search Query Object - SQO definition
 
-./core/common/class.search_query_object.php
+> ./core/common/class.search_query_object.php
 
 **search_query_object** `object`
 
@@ -978,6 +978,91 @@ SELECT COUNT(*) as full_count FROM (
     (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
 )
 x;
+```
+
+### group_by
+
+Defines if the query will count the result by any criteria.
+
+!!! note "About the `group_by` implementation"
+    In current version the property `group_by` is not totally equivalent to the SQL `GROUP BY` clause, `group_by` is used only for count records and grouped by concepts. SQO can create `GROUP BY` clause in other context of the query, but it's not directly controlled by this parameter.
+
+Definition: array of strings as "section_tipo" or specific literal component as "dd199" **optional**, ex: \["section_tipo"\]
+
+Example: count the sections `Objects` [tch1](https://dedalo.dev/ontology/tch1) and `Publications` [rsc205](https://dedalo.dev/ontology/rsc205) that are calling to the chronological descriptor (section_tipo = dc1) with section_id = 1 and return the total grouped by section_tipo
+
+```json
+{
+    "mode": "related",
+    "section_tipo": ["tch1","rsc205"],
+    "filter_by_locators": [
+      {
+        "section_tipo": "dc1",
+        "section_id": "1",
+        "tipo": "hierarchy40"
+      }
+    ],
+    "full_count": true,
+    "group_by": ["section_tipo"]
+}
+```
+
+```sql
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_activities"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_hierarchy"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_list"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
+GROUP BY section_tipo
+UNION ALL
+SELECT section_tipo, COUNT(*) as full_count
+FROM "matrix_test"
+WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205');
+GROUP BY section_tipo
+```
+
+The query result will be something like:
+
+| section_tipo | full_count |
+| --- | --- |
+| "tch1" | 5523 |
+| "rsc205" | 1297 |
+
+And the API will return something like:
+
+```json
+{
+  "total" : 6820,
+  "totals_group" : [
+    {
+      "key" : ["tch1"],
+      "value" : 5523
+    },
+    {
+      "key" : ["rsc205"],
+      "value" : 1297
+    }
+  ]
+}
+
 ```
 
 ### order
