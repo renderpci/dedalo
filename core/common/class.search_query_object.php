@@ -32,8 +32,9 @@
 								  }]
 		limit					: 1 // int
 		offset					: 2 // int
+		total                   : (null || int ) // by default total is null to be calculate, when int is set the sqo don't count and return his value
 		full_count				: (true || false || 4) // boolean or int (int disable the function for full count and get the number as total)
-		group_by 				: ['section_tipo'] // array with the columns or the paths to components (used to count values)
+		group_by 				: ['section_tipo'] // array with the columns or components (used to count values)
 		order					: [{
 										direction 	: (ASC || DESC) // string
 										path		: [{
