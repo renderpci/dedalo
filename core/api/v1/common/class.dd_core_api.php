@@ -2385,7 +2385,7 @@ final class dd_core_api {
 			$limit			= $sqo->limit ?? 500;
 			$offset			= $sqo->offset ?? 0;
 			$total			= $sqo->total ?? null;
-			$filter_section	= $sqo->section_tipo;
+			$filter_section	= $sqo->section_tipo ?? null;
 
 			// response
 			$response = new stdClass();

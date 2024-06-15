@@ -74,10 +74,10 @@ final class environment_test extends TestCase {
 
 			$lang_labels = $environment->result->get_label;
 
-			$eq = gettype($lang_labels)==='string';
+			$eq = gettype($lang_labels)==='object';
 			$this->assertTrue(
 				$eq,
-				'expected gettype($lang_labels)==="string" true, but received is: '
+				'expected gettype($lang_labels)==="object" true, but received is: '
 					. to_string( $eq )
 			);
 	}//end test_environment

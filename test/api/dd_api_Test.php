@@ -1272,7 +1272,6 @@ final class dd_api_Test extends TestCase {
 		// direct exec
 			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 			$response = dd_core_api::{$rqo->action}($rqo);
-				// dump($response, ' test_get_indexation_grid response  1 ++ '.to_string());
 
 			$this->assertTrue(
 				empty($_ENV['DEDALO_LAST_ERROR']),
