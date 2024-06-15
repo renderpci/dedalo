@@ -93,8 +93,8 @@ render_menu.prototype.edit = async function() {
 						self	: self,
 						tipo	: 'dd1'
 					})
-					// insert after toggle_inspector
-					toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, toggle_inspector.nextSibling);
+					// insert after button_toggle_inspector
+					button_toggle_inspector.parentNode.insertBefore(menu_mobile_wrapper, button_toggle_inspector.nextSibling);
 					const fn_user_navigation = function(e) {
 						if (!menu_mobile_wrapper.classList.contains('hide')) {
 							menu_mobile_wrapper.classList.add('hide')
@@ -201,13 +201,13 @@ render_menu.prototype.edit = async function() {
 		fragment.appendChild(section_label)
 
 	// inspector button toggle
-		const toggle_inspector = ui.create_dom_element({
+		const button_toggle_inspector = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'button_toggle_inspector top_item no_visible',
 			title			: get_label.inspector || 'Inspector',
 			parent			: fragment
 		})
-		toggle_inspector.addEventListener('click', ui.toggle_inspector)
+		button_toggle_inspector.addEventListener('click', ui.toggle_inspector)
 
 	// debug info bar
 		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
@@ -217,8 +217,8 @@ render_menu.prototype.edit = async function() {
 	// menu_wrapper
 		const menu_wrapper = document.createElement('div')
 			  menu_wrapper.appendChild(fragment)
-			  menu_wrapper.section_label	= section_label
-			  menu_wrapper.toggle_inspector	= toggle_inspector
+			  menu_wrapper.section_label = section_label
+			  menu_wrapper.button_toggle_inspector = button_toggle_inspector
 		// menu classes
 			const classes = ['menu_wrapper','menu']
 			// menu left band
@@ -379,7 +379,6 @@ const change_lang = async function(options) {
 	// reload window
 		window.location.reload(false);
 
-	// event_manager.publish('user_navigation', {lang: current_lang})
 
 	return api_response
 }//end change_lang
@@ -449,7 +448,7 @@ render_menu.prototype.update_section_label = function(options) {
 
 	// pointers get
 		const section_label		= self.node.section_label
-		const toggle_inspector	= self.node.toggle_inspector
+		const button_toggle_inspector	= self.node.button_toggle_inspector
 
 	// new_section_label
 		const new_section_label = render_section_label(self)
@@ -464,12 +463,12 @@ render_menu.prototype.update_section_label = function(options) {
 				new_section_label.addEventListener('mousedown', section_label_on_click)
 			}
 			// hide button inspector
-			toggle_inspector.classList.remove('no_visible')
+			button_toggle_inspector.classList.remove('no_visible')
 			// enable section_label user click
 			new_section_label.classList.remove('inactive')
 		}else{
 			// show button inspector
-			toggle_inspector.classList.add('no_visible')
+			button_toggle_inspector.classList.add('no_visible')
 			// disable section_label user click
 			new_section_label.classList.add('inactive')
 		}
