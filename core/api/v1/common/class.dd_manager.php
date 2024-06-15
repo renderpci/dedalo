@@ -9,7 +9,7 @@ final class dd_manager {
 
 
 
-	static $version = "1.0.0"; // 05-06-2019
+	static $version = '1.0.0'; // 05-06-2019
 
 
 
@@ -31,7 +31,6 @@ final class dd_manager {
 		$api_manager_start_time = start_time();
 
 		// debug
-			// dump($rqo, ' MANAGE_REQUEST rqo ++++++++++++++++++++++++++++++ '.to_string());
 			if(SHOW_DEBUG===true) {
 				$text			= 'API REQUEST ' . $rqo->action;
 				$text_length	= strlen($text) +1;
@@ -125,14 +124,6 @@ final class dd_manager {
 					// create new debug property
 					$response->debug = $api_debug;
 				}
-				//dump($response->debug, ' $response->debug ++ '.to_string($rqo->action));
-				// debug_log("API REQUEST $total_time ".str_repeat(">", 70).PHP_EOL.json_encode($rqo, JSON_PRETTY_PRINT).PHP_EOL.str_repeat("<", 171), logger::DEBUG);
-				// debug_log(json_encode($rqo, JSON_PRETTY_PRINT) .PHP_EOL. "API REQUEST $total_time ".str_repeat(">", 70), logger::DEBUG);
-				// $line = "API REQUEST total_time: $total_time ".str_repeat("<", 89); // 164
-				// debug_log($line, logger::DEBUG);
-				// if ($rqo->action==='read') {
-				// 	dump($response, ' response ++ '.to_string());
-				// }
 
 				// metrics
 					$metrics = [
