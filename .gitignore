@@ -39,6 +39,7 @@ des
 test
 !/test
 *.cache
+.idea
 
 
 # install/import/hierarchy

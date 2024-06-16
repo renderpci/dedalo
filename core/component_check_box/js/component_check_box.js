@@ -69,13 +69,14 @@ export const component_check_box = function(){
 
 
 /**
-* GET_CHANGED_KEY
-* Find the key of the data with the selected value of the datalist
-* The key of datalist has all possible values of the components
-* Key of the data is the active options in data.
-* @param string action
-* @param object value
-*/
+ * GET_CHANGED_KEY
+ * Find the key of the data with the selected value of the datalist
+ * The key of datalist has all possible values of the components
+ * Key of the data is the active options in data.
+ * @param action
+ * @param value
+ * @param source
+ */
 component_check_box.prototype.get_changed_key = function(action, value, source=this.data.value) {
 
 	// const self = this
