@@ -60,7 +60,6 @@
 		);
 		$context[] = $this->context;
 
-
 	if($permissions>0) {
 
 		// relation index use his own data_paginated
@@ -76,6 +75,14 @@
 			$limit		= $this->pagination->limit;
 			$offset		= $this->pagination->offset;
 			$total 		= $this->pagination->total ?? null;
+
+			// get all section context at first call of the component
+			// it get all section_tipo and the first record to get the context and subcontext
+			// of every section, when the component is paginated ($offset > 0) do not calculate again
+			if($ofsset === 0){
+				$related_section_context = $this->get_related_section_context();
+				$context = array_merge($context, $related_section_context);
+			}
 
 			// data item
 				$item = $this->get_data_item($value);
@@ -98,7 +105,7 @@
 
 					$datum = $this->get_section_datum_from_locator($locator);
 
-					// context become calculated and merge with previous
+					// context become calculated and merged with previous
 					$context = array_merge($context, $datum->context);
 
 					$ar_subdata	= $datum->data;
