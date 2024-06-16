@@ -45,7 +45,7 @@ class area_maintenance extends area_common {
 		// item
 			$item = new stdClass();
 				$item->id		= 'make_backup';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= label::get_label('make_backup') ?? 'Make backup';
 				$item->value	= (object)[
 					'dedalo_db_management'	=> DEDALO_DB_MANAGEMENT,
@@ -83,7 +83,7 @@ class area_maintenance extends area_common {
 		// regenerate_relations * . Delete and create again table relations records
 			$item = new stdClass();
 				$item->id		= 'regenerate_relations';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= 'Regenerate relations table data';
 				$item->value	= (object)[
 					'body' => 'Delete and create again table relations records based on locators data of sections in current selected table/s',
@@ -94,7 +94,7 @@ class area_maintenance extends area_common {
 		// update_ontology *
 			$item = new stdClass();
 				$item->id		= 'update_ontology';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= label::get_label('update_ontology') ?? 'Update Ontology';
 				$item->value	= (object)[
 					'current_ontology'		=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa'),
@@ -118,7 +118,7 @@ class area_maintenance extends area_common {
 		// move_tld
 			$item = new stdClass();
 				$item->id		= 'move_tld';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= 'Move TLD';
 				$item->value	= (object)[
 					'body' => 'Move TLD defined map items from source (e.g. numisdata279) to target (e.g. tchi1).<br>
@@ -133,7 +133,7 @@ class area_maintenance extends area_common {
 		// register_tools *
 			$item = new stdClass();
 				$item->id		= 'register_tools';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('registrar_herramientas');
 				$item->value	= (object)[
@@ -150,7 +150,7 @@ class area_maintenance extends area_common {
 		// export_ontology_to_json *
 			$item = new stdClass();
 				$item->id		= 'export_ontology_to_json';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
 				$item->value	= (object)[
@@ -165,7 +165,7 @@ class area_maintenance extends area_common {
 		// import_ontology_from_json *
 			$item = new stdClass();
 				$item->id		= 'import_ontology_from_json';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
 				$item->value	= (object)[
@@ -181,7 +181,7 @@ class area_maintenance extends area_common {
 		// build_structure_css
 			// $item = new stdClass();
 			// 	$item->id		= 'build_structure_css';
-			// 	$item->typo		= 'widget';
+			// 	$item->type		= 'widget';
 			// 	$item->tipo		= $this->tipo;
 			// 	$item->parent	= $this->tipo;
 			// 	$item->label	= label::get_label('build_structure_css');
@@ -204,7 +204,7 @@ class area_maintenance extends area_common {
 		// build_install_version *
 			$item = new stdClass();
 				$item->id		= 'build_install_version';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('build_install_version') ?? 'Build install version';
 				$item->value	= (object)[
@@ -219,7 +219,7 @@ class area_maintenance extends area_common {
 		// export_hierarchy *
 			$item = new stdClass();
 				$item->id		= 'export_hierarchy';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
 				$item->value	= (object)[
@@ -242,7 +242,7 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'update_data_version';
 				$item->class	= empty($update_version) ? 'success width_100' : 'danger width_100';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= label::get_label('update').' '.label::get_label('data');
 				$item->value	= (object)[
@@ -258,7 +258,7 @@ class area_maintenance extends area_common {
 		// update_code *
 			$item = new stdClass();
 				$item->id		= 'update_code';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= label::get_label('update') .' '. label::get_label('code');
 				$item->value	= (object)[
 					'dedalo_source_version_url'			=> DEDALO_SOURCE_VERSION_URL,
@@ -277,7 +277,7 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'check_config';
 				$item->class	= empty($missing) ? 'success' : 'danger';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= label::get_label('check_config') ?? 'Check config';
 				$item->value	= (object)[
 					'info' => $config_status
@@ -291,7 +291,7 @@ class area_maintenance extends area_common {
 				$install_config = install::get_config();
 
 				$item->id		= 'add_hierarchy';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->class	= 'success width_100';
 				$item->label	= label::get_label('instalar') .' '. label::get_label('jerarquias');
 				$item->value	= (object)[
@@ -307,7 +307,7 @@ class area_maintenance extends area_common {
 		// publication_api *
 			$item = new stdClass();
 				$item->id		= 'publication_api';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= 'Publication server API';
 				$item->value	= (object)[
 					'dedalo_diffusion_domain'			=> DEDALO_DIFFUSION_DOMAIN,
@@ -327,7 +327,7 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
 				$item->class	= 'width_100';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DÉDALO API TEST ENVIRONMENT';
 				$item->value	= (object)[];
@@ -339,7 +339,7 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'sqo_test_environment';
 				$item->class	= 'blue width_100';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'SEARCH QUERY OBJECT TEST ENVIRONMENT';
 				$item->value	= (object)[];
@@ -351,7 +351,7 @@ class area_maintenance extends area_common {
 			$item = new stdClass();
 				$item->id		= 'lock_components';
 				$item->class	= 'width_100';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'Lock components status';
 				$item->value	= (object)[
@@ -367,7 +367,7 @@ class area_maintenance extends area_common {
 		// dedalo_version *
 			$item = new stdClass();
 				$item->id		= 'dedalo_version';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DEDALO VERSION';
 				$item->value	= (object)[
@@ -383,7 +383,7 @@ class area_maintenance extends area_common {
 			$info['host'] = to_string(DEDALO_HOSTNAME_CONN);
 			$item = new stdClass();
 				$item->id		= 'database_info';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DATABASE INFO';
 				$item->value	= (object)[
@@ -413,7 +413,7 @@ class area_maintenance extends area_common {
 			})();
 			$item = new stdClass();
 				$item->id		= 'php_user';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP USER';
 				$item->value	= (object)[
@@ -426,7 +426,7 @@ class area_maintenance extends area_common {
 		// unit_test *
 			$item = new stdClass();
 				$item->id		= 'unit_test';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= 'Unit test area';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -435,7 +435,7 @@ class area_maintenance extends area_common {
 		// environment *
 			$item = new stdClass();
 				$item->id		= 'environment';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->label	= 'Environment';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
@@ -446,7 +446,7 @@ class area_maintenance extends area_common {
 			$response = db_data_check::check_sequences();
 			$item = new stdClass();
 				$item->id		= 'sequences_status';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DB SEQUENCES STATUS';
 				$item->value	= $response;
@@ -458,7 +458,7 @@ class area_maintenance extends area_common {
 			$response = counter::check_counters();
 			$item = new stdClass();
 				$item->id		= 'counters_status';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'DEDALO COUNTERS STATUS';
 				$item->value	= $response;
@@ -469,7 +469,7 @@ class area_maintenance extends area_common {
 		// php_info *
 			$item = new stdClass();
 				$item->id		= 'php_info';
-				$item->typo		= 'widget';
+				$item->type		= 'widget';
 				$item->tipo		= $this->tipo;
 				$item->label	= 'PHP INFO';
 				$item->value	= (object)[
@@ -495,7 +495,7 @@ class area_maintenance extends area_common {
 		$widget = new stdClass();
 			$widget->id			= $item->id;
 			$widget->class		= $item->class ?? null;
-			$widget->typo		= 'widget';
+			$widget->type		= 'widget';
 			$widget->tipo		= $item->tipo ?? $this->tipo;
 			$widget->parent		= $item->parent ?? $this->tipo;
 			$widget->label		= $item->label ?? 'Undefined label for: '.$this->tipo;
