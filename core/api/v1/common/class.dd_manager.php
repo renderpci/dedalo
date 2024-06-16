@@ -160,7 +160,7 @@ final class dd_manager {
 						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',
 						'--> section_save_total_calls: '. metrics::$section_save_total_calls,
 						// summary
-						'summary',
+						'Summary',
 						'time: ' . (
 							metrics::$security_permissions_total_time +
 							metrics::$search_free_total_time +

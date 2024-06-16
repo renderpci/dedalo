@@ -260,8 +260,7 @@ class tool_common {
 					return $el->name===$name;
 				});
 			}
-
-		// config
+			// config
 			$config = is_object($config_data)
 				? $config_data->config
 				: null;

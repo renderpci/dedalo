@@ -1420,6 +1420,14 @@ class search {
 			$section_alias		= $this->main_section_tipo_alias;
 			$datos_container	= ($this->matrix_table==='matrix_time_machine') ? 'dato' : 'datos';
 			$user_id			= logged_user_id(); // Logged user id
+			if (empty($user_id)) {
+				debug_log(__METHOD__
+					. " Error: user id unavailable (logged_user_id) " . PHP_EOL
+					. logged_user_id()
+					, logger::ERROR
+				);
+				return $sql_projects_filter;
+			}
 
 		// cache
 			static $sql_projects_filter_data;
