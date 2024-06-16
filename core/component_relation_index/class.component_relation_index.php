@@ -241,6 +241,81 @@ class component_relation_index extends component_relation_common {
 
 
 
+
+	/**
+	* GET_RELATED_SECTION_CONTEXT
+	* Get all calling sections and create his context and sub-context.
+	* As the relation_index use the calling sections to get his data,
+	* it's necessary to get all context of every the calling section.
+	* Relation_index has not a request_config definition in ontology,
+	* (is not possible create all combinations for every calling sections)
+	* his creation depends of the calling sections.
+	* When the original section is calling by a lot of other sections
+	* the context is not possible get it for the data.
+	* This function will ask for get all calling sections and all section_tipo
+	* and get 1 section_id to create a valid locator.
+	* The locator is necessary to calculate the sub-context of every calling section.
+	* The calculated context and sub-context will be mixed into the source section.
+	* @return array $context
+	*/
+	public function get_related_section_context() : array {
+
+		// context to be return
+			$context = [];
+
+		// get all calling sections
+		// use the count grouped by section_tipo to get unique rows for every calling section
+			$ar_section		= $this->count_data_group_by(['section_tipo']);
+			$totals_group	= $ar_section->totals_group;
+			if( empty($totals_group) ){
+				return $context;
+			}
+
+		// get the ar_section_tipo of the counter
+		// the total_goup set the key as array of the $group_by set
+		// in this case the key will be an array with the section_tipo as : ['tch1']
+			$ar_section_tipo = array_map(function( $item ){
+				return $item->key; // array
+			}, $totals_group );
+
+		// create a SQO limited to 1 record
+		// the query will get one valid record to create a section instance
+		// {"section_tipo" : "tch1", "section_id" : 1}
+		$sqo = new search_query_object();
+			$sqo->set_limit( 1 );
+
+		foreach ($ar_section_tipo as $current_section_tipo) {
+
+			// set/update section tipo
+			$sqo->set_section_tipo( $current_section_tipo );
+			// search to get any row of the database
+			// it will be use to create an instance section
+			$search_instace = search::get_instance(
+				$sqo, // object sqo
+			);
+
+			$search_response = $search_instace->search();
+			// as the SQO is limited to 1, the result will be only 1
+			$row = reset( $search_response->ar_records );
+
+			// create a valid locator to build the section instance
+			// this instance can calculate his context and his sub-context
+			$locator = new locator();
+				$locator->set_section_tipo($row->section_tipo);
+				$locator->set_section_id($row->section_id);
+
+			$datum = $this->get_section_datum_from_locator($locator);
+
+			// context become calculated and merged with previous
+			$context = array_merge($context, $datum->context);
+		}
+
+		return $context;
+	}//end get_related_section_context
+
+
+
+
 	/**
 	* GET_SECTION_DATUM_FROM_LOCATOR
 	* @param locator $locator
