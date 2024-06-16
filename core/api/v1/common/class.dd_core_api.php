@@ -2507,6 +2507,7 @@ final class dd_core_api {
 	* @return object $response
 	*/
 	public static function get_environment() : object {
+		$start_time = start_time();
 
 		// response
 			$response = new stdClass();
@@ -2535,6 +2536,17 @@ final class dd_core_api {
 		// response
 			$response->result	= $environment;
 			$response->msg		= 'OK. Request done';
+
+		// metrics
+			$metrics = [
+				// permissions stats
+				'Environment',
+				'--> calculated environment time: '.exec_time_unit($start_time).' ms'
+			];
+			debug_log(__METHOD__ . PHP_EOL
+				. implode(PHP_EOL, $metrics)
+				, logger::WARNING
+			);
 
 
 		return $response;

@@ -119,7 +119,7 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 		// color picker
-			// content_value node
+		// content_value node
 		const color_picker_container = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'color_picker_container'
