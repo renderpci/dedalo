@@ -1430,8 +1430,8 @@ component_portal.prototype.edit_record_handler = async function(options) {
 		if (!engine_request_config) {
 			// no engine is detected in request_config for section_tipo
 			if(SHOW_DEBUG===true) {
-				console.log(')) edit_record_handler - section_tipo:', section_tipo);
-				console.log(')) edit_record_handler - request_config:', request_config);
+				console.warn(')) NO engine_request_config found. edit_record_handler - section_tipo:', section_tipo);
+				console.warn(')) edit_record_handler - request_config:', request_config);
 			}
 			return
 		}

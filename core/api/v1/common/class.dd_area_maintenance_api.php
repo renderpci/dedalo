@@ -131,12 +131,11 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$options, function($item){
-				return $item->name==='dedalo_prefix_tipos';
-			})->value ?? '';
-			$ar_dedalo_prefix_tipos = array_map(function($item){
-				return trim($item);
-			}, explode(',', $dedalo_prefix_tipos));
+			$dedalo_prefix_tipos_item = array_find($options, function($item) {
+				return $item->name === 'dedalo_prefix_tipos';
+			});
+			$dedalo_prefix_tipos	= is_object($dedalo_prefix_tipos_item) ? $dedalo_prefix_tipos_item->value : '';
+			$ar_dedalo_prefix_tipos	= array_map('trim', explode(',', $dedalo_prefix_tipos));
 			if (empty($ar_dedalo_prefix_tipos)) {
 				// error
 				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
@@ -224,24 +223,38 @@ final class dd_area_maintenance_api {
 				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos = array_find((array)$options, function($item){
-				return $item->name==='dedalo_prefix_tipos';
-			})->value ?? '';
-			$ar_dedalo_prefix_tipos = array_map(function($item){
-				return trim($item);
-			}, explode(',', $dedalo_prefix_tipos));
+			$dedalo_prefix_tipos_item = array_find($options, function($item) {
+				return $item->name === 'dedalo_prefix_tipos';
+			});
+			$dedalo_prefix_tipos	= is_object($dedalo_prefix_tipos_item) ? $dedalo_prefix_tipos_item->value : '';
+			$ar_dedalo_prefix_tipos	= array_map('trim', explode(',', $dedalo_prefix_tipos));
 
+		// file contents
+			$file_name	= 'structure.json';
+			$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
+			if (!file_exists($file_path)) {
+				$response->msg .= ' - File not found: '.$file_name;
+				return $response;
+			}
 
-		$ar_tld	= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
+			$json_content = file_get_contents($file_path);
+			if ($json_content === false) {
+				$response->msg .= ' - Error reading file: '.$file_name;
+				return $response;
+			}
 
-		$file_name	= 'structure.json';
-		$file_path	= (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR) . '/' . $file_name;
+			$data = json_decode($json_content);
+			if (json_last_error() !== JSON_ERROR_NONE) {
+				$response->msg .= ' - Invalid JSON in file: '.$file_name;
+				return $response;
+			}
 
-		$data		= json_decode( file_get_contents($file_path) );
-		$response	= backup::import_structure_json_data($data, $ar_tld);
-
-		$response->result	= true;
-		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+		// import
+			$ar_tld		= empty($ar_dedalo_prefix_tipos) ? [] : $ar_dedalo_prefix_tipos;
+			$response	= backup::import_structure_json_data(
+				$data,
+				$ar_tld
+			);
 
 
 		return $response;
