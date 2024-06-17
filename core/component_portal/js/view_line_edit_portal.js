@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {
 		render_column_component_info,
@@ -15,6 +14,8 @@
 		render_references,
 	} from './render_edit_component_portal.js'
 	import {delete_dataframe} from '../../component_common/js/component_common.js'
+
+
 
 /**
 * VIEW_LINE_EDIT_PORTAL

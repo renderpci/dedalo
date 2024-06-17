@@ -21,6 +21,26 @@ final class dd_utils_api_Test extends TestCase {
 
 
 	/**
+	* TEST_USER_LOGIN
+	* @return void
+	*/
+	public function test_user_login() {
+
+		$user_id = TEST_USER_ID; // Defined in bootstrap
+
+		if (login::is_logged()===false) {
+			login_test::force_login($user_id);
+		}
+
+		$this->assertTrue(
+			login::is_logged()===true ,
+			'expected login true'
+		);
+	}//end test_user_login
+
+
+
+	/**
 	* TEST_GET_LOGIN_CONTEXT
 	* @return void
 	*/
