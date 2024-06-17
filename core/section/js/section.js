@@ -98,7 +98,6 @@ export const section = function() {
 	section.prototype.list_header		= render_list_section.prototype.list_header
 	section.prototype.solved			= render_solved_section.prototype.solved
 
-
 	section.prototype.delete_record		= render_common_section.prototype.delete_record
 
 
@@ -1029,6 +1028,11 @@ section.prototype.delete_section = async function (options) {
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
 * @param object options
+* {
+*	action : string "paginate",
+* 	callback : callable function
+* 	navigation_history : boolean
+* }
 * @return bool
 */
 section.prototype.navigate = async function(options) {
