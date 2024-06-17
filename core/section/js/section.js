@@ -168,7 +168,7 @@ section.prototype.init = async function(options) {
 
 		// session_key
 		self.session_save			= options.session_save ?? true
-		self.session_key			= options.session_key ?? ('section_' + self.tipo +'_'+ self.mode)
+		self.session_key			= options.session_key ?? build_sqo_id(self.tipo, self.mode)
 
 		// view
 		self.view					= options.view ?? null
@@ -1040,11 +1040,8 @@ section.prototype.navigate = async function(options) {
 	const self = this
 
 	// options
-		const action				= options.action || 'paginate'
 		const callback				= options.callback
-		const navigation_history	= options.navigation_history!==undefined
-			? options.navigation_history
-			: false
+		const navigation_history	= options.navigation_history ?? false
 
 	// check_unsaved_data
 		const result = await check_unsaved_data({
@@ -1305,7 +1302,7 @@ section.prototype.goto_list = async function() {
 	// Note that section build method store SQO in local DDBB to preserve user
 	// navigation section filter and pagination. It's recovered here when exists,
 	// to pass values to API server
-		const session_key = 'section_' + self.tipo + '_' + 'list'
+		const session_key = build_sqo_id(self.tipo, 'list')
 		const saved_sqo	= await data_manager.get_local_db_data(
 			session_key, // self.session_key + '_list',
 			'sqo',
@@ -1341,6 +1338,27 @@ section.prototype.goto_list = async function() {
 
 	return true
 }//end goto_list
+
+
+
+/**
+* BUILD_SQO_ID
+* Unified way to compound sqo_id value
+* This string is used as key for section session SQO
+* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
+* @param string tipo
+* 	section tipo like 'oh1'
+* @param string mode
+* 	current section mode like 'list'
+* @return string sqo_id
+* 	final sqo_id like 'section_oh1_list'
+*/
+const build_sqo_id = function(tipo, mode) {
+
+	const sqo_id = ['section', tipo, mode].join('_')
+
+	return sqo_id
+}//end build_sqo_id
 
 
 
