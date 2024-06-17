@@ -20,7 +20,7 @@ Search Query Object is send as part of Request Query Object to be processed by s
 
 ```mermaid
     graph TD
-    A(["User  search 
+    A(["User  search
      {q='orange cat'}"]) -- RQO with SQO--> B
     B(("API :: read()
     action : search"))
@@ -32,17 +32,17 @@ Search Query Object is send as part of Request Query Object to be processed by s
     E --is send to--> F("component_common :: get_search_query()" )
     F-- result -->E
     F-- is send to -->G
-    G("component :: resolve_query_object_sql() 
+    G("component :: resolve_query_object_sql()
       q='orange'")
     F-- is send to -->H
-    H("component :: resolve_query_object_sql() 
+    H("component :: resolve_query_object_sql()
       q='cat' ")
     G-- result -->F
     H-- result -->F
     C-- wait for preparse--> I("search :: parse_search_query_object()" )
     I--SQL--> J("JSON_RecordOBJ_matrix :: search_free()" )
     J--SQL-->Q[(matrix tables)]
-    Q --PgSql\Result--> K{{"result :: 
+    Q --PgSql\Result--> K{{"result ::
     {ar_records:[{'Raspa'}]}"}}
     K --Object--> B
     B --JSON--> A
@@ -163,11 +163,11 @@ rs197.section_tipo,
 rs197.datos
 FROM matrix AS rs197
 WHERE rs197.id in (
-    SELECT DISTINCT ON(rs197.section_id,rs197.section_tipo) rs197.id 
+    SELECT DISTINCT ON(rs197.section_id,rs197.section_tipo) rs197.id
     FROM matrix AS rs197
     WHERE (
-            rs197.section_tipo='rsc197') AND 
-            rs197.section_id>0  AND 
+            rs197.section_tipo='rsc197') AND
+            rs197.section_id>0  AND
             (f_unaccent(rs197.datos#>>'{components,rsc86,dato}') ~* f_unaccent('.*\[".*Ana.*'))
     ORDER BY rs197.section_id ASC
     LIMIT 10
@@ -318,8 +318,8 @@ Example: give me the time machine of the Oral History section [oh1](https://deda
   "order" : [{
     "direction" : "DESC",
     "path" : [
-      { 
-        "component_tipo" : "id" 
+      {
+        "component_tipo" : "id"
       }
       ]
   }]
@@ -364,7 +364,7 @@ It will be parsed as SQL WHERE sentence like:
 ```sql
 ...
   WHERE q = "Isis"
-... 
+...
 ```
 
 And some other filter items could be added as objects in array, ex with `$or`operator:
@@ -385,7 +385,7 @@ It will be parsed as SQL WHERE sentence like:
 ```sql
 ...
   WHERE (q = 'Isis') OR (q = 'Raspa')
-... 
+...
 ```
 
 And nested operators could be added:
@@ -411,7 +411,7 @@ So nested operations will be parsed as SQL WHERE sentence like:
 ```sql
 ...
   WHERE ((q = 'Isis' OR q = 'Raspa') AND q = 'Osiris')
-... 
+...
 ```
 
 !!! note "Use of q name"
@@ -564,11 +564,11 @@ Example: search the id's 1 and 6 of interviews [oh1](https://dedalo.dev/ontology
 And it will be passed:
 
 ```sql
-SELECT * 
+SELECT *
 FROM matrix AS oh1
-WHERE (oh1.section_tipo='oh1') AND 
+WHERE (oh1.section_tipo='oh1') AND
     (oh1.section_id = 1 OR oh1.section_id = 6)
-ORDER BY oh1.section_id ASC 
+ORDER BY oh1.section_id ASC
 LIMIT 10
 ```
 
@@ -600,7 +600,7 @@ And it will be passed:
 ```sql
 SELECT *
 FROM matrix AS oh1
-WHERE (oh1.section_tipo='oh1') AND 
+WHERE (oh1.section_tipo='oh1') AND
     (oh1.section_id IN(1,6))
 ORDER BY oh1.section_id ASC
 LIMIT 10
@@ -655,11 +655,11 @@ The previous locator to search can be flatten as: `numisdata309_numisdata300_1` 
 It will be format as SQL:
 
 ```sql
-SELECT * 
+SELECT *
 FROM matrix AS nu3
 WHERE (nu3.section_tipo='numisdata3') AND nu3.section_id>0  AND (
    relations_flat_fct_st_si(nu3.datos)@> '["numisdata309_numisdata300_1"]')
-ORDER BY nu3.section_id ASC 
+ORDER BY nu3.section_id ASC
 LIMIT 10
 ```
 
@@ -793,7 +793,7 @@ It will be transform to SQL as:
 ```sql
 SELECT DISTINCT *
 FROM matrix AS oh1
-WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
   (f_unaccent(oh1.datos#>>'{components,oh23,dato}') ~* f_unaccent('.*".*Bèl·lic.*') )
 ORDER BY oh1.section_id ASC
 LIMIT 10
@@ -826,7 +826,7 @@ The SQL where sentence will doesn't have the unaccent function.
 ```sql
 SELECT DISTINCT *
 FROM matrix AS oh1
-WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
   (oh1.datos#>>'{components,oh23,dato}' ~* '.*".*Bélic.*')
 ORDER BY oh1.section_id ASC
 LIMIT 10
@@ -982,9 +982,9 @@ Example: search the first 10 interviews [oh1](https://dedalo.dev/ontology/oh1) w
 --1 search the records:
 SELECT *
 FROM matrix AS oh1
-WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND 
+WHERE (oh1.section_tipo='oh1') AND oh1.section_id>0  AND
     (f_unaccent(oh1.datos#>>'{components,oh16,dato}') ~* f_unaccent('.*\[".*mother.*'))
-ORDER BY oh1.section_id ASC 
+ORDER BY oh1.section_id ASC
 LIMIT 10;
 
 -- 2 count the total
@@ -1052,7 +1052,7 @@ UNION ALL
 SELECT section_tipo, COUNT(*) as full_count
 FROM "matrix_test"
 WHERE (relations_flat_st_si(datos) @> '["dc1_1"]'::jsonb)
-    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205');
+    AND (section_tipo = 'tch1' OR section_tipo = 'rsc205')
 GROUP BY section_tipo
 ```
 
@@ -1172,7 +1172,7 @@ Example: give me the first 10 records of Numismatic objects [numisdata4](https:/
 It will be processed as SQL:
 
 ```sql
-SELECT * 
+SELECT *
 FROM (
     SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
     nu4.section_tipo,
@@ -1253,7 +1253,7 @@ Example: give me the first 10 records of Numismatic objects [numisdata4](https:/
 It will be processed as SQL:
 
 ```sql
-SELECT * 
+SELECT *
 FROM (
     SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
     nu4.section_tipo,
@@ -1284,7 +1284,7 @@ Example: give the list of Numismatic object section [numisdata4](https://dedalo.
   "order_custom": [{
     "section_tipo":"numisdata4",
     "column_name": "section_id",
-    "column_values": [5,3,1] 
+    "column_values": [5,3,1]
   }]
 }
 ```
@@ -1292,7 +1292,7 @@ Example: give the list of Numismatic object section [numisdata4](https://dedalo.
 The equivalent SQL:
 
 ```sql
-SELECT * 
+SELECT *
 FROM (
     SELECT DISTINCT ON (nu4.section_id) nu4.section_id,
     nu4.section_tipo,
@@ -1301,7 +1301,7 @@ FROM (
     WHERE (nu4.section_tipo='numisdata4') AND nu4.section_id>0
     ORDER BY nu4.section_id ASC
 ) main_select
-LEFT JOIN (VALUES ('numisdata4',5,1),('numisdata4',3,2),('numisdata4',1,3)) as x(ordering_section_tipo, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section_tipo 
+LEFT JOIN (VALUES ('numisdata4',5,1),('numisdata4',3,2),('numisdata4',1,3)) as x(ordering_section_tipo, ordering_id, ordering) ON main_select.section_id=x.ordering_id AND main_select.section_tipo=x.ordering_section_tipo
 ORDER BY x.ordering ASC
 LIMIT 10
 ```
