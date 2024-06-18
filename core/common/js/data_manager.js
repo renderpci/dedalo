@@ -464,7 +464,7 @@ data_manager.get_local_db = async function() {
 	return new Promise(function(resolve, reject){
 
 		// open db. Let us open our database (name, version)
-			const db_request = current_indexedDB.open('dedalo', 9);
+			const db_request = current_indexedDB.open('dedalo', 10);
 
 		// error case
 			db_request.onerror = function(event) {
@@ -514,6 +514,8 @@ data_manager.get_local_db = async function() {
 						console.log(`[get_local_db] Deleting ObjectStore (table) sqo`);
 					}
 					db.createObjectStore('sqo', { keyPath:'id' });
+				// pagination
+					db.objectStoreNames.contains('pagination') || db.createObjectStore('pagination', { keyPath:'id' });
 			};
 	})
 	.catch(err => {
