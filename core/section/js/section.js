@@ -168,7 +168,7 @@ section.prototype.init = async function(options) {
 
 		// session_key
 		self.session_save			= options.session_save ?? true
-		self.session_key			= options.session_key ?? build_sqo_id(self.tipo, self.mode)
+		self.session_key			= options.session_key ?? build_sqo_id(self.tipo)
 
 		// view
 		self.view					= options.view ?? null
