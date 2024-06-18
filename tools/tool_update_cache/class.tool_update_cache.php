@@ -41,7 +41,7 @@ class tool_update_cache extends tool_common {
 			RecordObj_time_machine::$save_time_machine_version	= false;
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
+			$sqo_id	= section::build_sqo_id($section_tipo);
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 				$response->msg .= ' Section session sqo not found!';
 				debug_log(__METHOD__

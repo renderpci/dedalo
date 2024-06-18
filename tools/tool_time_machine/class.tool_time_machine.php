@@ -92,7 +92,7 @@ class tool_time_machine extends tool_common {
 								$tm_result = $RecordObj_time_machine->Save();
 
 							// reset section session sqo
-								$sqo_id	= section::build_sqo_id($section_tipo, 'list'); // implode('_', ['section', $section_tipo]); // cache key sqo_id
+								$sqo_id	= section::build_sqo_id($section_tipo);
 								if (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 									unset($_SESSION['dedalo']['config']['sqo'][$sqo_id]);
 								}
