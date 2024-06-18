@@ -516,6 +516,18 @@ section.prototype.build = async function(autoload=false) {
 				if (self.rqo.sqo.offset===null) {
 					self.rqo.sqo.offset = default_offset
 				}
+				// always fix current pagination value, even if is not different
+				// Updates local DB pagination values. Don't await here
+					data_manager.set_local_db_data(
+						{
+							id		: `${self.tipo}_${self.mode}`,
+							value	: {
+								limit	: self.rqo.sqo.limit,
+								offset	: self.rqo.sqo.offset
+							}
+						},
+						'pagination'
+					)
 
 			// build_autoload
 			// Use unified way to load context and data with
