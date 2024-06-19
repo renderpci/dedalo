@@ -678,15 +678,14 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 						// const fields_separator = self.caller.fields_separator || ' | '
 						const value = ar_value
 
-
 					// record_data
 						const record_data = {
-							section_tipo		: section_tipo,
-							section_id			: record['id'],
-							type				: 'dd687',
-							// from_component_tipo	: ar_selected_fields[0].tipo,
-							tipo				: fields[j].tipo,
-							value				: value
+							section_tipo	: section_tipo,
+							section_id		: record['id'],
+							type			: 'dd687',
+							tipo			: fields[j].tipo,
+							mode			: 'list',
+							value			: value
 						}
 
 					// insert formatted item
