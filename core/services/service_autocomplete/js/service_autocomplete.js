@@ -618,6 +618,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 	// fields of Zenon 'title' for zenon4
 		const fields		= rqo_search.show.ddo_map
 		const fields_length	= fields.length
+
 	// section_tipo of Zenon zenon1
 		const section_tipo	= fields[0].section_tipo
 
@@ -634,7 +635,9 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			const records_length	= records.length
 			const separator = ' - '
 			for (let i = 0; i < records_length; i++) {
-				const record 	= records[i]
+
+				const record = records[i]
+
 				for (let j = 0; j < fields_length; j++) {
 
 					const field = fields[j].fields_map[0].remote
@@ -692,7 +695,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 						components_data.push(record_data)
 				}//end iterate fields
 
-				//locator
+				// locator
 					const locator = {
 						section_tipo	: section_tipo,
 						section_id		: record['id']
@@ -701,8 +704,9 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 				// insert formatted locator
 				section_data.push(locator)
 			}//end iterate records
+
 			// create the section and your data
-			const section ={
+			const section = {
 				section_tipo	: section_tipo,
 				tipo			: self.caller.tipo,
 				value			: section_data,
@@ -725,7 +729,7 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			}
 
 			return response
-		}
+		}//end format_data function
 
 	// trigger vars
 

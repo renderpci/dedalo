@@ -982,13 +982,6 @@ component_portal.prototype.update_pagination_values = function(action) {
 				}
 		}
 
-	// set_local_db_data updated rqo
-		// const rqo = self.rqo
-		// data_manager.set_local_db_data(
-		// 	rqo,
-		// 	'rqo'
-		// )
-
 
 	return true
 }//end update_pagination_values
