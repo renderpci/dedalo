@@ -1519,39 +1519,6 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 	// clone request_config_object
 		const request_config_object = clone(_request_config_object)
 
-	// local_db_data. get value if exists.
-	// Allow, for example, to return to the last paginated list preserving the user's
-	// navigation offset
-		// const saved_rqo = await data_manager.get_local_db_data(self.id, 'rqo')
-		// if(saved_rqo){
-		// 	if (request_config_object.sqo) {
-		// 		let to_save = false
-		// 		saved_rqo.sqo = saved_rqo.sqo || {}
-		// 		// update saved offset if is different from received config
-		// 			if (typeof request_config_object.sqo.filter!=='undefined' && saved_rqo.sqo.filter!==request_config_object.sqo.filter) {
-		// 				saved_rqo.sqo.filter = request_config_object.sqo.filter
-		// 				to_save = true
-		// 				console.warn("updated filter in saved_rqo:", saved_rqo);
-		// 			}
-		// 		// update saved offset if is different from received config
-		// 			if (typeof request_config_object.sqo.offset!=='undefined' && saved_rqo.sqo.offset!==request_config_object.sqo.offset) {
-		// 				saved_rqo.sqo.offset = request_config_object.sqo.offset
-		// 				to_save = true
-		// 				console.warn("updated offset in saved_rqo:", saved_rqo);
-		// 			}
-		// 		if (to_save===true) {
-		// 			// set_local_db_data updated rqo
-		// 				const rqo = saved_rqo
-		// 				data_manager.set_local_db_data(
-		// 					rqo,
-		// 					'rqo'
-		// 				)
-		// 		}
-		// 	}
-		// 	console.warn("returning saved_rqo:", saved_rqo);
-		// 	return saved_rqo
-		// }
-
 	// source. build new one with source of the instance caller (self)
 		const source = create_source(self, action)
 
@@ -1605,13 +1572,6 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 				: null;
 		}
 
-		// (!) somebody use this ? (count don't need this anymore..)
-			// sqo.full_count = (sqo.full_count)
-			// 	? sqo.full_count
-			// 	: (sqo_config && sqo_config.full_count)
-			// 		? sqo_config.full_count
-			// 		: false
-
 	// filter_by_locators
 		const filter_by_locators = (sqo.filter_by_locators)
 			? sqo.filter_by_locators
@@ -1645,12 +1605,6 @@ common.prototype.build_rqo_show = async function(_request_config_object, action,
 			}
 			// console.warn("added rqo.show:", self.tipo, self.mode, rqo.show);
 		}
-
-	// set_local_db_data updated rqo
-		// data_manager.set_local_db_data(
-		// 	rqo,
-		// 	'rqo'
-		// )
 
 
 	return rqo
