@@ -331,8 +331,7 @@ const render_item_hierarchy = (options) => {
 							mode	: 'list',
 							// this config comes from properties (used by section_tool to define the config of the section that its called)
 							config	: safe_item.config || null
-						},
-						sqo : sqo
+						}
 					})
 				}
 
