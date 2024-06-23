@@ -5,13 +5,11 @@
 
 
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_check_box} from './view_default_edit_check_box.js'
 	import {view_tools_edit_check_box} from './view_tools_edit_check_box.js'
 	import {view_line_edit_check_box} from './view_line_edit_check_box.js'
-	// import {render_view_mini} from './render_view_mini.js'
 
 
 
@@ -40,9 +38,6 @@ render_edit_component_check_box.prototype.edit = async function(options) {
 		const view	= self.context.view || 'default'
 
 	switch(view) {
-
-		// case 'mini':
-			// return render_view_mini.render(self, options)
 
 		case 'tools':
 			return view_tools_edit_check_box.render(self, options)
@@ -157,7 +152,6 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// label
-		// const label_string = (SHOW_DEBUG===true) ? label + " [" + section_id + "]" : label
 		const option_label = ui.create_dom_element({
 			element_type	: 'label',
 			inner_html		: label,
@@ -177,33 +171,6 @@ const get_content_value = (i, current_value, self) => {
 			}
 		})
 		input_checkbox.addEventListener('change', function(e){
-
-			// add style modified to wrapper node
-				// if (!self.node.classList.contains('modified')) {
-				// 	self.node.classList.add('modified')
-				// }
-
-			// DES
-				// const action		= (input_checkbox.checked===true) ? 'insert' : 'remove'
-				// const changed_key	= self.get_changed_key(action, datalist_value) // find the data.value key (could be different of datalist key)
-				// const changed_value	= (action==='insert') ? datalist_value : null
-
-				// const changed_data = [Object.freeze({
-				// 	action	: action,
-				// 	key		: changed_key,
-				// 	value	: changed_value
-				// })]
-				// // force to save on every change
-				// 	self.change_value({
-				// 		changed_data	: changed_data,
-				// 		refresh			: false,
-				// 		remove_dialog	: ()=>{
-				// 			return true
-				// 		}
-				// 	})
-				// 	.then(()=>{
-				// 		self.selected_key = i
-				// 	})
 
 			self.change_handler({
 				self			: self,
@@ -236,46 +203,6 @@ const get_content_value = (i, current_value, self) => {
 				parent			: content_value
 			})
 		}
-
-
-	// button_edit
-		// const button_edit = ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'button edit show_on_active',
-		// 	parent			: content_value
-		// })
-		// button_edit.addEventListener("click", function(e){
-		// 	e.stopPropagation()
-		// 	try {
-		// 		// target_section
-		// 			const sqo = self.context.request_config.find(el => el.api_engine==='dedalo').sqo //.sqo.section_tipo
-		// 			const target_section_tipo = sqo.section_tipo[0].tipo
-		// 			console.log("+++ sqo:",sqo);
-		// 		// navigation
-		// 			const user_navigation_options = {
-		// 				source		: {
-		// 					action			: 'search',
-		// 					model			: 'section',
-		// 					tipo			: target_section_tipo,
-		// 					section_tipo	: target_section_tipo,
-		// 					mode			: 'edit',
-		// 					lang			: self.lang
-		// 				},
-		// 				sqo : {
-		// 					section_tipo		: [{tipo : target_section_tipo}],
-		// 					filter				: null,
-		// 					limit				: 1,
-		// 					filter_by_locators	: [{
-		// 						section_tipo	: target_section_tipo,
-		// 						section_id		: section_id
-		// 					}]
-		// 				}
-		// 			}
-		// 		event_manager.publish('user_navigation', user_navigation_options)
-		// 	} catch (error) {
-		// 		console.error(error)
-		// 	}
-		// })
 
 
 	return content_value
@@ -415,4 +342,3 @@ export const get_buttons = (self) => {
 
 
 // @license-end
-

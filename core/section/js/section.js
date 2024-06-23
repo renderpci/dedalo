@@ -1329,12 +1329,12 @@ section.prototype.goto_list = async function() {
 		 }
 
 	// user_navigation event publish
-		const user_navigation_rqo = {
+		const user_navigation_options = {
 			caller_id	: self.id,
 			source		: source,
 			sqo			: sqo  // new sqo to use in list mode
 		}
-		event_manager.publish('user_navigation', user_navigation_rqo)
+		event_manager.publish('user_navigation', user_navigation_options)
 
 
 	return true
