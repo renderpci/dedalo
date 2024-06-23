@@ -135,6 +135,7 @@ abstract class label {
 	/**
 	* SET STATIC VARS
 	* Calculate an fix all labels values from structure (all terms with model 'label')
+	* This method is called by area_maintenance when Ontology is updated
 	* @param string $lang = DEDALO_APPLICATION_LANG
 	* @return array $ar_label
 	*/
@@ -148,27 +149,43 @@ abstract class label {
 			}
 
 		$ar_label	= array();
-		$cached		= true;
+		$cached		= false;
 		$fallback	= true;
 
-		$ar_term = (array)RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
+		$ar_term = RecordObj_dd::get_ar_terminoID_by_modelo_name('label');
 		foreach ($ar_term as $current_terminoID) {
 
 			$RecordObj_dd	= new RecordObj_dd($current_terminoID);
 			$properties		= $RecordObj_dd->get_properties();
 
 			// No data in field 'properties'
-			if(empty($properties) || empty($properties->name)) {
-				debug_log(__METHOD__
-					." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
-					.' properties: '. to_string($properties)
-					, logger::ERROR
-				);
-				continue;
-			}
+				if(empty($properties) || empty($properties->name)) {
+					debug_log(__METHOD__
+						." Ignored Term $current_terminoID with model 'label' don't have properly configured 'properties'. Please solve this ASAP" . PHP_EOL
+						.' properties: '. to_string($properties)
+						, logger::ERROR
+					);
+					continue;
+				}
 
-			// Set value
-			$ar_label[$properties->name] = RecordObj_dd::get_termino_by_tipo($current_terminoID, $lang, $cached, $fallback);
+			// get label value
+				$label = RecordObj_dd::get_termino_by_tipo(
+					$current_terminoID,
+					$lang,
+					$cached,
+					$fallback
+				);
+				if (empty($label)) {
+					debug_log(__METHOD__
+						. " Unable to resolve label for term: " . PHP_EOL
+						. ' current_terminoID: ' . to_string($current_terminoID)
+						, logger::ERROR
+					);
+					continue;
+				}
+
+			// add
+				$ar_label[$properties->name] = $label;
 		}
 
 		if(SHOW_DEBUG===true) {
