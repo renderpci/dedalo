@@ -3025,6 +3025,7 @@ define('SERVER_PROXY', '192.0.0.1:3128');
 ```
 
 > In the string could add user and password as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
+
 ---
 
 ### Defining source version uri
