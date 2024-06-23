@@ -526,17 +526,61 @@ include(DEDALO_CORE_PATH . '/base/version.inc');
 
 ---
 
-### Database config  / connection
+## Sessions
+
+---
+
+### Defining session path
 
 ./dedalo/config/config.php
 
-Dédalo need to import the config4_db.php file to load the database connection configuration. This file contains the PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
+DEDALO_SESSIONS_PATH `string`
+
+This parameter defines the path directory to store the session files.
+
+!!! warning "About the sessions directory"
+    Sessions contains important information about the users and their configuration, be aware to use a secure session directory to store this information. Usually Dédalo uses a directory outside the httpdocs directory defined in Apache vhost to avoid any URL access. Read the PHP information [here](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path).
 
 ```php
-include(DEDALO_CONFIG_PATH . '/config_db.php');
+define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
 ```
 
-### Session
+In a Ubuntu server, the path to the sessions directory will be located into the user `$HOME` like:
+
+```bash
+├── home
+│    ├── dedalo_user
+│    │    ├── sessions
+│    │    ├── httpdocs
+│    │    │    ├──dedalo
+│    │    │    │    ├──core
+│    │    │    │    ├──lib
+│    │    │    │    ├──...
+│    │    ├── backups
+│    │    └── logs
+```
+
+In this configuration, Apache `DocumentRoot` and `<Directory>` directives would point to `httpdocs` directory
+
+> /home/dedalo_user/httpdocs
+
+```apacheconf
+DocumentRoot "/home/dedalo_user/httpdocs"
+<Directory /home/dedalo_user/httpdocs>
+    SSLRequireSSL
+    Options FollowSymLinks
+    Options -Includes
+    AllowOverride All
+</Directory>
+```
+
+And `DEDALO_SESSIONS_PATH` would point to `sessions` directory (default configuration)
+
+> /home/dedalo_user/sessions
+
+This path is like that because `DEDALO_ROOT_PATH` was defined as:
+
+> /home/dedalo_user/httpdocs/dedalo/
 
 ---
 
@@ -580,21 +624,37 @@ $timeout_seconds = intval($session_duration_hours*3600);
 
 Starting the session ensure that the session is open and alive when the user login. The session will start with the format defined.
 
-Session needs to define the if the protocol to store cookies is https or not. Besides if the cookie `samesite` is Lax or Strict, by default is define as `Strict` the timeout and the session_name (using DEDALO_ENTITY parameter).
+Session needs to define if the protocol to store cookies is https or not. Besides if the cookie `samesite` is `Lax` or `Strict`, by default is define as `Strict` the timeout and the session_name (using `DEDALO_ENTITY` parameter).
 
 ```php
 $cookie_secure  = (DEDALO_PROTOCOL==='https://');
 $cookie_samesite = (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
 session_start_manager([
-    'save_handler'    => 'files',
-    'timeout_seconds'  => $timeout_seconds,
-    'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-    'session_name'    => 'dedalo_'.DEDALO_ENTITY
-    'cookie_secure'   => $cookie_secure, // Only https (true | false)
-    'cookie_samesite'  => $cookie_samesite // (None | Lax | Strict)
+    'save_handler'          => 'files',
+    'timeout_seconds'       => $timeout_seconds,
+    'save_path'             => DEDALO_SESSIONS_PATH,
+    'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
+    'session_name'          => 'dedalo_'.DEDALO_ENTITY
+    'cookie_secure'         => $cookie_secure, // Only https (true | false)
+    'cookie_samesite'       => $cookie_samesite // (None | Lax | Strict)
 ]);
 ```
 
+Parameters defined in `session_start_manager` will set into PHP session_manager like:
+
+* save_handler -> [save_handler](https://www.php.net/manual/en/session.configuration.php#ini.session.save-handler)
+* timeout_seconds -> [cache_expire](https://www.php.net/manual/en/session.configuration.php#ini.session.cache-expire)
+* save_path -> [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
+* additional_save_path *(optional)* -> overwrite the [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
+* prevent_session_lock -> [session_write_close](https://www.php.net/manual/en/function.session-write-close.php)
+* session_name -> [session_name](https://www.php.net/manual/en/session.configuration.php#ini.session.name)
+* cookie_secure -> [setcookie | secure](https://www.php.net/manual/en/function.setcookie.php)
+* cookie_samesite -> [setcookie | options | samesite](https://www.php.net/manual/en/function.setcookie.php)
+
+!!! note "About the different handlers"
+    By default, Dédalo uses a `files` handler, and the configuration has the necessary parameters to manage the session. If you want to change the handler to `mencached` or `postgresql` the parameters must be changed accordingly. This handlers are experimental, use it into preproduction, development or lab situations, but not in production.
+
+---
 ## Developer variables
 
 ### Show debug
