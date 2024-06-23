@@ -1010,7 +1010,7 @@ export const ts_object = new function() {
 						// 	//ts_object.toggle_view_children(element_children)
 						// }
 					// })
-			}else{
+			}else if(!element_children){
 				if (SHOW_DEBUG===true) {
 					console.log(new Error().stack);
 				}
