@@ -196,7 +196,7 @@ Some times the source data should be processed before sending a response. There 
         // argument1…N - will be set with the different parameters that the function needs to process the data
         // value1…N - will be set with the value that will be assigned to the parameter"
         "argument1": "value1_text",
-        "argument2": value2_int,
+        "argument2": "value2_int",
         ...
         "argumentN": "valueN_text"
         }
@@ -506,3 +506,26 @@ The order of related data will be the same of the section_id array order, if the
 | 2 | 1 | lg-spa | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
 | 1 | 1 | lg-eng | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
 | 3 | 1 | lg-cat | oh_code1 | \["2","1"] | \["María Gómez", "Manuel González"] | \[ "1945-09-30", "1936"] |
+
+### Check the publication state
+
+skip_publication_state_check `int`
+
+When one user publishes some record, Dédalo checks if this information has changes that are not published, if Dédalo found new data to publish the diffusion process began and the information will be replaced in MySQL. If the register doesn't have new information the process is stopped for this record.
+
+Checking the publication status prevent double, triple o more publications of the same record and all process will be faster (some records will not published), but in some cases can be useful that Dédalo don't check the diffusion state, and perform the publication process for every record has new information or no.
+
+This property configures the publication process to check the new data status or ignore it. This property is stored into the global Dédalo `$_SESSION`.
+
+```php
+$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
+```
+
+| Value | skip state check? |
+|  --- |  ---  |
+| 0 | don't check |
+| 1 | check  |
+
+The property is possible change by users into the publication tool.
+
+![Ignore publication status](assets/20240623_185227_ignore_publication_status.png)

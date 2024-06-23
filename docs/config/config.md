@@ -54,12 +54,17 @@ DEDALO_ROOT_PATH `string`
 
 This parameter define the root directory for Dédalo installation. It is used to define the relative paths inside the server used by internal server commands in the terminal or basic load and server code files. The path is define by you server directory configuration and apache directory configuration.
 
-> Example: /home/www/httpdocs/dedalo
->
-
 ```php
 define('DEDALO_ROOT_PATH', dirname(dirname(__FILE__)));
 ```
+
+Usually `DEDALO_ROOT_PATH` will be:
+
+> /home/www/httpdocs/dedalo
+
+Because `config.php` file `__FILE__` is in the path:
+
+> /home/www/httpdocs/dedalo/config/config.php
 
 ---
 
@@ -373,6 +378,8 @@ define('DEDALO_LOCALE', 'es-ES');
 
 ./dedalo/config/config.php
 
+DEDALO_DATE_ORDER `string`
+
 Defines the default order for the date input by users and to be showed in component_date. By default Dédalo use dmy (European dates format).
 
 Options:
@@ -452,6 +459,201 @@ With the debugger active Dédalo will show lot of messages in the php log and js
 define('DEVELOPMENT_SERVER', false);
 ```
 
+## Core require
+
+### Basic functions
+
+./dedalo/config/config.php
+
+Dédalo need to include core_functions.php file, it has definitions of some basic functions that will use for all Dédalo
+class and methods like encoding or encryption data. This file will be loaded before the session start.
+
+```php
+include(DEDALO_SHARED_PATH . '/core_functions.php');
+```
+
+---
+
+### Defining configuration path
+
+./dedalo/config/config.php
+
+This command include the config core file to control the status of installation.
+
+```php
+include(DEDALO_CONFIG_PATH . '/config_core.php');
+```
+
+---
+
+### Database config  / connection
+
+./dedalo/config/config.php
+
+Dédalo need to import the config4_db.php file to load the database connection configuration. This file contains the PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
+
+```php
+include(DEDALO_CONFIG_PATH . '/config_db.php');
+```
+
+---
+
+### Defining fixed tipos
+
+./dedalo/config/config.php
+
+Dédalo need to import dd_tipos.php file, with the definition of some fixed ontology tipos, that will use to assign
+directly to some functionalities, without call the ontology.
+This file acts as cache of some common tipos, some times when Dédalo need access to fixed part of the ontology is faster use a prefixed tipo than load the ontology and resolve the tipo, this calls are not loaded dynamically.
+
+```php
+include(DEDALO_CORE_PATH . '/base/dd_tipos.php');
+```
+
+> Tipo = Typology of Indirect Programming Object/s.
+
+---
+
+### Version
+
+./dedalo/config/config.php
+
+This command include the version file to control the correspondence between code and data versions.
+
+```php
+include(DEDALO_CORE_PATH . '/base/version.inc');
+```
+
+---
+
+## Sessions
+
+---
+
+### Defining session path
+
+./dedalo/config/config.php
+
+DEDALO_SESSIONS_PATH `string`
+
+This parameter defines the path directory to store the session files.
+
+!!! warning "About the sessions directory"
+    Sessions contains important information about the users and their configuration, be aware to use a secure session directory to store this information. Usually Dédalo uses a directory outside the httpdocs directory defined in Apache vhost to avoid any URL access. Read the PHP information [here](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path).
+
+```php
+define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
+```
+
+In a Ubuntu server, the path to the sessions directory will be located into the user `$HOME` like:
+
+```bash
+├── home
+│    ├── dedalo_user
+│    │    ├── sessions
+│    │    ├── httpdocs
+│    │    │    ├──dedalo
+│    │    │    │    ├──core
+│    │    │    │    ├──lib
+│    │    │    │    ├──...
+│    │    ├── backups
+│    │    └── logs
+```
+
+In this configuration, Apache `DocumentRoot` and `<Directory>` directives would point to `httpdocs` directory
+
+> /home/dedalo_user/httpdocs
+
+```apacheconf
+DocumentRoot "/home/dedalo_user/httpdocs"
+<Directory /home/dedalo_user/httpdocs>
+    SSLRequireSSL
+    Options FollowSymLinks
+    Options -Includes
+    AllowOverride All
+</Directory>
+```
+
+And `DEDALO_SESSIONS_PATH` would point to `sessions` directory (default configuration)
+
+> /home/dedalo_user/sessions
+
+This path is like that because `DEDALO_ROOT_PATH` was defined as:
+
+> /home/dedalo_user/httpdocs/dedalo/
+
+---
+
+### Defining session handler
+
+./dedalo/config/config.php
+
+DEDALO_SESSION_HANDLER `string`
+
+This parameter defines the method used to manage php session for the installation. It could be configured as files, memcached, user or postgresql. By default this parameter is defined as `files`, it means that PHP will use a file stored in the server to save the users sessions.
+
+If you are using memcached, you can activate it to save the sessions in RAM.
+
+Sessions store information about the user connection or the last search done, it will use to reopen Dédalo in the same section of the last session browse by the user or reload the filter with the last search configuration.
+
+```php
+define('DEDALO_SESSION_HANDLER', 'files');
+```
+
+---
+
+### Session lifetime
+
+./dedalo/config/config.php
+
+session_duration_hours `int`
+timeout_seconds `int`
+
+Session lifetime is defined by one calculation of hours convert to seconds. Normally the sessions in Dédalo define 1 journal session (8 hours) and this time will be the max duration of dedalo user session. The session will be deleted when it exceeds the parameter of unused session time.
+
+```php
+$session_duration_hours = 8;
+$timeout_seconds = intval($session_duration_hours*3600);
+```
+
+---
+
+### Starting the session
+
+./dedalo/config/config.php
+
+Starting the session ensure that the session is open and alive when the user login. The session will start with the format defined.
+
+Session needs to define if the protocol to store cookies is https or not. Besides if the cookie `samesite` is `Lax` or `Strict`, by default is define as `Strict` the timeout and the session_name (using `DEDALO_ENTITY` parameter).
+
+```php
+$cookie_secure  = (DEDALO_PROTOCOL==='https://');
+$cookie_samesite = (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
+session_start_manager([
+    'save_handler'          => 'files',
+    'timeout_seconds'       => $timeout_seconds,
+    'save_path'             => DEDALO_SESSIONS_PATH,
+    'prevent_session_lock'  => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
+    'session_name'          => 'dedalo_'.DEDALO_ENTITY
+    'cookie_secure'         => $cookie_secure, // Only https (true | false)
+    'cookie_samesite'       => $cookie_samesite // (None | Lax | Strict)
+]);
+```
+
+Parameters defined in `session_start_manager` will set into PHP session_manager like:
+
+* save_handler -> [save_handler](https://www.php.net/manual/en/session.configuration.php#ini.session.save-handler)
+* timeout_seconds -> [cache_expire](https://www.php.net/manual/en/session.configuration.php#ini.session.cache-expire)
+* save_path -> [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
+* additional_save_path *(optional)* -> overwrite the [save_path](https://www.php.net/manual/en/session.configuration.php#ini.session.save-path)
+* prevent_session_lock -> [session_write_close](https://www.php.net/manual/en/function.session-write-close.php)
+* session_name -> [session_name](https://www.php.net/manual/en/session.configuration.php#ini.session.name)
+* cookie_secure -> [setcookie | secure](https://www.php.net/manual/en/function.setcookie.php)
+* cookie_samesite -> [setcookie | options | samesite](https://www.php.net/manual/en/function.setcookie.php)
+
+!!! note "About the different handlers"
+    By default, Dédalo uses a `files` handler, and the configuration has the necessary parameters to manage the session. If you want to change the handler to `mencached` or `postgresql` the parameters must be changed accordingly. This handlers are experimental, use it into preproduction, development or lab situations, but not in production.
+
 ---
 
 ## Cache
@@ -476,130 +678,6 @@ define('DEDALO_CACHE_MANAGER', (object)[
 > ```php
 > define('DEDALO_CACHE_MANAGER', false );
 > ```
-
-## Core require
-
-### Basic functions
-
-./dedalo/config/config.php
-
-Dédalo need to include core_functions.php file, it has definitions of some basic functions that will use for all Dédalo
-class and methods like encoding or encryption data. This file will be loaded before the session start.
-
-```php
-include(DEDALO_CORE_PATH . '/base/core_functions.php');
-```
-
----
-
-### Defining configuration path
-
-./dedalo/config/config.php
-
-This command include the config core file to control the status of installation.
-
-```php
-include(DEDALO_CONFIG_PATH . '/config_core.php');
-```
-
----
-
-### Defining fixed tipos
-
-./dedalo/config/config.php
-
-Dédalo need to import dd_tipos.php file, with the definition of some fixed ontology tipos, that will use to assign
-directly to some functionalities, without call the ontology.
-This file acts as cache of some common tipos, some times when Dédalo need access to fixed part of the ontology is faster use a prefixed tipo than load the ontology and resolve the tipo, this calls are not loaded dynamically.
-
-```php
-include(DEDALO_CONFIG_PATH . '/dd_tipos.php');
-```
-
-> Tipo = Typology of Indirect Programming Object/s.
-
----
-
-### Version
-
-./dedalo/config/config.php
-
-This command include the version file to control the correspondence between code and data versions.
-
-```php
-include(DEDALO_CONFIG_PATH . '/version.inc');
-```
-
----
-
-### Database config  / connection
-
-./dedalo/config/config.php
-
-Dédalo need to import the config4_db.php file to load the database connection configuration. This file contains the PostgreSQL and MariaDB / MySQL connections. Dédalo interface will use the PostgreSQL connection to manage all datasets, the ontology, etc, and will use the MySQL connection to transform and save the publication versions of the data.
-
-```php
-include(DEDALO_CONFIG_PATH . '/config_db.php');
-```
-
-### Session
-
----
-
-### Defining session handler
-
-./dedalo/config/config.php
-
-DEDALO_SESSION_HANDLER `string`
-
-This parameter defines the method used to manage php session for the installation. It could be configured as files, memcached, user or postgresql by default this parameter is defined as `files`, it means that php will use a file stored in the server to save the users sessions.
-
-If you are using memcached, you can activate it to save the sessions in RAM.
-
-Sessions store information about the user connection or the last search done, it will use to reopen Dédalo in the same section of the last session browse by the user or reload the filter with the last search configuration.
-
-```php
-define('DEDALO_SESSION_HANDLER', 'files');
-```
-
----
-
-### Session lifetime
-
-./dedalo/config/config.php
-
-session_duration_hours `int`
-timeout_seconds `int`
-
-Session lifetime is defined by one calculation of hours convert to seconds. Normally the sessions in Dédalo define 1 journal session (8 hours) and this time will be the max duration of dedalo user session. The session will be deleted when it exceeds this time.
-
-```php
-$session_duration_hours = 8;
-$timeout_seconds = intval($session_duration_hours*3600);
-```
-
----
-
-### Starting the session
-
-./dedalo/config/config.php
-
-Starting the session ensure that the session is open and alive when the user login. The session will start with the format defined.
-
-Session needs to define the if the protocol to store cookies is https or not. Besides if the cookie `samesite` is Lax or Strict, by default is define as `Strict` the timeout and the session_name (using DEDALO_ENTITY parameter).
-
-```php
-$cookie_secure  = (DEDALO_PROTOCOL==='https://');
-$cookie_samesite = (DEVELOPMENT_SERVER===true) ? 'Lax' : 'Strict';
-session_start_manager([
-    'save_handler'    => 'files',
-    'timeout_seconds'  => $timeout_seconds,
-    'prevent_session_lock' => defined('PREVENT_SESSION_LOCK') ? PREVENT_SESSION_LOCK : false,
-    'session_name'    => 'dedalo_'.DEDALO_ENTITY
-    'cookie_secure'   => $cookie_secure, // Only https (true | false)
-    'cookie_samesite'  => $cookie_samesite // (None | Lax | Strict)
-]);
-```
 
 ## Developer variables
 
@@ -645,9 +723,7 @@ define('SHOW_DEVELOPER',
 
 ./dedalo/config/config.php
 
-DEDALO_CORE_PATH `string`
-
-Dédalo needs to include some common classes and tools to be operative. The loader is the responsible for loading the core classes into memory before start the users login process.
+Dédalo needs to include some common classes and tools to be operative. The loader is the responsible for loading the core classes into memory before start the users login process and in every user call.
 
 ```php
 include DEDALO_CORE_PATH . '/base/class.loader.php';
@@ -1035,24 +1111,6 @@ define('DEDALO_DIFFUSION_LANGS', [ 'lg-spa', 'lg-cat', 'lg-eng', ]);
 
 ---
 
-### Defining translator url
-
-./dedalo/config/config.php
-
-DEDALO_TRANSLATOR_URL `string`
-
-This parameter define the external service to translate data.
-
-You can define the URI for external API service that will use in the translation tool. External services provide different APIs and URIs that can be configured here.
-
-```php
-define('DEDALO_TRANSLATOR_URL', 'http://babel.render.net/babel_engine/');
-```
-
->You will need an account in the external service. Dédalo has full integration with [Apertium](https://www.apertium.org) server (open source machine translation). Other external services, like Google translation, IBM Watson, etc will need a developer integration of his API.
->
->If you want to use a machine translation for developer proposes, you can talk with [Render](https://render.es), that support the Dédalo development to get a free account to his machine translation server.
-
 ## Default variables
 
 ### Defining prefix tipos
@@ -1319,7 +1377,6 @@ define('DEDALO_THUMB_EXTENSION', 'jpg');
 
 DEDALO_QUALITY_THUMB `string`
 
-
 This parameter defines the thumb quality definition that can be used for compress the media files.
 
 This parameter will use to compress and store image files used in lists. The compression will use the default file.
@@ -1331,7 +1388,6 @@ This parameter will use to compress and store image files used in lists. The com
 | Image | Will render the default quality, if the default image does not exist it will try to use the original quality.|
 | SVG | Will render the default quality, if the default image does not exist it will try to use the original quality.|
 | 3d | Will render the posterframe.|
-
 
 ```php
 define('DEDALO_QUALITY_THUMB', 'thumb');
@@ -1971,7 +2027,6 @@ define('DEDALO_PDF_EXTENSIONS_SUPPORTED', serialize(['pdf']));
 
 DEDALO_PDF_ALTERNATIVE_EXTENSIONS `array` *optional*
 
-
 This parameter defines the standards file types that will use to create versions of the uploaded PDF files.
 
 Dédalo will use this parameter to create alternative versions of the PDF uploaded, the files formats that will use to convert from the original files uploaded by the users. This parameter is optional and can be used to add other image formats. When the parameter is active, every PDF uploaded will be processed for every quality with every alternative format defines.
@@ -1995,7 +2050,6 @@ In original quality directory:
 >
 > ../media/pdf/original/rsc37_rsc176_1.jpg
 
-
 In web quality directory:
 > ../media/pdf/web/rsc37_rsc176_1.pdf
 >
@@ -2007,22 +2061,6 @@ In web quality directory:
     Alternative versions of PDF increase the rendering process time of uploaded PDF files by ~5 times.
     The render PDF use a high density dpi and reduce the final image to get a good anti-aliased image.
     This process increases the waiting time until the PDF is displayed and usable.
-
----
-
-#### Defining pdf qualities definition
-
-./dedalo/config/config.php
-
-DEDALO_PDF_AR_QUALITY `array`
-
-This parameter defines the different qualities that can be used for pdf files.
-
-This parameter will use to compress pdf files to specific quality. The compression will use the original file and will compress to those qualities when the user demand a specific quality.
-
-```php
-define('DEDALO_PDF_EXTENSIONS_SUPPORTED', ['pdf']);
-```
 
 ---
 
@@ -2102,6 +2140,23 @@ This parameter will use to compress PDF files to specific quality. The compressi
 
 ```php
 define('DEDALO_PDF_AR_QUALITY', [DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
+```
+
+---
+
+#### Defining pdf rendered for html sections
+
+./dedalo/config/config.php
+
+DEDALO_PDF_RENDERER `string` *deprecated*
+
+Path of daemon pdf generator from html.
+
+Used to create a PDF print version of the section. The print version was used in v5 but is not active into v6.
+This parameter defines the path to the library, usually [wkhtmltopdf](https://wkhtmltopdf.org), to be used for process the html pages to pdf format, this library will be used to create a print version of the records.
+
+```php
+define('DEDALO_PDF_RENDERER', '/usr/bin/wkhtmltopdf');
 ```
 
 ---
@@ -2426,7 +2481,7 @@ define('DEDALO_SVG_QUALITY_DEFAULT', 'web');
 
 ./dedalo/config/config.php
 
-DEDALO_PDF_AR_QUALITY `array`
+DEDALO_SVG_AR_QUALITY `array`
 
 This parameter defines the different qualities that can be used transformed svg files.
 
@@ -2439,18 +2494,6 @@ define('DEDALO_SVG_AR_QUALITY', [DEDALO_SVG_QUALITY_DEFAULT, DEDALO_SVG_QUALITY_
 ---
 
 ### HTML
-
-#### Defining html render to pdf library path
-
-./dedalo/config/config.php
-
-DEDALO_PDF_RENDERER `string`
-
-This parameter defines the path to the library, normally wkhtmltopdf, to be used for process the html pages to pdf format, this library will be used to create a print version of the records.
-
-```php
-define('DEDALO_PDF_RENDERER', '/usr/bin/wkhtmltopdf');
-```
 
 ---
 
@@ -2482,7 +2525,6 @@ define('DEDALO_HTML_FILES_EXTENSION', 'html');
 
 ---
 
-
 ### Defining upload temporary directory
 
 ./dedalo/config/config.php
@@ -2491,10 +2533,26 @@ DEDALO_UPLOAD_TMP_DIR `string`
 
 This parameter defines the temporary directory used for upload files.
 
-This parameter will use to store different chunks or files previous to be processed.
+This parameter will be used to store different chunks or files previous to be processed.
 
 ```php
 define('DEDALO_UPLOAD_TMP_DIR', DEDALO_MEDIA_PATH . '/upload/service_upload/tmp');
+```
+
+---
+
+### Defining upload temporary url
+
+./dedalo/config/config.php
+
+DEDALO_UPLOAD_TMP_URL `string`
+
+This parameter defines the temporary URL used for upload files.
+
+This parameter will be used by tools and upload services to get the thumbnails of processed files previously to be upload.
+
+```php
+define('DEDALO_UPLOAD_TMP_URL', DEDALO_MEDIA_URL  . '/upload/service_upload/tmp');
 ```
 
 ---
@@ -2657,20 +2715,6 @@ define('DEDALO_LOCK_COMPONENTS', false);
 
 ---
 
-### Defining lock components notifications
-
-./dedalo/config/config.php
-
-DEDALO_NOTIFICATIONS `bool`
-
-This parameter defines if Dédalo will notify to the user than other users are editing the same field in the same section when the user try to edit the field.
-
-```php
-define('DEDALO_NOTIFICATIONS', false);
-```
-
----
-
 ### Defining protect media files for external access
 
 ./dedalo/config/config.php
@@ -2687,9 +2731,23 @@ define('DEDALO_PROTECT_MEDIA_FILES', false);
 
 ---
 
-### Defining node js library path
+### Defining lock components notifications
 
 ./dedalo/config/config.php
+
+DEDALO_NOTIFICATIONS `bool`
+
+This parameter defines if Dédalo will notify to the user than other users are editing the same field in the same section when the user try to edit the field.
+
+```php
+define('DEDALO_NOTIFICATIONS', false);
+```
+
+---
+
+### Defining node js library path
+
+./dedalo/config/config.php *deprecated*
 
 DEDALO_NODEJS `string`
 
@@ -2703,7 +2761,7 @@ define('DEDALO_NODEJS', '/usr/bin/node');
 
 ### Defining node js pm2 library path
 
-./dedalo/config/config.php
+./dedalo/config/config.php *deprecated*
 
 DEDALO_NODEJS_PM2 `string`
 
@@ -2837,29 +2895,6 @@ On true, the paths will be simplified to the file name like 'rsc37_rsc176_34.pdf
 
 ---
 
-### Check the publication state
-
-./dedalo/config/config.php
-
-skip_publication_state_check `int`
-
-When one user publishes some record, Dédalo checks if this information has changes that are not published, if Dédalo found new data to publish the diffusion process began and the information will be replaced in MySQL. If the register doesn't have new information the process is stopped for this record.
-
-Checking the publication status prevent double, triple o more publications of the same record and all process will be faster (some records will not published), but in some cases can be useful that Dédalo don't check the diffusion state, and perform the publication process for every record has new information or no.
-
-This property configures the publication process to check the new data status or ignore it. This property is stored into the global Dédalo $_SESSION.
-
-```php
-$_SESSION['dedalo4']['config']['skip_publication_state_check'] = 1;
-```
-
-| Value | skip state check? |
-|  --- |  ---  |
-| 0 | don't check |
-| 1 | check  |
-
----
-
 ### Defining diffusion custom
 
 ./dedalo/config/config.php
@@ -2990,6 +3025,7 @@ define('SERVER_PROXY', '192.0.0.1:3128');
 ```
 
 > In the string could add user and password as proxy needs. Ex: my_user:my_pw@192.0.0.1:3128
+
 ---
 
 ### Defining source version uri
@@ -3077,10 +3113,15 @@ define('DEDALO_MAINTENANCE_MODE', false);
 
 ./dedalo/config/config.php
 
-notice_to_active_users() `function`
+DEDALO_NOTIFICATION `array`
 
-This function activates a message for all registered users, it could be used to advertise if the server will need to shut down or other actions that users should know about. This function admin two different parameters, the message and the mode.
+This parameter activates a message for all registered users, it could be used to advertise if the server will need to shut down or other actions that users should know about. This parameter admin two different properties, the message and the and the class_name.
 
 ```php
-notice_to_active_users(array('msg'=>'Please leave the session', 'mode'=>"warning"));
+notice_to_active_users(array('msg'=>'Please leave the session', 'class_name'=>"warning"));
 ```
+
+Properties:
+
+* `msg`. The text to be print into the user interface
+* `class_name`. CSS class to be applied to the msg
