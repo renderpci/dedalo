@@ -2,8 +2,8 @@
 
 Last modification date:
 
-2024-03-16T20:07:43+01:00
+2024-06-22T11:27:19+02:00
 
 Dédalo version
 
-6.1.0
+6.2.3

@@ -1587,7 +1587,7 @@
 		"active_in_thesaurus": true
 	},
 	{
-		"tld": "resanalysis",
+		"tld": "labanalysis",
 		"label": "Analysis",
 		"typology": 10,
 		"active_in_thesaurus": true
@@ -1668,6 +1668,20 @@
 		"tld": "utoponymy",
 		"label": "Unofficial toponymy",
 		"typology": 2,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
+	},
+	{
+		"tld": "htoponymy",
+		"label": "Historical toponymy",
+		"typology": 2,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
+	},
+	{
+		"tld": "authority",
+		"label": "Authority",
+		"typology": 1,
 		"active_in_thesaurus": false,
 		"install_checked_default": true
 	},
