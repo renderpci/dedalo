@@ -503,12 +503,14 @@ section.prototype.build = async function(autoload=false) {
 
 			// pagination. Set pagination from saved local_db_data if exists
 			// Updates the rqo.sqo pagination properties with local DB values
-				const saved_pagination = await data_manager.get_local_db_data(
-					`${self.tipo}_${self.mode}`,
-					'pagination'
-				);
-				const default_limit		= saved_pagination?.value.limit || (self.mode==='edit' ? 1 : 10);
-				const default_offset	= saved_pagination?.value.offset || 0;
+				const saved_pagination = self.session_save===false
+					? false
+					: await data_manager.get_local_db_data(
+						`${self.tipo}_${self.mode}`,
+						'pagination'
+					);
+				const default_limit		= saved_pagination.value?.limit || (self.mode==='edit' ? 1 : 10);
+				const default_offset	= saved_pagination.value?.offset || 0;
 				// fill sqo empty values with final values if necessary
 				if (self.rqo.sqo.limit===null) {
 					self.rqo.sqo.limit = default_limit
@@ -518,16 +520,18 @@ section.prototype.build = async function(autoload=false) {
 				}
 				// always fix current pagination value, even if is not different
 				// Updates local DB pagination values. Don't await here
-					data_manager.set_local_db_data(
-						{
-							id		: `${self.tipo}_${self.mode}`,
-							value	: {
-								limit	: self.rqo.sqo.limit,
-								offset	: self.rqo.sqo.offset
-							}
-						},
-						'pagination'
-					)
+					if (self.session_save===true) {
+						data_manager.set_local_db_data(
+							{
+								id		: `${self.tipo}_${self.mode}`,
+								value	: {
+									limit	: self.rqo.sqo.limit,
+									offset	: self.rqo.sqo.offset
+								}
+							},
+							'pagination'
+						)
+					}
 
 			// build_autoload
 			// Use unified way to load context and data with
@@ -705,16 +709,18 @@ section.prototype.build = async function(autoload=false) {
 
 					// save pagination
 					// Updates local DB pagination values
-						await data_manager.set_local_db_data(
-							{
-								id		: `${self.tipo}_${self.mode}`,
-								value	: {
-									limit	: self.rqo.sqo.limit,
-									offset	: self.rqo.sqo.offset
-								}
-							},
-							'pagination'
-						)
+						if (self.session_save===true) {
+							await data_manager.set_local_db_data(
+								{
+									id		: `${self.tipo}_${self.mode}`,
+									value	: {
+										limit	: self.rqo.sqo.limit,
+										offset	: self.rqo.sqo.offset
+									}
+								},
+								'pagination'
+							)
+						}
 
 					// navigate section rows
 						self.navigate({
@@ -1301,13 +1307,15 @@ section.prototype.goto_list = async function() {
 
 	// set pagination from saved local_db_data if exists
 	// Updates the rqo.sqo pagination properties with local DB values
-		const saved_pagination	= await data_manager.get_local_db_data(
-			`${self.tipo}_list`,
-			'pagination'
-		);
-		if (saved_pagination) {
-			sqo.limit = saved_pagination.value.limit
-			sqo.offset = saved_pagination.value.offset
+		if (self.session_save===true) {
+			const saved_pagination = await data_manager.get_local_db_data(
+				`${self.tipo}_list`,
+				'pagination'
+			);
+			if (saved_pagination) {
+				sqo.limit = saved_pagination.value.limit
+				sqo.offset = saved_pagination.value.offset
+			}
 		}
 
 	// source
