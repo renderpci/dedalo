@@ -1672,6 +1672,13 @@
 		"install_checked_default": true
 	},
 	{
+		"tld": "htoponymy",
+		"label": "Historical toponymy",
+		"typology": 2,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
+	},
+	{
 		"tld": "object",
 		"label": "Object",
 		"typology": 11,
