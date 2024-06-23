@@ -5,14 +5,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {clone} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
-	// import {instances, get_instance, delete_instance} from '../../common/js/instances.js'
 	import {render_list_dd_grid} from '../../dd_grid/js/render_list_dd_grid.js'
-	// import {render_table_dd_grid} from '../../dd_grid/js/render_table_dd_grid.js'
-	// import {ui} from '../../common/js/ui.js'
 
 
 
@@ -44,16 +40,11 @@ export const dd_grid = function(){
 */
 // prototypes assign
 	// lifecycle
-	// dd_grid.prototype.init	= common.prototype.init
-	// dd_grid.prototype.build	= common.prototype.build
 	dd_grid.prototype.render	= common.prototype.render
 	dd_grid.prototype.refresh	= common.prototype.refresh
 	dd_grid.prototype.destroy	= common.prototype.destroy
-
 	// render
 	dd_grid.prototype.list		= render_list_dd_grid.prototype.list
-	// dd_grid.prototype.table	= render_table_dd_grid.prototype.table
-	// dd_grid.prototype.csv	= render_csv_dd_grid.prototype.table
 
 
 
@@ -83,10 +74,6 @@ dd_grid.prototype.init	= async function(options) {
 		self.paginator_options = options.paginator_options || {}
 	// totals group options
 		self.totals_group = options.totals_group || {}
-
-	
-	// // show_tipo_in_label
-	// 	self.show_tipo_in_label = options.show_tipo_in_label || false
 
 
 	return common_init
@@ -124,15 +111,12 @@ dd_grid.prototype.build	= async function(autoload=false) {
 
 
 
-
 /**
 * GET_TOTAL
-* called by the paginator when is initiated or refreshed
-*
-* @return int self.total
+* Called by the paginator when is initiated or refreshed
+* @return int self.rqo.sqo.total
 */
 dd_grid.prototype.get_total = async function() {
-
 
 	const self = this
 
@@ -161,8 +145,6 @@ dd_grid.prototype.get_total = async function() {
 
 	// set result
 		self.rqo.sqo.total = api_count_response.result.total
-
-		console.warn(self.rqo.sqo.total)
 
 
 	return self.rqo.sqo.total
