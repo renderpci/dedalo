@@ -1622,14 +1622,14 @@ function session_start_manager(array $options) : bool {
 			// cookie_lifetime. Set the session cookie to timeout
 				ini_set('session.cookie_lifetime', $timeout);
 
-			// save_path
-				if ($save_path!==false) {
-					ini_set('session.save_path', $save_path);
-				}
-
 			// session_name
 				if ($session_name!==false) {
 					session_name($session_name);
+				}
+
+			// save_path
+				if ($save_path!==false) {
+					ini_set('session.save_path', $save_path);
 				}
 
 			// additional_save_path
