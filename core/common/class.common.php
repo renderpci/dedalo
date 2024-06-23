@@ -2685,7 +2685,7 @@ abstract class common {
 				// sqo. Preserves filter across calls using session sqo if exists
 				$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
 				$sqo_id	= ($model==='section')
-					? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+					? section::build_sqo_id($tipo)
 					: null; // cache key sqo_id
 				if ($model==='section') {
 					// dd_core_api::$rqo->sqo is set case
@@ -3199,7 +3199,7 @@ abstract class common {
 							if (isset($parsed_item->show->sqo_config->limit)) {
 								// get session limit if it was defined
 								if ($model==='section') {
-									$sqo_id	= section::build_sqo_id($tipo, $mode); // implode('_', ['section', $tipo]); // cache key sqo_id
+									$sqo_id	= section::build_sqo_id($tipo);
 									$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 										? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 										: $parsed_item->show->sqo_config->limit;
@@ -3302,7 +3302,7 @@ abstract class common {
 								// if (isset($parsed_item->search->sqo_config->limit)) {
 								// 	// get session limit if it was defined
 								// 	if ($model==='section') {
-								// 		$sqo_id	= section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo]); // cache key sqo_id
+								// 		$sqo_id	= section::build_sqo_id($tipo) // implode('_', ['section', $tipo]); // cache key sqo_id
 								// 		$parsed_item->sqo->limit = (isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit))
 								// 			? $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit
 								// 			: $parsed_item->search->sqo_config->limit;

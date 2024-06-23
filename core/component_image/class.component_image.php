@@ -2163,6 +2163,27 @@ class component_image extends component_media_common implements component_media_
 				}
 			}
 
+		/**
+		* @todo working here
+		// default quality replace file when a original or modified exists
+		// This forces to create a fresh version of the modified/original file
+		// because in some situations (like modified manual upload file) we
+		// need to update default. Note that thumb is always updated
+		// Note that this action, re-creates the SVG file too
+			// $sources = [
+			// 	$this->get_media_filepath( $this->get_modified_quality() ), // option 1
+			// 	$this->get_media_filepath( $this->get_original_quality() ) // options 2
+			// ];
+			// foreach ($sources as $current_path) {
+			// 	if (file_exists($current_path)) {
+			// 		// create a new default quality file
+			// 		$this->build_version(
+			// 			$this->get_default_quality()
+			// 		);
+			// 	}
+			// }
+			*/
+
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
 

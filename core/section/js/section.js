@@ -98,7 +98,6 @@ export const section = function() {
 	section.prototype.list_header		= render_list_section.prototype.list_header
 	section.prototype.solved			= render_solved_section.prototype.solved
 
-
 	section.prototype.delete_record		= render_common_section.prototype.delete_record
 
 
@@ -169,7 +168,7 @@ section.prototype.init = async function(options) {
 
 		// session_key
 		self.session_save			= options.session_save ?? true
-		self.session_key			= options.session_key ?? ('section_' + self.tipo +'_'+ self.mode)
+		self.session_key			= options.session_key ?? build_sqo_id(self.tipo)
 
 		// view
 		self.view					= options.view ?? null
@@ -502,6 +501,34 @@ section.prototype.build = async function(autoload=false) {
 			// view
 				self.rqo.source.view = self.view
 
+			// pagination. Set pagination from saved local_db_data if exists
+			// Updates the rqo.sqo pagination properties with local DB values
+				const saved_pagination = await data_manager.get_local_db_data(
+					`${self.tipo}_${self.mode}`,
+					'pagination'
+				);
+				const default_limit		= saved_pagination?.value.limit || (self.mode==='edit' ? 1 : 10);
+				const default_offset	= saved_pagination?.value.offset || 0;
+				// fill sqo empty values with final values if necessary
+				if (self.rqo.sqo.limit===null) {
+					self.rqo.sqo.limit = default_limit
+				}
+				if (self.rqo.sqo.offset===null) {
+					self.rqo.sqo.offset = default_offset
+				}
+				// always fix current pagination value, even if is not different
+				// Updates local DB pagination values. Don't await here
+					data_manager.set_local_db_data(
+						{
+							id		: `${self.tipo}_${self.mode}`,
+							value	: {
+								limit	: self.rqo.sqo.limit,
+								offset	: self.rqo.sqo.offset
+							}
+						},
+						'pagination'
+					)
+
 			// build_autoload
 			// Use unified way to load context and data with
 			// errors and not login situation managing
@@ -562,28 +589,6 @@ section.prototype.build = async function(autoload=false) {
 
 			// rqo regenerate
 				await generate_rqo()
-
-			// update rqo.sqo.limit. Note that it may have been updated from the API response
-			// Paginator takes limit from: self.rqo.sqo.limit
-				const request_config_item = self.context.request_config
-					? self.context.request_config.find(el => el.api_engine==='dedalo' && el.type==='main')
-					: null // permissions 0 case
-				if (request_config_item) {
-					// Updated self.rqo.sqo.limit. Try sqo and show.sqo_config
-					if (request_config_item.sqo && request_config_item.sqo.limit) {
-						self.rqo.sqo.limit = request_config_item.sqo.limit
-					}else
-					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.limit) {
-						self.rqo.sqo.limit = request_config_item.show.sqo_config.limit
-					}
-					// Updated self.rqo.sqo.offset. Try sqo and show.sqo_config
-					if (request_config_item.sqo && request_config_item.sqo.offset) {
-						self.rqo.sqo.offset = request_config_item.sqo.offset
-					}else
-					if(request_config_item.show && request_config_item.show.sqo_config && request_config_item.show.sqo_config.offset) {
-						self.rqo.sqo.offset = request_config_item.show.sqo_config.offset
-					}
-				}
 
 			// view
 				if (self.context.view) {
@@ -695,26 +700,28 @@ section.prototype.build = async function(autoload=false) {
 						self.request_config_object.sqo.offset	= offset
 						self.rqo.sqo.offset						= offset
 
+					// get sqo after modification for proper navigation
+						const sqo = clone(self.rqo.sqo)
+
+					// save pagination
+					// Updates local DB pagination values
+						await data_manager.set_local_db_data(
+							{
+								id		: `${self.tipo}_${self.mode}`,
+								value	: {
+									limit	: self.rqo.sqo.limit,
+									offset	: self.rqo.sqo.offset
+								}
+							},
+							'pagination'
+						)
+
 					// navigate section rows
 						self.navigate({
-							callback : () => { // callback
-
-								// (!) This code is unified in function 'navigate' ⬇︎
-
-								// // fix new offset value
-								// 	self.request_config_object.sqo.offset	= offset
-								// 	self.rqo.sqo.offset						= offset
-								// // set_local_db_data updated rqo
-								// 	if (self.mode==='list') {
-								// 		const rqo = self.rqo
-								// 		data_manager.set_local_db_data(
-								// 			rqo,
-								// 			'rqo'
-								// 		)
-								// 	}
+							callback : async () => { // callback
 							},
-							navigation_history	: true, // bool navigation_history save
-							action				: 'paginate'
+							sqo					: sqo,
+							navigation_history	: true // bool navigation_history save
 						})
 				}
 				self.events_tokens.push(
@@ -750,20 +757,6 @@ section.prototype.build = async function(autoload=false) {
 			context			: self.context,
 			datum_context	: self.datum.context
 		})
-
-	// fix SQO to local DDBB. Used later to preserve section filter and pagination across pagination
-		if (self.session_save===true) {
-			if(SHOW_DEVELOPER===true) {
-				console.warn('to local DDBB value :', self.session_key, self.rqo.sqo);
-			}
-			data_manager.set_local_db_data(
-				{
-					id		: self.session_key,
-					value	: self.rqo.sqo
-				},
-				'sqo'
-			)
-		}
 
 	// debug
 		if(SHOW_DEBUG===true) {
@@ -1029,6 +1022,11 @@ section.prototype.delete_section = async function (options) {
 * Refresh the section instance with new sqo params creating a
 * history footprint. Used to paginate and sort records
 * @param object options
+* {
+* 	callback : callable function optional
+* 	navigation_history : boolean, navigation_history save
+* 	sqo : object (clone before apply offset)
+* }
 * @return bool
 */
 section.prototype.navigate = async function(options) {
@@ -1036,11 +1034,9 @@ section.prototype.navigate = async function(options) {
 	const self = this
 
 	// options
-		const action				= options.action || 'paginate'
 		const callback				= options.callback
-		const navigation_history	= options.navigation_history!==undefined
-			? options.navigation_history
-			: false
+		const navigation_history	= options.navigation_history ?? false
+		const sqo					= options.sqo
 
 	// check_unsaved_data
 		const result = await check_unsaved_data({
@@ -1061,7 +1057,7 @@ section.prototype.navigate = async function(options) {
 			await callback()
 		}
 
-	// loading
+	// loading styles
 		if (self.node_body){
 			self.node_body.classList.add('loading')
 		}
@@ -1074,7 +1070,7 @@ section.prototype.navigate = async function(options) {
 			destroy : false // avoid to destroy here to allow section to recover from loosed login scenarios
 		})
 
-	// loading
+	// loading styles
 		if (self.node_body){
 			self.node_body.classList.remove('loading')
 		}
@@ -1085,9 +1081,8 @@ section.prototype.navigate = async function(options) {
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
 
-			const source	= create_source(self, null)
-			const sqo		= self.request_config_object.sqo
 			const title		= self.id
+			const source	= create_source(self, null)
 
 			// url search. Append section_id if exists
 				const url_vars = url_vars_to_object(location.search)
@@ -1095,10 +1090,11 @@ section.prototype.navigate = async function(options) {
 
 			// browser navigation update
 				push_browser_history({
-					source	: source,
-					sqo		: sqo,
-					title	: title,
-					url		: url
+					source				: source,
+					sqo					: sqo,
+					event_in_history	: false,
+					title				: title,
+					url					: url
 				})
 		}
 
@@ -1297,24 +1293,22 @@ section.prototype.goto_list = async function() {
 
 	// MODE USING PAGE user_navigation
 
-	// saved_sqo
-	// Note that section build method store SQO in local DDBB to preserve user
-	// navigation section filter and pagination. It's recovered here when exists,
-	// to pass values to API server
-		const session_key = 'section_' + self.tipo + '_' + 'list'
-		const saved_sqo	= await data_manager.get_local_db_data(
-			session_key, // self.session_key + '_list',
-			'sqo',
-			true
+	const sqo = clone(self.rqo.sqo)
+
+	// reset pagination from current edit sqo
+		sqo.limit = null
+		sqo.offset = null
+
+	// set pagination from saved local_db_data if exists
+	// Updates the rqo.sqo pagination properties with local DB values
+		const saved_pagination	= await data_manager.get_local_db_data(
+			`${self.tipo}_list`,
+			'pagination'
 		);
-		const sqo = saved_sqo
-			? saved_sqo.value
-			: {
-				filter	: self.rqo.sqo.filter,
-				order	: self.rqo.sqo.order || null
-			  }
-		// always use section request_config_object format instead parsed sqo format
-		sqo.section_tipo = self.request_config_object.sqo.section_tipo
+		if (saved_pagination) {
+			sqo.limit = saved_pagination.value.limit
+			sqo.offset = saved_pagination.value.offset
+		}
 
 	// source
 		const source = {
@@ -1337,6 +1331,25 @@ section.prototype.goto_list = async function() {
 
 	return true
 }//end goto_list
+
+
+
+/**
+* BUILD_SQO_ID
+* Unified way to compound sqo_id value
+* This string is used as key for section session SQO
+* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
+* @param string tipo
+* 	section tipo like 'oh1'
+* @return string sqo_id
+* 	final sqo_id like 'oh1'
+*/
+const build_sqo_id = function(tipo) {
+
+	const sqo_id = tipo
+
+	return sqo_id
+}//end build_sqo_id
 
 
 

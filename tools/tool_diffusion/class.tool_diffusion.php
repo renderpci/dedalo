@@ -264,7 +264,7 @@ class tool_diffusion extends tool_common {
 
 						// list case
 
-						$sqo_id			= section::build_sqo_id($section_tipo, 'list');
+						$sqo_id			= section::build_sqo_id($section_tipo);
 						$sqo_session	= $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 						if ( empty($sqo_session) ) {
 

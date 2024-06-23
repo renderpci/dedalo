@@ -2218,13 +2218,11 @@ final class section_test extends TestCase {
 	*/
 	public function test_build_sqo_id() : void {
 
-		$section_tipo	= self::$section_tipo;
-		$mode			= 'edit';
+		$section_tipo = self::$section_tipo;
 
 		// Note that section is not saved
 		$result = section::build_sqo_id(
-			$section_tipo,
-			$mode
+			$section_tipo
 		);
 
 		$this->assertTrue(
@@ -2233,7 +2231,7 @@ final class section_test extends TestCase {
 			.' result: ' . gettype($result)
 		);
 
-		$eq = ($result==='section_' . $section_tipo . '_' . $mode);
+		$eq = ($result===$section_tipo);
 		$this->assertTrue(
 			$eq===true,
 			'expected equal true in result '. PHP_EOL

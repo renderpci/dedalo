@@ -2453,7 +2453,7 @@ export const ui = {
 				// update rqo (removed way. navigate from page directly wit a user_navigation event bellow)
 				// note that navigate only refresh current instance content_data, not the whole page
 					self.navigate({
-						callback : () => { // callback
+						callback : async () => { // callback
 							self.request_config_object.sqo.order	= order
 							self.rqo.sqo.order						= order
 						},
