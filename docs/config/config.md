@@ -655,6 +655,30 @@ Parameters defined in `session_start_manager` will set into PHP session_manager 
     By default, Dédalo uses a `files` handler, and the configuration has the necessary parameters to manage the session. If you want to change the handler to `mencached` or `postgresql` the parameters must be changed accordingly. This handlers are experimental, use it into preproduction, development or lab situations, but not in production.
 
 ---
+
+## Cache
+
+### Defining cache manager
+
+./dedalo/config/config.php
+
+DEDALO_CACHE_MANAGER `bool || object`
+
+This parameter configure the cache manager to use. By default the cache manager use files in tmp directory.
+
+```php
+define('DEDALO_CACHE_MANAGER', (object)[
+    'manager'  => 'files',
+    'files_path' => '/tmp'
+]);
+```
+
+> When cache manager is set to `files` it will write cache files with complex resolved data of current logged user (like profiles data). You can deactivate it in this way:
+>
+> ```php
+> define('DEDALO_CACHE_MANAGER', false );
+> ```
+
 ## Developer variables
 
 ### Show debug
