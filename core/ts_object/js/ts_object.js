@@ -945,6 +945,8 @@ export const ts_object = new function() {
 	*/
 	this.refresh_element = function(section_tipo, section_id) {
 
+		const self = this
+
 		// Locate all term elements
 		const type				= 'term';
 		const matches			= document.querySelectorAll('.list_thesaurus_element[data-type="'+type+'"][data-section_tipo="'+section_tipo+'"][data-section_id="'+section_id+'"]');
@@ -959,13 +961,18 @@ export const ts_object = new function() {
 		// iterate all matches
 		for (let i = matches_length - 1; i >= 0; i--) {
 
-			// element to hilite
-				ts_object.element_to_hilite = {
-					'section_tipo'	: section_tipo,
-					'section_id'	: section_id
-				}
+			const term_node = matches[i]
 
-			const parent_wrap		= matches[i].parentNode.parentNode.parentNode.parentNode
+			// element to hilite
+				// ts_object.element_to_hilite = {
+				// 	'section_tipo'	: section_tipo,
+				// 	'section_id'	: section_id
+				// }
+				setTimeout(function(){
+					self.hilite_element(term_node)
+				}, 200)
+
+			const parent_wrap		= term_node.parentNode.parentNode.parentNode.parentNode
 			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
 			const is_open			= element_children?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
 			if(element_children && is_open) {
