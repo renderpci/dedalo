@@ -10,7 +10,7 @@ ddd_object is the way to call and modify the ontology nodes.
 
 ## dd_object definition
 
-./core/common/class.dd_object.php
+> ./core/common/class.dd_object.php
 
 **dd_object** `object`
 
@@ -26,7 +26,7 @@ Also ddo is used to request information at working API. Changing ddo properties 
 
 | Property | Type | Description | Value Type | Options | Default | Example |
 | --- | --- | --- | --- | --- | --- |  --- |
-| typo | private  | Fixed property used to identify the dd_object in client | string | ddo |   ddo  |   |
+| typo | private  | `type of object`. Fixed property used to identify the dd_object in client | string | ddo |   ddo  |   |
 | type | public | Defines the general model. It is used to apply common behaviors to components, buttons, etc.  | string | section \| component \| grouper \| button \| area \| tm \| widget \| install \| login \| menu \| tool \| detail \| dd_grid | component |  |
 | tipo | public |  Defines the ontology identification 'tipo' | string |  |  |  oh14 |
 | section_tipo | public |  Defines the ontology identification 'tipo' of the section, when the ddo is a section will be the same tipo ans section_tipo, when the ddo is a component it will be the section of it. | string |  |  |  oh1 |

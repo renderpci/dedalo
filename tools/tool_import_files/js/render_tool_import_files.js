@@ -455,7 +455,7 @@ const render_options_container = function (self, content_data) {
 					const label_field_check_box = ui.create_dom_element({
 						element_type	: 'span',
 						class_name		: 'checkbox-label',
-						inner_html		: get_label.name_to_field || 'Name indicates field',
+						inner_html		: get_label.name_to_field || 'Suffix indicates field',
 						parent			: name_control_field
 					})
 
@@ -468,7 +468,7 @@ const render_options_container = function (self, content_data) {
 						for (let i = 0; i < option_components.length; i++) {
 
 							const option	= option_components[i]
-							const map_name	= option.map_name ? option.map_name + ' = ' : ''
+							const map_name	= option.map_name ? `- ${option.map_name} -> ` : ''
 
 							// option_node
 							ui.create_dom_element({
@@ -518,7 +518,7 @@ const render_options_container = function (self, content_data) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'checkbox-label',
-							inner_html		: get_label.name_to_record_id || 'Name indicates id',
+							inner_html		: get_label.name_to_record_id || 'Prefix indicates id',
 							parent			: name_control_section_id
 						})
 					// set the node to be used when data will send to server
@@ -567,7 +567,7 @@ const render_options_container = function (self, content_data) {
 						ui.create_dom_element({
 							element_type	: 'span',
 							class_name		: 'checkbox-label',
-							inner_html		: get_label.same_name_same_record || 'Same name same record',
+							inner_html		: get_label.same_name_same_record || 'Same name same record. Create new ID',
 							parent			: same_name_same_section
 						})
 
