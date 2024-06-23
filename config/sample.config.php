@@ -115,22 +115,6 @@
 
 
 
-// SESSIONS
-	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
-
-
-
-// cache
-	// dedalo_cache_manager. bool|array.
-	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
-	// sample: value ['manager' => 'files', 'files_path' => '/tmp']
-	define('DEDALO_CACHE_MANAGER', [
-		'manager'		=> 'files',
-		'files_path'	=> DEDALO_SESSIONS_PATH
-	]);
-
-
-
 // required files
 	// core_functions. Basic common functions (before session start)
 	include(DEDALO_SHARED_PATH . '/core_functions.php');
@@ -144,8 +128,10 @@
 	include(DEDALO_CORE_PATH . '/base/version.inc');
 
 
+// SESSIONS
+	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
 
-// session
+
 	if (session_status()!==PHP_SESSION_ACTIVE) {
 
 		# HANDLER
@@ -177,6 +163,15 @@
 		]);
 	}//end if (session_status()!==PHP_SESSION_ACTIVE)
 
+
+// cache
+	// dedalo_cache_manager. bool|array.
+	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
+	// sample: value ['manager' => 'files', 'files_path' => '/tmp']
+	define('DEDALO_CACHE_MANAGER', [
+		'manager'		=> 'files',
+		'files_path'	=> DEDALO_SESSIONS_PATH
+	]);
 
 
 // show_debug
@@ -282,11 +277,6 @@
 	]);
 	// dedalo_diffusion_langs. Default value is the same as project langs. Change for custom diffusion langs
 	define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS);
-	// translator
-	// define('DEDALO_TRANSLATOR_URL' , [
-	// 	'babel' => 'https://babel.render.es/babel_engine/'
-	// ]);	# default Babel: http://babel.render.net/babel_engine/
-
 
 
 // dedalo default config values
@@ -452,7 +442,7 @@
 		// pdf_ar_quality. Array of PDF quality definitions
 		define('DEDALO_PDF_AR_QUALITY',				[DEDALO_PDF_QUALITY_ORIGINAL, DEDALO_PDF_QUALITY_DEFAULT]);
 		// pdf_renderer (path of daemon pdf generator from html) Normally wkhtmltopdf (https://wkhtmltopdf.org) lib is used
-		define('DEDALO_PDF_RENDERER',				'/usr/bin/wkhtmltopdf');
+		// define('DEDALO_PDF_RENDERER',				'/usr/bin/wkhtmltopdf');
 		// automatic_transcription_engine (path of daemon generator of text files from PDF) Using XPDF from http://www.foolabs.com/xpdf/ or https://pdftotext.com
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE','/usr/bin/pdftotext');
 		// OCR engine (path of daemon of OCR) Using ocrmypdf https://ocrmypdf.readthedocs.io/en/latest/index.html
@@ -567,8 +557,8 @@
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
 	define('DEDALO_NOTIFICATIONS',	false);
-	define('DEDALO_NODEJS',			'/usr/bin/node');
-	define('DEDALO_NODEJS_PM2',		'/usr/bin/pm2');
+	// define('DEDALO_NODEJS',			'/usr/bin/node');
+	// define('DEDALO_NODEJS_PM2',		'/usr/bin/pm2');
 
 
 // dedalo_ar_exclude_components
