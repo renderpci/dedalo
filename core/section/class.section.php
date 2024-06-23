@@ -4379,14 +4379,12 @@ class section extends common {
 	* like $_SESSION['dedalo']['config']['sqo'][$sqo_id]
 	* @param string $tipo
 	* 	section tipo like 'oh1'
-	* @param string $mode
-	* 	current section mode like 'list'
 	* @return string $sqo_id
-	* 	final sqo_id like 'section_oh1_list'
+	* 	final sqo_id like 'oh1'
 	*/
-	public static function build_sqo_id(string $tipo, string $mode) {
+	public static function build_sqo_id(string $tipo) {
 
-		$sqo_id = implode('_', ['section', $tipo, $mode]);
+		$sqo_id = $tipo;
 
 		return $sqo_id;
 	}//end build_sqo_id

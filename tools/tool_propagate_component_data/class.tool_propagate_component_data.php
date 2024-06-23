@@ -40,7 +40,7 @@ class tool_propagate_component_data extends tool_common {
 			}
 
 		// RECORDS. Use actual list search options as base to build current search
-			$sqo_id	= section::build_sqo_id($section_tipo, $mode);
+			$sqo_id	= section::build_sqo_id($section_tipo);
 			if (empty($_SESSION['dedalo']['config']['sqo'][$sqo_id])) {
 
 				// sqo create

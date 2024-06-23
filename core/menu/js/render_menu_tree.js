@@ -323,32 +323,6 @@ const render_item_hierarchy = (options) => {
 						  win.focus();
 				}else{
 
-					// SQO
-						// get the saved sqo to reuse into the load
-						// if sqo is not saved into local database, sqo will be null
-						const session_key = safe_item.model + '_' + safe_item.tipo + '_list'
-
-						// get the sqo in local db, it could be saved previously by section or area
-						const saved_sqo	= await data_manager.get_local_db_data(
-							session_key,
-							'sqo',
-							true
-						)
-
-						const sqo = saved_sqo
-							? saved_sqo.value
-							: null
-
-						// sqo will have the section_tipo unresolved
-						// but the sqo format need a object to be resolved in server
-						if(sqo){
-							sqo.section_tipo = [{
-								type : 'ddo',
-								tipo : safe_item.tipo,
-								model: safe_item.model
-							}]
-						}
-
 					// navigate
 					event_manager.publish('user_navigation', {
 						source : {
@@ -357,8 +331,7 @@ const render_item_hierarchy = (options) => {
 							mode	: 'list',
 							// this config comes from properties (used by section_tool to define the config of the section that its called)
 							config	: safe_item.config || null
-						},
-						sqo : sqo
+						}
 					})
 				}
 

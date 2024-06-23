@@ -967,7 +967,8 @@ export const ts_object = new function() {
 
 			const parent_wrap		= matches[i].parentNode.parentNode.parentNode.parentNode
 			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
-			if(element_children) {
+			const is_open			= element_children?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
+			if(element_children && is_open) {
 
 				// pagination is set in DOM element_children from API response in get_children call
 					const pagination = element_children.pagination

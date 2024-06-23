@@ -202,9 +202,12 @@ const render_content_data = function(self) {
 				}
 
 			// hierarchy sections
-				const hierarchy_sections = hierarchy_nodes.filter(node => node.typology_section_id===typology_item.section_id)
-				// sort hierarchy_nodes by alphabetic
-				hierarchy_sections.sort((a, b) => new Intl.Collator().compare(a.target_section_name, b.target_section_name));
+				const hierarchy_sections_full = hierarchy_nodes.filter(node => node.typology_section_id===typology_item.section_id)
+				// sort hierarchy_nodes by order value and alphabetic. First those with a order value and then the rest.
+				const ordered		= hierarchy_sections_full.filter(obj => obj.order !== 0).sort(sort_root_terms)
+				const disordered	= hierarchy_sections_full.filter(obj => obj.order === 0).sort(sort_root_terms);
+				// concatenate all values, ordered and disordered
+				const hierarchy_sections = ordered.concat(disordered)
 				const hierarchy_sections_length = hierarchy_sections.length
 				for (let j = 0; j < hierarchy_sections_length; j++) {
 
@@ -265,6 +268,25 @@ const render_content_data = function(self) {
 
 	return content_data
 }//end render_content_data
+
+
+
+/**
+* SORT_ROOT_TERMS
+* Sort elements by order value and alphabetic ascending.
+* If order value is the same, sort by target_section_name
+* @return int 1|-1
+*/
+const sort_root_terms = function (a, b) {
+	// If first value is same
+	if (a.order == b.order) {
+		// sort by target_section_name like 'Onomastic' ascending
+		return new Intl.Collator().compare(a.target_section_name, b.target_section_name)
+	} else {
+		// order by order value from lowest to highest
+		return a.order - b.order
+	}
+}//end sort_root_terms
 
 
 

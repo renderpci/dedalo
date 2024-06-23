@@ -1387,7 +1387,7 @@ final class dd_core_api {
 			// If session filter exists from current section, add to the sqo
 			// to be consistent with the last search
 			$sqo_id = ($model==='section')
-				? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+				? section::build_sqo_id($tipo)
 				: 'undefined';
 			$sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
@@ -1742,7 +1742,7 @@ final class dd_core_api {
 			$properties			= $ddo_source->properties ?? null;
 			$session_save		= $ddo_source->session_save ?? true;
 			$session_key		= $ddo_source->session_key ?? (($model==='section')
-				? section::build_sqo_id($tipo, $mode) // implode('_', ['section', $tipo])
+				? section::build_sqo_id($tipo)
 				: 'undefined'
 			); // cache key sqo_id;
 			$autocomplete 		= $ddo_source->autocomplete ?? null;
