@@ -700,6 +700,9 @@ section.prototype.build = async function(autoload=false) {
 						self.request_config_object.sqo.offset	= offset
 						self.rqo.sqo.offset						= offset
 
+					// get sqo after modification for proper navigation
+						const sqo = clone(self.rqo.sqo)
+
 					// save pagination
 					// Updates local DB pagination values
 						await data_manager.set_local_db_data(
@@ -715,10 +718,10 @@ section.prototype.build = async function(autoload=false) {
 
 					// navigate section rows
 						self.navigate({
-							callback : () => { // callback
+							callback : async () => { // callback
 							},
-							navigation_history	: true, // bool navigation_history save
-							action				: 'paginate'
+							sqo					: sqo,
+							navigation_history	: true // bool navigation_history save
 						})
 				}
 				self.events_tokens.push(
@@ -1020,9 +1023,9 @@ section.prototype.delete_section = async function (options) {
 * history footprint. Used to paginate and sort records
 * @param object options
 * {
-*	action : string "paginate",
-* 	callback : callable function
-* 	navigation_history : boolean
+* 	callback : callable function optional
+* 	navigation_history : boolean, navigation_history save
+* 	sqo : object (clone before apply offset)
 * }
 * @return bool
 */
@@ -1033,6 +1036,7 @@ section.prototype.navigate = async function(options) {
 	// options
 		const callback				= options.callback
 		const navigation_history	= options.navigation_history ?? false
+		const sqo					= options.sqo
 
 	// check_unsaved_data
 		const result = await check_unsaved_data({
@@ -1053,7 +1057,7 @@ section.prototype.navigate = async function(options) {
 			await callback()
 		}
 
-	// loading
+	// loading styles
 		if (self.node_body){
 			self.node_body.classList.add('loading')
 		}
@@ -1066,7 +1070,7 @@ section.prototype.navigate = async function(options) {
 			destroy : false // avoid to destroy here to allow section to recover from loosed login scenarios
 		})
 
-	// loading
+	// loading styles
 		if (self.node_body){
 			self.node_body.classList.remove('loading')
 		}
@@ -1077,9 +1081,8 @@ section.prototype.navigate = async function(options) {
 	// navigation history. When user paginates, store navigation history to allow browser navigation too
 		if (navigation_history===true) {
 
-			const source	= create_source(self, null)
-			const sqo		= self.request_config_object.sqo
 			const title		= self.id
+			const source	= create_source(self, null)
 
 			// url search. Append section_id if exists
 				const url_vars = url_vars_to_object(location.search)
@@ -1087,10 +1090,11 @@ section.prototype.navigate = async function(options) {
 
 			// browser navigation update
 				push_browser_history({
-					source	: source,
-					sqo		: sqo,
-					title	: title,
-					url		: url
+					source				: source,
+					sqo					: sqo,
+					event_in_history	: false,
+					title				: title,
+					url					: url
 				})
 		}
 

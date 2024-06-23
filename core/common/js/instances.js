@@ -195,7 +195,7 @@ export const get_instance = async function(options){
 			// serialize element id
 			// add the id for init the instance with the id
 				instance_element.id			= key
-				instance_element.id_base	= section_tipo +'_'+ section_id +'_'+ tipo
+				instance_element.id_base	= [section_tipo, section_id, tipo].join('_')
 			// id_variant. Propagate a custom instance id to children
 				if (options.id_variant) {
 					instance_element.id_variant = options.id_variant

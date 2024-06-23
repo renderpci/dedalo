@@ -369,7 +369,7 @@ const check_duplicates = async function(self, value) {
 		}
 
 	// into tool case
-		if (self.caller.type==='tool') {
+		if (self.caller?.type==='tool') {
 			return
 		}
 

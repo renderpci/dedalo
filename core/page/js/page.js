@@ -61,211 +61,21 @@ page.prototype.init = async function(options) {
 
 	const self = this
 
-	self.model			= 'page'
-	self.type			= 'page'
-	self.mode			= 'edit' // mode like 'section', 'tool', 'thesaurus'...
-	self.node			= null
-	self.ar_instances	= []
-	self.context		= options.context // mixed items types like 'sections', 'tools'..
-	self.status			= null
-	self.events_tokens	= []
-	self.menu_data		= options.menu_data
+	// set vars
+		self.model			= 'page'
+		self.type			= 'page'
+		self.mode			= 'edit' // mode like 'section', 'tool', 'thesaurus'...
+		self.node			= null
+		self.ar_instances	= []
+		self.context		= options.context // mixed items types like 'sections', 'tools'..
+		self.status			= null
+		self.events_tokens	= []
+		self.menu_data		= options.menu_data
 
 	// events subscriptions
 		// event user_navigation. Menu navigation (not pagination)
-			const fn_user_navigation = async function(user_navigation_options) {
-
-				// options
-					const source			= user_navigation_options.source
-					const sqo				= user_navigation_options.sqo || null
-					const event_in_history	= user_navigation_options.event_in_history ?? false
-
-				// check_unsaved_data
-					const result = await check_unsaved_data({
-						confirm_msg : 'page: ' + (get_label.discard_changes || 'Discard unsaved changes?')
-					})
-					if (!result) {
-						// user selects 'cancel' in dialog confirm. Stop navigation
-						return false
-					}
-
-				// check valid vars
-					if (!source) {
-						console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
-						return false
-					}
-
-				// reset status to prevent errors lock
-					self.status = 'rendered'
-
-				// loading css add
-					const container = self.node
-						? self.node.content_data
-						: null
-						if (container) { container.classList.add('loading') }
-
-				// stream_readers. If any stream reader is active, stop it
-					if (page_globals.stream_readers && page_globals.stream_readers.length) {
-						page_globals.stream_readers.forEach((el)=>{
-							el.cancel('abort')
-						})
-					}
-
-				try {
-
-					// do the work
-					return new Promise(async function(resolve){
-
-						// basic vars
-							// Only source is mandatory but if sqo is received, is placed in a new request_config
-							// to allow sections and components manage properly the offset and limit
-							if (!source.request_config && sqo) {
-								source.request_config = [{
-									api_engine	: 'dedalo',
-									type		: 'main',
-									sqo			: sqo
-								}]
-							}
-
-						// new_page_element_instance. Like 'section'
-							const new_page_element_instance = await instantiate_page_element(
-								self, // object page instance
-								source // object source
-							)
-							// check valid element. Only checks if new source of page element is actually valid for instantiation
-							// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
-							if (!new_page_element_instance) {
-								console.error("error on get new_page_element_instance:", new_page_element_instance);
-								// loading css remove
-								if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
-								console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
-								return false
-							}else{
-								// remove instance from cache to prevent to use old request_config
-								await new_page_element_instance.destroy(
-									true, // delete_self
-									true, // delete_dependencies
-									true // remove_dom
-								)
-							}
-
-						// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
-							const base_models				= ['menu']
-							const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
-							// add current source from options
-								context_elements_to_stay.push(source)
-							// fix new page clean context
-								self.context = context_elements_to_stay
-
-						// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
-							const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
-							for (let i = instances_to_stay.length - 1; i >= 0; i--) {
-								instances_to_stay[i].destroyable = false
-							}
-
-						// refresh page. Force to load new context elements data from DDBB
-							const refresh_result = await self.refresh({
-								build_autoload	: false,
-								render_level	: 'content'
-							})
-
-						// reset page scroll
-							window.scrollTo(0, 0);
-
-						// browser history track
-							if(refresh_result===true && event_in_history!==true) {
-
-								// page tile
-									const title	= new_page_element_instance.id
-
-								// page url
-									const current_tipo = (source.config && source.config.source_section_tipo)
-										? source.config.source_section_tipo
-										: source.tipo
-									// url search. Append section_id if exists
-										const current_url_vars = url_vars_to_object(location.search)
-										const url_vars = {} // url_vars_to_object(location.search)
-											  url_vars.tipo = current_tipo
-											  url_vars.mode = source.mode
-										if(source.mode==='list' && url_vars.id){
-											delete url_vars.id
-										}
-										// source.config.url_vars add if they exists
-										// used by menu thesaurus_view_mode
-										if (source.config?.url_vars) {
-											for (const property in source.config.url_vars) {
-												url_vars[property] = source.config.url_vars[property]
-											}
-										}
-										// preserve URL vars
-										const preserve_url_vars = [
-											'menu',
-											'session_save'
-										]
-										preserve_url_vars.forEach(name => {
-											if (typeof current_url_vars[name]!=='undefined') {
-												url_vars[name] = current_url_vars[name]
-											}
-										})
-										const url = '?' + object_to_url_vars(url_vars)
-
-								// browser navigation update
-									push_browser_history({
-										source				: source,
-										sqo					: sqo,
-										event_in_history	: false,
-										title				: title,
-										url					: url
-									})
-							}
-
-						// remove aux items
-							if (window.page_globals.service_autocomplete) {
-								window.page_globals.service_autocomplete.destroy(true, true, true)
-							}
-
-						// loading css remove
-							if (container) { container.classList.remove('loading') }
-
-						// clean previous locks of current user in current section
-							setTimeout(()=>{
-								data_manager.request({
-									use_worker	: true,
-									body		: {
-										dd_api	: 'dd_utils_api',
-										action	: 'update_lock_components_state',
-										options	: {
-											component_tipo	: null,
-											section_tipo	: source.section_tipo || source.tipo,
-											section_id		: null,
-											action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
-										}
-									}
-								})
-								.then(function(api_response){
-									// dedalo_notification from config file
-									// update page_globals
-									page_globals.dedalo_notification = api_response.dedalo_notification || null
-									// dedalo_notification from config file
-									event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
-								})
-							}, 0)
-
-						resolve(new_page_element_instance.id)
-					})
-
-				} catch (error) {
-					// loading css remove
-					if (container) {
-						container.classList.remove('loading')
-					}
-					console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
-					console.error(error)
-					return false
-				}
-			}//end fn_user_navigation
 			self.events_tokens.push(
-				event_manager.subscribe('user_navigation', fn_user_navigation)
+				event_manager.subscribe('user_navigation', navigate.bind(this))
 			)
 
 		// event activate_component
@@ -395,30 +205,6 @@ page.prototype.build = async function(autoload=false) {
 						}
 					}
 
-				// local DDBB SQO
-				// Try to get local DDB SQO value when URL tipo exists to preserve user navigation filter and pagination
-					const url_tipo = rqo.options.search_obj.tipo ?? rqo.options.search_obj.t ?? null;
-					const url_mode = rqo.options.search_obj.mode ?? rqo.options.search_obj.m ?? null;
-					if (url_tipo) {
-						const section_tipo	= url_tipo
-						const mode			= url_mode || 'list'
-						const session_key	= rqo.options.search_obj.session_key || section_tipo
-						const local_db_sqo	= await data_manager.get_local_db_data(
-							session_key + '_' + mode, // id
-							'sqo', // table
-							true // cache
-						)
-						if (local_db_sqo && local_db_sqo.value) {
-							// add found user navigation values to RQO
-							rqo.sqo		= local_db_sqo.value
-							rqo.source	= {
-								tipo			: section_tipo,
-								section_tipo	: section_tipo,
-								mode			: mode
-							}
-						}
-					}
-
 				// request page context (usually menu and section/area context)
 					const api_response = await data_manager.request({
 						body : rqo
@@ -529,6 +315,209 @@ page.prototype.build = async function(autoload=false) {
 
 
 /**
+* NAVIGATE
+* Used by menu navigation
+* Is called by page init event 'user_navigation'
+* @param object user_navigation_options
+* {
+* 	source: object {config:null, mode:"list", model:"section", tipo:"rsc170"},
+* 	sqo: object|null,
+* 	event_in_history: bool
+* }
+* @return promise
+* 	resolve string new_page_element_instance id
+*/
+const navigate = async function(user_navigation_options) {
+
+	const self = this
+
+	// options
+		const source			= user_navigation_options.source
+		const sqo				= user_navigation_options.sqo || null
+		const event_in_history	= user_navigation_options.event_in_history ?? false
+
+	// check_unsaved_data
+		const result = await check_unsaved_data({
+			confirm_msg : 'page: ' + (get_label.discard_changes || 'Discard unsaved changes?')
+		})
+		if (!result) {
+			// user selects 'cancel' in dialog confirm. Stop navigation
+			return false
+		}
+
+	// check valid vars
+		if (!source) {
+			console.error("ERROR. valid source is mandatory on user_navigation:", user_navigation_options);
+			return false
+		}
+
+	// reset status to prevent errors lock
+		self.status = 'rendered'
+
+	// loading css add
+		const container = self.node
+			? self.node.content_data
+			: null
+			if (container) { container.classList.add('loading') }
+
+	// stream_readers. If any stream reader is active, stop it
+		if (page_globals.stream_readers && page_globals.stream_readers.length) {
+			page_globals.stream_readers.forEach((el)=>{
+				el.cancel('abort')
+			})
+		}
+
+	// source
+		// Only source is mandatory but if sqo is received, is placed in a new request_config
+		// to allow sections and components manage properly the offset and limit
+		if (!source.request_config && sqo) {
+			source.request_config = [{
+				api_engine	: 'dedalo',
+				type		: 'main',
+				sqo			: sqo
+			}]
+		}
+
+	try {
+
+		// new_page_element_instance. Like 'section'
+			const new_page_element_instance = await instantiate_page_element(
+				self, // object page instance
+				source // object source
+			)
+			// check valid element. Only checks if new source of page element is actually valid for instantiation
+			// (!) Note that this element page is called twice, this time and when page is refreshed (assume is cached..)
+			if (!new_page_element_instance) {
+				console.error("error on get new_page_element_instance:", new_page_element_instance);
+				// loading css remove
+				if (container) {setTimeout(()=> container.classList.remove('loading'), 150)}
+				console.error("ERROR. on instantiate_page_element. Unable to create a valid page element instance. ", user_navigation_options);
+				return false
+			}else{
+				// remove instance from cache to prevent to use old request_config
+				await new_page_element_instance.destroy(
+					true, // delete_self
+					true, // delete_dependencies
+					true // remove_dom
+				)
+			}
+
+		// page context elements to stay. Menu and other static elements don't need to be built and rendered every time
+			const base_models				= ['menu']
+			const context_elements_to_stay	= self.context.filter( item => base_models.includes(item.model) )
+			// add current source from options
+				context_elements_to_stay.push(source)
+			// fix new page clean context
+				self.context = context_elements_to_stay
+
+		// instances. Set property 'destroyable' as false for own instances to prevent to be remove on refresh page
+			const instances_to_stay = self.ar_instances.filter(item => base_models.includes(item.model))
+			for (let i = instances_to_stay.length - 1; i >= 0; i--) {
+				instances_to_stay[i].destroyable = false
+			}
+
+		// refresh page. Force to load new context elements data from DDBB
+			const refresh_result = await self.refresh({
+				build_autoload	: false,
+				render_level	: 'content'
+			})
+
+		// reset page scroll
+			window.scrollTo(0, 0);
+
+		// browser history track. Navigating from menu for example
+			// If is not already mark as used in history
+			if(refresh_result===true && event_in_history!==true) {
+
+				// page tile
+					const title	= new_page_element_instance.id
+
+				// page url
+					const current_tipo = source.config?.source_section_tipo || source.tipo;
+					// url search. Append section_id if exists
+						const current_url_vars = url_vars_to_object(location.search)
+						const url_vars = {} // url_vars_to_object(location.search)
+							  url_vars.tipo = current_tipo
+							  url_vars.mode = source.mode
+						if(source.mode==='list' && url_vars.id){
+							delete url_vars.id
+						}
+						// source.config.url_vars add if they exists
+						// used by menu thesaurus_view_mode
+						if (source.config?.url_vars) {
+							for (const property in source.config.url_vars) {
+								url_vars[property] = source.config.url_vars[property]
+							}
+						}
+						// preserve URL vars
+						const preserve_url_vars = [
+							'menu',
+							'session_save'
+						]
+						preserve_url_vars.forEach(name => {
+							if (typeof current_url_vars[name]!=='undefined') {
+								url_vars[name] = current_url_vars[name]
+							}
+						})
+						const url = '?' + object_to_url_vars(url_vars)
+
+				// browser navigation update
+					push_browser_history({
+						source				: source,
+						sqo					: sqo,
+						event_in_history	: false,
+						title				: title,
+						url					: url
+					})
+			}
+
+		// remove aux items
+			if (window.page_globals.service_autocomplete) {
+				window.page_globals.service_autocomplete.destroy(true, true, true)
+			}
+
+		// loading css remove
+			if (container) { container.classList.remove('loading') }
+
+		// clean previous locks of current user in current section
+			setTimeout(()=>{
+				data_manager.request({
+					use_worker	: true,
+					body		: {
+						dd_api	: 'dd_utils_api',
+						action	: 'update_lock_components_state',
+						options	: {
+							component_tipo	: null,
+							section_tipo	: source.section_tipo || source.tipo,
+							section_id		: null,
+							action			: 'delete_user_section_locks' // delete_user_section_locks|blur|focus
+						}
+					}
+				})
+				.then(function(api_response){
+					// dedalo_notification from config file
+					// update page_globals
+					page_globals.dedalo_notification = api_response.dedalo_notification || null
+					// dedalo_notification from config file
+					event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
+				})
+			}, 1)
+
+		return new_page_element_instance.id
+
+	} catch (error) {
+		// loading css remove
+		if (container) { container.classList.remove('loading') }
+		console.error('Error on user navigation. user_navigation_options:', user_navigation_options)
+		console.error(error)
+
+		return false
+	}
+}//end navigate
+
+
+
+/**
 * ADD_EVENTS
 * Set page common events like 'keydown'
 * @return void
@@ -540,7 +529,7 @@ page.prototype.add_events = function() {
 	// window onpopstate. Triggered when user clicks on the browser navigation buttons
 		// note that navigation calls generate a history of event state, and when user click's on back button,
 		// the browser get this event form history with the state info stored previously
-		window.onpopstate = function(event) {
+		const popstate_handler = function(event) {
 			if (event.state && event.state.user_navigation_options) {
 				// get previously stored state data
 				const new_user_navigation_options = event.state.user_navigation_options
@@ -550,10 +539,10 @@ page.prototype.add_events = function() {
 				event_manager.publish('user_navigation', new_user_navigation_options)
 			}
 		}
+		window.addEventListener('popstate', popstate_handler)
 
 	// beforeunload (event)
-		window.addEventListener('beforeunload', beforeUnloadListener, {capture: true})
-		function beforeUnloadListener(event) {
+		const beforeunload_handler = function(event) {
 			// event.preventDefault();
 
 			const unsaved_data = typeof window.unsaved_data!=='undefined'
@@ -578,11 +567,11 @@ page.prototype.add_events = function() {
 			// set event.returnValue value to force browser standard message (unable to customize)
 			// like : 'Changes that you made may not be saved.'
 				event.returnValue = true
-		}//end beforeUnloadListener
+		}
+		window.addEventListener('beforeunload', beforeunload_handler, {capture: true})
 
 	// keydown events
-		document.addEventListener('keydown', fn_keydown)
-		function fn_keydown(evt) {
+		const keydown_handler = function(evt) {
 			switch(true) {
 
 				case evt.key==='Escape':
@@ -654,7 +643,8 @@ page.prototype.add_events = function() {
 				default:
 					break;
 			}//end switch
-		}//end fn_keydown
+		}
+		document.addEventListener('keydown', keydown_handler)
 
 	// page click/mousedown
 		document.addEventListener('mousedown', deactivate_components)

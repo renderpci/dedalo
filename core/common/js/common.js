@@ -2690,6 +2690,13 @@ export const get_fallback_value = function(value, fallback_value) {
 * PUSH_BROWSER_HISTORY
 * Unified way to update page navigation history state
 * @param object options
+* {
+*	event_in_history: bool
+* 	source: object {model: section,...}
+* 	sqo: object|null
+* 	titles: string "section_rsc176_rsc176_list_lg-eng",
+* 	url: string "?tipo=rsc176&mode=list"
+* }
 * @return bool
 */
 export const push_browser_history = function(options) {
@@ -2697,23 +2704,23 @@ export const push_browser_history = function(options) {
 	// options
 		const source			= options.source
 		const sqo				= options.sqo
-		const event_in_history	= options.event_in_history || false
+		const event_in_history	= options.event_in_history ?? false
 		const title				= options.title || ''
 		const url				= options.url || ''
 
 	// state
-		const state = {
+		const state = Object.freeze({
 			user_navigation_options : {
-				source				: source,
-				sqo					: sqo,
-				event_in_history	: event_in_history
+				source				: source, // object
+				sqo					: sqo, // object
+				event_in_history	: event_in_history // bool
 			}
-		}
+		})
 
-	// history push
+	// history push. Adds an entry to the browser's session history stack.
 		history.pushState(
 			state, // object state
-			title, // string unused (only safari)
+			title, // string unused (only Safari)
 			url // string url optional
 		)
 		if(SHOW_DEBUG===true) {
