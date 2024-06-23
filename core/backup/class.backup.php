@@ -1971,22 +1971,21 @@ abstract class backup {
 		// update JAVASCRIPT labels
 			$ar_langs = DEDALO_APPLICATION_LANGS;
 			foreach ($ar_langs as $lang => $label) {
-				// debug_log(__METHOD__." >>> Writing file $lang => $label ", logger::DEBUG);
 
 				// direct
 					$write_file = backup::write_lang_file($lang);
 					if ($write_file===false) {
 						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
+						continue;
 					}
 
-				// thread . Use above Thread class @see https://www.php.net/manual/en/language.fibers.php
-					// Thread::register(
-					// 	$lang, // name
-					// 	'backup::write_lang_file', // 'my_thread',
-					// 	[$lang]
-					// );
+				// debug
+					debug_log(__METHOD__
+						. " Writing lang file " . PHP_EOL
+						. ' lang: ' . to_string($lang)
+						, logger::WARNING
+					);
 			}
-			// Thread::run();
 
 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
 			logger::$obj['activity']->log_message(

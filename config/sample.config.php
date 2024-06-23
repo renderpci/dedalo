@@ -132,6 +132,7 @@
 	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
 
 
+
 	if (session_status()!==PHP_SESSION_ACTIVE) {
 
 		# HANDLER
@@ -164,6 +165,7 @@
 	}//end if (session_status()!==PHP_SESSION_ACTIVE)
 
 
+
 // cache
 	// dedalo_cache_manager. bool|array.
 	// Default manager: files : write cache files with complex resolved data of current logged user (like profiles)
@@ -172,6 +174,7 @@
 		'manager'		=> 'files',
 		'files_path'	=> DEDALO_SESSIONS_PATH
 	]);
+
 
 
 // show_debug
