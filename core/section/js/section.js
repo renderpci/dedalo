@@ -1313,8 +1313,8 @@ section.prototype.goto_list = async function() {
 				'pagination'
 			);
 			if (saved_pagination) {
-				sqo.limit = saved_pagination.value.limit
-				sqo.offset = saved_pagination.value.offset
+				sqo.limit	= saved_pagination.value?.limit
+				sqo.offset	= saved_pagination.value?.offset
 			}
 		}
 
