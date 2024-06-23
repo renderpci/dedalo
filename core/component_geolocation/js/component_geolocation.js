@@ -169,15 +169,17 @@ component_geolocation.prototype.init = async function(options) {
 			common.prototype.load_style(geo_editor_lib_css_file)
 
 		// load and set JSON langs file
-			data_manager.request({
-				url		: '../common/js/lang.json',
-				method	: 'GET',
-				cache	: 'force-cache' // force use cache because the file do not changes
-			})
-			.then(function(response){
-				// set json_langs
-				self.json_langs = response
-			})
+			if (!window['json_langs']) {
+				data_manager.request({
+					url		: '../common/js/lang.json',
+					method	: 'GET',
+					cache	: 'force-cache' // force use cache because the file do not changes
+				})
+				.then(function(response){
+					// set json_langs
+					self.json_langs = response
+				})
+			}
 
 		const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
 		common.prototype.load_script(geo_messure_lib_js_file, license)
