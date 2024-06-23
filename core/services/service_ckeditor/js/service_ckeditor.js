@@ -89,7 +89,8 @@ export const service_ckeditor = function() {
 							new Promise(function(resolve){
 								data_manager.request({
 									url		: '../common/js/lang.json',
-									method	: 'GET'
+									method	: 'GET',
+									cache	: 'force-cache' // force use cache because the file do not changes
 								})
 								.then(function(response){
 									// set json_langs
