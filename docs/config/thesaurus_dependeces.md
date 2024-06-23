@@ -37,17 +37,18 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Fauna | Typology | fauna | √ | √ | √ | √ | x | x | x |
 | ISAD(g) | Catalog | isad | x | x | x | x | x | √ | x |
 | Location | Ubications | ubication | √ | √ | x | √ | x | x | x |
+| Historical toponymy | Toponymy | htoponymy | √ | √ | x | √ | * | * | * |
 | Cause of uncertainty | Semantics | uncertainty | x | x | x | √ | x | x | x |
 | Job roles | Semantics | rolejob | √ | √ | √ | √ | √ | √ | √ |
 | Position roles | Semantics | rolepos | √ | √ | √ | √ | √ | √ | √ |
 | Semantic | Semantics | ds | √ | √ | √ | √ | √ | √ | √ |
 | User roles | Semantics | roleusr | √ | √ | √ | √ | √ | √ | √ |
 | Special | Special | special | x | x | x | x | √ | x | x |
-| Analysis | Restoration | resanalysis | √ | √ | x | x | x | x | x |
-| Cause | Restoration | rescause | √ | √ | x | x | x | x | x |
-| Job material | Restoration | resmaterial | √ | √ | x | x | x | x | x |
-| Pathology | Restoration | respathology | √ | √ | x | x | x | x | x |
-| Treatment | Restoration | restreatment | √ | √ | x | x | x | x | x |
+| Analysis | Laboratory \| Restoration | labanalysis | √ | √ | x | x | x | x | x |
+| Cause | Laboratory \| Restoration | rescause | √ | √ | x | x | x | x | x |
+| Job material | Laboratory \| Restoration | resmaterial | √ | √ | x | x | x | x | x |
+| Pathology | Laboratory \| Restoration | respathology | √ | √ | x | x | x | x | x |
+| Treatment | Laboratory \| Restoration | restreatment | √ | √ | x | x | x | x | x |
 | Countermarks | Epigraphy | sccmk | x | x | x | √ | x | x | x |
 | Greek | Epigraphy | scell | x | x | x | √ | x | x | x |
 | Latin | Epigraphy | sclat | x | x | x | √ | x | x | x |
@@ -57,6 +58,10 @@ The next table show the dependencies between main catalog tld and thesaurus tld.
 | Southwest Paleohispanic | Epigraphy | sctxr | x | x | x | x | x | x | x |
 | Symbol | Epigraphy | scsym | x | x | x | √ | x | x | x |
 | Web sites | Websites | ww |  x | x | x | x | x | x | x |
+
+- √ The thesaurus is used and called directly
+- X The thesaurus is not used directly
+- \* The thesaurus may or may not be used, depending on the project. The thesaurus is called by the components through their typology.
 
 The above table shows required dependencies for the main tlds, but it is possible to implement more thesaurus than those required, for example, if you want to work with epigraphic legends in amphorae with Greek thesaurus when you are working with the `tch` catalogue, you can implement it.
 
