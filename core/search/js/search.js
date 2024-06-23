@@ -945,30 +945,6 @@ search.prototype.update_state = async function(options) {
 						paginator_node.classList.add('loading')
 					}
 
-				// pagination. Reset other local DB offset values
-				// This is necessary because on changing mode, previous offset
-				// will be wrong, then we reset the opposite mode offset value
-					const pagination_id = caller_instance.mode==='edit'
-						? `${caller_instance.tipo}_list`
-						: `${caller_instance.tipo}_edit`
-					const saved_pagination = await data_manager.get_local_db_data(
-						pagination_id,
-						'pagination'
-					);
-					if (saved_pagination) {
-						await data_manager.set_local_db_data(
-							{
-								id		: pagination_id,
-								value	: {
-									limit	: saved_pagination.value.limit,
-									offset	: 0
-								}
-							},
-							'pagination'
-						)
-					}
-
-
 				// section. refresh current section and set history navigation
 					const section_promise = caller_instance.navigate({
 						callback			: null,
@@ -977,15 +953,9 @@ search.prototype.update_state = async function(options) {
 					})
 					section_promise.then(()=>{
 						// loading css remove
-							// section_node.classList.remove('loading')
-						// refresh section paginator
-							if (paginator_node) {
-								// caller_instance.paginator.refresh()
-								// .then(function(){
-								// 	paginator_node.classList.remove('loading')
-								// })
-								paginator_node.classList.remove('loading')
-							}
+						if (paginator_node) {
+							paginator_node.classList.remove('loading')
+						}
 					})
 
 				return section_promise
