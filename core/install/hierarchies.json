@@ -1679,6 +1679,13 @@
 		"install_checked_default": true
 	},
 	{
+		"tld": "authority",
+		"label": "Authority",
+		"typology": 1,
+		"active_in_thesaurus": false,
+		"install_checked_default": true
+	},
+	{
 		"tld": "object",
 		"label": "Object",
 		"typology": 11,
