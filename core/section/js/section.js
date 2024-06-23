@@ -509,8 +509,8 @@ section.prototype.build = async function(autoload=false) {
 						`${self.tipo}_${self.mode}`,
 						'pagination'
 					);
-				const default_limit		= saved_pagination.value?.limit || (self.mode==='edit' ? 1 : 10);
-				const default_offset	= saved_pagination.value?.offset || 0;
+				const default_limit		= saved_pagination?.value?.limit || (self.mode==='edit' ? 1 : 10);
+				const default_offset	= saved_pagination?.value?.offset || 0;
 				// fill sqo empty values with final values if necessary
 				if (self.rqo.sqo.limit===null) {
 					self.rqo.sqo.limit = default_limit
