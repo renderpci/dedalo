@@ -16,10 +16,19 @@
 
 				// input  (text title/url)
 				.input_value {
-					flex: 1;
+					width: calc(50% - 0.5rem);
 					padding-right: 0.5rem;
+
+
+					&.title {
+
+					}
+
 					&.url {
-						padding-right: 3rem;
+
+						&:focus {
+							padding-right: 3.15rem;
+						}
 					}
 				}
 
