@@ -320,6 +320,21 @@ class component_media_common extends component_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
+		// data
+			$dato = $this->get_dato();
+			if (empty($dato) || empty($dato[0])) {
+				return null;
+			}
+			$files_info = $dato[0]->files_info ?? [];
+			$found = array_find($files_info, function($el){
+				return $el->quality === $this->get_default_quality()
+					&& $el->extension === $this->get_extension()
+					&& $el->file_exist === true;
+			});
+			if (!is_object($found)) {
+				return null;
+			}
+
 		$diffusion_value = (defined('DEDALO_PUBLICATION_CLEAN_URL') && true===DEDALO_PUBLICATION_CLEAN_URL)
 			? ($this->get_id() .'.'. $this->get_extension())
 			: $this->get_url(
