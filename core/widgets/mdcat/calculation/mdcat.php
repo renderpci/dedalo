@@ -203,3 +203,100 @@
 
 		return $result;
 	}//end to_euros
+
+	/**
+	* RANGE_TO_DAYS
+	* Get a range of start end dates to get the days between then
+	* Example of use:
+	* "widgets": [
+	*	{
+	*		"ipo": [
+	*		{
+	*			"input": {
+	*				"filter": false,
+	*				"components": [
+	*					{
+	*					"tipo": "mdcat1968",
+	*					"options": {
+	*						"select": "start"
+	*					},
+	*					"var_name": "start"
+	*					},
+	*					{
+	*					"tipo": "mdcat1968",
+	*					"options": {
+	*						"select": "end"
+	*					},
+	*					"var_name": "end"
+	*					}
+	*				],
+	*				"section_id": "current",
+	*				"section_tipo": "current"
+	*			},
+	*			"output": [
+	*				{
+	*					"id": "total",
+	*					"value": "int"
+	*				}
+	*			],
+	*			"process": {
+	*				"fn": "range_to_days",
+	*				"file": "/mdcat/calculation/mdcat.php",
+	*				"engine": "php"
+	*			}
+	*		}
+	*		],
+	*		"path": "/calculation",
+	*		"widget_info": "sum calc.",
+	*		"widget_name": "calculation"
+	*	}
+	* ]
+	* @param object $request_options
+	* {
+	* 	"start" : 98542135,
+	* 	"end" : 98754235
+	* }
+	* @return array
+	*/
+	function range_to_days($request_options) : array {
+
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$start	= $data->start;
+		$end	= $data->end;
+		// error_log('------ range_to_days numero: '.json_encode($options));
+
+		// check value
+		if (!is_numeric($start) || !is_numeric($end)) {
+			debug_log(__METHOD__
+				. " Invalid 'number' value (non numeric) " . PHP_EOL
+				. ' start: ' . to_string($start) . PHP_EOL
+				. ' end: ' . to_string($end) . PHP_EOL
+				. ' request_options: ' . to_string($request_options)
+				, logger::ERROR
+			);
+			return [];
+		}
+
+		$time = round( $end - $start );
+
+		if($time <= 0){
+			$total = 1;
+		}else{
+			$total =round ( $time / ( 60 * 60 * 24) );
+		}
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $total
+			]
+		];
+
+		return $result;
+	}//end range_to_days
