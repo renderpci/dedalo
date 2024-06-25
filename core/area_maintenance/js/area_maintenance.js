@@ -7,8 +7,6 @@
 // imports
 	import {common, build_autoload} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
-	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_area_maintenance, build_form} from './render_area_maintenance.js'
 
@@ -48,9 +46,6 @@ export const area_maintenance = function() {
 * extend component functions from component common
 */
 // prototypes assign
-	// area_maintenance.prototype.init			= area_common.prototype.init
-	// area_maintenance.prototype.build			= area_common.prototype.build
-	// area_maintenance.prototype.render		= common.prototype.render
 	area_maintenance.prototype.refresh			= common.prototype.refresh
 	area_maintenance.prototype.destroy			= common.prototype.destroy
 	area_maintenance.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -61,6 +56,8 @@ export const area_maintenance = function() {
 
 /**
 * INIT
+* @param object options
+* @return bool common_init
 * Custom init
 */
 area_maintenance.prototype.init = async function(options) {
@@ -86,7 +83,6 @@ area_maintenance.prototype.init = async function(options) {
 *	bool true
 */
 area_maintenance.prototype.build = async function(autoload=true) {
-	const t0 = performance.now()
 
 	const self = this
 
@@ -101,9 +97,6 @@ area_maintenance.prototype.build = async function(autoload=true) {
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 		self.rqo.prevent_lock = true
-
-	// debug
-		// const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {
@@ -152,7 +145,6 @@ area_maintenance.prototype.build = async function(autoload=true) {
 					}
 				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
-				// self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 				self.widgets	= self.data && self.data.datalist
 					? self.data.datalist
 					: []
@@ -172,12 +164,6 @@ area_maintenance.prototype.build = async function(autoload=true) {
 			? self.context.label
 			: 'Area Development'
 
-	// debug
-		if(SHOW_DEBUG===true) {
-			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-		}
-
 	// status update
 		self.status = 'built'
 
@@ -189,7 +175,7 @@ area_maintenance.prototype.build = async function(autoload=true) {
 
 /**
 * RENDER
-* @param object options
+* @param object options = {}
 *	render_level : level of deep that is rendered (full | content)
 * @return promise
 *	node first DOM node stored in instance 'node' array
@@ -222,7 +208,6 @@ export const load_json_editor_files = function() {
 	const lib_css_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.css'
 	load_promises.push( common.prototype.load_style(lib_css_file) )
 
-	// const lib_js_file = DEDALO_ROOT_WEB + '/lib/jsoneditor/dist/jsoneditor.min.js'
 	// load_promises.push( common.prototype.load_script(lib_js_file) )
 	const load_promise = import('../../../lib/jsoneditor/dist/jsoneditor.min.js') // used minified version for now
 	load_promises.push( load_promise )

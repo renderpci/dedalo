@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
@@ -58,6 +57,7 @@ render_area_development.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
+* @param object options
 * @return HTMLElement
 */
 render_area_development.prototype.list = async function(options) {
@@ -106,7 +106,7 @@ const get_content_data = function(self) {
 
 /**
 * BUILD_WIDGET
-*
+* Renders given widget DOM nodes
 * @param object item
 * @param object self
 * 	Instance of current area
@@ -189,8 +189,7 @@ const build_widget = (item, self) => {
 		})
 		.catch((err) => {
 			console.error(err)
-			});
-
+		});
 
 
 	return container
@@ -231,7 +230,7 @@ export const print_response = (container, api_response) => {
 		const api_msg = api_response && api_response.msg
 			? Array.isArray(api_response.msg)
 				? api_response.msg.join('<br>')
-				: api_response.msg.replace(/\\n/g, '<br>') // api_response.msg.replace(/\\n/g, '<br>')
+				: api_response.msg.replace(/\\n/g, '<br>')
 			: 'Unknown API response error'
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -275,7 +274,7 @@ export const build_form = function(widget_object) {
 			class_name		: 'form_container',
 			parent			: body_info
 		})
-
+		// submit event
 		form_container.addEventListener('submit', async function(e){
 			e.preventDefault()
 
@@ -353,7 +352,6 @@ export const build_form = function(widget_object) {
 					this.classList.remove('empty')
 				}
 			})
-
 			input_nodes.push(input_node)
 		}
 
@@ -364,7 +362,8 @@ export const build_form = function(widget_object) {
 			text_content	: submit_label,
 			parent			: form_container
 		})
-		button_submit.addEventListener('click', function(){
+		button_submit.addEventListener('click', function(e){
+			e.stopPropagation()
 		})
 
 
