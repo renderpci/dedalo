@@ -11,8 +11,8 @@ class button_common extends common {
 	/**
 	* CLASS VARS
 	*/
-		protected $target ;
-		protected $section_tipo ;
+		public $target;
+		public $id;
 		public $context_tipo; //dependiendo de quien realice la llamada (area, seccion...) enviará su tipo, independiente de modelo, el tipo será el contexto de la llamada (dd12, dd323...)
 
 
@@ -25,7 +25,6 @@ class button_common extends common {
 
 		$this->define_id(NULL);
 		$this->define_lang(DEDALO_APPLICATION_LANG);
-		// $this->define_mode(navigator::get_selected('mode'));
 
 		parent::load_structure_data();
 
@@ -41,21 +40,6 @@ class button_common extends common {
 	protected function define_lang($lang) {	$this->lang = $lang ; }
 	# define mode
 	protected function define_mode($mode) {	$this->mode = $mode ; }
-
-
-
-	/**
-	* GET_HTML
-	* return include file __class__.php
-	*/
-		// public function get_html() {
-
-		// 	ob_start();
-		// 	include ( DEDALO_CORE_PATH .'/'. get_called_class() .'/'. get_called_class() . '.php' );
-		// 	$html =  ob_get_clean();
-
-		// 	return $html;
-		// }//end get_html
 
 
 
