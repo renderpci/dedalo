@@ -204,6 +204,7 @@
 		return $result;
 	}//end to_euros
 
+
 	/**
 	* RANGE_TO_DAYS
 	* Get a range of start end dates to get the days between then
@@ -300,3 +301,80 @@
 
 		return $result;
 	}//end range_to_days
+
+
+
+	/**
+	* DAYS_CORRECTION_MANUALLY
+	* Get a range of start end dates to get the days between then
+	* Example of use:
+	*	"widgets": [
+	*		{
+	*			"ipo": [
+	*			{
+	*				"input": {
+	*					"filter": false,
+	*					"components": [
+	*						{
+	*						"tipo": "mdcat1969",
+	*						"var_name": "calculation_day",
+	*						"options": {"select": "value"}
+	*						},
+	*						{"tipo": "mdcat2918", "var_name": "manual_day"}
+	*					],
+	*					"section_id": "current",
+	*					"section_tipo": "current"
+	*					},
+	*				"output": [
+	*					{"id": "total", "value": "int"}
+	*				],
+	*				"process": {
+	*					"fn"    : "days_correction_manually"    ,
+	*					"file"  : "/mdcat/calculation/mdcat.php",
+	*					"engine": "php"
+	*				}
+	*			}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "sum calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*	]
+	* @param object $request_options
+	* {
+	* 	"calculation_day" : [384],
+	* 	"manual_day" : 87
+	* }
+	* @return array
+	*/
+	function days_correction_manually($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$calculation_day	= array_sum($data->calculation_day);
+		$manual_day			= $data->manual_day;
+
+		// error_log('------ days_correction_manually numero: '.json_encode($options));
+
+		$total = !empty( $manual_day )
+			? $manual_day
+			: $calculation_day;
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $total
+			]
+		];
+
+
+		return $result;
+	}//end days_correction_manually
+
+
+
+
