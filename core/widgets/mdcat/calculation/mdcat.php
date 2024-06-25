@@ -85,82 +85,6 @@
 
 
 	/**
-	* CALCULATE_PERIOD
-	* @return
-	*/
-		// function calculate_period__DES($options) {
-		//
-		// 	$data          = $options->data;
-		// 	$total_days    = $data->total_days;
-		//
-		// 	$years         = floor($total_days / 365);
-		// 	$years_days    = $total_days - (years * 365);
-		// 	$total_months  = floor($total_days / 30.42);
-		//
-		// 	$months        = 0;
-		// 	$days          = 0;
-		//
-		// 	$months        = floor($years_days / 30.42);
-		// 	$days          = floor($years_days - ($months * 30.42));
-		//
-		// 	$period = [];
-		//
-		// 	if($years > 0 && $options->years === true){
-		// 		$year_label = $years == 1
-		//             ? label::get_label("anyo")
-		//             : label::get_label("anyos");
-		//
-		//         $year_value = ($options->label===true)
-		//             ? $years .' '. $year_label
-		//             : $years;
-		//
-		// 		$period[] = $year_value;
-		// 	}
-		//
-		// 	if($months > 0 && $options->months === true){
-		// 		$months_label = $months == 1
-		//             ? label::get_label("mes")
-		//             : label::get_label("meses");
-		//
-		// 		$months_value = "";
-		// 		if($options->total === true){
-		// 			$months_value = ($options->label===true)
-		//                 ? $total_months . ' ' . $months_label
-		//                 : $total_months;
-		// 		}else{
-		// 			$months_value = ($options->label===true)
-		//                 ? $months . ' ' . $months_label
-		//                 : $months;
-		// 		}
-		// 		$period[] = $months_value;
-		// 	}
-		//
-		// 	if($days > 0 && $options->days === true){
-		// 		$days_label = $days == 1
-		//             ? label::get_label("dia")
-		//             : label::get_label("dias");
-		//
-		//         $days_value = "";
-		// 		if($options->total === true){
-		// 			$days_value = ($options->label===true)
-		//                 ? $total_days . ' ' . $days_label
-		//                 : $total_days;
-		// 		}else{
-		// 			$days_value = ($options->label===true)
-		//                 ? $days . ' ' . $days_label
-		//                 : $days;
-		// 		}
-		// 		$period[] = $days_value;
-		// 	}
-		//
-		// 	$result = implode(', ', $period);
-		//
-		//     return $result;
-		// }//end calculate_period__DES
-
-
-
-	/**
 	* CALCULATE_IMPORT_MAJOR
 	* @return int
 	*/
@@ -239,7 +163,7 @@
 
 
 
-   	/**
+	/**
 	* TO_EUROS
 	* @return array
 	*/
