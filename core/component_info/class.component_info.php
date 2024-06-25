@@ -389,5 +389,34 @@ class component_info extends component_common {
 	}//end get_list_value
 
 
+	/**
+	* GET_CALCULATION_DATA
+	*  Get the data of the component for do a calculation
+	* @param object|null $options = null
+	* @return mixed $data
+	*/
+	public function get_calculation_data($options=null) : array {
+
+		$data = [];
+
+		// options
+			$select	= $options->select ?? 'value';
+
+		$dato = $this->get_dato();
+		if (!empty($dato)) {
+			foreach ($dato as $current_dato) {
+
+				if (isset($current_dato->{$select})){
+					$data[] = $current_dato->{$select};
+				}else{
+					continue;
+				}
+			}
+		}
+
+		return $data;
+	}//end get_calculation_data
+
+
 
 }//end class component_info
