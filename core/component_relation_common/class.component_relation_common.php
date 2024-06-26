@@ -2944,6 +2944,7 @@ class component_relation_common extends component_common {
 
 		$last			= $dd_object->last ?? null;
 		$tipo			= $dd_object->tipo;
+		$data_fn		= $dd_object->data_fn ?? null;
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -2956,7 +2957,17 @@ class component_relation_common extends component_common {
 			$translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$component_data = $component->get_dato();
+
+		switch ($data_fn) {
+			case 'get_calculation_data':
+				$options = $dd_object->options ?? null;
+				$component_data = $component->get_calculation_data($options);
+				break;
+
+			default:
+				$component_data = $component->get_dato();
+				break;
+		}
 		if (empty($component_data)) {
 			return [];
 		}
@@ -3405,6 +3416,56 @@ class component_relation_common extends component_common {
 
 		return $term_id;
 	}//end map_locator_to_term_id
+
+
+
+	/*
+	* GET_CALCULATION_DATA
+	* @return $data
+	* get the data of the component for do a calculation
+	*/
+	public function get_calculation_data($options=null) : mixed {
+
+		$ar_data		= [];
+		$ddo_map		= $options->ddo_map ?? new dd_object();
+		$dato			= $this->get_dato();
+		$section_tipo	= $this->section_tipo;
+
+		if(empty($dato)){
+			return false;
+		}
+
+		// get the first ddo to be resolve the ddo chain
+		$init_ddo = array_find($ddo_map, function($item) use ($section_tipo) {
+			return $item->parent === 'self' || $item->parent === $section_tipo;
+		});
+		// get the ddo that match with the q definition
+		$tipo_to_be_resolved = end($ddo_map)->tipo;
+
+		$resolve_ddo = array_find($ddo_map, function($item) use ($tipo_to_be_resolved) {
+			return $item->tipo === $tipo_to_be_resolved;
+		});
+
+		// set the ddo to be resolve as last, is used by the recursion to stop the resolution
+		if (is_object($resolve_ddo)) {
+			$resolve_ddo->last = true;
+		}
+
+		foreach ($dato as $current_dato) {
+
+			// create the current_data with the section of the component that call.
+			// it will use to resolve the ddo_chain
+				$current_data = new stdClass();
+					$current_data->section_tipo	= $current_dato->section_tipo;
+					$current_data->section_id	= $current_dato->section_id;
+
+			$result_compnent_data = component_relation_common::resolve_component_data_recursively($ddo_map, $init_ddo, $current_data);
+
+			$ar_data = array_merge($ar_data, $result_compnent_data);
+		}
+
+		return $ar_data;
+	}//end get_calculation_data
 
 
 
