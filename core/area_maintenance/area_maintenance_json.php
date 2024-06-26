@@ -19,7 +19,7 @@
 		// set self from_parent
 			$this->from_parent = $tipo;
 
-		// Component structure context (tipo, relations, properties, etc.)
+		// Element structure context (tipo, relations, properties, etc.)
 			$context[] = $this->get_structure_context(
 				$permissions,
 				true // add_rqo
@@ -32,10 +32,10 @@
 // data
 	$data = [];
 
-	if($options->get_data===true && $permissions>0){
+	if($options->get_data===true && $permissions>0) {
 
 		// value
-			$value = []; // $this->get_data_items();
+			$value = [];
 
 		// item value
 			$item = $this->get_data_item($value);
