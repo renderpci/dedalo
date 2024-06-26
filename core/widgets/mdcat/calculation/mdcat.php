@@ -376,6 +376,78 @@
 
 
 
+	/**
+	* SUBTRACT
+	* Subtract between two components
+	* Example of use:
+	*	"widgets": [
+	*		{
+	*			"ipo": [
+	*				{
+	*					"input": {
+	*						"filter": false,
+	*						"components": [
+	*							{
+	*								"tipo": "mdcat2433",
+	*								"var_name": "total_period"
+	*							},
+	*							{
+	*								"tipo": "mdcat2440",
+	*								"var_name": "total"
+	*							}
+	*						],
+	*						"section_id": "current",
+	*						"section_tipo": "current"
+	*					},
+	*					"output": [
+	*						{
+	*							"id": "total",
+	*							"value": "int"
+	*						}
+	*					],
+	*					"process": {
+	*						"fn": "subtract",
+	*						"file": "/mdcat/calculation/mdcat.php",
+	*						"engine": "php"
+	*					}
+	*				}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "subtract calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*	]
+	* @param object $request_options
+	* {
+	* 	"total_period" : [6010],
+	* 	"total" : [6010]
+	* }
+	* @return array
+	*/
+	function subtract($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$total_period	= reset($data->total_period);
+		$total			= reset($data->total);
+
+		$total = $total - $total_period;
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> round($total, 2)
+			]
+		];
+
+		return $result;
+	}//end subtract
+
+
 
 
 	/**
