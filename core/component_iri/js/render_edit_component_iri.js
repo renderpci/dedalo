@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../../core/common/js/utils/index.js'
-	import {set_before_unload} from '../../common/js/events.js'
 	import {view_default_edit_iri} from './view_default_edit_iri.js'
 	import {view_line_edit_iri} from './view_line_edit_iri.js'
 	import {view_mini_iri} from './view_mini_iri.js'
@@ -262,8 +261,13 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'button remove hidden_button '+ active_check_class,
 			parent			: content_value
 		})
-		button_remove.addEventListener('click', function(e) {
+		button_remove.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
+			e.preventDefault()
+
+			if (!confirm(get_label.sure || 'Sure?')) {
+				return
+			}
 
 			// force possible input change before remove
 			document.activeElement.blur()
@@ -287,8 +291,9 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'button link hidden_button '+ active_check_class,
 			parent			: content_value
 		})
-		button_link.addEventListener('click', function(e) {
+		button_link.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
+			e.preventDefault()
 
 			// open a new window
 				const url				= input_iri.value

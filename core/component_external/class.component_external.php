@@ -25,7 +25,6 @@ class component_external extends component_common {
 			static $data_from_remote_cache = [];
 			$uid = $section_tipo . '_'. $section_id .'_'. $lang;
 			if (array_key_exists($uid, $data_from_remote_cache)) {
-				// dump($data_from_remote_cache[$uid], ' ))) RETURN FROM CACHE ++ '.to_string($uid));
 				return $data_from_remote_cache[$uid];
 			}
 

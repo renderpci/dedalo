@@ -3,8 +3,8 @@
 	# Version
 	$DEDALO_VERSION = '6.2.3';
 	if(defined('DEVELOPMENT_SERVER') && DEVELOPMENT_SERVER===true) {
-		$DEDALO_VERSION .= '.dev'; // .time();
+		$DEDALO_VERSION .= '.dev';
 	}
 	define('DEDALO_VERSION'	, $DEDALO_VERSION);
-	define('DEDALO_BUILD'	, '2024-06-24T09:02:00+02:00');
+	define('DEDALO_BUILD'	, '2024-06-25T20:14:36+02:00');
 	define('DEDALO_MAJOR_VERSION', '6');

@@ -7,8 +7,6 @@
 // imports
 	import {common, build_autoload} from '../../common/js/common.js'
 	import {area_common} from '../../area_common/js/area_common.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
-	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {render_area_development, build_form} from './render_area_development.js'
 
@@ -49,7 +47,6 @@ export const area_development = function() {
 */
 // prototypes assign
 	area_development.prototype.init				= area_common.prototype.init
-
 	area_development.prototype.refresh			= common.prototype.refresh
 	area_development.prototype.destroy			= common.prototype.destroy
 	area_development.prototype.build_rqo_show	= common.prototype.build_rqo_show
@@ -60,11 +57,11 @@ export const area_development = function() {
 
 /**
 * BUILD
+* @param bool autoload = true
 * @return promise
 *	bool true
 */
 area_development.prototype.build = async function(autoload=true) {
-	const t0 = performance.now()
 
 	const self = this
 
@@ -79,9 +76,6 @@ area_development.prototype.build = async function(autoload=true) {
 	// rqo build
 		self.rqo = self.rqo || await self.build_rqo_show(self.request_config_object, 'get_data')
 		self.rqo.prevent_lock = true
-
-	// debug
-		// const rqo_original = clone(self.rqo)
 
 	// load from DDBB
 		if (autoload===true) {
@@ -130,7 +124,6 @@ area_development.prototype.build = async function(autoload=true) {
 					}
 				}
 				self.data		= self.datum.data.find(el => el.tipo===el.section_tipo)
-				// self.widgets	= self.datum.context.filter(el => el.parent===self.tipo && el.typo==='widget')
 				self.widgets	= self.data && self.data.datalist
 					? self.data.datalist
 					: []
@@ -149,12 +142,6 @@ area_development.prototype.build = async function(autoload=true) {
 		self.label = self.context
 			? self.context.label
 			: 'Area Development'
-
-	// debug
-		if(SHOW_DEBUG===true) {
-			//console.log("self.context section_group:",self.datum.context.filter(el => el.model==='section_group'));
-			console.log("__Time to build", self.model, " ms:", performance.now()-t0);
-		}
 
 	// status update
 		self.status = 'built'
@@ -199,6 +186,7 @@ area_development.prototype.init_form = async function(widget_object) {
 
 	return true
 }//end init_form
+
 
 
 // @license-end

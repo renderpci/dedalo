@@ -234,7 +234,12 @@
 
 			$locator_section_tipo	= $item->value->section_tipo;
 			$section_table			= common::get_matrix_table_from_tipo($locator_section_tipo);
-			$current_is_publicable	= ($section_table==='matrix_list' || $section_table==='matrix_hierarchy' || $section_table==='matrix_dd' || $is_publicable===true)
+			$current_is_publicable	= (
+				$is_publicable===true ||
+				$section_table==='matrix_list' ||
+				$section_table==='matrix_hierarchy' ||
+				$section_table==='matrix_dd'
+				)
 				? true
 				: diffusion::get_is_publicable($item->value);
 

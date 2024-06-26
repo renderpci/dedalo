@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {render_tree_data} from '../../common/js/common.js'
@@ -58,6 +57,7 @@ render_area_maintenance.prototype.edit = async function(options) {
 /**
 * LIST
 * Alias of edit
+* @param object options
 * @return HTMLElement
 */
 render_area_maintenance.prototype.list = async function(options) {
@@ -106,7 +106,7 @@ const get_content_data = function(self) {
 
 /**
 * BUILD_WIDGET
-*
+* Renders widget DOM nodes
 * @param object item
 * @param object self
 * 	Instance of current area
@@ -155,7 +155,6 @@ const build_widget = (item, self) => {
 			label.classList.add('up')
 		}
 
-
 	// widget module check. Use if exists
 		const path = './widgets/'+ item.id +'/'+ item.id + '.js'
 		import(path)
@@ -189,92 +188,6 @@ const build_widget = (item, self) => {
 		})
 		.catch((err) => {
 			console.error(err)
-
-			// old builder fallback
-				/*
-				// item info
-					if (item.info) {
-						const widget_info = ui.create_dom_element({
-							element_type	: 'div',
-							class_name		: 'link',
-							inner_html		: item.info || '',
-							parent			: body
-						})
-						// action
-						widget_info.addEventListener('mouseup',  async function(e){
-							e.stopPropagation()
-
-							// confirm optional
-								if (item.confirm && !confirm(item.confirm)) {
-									return false
-								}
-
-							widget_info.classList.add('lock')
-
-							// spinner
-								const spinner = ui.create_dom_element({
-									element_type	: 'div',
-									class_name		: 'spinner'
-								})
-								body_response.prepend(spinner)
-
-							// data_manager
-								const api_response = await data_manager.request({
-									use_worker	: true,
-									body		: {
-										dd_api	: item.trigger.dd_api,
-										action	: item.trigger.action,
-										options	: item.trigger.options
-									}
-								})
-								print_response(body_response, api_response)
-								widget_info.classList.remove("lock")
-								spinner.remove()
-						})
-					}//end if (item.info) {
-
-				// body info
-					const body_info = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: "body_info",
-						inner_html		: item.body || '',
-						parent			: body
-					})
-
-				// body_response
-					const body_response = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'body_response',
-						parent			: body
-					})
-
-				// script (javascript code)
-					// if (item.script) {
-					// 	const script = ui.create_dom_element({
-					// 		element_type	: 'script',
-					// 		parent			: body,
-					// 		inner_html		: item.script
-					// 	})
-					// }
-
-				// run widget scripts
-					if(item.run) {
-						for (let i = 0; i < item.run.length; i++) {
-
-							const func			= item.run[i].fn
-							const func_options	= item.run[i].options
-
-							// promise
-							self[func].apply(self, [{
-								...item,
-								...func_options,
-								body_info		: body_info,
-								body_response	: body_response,
-								print_response	: print_response
-							}])
-						}
-					}
-				*/
 		});
 
 
@@ -326,7 +239,7 @@ export const print_response = (container, api_response) => {
 		const api_msg = api_response && api_response.msg
 			? Array.isArray(api_response.msg)
 				? api_response.msg.join('<br>')
-				: api_response.msg.replace(/\\n/g, '<br>') // api_response.msg.replace(/\\n/g, '<br>')
+				: api_response.msg.replace(/\\n/g, '<br>')
 			: 'Unknown API response error'
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -435,27 +348,6 @@ export const build_form = function(widget_object) {
 						if (on_done) {
 							return on_done(api_response)
 						}
-
-					// delegates get_children task to worker. When finish, create global radio for current area
-						// const current_worker = new Worker('../area_maintenance/js/worker_area_maintenance.js', {
-						// 	type : 'module'
-						// });
-						// current_worker.postMessage({
-						// 	url		: DEDALO_API_URL,
-						// 	dd_api	: trigger.dd_api,
-						// 	action	: trigger.action,
-						// 	options	: options
-						// });
-						// current_worker.onmessage = function(e) {
-						// 	const api_response = e.data.api_response
-
-						// 	print_response(body_response, api_response)
-
-						// 	form_container.classList.remove('lock')
-						// 	spinner.remove()
-
-						// 	current_worker.terminate()
-						// }
 			}
 		})
 
@@ -499,16 +391,6 @@ export const build_form = function(widget_object) {
 		form_container.button_submit = button_submit
 		button_submit.addEventListener('click', function(e){
 			e.stopPropagation()
-
-			// if (confirm( (get_label["sure"] || "Sure?") )) {
-			// 	for (let i = 0; i < input_nodes.length; i++) {
-			// 		if(input_nodes[i].classList.contains("mandatory") && input_nodes[i].value.length<1) {
-			// 			input_nodes[i].focus()
-			// 			input_nodes[i].classList.add("empty")
-			// 			return
-			// 		}
-			// 	}
-			// }
 		})
 
 
