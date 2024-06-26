@@ -377,3 +377,96 @@
 
 
 
+
+	/**
+	* FINAL_TOTAL
+	* Get the total of the specific totals
+	* Example of use:
+	*		"widgets": [
+	*		{
+	*			"ipo": [
+	*			{
+	*				"input": {
+	*					"filter": false,
+	*					"components": [
+	*						{
+	*							"tipo": "mdcat2579",
+	*							"var_name": "total_minor"
+	*						},
+	*						{
+	*							"tipo": "mdcat2585",
+	*							"var_name": "import_manual"
+	*						},
+	*						{
+	*							"tipo": "mdcat2443",
+	*							"var_name": "total_major"
+	*						},
+	*						{
+	*							"tipo": "mdcat2587",
+	*							"var_name": "paid"
+	*						}
+	*					],
+	*					"section_id": "current",
+	*					"section_tipo": "current"
+	*					},
+	*				"output": [
+	*					{
+	*						"id": "total",
+	*						"value": "int"
+	*					}
+	*				],
+	*				"process": {
+	*					"fn": "final_total",
+	*					"file": "/mdcat/calculation/mdcat.php",
+	*					"engine": "php"
+	*				}
+	*			}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "sum calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*		]
+	* @param object $request_options
+	* {
+	* 	"total_minor" : [6010],
+	* 	"total_major" : [6010],
+	* 	"import_manual" : "96",
+	* 	"paid" 			: "645"
+	* }
+	* @return array
+	*/
+	function final_total($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		// $calculation_day	= array_sum($data->calculation_day);
+		$total_minor	= (float)reset($data->total_minor);
+		$total_major	= (float)reset($data->total_major);
+		$import_manual	= (float)$data->import_manual;
+		$paid			= (float)$data->paid;
+
+		if( isset($import_manual) && $import_manual !== 0.0 ){
+			$total = $import_manual - $paid;
+
+		}else{
+			$total = ( isset($total_major) && $total_major > 0.0 )
+				? $total_major - $paid
+				: $total_minor - $paid;
+		}
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> round($total, 2)
+			]
+		];
+
+		return $result;
+	}//end final_total
+
+
