@@ -2836,6 +2836,17 @@ class component_relation_common extends component_common {
 
 					// for every value resolve the path and get the component_data
 					foreach($value as $current_value){
+
+						// create a ddo_map when is not defined
+						// the case of the component to be searched is in the same section that the caller
+						if( !isset($current_value->ddo_map) ){
+							$ddo = new dd_object();
+								$ddo->set_section_tipo($section_tipo);
+								$ddo->set_parent($section_tipo);
+								$ddo->set_tipo($current_value->q);
+							$current_value->ddo_map = [$ddo];
+						}
+
 						// get the first ddo to be resolve the ddo chain
 						$init_ddo = array_find($current_value->ddo_map, function($item) use ($section_tipo) {
 							return $item->parent === 'self' || $item->parent === $section_tipo;
