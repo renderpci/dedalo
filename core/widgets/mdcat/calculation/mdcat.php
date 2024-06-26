@@ -22,7 +22,7 @@
 
 		$data          = $params->data;
 		$options       = $params->options;
-		$total_days    = $data->total_days;
+		$total_days    = array_sum($data->total_days); //$data->total_days;
 		$month_days    = 30.42;
 
 		// check value
@@ -41,7 +41,7 @@
 		$total_months  = floor($total_days / $month_days);
 
 		$months        = floor($years_days / $month_days);
-		$days          = floor($years_days - ($months * $month_days));
+		$days          = floor($years_days - ($months * $month_days)); // error in the original calculation the * need to be floor also if not always count 1 day minus
 
 		$period = [];
 
@@ -88,10 +88,10 @@
 	* CALCULATE_IMPORT_MAJOR
 	* @return int
 	*/
-	function calculate_import_major(object $options) : int {
+	function calculate_import_major(object $options) : array {
 
 		$data = $options->data;
-		$total_days = $data->total_days;
+		$total_days = array_sum($data->total_days);
 		if($total_days === 0){
 			return 0;
 		}
@@ -107,6 +107,7 @@
 		if($days > 0){
 			$total_months = $total_months + 1;
 		}
+
 		if($total_months <= 6){
 			$cal_import = 150000;
 		}else{
@@ -116,8 +117,12 @@
 			$cal_import = 1000000;
 		}
 
-		$result = $cal_import;
-
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $cal_import
+			]
+		];
 
 		return $result;
 	}//end calculate_import_major
@@ -128,10 +133,10 @@
 	* CALCULATE_IMPORT_MINOR
 	* @return int
 	*/
-	function calculate_import_minor(object $options) : int {
+	function calculate_import_minor(object $options) : array {
 
 		$data = $options->data;
-		$total_days = $data->total_days;
+		$total_days = array_sum($data->total_days);
 		if($total_days === 0){
 			return 0;
 		}
@@ -155,8 +160,13 @@
 			$cal_import = 6010;
 		}
 
-		$result = $cal_import;
-
+		// $result = $cal_import;
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $cal_import
+			]
+		];
 
 		return $result;
 	}//end calculate_import_minor
@@ -175,22 +185,21 @@
 
 		$data = $options->data;
 
-		$numero = $data->numero;
-		// error_log('------ to_euros numero: '.json_encode($options));
+		$number = array_sum($data->number);
 
 		// check value
-		if (!is_numeric($numero)) {
+		if (!is_numeric($number)) {
 			debug_log(__METHOD__
-				. " Invalid 'numero' value (non numeric) " . PHP_EOL
-				. ' numero: ' . to_string($numero) . PHP_EOL
+				. " Invalid 'number' value (non numeric) " . PHP_EOL
+				. ' number: ' . to_string($number) . PHP_EOL
 				. ' request_options: ' . to_string($request_options)
 				, logger::ERROR
 			);
 			return [];
 		}
 
-		$total = !empty($numero)
-			? ($numero / 166.386)
+		$total = !empty($number)
+			? round($number / 166.386, 2)
 			: 0;
 
 		$result = [
@@ -268,23 +277,15 @@
 
 		$data = $options->data;
 
-		$start	= $data->start;
-		$end	= $data->end;
-		// error_log('------ range_to_days numero: '.json_encode($options));
+		$start = ( $data->start === false )
+			? 0
+			: $data->start;
 
-		// check value
-		if (!is_numeric($start) || !is_numeric($end)) {
-			debug_log(__METHOD__
-				. " Invalid 'number' value (non numeric) " . PHP_EOL
-				. ' start: ' . to_string($start) . PHP_EOL
-				. ' end: ' . to_string($end) . PHP_EOL
-				. ' request_options: ' . to_string($request_options)
-				, logger::ERROR
-			);
-			return [];
-		}
+		$end =  $data->end;
 
-		$time = round( $end - $start );
+		$time = ( !isset($end) || $end === false )
+			? 0
+			: round( $end - $start );
 
 		if($time <= 0){
 			$total = 1;
@@ -357,8 +358,6 @@
 
 		$calculation_day	= array_sum($data->calculation_day);
 		$manual_day			= $data->manual_day;
-
-		// error_log('------ days_correction_manually numero: '.json_encode($options));
 
 		$total = !empty( $manual_day )
 			? $manual_day
