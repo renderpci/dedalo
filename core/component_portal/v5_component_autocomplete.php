@@ -198,6 +198,27 @@
 
 		// get_valor : ($lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> ')
 			$value = $this->get_valor($lang, 'array');
+			// value sample:
+				// [
+				//     {
+				//         "value": {
+				//             "type": "dd151",
+				//             "section_id": "4551",
+				//             "section_tipo": "rsc194",
+				//             "from_component_tipo": "rsc139"
+				//         },
+				//         "label": "<mark>Ripollès Alegre (Universitat de València)</mark>, <mark>Pere Pau</mark>"
+				//     },
+				//     {
+				//         "value": {
+				//             "type": "dd151",
+				//             "section_id": "3125",
+				//             "section_tipo": "rsc194",
+				//             "from_component_tipo": "rsc139"
+				//         },
+				//         "label": "<mark>Llorens Forcada</mark>, <mark>Maria del Mar</mark>"
+				//     }
+				// ]
 
 		// is_publicable from propiedades. case Bibliography 'rsc368'
 			$propiedades	= $this->get_propiedades(true);
@@ -247,7 +268,7 @@
 				$current_label = $item->label ?? '';
 				$diffusion_value_clean[] = strip_tags($current_label,'<img>');
 			}
-		}
+		}//end foreach ($value as $item)
 
 		$diffusion_value = implode($fields_separator, $diffusion_value_clean);
 
