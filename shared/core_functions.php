@@ -414,6 +414,7 @@ function curl_request(object $options) : object {
 		$followlocation	= $options->followlocation ?? true;
 		$header			= $options->header ?? true;
 		$ssl_verifypeer	= $options->ssl_verifypeer ?? false;
+		$ssl_verifyhost	= $options->ssl_verifyhost ?? false;
 		$timeout		= isset($options->timeout) ? (int)$options->timeout : 5; // seconds
 		$proxy			= $options->proxy ?? false;
 		$httpheader		= $options->httpheader ?? null; // array('Content-Type:application/json')
@@ -450,6 +451,7 @@ function curl_request(object $options) : object {
 
 	// SSL. Avoid verify SSL certificates (very slow)
 		curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, $ssl_verifypeer); // bool default false
+		curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, $ssl_verifyhost); // bool default false
 
 	// A given cURL operation should only take XXX seconds max.
 		curl_setopt($ch, CURLOPT_TIMEOUT, $timeout); // int default 5
