@@ -191,28 +191,12 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
-
-					const section_id = api_response.result
-
-					const source = create_source(self, 'search')
-						  source.section_id	= section_id
-						  source.mode		= 'edit'
-
-					const sqo = {
-						mode				: self.mode,
-						section_tipo		: [{tipo:self.section_tipo}],
-						filter_by_locators	: [{
-							section_tipo	: self.section_tipo,
-							section_id		: section_id
-						}],
-						limit				: 1,
-						offset				: 0
-					}
-					// launch event 'user_navigation' that page is watching
-					event_manager.publish('user_navigation', {
-						source	: source,
-						sqo		: sqo
-					})
+					// const section_id = api_response.result
+					const offset = self.total
+					// update total (added one record)
+					self.total++
+					// update pagination sqo and local DB
+					self.update_pagination(offset)
 				}
 			}//end fn_create_new_section
 
@@ -238,28 +222,12 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
-
-					const section_id = api_response.result
-
-					const source = create_source(self, 'search')
-						  source.section_id	= section_id
-						  source.mode		= 'edit'
-
-					const sqo = {
-						mode				: self.mode,
-						section_tipo		: [{tipo:self.section_tipo}],
-						filter_by_locators	: [{
-							section_tipo	: self.section_tipo,
-							section_id		: section_id
-						}],
-						limit				: 1,
-						offset				: 0
-					}
-					// launch event 'user_navigation' that page is watching
-					event_manager.publish('user_navigation', {
-						source	: source,
-						sqo		: sqo
-					})
+					// const section_id = api_response.result
+					const offset = self.total
+					// update total (added one record)
+					self.total++
+					// update pagination sqo and local DB
+					self.update_pagination(offset)
 				}
 			}//end fn_duplicate_section
 
@@ -699,36 +667,7 @@ section.prototype.build = async function(autoload=false) {
 
 			// event paginator_goto_
 				const fn_paginator_goto = async function(offset) {
-
-					// fix new offset value
-						self.request_config_object.sqo.offset	= offset
-						self.rqo.sqo.offset						= offset
-
-					// get sqo after modification for proper navigation
-						const sqo = clone(self.rqo.sqo)
-
-					// save pagination
-					// Updates local DB pagination values
-						if (self.session_save===true) {
-							await data_manager.set_local_db_data(
-								{
-									id		: `${self.tipo}_${self.mode}`,
-									value	: {
-										limit	: self.rqo.sqo.limit,
-										offset	: self.rqo.sqo.offset
-									}
-								},
-								'pagination'
-							)
-						}
-
-					// navigate section rows
-						self.navigate({
-							callback : async () => { // callback
-							},
-							sqo					: sqo,
-							navigation_history	: true // bool navigation_history save
-						})
+					self.update_pagination(offset)
 				}
 				self.events_tokens.push(
 					event_manager.subscribe('paginator_goto_'+self.paginator.id, fn_paginator_goto)
@@ -1358,6 +1297,52 @@ const build_sqo_id = function(tipo) {
 
 	return sqo_id
 }//end build_sqo_id
+
+
+
+/**
+* UPDATE_PAGINATION
+* This is fired on new and duplicate section events and in paginator goto function
+* Is a unified mode to update navigation history and offset
+* navigation section
+* @see self.navigate
+* @param int offset
+* @return bool
+*/
+section.prototype.update_pagination = async function (offset) {
+
+	const self = this
+
+	// update section sqo
+		self.request_config_object.sqo.offset	= offset
+		self.rqo.sqo.offset						= offset
+
+	// get sqo after modification for proper navigation
+		const sqo = clone(self.rqo.sqo)
+
+	// save pagination
+	// Updates local DB pagination values
+		if (self.session_save===true) {
+			await data_manager.set_local_db_data(
+				{
+					id		: `${self.tipo}_${self.mode}`,
+					value	: {
+						limit	: self.rqo.sqo.limit,
+						offset	: self.rqo.sqo.offset
+					}
+				},
+				'pagination'
+			)
+		}
+
+	// navigate section rows
+		self.navigate({
+			sqo					: sqo,
+			navigation_history	: true // bool navigation_history save
+		})
+
+	return true
+}//end update_pagination
 
 
 
