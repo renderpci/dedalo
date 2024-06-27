@@ -1190,7 +1190,7 @@ class tools_register {
 		$ar_client_defautl_config = array_map(function($item){
 
 			$new_config = [];
-			if($item->config !== false){
+			if( $item->config!==false && is_iterable($item->config) ) {
 				foreach ($item->config as $key => $value) {
 					if (isset($value->client) && $value->client===true) {
 						$new_config[$key] = $value;
