@@ -516,6 +516,11 @@
 
 		$data = $options->data;
 
+		$caller_section_tipo = $request_options->caller_section_tipo ?? null;
+		if( !isset($caller_section_tipo) ){
+			return false;
+		}
+
 		// $calculation_day	= array_sum($data->calculation_day);
 		$total_minor	= (float)reset($data->total_minor);
 		$total_major	= (float)reset($data->total_major);
@@ -526,7 +531,7 @@
 			$total = $import_manual - $paid;
 
 		}else{
-			$total = ( isset($total_major) && $total_major > 0.0 )
+			$total = ( $caller_section_tipo === 'mdcat2605' && isset($total_major) && $total_major > 0.0 )
 				? $total_major - $paid
 				: $total_minor - $paid;
 		}

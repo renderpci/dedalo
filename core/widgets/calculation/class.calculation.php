@@ -604,8 +604,9 @@ class calculation extends widget_common {
 		// merge the process->options defined in structure and the pre-processed data
 		// in a unique object, for simplify the call
 		$arg 	= (object)[
-			'data'		=> $data,
-			'options'	=> $process->options ?? new stdClass()
+			'caller_section_tipo'	=> $this->section_tipo,
+			'data'					=> $data,
+			'options'				=> $process->options ?? new stdClass()
 		];
 
 		switch ($process->engine) {
