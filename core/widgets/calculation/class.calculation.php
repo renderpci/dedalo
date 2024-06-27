@@ -605,7 +605,7 @@ class calculation extends widget_common {
 		// in a unique object, for simplify the call
 		$arg 	= (object)[
 			'data'		=> $data,
-			'options'	=> $process->options
+			'options'	=> $process->options ?? new stdClass()
 		];
 
 		switch ($process->engine) {
