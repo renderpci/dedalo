@@ -321,31 +321,43 @@ class component_iri extends component_common {
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$dato = $this->get_dato();
-		if (!empty($dato)) {
 
-			$ar_values = [];
-			foreach ($dato as $value) {
-
-				if(empty($value)) {
-					continue;
-				}
-
-				$ar_parts = [];
-				if (!empty($value->title)) {
-					$ar_parts[] = $value->title;
-				}
-				if (!empty($value->iri)) {
-					$ar_parts[] = $value->iri;
-				}
-
-				$ar_values[] = implode(', ', $ar_parts);
+		// no lang fallback
+			if (empty($dato) && $lang!==DEDALO_DATA_NOLAN) {
+				// try using nolan
+				$this->set_lang(DEDALO_DATA_NOLAN);
+				$dato = $this->get_dato();
+				// restore lang
+				$this->set_lang($lang);
 			}
 
-			$diffusion_value = implode(' | ', $ar_values);
-		}else{
+		// no value case
+			if (empty($dato)) {
+				return null;
+			}
 
-			$diffusion_value = null;
+
+		$ar_values = [];
+		foreach ($dato as $value) {
+
+			if(empty($value)) {
+				continue;
+			}
+
+			$ar_parts = [];
+			if (!empty($value->title)) {
+				$ar_parts[] = $value->title;
+			}
+			if (!empty($value->iri)) {
+				$ar_parts[] = $value->iri;
+			}
+
+			// add value
+			$ar_values[] = implode(', ', $ar_parts);
 		}
+
+		// diffusion_value string
+		$diffusion_value = implode(' | ', $ar_values);
 
 
 		return $diffusion_value;
