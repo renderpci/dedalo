@@ -51,10 +51,7 @@ export const service_ckeditor = function() {
 			const caller			= options.caller // compnent_text_area that create the instance
 			const value_container	= options.value_container // dom node to be used as value container (empty when is set by the caller)
 			const toolbar_container	= options.toolbar_container // dom node for the toolbar
-			// const value			= options.value // the html data to be incorporated to the editor
 			const fallback_value	= options.fallback_value // the html data to be showed as placeholder when value is empty
-
-
 			const key				= options.key // array key of the value of the caller data
 			const editor_config		= options.editor_config // options for build custom buttons in the toolbar or custom events
 			const editor_class		= options.editor_class || 'ddEditor'
@@ -66,9 +63,6 @@ export const service_ckeditor = function() {
 			self.options			= options
 			self.key				= key
 			self.fallback_value		= fallback_value
-
-		// add component_text_area value
-			// value_container.innerHTML = value
 
 		// load ckeditor files if not already loaded
 			if(typeof ckeditor==='undefined'){
@@ -101,10 +95,6 @@ export const service_ckeditor = function() {
 						)
 					}
 					await Promise.all(load_promises)
-
-				if(SHOW_DEBUG===true) {
-					// console.log('ckeditor load editor and langs: ',  Math.round(performance.now()-t0), self.caller.id);
-				}
 			}
 
 		// set json_langs (loaded once and set to global var)
@@ -241,9 +231,6 @@ export const service_ckeditor = function() {
 				// init editor status changes to track isDirty value
 					self.init_status_changes()
 
-				// remove original value container
-					// self.value_container.remove()
-
 				// setup_events
 					self.setup_button_reference();
 
@@ -271,15 +258,13 @@ export const service_ckeditor = function() {
 								// toolbar.maxWidth = width
 								// set styles
 								Object.assign(ck_toolbar.style, {
-									width		: width + 'px'
-									// maxWidth	: width + 'px'
+									width : width + 'px'
 								});
 							}
 
 						// sync toolbar container. Focus/blur editor show/hide the toolbar container
 							editor.ui.focusTracker.on( 'change:isFocused', ( evt, name, isFocused ) => {
 								if ( isFocused===true ) {
-									// adjust_size()
 									self.toolbar_container.classList.remove('hide')
 								}else{
 									self.toolbar_container.classList.add('hide')
@@ -364,8 +349,6 @@ export const service_ckeditor = function() {
 						return
 					}
 
-				// if()
-
 				// check the target name of the element (expected a image)
 				if(data.target.name==='img'){
 					editor.editing.view.change((writer) => {
@@ -437,7 +420,6 @@ export const service_ckeditor = function() {
 				editor.editing.view.focus()
 
 				document.body.addEventListener('mouseup', fn_remove)
-				// value_container.remove()
 			}
 
 		// add custom class to the root element of the editor
@@ -491,13 +473,11 @@ export const service_ckeditor = function() {
 			return false
 		}
 
-		// const value = self.get_value()	// editor.getContent({format:'raw'})
-		// // const value = self.editor.getBody()
 		const value = editor.getData();
 
 		await self.caller.save_value(key, value)
 
-		// // set_set_dirty after save is finish
+		// set_set_dirty after save is finish
 		self.is_dirty = false;
 
 
@@ -585,15 +565,9 @@ export const service_ckeditor = function() {
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
-				// const modelDocument	= editor.model.document;
-				// const selection		= modelDocument.selection;
 
 				// get the name of the node clicked, 'img' 'p' 'div', etc
 				const click_element = data.target.name
-
-				// if ( clickedElement.tagName.toLowerCase() != 'reference' ) {
-				// 	clickedElement = clickedElement.closest( 'a' );
-				// }
 
 				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
 				if(click_element==='div' || ( click_element!=='img' && click_element!=='reference')){
@@ -713,8 +687,8 @@ export const service_ckeditor = function() {
 				text_editor	: self
 			})
 			// create the new tag for the reference
-			const tag_type			='reference'
-			const last_tag_id		= 0 //self.get_last_tag_id(tag_type, self)
+			const tag_type			= 'reference'
+			const last_tag_id		= 0
 			const refrence_number	= parseInt(last_tag_id) + 1
 			const reference_tag		= {
 				type	: tag_type,
@@ -752,34 +726,16 @@ export const service_ckeditor = function() {
 		const self		= this
 		const editor	= self.editor
 
-		// convert the html to the model of ck_editor
-		// const view_fragment	= editor.data.processor.toView( html );
-		// const model_tag_node	= editor.data.toModel( view_fragment );
-
 		editor.model.change( writer => {
-			// if(tag_obj.type==='reference'){
-			// 	const model_tag_node = writer.createElement( 'reference', tag_obj) ;
-			// 	// set the element to enclose the selection range
-			// 	writer.wrap( editor.model.document.selection.getFirstRange(), model_tag_node )
-			// }else{
-				// get the end position of the selection
-				const position = editor.model.document.selection.getLastPosition()
-				// create the tag_node
-				const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
-
-				// Insert the html in the current selection location.
-				editor.model.insertContent( model_tag_node, position );
-				// Put the selection on the inserted element.
-				// writer.setSelection( model_tag_node, 'on' );
-			// }
+			// get the end position of the selection
+			const position = editor.model.document.selection.getLastPosition()
+			// create the tag_node
+			const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
+			// Insert the html in the current selection location.
+			editor.model.insertContent( model_tag_node, position );
 		});
 
 		self.is_dirty = true;
-
-		// const value = editor.getContent({format:'raw'})
-		const value = editor.getData();
-		// const value = self.editor.getBody()
-		// self.caller.save_value(self.key, value)
 
 
 		return true
@@ -790,8 +746,7 @@ export const service_ckeditor = function() {
 	/**
 	* DELETE_TAG
 	* @param tag_obj
-	* Tag object with all parameters for search the tag inside the model structure of ckeditor
-	*
+	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return promise bool
 	*/
 	this.delete_tag = function(tag_obj) {
@@ -908,15 +863,13 @@ export const service_ckeditor = function() {
 		}
 
 		// get the user selection
-		const user_selection =  editor.model.document.selection
+		const user_selection = editor.model.document.selection
 
 		// get the content of the selection, it get the html representation
 		const content = editor.model.getSelectedContent(user_selection)
 
 		// convert the ckeditor data to html in string format
 		const selection = editor.data.stringify(content)
-
-		// const collapse = editor.model.document.selection.isCollapsed
 
 
 		return selection
@@ -940,8 +893,6 @@ export const service_ckeditor = function() {
 
 		editor.model.change( writer => {
 			// convert the html to the model of ck_editor
-			// const data_tag_obj_in	= editor.data.processor.toView( tag_obj_in.outerHTML  );
-			// const model_tag_obj_in	= editor.data.toModel( data_tag_obj_in );
 
 			// get the in position of the selection
 			const in_position = editor.model.document.selection.getFirstPosition()
@@ -958,13 +909,7 @@ export const service_ckeditor = function() {
 
 			const model_tag_obj_out = writer.createElement( 'imageInline', tag_obj_out );
 			// convert the html to the model of ck_editor
-			// const view_tag_obj_out	= editor.data.processor.toView( tag_obj_out.outerHTML );
-			// const model_tag_obj_out = editor.data.toModel( tag_obj_out );
-
 			editor.model.insertContent( model_tag_obj_out, out_position );
-
-			// writer.setSelection( model_tag_obj_out, 'on' );
-			// writer.setSelection( model_tag_obj_in, 'on' );
 		});
 
 		editor.editing.view.focus();
@@ -1006,7 +951,7 @@ export const service_ckeditor = function() {
 			if(tag_view_in && tag_view_out){
 				self.set_selection_from_view_tags(tag_view_in, tag_view_out)
 			}else{
-				console.log('Invalid tag_view_in/tag_view_out:', tag_view_in, tag_view_out);
+				console.warn('Invalid tag_view_in/tag_view_out:', tag_view_in, tag_view_out);
 			}
 	}//end set_selection_from_tag
 
@@ -1016,9 +961,9 @@ export const service_ckeditor = function() {
 	* GET_SELECTION_FROM_TAGS
 	* Set selection and scroll selection into the view
 	* @param object tag_view_in
-	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
+	* 	tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag in
 	* @param object tag_view_out
-	* tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
+	* 	tag representation in ckeditor view structure, it's a object with the parameters of the ckeditor for tag out
 	* @return void
 	*/
 	this.set_selection_from_view_tags = function(tag_view_in, tag_view_out) {
@@ -1042,8 +987,6 @@ export const service_ckeditor = function() {
 			const range = writer.createRange(start, end);
 
 			writer.setSelection( range );
-
-			// self.scroll_to_selection()
 		});
 	}//end get_selection_from_tags
 
@@ -1090,6 +1033,12 @@ export const service_ckeditor = function() {
 		// short vars
 			const self		= this
 			const editor	= self.editor
+
+		// check
+			if (!editor || !editor.editing) {
+				console.error('get_view_tag. Editor is not available:', editor);
+				return false
+			}
 
 		// root. Whole editor document to traverse
 			const root = editor.editing.view.document.getRoot();
@@ -1267,7 +1216,6 @@ export const service_ckeditor = function() {
 				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-
 				const parent_item = item.parent
 
 				const attributes = parent_item._attrs
@@ -1366,9 +1314,6 @@ export const service_ckeditor = function() {
 									edit_attributes.set(name, current_value)
 								}
 
-								// console.log("-> 1 changed attributes:",attributes);
-								// console.log("-> 2 changed edit_attributes:",edit_attributes);
-
 							// id. Re-create the id like [/index-n-1-label in 1]
 								const data_tag = {
 									type	: current_type, // type
@@ -1463,12 +1408,13 @@ export const service_ckeditor = function() {
 		// editor config vars
 			// toolbar array with the order of the buttons like:
 			// ['bold','italic','underline','|','undo','redo']
-			const toolbar			= editor_config.toolbar
+			const toolbar = editor_config.toolbar
 			// custom_buttons array of the buttons objects with the own configuration
-			const custom_buttons	= editor_config.custom_buttons
+			const custom_buttons = editor_config.custom_buttons
 
 			const toolbar_length = toolbar.length
 			for (let i = 0; i < toolbar_length; i++) {
+
 				const toolbar_item = toolbar[i]
 
 				const button_config = custom_buttons.find(el => el.name === toolbar_item)
@@ -1483,10 +1429,6 @@ export const service_ckeditor = function() {
 				if(button_config.manager_editor === true){
 					self.factory_events_for_buttons(button_config)
 				}
-				// if(button_config.name === 'reference'){
-
-
-				// }
 
 				toolbar_container.appendChild(button_node)
 
@@ -1570,10 +1512,8 @@ export const service_ckeditor = function() {
 
 		// command. Retrieve the editor command corresponding with the ID of the button in the DOM.
 			const command = editor.commands.get( name );
-			// const button = this.view.toolbarButtons[ name ];
 
 		// Clicking the buttons should execute the editor command...
-			// button.onmousedown( evt => evt.preventDefault() );
 			button.addEventListener('click', function(){
 				editor.execute( name )
 				editor.editing.view.focus();
@@ -1595,8 +1535,7 @@ export const service_ckeditor = function() {
 
 		// change the state of the button if the command is not enable
 			const onIsEnabledChange = () => {
-				// button.attr( 'disabled', () => !command.isEnabled );
-				// button.setAttribute( 'disabled', !command.isEnabled );
+
 				if(!command.isEnabled){
 					button.classList.add('disable')
 				}else{
@@ -1606,6 +1545,7 @@ export const service_ckeditor = function() {
 			editor.listenTo( command, 'change:isEnabled', (evt)=>{
 				onIsEnabledChange()
 			})
+
 
 		return true
 	}//end factory_events_for_buttons
@@ -1681,48 +1621,6 @@ export const service_ckeditor = function() {
 				? selectedElement.getAttribute( 'reference' )
 				: selection.getAttribute( 'reference' )
 
-		// des
-			// 	this.isEnabled = model.schema.checkAttribute( selectedElement, 'reference' );
-			// } else {
-			// 	this.value = selection.getAttribute( 'reference' );
-			// 	this.isEnabled = model.schema.checkAttributeInSelection( selection, 'reference' );
-			// }
-
-			// const self		= this
-			// const editor	= self.editor
-
-			// const view				= editor.editing.view;
-			// const selection			= view.document.selection;
-			// const selectedElement	= selection.getSelectedElement();
-
-			// function is_widget( node ) {
-			// 	if ( !node.is( 'element' ) ) {
-			// 		return false;
-			// 	}
-			// 	return !!node.getCustomProperty( 'widget' );
-			// }
-
-			// // The selection is collapsed or some widget is selected (especially inline widget).
-			// if ( selection.isCollapsed || selectedElement && is_widget(selectedElement) ) {
-			// 	return self.find_reference_element_ancestor( selection.getFirstPosition() );
-			// } else {
-			// 	// The range for fully selected link is usually anchored in adjacent text nodes.
-			// 	// Trim it to get closer to the actual link element.
-			// 	const range = selection.getFirstRange().getTrimmed();
-			// 	const start_reference	= self.find_reference_element_ancestor( range.start );
-			// 	const end_reference		= self.find_reference_element_ancestor( range.end );
-
-			// 	if ( !start_reference || start_reference != end_reference ) {
-			// 		return null;
-			// 	}
-
-			// 	// Check if the reference element is fully selected.
-			// 	if ( view.createRangeIn( start_reference ).getTrimmed().isEqual( range ) ) {
-			// 		return start_reference;
-			// 	} else {
-			// 		return null;
-			// 	}
-			// }
 
 		return value
 	}//end get_selected_reference_element
@@ -1769,7 +1667,7 @@ export const service_ckeditor = function() {
 
 		const model		= editor.model;
 		const selection	= model.document.selection;
-		// get the reference_editing plug-ing to get ck_funcitonalities
+		// get the reference_editing plugin to get ck_funcitonalities
 		const reference_editing = editor.plugins.get( 'reference_editing' )
 
 		model.change( writer => {
@@ -1784,10 +1682,6 @@ export const service_ckeditor = function() {
 
 					writer.setAttribute( 'reference', new_data_obj, reference_range );
 
-					// new_data_obj.forEach( item => {
-					// 	writer.setAttribute( item, true, reference_range );
-					// } );
-
 					// Put the selection at the end of the updated link.
 					writer.setSelection( writer.createPositionAfter( reference_range.end.nodeBefore ) );
 				}
@@ -1798,14 +1692,6 @@ export const service_ckeditor = function() {
 					const attributes = new Map( selection.getAttributes() );
 
 					attributes.set( 'reference', new_data_obj );
-
-					// new_data_obj.forEach( item => {
-					// 	attributes.set( item, true );
-					// } );
-					// for (const name in new_data_obj) {
-					// 	attributes.set(name, new_data_obj[name])
-					// }
-
 
 					const { end: positionAfter } = model.insertContent( writer.createText( locator_text_value, attributes ), position );
 
@@ -1856,10 +1742,6 @@ export const service_ckeditor = function() {
 
 				for ( const range of rangesToUpdate ) {
 					writer.setAttribute( 'reference', new_data_obj, range );
-
-					// new_data_obj.forEach( item => {
-					// 	writer.setAttribute( item, true, range );
-					// } );
 				}
 			}
 		});
@@ -1878,7 +1760,7 @@ export const service_ckeditor = function() {
 		const model		= editor.model;
 		const selection	= model.document.selection;
 
-		// get the reference_editing plug-ing to get ck_funcitonalities
+		// get the reference_editing plugin to get ck_funcitonalities
 		const reference_editing = editor.plugins.get( 'reference_editing' )
 
 		model.change( writer => {
