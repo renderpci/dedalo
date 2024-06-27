@@ -59,6 +59,7 @@ class dd_object extends stdClass {
 									} Used by tools
 		// color 				: string // "#f1f1f1"
 		// matrix_table 		: string || 'matrix_dd'
+		// data_fn 				: string || 'get_calculation_data' used in mdcat2431 set the function to be used to get data of the ddo
 
 
 		// object features. Use this container to add custom properties like 'notes_publication_tipo' in text area
@@ -1265,6 +1266,7 @@ class dd_object extends stdClass {
 
 
 
+
 	/**
 	* GET_COLOR
 	* Return property value
@@ -1302,6 +1304,36 @@ class dd_object extends stdClass {
 		return $this->matrix_table ?? null;
 	}//end get_matrix_table
 
+
+
+
+	/**
+	* SET_DATA_FN
+	* data_fn defines the function to be used to get data of the ddo
+	* example:
+	* "data_fn" : "get_calculation_data"
+	* @param string|null $value
+	* @return bool
+	*/
+	public function set_data_fn(?string $value) : bool {
+
+		$this->data_fn = $value;
+
+		return true;
+	}//end set_data_fn
+
+
+
+
+	/**
+	* GET_DATA_FN
+	* Return property value
+	* @return string|null $this->label
+	*/
+	public function get_data_fn() : ?string {
+
+		return $this->data_fn ?? null;
+	}//end get_data_fn
 
 
 

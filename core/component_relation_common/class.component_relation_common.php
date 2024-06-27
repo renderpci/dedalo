@@ -2785,7 +2785,7 @@ class component_relation_common extends component_common {
 					break;
 
 				case 'component_data':
-					//Sample
+					// Sample
 					//	{
 					//		"value": [
 					//			{
@@ -2816,21 +2816,37 @@ class component_relation_common extends component_common {
 					//		],
 					//		"source": "component_data"
 					//	}
-					// Every value has a object with:
-					// q :					His value defines the target component_tipo that has the data to be used into the filter
-					//						(in the example a portal point to biographic milestones)
-					// path : 				To be used as final search path (the component to be searched),
-					//						(in the example the section_id of the biographic milestone section)
-					// ddo_map :			Defines the ddo path to the component that has the data, it could be in the same section or in other.
-					//						(in the example the path from numismatic object to the biographic milestones portal in People under study)
-					// 						when the ddo has a children, every child will be resolve with the data of his parent.
-					// q_operator  			q_operator to be used
-					// search_section_id : 	true | null. Defines if the component data will be used to search into a section_id component, in those cases, join the section_id to optimize the search
+					// Every value property has a object with:
+					// q :							His value defines the target component_tipo that has the data to be used into the filter
+					//								(in the example a portal point to biographic milestones)
+					// path : 						To be used as final search path (the component to be searched),
+					//								(in the example the section_id of the biographic milestone section)
+					// ddo_map :					Defines the ddo path to the component that has the data, it could be in the same section or in other.
+					//								(in the example the path from numismatic object to the biographic milestones portal in People under study)
+					// 								when the ddo has a children, every child will be resolve with the data of his parent.
+					//								If ddo is not set, the component to get his data to be search, need to be in the same section that the caller.
+					// q_operator  					q_operator to be used
+					// search_section_id : 			true | null. Defines if the component data will be used to search into a section_id component,
+					//								in those cases, join the section_id to optimize the search
+					// use_from_component_tipo : 	true | false. Defines if the locator to be search will remove the property "from_component_tipo"
+					//								to be match with other related components, (data from a select search into a portal)
+					//								used in mdcat3165 to get a short filtered list of items using the data of mdcat3047
 
 					$value = $search_item->value;
 
 					// for every value resolve the path and get the component_data
 					foreach($value as $current_value){
+
+						// create a ddo_map when is not defined
+						// the case of the component to be searched is in the same section that the caller
+						if( !isset($current_value->ddo_map) ){
+							$ddo = new dd_object();
+								$ddo->set_section_tipo($section_tipo);
+								$ddo->set_parent($section_tipo);
+								$ddo->set_tipo($current_value->q);
+							$current_value->ddo_map = [$ddo];
+						}
+
 						// get the first ddo to be resolve the ddo chain
 						$init_ddo = array_find($current_value->ddo_map, function($item) use ($section_tipo) {
 							return $item->parent === 'self' || $item->parent === $section_tipo;
@@ -2881,6 +2897,12 @@ class component_relation_common extends component_common {
 						}else{
 							// if the component is other than section_id, create a q and path with every compnent_data.
 							foreach ($component_data as $search_data) {
+
+								if( is_object( $search_data ) &&
+									isset($current_value->use_from_component_tipo) &&
+									$current_value->use_from_component_tipo === false ){
+									unset($search_data->from_component_tipo);
+								}
 								$filter_item = new stdClass();
 									$filter_item->q		= $search_data;
 									$filter_item->path	= $current_value->path;
@@ -2922,6 +2944,7 @@ class component_relation_common extends component_common {
 
 		$last			= $dd_object->last ?? null;
 		$tipo			= $dd_object->tipo;
+		$data_fn		= $dd_object->data_fn ?? null;
 		$section_tipo	= $data->section_tipo;
 		$section_id		= $data->section_id;
 		$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -2934,7 +2957,17 @@ class component_relation_common extends component_common {
 			$translatable===true ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN,
 			$section_tipo
 		);
-		$component_data = $component->get_dato();
+
+		switch ($data_fn) {
+			case 'get_calculation_data':
+				$options = $dd_object->options ?? null;
+				$component_data = $component->get_calculation_data($options);
+				break;
+
+			default:
+				$component_data = $component->get_dato();
+				break;
+		}
 		if (empty($component_data)) {
 			return [];
 		}
@@ -3383,6 +3416,56 @@ class component_relation_common extends component_common {
 
 		return $term_id;
 	}//end map_locator_to_term_id
+
+
+
+	/*
+	* GET_CALCULATION_DATA
+	* @return $data
+	* get the data of the component for do a calculation
+	*/
+	public function get_calculation_data($options=null) : mixed {
+
+		$ar_data		= [];
+		$ddo_map		= $options->ddo_map ?? new dd_object();
+		$dato			= $this->get_dato();
+		$section_tipo	= $this->section_tipo;
+
+		if(empty($dato)){
+			return false;
+		}
+
+		// get the first ddo to be resolve the ddo chain
+		$init_ddo = array_find($ddo_map, function($item) use ($section_tipo) {
+			return $item->parent === 'self' || $item->parent === $section_tipo;
+		});
+		// get the ddo that match with the q definition
+		$tipo_to_be_resolved = end($ddo_map)->tipo;
+
+		$resolve_ddo = array_find($ddo_map, function($item) use ($tipo_to_be_resolved) {
+			return $item->tipo === $tipo_to_be_resolved;
+		});
+
+		// set the ddo to be resolve as last, is used by the recursion to stop the resolution
+		if (is_object($resolve_ddo)) {
+			$resolve_ddo->last = true;
+		}
+
+		foreach ($dato as $current_dato) {
+
+			// create the current_data with the section of the component that call.
+			// it will use to resolve the ddo_chain
+				$current_data = new stdClass();
+					$current_data->section_tipo	= $current_dato->section_tipo;
+					$current_data->section_id	= $current_dato->section_id;
+
+			$result_compnent_data = component_relation_common::resolve_component_data_recursively($ddo_map, $init_ddo, $current_data);
+
+			$ar_data = array_merge($ar_data, $result_compnent_data);
+		}
+
+		return $ar_data;
+	}//end get_calculation_data
 
 
 

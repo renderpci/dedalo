@@ -3671,7 +3671,7 @@ abstract class component_common extends common {
 	*/
 	public function get_calculation_data(?object $options=null) {
 
-		$data = $this->get_valor();
+		$data = $this->get_value();
 
 		return $data;
 	}//end get_calculation_data

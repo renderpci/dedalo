@@ -22,7 +22,7 @@
 
 		$data          = $params->data;
 		$options       = $params->options;
-		$total_days    = $data->total_days;
+		$total_days    = array_sum($data->total_days); //$data->total_days;
 		$month_days    = 30.42;
 
 		// check value
@@ -41,7 +41,7 @@
 		$total_months  = floor($total_days / $month_days);
 
 		$months        = floor($years_days / $month_days);
-		$days          = floor($years_days - ($months * $month_days));
+		$days          = floor($years_days - ($months * $month_days)); // error in the original calculation the * need to be floor also if not always count 1 day minus
 
 		$period = [];
 
@@ -85,89 +85,13 @@
 
 
 	/**
-	* CALCULATE_PERIOD
-	* @return
-	*/
-		// function calculate_period__DES($options) {
-		//
-		// 	$data          = $options->data;
-		// 	$total_days    = $data->total_days;
-		//
-		// 	$years         = floor($total_days / 365);
-		// 	$years_days    = $total_days - (years * 365);
-		// 	$total_months  = floor($total_days / 30.42);
-		//
-		// 	$months        = 0;
-		// 	$days          = 0;
-		//
-		// 	$months        = floor($years_days / 30.42);
-		// 	$days          = floor($years_days - ($months * 30.42));
-		//
-		// 	$period = [];
-		//
-		// 	if($years > 0 && $options->years === true){
-		// 		$year_label = $years == 1
-		//             ? label::get_label("anyo")
-		//             : label::get_label("anyos");
-		//
-		//         $year_value = ($options->label===true)
-		//             ? $years .' '. $year_label
-		//             : $years;
-		//
-		// 		$period[] = $year_value;
-		// 	}
-		//
-		// 	if($months > 0 && $options->months === true){
-		// 		$months_label = $months == 1
-		//             ? label::get_label("mes")
-		//             : label::get_label("meses");
-		//
-		// 		$months_value = "";
-		// 		if($options->total === true){
-		// 			$months_value = ($options->label===true)
-		//                 ? $total_months . ' ' . $months_label
-		//                 : $total_months;
-		// 		}else{
-		// 			$months_value = ($options->label===true)
-		//                 ? $months . ' ' . $months_label
-		//                 : $months;
-		// 		}
-		// 		$period[] = $months_value;
-		// 	}
-		//
-		// 	if($days > 0 && $options->days === true){
-		// 		$days_label = $days == 1
-		//             ? label::get_label("dia")
-		//             : label::get_label("dias");
-		//
-		//         $days_value = "";
-		// 		if($options->total === true){
-		// 			$days_value = ($options->label===true)
-		//                 ? $total_days . ' ' . $days_label
-		//                 : $total_days;
-		// 		}else{
-		// 			$days_value = ($options->label===true)
-		//                 ? $days . ' ' . $days_label
-		//                 : $days;
-		// 		}
-		// 		$period[] = $days_value;
-		// 	}
-		//
-		// 	$result = implode(', ', $period);
-		//
-		//     return $result;
-		// }//end calculate_period__DES
-
-
-
-	/**
 	* CALCULATE_IMPORT_MAJOR
 	* @return int
 	*/
-	function calculate_import_major(object $options) : int {
+	function calculate_import_major(object $options) : array {
 
 		$data = $options->data;
-		$total_days = $data->total_days;
+		$total_days = array_sum($data->total_days);
 		if($total_days === 0){
 			return 0;
 		}
@@ -183,6 +107,7 @@
 		if($days > 0){
 			$total_months = $total_months + 1;
 		}
+
 		if($total_months <= 6){
 			$cal_import = 150000;
 		}else{
@@ -192,8 +117,12 @@
 			$cal_import = 1000000;
 		}
 
-		$result = $cal_import;
-
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $cal_import
+			]
+		];
 
 		return $result;
 	}//end calculate_import_major
@@ -204,10 +133,10 @@
 	* CALCULATE_IMPORT_MINOR
 	* @return int
 	*/
-	function calculate_import_minor(object $options) : int {
+	function calculate_import_minor(object $options) : array {
 
 		$data = $options->data;
-		$total_days = $data->total_days;
+		$total_days = array_sum($data->total_days);
 		if($total_days === 0){
 			return 0;
 		}
@@ -231,15 +160,20 @@
 			$cal_import = 6010;
 		}
 
-		$result = $cal_import;
-
+		// $result = $cal_import;
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $cal_import
+			]
+		];
 
 		return $result;
 	}//end calculate_import_minor
 
 
 
-   	/**
+	/**
 	* TO_EUROS
 	* @return array
 	*/
@@ -251,22 +185,21 @@
 
 		$data = $options->data;
 
-		$numero = $data->numero;
-		// error_log('------ to_euros numero: '.json_encode($options));
+		$number = array_sum($data->number);
 
 		// check value
-		if (!is_numeric($numero)) {
+		if (!is_numeric($number)) {
 			debug_log(__METHOD__
-				. " Invalid 'numero' value (non numeric) " . PHP_EOL
-				. ' numero: ' . to_string($numero) . PHP_EOL
+				. " Invalid 'number' value (non numeric) " . PHP_EOL
+				. ' number: ' . to_string($number) . PHP_EOL
 				. ' request_options: ' . to_string($request_options)
 				, logger::ERROR
 			);
 			return [];
 		}
 
-		$total = !empty($numero)
-			? ($numero / 166.386)
+		$total = !empty($number)
+			? round($number / 166.386, 2)
 			: 0;
 
 		$result = [
@@ -279,3 +212,333 @@
 
 		return $result;
 	}//end to_euros
+
+
+	/**
+	* RANGE_TO_DAYS
+	* Get a range of start end dates to get the days between then
+	* Example of use:
+	* "widgets": [
+	*	{
+	*		"ipo": [
+	*		{
+	*			"input": {
+	*				"filter": false,
+	*				"components": [
+	*					{
+	*					"tipo": "mdcat1968",
+	*					"options": {
+	*						"select": "start"
+	*					},
+	*					"var_name": "start"
+	*					},
+	*					{
+	*					"tipo": "mdcat1968",
+	*					"options": {
+	*						"select": "end"
+	*					},
+	*					"var_name": "end"
+	*					}
+	*				],
+	*				"section_id": "current",
+	*				"section_tipo": "current"
+	*			},
+	*			"output": [
+	*				{
+	*					"id": "total",
+	*					"value": "int"
+	*				}
+	*			],
+	*			"process": {
+	*				"fn": "range_to_days",
+	*				"file": "/mdcat/calculation/mdcat.php",
+	*				"engine": "php"
+	*			}
+	*		}
+	*		],
+	*		"path": "/calculation",
+	*		"widget_info": "sum calc.",
+	*		"widget_name": "calculation"
+	*	}
+	* ]
+	* @param object $request_options
+	* {
+	* 	"start" : 98542135,
+	* 	"end" : 98754235
+	* }
+	* @return array
+	*/
+	function range_to_days($request_options) : array {
+
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$start = ( $data->start === false )
+			? 0
+			: $data->start;
+
+		$end =  $data->end;
+
+		$time = ( !isset($end) || $end === false )
+			? 0
+			: round( $end - $start );
+
+		if($time <= 0){
+			$total = 1;
+		}else{
+			$total =round ( $time / ( 60 * 60 * 24) );
+		}
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $total
+			]
+		];
+
+		return $result;
+	}//end range_to_days
+
+
+
+	/**
+	* DAYS_CORRECTION_MANUALLY
+	* Get a range of start end dates to get the days between then
+	* Example of use:
+	*	"widgets": [
+	*		{
+	*			"ipo": [
+	*			{
+	*				"input": {
+	*					"filter": false,
+	*					"components": [
+	*						{
+	*						"tipo": "mdcat1969",
+	*						"var_name": "calculation_day",
+	*						"options": {"select": "value"}
+	*						},
+	*						{"tipo": "mdcat2918", "var_name": "manual_day"}
+	*					],
+	*					"section_id": "current",
+	*					"section_tipo": "current"
+	*					},
+	*				"output": [
+	*					{"id": "total", "value": "int"}
+	*				],
+	*				"process": {
+	*					"fn"    : "days_correction_manually"    ,
+	*					"file"  : "/mdcat/calculation/mdcat.php",
+	*					"engine": "php"
+	*				}
+	*			}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "sum calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*	]
+	* @param object $request_options
+	* {
+	* 	"calculation_day" : [384],
+	* 	"manual_day" : 87
+	* }
+	* @return array
+	*/
+	function days_correction_manually($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$calculation_day	= array_sum($data->calculation_day);
+		$manual_day			= $data->manual_day;
+
+		$total = !empty( $manual_day )
+			? $manual_day
+			: $calculation_day;
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> $total
+			]
+		];
+
+
+		return $result;
+	}//end days_correction_manually
+
+
+
+	/**
+	* SUBTRACT
+	* Subtract between two components
+	* Example of use:
+	*	"widgets": [
+	*		{
+	*			"ipo": [
+	*				{
+	*					"input": {
+	*						"filter": false,
+	*						"components": [
+	*							{
+	*								"tipo": "mdcat2433",
+	*								"var_name": "total_period"
+	*							},
+	*							{
+	*								"tipo": "mdcat2440",
+	*								"var_name": "total"
+	*							}
+	*						],
+	*						"section_id": "current",
+	*						"section_tipo": "current"
+	*					},
+	*					"output": [
+	*						{
+	*							"id": "total",
+	*							"value": "int"
+	*						}
+	*					],
+	*					"process": {
+	*						"fn": "subtract",
+	*						"file": "/mdcat/calculation/mdcat.php",
+	*						"engine": "php"
+	*					}
+	*				}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "subtract calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*	]
+	* @param object $request_options
+	* {
+	* 	"total_period" : [6010],
+	* 	"total" : [6010]
+	* }
+	* @return array
+	*/
+	function subtract($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		$total_period	= reset($data->total_period);
+		$total			= reset($data->total);
+
+		$total = $total - $total_period;
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> round($total, 2)
+			]
+		];
+
+		return $result;
+	}//end subtract
+
+
+
+
+	/**
+	* FINAL_TOTAL
+	* Get the total of the specific totals
+	* Example of use:
+	*		"widgets": [
+	*		{
+	*			"ipo": [
+	*			{
+	*				"input": {
+	*					"filter": false,
+	*					"components": [
+	*						{
+	*							"tipo": "mdcat2579",
+	*							"var_name": "total_minor"
+	*						},
+	*						{
+	*							"tipo": "mdcat2585",
+	*							"var_name": "import_manual"
+	*						},
+	*						{
+	*							"tipo": "mdcat2443",
+	*							"var_name": "total_major"
+	*						},
+	*						{
+	*							"tipo": "mdcat2587",
+	*							"var_name": "paid"
+	*						}
+	*					],
+	*					"section_id": "current",
+	*					"section_tipo": "current"
+	*					},
+	*				"output": [
+	*					{
+	*						"id": "total",
+	*						"value": "int"
+	*					}
+	*				],
+	*				"process": {
+	*					"fn": "final_total",
+	*					"file": "/mdcat/calculation/mdcat.php",
+	*					"engine": "php"
+	*				}
+	*			}
+	*			],
+	*			"path": "/calculation",
+	*			"widget_info": "sum calc.",
+	*			"widget_name": "calculation"
+	*		}
+	*		]
+	* @param object $request_options
+	* {
+	* 	"total_minor" : [6010],
+	* 	"total_major" : [6010],
+	* 	"import_manual" : "96",
+	* 	"paid" 			: "645"
+	* }
+	* @return array
+	*/
+	function final_total($request_options) : array {
+
+		$options = is_string($request_options)
+			? json_decode($request_options)
+			: $request_options;
+
+		$data = $options->data;
+
+		// $calculation_day	= array_sum($data->calculation_day);
+		$total_minor	= (float)reset($data->total_minor);
+		$total_major	= (float)reset($data->total_major);
+		$import_manual	= (float)$data->import_manual;
+		$paid			= (float)$data->paid;
+
+		if( isset($import_manual) && $import_manual !== 0.0 ){
+			$total = $import_manual - $paid;
+
+		}else{
+			$total = ( isset($total_major) && $total_major > 0.0 )
+				? $total_major - $paid
+				: $total_minor - $paid;
+		}
+
+		$result = [
+			(object)[
+				'id'	=> 'total',
+				'value'	=> round($total, 2)
+			]
+		];
+
+		return $result;
+	}//end final_total
+
+

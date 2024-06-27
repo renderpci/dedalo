@@ -148,7 +148,7 @@ function summarize( string|object $request_options) : array {
 				if (empty($value)) {
 					continue;
 				}
-				$ar_values[] = $value;
+				$ar_values[] = array_sum($value);
 			}
 			$total_sum = array_sum($ar_values);
 
@@ -165,7 +165,7 @@ function summarize( string|object $request_options) : array {
 				if (empty($value)) {
 					continue;
 				}
-				$ar_values[] = $value;
+				$ar_values[] = array_sum($value);
 			}
 			$total_sum = array_sum($ar_values);
 
