@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {object_to_url_vars, time_unit_auto, open_window} from '../../../core/common/js/utils/index.js'
 	import {render_stream} from '../../../core/common/js/render_common.js'
@@ -49,15 +48,6 @@ render_tool_diffusion.prototype.edit = async function(options) {
 		const wrapper = ui.tool.build_wrapper_edit(self, {
 			content_data : content_data
 		})
-
-	// modal container
-		// const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// const modal		= ui.attach_to_modal(header, wrapper, null)
-		// modal.on_close	= () => {
-		// 	self.caller.refresh()
-		// 	// when closing the modal, common destroy is called to remove tool and elements instances
-		// 	self.destroy(true, true, true)
-		// }
 
 	// focus first publish button
 		when_in_dom(
@@ -134,13 +124,13 @@ const get_content_data = async function(self) {
 			parent			: resolve_levels_container
 		})
 		// resolve_levels_input
-		const resolve_levels_node = ui.create_dom_element({
+		const resolve_levels_input = ui.create_dom_element({
 			element_type	: 'input',
 			class_name		: 'resolve_levels_input',
 			value			: self.resolve_levels,
 			parent			: resolve_levels_container
 		})
-		resolve_levels_node.addEventListener('change', function(e) {
+		resolve_levels_input.addEventListener('change', function(e) {
 			e.preventDefault()
 			// fix self levels value
 			self.resolve_levels = parseInt(this.value)
@@ -148,7 +138,14 @@ const get_content_data = async function(self) {
 				self.resolve_levels	= 1
 				this.value	= 1
 			}
+			// store locally
+			window.localStorage.setItem('diffusion_levels', this.value);
 		})
+		// restore local value
+		const saved_diffusion_levels = localStorage.getItem('diffusion_levels')
+		if (saved_diffusion_levels) {
+			resolve_levels_input.value = saved_diffusion_levels
+		}
 		ui.create_dom_element({
 			element_type	: 'label',
 			class_name		: '',
@@ -196,7 +193,14 @@ const get_content_data = async function(self) {
 			e.preventDefault()
 			// fix self levels value
 			self.skip_publication_state_check = this.checked ? 1 : 0
+			// store locally
+			window.localStorage.setItem('diffusion_skip_publication_state', self.skip_publication_state_check);
 		})
+		// restore local value
+		const saved_skip_publication_state = localStorage.getItem('diffusion_skip_publication_state')
+		if (saved_skip_publication_state) {
+			skip_publication_state_check_node.checked = saved_skip_publication_state > 0
+		}
 
 	// publication items
 		const publication_items = render_publication_items(self)
@@ -575,9 +579,6 @@ const publish_content = async (self, options) => {
 	// clean previous messages
 		response_message.classList.remove('error')
 		publication_button.classList.add('loading')
-		// while (response_message.firstChild) {
-		// 	response_message.removeChild(response_message.firstChild);
-		// }
 
 	// export API call
 		const api_response = await self.export({
