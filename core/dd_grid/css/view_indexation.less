@@ -17,28 +17,32 @@
 	position: relative;
 
 	.top_container {
+		background-color: #ffffff;
 		display: grid;
 		grid-template-columns: 1fr auto;
 		align-items: center;
 		position: sticky;
 		top: 0;
 		z-index: 2;
-		background-color: #ffffff;
 
 		.filter_section_container {
+			background-color: #ffffff;
 			margin-left: 4rem;
 			padding-top: 1.02rem;
 			padding-bottom: 1rem;
+			display: flex;
+			flex-wrap: nowrap;
 
 			.checkbox_label {
+				background-color: #f9f9f9;
 				margin-right: 0.5rem;
 				padding: 1rem;
 				padding-top: 0.5rem;
 				padding-bottom: 0.5rem;
 				border: 1px solid #c9c9c9;
 				border-radius: 0.5rem;
-				background-color: #f9f9f9;
 				cursor: pointer;
+				width: max-content;
 
 				&.unchecked {
 					opacity: 0.5;
@@ -151,7 +155,7 @@
 					border-top-right-radius: 4px;
 					line-height: 0.8em;
 					position: sticky;
-					top: 3rem;
+					top: 4.2rem;
 					z-index: 1;
 				}
 
@@ -312,8 +316,6 @@
 		}//end >.row
 
 	}
-
-
 
 }//end view_indexation
 
