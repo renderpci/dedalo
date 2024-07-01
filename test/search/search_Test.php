@@ -58,15 +58,14 @@ final class search_test extends TestCase {
 		$search = search::get_instance(
 			$sqo, // object sqo
 		);
-		// dump($search, ' search ++ '.to_string());
 
 		// fix
 			$this->search = $search;
 
-		// $this->assertTrue(
-		// 	empty($_ENV['DEDALO_LAST_ERROR']),
-		// 	'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
-		// );
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
 
 		$type	= gettype($search);
 		$eq		= $type==='object';
