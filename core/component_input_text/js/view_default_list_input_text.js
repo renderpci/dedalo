@@ -53,6 +53,11 @@ view_default_list_input_text.render = async function(self, options) {
 			wrapper.addEventListener('click', function(e){
 				e.stopPropagation()
 
+				// dataframe detection
+				if (ui.inside_dataframe(self)) {
+					return false
+				}
+
 				const wrapper_width	= wrapper.getBoundingClientRect().width
 				if (wrapper_width >= self.minimum_width_px) {
 					// inline way
