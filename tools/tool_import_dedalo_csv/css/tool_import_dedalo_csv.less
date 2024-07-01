@@ -34,6 +34,10 @@
 	}
 
 	>.content_data {
+		display: block;
+		position: relative;
+		max-width: 100vw;
+		overflow: hidden;
 
 		// generic box
 		.container {
@@ -55,6 +59,7 @@
 
 				>.file_line {
 					display: flex;
+					flex-wrap: wrap;
 					align-items: center;
 					position: relative;
 
@@ -71,6 +76,9 @@
 					.checkbox_label {
 						display: block;
 						line-height: 1.1rem;
+						max-width: 75%;
+						word-break: break-all;
+
 						input {
 							margin-right: 0.5rem;
 							vertical-align: middle;
@@ -122,6 +130,36 @@
 					.button.delete {
 						position: absolute;
 						right: 0px;
+
+						@media screen and (max-width: @width_break_point_0) {
+							top: 0px;
+						}
+					}
+
+					@media screen and (max-width: @width_break_point_0) {
+						.button.csv {
+							width: 2rem;
+						}
+						.checkbox_label {
+							width: calc(100% - 2rem);
+							line-height: 1.2rem;
+						}
+						.section_tipo_label {
+							width: 100%;
+							display: grid;
+							grid-template-columns: 1fr 1fr;
+							grid-gap: 0.5rem;
+							padding-top: 0.5rem;
+							padding-bottom: 0.5rem;
+
+							.section_name {
+								margin-left: 0px;
+							}
+						}
+
+						.arrow_right {
+							display: none;
+						}
 					}
 				}//end >.file_line
 
@@ -133,6 +171,7 @@
 				}
 
 				.info_text {
+
 					.columns {
 						font-size: 0.75rem;
 					}
@@ -153,6 +192,9 @@
 
 				>.columns_mapper {
 					width: 100%;
+					max-width: 100%;
+					overflow: hidden;
+
 
 					>.columns_header {
 						width: 100%;
@@ -325,7 +367,6 @@
 				}
 			}//end >.file_item
 		}//end >.files_list
-
 
 		>.submit_container {
 			padding: 1rem;
