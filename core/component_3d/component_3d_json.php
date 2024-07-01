@@ -12,16 +12,15 @@
 // context
 	$context = [];
 
-
-	if($options->get_context===true) { //  && $permissions>0
+	if($options->get_context===true) {
 		switch ($options->context_type) {
+
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-
 				$current_context = $this->get_structure_context($permissions);
 
 				// append additional info
@@ -36,7 +35,6 @@
 					$current_context->features->extension				= $this->get_extension();
 
 				$context[] = $current_context;
-
 				break;
 		}
 	}//end if($options->get_context===true)
@@ -64,10 +62,10 @@
 		// item
 			$item = $this->get_data_item($value);
 
-			// posterframe_url
-				$item->posterframe_url = empty($value)
-					? null
-					: $this->get_posterframe_url();
+		// posterframe_url
+			$item->posterframe_url = empty($value)
+				? null
+				: $this->get_posterframe_url();
 
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='edit') {
