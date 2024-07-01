@@ -80,6 +80,34 @@ final class search_test extends TestCase {
 			$eq,
 			'expected true (class===search) and received class: ' .$class
 		);
+
+		// modes check
+			$search_query_object = (object) [
+				'mode'			=> 'tm',
+				'section_tipo'	=> ['oh1']
+			];
+			$instance = search::get_instance($search_query_object);
+			$this->assertInstanceOf(search_tm::class, $instance);
+
+			$search_query_object = (object) [
+				'mode'			=> 'related',
+				'section_tipo'	=> ['oh1']
+			];
+			$instance = search::get_instance($search_query_object);
+			$this->assertInstanceOf(search_related::class, $instance);
+
+			$search_query_object = (object) [
+				'mode'			=> 'default',
+				'section_tipo'	=> ['oh1']
+			];
+			$instance = search::get_instance($search_query_object);
+			$this->assertInstanceOf(search::class, $instance);
+
+			$search_query_object = (object) [
+				'mode'			=> 'fake',
+				'section_tipo'	=> ['oh1']
+			];
+			$instance = search::get_instance($search_query_object);
 	}//end test__construct
 
 
@@ -2053,6 +2081,58 @@ final class search_test extends TestCase {
 			'expected true trim($result)==="LEFT JOIN relations AS r_rs167_rs20_dd64 ON ..." and received: ' . json_encode($result)
 		);
 	}//end test_get_sql_joins
+
+
+
+	/**
+	* TEST_propagate_component_dato_to_relations_table
+	* @return void
+	*/
+	public function test_propagate_component_dato_to_relations_table(): void {
+
+		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+		$options = (object)[
+			'section_tipo'			=> 'test3',
+			'section_id'			=> 1,
+			'from_component_tipo'	=> 'test169', // relation_model
+			'ar_locators'			=> json_decode('[
+				{
+					"section_id": "5",
+					"section_tipo": "dd922",
+					"type": "dd98",
+					"from_component_tipo": "test169"
+				}
+		    ]')
+		];
+		$response = search::propagate_component_dato_to_relations_table($options); // only returns bool
+
+		$this->assertTrue(
+			empty($_ENV['DEDALO_LAST_ERROR']),
+			'expected running without errors. DEDALO_LAST_ERROR: ' .$_ENV['DEDALO_LAST_ERROR']
+		);
+
+		$type	= gettype($response);
+		$eq		= $type==='object';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===object) and received type: ' .$type
+		);
+
+		$type	= gettype($response->result);
+		$eq		= $type==='boolean';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===boolean) and received type: ' .$type
+		);
+
+		$type	= gettype($response->msg);
+		$eq		= $type==='string';
+		$this->assertTrue(
+			$eq,
+			'expected true (type===string) and received type: ' .$type
+		);
+	}//end test_propagate_component_dato_to_relations_table
 
 
 
