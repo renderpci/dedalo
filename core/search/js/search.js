@@ -12,10 +12,6 @@
 	import * as instances from '../../common/js/instances.js'
 	import {
 		render_search
-		// toggle_fields,
-		// toggle_search_panel,
-		// toggle_presets,
-		// render_thesaurus_sections_checkboxes
 	} from './render_search.js'
 	import {
 		on_dragstart,
@@ -28,11 +24,6 @@
 		load_search_preset,
 		save_temp_preset
 	} from './search_user_presets.js'
-	// import {
-		// create_cookie,
-		// read_cookie,
-		// erase_cookie
-	// } from '../../common/js/utils/cookie.js'
 
 
 
@@ -1087,26 +1078,26 @@ search.prototype.get_panels_status = async function() {
 
 
 
-// /**
-// * SEARCH_FROM_ENTER_KEY
-// * @return bool
-// */
-// search.prototype.search_from_enter_key = function(button_submit) {
+/**
+* SEARCH_FROM_ENTER_KEY
+* @return bool
+*/
+	// search.prototype.search_from_enter_key = function(button_submit) {
 
-// 	if(SHOW_DEBUG===true) {
-// 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
-// 	}
+	// 	if(SHOW_DEBUG===true) {
+	// 		//console.log("[saerch2.search_from_enter_key] search_panel_is_open:",button_submit, search2.search_panel_is_open);
+	// 	}
 
-// 	// button_submit.click()
+	// 	// button_submit.click()
 
-// 	if (search.search_panel_is_open===true) {
-// 		button_submit.click()
-// 	}else{
-// 		this.toggle_search_panel()
-// 	}
+	// 	if (search.search_panel_is_open===true) {
+	// 		button_submit.click()
+	// 	}else{
+	// 		this.toggle_search_panel()
+	// 	}
 
-// 	return true
-// }//end search_from_enter_key
+	// 	return true
+	// }//end search_from_enter_key
 
 
 
@@ -1167,6 +1158,47 @@ export const is_filter_empty = function(filter_obj) {
 
 	return empty
 }//end is_filter_empty
+
+
+
+/**
+* RESET
+* Reset form values
+* @return bool
+*/
+search.prototype.reset = async function () {
+
+	const self = this
+
+	const ar_promises			= []
+	const ar_instances_length	= self.ar_instances.length
+	for (let i = ar_instances_length - 1; i >= 0; i--) {
+		const instance = self.ar_instances[i]
+		ar_promises.push(
+			new Promise(async function(resolve){
+				if (!instance.data) {
+					instance.data = {}
+				}
+				if (instance.data.value) {
+					instance.data.value = []
+				}
+				if (instance.data.q_operator) {
+					instance.data.q_operator = null
+				}
+				// refresh component without load DB data
+				await instance.refresh({
+					build_autoload : false
+				})
+				resolve(instance)
+			})
+		)
+	}
+	await Promise.all(ar_promises)
+	// save_temp_preset. Temp preset section_id and section_tipo are solved and fixed on the first load
+	save_temp_preset(self)
+
+	return true
+}//end reset
 
 
 

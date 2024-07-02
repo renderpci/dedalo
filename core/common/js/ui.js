@@ -3173,7 +3173,27 @@ export const ui = {
 		if (chars>0) {
 			input_node.style.width = chars + 'ch';
 		}
-	}//end fit_input_width_to_value
+	},//end fit_input_width_to_value
+
+
+
+	/**
+	* INSIDE_DATAFRAME
+	* Check if current component is inside component_dataframe
+	* @param object instance
+	* 	component instance
+	* @return bool
+	*/
+	inside_dataframe : function (instance) {
+
+		if (instance.caller?.model==='section_record') {
+			if (instance.caller?.caller?.model==='component_dataframe') {
+				return true
+			}
+		}
+
+		return false
+	}//end inside_dataframe
 
 
 

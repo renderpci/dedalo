@@ -137,21 +137,11 @@ class search {
 
 	/**
 	* SET_UP
+	* Analyze given search_query_object and fix the properties
 	* @param object $search_query_object
 	* @return void
 	*/
 	protected function set_up(object $search_query_object) : void {
-
-		// // Accepted objects JSON encoded too
-		// if (is_string($search_query_object)) {
-		// 	$search_query_object = json_decode($search_query_object);
-		// }
-
-		// removed 25-07-2023. Not used !
-			// if (SHOW_DEVELOPER===true && (!isset($this->search_query_object->parsed) || $this->search_query_object->parsed===false)) {
-			// 	// Set and fix class property search_query_object
-			// 	$this->search_query_object_preparse = json_decode(json_encode($search_query_object));
-			// }
 
 		// Set and fix class property search_query_object
 		$this->search_query_object = (object)$search_query_object;
@@ -548,10 +538,10 @@ class search {
 				metrics::$search_total_time += $exec_time;
 			}
 
-		// Fix total value
+		// Fix total value in the SQO
 			$this->search_query_object->total = $total;
 
-		// $records_data->search_query_object	= $this->search_query_object;
+		// set total
 			$records_data->total = $total;
 
 		// if the sqo has group_by set the result
@@ -2729,128 +2719,33 @@ class search {
 
 
 	/**
-	* CALCULATE_INVERSE_LOCATORS
-	* Now inverse locators is always calculated, not stored !
-	* @see section::get_inverse_references
-	* @param object $reference_locator
-	*	Basic locator with section_tipo and section_id properties
-	* @param int|null $limit = null
-	* @param int|null $offset = null
-	* @param bool $count = false
-	* @return array $ar_inverse_locators
-	*/
-	public static function calculate_inverse_locators(object $reference_locator, int $limit=null, int $offset=null, bool $count=false) : array {
-		#debug_log(__METHOD__." locator received:  ".to_string($reference_locator), logger::DEBUG);
-
-		# compare
-		$compare = json_encode($reference_locator);
-
-		# Cache
-		#static $ar_inverse_locators_data;
-		#$uid = md5($compare) . '_' . (int)$limit . '_' . (int)$offset . '_' . (int)$count;
-		#if (isset($ar_inverse_locators_data[$uid])) {
-		#	debug_log(__METHOD__." Returning cached result !! ".to_string($uid), logger::DEBUG);
-		#	return $ar_inverse_locators_data[$uid];
-		#}
-
-		$ar_tables_to_search = common::get_matrix_tables_with_relations();
-
-		// ar_query
-			$ar_query = array();
-			foreach ($ar_tables_to_search as $table) {
-
-				$query	 = '';
-				$query	.= ($count===true)
-					? PHP_EOL . 'SELECT COUNT(*)'
-					: PHP_EOL . 'SELECT section_tipo, section_id, datos#>\'{relations}\' AS relations';
-				$query	.= PHP_EOL . 'FROM "'.$table.'"';
-				$query	.= PHP_EOL . 'WHERE datos#>\'{relations}\' @> \'['.$compare.']\'::jsonb';
-
-				$ar_query[] = $query;
-			}
-
-		// strQuery
-			$strQuery  = '';
-			$strQuery .= implode(' UNION ALL ', $ar_query);
-			// Set order to maintain results stable
-			if($count===false) {
-				$strQuery .= PHP_EOL . 'ORDER BY section_id ASC, section_tipo';
-				if($limit!==null){
-					$strQuery .= PHP_EOL . 'LIMIT '.$limit;
-					if($offset!==null){
-						$strQuery .= PHP_EOL . 'OFFSET '.$offset;
-					}
-				}
-			}
-			$strQuery .= ';';
-
-		$result	= JSON_RecordObj_matrix::search_free($strQuery);
-		if ($result===false) {
-			trigger_error("Error Processing Request : Sorry cannot execute non resource query: ".PHP_EOL."<hr> $strQuery");
-			return null;
-		}
-		$ar_inverse_locators = array();
-		if($count===false) {
-			# Note that row relations contains all relations and not only searched because we need
-			# filter relations array for each records to get only desired coincidences
-
-			// Compare all properties of received locator in each relations locator
-			$ar_properties = array();
-			foreach ($reference_locator as $key => $value) {
-				$ar_properties[] = $key;
-			}
-
-			while ($rows = pg_fetch_assoc($result)) {
-
-				$current_section_id		= $rows['section_id'];
-				$current_section_tipo	= $rows['section_tipo'];
-				$current_relations		= (array)json_decode($rows['relations']);
-
-				foreach ($current_relations as $current_locator) {
-					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
-						// Add some temporal info to current locator for build component later
-						$current_locator->from_section_tipo	= $current_section_tipo;
-						$current_locator->from_section_id	= $current_section_id;
-						// Note that '$current_locator' contains 'from_component_tipo' property, useful for know when component is called
-						$ar_inverse_locators[] = $current_locator;
-					}
-				}
-			}
-
-		}else{
-			while ($rows = pg_fetch_assoc($result)) {
-				$ar_inverse_locators[] = $rows;
-			}
-		}
-
-		# Cache
-		#$ar_inverse_locators_data[$uid] = $ar_inverse_locators;
-
-
-		return (array)$ar_inverse_locators;
-	}//end calculate_inverse_locators
-
-
-
-	/**
 	* PROPAGATE_COMPONENT_DATO_TO_RELATIONS_TABLE
 	* Get complete component relation dato and generate rows into relations table for fast LEFT JOIN
 	* @param object $options
+	* {
+	* 	section_tipo: string (mandatory)
+	* 	section_id: string|int (mandatory)
+	* 	from_component_tipo: string (mandatory)
+	* }
 	* @return object $response
+	* {
+	* 	result: bool,
+	* 	msg: string
+	* }
 	*/
 	public static function propagate_component_dato_to_relations_table( object $options ) : object {
 		$start_time = start_time();
 
 		// options
-			// $ar_locators			= $options->ar_locators ?? null;
 			$section_tipo			= $options->section_tipo ?? null;
 			$section_id				= $options->section_id ?? null;
 			$from_component_tipo	= $options->from_component_tipo ?? null;
+			$ar_locators			= $options->ar_locators ?? [];
 
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= array('Error. Request failed '.__METHOD__);
+				$response->msg		= 'Error. Request failed '.__METHOD__;
 
 		// section temp case
 			if (!empty($section_id) && strpos((string)$section_id, DEDALO_SECTION_ID_TEMP)!==false) {
@@ -2861,8 +2756,7 @@ class search {
 
 		// empty section_id case
 			if (empty($section_id)) {
-				$response->msg[]	= " options->section_id is mandatory ! Stopped action";
-				$response->msg		= implode(', ', $response->msg);
+				$response->msg	.= " options->section_id is mandatory ! Stopped action";
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
 					. ' options: ' . to_string($options)
@@ -2873,8 +2767,7 @@ class search {
 
 		// empty section_tipo case
 			if (empty($section_tipo)) {
-				$response->msg[]	= " options->section_tipo is mandatory ! Stopped action";
-				$response->msg		= implode(', ', $response->msg);
+				$response->msg .= " options->section_tipo is mandatory ! Stopped action";
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
 					. ' options: ' . to_string($options)
@@ -2885,8 +2778,7 @@ class search {
 
 		// empty from_component_tipo case
 			if (empty($from_component_tipo)) {
-				$response->msg[]	= " options->from_component_tipo is mandatory ! Stopped action";
-				$response->msg		= implode(', ', $response->msg);
+				$response->msg .= " options->from_component_tipo is mandatory ! Stopped action";
 				debug_log(__METHOD__
 					. " $response->msg " . PHP_EOL
 					. ' options: ' . to_string($options)
@@ -2899,44 +2791,12 @@ class search {
 			$table = 'relations';
 
 		// DELETE . Remove all relations of current component
-			$strQuery	= "DELETE FROM $table WHERE section_id = $section_id AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo';";
+			$strQuery	= "DELETE FROM $table WHERE section_id = ".(int)$section_id." AND section_tipo = '$section_tipo' AND from_component_tipo = '$from_component_tipo';";
 			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 
 		// INSERT . Create all relations again (multiple)
-			/* Old way, one insert by record
-				foreach ((array)$options->ar_locators as $key => $locator) {
-
-					if(!isset($locator->section_tipo)) {
-						debug_log(__METHOD__." Error. empty section_tipo. Ignored insert locator: ".to_string($locator), logger::ERROR);
-						continue;
-					}
-
-					$target_section_tipo = $locator->section_tipo;
-					$target_section_id 	 = $locator->section_id;
-					#$from_component_tipo = $locator->from_component_tipo; // Already defined before
-
-					# INSERT . Create new
-					$strQuery = "INSERT INTO $table (section_id, section_tipo, target_section_id, target_section_tipo, from_component_tipo) VALUES ($1, $2, $3, $4, $5) RETURNING id";
-					# Exec query
-					$result = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id, $section_tipo, $target_section_id, $target_section_tipo, $from_component_tipo ));
-					if(!$result) {
-						$msg = " Failed Insert relations record - $strQuery";
-						debug_log(__METHOD__." ERROR: $msg ".to_string(), logger::ERROR);
-						$response->msg[] = $msg;
-					}else{
-						$msg = " Created relations row ({$section_tipo}-{$section_id}) target_section_id:$target_section_id, target_section_tipo:$target_section_tipo, from_component_tipo:$from_component_tipo";
-						$response->msg[] = $msg;
-						if(SHOW_DEBUG===true) {
-							if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
-								$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
-								debug_log(__METHOD__." OK: ".$msg, logger::DEBUG);
-							}
-						}
-					}
-				}
-				*/
 			$ar_insert_values = [];
-			foreach ((array)$options->ar_locators as $locator) {
+			foreach ($ar_locators as $locator) {
 
 				if (empty($locator)) {
 					debug_log(__METHOD__
@@ -2954,8 +2814,10 @@ class search {
 					);
 					continue;
 				}
-				$target_section_tipo	= $locator->section_tipo;
-				$target_section_id		= $locator->section_id;
+
+				// target vars
+					$target_section_tipo	= $locator->section_tipo;
+					$target_section_id		= $locator->section_id;
 
 				// prevents to save yes/not section pointers (dd64 - DEDALO_SECTION_SI_NO_TIPO) - DEDALO_SECTION_USERS_TIPO ?
 					// if ($target_section_tipo===DEDALO_SECTION_SI_NO_TIPO) {
@@ -2982,10 +2844,9 @@ class search {
 						. ' strQuery: ' . $strQuery
 						, logger::ERROR
 					);
-					$response->msg[] = $msg;
+					$response->msg .= $msg;
 				}else{
 					$msg = " Created " . count($ar_insert_values) . " relations rows (section_tipo:$section_tipo,  section_id:$section_id, from_component_tipo:$from_component_tipo, target_section_tipo:$target_section_tipo)";
-					$response->msg[] = $msg;
 					if(SHOW_DEBUG===true) {
 						if ($section_tipo!==DEDALO_ACTIVITY_SECTION_TIPO) {
 							$msg .= ' ('.RecordObj_dd::get_termino_by_tipo($section_tipo).' - '.RecordObj_dd::get_termino_by_tipo($from_component_tipo).')';
@@ -3000,8 +2861,10 @@ class search {
 
 				// response
 					$response->result	= true;
-					$response->msg[0]	= "OK. Relations row successfully"; // Override first message
-					$response->msg		= implode(PHP_EOL, $response->msg);
+					$response->msg		= "OK. Relations row successfully ";
+					if (isset($msg)) {
+						$response->msg .= $msg;
+					}
 			}
 
 

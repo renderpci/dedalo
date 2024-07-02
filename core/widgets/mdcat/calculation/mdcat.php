@@ -183,9 +183,9 @@
 			? json_decode($request_options)
 			: $request_options;
 
-		$data = $options->data;
-
-		$number = array_sum($data->number);
+		$data			= $options->data;
+		$data_number	= $data->number ?? [];
+		$number			= array_sum($data_number);
 
 		// check value
 		if (!is_numeric($number)) {

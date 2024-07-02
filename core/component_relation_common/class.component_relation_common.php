@@ -1944,12 +1944,8 @@ class component_relation_common extends component_common {
 
 		// Add locator at end
 		// $new_relation_locators[] = $locator;
-		// get the inverse references
-			//old way done in relations table
-				// $ar_result 	= $this->get_external_result_from_relations_table($new_relation_locators, $ar_component_to_search);
-			//old way done with direct calculation
-				// $result = search::calculate_inverse_locators( $locator );
 
+		// get the inverse references
 			// sqo. new way done in relations field with standard sqo
 				$start_time2=start_time();
 				$target_section_to_search = $ar_section_to_search ?? ['all'];

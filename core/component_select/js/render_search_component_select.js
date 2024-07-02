@@ -120,14 +120,15 @@ const get_content_value = (i, current_value, self) => {
 			parent			: content_value
 		})
 		// change event
-			input_q_operator.addEventListener('change', function() {
+			const change_handler = () => {
 				// value
-					const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
+				const value = (input_q_operator.value.length>0) ? input_q_operator.value : null
 				// q_operator. Fix the data in the instance previous to save
-					self.data.q_operator = value
+				self.data.q_operator = value
 				// publish search. Event to update the DOM elements of the instance
-					event_manager.publish('change_search_element', self)
-			})// end event change
+				event_manager.publish('change_search_element', self)
+			}
+			input_q_operator.addEventListener('change', change_handler)
 
 	// select
 		const select = ui.create_dom_element({

@@ -980,9 +980,6 @@ class area_maintenance extends area_common {
 			TABLESPACE pg_default;
 		';
 
-		// jer_dd
-		$ar_sql_query[] =
-
 		// main_dd
 		$ar_sql_query[] = '
 			CREATE INDEX IF NOT EXISTS main_dd_tld
