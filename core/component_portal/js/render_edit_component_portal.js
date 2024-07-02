@@ -630,6 +630,7 @@ export const render_column_remove = function(options) {
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'button delete_light icon',
+				title			: (get_label.delete || 'Delete'),
 				parent			: button_remove
 			})
 		}

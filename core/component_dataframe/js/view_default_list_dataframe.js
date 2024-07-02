@@ -6,8 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {get_section_records} from '../../section/js/section.js'
 	import {get_instance} from '../../common/js/instances.js'
 
 
@@ -160,8 +158,6 @@ const render_content_value = function(options) {
 				// update text color based on background
 					const text_color = ui.get_text_color(bg_color)
 					button_activate.style.color = text_color
-
-				// console.log('text_color:', text_color, 'bg_color', bg_color);
 			}
 		}
 
@@ -213,7 +209,7 @@ const open_target_section = async function (self) {
 		})
 
 	// header
-		const header = self.target_section[0].label // (get_label.new || 'New section') +
+		const header = self.target_section[0].label
 
 	// footer
 		const footer_container = ui.create_dom_element({
@@ -256,12 +252,10 @@ const open_target_section = async function (self) {
 						section_id		: section_id
 					})
 
-
 				// close modal
-				modal.close()
+					modal.close()
 
 				footer_container.classList.remove('loading')
-
 			})
 
 	// modal. Create a modal to attach the section node
@@ -288,8 +282,7 @@ const open_target_section = async function (self) {
 						})
 						await section.build(true)
 						const section_node = await section.render()
-						// body.appendChild(section_node)
-						// body.replaceWith(section_node);
+
 						return section_node
 					}
 				})
