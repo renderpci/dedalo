@@ -84,6 +84,9 @@ const get_content_data = function(self) {
 
 /**
 * GET_CONTENT_VALUE
+* @param int i
+* @param string current_value
+* @param object self
 * @return HTMLElement content_value
 */
 const get_content_value = (i, current_value, self) => {
@@ -117,9 +120,7 @@ const get_content_value = (i, current_value, self) => {
 
 			// update the instance data (previous to save)
 				self.update_data_value(changed_data_item)
-			// set data.changed_data. The change_data to the instance
-				// self.data.changed_data = changed_data
-			// publish search. Event to update the dom elements of the instance
+			// publish search. Event to update the DOM elements of the instance
 				event_manager.publish('change_search_element', self)
 		}//end fn_change
 

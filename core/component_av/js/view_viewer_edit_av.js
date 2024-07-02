@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {url_vars_to_object, download_file} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
@@ -130,10 +129,14 @@ view_viewer_edit_av.render = async function(self, options) {
 
 /**
 * DOWNLOAD_ORIGINAL_IMAGE
-* create a temp <a> node with the original quality or default quality if the original file is missing
+* Creates a temp <a> node with the original quality or default quality if the original file is missing
 * set the node to be downloadable with the original filename uploaded by user
 * download the file
 * @param object options
+* {
+* 	download_url: string
+* 	name: string
+* }
 * @return bool
 */
 const download_original_av = function (options) {

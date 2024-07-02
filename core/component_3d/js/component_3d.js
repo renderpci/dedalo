@@ -12,11 +12,9 @@
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
 	import {render_list_component_3d} from '../../component_3d/js/render_list_component_3d.js'
 	import {render_search_component_3d} from '../../component_3d/js/render_search_component_3d.js'
-
 	import {upload} from '../../services/service_upload/js/service_upload.js'
-	// import {render_mini_component_3d} from '../../component_3d/js/render_mini_component_3d.js'
-	// import {render_player_component_3d} from '../../component_3d/js/render_player_component_3d.js'
-	// import {render_viewer_component_3d} from '../../component_3d/js/render_viewer_component_3d.js'
+
+
 
 	// Note about event_manager
 	// the component_3d is configured by properties in the ontology,
@@ -77,8 +75,6 @@ export const component_3d = function(){
 	component_3d.prototype.tm					= render_edit_component_3d.prototype.list
 	component_3d.prototype.edit					= render_edit_component_3d.prototype.edit
 	component_3d.prototype.search				= render_search_component_3d.prototype.search
-	// component_3d.prototype.player			= render_player_component_3d.prototype.player
-	// component_3d.prototype.viewer			= render_viewer_component_3d.prototype.viewer
 
 	component_3d.prototype.change_mode			= component_common.prototype.change_mode
 
@@ -133,7 +129,6 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 		// force to name as image_blob.name to prevent chunk mode issues
 		file_data.name = image_blob.name
 
-
 	// debug
 		if(SHOW_DEBUG===true) {
 			console.log('3d file_data (on upload finish):', file_data);
@@ -165,13 +160,6 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			resolve(result)
 		})
 	})
-	// save file
-	// const posterframe =  viewer.renderer.domElement.toDataURL("image/jpeg", 0.95);
-	// const a = document.createElement('a');
-	//	a.href = posterframe;
-	//	a.download = 'a.jpg';
-	//	document.body.appendChild(a);
-	//	a.click();
 }//end create_posterframe
 
 
