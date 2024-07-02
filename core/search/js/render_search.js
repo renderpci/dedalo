@@ -15,7 +15,6 @@
 		create_new_search_preset,
 		edit_user_search_preset,
 		save_preset,
-		save_temp_preset,
 		load_user_search_presets,
 		presets_section_tipo
 	} from './search_user_presets.js'
@@ -419,7 +418,12 @@ render_search.prototype.render_search_buttons = function(){
 			class_name		: 'reset_group',
 			parent			: search_buttons_container
 		})
+
 	// Reset button
+		const reset_fn = (e) => {
+			e.stopPropagation()
+			self.reset()
+		}
 		const reset_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button reload',
@@ -427,50 +431,25 @@ render_search.prototype.render_search_buttons = function(){
 			parent			: reset_group
 
 		})
-		reset_button.addEventListener('mousedown', async function(e){
-			e.stopPropagation()
+		reset_button.addEventListener('mousedown', reset_fn)
 
-			const ar_promises			= []
-			const ar_instances_length	= self.ar_instances.length
-			for (let i = ar_instances_length - 1; i >= 0; i--) {
-				const instance = self.ar_instances[i]
-				ar_promises.push(
-					new Promise(async function(resolve){
-						instance.data.value = []
-						instance.q_operator = null
-						await instance.refresh({
-							build_autoload : false
-						})
-						resolve(instance)
-					})
-				)
-			}
-			await Promise.all(ar_promises)
-			// save_temp_preset. Temp preset section_id and section_tipo are solved and fixed on the first load
-			save_temp_preset(self)
-		})
 	// Show all
+		const show_all_fn = (e) => {
+			e.stopPropagation()
+			self.show_all(show_all_button)
+			// Close search div
+			toggle_search_panel(self) // toggle to open from default state close
+		}
 		const show_all_button = ui.create_dom_element({
 			element_type	: 'button',
 			class_name		: 'button show_all',
 			inner_html		: get_label.show_all || 'Show all',
 			parent			: reset_group
 		})
-		show_all_button.addEventListener('mousedown', function(e){
-			e.stopPropagation()
-			self.show_all(this)
-			// Close search div
-				toggle_search_panel(self) // toggle to open from default state close
-		})
+		show_all_button.addEventListener('mousedown', show_all_fn)
+
 	// Submit button
-		const submit_button = ui.create_dom_element({
-			element_type	: 'button',
-			id				: 'button_submit',
-			class_name		: 'button submit',
-			inner_html		: get_label.apply || 'Apply',
-			parent			: search_buttons_container
-		})
-		submit_button.addEventListener('mousedown', function(e){
+		const submit_fn = (e) => {
 			e.stopPropagation()
 			// always blur active component to force set dato (!)
 				document.activeElement.blur()
@@ -478,7 +457,15 @@ render_search.prototype.render_search_buttons = function(){
 				self.exec_search()
 			// toggle filter container
 				toggle_search_panel(self) // toggle to open from default state close
+		}
+		const submit_button = ui.create_dom_element({
+			element_type	: 'button',
+			id				: 'button_submit',
+			class_name		: 'button submit',
+			inner_html		: get_label.apply || 'Apply',
+			parent			: search_buttons_container
 		})
+		submit_button.addEventListener('mousedown', submit_fn)
 
 
 	return search_buttons_container

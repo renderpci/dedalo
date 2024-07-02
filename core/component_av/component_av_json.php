@@ -13,16 +13,15 @@
 // context
 	$context = [];
 
-
 	if($options->get_context===true) { //  && $permissions>0
 		switch ($options->context_type) {
+
 			case 'simple':
 				// Component structure context_simple (tipo, relations, properties, etc.)
 				$context[] = $this->get_structure_context_simple($permissions);
 				break;
 
 			default:
-
 				$current_context = $this->get_structure_context($permissions);
 
 				// append additional info
@@ -62,9 +61,6 @@
 					break;
 			}
 
-		// $quality
-
-
 		// item
 			$item = $this->get_data_item($value);
 
@@ -75,9 +71,6 @@
 
 		// player mode case. Send the media header when the component are working as player
 			if($mode==='edit') {
-
-				// media info (!) Moved to a specific API request because it is used only in the player view
-					// $item->media_info = $this->get_media_streams( $quality );
 
 				// subtitles info
 					$item->subtitles = (object)[

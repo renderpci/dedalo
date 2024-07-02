@@ -13,7 +13,6 @@
 // context
 	$context = [];
 
-
 	if($options->get_context===true) {
 
 		// set self from_parent

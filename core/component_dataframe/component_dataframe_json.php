@@ -35,13 +35,10 @@
 			$permissions,
 			true // bool add_request_config
 		);
-
-		// $this->context->view = 'dataframe';
-
 		$context[] = $this->context;
 
 	if($permissions>0) {
-	// if($options->get_data===true ){
+
 		// short vars
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
@@ -95,7 +92,6 @@
 				if (!empty($caller_dataframe) && isset($caller_dataframe->section_id_key)) {
 					$item->section_id_key = $caller_dataframe->section_id_key;
 				}
-				// $item->tipo_key		= $caller_dataframe->tipo_key;
 
 			$data[] = $item;
 
@@ -114,8 +110,9 @@
 					$data[] = $sub_value;
 				}
 			}//end if (!empty($dato))
-		// }// end get_data
 	}//end if $options->get_data===true && $permissions>0
+
+
 
 // JSON string
 	return common::build_element_json_output($context, $data);

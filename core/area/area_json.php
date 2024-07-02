@@ -12,8 +12,6 @@
 
 // context
 	$context = [];
-
-
 	if($options->get_context===true) {
 
 		// set self from_parent
@@ -30,7 +28,6 @@
 
 // data
 	$data = [];
-
 	if($options->get_data===true && $permissions>0){
 
 		// value

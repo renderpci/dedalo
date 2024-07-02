@@ -2091,8 +2091,12 @@ final class dd_core_api {
 							// pagination. Fix pagination vars (defined in class component_common)
 								if (isset($rqo->sqo->limit) || isset($rqo->sqo->offset)) {
 									$pagination = new stdClass();
-										$pagination->limit	= $rqo->sqo->limit;
-										$pagination->offset	= $rqo->sqo->offset;
+										if (isset($rqo->sqo->limit)) {
+											$pagination->limit = $rqo->sqo->limit;
+										}
+										if (isset($rqo->sqo->offset)) {
+											$pagination->offset	= $rqo->sqo->offset;
+										}
 										if( isset($rqo->sqo->total) ){
 											$pagination->total	= $rqo->sqo->total;
 										}
