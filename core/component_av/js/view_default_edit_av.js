@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {when_in_viewport} from '../../common/js/events.js'
@@ -605,4 +604,3 @@ const get_buttons = (self) => {
 
 
 // @license-end
-
