@@ -746,7 +746,6 @@ var dd = new function() {
 				// input_term
 				setTimeout(function(){
 					const input_term = editwindow.document.querySelector('.input_term')
-					console.log('input_term:', input_term);
 					if (input_term) {
 						input_term.focus()
 					}
