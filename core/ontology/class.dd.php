@@ -303,17 +303,8 @@ class dd extends dd_elements {
 						}
 					}
 
-				# margen izquierdo
-				if($parent === 'dd0'){
-					$marginLeft = 0 ;
-					$display = "display:block" ;
-				}else{
-					$marginLeft = 35 ;
-					$display = "display:block" ;
-				}
-
 				#$html .= "\n\n\n<!-- DIV LINEA TESAURO ICONOS Y TÉRMINO $terminoID ---------------------------------------------------------------- -->";
-				$html .= "<div id=\"divCont{$terminoID}\" class=\"divCont\" style=\"padding-left:{$marginLeft}" . "px;{$display}\">";
+					$html .= "<div id=\"divCont{$terminoID}\" class=\"divCont\">";
 
 					# generamos la linea con los iconos, etc..
 					$html .= $this->makeTSline($terminoID,$termino,$parent,$children,$def,$obs,$hijosD,$hijosND,$nIndexaciones,$ncaptaciones,$nordenV,$resalte,$modelo,$propiedades,$properties,$traducible,$norden);
