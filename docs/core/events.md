@@ -15,7 +15,7 @@ All events are storen in the events array of the event manager.
 
  Events format:
 
- ```json
+```json
 [{
     "event_name"  : "update_data",  //string. The common name of the events for fired by publish/changes as 'activate_component'
     "token"       : "event_1",      //string. Unique id stored in the instance for control the event as 'event_19'
