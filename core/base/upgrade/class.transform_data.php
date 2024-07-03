@@ -418,28 +418,33 @@ class transform_data {
 					// locator edit
 						switch ($locator->from_component_tipo) {
 							case 'numisdata885':
+								// Numismatic object Type data frame
 								$locator->section_id			= $create_new_rating_section();
 								$locator->section_tipo			= $target_section_tipo;
 								$locator->from_component_tipo	= 'numisdata1447';
 								break;
 
 							case 'numisdata1017':
+								// types Mint data frame
 								$locator->section_id			= $create_new_rating_section();
 								$locator->section_tipo			= $target_section_tipo;
 								$locator->from_component_tipo	= 'numisdata1448';
 								break;
 
 							case 'numisdata865':
+								// types Denomination data frame
 								$locator->section_id			= $create_new_rating_section();
 								$locator->section_tipo			= $target_section_tipo;
 								$locator->from_component_tipo	= 'numisdata1449';
 								break;
 
 							case 'oh126':
+								// Informants role
 								$locator->from_component_tipo	= 'oh115';
 								break;
 
 							case 'rsc1057':
+								// Entities role
 								$locator->from_component_tipo	= 'rsc1265';
 								break;
 

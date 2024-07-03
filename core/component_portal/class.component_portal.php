@@ -201,37 +201,42 @@ class component_portal extends component_relation_common {
 
 	/**
 	* UPDATE_DATO_VERSION
-	* @param object $request_options
+	* Is fired by area_maintenance update_data to transform
+	* component data between different versions or upgrades
+	* @see update::components_update
+	* @param object $options
+	* {
+	* 	update_version: array
+	* 	dato_unchanged: mixed
+	* 	reference_id: string|int
+	* 	tipo: string
+	* 	section_id: string|int
+	* 	section_tipo: string
+	* 	context: string (default: 'update_component_dato')
+	* }
 	* @return object $response
 	*	$response->result = 0; // the component don't have the function "update_dato_version"
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $request_options) : object {
+	public static function update_dato_version(object $options) : object {
 
-		$options = new stdClass();
-			$options->update_version	= null;
-			$options->dato_unchanged	= null;
-			$options->reference_id		= null;
-			$options->tipo				= null;
-			$options->section_id		= null;
-			$options->section_tipo		= null;
-			$options->context			= 'update_component_dato';
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
-
-			$update_version	= $options->update_version;
-			$dato_unchanged	= $options->dato_unchanged;
-			$reference_id	= $options->reference_id;
-
+		// options
+			$update_version	= $options->update_version ?? null;
+			$dato_unchanged	= $options->dato_unchanged ?? null;
+			$reference_id	= $options->reference_id ?? null;
+			$tipo			= $options->tipo ?? null;
+			$section_id		= $options->section_id ?? null;
+			$section_tipo	= $options->section_tipo ?? null;
+			$context		= $options->context ?? 'update_component_dato';
 
 		$update_version = implode(".", $update_version);
 		switch ($update_version) {
 
 			case '6.0.0':
-
 				// Update the locator to move old ds and dataframe to v6 dataframe model.
 				if (!empty($dato_unchanged) && is_array($dato_unchanged)) {
-					$RecordObj_dd			= new RecordObj_dd($options->tipo);
+					$RecordObj_dd			= new RecordObj_dd($tipo);
 					$properties				= $RecordObj_dd->get_properties();
 					$v6_update_dataframe	= $properties->v6_update_dataframe ?? null;
 
@@ -243,13 +248,18 @@ class component_portal extends component_relation_common {
 						if(isset($current_locator->ds) || isset($current_locator->dataframe)){
 							$need_to_be_updated = true;
 							if(empty($v6_update_dataframe)){
-								throw new Exception("The current component doesn't has defined v6_update_dataframe in preferences. tipo:".$options->tipo, 1);
+								debug_log(__METHOD__
+									. " The current component doesn't has defined v6_update_dataframe in preferences (Ontology properties). " . PHP_EOL
+									. ' options: '  . to_string($options)
+									, logger::ERROR
+								);
+								throw new Exception("The current component doesn't has defined v6_update_dataframe in preferences (Ontology properties). tipo:".$tipo, 1);
 							}
 
 							// ds case
 							if(!empty($current_locator->ds)){
 								debug_log(__METHOD__
-									." ----> Located locator->ds  ($options->section_tipo - $options->section_id) ".to_string($current_locator->ds)
+									." ----> Located locator->ds ($section_tipo - $section_id) ".to_string($current_locator->ds)
 									, logger::WARNING
 								);
 
@@ -259,7 +269,7 @@ class component_portal extends component_relation_common {
 									$current_ds->section_id_key			= (int)$current_locator->section_id;
 
 									$new_dataframe[] = $current_ds;
-									// debug_log(__METHOD__." ----> Changed ds locator ($options->section_tipo - $options->section_id) ".to_string($current_ds), logger::WARNING);
+									// debug_log(__METHOD__." ----> Changed ds locator ($section_tipo - $section_id) ".to_string($current_ds), logger::WARNING);
 								}
 								// delete old ds
 								unset($current_locator->ds);
@@ -294,31 +304,31 @@ class component_portal extends component_relation_common {
 
 								debug_log(__METHOD__
 									. " Updated locator type from dd151 to dd96 " . PHP_EOL
-									. ' component tipo: ' . $options->tipo . PHP_EOL
-									. ' section_tipo: ' . $options->section_tipo . PHP_EOL
-									. ' section_id: ' . $options->section_id . PHP_EOL
+									. ' component tipo: ' . $tipo . PHP_EOL
+									. ' section_tipo: ' . $section_tipo . PHP_EOL
+									. ' section_id: ' . $section_id . PHP_EOL
 									, logger::DEBUG
 								);
 							}
 						}
 
 						$clean_locators[] = $current_locator;
-					}//end foreach ((array)$dato_unchanged as $key => $clocator)
+					}//end foreach ((array)$dato_unchanged as $key => $current_locator)
 
-					if($need_to_be_updated === true){
+					if ($need_to_be_updated === true) {
 
 						$ar_locators	= array_merge($clean_locators, $new_dataframe);
 						$new_dato		= (array)$ar_locators;
 
 						// section update and save locators
 							$section_to_save = section::get_instance(
-								$options->section_id, // string|null section_id
-								$options->section_tipo, // string section_tipo
+								$section_id, // string|null section_id
+								$section_tipo, // string section_tipo
 								'list', // string mode
 								false // bool bool
 							);
 							$remove_options = new stdClass();
-								$remove_options->component_tipo			= $options->tipo;
+								$remove_options->component_tipo			= $tipo;
 								$remove_options->relations_container	= 'relations';
 
 							$section_to_save->remove_relations_from_component_tipo( $remove_options );
@@ -326,16 +336,15 @@ class component_portal extends component_relation_common {
 								$section_to_save->add_relation($current_locator);
 							}
 							$section_to_save->Save();
-							debug_log(__METHOD__." ----> Saved ($options->section_tipo - $options->section_id) ".to_string($ar_locators), logger::WARNING);
+							debug_log(__METHOD__." ----> Saved ($section_tipo - $section_id) ".to_string($ar_locators), logger::WARNING);
 
 						$response = new stdClass();
 							$response->result	= 3;
 							$response->new_dato	= $new_dato;
 							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-
 					}else{
 
-						$legacy_model_name = RecordObj_dd::get_legacy_model_name_by_tipo($options->tipo);
+						$legacy_model_name = RecordObj_dd::get_legacy_model_name_by_tipo($tipo);
 						if ($legacy_model_name==='component_autocomplete_hi') {
 							// force save to regenerate search relations
 							$response = new stdClass();
@@ -352,10 +361,10 @@ class component_portal extends component_relation_common {
 					}// end if($need_to_be_updated === true)
 				}else{
 
-						$response = new stdClass();
-							$response->result	= 2;
-							$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}// end (!empty($dato_unchanged))
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}//end (!empty($dato_unchanged) && is_array($dato_unchanged))
 				break;
 
 			default:
@@ -363,7 +372,7 @@ class component_portal extends component_relation_common {
 					$response->result	= 0;
 					$response->msg		= "This component ".get_called_class()." don't have update to this version ($update_version). Ignored action";
 				break;
-			}
+		}//end switch ($update_version)
 
 
 		return $response;
