@@ -210,6 +210,18 @@ class component_number extends component_common {
 
 				case 'float':
 				default:
+					if (gettype($dato_value)==='string' && strpos($dato_value,',')===false && strpos($dato_value,'.')===false) {
+						$dato_value = (int)$dato_value;
+					}
+					if (gettype($dato_value)!=='integer' && gettype($dato_value)!=='double') {
+						debug_log(__METHOD__
+							. " Converting unexpected type. Forced to integer to prevent issues " . PHP_EOL
+							. ' type: ' . gettype($dato_value) . PHP_EOL
+							. ' value: ' . to_string($dato_value)
+							, logger::ERROR
+						);
+						$dato_value = (int)$dato_value;
+					}
 					$precision	= $properties->precision ?? 2;
 					$dato_value	= is_numeric($dato_value)
 						? (float)round($dato_value, $precision)
