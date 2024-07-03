@@ -6,9 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
-	import {get_section_records} from '../../section/js/section.js'
-	import {get_instance} from '../../common/js/instances.js'
 
 
 
@@ -131,13 +128,12 @@ const render_content_value = function(options) {
 				// update text color based on background
 					const text_color = ui.get_text_color(bg_color)
 					button_activate.style.color = text_color
-
-				// console.log('text_color:', text_color, 'bg_color', bg_color);
 			}
 		}
 
 	return content_value
 }//end render_content_value
+
 
 
 // @license-end

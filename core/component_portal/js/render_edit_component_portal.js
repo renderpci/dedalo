@@ -449,6 +449,7 @@ export const render_column_remove = function(options) {
 			const button_remove = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'button_remove',
+				title			: (get_label.delete || 'Delete'),
 				parent			: fragment
 			})
 			button_remove.tabIndex = -1;
@@ -632,6 +633,9 @@ export const render_column_remove = function(options) {
 				class_name		: 'button delete_light icon',
 				parent			: button_remove
 			})
+
+			// activate_tooltips
+			ui.activate_tooltips(button_remove.parentNode, '.button_remove')
 		}
 
 

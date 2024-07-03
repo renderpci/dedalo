@@ -7,7 +7,6 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	import {object_to_url_vars} from '../../common/js/utils/index.js'
 	import {get_section_records} from '../../section/js/section.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {
@@ -60,7 +59,7 @@ view_tree_edit_portal.render = async function(self, options) {
 			return content_data
 		}
 
-	//show interface
+	// show interface
 		self.show_interface.button_tree			= true
 		self.show_interface.button_add			= false
 		self.show_interface.button_link			= false
@@ -108,6 +107,8 @@ view_tree_edit_portal.render = async function(self, options) {
 
 /**
 * ADD_EVENTS
+* @param object self
+* @param HTMLElement wrapper
 * @return bool
 */
 export const add_events = function(self, wrapper) {
@@ -172,7 +173,6 @@ export const add_events = function(self, wrapper) {
 
 					return true
 				}//end if(e.target.matches('.button.remove'))
-
 		}//end fn_wrapper_click
 
 
