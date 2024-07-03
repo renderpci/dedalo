@@ -916,7 +916,167 @@ var dd = new function() {
 
 
 
-}//end component_dd class
+	/**
+	* EXPORT_STR
+	* Uses trigger.dd.php to call backup::export_structure
+	* @param HTMLElement button_obj
+	* @return bool
+	*/
+	this.export_str = function(button_obj) {
+
+		const self = this
+
+		// confirm msg
+			if( !confirm('\nAre you sure to EXPORT and overwrite structure data in file \n "dedalo4_development_str.custom.backup" ?\n') ) {
+				return false
+			}
+
+		// loading..
+			const wrapGeneral = document.getElementById("wrapGeneral")
+			wrapGeneral.classList.add("hide")
+
+			const log_messages = document.getElementById('log_messages')
+			log_messages.classList.add('show_str_data')
+			log_messages.addEventListener("dblclick",function(){
+				this.innerHTML = ""
+				this.classList.remove('show_str_data')
+				this.classList.add('hide')
+				wrapGeneral.classList.remove("hide")
+
+			})
+			log_messages.classList.remove("hide")
+			log_messages.innerHTML = "Loading.. "
+
+		// request
+			const body = {
+				mode : 'export_str'
+			}
+			data_manager.request({
+				url		: self.trigger_url,
+				body	: body
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log("[dd.export_str] response: ", response);
+				}
+
+				if (!response) {
+					console.log("[dd.export_str] Error. null response");
+				}else{
+
+					if (log_messages) {
+						log_messages.innerHTML = response.msg
+					}else{
+						console.log("[dd.export_str] ", response.msg);
+						alert("[dd.export_str] Error. log_messages not found")
+					}
+				}
+			})
+
+
+		return true
+	}//end export_str
+
+
+
+	/**
+	* BUILD_VERSION_FROM_GIT_MASTER
+	*
+	* @param HTMLElement button_obj
+	* @param int version
+	* @param string branch
+	* @return bool
+	*/
+	this.build_version_from_git_master = function(button_obj, version, branch) {
+
+		self = this
+
+		// confirm
+			const msg = 'BUILD A NEW VERSION OF DEDALO FROM GIT? \n\nVersion: '+version+' \nBranch: '+(branch || 'master')
+			if( !confirm(msg +'\n\n') ){
+				return false
+			}
+
+		// loading..
+			const wrapGeneral = document.getElementById("wrapGeneral")
+			wrapGeneral.classList.add("hide")
+
+			const log_messages = document.getElementById('log_messages')
+			log_messages.classList.add('show_str_data')
+			log_messages.addEventListener("dblclick",function(){
+				this.innerHTML = ""
+				this.classList.remove('show_str_data')
+				this.classList.add('hide')
+				wrapGeneral.classList.remove("hide")
+
+			})
+			log_messages.classList.remove("hide")
+			log_messages.innerHTML = "Loading.. "
+
+		// DES
+			// const trigger = DEDALO_LIB_BASE_URL + "/backup/trigger.db_utils.php"
+			// const trigger_vars = {
+			// 	mode	: 'build_version_from_git_master',
+			// 	version	: version,
+			// 	branch	: branch // master | v6_developer
+			// }
+
+			// // HTTPX Request
+			// const js_promise = common.get_json_data(trigger, trigger_vars)
+			// .then(function(response) {
+			// 	if(SHOW_DEBUG===true) {
+			// 		console.log("[dd.build_version_from_git_master] response: "+trigger_vars.mode, response);
+			// 	}
+
+			// 	if (!response) {
+			// 		console.log("[dd.build_version_from_git_master] Error. null response");
+			// 	}else{
+
+			// 		if (log_messages) {
+			// 			log_messages.innerHTML = response.msg
+			// 		}else{
+			// 			console.log("[dd.build_version_from_git_master] ", response.msg);
+			// 			alert("[dd.build_version_from_git_master] Error. log_messages not found")
+			// 		}
+			// 	}
+			// })
+
+		// request
+			const body = {
+				mode	: 'build_version_from_git_master',
+				version	: version,
+				branch	: branch // master | v6_developer
+			}
+			data_manager.request({
+				url		: self.trigger_url,
+				body	: body
+			})
+			.then(function(response){
+				if(SHOW_DEBUG===true) {
+					console.log("[dd.build_version_from_git_master] response: ", response);
+				}
+
+				if (!response) {
+					console.log("[dd.build_version_from_git_master] Error. null response");
+				}else{
+
+					if (log_messages) {
+						log_messages.innerHTML = response.msg
+					}else{
+						console.log("[dd.build_version_from_git_master] ", response.msg);
+						alert("[dd.build_version_from_git_master] Error. log_messages not found")
+					}
+				}
+			})
+
+
+
+		return true
+	}//end build_version_from_git_master
+
+
+
+}//end dd class
 
 
 

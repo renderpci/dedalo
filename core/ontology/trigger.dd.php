@@ -2,6 +2,7 @@
 // Turn off output buffering
 	ini_set('output_buffering', 'off');
 
+$start_time = hrtime(true);
 
 // ontology custom config file
 include_once( dirname(__FILE__) .'/config/config_ontology.php' );
@@ -52,7 +53,7 @@ include_once( dirname(__FILE__) . '/lang/lang_code.php' );
 	foreach($vars as $name)	$$name = common::setVar($name);
 
 
-// json request
+// JSON request
 	$json	= file_get_contents('php://input');
 	$data	= json_decode($json);
 
@@ -769,3 +770,155 @@ if($accion==='duplicate') {
 
 	exit();
 }//end duplicate
+
+
+
+/**
+* EXPORT_STR
+* Called from dd_list.js -> dd.export_str()
+*/
+if(!empty($data) && $data->mode==='export_str') {
+
+	// Write session to unlock session file
+	session_write_close();
+
+	$response = new stdClass();
+		$response->result	= false;
+		$response->msg		= 'Error. Request failed ' . $data->mode;
+
+	// dump all historic data first
+		$db_name				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+		$res_export_structure	= (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+		if ($res_export_structure->result===false) {
+			$response->result	= false;
+			$response->msg		= $res_export_structure->msg;
+			return $response;
+		}else{
+			# Append msg
+			$response->msg .= $res_export_structure->msg;
+		}
+
+	// dump official structure version 'dedalo4_development_str.custom' (partial backup)
+		$res_export_structure2 = (object)backup::export_structure(null, $exclude_tables=true);	 // Partial backup
+		if ($res_export_structure2->result===false) {
+			$response->result	= false;
+			$response->msg		= $res_export_structure2->msg;
+			return $response;
+		}else{
+			# Append msg
+			$response->msg .= $res_export_structure2->msg;
+		}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time = exec_time_unit_auto($start_time);
+			$response->debug = $debug;
+		}
+
+	header('Content-Type: application/json');
+	echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+	exit();
+}//end export_str
+
+
+
+/**
+* BUILD_VERSION_FROM_GIT_MASTER
+* Called from dd_list.js -> dd.build_version_from_git_master()
+*/
+if(!empty($data) && $data->mode==='build_version_from_git_master') {
+
+	// Write session to unlock session file
+	session_write_close();
+
+	// response
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= '';
+
+	// options
+		$options = $data;
+		$version = $options->version;
+		if (empty($version)) {
+			$response->msg = 'Version is mandatory!';
+			return $response;
+		}
+		$branch = $options->branch ?? 'master';
+
+	// rsync trigger code HEAD from master git
+		function update_head_code(object $response, int $version, string $branch) : string {
+
+			if ($version==6) {
+				// source
+				$source = DEDALO_6_CODE_SERVER_GIT_DIR;
+				// target
+				$target = DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
+				// branch conditional
+				if ($branch==='v6_developer') {
+					$target = DEDALO_6_CODE_FILES_DIR .'/dedalo'.$version.'_'.$branch.'_code.zip';
+				}
+				// command @see https://git-scm.com/docs/git-archive
+				$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ $branch > $target ";
+
+			}else{
+				// source
+				$source = DEDALO_CODE_SERVER_GIT_DIR;
+				// target
+				$target = DEDALO_CODE_FILES_DIR .'/dedalo'.$version.'_code.zip';
+				// command @see https://git-scm.com/docs/git-archive
+				$command = "cd $source; git archive --verbose --format=zip --prefix=dedalo{$version}_code/ v5 > $target ";
+			}
+
+			$msg = "Called Dédalo update_head_code with command: " .PHP_EOL. to_string($command);
+			debug_log(__METHOD__." $msg ".to_string(), logger::DEBUG);
+			$response->msg .= PHP_EOL . $msg;
+
+			$output_array	= null;
+			$retval			= null;
+			exec($command, $output_array, $retval);
+
+			$result = 'Return:'.PHP_EOL.'status: '. ($retval ?? null). PHP_EOL . 'output: ' . json_encode($output_array, JSON_PRETTY_PRINT);
+
+			return $result;
+		}
+
+	// try exec
+		try{
+
+			$output = update_head_code($response, $version, $branch);
+
+			// Append msg
+			$msg = PHP_EOL ."update_head_code shell_exec output: ". PHP_EOL. to_string($output);
+			$response->msg .= $msg;
+			debug_log(__METHOD__
+				." update_head_code output OK: $msg "
+				, logger::DEBUG
+			);
+
+			$response->result = true;
+
+		} catch (Exception $e) {
+
+			// Append msg
+			$response->msg .= $e->getMessage();
+			debug_log(__METHOD__
+				." update_head_code output ERROR: $response->msg " . PHP_EOL
+				. ' response: ' . to_string($response)
+				, logger::ERROR
+			);
+		}
+
+	// debug
+		if(SHOW_DEBUG===true) {
+			$debug = new stdClass();
+				$debug->exec_time = exec_time_unit_auto($start_time);
+			$response->debug = $debug;
+		}
+
+	header('Content-Type: application/json');
+	echo json_encode($response, JSON_UNESCAPED_UNICODE);
+
+	exit();
+}//end export_str
