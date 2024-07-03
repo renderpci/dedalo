@@ -1128,39 +1128,58 @@ class tools_register {
 				$section->set_dato($record->datos);
 
 				// name
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
-					$component	= component_common::get_instance(
-						$model,
-						$name_tipo,
-						$record->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$record->section_tipo
-					);
-					$dato	= $component->get_dato();
-					$name	= !empty($dato)
-						? ($dato[0] ?? null)
-						: null;
+					$model = RecordObj_dd::get_modelo_name_by_tipo($name_tipo,true);
+					if (empty($model)) {
+						$name	= null;
+						debug_log(__METHOD__
+							. " Invalid model (empty) is ignored! " . PHP_EOL
+							. ' tipo: ' . to_string($config_tipo)
+							, logger::ERROR
+						);
+					}else{
+						$component	= component_common::get_instance(
+							$model,
+							$name_tipo,
+							$record->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$record->section_tipo
+						);
+						$dato	= $component->get_dato();
+						$name	= !empty($dato)
+							? ($dato[0] ?? null)
+							: null;
+					}
 
 				// config
-					$model		= RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
-					$component	= component_common::get_instance(
-						$model,
-						$config_tipo,
-						$record->section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$record->section_tipo
-					);
-					$dato	= $component->get_dato();
-					$config	= !empty($dato)
-						? ($dato[0] ?? null)
-						: null;
+					$model = RecordObj_dd::get_modelo_name_by_tipo($config_tipo,true);
+					if (empty($model)) {
+						$config	= null;
+						debug_log(__METHOD__
+							. " Invalid model (empty) is ignored! " . PHP_EOL
+							. ' tipo: ' . to_string($config_tipo)
+							, logger::ERROR
+						);
+					}else{
+						$component	= component_common::get_instance(
+							$model,
+							$config_tipo,
+							$record->section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$record->section_tipo
+						);
+						$dato	= $component->get_dato();
+						$config	= !empty($dato)
+							? ($dato[0] ?? null)
+							: null;
+					}
 
-				$value = (object)[
-					'name'		=> $name,
-					'config'	=> $config
-				];
+				// value
+					$value = (object)[
+						'name'		=> $name,
+						'config'	=> $config
+					];
 
 				return $value;
 			}, $ar_records);
