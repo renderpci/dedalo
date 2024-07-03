@@ -973,6 +973,7 @@ class component_pdf extends component_media_common implements component_media_in
 			case '6.0.0':
 				$is_old_dato = (
 					empty($dato_unchanged) || // v5 early case
+					(is_object($dato_unchanged) && property_exists($dato_unchanged, 'scalar')) || // mdcat old data cases
 					isset($dato_unchanged->section_id) || // v5 modern case
 					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
 				);
