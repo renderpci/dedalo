@@ -7,15 +7,25 @@
 
 	// edit
 	&.edit {
-		display: grid;
-		justify-content: start;
-		align-items: start;
+		display: block;
 
 		>.content_data {
 			display: grid;
 			grid-template-columns: 1fr auto;
-		}
+			overflow: auto;
+			padding: 0px;
 
+			>.column {
+				padding: 0.12rem;
+			}
+
+			.section_record:first-child {
+
+				>.column {
+
+				}
+			}
+		}
 	}//end &.edit
 
 	&.search {

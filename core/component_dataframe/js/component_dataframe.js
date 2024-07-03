@@ -9,6 +9,7 @@
 	import {data_manager} from '../../common/js/data_manager.js'
 
 
+
 // alias of component_portal
 	export const component_dataframe = component_portal
 
@@ -54,7 +55,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 		body : rqo
 	})
 
-	// if the server response is ok, it will send the new section_id
+	// if the server response is OK, it will send the new section_id
 	if (api_response.result && api_response.result>0) {
 
 		const section_id = api_response.result
@@ -63,7 +64,6 @@ component_dataframe.prototype.create_new_section = async function(options) {
 			section_tipo		: target_section_tipo,
 			section_id			: section_id,
 			section_id_key		: data.section_id_key,
-			// tipo_key			: data.tipo_key,
 			from_component_tipo	: self.tipo
 		}
 
@@ -92,7 +92,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 * rating component is a component_radio_button, it will have a datalist with all rating values
 * his data need to be match with the datalist to get the literal or the equivalent color of the rating
 * data_rating will be the datalist item that match with the value.
-* @return object data_rating | null
+* @return object data_rating|null
 */
 component_dataframe.prototype.get_rating = function() {
 
@@ -123,8 +123,6 @@ component_dataframe.prototype.get_rating = function() {
 
 	return null
 }//end get_rating
-
-
 
 
 

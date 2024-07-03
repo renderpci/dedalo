@@ -226,77 +226,6 @@ const get_content_value = (i, current_value, self) => {
 	});//end when_in_viewport
 
 
-	// urls
-		// 	// posterframe url
-		// 		const posterframe_url = self.data.posterframe_url
-		// 	// media url from data.datalist based on selected context quality
-		// 		const quality	= self.quality || self.context.features.quality
-		// 		const datalist	= self.data.datalist
-		// 		const file_info	= datalist.find(el => el.quality===quality && el.file_exist===true)
-		// 		const video_url	= file_info
-		// 			? file_info.file_url
-		// 			: null
-
-	// background content_value. Load the posterframe image only to get the bg color, not for show it
-		// 		// if (posterframe_url) {
-		// 		// 	const image = ui.create_dom_element({
-		// 		// 		element_type: 'img'
-		// 		// 	})
-		// 		// 	// image background color
-		// 		// 	image.addEventListener('load', set_bg_color, false)
-		// 		// 	function set_bg_color() {
-		// 		// 		this.removeEventListener('load', set_bg_color, false)
-		// 		// 		ui.set_background_image(this, content_value)
-		// 		// 		image.remove()
-		// 		// 	}
-		// 		// 	image.src = posterframe_url
-		// 		// }
-
-
-
-	// video / posterframe cases
-		// 	if (video_url) {
-
-		// 		const video = build_3d_node(
-		// 			posterframe_url
-		// 		)
-		// 		// fix pointer
-		// 		content_value.video = video
-		// 		// append node to content_value
-		// 		content_value.prepend(video)
-
-		// 		// fix pointer to allow play/pause
-		// 		self.video = video
-
-		// 		// observer. Set video node only when it is in viewport (to save browser resources)
-		// 		when_in_viewport(
-		// 			content_value, // node to observe
-		// 			() => { // callback function returns int timestamp
-		// 				posterframe.remove()
-		// 				video.src		= video_url
-		// 				video.classList.remove('hide')
-		// 			}
-		// 		)
-		// 	}else{
-
-		// 		posterframe.classList.add('link')
-		// 		posterframe.addEventListener('mouseup', function(e) {
-		// 			e.stopPropagation();
-
-		// 			const tool_upload = self.tools.find(el => el.model==='tool_upload')
-		// 			// open_tool (tool_common)
-		// 				open_tool({
-		// 					tool_context	: tool_upload,
-		// 					caller			: self
-		// 				})
-		// 		})
-		// 	}
-
-	// quality_selector
-		// 	const quality_selector = get_quality_selector(content_value, self)
-		// 	content_value.appendChild(quality_selector)
-
-
 	return content_value
 }//end get_content_value
 
@@ -343,7 +272,7 @@ const get_content_value_read = (i, current_value, self) => {
 					ui.set_background_image(this, content_value)
 				}
 			}
-			// set src url
+			// set source URL
 			content_value.posterframe.src = posterframe_url
 		}
 
@@ -381,9 +310,6 @@ const get_quality_selector = (content_value, self) => {
 		})
 		quality_selector.addEventListener('change', (e) =>{
 			const src = e.target.value
-			// self.video.src = src
-			// video.src = src
-			// event_manager.publish('image_quality_change_'+self.id, img_src)
 		})
 
 		const quality_list		= files_info.filter(el => el.file_exist===true && el.extension===extension)

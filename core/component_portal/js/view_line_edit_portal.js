@@ -216,7 +216,6 @@ const rebuild_columns_map = async function(self) {
 			})
 		}
 
-
 	// column remove
 		if ( self.context.properties.source?.mode !== 'external' && self.permissions > 1) {
 			columns_map.push({
@@ -343,8 +342,6 @@ view_line_edit_portal.render_column_remove = function(options) {
 					row_key			: row_key,
 					section_id		: section_id
 				})
-
-
 		}//end fn_remove
 
 	// remove_icon
