@@ -21,10 +21,18 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
             'rdfInterface\\' => 13,
             'rdfHelpers\\' => 11,
         ),
+        'R' => 
+        array (
+            'RobRichards\\XMLSecLibs\\' => 23,
+        ),
         'P' => 
         array (
             'Psr\\Http\\Message\\' => 17,
             'PhpParser\\' => 10,
+        ),
+        'O' => 
+        array (
+            'OneLogin\\' => 9,
         ),
         'E' => 
         array (
@@ -49,6 +57,10 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         array (
             0 => __DIR__ . '/..' . '/sweetrdf/rdf-helpers/src/rdfHelpers',
         ),
+        'RobRichards\\XMLSecLibs\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/robrichards/xmlseclibs/src',
+        ),
         'Psr\\Http\\Message\\' => 
         array (
             0 => __DIR__ . '/..' . '/psr/http-message/src',
@@ -56,6 +68,10 @@ class ComposerStaticInit0aa00609568bbaee993e02b5583554a6
         'PhpParser\\' => 
         array (
             0 => __DIR__ . '/..' . '/nikic/php-parser/lib/PhpParser',
+        ),
+        'OneLogin\\' => 
+        array (
+            0 => __DIR__ . '/..' . '/onelogin/php-saml/src',
         ),
         'EasyRdf\\' => 
         array (
