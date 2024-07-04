@@ -7,21 +7,22 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\Framework\MockObject\Generator;
+namespace PHPUnit\Runner;
 
 use function sprintf;
+use RuntimeException;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class ClassIsReadonlyException extends \PHPUnit\Framework\Exception implements Exception
+final class DirectoryDoesNotExistException extends RuntimeException implements Exception
 {
-    public function __construct(string $className)
+    public function __construct(string $directory)
     {
         parent::__construct(
             sprintf(
-                'Class "%s" is declared "readonly" and cannot be doubled',
-                $className,
+                'Directory "%s" does not exist and could not be created',
+                $directory,
             ),
         );
     }

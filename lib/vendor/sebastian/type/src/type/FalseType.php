@@ -23,7 +23,7 @@ final class FalseType extends Type
     }
 
     /**
-     * @psalm-return 'false'
+     * @return 'false'
      */
     public function name(): string
     {
@@ -35,9 +35,6 @@ final class FalseType extends Type
         return false;
     }
 
-    /**
-     * @psalm-assert-if-true FalseType $this
-     */
     public function isFalse(): bool
     {
         return true;

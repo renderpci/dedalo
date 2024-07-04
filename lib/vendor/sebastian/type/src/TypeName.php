@@ -21,12 +21,12 @@ final readonly class TypeName
     private ?string $namespaceName;
 
     /**
-     * @psalm-var non-empty-string
+     * @var non-empty-string
      */
     private string $simpleName;
 
     /**
-     * @psalm-param class-string $fullClassName
+     * @param class-string $fullClassName
      */
     public static function fromQualifiedName(string $fullClassName): self
     {
@@ -44,6 +44,9 @@ final readonly class TypeName
         return new self($namespaceName, $simpleName);
     }
 
+    /**
+     * @phpstan-ignore missingType.generics
+     */
     public static function fromReflection(ReflectionClass $type): self
     {
         return new self(
@@ -53,7 +56,7 @@ final readonly class TypeName
     }
 
     /**
-     * @psalm-param non-empty-string $simpleName
+     * @param non-empty-string $simpleName
      */
     public function __construct(?string $namespaceName, string $simpleName)
     {
@@ -71,7 +74,7 @@ final readonly class TypeName
     }
 
     /**
-     * @psalm-return non-empty-string
+     * @return non-empty-string
      */
     public function simpleName(): string
     {
@@ -79,7 +82,7 @@ final readonly class TypeName
     }
 
     /**
-     * @psalm-return non-empty-string
+     * @return non-empty-string
      */
     public function qualifiedName(): string
     {

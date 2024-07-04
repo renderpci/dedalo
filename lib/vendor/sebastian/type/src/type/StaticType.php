@@ -45,7 +45,7 @@ final class StaticType extends Type
     }
 
     /**
-     * @psalm-return 'static'
+     * @return 'static'
      */
     public function name(): string
     {
@@ -57,9 +57,6 @@ final class StaticType extends Type
         return $this->allowsNull;
     }
 
-    /**
-     * @psalm-assert-if-true StaticType $this
-     */
     public function isStatic(): bool
     {
         return true;
