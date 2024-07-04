@@ -905,6 +905,21 @@ class transform_data {
 
 								foreach ($relations as $locator) {
 									foreach ($locator as $loc_key => $loc_value) {
+
+										if (!is_string($loc_value) && !is_int($loc_value)) {
+											debug_log(__METHOD__
+												. " Ignored locator value ! " . PHP_EOL
+												. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+												. ' loc_value: ' . to_string($loc_value) . PHP_EOL
+												. ' loc_value type: ' . gettype($loc_value) . PHP_EOL
+												. ' table: ' . $table . PHP_EOL
+												. ' id: ' . $id . PHP_EOL
+												. ' locator: ' . to_string($locator)
+												, logger::ERROR
+											);
+											continue;
+										}
+
 										if( isset($ar_transform_map[$loc_value]) ){
 											// replace old tipo with the new one in any locator property
 											$locator->{$loc_key} = $ar_transform_map[$loc_value]->new;
