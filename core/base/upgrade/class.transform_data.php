@@ -768,7 +768,7 @@ class transform_data {
 
 		// skip_virtuals
 			$skip_virtuals = array_map(function($el){
-				return $el->skip_virtuals;
+				return $el->skip_virtuals ?? [];
 			}, $ar_section_elements, []);
 			$skip_virtuals = array_flatten($skip_virtuals);
 
