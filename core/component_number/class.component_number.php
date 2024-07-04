@@ -3,7 +3,8 @@ declare(strict_types=1);
 /**
 * CLASS COMPONENT_NUMBER
 * Manage numbers with specific precision
-* types supported : int || float
+* types supported : int|float
+* (!) Note that Ontology previous to 04/07/2024 used a wrong object format like "type":{"float":2}
 * data format : [number,xx]
 * data example : [6.12]
 * example multiple : [6.12,88]
