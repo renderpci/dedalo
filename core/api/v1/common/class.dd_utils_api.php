@@ -1432,12 +1432,20 @@ final class dd_utils_api {
 
 				// debug
 					if(SHOW_DEBUG===true) {
-						error_log('process loop: is_running: '.to_string($is_running) . ' - pid: ' .$pid. ' - pfile: ' .$pfile );
-						// error_log('process output: '.to_string($output) );
+						error_log('process loop: is_running: '.to_string($is_running) . ' - pid: ' .$pid. ' - pfile: ' .$pfile);
 					}
 
 				// output the response JSON string
 					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+					if (!is_string($a)) {
+						debug_log(__METHOD__
+							. " Error. output value is no correctly JSON encoded ! " . PHP_EOL
+							. to_string($a)
+							, logger::ERROR
+						);
+						// force type string
+						$a = to_string($a);
+					}
 
 					// fix Apache issue where small chunks are not sent correctly over HTTP 1.1
 					// sometimes Apache server join some outputs into a message (merge).
@@ -1454,18 +1462,17 @@ final class dd_utils_api {
 					}
 					// format the message to be analyzed in client side.
 					// client side doesn't use the eventManager(), the event is sent by fetch(),
-					// so the format is not relevant instead in the http 1.1 cases, than Apache can join or split the message in chunks
+					// so the format is not relevant instead in the HTTP 1.1 cases, than Apache can join or split the message in chunks
 					echo 'data:';
 					echo "\n";
 					echo $a;
 					echo "\n\n";
 
-						debug_log(__METHOD__
-							. " $a " . PHP_EOL
-							. to_string()
-							, logger::DEBUG
-						);
-
+				// debug log. Message printed in PHP error log
+					debug_log(__METHOD__
+						. ' ' . $a . PHP_EOL
+						, logger::DEBUG
+					);
 
 				// flush the output buffer and send echoed messages to the browser
 					while (ob_get_level() > 0) {
