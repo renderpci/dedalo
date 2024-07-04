@@ -9,8 +9,10 @@ return array(
     'zozlak\\' => array($vendorDir . '/zozlak/rdf-constants/src/zozlak'),
     'rdfInterface\\' => array($vendorDir . '/sweetrdf/rdf-interface/src/rdfInterface'),
     'rdfHelpers\\' => array($vendorDir . '/sweetrdf/rdf-helpers/src/rdfHelpers'),
+    'RobRichards\\XMLSecLibs\\' => array($vendorDir . '/robrichards/xmlseclibs/src'),
     'Psr\\Http\\Message\\' => array($vendorDir . '/psr/http-message/src'),
     'PhpParser\\' => array($vendorDir . '/nikic/php-parser/lib/PhpParser'),
+    'OneLogin\\' => array($vendorDir . '/onelogin/php-saml/src'),
     'EasyRdf\\' => array($vendorDir . '/sweetrdf/easyrdf/lib'),
     'DeepCopy\\' => array($vendorDir . '/myclabs/deep-copy/src/DeepCopy'),
 );
