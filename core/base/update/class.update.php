@@ -589,8 +589,8 @@ class update {
 					common::$pdata->section_tipo = $current_section_tipo;
 					common::$pdata->section_n_rows = $n_rows;
 					common::$pdata->n_sections = $n_sections;
-					common::$pdata->current_table = $current_table;
-					common::$pdata->tables = $tables;
+					common::$pdata->section_counter = common::$pdata->section_counter ? common::$pdata->section_counter++ : 0;
+					common::$pdata->n_components = $n_components;
 				}
 
 			// Iterate database resource directly to minimize memory requirements on large arrays
