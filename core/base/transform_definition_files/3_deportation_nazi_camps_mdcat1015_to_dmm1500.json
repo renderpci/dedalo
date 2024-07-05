@@ -48,7 +48,7 @@
 {"old":"mdcat1484" 	,"new": "dmm1554"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Publications"},
 {"old":"mdcat4329" 	,"new": "dmm1555"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Documented to"},
 {"old":"mdcat1485" 	,"new": "dmm1556"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Web publication"},
-{"old":"mdcat1478" 	,"new": "dmm1558"	,"type":"component"	,"perform":["replace_tipo","update_dataframe"]	,"info": "Filiation"},
+{"old":"mdcat3571" 	,"new": "dmm1828"	,"type":"component"	,"perform":["replace_tipo","update_dataframe"]	,"info": "Filiation"},
 {"old":"mdcat4260" 	,"new": "dmm1560"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Stolpersteine"},
 {"old":"mdcat1328" 	,"new": "dmm1567"	,"type":"section"	,"perform":["replace_tipo"]	,"info": "French fields"},
 {"old":"mdcat1573" 	,"new": "dmm1576"	,"type":"component"	,"perform":["replace_tipo"]	,"info": "Previous field"},
