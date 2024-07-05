@@ -3309,6 +3309,13 @@ class area_maintenance extends area_common {
 				return $response;
 			}
 
+			// ar_file_name
+			$ar_file_name = array_values(
+				array_map(function($el){
+					return $el->file_name;
+				}, $json_files)
+			);
+
 		// process changes_in_tipos
 			$ar_tables = [
 				'matrix',
@@ -3334,7 +3341,7 @@ class area_maintenance extends area_common {
 			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
 			$result = transform_data::changes_in_tipos(
 				$ar_tables,
-				array_values($json_files) // remove array keys
+				$ar_file_name
 			);
 
 		$response->result	= $result;
