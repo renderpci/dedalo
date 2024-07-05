@@ -4275,6 +4275,12 @@ abstract class common {
 					if (in_array($model, $ar_components_exclude)) {
 						continue;
 					}
+					if ($model==='section_group') {
+						$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($element_tipo);
+						if ($legacy_model==='section_group_div') {
+							continue;
+						}
+					}
 
 				// common temporal excluded/mapped models *******
 					$mapped_model = isset(common::$ar_temp_map_models[$model])
