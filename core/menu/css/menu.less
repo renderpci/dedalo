@@ -34,6 +34,15 @@
 		--menu_heigth: 3rem
 	}
 
+	&.wrapping {
+		>.menu_hierarchy, >.ontology {
+			display: none;
+		}
+		>.menu_mobile_icon, >.menu_mobile_wrapper {
+			display: block;
+		}
+	}
+
 	// left line
 		&:before {
 			content : ' ';
@@ -93,6 +102,10 @@
 			padding: 0px;
 			margin-left: 0.5rem;
 			z-index: 2;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				display: none;
+			}
 
 			ul {
 				display: none;
@@ -254,10 +267,6 @@
 			// shadow for fir level when active
 			>li.menu_li_active {
 				box-shadow: @menu_box_shadow;
-			}
-
-			@media screen and (max-width: @width_break_point_0) { // 1024px
-				display: none;
 			}
 		}//end #menu_hierarchy
 
@@ -463,7 +472,12 @@
 			flex-basis: 100%;
 			line-height: var(--menu_heigth);
 			min-height: var(--menu_heigth);
-			font-size: 1em;
+			font-size: 1rem;
+
+			@media screen and (max-width: @width_break_point_0) { // 1024px
+				line-height: 1.5rem;
+				padding: 0.5rem;
+			}
 
 			>div {
 				padding-left: 1em;
