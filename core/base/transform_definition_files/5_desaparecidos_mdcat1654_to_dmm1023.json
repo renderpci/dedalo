@@ -56,7 +56,7 @@
 {"old":"mdcat1877"	,"new": "dmm1097" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Exhumed outside of CCAA"},
 {"old":"mdcat3590"	,"new": "dmm1098" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Relevant data"},
 {"old":"mdcat3591"	,"new": "dmm1099" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Comments HUVH"},
-{"old":"mdcat1864"	,"new": "dmm1100" 		,"type":"component"	,"perform":["replace_tipo","update_dataframe"]	,"info":"Filiation"},
+{"old":"mdcat2882"	,"new": "dmm937" 		,"type":"component"	,"perform":["replace_tipo","update_dataframe"]	,"info":"Filiation"},
 {"old":"mdcat1881"	,"new": "dmm1102" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Municipality"},
 {"old":"mdcat1879"	,"new": "dmm1103" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Graveyard"},
 {"old":"mdcat1880"	,"new": "dmm1104" 		,"type":"component"	,"perform":["replace_tipo"]	,"info":"Place"},
