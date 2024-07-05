@@ -210,8 +210,11 @@ render_menu.prototype.edit = async function() {
 		button_toggle_inspector.addEventListener('click', ui.toggle_inspector)
 
 	// debug info bar
-		if(SHOW_DEVELOPER===true || SHOW_DEBUG===true) {
-			fragment.appendChild( render_debug_info_bar(self) );
+		const debug_info_bar = (SHOW_DEVELOPER===true || SHOW_DEBUG===true)
+			? render_debug_info_bar(self)
+			: null
+		if(debug_info_bar) {
+			fragment.appendChild( debug_info_bar );
 		}
 
 	// menu_wrapper
@@ -234,6 +237,33 @@ render_menu.prototype.edit = async function() {
 					break;
 			}
 			menu_wrapper.classList.add(...classes)
+		// events
+			const observer = new ResizeObserver((entries) => {
+				entries.forEach((entry) => {
+
+					// debug_info_bar
+					const debug_info_bar_height = debug_info_bar
+						? debug_info_bar.getBoundingClientRect().height
+						: 0
+
+					// wrapper height current
+					const wrapper_height = entry.contentRect.height
+
+					// subtract debug_info_bar_height from wrapper height
+					const limit = Math.floor(wrapper_height - debug_info_bar_height)
+
+					if (limit > 50) {
+						menu_wrapper.classList.add('wrapping')
+						// fix width edge
+						menu_wrapper.width_edge = entry.contentRect.width
+					}else{
+						if (menu_wrapper.width_edge && entry.contentRect.width > menu_wrapper.width_edge) {
+							menu_wrapper.classList.remove('wrapping')
+						}
+					}
+				});
+			});
+			observer.observe(menu_wrapper);
 
 
 	return menu_wrapper
