@@ -11,36 +11,22 @@ namespace PHPUnit\Framework;
 
 use const PHP_EOL;
 use function assert;
-use function class_exists;
-use function defined;
 use function extension_loaded;
-use function get_include_path;
-use function hrtime;
-use function serialize;
 use function sprintf;
-use function sys_get_temp_dir;
-use function tempnam;
-use function unlink;
-use function var_export;
 use AssertionError;
-use PHPUnit\Event;
-use PHPUnit\Event\NoPreviousThrowableException;
+use PHPUnit\Event\Facade;
 use PHPUnit\Metadata\Api\CodeCoverage as CodeCoverageMetadataApi;
 use PHPUnit\Metadata\Parser\Registry as MetadataRegistry;
 use PHPUnit\Runner\CodeCoverage;
 use PHPUnit\Runner\ErrorHandler;
+use PHPUnit\Runner\Exception;
 use PHPUnit\TextUI\Configuration\Configuration;
 use PHPUnit\TextUI\Configuration\Registry as ConfigurationRegistry;
-use PHPUnit\Util\GlobalState;
-use PHPUnit\Util\PHP\AbstractPhpProcess;
-use ReflectionClass;
 use SebastianBergmann\CodeCoverage\Exception as OriginalCodeCoverageException;
 use SebastianBergmann\CodeCoverage\InvalidArgumentException;
-use SebastianBergmann\CodeCoverage\StaticAnalysisCacheNotConfiguredException;
 use SebastianBergmann\CodeCoverage\UnintentionallyCoveredCodeException;
 use SebastianBergmann\Invoker\Invoker;
 use SebastianBergmann\Invoker\TimeoutException;
-use SebastianBergmann\Template\Template;
 use Throwable;
 
 /**
@@ -57,8 +43,8 @@ final class TestRunner
     }
 
     /**
-     * @throws \PHPUnit\Runner\Exception
      * @throws CodeCoverageException
+     * @throws Exception
      * @throws InvalidArgumentException
      * @throws UnintentionallyCoveredCodeException
      */
@@ -137,7 +123,7 @@ final class TestRunner
         if (!$error && !$failure && !$incomplete && !$skipped && !$risky &&
             $this->configuration->requireCoverageMetadata() &&
             !$this->hasCoverageMetadata($test::class, $test->name())) {
-            Event\Facade::emitter()->testConsideredRisky(
+            Facade::emitter()->testConsideredRisky(
                 $test->valueObjectForEvents(),
                 'This test does not define a code coverage target but is expected to do so',
             );
@@ -162,7 +148,7 @@ final class TestRunner
                         $test->name(),
                     );
                 } catch (InvalidCoversTargetException $cce) {
-                    Event\Facade::emitter()->testTriggeredPhpunitWarning(
+                    Facade::emitter()->testTriggeredPhpunitWarning(
                         $test->valueObjectForEvents(),
                         $cce->getMessage(),
                     );
@@ -178,7 +164,7 @@ final class TestRunner
                     $linesToBeUsed,
                 );
             } catch (UnintentionallyCoveredCodeException $cce) {
-                Event\Facade::emitter()->testConsideredRisky(
+                Facade::emitter()->testConsideredRisky(
                     $test->valueObjectForEvents(),
                     'This test executed code that is not listed as code to be covered or used:' .
                     PHP_EOL .
@@ -199,7 +185,7 @@ final class TestRunner
             $this->configuration->reportUselessTests() &&
             !$test->doesNotPerformAssertions() &&
             $test->numberOfAssertionsPerformed() === 0) {
-            Event\Facade::emitter()->testConsideredRisky(
+            Facade::emitter()->testConsideredRisky(
                 $test->valueObjectForEvents(),
                 'This test did not perform any assertions',
             );
@@ -207,7 +193,7 @@ final class TestRunner
 
         if ($test->doesNotPerformAssertions() &&
             $test->numberOfAssertionsPerformed() > 0) {
-            Event\Facade::emitter()->testConsideredRisky(
+            Facade::emitter()->testConsideredRisky(
                 $test->valueObjectForEvents(),
                 sprintf(
                     'This test is not expected to perform assertions but performed %d assertion%s',
@@ -218,11 +204,11 @@ final class TestRunner
         }
 
         if ($test->hasUnexpectedOutput()) {
-            Event\Facade::emitter()->testPrintedUnexpectedOutput($test->output());
+            Facade::emitter()->testPrintedUnexpectedOutput($test->output());
         }
 
         if ($this->configuration->disallowTestOutput() && $test->hasUnexpectedOutput()) {
-            Event\Facade::emitter()->testConsideredRisky(
+            Facade::emitter()->testConsideredRisky(
                 $test->valueObjectForEvents(),
                 sprintf(
                     'This test printed output: %s',
@@ -232,115 +218,11 @@ final class TestRunner
         }
 
         if ($test->wasPrepared()) {
-            Event\Facade::emitter()->testFinished(
+            Facade::emitter()->testFinished(
                 $test->valueObjectForEvents(),
                 $test->numberOfAssertionsPerformed(),
             );
         }
-    }
-
-    /**
-     * @throws \PHPUnit\Runner\Exception
-     * @throws \PHPUnit\Util\Exception
-     * @throws \SebastianBergmann\Template\InvalidArgumentException
-     * @throws Exception
-     * @throws NoPreviousThrowableException
-     * @throws ProcessIsolationException
-     * @throws StaticAnalysisCacheNotConfiguredException
-     */
-    public function runInSeparateProcess(TestCase $test, bool $runEntireClass, bool $preserveGlobalState): void
-    {
-        $class = new ReflectionClass($test);
-
-        if ($runEntireClass) {
-            $template = new Template(
-                __DIR__ . '/../Util/PHP/Template/TestCaseClass.tpl',
-            );
-        } else {
-            $template = new Template(
-                __DIR__ . '/../Util/PHP/Template/TestCaseMethod.tpl',
-            );
-        }
-
-        $bootstrap     = '';
-        $constants     = '';
-        $globals       = '';
-        $includedFiles = '';
-        $iniSettings   = '';
-
-        if (ConfigurationRegistry::get()->hasBootstrap()) {
-            $bootstrap = ConfigurationRegistry::get()->bootstrap();
-        }
-
-        if ($preserveGlobalState) {
-            $constants     = GlobalState::getConstantsAsString();
-            $globals       = GlobalState::getGlobalsAsString();
-            $includedFiles = GlobalState::getIncludedFilesAsString();
-            $iniSettings   = GlobalState::getIniSettingsAsString();
-        }
-
-        $coverage         = CodeCoverage::instance()->isActive() ? 'true' : 'false';
-        $linesToBeIgnored = var_export(CodeCoverage::instance()->linesToBeIgnored(), true);
-
-        if (defined('PHPUNIT_COMPOSER_INSTALL')) {
-            $composerAutoload = var_export(PHPUNIT_COMPOSER_INSTALL, true);
-        } else {
-            $composerAutoload = '\'\'';
-        }
-
-        if (defined('__PHPUNIT_PHAR__')) {
-            $phar = var_export(__PHPUNIT_PHAR__, true);
-        } else {
-            $phar = '\'\'';
-        }
-
-        $data            = var_export(serialize($test->providedData()), true);
-        $dataName        = var_export($test->dataName(), true);
-        $dependencyInput = var_export(serialize($test->dependencyInput()), true);
-        $includePath     = var_export(get_include_path(), true);
-        // must do these fixes because TestCaseMethod.tpl has unserialize('{data}') in it, and we can't break BC
-        // the lines above used to use addcslashes() rather than var_export(), which breaks null byte escape sequences
-        $data                    = "'." . $data . ".'";
-        $dataName                = "'.(" . $dataName . ").'";
-        $dependencyInput         = "'." . $dependencyInput . ".'";
-        $includePath             = "'." . $includePath . ".'";
-        $offset                  = hrtime();
-        $serializedConfiguration = $this->saveConfigurationForChildProcess();
-        $processResultFile       = tempnam(sys_get_temp_dir(), 'phpunit_');
-
-        $var = [
-            'bootstrap'                      => $bootstrap,
-            'composerAutoload'               => $composerAutoload,
-            'phar'                           => $phar,
-            'filename'                       => $class->getFileName(),
-            'className'                      => $class->getName(),
-            'collectCodeCoverageInformation' => $coverage,
-            'linesToBeIgnored'               => $linesToBeIgnored,
-            'data'                           => $data,
-            'dataName'                       => $dataName,
-            'dependencyInput'                => $dependencyInput,
-            'constants'                      => $constants,
-            'globals'                        => $globals,
-            'include_path'                   => $includePath,
-            'included_files'                 => $includedFiles,
-            'iniSettings'                    => $iniSettings,
-            'name'                           => $test->name(),
-            'offsetSeconds'                  => $offset[0],
-            'offsetNanoseconds'              => $offset[1],
-            'serializedConfiguration'        => $serializedConfiguration,
-            'processResultFile'              => $processResultFile,
-        ];
-
-        if (!$runEntireClass) {
-            $var['methodName'] = $test->name();
-        }
-
-        $template->setVar($var);
-
-        $php = AbstractPhpProcess::factory();
-        $php->runTestJob($template->render(), $test, $processResultFile);
-
-        @unlink($serializedConfiguration);
     }
 
     /**
@@ -355,6 +237,10 @@ final class TestRunner
             }
 
             if ($metadata->isCoversClass()) {
+                return true;
+            }
+
+            if ($metadata->isCoversTrait()) {
                 return true;
             }
 
@@ -377,12 +263,6 @@ final class TestRunner
     private function canTimeLimitBeEnforced(): bool
     {
         if ($this->timeLimitCanBeEnforced !== null) {
-            return $this->timeLimitCanBeEnforced;
-        }
-
-        if (!class_exists(Invoker::class)) {
-            $this->timeLimitCanBeEnforced = false;
-
             return $this->timeLimitCanBeEnforced;
         }
 
@@ -427,7 +307,7 @@ final class TestRunner
         try {
             (new Invoker)->invoke([$test, 'runBare'], [], $_timeout);
         } catch (TimeoutException) {
-            Event\Facade::emitter()->testConsideredRisky(
+            Facade::emitter()->testConsideredRisky(
                 $test->valueObjectForEvents(),
                 sprintf(
                     'This test was aborted after %d second%s',
@@ -440,24 +320,6 @@ final class TestRunner
         }
 
         return false;
-    }
-
-    /**
-     * @throws ProcessIsolationException
-     */
-    private function saveConfigurationForChildProcess(): string
-    {
-        $path = tempnam(sys_get_temp_dir(), 'phpunit_');
-
-        if ($path === false) {
-            throw new ProcessIsolationException;
-        }
-
-        if (!ConfigurationRegistry::saveTo($path)) {
-            throw new ProcessIsolationException;
-        }
-
-        return $path;
     }
 
     private function shouldErrorHandlerBeUsed(TestCase $test): bool

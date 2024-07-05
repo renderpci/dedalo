@@ -79,8 +79,9 @@ export const component_number = function(){
 const get_format_number = function ( self, number ) {
 
 	// get properties or default values
-	const type		= self.context.properties.type || 'float'
-	const precision	= self.context.properties.precision || 2
+	// (!) Note that Ontology previous to 04/07/2024 used a wrong object format like "type":{"float":2}
+	const type		= self.context.properties?.type || 'float'
+	const precision	= self.context.properties?.precision || 2
 
 	const format_number = (type === 'float')
 		? number.toFixed( precision )

@@ -2,6 +2,18 @@
 
 All notable changes are documented in this file using the [Keep a CHANGELOG](http://keepachangelog.com/) principles.
 
+## [11.0.5] - 2024-07-03
+
+### Changed
+
+* This project now uses PHPStan instead of Psalm for static analysis
+
+## [11.0.4] - 2024-06-29
+
+### Fixed
+
+* [#967](https://github.com/sebastianbergmann/php-code-coverage/issues/967): Identification of executable lines for `match` expressions does not work correctly
+
 ## [11.0.3] - 2024-03-12
 
 ### Fixed
@@ -28,6 +40,8 @@ All notable changes are documented in this file using the [Keep a CHANGELOG](htt
 * This component now requires PHP-Parser 5
 * This component is no longer supported on PHP 8.1
 
+[11.0.5]: https://github.com/sebastianbergmann/php-code-coverage/compare/11.0.4...11.0.5
+[11.0.4]: https://github.com/sebastianbergmann/php-code-coverage/compare/11.0.3...11.0.4
 [11.0.3]: https://github.com/sebastianbergmann/php-code-coverage/compare/11.0.2...11.0.3
 [11.0.2]: https://github.com/sebastianbergmann/php-code-coverage/compare/11.0.1...11.0.2
 [11.0.1]: https://github.com/sebastianbergmann/php-code-coverage/compare/11.0.0...11.0.1
