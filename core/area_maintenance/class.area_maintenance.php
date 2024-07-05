@@ -844,6 +844,7 @@ class area_maintenance extends area_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
 			$response->errors	= [];
+			$response->success	= 0;
 
 		$ar_sql_query = [];
 
@@ -2492,7 +2493,10 @@ class area_maintenance extends area_common {
 					, logger::ERROR
 				);
 				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
+				continue;
 			}
+
+			$response->success++;
 		}
 
 		// debug
@@ -2507,6 +2511,7 @@ class area_maintenance extends area_common {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_sql_query);
 
 
 		return $response;
