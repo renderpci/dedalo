@@ -5,7 +5,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	import {when_in_dom} from '../../../../common/js/events.js'
 	import {render_stream} from '../../../../common/js/render_common.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
 
@@ -78,6 +77,9 @@ const get_content_data_edit = async function(self) {
 		const files			= value.files || []
 		const process_id	= 'process_move_tld'
 
+	// files sort
+		files.sort((a, b) => new Intl.Collator().compare(a.file_name, b.file_name));
+
 	// content_data
 		const content_data = ui.create_dom_element({
 			element_type : 'div'
@@ -97,7 +99,7 @@ const get_content_data_edit = async function(self) {
 			class_name		: 'files_list',
 			parent			: content_data
 		})
-		let file_selected = null
+		const files_selected = []
 		const files_length = files.length
 		for (let i = 0; i < files_length; i++) {
 
@@ -121,7 +123,7 @@ const get_content_data_edit = async function(self) {
 			// input radio button
 			const input = ui.create_dom_element({
 				element_type	: 'input',
-				type			: 'radio',
+				type			: 'checkbox',
 				value			: item.file_name,
 				name			: 'files_list'
 			})
@@ -133,8 +135,14 @@ const get_content_data_edit = async function(self) {
 				})
 				// set as selected
 				if (input.checked) {
-					file_selected = item.file_name
+					files_selected.push(item.file_name)
 					input_label.classList.add('selected')
+				}else{
+					const index = files_selected.indexOf(item.file_name);
+					if (index !== -1) {
+						files_selected.splice(index, 1);
+					}
+					input_label.classList.remove('selected')
 				}
 			})
 
@@ -185,13 +193,13 @@ const get_content_data_edit = async function(self) {
 			body_response	: body_response,
 			on_submit	: (e, values) => {
 
-				if (!file_selected) {
-					alert("Error: no file is selected");
+				if (!files_selected.length) {
+					alert("Error: no files are selected");
 					return
 				}
 
 				// move_tld
-				move_tld(file_selected)
+				self.exec_move_tld(files_selected)
 				.then(function(response){
 					update_process_status(
 						process_id,
@@ -202,27 +210,6 @@ const get_content_data_edit = async function(self) {
 				})
 			}
 		})
-
-	// move_tld
-		const move_tld = async (file_selected) => {
-
-			// move_tld process fire
-			const response = await data_manager.request({
-				body		: {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'class_request',
-					source	: {
-						action	: 'move_tld',
-					},
-					options : {
-						background_running	: true, // set run in background CLI
-						file_selected		: file_selected // string e.g. 'finds_numisdata279_to_tchi1.json'
-					}
-				}
-			})
-
-			return response
-		}//end move_tld
 
 	// update_process_status
 		const update_process_status = function(id, pid, pfile, container) {
