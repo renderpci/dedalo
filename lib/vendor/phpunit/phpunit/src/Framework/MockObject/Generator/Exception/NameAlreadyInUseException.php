@@ -7,22 +7,24 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\Framework\MockObject;
+namespace PHPUnit\Framework\MockObject\Generator;
 
 use function sprintf;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class CannotUseAddMethodsException extends \PHPUnit\Framework\Exception implements Exception
+final class NameAlreadyInUseException extends \PHPUnit\Framework\Exception implements Exception
 {
-    public function __construct(string $type, string $methodName)
+    /**
+     * @psalm-param class-string|trait-string $name
+     */
+    public function __construct(string $name)
     {
         parent::__construct(
             sprintf(
-                'Trying to configure method "%s" with addMethods(), but it exists in class "%s". Use onlyMethods() for methods that exist in the class',
-                $methodName,
-                $type,
+                'The name "%s" is already in use',
+                $name,
             ),
         );
     }

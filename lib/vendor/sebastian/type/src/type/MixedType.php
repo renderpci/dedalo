@@ -17,7 +17,7 @@ final class MixedType extends Type
     }
 
     /**
-     * @psalm-return 'mixed'
+     * @return 'mixed'
      */
     public function asString(): string
     {
@@ -25,7 +25,7 @@ final class MixedType extends Type
     }
 
     /**
-     * @psalm-return 'mixed'
+     * @return 'mixed'
      */
     public function name(): string
     {
@@ -37,9 +37,6 @@ final class MixedType extends Type
         return true;
     }
 
-    /**
-     * @psalm-assert-if-true MixedType $this
-     */
     public function isMixed(): bool
     {
         return true;

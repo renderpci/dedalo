@@ -22,6 +22,9 @@ final class ExceptionComparator extends ObjectComparator
         return $expected instanceof Exception && $actual instanceof Exception;
     }
 
+    /**
+     * @return array<mixed>
+     */
     protected function toArray(object $object): array
     {
         assert($object instanceof Exception);
@@ -33,7 +36,7 @@ final class ExceptionComparator extends ObjectComparator
             $array['line'],
             $array['trace'],
             $array['string'],
-            $array['xdebug_message']
+            $array['xdebug_message'],
         );
 
         return $array;

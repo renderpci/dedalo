@@ -844,6 +844,7 @@ class area_maintenance extends area_common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed ';
 			$response->errors	= [];
+			$response->success	= 0;
 
 		$ar_sql_query = [];
 
@@ -2492,7 +2493,10 @@ class area_maintenance extends area_common {
 					, logger::ERROR
 				);
 				$response->errors[] = " Error Processing sql_query Request: ". pg_last_error(DBi::_getConnection());
+				continue;
 			}
+
+			$response->success++;
 		}
 
 		// debug
@@ -2507,6 +2511,7 @@ class area_maintenance extends area_common {
 		$response->msg		= count($response->errors)>0
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
+		$response->n_queries = count($ar_sql_query);
 
 
 		return $response;
@@ -3276,7 +3281,7 @@ class area_maintenance extends area_common {
 	* Is called from widget 'move_tld' as process
 	* @param object $options
 	* {
-	* 	file_selected : string 'finds_numisdata279_to_tchi1.json'
+	* 	files_selected : array ['finds_numisdata279_to_tchi1.json']
 	* }
 	* @return object $response
 	*/
@@ -3288,19 +3293,19 @@ class area_maintenance extends area_common {
 			$response->errors	= [];
 
 		// options
-			$file_selected = $options->file_selected;
-			if (empty($file_selected)) {
-				$response->errors[] = 'empty file_selected';
+			$files_selected = $options->files_selected;
+			if (empty($files_selected)) {
+				$response->errors[] = 'empty files_selected';
 				return $response;
 			}
 
 		// files
 			$definitions_files	= area_maintenance::get_definitions_files();
-			$found				= array_find($definitions_files, function($el) use($file_selected){
-				return $el->file_name===$file_selected;
+			$json_files			= array_filter($definitions_files, function($el) use($files_selected){
+				return in_array($el->file_name, $files_selected);
 			});
-			if (!is_object($found)) {
-				$response->errors[] = 'file_selected not found';
+			if (empty($json_files)) {
+				$response->errors[] = 'json_files not found';
 				return $response;
 			}
 
@@ -3326,11 +3331,10 @@ class area_maintenance extends area_common {
 				'matrix_stats',
 				'matrix_time_machine'
 			];
-			$json_files = [$found->file_name];
 			require_once DEDALO_CORE_PATH . '/base/upgrade/class.transform_data.php';
 			$result = transform_data::changes_in_tipos(
 				$ar_tables,
-				$json_files
+				array_values($json_files) // remove array keys
 			);
 
 		$response->result	= $result;

@@ -7,22 +7,22 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace PHPUnit\TextUI;
+namespace PHPUnit\Framework\MockObject\Generator;
 
 use function sprintf;
-use RuntimeException;
 
 /**
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
-final class DirectoryDoesNotExistException extends RuntimeException implements Exception
+final class CannotUseAddMethodsException extends \PHPUnit\Framework\Exception implements Exception
 {
-    public function __construct(string $directory)
+    public function __construct(string $type, string $methodName)
     {
         parent::__construct(
             sprintf(
-                'Directory "%s" does not exist and could not be created',
-                $directory,
+                'Trying to configure method "%s" with addMethods(), but it exists in class "%s". Use onlyMethods() for methods that exist in the class',
+                $methodName,
+                $type,
             ),
         );
     }

@@ -17,12 +17,19 @@ use function array_slice;
 use function count;
 use function is_array;
 use function random_int;
-use function spl_object_hash;
+use function spl_object_id;
 use SplObjectStorage;
 
 final class Context
 {
+    /**
+     * @var list<array<mixed>>
+     */
     private array $arrays = [];
+
+    /**
+     * @var SplObjectStorage<object, null>
+     */
     private SplObjectStorage $objects;
 
     public function __construct()
@@ -44,9 +51,9 @@ final class Context
     }
 
     /**
-     * @psalm-template T
+     * @template T of object|array
      *
-     * @psalm-param T $value
+     * @param T $value
      *
      * @param-out T $value
      */
@@ -60,9 +67,9 @@ final class Context
     }
 
     /**
-     * @psalm-template T
+     * @template T of object|array
      *
-     * @psalm-param T $value
+     * @param T $value
      *
      * @param-out T $value
      */
@@ -75,6 +82,9 @@ final class Context
         return $this->containsObject($value);
     }
 
+    /**
+     * @param array<mixed> $array
+     */
     private function addArray(array &$array): int
     {
         $key = $this->containsArray($array);
@@ -114,15 +124,18 @@ final class Context
         return $key;
     }
 
-    private function addObject(object $object): string
+    private function addObject(object $object): int
     {
         if (!$this->objects->contains($object)) {
             $this->objects->attach($object);
         }
 
-        return spl_object_hash($object);
+        return spl_object_id($object);
     }
 
+    /**
+     * @param array<mixed> $array
+     */
     private function containsArray(array $array): false|int
     {
         $end = array_slice($array, -2);
@@ -130,10 +143,10 @@ final class Context
         return isset($end[1]) && $end[1] === $this->objects ? $end[0] : false;
     }
 
-    private function containsObject(object $value): false|string
+    private function containsObject(object $value): false|int
     {
         if ($this->objects->contains($value)) {
-            return spl_object_hash($value);
+            return spl_object_id($value);
         }
 
         return false;

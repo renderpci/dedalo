@@ -17,7 +17,7 @@ final class NullType extends Type
     }
 
     /**
-     * @psalm-return 'null'
+     * @return 'null'
      */
     public function name(): string
     {
@@ -25,7 +25,7 @@ final class NullType extends Type
     }
 
     /**
-     * @psalm-return 'null'
+     * @return 'null'
      */
     public function asString(): string
     {
@@ -37,9 +37,6 @@ final class NullType extends Type
         return true;
     }
 
-    /**
-     * @psalm-assert-if-true NullType $this
-     */
     public function isNull(): bool
     {
         return true;
