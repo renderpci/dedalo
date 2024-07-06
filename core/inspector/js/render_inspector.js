@@ -409,7 +409,7 @@ const render_selection_info = function(self) {
 
 	// add_list_button to go to section list
 		const add_list_button = function(caller) {
-			if (caller && caller.model==='section') {
+			if (caller && caller.model==='section' && caller.session_save===true) {
 				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button light list',
