@@ -471,6 +471,64 @@ class locator extends stdClass {
 
 
 	/**
+	* CHECK_LOCATOR
+	* Check locator integrity and mandatory properties
+	* @return object $response
+	*/
+	public function check_locator() : object {
+
+		$response = new stdClass();
+
+		// section_tipo mandatory
+			if (!isset($this->section_tipo) || empty($this->section_tipo)) {
+
+				$response->result	= false;
+				$response->errors[] = 'Empty section_tipo';
+				$response->msg		= 'Invalid locator: locator section_tipo is mandatory';
+
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' backtrace 1: ' . to_string($bt)
+						, logger::ERROR
+					);
+				}
+
+				return $response;
+			}
+
+		// section_id mandatory
+			if (!isset($this->section_id)) {
+
+				$response->result	= false;
+				$response->errors[] = 'Empty section_id';
+				$response->msg		= 'Invalid locator: locator section_id is mandatory';
+
+				if(SHOW_DEBUG===true) {
+					$bt = debug_backtrace()[1];
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' backtrace 1: ' . to_string($bt)
+						, logger::ERROR
+					);
+				}
+
+				return $response;
+			}
+
+		// OK message
+			$response->result	= true;
+			$response->msg		= 'OK. Locator is valid';
+			$response->errors	= [];
+
+
+		return $response;
+	}//end check_locator
+
+
+
+	/**
 	* GET_TERM_ID_FROM_LOCATOR
 	* Contract locator object as string like 'es1_185' (section_tipo and section_id)
 	* @param object $locator
@@ -750,22 +808,33 @@ class locator extends stdClass {
 		// ONLY FOR DEBUG !!
 		if(SHOW_DEBUG===true) {
 			if (!isset($this->section_tipo)) {
-				dump($this, ' locator __destruct this');
-				throw new Exception("Error Processing Request. locator section_tipo is mandatory", 1);
+				$bt = debug_backtrace()[1];
+				debug_log(__METHOD__
+					. " Invalid locator: locator section_tipo is mandatory " . PHP_EOL
+					. ' locator: '		. to_string($this) . PHP_EOL
+					. ' backtrace [1]: '. to_string($bt)
+					, logger::ERROR
+				);
 			}
 			if (!isset($this->section_id)) {
-				dump($this, ' locator __destruct this');
-				throw new Exception("Error Processing Request. locator section_id is mandatory", 1);
+				$bt = debug_backtrace()[1];
+				debug_log(__METHOD__
+					. " Invalid locator: locator section_id is mandatory " . PHP_EOL
+					. ' locator: '		. to_string($this) . PHP_EOL
+					. ' backtrace [1]: '. to_string($bt)
+					, logger::ERROR
+				);
 			}
 		}else{
 			if (!isset($this->section_tipo) || !isset($this->section_id)) {
 				debug_log(__METHOD__
 					." ERROR: wrong locator format detected. Please fix this ASAP : "
 					.' locator this: ' . to_string($this)
-					, logger::WARNING
+					, logger::ERROR
 				);
 			}
 		}
+
 	}//end __destruct
 
 
