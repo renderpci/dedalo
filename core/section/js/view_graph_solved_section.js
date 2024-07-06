@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {get_section_records} from '../../section/js/section.js'
-	// import {set_element_css} from '../../page/js/css.js'
 	import {when_in_dom} from '../../common/js/events.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
@@ -152,6 +150,7 @@ view_graph_solved_section.render = async function(self, options) {
 		wrapper.appendChild(right_node)
 		// set pointers
 		wrapper.content_data = content_data
+
 
 	return wrapper
 }//end render
@@ -1004,6 +1003,7 @@ const rebuild_columns_map = async function(self) {
 	// fixed as calculated
 		self.fixed_columns_map = true
 
+
 	return columns_map
 }//end rebuild_columns_map
 
@@ -1123,6 +1123,7 @@ view_graph_solved_section.render_column_drag = function(options) {
 			drag_node.appendChild(instace_node)
 		}
 
+
 	return fragment
 }//end render_column_drag
 
@@ -1157,6 +1158,7 @@ export const on_dragstart = function(node, event, options) {
 	node.classList.add('dragging')
 
 	event.dataTransfer.setDragImage(options.drag_node, 0, 20);
+
 
 	return true
 }//end ondrag_start

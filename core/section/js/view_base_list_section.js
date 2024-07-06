@@ -7,12 +7,9 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from './render_common_section.js'
-	// import {render_column_id} from './render_list_section.js'
 
 
 
