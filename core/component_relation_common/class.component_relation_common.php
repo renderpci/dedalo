@@ -3241,6 +3241,13 @@ class component_relation_common extends component_common {
 
 				// is full locator. Inject safe fixed properties to avoid errors
 					$locator = new locator($current_locator);
+
+						$check_response = $locator->check_locator();
+						if ($check_response->result!==true) {
+							$msg = $check_response->msg . ' record section_id: ' . $this->section_id;
+							throw new Exception("Error Processing Request. ".$msg, 1);
+						}
+
 						// ! type could be false (component_relation_parent)
 						if (!empty($type) && !property_exists($current_locator, 'type')) {
 							$locator->set_type($type);
