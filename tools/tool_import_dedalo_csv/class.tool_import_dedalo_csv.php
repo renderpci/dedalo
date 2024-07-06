@@ -971,6 +971,12 @@ class tool_import_dedalo_csv extends tool_common {
 							continue;
 						}
 
+					// caller_dataframe cases
+						$caller_dataframe = (object)[
+							'section_id_key'=> $section_id_key,
+							'section_tipo'	=> $section_tipo
+						];
+
 					// component base
 						$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo, true);
 						$translate		= RecordObj_dd::get_translatable($component_tipo); //==='si' ? true : false;
@@ -982,7 +988,8 @@ class tool_import_dedalo_csv extends tool_common {
 							'list',
 							$lang,
 							$section_tipo,
-							// false // cache
+							false, // cache
+							$caller_dataframe
 						);
 
 						if($model_name==='component_number' && isset($column_map->decimal)){
