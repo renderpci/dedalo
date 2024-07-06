@@ -942,6 +942,16 @@ class transform_data {
 										$perform = $ar_transform_map[$literal_tipo]->perform;
 										foreach ($perform as $action) {
 
+											// check method already exists
+												if(!method_exists('transform_data', $action)) {
+													debug_log(__METHOD__
+														. " Error. Calling undefined method transform_data::$action . Ignored action !" . PHP_EOL
+														. to_string()
+														, logger::ERROR
+													);
+													continue;
+												}
+
 											$options = new stdClass();
 												$options->transform_object	= $ar_transform_map[$literal_tipo];
 												$options->new_components	= &$new_components; // pass by reference to allow add (!)
