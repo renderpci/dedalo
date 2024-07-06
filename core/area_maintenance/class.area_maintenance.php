@@ -2512,6 +2512,7 @@ class area_maintenance extends area_common {
 			? 'Warning. Request done with errors'
 			: 'OK. Request done successfully';
 		$response->n_queries = count($ar_sql_query);
+		$response->n_errors = count($response->errors);
 
 
 		return $response;

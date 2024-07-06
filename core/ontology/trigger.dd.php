@@ -225,13 +225,16 @@ if(!empty($data) && $data->mode==='edit_ts') {
 		}
 
 	// css structure . For easy css edit, save
-		if ( isset($form_data->{MAIN_PROPERTIES_COLUMN}) &&
-			 is_object($form_data->{MAIN_PROPERTIES_COLUMN}) &&
-			 property_exists($form_data->{MAIN_PROPERTIES_COLUMN}, 'css')
-			) {
+		$dedalo_version = get_dedalo_version();
+		if ($dedalo_version[0] < 6) {
+			if ( isset($form_data->{MAIN_PROPERTIES_COLUMN}) &&
+				 is_object($form_data->{MAIN_PROPERTIES_COLUMN}) &&
+				 property_exists($form_data->{MAIN_PROPERTIES_COLUMN}, 'css')
+				) {
 
-			debug_log("trigger_dd.edit_ts ->  Processing global structure_css: ".json_encode($form_data->{MAIN_PROPERTIES_COLUMN}), logger::ERROR);
-			$result = css::build_structure_css();
+				debug_log("trigger_dd.edit_ts ->  Processing global structure_css: ".json_encode($form_data->{MAIN_PROPERTIES_COLUMN}), logger::ERROR);
+				$result = css::build_structure_css();
+			}
 		}
 
 	// publication schema (only for model diffusion_element)
