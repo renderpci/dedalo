@@ -358,7 +358,7 @@ class component_input_text extends component_common {
 			case '4.0.21':
 				#$dato = $this->get_dato_unchanged();
 
-				# Compatibility old dedalo instalations
+				# Compatibility old dedalo installations
 				if (!empty($dato_unchanged) && is_string($dato_unchanged)) {
 
 					$new_dato = (array)$dato_unchanged;
