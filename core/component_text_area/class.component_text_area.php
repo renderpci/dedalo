@@ -1586,7 +1586,7 @@ class component_text_area extends component_common {
 
 		// Decode entities
 			$diffusion_value = isset($dato[0]) && !empty($dato[0])
-				? html_entity_decode($dato[0])
+				? html_entity_decode( strval($dato[0]) )
 				: null;
 
 		if (!empty($diffusion_value)) {
