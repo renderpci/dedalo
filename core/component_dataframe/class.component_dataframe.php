@@ -169,4 +169,19 @@ class component_dataframe extends component_portal {
 
 
 
+	/**
+	* GET_DIFFUSION_VALUE
+	*
+	* @return string|null $diffusion_value
+	*/
+	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
+
+		$diffusion_value = $this->get_value();
+
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
 }//end class component_dataframe
