@@ -2509,7 +2509,12 @@ class diffusion_sql extends diffusion  {
 								switch ($format) {
 									case 'string':
 										$separator = $column_map_item->separator ?? ' | ';
-										return implode($separator, $column_values);
+										$safe_column_values = array_map(function($el){
+											return is_string($el)
+												? $el
+												: to_string($el);
+										}, $column_values);
+										return implode($separator, $safe_column_values);
 										break;
 									default:
 										if (count($source_columns)<2) {
