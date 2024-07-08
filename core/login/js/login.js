@@ -12,6 +12,7 @@
 		render_login,
 		render_files_loader
 	} from './render_login.js'
+	import {saml} from '../saml/js/saml.js'
 
 
 
@@ -130,6 +131,16 @@ login.prototype.build = async function(autoload=false) {
 			// set context and data to current instance
 				self.context	= api_response.result.find(element => element.model===self.model);
 				self.data		= {}
+		}
+
+	// saml
+		const saml_config = self.context?.properties?.saml_config
+		if (saml_config) {
+			self.saml = new saml()
+			await self.saml.init({
+				caller		: self,
+				saml_config	: saml_config
+			})
 		}
 
 	// status update

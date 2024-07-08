@@ -1478,6 +1478,20 @@ class login extends common {
 				];
 			}
 
+		// saml. If set, a button will be displayed on the login form.
+			if (defined('SAML_CONFIG')) {
+				// format:
+				// [
+				//	  'active'		=> true,
+				//	  'url'			=> DEDALO_CORE_URL . '/login/saml',
+				//	  'logout_url'	=> 'https://domain/SAML/SSO',
+				//	  'debug'		=> true,
+				//	  'code'		=> 'urn:oid:4.7.2.9.3.8.5926',
+				//	  'idp_ip'		=> ['127.0.0.1']
+				// ]
+				$properties->saml_config = true;
+			}
+
 		// dd_object
 			$dd_object = new dd_object((object)[
 				'label'			=> $label,

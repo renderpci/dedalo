@@ -122,6 +122,31 @@
 			line-height: 1.3em;
 		}
 
+		// saml_container
+		>.saml_container {
+			width: 100%;
+			padding-top: 2rem;
+			padding-bottom: 1rem;
+
+			>.saml_wrapper {
+				width: 100%;
+
+				>.button_enter {
+					display: flex;
+					height: 3em;
+					width: 100%;
+					margin: 0px;
+					text-align: center;
+					transition: all 0.17s ease, padding 0s;
+					.fn_append_icon('saml.svg', #ffffff, 1);
+
+					&:active {
+						opacity: 0.5;
+					}
+				}
+			}
+		}
+
 		// powered by
 		.powered_by {
 			width: 100%;
