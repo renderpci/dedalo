@@ -544,6 +544,35 @@ class login extends common {
 
 
 	/**
+	* GET_USER_CODE
+	* Resolve user code from section_id
+	* @param string|int $section_id (is user section id)
+	* @return string $code
+	*/
+	public static function get_user_code($section_id) : ?string {
+
+		$tipo = 'dd1053'; // Code input text
+		$model = RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+		$component = component_common::get_instance(
+			$model,
+			$tipo,
+			$section_id,
+			'list',
+			DEDALO_DATA_NOLAN,
+			DEDALO_SECTION_USERS_TIPO
+		);
+		$dato = $component->get_dato();
+
+		$code = !empty($dato)
+			? implode(' ', (array)$dato)
+			: null;
+
+		return $code;
+	}//end get_user_code
+
+
+
+	/**
 	* GET_USER_IMAGE
 	* @param string|int $section_id (is user section id)
 	* @return string|null $user_image
