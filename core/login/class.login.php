@@ -26,7 +26,7 @@ class login extends common {
 	*/
 	public function __construct(string $mode='edit') {
 
-		// removed is_logged verification because it's necessary to get the context of login
+		// (!) removed is_logged verification because it's necessary to get the context of login
 		// in test environments like unit_test
 
 		$id		= null;
@@ -47,6 +47,10 @@ class login extends common {
 	* LOGIN
 	* Exec user login action comparing received values with database encrypted values
 	* @param object $options
+	* {
+	* 	username: string,
+	* 	password: string
+	* }
 	* @see Mandatory vars: 'username','password'
 	*
 	* @return object $response
@@ -312,24 +316,28 @@ class login extends common {
 
 	/**
 	* LOGIN_SAML
-	* @param object $request_options
+	* @param object $options
+	* {
+	* 	code: string
+	* }
 	* @return object $response
 	*/
-	public static function Login_SAML(object $request_options) : object {
+	public static function Login_SAML(object $options) : object {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= __METHOD__.' Error. Request failed';
+			$response->errors	= [];
 
-		$options = new stdClass();
-			$options->code = null;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// options
+			$code = $options->code ?? null;
 
 		// IP validation
 			if (!empty(SAML_CONFIG['idp_ip'])) {
 				$client_ip = get_client_ip();
 				if (!in_array($client_ip, SAML_CONFIG['idp_ip'])) {
 					$response->msg = "[Login_SAML] Error. Invalid client IP !";
+					$response->errors[] = 'Invalid IP';
 					return $response;
 				}
 			}
@@ -338,7 +346,7 @@ class login extends common {
 			$arguments=array();
 			$arguments["strPrimaryKeyName"] = 'section_id';
 			$arguments["section_tipo"]  	= DEDALO_SECTION_USERS_TIPO;
-			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode((array)$options->code,JSON_UNESCAPED_UNICODE);
+			$arguments["datos#>>'{components,dd1053,dato,lg-nolan}'"] = json_encode([$code], JSON_UNESCAPED_UNICODE);
 
 			$matrix_table 			= common::get_matrix_table_from_tipo(DEDALO_SECTION_USERS_TIPO);
 			$JSON_RecordObj_matrix	= new JSON_RecordObj_matrix($matrix_table,NULL,DEDALO_SECTION_USERS_TIPO);
@@ -464,7 +472,7 @@ class login extends common {
 								'result' 	=> 'deny',
 								'cause' 	=> 'code not exist',
 								'username' 	=> 'from saml',
-								'code' 		=> $options->code
+								'code' 		=> $code
 							)
 						);
 
@@ -524,7 +532,7 @@ class login extends common {
 			DEDALO_DATA_NOLAN,
 			DEDALO_SECTION_USERS_TIPO
 		);
-		$dato = $component->get_valor();
+		$dato = $component->get_dato();
 
 		$full_username = !empty($dato)
 			? implode(' ', (array)$dato)
