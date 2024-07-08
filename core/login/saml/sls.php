@@ -8,7 +8,14 @@
  * When the user visits this URL, the browser will be redirected to the SLO
  * IdP with an SLO request.
  */
-session_start();
+
+// debug
+	error_log(" SAML sls... ");
+
+// session
+	if(session_status()!==PHP_SESSION_ACTIVE) {
+		session_start();
+	}
 
 // v3.0
 	// samlSettings build

@@ -10,6 +10,9 @@
  * link where it will send a certified response via $_POST.
  */
 
+// debug
+	error_log(" SAML acs... ");
+
 $start_time=start_time();
 
 // test

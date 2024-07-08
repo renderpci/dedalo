@@ -12,6 +12,10 @@
  */
 
 // Login into idp
+
+	// debug
+		error_log(" SAML index... ");
+
 	// v3.0
 		$auth = new OneLogin\Saml2\Auth($saml_settings); // Constructor of the SP, loads settings.php and advanced_settings.php
 
