@@ -337,6 +337,19 @@ const get_content_data = function(self) {
 				})
 		}
 
+	// saml
+		if (self.saml) {
+			const saml_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'saml_container',
+				parent			: fragment
+			})
+			self.saml.render()
+			.then(function(saml_wrapper){
+				saml_container.appendChild(saml_wrapper)
+			})
+		}
+
 	// powered by
 		const powered_by = ui.create_dom_element({
 			element_type	: 'div',
