@@ -49,8 +49,6 @@ render_list_component_filter.prototype.list = async function(options) {
 		default:
 			return view_default_list_filter.render(self, options)
 	}
-
-	return null
 }//end list
 
 

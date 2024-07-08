@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -31,7 +30,7 @@ view_default_list_filter.render = async function(self, options) {
 	// short vars
 		const data			= self.data
 		const value			= data.value || []
-		const value_string	= value.join(' | ')
+		const value_string	= value.join('<br>')
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
