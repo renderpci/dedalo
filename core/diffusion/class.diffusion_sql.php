@@ -3063,13 +3063,15 @@ class diffusion_sql extends diffusion  {
 	* @return string|null $table_name
 	*	Return table name usable for mysql like 'themes'
 	*/
-	public static function map_target_section_tipo(object $options, array $dato) : ?string {
+	public static function map_target_section_tipo(object $options, ?array $dato) : ?string {
 
 		$table_name = null;
 
 		$element_tipo = $options->tipo;
 
-		$target_section_tipo = reset($dato);
+		$target_section_tipo = is_array($dato)
+			? reset($dato)
+			: null;
 		if (!empty($target_section_tipo)) {
 
 			$database_element_tipo  = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
