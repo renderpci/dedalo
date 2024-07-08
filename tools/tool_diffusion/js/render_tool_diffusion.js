@@ -144,7 +144,10 @@ const get_content_data = async function(self) {
 		// restore local value
 		const saved_diffusion_levels = localStorage.getItem('diffusion_levels')
 		if (saved_diffusion_levels) {
-			resolve_levels_input.value = saved_diffusion_levels
+			const resolve_levels_value	= parseInt(saved_diffusion_levels)
+			resolve_levels_input.value	= resolve_levels_value
+			self.resolve_levels			= resolve_levels_value
+
 		}
 		ui.create_dom_element({
 			element_type	: 'label',
@@ -199,7 +202,9 @@ const get_content_data = async function(self) {
 		// restore local value
 		const saved_skip_publication_state = localStorage.getItem('diffusion_skip_publication_state')
 		if (saved_skip_publication_state) {
-			skip_publication_state_check_node.checked = saved_skip_publication_state > 0
+			const skip_publication_state_check_value	= saved_skip_publication_state > 0
+			skip_publication_state_check_node.checked	= skip_publication_state_check_value // bool
+			self.skip_publication_state_check			= skip_publication_state_check_value // bool
 		}
 
 	// publication items
