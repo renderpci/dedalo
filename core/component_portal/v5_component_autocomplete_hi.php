@@ -89,6 +89,27 @@
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a mysql field)
 	* Used for diffusion_mysql to unify components diffusion value call
+	* (!) To force to use custom separator, set 'propiedades' as
+	* 	{
+	*	  "source": {
+	*	    "divisor": ", "
+	*	  }
+	*	}
+	*   OR
+	* 	{
+	*	    "process_dato": "diffusion_sql::resolve_value",
+	*	    "process_dato_arguments": {
+	*	        "target_component_tipo": "rsc91",
+	*	        "component_method": "get_diffusion_value",
+	*	        "custom_arguments": [
+	*	            {
+	*	                "divisor": ", ",
+	*	                "check_publishable": false
+	*	            }
+	*	        ]
+	*	    }
+	*	}
+	*
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php

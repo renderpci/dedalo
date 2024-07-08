@@ -1275,6 +1275,7 @@ class component_text_area extends component_common {
 
 		$ar_indexations = $componet_index->get_dato() ?? [];
 
+
 		return $ar_indexations;
 	}//end get_component_indexations
 
