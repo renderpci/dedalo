@@ -9,6 +9,9 @@
  * or expose it on a URL so your IdP can check it periodically.
 */
 
+// debug
+	error_log(" SAML metadata... ");
+
 // v3.0
 	try {
 		// Real scenario
