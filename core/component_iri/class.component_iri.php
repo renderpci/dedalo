@@ -39,7 +39,7 @@ class component_iri extends component_common {
 		// to change the string value of the input_text to IRI object value
 			$input_text = false;
 			if(!empty($dato)) {
-				foreach ($dato as $key => $value) {
+				foreach ((array)$dato as $key => $value) {
 					if(!is_object($value)){
 						$input_text = true;
 						$object = new stdClass();
@@ -53,16 +53,24 @@ class component_iri extends component_common {
 				}
 			}
 
-		// debug
-			if(SHOW_DEBUG===true) {
-				if ( !is_null($dato) && !is_array($dato)  ) {
+		// check dato
+			if ( !is_null($dato) && !is_array($dato)  ) {
+				if(SHOW_DEBUG===true) {
 					debug_log(__METHOD__
 						. " WRONG TYPE of dato. Expected array or null. Given: ".gettype($dato) . PHP_EOL
 						. " tipo: $this->tipo" . PHP_EOL
 						. " section_tipo: $this->section_tipo" . PHP_EOL
-						. " section_id: $this->section_id"
+						. " section_id: $this->section_id" . PHP_EOL
+						.' dato: ' . json_encode($dato)
 						, logger::ERROR
 					);
+				}
+				if (is_string($dato)) {
+					$object = new stdClass();
+						$object->iri = $dato;
+					$dato = [$object];
+					$this->set_dato($dato);
+					$this->Save();
 				}
 			}
 
