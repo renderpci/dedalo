@@ -126,7 +126,9 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// posterframe
-		const posterframe_url	= data.posterframe_url + '?t=' + (new Date()).getTime()
+		const posterframe_url	= data.posterframe_url
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 		const posterframe		= ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'posterframe',
