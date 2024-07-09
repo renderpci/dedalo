@@ -12,11 +12,11 @@
 
 /**
 * RENDER_COMPONENTS_LIST
-* Create dom elements to generate list of components and section groups of current section
+* Create DOM elements to generate list of components and section groups of current section
 * @see this.get_section_elements_context
 * @param object options
 *	string options.section_tipo (section to load components and render)
-*	DOM element options.target_div (Target dom element on new data will be added)
+*	DOM element options.target_div (Target DOM element on new data will be added)
 *	array path (Cumulative array of component path objects)
 * @return array ar_components
 */
