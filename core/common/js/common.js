@@ -291,6 +291,15 @@ common.prototype.render = async function (options={}) {
 			return node
 		}
 
+	// context check
+		if (self.type==='component' && !self.context) {
+			return render_server_response_error([{
+				error	: 'invalid context',
+				msg		: 'Unable to render component without context',
+				trace	: 'common render',
+			}])
+		}
+
 	// permissions
 		const permissions = parseInt(self.permissions)
 		if(permissions<1) {
