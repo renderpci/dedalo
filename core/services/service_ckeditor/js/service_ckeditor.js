@@ -1036,7 +1036,7 @@ export const service_ckeditor = function() {
 
 		// check
 			if (!editor || !editor.editing) {
-				console.error('get_view_tag. Editor is not available:', editor);
+				console.warn('Ignored get_view_tag. Editor editing is not available. tag_obj:', tag_obj);
 				return false
 			}
 

@@ -419,16 +419,16 @@ section_record.prototype.get_ar_columns_instances_list = async function() {
 										// Note that this message is not an error, but a warning when some columns
 										// are defined and not used (like Zenon columns in Bibliography if no Zenon data is added)
 										// Remember that subcontext is only calculated when subdata exists !
-										console.groupCollapsed(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
-										console.warn('Check your hierarchy definitions to make sure it is defined (Remember that subcontext is only calculated when subdata exists)', current_ddo.tipo);
-										console.log('ddo:', current_ddo);
-										console.log("self.datum.context:", self.datum.context);
-										console.log('current_data:', current_data);
-										console.log("self:", self);
-										console.groupEnd()
+											// console.groupCollapsed(`+ [get_ar_columns_instances_list] Ignored context not found for model: ${current_ddo.model}, section_tipo: ${current_ddo.section_tipo}, tipo: ${current_ddo.tipo}`);
+											// console.warn('Check your hierarchy definitions to make sure it is defined (Remember that subcontext is only calculated when subdata exists)', current_ddo.tipo);
+											// console.log('ddo:', current_ddo);
+											// console.log("self.datum.context:", self.datum.context);
+											// console.log('current_data:', current_data);
+											// console.log("self:", self);
+											// console.groupEnd()
 									}
 
-									// ignore invalid context
+									// ignore unused context
 									continue;
 								}
 

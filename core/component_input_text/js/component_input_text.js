@@ -12,8 +12,6 @@
 	import {render_edit_component_input_text} from '../../component_input_text/js/render_edit_component_input_text.js'
 	import {render_list_component_input_text} from '../../component_input_text/js/render_list_component_input_text.js'
 	import {render_search_component_input_text} from '../../component_input_text/js/render_search_component_input_text.js'
-	// import {render_mini_component_input_text} from '../../component_input_text/js/render_mini_component_input_text.js'
-	// import {render_view_text} from '../../component_input_text/js/render_view_text.js'
 
 
 
@@ -65,9 +63,6 @@ export const component_input_text = function(){
 	component_input_text.prototype.change_value			= component_common.prototype.change_value
 	component_input_text.prototype.set_changed_data		= component_common.prototype.set_changed_data
 	component_input_text.prototype.build_rqo			= common.prototype.build_rqo
-	// component_input_text.prototype.build_rqo_show	= common.prototype.build_rqo_show
-	// component_input_text.prototype.build_rqo_search	= common.prototype.build_rqo_search
-	// component_input_text.prototype.build_rqo_choose	= common.prototype.build_rqo_choose
 
 	// render
 	component_input_text.prototype.list					= render_list_component_input_text.prototype.list
@@ -76,9 +71,6 @@ export const component_input_text = function(){
 	component_input_text.prototype.search				= render_search_component_input_text.prototype.search
 
 	component_input_text.prototype.change_mode			= component_common.prototype.change_mode
-
-	// output
-	// component_input_text.prototype.get_raw_string	= render_view_text.prototype.get_raw_string
 
 
 
