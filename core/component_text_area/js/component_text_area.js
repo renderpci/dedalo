@@ -152,10 +152,12 @@ component_text_area.prototype.init = async function(options) {
 						// set_selection. Implies scroll to the tag into view (!)
 						text_editor.set_selection_from_tag(tag)
 						setTimeout(function(){
-							// set focus to editor (if the event is fired by other components as portal indexation)
-							text_editor.editor.editing.view.focus()
-							// scroll to allow display the selection into the view
-							text_editor.scroll_to_selection()
+							if (text_editor.editor && text_editor.editor.editing) {
+								// set focus to editor (if the event is fired by other components as portal indexation)
+								text_editor.editor.editing.view.focus()
+								// scroll to allow display the selection into the view
+								text_editor.scroll_to_selection()
+							}
 						}, 10)
 					})
 
