@@ -388,15 +388,9 @@ class component_portal extends component_relation_common {
 	public function get_valor(?string $lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-		// if ($legacy_model==='component_portal') {
-		// 	return 'unavailable';
-		// }
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
-
-		// $_get_valor = Closure::bind($_get_valor, $this);
-		// $lang=DEDALO_DATA_LANG, $format='string', $ar_related_terms=false, $fields_separator='<br> '
 
 		$data_to_be_used = 'dato';
 
@@ -416,6 +410,7 @@ class component_portal extends component_relation_common {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 
+		// portal valor_export is no longer available
 		if ($legacy_model==='component_portal') {
 			return 'unavailable';
 		}
@@ -440,9 +435,6 @@ class component_portal extends component_relation_common {
 	public function get_diffusion_value( ?string $lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
 		$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
-		// if ($legacy_model==='component_portal') {
-		// 	return 'unavailable';
-		// }
 
 		$path = DEDALO_CORE_PATH .'/'. __CLASS__ .'/v5_'. $legacy_model .'.php';
 		include $path;
@@ -457,6 +449,197 @@ class component_portal extends component_relation_common {
 
 		return $diffusion_value;
 	}//end get_diffusion_value
+
+
+
+	/**
+	* GET_POLITICAL_TOPONYMY (LEGACY METHOD - DEPRECATED) !
+	* Legacy method used by diffusion cost humà
+	* @param object $options
+	* @return string|null $term
+	*/
+	public static function get_political_toponymy( object $options ) : ?string  {
+
+		// options
+			$locator	= $options->locator ?? null;
+			$lang		= $options->lang ?? DEDALO_DATA_LANG;
+			$type		= $options->type ?? 'municipality';
+
+		// empty locator case
+			if (empty($locator)) {
+				return null;
+			}
+
+		// self option
+			if ($type==='self') {
+
+				// term plain without parents
+					$term = ts_object::get_term_by_locator( $locator, $lang, true );
+
+			}else{
+
+				// section data of current locator
+					$section_tipo	= $locator->section_tipo;
+					$section_id		= $locator->section_id;
+
+				// political_map
+					$political_map = self::get_legacy_political_map($section_tipo);
+					if(empty($political_map)){
+
+						debug_log(__METHOD__
+							." Empty political_map (ignored resolution by political_map for section: $section_tipo) "
+							, logger::WARNING
+						);
+
+						return null;
+
+					}else{
+
+						// current_map check
+						$current_map = array_reduce($political_map, function($carry, $item) use($type){
+							return $item->type===$type ? $item : $carry;
+						});
+						if (empty($current_map)) {
+
+							debug_log(__METHOD__
+								." Empty political_map type (ignored resolution by political_map for type: $type in section: $section_tipo) "
+								, logger::WARNING
+							);
+
+							return null;
+						}
+					}
+
+				// component_model_tipo of current section
+					$ar_component_model_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+						$section_tipo,
+						['component_relation_model'],
+						true, // from_cache
+						true, // resolve_virtual
+						true, // recursive
+						true // search_exact
+					);
+					$component_model_tipo = reset($ar_component_model_tipo);
+					if (empty($component_model_tipo)) {
+
+						debug_log(__METHOD__
+							." Empty section component_model_tipo. Please, review structure of section: '$section_tipo' and add a component_relation_model ) "
+							, logger::ERROR
+						);
+
+						return null;
+					}
+
+				// compare model
+					$compare_model = function($section_tipo, $section_id, $component_model_tipo, $current_map) {
+
+						// get model value
+							$component_model = RecordObj_dd::get_modelo_name_by_tipo($component_model_tipo,true);
+							$component_model = component_common::get_instance(
+								$component_model, // component_relation_model
+								$component_model_tipo,
+								$section_id,
+								'list',
+								DEDALO_DATA_NOLAN,
+								$section_tipo
+							);
+							$model_dato = $component_model->get_dato();
+							if (empty($model_dato)) {
+								return false;
+							}
+
+							$model_locator = reset($model_dato);
+
+						// check match 'section_tipo','section_id'
+							$result = locator::compare_locators( $current_map, $model_locator, ['section_tipo','section_id'] );
+
+						return $result;
+					};
+
+				// self term check
+					if (true===$compare_model($section_tipo, $section_id, $component_model_tipo, $current_map)) {
+						// term
+							$term = ts_object::get_term_by_locator( $locator, $lang, true );
+				// children check
+					}else{
+						// search in parents recursive
+							$parents_recursive = component_relation_parent::get_parents_recursive(
+								$locator->section_id,
+								$locator->section_tipo,
+								null // options
+							);
+							foreach ($parents_recursive as $current_parent_locator) {
+								if (true===$compare_model($current_parent_locator->section_tipo, $current_parent_locator->section_id, $component_model_tipo, $current_map)) {
+									// term
+										$term = ts_object::get_term_by_locator( $current_parent_locator, $lang, true );
+									break;
+								}
+							}
+					}
+			}
+
+		// term
+			$term = isset($term) ? strip_tags($term) : null;
+
+
+		return $term;
+	}//end _get_political_toponymy
+
+
+
+	/**
+	* GET_LEGACY_POLITICAL_MAP (LEGACY METHOD - DEPRECATED) !
+	* Legacy method used by diffusion cost humà
+	* Return an array of political map models of each country
+	* This is a legacy function for compatibility with old publication tables
+	* and is NOT a future way of work
+	* @param string $section_tipo
+	* @return array $ar_models
+	*/
+	public static function get_legacy_political_map( $section_tipo ) {
+
+		switch ($section_tipo) {
+			// Spain
+			case 'es1':
+				// models
+				$ar_models = [
+					(object)['type' => 'country', 				'section_tipo' => 'es2', 'section_id' => '8868'],
+					(object)['type' => 'autonomous_community', 	'section_tipo' => 'es2', 'section_id' => '8869'],
+					(object)['type' => 'province', 				'section_tipo' => 'es2', 'section_id' => '8870'],
+					(object)['type' => 'region', 				'section_tipo' => 'es2', 'section_id' => '8871'], // comarca
+					(object)['type' => 'municipality', 			'section_tipo' => 'es2', 'section_id' => '8872']
+				];
+				break;
+			// France
+			case 'fr1':
+				// models
+				$ar_models = [
+					(object)['type' => 'country', 				'section_tipo' => 'fr2', 'section_id' => '41189'],
+					(object)['type' => 'autonomous_community'],
+					(object)['type' => 'province', 				'section_tipo' => 'fr2', 'section_id' => '41190'],
+					(object)['type' => 'region', 				'section_tipo' => 'fr2', 'section_id' => '41191'], // comarca
+					(object)['type' => 'municipality', 			'section_tipo' => 'fr2', 'section_id' => '41192']
+				];
+				break;
+			// Cuba
+			case 'cu1':
+				// models
+				$ar_models = [
+					(object)['type' => 'country', 				'section_tipo' => 'cu2', 'section_id' => '325'],
+					(object)['type' => 'autonomous_community'],
+					(object)['type' => 'province', 				'section_tipo' => 'cu2', 'section_id' => '326'],
+					(object)['type' => 'region', 				'section_tipo' => 'cu2', 'section_id' => '329'], // comarca | reparto
+					(object)['type' => 'municipality', 			'section_tipo' => 'cu2', 'section_id' => '327']
+				];
+				break;
+			default:
+				$ar_models = [];
+				break;
+		}
+
+
+		return $ar_models;
+	}//end get_legacy_political_map
 
 
 
