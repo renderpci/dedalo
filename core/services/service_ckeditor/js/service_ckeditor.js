@@ -932,6 +932,21 @@ export const service_ckeditor = function() {
 		// short vars
 			const self = this
 
+		// Check the tag to be the type reference
+		// reference tags don't need find the in and out because it has a close node
+		// <reference>text to be selected</reference>
+			if(tag_obj || (tag_obj.type==='reference')){
+
+				const editor	= self.editor
+
+				const tag_reference	= self.get_view_tag(tag_obj)
+				editor.editing.view.change((writer) => {
+					writer.setSelection( tag_reference, 'on' );
+				});
+			}
+
+		// Index tags has a span to mark the in and other span to mark out as:
+		// <span data.type="indexIn"></span>text to be selected<span data.type="indexOut"></span>
 		// Check the tag to be the type indexXX
 			if(!tag_obj || (tag_obj.type!=='indexIn' && tag_obj.type!=='indexOut')){
 				return false
@@ -1051,7 +1066,7 @@ export const service_ckeditor = function() {
 
 				const item = value.item
 
-				if(item.name !== 'img'){
+				if(item.name !== 'img' && item.name !== 'reference'){
 					continue
 				}
 
@@ -1062,7 +1077,9 @@ export const service_ckeditor = function() {
 				// }
 				// const htmlAttributes = item.getAttribute('htmlAttributes')
 				// const htmlAttributes = item.getAttributes()
-				const parent_item = item.parent
+				const parent_item = (item.name === 'img')
+					? item.parent
+					: item
 
 				const attributes = parent_item._attrs
 
@@ -1207,7 +1224,7 @@ export const service_ckeditor = function() {
 				const item = value.item
 
 				// ignore non image elements
-					if(item.name !== 'img') {
+					if(item.name !== 'img' && item.name !== 'reference') {
 						continue
 					}
 
@@ -1216,7 +1233,9 @@ export const service_ckeditor = function() {
 				//   attributes : {data: '', label: 'label in 1', state: 'r', tag_id: '1', type: 'indexIn', …}
 				//	 classes : ['index']
 				// }
-				const parent_item = item.parent
+				// when the tag is a img get his parent (the span with the attributes)
+				// else get the item as reference (the attributes are into same node)
+				const parent_item = (item.name === 'img') ? item.parent : item;
 
 				const attributes = parent_item._attrs
 
