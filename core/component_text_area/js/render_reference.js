@@ -20,11 +20,11 @@
 export const render_reference = async function(options) {
 
 	// options
-		const self			= options.self
-		const text_editor	= options.text_editor
-		const i				= options.i
-		const view_tag		= options.tag
-
+		const self				= options.self
+		const text_editor		= options.text_editor
+		const i					= options.i
+		const view_tag			= options.tag
+		const tags_reference	= options.tags_reference // the component with all locator references
 
 	// short vars
 		// const data_string		= view_tag.data
@@ -41,8 +41,8 @@ export const render_reference = async function(options) {
 			? JSON.parse(data)
 			: null
 
-		const references_section_tipo		= self.context.features.references_section_tipo
-		const references_component_tipo		= self.context.features.references_component_tipo
+		const references_section_tipo		= self.context.features.references_section_tipo // the section with a empty autocomplete to be use to search
+		const references_component_tipo		= self.context.features.references_component_tipo // empty autocomplete to be use to search
 		const references_component_model	= self.context.features.references_component_model
 
 	// reference_component
