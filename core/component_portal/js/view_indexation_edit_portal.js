@@ -238,15 +238,7 @@ const rebuild_columns_map = async function(self) {
 			callback	: render_info_column
 		})
 
-	// button_remove column add (Moved to inside render_info_column for readability)
-		// if (self.permissions>1) {
-		// 	columns_map.push({
-		// 		id			: 'remove',
-		// 		label		: '', // get_label.delete || 'Delete',
-		// 		width		: 'auto',
-		// 		callback	: render_column_remove
-		// 	})
-		// }
+	// button_remove column (Moved to inside render_info_column for readability)
 
 	// fixed as calculated
 		self.fixed_columns_map = true
@@ -287,29 +279,6 @@ const render_column_id = function(options) {
 				'edit_window',
 				'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes'
 			)
-
-			// DES navigation
-				// const user_navigation_rqo = {
-				// 	caller_id	: self.id,
-				// 	source		: {
-				// 		action			: 'search',
-				// 		model			: 'section',
-				// 		tipo			: section_tipo,
-				// 		section_tipo	: section_tipo,
-				// 		mode			: 'edit',
-				// 		lang			: self.lang
-				// 	},
-				// 	sqo : {
-				// 		section_tipo		: [{tipo : section_tipo}],
-				// 		filter				: null,
-				// 		limit				: 1,
-				// 		filter_by_locators	: [{
-				// 			section_tipo	: section_tipo,
-				// 			section_id		: section_id,
-				// 		}]
-				// 	}
-				// }
-				// event_manager.publish('user_navigation', user_navigation_rqo)
 		})
 
 	// edit icon
