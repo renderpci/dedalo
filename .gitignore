@@ -129,9 +129,8 @@ core/**/*-min.css
 # css map
 # core/**/*.css.map
 
-# saml
-core/login/saml/test_js.html
-core/login/saml/test.php
+# legacy dedalo lib
+/lib/dedalo
 
 # Drafts
 core/component_date_mod/
