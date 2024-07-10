@@ -163,6 +163,42 @@ component_text_area.prototype.init = async function(options) {
 				return true
 			}//end fn_create_fragment
 
+
+		// click_reference_. User click over reference tag
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_reference_' + self.id_base, fn_click_reference)
+			)
+			function fn_click_reference(options) {
+				if(SHOW_DEVELOPER===true) {
+					dd_console(`[component_text_area] click_reference_ ${self.id_base}`, 'DEBUG', options)
+				}
+
+				// options
+					const tag = options.tag // object
+
+				// short vars
+					const key			= 0; // key (only one editor is available but component could support multiple)
+					const text_editor	= self.text_editor[key]
+
+				// fix selected tag element
+					self.tag = tag
+
+					ui.component.activate(self)
+					.then(function(response){
+
+						// set_selection. Implies scroll to the tag into view (!)
+						text_editor.set_selection_from_tag(tag)
+						setTimeout(function(){
+							// set focus to editor (if the event is fired by other components as portal indexation)
+							text_editor.editor.editing.view.focus()
+							// scroll to allow display the selection into the view
+							text_editor.scroll_to_selection()
+						}, 10)
+					})
+
+
+				return true
+			}//end fn_create_fragment
 		// text_selection_
 			self.events_tokens.push(
 				event_manager.subscribe('text_selection_'+ self.id, fn_show_button_create_fragment)
