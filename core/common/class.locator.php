@@ -13,6 +13,7 @@ declare(strict_types=1);
 *		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 *		$locator->tag_id				= (string)$tag_id;
 *		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
+* 		$locator->tag_type				= (string)$tag_type; // reference to the type of the tag that the locator is referenced
 * 		$locator->type					= (string)$type;
 *		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
 *		$locator->tipo_key				= (string)$tipo_key; // dataframe tipo of the main component (component that has dataframe)
@@ -329,7 +330,32 @@ class locator extends stdClass {
 
 
 	/**
+	* SET_TAG_TYPE
+	* Set tag_type value as string
+	* tag_type defines the target tag in the tag_component_tipo as 'index', 'reference', 'draw', ...
+	* @param string $value
+	* @return bool
+	*/
+	public function set_tag_type(string $value) : bool {
+		if(!RecordObj_dd::get_prefix_from_tipo($value)) {
+			debug_log(__METHOD__
+				. ' Invalid from_component_tipo' . PHP_EOL
+				. ' value: ' . to_string($value)
+				, logger::ERROR
+			);
+			throw new Exception("Error Processing Request. Invalid from_component_tipo: $value", 1);
+		}
+		$this->tag_type = (string)$value;
+
+		return true;
+	}//end set_tag_type
+
+
+
+
+	/**
 	* SET_TAG_COMPONENT_TIPO
+	* defines the target component that has the tag, usually a text_area as rsc36
 	* @param string $value
 	* @return bool
 	*/
