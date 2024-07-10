@@ -323,6 +323,10 @@ const render_tag_column = function(options) {
 				? 'no_tag'
 				: 'tags'
 
+			const tag_type = !current_locator.tag_type
+				? 'index'
+				: current_locator.tag_type
+
 			const text_value = !current_locator.tag_id
 				? (get_label.provisional || 'Provisional')
 				: (current_locator.tag_id || null)
@@ -377,11 +381,20 @@ const render_tag_column = function(options) {
 						// tag. Get the tag object selecting the tag into the text_area editor (get the tag attributes)
 						// needed to get the tag state, to show the tag info inside the tool_indexation
 						const tag = text_editor.get_view_tag_attributes({
-							type	: 'indexIn',
+							type	: tag_type==='index' ? 'indexIn' : tag_type,
 							tag_id	: current_locator.tag_id
 						})
-						// fire the event to select tag
-						event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+						switch (tag_type) {
+							case 'reference':
+								event_manager.publish('click_tag_reference_'+ id_base, {tag: tag})
+								break;
+
+							default:
+								// fire the event to select tag
+								event_manager.publish('click_tag_index_'+ id_base, {tag: tag})
+								break;
+						}
+
 					}else{
 						console.error('Unable to locate component into instances. id_base:', id_base);
 					}
