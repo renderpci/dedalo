@@ -7,14 +7,15 @@ declare(strict_types=1);
 *
 *		$locator->section_top_tipo		= (string)$section_top_tipo;
 *		$locator->section_top_id		= (string)$section_top_id;
-*		$locator->section_id			= (string)$section_id;
-*		$locator->section_tipo			= (string)$section_tipo;
+*		$locator->section_id			= (string)$section_id; Mandatory
+*		$locator->section_tipo			= (string)$section_tipo; Mandatory
 *		$locator->component_tipo		= (string)$component_tipo; // destination component tipo
 *		$locator->from_component_tipo	= (string)$component_tipo; // source component tipo
 *		$locator->tag_id				= (string)$tag_id;
-*		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used for component_relation_index)
+*		$locator->tag_component_tipo	= (string)$tag_component_tipo; // component that has the tag, in the same section (used by component_relation_index)
 * 		$locator->tag_type				= (string)$tag_type; // reference to the type of the tag that the locator is referenced
 * 		$locator->type					= (string)$type;
+* 		$locator->type_rel				= (string)$type_rel; // type of rel (like unidirectional, bidirectional, multi directional, etc..) (used by component_relation_related)
 *		$locator->section_id_key		= (int)$section_id_key; // dataframe index array number of the data that reference
 *		$locator->tipo_key				= (string)$tipo_key; // dataframe tipo of the main component (component that has dataframe)
 *
@@ -310,6 +311,9 @@ class locator extends stdClass {
 	/**
 	* SET_TAG_ID
 	* Set tag_id value as string
+	* tags are used in the component_text_area to analyze transcriptions, descriptions etc.
+	* Locator can define the specific tag to point a fragment of the text defined by the tag.
+	* or specific reference to be linked.
 	* @param string|int $value
 	* @return bool
 	*/
