@@ -24,37 +24,7 @@ declare(strict_types=1);
 class locator extends stdClass {
 
 
-
-	/* Created on the fly
-		private $section_top_tipo;
-		private $section_top_id;
-		private $from_component_tipo;
-		private $section_id;
-		private $section_tipo;
-		private $component_tipo;
-		private $tag_id;
-		private $tag_component_tipo;
-		private $section_id_key;
-		private $tipo_key;
-	*/
-
-	# Mandatory and protected (use set/get to access)
-	#protected $section_id;
-	#protected $section_tipo;
-
-	/*
-		#$rel_locator->set_section_top_tipo( $section_top_tipo );
-		$rel_locator->set_section_top_id( $section_top_id );
-		$rel_locator->set_section_tipo( $section_tipo );
-		$rel_locator->set_section_id( $parent );
-		$rel_locator->set_component_tipo( $tipo );
-		$rel_locator->set_tag_id( $tag_value );
-	*/
-
-
-
 	const DELIMITER = '_';
-
 
 
 	/**
