@@ -992,17 +992,18 @@ component_portal.prototype.update_pagination_values = function(action) {
 * FILTER_DATA_BY_TAG_ID
 * Filtered data with the tag clicked by the user
 * The portal will show only the locators for the tag selected
+* This function is fired directly to add or unlink a locator or by event defined in properties look: rsc860
 * @param object options
 * sample
 * {
-	"tag": {
-		"node_name": "img",
-		"type": "indexOut",
-		"tag_id": "4",
-		"state": "d",
-		"label": "",
-		"data": ""
-	}
+*	"tag": {
+*		"node_name": "img",
+*		"type": "indexOut",
+*		"tag_id": "4",
+*		"state": "d",
+*		"label": "",
+*		"data": ""
+*	}
 * }
 * @return promise self.render
 */
