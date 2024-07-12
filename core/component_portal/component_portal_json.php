@@ -59,9 +59,10 @@
 	if($permissions>0) {
 	// if($options->get_data===true ){
 		// short vars
+	
 			$section_id	= $this->get_section_id();
 			$limit		= $this->pagination->limit;
-			$offset		= $this->pagination->offset;
+			$offset		= $this->pagination->offset ?? 0;
 
 		// custom properties external dato
 		// Only is recalculated in edit mode and when is not a pagination request (section request rqo is action=search)
