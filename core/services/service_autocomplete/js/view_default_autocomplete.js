@@ -1328,7 +1328,6 @@ view_default_autocomplete.hide = function () {
 
 
 
-
 /**
 * GET_LAST_DDO_DATA_VALUE
 * Recursive function

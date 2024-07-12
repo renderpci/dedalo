@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../common/js/event_manager.js'
 	import {ui} from '../../../common/js/ui.js'
 
 
@@ -160,7 +159,7 @@ export const get_content_data = function(self) {
 
 		// input Languages (from dedalo config)
 			page_globals.dedalo_application_langs.forEach((lang) => {
-				var lang_option = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'option',
 					value			: lang.value,
 					text_content	: lang.label,
