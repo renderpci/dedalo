@@ -34,7 +34,7 @@ export const render_reference = async function(options) {
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan
 		}
-
+		// get the reference component instance
 		const found_instances = await instances.find_instances(tag_component_options)
 
 		const component_tags_reference = found_instances.length > 0
@@ -162,11 +162,15 @@ export const render_reference = async function(options) {
 				if(window.confirm(delete_label)) {
 
 					if(locator.length > 0){
+
+						// if the locator is not empty, remove it of the component.
 						component_tags_reference.unlink_record({
 							paginated_key	: locator[0].paginated_key,
 							row_key			: null,
 							section_id		: locator[0].section_id
 						});
+						// refresh the component of the tags to get the real data
+						// component_tags_reference.reset_filter_data()
 					}
 					// remove the reference attribute of the text selected in the component_text_area
 						text_editor.remove_reference()
