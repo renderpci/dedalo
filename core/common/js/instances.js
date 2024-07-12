@@ -281,6 +281,33 @@ export const delete_instance = async function(options) {
 
 
 /**
+* FIND_INSTANCES
+* Get all created instances from memory
+* @return array find_instances
+*/
+export const find_instances = function(options) {
+
+	const tipo			= options.tipo
+	const section_tipo	= options.section_tipo
+	const section_id	= options.section_id
+	const mode			= options.mode
+	const lang			= options.lang
+
+	const found_instances = instances.filter(el =>
+		el.tipo			=== tipo &&
+		el.section_tipo	=== section_tipo &&
+		el.section_id	=== section_id &&
+		el.mode			=== mode &&
+		el.lang			=== lang
+	)
+
+	return found_instances
+}//end find_instances
+
+
+
+
+/**
 * KEY_INSTANCES_BUILDER
 * Creates string normalized key from several parameters
 * @param object options
