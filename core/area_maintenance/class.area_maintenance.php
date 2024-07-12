@@ -596,6 +596,13 @@ class area_maintenance extends area_common {
 		// truncate relations table on *
 			if ($tables==='*') {
 
+				// CLI msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg' => 'Truncating table "relations"'
+					]);
+				}
+
 				// truncate relations table data
 				$strQuery	= 'TRUNCATE "relations";';
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -633,7 +640,7 @@ class area_maintenance extends area_common {
 					? -1
 					: 1;
 
-			// cli msg
+			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Processing table: ' . $table .' | Records: ' . $max,
@@ -683,7 +690,8 @@ class area_maintenance extends area_common {
 								// CLI msg
 									if ( running_in_cli()===true ) {
 										print_cli((object)[
-											'msg' => 'Propagating section_tipo: ' . $section_tipo .' | section_id: ' . $section_id .' | component_tipo: ' . $from_component_tipo
+											'msg'		=> 'Propagating table: ' . $table . ' | section_tipo: ' . $section_tipo .' | section_id: ' . $section_id .' | component_tipo: ' . $from_component_tipo,
+											'tables'	=> $ar_tables
 										]);
 									}
 
@@ -698,7 +706,13 @@ class area_maintenance extends area_common {
 							}
 
 					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: " . PHP_EOL
+							.' table: ' . to_string($table) . PHP_EOL
+							.' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+							.' section_id: ' . to_string($section_id)
+							, logger::ERROR
+						);
 					}
 				}
 
@@ -706,7 +720,7 @@ class area_maintenance extends area_common {
 					if(SHOW_DEBUG===true) {
 						# Show log msg every 100 id
 						if ($counter===1) {
-							debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
+							debug_log(__METHOD__." Updated section data table $table $i", logger::DEBUG);
 						}
 						$counter++;
 						if ($counter>300) {
@@ -2809,7 +2823,7 @@ class area_maintenance extends area_common {
 
 			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
 
-			// cli msg
+			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
@@ -2881,7 +2895,7 @@ class area_maintenance extends area_common {
 				];
 
 			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Extracting zip file',
@@ -2909,7 +2923,7 @@ class area_maintenance extends area_common {
 				);
 
 			// rsync
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Updating files',
@@ -2962,7 +2976,7 @@ class area_maintenance extends area_common {
 				);
 
 			// update JAVASCRIPT labels
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Updating js lang files',
