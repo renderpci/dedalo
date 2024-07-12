@@ -1010,6 +1010,27 @@
 				&.section_group_label {
 					background-color: @color_grey_dark;
 					color: @color_white;
+					cursor: pointer;
+
+					&:active {
+						opacity: 0.5;
+					}
+
+					&.closed {
+						opacity: 0.75;
+
+						&:after {
+							content: " ";
+							mask-image: url(../../themes/default/icons/arrow_down.svg);
+							background-color: #5b5b5b;
+							transition: transform .26s ease-out;
+							position: absolute;
+							right: 0.33rem;
+							top: 0.33rem;
+							height: 1rem;
+							width: 1rem;
+						}
+					}
 				}
 
 				// component_label
