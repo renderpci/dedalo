@@ -699,7 +699,38 @@ component_common.prototype.update_datum = async function(new_datum) {
 			}
 			const new_data_length = new_data.length
 
+			// EMPTY DATA CASE
+			// if the caller has not data remove his value from the data
+			// Server only send data when it has any data, empty portals will not send any data
+			// data = []
+			// the datum will remove the value of this component.
+			// for now the subdatum is not removed because implications. To be evaluate.
+			if(new_data_length === 0){
+
+				for (let i = self.datum.data.length - 1; i >= 0; i--) {
+
+					const el = self.datum.data[i]
+
+					if( el.tipo 					=== self.tipo
+						&& el.section_tipo 			=== self.section_tipo
+						&& parseInt(el.section_id) 	=== parseInt(self.section_id)
+						&& el.mode 					=== self.mode
+						){
+						// if the new data provides by dataframe it will has section_id_key
+						// in this case check the previous data in datum has correspondence with section_id_key and his tipo_key
+						const to_delete = (el.section_id_key)
+							 ? parseInt(el.section_id_key) === parseInt(self.section_id_key)
+							 : true
+
+						if(to_delete){
+							el.value = [];
+						}
+					}
+				}
+			}
+
 		// datum (global shared with section)
+			// DATA
 			// remove the component old data in the datum (from down to top array items)
 				for (let i = new_data_length - 1; i >= 0; i--) {
 
