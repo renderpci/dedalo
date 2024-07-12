@@ -696,18 +696,24 @@ export const service_ckeditor = function() {
 				caller		: self,
 				text_editor	: self
 			})
+
+			const seleted_tag = self.get_selected_reference_element()
+
 			// create the new tag for the reference
-			const tag_type			= 'reference'
-			const last_tag_id		= 0
-			const refrence_number	= parseInt(last_tag_id) + 1
+			const last_tag_id	= self.get_last_tag_id( {tag_type:'reference'} )
+			const tag_id		= last_tag_id + 1
+
 			const reference_tag		= {
-				type	: tag_type,
-				label	: 'reference ' + refrence_number,
-				tag_id	: String(refrence_number),
+				type	: 'reference',
+				label	: 'reference ' + tag_id,
+				tag_id	: String(tag_id),
 				state	: 'n',
 				data	: ''
 			}
-			const tag = self.caller.build_view_tag_obj(reference_tag, reference_tag.tag_id)
+			const tag = (seleted_tag)
+				? seleted_tag
+				: self.caller.build_view_tag_obj(reference_tag, reference_tag.tag_id)
+
 			// render the modal
 			self.caller.render_reference({
 				self		: self.caller,
@@ -1698,7 +1704,6 @@ export const service_ckeditor = function() {
 		const editor	= self.editor
 
 		const new_data_obj			= options.new_data_obj // all properties need to be his type (object, string, etc) do not send stringify properties
-		const locator				= options.locator
 		const locator_text_value	= options.locator_text_value
 
 		const model		= editor.model;
