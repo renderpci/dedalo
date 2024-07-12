@@ -6,8 +6,6 @@
 
 // imports
 	import {get_section_records} from '../../section/js/section.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {pause} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
@@ -284,6 +282,10 @@ export const render_column_apply_preset = function(options) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
+* {
+* 	caller: instance,
+* 	section:id: string|int
+* }
 * @return HTMLElement button_edit
 */
 export const render_column_id = function(options) {

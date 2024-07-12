@@ -6,7 +6,6 @@
 
 // imports
 	import {data_manager} from '../../../common/js/data_manager.js'
-	// import {event_manager} from '../../../common/js/event_manager.js'
 	import {clone} from '../../../common/js/utils/index.js'
 	import {common, get_columns_map} from '../../../common/js/common.js'
 	import {view_default_autocomplete} from './view_default_autocomplete.js'
@@ -758,16 +757,16 @@ service_autocomplete.prototype.zenon_engine = async function(options) {
 			}
 		}
 
-		// const url_trigger  = 'https://zenon.dainst.org/api/v1/search'
-		const url_trigger  = self.request_config_object.api_config.api_url_search || 'https://zenon.dainst.org/api/v1/search'
-		const trigger_vars = {
-				lookfor		: (q==='') ? 'ñññññññ---!!!!!' : q, // when the q is empty, Zenon get the first 10 records of your DDBB, in that case we change the empty with a nonsense q
-				type		: "AllFields", // search in all fields
-				sort		: "relevance",
-				limit		: 20,
-				prettyPrint	: false,
-				lng			: "de"
-			}; // console.log("*** [zenon_engine] trigger_vars", trigger_vars, dd_request)
+		// trigger
+		const url_trigger	= self.request_config_object.api_config.api_url_search || 'https://zenon.dainst.org/api/v1/search'
+		const trigger_vars	= {
+			lookfor		: (q==='') ? 'ñññññññ---!!!!!' : q, // when the q is empty, Zenon get the first 10 records of your DDBB, in that case we change the empty with a nonsense q
+			type		: "AllFields", // search in all fields
+			sort		: "relevance",
+			limit		: 20,
+			prettyPrint	: false,
+			lng			: "de"
+		};
 
 		const pairs = []
 		for (let key in trigger_vars) {

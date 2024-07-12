@@ -554,14 +554,12 @@ export const service_ckeditor = function() {
 				}
 			});//end focus event
 
-
 		// blur event
 			editor.editing.view.document.on('blur', function(evt, data ) {
 				if (custom_events.blur) {
 					custom_events.blur(data.domEvent, {})
 				}
 			});//end blur event
-
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
@@ -601,7 +599,6 @@ export const service_ckeditor = function() {
 					custom_events.MouseUp(data.domEvent, options)
 				}
 			});//end click event
-
 
 			// editor.editing.view.document.on('mouseup', async function(evt, data ){
 			// 	// get the name of the node clicked, 'img' 'p' 'div', etc
@@ -715,9 +712,9 @@ export const service_ckeditor = function() {
 
 	/**
 	* SET_CONTENT
-	* get the tag parameters and create the node of the DOM using the ckeditor tools
+	* Get the tag parameters and create the node of the DOM using the ckeditor tools
 	* insert the node in the caret position
-	* @param tag_obj
+	* @param object tag_obj
 	* Tag object with all parameters for create a view node in DOM
 	* @return bool
 	*/
@@ -730,7 +727,7 @@ export const service_ckeditor = function() {
 			// get the end position of the selection
 			const position = editor.model.document.selection.getLastPosition()
 			// create the tag_node
-			const model_tag_node = writer.createElement( 'imageInline', tag_obj) ;
+			const model_tag_node = writer.createElement( 'imageInline', tag_obj )
 			// Insert the html in the current selection location.
 			editor.model.insertContent( model_tag_node, position );
 		});
@@ -745,7 +742,7 @@ export const service_ckeditor = function() {
 
 	/**
 	* DELETE_TAG
-	* @param tag_obj
+	* @param object tag_obj
 	*  Tag object with all parameters for search the tag inside the model structure of ckeditor
 	* @return promise bool
 	*/

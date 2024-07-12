@@ -10,11 +10,9 @@
 	import {
 		clone,
 		get_font_fit_size,
-		// url_vars_to_object,
 		object_to_url_vars,
 		open_window
 	} from '../../common/js/utils/index.js'
-	// import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 	import {view_graph_list_section} from './view_graph_list_section.js'

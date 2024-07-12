@@ -7,11 +7,10 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
-	import {url_vars_to_object, object_to_url_vars, open_window} from '../../common/js/utils/index.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
-		// render_ts_line,
 		render_ts_pagination,
 		render_children_list
 	} from './render_ts_object.js'
@@ -21,41 +20,19 @@
 /**
 * TS_OBJECT
 * Manages a single thesaurus row element
+* Note that ts_object is v5 legacy code and do not use instances !
 */
 export const ts_object = new function() {
 
 
 
 	// class vars
-		// this.trigger_url		= DEDALO_CORE_URL + '/ts_object/trigger.ts_object.php'
 		// Set on update element in DOM (refresh)
-		this.element_to_hilite	= null;
+		this.element_to_hilite = null;
 		// thesaurus_mode . Defines appearance of thesaurus
-		this.thesaurus_mode		= null;
+		this.thesaurus_mode = null;
 		// events_tokens
-		this.events_tokens		= [];
-
-
-
-	/**
-	* INIT
-	* Fix important vars for current object
-	* (!) Disabled (01-03-2024) because it is not used as instance and nobody calls here !
-	*/
-		// this.init = function() {
-
-		// 	const self = this
-
-		// 	// const url_vars = get_current_url_vars()
-		// 	const url_vars = url_vars_to_object(window.location.search)
-
-		// 	// THESAURUS_MODE: relation|default
-		// 	this.thesaurus_mode = url_vars.thesaurus_mode || 'default'
-		// 	// component_name Caller component name for relations
-		// 	this.component_name = url_vars.component_name || null
-
-		// 	return true
-		// }//end init
+		this.events_tokens = [];
 
 
 
@@ -95,7 +72,7 @@ export const ts_object = new function() {
 				return Promise.resolve(false);
 			}
 
-		// children_container. children_container is the div container inside current ts_object
+		// children_container. Is the div container inside current ts_object
 			const children_container = (()=>{
 
 				const wrap_children		= wrap.childNodes
@@ -116,69 +93,69 @@ export const ts_object = new function() {
 		return new Promise(function(resolve){
 
 			// API call
-				const rqo = {
-					dd_api			: 'dd_ts_api',
-					prevent_lock	: true,
-					action			: 'get_children_data',
-					source			: {
-						section_id			: parent_section_id,
-						section_tipo		: parent_section_tipo,
-						node_type			: node_type,
-						target_section_tipo	: target_section_tipo,
-						tipo				: tipo,
-						build_options : {
-							terms_are_model : self.thesaurus_view_mode==='model'
-						}
-					},
-					options : {
-						pagination			: pagination,
-						thesaurus_view_mode	: thesaurus_view_mode
+			const rqo = {
+				dd_api			: 'dd_ts_api',
+				prevent_lock	: true,
+				action			: 'get_children_data',
+				source			: {
+					section_id			: parent_section_id,
+					section_tipo		: parent_section_tipo,
+					node_type			: node_type,
+					target_section_tipo	: target_section_tipo,
+					tipo				: tipo,
+					build_options : {
+						terms_are_model : self.thesaurus_view_mode==='model'
 					}
+				},
+				options : {
+					pagination			: pagination,
+					thesaurus_view_mode	: thesaurus_view_mode
 				}
-				data_manager.request({
-					body : rqo
-				})
-				.then(async function(response) {
+			}
+			data_manager.request({
+				body : rqo
+			})
+			.then(async function(response) {
 
-					if (response && response.result) {
+				if (response && response.result) {
 
-						// success case
+					// success case
 
-						// dom_parse_children
-							const ar_children_data = response.result
-							const options = {
-								target_section_tipo			: target_section_tipo,
-								node_type					: node_type,
-								clean_children_container	: clean_children_container ?? false,
-								pagination					: response.pagination
-							}
-							const result = await ts_object.dom_parse_children(
-								ar_children_data,
-								children_container,
-								options
-							)
+					// dom_parse_children
+						const ar_children_data = response.result
+						const options = {
+							target_section_tipo			: target_section_tipo,
+							node_type					: node_type,
+							clean_children_container	: clean_children_container ?? false,
+							pagination					: response.pagination
+						}
+						const result = await ts_object.dom_parse_children(
+							ar_children_data,
+							children_container,
+							options
+						)
 
-						// fix children_element pagination (used on refresh_element to get current pagination status)
-							children_element.pagination = response.pagination
+					// fix children_element pagination (used on refresh_element to get current pagination status)
+						children_element.pagination = response.pagination
 
-						// updates arrow
-							if (children_element && children_element.firstChild && children_element.dataset.type) {
-								children_element.firstChild.classList.remove('arrow_spinner');
-								// Update arrow state
-								//ts_object.update_arrow_state(children_element, true) // disabled temporally
-							}
+					// updates arrow
+						if (children_element && children_element.firstChild && children_element.dataset.type) {
+							children_element.firstChild.classList.remove('arrow_spinner');
+							// Update arrow state
+							//ts_object.update_arrow_state(children_element, true) // disabled temporally
+						}
 
-						resolve(result)
+					resolve(result)
 
-					}else{
+				}else{
 
-						// error case
+					// error case
 
-						console.warn("[ts_object.get_children] Error, response is null");
+					console.warn("[ts_object.get_children] Error, response is null");
 
-						resolve(false)
-					}
-				})
+					resolve(false)
+				}
+			})
 		})
 	}//end get_children
 
@@ -187,6 +164,9 @@ export const ts_object = new function() {
 	/**
 	* UPDATE_ARROW_STATE
 	* Updates arrow state when updated wrap
+	* @param HTMLElement link_children_element
+	* @param bool toggle
+	* @return true
 	*/
 	this.update_arrow_state = function(link_children_element, toggle) {
 
@@ -250,8 +230,6 @@ export const ts_object = new function() {
 			const show_arrow_opened				= typeof options.show_arrow_opened!=='undefined' ? options.show_arrow_opened : false
 			const pagination					= options.pagination || {}
 			const mode							= options.mode || 'list'
-			// const wrap						= children_container.parentNode
-			// const element_children_target	= ts_object.get_link_children_from_wrap(wrap)
 
 		// Clean children container before build contents
 			if (clean_children_container===true) {
@@ -338,9 +316,6 @@ export const ts_object = new function() {
 	*/
 	this.old_parent_wrap = null
 	this.on_dragstart = function(obj, event) {
-		if(SHOW_DEBUG===true) {
-			//console.log("ts_object.on_dragstart:",typeof handle);
-		}
 
 		// obj ondrop set as null
 			obj.ondrop = null
@@ -348,7 +323,6 @@ export const ts_object = new function() {
 		// if (handle.contains(target))
 			if (handle) {
 				event.stopPropagation();
-				//event.dataTransfer.setData('text/plain', 'handle');
 				source = obj;
 				event.dataTransfer.effectAllowed = 'move';
 				event.dataTransfer.setData('text/html', obj.innerHTML);
@@ -361,8 +335,6 @@ export const ts_object = new function() {
 			if(!ts_object.old_parent_wrap) {
 				console.log("[on_dragstart] Error on find old_parent_wrap");
 			}
-		//console.log(event);
-		//obj.parentNode.parentNode.removeEventListener("drop", 'ts_object.on_drop');
 	}//end on_dragstart
 
 
@@ -382,22 +354,17 @@ export const ts_object = new function() {
 
 		// source. set as blank
 			source = '';
-
-		//handle = '';
-		//window.onmouseup = null;
 	}//end on_drag_end
 
 
 
 	/**
 	* ON_ORDER_DRAG_MOUSEDOWN
+	* @return void
 	*/
 	var order_source = false;
 	var order_handle = '';
 	this.on_order_drag_mousedown = function(obj, event) {
-		if(SHOW_DEBUG===true) {
-			//console.log("on_order_drag_mousedown");
-		}
 
 		order_handle = event;
 	}//end on_order_drag_mousedown
@@ -406,18 +373,15 @@ export const ts_object = new function() {
 
 	/**
 	* ON_ORDER_DRAGSTART
+	* @return void
 	*/
 	this.on_order_dragstart = function(obj, event) {
-		if(SHOW_DEBUG===true) {
-			//console.log("on_order_dragstart");
-		}
 
 		obj.ondrop = null;
 
 		//if (handle.contains(target)) {
 		if (order_handle) {
 			event.stopPropagation();
-			//event.dataTransfer.setData('text/plain', 'order_handle');
 			order_source = obj;
 			event.dataTransfer.effectAllowed = 'move';
 			event.dataTransfer.setData('text/html', obj.innerHTML);
@@ -430,15 +394,11 @@ export const ts_object = new function() {
 
 	/**
 	* ON_ORDER_DRAG_END
-	* @return
+	* @return void
 	*/
 	this.on_order_drag_end = function() {
-		if(SHOW_DEBUG===true) {
-			//console.log("on_order_drag_end ");;
-		}
 
 		target = false;
-		//handle = '';
 		order_source = '';
 	}//end on_order_drag_end
 
@@ -448,36 +408,31 @@ export const ts_object = new function() {
 	* ON_ORDER_DRAGOVER
 	* @param DOM object obj
 	* 	Is the whole ts_object target wrapper
+	* @return void
 	*/
 	this.on_order_dragover = function(obj, event) {
 		event.preventDefault(); // Necessary. Allows us to drop.
 		event.stopPropagation();
 		event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
-
-		// Add drag_over class
-		//obj.classList.add('drag_over')
 	}//end on_order_dragover
 
 
 
 	/**
 	* ON_DRAGENTER
-	* @return
+	* @return void
 	*/
 	this.on_dragenter = function(obj, event) {
-		if(SHOW_DEBUG===true) {
-			//console.log("dragenter");
-			//console.log(obj.dataset.tipo);;
-		}
-
-		//event.dataTransfer.dropEffect = "copy";
+		// event.dataTransfer.dropEffect = "copy";
 	}//end on_dragenter
+
 
 
 	/**
 	* ON_DRAGOVER
 	* @param DOM object obj
 	* 	Is the whole ts_object target wrapper
+	* @return void
 	*/
 	this.on_dragover = function(obj, event) {
 		event.preventDefault(); // Necessary. Allows us to drop.
@@ -492,15 +447,11 @@ export const ts_object = new function() {
 
 	/**
 	* ON_DRAGLEAVE
-	* @return
+	* @return void
 	*/
 	this.on_dragleave = function(obj, event) {
-		if(SHOW_DEBUG===true) {
-			//console.log("dragleave");;
-		}
-
 		// Remove drag_over class
-			obj.classList.remove('drag_over')
+		obj.classList.remove('drag_over')
 	}//end on_dragleave
 
 
@@ -516,8 +467,8 @@ export const ts_object = new function() {
 			obj.classList.remove('drag_over')
 
 		// wraps
-			const wrap_source	= source 	// element that's move
-			const wrap_target	= obj 	// element on user leaves source wrap
+			const wrap_source	= source // element that's move
+			const wrap_target	= obj // element on user leaves source wrap
 			if (wrap_source === wrap_target) {
 				console.log("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
 				return false;
@@ -540,18 +491,9 @@ export const ts_object = new function() {
 		// data_transfer_json case
 		// used by tool_cataloging to add data to the ts
 			const data_transfer_json = event.dataTransfer.getData("text/plain")
-
 			if (data_transfer_json && data_transfer_json.length>0) {
 				// parse from event.dataTransfer
 					const data_obj = JSON.parse(data_transfer_json)
-
-				// debug
-					if(SHOW_DEBUG===true) {
-						// console.log("wrap_target:",wrap_target);
-						// console.log("obj:",obj);
-						// console.log("-- event:",event);
-						// console.log("ts_object.on_drop event called !!!!! with data_obj:", data_obj);
-					}
 
 				// add children, create new section and his node in the tree
 				// go deep in the tree to point base to getback into the wrap by the add_child method
@@ -566,14 +508,14 @@ export const ts_object = new function() {
 					.then(function(response){
 
 						// callback
-							if (data_obj.caller) {
+						if (data_obj.caller) {
 
 							// new_section_id . Generated as response by the trigger add_child
 								const new_section_id 	= response.result
 							// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
 								const section_tipo 	  	= wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
 
-								// fire the event to update the component used as term in the new section
+							// fire the event to update the component used as term in the new section
 								event_manager.publish('ts_add_child_' + data_obj.caller, {
 									locator			: data_obj.locator,
 									new_ts_section	: {
@@ -604,9 +546,8 @@ export const ts_object = new function() {
 
 									}
 								})
-
-							}
-					 })
+						}//end if (data_obj.caller) {
+					})
 
 				return true // stop execution here
 			}
@@ -740,9 +681,6 @@ export const ts_object = new function() {
 
 		let result = null
 
-		// var wrap		= link_children_element.parentNode.parentNode
-		// var nodes	= wrap.children  //childNodes
-
 		const children_container = self.get_my_parent_container(link_children_element, 'children_container')
 
 		// If is the first time that the children are loaded, remove the first class selector and send the query for get the children
@@ -757,11 +695,6 @@ export const ts_object = new function() {
 					null, // object|null pagination
 					false // bool clean_children_container
 				);
-
-			//var children_container = self.get_my_parent_container(link_children_element, 'children_container')
-			//if (children_container.style.display==='none') {
-			//	children_container.style.display = 'inline-table'
-			//}
 
 			// save_opened_elements
 			self.save_opened_elements(link_children_element,'add')
@@ -812,10 +745,8 @@ export const ts_object = new function() {
 			return false;
 		}
 
-		const wrap			= link_children_element.parentNode.parentNode
-		const key			= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
-		//var parent_node	= wrap.parentNode.parentNode
-		//var parent		= parent_node.dataset.section_tipo +'_'+ parent_node.dataset.section_id
+		const wrap	= link_children_element.parentNode.parentNode
+		const key	= wrap.dataset.section_tipo +'_'+ wrap.dataset.section_id
 
 		if (action==='add') {
 
@@ -873,21 +804,15 @@ export const ts_object = new function() {
 	*/
 	this.hilite_element = function(element, clean_others) {
 
-		// Locate all term elements
-		// var type 	= 'term'; // [data-type="'+type+'"]
-		// var matches = document.querySelectorAll('.list_thesaurus_element[data-section_tipo="'+section_tipo+'"][data-section_id="'+section_id+'"]');
-
-		if (typeof clean_others==='undefined') {
-			clean_others = true
-		}
+		// undefined clean_others case
+			if (typeof clean_others==='undefined') {
+				clean_others = true
+			}
 
 		// Remove current hilite elements
 			if(clean_others!==false) {
 				this.reset_hilites()
 			}
-
-		// hilite only current element
-			// element.classList.add("element_hilite");
 
 		// hilite all appearances of current component (may appear more than once)
 			const matches	= document.querySelectorAll('.list_thesaurus_element[data-type="'+element.dataset.type+'"][data-section_tipo="'+element.dataset.section_tipo+'"][data-section_id="'+element.dataset.section_id+'"]');
@@ -964,10 +889,6 @@ export const ts_object = new function() {
 			const term_node = matches[i]
 
 			// element to hilite
-				// ts_object.element_to_hilite = {
-				// 	'section_tipo'	: section_tipo,
-				// 	'section_id'	: section_id
-				// }
 				setTimeout(function(){
 					self.hilite_element(term_node)
 				}, 200)
@@ -1036,7 +957,6 @@ export const ts_object = new function() {
 		const self = this
 
 		// check button_obj.parentNode
-			//console.log("typeof button_obj:", typeof button_obj, "button_obj:", button_obj, "button_obj.parentNode", button_obj.parentNode);
 			if (!button_obj.parentNode) {
 				console.warn("[ts_object.edit] Ignored empty button action ", button_obj);
 				return false
@@ -1066,7 +986,7 @@ export const ts_object = new function() {
 			})
 
 		// window managing
-			if(self.edit_window===null || self.edit_window.closed) { //  || edit_window.location.href!=url || self.edit_window.closed
+			if(self.edit_window===null || self.edit_window.closed) {
 
 				self.edit_window = open_window({
 					url		: url,
@@ -1097,7 +1017,7 @@ export const ts_object = new function() {
 	/**
 	* ADD_CHILD
 	* Call to API to create a new record and add it to the current element as child
-	* @param DOM node button_obj
+	* @param HTMLElement button_obj
 	* @return promise
 	*/
 	this.add_child = function(button_obj) {
@@ -1318,9 +1238,6 @@ export const ts_object = new function() {
 			const tipo			= button_obj.dataset.tipo
 			const tipos			= tipo.split(',')
 			const lang			= page_globals.dedalo_data_lang
-			// const mode		= 'edit'
-			// const html_data	= '...';	//" show_component_in_ts_object here! "
-			// const role		= section_tipo + '_' + section_id + '_' + tipo
 
 		// delete the previous registered events
 			self.events_tokens.map(current_token => event_manager.unsubscribe(current_token))
@@ -1381,6 +1298,7 @@ export const ts_object = new function() {
 								    components.pop();
 								}
 							}
+
 							self.events_tokens.push(
 								event_manager.subscribe('save_' + current_component.id_base, fn_update_value)
 							)
@@ -1396,7 +1314,6 @@ export const ts_object = new function() {
 								ui.component.activate(current_component)
 							}, 50)
 						}
-
 
 					return component_node
 			}//end render_component_node
@@ -1451,7 +1368,8 @@ export const ts_object = new function() {
 
 
 	/**
-	* SHOW_INDEXATIONS : load the fragment list and render the grid
+	* SHOW_INDEXATIONS
+	* 	Load the fragment list and render the grid
 	* @param object options
 	* @return promise
 	* 	resolve object dd_grid
@@ -1468,7 +1386,7 @@ export const ts_object = new function() {
 			const totals_group		= options.totals_group || [{key: ['all']}]
 
 		// pagination vars
-			const total 			= options.total || null
+			const total = options.total || null
 
 		// get the filter section
 			const filter_section = totals_group.map(el => el.key)
@@ -1583,7 +1501,7 @@ export const ts_object = new function() {
 
 		const self = this
 
-		// data sample:
+		// sample data:
 			// {
 			// 	"hierarchy1_66": {
 			// 		"section_tipo": "hierarchy1",
@@ -2050,7 +1968,7 @@ export const ts_object = new function() {
 	this.get_link_children_from_wrap = function(wrap) {
 
 		// LINK_CHILDREN . Search component_relation_children tipo from wrap
-			let link_children = null; //wrap.querySelector('[data-type="link_children"]')
+			let link_children = null;
 
 		// check valid wrap by class
 			if (wrap.classList.contains("wrap_ts_object")===false) {
@@ -2081,7 +1999,6 @@ export const ts_object = new function() {
 				break;
 			}
 		}
-
 
 		if (link_children===null) {
 			if(SHOW_DEBUG===true) {

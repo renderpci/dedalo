@@ -85,7 +85,6 @@ export const render_ts_line = function(options) {
 
 				// button wrapper
 					// Case link open children (arrow)
-					// var event_function	= [{'type':'click','name':'ts_object.toggle_view_children'}];
 					const element_link_children = ui.create_dom_element({
 						element_type	: 'div',
 						class_name		: class_for_all + ' arrow_icon',

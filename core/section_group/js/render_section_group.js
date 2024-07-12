@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
@@ -63,7 +62,6 @@ render_section_group.prototype.edit = async function(options) {
 	// header (label)
 		if (self.context.add_label===false) {
 			wrapper.classList.add('no_margin')
-			// content_data.classList.add('is_group_div')
 		}else{
 
 			const component_label = ui.create_dom_element({
