@@ -355,7 +355,7 @@ export const render_column_id = function(options) {
 
 								// MODE USING PAGE USER_NAVIGATION
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = clone(self.request_config_object.sqo)
+									const sqo = clone(self.rqo.sqo)
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination
