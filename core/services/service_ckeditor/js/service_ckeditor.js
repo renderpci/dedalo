@@ -1172,17 +1172,24 @@ export const service_ckeditor = function() {
 				// }
 				// const htmlAttributes = item.getAttribute('htmlAttributes')
 				// const htmlAttributes = item.getAttributes()
-				const attributes = item._attrs
+				const current_type = item.hasAttribute('reference')
+					? item.getAttribute( 'reference' ).type
+					: item.getAttribute( 'type' )
 
-				if(attributes && attributes.size > 0) {
 
-					const current_type		= attributes.get('type')
-					const current_tag_id	= attributes.get('tag_id')
+				// if(attributes && attributes.size > 0) {
 
-					if(current_type===type) {
+					// const current_type		= attributes.get('type')
+					// const current_tag_id	= attributes.get('tag_id')
+
+					if( current_type && current_type === type ) {
+						 const current_tag_id	= item.hasAttribute('reference')
+							? item.getAttribute( 'reference' ).tag_id
+							: item.getAttribute(' tag_id' )
+
 						ar_tag_id.push(current_tag_id)
 					}
-				}
+				// }
 			}//end for ( const value of range.getWalker({ ignoreElementEnd: true }) )
 
 		const last_tag_id = Math.max(...ar_tag_id);
