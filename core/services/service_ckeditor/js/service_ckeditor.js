@@ -547,6 +547,9 @@ export const service_ckeditor = function() {
 		// when the event in the editor is fired, it call to the event in the caller and do the process of data
 		const custom_events = editor_config.custom_events || {}
 
+		// prevent
+			custom_events.prevent_selectionChangeDone = false
+
 		// focus event
 			editor.editing.view.document.on('focus', function(evt, data ) {
 				if (custom_events.focus) {
@@ -593,10 +596,12 @@ export const service_ckeditor = function() {
 					custom_events.click(data.domEvent, tag_obj)
 				}
 
-				if (custom_events.MouseUp && click_element==='img') {
+				if (custom_events.MouseUp && (click_element==='img' || click_element==='reference')) {
+					custom_events.prevent_selectionChangeDone = click_element==='reference' ? true : false;
 					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
 					const options = {
-						selection : ''
+						selection	: '',
+						node_name	: click_element
 					}
 					custom_events.MouseUp(data.domEvent, options)
 				}
@@ -618,6 +623,11 @@ export const service_ckeditor = function() {
 			// 	}
 			// })
 			editor.editing.view.document.on('selectionChangeDone', function(evt, data) {
+
+				if(custom_events.prevent_selectionChangeDone === true){
+					custom_events.prevent_selectionChangeDone = false
+					return
+				}
 
 				if (custom_events.MouseUp) {
 					// if the element clicked is not a img (any text or other elements in the editor) get the selection and fire mouseup
