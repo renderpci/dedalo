@@ -813,15 +813,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 					case 'reference':
 						// Show reference info
-						event_manager.publish('click_reference_'+ self.id_base, {tag: tag_obj, caller: self, text_editor: text_editor})
-	console.log("self.data:----------------->",self.data);
-						self.render_reference({
-							self			: self,
-							text_editor		: text_editor,
-							i				: i,
-							tag				: tag_obj,
-							tags_reference	: self.properties.tags_reference
-						})
+						event_manager.publish('click_tag_reference_'+ self.id_base, {tag: tag_obj})
 						break;
 
 					default:
