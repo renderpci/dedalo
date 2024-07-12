@@ -24,22 +24,48 @@ export const render_reference = async function(options) {
 		const text_editor		= options.text_editor
 		const i					= options.i
 		const view_tag			= options.tag
-		const tags_reference	= options.tags_reference // the component with all locator references
+		const tags_reference	= self.properties.tags_reference // the component with all locator references
+
+	// component with the tag data
+		const tag_component_options = {
+			tipo			: tags_reference.tipo,
+			section_tipo	: self.section_tipo,
+			section_id		: self.section_id,
+			mode			: 'edit',
+			lang			: page_globals.dedalo_data_nolan
+		}
+
+		const found_instances = await instances.find_instances(tag_component_options)
+
+		const component_tags_reference = found_instances.length > 0
+			? found_instances[0]
+			: null
+
+		if(!component_tags_reference){
+			console.error("Error! misconfigured text area with references, the tags reference component is not available, create new one in the ontology, see rsc36 and rsc1368");
+			return false
+		}
+
+		const ar_tags_values = component_tags_reference.data.value
+
+		const locator = (ar_tags_values)
+			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'reference')
+			: null
 
 	// short vars
 		// const data_string		= view_tag.data
-		const reference_element = text_editor.get_selected_reference_element()
+		// const reference_element = text_editor.get_selected_reference_element()
 
-		const data_string = (reference_element)
-			? reference_element.data
-			: ''
+		// const data_string = (reference_element)
+		// 	? reference_element.data
+		// 	: ''
 
 		// convert the data_tag form string to json*-
 		// replace the ' to " stored in the html data to JSON "
-		const data		= data_string.replace(/\'/g, '"')
-		const locator	= data && data.length > 0
-			? JSON.parse(data)
-			: null
+		// const data		= data_string.replace(/\'/g, '"')
+		// const locator	= data && data.length > 0
+		// 	? JSON.parse(data)
+		// 	: null
 
 		const references_section_tipo		= self.context.features.references_section_tipo // the section with a empty autocomplete to be use to search
 		const references_component_tipo		= self.context.features.references_component_tipo // empty autocomplete to be use to search
@@ -134,6 +160,14 @@ export const render_reference = async function(options) {
 				const delete_label = get_label.are_you_sure_to_delete_refrence || 'Are you sure you want to delete this reference?'
 				// if yes, delete the note section in the server
 				if(window.confirm(delete_label)) {
+
+					if(locator.length > 0){
+						component_tags_reference.unlink_record({
+							paginated_key	: locator[0].paginated_key,
+							row_key			: null,
+							section_id		: locator[0].section_id
+						});
+					}
 					// remove the reference attribute of the text selected in the component_text_area
 						text_editor.remove_reference()
 
@@ -154,18 +188,25 @@ export const render_reference = async function(options) {
 				parent			: footer
 			})
 			button_apply.addEventListener('mouseup',function(evt) {
-				const new_locator = reference_component.data.value
+				const locator = reference_component.data.value
 
-				if(!new_locator){
+				if(locator.length === 0){
 					button_remove.click()
 					return
 				}
+
+				const new_locator = locator[0]
+					new_locator.tag_id = view_tag.tag_id
+					new_locator.tag_type = 'reference'
+
+				component_tags_reference.add_value(new_locator);
+
 				// get the data from the new locator
 				const locator_data = new_locator
 				 	? reference_component.datum.data.find(el =>
-				 		el.from_component_tipo === new_locator[0].from_component_tipo
-						&& el.section_id	=== new_locator[0].section_id
-						&& el.section_tipo	=== new_locator[0].section_tipo
+				 		el.from_component_tipo === new_locator.from_component_tipo
+						&& el.section_id	=== new_locator.section_id
+						&& el.section_tipo	=== new_locator.section_tipo
 				 		)
 				 	: null
 				 // is possible that user don't select any text (collapse selection), in those cases it will insert a text value of the locator or empty text.
@@ -183,11 +224,10 @@ export const render_reference = async function(options) {
 					label	: view_tag.label,
 					tag_id	: view_tag.tag_id,
 					state	: view_tag.state,
-					data	: new_locator // object format
+					data	: view_tag.tag_id //new_locator // object format
 				}
 				const tag = self.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 				const reference_obj = {
-					locator 			: new_locator,
 					locator_text_value	: locator_text_value,
 					new_data_obj		: tag
 				}
@@ -200,12 +240,6 @@ export const render_reference = async function(options) {
 
 				// remove the modal
 					modal.remove()
-
-				// text_editor.update_tag({
-				// 	type			: tag_type,
-				// 	tag_id			: view_tag.tag_id,
-				// 	new_data_obj	: reference_tag
-				// })
 			})
 
 	// save editor changes to prevent conflicts with modal components changes
