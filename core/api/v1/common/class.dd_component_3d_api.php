@@ -131,7 +131,61 @@ final class dd_component_3d_api {
 
 
 		return $response;
-	}//end add_posterframe
+	}//end move_file_to_dir
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* Deletes posterframe file
+	*
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "delete_posterframe",
+	*	dd_api	: 'dd_component_3d_api',
+	*	source	: {
+	*		tipo			: 'rsc36',
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function delete_posterframe( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+
+		// move file
+			$result = $component->delete_posterframe();
+
+		// response
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end delete_posterframe
 
 
 

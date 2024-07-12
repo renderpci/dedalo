@@ -8,7 +8,7 @@
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {object_to_url_vars, open_window, download_file} from '../../common/js/utils/index.js'
-	import {common} from '../../common/js/common.js'
+	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_av} from '../../component_av/js/render_edit_component_av.js'
 	import {render_list_component_av} from '../../component_av/js/render_list_component_av.js'
@@ -509,6 +509,75 @@ component_av.prototype.get_media_streams = function() {
 		})
 	})
 }//end get_media_streams
+
+
+
+/**
+* CREATE_POSTERFRAME
+* Creates a new posterframe file from current_view overwriting old file if exists
+* @param object viewer
+* @return bool
+*/
+component_av.prototype.create_posterframe = async function() {
+
+	const self = this
+
+	// move_file_to_dir
+		const rqo = {
+			dd_api	: 'dd_component_av_api',
+			action	: 'create_posterframe',
+			source	: create_source(self),
+			options	: {
+				current_time : self.video?.currentTime || 0
+			}
+		}
+
+	// call to the API, fetch data and get response
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// debug
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> create_posterframe API response:",'DEBUG', api_response);
+		}
+
+
+	return api_response.result
+}//end create_posterframe
+
+
+
+/**
+* DELETE_POSTERFRAME
+* Deletes existing posterframe file
+* @return bool
+*/
+component_av.prototype.delete_posterframe = async function() {
+
+	const self = this
+
+	// move_file_to_dir
+		const rqo = {
+			dd_api	: 'dd_component_av_api',
+			action	: 'delete_posterframe',
+			source	: create_source(self),
+			options	: {}
+		}
+
+	// call to the API, fetch data and get response
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// debug
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> delete_posterframe API response:",'DEBUG', api_response);
+		}
+
+
+	return api_response.result
+}//end delete_posterframe
 
 
 
