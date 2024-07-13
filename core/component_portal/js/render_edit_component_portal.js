@@ -563,7 +563,7 @@ export const render_column_remove = function(options) {
 
 						footer.classList.add('loading')
 
-						// deletes the locator from component data
+						// deletes the locator from component data and refresh the component
 						await self.unlink_record({
 							paginated_key	: paginated_key,
 							row_key			: row_key,
@@ -577,9 +577,6 @@ export const render_column_remove = function(options) {
 							section_tipo	: self.section_tipo,
 							section_id_key	: section_id
 						})
-
-						// refresh the component. Don't wait here
-						self.refresh()
 
 						// close modal
 						modal.close()
