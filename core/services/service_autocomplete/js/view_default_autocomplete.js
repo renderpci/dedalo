@@ -581,9 +581,7 @@ const render_filters_selector = function(self) {
 				const label = label_find
 					? label_find.label
 					: ''
-				// const id				= ddo_section.tipo
-				// const request_ddo	= self.request_config_object.find(item => item.typo === 'request_ddo').value
-				// const ddo_section	= request_ddo.find((item) => item.tipo===section && item.type==='section' && item.typo==='ddo')
+
 				const datalist_item	= {
 					grouper	: 'sections',
 					id		: section_tipo,
@@ -613,7 +611,7 @@ const render_filters_selector = function(self) {
 			filters_container.appendChild(filter_node)
 		}
 
-	// filter_by_list . if the component caller has a filter_by_list we add the datalist of the component
+	// filter_by_list. if the component caller has a filter_by_list we add the datalist of the component
 		const filter_by_list = self.rqo_search.sqo_options.filter_by_list//find(item => item.typo==='filter_by_list') || false
 		if(filter_by_list) {
 
@@ -634,11 +632,6 @@ const render_filters_selector = function(self) {
 					const current_datalist	= component_datalist[j]
 					const id				= section +'_'+ component_tipo +'_'+ current_datalist.section_id
 					const q					= '"'+component_tipo +'_'+ current_datalist.value.section_tipo + '_' +current_datalist.value.section_id+'"'
-					// {
-						// section_id			: current_datalist.value.section_id,
-						// section_tipo		: current_datalist.value.section_tipo,
-						// from_component_tipo	: component_tipo
-					// }
 					const path				= [{
 						section_tipo	: section,
 						component_tipo	: component_tipo
@@ -686,9 +679,6 @@ const render_filters_selector = function(self) {
 			localStorage.setItem(self.id, JSON.stringify(ar_id) )
 		}
 
-		// console.log('localStorage.getItem(self.id)', JSON.parse(localStorage.getItem(self.id)) );
-		// console.log('ar_filter_by_list 2:',self.ar_filter_by_list);
-
 
 	return filters_container
 }//end render_filters_selector
@@ -708,13 +698,13 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 
 	const filter_node = ui.create_dom_element({
 		element_type	: 'ul',
-		class_name		: 'filter_node' // css_autocomplete_hi_search_field
+		class_name		: 'filter_node'
 	})
 
 	// all_selector li
 		const all_selector = ui.create_dom_element({
 			element_type	: 'li',
-			class_name		: 'all_selector', // css_autocomplete_hi_search_field
+			class_name		: 'all_selector',
 			parent			: filter_node
 		})
 
@@ -722,7 +712,7 @@ const build_filter = function(self, filter_items, filter_name, filter_id) {
 		const label = get_label.all || 'All'
 		const all_section_label = ui.create_dom_element({
 			element_type	: 'label',
-			inner_html		: label + ' ' + filter_name, //ddo_section.label ||
+			inner_html		: label + ' ' + filter_name,
 			parent			: all_selector
 		})
 		all_section_label.setAttribute('for', filter_id + '_all')
@@ -891,7 +881,7 @@ const render_inputs_list = function(self) {
 
 	const inputs_list = ui.create_dom_element({
 		element_type	: 'div',
-		class_name		: 'inputs_list' // css_autocomplete_hi_search_field
+		class_name		: 'inputs_list'
 	})
 
 	const filter_free = self.rqo_search.sqo_options.filter_free
@@ -1204,7 +1194,7 @@ const render_datalist = async function(self, result) {
 				.then(function(section_record_node){
 					li_node.appendChild(section_record_node)
 				})
-		}// end for of current_section (section_tipo)
+		}//end for of current_section (section_tipo)
 
 	// mouseenter_handler
 		async function mouseenter_handler(e){

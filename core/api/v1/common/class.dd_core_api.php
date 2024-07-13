@@ -1723,15 +1723,6 @@ final class dd_core_api {
 
 		// ddo_source
 			$ddo_source = $rqo->source;
-			// 	$ar_source = array_filter($rqo, function($item) {
-			// 		 if(isset($item->typo) && $item->typo==='source') return $item;
-			// 	});
-			// 	if (count($ar_source)!==1) {
-			// 		throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
-			// 		return $result;
-			// 	}
-			// 	$ddo_source = reset($ar_source);
-
 
 		// source vars
 			$action				= $ddo_source->action ?? 'search';
@@ -1846,16 +1837,6 @@ final class dd_core_api {
 			switch ($action) {
 
 				case 'search': // Used by section and service autocomplete
-
-					// DES resolve limit before use sqo
-						// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
-						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
-						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
-						// ) {
-						// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
-						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
-						// }
-
 
 					// check if the search has a dataframe associated (time_machine of the component with dataframe)
 					// when the component has a dataframe need to be re_created using his own data with the dataframe data

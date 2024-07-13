@@ -1593,7 +1593,7 @@ abstract class common {
 				: $this->RecordObj_dd->get_parent();
 
 		// tools
-			$tools		= [];
+			$tools = [];
 			// get the section tools in list
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
