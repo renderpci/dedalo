@@ -1740,7 +1740,6 @@ final class dd_core_api {
 				? section::build_sqo_id($tipo)
 				: 'undefined'
 			); // cache key sqo_id;
-			$autocomplete 		= $ddo_source->autocomplete ?? null;
 
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
@@ -1961,11 +1960,6 @@ final class dd_core_api {
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
 						}
-
-					// autocomplete. Set the autocomplete status into sections to set correct permissions
-					// search with autocomplete need access, at least with read, to target data,
-					// so, in the context of the search autocomplete the section and components will set his subdatum at least with permissions = 1.
-						$element->autocomplete = $autocomplete;
 
 					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export

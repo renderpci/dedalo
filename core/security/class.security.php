@@ -72,8 +72,19 @@ class security {
 				$start_time=start_time();
 				// metrics
 				metrics::$security_permissions_total_calls++;
-				// debug backtrace
-				// dump(debug_backtrace(), 'debug_backtrace() ++ '.to_string("$parent_tipo - $tipo"));
+			}
+
+		// autocomplete case. For speed and accessibility, return fixed value 1 here
+			// Autocomplete status inheritance
+			// Used to identify if the search has been fired by autocompletes(portal searches) or not (list)
+			// autocompletes need has access to target sections and components.
+			// When the action is search by autocompletes, the permissions need to be at least 1 (read).
+			// Note: take account that the project filter was applied in the search
+			// so, here the data is the result of the search to be processed by section
+			// to get the component data.
+			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
+			if ($autocomplete) {
+				return 1;
 			}
 
 		// cache

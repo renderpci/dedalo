@@ -2181,12 +2181,8 @@ abstract class common {
 								// Exception:
 								// if the user can read or read/write permissions, do not change it.
 									$child_permissions = $related_element->get_component_permissions();
-									if( strpos(get_called_class(), 'component_')===0 ||
-										(get_called_class() === 'section' && $this->autocomplete===true)
-									){
-										if($child_permissions <1){
-											$related_element->set_permissions(1);
-										}
+									if( strpos(get_called_class(), 'component_')===0 && $child_permissions <1 ){
+										$related_element->set_permissions(1);
 									}
 
 								// component_text_area lang case. Change lang before get dato (!)
@@ -4382,7 +4378,6 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
-
 				// metrics
 				metrics::$get_tools_total_calls++;
 			}
@@ -4390,6 +4385,12 @@ abstract class common {
 		// already set
 			if (isset($this->tools)) {
 				return $this->tools;
+			}
+
+		// autocomplete case. For speed and accessibility, return fixed value here
+			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
+			if ($autocomplete) {
+				return [];
 			}
 
 		// cache

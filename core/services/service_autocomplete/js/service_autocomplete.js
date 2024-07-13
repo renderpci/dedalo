@@ -517,11 +517,15 @@ service_autocomplete.prototype.dedalo_engine = async function() {
 	// const rqo = await options.rqo
 		rqo.prevent_lock = true
 
-	// verify source is in list mode to allow lang fallback
-		const source	= rqo.source
-		source.mode		= 'list'
-	// set the autocomplete to true, it will used to assign permissions to at least 1 in the target section and components.
-		source.autocomplete	= true
+	// source
+		const source = rqo.source
+		// make sure source is in list mode to allow lang fallback
+		source.mode = 'list'
+		// config. set config options like autocomplete to allow custom server behaviors
+		source.config = {
+			// set the autocomplete to true, it will used to assign permissions to at least 1 in the target section and components.
+			autocomplete : true
+		}
 
 	// API read request
 		const load_section_data_promise	= data_manager.request({
