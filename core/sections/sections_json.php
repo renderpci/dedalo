@@ -143,17 +143,6 @@
 						true // bool cache
 					);
 
-				// Autocomplete status inheritance
-				// Used to identify if the search has been fired by autocompletes(portal searches) or not (list)
-				// autocompletes need has access to target sections and components.
-					// When the action is search by autocompletes, the permissions need to be at least 1 (read).
-					// Note: take account that the project filter was applied in the search
-					// so, here the data is the result of the search to be processed by section
-					// to get the component data.
-					if($this->autocomplete === true){
-						$section->autocomplete = true;
-					}
-
 				// permissions check
 					$permissions = $section->get_section_permissions();
 

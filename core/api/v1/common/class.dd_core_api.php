@@ -596,74 +596,78 @@ final class dd_core_api {
 
 		// activity
 			if ($rqo->source->action==='search') {
-				// Prevent infinite loop saving self
-				if (!in_array($rqo->source->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
+				// only sections and areas generate activity (prevent autocomplete activity footprint)
+				$model = RecordObj_dd::get_modelo_name_by_tipo($rqo->source->tipo, true);
+				if (strpos($model, 'component')===false) {
+					// Prevent infinite loop saving self
+					if (!in_array($rqo->source->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
 
-					// mode. set mode_to_activity
-					// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
-					// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
-						$mode				= $rqo->source->mode;
-						$mode_to_activity	= $mode;
-						if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
-							$mode_to_activity = 'edit';
-						}
+						// mode. set mode_to_activity
+						// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
+						// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
+							$mode				= $rqo->source->mode;
+							$mode_to_activity	= $mode;
+							if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
+								$mode_to_activity = 'edit';
+							}
 
-					// activity dato
-						$dato_activity = [
-							'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
-						];
+						// activity dato
+							$dato_activity = [
+								'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
+							];
 
-						switch (true) {
+							switch (true) {
 
-							case ($mode==='edit'):
-								$section_id						= isset($json_rows->data[0]) && isset($json_rows->data[0]->value[0])
-									? $json_rows->data[0]->value[0]->section_id
-									: null;
-								$dato_activity['id']			= $section_id;
-								$dato_activity['tipo']			= $rqo->source->tipo;
-								// $dato_activity['top_id']		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
-								// $dato_activity['top_tipo']	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-								break;
+								case ($mode==='edit'):
+									$section_id						= isset($json_rows->data[0]) && isset($json_rows->data[0]->value[0])
+										? $json_rows->data[0]->value[0]->section_id
+										: null;
+									$dato_activity['id']			= $section_id;
+									$dato_activity['tipo']			= $rqo->source->tipo;
+									// $dato_activity['top_id']		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
+									// $dato_activity['top_tipo']	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+									break;
 
-							case ($mode==='list') :
-								$dato_activity['tipo']			= $rqo->source->tipo;
-								#$dato_activity['top_id']		= null;
-								// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
-								break;
+								case ($mode==='list') :
+									$dato_activity['tipo']			= $rqo->source->tipo;
+									#$dato_activity['top_id']		= null;
+									// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
+									break;
 
-							case ($mode==='tm') :
-								$dato_activity['tipo']			= $rqo->options->caller_tipo;
-								#$dato_activity['top_id']		= null;
-								// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
-								break;
+								case ($mode==='tm') :
+									$dato_activity['tipo']			= $rqo->options->caller_tipo;
+									#$dato_activity['top_id']		= null;
+									// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
+									break;
 
-							// case ( strpos($mode, 'tool_portal')!==false ) :
-							// 	#$dato_activity['id']		= $id;
-							// 	$dato_activity['tipo']		= $tipo;
-							// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-							// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-							// 	break;
+								// case ( strpos($mode, 'tool_portal')!==false ) :
+								// 	#$dato_activity['id']		= $id;
+								// 	$dato_activity['tipo']		= $tipo;
+								// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
+								// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+								// 	break;
 
-							// case ( strpos($mode, 'tool_')!==false ) :
-							// 	#$dato_activity['id']		= $id;
-							// 	$dato_activity['tipo']		= $tipo;
-							// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-							// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-							// 	break;
+								// case ( strpos($mode, 'tool_')!==false ) :
+								// 	#$dato_activity['id']		= $id;
+								// 	$dato_activity['tipo']		= $tipo;
+								// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
+								// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
+								// 	break;
 
-							default:
-								break;
-						}
+								default:
+									break;
+							}
 
-					// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-						logger::$obj['activity']->log_message(
-							'LOAD'.' '.strtoupper($mode_to_activity),
-							logger::INFO,
-							$rqo->source->tipo,
-							null,
-							$dato_activity
-						);
-				}//end if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+						// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+							logger::$obj['activity']->log_message(
+								'LOAD'.' '.strtoupper($mode_to_activity),
+								logger::INFO,
+								$rqo->source->tipo,
+								null,
+								$dato_activity
+							);
+					}//end if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
+				}
 			}//end if ($rqo->source->action==='search')
 
 		// debug
@@ -1719,15 +1723,6 @@ final class dd_core_api {
 
 		// ddo_source
 			$ddo_source = $rqo->source;
-			// 	$ar_source = array_filter($rqo, function($item) {
-			// 		 if(isset($item->typo) && $item->typo==='source') return $item;
-			// 	});
-			// 	if (count($ar_source)!==1) {
-			// 		throw new Exception("Error Processing Request. Invalid number of 'source' items in context. Only one is allowed. Found: ".count($ar_source), 1);
-			// 		return $result;
-			// 	}
-			// 	$ddo_source = reset($ar_source);
-
 
 		// source vars
 			$action				= $ddo_source->action ?? 'search';
@@ -1745,7 +1740,6 @@ final class dd_core_api {
 				? section::build_sqo_id($tipo)
 				: 'undefined'
 			); // cache key sqo_id;
-			$autocomplete 		= $ddo_source->autocomplete ?? null;
 
 		// sqo (search_query_object)
 			// If empty, we look at the session, and if not exists, we will create a new one with default values
@@ -1842,16 +1836,6 @@ final class dd_core_api {
 			switch ($action) {
 
 				case 'search': // Used by section and service autocomplete
-
-					// DES resolve limit before use sqo
-						// if ( (property_exists($sqo, 'limit') && $sqo->limit===null)
-						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id])
-						// 	&& isset($_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit)
-						// ) {
-						// 	$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
-						// 	debug_log(__METHOD__." Set limit from session to $sqo->limit ".to_string(), logger::DEBUG);
-						// }
-
 
 					// check if the search has a dataframe associated (time_machine of the component with dataframe)
 					// when the component has a dataframe need to be re_created using his own data with the dataframe data
@@ -1976,11 +1960,6 @@ final class dd_core_api {
 									$lang // string $lang = DEDALO_DATA_NOLAN
 								);
 						}
-
-					// autocomplete. Set the autocomplete status into sections to set correct permissions
-					// search with autocomplete need access, at least with read, to target data,
-					// so, in the context of the search autocomplete the section and components will set his subdatum at least with permissions = 1.
-						$element->autocomplete = $autocomplete;
 
 					// session sqo. Store section SQO in session.
 					// It's not used to main navigation, but it's needed by some tools like tool_export

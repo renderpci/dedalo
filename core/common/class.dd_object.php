@@ -40,7 +40,7 @@ class dd_object extends stdClass {
 		// developer			: string like 'Dédalo team' // Used by tools
 		// show_in_inspector	: bool // Used by tools
 		// show_in_component	: bool // Used by tools
-		// config				: object // Used by tools
+		// config				: object // Used by tools and services
 		// sortable				: bool // Used by components (columns)
 		// fields_separator		: string like ", " // used by portal to join different fields
 		// records_separator	: string like " | " // used by portal to join different records (rows)

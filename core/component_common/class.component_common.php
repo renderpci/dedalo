@@ -3306,11 +3306,6 @@ abstract class component_common extends common {
 				}//end if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO)
 		}
 
-		// check if the action is search with autocomplete and return 1 (read).
-			if ($this->permissions <1 && $this->autocomplete===true) {
-				$this->permissions = 1;
-			}
-
 
 		return $this->permissions;
 	}//end get_component_permissions
