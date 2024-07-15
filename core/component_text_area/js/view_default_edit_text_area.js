@@ -220,7 +220,7 @@ const get_content_value = (i, current_value, self) => {
 					}
 				// toolbar add standard buttons
 					// toolbar.push(...['button_lang','reference','|','button_save'])
-					toolbar.push(...['button_lang','reference'])
+					toolbar.push(...['button_lang'])
 
 			// editor_config
 				const editor_config = {
