@@ -6,6 +6,34 @@ global $updates;
 $updates = new stdClass();
 
 
+$v=625; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 5;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 2;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// UPDATE COMPONENTS
+		$updates->$v->components_update = [
+			'component_text_area'
+		];	// Force convert from string to array
+
 
 $v=622; #####################################################################################
 $updates->$v = new stdClass();
