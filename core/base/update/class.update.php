@@ -474,11 +474,11 @@ class update {
 
 			// Skip sections
 				$ar_section_skip = [
-					/*
-					#'lg1', // lenguajes
-					#'on1', // omomasticos
-					#'dc1', // cronologicos
-					#'ts1', // tematicos
+
+					'lg1', // lenguajes
+					'on1', // omomasticos
+					'dc1', // cronologicos
+					'ts1', // tematicos
 					#'hu1', // hungria
 					#'cu1', // cuba
 					"es1",
@@ -512,8 +512,24 @@ class update {
 					"mupreva473",
 					"mupreva500",
 					"mupreva770",
-					"rsc332"
-					*/
+					"dd1500",
+					"material1",
+					"numisdata4",
+					"hierarchy1",
+					"technique1",
+					"rsc332",
+					"rsc170",
+					"rsc205",
+					"mdcat1957",
+					"nexus1",
+					"mdcat2605",
+					"mdcat1957",
+					"dd1266",
+					"dd1324",
+					"dd1000",
+					"tchi1",
+					"mdcat2608"
+					/**/
 				];
 				if (in_array($current_section_tipo, $ar_section_skip)) {
 					continue;
