@@ -46,6 +46,12 @@
 							$this->context->toolbar_buttons[] = 'button_note';
 					}
 
+				// reference
+					if(isset($properties->tags_reference)) {
+						// toolbar_buttons add
+							$this->context->toolbar_buttons[] = 'reference';
+					}
+
 				// lang (related_component_lang)
 					$original_lang = $this->get_original_lang();
 					if (!empty($original_lang)) {
