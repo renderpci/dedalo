@@ -8,6 +8,7 @@
 	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
+	import {clone} from '../../common/js/utils/index.js'
 
 
 
@@ -25,7 +26,8 @@ export const render_reference = async function(options) {
 		const i					= options.i
 		const view_tag			= options.tag
 		const tags_reference	= self.properties.tags_reference // the component with all locator references
-
+		const selected_tag 		= clone(options.tag)
+			selected_tag.reuse = false
 	// component with the tag data
 		const tag_component_options = {
 			tipo			: tags_reference.tipo,
@@ -46,11 +48,33 @@ export const render_reference = async function(options) {
 			return false
 		}
 
+		const all_tag_data = component_tags_reference.datum.data.find(el =>
+			el.tipo===component_tags_reference.tipo &&
+			el.section_tipo===component_tags_reference.section_tipo &&
+			el.section_id==component_tags_reference.section_id).value || []
+
 		const ar_tags_values = component_tags_reference.data.value
 
 		const locator = (ar_tags_values)
 			? ar_tags_values.filter(el => el.tag_id === view_tag.tag_id && el.tag_type === 'reference')
 			: null
+
+		const existing_values = []
+		for (let i = all_tag_data.length - 1; i >= 0; i--) {
+			const current_locator = all_tag_data[i]
+
+			const found = component_tags_reference.datum.data.find(el =>
+				el.from_component_tipo === current_locator.from_component_tipo &&
+				el.section_tipo === current_locator.section_tipo &&
+				el.section_id === current_locator.section_id
+			)
+
+			if(found){
+				const used_locator = clone(current_locator)
+				used_locator.fallback_value = found.fallback_value
+				existing_values.push(used_locator)
+			}
+		}
 
 	// short vars
 		// const data_string		= view_tag.data
@@ -134,9 +158,76 @@ export const render_reference = async function(options) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'body content fill_vertical'
+			class_name		: 'body content fill_vertical text_area_reference_selector'
 		})
-		body.appendChild(reference_component_node)
+	// new tag
+		const new_tags_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'new_tags_container',
+			parent			: body
+		})
+			const new_tags_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label new_tags_label',
+				inner_html		: get_label.new_tag || 'New tag',
+				parent			: new_tags_container
+			})
+			new_tags_container.appendChild(reference_component_node)
+
+	// Previous values to be reused
+		const existing_tags_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'existing_tags_container',
+			parent			: body
+		})
+			const existing_tags_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label existing_tags_label',
+				inner_html		: get_label.reuse_tag || 'Reuse tag',
+				parent			: existing_tags_container
+			})
+			const ar_existing_value_node =[]
+			for (let i = 0; i < existing_values.length; i++) {
+
+				const current_value = existing_values[i]
+				const existing_value_node = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'value',
+					inner_html		: current_value.fallback_value.join(' | '),
+					parent			: existing_tags_container
+				})
+				existing_value_node.data = current_value
+
+				existing_value_node.activated = false
+				existing_value_node.key = i
+				ar_existing_value_node.push(existing_value_node)
+				existing_value_node.addEventListener("mouseup", function(e) {
+					e.stopPropagation()
+					// remove all selected node classes
+					for (let i = ar_existing_value_node.length - 1; i >= 0; i--) {
+						if(ar_existing_value_node[i].key !== existing_value_node.key){
+							ar_existing_value_node[i].classList.remove('selected_tag')
+							ar_existing_value_node[i].activated = false
+						}
+					}
+					if(existing_value_node.activated){
+						existing_value_node.activated = false
+						existing_value_node.classList.remove('selected_tag')
+						// reset the selected tag_id with the original tag_id
+						selected_tag.tag_id = view_tag.tag_id
+						selected_tag.reuse = false
+						selected_tag.fallback_value = null
+					}else{
+						existing_value_node.activated = true
+						existing_value_node.classList.add('selected_tag')
+						// set the selected tag_id with the selection
+						selected_tag.tag_id = existing_value_node.data.tag_id
+						selected_tag.reuse = true
+						selected_tag.fallback_value = existing_value_node.data.fallback_value.join(' | ')
+					}
+				})
+			}
+
 
 	// footer
 		const footer = ui.create_dom_element({
@@ -192,47 +283,55 @@ export const render_reference = async function(options) {
 				parent			: footer
 			})
 			button_apply.addEventListener('mouseup',function(evt) {
-				const locator = reference_component.data.value
 
-				if(locator.length === 0){
-					button_remove.click()
-					return
-				}
 
-				const new_locator = locator[0]
-					new_locator.tag_id = view_tag.tag_id
-					new_locator.tag_type = 'reference'
+				// save the locator when is a new tag_id
+				// if a reuse is active, the locator already exist into the portal
+				if(selected_tag.reuse === false){
 
-				component_tags_reference.add_value(new_locator);
+					const locator = reference_component.data.value
 
-				// get the data from the new locator
-				const locator_data = new_locator
-				 	? reference_component.datum.data.find(el =>
-				 		el.from_component_tipo === new_locator.from_component_tipo
-						&& el.section_id	=== new_locator.section_id
-						&& el.section_tipo	=== new_locator.section_tipo
-				 		)
-				 	: null
-				 // is possible that user don't select any text (collapse selection), in those cases it will insert a text value of the locator or empty text.
-				 // get the resolution of the new locator with the value_fallback (ensure text value if it's not translated)
-				 // if the locator data is not set, empty space is used to create the text for the collapse selection
-				 const locator_text_value = locator_data
-				 	? locator_data.fallback_value[0]
-				 	: ' '
+					if(!locator || locator.length === 0){
+						button_remove.click()
+						return
+					}
+
+					const new_locator = locator[0]
+						new_locator.tag_id = view_tag.tag_id
+						new_locator.tag_type = 'reference'
+
+					component_tags_reference.add_value(new_locator);
+
+					// get the data from the new locator
+					const locator_data = new_locator
+					 	? reference_component.datum.data.find(el =>
+					 		// el.from_component_tipo === new_locator.from_component_tipo &&
+							el.section_id	=== new_locator.section_id &&
+ 							el.section_tipo	=== new_locator.section_tipo
+					 	  )
+					 	: null
+
+					 // is possible that user don't select any text (collapse selection), in those cases it will insert a text value of the locator or empty text.
+					 // get the resolution of the new locator with the value_fallback (ensure text value if it's not translated)
+					 // if the locator data is not set, empty space is used to create the text for the collapse selection
+					 selected_tag.fallback_value  = locator_data
+					 	? locator_data.fallback_value.join(' | ')
+					 	: ' '
+				 }
 
 				// create the new tag for the reference, it's necessary to change the referenceIn tag only
 					const tag_type		='reference'
 
 				const reference_tag = {
 					type	: tag_type,
-					label	: view_tag.label,
-					tag_id	: view_tag.tag_id,
-					state	: view_tag.state,
-					data	: view_tag.tag_id //new_locator // object format
+					label	: selected_tag.label,
+					tag_id	: selected_tag.tag_id,
+					state	: selected_tag.state,
+					data	: selected_tag.tag_id
 				}
 				const tag = self.build_view_tag_obj(reference_tag, reference_tag.tag_id)
 				const reference_obj = {
-					locator_text_value	: locator_text_value,
+					locator_text_value	: selected_tag.fallback_value,
 					new_data_obj		: tag
 				}
 

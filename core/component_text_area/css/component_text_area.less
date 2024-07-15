@@ -387,4 +387,45 @@ dd-modal {
 		}
 	}
 
+	// Reference selector of new or existing tags
+	>.text_area_reference_selector{
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		font-size: 1.4rem;
+		padding-top: 2rem !important;
+
+		.new_tags_container{
+			.label{
+				padding-bottom: 1rem;
+			}
+
+			.wrapper_component{
+				font-size: 1rem;
+			}
+		}
+
+		.existing_tags_container{
+			display: flex;
+			flex-direction: column;
+
+			.label{
+				margin-left: 2rem;
+				padding-bottom: 1rem;
+			}
+
+			.value{
+				font-size: 1.2rem;
+				margin-left: 2.3rem;
+				border-top: 1px #eeeeee solid;
+				line-height: 1.7rem;
+				&.selected_tag{
+					background-color: aquamarine;
+				}
+			}
+			.value:hover{
+				background-color: #eeeeee;
+			}
+		}
+	}
+
 }//end dd-modal
