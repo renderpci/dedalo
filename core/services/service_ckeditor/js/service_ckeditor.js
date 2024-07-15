@@ -163,6 +163,13 @@ export const service_ckeditor = function() {
 		// remove loading class of value_container before is changed by ckeditor
 			self.value_container.classList.remove('loading')
 
+		// Remove reference toolbar
+		// when is defined don't touch the toolbar, reference isset by default
+		// else remove the reference button in the tool bar.
+			const remove_reference = editor_config.toolbar.find(el => el === 'reference')
+				? [null]
+				: ['reference']
+
 		return new Promise(function(resolve){
 
 			// editor.
@@ -210,11 +217,13 @@ export const service_ckeditor = function() {
 					// 		"indent",
 					// 		"|",
 					// 		"specialCharacters",
-					// 		"pageBreak",
-					// 		"reference"
+					// 		"pageBreak"
 					// 	],
 					// 	shouldNotGroupWhenFull: false
 					// }
+				toolbar:{
+					removeItems: remove_reference
+				},
 				// The UI will be in English.
 				language: lang,
 				simpleUpload: {
@@ -1728,8 +1737,7 @@ export const service_ckeditor = function() {
 				}
 				// If not then insert text node with `reference` attribute in place of caret.
 				// However, since selection is collapsed, attribute value will be used as data for text node.
-				// So, if `locator` is empty, do not create text node.
-				else if ( new_data_obj.data !== '' ) {
+				else {
 					const attributes = new Map( selection.getAttributes() );
 
 					attributes.set( 'reference', new_data_obj );
