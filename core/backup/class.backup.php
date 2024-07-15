@@ -2152,7 +2152,10 @@ abstract class backup {
 		foreach ($ar_bk_files as $current_file) {
 
 			$path_info = pathinfo($current_file);
-			if ($path_info['extension']!=='sql') {
+
+			// only 'sql' extension is allowed
+			$extension = $path_info['extension'] ?? null;
+			if ($extension!=='sql') {
 				// ignore it
 				continue;
 			}
@@ -2161,8 +2164,8 @@ abstract class backup {
 			$size	= filesize($current_file);
 
 			$item = (object)[
-				'name' => $name,
-				'size' => format_size_units($size)
+				'name'	=> $name,
+				'size'	=> format_size_units($size)
 			];
 
 
@@ -2193,7 +2196,10 @@ abstract class backup {
 		foreach ($ar_bk_files as $current_file) {
 
 			$path_info = pathinfo($current_file);
-			if ($path_info['extension']!=='backup') {
+
+			// only 'backup' extension is allowed
+			$extension = $path_info['extension'] ?? null;
+			if ($extension!=='backup') {
 				// ignore it
 				continue;
 			}
@@ -2202,8 +2208,8 @@ abstract class backup {
 			$size	= filesize($current_file);
 
 			$item = (object)[
-				'name' => $name,
-				'size' => format_size_units($size)
+				'name'	=> $name,
+				'size'	=> format_size_units($size)
 			];
 
 
