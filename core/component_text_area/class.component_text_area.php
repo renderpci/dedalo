@@ -1584,7 +1584,7 @@ class component_text_area extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*

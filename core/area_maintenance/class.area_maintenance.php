@@ -2604,12 +2604,10 @@ class area_maintenance extends area_common {
 				];
 
 				$output = (object)[
-					// 'pid'		=> $pid,
-					// 'pfile'		=> $pfile,
 					'is_running'	=> true,
 					'data'			=> $data,
 					'time'			=> date("Y-m-d H:i:s"),
-					'total_time' 	=> exec_time_unit_auto($start_time),
+					'total_time'	=> exec_time_unit_auto($start_time),
 					'errors'		=> []
 				];
 
