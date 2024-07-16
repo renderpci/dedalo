@@ -218,9 +218,6 @@ export const ts_object = new function() {
 				return Promise.resolve(false);
 			}
 
-		// Element wrap div is parentNode of 'children_container' (children_container)
-			//var wrap_div = children_container.parentNode
-
 		// options set values
 			const clean_children_container		= typeof options.clean_children_container!=='undefined' ? options.clean_children_container : true
 			const target_section_tipo			= typeof options.target_section_tipo!=='undefined' ? options.target_section_tipo : null
@@ -291,47 +288,54 @@ export const ts_object = new function() {
 
 	/**
 	* ON_DRAG_MOUSEDOWN
+	* Fix ts_object.handle with received event
+	* @param event event
+	* @return void
 	*/
-	var source = false;
-	var handle = '';
-	this.on_drag_mousedown = function(obj, event) {
+	this.source = null;
+	this.handle = null;
+	this.on_drag_mousedown = function(event) {
 		if(SHOW_DEBUG===true) {
-			console.log("ts_object.on_drag_mousedown");
+			// console.log("))))) ts_object.on_drag_mousedown set handler:", event);
 		}
 
-		// handle . set with event value
-			handle = event
-
-		//obj.ondrop = null;
-		//obj.addEventListener ("dragend", ts_object.on_drag_end, true);
-		//window.addEventListener ("mouseup", ts_object.on_drop_mouseup, false);
-		//window.onmouseup = ts_object.on_drop_mouseup;
-		//console.log(window.onmouseup);
+		// handle. set with event value
+			ts_object.handle = event
 	}//end on_drag_mousedown
 
 
 
 	/**
 	* ON_DRAGSTART
+	* @param event event
+	* @return void
 	*/
 	this.old_parent_wrap = null
-	this.on_dragstart = function(obj, event) {
+	this.on_dragstart = function(event) {
+		event.stopPropagation()
 
-		// obj ondrop set as null
-			obj.ondrop = null
+		if(SHOW_DEBUG===true) {
+			// console.log("))))) ts_object.on_dragstart event", event);
+		}
 
-		// if (handle.contains(target))
-			if (handle) {
+		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
+			const wrap_ts_object = ts_object.find_up_tag(event.srcElement, 'wrap_ts_object')
+
+		// wrap_ts_object ondrop set as null
+			wrap_ts_object.ondrop = null
+
+		// if handle
+			if (ts_object.handle) {
 				event.stopPropagation();
-				source = obj;
+				ts_object.source = wrap_ts_object;
 				event.dataTransfer.effectAllowed = 'move';
-				event.dataTransfer.setData('text/html', obj.innerHTML);
+				event.dataTransfer.setData('text/html', wrap_ts_object.innerHTML);
 			}else{
 				event.preventDefault();
 			}
 
 		// Fix class var 'old_parent_wrap'
-			ts_object.old_parent_wrap = obj.parentNode.parentNode;
+			ts_object.old_parent_wrap = wrap_ts_object.parentNode.parentNode;
 			if(!ts_object.old_parent_wrap) {
 				console.log("[on_dragstart] Error on find old_parent_wrap");
 			}
@@ -341,134 +345,49 @@ export const ts_object = new function() {
 
 	/**
 	* ON_DRAG_END
-	* @return
+	* @param event event
+	* @return void
 	*/
-	var target
-	this.on_drag_end = function() {
+	this.target = null
+	this.on_drag_end = function(event) {
+		event.preventDefault()
+		event.stopPropagation()
+
 		if(SHOW_DEBUG===true) {
-			console.log("on_drag_end");
+			// console.log("))))) ts_object.on_drag_end event", event);
 		}
 
 		// target set as false
-			target = false;
+			this.target = false;
 
 		// source. set as blank
-			source = '';
+			ts_object.source = null;
 	}//end on_drag_end
 
 
 
 	/**
-	* ON_ORDER_DRAG_MOUSEDOWN
-	* @return void
-	*/
-	var order_source = false;
-	var order_handle = '';
-	this.on_order_drag_mousedown = function(obj, event) {
-
-		order_handle = event;
-	}//end on_order_drag_mousedown
-
-
-
-	/**
-	* ON_ORDER_DRAGSTART
-	* @return void
-	*/
-	this.on_order_dragstart = function(obj, event) {
-
-		obj.ondrop = null;
-
-		//if (handle.contains(target)) {
-		if (order_handle) {
-			event.stopPropagation();
-			order_source = obj;
-			event.dataTransfer.effectAllowed = 'move';
-			event.dataTransfer.setData('text/html', obj.innerHTML);
-		} else {
-			event.preventDefault();
-		}
-	}//end on_order_dragstart
-
-
-
-	/**
-	* ON_ORDER_DRAG_END
-	* @return void
-	*/
-	this.on_order_drag_end = function() {
-
-		target = false;
-		order_source = '';
-	}//end on_order_drag_end
-
-
-
-	/**
-	* ON_ORDER_DRAGOVER
-	* @param DOM object obj
-	* 	Is the whole ts_object target wrapper
-	* @return void
-	*/
-	this.on_order_dragover = function(obj, event) {
-		event.preventDefault(); // Necessary. Allows us to drop.
-		event.stopPropagation();
-		event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
-	}//end on_order_dragover
-
-
-
-	/**
-	* ON_DRAGENTER
-	* @return void
-	*/
-	this.on_dragenter = function(obj, event) {
-		// event.dataTransfer.dropEffect = "copy";
-	}//end on_dragenter
-
-
-
-	/**
-	* ON_DRAGOVER
-	* @param DOM object obj
-	* 	Is the whole ts_object target wrapper
-	* @return void
-	*/
-	this.on_dragover = function(obj, event) {
-		event.preventDefault(); // Necessary. Allows us to drop.
-		event.stopPropagation();
-		event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
-
-		// Add drag_over class
-		obj.classList.add('drag_over')
-	}//end on_dragover
-
-
-
-	/**
-	* ON_DRAGLEAVE
-	* @return void
-	*/
-	this.on_dragleave = function(obj, event) {
-		// Remove drag_over class
-		obj.classList.remove('drag_over')
-	}//end on_dragleave
-
-
-
-	/**
 	* ON_DROP
+	* @param event event
+	* @return bool
 	*/
-	this.on_drop = function(obj, event) {
+	this.on_drop = function(event) {
 		event.preventDefault();
 		event.stopPropagation();
 
+		if(SHOW_DEBUG===true) {
+			// console.log("))))) ts_object.on_drop event:", event);
+		}
+
+		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
+			const wrap_ts_object = ts_object.find_up_tag(event.srcElement, 'wrap_ts_object')
+
 		// Remove drag_over class
-			obj.classList.remove('drag_over')
+			wrap_ts_object.classList.remove('drag_over')
 
 		// wraps
-			const wrap_source	= source // element that's move
-			const wrap_target	= obj // element on user leaves source wrap
+			const wrap_source	= ts_object.source // element that's move (global var defined at 'on_drag_mousedown')
+			const wrap_target	= wrap_ts_object // element on user leaves source wrap
 			if (wrap_source === wrap_target) {
 				console.log("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
 				return false;
@@ -476,7 +395,7 @@ export const ts_object = new function() {
 
 		// div_children
 			let div_children	= null
-			const nodes			= obj.children // childNodes
+			const nodes			= wrap_target.children // childNodes
 			const nodes_len		= nodes.length
 			for (let i = nodes_len - 1; i >= 0; i--) {
 				if (nodes[i].dataset.role === 'children_container'){
@@ -498,7 +417,7 @@ export const ts_object = new function() {
 				// add children, create new section and his node in the tree
 				// go deep in the tree to point base to getback into the wrap by the add_child method
 				// (it will use parentNode.parentNode to find the wrap)
-					const button_obj = obj.firstChild.firstChild
+					const button_obj = wrap_target.firstChild.firstChild
 					// set mode to button for add_child
 					button_obj.dataset.mode = (wrap_target.dataset.section_tipo==='hierarchy1')
 						? 'add_child_from_hierarchy'
@@ -511,9 +430,9 @@ export const ts_object = new function() {
 						if (data_obj.caller) {
 
 							// new_section_id . Generated as response by the trigger add_child
-								const new_section_id 	= response.result
+								const new_section_id = response.result
 							// section_tipo. When dataset target_section_tipo exists, is hierarchy_node. Else is normal node
-								const section_tipo 	  	= wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
+								const section_tipo = wrap_target.dataset.target_section_tipo || wrap_target.dataset.section_tipo
 
 							// fire the event to update the component used as term in the new section
 								event_manager.publish('ts_add_child_' + data_obj.caller, {
@@ -571,7 +490,7 @@ export const ts_object = new function() {
 			.then(function(response){
 
 				// Updates element_children_target
-					ts_object.update_arrow_state(element_children_target, true)
+					// ts_object.update_arrow_state(element_children_target, true) // Not necessary
 
 				// Updates element_children_source
 					ts_object.update_arrow_state(element_children_source, false)
@@ -581,7 +500,7 @@ export const ts_object = new function() {
 					if (element) {
 						setTimeout(function(){
 							ts_object.hilite_element(element)
-						}, 300)
+						}, 200)
 					}
 
 				// debug
@@ -592,8 +511,144 @@ export const ts_object = new function() {
 			})
 		});//end js_promise
 
+
 		return true;
 	}//end on_drop
+
+
+
+	/**
+	* ON_DRAGOVER
+	* @param event event
+	* @return void
+	*/
+	this.on_dragover = function(event) {
+		event.preventDefault();
+		event.stopPropagation();
+
+		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
+		const wrap_ts_object = ts_object.find_up_tag(event.target, 'wrap_ts_object')
+		if (wrap_ts_object.classList.contains('drag_over')) {
+			return false
+		}
+
+		if(SHOW_DEBUG===true) {
+			// console.log("))))) ts_object.on_dragover event:", event.target);
+		}
+
+		// dataTransfer
+		event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
+
+		// Add drag_over class
+		wrap_ts_object.classList.add('drag_over')
+	}//end on_dragover
+
+
+
+	/**
+	* ON_DRAGLEAVE
+	* @param event event
+	* @return void
+	*/
+	this.on_dragleave = function(event) {
+		// event.preventDefault();
+		event.stopPropagation();
+
+		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
+		const wrap_ts_object = ts_object.find_up_tag(event.target, 'wrap_ts_object')
+
+		if(SHOW_DEBUG===true) {
+			// console.log("))))) ts_object.on_dragleave event:", event);
+		}
+
+		// Remove drag_over class
+		if (wrap_ts_object.classList.contains('drag_over')) {
+			wrap_ts_object.classList.remove('drag_over')
+		}else{
+			event.preventDefault();
+		}
+	}//end on_dragleave
+
+
+
+	/**
+	* ON_ORDER_DRAG_MOUSEDOWN
+	* @return void
+	*/
+		// this.order_source = null;
+		// this.order_handle = null;
+		// this.on_order_drag_mousedown = function(obj, event) {
+
+		// 	ts_object.order_handle = event;
+		// }//end on_order_drag_mousedown
+
+
+
+	/**
+	* ON_ORDER_DRAGSTART
+	* @return void
+	*/
+		// this.on_order_dragstart = function(obj, event) {
+
+		// 	obj.ondrop = null;
+
+		// 	// if (order_handle)
+		// 	if (ts_object.order_handle) {
+		// 		event.stopPropagation();
+		// 		ts_object.order_source = obj;
+		// 		event.dataTransfer.effectAllowed = 'move';
+		// 		event.dataTransfer.setData('text/html', obj.innerHTML);
+		// 	} else {
+		// 		event.preventDefault();
+		// 	}
+		// }//end on_order_dragstart
+
+
+
+	/**
+	* ON_ORDER_DRAG_END
+	* @return void
+	*/
+		// this.on_order_drag_end = function() {
+
+		// 	ts_object.target		= null;
+		// 	ts_object.order_source	= null;
+		// }//end on_order_drag_end
+
+
+
+	/**
+	* ON_ORDER_DRAGOVER
+	* @param DOM object obj
+	* 	Is the whole ts_object target wrapper
+	* @return void
+	*/
+		// this.on_order_dragover = function(obj, event) {
+		// 	event.preventDefault(); // Necessary. Allows us to drop.
+		// 	event.stopPropagation();
+		// 	event.dataTransfer.dropEffect = 'move';  // See the section on the DataTransfer object.
+		// }//end on_order_dragover
+
+
+
+	/**
+	* FIND_UP_TAG
+	* Search parent with given CSS selector recursively
+	* @param HTMLElement el
+	* @param string class_name 'wrap_ts_object'
+	* @return HTMLElement|null
+	*/
+	this.find_up_tag = function(el, class_name) {
+		if (el.classList.contains(class_name)) {
+			return el
+		}
+		while (el.parentNode) {
+			el = el.parentNode;
+			if (el.classList.contains(class_name))
+				return el;
+		}
+		return null;
+	}//end find_up_tag
 
 
 
@@ -624,7 +679,6 @@ export const ts_object = new function() {
 			}
 
 		// element_children
-			//var element_children = parent_wrap.querySelector('.list_thesaurus_element[data-type="link_children"]')
 			const element_children = ts_object.get_link_children_from_wrap(parent_wrap)
 
 		// If old and new wrappers are the same, no is necessary update data
@@ -879,7 +933,7 @@ export const ts_object = new function() {
 
 		// no matches case
 			if (matches_length===0) {
-				console.log("[refresh_element] Error on match elements. Not terms found for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+				console.error("[refresh_element] Error on match elements. Not terms found for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
 				return matches_length;
 			}
 
@@ -887,11 +941,6 @@ export const ts_object = new function() {
 		for (let i = matches_length - 1; i >= 0; i--) {
 
 			const term_node = matches[i]
-
-			// element to hilite
-				setTimeout(function(){
-					self.hilite_element(term_node)
-				}, 200)
 
 			const parent_wrap		= term_node.parentNode.parentNode.parentNode.parentNode
 			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
@@ -924,18 +973,42 @@ export const ts_object = new function() {
 						edit_pagination, // object pagination
 						true // bool clean_children_container
 					)
-					// .then(function() {
+					.then(function() {
 						// const arrow_div = element_children.querySelector('.ts_object_children_arrow_icon')
 						// if (arrow_div && arrow_div.classList.contains('ts_object_children_arrow_icon_open')===false) {
 						// 	// Reopen arrow children
 						// 	//ts_object.toggle_view_children(element_children)
 						// }
-					// })
+
+						// element to hilite
+						setTimeout(function(){
+							self.hilite_element(term_node)
+						}, 200)
+					})
 			}else if(!element_children){
 				if (SHOW_DEBUG===true) {
 					console.log(new Error().stack);
 				}
 				console.log("[refresh_element] Error on find element_children for section_tipo:"+section_tipo+", section_id:"+section_id+", type:"+type);
+			}else{
+
+				// children_container. Reset to force load again
+				const wrapper_children		= parent_wrap.children
+				const wrapper_children_len	= wrapper_children.length
+				for (let i = wrapper_children_len - 1; i >= 0; i--) {
+					if (wrapper_children[i].classList.contains('children_container')) {
+						const children_container = wrapper_children[i]
+						// clean nodes
+						while (children_container.firstChild) {
+							children_container.removeChild(children_container.firstChild);
+						}
+						// reset classes
+						children_container.classList.add('js_first_load')
+						children_container.classList.remove('removed_from_view')
+						break
+					}
+				}
+
 			}
 		}//end for (let i = matches_length - 1; i >= 0; i--)
 
@@ -1295,7 +1368,7 @@ export const ts_object = new function() {
 								});
 								// clean up array of components
 								while(components.length > 0) {
-								    components.pop();
+									components.pop();
 								}
 							}
 
@@ -1496,7 +1569,7 @@ export const ts_object = new function() {
 	* @return bool
 	*/
 	this.current_main_div = null;
-	var ar_resolved = [];
+	this.ar_resolved = [];
 	this.parse_search_result = function( data, main_div, is_recursion ) {
 
 		const self = this
@@ -1566,7 +1639,7 @@ export const ts_object = new function() {
 			const element = data[key]
 
 			// checks already exists
-				if (ar_resolved.indexOf(key) !== -1) {
+				if (ts_object.ar_resolved.indexOf(key) !== -1) {
 					if(SHOW_DEBUG===true) {
 						console.log("[ts_object.parse_search_result] Skipped resolved key "+key);
 					}
@@ -1607,7 +1680,7 @@ export const ts_object = new function() {
 
 			if(!main_div) {
 
-				ar_resolved = [] // reset array
+				ts_object.ar_resolved = [] // reset array
 				console.warn("[ts_object.parse_search_result] Warn: No main_div found! ", '.hierarchy_root_node[data-section_id="'+element.section_id+'"]>.children_container ', element);
 
 			}else{
@@ -1674,7 +1747,7 @@ export const ts_object = new function() {
 				// 	//console.log(children_element);
 				// }
 
-			// ar_resolved.push(key);
+			// ts_object.ar_resolved.push(key);
 
 		}//end for (const key in data)
 
@@ -1792,7 +1865,7 @@ export const ts_object = new function() {
 		// move_locator
 			function move_locator(array, pos1, pos2) {
 				// local variables
-				var i, tmp;
+				let i, tmp;
 				// cast input parameters to integers
 				pos1 = parseInt(pos1, 10);
 				pos2 = parseInt(pos2, 10);
