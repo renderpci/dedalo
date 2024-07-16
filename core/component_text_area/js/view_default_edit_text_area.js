@@ -698,6 +698,7 @@ const get_custom_events = (self, i, text_editor) => {
 			// img : click on img
 			evt.preventDefault()
 			evt.stopPropagation()
+
 			if(options.node_name==='img' || options.node_name==='reference') {
 				const tag_obj = options
 				switch(tag_obj.type) {
