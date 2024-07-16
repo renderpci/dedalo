@@ -333,7 +333,7 @@ const render_tag_column = function(options) {
 
 			const tag_node = ui.create_dom_element({
 				element_type	: 'div',
-				class_name		: class_name,
+				class_name		: class_name+' '+tag_type,
 				inner_html		: text_value,
 				parent			: fragment
 			})
