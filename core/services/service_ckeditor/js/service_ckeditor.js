@@ -577,29 +577,44 @@ export const service_ckeditor = function() {
 
 		// click event
 			editor.editing.view.document.on('click', function(evt, data ) {
+				// data.stopPropagation()
+				// data.preventDefault()
 
-				// get the name of the node clicked, 'img' 'p' 'div', etc
-				const click_element = data.target.name
+				// 1 get the reference by the selection
+				// references are different of the other tags
+				// references has a text property as bold, italics, etc
+				// therefore is necessary get his attributes by the selection
+				// sometime the reference is in the middle of a bold text and the node click is the bold
+				// to avoid search into the DOM use the selection to text if has the reference attributes
+				const selection = editor.editing.model.document.selection;
+				const has_reference = selection.hasAttribute( 'reference' )
+
+				// get the node_name clicked
+				const click_element = has_reference
+					? 'reference'
+					: data.target.name // get the name of the node clicked, 'img' 'p' 'div', etc
 
 				// check if the click element was inside a empty editor. div is the main node and it doesn't has parent, parent=undefined
-				if(click_element==='div' || ( click_element!=='img' && click_element!=='reference')){
+				if(click_element==='div' || ( click_element!=='img' && has_reference!==true)){
 					return
 				}
-				const item = click_element!=='reference'
-					? data.target.parent
-					: data.domTarget
+				// get the parent node for the common tag (instead the references)
+				const item = data.target.parent
 
 				// get the parent of the img, it will be a span with the data of the tag in attributes
 				// const item = data.target.parent._attrs
-				const tag_obj =  {
-					node_name	: click_element,
-					// dataset
-					type		: item.getAttribute('data-type'),
-					tag_id		: item.getAttribute('data-tag_id'),
-					state		: item.getAttribute('data-state'),
-					label		: item.getAttribute('data-label'),
-					data		: item.getAttribute('data-data')
-				}
+				const tag_obj =  has_reference
+					? selection.getAttribute( 'reference' )
+					: {
+						type		: item.getAttribute('data-type'),
+						tag_id		: item.getAttribute('data-tag_id'),
+						state		: item.getAttribute('data-state'),
+						label		: item.getAttribute('data-label'),
+						data		: item.getAttribute('data-data')
+					 }
+
+				// add node_name to the tag object to identify the origin
+				tag_obj.node_name = click_element
 
 				if (custom_events.click) {
 					custom_events.click(data.domEvent, tag_obj)
