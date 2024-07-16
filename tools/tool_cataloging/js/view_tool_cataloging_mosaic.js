@@ -201,28 +201,28 @@ const get_content_data = async function(self, ar_section_record) {
 						const section_record		= ar_section_record[i]
 						const section_record_node	= await section_record.render()
 
-						drag_and_drop({
+						set_drag_and_drop({
 							section_record_node	: section_record_node,
 							total_records		: self.total,
-							locator 			: section_record.locator,
-							caller 				: self
+							locator				: section_record.locator,
+							caller				: self
 						})
 
-						// mouseenter event
-							section_record_node.addEventListener('mouseenter',function(e){
-								e.stopPropagation()
-								const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-								event_manager.publish(event_id, this)
-								section_record_node.classList.add('mosaic_over')
-							})
+					// mouseenter event
+						section_record_node.addEventListener('mouseenter',function(e){
+							e.stopPropagation()
+							const event_id = `mosaic_hover_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							event_manager.publish(event_id, this)
+							section_record_node.classList.add('mosaic_over')
+						})
 
-						// mouseleave event
-							section_record_node.addEventListener('mouseleave',function(e){
-								e.stopPropagation()
-								const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-								event_manager.publish(event_id, this)
-								section_record_node.classList.remove('mosaic_over')
-							})
+					// mouseleave event
+						section_record_node.addEventListener('mouseleave',function(e){
+							e.stopPropagation()
+							const event_id = `mosaic_mouseleave_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+							event_manager.publish(event_id, this)
+							section_record_node.classList.remove('mosaic_over')
+						})
 
 					// section record append
 						fragment.appendChild(section_record_node)
@@ -253,22 +253,32 @@ const get_content_data = async function(self, ar_section_record) {
 
 
 /**
-* DRAG_AND_DROP
+* SET_DRAG_AND_DROP
 * Set section_record_node ready to drag and drop
 * @param object options
+* {
+* 	section_record_node: HTMLELement
+* 	total_records		: int self.total,
+* 	locator				: object section_record.locator,
+* 	caller				: object self
+* }
 * @return bool
 */
-const drag_and_drop = function(options) {
+const set_drag_and_drop = function(options) {
 
 	// options
 		const drag_node = options.section_record_node
 
-	drag_node.draggable = true
-	drag_node.classList.add('draggable')
-	drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+	// drag_node
+		drag_node.draggable = true
+		drag_node.classList.add('draggable')
+		drag_node.addEventListener('dragstart', function(e){
+			on_dragstart_mosaic(this, e, options)
+		})
+
 
 	return true
-}//end drag_and_drop
+}//end set_drag_and_drop
 
 
 
@@ -279,20 +289,30 @@ const drag_and_drop = function(options) {
 *	Its a section record (only in mosaic mode)
 * @param event
 * @param object options
+* {
+* 	caller: object,
+* 	locator: object,
+* 	section_record_node: HTMLElment,
+* 	total_records: int|null
+* }
 * @return bool true
 */
 const on_dragstart_mosaic = function(node, event, options) {
 	event.stopPropagation();
 
-	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
-	const transfer_data = {
-		locator			: options.locator,
-		paginated_key	: options.paginated_key,
-		caller			: 'tool_cataloging'
-	}
+	// options
+		const locator		= options.locator
+		const paginated_key	= options.paginated_key
 
-	// the data will be transfer to drop in text format
-	const data = JSON.stringify(transfer_data)
+	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+		const transfer_data = {
+			locator			: locator,
+			paginated_key	: paginated_key,
+			caller			: 'tool_cataloging'
+		}
+
+		// the data will be transfer to drop in text format
+		const data = JSON.stringify(transfer_data)
 
 	event.dataTransfer.effectAllowed = 'move';
 	event.dataTransfer.setData('text/plain', data);
@@ -422,7 +442,7 @@ const rebuild_columns_map = async function(base_columns_map, self, view_mosaic) 
 
 /**
 * RENDER_COLUMN_DRAG
-* @param options
+* @param object options
 * @return DocumentFragment
 */
 const render_column_drag = function(options) {
@@ -432,6 +452,7 @@ const render_column_drag = function(options) {
 		const section_record	= options.caller
 		const locator			= options.locator
 
+	// area_thesaurus
 		const area_thesaurus = tool_caller.area_thesaurus
 
 	// get hierarchy sections
@@ -447,7 +468,7 @@ const render_column_drag = function(options) {
 	// check if the hierarchies of catalog loaded in area_thesarurs has relation with current locator.
 	function get_related_hierarchy(relation_value) {
 		// get every target_section_tipo loaded as possible catalog hierarchy
-		for (var i = hierarchies.length - 1; i >= 0; i--) {
+		for (let i = hierarchies.length - 1; i >= 0; i--) {
 			const current_tipo = hierarchies[i].target_section_tipo
 			const found = relation_value.find(el => el.from_section_tipo === current_tipo)
 			if(found){
@@ -466,7 +487,7 @@ const render_column_drag = function(options) {
 		const fragment = new DocumentFragment()
 
 	// already used columns drag indication
-		const used_class	= used
+		const used_class = used
 			? ' used'
 			: ''
 
@@ -476,17 +497,19 @@ const render_column_drag = function(options) {
 			class_name		: 'dragger' + used_class,
 			parent			: fragment
 		})
-	// when the user drop a node in thesaurus, it send an event
-	// use it to change the class of the dragged
-	event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
-	async function add_data_to_ts_component(options) {
-		// the locator drag by the user (the section as the term of the ts)
-		const added_locator = options.locator
 
-		if(added_locator.section_id === locator.section_id && added_locator.section_tipo===locator.section_tipo){
-			draged_node.classList.add('used')
+	// ts_add_child_tool_cataloging event subscription
+		// when the user drop a node in thesaurus, it send an event
+		// use it to change the class of the dragged
+		event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
+		async function add_data_to_ts_component(options) {
+			// the locator drag by the user (the section as the term of the ts)
+			const added_locator = options.locator
+
+			if(added_locator.section_id === locator.section_id && added_locator.section_tipo === locator.section_tipo){
+				draged_node.classList.add('used')
+			}
 		}
-	}
 
 
 	return fragment
@@ -520,7 +543,6 @@ const get_buttons = function(self) {
 		})
 		filter_button.addEventListener('mousedown', function(e) {
 			e.stopPropagation()
-
 			event_manager.publish('toggle_search_panel_'+self.id)
 		})
 
