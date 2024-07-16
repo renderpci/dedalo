@@ -1454,7 +1454,8 @@ final class dd_utils_api {
 					// 		ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10
 					// to prevent this behavior, but the problem doesn't disappear completely.
 					// With h2 protocol and SSL the problem disappear, but is necessary to be compatibles with http 1.1
-					if(DEDALO_PROTOCOL === 'http://'){
+					// if(DEDALO_PROTOCOL === 'http://'){
+					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
 						$len = strlen($a);
 						if ($len < 4096) {
 							$a .= str_pad(' ', 4095-$len);

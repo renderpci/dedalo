@@ -2617,12 +2617,18 @@ class area_maintenance extends area_common {
 					}
 
 				// output the response JSON string
-					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
-					echo $a;
-					// fix Apache issue where small chunks are not sent correctly over HTTP
-					if (strlen($a) < 4096) {
-						echo str_pad(' ', 4096) . PHP_EOL;
+					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+
+				// fix Apache issue where small chunks are not sent correctly over HTTP
+					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
+						$len = strlen($a);
+						if ($len < 4096) {
+							$a .= str_pad(' ', 4095-$len);
+						}
 					}
+
+					echo $a;
+					echo "\n\n";
 
 				while (ob_get_level() > 0) {
 					ob_end_flush();
