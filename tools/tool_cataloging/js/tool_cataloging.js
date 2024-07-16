@@ -5,12 +5,9 @@
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
+	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_cataloging} from './render_tool_cataloging.js'
 
@@ -78,64 +75,68 @@ tool_cataloging.prototype.init = async function(options) {
 		console.error(error)
 	}
 
-	// listen the thesaurus to update the data of the component_portal when the locator drag by user
-	// the cataloging section has a portal that point to any other section to be ordered
-	// when the user drag the section to be placed in the thesaurus the thesaurus create new term (new section)
-	// this new section has a portal that need to be updated with the locator received
-	const token = event_manager.subscribe('ts_add_child_tool_cataloging', add_data_to_ts_component)
-	self.events_tokens.push(token)
-	async function add_data_to_ts_component(options) {
-		// get the thesaurus value defined in properties
-		const set_new_thesaurus_value = self.tool_config.set_new_thesaurus_value
+	// ts_add_child_tool_cataloging event subscription
+		// listen the thesaurus to update the data of the component_portal when the locator drag by user
+		// the cataloging section has a portal that point to any other section to be ordered
+		// when the user drag the section to be placed in the thesaurus the thesaurus create new term (new section)
+		// this new section has a portal that need to be updated with the locator received
+		const add_child_handler = async function(options) {
 
-		// check if the tool_config has the new thesaurus value
-		if(!set_new_thesaurus_value){
-			console.error('Error, set_new_thesaurus_value is not present in properties.tool_config of the tool_cataloging ontology');
-		}
-		// the new section created by the thesaurus
-		const new_ts_section	= options.new_ts_section
-		// the locator drag by the user (the section as the term of the ts)
-		const locator			= options.locator
-		// component to inject the locator
-		const component_options = {
-			model			: 'component_portal',
-			mode 			: 'edit',
-			tipo			: set_new_thesaurus_value.tipo,
-			section_tipo	: new_ts_section.section_tipo,
-			section_id		: new_ts_section.section_id,
-			lang			: page_globals.dedalo_data_nolan,
-			type			: 'component'
-		}
+			// options
+				// new_ts_section. The new section created by the thesaurus
+				const new_ts_section = options.new_ts_section
+				// locator. The locator drag by the user (the section as the term of the ts)
+				const locator = options.locator
+				// callback. Dispatch the callback to the thesaurus to update the node in the thesaurus tree
+				const callback = options.callback
 
-		const component = await get_instance(component_options)
-		await component.build(true);
-
-		// insert the locator in the data of the component
-			const changed_data = [{
-				action	: 'insert',
-				key		: null,
-				value	: {
-					section_id		: locator.section_id,
-					section_tipo	: locator.section_tipo
+			// set_new_thesaurus_value. Get the thesaurus value defined in properties
+				const set_new_thesaurus_value = self.tool_config.set_new_thesaurus_value
+				// check if the tool_config has the new thesaurus value
+				if(!set_new_thesaurus_value){
+					console.error('Error, set_new_thesaurus_value is not present in properties.tool_config of the tool_cataloging ontology');
+					return
 				}
-			}]
 
-		// change_value (implies saves too)
-			component.change_value({
-				changed_data	: changed_data,
-				refresh			: false
-			})
-			.then(async (response)=>{
-				// the user has selected cancel from delete dialog
-					if (response===false) {
-						return
+			// component to inject the locator
+				const component = await get_instance({
+					model			: 'component_portal',
+					mode 			: 'edit',
+					tipo			: set_new_thesaurus_value.tipo,
+					section_tipo	: new_ts_section.section_tipo,
+					section_id		: new_ts_section.section_id,
+					lang			: page_globals.dedalo_data_nolan,
+					type			: 'component'
+				})
+				await component.build(true);
+
+			// insert the locator in the data of the component
+				const changed_data = [Object.freeze({
+					action	: 'insert',
+					key		: null,
+					value	: {
+						section_id		: locator.section_id,
+						section_tipo	: locator.section_tipo
 					}
-				// dispatch the callback to the thesaurus to update the node in the thesaurus tree
-				options.callback(response)
-			})
-
-		return true;
-	}
+				})]
+				// change_value (implies saves too)
+				component.change_value({
+					changed_data	: changed_data,
+					refresh			: false
+				})
+				.then((response)=>{
+					// the user has selected cancel from delete dialog
+						if (response===false) {
+							return
+						}
+					// dispatch the callback to the thesaurus to update the node in the thesaurus tree
+						if (callback) {
+							callback(response)
+						}
+				})
+		}
+		const token = event_manager.subscribe('ts_add_child_tool_cataloging', add_child_handler)
+		self.events_tokens.push(token)
 
 
 	return common_init
@@ -169,14 +170,15 @@ tool_cataloging.prototype.build = async function(autoload=false) {
 			const area_thesaurus_ddo	= self.tool_config.ddo_map.find(el => el.role==='area_thesaurus')
 			self.area_thesaurus			= self.ar_instances.find(el => el.tipo===area_thesaurus_ddo.tipo)
 			// set instance in thesaurus mode 'relation'
-			// self.area_thesaurus.context.thesaurus_mode	= 'relation'
-			self.area_thesaurus.caller						= self
-			self.area_thesaurus.linker						= self.indexing_component
+			// self.area_thesaurus.context.thesaurus_mode = 'relation'
+			self.area_thesaurus.caller = self
+			self.area_thesaurus.linker = self.indexing_component
 
 	} catch (error) {
 		self.error = error
 		console.error(error)
 	}
+
 
 	return common_build
 }//end build_custom
@@ -193,8 +195,6 @@ tool_cataloging.prototype.load_section = async function(section_to_cataloging) {
 
 	const self = this
 
-	const request_config = section_to_cataloging.properties.source.request_config
-
 	const section_options = {
 		model			: 'section',
 		mode			: section_to_cataloging.mode || 'list',
@@ -206,11 +206,12 @@ tool_cataloging.prototype.load_section = async function(section_to_cataloging) {
 		type			: 'section'
 	}
 	self.section_to_cataloging = await get_instance(section_options)
+	// add properties to the section instance
+	self.section_to_cataloging.properties = section_to_cataloging.properties
 
-	self.section_to_cataloging.properties	= section_to_cataloging.properties
-	// self.section_to_cataloging.buttons	= false
-
+	// store instance
 	self.ar_instances.push(self.section_to_cataloging)
+
 
 	return true
 }//end assign_element
