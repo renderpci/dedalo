@@ -531,6 +531,14 @@ const render_id_column = function(options) {
 								self.add_child(this)
 								.then(function(response){
 
+									// response is an object as
+									// {
+									// 	API response ...
+									// 	result: 40
+									//  button_obj: a.id_column_link.ts_object_add
+									// 	wrap: div.wrap_ts_object
+									// }
+
 									// vars from response
 										// new_section_id . Generated as response by the trigger add_child
 											const new_section_id 	= response.result
@@ -541,18 +549,21 @@ const render_id_column = function(options) {
 										// children_element. list_thesaurus_element of current wrapper
 											const children_element 	= self.get_link_children_from_wrap(response.wrap)
 											if(!children_element) {
-												return console.log("[ts_object.add_child] Error on find children_element 'link_children'");
+												return console.error("[ts_object.add_child] Error on find children_element 'link_children'");
 											}
 
 									// refresh children container
 										self.get_children(
-											children_element,
+											children_element, // current node arrow (is the father of the new created item)
 											null, // object|null pagination
 											true // bool clean_children_container
 										)
-										.then(function(){
+										.then(function(result){
+											// result could be an array of children_container nodes or bool false
 											// Open editor in new window
-											self.edit(button_obj, null, new_section_id, section_tipo)
+											if (result) {
+												self.edit(button_obj, null, new_section_id, section_tipo)
+											}
 										})
 								})
 						})//end link_add.addEventListener("click", function(e)

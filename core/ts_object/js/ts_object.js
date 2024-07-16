@@ -140,9 +140,12 @@ export const ts_object = new function() {
 
 					// updates arrow
 						if (children_element && children_element.firstChild && children_element.dataset.type) {
+							// remove spinner
 							children_element.firstChild.classList.remove('arrow_spinner');
+							// set arrow icon as opened
+							children_element.firstChild.classList.add('ts_object_children_arrow_icon_open')
 							// Update arrow state
-							//ts_object.update_arrow_state(children_element, true) // disabled temporally
+							// ts_object.update_arrow_state(children_element, true) // disabled temporally
 						}
 
 					resolve(result)
@@ -371,7 +374,7 @@ export const ts_object = new function() {
 	* @param event event
 	* @return bool
 	*/
-	this.on_drop = function(event) {
+	this.on_drop = async function(event) {
 		event.preventDefault();
 		event.stopPropagation();
 
@@ -389,7 +392,7 @@ export const ts_object = new function() {
 			const wrap_source	= ts_object.source // element that's move (global var defined at 'on_drag_mousedown')
 			const wrap_target	= wrap_ts_object // element on user leaves source wrap
 			if (wrap_source === wrap_target) {
-				console.log("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
+				console.warn("[ts_object.on_drop] Unable self drop (2) wrap_source is equal wrap_target");
 				return false;
 			}
 
@@ -403,7 +406,7 @@ export const ts_object = new function() {
 				}
 			}
 			if (div_children===null) {
-				console.log("[ts_object.on_drop] Unable self drop (3) div_children not found in nodes:",nodes);
+				console.warn("[ts_object.on_drop] Unable self drop (3) div_children not found in nodes:",nodes);
 				return false;
 			}
 
@@ -465,51 +468,47 @@ export const ts_object = new function() {
 
 									}
 								})
-						}//end if (data_obj.caller) {
+						}//end if (data_obj.caller)
 					})
 
 				return true // stop execution here
 			}
 
-		const element_children_target	= ts_object.get_link_children_from_wrap(wrap_target)
-		const element_children_source	= ts_object.get_link_children_from_wrap(ts_object.old_parent_wrap)
+		// element_children target/source
+			const element_children_target	= ts_object.get_link_children_from_wrap(wrap_target)
+			const element_children_source	= ts_object.get_link_children_from_wrap(ts_object.old_parent_wrap)
 
-
-		new Promise(function(resolve, reject) {
-			// Append child
-			if ( div_children.appendChild(wrap_source) ) {
-				resolve("DOM updated!");
-			}else{
-				reject(Error("Error on append child"));
+		// check nodes
+			if ( !div_children || !wrap_source ) {
+				console.error('"Error on append child":', wrap_source, div_children);
+				return false
 			}
-		})
-		.then(function() {
 
-			// Update parent data (returns a promise after HTTP request finish)
-			ts_object.update_parent_data(wrap_source)
-			.then(function(response){
+		// add node
+			div_children.appendChild(wrap_source)
 
-				// Updates element_children_target
-					// ts_object.update_arrow_state(element_children_target, true) // Not necessary
+		// Update parent data (returns a promise after HTTP request finish)
+			const response = await ts_object.update_parent_data(wrap_source)
 
-				// Updates element_children_source
-					ts_object.update_arrow_state(element_children_source, false)
+		// Updates element_children_target
+			// ts_object.update_arrow_state(element_children_target, true) // Not necessary ?
 
-				// hilite moved term. wait 300 ms to allow arrow state update
-					const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
-					if (element) {
-						setTimeout(function(){
-							ts_object.hilite_element(element)
-						}, 200)
-					}
+		// Updates element_children_source
+			ts_object.update_arrow_state(element_children_source, false)
 
-				// debug
-					if(SHOW_DEBUG===true) {
-						console.log("[on_drop ts_object.update_parent_data] response",response)
-						console.log("[ts_object.on_drop] Finish on_drop 3");
-					}
-			})
-		});//end js_promise
+		// hilite moved term. wait 300 ms to allow arrow state update
+			const element = wrap_source.querySelector('.list_thesaurus_element[data-type="term"]')
+			if (element) {
+				setTimeout(function(){
+					ts_object.hilite_element(element)
+				}, 200)
+			}
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				console.log("))))) [on_drop ts_object.update_parent_data] response", response)
+				console.log("))))) [ts_object.on_drop] Finish on_drop 3");
+			}
 
 
 		return true;
