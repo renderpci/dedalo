@@ -100,11 +100,19 @@
 					>.tags {
 						margin-left: 0.25rem;
 						margin-right: 0px;
+						&.index{
+							.fn_build_tag_indexation(
+								@color_tag_indexation_normal,
+								white
+							);
+						}
+						&.reference{
+							.fn_build_tag_reference(
+								@color_tag_indexation_normal,
+								#fff
+							);
+						}
 
-						.fn_build_tag_indexation(
-							@color_tag_indexation_normal,
-							white
-						);
 					}
 				}
 
