@@ -317,40 +317,6 @@ export const render_children_list = function(options) {
 					dataset.target_section_tipo = target_section_tipo
 				}
 
-			// DES
-				// if (is_descriptor===true) {
-				// 	var wrap_container 		= children_container
-				// 	var wrap_class 			= "wrap_ts_object"
-				// 	var event_function 		= [
-				// 								{'type':'dragstart','name':'ts_object.on_dragstart'}
-				// 								,{'type':'dragend','name':'ts_object.on_drag_end'}
-				// 								,{'type':'drop','name':'ts_object.on_drop'}
-				// 								,{'type':'dragenter','name':'ts_object.on_dragenter'}
-				// 								,{'type':'dragover','name':'ts_object.on_dragover'}
-				// 								,{'type':'dragleave','name':'ts_object.on_dragleave'}
-				// 							  ]
-				// }else{
-				// 	// Default wrap_ts_object is placed inside children container, but when current element is not descriptor, we place it into 'nd_container'
-				// 	//if (typeof parent_nd_container==="undefined") {
-				// 		//var parent_nd_container  = null
-				// 		//var wrapper_children 	 = children_container.parentNode.children
-				// 		//var wrapper_children_len = wrapper_children.length
-				// 		//for (var wrapper_children_i = wrapper_children_len - 1; wrapper_children_i >= 0; wrapper_children_i--) {
-				// 		//	if (wrapper_children[wrapper_children_i].dataset.role==='nd_container') {
-				// 		//		parent_nd_container = wrapper_children[wrapper_children_i];
-				// 		//		break
-				// 		//	}
-				// 		//}
-				// 		//// Clean always
-				// 		//while (parent_nd_container && parent_nd_container.hasChildNodes()) {
-				// 		//	parent_nd_container.removeChild(parent_nd_container.lastChild);
-				// 		//}
-				// 	//}
-				// 	var wrap_container 	= parent_nd_container
-				// 	// var wrap_class 		= "wrap_ts_object wrap_ts_object_nd"
-				// 	var event_function 	= null
-				// }
-
 			const wrap_ts_object = ui.create_dom_element({
 				element_type	: 'div',
 				parent			: is_descriptor===true ? children_container : parent_nd_container,
@@ -360,24 +326,16 @@ export const render_children_list = function(options) {
 			})
 			// drag events attach
 				if (is_descriptor===true) {
-					wrap_ts_object.addEventListener("dragstart",(e)=>{
-						self.on_dragstart(wrap_ts_object, e)
-					})
-					wrap_ts_object.addEventListener("dragend",(e)=>{
-						self.on_drag_end(wrap_ts_object, e)
-					})
-					wrap_ts_object.addEventListener("drop",(e)=>{
-						self.on_drop(wrap_ts_object, e)
-					})
-					wrap_ts_object.addEventListener("dragenter",(e)=>{
-						self.on_dragenter(wrap_ts_object, e)
-					})
-					wrap_ts_object.addEventListener("dragover",(e)=>{
-						self.on_dragover(wrap_ts_object, e)
-					})
-					wrap_ts_object.addEventListener("dragleave",(e)=>{
-						self.on_dragleave(wrap_ts_object, e)
-					})
+					// dragstart event
+					wrap_ts_object.addEventListener('dragstart', self.on_dragstart)
+					// dragend event
+					wrap_ts_object.addEventListener('dragend', self.on_drag_end)
+					// drop event
+					wrap_ts_object.addEventListener('drop', self.on_drop)
+					// dragover event
+					wrap_ts_object.addEventListener('dragover', self.on_dragover)
+					// dragleave
+					wrap_ts_object.addEventListener("dragleave", self.on_dragleave)
 				}
 
 		// ID COLUMN . id column content
@@ -563,7 +521,8 @@ const render_id_column = function(options) {
 							title_label		: 'add',
 							parent			: id_column_content
 						})
-						link_add.addEventListener('click', function(){
+						link_add.addEventListener('click', function(e){
+							e.stopPropagation()
 
 							// mode set in dataset
 								this.dataset.mode = (node_type==='hierarchy_node') ? "add_child_from_hierarchy" : "add_child"
@@ -610,15 +569,15 @@ const render_id_column = function(options) {
 			// MOVE DRAG . button drag element
 				if (children_data.permissions_button_new>=2) {
 					if(is_descriptor===true) {
-						// var event_function 	= [{'type':'mousedown','name':'ts_object.on_drag_mousedown'}];
 						const link_drag = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'id_column_link ts_object_drag',
 							title_label		: 'drag',
 							parent			: id_column_content
 						})
-						link_drag.addEventListener("mousedown",(e)=>{
-							self.on_drag_mousedown(link_drag, e)
+						link_drag.addEventListener('mousedown', (e)=>{
+							e.stopPropagation()
+							self.on_drag_mousedown(e)
 						})
 						// drag icon
 						ui.create_dom_element({
@@ -726,7 +685,7 @@ const render_term = function(options) {
 		const is_descriptor	= options.is_descriptor
 		const key			= options.key // int j
 
-	// shot vars
+	// children_dataset
 		const children_dataset	= {
 			tipo	: child_data.ar_elements[key].tipo,
 			type	: child_data.ar_elements[key].type
@@ -740,16 +699,6 @@ const render_term = function(options) {
 		const term_text = Array.isArray( child_data.ar_elements[key].value )
 			? child_data.ar_elements[key].value.join(' ')
 			: child_data.ar_elements[key].value
-
-	// des
-		// switch(ts_object.thesaurus_mode) {
-		// 	case 'relation':
-		// 		var event_function 	= [];
-		// 		break;
-		// 	default:
-		// 		var event_function 	= [{'type':'click','name':'ts_object.show_component_in_ts_object'}];
-		// 		break;
-		// }
 
 	// term_node
 		const term_node = ui.create_dom_element({
