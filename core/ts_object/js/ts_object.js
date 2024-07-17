@@ -379,7 +379,7 @@ export const ts_object = new function() {
 		event.stopPropagation();
 
 		if(SHOW_DEBUG===true) {
-			// console.log("))))) ts_object.on_drop event:", event);
+			// console.log("----------------------->>> ts_object.on_drop event:", event);
 		}
 
 		// wrap_ts_object. Find parent wrapper. Note that 'ts_object' is not an instance
@@ -453,7 +453,7 @@ export const ts_object = new function() {
 											return false
 										}
 
-										ts_object.update_arrow_state(link_children_element, true)
+										// ts_object.update_arrow_state(link_children_element, true)
 
 									// refresh children container
 										ts_object.get_children(
@@ -463,7 +463,8 @@ export const ts_object = new function() {
 										)
 										.then(function(){
 											// update parent arrow button
-											ts_object.update_arrow_state(link_children_element, true)
+											 // ts_object.update_arrow_state(link_children_element, true)
+											ts_object.update_arrow_state(link_children_element, false)
 										})
 
 									}
