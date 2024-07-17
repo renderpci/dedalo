@@ -308,7 +308,7 @@
     "installed": "Installed",
     "tool_administration": "Administration tool",
     "remove_filter": "Remove filter",
-    "no_hay_etiqueta_seleccionada": "No tag selected. If you continue, the entire record will be indexed.",
+    "no_hay_etiqueta_seleccionada": "User code does not exist",
     "component_deprecated": "Field in the process of disappearing. This field merges with: %s",
     "error_source_target_lang": "Source and target langs can't be the same language",
     "references": "References",
