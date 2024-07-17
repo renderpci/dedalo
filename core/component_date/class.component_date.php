@@ -476,16 +476,19 @@ class component_date extends component_common {
 		// ar_valor
 			$ar_valor	= array();
 			$ar_dato	= $this->get_dato();
-			foreach ($ar_dato as $key => $current_dato) {
+			if (is_array($ar_dato)) {
 
-				$ar_valor[$key] = ''; // default
+				foreach ($ar_dato as $key => $current_dato) {
 
-				if(empty($current_dato)) {
-					continue;
-				}
+					$ar_valor[$key] = ''; // default
 
-				$ar_valor[$key] = self::data_item_to_value($current_dato, $date_mode);
-			}//end foreach ($ar_dato as $key => $current_dato)
+					if(empty($current_dato)) {
+						continue;
+					}
+
+					$ar_valor[$key] = self::data_item_to_value($current_dato, $date_mode);
+				}//end foreach ($ar_dato as $key => $current_dato)
+			}
 
 		// valor
 			$fields_separator	= $properties->fields_separator ?? ' | ';
