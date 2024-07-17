@@ -308,7 +308,7 @@
     "installed": "स्थापना गरियो",
     "tool_administration": "<mark>Herramienta de administración<\/mark>",
     "remove_filter": "फिल्टर हटाउनुहोस्",
-    "no_hay_etiqueta_seleccionada": "कुनै ट्याग चयन गरिएको छैन। यदि तपाईंले जारी राख्नुभयो भने, सम्पूर्ण रेकर्ड अनुक्रमित हुनेछ।",
+    "no_hay_etiqueta_seleccionada": "प्रयोगकर्ता कोड अवस्थित छैन",
     "component_deprecated": "हराउने प्रक्रियामा क्षेत्र। यो क्षेत्र यससँग मर्ज हुन्छ: %s",
     "error_source_target_lang": "स्रोत र लक्ष्य भाषा एउटै भाषा हुन सक्दैन",
     "references": "सन्दर्भहरू",

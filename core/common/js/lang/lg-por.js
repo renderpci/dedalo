@@ -308,7 +308,7 @@
     "installed": "Instalado",
     "tool_administration": "<mark>Herramienta de administración<\/mark>",
     "remove_filter": "Remover filtro",
-    "no_hay_etiqueta_seleccionada": "Nenhuma etiqueta selecionada. Se você continuar, todo o registro será indexado.",
+    "no_hay_etiqueta_seleccionada": "O código de utilizador não existe",
     "component_deprecated": "<mark>Campo en proceso de desaparición. Este campo se fusiona con: %s<\/mark>",
     "error_source_target_lang": "<mark>Lenguaje de origen y destino NO pueden tener el mismo idioma<\/mark>",
     "references": "<mark>Referencias<\/mark>",

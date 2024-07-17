@@ -308,7 +308,7 @@
     "installed": "Εγκατεστημένο",
     "tool_administration": "<mark>Herramienta de administración<\/mark>",
     "remove_filter": "<mark>Eliminar filtro<\/mark>",
-    "no_hay_etiqueta_seleccionada": "<mark>No hay ninguna etiqueta seleccionada. Si continúa, se indexará todo el registro.<\/mark>",
+    "no_hay_etiqueta_seleccionada": "<mark>El código de usuario no existe<\/mark>",
     "component_deprecated": "Το πεδίο κατά τη διαδικασία της εξαφάνισης. Αυτό το πεδίο συγχωνεύεται με: %s",
     "error_source_target_lang": "Οι λέξεις προέλευσης και στόχου δεν μπορούν να είναι η ίδια γλώσσα",
     "references": "<mark>Referencias<\/mark>",

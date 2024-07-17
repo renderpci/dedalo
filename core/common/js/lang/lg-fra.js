@@ -308,7 +308,7 @@
     "installed": "Installé",
     "tool_administration": "Outil d'administration",
     "remove_filter": "Supprimer le filtre",
-    "no_hay_etiqueta_seleccionada": "<mark>No hay ninguna etiqueta seleccionada. Si continúa, se indexará todo el registro.<\/mark>",
+    "no_hay_etiqueta_seleccionada": "<mark>El código de usuario no existe<\/mark>",
     "component_deprecated": "Champ en voie de disparition. Ce champ est fusionné avec : %s",
     "error_source_target_lang": "La langue source et la langue cible NE PEUVENT PAS être la même.",
     "references": "Références",
