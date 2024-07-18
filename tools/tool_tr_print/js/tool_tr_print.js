@@ -95,6 +95,7 @@ tool_tr_print.prototype.build = async function(autoload=false) {
 			self.transcription_component		= self.ar_instances.find(el => el.tipo===transcription_component_tipo)
 			self.ar_raw_data					= self.transcription_component.data.value
 
+			self.tags_info	= await self.transcription_component.get_tags_info(['index','note','reference'])
 	} catch (error) {
 		self.error = error
 		console.error(error)
