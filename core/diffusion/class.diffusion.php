@@ -990,7 +990,7 @@ abstract class diffusion  {
 					$options->lang,
 					$options->section_tipo
 				);
-				$ar_indexations = $component->get_component_indexations(); # DEDALO_RELATION_TYPE_INDEX_TIPO dd96
+				$ar_indexations = $component->get_component_tags_data('index'); # DEDALO_RELATION_TYPE_INDEX_TIPO dd96
 					// dump($ar_indexations, ' ar_indexations +++++++++++++++++++++++++++++++ '." section_id: $options->section_id - lang: $options->lang - dato:";
 
 				if (!empty($ar_indexations)) {
