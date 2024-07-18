@@ -510,6 +510,39 @@ final class component_text_area_test extends TestCase {
 	}//end test_get_component_tags
 
 
+	/**
+	* TEST_GET_TAGS_DATA_AS_TERM_ID
+	* @return void
+	*/
+	public function test_get_tags_data_as_term_id() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_tags_data_as_term_id();
+
+		$this->assertTrue(
+			$value==='[]',
+				'expected value do not match:' . PHP_EOL
+				.' expected: []' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_tags_data_as_term_id
+
 
 	/**
 	* TEST_get_component_indexations_term_id
@@ -543,6 +576,41 @@ final class component_text_area_test extends TestCase {
 				.' value: '.to_string($value)
 		);
 	}//end test_get_component_indexations_term_id
+
+
+
+	/**
+	* TEST_GET_TAGS_DATA_AS_TERMS
+	* @return void
+	*/
+	public function test_get_tags_data_as_terms() {
+
+		$model			= self::$model;
+		$tipo			= self::$tipo;
+		$section_tipo	= self::$section_tipo;
+		$section_id		= 1;
+		$mode			= 'list';
+		$lang			= DEDALO_DATA_LANG;
+
+		$component = component_common::get_instance(
+			$model, // string model
+			$tipo, // string tipo
+			$section_id,
+			$mode,
+			$lang,
+			$section_tipo,
+			false
+		);
+
+		$value = $component->get_tags_data_as_terms('index','array',' | ');
+
+		$this->assertTrue(
+			$value===[],
+				'expected value do not match:' . PHP_EOL
+				.' expected: []' . PHP_EOL
+				.' value: '.to_string($value)
+		);
+	}//end test_get_tags_data_as_terms
 
 
 
