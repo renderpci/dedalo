@@ -1330,6 +1330,56 @@ class component_text_area extends component_common {
 
 
 
+
+	/**
+	* GET_TAGS_DATA_AS_TERMS
+	* Used for diffusion global search
+	* @see diffusion global search needs
+	* @param string $tag_type // the type of the tag as 'index', 'reference', 'draw'
+	* @param array $format array|test // output format
+	* @param string $separator, | // when the format is text the  separator to use between values
+	* @return array $ar_terms
+	*/
+	public function get_tags_data_as_terms(string $tag_type='index', string $format='array', string $separator=' | ') : array {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+		/*
+		# Search relation index in hierarchy tables
+		*/
+		$tags_data = $this->get_component_tags_data( $tag_type );
+
+		$ar_indexation_terms	= [];
+		$ar_indextaion_obj		= [];
+		foreach ($tags_data as $key => $current_tag_data) {
+
+			$locator = new locator();
+				$locator->set_section_tipo($current_tag_data->section_tipo);
+				$locator->set_section_id($current_tag_data->section_id);
+				$locator->set_component_tipo($current_tag_data->from_component_tipo);
+
+			#$term_id = $current_tag_data->section_tipo.'_'.$current_tag_data->section_id;
+			$term = ts_object::get_term_by_locator($locator);
+
+			$ar_indexation_terms[] = $term;
+
+			$indextaion_obj = new stdClass();
+				$indextaion_obj->data	= $current_tag_data;
+				$indextaion_obj->label	= $term;
+			$ar_indextaion_obj[] = $indextaion_obj;
+		}//end foreach ($tags_data as $key => $current_tag_data)
+		#dump($ar_indexation_terms, ' ar_indexation_terms ++ '.to_string());
+
+		if ($format==='text') {
+			$ar_terms = implode($separator, $ar_indexation_terms);	//json_encode($ar_indexation_terms);
+		}else{
+			$ar_terms = $ar_indextaion_obj;
+		}
+		#dump($ar_terms, ' ar_terms ++ '.to_string());
+
+		return $ar_terms;
+	}//end get_tags_data_as_terms
+
+
+
+
 	/**
 	* GET_COMPONENT_INDEXATIONS_TERMS
 	* Used for diffusion global search
@@ -1340,35 +1390,7 @@ class component_text_area extends component_common {
 		/*
 		# Search relation index in hierarchy tables
 		*/
-		$tags_data = $this->get_component_tags_data( $tag_type );
-
-		$ar_indexation_terms	= [];
-		$ar_indextaion_obj		= [];
-		foreach ($result as $key => $row) {
-
-			$locator = new locator();
-				$locator->set_section_tipo($row->section_tipo);
-				$locator->set_section_id($row->section_id);
-				$locator->set_component_tipo($row->from_component_tipo);
-
-			#$term_id = $row->section_tipo.'_'.$row->section_id;
-			$term = ts_object::get_term_by_locator($locator);
-
-			$ar_indexation_terms[] = $term;
-
-			$indextaion_obj = new stdClass();
-				$indextaion_obj->data	= $row;
-				$indextaion_obj->label	= $term;
-			$ar_indextaion_obj[] = $indextaion_obj;
-		}//end foreach ($result as $key => $row)
-		#dump($ar_indexation_terms, ' ar_indexation_terms ++ '.to_string());
-
-		if ($format==='text') {
-			$ar_terms = implode($separator, $ar_indexation_terms);	//json_encode($ar_indexation_terms);
-		}else{
-			$ar_terms = $ar_indextaion_obj;
-		}
-		#dump($ar_terms, ' ar_terms ++ '.to_string());
+		$ar_terms = $this->get_tags_data_as_terms('index', $format, $separator);
 
 		return $ar_terms;
 	}//end get_component_indexations_terms
