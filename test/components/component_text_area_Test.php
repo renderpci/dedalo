@@ -476,10 +476,10 @@ final class component_text_area_test extends TestCase {
 
 
 	/**
-	* TEST_get_component_indexations
+	* TEST_GET_COMPONENT_TAGS
 	* @return void
 	*/
-	public function test_get_component_indexations() {
+	public function test_get_component_tags_data() {
 
 		$model			= self::$model;
 		$tipo			= self::$tipo;
@@ -498,7 +498,7 @@ final class component_text_area_test extends TestCase {
 			false
 		);
 
-		$value = $component->get_component_indexations();
+		$value = $component->get_component_tags_data('index');
 			// dump($value, ' value ++ '.to_string());
 
 		$this->assertTrue(
@@ -507,7 +507,7 @@ final class component_text_area_test extends TestCase {
 				.' expected: []' . PHP_EOL
 				.' value: '.to_string($value)
 		);
-	}//end test_get_component_indexations
+	}//end test_get_component_tags
 
 
 
