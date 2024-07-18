@@ -733,9 +733,9 @@ const render_default = function(self) {
 					// console.log("self.data:",self.data);
 					const tags_persons = self.transcription_component.data.tags_persons || []
 					const person = tags_persons.find(el =>
-						el.data.section_tipo	===locator.section_tipo &&
-						el.data.section_id		== locator.section_id &&
-						el.data.component_tipo	===locator.component_tipo
+						el.data.section_tipo			=== locator.section_tipo &&
+						parseInt(el.data.section_id)	=== parseInt(locator.section_id) &&
+						el.data.component_tipo			=== locator.component_tipo
 					)
 					const tag_node	= person
 						? '<span class="person">'+ person.full_name +': </span>'
@@ -757,9 +757,9 @@ const render_default = function(self) {
 					// console.log("self.data:",self.data);
 					const tags_notes = self.transcription_component.data.tags_notes || []
 					const note = tags_notes.find(el =>
-						el.data.section_tipo	===locator.section_tipo &&
-						el.data.section_id		== locator.section_id &&
-						el.data.component_tipo	===locator.component_tipo
+						el.data.section_tipo			===locator.section_tipo &&
+						parseInt(el.data.section_id)	=== parseInt(locator.section_id) &&
+						el.data.component_tipo			===locator.component_tipo
 					)
 
 					const note_title = (note.title)
@@ -883,7 +883,7 @@ const render_header = function(self) {
 					el.model!=='section' &&
 					el.tipo===current_component.tipo &&
 					el.section_tipo===current_locator.section_tipo &&
-					el.section_id===current_locator.section_id
+					parseInt(el.section_id)===parseInt(current_locator.section_id)
 				)
 				const current_component_value = current_component_data && current_component_data.value
 					? current_component_data.value.join(' | ')
@@ -910,7 +910,7 @@ const render_header = function(self) {
 		}
 		const ar_persons_for_this_section = ar_persons.filter(el =>
 			el.section_tipo===current_locator.section_tipo &&
-			el.section_id===current_locator.section_id
+			parseInt(el.section_id)===parseInt(current_locator.section_id)
 		)
 		for (let j = 0; j < ar_persons_for_this_section.length; j++) {
 
