@@ -1073,7 +1073,7 @@ class component_text_area extends component_common {
 			}
 
 		// thesaurus indexations integrity verify
-			$ar_indexations				= $this->get_component_indexations();
+			$ar_indexations				= $this->get_component_tags_data('index');
 			$ar_indexations_tag_id_raw	= array();
 			foreach ($ar_indexations as $locator) {
 				if(!property_exists($locator,'tag_id')) continue;
@@ -1233,9 +1233,9 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_COMPONENT_INDEXATIONS
-	* Indexations in v6 are direct data from portal configured in
-	* component_text_area properties 'tags_index'
+	* GET_COMPONENT_TAGS_DATA
+	* Indexations, references, draw tags in v6 are direct data from portal configured in
+	* component_text_area properties 'tags_index', 'tags_references'
 	* Defined in Ontology as (sample from rsc36):
 	* {
 	*	"tags_index": {
@@ -1244,23 +1244,25 @@ class component_text_area extends component_common {
 	*		"section_tipo": "self"	// auto-solved current section_tipo
 	*	}
 	* }
-	* @return array $ar_indexations
+	* @param string $tag_type, used to get the configuration in properties
+	* @return array $ar_tags_data
 	* 	Array of component_portal dato locators
 	*/
-	public function get_component_indexations() : array {
+	public function get_component_tags_data( string $tag_type='index' ) : array {
 
 		$properties	= $this->get_properties();
 
-		// tags_index
-			$tags_index	= $properties->tags_index ?? null;
-			if(empty($tags_index)) {
+		// tags_config
+			$tags_name = 'tags_'.$tag_type;
+			$tags_config	= $properties->$tags_name ?? null;
+			if(empty($tags_config)) {
 				return [];
 			}
 
 		// short vars
 			$section_tipo	= $this->section_tipo;
 			$section_id		= $this->section_id;
-			$component_tipo	= $tags_index->tipo;
+			$component_tipo	= $tags_config->tipo;
 
 		// component portal where the indexations are stored (v6 are direct instead v5 reverse pointers)
 			$model_name		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
@@ -1273,11 +1275,11 @@ class component_text_area extends component_common {
 				$section_tipo
 			);
 
-		$ar_indexations = $componet_index->get_dato() ?? [];
+		$ar_tags_data = $componet_index->get_dato() ?? [];
 
 
-		return $ar_indexations;
-	}//end get_component_indexations
+		return $ar_tags_data;
+	}//end get_component_tags_data
 
 
 
@@ -1293,7 +1295,7 @@ class component_text_area extends component_common {
 
 		$ar_indexations = [];
 
-		$locators = $this->get_component_indexations();
+		$locators = $this->get_component_tags_data($tag_type);
 		foreach ($locators as $locator) {
 
 			// compound term_id from locator section_tipo and section_id
@@ -1307,6 +1309,8 @@ class component_text_area extends component_common {
 
 
 		return $indexations_locators;
+
+		return $this->get_tags_data_as_term_id( 'index', $type );
 	}//end get_component_indexations_term_id
 
 
@@ -1321,7 +1325,7 @@ class component_text_area extends component_common {
 		/*
 		# Search relation index in hierarchy tables
 		*/
-		$result = $this->get_component_indexations();
+		$tags_data = $this->get_component_tags_data( $tag_type );
 
 		$ar_indexation_terms	= [];
 		$ar_indextaion_obj		= [];
