@@ -132,4 +132,106 @@ final class dd_component_text_area_api {
 
 
 
+	/**
+	* GET_TAGS_INFO
+	* Resolve the specific tags defined by the rqo request
+	* Resolve the tag locators with the term
+	* Resolve the annotations and person name/surname and his role
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "delete_tag",
+	*	dd_api	: 'dd_component_text_area_api',
+	*	source	: {
+	*		section_tipo	: 'rsc167', // current component_text_area section_tipo
+	*		section_id		: '2', // component_text_area section_id
+	*		tipo			: 'rsc36', // component_text_area tipo
+	*		lang			: 'lg-spa' // component_text_area lang	*
+	*	},
+	* 	options : {
+	* 		type : ['index'] // array e.g. ['index'.'note','reference']
+	* 	}
+	* }
+	* @return object $response
+	*/
+	public static function get_tags_info(object $rqo) : object {
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= [];
+				$response->error	= null;
+
+		// source
+			$source			= $rqo->source;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+			$tipo			= $source->tipo;
+			$lang			= $source->lang; // string e.g. 'lg-spa'
+
+		// options
+			$options	= $rqo->options;
+			$ar_types	= $options->ar_type; // string e.g. 'index'
+
+		// component_text_area. Remove tag in all langs
+			$model_name				= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			$component_text_area	= component_common::get_instance(
+				$model_name,
+				$tipo,
+				$section_id,
+				'list',
+				$lang,
+				$section_tipo
+			);
+
+			$properties		= $component_text_area->get_properties();
+
+			$tags_info = new stdClass();
+
+
+			// INDEX
+				if(in_array('index', $ar_types) && isset($properties->tags_index)) {
+					$tags_info->tags_index = $component_text_area->get_tags_data_as_terms('index');
+				}
+
+			// PERSON
+				// person. tags for persons
+				// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
+				if(in_array('person', $ar_types) && isset($properties->tags_persons)) {
+
+					// related_sections add
+						$related_sections = $component_text_area->get_related_sections();
+
+					// tags_persons
+						$tags_persons = [];
+						// related_sections
+						$obj_data_sections = array_find($related_sections->data, function($el){
+							return $el->typo==='sections';
+						}) ?? new stdClass();
+						$ar_related_sections = $obj_data_sections->value ?? [];
+						// tags_persons_config
+						$tags_persons_config = $properties->tags_persons;
+						foreach ($tags_persons_config as $related_section_tipo => $current_value) {
+							$ar_tags_persons =  $component_text_area->get_tags_persons($related_section_tipo, $ar_related_sections);
+							$tags_info->tags_persons = array_merge($tags_persons, $ar_tags_persons);
+						}
+				}
+
+			// NOTE
+				if(in_array('note', $ar_types) && isset($properties->tags_notes)) {
+					$tags_info->tags_notes = $component_text_area->get_annotations();
+				}
+			// REFERENCE
+				if(in_array('reference', $ar_types) && isset($properties->tags_reference)) {
+					$tags_info->tags_reference = $component_text_area->get_tags_data_as_terms('reference');
+				}
+
+		// response result
+			$response->result = $tags_info;
+
+
+		return $response;
+	}//end get_tags_info
+
+
 }//end dd_component_text_area_api
