@@ -633,26 +633,19 @@ const render_default = function(self) {
 			parent			: fragment
 		})
 
-		for (let j = 0; j < ar_fragment_data_len; j++) {
-			let current_fragment = ar_fragment_data[j]
-			// for every block create a fragment and left block for indexation ans right block for the text
-			const fragment_block = ui.create_dom_element({
-				element_type	: 'tr',
-				class_name		: 'fragment_block',
+		function get_new_text_node() {
+
+			return ui.create_dom_element({
+				element_type	: 'td',
+				class_name		: 'right_block',
 				parent			: data_block
 			})
-				const left_block = ui.create_dom_element({
-					element_type	: 'td',
-					class_name		: 'left_block',
-					parent			: fragment_block
-				})
-				const right_block = ui.create_dom_element({
-					element_type	: 'td',
-					class_name		: 'right_block',
-					parent			: fragment_block
-				})
-
-
+		}
+		let right_block =  get_new_text_node()
+		let left_block = ''
+		let row = 1
+		for (let j = 0; j < ar_fragment_data_len; j++) {
+			let current_fragment = ar_fragment_data[j]
 			// TC
 				function get_tc(match, p1,p2, offset) {
 
@@ -672,42 +665,60 @@ const render_default = function(self) {
 					// the tag_id is inside the p4 of the match
 					const tag_id = p4
 					// get all indexation terms of the current tag with match tag_id inside the locator
-					const tags_index	= self.transcription_component.data.tags_index || []
+					// const tags_index	= self.transcription_component.data.tags_index || []
+					const tags_index	= self.tags_info.tags_index || []
+
 					const ar_indexation	= tags_index.filter(el =>
 						el.data.tag_id	=== tag_id
 					)
 					const ar_indexation_len = ar_indexation.length
 
-					const indexations = ui.create_dom_element({
-							id 				: 'index_'+tag_id,
-							element_type	: 'div',
-							class_name 		: 'indexations',
-							parent 			: left_block
-						})
-						const indexations_tag = ui.create_dom_element({
-							element_type	: 'span',
-							class_name 		: 'index tag',
-							text_content	: tag_id,
-							parent 			: indexations
-						})
+					if(ar_indexation_len>0){
 
-					const ar_labels = []
-					for (let i = 0; i < ar_indexation_len; i++) {
-						ar_labels.push(ar_indexation[i].label)
+						const indexations = ui.create_dom_element({
+								id 				: 'index_'+tag_id,
+								element_type	: 'div',
+								class_name 		: 'indexations',
+								parent 			: left_block
+							})
+							const indexations_tag = ui.create_dom_element({
+								element_type	: 'span',
+								class_name 		: 'index tag',
+								text_content	: tag_id,
+								parent 			: indexations
+							})
+
+						const ar_labels = []
+						for (let i = 0; i < ar_indexation_len; i++) {
+							ar_labels.push(ar_indexation[i].label)
+						}
+						ui.create_dom_element({
+								element_type	: 'a',
+								class_name 		: 'index terms',
+								href 			: '#tagindex_'+tag_id,
+								text_content	: ar_labels.join(', '),
+								parent 			: indexations
+							})
 					}
-					ui.create_dom_element({
-							element_type	: 'a',
-							class_name 		: 'index terms',
-							href 			: '#tagindex_'+tag_id,
-							text_content	: ar_labels.join(', '),
-							parent 			: indexations
-						})
 
 					const tag_node	= '<a id="tagindex_'+tag_id+'" href="#index_'+tag_id+'" class="index in">'+tag_id+'{</a>'
 
 					return tag_node
 				}
 				const pattern_index_in = tr.get_mark_pattern('indexIn');
+				const find_indexing = current_fragment.search(pattern_index_in)
+
+				if(find_indexing !== -1){
+						right_block = get_new_text_node()
+						row++
+
+						left_block = ui.create_dom_element({
+							element_type	: 'td',
+							class_name		: 'left_block',
+							parent			: data_block
+						})
+						left_block.style = `grid-row: ${row}`
+				}
 				current_fragment = current_fragment.replace(pattern_index_in, get_index_in);
 
 			// INDEX OUT
@@ -720,6 +731,16 @@ const render_default = function(self) {
 				const pattern_indexOut = tr.get_mark_pattern('indexOut');
 				current_fragment = current_fragment.replace(pattern_indexOut, get_index_out);
 				// current_fragment = current_fragment.replace(pattern_indexOut, `<a href=#index_'+tag_id+' class="index out">}$4</a>`);
+
+			// REFERENCE
+				function get_reference(match, p1,p2,p3,p4,p5,p6, offset){
+					// reference are removed from the text, links are not useful in print
+					const tag_node = ''
+
+					return tag_node
+				}
+				const pattern_reference = tr.get_mark_pattern('reference');
+				current_fragment = current_fragment.replace(pattern_reference, get_reference);
 
 			// PERSON
 				function get_person(match, p1,p2,p3,p4,p5,p6, offset){
@@ -738,7 +759,7 @@ const render_default = function(self) {
 						el.data.component_tipo			=== locator.component_tipo
 					)
 					const tag_node	= person
-						? '<span class="person">'+ person.full_name +': </span>'
+						? '<div class="person">'+ person.full_name +': </div>'
 						: ''
 					return tag_node
 				}
@@ -755,7 +776,9 @@ const render_default = function(self) {
 					const locator		= JSON.parse(data) || {}
 					// get the match of the locator with the tag_persons array inside the instance
 					// console.log("self.data:",self.data);
-					const tags_notes = self.transcription_component.data.tags_notes || []
+					// const tags_notes = self.transcription_component.data.tags_notes || []
+					const tags_notes	= self.tags_info.tags_notes || []
+
 					const note = tags_notes.find(el =>
 						el.data.section_tipo			===locator.section_tipo &&
 						parseInt(el.data.section_id)	=== parseInt(locator.section_id) &&
