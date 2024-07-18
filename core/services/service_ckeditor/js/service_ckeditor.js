@@ -1225,7 +1225,7 @@ export const service_ckeditor = function() {
 					if( current_type && current_type === type ) {
 						 const current_tag_id	= item.hasAttribute('reference')
 							? item.getAttribute( 'reference' ).tag_id
-							: item.getAttribute(' tag_id' )
+							: item.getAttribute( 'tag_id' )
 
 						ar_tag_id.push(current_tag_id)
 					}
