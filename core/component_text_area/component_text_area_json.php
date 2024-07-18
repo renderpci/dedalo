@@ -90,22 +90,6 @@
 							'av_rewind_seconds'		=> 3
 						]
 					];
-
-				// // Notes. Add the section_tipo for the annotations
-				// 	$this->context->notes_section_tipo		= DEDALO_NOTES_SECTION_TIPO;
-				// 	$this->context->notes_publication_tipo	= DEDALO_NOTES_PUBLICATION_TIPO;
-
-				// // References. Add the section_tipo for the virtual references
-				// 	$this->context->references_section_tipo		= DEDALO_TS_REFERENCES_SECTION_TIPO;
-				// 	$this->context->references_component_tipo	= DEDALO_TS_REFERENCES_COMPONENT_TIPO;
-				// 	$this->context->references_component_model	= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_TS_REFERENCES_COMPONENT_TIPO,true);
-
-				// // av_player
-				// 	$this->context->av_player = (object)[
-				// 		'av_play_pause_code'	=> 'Escape', // ESC
-				// 		'av_insert_tc_code'		=> 'F2', // F2
-				// 		'av_rewind_seconds'		=> 3
-				// 	];
 				break;
 
 			default:
@@ -156,14 +140,6 @@
 									$tags_persons = array_merge($tags_persons, $ar_tags_persons);
 								}
 						}
-					// indexation
-						if(isset($properties->tags_index)) {
-							$tags_index = $this->get_component_indexations_terms();
-						}
-					// notes
-						if(isset($properties->tags_notes)) {
-							$tags_notes = $this->get_annotations();
-						}
 
 					$value = $this->get_dato();
 
@@ -198,12 +174,6 @@
 				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;
 					$item->tags_persons		= $tags_persons;
-				}
-				if(isset($properties->tags_index) && $mode==='edit') {
-					$item->tags_index = $tags_index;
-				}
-				if(isset($properties->tags_notes) && $mode==='edit') {
-					$item->tags_notes = $tags_notes;
 				}
 
 		$data[] = $item;
