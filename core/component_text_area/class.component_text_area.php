@@ -1284,16 +1284,17 @@ class component_text_area extends component_common {
 
 
 	/**
-	* GET_COMPONENT_INDEXATIONS_TERM_ID
+	* GET_TAGS_DATA_AS_TERM_ID
 	* Used for diffusion global search (temporally??????)
 	* @see diffusion global search needs
+	* @param string $tag_type // the type of the tag as 'index', 'reference', 'draw'
 	* @param string $type
-	* @return string $indexations_locators
+	* @return string $string_ar_term_id
 	* 	JSON encoded array
 	*/
-	public function get_component_indexations_term_id(string $type) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
+	public function get_tags_data_as_term_id(string $tag_type='index', string $type=DEDALO_RELATION_TYPE_INDEX_TIPO) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 
-		$ar_indexations = [];
+		$ar_term_id = [];
 
 		$locators = $this->get_component_tags_data($tag_type);
 		foreach ($locators as $locator) {
@@ -1301,14 +1302,28 @@ class component_text_area extends component_common {
 			// compound term_id from locator section_tipo and section_id
 			$term_id = $locator->section_tipo.'_'.$locator->section_id;
 
-			$ar_indexations[] = $term_id;
+			$ar_term_id[] = $term_id;
 		}//end foreach ($locators as $locator)
 
 		// string value JSON encoded array
-		$indexations_locators = json_encode($ar_indexations);
+		$string_ar_term_id = json_encode($ar_term_id);
 
 
-		return $indexations_locators;
+		return $string_ar_term_id;
+	}//end get_tags_data_as_term_id
+
+
+
+
+	/**
+	* GET_COMPONENT_INDEXATIONS_TERM_ID
+	* Used for diffusion global search (temporally??????)
+	* @see diffusion global search needs
+	* @param string $type
+	* @return string $string_ar_term_id
+	* 	JSON encoded array
+	*/
+	public function get_component_indexations_term_id(string $type) : string {  // DEDALO_RELATION_TYPE_INDEX_TIPO
 
 		return $this->get_tags_data_as_term_id( 'index', $type );
 	}//end get_component_indexations_term_id
