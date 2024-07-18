@@ -62,13 +62,17 @@
 				box-shadow: 0 0px 10px 0px #dddddd;
 
 				.data_block {
-					.fragment_block {
-						width: 100ch;
+					display: grid;
+					grid-template-columns: 2fr 8fr;
+					// .fragment_block {
+					// width: 80ch;
 
 						.right_block {
+							border-left: 1px solid #555;
 							padding-left: 1em;
-							display: grid;
+							// display: grid;
 							word-wrap: break-word;
+							grid-column: 2;
 
 							.tc {
 								color: #2c6133;
@@ -91,11 +95,11 @@
 						}
 
 						.left_block {
-							border-right: 1px solid #555;
 							margin-right: 1em;
 							text-align: left;
 							padding-right:1em;
-							width: 20ch;
+							// width: 20ch;
+							grid-column: 1;
 
 							.indexations {
 								display: flex;
@@ -110,7 +114,7 @@
 						}:target {
 							background: #eeeeee;
 						}
-					}
+					// }
 				}
 
 				.data_block.hidden_column_index{
