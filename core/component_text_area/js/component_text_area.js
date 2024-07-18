@@ -1065,6 +1065,48 @@ component_text_area.prototype.delete_tag = function(tag_id, type, key=0) {
 
 
 /**
+* GET_TAGS_INFO
+* @param array type
+* 	e.g. ['index']
+* @param int key = 0
+* 	editors key (default zero)
+* @return promise
+* 	resolve object response
+*/
+component_text_area.prototype.get_tags_info = function(ar_type, key=0) {
+
+	const self = this
+
+	return new Promise(function(resolve){
+
+		data_manager.request({
+			body : {
+				action	: 'get_tags_info',
+				dd_api	: 'dd_component_text_area_api', // component_text_area
+				source	: {
+					section_tipo	: self.section_tipo,
+					section_id		: self.section_id,
+					tipo			: self.tipo,
+					lang			: self.lang
+				},
+				options : {
+					ar_type	: ar_type ,// array current selected tag type (passed as param)
+					key		: key // int, text_area data key, by default is 0
+				}
+			}
+		})
+		.then(async function(api_response){
+
+			if (api_response.result!==false) {
+				resolve(api_response.result)
+			}
+		})
+	})
+}//end get_tags_info
+
+
+
+/**
 * UPDATED_LAYER_DATA
 * @param object options
 * {
