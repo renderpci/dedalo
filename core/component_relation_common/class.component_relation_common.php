@@ -59,8 +59,7 @@ class component_relation_common extends component_common {
 	* @param string $mode = 'list'
 	* @param string $lang = null
 	* @param string $section_tipo = null
-	*
-	* @return bool
+	* @return void
 	*/
 	protected function __construct(string $tipo=null, $section_id=null, string $mode='list', string $lang=null, string $section_tipo=null, bool $cache=true) {
 
@@ -113,7 +112,7 @@ class component_relation_common extends component_common {
 	/**
 	* GET_COMPONENTS_WITH_RELATIONS
 	* Array of components model name that using locators in dato and extends component_relation_common
-	* @return array
+	* @return array $components_with_relations
 	*/
 	public static function get_components_with_relations() : array {
 

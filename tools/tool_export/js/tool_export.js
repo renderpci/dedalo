@@ -7,7 +7,6 @@
 // import
 	import {clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
