@@ -1852,6 +1852,52 @@ export const service_ckeditor = function() {
 
 
 	/**
+	* GET_SELECTED_TAG
+	* get the tag object that was selected
+	* @return object|false tag_obj
+	*	the tag selected object
+	*/
+	this.get_selected_tag = function() {
+
+		const self = this
+		// get the editor
+		const editor = self.editor
+		if (!editor) {
+			return false
+		}
+
+		// get the user selection
+		const selection = editor.editing.model.document.selection;
+		// references can be checked directly with the selection, as they are text
+		const has_reference = selection.hasAttribute( 'reference' )
+		// other tags as draw, geo,... are images and
+		// they need to get the selected element instead the selection
+		const element = selection.getSelectedElement()
+
+		// if the selection has not references or element, as text selection
+		// stop the process and return false
+		if(!has_reference && !element){
+			return false
+		}
+		// get the tag object
+		// when the selected is a reference get from selection
+		// otherwise use the element to get the attributes.
+		const tag_obj =  has_reference
+			? selection.getAttribute( 'reference' )
+			: {
+				type		: element.getAttribute('type'),
+				tag_id		: element.getAttribute('tag_id'),
+				state		: element.getAttribute('state'),
+				label		: element.getAttribute('label'),
+				data		: element.getAttribute('data')
+			 }
+
+		return tag_obj
+	}//end get_selected_tag
+
+
+
+	/**
 	* FOCUS
 	* Focus editor and set pointer to the end of text
 	* @return void
