@@ -8,7 +8,7 @@
 	import {view_default_edit_text_area} from './view_default_edit_text_area.js'
 	import {view_mini_text_area} from './view_mini_text_area.js'
 	import {view_line_edit_text_area} from './view_line_edit_text_area.js'
-
+	import {ui} from '../../common/js/ui.js'
 
 /**
 * RENDER_EDIT_COMPONENT_text_area
@@ -58,5 +58,237 @@ render_edit_component_text_area.prototype.edit = async function(options) {
 }//end edit
 
 
+
+/**
+* RENDER_LAYER_SELECTOR
+* Used from component_image
+* @return HTMLElement layer_selector
+*/
+export const render_layer_selector = function(options){
+
+	const self			= options.self
+	const text_editor	= options.text_editor
+	const callback		= options.callback
+	const data_tag		= options.data_tag
+	const ar_layers		= data_tag.layers
+
+	const fragment = new DocumentFragment()
+
+	// // add_layer button
+	// 	const add_layer = ui.create_dom_element({
+	// 		element_type	: 'span',
+	// 		class_name		: 'button add',
+	// 		title			: get_label.new || 'New',
+	// 		parent			: fragment
+	// 	})
+	// 	add_layer.addEventListener('click', (e) =>{
+	// 		e.preventDefault()
+	// 		e.stopPropagation()
+	// 		data_tag.data = [data_tag.last_layer_id]
+	// 		const tag 	= self.build_view_tag_obj(data_tag, tag_id)
+	// 		text_editor.set_content(tag)
+	// 		layer_selector.remove()
+	// 	})
+
+	// layer_icon
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'layer_icon',
+			parent			: fragment,
+			text_node		: data_tag.type
+		})
+
+	// close button
+		const close = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'button close',
+			parent			: fragment
+		})
+		close.addEventListener('click', (e) =>{
+			e.preventDefault()
+			e.stopPropagation()
+			layer_selector.remove()
+		})
+
+	// inputs container
+		const layer_ul = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'layer_ul',
+			parent			: fragment
+		})
+
+		for (let i = 0; i < ar_layers.length; i++) {
+			const layer = ar_layers[i]
+
+			const layer_li = ui.create_dom_element({
+				element_type	: 'li',
+				parent			: layer_ul
+			})
+			layer_li.addEventListener('click', (e) =>{
+				e.preventDefault()
+				e.stopPropagation()
+
+				data_tag.label = `${data_tag.tag_id}:${layer.layer_id}`
+				data_tag.data = [layer.layer_id]
+
+				callback({
+					data_tag	: data_tag,
+					text_editor	: text_editor
+				})
+
+				// const tag = self.build_view_tag_obj(data_tag, tag_id)
+				// text_editor.set_content(tag)
+				layer_selector.remove()
+			})
+
+			// layer_id
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'layer_id',
+					parent			: layer_li,
+					text_node		: layer.layer_id
+				})
+
+			// user_layer_name
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'user_layer_name',
+					parent			: layer_li,
+					text_node		: layer.user_layer_name
+				})
+
+				// const layer_color_box = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name 		: 'layer_color_box',
+				// 	parent 			: layer_li,
+				// })
+				// const layer_color = ui.create_dom_element({
+				// 	element_type	: 'div',
+				// 	class_name 		: 'layer_color',
+				// 	parent 			: layer_color_box,
+				// })
+				// layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
+				// 	? layer.layer_color
+				// 	: 'black'
+		}// end for
+
+	const layer_selector = ui.create_dom_element({
+		element_type	: 'div',
+		class_name		: 'layer_selector'
+	})
+	layer_selector.appendChild(fragment)
+
+
+	return layer_selector
+}//end render_layer_selector
+
+
+
+
+/**
+* RENDER_PAGE_SELECTOR
+* Creates a modal dialog with page_selector options
+* @return bool true
+*/
+export const render_page_selector = function(self, data_tag, tag_id, text_editor) {
+
+	// short vars
+		const total_pages	= data_tag.total_pages
+		const offset		= data_tag.offset
+		const page_in		= offset
+		const page_out		= (offset -1) + total_pages
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			text_node		: get_label.select_page_of_the_doc
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body'
+		})
+
+		const label = eval('`'+get_label.choose_page_between+'`')
+		const body_title = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: label,
+			parent			: body
+		})
+
+		const body_input = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'body_title',
+			parent			: body
+		})
+
+		const error_input = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'body_title',
+			text_node		: '',
+			parent			: body
+		})
+
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'span'
+		})
+
+		const user_option_cancel = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'user_option ',
+			inner_html		: get_label.cancel || 'Cancel',
+			parent			: footer
+		})
+
+		const user_option_ok = ui.create_dom_element({
+			element_type	: 'button',
+			class_name		: 'user_option',
+			inner_html		: get_label.insert_tag || 'Insert tag',
+			parent			: footer
+		})
+
+	// save editor changes to prevent conflicts with modal components changes
+		text_editor.save()
+
+	// modal
+		const modal = ui.attach_to_modal({
+			header	: header,
+			body	: body,
+			footer	: footer,
+			size	: 'normal'
+		})
+
+	user_option_ok.addEventListener('click', (e) =>{
+		e.preventDefault()
+		e.stopPropagation()
+		const user_value = body_input.value
+		if(user_value === null) {
+			modal.renove()
+		}
+		if(user_value > page_out || user_value < page_in){
+			error_input.textContent = get_label.value_out_of_range || 'Value out of range'
+			return
+		}
+		const data		= body_input.value - (offset -1)
+		data_tag.label	= body_input.value
+		data_tag.data	= [data]
+		const tag		= self.build_view_tag_obj(data_tag, tag_id)
+		text_editor.set_content(tag)
+		modal.remove()
+	})
+
+	user_option_cancel.addEventListener('click', (e) =>{
+		e.stopPropagation()
+		modal.remove()
+	})
+
+
+	return true
+}//end render_page_selector
 
 // @license-end
