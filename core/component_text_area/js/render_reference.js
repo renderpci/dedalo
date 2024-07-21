@@ -48,10 +48,14 @@ export const render_reference = async function(options) {
 			return false
 		}
 
-		const all_tag_data = component_tags_reference.datum.data.find(el =>
+		const found_tag_data = component_tags_reference.datum.data.find(el =>
 			el.tipo===component_tags_reference.tipo &&
 			el.section_tipo===component_tags_reference.section_tipo &&
-			el.section_id==component_tags_reference.section_id).value || []
+			el.section_id==component_tags_reference.section_id)
+
+		const all_tag_data = found_tag_data && found_tag_data.value
+			? found_tag_data.value
+			: []
 
 		const ar_tags_values = component_tags_reference.data.value
 
@@ -75,22 +79,9 @@ export const render_reference = async function(options) {
 				existing_values.push(used_locator)
 			}
 		}
-
-	// short vars
-		// const data_string		= view_tag.data
-		// const reference_element = text_editor.get_selected_reference_element()
-
-		// const data_string = (reference_element)
-		// 	? reference_element.data
-		// 	: ''
-
-		// convert the data_tag form string to json*-
-		// replace the ' to " stored in the html data to JSON "
-		// const data		= data_string.replace(/\'/g, '"')
-		// const locator	= data && data.length > 0
-		// 	? JSON.parse(data)
-		// 	: null
-
+		
+	// get the reference portal
+	// used as temporal portal to search into thesaurus and get the locator to be assigned to the tag
 		const references_section_tipo		= self.context.features.references_section_tipo // the section with a empty autocomplete to be use to search
 		const references_component_tipo		= self.context.features.references_component_tipo // empty autocomplete to be use to search
 		const references_component_model	= self.context.features.references_component_model
