@@ -1362,6 +1362,73 @@ component_text_area.prototype.add_component_history_note = async function(option
 	}//end create_reference
 
 
+	/**
+	* BUILD_TAG
+	* Build a new annotation when user clicks on text editor button
+	*
+	* @return
+	*/
+	component_text_area.prototype.build_tag = function(options) {
+
+		const self = options.caller
+		// get the text_editor sent by the event (button_note event)
+		const text_editor = options.text_editor
+
+		const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, 'F2')
+		const susbscriptors_responses_length	= susbscriptors_responses.length
+
+		// iterate subscription responses
+		for (let i = 0; i < susbscriptors_responses_length; i++) {
+			const data_tag	= susbscriptors_responses[i]
+
+			// last_tag_id. Find last geo and returns id or 0
+				const last_tag_index_id = self.get_last_tag_id(data_tag.type, text_editor)
+
+			// if the linked component create a tag_id, use it (as tc) otherwise get the last tag id and add 1
+				const tag_id = (!data_tag.tag_id)
+					// tag_id. Last id plus one
+					? parseInt(last_tag_index_id) + 1
+					: data_tag.tag_id;
+
+			// set the tag_id into the tag data
+			data_tag.tag_id = tag_id
+
+			switch(data_tag.type) {
+				case ('draw'):
+					const layer_selector = render_layer_selector({
+						self		: self,
+						data_tag	: data_tag,
+						text_editor	: text_editor,
+						callback	: self.create_draw_tag.bind(self)
+					})
+					self.node.appendChild(layer_selector)
+					break;
+				case ('geo'): {
+					 const layer_selector = render_layer_selector({
+						self		: self,
+						data_tag	: data_tag,
+						text_editor	: text_editor,
+						callback	: self.create_geo_tag.bind(self)
+					})
+					 self.node.appendChild(layer_selector)
+					break;
+				}
+				case ('page'): {
+
+					// modal selector
+					render_page_selector(self, data_tag, tag_id, text_editor)
+					break;
+				}
+				default: {
+
+					const tag = self.build_view_tag_obj(data_tag, tag_id)
+
+					text_editor.set_content(tag)
+					break;
+				}
+			}// end switch
+		}
+	}// end build_tag
 
 /**
 * CHANGE_LANG
