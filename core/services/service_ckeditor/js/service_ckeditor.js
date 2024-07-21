@@ -224,7 +224,7 @@ export const service_ckeditor = function() {
 				toolbar:{
 					removeItems: remove_reference
 				},
-				// By default the UI will be in English.
+				// Set the lang of the DEDALO_DATA_LANG.
 				language: lang,
 				simpleUpload: {
 					// The URL that the images are uploaded to.
