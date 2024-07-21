@@ -44,6 +44,16 @@ $text = strip_tags($text, '');
 // tag type
 	$tag_image_dir = dirname(dirname(dirname(__FILE__))) . '/themes/default/tag_base';
 	$type = false;
+	$fill_color = new stdClass();
+		$fill_color->n = '#FF9900';
+		$fill_color->d = '#3e8fed';
+		$fill_color->r = '#e04a26';
+
+	$icon_color = new stdClass();
+		$icon_color->n = '#000000';
+		$icon_color->d = '#ffffff';
+		$icon_color->r = '#ffffff';
+
 	switch (true) {
 		case (strpos($text,'[TC_')!==false):
 			$type			= 'tc';
@@ -82,6 +92,47 @@ $text = strip_tags($text, '');
 			preg_match($pattern, $text, $matches);
 			$text		= $matches[4];
 			$imgBase	= $tag_image_dir."/draw-{$state}-x2.png";
+
+			$path = strlen($text)>3
+				? '"M73.22,30H14.85C6.74,30,0.17,23.43,0.17,15.32v-0.64C0.17,6.57,6.74,0,14.85,0l58.37,0 c8.11,0,14.68,6.57,14.68,14.68v0.64C87.91,23.43,81.33,30,73.22,30z"'
+				: '"M61.15,30H14.88C6.77,30,0.19,23.43,0.19,15.32v-0.64C0.19,6.57,6.77,0,14.88,0l46.27,0 c8.11,0,14.68,6.57,14.68,14.68v0.64C75.83,23.43,69.26,30,61.15,30z"';
+			$x_length = strlen($text)>3
+				? 88
+				: 76;
+			$x_text_position = strlen($text)>3
+				? 28
+				: 30;
+
+			$svg_content = '
+			<svg enable-background="new 0 0 '.$x_length.' 30" version="1.1" viewBox="0 0 '.$x_length .' 30" xml:space="preserve" xmlns="http://www.w3.org/2000/svg">
+			<g id="base">
+				<path fill="'.$fill_color->$state.'" d='.$path.'/>
+				<path fill="'.$icon_color->$state.'" d="m14.86 5.9c-0.97 0-1.92 0.09-2.84 0.4-5.39 1.81-7.99 6.89-8.16 7.32-0.16 0.43-0.25 0.77-0.25 1.02s0.08 0.59 0.25 1.02c0.16 0.43 3.42 7.71 10.99 7.71 8.01 0 10.83-7.28 10.99-7.71s0.25-0.77 0.25-1.02-0.08-0.59-0.25-1.02c-0.16-0.43-2.77-5.39-8.16-7.32-0.89-0.33-1.85-0.4-2.82-0.4zm-5.09 4.68c0.18-0.18 0.28-0.25 0.32-0.21s0.01 0.16-0.09 0.39c-0.29 0.67-0.44 1.37-0.44 2.1 0 1.46 0.52 2.71 1.56 3.75s2.29 1.56 3.75 1.56 2.71-0.52 3.75-1.56 1.56-2.29 1.56-3.75c0-0.7-0.14-1.37-0.41-2.01-0.09-0.22-0.12-0.35-0.08-0.39s0.14 0.04 0.31 0.21c0.82 0.81 1.77 1.9 2.83 3.25 0.15 0.19 0.24 0.43 0.27 0.72 0.02 0.29-0.03 0.54-0.16 0.75-0.26 0.42-3.18 5.6-8.06 5.6-5.39 0-7.8-5.16-8.06-5.58-0.13-0.21-0.18-0.46-0.16-0.75s0.11-0.53 0.25-0.73c1.04-1.39 2-2.5 2.86-3.35zm7.78 1.8 0.62 0.64c0.18 0.18 0.29 0.4 0.34 0.68s0.03 0.52-0.08 0.73c-0.44 0.8-0.98 1.48-1.64 2.05-0.19 0.15-0.42 0.22-0.68 0.19-0.27-0.02-0.48-0.12-0.65-0.3l-0.62-0.6c-0.16-0.18-0.24-0.37-0.22-0.59s0.11-0.42 0.29-0.59c0.52-0.52 1.04-1.21 1.57-2.07 0.13-0.21 0.29-0.33 0.49-0.35s0.4 0.05 0.58 0.21z"/>
+			</g>
+			<g id="text">
+				<text x="'.$x_text_position.'" y="23" fill="#ffffff" font-family="sans-serif" font-weight="600" font-size="24px" letter-spacing="-.50px">
+				'.$text.'</text>
+			</g>
+			</svg>
+			';
+			header("Cache-Control: private, max-age=10800, pre-check=10800");
+			header("Pragma: private");
+			header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
+
+			// No cache header
+			// header("Cache-Control: no-cache, must-revalidate");
+
+			// Output to browser
+			// header('Content-Length: '.strlen($file_content));
+			header('Content-Type: image/svg+xml');
+			// header('Content-Length: '.filesize($file_path));
+			// header('Accept-Ranges: bytes');
+			header('Vary: Accept-Encoding');
+			// fpassthru( $file_path );
+			header('Connection: close');
+			echo $svg_content;
+			die();
+
 			break;
 
 		case (strpos($text,'[geo-')!==false):
@@ -319,6 +370,9 @@ $text = strip_tags($text, '');
 			break;
 
 		case 'draw':
+			$offsetY = 2;
+			$offsetX = 10;
+			break;
 		case 'page':
 			$offsetY = 2;
 		case 'person':
@@ -352,6 +406,9 @@ $text = strip_tags($text, '');
 				break;
 
 			case 'draw':
+				$offsetY = 2;
+				$offsetX = 10;
+				break;
 			case 'page':
 			case 'person':
 				$offsetX = 8;
