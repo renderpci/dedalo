@@ -52,6 +52,12 @@
 							$this->context->toolbar_buttons[] = 'reference';
 					}
 
+				// draw
+					if(isset($properties->tags_draw)) {
+						// toolbar_buttons add
+							$this->context->toolbar_buttons[] = 'button_draw';
+					}
+
 				// lang (related_component_lang)
 					$original_lang = $this->get_original_lang();
 					if (!empty($original_lang)) {

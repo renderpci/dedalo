@@ -110,4 +110,34 @@
 		&:active {
 			opacity: 0.5;
 		}
-	}//end .fn_build_tag_reference(
+	}//end .fn_build_tag_reference
+
+
+	// fn_build_tag_draw. indexation tag builder
+	.fn_build_tag_draw(@bg_color:@color_orange_dedalo, @text_color:#fff) {
+			display: flex;
+			align-items: center;
+			justify-content: flex-start;
+			min-width: 2.7rem;
+			font-size: 1rem;
+			margin-right: 1px;
+			padding-top: 2px;
+			padding-bottom: 2px;
+			padding-left: 5px;
+			padding-right: .65rem;
+			background-color: @bg_color;
+			border-radius: 9px;
+			color: @text_color;
+			cursor: pointer;
+			background-image: url(../../themes/default/icons/eye.svg);
+			background-size: 1rem;
+			background-repeat: no-repeat;
+			background-position: right 5px top 2px;
+			padding-right: 1.3rem;
+			flex-wrap: nowrap;
+
+		&:active {
+			opacity: 0.5;
+		}
+	}//end .fn_build_tag_draw(
+

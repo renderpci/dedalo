@@ -12,6 +12,7 @@
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
 	// import {when_in_viewport} from '../../common/js/events.js'
+	import {render_draw} from './render_draw.js'
 
 
 
@@ -562,6 +563,35 @@ const get_custom_buttons = (self, text_editor, i) => {
 			}
 		})
 
+	// button_draw
+		custom_buttons.push({
+			name			: "button_draw",
+			manager_editor	: false,
+			options	: {
+				tooltip	: 'Add draw_ref',
+				image	: '../../core/themes/default/icons/eye.svg',
+				onclick	: function(e) {
+					e.stopPropagation()
+					const tag_selected = text_editor.get_selected_tag()
+					if(tag_selected.type === 'draw'){
+						// open the draw modal to get the locator to be assigned
+						render_draw({
+							self		: self,
+							text_editor	: text_editor,
+							i			: i,
+							tag			: tag_selected,
+						})
+					}else{
+
+						event_manager.publish('build_tag_'+ self.id_base, {
+							caller		: self,
+							text_editor	: text_editor
+						})
+					}
+				}
+			}
+		})
+
 	// button_note
 		custom_buttons.push({
 			name			: "button_note",
@@ -860,6 +890,12 @@ const get_custom_events = (self, i, text_editor) => {
 					evt.stopPropagation()
 					evt.preventDefault()
 
+					self.build_tag({
+						caller		: self,
+						text_editor	: text_editor
+					})
+
+					/*
 					// publish event and receive subscription responses
 					const susbscriptors_responses			= event_manager.publish('key_up_f2' +'_'+ self.id_base, evt.code)
 					const susbscriptors_responses_length	= susbscriptors_responses.length
@@ -881,8 +917,24 @@ const get_custom_events = (self, i, text_editor) => {
 
 							switch(data_tag.type) {
 								case ('draw'):
+									data_tag.tag_id = tag_id
+									const layer_selector = render_layer_selector({
+										self		: self,
+										data_tag	: data_tag,
+										text_editor	: text_editor,
+										callback	: self.create_draw_tag.bind(self)
+									})
+									// append layer selector to wrapper
+									self.node.appendChild(layer_selector)
+									break;
 								case ('geo'): {
-									const layer_selector = render_layer_selector(self, data_tag, tag_id, text_editor)
+									data_tag.tag_id = tag_id
+									const layer_selector = render_layer_selector({
+										self		: self,
+										data_tag	: data_tag,
+										text_editor	: text_editor,
+										callback	: self.create_geo_tag.bind(self)
+									})
 									// append layer selector to wrapper
 									self.node.appendChild(layer_selector)
 									break;
@@ -899,6 +951,7 @@ const get_custom_events = (self, i, text_editor) => {
 								}
 							}// end switch
 						}
+					*/
 					break;
 				}
 
