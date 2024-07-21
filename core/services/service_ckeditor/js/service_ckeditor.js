@@ -224,11 +224,15 @@ export const service_ckeditor = function() {
 				toolbar:{
 					removeItems: remove_reference
 				},
-				// The UI will be in English.
+				// By default the UI will be in English.
 				language: lang,
 				simpleUpload: {
-					 // The URL that the images are uploaded to.
-					uploadUrl: DEDALO_API_URL + '?resource_type=web'
+					// The URL that the images are uploaded to.
+					// It call to in index.php of API (../core/api/v1/json/index.php)
+					// the rqo will created as to use the 'upload' by default
+					// the main rqo vars needed as rqo.options will be created with the URI variables.
+					// rqo.upload property will created with the name of the file
+					uploadUrl: DEDALO_API_URL + '?resource_type=web&key_dir=web'
 				},
 				placeholder: self.fallback_value
 			})
