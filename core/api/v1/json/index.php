@@ -69,6 +69,8 @@ $global_start_time = hrtime(true);
 
 
 // non php://input cases
+// when the API is called by libs as ckeditor will be created a default upload rqo
+// see: service_ckeditor simpleUpload.uploadUrl
 	if (!empty($_FILES)) {
 
 		// files case. Received files case. Uploading from tool_upload or text editor images upload
