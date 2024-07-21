@@ -2592,6 +2592,169 @@ class component_text_area extends component_common {
 		$update_version = implode('.', $update_version);
 		switch ($update_version) {
 
+			case '6.2.5':
+				if ( !empty($dato_unchanged) ) {
+
+					$data = $dato_unchanged[0];
+
+					$to_be_saved = false;
+
+					// update the label of draw tags
+						$pattern_draw_tag = TR::get_mark_pattern(
+							'draw', // string mark
+							true // bool standalone
+						);
+						// key 7 is the data stored in the result of the preg_match_all
+						// key 4 is the id
+						// key 6 is the label
+						// The layer data is used as label, add the tag_id to it
+						// tag_id:layer_id as 8:2, the label indicate both id to be clear
+						$data = preg_replace($pattern_draw_tag, "[$2-$3-$4-$4:$6-data:$7:data]", $data, -1, $count);
+
+						$to_be_saved = ( $count>0 );
+
+					// get the properties of the component
+					$RecordObj_dd = new RecordObj_dd($tipo);
+					$properties = $RecordObj_dd->get_properties();
+
+					// reference
+					if( isset($properties->tags_reference) && isset($properties->tags_reference->tipo) ) {
+
+						$html_references = null;
+						$html_regex = '/(\<\/{0,1}reference .*? data-data=\\"(.*?)\\">).*?(<\/reference>)/';
+						preg_match_all($html_regex,  $data, $html_references, PREG_PATTERN_ORDER);
+
+						if( !empty($html_references) ){
+
+							// key 0 full html reference with the in text and out tag
+							// key 1 is the reference in <reference data-data=[]>
+							// key 2 is the locator data
+							// key 3 is the reference out </reference>
+							foreach ($html_references[2] as $match_key => $text_locator) {
+
+								$ref_in		= '[reference-n-'.$match_key.'-reference '.$match_key.'-data:'.$text_locator.':data]';
+								$ref_out	= '[/reference-n-'.$match_key.'-reference '.$match_key.'-data:'.$text_locator.':data]';
+
+								// replace the in HTML tag
+								$search	= '/'.preg_quote($html_references[1][$match_key], '/').'/';
+								$data	= preg_replace($search, $ref_in, $data, 1);
+								// replace the out HTML tag
+								$search	= '/'.preg_quote($html_references[3][$match_key], '/').'/';
+								$data	= preg_replace($search, $ref_out, $data, 1);
+							}
+						}
+
+						$tags_reference_tipo = $properties->tags_reference->tipo;
+
+						$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
+
+						// create the component relation for save the layers
+						$reference_tags_component = component_common::get_instance(
+							$model,
+							$tags_reference_tipo,
+							$options->section_id,
+							'edit',
+							DEDALO_DATA_NOLAN,
+							$options->section_tipo,
+							false
+						);
+						$previous_dato = $reference_tags_component->get_dato();
+
+						// get all out references
+						$all_reference_tags = null;
+						$pattern_all = TR::get_mark_pattern(
+							'reference', // string mark
+							true // bool standalone
+						);
+						// Search math pattern tags
+						preg_match_all($pattern_all,  $data, $all_reference_tags, PREG_PATTERN_ORDER);
+
+						// in and out references
+						$ar_full_references = $all_reference_tags[0];
+
+						// key 6 is the data stored in the result of the preg_match_all
+						// key 3 is the id
+						// key 5 is the label
+						// The layer data inside the tag are with ' and is necessary change to "
+						$all_tags_locators = [];
+						$count = 1;
+						foreach ($all_reference_tags[3] as $match_key => $layer_id) {
+
+							if ($match_key % 2 == 0) {
+
+								$text = $all_reference_tags[6][$match_key] ?? '';
+
+
+								$tag_id			= $count;
+								$count++;
+								$data_string	= str_replace('\'', '"', $text);
+
+								$tag_locator 	= json_decode( $data_string );
+								$tag_locator = 	!empty( $tag_locator )
+									? reset ($tag_locator)
+									: null;
+								if(isset($tag_locator)){
+									$new_tag_locator = new locator();
+										$new_tag_locator->set_tag_id( $tag_id );
+										$new_tag_locator->set_tag_type( 'reference' );
+										$new_tag_locator->set_section_tipo( $tag_locator->section_tipo );
+										$new_tag_locator->set_section_id( $tag_locator->section_id );
+										$new_tag_locator->set_from_component_tipo( $tags_reference_tipo );
+
+									$all_tags_locators[] = $new_tag_locator;
+								}
+								$new_reference_tag	= '[reference-n-'.$tag_id.'-reference '.$tag_id.'-data::data]';
+								$search				= '/'.preg_quote($ar_full_references[$match_key], '/').'/';
+								$data				= preg_replace($search, $new_reference_tag, $data, 1);
+
+								if (!isset($ar_full_references[$match_key+1]) || strpos($ar_full_references[$match_key+1], '[/reference')!==0) {
+									debug_log(__METHOD__
+										. " Bad reference tag " . PHP_EOL
+										. " match_key " . $match_key . PHP_EOL
+										. ' ar_full_references: ' . to_string($ar_full_references)
+										, logger::ERROR
+									);
+								}else{
+									$new_reference_tag	= '[/reference-n-'.$tag_id.'-reference '.$tag_id.'-data::data]';
+									$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
+									$data				= preg_replace($search, $new_reference_tag, $data, 1);
+								}
+							}
+						}
+
+						if( !empty($all_tags_locators) ){
+
+							$final_references_locator = array_merge($previous_dato, $all_tags_locators);
+							$reference_tags_component->set_dato($final_references_locator);
+							$reference_tags_component->Save();
+						}
+
+						$to_be_saved = true;
+					}
+
+					if($to_be_saved===true){
+
+						// fix final dato with new format as array or null
+							$new_dato = [$data];
+
+						$response = new stdClass();
+							$response->result	= 1;
+							$response->new_dato	= $new_dato;
+							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+
+					}else{
+						$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+					}
+				}else{
+
+					$response = new stdClass();
+						$response->result	= 2;
+						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
+				}
+				break;
+
 			case '6.0.0':
 				if ( (!empty($dato_unchanged) || $dato_unchanged==='') && !is_array($dato_unchanged)) {
 
@@ -2786,149 +2949,6 @@ class component_text_area extends component_common {
 				}
 				break;
 
-			case '6.2.5':
-				if ( !empty($dato_unchanged) ) {
-
-					$data = $dato_unchanged[0];
-
-					// get the properties of the component
-					$RecordObj_dd = new RecordObj_dd($tipo);
-					$properties = $RecordObj_dd->get_properties();
-
-					// reference
-					if( !isset($properties->tags_reference) && !isset($properties->tags_reference->tipo) ) {
-
-						$response = new stdClass();
-							$response->result	= 2;
-							$response->msg		= "[$reference_id] Current data don't need to be updated, the text area doesn't has tags_reference.<br />";
-
-						return $response;
-					}
-
-					$html_references = null;
-					$html_regex = '/(\<\/{0,1}reference .*? data-data=\\"(.*?)\\">).*?(<\/reference>)/';
-					preg_match_all($html_regex,  $data, $html_references, PREG_PATTERN_ORDER);
-
-					if( !empty($html_references) ){
-
-						// key 0 full html reference with the in text and out tag
-						// key 1 is the reference in <reference data-data=[]>
-						// key 2 is the locator data
-						// key 3 is the reference out </reference>
-						foreach ($html_references[2] as $match_key => $text_locator) {
-
-							$ref_in		= '[reference-n-'.$match_key.'-reference '.$match_key.'-data:'.$text_locator.':data]';
-							$ref_out	= '[/reference-n-'.$match_key.'-reference '.$match_key.'-data:'.$text_locator.':data]';
-
-							// replace the in HTML tag
-							$search	= '/'.preg_quote($html_references[1][$match_key], '/').'/';
-							$data	= preg_replace($search, $ref_in, $data, 1);
-							// replace the out HTML tag
-							$search	= '/'.preg_quote($html_references[3][$match_key], '/').'/';
-							$data	= preg_replace($search, $ref_out, $data, 1);
-						}
-					}
-
-					$tags_reference_tipo = $properties->tags_reference->tipo;
-
-					$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
-
-					// create the component relation for save the layers
-					$reference_tags_component = component_common::get_instance(
-						$model,
-						$tags_reference_tipo,
-						$options->section_id,
-						'edit',
-						DEDALO_DATA_NOLAN,
-						$options->section_tipo,
-						false
-					);
-					$previous_dato = $reference_tags_component->get_dato();
-
-					// get all out references
-					$all_reference_tags = null;
-					$pattern_all = TR::get_mark_pattern(
-						'reference', // string mark
-						true // bool standalone
-					);
-					// Search math pattern tags
-					preg_match_all($pattern_all,  $data, $all_reference_tags, PREG_PATTERN_ORDER);
-
-					// in and out references
-					$ar_full_references = $all_reference_tags[0];
-
-					// key 6 is the data stored in the result of the preg_match_all
-					// key 3 is the id
-					// key 5 is the label
-					// The layer data inside the tag are with ' and is necessary change to "
-					$all_tags_locators = [];
-					$count = 1;
-					foreach ($all_reference_tags[3] as $match_key => $layer_id) {
-
-						if ($match_key % 2 == 0) {
-
-							$text = $all_reference_tags[6][$match_key] ?? '';
-
-
-							$tag_id			= $count;
-							$count++;
-							$data_string	= str_replace('\'', '"', $text);
-
-							$tag_locator 	= json_decode( $data_string );
-							$tag_locator = 	!empty( $tag_locator )
-								? reset ($tag_locator)
-								: null;
-							if(isset($tag_locator)){
-								$new_tag_locator = new locator();
-									$new_tag_locator->set_tag_id( $tag_id );
-									$new_tag_locator->set_tag_type( 'reference' );
-									$new_tag_locator->set_section_tipo( $tag_locator->section_tipo );
-									$new_tag_locator->set_section_id( $tag_locator->section_id );
-									$new_tag_locator->set_from_component_tipo( $tags_reference_tipo );
-
-								$all_tags_locators[] = $new_tag_locator;
-							}
-							$new_reference_tag	= '[reference-n-'.$tag_id.'-reference '.$tag_id.'-data::data]';
-							$search				= '/'.preg_quote($ar_full_references[$match_key], '/').'/';
-							$data				= preg_replace($search, $new_reference_tag, $data, 1);
-
-							if (!isset($ar_full_references[$match_key+1]) || strpos($ar_full_references[$match_key+1], '[/reference')!==0) {
-								debug_log(__METHOD__
-									. " Bad reference tag " . PHP_EOL
-									. " match_key " . $match_key . PHP_EOL
-									. ' ar_full_references: ' . to_string($ar_full_references)
-									, logger::ERROR
-								);
-							}else{
-								$new_reference_tag	= '[/reference-n-'.$tag_id.'-reference '.$tag_id.'-data::data]';
-								$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
-								$data				= preg_replace($search, $new_reference_tag, $data, 1);
-							}
-						}
-					}
-
-					if( !empty($all_tags_locators) ){
-
-						$final_references_locator = array_merge($previous_dato, $all_tags_locators);
-						$reference_tags_component->set_dato($final_references_locator);
-						$reference_tags_component->Save();
-					}
-
-
-					// fix final dato with new format as array or null
-						$new_dato = [$data];
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
-				break;
 			default:
 				$response = new stdClass();
 					$response->result	= 0;
