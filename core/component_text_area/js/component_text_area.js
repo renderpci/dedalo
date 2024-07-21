@@ -12,7 +12,11 @@
 	import {tr} from '../../common/js/tr.js'
 	import {ui} from '../../common/js/ui.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	import {render_edit_component_text_area} from './render_edit_component_text_area.js'
+	import {
+				render_edit_component_text_area,
+				render_layer_selector,
+				render_page_selector
+			} from './render_edit_component_text_area.js'
 	import {render_list_component_text_area} from './render_list_component_text_area.js'
 	import {render_search_component_text_area} from './render_search_component_text_area.js'
 	import {render_reference} from './render_reference.js'
