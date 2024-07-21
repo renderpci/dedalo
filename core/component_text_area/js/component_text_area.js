@@ -233,7 +233,6 @@ component_text_area.prototype.init = async function(options) {
 					const current_text_editor		= self.text_editor[key]
 					const component_container		= self.node.content_data[key]
 					const button					= component_container.querySelector(".create_fragment") // could exists or not
-					// console.log("selection.length:",selection.length);
 
 				if (selection.length<1) {
 					if (button) {
@@ -279,6 +278,11 @@ component_text_area.prototype.init = async function(options) {
 		// create_geo_tag_
 			self.events_tokens.push(
 				event_manager.subscribe('create_geo_tag_'+ self.id_base, self.create_geo_tag)
+			)
+
+		// build_tag_
+			self.events_tokens.push(
+				event_manager.subscribe('build_tag_'+ self.id_base, self.build_tag)
 			)
 
 		// deactivate_component. Save content on deactivate
@@ -1362,6 +1366,9 @@ component_text_area.prototype.add_component_history_note = async function(option
 	}//end create_reference
 
 
+/*	Draw
+----------------------------------------------------------------------------------------- */
+
 	/**
 	* BUILD_TAG
 	* Build a new annotation when user clicks on text editor button
@@ -1429,6 +1436,30 @@ component_text_area.prototype.add_component_history_note = async function(option
 			}// end switch
 		}
 	}// end build_tag
+
+	/**
+	* CREATE_DRAW_TAG
+	* Build a new annotation when user clicks on text editor button
+	*
+	* @return
+	*/
+	component_text_area.prototype.create_draw_tag = function(options) {
+
+		const self = this
+
+		const data_tag = options.data_tag
+
+		// get the text_editor sent by the event (button_note event)
+		const text_editor = options.text_editor
+
+		// tag images
+			const draw_view_tag  = self.build_view_tag_obj(data_tag, data_tag.tag_id)
+
+		// const tag = self.build_view_tag_obj(draw_view_tag, tag_id)
+		// insert the new note tag in the caret position of the text_editor
+		const inserted_tag = text_editor.set_content(draw_view_tag)
+
+	}// end create_draw_tag
 
 /**
 * CHANGE_LANG
