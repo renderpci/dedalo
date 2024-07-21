@@ -826,7 +826,7 @@ component_geolocation.prototype.get_lib_data = function() {
 
 	const self = this
 
-	const lib_data = typeof(self.data.value[0])!=='undefined' && typeof(self.data.value[0].lib_data)!=='undefined'
+	const lib_data = self.data.value && typeof(self.data.value[0])!=='undefined' && typeof(self.data.value[0].lib_data)!=='undefined'
 		? self.data.value[0].lib_data
 		: [{
 				layer_id		: 1,
