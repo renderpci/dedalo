@@ -574,6 +574,11 @@ const get_custom_buttons = (self, text_editor, i) => {
 					e.stopPropagation()
 					const tag_selected = text_editor.get_selected_tag()
 					if(tag_selected.type === 'draw'){
+						// get a default draw tag, it get the layers avalible into the image
+						// to be used to create the layer selector into the draw editor.
+						const default_tag = event_manager.publish('key_up_f2' +'_'+ self.id_base, 'F2')
+
+						tag_selected.layers = default_tag[0].layers
 						// open the draw modal to get the locator to be assigned
 						render_draw({
 							self		: self,
