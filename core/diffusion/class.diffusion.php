@@ -556,7 +556,7 @@ abstract class diffusion  {
 			);
 
 			// dato
-			$dato = (property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+			$dato = (is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
 				? $current_component->{$properties->get_field_value->get_dato_method}()
 				: $current_component->get_dato();
 

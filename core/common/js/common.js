@@ -2548,8 +2548,14 @@ common.prototype.load_data_from_datum = function() {
 * GET_SECTION_ELEMENTS_CONTEXT
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
-*	string options.section_tipo
-* @return promise
+* {
+* 	section_tipo: string
+* 	ar_components_exclude: array
+* 	use_real_sections: bool
+* 	skip_permissions: bool = false
+* }
+* @return promise components
+* 	Array of section components
 */
 common.prototype.get_section_elements_context = async function(options) {
 
@@ -2559,6 +2565,7 @@ common.prototype.get_section_elements_context = async function(options) {
 		const section_tipo			= options.section_tipo
 		const ar_components_exclude	= options.ar_components_exclude
 		const use_real_sections		= options.use_real_sections
+		const skip_permissions		= options.skip_permissions ?? false;
 
 	// components
 		const get_components = async () => {
@@ -2579,7 +2586,8 @@ common.prototype.get_section_elements_context = async function(options) {
 							context_type			: 'simple',
 							ar_section_tipo			: section_tipo,
 							use_real_sections		: use_real_sections,
-							ar_components_exclude	: ar_components_exclude
+							ar_components_exclude	: ar_components_exclude,
+							skip_permissions		: skip_permissions
 						}
 					}
 					const api_response = await data_manager.request({

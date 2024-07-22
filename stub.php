@@ -46,6 +46,7 @@ define('DEDALO_SOURCE_VERSION_URL','');
 define('DEDALO_SOURCE_VERSION_LOCAL_DIR','');
 define('DEDALO_6_CODE_SERVER_GIT_DIR','');
 define('DEDALO_6_CODE_FILES_DIR','');
+define('SOCRATA_CONFIG',[]):
 function session_start_manager(){};
 function fix_cascade_config_var(){};
 class logger{};
@@ -53,4 +54,5 @@ function custom_postprocessing_image(){};
 // function logged_user_id() : ?int {};
 function logged_user_is_developer() {};
 function array_find(array $ar_value=null, callable $fn);
+class Socrata(){function post(){}};
 $options = new stdClass();
