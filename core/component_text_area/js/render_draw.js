@@ -8,7 +8,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {clone} from '../../common/js/utils/index.js'
-
+	import {render_layer_selector} from './render_edit_component_text_area.js'
 
 
 /**
@@ -20,13 +20,14 @@
 export const render_draw = async function(options) {
 
 	// options
-		const self				= options.self
-		const text_editor		= options.text_editor
-		const i					= options.i
-		const view_tag			= options.tag
-		const tags_draw	= self.properties.tags_draw // the component with all locators of draw tags
-		const selected_tag 		= clone(options.tag)
+		const self			= options.self
+		const text_editor	= options.text_editor
+		const i				= options.i
+		const view_tag		= options.tag
+		const tags_draw		= self.properties.tags_draw // the component with all locators of draw tags
+		const selected_tag	= clone(options.tag)
 			selected_tag.reuse = false
+
 	// component with the tag data
 		const tag_component_options = {
 			tipo			: tags_draw.tipo,
@@ -223,6 +224,37 @@ export const render_draw = async function(options) {
 				})
 			}
 
+	// assign layer to tag
+		const set_layer_selected = function(options){
+				text_editor.delete_tag(options.data_tag).then(function(response){
+					if(response){
+						options.data_tag.state = 'n'
+						self.create_draw_tag(options)
+					}
+				})
+			// remove the modal
+				modal.remove()
+		}
+
+		const layer_selector_container = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'layer_selector_container',
+			parent			: body
+		})
+			const layer_selector_label = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'label layer_selector_label',
+				inner_html		: get_label.set_img_layer || 'Set image layer',
+				parent			: layer_selector_container
+			})
+
+		const layer_selector_node = render_layer_selector({
+			self		: self,
+			data_tag	: selected_tag,
+			text_editor	: text_editor,
+			callback	: set_layer_selected
+		})
+		layer_selector_container.appendChild(layer_selector_node)
 
 	// footer
 		const footer = ui.create_dom_element({
@@ -287,7 +319,6 @@ export const render_draw = async function(options) {
 					new_locator.tag_type = 'draw'
 
 				component_tags_draw.add_value(new_locator);
-
 
 				// remove the modal
 					modal.remove()
