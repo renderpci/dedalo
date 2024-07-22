@@ -138,7 +138,8 @@ export const render_draw = async function(options) {
 			class_name		: 'header'
 		})
 		// header_label. created label with Title case (first letter to uppercase)
-			const header_label		= (view_tag.label || 'Reference')
+			const ar_info_label = view_tag.label.split(':')
+			const header_label = `${get_label.tag || 'Tag'} id: ${ar_info_label[0]} | ${get_label.layer || 'Layer'} id: ${ar_info_label[1]} `
 			ui.create_dom_element({
 				element_type	: 'span',
 				class_name		: 'label',
@@ -149,7 +150,7 @@ export const render_draw = async function(options) {
 	// body
 		const body = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'body content fill_vertical text_area_reference_selector'
+			class_name		: 'body content fill_vertical text_area_draw_selector'
 		})
 	// new tag
 		const new_tags_container = ui.create_dom_element({
