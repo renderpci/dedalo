@@ -503,6 +503,9 @@ abstract class TR {
 			case 'person':
 				$tag = '[person-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
 				break;
+			case 'draw':
+				$tag = '[draw-'.$state.'-'.$id.'-'.$label.'-data:'.$data.':data]';
+				break;
 			default:
 				throw new Exception("Error Processing Request. Unimplemented build_tag of type: ".to_string($type), 1);
 				break;
