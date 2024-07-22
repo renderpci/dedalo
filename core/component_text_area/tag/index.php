@@ -45,14 +45,14 @@ $text = strip_tags($text, '');
 	$tag_image_dir = dirname(dirname(dirname(__FILE__))) . '/themes/default/tag_base';
 	$type = false;
 	$fill_color = new stdClass();
-		$fill_color->n = '#FF9900';
-		$fill_color->d = '#3e8fed';
-		$fill_color->r = '#e04a26';
+		$fill_color->n = '#FFaa00'; // normal state
+		$fill_color->d = '#3e8fed'; // delete state
+		$fill_color->r = '#e04a26';	// review state
 
 	$icon_color = new stdClass();
-		$icon_color->n = '#000000';
-		$icon_color->d = '#ffffff';
-		$icon_color->r = '#ffffff';
+		$icon_color->n = '#000000'; // normal state
+		$icon_color->d = '#ffffff'; // delete state
+		$icon_color->r = '#ffffff'; // review state
 
 	switch (true) {
 		case (strpos($text,'[TC_')!==false):
@@ -91,7 +91,7 @@ $text = strip_tags($text, '');
 			$pattern	= "/\[(draw)-([a-z])-([0-9]{1,6})-(.{0,22})\]/";
 			preg_match($pattern, $text, $matches);
 			$text		= $matches[4];
-			$imgBase	= $tag_image_dir."/draw-{$state}-x2.png";
+			// $imgBase	= $tag_image_dir."/draw-{$state}-x2.png";
 
 			$path = strlen($text)>3
 				? '"M73.22,30H14.85C6.74,30,0.17,23.43,0.17,15.32v-0.64C0.17,6.57,6.74,0,14.85,0l58.37,0 c8.11,0,14.68,6.57,14.68,14.68v0.64C87.91,23.43,81.33,30,73.22,30z"'
