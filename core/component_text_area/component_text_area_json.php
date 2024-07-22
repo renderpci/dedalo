@@ -150,7 +150,7 @@
 					$value = $this->get_dato();
 
 					// fix broken tags
-						if (isset($properties->tags_index) && !empty($value)) {
+						if (isset($properties->tags_index) || isset($properties->tags_draw) && !empty($value)) {
 							$value = array_map(function($raw_text){
 								if (!empty($raw_text)) {
 									$response = $this->fix_broken_index_tags($raw_text);

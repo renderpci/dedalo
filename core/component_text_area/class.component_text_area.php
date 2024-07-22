@@ -1026,24 +1026,32 @@ class component_text_area extends component_common {
 
 		// short vars
 			$index_tag_id	= 3;
+			$draw_tag_id	= 3;
 			$changed_tags	= 0;
 
-		// matches_indexIn. index in
+		// matches_indexIn. index in tags
 			$pattern = TR::get_mark_pattern(
 				'indexIn', // string mark
 				false // bool standalone
 			);
 			preg_match_all($pattern, $raw_text, $matches_indexIn, PREG_PATTERN_ORDER);
 
-		// matches_indexOut. index out
+		// matches_indexOut. index out tags
 			$pattern = TR::get_mark_pattern(
 				'indexOut', // string mark
 				false // bool standalone
 			);
 			preg_match_all($pattern,  $raw_text,  $matches_indexOut, PREG_PATTERN_ORDER);
 
+		// matches_draw. Draw tags
+			$pattern = TR::get_mark_pattern(
+				'draw', // string mark
+				false // bool standalone
+			);
+			preg_match_all($pattern,  $raw_text,  $matches_draw, PREG_PATTERN_ORDER);
+
 		// index in missing
-			$ar_missing_indexIn=array();
+			$ar_missing_indexIn = [];
 			foreach ($matches_indexOut[$index_tag_id] as $key => $value) {
 				if (!in_array($value, $matches_indexIn[$index_tag_id])) {
 					$tag_out				= $matches_indexOut[0][$key];
@@ -1058,7 +1066,7 @@ class component_text_area extends component_common {
 			}
 
 		// index out missing
-			$ar_missing_indexOut=array();
+			$ar_missing_indexOut = [];
 			foreach ($matches_indexIn[$index_tag_id] as $key => $value) {
 				if (!in_array($value, $matches_indexOut[$index_tag_id])) {
 					$tag_in					= $matches_indexIn[0][$key];	// As we only have the in tag, we create out tag
@@ -1072,22 +1080,40 @@ class component_text_area extends component_common {
 				}
 			}
 
+		// Index
 		// thesaurus indexations integrity verify
 			$ar_indexations				= $this->get_component_tags_data('index');
-			$ar_indexations_tag_id_raw	= array();
+			$ar_indexations_tag_id_raw	= [];
 			foreach ($ar_indexations as $locator) {
 				if(!property_exists($locator,'tag_id')) continue;
 				// add tag_id
 				$ar_indexations_tag_id_raw[] = $locator->tag_id;
 			}
 
-		// clean duplicates
+		// Draw
+		// thesaurus draw indexations integrity verify
+			$ar_draw_indexations			= $this->get_component_tags_data('draw');
+			$ar_draw_indexations_tag_id_raw	= [];
+			foreach ($ar_draw_indexations as $locator) {
+				if(!property_exists($locator,'tag_id')) continue;
+				// add tag_id
+				$ar_draw_indexations_tag_id_raw[] = $locator->tag_id;
+			}
+
+		// clean index duplicates
 			$ar_indexations_tag_id = array_values(
 				array_unique($ar_indexations_tag_id_raw)
 			);
 
+		// clean draw duplicates
+			$ar_draw_indexations_tag_id = array_values(
+				array_unique($ar_draw_indexations_tag_id_raw)
+			);
+
 		// add tags
 			$added_tags = 0;
+
+			// Index
 			if (!empty($ar_indexations_tag_id)) {
 
 				$all_text_tags = array_unique(
@@ -1103,6 +1129,21 @@ class component_text_area extends component_common {
 						$new_pair	= $tag_in . $tag_out;
 
 						$raw_text	= $new_pair . $raw_text;
+						$added_tags++;
+					}
+				}
+			}//end if (!empty($ar_indexations_tag_id)) {
+
+			// Draw
+			if (!empty($ar_draw_indexations_tag_id)) {
+
+				$all_text_tags = array_unique( $matches_draw[$draw_tag_id] );
+				foreach ($ar_draw_indexations_tag_id as $current_tag_id) {
+					if (!in_array($current_tag_id, $all_text_tags)) {
+
+						$tag_draw	= TR::build_tag('draw', 'd', $current_tag_id, $current_tag_id.':', '');
+
+						$raw_text	= $tag_draw . $raw_text;
 						$added_tags++;
 					}
 				}
@@ -1253,7 +1294,7 @@ class component_text_area extends component_common {
 		$properties	= $this->get_properties();
 
 		// tags_config
-			$tags_name = 'tags_'.$tag_type;
+			$tags_name		= 'tags_'.$tag_type;
 			$tags_config	= $properties->$tags_name ?? null;
 			if(empty($tags_config)) {
 				return [];
