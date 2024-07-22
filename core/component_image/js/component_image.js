@@ -308,6 +308,9 @@ component_image.prototype.load_tag_into_vector_editor = async function(options) 
 
 	// options
 		const tag = options.tag
+		if( !tag.data || tag.data.length === 0){
+			return false
+		}
 
 	if(!self.vector_editor){
 		await self.load_vector_editor()
