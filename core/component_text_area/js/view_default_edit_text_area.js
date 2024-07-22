@@ -180,7 +180,7 @@ const get_content_value = (i, current_value, self) => {
 	// value_container
 		const value_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'value_container editor_container',
+			class_name		: 'value_container editor_container ck-content ck',
 			inner_html 		: value_string,
 			parent			: content_value
 		})
