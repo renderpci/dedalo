@@ -829,9 +829,13 @@ export const render_component_info = function(self, component) {
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value wide code hide',
-			// text_content	: value,
 			text_content	: 'Parsing data..',
 			parent			: fragment
+		})
+		value_node.addEventListener('dblclick', function(e) {
+			e.stopPropagation()
+			// toggle value container max-height from default to none
+			container.classList.toggle('auto_height')
 		})
 		// parse data. This time out prevents lock component selection
 		setTimeout(function(){
@@ -840,9 +844,15 @@ export const render_component_info = function(self, component) {
 				: ''
 			value_node.textContent = value
 
+			// monospace for JSON data
+			// Note that this node is rendered again on each user component selection
+			if (value.indexOf('[{')===0) {
+				value_node.classList.add('monospace')
+			}
+
 			const button_value_copy_node = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning',
+				class_name		: 'button_value_copy warning',
 				inner_html		: get_label.copy || 'Copy',
 				parent			: value_node
 			})

@@ -308,7 +308,7 @@
     "installed": "Eingerichtet",
     "tool_administration": "Administrationswerkzeug",
     "remove_filter": "Filter entfernen",
-    "no_hay_etiqueta_seleccionada": "Kein Tag ausgewählt. Wenn Sie fortfahren, wird der gesamte Datensatz indiziert.",
+    "no_hay_etiqueta_seleccionada": "Benutzercode ist nicht vorhanden",
     "component_deprecated": "Feld im Begriff zu verschwinden. Dieses Feld fusioniert mit: %s",
     "error_source_target_lang": "Ursprungssprache und Zielsprache dürfen nicht identisch sein.",
     "references": "Referenzen",

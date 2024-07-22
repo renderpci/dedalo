@@ -4152,18 +4152,23 @@ abstract class common {
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get list of all components available for current section using get_context_simple
-	* Used to build search presets in filter
-	* @param object $request_options
+	* Used to build search presets in filter, and components list in tool_export
+	* @param object $options
+	* {
+	* 	ar_section_tipo: array|null
+	* 	use_real_sections: bool = false
+	* 	skip_permissions: bool = false
+	* 	ar_tipo_exclude_elements: array (optional)
+	* 	ar_components_exclude: array (optional)
+	* }
 	* @return array $context
 	*/
 	public static function get_section_elements_context(object $options) : array {
 
 		// options
-			$context_type				= $options->context_type ?? 'simple';
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
 			$use_real_sections			= $options->use_real_sections ?? false;
-			$skip_permissions 			= $options->skip_permissions ?? false;
-			$path						= $options->path ?? [];
+			$skip_permissions			= $options->skip_permissions ?? false;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_password',
@@ -4185,7 +4190,7 @@ abstract class common {
 				'component_semantic_node',
 				'section_tab'
 			];
-			$ar_include_elements		= $options->ar_include_elements ?? [
+			$ar_include_elements = $options->ar_include_elements ?? [
 				'component',
 				'section_group',
 				'section_group_div',
@@ -4211,10 +4216,7 @@ abstract class common {
 				$section_permisions = ($skip_permissions === true)
 					? 1
 					: security::get_security_permissions($section_tipo, $section_tipo);
-
-				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
-
-			// skip section if permissions are not enough (except thesaurus 'hierarchy20')
+				// skip section if permissions are not enough (except thesaurus 'hierarchy20')
 				if ( $section_permisions<1  && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
 					// user don't have access to current section. skip section
 					continue;
@@ -4274,6 +4276,16 @@ abstract class common {
 					// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 					continue;
 				}
+
+				// permissions (element: component, grouper)
+					$element_permisions = ($skip_permissions === true)
+						? 1
+						: security::get_security_permissions($section_tipo, $element_tipo);
+					// skip element if permissions are not enough
+					if ( $element_permisions<1 ) {
+						// user don't have access to current element. skip element
+						continue;
+					}
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);

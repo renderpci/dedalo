@@ -111,7 +111,7 @@
 				&.wide {
 					grid-column-start: 1;
 					grid-column-end: 3;
-					max-height: 10rem;
+					max-height: 16.6rem;
 					overflow: auto;
 					word-break: break-word;
 				}
@@ -120,15 +120,34 @@
 					white-space: pre-wrap;
 					display: flex;
 					flex-direction: column;
+					background-color: @color_grey_ultralight;
 
-					button{
+					&.monospace {
+						word-break: break-all;
+						font-family: monospace;
+						font-size: 0.76rem;
+					}
+
+					.button_value_copy {
 						align-self: center;
+						font-size: 0.9rem;
+						margin: 0px;
+
+						&:active {
+							opacity: 0.5;
+						}
 					}
 				}
 
 				&.bold {
 					font-size: 0.9rem;
 					font-weight: 600;
+				}
+			}
+
+			&.auto_height {
+				.code {
+					max-height: none;
 				}
 			}
 		}
