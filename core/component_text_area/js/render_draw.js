@@ -315,9 +315,14 @@ export const render_draw = async function(options) {
 					return
 				}
 
+				// set the tag_id and tag_type into the locator to be saved
 				const new_locator = locator[0]
 					new_locator.tag_id = view_tag.tag_id
 					new_locator.tag_type = 'draw'
+
+				// remove type from locator to be set as preferences says in server.
+				// see the ontology node properties
+				delete new_locator.type
 
 				component_tags_draw.add_value(new_locator);
 
