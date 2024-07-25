@@ -26,6 +26,14 @@ $updates->$v = new stdClass();
 		$alert->command			= "
 			<h1>🧐 WARNING! Before apply this update:</h1>
 			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>
+			<br>
+			<br>This update changes the way we work with relationships in the component_text_area when it is related to media files.
+			<br>Now, reference links and drawing zones use a component_portal to store the locators associated to these tags
+			<br>(the locator is no longer stored in the tag).
+			<br>For the Audiovisual section (rsc167) a new component name ‘References’ (rsc1368) is added.
+			<br>For the Image section (rsc170) a new component called ‘Image drawing layers’ (rsc1369) is added.
+			<br>If you want to use this functionality or have used it before, please review the profiles to give access to the new components.
 		";
 		$updates->$v->alert_update[] = $alert;
 
