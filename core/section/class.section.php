@@ -552,6 +552,10 @@ class section extends common {
 					$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
 				}
 
+				if( isset($component_obj->process_id) ){
+					$save_options->time_machine_process_id	= $component_obj->process_id;
+				}
+
 
 		// save section result
 			$result = $this->Save( $save_options );
@@ -842,6 +846,7 @@ class section extends common {
 				$options->time_machine_tipo				= false;
 				$options->time_machine_section_id		= (int)$this->section_id; // always
 				$options->time_machine_section_id_key	= null;
+				$options->time_machine_process_id		= null;
 
 				$options->save_tm						= $this->save_tm;
 				$options->previous_component_dato		= null; // only when save from component
