@@ -158,7 +158,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.3"
+          "2.0.4"
         ]
       }
     },
@@ -247,11 +247,6 @@
               "value": "Applica e salva"
             },
             {
-              "lang": "lg-ara",
-              "name": "apply_and_save",
-              "value": ""
-            },
-            {
               "lang": "lg-nep",
               "name": "recover_section_alert",
               "value": "के तपाइँ यो खण्ड पुनर्स्थापना गर्न निश्चित हुनुहुन्छ?"
@@ -262,11 +257,6 @@
               "value": "Sei sicuro di voler ripristinare questa sezione?"
             },
             {
-              "lang": "lg-ara",
-              "name": "recover_section_alert",
-              "value": ""
-            },
-            {
               "lang": "lg-fra",
               "name": "recover_section_alert",
               "value": "Êtes-vous sûr de vouloir restaurer cette section ?"
@@ -275,16 +265,6 @@
               "lang": "lg-por",
               "name": "recover_section_alert",
               "value": "Tem certeza de que deseja restaurar esta seção?"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "recover_section_alert",
-              "value": ""
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "recover_section_alert",
-              "value": ""
             },
             {
               "lang": "lg-cat",
@@ -300,6 +280,56 @@
               "lang": "lg-deu",
               "name": "recover_section_alert",
               "value": "Möchten Sie diesen Abschnitt wirklich wiederherstellen?"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "revert_bulk_process",
+              "value": "Revert the bulk process"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "revert_bulk_process",
+              "value": "Revertir el cambio en bloque"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "revert_bulk_process",
+              "value": "Revertir el procés en bloc"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "revert_bulk_process",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "revert_bulk_process",
+              "value": "Reverter o processo em bloco"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "revert_bulk_process",
+              "value": "Inverser le processus en bloc"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "revert_bulk_process",
+              "value": "Invertire il processo di massa"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "revert_bulk_process",
+              "value": "Αναστροφή της διαδικασίας μαζικής επεξεργασίας"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "revert_bulk_process",
+              "value": "Rückgängigmachung des Massenverfahrens"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "revert_bulk_process",
+              "value": "बल्क प्रक्रिया उल्टाउनुहोस्"
             }
           ]
         ]
@@ -317,7 +347,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:42:23",
+  "modified_date": "2024-07-27 14:06:16",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
