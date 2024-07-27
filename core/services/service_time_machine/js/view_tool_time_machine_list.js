@@ -153,11 +153,12 @@ const rebuild_columns_map = async function(self) {
 			// map names to tipo (columns already parse id for another uses)
 			.map(el => {
 				switch (el) {
-					case 'matrix_id': return 'dd1573';
-					case 'when'		: return 'dd547';
-					case 'who'		: return 'dd543';
-					case 'where'	: return 'dd546';
-					default			: return el;
+					case 'matrix_id'	: return 'dd1573';
+					case 'process_id'	: return 'dd1371';
+					case 'when'			: return 'dd547';
+					case 'who'			: return 'dd543';
+					case 'where'		: return 'dd546';
+					default				: return el;
 				}
 			})
 
@@ -197,6 +198,7 @@ const render_column_id = function(options) {
 		const section_tipo			= options.section_tipo
 		const matrix_id				= options.matrix_id
 		const modification_date		= options.modification_date
+		const process_id			= options.locator.process_id
 
 	// short vars
 		const tool			= service_time_machine.caller
@@ -251,6 +253,7 @@ const render_column_id = function(options) {
 						section_id	: section_id,
 						matrix_id	: matrix_id,
 						date		: modification_date || null,
+						process_id	: process_id || null,
 						mode		: 'tm',
 						caller 		: options
 					}

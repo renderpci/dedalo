@@ -3596,6 +3596,7 @@ class section extends common {
 					$lang			= $db_record->lang;
 					$id				= $db_record->id;
 					$timestamp		= $db_record->timestamp;
+					$process_id		= $db_record->process_id;
 					$user_id		= $db_record->userID;
 					$tipo			= $db_record->tipo;
 					$dato			= $db_record->dato;
@@ -3652,6 +3653,24 @@ class section extends common {
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
+									'matrix_id'				=> $id
+								];
+								$ar_subdata[]		= $data_item;
+								$ar_subcontext[]	= $ddo;
+								break;
+
+							case ($current_ddo_tipo==='dd1371'): // process id (model: component_section_id)
+								$data_item = (object)[
+									'id'					=> 'process_id',
+									'section_id'			=> $section_id,
+									'section_tipo'			=> $section_tipo,
+									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+									'lang'					=> DEDALO_DATA_NOLAN,
+									'mode'					=> $mode, // expected 'tm'
+									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
+									'value'					=> [$process_id], // always need to be array
+									'debug_model'			=> 'component_number',
+									'debug_label'			=> 'Process id',
 									'matrix_id'				=> $id
 								];
 								$ar_subdata[]		= $data_item;

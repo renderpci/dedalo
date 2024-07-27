@@ -233,6 +233,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				const ignore_columns = self.main_element.model==='section'
 					? [
 						'dd1573', // matrix_id
+						'dd1371', // process_id
 						'dd547', // when
 						'dd543', // who
 						'dd546' // where
@@ -245,6 +246,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					: [
 						'5rem', // id
 						'8rem', // tm matrix_id
+						'8rem', // tm process_id
 						'11.2rem', // date (when)
 						'16rem', // user (who)
 						'1fr', // component (where)
