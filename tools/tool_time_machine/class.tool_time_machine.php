@@ -242,4 +242,148 @@ class tool_time_machine extends tool_common {
 
 
 
+	/**
+	* REVERT_PROCESS
+	* Revert a bulk process done previously
+	* Use the process_id to get all changes done by this process in all sections.
+	* Get all changes done in the component affected by the bulk process
+	* Revert the component to the previous data of the bulk process.
+	* If the component has not previous data, set a empty data.
+	* @param object $request_options
+	* @return object $response
+	*/
+	public static function revert_process(object $request_options) : object {
+		$start_time = start_time();
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// options get and set
+			$options = new stdClass();
+				$options->section_tipo	= $request_options->section_tipo ?? null;
+				$options->section_id	= $request_options->section_id ?? null;
+				$options->tipo			= $request_options->tipo ?? null;
+				$options->lang			= $request_options->lang ?? null;
+				$options->process_id	= $request_options->process_id ?? null;
+				$options->ddo_map		= $request_options->ddo_map ?? null;
+				$options->source_data	= $request_options->source_data ?? null;
+
+		// short vars
+			$section_tipo		= $options->section_tipo;
+			$section_id			= $options->section_id;
+			$tipo				= $options->tipo;
+			$lang				= $options->lang;
+			$process_id			= $options->process_id;
+			$model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+
+		// get all changes saved in time_machine with the same process_id
+			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE process_id = $process_id ORDER BY id DESC";
+			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
+			if($result===false) {
+				$response->msg = "Failed Search process_id $process_id. Data is not found.";
+				debug_log(__METHOD__
+					." ERROR: $response->msg "
+					, logger::ERROR
+				);
+				return $response ;
+			}
+			$n_rows = pg_num_rows($result);
+
+			if ($n_rows<1) return $response;
+		// for every found record in time_machine get all component changes saved.
+			while($row = pg_fetch_assoc($result)) {
+
+				$tipo			= $row['tipo'];
+				$section_tipo	= $row['section_tipo'];
+				$section_id		= $row['section_id'];
+				// search all changes of the component
+				$sub_strQuery	= "SELECT * FROM \"matrix_time_machine\"
+					WHERE tipo 		= '$tipo' AND
+					section_tipo 	= '$section_tipo' AND
+					section_id 		= '$section_id'
+					ORDER BY id DESC"
+				;
+				$sub_result		= JSON_RecordDataBoundObject::search_free($sub_strQuery);
+				// get the total changes,
+				// if the component has only 1 change, it will be the bulk change
+				// in those cases the data to save into the component will be a empty array
+				$sub_n_rows = pg_num_rows($sub_result);
+
+				// reverted is done?
+				$reverted = false;
+				while($current_row = pg_fetch_assoc($sub_result)) {
+					// get the process_id to be checked with the global proces_id
+					// loop the component data saved in tm one of this has the process_id to revert
+					$current_process_id	= (int)$current_row['process_id'];
+					$time_machine_data	= $current_row['dato'];
+
+					// if the time_machine doesn't has any other register than the process_id change
+					// set it to null, to bypass the next if
+					// set the data as empty array to remove the component data.
+					if ($sub_n_rows===1){
+						$current_process_id = null;
+						$time_machine_data = [];
+					}
+					// check if the process_id is the same than current record of the time_machine
+					// or if the component was reverted
+					// in those cases don't process the row.
+					if( $current_process_id === $process_id || $reverted === true  ){
+						continue;
+					}
+					// component. Inject tm data to the component
+						$element = component_common::get_instance(
+							$model,
+							$tipo,
+							$section_id,
+							'list', // the component always in list because the edit could fire a save with the dato_default
+							$lang,
+							$section_tipo,
+							false
+						);
+
+					// Set data overwrites the data of the current element
+						$element->set_dato($time_machine_data);
+
+					// Save the component with a new updated data from time machine
+						$saved_id = $element->Save();
+
+
+					// LOGGER ACTIVITY
+						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
+						logger::$obj['activity']->log_message(
+							'RECOVER COMPONENT',
+							logger::INFO,
+							$section_tipo,
+							null,
+							[
+								'msg'			=> 'Recovered component data from time machine',
+								'model'			=> $model,
+								'section_id'	=> $section_id,
+								'section_tipo'	=> $section_tipo,
+								'table'			=> $matrix_table,
+								'tm_id'			=> $current_row['id']
+							]
+						);
+
+					$reverted = true;
+					break;
+				}
+			}// end while
+
+		$response->result	= true;
+		$response->msg		= 'OK. Request done ['.__FUNCTION__.']';
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				$debug = new stdClass();
+					$debug->exec_time	= exec_time_unit($start_time,'ms').' ms';
+				$response->debug = $debug;
+			}
+
+		return (object)$response;
+	}//end revert_process
+
+
+
 }//end class tool_time_machine

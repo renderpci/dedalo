@@ -120,6 +120,16 @@ tool_time_machine.prototype.init = async function(options) {
 			self.selected_matrix_id = matrix_id
 			// show Apply button
 			self.button_apply.classList.remove('hide','lock')
+
+			// bulk process remove the hide when the selected row has a process_id
+			if(data.process_id){
+				self.selected_process_id = data.process_id
+				self.button_revert_process.classList.remove('hide','lock')
+			}else{
+				self.selected_process_id = null
+				self.button_revert_process.classList.add('hide','lock')
+			}
+
 		}//end fn_tm_edit_record
 		self.events_tokens.push(
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
@@ -414,6 +424,60 @@ tool_time_machine.prototype.apply_value = function(options) {
 			})
 		})
 }//end apply_value
+
+
+
+
+/**
+* revert_process
+* Set selected version value to active component and close the tool
+* @param object options
+* @return promise
+*/
+tool_time_machine.prototype.revert_process = function(options) {
+
+	const self = this
+
+	// options
+		const section_id	= options.section_id
+		const section_tipo	= options.section_tipo
+		const tipo			= options.tipo
+		const lang			= options.lang
+		const process_id	= options.selected_process_id
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'revert_process'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = create_source(self, 'revert_process')
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_tools_api',
+			action	: 'tool_request',
+			source	: source,
+			options	: {
+				section_id		: section_id,
+				section_tipo	: section_tipo,
+				tipo			: tipo,
+				lang			: lang,
+				process_id		: process_id
+			}
+		}
+
+	// call to the API, fetch data and get response
+		return new Promise(function(resolve){
+
+			data_manager.request({
+				body : rqo
+			})
+			.then(function(response){
+				if(SHOW_DEVELOPER===true) {
+					dd_console("-> revert_process API response:",'DEBUG',response);
+				}
+
+				resolve(response)
+			})
+		})
+}//end revert_process
 
 
 
