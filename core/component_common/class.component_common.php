@@ -72,6 +72,11 @@ abstract class component_common extends common {
 		// matrix_id
 		public $matrix_id;
 
+		// process_id, use to identified the process that change the component and save it into time_machine.
+		// It will use to get all changes done by bulk processes together.
+		// ex: 20240727083235 (Unix time stamp of the first bulk change)
+		public $process_id;
+
 		// observable data, used for propagate to other components that are seeing this component changes.
 		public $observable_dato;
 
