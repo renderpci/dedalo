@@ -987,6 +987,24 @@ class dd_date extends stdClass {
 
 
 
+	/**
+	* GET_NOW_AS_UNIX_TIMESTAMP
+	* Get current dd_date in UNIX timestamp mode
+	* Note that hours, minutes and seconds are not defined here.
+	* Change the date to the unit (day, month, year)
+	* @return int $unix_timestamp
+	*/
+	public static function get_now_as_unix_timestamp() : int {
+
+		$datetime = new DateTime();
+		$unix_timestamp	= $datetime->getTimestamp();
+
+		return $unix_timestamp;
+	}//end get_now_as_unix_timestamp
+
+
+
+
 
 
 }//end class dd_date
