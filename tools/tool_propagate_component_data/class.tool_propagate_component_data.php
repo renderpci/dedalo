@@ -84,6 +84,8 @@ class tool_propagate_component_data extends tool_common {
 				// send to output
 				print_cli($pdata);
 			}
+		// get the process_id as the current time as unix timestamp
+			$process_id = dd_date::get_now_as_unix_timestamp();
 
 		// result records iterate
 			foreach ($rows_data->ar_records as $row) {
@@ -164,6 +166,7 @@ class tool_propagate_component_data extends tool_common {
 
 				// set and save changes
 					if ($save) {
+						$current_component->set_process_id($process_id);
 						$current_component->set_dato($final_dato);
 						$current_component->Save();
 
