@@ -138,6 +138,38 @@ const get_content_data = async function(self) {
 					tool_bar.appendChild(select_lang)
 				}
 
+			// button revert process
+				self.button_revert_process = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'warning button_revert_process hide lock history',
+					inner_html		: self.get_tool_label('revert_bulk_p') || 'Revert the bulk process',
+					parent			: tool_bar
+				})
+				self.button_revert_process.addEventListener('click', function(){
+
+					
+					self.revert_process({
+						section_id			: self.main_element.section_id,
+						section_tipo		: self.main_element.section_tipo,
+						tipo				: self.main_element.tipo,
+						lang				: self.main_element.lang,
+						selected_process_id	: self.selected_process_id
+					})
+					.then(function(response){
+						if (response.result===true) {
+							// success case
+							if (window.opener) {
+								// close this window when was opened from another
+								window.close()
+							}
+						}else{
+							// error case
+							console.warn('response:',response);
+							alert(response.msg || 'Error. Unknown error on apply tm value');
+						}
+					})
+				})
+
 			// button apply
 				self.button_apply = ui.create_dom_element({
 					element_type	: 'button',
