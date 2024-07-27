@@ -142,7 +142,7 @@ const get_content_data = async function(self) {
 				self.button_revert_process = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'warning button_revert_process hide lock history',
-					inner_html		: self.get_tool_label('revert_bulk_p') || 'Revert the bulk process',
+					inner_html		: self.get_tool_label('revert_bulk_process') || 'Revert the bulk process',
 					parent			: tool_bar
 				})
 				self.button_revert_process.addEventListener('click', function(){
