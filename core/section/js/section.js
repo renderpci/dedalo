@@ -857,7 +857,7 @@ export const get_section_records = async function(options) {
 					// 	? locator.matrix_id
 					// 	: self.matrix_id
 					instance_options.modification_date	= locator.timestamp || null
-					instance_options.id_variant = instance_options.id_variant + '_' + instance_options.matrix_id
+					instance_options.id_variant			= instance_options.id_variant + '_' + instance_options.matrix_id
 				}
 
 			// promise add and continue init and build

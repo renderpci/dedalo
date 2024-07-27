@@ -229,6 +229,7 @@
 							$current_value->matrix_id	= $current_record->id;
 							$current_value->timestamp	= $current_record->timestamp;
 							$current_value->state		= $current_record->state;
+							$current_value->process_id	= (int)$current_record->process_id;
 						}
 					// add value
 						$item->value[] = $current_value;

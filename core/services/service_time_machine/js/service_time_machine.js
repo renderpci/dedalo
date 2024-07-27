@@ -370,6 +370,19 @@ service_time_machine.prototype.build_request_config = function() {
 					mode			: 'tm',
 					view			: 'mini'
 				},
+				//  process_id . tm info -> Process
+				{
+					id				: 'process_id',
+					tipo			: 'dd1371',
+					type			: 'component',
+					typo			: 'ddo',
+					model			: 'component_number',
+					section_tipo	: section_tipo,
+					parent			: section_tipo,
+					debug_label		: 'Process id',
+					mode			: 'tm',
+					view			: 'mini'
+				},
 				// when dd547 (from activity section)
 				{
 					id				: 'when',
