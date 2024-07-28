@@ -1560,20 +1560,20 @@ final class dd_core_api {
 	*		action			: 'get_section_elements_context',
 	*		prevent_lock	: true,
 	*		"source": {
-	*	        "typo": "source",
-	*	        "type": "filter",
-	*	        "action": null,
-	*	        "model": "search",
-	*	        "section_tipo": "numisdata4",
-	*	        "section_id": 0,
-	*	        "mode": "list",
-	*	        "view": null,
-	*	        "lang": "lg-eng"
-	*	    },
+	*			"typo": "source",
+	*			"type": "filter",
+	*			"action": null,
+	*			"model": "search",
+	*			"section_tipo": "numisdata4",
+	*			"section_id": 0,
+	*			"mode": "list",
+	*			"view": null,
+	*			"lang": "lg-eng"
+	*		},
 	*		options			: {
 	*			context_type			: 'simple',
 	*			ar_section_tipo			: section_tipo,
-	* 			use_real_sections 		: true,
+	*			use_real_sections		: true,
 	*			ar_components_exclude	: ar_components_exclude
 	*		}
 	*	}
@@ -1587,7 +1587,7 @@ final class dd_core_api {
 			$ar_section_tipo		= (array)$options->ar_section_tipo;
 			$use_real_sections		= $options->use_real_sections ?? false;
 			$ar_components_exclude	= $options->ar_components_exclude ?? null;
-			$source 				= $rqo->source;
+			$skip_permissions		= $options->skip_permissions ?? false;
 
 		// response
 			$response = new stdClass();
@@ -1600,7 +1600,7 @@ final class dd_core_api {
 				'context_type'		=> $context_type,
 				'ar_section_tipo'	=> $ar_section_tipo,
 				'use_real_sections'	=> $use_real_sections,
-				'skip_permissions'	=> ($source->type === 'filter') ? true : false
+				'skip_permissions'	=> $skip_permissions
 			];
 			if (isset($ar_components_exclude)) {
 				$section_elements_context_options->ar_components_exclude = $ar_components_exclude;
@@ -1610,7 +1610,6 @@ final class dd_core_api {
 			$filtered_components = common::get_section_elements_context(
 				$section_elements_context_options
 			);
-
 
 		// response
 			$response->result	= $filtered_components;
@@ -2686,8 +2685,8 @@ final class dd_core_api {
 	* @return string $lang_labels
 	* {
 	* 	"diameter": "Diameter",
-    *	"code": "Code",
-    * 	...
+	*	"code": "Code",
+	* 	...
 	* }
 	*/
 	public static function get_lang_labels(string $lang) : string {
