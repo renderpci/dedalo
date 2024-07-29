@@ -389,7 +389,7 @@ abstract class filter {
 	*/
 	public static function get_filter_user_records_by_id(int $user_id) : array {
 
-		$filter_user_records_by_id = array();
+		$filter_user_records_by_id = [];
 
 		if (defined('DEDALO_FILTER_USER_RECORDS_BY_ID') && DEDALO_FILTER_USER_RECORDS_BY_ID===true) {
 
@@ -403,7 +403,8 @@ abstract class filter {
 				DEDALO_DATA_NOLAN,
 				DEDALO_SECTION_USERS_TIPO
 			);
-			$filter_user_records_by_id = $component->get_dato();
+			$filter_user_records_by_id = $component->get_dato() ?? [];
+
 		}
 
 		return $filter_user_records_by_id;
