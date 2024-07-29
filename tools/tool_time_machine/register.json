@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 27,
-              "hour": 14,
-              "time": 65071346776,
+              "day": 29,
+              "hour": 12,
+              "time": 65071515344,
               "year": 2024,
               "month": 7,
-              "minute": 6,
-              "second": 16
+              "minute": 55,
+              "second": 44
             }
           }
         ]
@@ -330,6 +330,106 @@
               "lang": "lg-nep",
               "name": "revert_bulk_process",
               "value": "बल्क प्रक्रिया उल्टाउनुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "info_revert_bulk_process",
+              "value": "To revert this bulk process contact an administrator."
+            },
+            {
+              "lang": "lg-spa",
+              "name": "info_revert_bulk_process",
+              "value": "Para revertir este proceso masivo, póngase en contacto con un administrador."
+            },
+            {
+              "lang": "lg-cat",
+              "name": "info_revert_bulk_process",
+              "value": "Per revertir aquest procés massiu, poseu-vos en contacte amb un administrador."
+            },
+            {
+              "lang": "lg-por",
+              "name": "info_revert_bulk_process",
+              "value": "Para reverter este processo em massa, contacte um administrador."
+            },
+            {
+              "lang": "lg-fra",
+              "name": "info_revert_bulk_process",
+              "value": "Pour annuler ce processus en bloc, contactez un administrateur."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "info_revert_bulk_process",
+              "value": "Per ripristinare questo processo di massa, contattare un amministratore."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "info_revert_bulk_process",
+              "value": "Για να επαναφέρετε αυτή τη μαζική διαδικασία επικοινωνήστε με έναν διαχειριστή."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "info_revert_bulk_process",
+              "value": "Um diesen Massenprozess rückgängig zu machen, wenden Sie sich an einen Administrator."
+            },
+            {
+              "lang": "lg-eus",
+              "name": "info_revert_bulk_process",
+              "value": ""
+            },
+            {
+              "lang": "lg-nep",
+              "name": "info_revert_bulk_process",
+              "value": "यो बल्क प्रक्रियालाई उल्टाउन प्रशासकलाई सम्पर्क गर्नुहोस्।"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "revert_confirm_msg",
+              "value": "Are you sure to revert the bulk process: {0}?\n\nAll changed done in this process will be reverted in all records"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "revert_confirm_msg",
+              "value": "¿Estás seguro de revertir el proceso masivo: {0}?\n\nTodos los cambios realizados en este proceso se revertirán en todos los registros"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "revert_confirm_msg",
+              "value": "Esteu segur de revertir el procés massiu: {0}?\n\nTots els canvis fets en aquest procés es revertiran a tots els registres"
+            },
+            {
+              "lang": "lg-por",
+              "name": "revert_confirm_msg",
+              "value": "Tem a certeza de que pretende reverter o processo em massa: {0}?\n\nTodas as alterações efectuadas neste processo serão revertidas em todos os registos"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "revert_confirm_msg",
+              "value": "Êtes-vous sûr de vouloir inverser le processus en vrac : {0}?\n\nToutes les modifications effectuées dans ce processus seront annulées dans tous les enregistrements."
+            },
+            {
+              "lang": "lg-ita",
+              "name": "revert_confirm_msg",
+              "value": "Sei sicuro di voler ripristinare il processo bulk: {0}?\n\nTutte le modifiche apportate in questo processo verranno ripristinate in tutti i record."
+            },
+            {
+              "lang": "lg-ell",
+              "name": "revert_confirm_msg",
+              "value": "Είστε σίγουροι ότι πρέπει να επαναφέρετε τη διαδικασία μαζικής επεξεργασίας: {0}?\n\nΌλες οι αλλαγές που έγιναν σε αυτή τη διαδικασία θα επανέλθουν σε όλες τις εγγραφές."
+            },
+            {
+              "lang": "lg-deu",
+              "name": "revert_confirm_msg",
+              "value": "Sind Sie sicher, dass Sie den Massenprozess rückgängig machen wollen: {0}?\n\nAlle in diesem Prozess vorgenommenen Änderungen werden in allen Datensätzen rückgängig gemacht"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "revert_confirm_msg",
+              "value": ""
+            },
+            {
+              "lang": "lg-nep",
+              "name": "revert_confirm_msg",
+              "value": "के तपाइँ बल्क प्रक्रियालाई उल्टाउन निश्चित हुनुहुन्छ: {0}?\\n\\nयस प्रक्रियामा गरिएका सबै परिवर्तनहरू सबै रेकर्डहरूमा उल्टाइनेछन्"
             }
           ]
         ]
@@ -347,7 +447,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2024-07-27 14:06:16",
+  "modified_date": "2024-07-29 12:55:44",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

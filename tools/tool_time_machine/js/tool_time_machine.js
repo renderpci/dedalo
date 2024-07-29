@@ -122,13 +122,16 @@ tool_time_machine.prototype.init = async function(options) {
 			self.button_apply.classList.remove('hide','lock')
 
 			// bulk process remove the hide when the selected row has a process_id
-			if(data.process_id){
+			// only global_admin can use it.
+			// if user pick a row with process_id it will show a message.
+			if( data.process_id ){
 				self.selected_process_id = data.process_id
 				self.button_revert_process.classList.remove('hide','lock')
 			}else{
 				self.selected_process_id = null
 				self.button_revert_process.classList.add('hide','lock')
 			}
+
 
 		}//end fn_tm_edit_record
 		self.events_tokens.push(
