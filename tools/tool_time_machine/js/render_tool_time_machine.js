@@ -139,36 +139,56 @@ const get_content_data = async function(self) {
 				}
 
 			// button revert process
-				self.button_revert_process = ui.create_dom_element({
-					element_type	: 'button',
-					class_name		: 'warning button_revert_process hide lock history',
-					inner_html		: self.get_tool_label('revert_bulk_process') || 'Revert the bulk process',
-					parent			: tool_bar
-				})
-				self.button_revert_process.addEventListener('click', function(){
-
-					
-					self.revert_process({
-						section_id			: self.main_element.section_id,
-						section_tipo		: self.main_element.section_tipo,
-						tipo				: self.main_element.tipo,
-						lang				: self.main_element.lang,
-						selected_process_id	: self.selected_process_id
+				// this activate the bulk process button.
+				// only global admin can manage a revert of bulk processes
+				// users will see a message saying that
+				// they need to talk with the global admin to inform about the bulk process
+				// and why need to be reverted
+				self.button_revert_process = ( page_globals.is_global_admin === true )
+					? ui.create_dom_element({
+						element_type	: 'button',
+						class_name		: 'warning button_revert_process hide lock history',
+						inner_html		: self.get_tool_label('revert_bulk_process') || 'Revert the bulk process',
+						parent			: tool_bar
 					})
-					.then(function(response){
-						if (response.result===true) {
-							// success case
-							if (window.opener) {
-								// close this window when was opened from another
-								window.close()
-							}
-						}else{
-							// error case
-							console.warn('response:',response);
-							alert(response.msg || 'Error. Unknown error on apply tm value');
+					: ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'revert_label hide lock',
+						inner_html		: self.get_tool_label('info_revert_bulk_process') || 'To revert this bulk process contact an administrator.',
+						parent			: tool_bar
+					})
+
+				if( page_globals.is_global_admin === true ){
+					self.button_revert_process.addEventListener('click', function(){
+						//get the confirm message
+						const confirm_msg = self.get_tool_label('revert_confirm_msg', self.selected_process_id)
+							|| `Are you sure to revert the bulk process: ${self.selected_process_id}?\n\nAll changed done in this process will be reverted in all records`
+
+						if (confirm(confirm_msg)) {
+							// process the bulk revert
+							self.revert_process({
+								section_id			: self.main_element.section_id,
+								section_tipo		: self.main_element.section_tipo,
+								tipo				: self.main_element.tipo,
+								lang				: self.main_element.lang,
+								selected_process_id	: self.selected_process_id
+							})
+							.then(function(response){
+								if (response.result===true) {
+									// success case
+									if (window.opener) {
+										// close this window when was opened from another
+										window.close()
+									}
+								}else{
+									// error case
+									console.warn('response:',response);
+									alert(response.msg || 'Error. Unknown error on apply tm value');
+								}
+							})
 						}
 					})
-				})
+				}
 
 			// button apply
 				self.button_apply = ui.create_dom_element({
