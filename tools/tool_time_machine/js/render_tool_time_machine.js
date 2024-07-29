@@ -147,7 +147,7 @@ const get_content_data = async function(self) {
 				self.button_revert_process = ( page_globals.is_global_admin === true )
 					? ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'warning button_revert_process hide lock history',
+						class_name		: 'danger button_revert_process hide lock history',
 						inner_html		: self.get_tool_label('revert_bulk_process') || 'Revert the bulk process',
 						parent			: tool_bar
 					})
