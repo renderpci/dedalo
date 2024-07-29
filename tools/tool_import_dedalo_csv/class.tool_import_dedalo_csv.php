@@ -881,6 +881,10 @@ class tool_import_dedalo_csv extends tool_common {
 
 		$counter		= 0;
 		$csv_head_row	= $ar_csv_data[0];
+
+		// get the process_id as the current time as unix timestamp
+			$process_id = dd_date::get_now_as_unix_timestamp();
+
 		foreach ($ar_csv_data as $rkey => $columns) {
 
 			// header row
@@ -991,6 +995,9 @@ class tool_import_dedalo_csv extends tool_common {
 							false, // cache
 							$caller_dataframe
 						);
+						// set the process_id to save it into time_machine
+						// this allow to revert the bulk import
+						$component->set_process_id($process_id);
 
 						if($model_name==='component_number' && isset($column_map->decimal)){
 							$component->decimal = $column_map->decimal;
