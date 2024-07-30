@@ -789,20 +789,9 @@ final class dd_utils_api {
 
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
-					if( !is_dir($tmp_dir) ) {
-						if(!mkdir($tmp_dir, 0750, true)) {
-							$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
-							debug_log(__METHOD__
-								. " $response->msg" .PHP_EOL
-								. ' tmp_dir: ' . $tmp_dir
-								, logger::ERROR
-							);
-							return $response;
-						}
-						debug_log(__METHOD__
-							." CREATED DIR:  ". $tmp_dir
-							, logger::DEBUG
-						);
+					if(!create_directory($tmp_dir, 0750)) {
+						$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
+						return $response;
 					}
 
 				// move file to target path
