@@ -572,12 +572,28 @@
 				, logger::ERROR
 			);
 
-			return $init_response;
-		}
-		debug_log(__METHOD__
-			." CREATED DIR: $folder_path "
-			, logger::DEBUG
-		);
+
+
+// IMPORT DIR
+	if(!create_directory(
+		DEDALO_MEDIA_PATH . '/import',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on read or create import directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
+	}
+
+
+
+// IMPORT HISTORY DIR
+	if(!create_directory(
+		DEDALO_MEDIA_PATH . '/import/history',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on read or create import history directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
 	}
 
 
