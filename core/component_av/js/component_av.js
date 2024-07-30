@@ -502,7 +502,7 @@ component_av.prototype.get_media_streams = function() {
 
 				// success case
 
-				const media_streams	= api_response.result
+				const media_streams	= api_response.result?.streams || []
 
 				resolve(media_streams)
 			}
