@@ -62,6 +62,38 @@ $text = strip_tags($text, '');
 			preg_match_all($pattern, $text, $matches);
 			$text			= $matches[1][0];
 			$imgBase		= $tag_image_dir . '/tc_ms-x2.png';
+			// SGV version
+			// disable by render performance
+				// $path = '"M135.32,30H14.68C6.57,30,0,23.43,0,15.32v-0.64C0,6.57,6.57,0,14.68,0l120.64,0C143.43,0,150,6.57,150,14.68v0.64 C150,23.43,143.43,30,135.32,30z"';
+
+				// $svg_content = '
+				// <svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 150 30" enable-background="new 0 0 150 30" xml:space="preserve">
+				// 	<g id="base">
+				// 		<path d='.$path.'/>
+				// 	</g>
+				// 	<g id="text">
+				// 	<text x="50%" y="50%" dominant-baseline="central" text-anchor="middle" fill="#00D800" font-family="sans-serif" font-size="24px">'.$text.'</text>
+				// 	</g>
+				// </svg>
+				// ';
+				// header("Cache-Control: private, max-age=10800, pre-check=10800");
+				// header("Pragma: private");
+				// header("Expires: " . date(DATE_RFC822,strtotime(" 200 day")));
+
+				// // No cache header
+				// // header("Cache-Control: no-cache, must-revalidate");
+
+				// // Output to browser
+				// // header('Content-Length: '.strlen($file_content));
+				// header('Content-Type: image/svg+xml');
+				// // header('Content-Length: '.filesize($file_path));
+				// // header('Accept-Ranges: bytes');
+				// header('Vary: Accept-Encoding');
+				// // fpassthru( $file_path );
+				// header('Connection: close');
+				// echo $svg_content;
+				// die();
+
 			break;
 
 		case (strpos($text,'[index-')!==false || strpos($text,'[/index-')!==false):
