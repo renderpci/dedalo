@@ -126,7 +126,7 @@ const get_content_value = (i, current_value, self) => {
 		})
 
 	// posterframe
-		const posterframe_url	= data.posterframe_url
+		const posterframe_url = data.posterframe_url
 			? data.posterframe_url + '?t=' + (new Date()).getTime()
 			: page_globals.fallback_image
 		const posterframe		= ui.create_dom_element({
@@ -175,8 +175,29 @@ const get_content_value = (i, current_value, self) => {
 			when_in_viewport(
 				content_value, // node to observe
 				() => { // callback function returns int timestamp
+
 					posterframe.remove()
-					video.src		= video_url
+
+					// error event
+						video.addEventListener('error', function(e) {
+
+							// debug
+								if(SHOW_DEBUG===true) {
+									console.warn('e:', e);
+									console.warn('this.networkState MediaError:', this.networkState);
+								}
+
+							// if the error is caused by the video not loading
+							// @see https://html.spec.whatwg.org/multipage/media.html#error-codes
+								if (this.networkState > 2) {
+									// add an image default
+									this.setAttribute('poster', page_globals.fallback_image)
+									// notify
+									console.error('Network error ['+this.networkState+'] loading video:', e.target);
+								}
+						}, true)
+
+					video.src = video_url
 					video.classList.remove('hide')
 				}
 			)
@@ -243,19 +264,14 @@ const get_content_value = (i, current_value, self) => {
 
 /**
 * BUILD_VIDEO_NODE
-*
+* Creates HTMLElement video that contains the current media
 * @param string|null posterframe_url
 * @return HTMLElement video
 */
 const build_video_node = (posterframe_url) => {
 
-	// source tag
-		const source	= document.createElement('source')
-		source.type		= 'video/mp4'
-		// source.src	= video_url
-
 	// video tag
-		const video		= document.createElement('video')
+		const video	= document.createElement('video')
 		video.classList.add('hide')
 		if (posterframe_url) {
 			video.poster = posterframe_url
@@ -264,20 +280,12 @@ const build_video_node = (posterframe_url) => {
 		video.classList.add('posterframe')
 		video.setAttribute('tabindex', 0)
 		video.setAttribute('height', 392)
+
+	// source tag
+		const source	= document.createElement('source')
+		source.type		= 'video/mp4'
 		video.appendChild(source)
 
-	// keyup event
-		// video.addEventListener("timeupdate", async (e) => {
-		// 	// e.stopPropagation()
-		// 	// const frame = Math.floor(video.currentTime.toFixed(5) * 25);
-		// })
-
-	// canplay event
-		// video.addEventListener('canplay', fn_canplay)
-		// function fn_canplay() {
-		// 	// self.main_component.video.removeEventListener('canplay', fn_play);
-		// 	video.play()
-		// }
 
 	return video
 }//end build_video_node
@@ -286,7 +294,8 @@ const build_video_node = (posterframe_url) => {
 
 /**
 * GET_QUALITY_SELECTOR
-*
+* Creates HTMLElement select to allow user change the current
+* media quality
 * @param object content_value
 * @return HTMLElement select
 */

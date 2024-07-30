@@ -281,7 +281,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '< 10s',
 			parent			: fragment
 		})
-		av_minus_10_seg.addEventListener('mouseup', () =>{
+		av_minus_10_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime - 10
 			self.go_to_time({
 				seconds : seconds
@@ -295,7 +297,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '< 5s',
 			parent			: fragment
 		})
-		av_minus_5_seg.addEventListener('mouseup', () =>{
+		av_minus_5_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime - 5
 			self.go_to_time({
 				seconds : seconds
@@ -374,7 +378,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '> 10s',
 			parent			: fragment
 		})
-		av_plus_10_seg.addEventListener('mouseup', () =>{
+		av_plus_10_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime + 10
 			self.go_to_time({
 				seconds : seconds
