@@ -84,20 +84,9 @@ final class dd_component_3d_api {
 
 			// target directory check
 				$full_target_dir = dirname($target_file_path);
-				if (!is_dir($full_target_dir)) {
-					if(!mkdir($full_target_dir, 0750, true)) {
-						debug_log(__METHOD__
-							.' Error creating directory: ' . PHP_EOL
-							.' target_dir: ' . $full_target_dir
-							, logger::ERROR
-						);
-						$response->msg .= ' Error creating directory';
-						debug_log(__METHOD__
-							. ' '.$response->msg
-							, logger::ERROR
-						);
-						return $response;
-					}
+				if(!create_directory($full_target_dir, 0750)) {
+					$response->msg .= ' Error creating directory';
+					return $response;
 				}
 
 			$result = rename($source_file_path, $target_file_path);
