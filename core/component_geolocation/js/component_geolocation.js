@@ -10,8 +10,6 @@
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-
-	// import langs from '../../common/js/lang.json' assert { type: "json" };
 	import {render_edit_component_geolocation, render_popup_text, render_color_picker} from '../../component_geolocation/js/render_edit_component_geolocation.js'
 	import {render_list_component_geolocation} from '../../component_geolocation/js/render_list_component_geolocation.js'
 	import {render_search_component_geolocation} from '../../component_geolocation/js/render_search_component_geolocation.js'
@@ -170,15 +168,8 @@ component_geolocation.prototype.init = async function(options) {
 
 		// load and set JSON langs file
 			if (!window['json_langs']) {
-				data_manager.request({
-					url		: '../common/js/lang.json',
-					method	: 'GET',
-					cache	: 'force-cache' // force use cache because the file do not changes
-				})
-				.then(function(response){
-					// set json_langs
-					self.json_langs = response
-				})
+				// launch request but not wait here
+				self.get_json_langs()
 			}
 
 		const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
@@ -418,12 +409,12 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 		})
 
 	// map ready event
-		self.map.whenReady(function(){
+		self.map.whenReady(async function(){
 			// init map editor
 				self.init_draw_editor()
 
 			// set the lang of the tool
-				const json_langs = self.json_langs || []
+				const json_langs = await self.get_json_langs() || []
 				if (json_langs.length<1) {
 					console.error('Error. Expected array of json_langs but empty result is obtained:', json_langs);
 				}
@@ -1498,5 +1489,40 @@ const readable_area = function (area, metric=true) {
 
 
 
-// @license-end
+/**
+* GET_JSON_LANGS
+* Reads ../common/js/lang.json JSON file and store value in window['json_langs']
+* @return array|null self.json_langs
+*/
+component_geolocation.prototype.get_json_langs = async function () {
 
+	const self = this
+
+	// already calculated
+		if (self.json_langs && self.json_langs.length) {
+			return self.json_langs
+		}
+
+	// return from page global value
+		if (window['json_langs']) {
+			// fix var from page global value
+			self.json_langs = window['json_langs']
+			return self.json_langs
+		}
+
+	// calculate from server
+		self.json_langs = await data_manager.request({
+			url		: '../common/js/lang.json',
+			method	: 'GET',
+			cache	: 'force-cache' // force use cache because the file do not changes
+		})
+		// fix as page global
+		window['json_langs'] = self.json_langs
+
+
+	return self.json_langs
+}//end get_json_langs
+
+
+
+// @license-end
