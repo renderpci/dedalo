@@ -945,6 +945,7 @@ export const ts_object = new function() {
 			const parent_wrap		= term_node.parentNode.parentNode.parentNode.parentNode
 			const element_children	= ts_object.get_link_children_from_wrap(parent_wrap)
 			const is_open			= element_children?.firstChild.classList.contains('ts_object_children_arrow_icon_open')
+
 			if(element_children && is_open) {
 
 				// pagination is set in DOM element_children from API response in get_children call
@@ -997,11 +998,31 @@ export const ts_object = new function() {
 				const wrapper_children_len	= wrapper_children.length
 				for (let i = wrapper_children_len - 1; i >= 0; i--) {
 					if (wrapper_children[i].classList.contains('children_container')) {
+
 						const children_container = wrapper_children[i]
-						// clean nodes
-						while (children_container.firstChild) {
-							children_container.removeChild(children_container.firstChild);
+
+						if (parent_wrap.classList.contains('hierarchy_root_node')) {
+
+							// root nodes case: hilite term
+
+							const term = children_container.firstChild.querySelector('.term')
+							if (term) {
+								// element to hilite
+								setTimeout(function(){
+									self.hilite_element(term)
+								}, 200)
+							}
+
+						}else{
+
+							// default case: remove children
+
+							// clean nodes
+							while (children_container.firstChild) {
+								children_container.removeChild(children_container.firstChild);
+							}
 						}
+
 						// reset classes
 						children_container.classList.add('js_first_load')
 						children_container.classList.remove('removed_from_view')
