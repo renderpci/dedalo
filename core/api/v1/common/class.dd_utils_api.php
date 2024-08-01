@@ -1416,6 +1416,7 @@ final class dd_utils_api {
 						'data'			=> $data,
 						'time'			=> date("Y-m-d H:i:s"),
 						'total_time' 	=> exec_time_unit_auto($start_time),
+						'update_rate'	=> $update_rate,
 						'errors'		=> []
 					];
 
@@ -1447,7 +1448,10 @@ final class dd_utils_api {
 					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
 						$len = strlen($a);
 						if ($len < 4096) {
-							$a .= str_pad(' ', 4095-$len);
+							// re-create the output object and the final string
+							$fill_length = 4096 - $len;
+							$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+							$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
 						}
 					}
 					// format the message to be analyzed in client side.

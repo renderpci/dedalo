@@ -283,6 +283,14 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 	// register reader (allow stop on page navigation)
 	page_globals.stream_readers.push(reader)
 
+	// exec previous callback
+	on_read({
+		data : {
+			msg : 'Preparing data...'
+		},
+		is_running	: true
+	}, reader)
+
 	const ar_chunks = []
 	// Define a function to read each chunk
 	const readChunk = () => {
@@ -306,10 +314,10 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 
 				// CHEKING THE STRING TO DETERMINATE THE MSG SENT
 				// The event message always begins with "data:\n" and end with "\n\n"
-				// PHP create the message correctly, but http server can split it or merge it into a chunk
+				// PHP create the message correctly, but HTTP server can split it or merge it into a chunk
 				// Why is not coherent ???? (only gods knows!)
 				// So, every value received needs to be analyzed to determinate:
-				//	1 - It's a full message, perfect! the message is ok.
+				//	1 - It's a full message, perfect! the message is OK.
 				// 	2 - It's a part (message divided in parts, then need to be joined to get the message)
 				//	3 - It has more than 1 message (merged, then need to be split to get the message)
 
@@ -341,16 +349,24 @@ data_manager.read_stream = function(stream, on_read, on_done) {
 					//add the valid chuck into the array, is used to add divided messages into 1 valid.
 					ar_chunks.push(valid_chunk)
 
-				// if the value indicate the is the final part of the message, decode it and get the json
+				// if the value indicate the is the final part of the message, decode it and get the JSON
 				// if not, the message is incomplete and can't be processed and showed.
-				if(last === 10 && previous ===10 ){
+				if(last === 10 && previous === 10){
 
 					// join the messages parts into one string
 					// and parse message response as JSON
 					// JSON_parse_safely is needed to check and don't stop the event loop
 					// BUT only a valid JSON is expected here.
 					const data_string	= ar_chunks.join('')
-					const sse_response	= JSON_parse_safely(data_string)
+					const sse_response	= JSON_parse_safely(data_string) || {
+						data : {
+							msg : 'JSON invalid SSE message'
+						},
+						is_running	: true,
+						errors		: ['Invalid JSON message'],
+						total_time	: '0 sec',
+						data_string	: data_string
+					}
 
 					// reset the array
 					ar_chunks.length = 0
