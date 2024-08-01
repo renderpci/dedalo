@@ -732,6 +732,7 @@ final class dd_core_api {
 
 		// response success
 			$response->result	= $dato;
+			$response->table	= common::get_matrix_table_from_tipo($section_tipo);
 			$response->msg		= 'OK. Request done';
 
 
