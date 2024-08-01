@@ -1459,6 +1459,11 @@ class RecordObj_dd extends RecordDataBoundObject {
 	*/
 	public static function check_active_tld( string $tipo ) : bool {
 
+		// allow 'section_id' as valid tipo for SQO uses
+		if ($tipo==='section_id') {
+			return true;
+		}
+
 		$active_tlds = RecordObj_dd::get_active_tlds();
 		$current_tld = RecordObj_dd::get_prefix_from_tipo($tipo);
 
