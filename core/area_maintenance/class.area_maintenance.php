@@ -2540,14 +2540,16 @@ class area_maintenance extends area_common {
 	* Used to test long processes and timeouts issues
 	* @param object $options
 	* {
-	* 	iterations: int
+	* 	iterations: int,
+	* 	update_rate: int
 	* }
 	* @return object|void
 	*/
 	public static function long_process_stream(object $options) {
 
 		// options
-			$iterations = $options->iterations ?? 10;
+			$iterations		= $options->iterations ?? 10;
+			$update_rate	= $options->update_rate ?? 1000;
 
 		if (running_in_cli()===true) {
 
@@ -2561,8 +2563,10 @@ class area_maintenance extends area_common {
 				// end runner case
 				if ($counter>$iterations) {
 					$result = (object)[
-						'msg'		=> 'Iterations completed ' . $iterations,
-						'memory'	=> dd_memory_usage()
+						'msg'			=> 'Iterations completed ' . $iterations,
+						'iterations'	=> $iterations,
+						'update_rate'	=> $update_rate,
+						'memory'		=> dd_memory_usage()
 					];
 					// return is printed by manager too
 					return $result; // stop the loop here
@@ -2570,12 +2574,14 @@ class area_maintenance extends area_common {
 
 				// print notification
 				print_cli((object)[
-					'msg'		=> 'Iteration ' . $counter . ' of ' . $iterations,
-					'memory'	=> dd_memory_usage()
+					'msg'			=> 'Iteration ' . $counter . ' of ' . $iterations,
+					'iterations'	=> $iterations,
+					'update_rate'	=> $update_rate,
+					'memory'		=> dd_memory_usage()
 				]);
 
 				// sleep process
-				$ms = 1000; usleep( $ms * 1000 );
+				$ms = $update_rate; usleep( $ms * 1000 );
 			}
 
 		}else{
@@ -2608,6 +2614,7 @@ class area_maintenance extends area_common {
 					'data'			=> $data,
 					'time'			=> date("Y-m-d H:i:s"),
 					'total_time'	=> exec_time_unit_auto($start_time),
+					'update_rate'	=> $update_rate,
 					'errors'		=> []
 				];
 
@@ -2623,7 +2630,10 @@ class area_maintenance extends area_common {
 					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
 						$len = strlen($a);
 						if ($len < 4096) {
-							$a .= str_pad(' ', 4095-$len);
+							// re-create the output object and the final string
+							$fill_length = 4096 - $len;
+							$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+							$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
 						}
 					}
 
@@ -2638,7 +2648,7 @@ class area_maintenance extends area_common {
 				// break the loop if the client aborted the connection (closed the page)
 				if ( connection_aborted() ) break;
 
-				$ms = 1000;
+				$ms = $update_rate;
 				usleep( $ms * 1000 );
 			}
 			die();
