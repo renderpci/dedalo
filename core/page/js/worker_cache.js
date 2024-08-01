@@ -107,8 +107,9 @@ self.onmessage = async function(e) {
 					// mime: text/css
 					headers.append('Content-Type', 'text/css');
 					break;
-				default:
 
+				default:
+					headers.append('Cache-Control', 'stale-while-revalidate=604800');
 					break;
 			}
 
@@ -124,13 +125,14 @@ self.onmessage = async function(e) {
 
 			const item = api_response.result[i]
 
+			const headers = get_headers(item)
+
 			ar_promises.push(
 				fetch(item.url, {
-					headers		: get_headers(item),
+					headers		: headers,
 					method		: 'GET',
 					cache		: cache, // "no-store","reload","no-cache","force-cache"
-					credentials	: 'same-origin',
-					credentials	: 'omit'
+					credentials	: 'same-origin'
 				})
 				.then((response) => {
 

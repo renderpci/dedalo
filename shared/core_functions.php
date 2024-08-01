@@ -2395,6 +2395,8 @@ function get_cookie_properties() : object {
 * @param int $create_dir_permissions
 * 	PHP target directory permissions expressed like 0750
 * @return bool
+* 	true when directory already exists or is created successfully
+* 	false when not exists and is not possible to create it for any reason
 */
 function create_directory(string $folder_path, int $create_dir_permissions) {
 
