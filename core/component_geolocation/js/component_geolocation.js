@@ -115,9 +115,37 @@ component_geolocation.prototype.init = async function(options) {
 		const common_init = await component_common.prototype.init.call(this, options);
 
 	// load dependencies js/css. Set the self specific libraries and variables not defined by the generic init
-		const load_promises = []
+		// await self.load_libs()
 
-		const license = null
+	// event subscriptions
+		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
+		// {
+		//   "client": {
+		//     "event": "click_tag_geo",
+		//     "perform": {
+		//       "function": "load_tag_into_geo_editor"
+		//     }
+		//   },
+		//   "component_tipo": "numisdata19"
+		// }
+
+
+	return common_init
+}//end init
+
+
+
+/**
+* LOAD_LIBS
+* Load Leaflet lib and accessories
+* @return promise
+* 	bool true
+*/
+component_geolocation.prototype.load_libs = async function () {
+
+	const self = this
+
+	const license = null
 			// `
 			// /**
 			//  *
@@ -149,51 +177,42 @@ component_geolocation.prototype.init = async function(options) {
 			//  */
 			//  `
 
-		// leaflet. (!) It's necessary to be loaded fully before 'geoman'
-			const lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js'
-			await common.prototype.load_script(
-				lib_js_file,
-				license
-			)
+	// leaflet. (!) It's necessary to be fully loaded before 'geoman'
+		common.prototype.load_style(
+			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
+		)
+		await common.prototype.load_script(
+			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.js',
+			license
+		)
 
-			const lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet.css'
-			common.prototype.load_style(lib_css_file)
+	// geoman
+		common.prototype.load_style(
+			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
+		)
+		await common.prototype.load_script(
+			DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js',
+			license
+		)
 
-		// load geoman
-			const geo_editor_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.min.js'
-			await common.prototype.load_script(geo_editor_lib_js_file, license)
+	// load and set JSON langs file
+		self.get_json_langs()
 
-			const geo_editor_lib_css_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/leaflet-geoman/leaflet-geoman.css'
-			common.prototype.load_style(geo_editor_lib_css_file)
+	// turf
+		common.prototype.load_script(
+			DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js',
+			license
+		)
 
-		// load and set JSON langs file
-			if (!window['json_langs']) {
-				// launch request but not wait here
-				self.get_json_langs()
-			}
-
-		const geo_messure_lib_js_file = DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js'
-		common.prototype.load_script(geo_messure_lib_js_file, license)
-
-		const color_picker_lib_js_file = DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js'
-		common.prototype.load_script(color_picker_lib_js_file, license)
-
-	// event subscriptions
-		// (!) Note that component properties could set observe events like (numisdata264, hierarchy31):
-		// {
-		//   "client": {
-		//     "event": "click_tag_geo",
-		//     "perform": {
-		//       "function": "load_tag_into_geo_editor"
-		//     }
-		//   },
-		//   "component_tipo": "numisdata19"
-		// }
+	// iro
+		common.prototype.load_script(
+			DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js',
+			license
+		)
 
 
-	return common_init
-}//end init
-
+	return true
+}//end load_libs
 
 
 
@@ -208,11 +227,13 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 
 	const self = this
 
+	// load libs
+		await self.load_libs()
+
 	// defaults
 		const value = self.data.value || self.default_value
 
 	// get data
-		// const key			= JSON.parse(map_container.dataset.key)
 		const field_lat		= value[key].lat
 		const field_lon		= value[key].lon
 		const field_zoom	= value[key].zoom
@@ -405,7 +426,6 @@ component_geolocation.prototype.get_map = async function(map_container, key) {
 					layer.pm.disable()
 				});
 			}
-
 		})
 
 	// map ready event
