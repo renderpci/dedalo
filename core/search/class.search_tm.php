@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS SEARCH_TM
 *
@@ -73,7 +74,7 @@ class search_tm extends search {
 
 
 	/**
-	* BUILD_MAIN_FROM_SQL
+	* BUILD_MAIN_FROM_SQL DISABLE !
 	* @return string $main_from_sql
 	*/
 		// public function build_main_from_sql() {
@@ -98,7 +99,7 @@ class search_tm extends search {
 
 
 	/**
-	* BUILD_MAIN_WHERE_SQL
+	* BUILD_MAIN_WHERE_SQL DISABLE !
 	* @return string $main_where_sql
 	*/
 		// public function build_main_where_sql() {
@@ -122,7 +123,7 @@ class search_tm extends search {
 
 
 	/**
-	* BUILD_SQL_QUERY_SELECT
+	* BUILD_SQL_QUERY_SELECT DISABLE !
 	* @return string $sql_query_select
 	*/
 		// public function build_sql_query_select($full_count=false) {
@@ -199,7 +200,7 @@ class search_tm extends search {
 
 
 	/**
-	* GET_TIME_MACHINE_RECORDS
+	* GET_TIME_MACHINE_RECORDS DISABLE !
 	* @return
 	*/
 		// public function get_time_machine_records( $request_options ) {
