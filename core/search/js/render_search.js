@@ -238,15 +238,18 @@ render_search.prototype.render_base = function() {
 					.then(function(section_node){
 						body.appendChild(section_node)
 						// modal attach
-						const modal_container =ui.attach_to_modal({
-							header	: get_label.search_presets || 'User search preset',
-							body	: body,
-							footer	: null,
-							size 	: 'small'
+						const modal_container = ui.attach_to_modal({
+							header		: get_label.search_presets || 'User search preset',
+							body		: body,
+							footer		: null,
+							size		: 'small',
+							callback	: (dd_modal) => {
+								dd_modal.modal_content.style.width = '20rem'
+							},
+							on_close	: () => {
+								self.user_presets_section.refresh()
+							}
 						})
-						modal_container.on_close = function(){
-							self.user_presets_section.refresh()
-						}
 					})
 			})
 
@@ -1304,6 +1307,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 		return true
 	}//end toggle_type
+// end toggles
 
 
 
