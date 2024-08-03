@@ -322,17 +322,10 @@ section.prototype.init = async function(options) {
 					}//end update_menu
 
 				// call only for direct page created sections
-					if (self.caller && self.caller.model==='page') {
-						// ignore some section cases
-						if (    self.tipo==='dd623' // search presets case
-							|| (self.caller && self.caller.type==='tool') // inside tool (tool_user_admin case)
-							) {
-							// nothing to do
-						}else{
-							// menu. Get from caller page
-							const menu_instance = self.caller && self.caller.ar_instances
-								? self.caller.ar_instances.find(el => el.model==='menu')
-								: null
+					if ( self.caller?.model==='page' ) {
+						// menu. Get instance from caller page
+						const menu_instance = self.caller.ar_instances.find(el => el.model==='menu')
+						if (menu_instance) {
 							update_menu( menu_instance )
 						}
 					}
