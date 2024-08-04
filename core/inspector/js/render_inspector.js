@@ -13,6 +13,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
 
@@ -864,7 +865,7 @@ export const render_component_info = function(self, component) {
 				}
 			})
 		}
-		requestIdleCallback(callback)
+		dd_request_idle_callback(callback)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -1177,7 +1178,7 @@ const render_relation_list = function(self) {
 				load_relation_list(self)
 				relation_list_head.classList.add('up')
 			}
-			requestIdleCallback(load)
+			dd_request_idle_callback(load)
 		}
 
 
@@ -1247,7 +1248,7 @@ export const render_time_machine_list = function(self) {
 				load_time_machine_list(self)
 				time_machine_list_head.classList.add('up')
 			}
-			requestIdleCallback(load)
+			dd_request_idle_callback(load)
 		}
 
 
@@ -1383,7 +1384,7 @@ const render_component_history = function(self) {
 				load_component_history(self, self.actived_component)
 				component_history_head.classList.add('up')
 			}
-			requestIdleCallback(load)
+			dd_request_idle_callback(load)
 		}
 
 
