@@ -144,21 +144,13 @@ const get_content_data = async function(self) {
 				// users will see a message saying that
 				// they need to talk with the global admin to inform about the bulk process
 				// and why need to be reverted
-				self.button_revert_process = ( page_globals.is_global_admin === true )
-					? ui.create_dom_element({
+				if ( page_globals.is_global_admin === true ){
+					self.button_revert_process = ui.create_dom_element({
 						element_type	: 'button',
 						class_name		: 'danger button_revert_process hide lock history',
 						inner_html		: self.get_tool_label('revert_bulk_process') || 'Revert the bulk process',
 						parent			: tool_bar
 					})
-					: ui.create_dom_element({
-						element_type	: 'span',
-						class_name		: 'revert_label hide lock',
-						inner_html		: self.get_tool_label('info_revert_bulk_process') || 'To revert this bulk process contact an administrator.',
-						parent			: tool_bar
-					})
-
-				if( page_globals.is_global_admin === true ){
 					self.button_revert_process.addEventListener('click', function(){
 						//get the confirm message
 						const confirm_msg = self.get_tool_label('revert_confirm_msg', self.selected_process_id)
@@ -166,12 +158,15 @@ const get_content_data = async function(self) {
 
 						if (confirm(confirm_msg)) {
 							// process the bulk revert
+							const revert_process_label = self.get_tool_label('revert_process_label') || 'Reversed the process with id'
+							const revert_process_name = `${revert_process_label} ${self.selected_process_id} > ${self.label_revert_process.innerHTML}`
 							self.revert_process({
-								section_id			: self.main_element.section_id,
-								section_tipo		: self.main_element.section_tipo,
-								tipo				: self.main_element.tipo,
-								lang				: self.main_element.lang,
-								selected_process_id	: self.selected_process_id
+								section_id				: self.main_element.section_id,
+								section_tipo			: self.main_element.section_tipo,
+								tipo					: self.main_element.tipo,
+								lang					: self.main_element.lang,
+								selected_process_id		: self.selected_process_id,
+								revert_process_label	: revert_process_name
 							})
 							.then(function(response){
 								if (response.result===true) {
@@ -189,6 +184,14 @@ const get_content_data = async function(self) {
 						}
 					})
 				}
+
+			// revert_label
+				self.label_revert_process = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'revert_label hide',
+					// inner_html		: self.get_tool_label('info_revert_bulk_process') || 'To revert this bulk process contact an administrator.',
+					parent			: tool_bar
+				})
 
 			// button apply
 				self.button_apply = ui.create_dom_element({

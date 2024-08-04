@@ -261,21 +261,21 @@ class tool_time_machine extends tool_common {
 
 		// options get and set
 			$options = new stdClass();
-				$options->section_tipo	= $request_options->section_tipo ?? null;
-				$options->section_id	= $request_options->section_id ?? null;
-				$options->tipo			= $request_options->tipo ?? null;
-				$options->lang			= $request_options->lang ?? null;
-				$options->process_id	= $request_options->process_id ?? null;
-				$options->ddo_map		= $request_options->ddo_map ?? null;
-				$options->source_data	= $request_options->source_data ?? null;
+				$options->section_tipo			= $request_options->section_tipo ?? null;
+				$options->section_id			= $request_options->section_id ?? null;
+				$options->tipo					= $request_options->tipo ?? null;
+				$options->lang					= $request_options->lang ?? null;
+				$options->process_id			= $request_options->process_id ?? null;
+				$options->revert_process_label	= $request_options->revert_process_label ?? null;
 
 		// short vars
-			$section_tipo		= $options->section_tipo;
-			$section_id			= $options->section_id;
-			$tipo				= $options->tipo;
-			$lang				= $options->lang;
-			$process_id			= $options->process_id;
-			$model				= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$section_tipo			= $options->section_tipo;
+			$section_id				= $options->section_id;
+			$tipo					= $options->tipo;
+			$lang					= $options->lang;
+			$process_id				= $options->process_id;
+			$revert_process_label	= $options->revert_process_label;
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
 		// get all changes saved in time_machine with the same process_id
 			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE process_id = $process_id ORDER BY id DESC";
@@ -292,6 +292,33 @@ class tool_time_machine extends tool_common {
 
 			if ($n_rows<1) return $response;
 		// for every found record in time_machine get all component changes saved.
+		// 1. create the revert process
+
+			// PROCESS
+			// create new process section
+				$process_section = section::get_instance(
+					null, // string|null section_id
+					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$process_section->Save();
+
+			// get the process_id as the section_id of the section process
+				$new_process_id = $process_section->get_section_id();
+
+			// Save the process name into the process section
+				$process_label_component = component_common::get_instance(
+					'component_input_text', // string model
+					DEDALO_PROCESS_LABEL_TIPO, // string tipo
+					$new_process_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$process_label_component->set_dato($revert_process_label);
+				$process_label_component->Save();
+
+		// 2. revert the values in time machine
+
 			while($row = pg_fetch_assoc($result)) {
 
 				$tipo			= $row['tipo'];

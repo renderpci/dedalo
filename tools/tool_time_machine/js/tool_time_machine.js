@@ -126,10 +126,25 @@ tool_time_machine.prototype.init = async function(options) {
 			// if user pick a row with process_id it will show a message.
 			if( data.process_id ){
 				self.selected_process_id = data.process_id
-				self.button_revert_process.classList.remove('hide','lock')
+				if( self.button_revert_process ){
+					self.button_revert_process.classList.remove('hide','lock')
+				}
+
+				const label_revert_text = ( page_globals.is_global_admin === true )
+					? await self.get_bulk_process_label({
+						process_id : data.process_id
+					})
+					: self.get_tool_label('info_revert_bulk_process') || 'To revert this bulk process contact an administrator.'
+
+
+				self.label_revert_process.innerHTML = label_revert_text
+
+
+				self.label_revert_process.classList.remove('hide','lock')
 			}else{
 				self.selected_process_id = null
 				self.button_revert_process.classList.add('hide','lock')
+				self.label_revert_process.classList.add('hide','lock')
 			}
 
 
@@ -442,11 +457,12 @@ tool_time_machine.prototype.revert_process = function(options) {
 	const self = this
 
 	// options
-		const section_id	= options.section_id
-		const section_tipo	= options.section_tipo
-		const tipo			= options.tipo
-		const lang			= options.lang
-		const process_id	= options.selected_process_id
+		const section_id			= options.section_id
+		const section_tipo			= options.section_tipo
+		const tipo					= options.tipo
+		const lang					= options.lang
+		const process_id			= options.selected_process_id
+		const revert_process_label	= options.revert_process_label
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'revert_process'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -458,11 +474,12 @@ tool_time_machine.prototype.revert_process = function(options) {
 			action	: 'tool_request',
 			source	: source,
 			options	: {
-				section_id		: section_id,
-				section_tipo	: section_tipo,
-				tipo			: tipo,
-				lang			: lang,
-				process_id		: process_id
+				section_id				: section_id,
+				section_tipo			: section_tipo,
+				tipo					: tipo,
+				lang					: lang,
+				process_id				: process_id,
+				revert_process_label	: revert_process_label
 			}
 		}
 
@@ -483,5 +500,53 @@ tool_time_machine.prototype.revert_process = function(options) {
 }//end revert_process
 
 
+
+/**
+* GET_BULK_PROCESS_LABEL
+* Get the process label
+* @param object options
+* @return promise
+*/
+tool_time_machine.prototype.get_bulk_process_label = async function(options){
+
+	const self = this
+
+	const process_id		= options.process_id
+	const section_tipo		= 'dd800'
+	const component_tipo	= 'dd796'
+
+	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
+	// this generates a call as my_tool_name::my_function_name(options)
+		const source = {
+			typo			: 'source',
+			type			: 'component',
+			action			: 'get_value',
+			tipo			: component_tipo,
+			section_tipo	: section_tipo,
+			section_id		: process_id,
+		}
+
+	// rqo
+		const rqo = {
+			dd_api	: 'dd_core_api',
+			action	: 'read',
+			source	: source
+		}
+
+	// call to the API, fetch data and get response
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+		if(SHOW_DEVELOPER===true) {
+			console.log("-------------> get_value:",'DEBUG', api_response.result);
+		}
+
+		// user messages
+		// const msg_type = (api_response.result===false) ? 'error' : 'ok'
+		// ui.show_message(buttons_container, api_response.msg, msg_type)
+
+
+	return api_response.result
+}//end get_bulk_process_label
 
 // @license-end
