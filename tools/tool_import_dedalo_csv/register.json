@@ -45,7 +45,7 @@
     },
     {
       "type": "dd151",
-      "section_id": "1",
+      "section_id": "-1",
       "section_tipo": "dd128",
       "from_component_tipo": "dd197"
     }
@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 14,
-              "hour": 21,
-              "time": 65062213435,
+              "day": 2,
+              "hour": 12,
+              "time": 65071860458,
               "year": 2024,
-              "month": 4,
-              "minute": 3,
-              "second": 55
+              "month": 8,
+              "minute": 47,
+              "second": 38
             }
           }
         ]
@@ -511,7 +511,7 @@
             {
               "lang": "lg-ita",
               "name": "preview",
-              "value": ""
+              "value": "Anteprima"
             },
             {
               "lang": "lg-spa",
@@ -592,6 +592,221 @@
               "lang": "lg-nep",
               "name": "preview",
               "value": "पूर्वावलोकन"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "records",
+              "value": "Records"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "records",
+              "value": "Registros"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "records",
+              "value": "Registres"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "records",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "records",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "records",
+              "value": "Registres"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "records",
+              "value": "Registrazioni"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "records",
+              "value": ""
+            },
+            {
+              "lang": "lg-deu",
+              "name": "records",
+              "value": "Aufzeichnungen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "records",
+              "value": "रेकर्डहरू"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "sure",
+              "value": "Sicuro?"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "error_coping_text",
+              "value": "Errore nella copia del testo:"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "error_coping_text",
+              "value": ""
+            },
+            {
+              "lang": "lg-ita",
+              "name": "text_copied",
+              "value": "Testo copiato negli appunti"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "insecure_context",
+              "value": "Contesto non sicuro, usato solo in https"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "updated",
+              "value": "Aggiornato"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "copy_as_column",
+              "value": "Copia come colonna"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "copy_to_find",
+              "value": "Copia come separato da virgola"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "created",
+              "value": "Creato"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "failed",
+              "value": "Fallito"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "error",
+              "value": "Errore"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "ok",
+              "value": "Ok"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "select_a_file",
+              "value": "Selezionare un file"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "import",
+              "value": "Importazione"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "import",
+              "value": "Importar"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "columns",
+              "value": "Columns"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "columns",
+              "value": "Columnas"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "columns",
+              "value": "Columnes"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "columns",
+              "value": "Colonne"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "columns",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "columns",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "columns",
+              "value": "Colonnes"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "columns",
+              "value": "Rubriken"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "columns",
+              "value": "स्तम्भहरू"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "process_title",
+              "value": "Title of the process: "
+            },
+            {
+              "lang": "lg-deu",
+              "name": "process_title",
+              "value": "Titel des Verfahrens:"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "process_title",
+              "value": "प्रक्रियाको शीर्षक:"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "process_title",
+              "value": "Título del proceso: "
+            },
+            {
+              "lang": "lg-cat",
+              "name": "process_title",
+              "value": "Títol del procés:"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "process_title",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "process_title",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "process_title",
+              "value": "Titre du processus :"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "process_title",
+              "value": "Titolo del processo:"
             }
           ]
         ]
@@ -609,9 +824,9 @@
   "section_id": 6,
   "created_date": "2020-01-23 18:30:08",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-14 21:03:55",
+  "modified_date": "2024-08-02 12:47:38",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
-  "modified_by_userID": 1
+  "modified_by_userID": -1
 }
