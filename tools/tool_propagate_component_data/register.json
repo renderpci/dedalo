@@ -254,13 +254,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 18,
-              "hour": 12,
-              "time": 65062528970,
+              "day": 3,
+              "hour": 21,
+              "time": 65071979889,
               "year": 2024,
-              "month": 4,
-              "minute": 42,
-              "second": 50
+              "month": 8,
+              "minute": 58,
+              "second": 9
             }
           }
         ]
@@ -751,6 +751,196 @@
               "lang": "lg-nep",
               "name": "tool_do_delete",
               "value": "सामग्री मेटाउनुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "process_label",
+              "value": "Data propagation"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "process_label",
+              "value": "Propagación de datos"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "process_label",
+              "value": "Propagació de dades"
+            },
+            {
+              "lang": "lg-por",
+              "name": "process_label",
+              "value": "Propagação de dados"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "process_label",
+              "value": "Propagation des données"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "process_label",
+              "value": "Propagazione dei dati"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "process_label",
+              "value": "Διάδοση δεδομένων"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "process_label",
+              "value": "Datenvermehrung"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "process_label",
+              "value": "डाटा प्रसार"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "replace",
+              "value": "Replace"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "replace",
+              "value": "Reemplazar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "replace",
+              "value": "Reemplaçar"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "replace",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "replace",
+              "value": "Substituir"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "replace",
+              "value": "Remplacer"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "replace",
+              "value": "Sostituire"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "replace",
+              "value": "Αντικαταστήστε το"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "replace",
+              "value": "Ersetzen Sie"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "replace",
+              "value": "प्रतिस्थापन गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "add",
+              "value": "Add"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "add",
+              "value": "Añadir"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "add",
+              "value": "Afegir"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "add",
+              "value": ""
+            },
+            {
+              "lang": "lg-deu",
+              "name": "add",
+              "value": "Hinzufügen"
+            },
+            {
+              "lang": "lg-por",
+              "name": "add",
+              "value": "Adicionar"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "add",
+              "value": "Ajouter"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "add",
+              "value": "Aggiungi"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "add",
+              "value": "Προσθέστε"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "add",
+              "value": "थप्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "delete",
+              "value": "Delete"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "delete",
+              "value": "Borrar"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "delete",
+              "value": "Esborrar"
+            },
+            {
+              "lang": "lg-por",
+              "name": "delete",
+              "value": "Eliminar"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "delete",
+              "value": "Διαγραφή"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "delete",
+              "value": "Supprimer"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "delete",
+              "value": "Cancellare"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "delete",
+              "value": "Löschen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "delete",
+              "value": "मेटाउन"
             }
           ]
         ]
@@ -797,7 +987,7 @@
   "section_id": 11,
   "created_date": "2022-02-28 16:55:15",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-18 12:42:50",
+  "modified_date": "2024-08-03 21:58:09",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
