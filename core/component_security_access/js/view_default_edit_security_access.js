@@ -9,7 +9,7 @@
 	import {set_before_unload, when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {data_manager} from '../../common/js/data_manager.js'
-
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
 /**
@@ -518,7 +518,7 @@ const render_area_item = function(item, datalist, value, self) {
 							permissions_global.appendChild(radio_group)
 						})
 					}
-					requestIdleCallback(callback)
+					dd_request_idle_callback(callback)
 
 			// add branch at last position
 			li.appendChild(branch)
@@ -676,7 +676,7 @@ const create_permissions_radio_group = function(self, item, permissions) {
 						const callback = () => {
 							self.update_parents_radio_butons(item, input_value)
 						}
-						requestIdleCallback(callback)
+						dd_request_idle_callback(callback)
 
 					// show_save_button
 						event_manager.publish('show_save_button_'+self.id)
@@ -818,7 +818,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 					const callback = () => {
 						self.update_parents_radio_butons(item, input_value)
 					}
-					requestIdleCallback(callback)
+					dd_request_idle_callback(callback)
 
 				// show_save_button
 					event_manager.publish('show_save_button_'+self.id)
