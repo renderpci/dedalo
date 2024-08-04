@@ -310,8 +310,8 @@ class tool_time_machine extends tool_common {
 				// in those cases the data to save into the component will be a empty array
 				$sub_n_rows = pg_num_rows($sub_result);
 
-				// reverted is done?
-				$reverted = false;
+				// next row is the data to be reverted.
+				$reverted_next = false;
 				while($current_row = pg_fetch_assoc($sub_result)) {
 					// get the process_id to be checked with the global proces_id
 					// loop the component data saved in tm one of this has the process_id to revert
@@ -326,11 +326,16 @@ class tool_time_machine extends tool_common {
 						$time_machine_data = [];
 					}
 					// check if the process_id is the same than current record of the time_machine
-					// or if the component was reverted
-					// in those cases don't process the row.
-					if( $current_process_id === $process_id || $reverted === true  ){
+					// if the row is the process_id row, the next record will be the row to be recovery.
+					if( $current_process_id === $process_id ){
+						$reverted_next = true;
 						continue;
 					}
+					// if the row is previous to the process_id don't process it
+					if( $reverted_next === false ){
+						continue;
+					}
+					// process the row (after the row of the process_id)
 					// component. Inject tm data to the component
 						$element = component_common::get_instance(
 							$model,
@@ -342,12 +347,15 @@ class tool_time_machine extends tool_common {
 							false
 						);
 
+					// set the new_process_id to save it into time_machine
+					// this allow to revert the bulk import
+						$element->set_process_id($new_process_id);
+
 					// Set data overwrites the data of the current element
 						$element->set_dato($time_machine_data);
 
 					// Save the component with a new updated data from time machine
 						$saved_id = $element->Save();
-
 
 					// LOGGER ACTIVITY
 						$matrix_table = common::get_matrix_table_from_tipo($section_tipo);
@@ -366,7 +374,6 @@ class tool_time_machine extends tool_common {
 							]
 						);
 
-					$reverted = true;
 					break;
 				}
 			}// end while
