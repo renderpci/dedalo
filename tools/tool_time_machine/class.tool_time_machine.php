@@ -343,7 +343,9 @@ class tool_time_machine extends tool_common {
 					// get the bulk_process_id to be checked with the global proces_id
 					// loop the component data saved in tm one of this has the bulk_process_id to revert
 					$current_bulk_process_id	= (int)$current_row['bulk_process_id'];
-					$time_machine_data	= $current_row['dato'];
+					$time_machine_data			= $current_row['dato'] === 'null'
+						? null
+						: $current_row['dato'];
 
 					// if the time_machine doesn't has any other register than the bulk_process_id change
 					// set it to null, to bypass the next if

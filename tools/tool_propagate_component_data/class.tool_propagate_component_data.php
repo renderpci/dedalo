@@ -27,7 +27,7 @@ class tool_propagate_component_data extends tool_common {
 			$action					= $options->action;
 			$lang					= $options->lang;
 			$propagate_data_value	= $options->propagate_data_value ?? null;
-			$bulk_process_label			= $options->bulk_process_label ?? null;
+			$bulk_process_label		= $options->bulk_process_label ?? null;
 
 		// short vars
 			$mode			= 'list';
