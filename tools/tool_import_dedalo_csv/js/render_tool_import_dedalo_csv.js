@@ -163,7 +163,8 @@ const get_content_data = async function(self) {
 					return {
 						file			: el.name, // string like 'exported_oral-history_-1-oh1.csv'
 						section_tipo	: el.section_tipo, // string like 'oh1'
-						ar_columns_map	: el.ar_columns_map // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+						ar_columns_map	: el.ar_columns_map, // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+						process_label	: el.process_label // name of the process fired, it could be changed by user.
 					}
 				})
 
@@ -353,6 +354,9 @@ const render_file_info = function(self, item) {
 						// section_label
 						section_label.innerHTML = item.section_label || ''
 
+						process_label.value = `${self.context.label} | ${item.section_tipo} | ${item.section_label} `
+						process_label.dispatchEvent(new Event('input'));
+
 						columns_maper.classList.remove('loading')
 					})
 				}
@@ -399,14 +403,39 @@ const render_file_info = function(self, item) {
 		// update_section_warn()
 
 	// info
-		// const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns} - Header:<br><span class="columns">` + item.file_info.join(', ') + '</span>'
-		const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns}`
-		ui.create_dom_element({
+		const info_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name		: 'info_text',
-			inner_html		: info_text,
+			class_name		: 'info_container',
 			parent			: fragment
 		})
+		// const info_text = `Records: ${item.n_records} - Columns: ${item.n_columns} - Header:<br><span class="columns">` + item.file_info.join(', ') + '</span>'
+		const info_text = `${self.get_tool_label('records') || 'Records'}: ${item.n_records} - ${self.get_tool_label('Columns') || 'Columns'}: ${item.n_columns}`
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'info_text',
+			inner_html		: info_text,
+			parent			: info_container
+		})
+
+		// updated by the render_columns_mapper
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'process_name_label',
+			inner_html		: self.get_tool_label('process_title') || 'Process title: ',
+			parent			: info_container
+		})
+		item.process_label = `${self.context.label} | ${item.section_tipo} | ${item.section_label}`
+		const process_label = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'process_label input_section_tipo',
+			value			: item.process_label,
+			parent			: info_container
+		})
+		process_label.addEventListener('input', function(e){
+			item.process_label = process_label.value
+		})
+
 
 	// preview
 		const button_preview = ui.create_dom_element({
