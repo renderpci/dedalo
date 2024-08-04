@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 2,
-              "hour": 12,
-              "time": 65071860458,
+              "day": 4,
+              "hour": 13,
+              "time": 65072035606,
               "year": 2024,
               "month": 8,
-              "minute": 47,
-              "second": 38
+              "minute": 26,
+              "second": 46
             }
           }
         ]
@@ -140,14 +140,14 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.3"
+          "2.0.4"
         ]
       }
     },
     "dd1328": {
       "dato": {
         "lg-nolan": [
-          "6.0.0"
+          "6.2.5"
         ]
       }
     },
@@ -765,47 +765,47 @@
             },
             {
               "lang": "lg-eng",
-              "name": "process_title",
-              "value": "Title of the process: "
+              "name": "bulk_process_title",
+              "value": "Process title: "
             },
             {
               "lang": "lg-deu",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "Titel des Verfahrens:"
             },
             {
               "lang": "lg-nep",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "प्रक्रियाको शीर्षक:"
             },
             {
               "lang": "lg-spa",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "Título del proceso: "
             },
             {
               "lang": "lg-cat",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "Títol del procés:"
             },
             {
               "lang": "lg-eus",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": ""
             },
             {
               "lang": "lg-por",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": ""
             },
             {
               "lang": "lg-fra",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "Titre du processus :"
             },
             {
               "lang": "lg-ita",
-              "name": "process_title",
+              "name": "bulk_process_title",
               "value": "Titolo del processo:"
             }
           ]
@@ -824,7 +824,7 @@
   "section_id": 6,
   "created_date": "2020-01-23 18:30:08",
   "section_tipo": "dd1340",
-  "modified_date": "2024-08-02 12:47:38",
+  "modified_date": "2024-08-04 13:26:46",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",

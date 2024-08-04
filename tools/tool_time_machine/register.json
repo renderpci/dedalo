@@ -81,12 +81,12 @@
           {
             "start": {
               "day": 4,
-              "hour": 12,
-              "time": 65072031681,
+              "hour": 13,
+              "time": 65072035579,
               "year": 2024,
               "month": 8,
-              "minute": 21,
-              "second": 21
+              "minute": 26,
+              "second": 19
             }
           }
         ]
@@ -165,7 +165,7 @@
     "dd1328": {
       "dato": {
         "lg-nolan": [
-          "6.0.0"
+          "6.2.5"
         ]
       }
     },
@@ -497,7 +497,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2024-08-04 12:21:21",
+  "modified_date": "2024-08-04 13:26:19",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
