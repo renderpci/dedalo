@@ -239,12 +239,12 @@ export const rebuild_columns_map = async function(self) {
 		// map names to tipo (columns already parse id for another uses)
 		.map(el => {
 			switch (el) {
-				case 'matrix_id'	: return 'dd1573';
-				case 'process_id'	: return 'dd1371';
-				case 'when'			: return 'dd547';
-				case 'who'			: return 'dd543';
-				case 'where'		: return 'dd546';
-				default				: return el;
+				case 'matrix_id'		: return 'dd1573';
+				case 'bulk_process_id'	: return 'dd1371';
+				case 'when'				: return 'dd547';
+				case 'who'				: return 'dd543';
+				case 'where'			: return 'dd546';
+				default					: return el;
 			}
 		})
 

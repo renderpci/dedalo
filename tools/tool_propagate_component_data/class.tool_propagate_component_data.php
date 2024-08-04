@@ -27,7 +27,7 @@ class tool_propagate_component_data extends tool_common {
 			$action					= $options->action;
 			$lang					= $options->lang;
 			$propagate_data_value	= $options->propagate_data_value ?? null;
-			$process_label			= $options->process_label ?? null;
+			$bulk_process_label			= $options->bulk_process_label ?? null;
 
 		// short vars
 			$mode			= 'list';
@@ -90,24 +90,24 @@ class tool_propagate_component_data extends tool_common {
 			// create new process section
 				$process_section = section::get_instance(
 					null, // string|null section_id
-					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
 				$process_section->Save();
 
-			// get the process_id as the section_id of the section process
-				$process_id = $process_section->get_section_id();
+			// get the bulk_process_id as the section_id of the section process
+				$bulk_process_id = $process_section->get_section_id();
 
 			// Save the process name into the process section
-				$process_label_component = component_common::get_instance(
+				$bulk_process_label_component = component_common::get_instance(
 					'component_input_text', // string model
-					DEDALO_PROCESS_LABEL_TIPO, // string tipo
-					$process_id, // string section_id
+					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+					$bulk_process_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$process_label_component->set_dato($process_label);
-				$process_label_component->Save();
+				$bulk_process_label_component->set_dato($bulk_process_label);
+				$bulk_process_label_component->Save();
 
 		// result records iterate
 			foreach ($rows_data->ar_records as $row) {
@@ -188,9 +188,9 @@ class tool_propagate_component_data extends tool_common {
 
 				// set and save changes
 					if ($save) {
-						// set the process_id to save it into time_machine
+						// set the bulk_process_id to save it into time_machine
 						// this allow to revert the bulk import
-						$current_component->set_process_id($process_id);
+						$current_component->set_bulk_process_id($bulk_process_id);
 						$current_component->set_dato($final_dato);
 						$current_component->Save();
 

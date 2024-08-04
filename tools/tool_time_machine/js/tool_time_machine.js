@@ -121,30 +121,30 @@ tool_time_machine.prototype.init = async function(options) {
 			// show Apply button
 			self.button_apply.classList.remove('hide','lock')
 
-			// bulk process remove the hide when the selected row has a process_id
+			// bulk process remove the hide when the selected row has a bulk_process_id
 			// only global_admin can use it.
-			// if user pick a row with process_id it will show a message.
-			if( data.process_id ){
-				self.selected_process_id = data.process_id
-				if( self.button_revert_process ){
-					self.button_revert_process.classList.remove('hide','lock')
+			// if user pick a row with bulk_process_id it will show a message.
+			if( data.bulk_process_id ){
+				self.selected_bulk_process_id = data.bulk_process_id
+				if( self.button_bulk_revert_process ){
+					self.button_bulk_revert_process.classList.remove('hide','lock')
 				}
 
-				const label_revert_text = ( page_globals.is_global_admin === true )
+				const label_bulk_revert_text = ( page_globals.is_global_admin === true )
 					? await self.get_bulk_process_label({
-						process_id : data.process_id
+						bulk_process_id : data.bulk_process_id
 					})
 					: self.get_tool_label('info_revert_bulk_process') || 'To revert this bulk process contact an administrator.'
 
 
-				self.label_revert_process.innerHTML = label_revert_text
+				self.label_bulk_revert_process.innerHTML = label_bulk_revert_text
 
 
-				self.label_revert_process.classList.remove('hide','lock')
+				self.label_bulk_revert_process.classList.remove('hide','lock')
 			}else{
-				self.selected_process_id = null
-				self.button_revert_process.classList.add('hide','lock')
-				self.label_revert_process.classList.add('hide','lock')
+				self.selected_bulk_process_id = null
+				self.button_bulk_revert_process.classList.add('hide','lock')
+				self.label_bulk_revert_process.classList.add('hide','lock')
 			}
 
 
@@ -261,7 +261,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 				const ignore_columns = self.main_element.model==='section'
 					? [
 						'dd1573', // matrix_id
-						'dd1371', // process_id
+						'dd1371', // bulk_process_id
 						'dd547', // when
 						'dd543', // who
 						'dd546' // where
@@ -274,7 +274,7 @@ tool_time_machine.prototype.build = async function(autoload=false) {
 					: [
 						'5rem', // id
 						'8rem', // tm matrix_id
-						'8rem', // tm process_id
+						'8rem', // tm bulk_process_id
 						'11.2rem', // date (when)
 						'16rem', // user (who)
 						'1fr', // component (where)
@@ -447,26 +447,26 @@ tool_time_machine.prototype.apply_value = function(options) {
 
 
 /**
-* revert_process
+* BULK_REVERT_PROCESS
 * Set selected version value to active component and close the tool
 * @param object options
 * @return promise
 */
-tool_time_machine.prototype.revert_process = function(options) {
+tool_time_machine.prototype.bulk_revert_process = function(options) {
 
 	const self = this
 
 	// options
-		const section_id			= options.section_id
-		const section_tipo			= options.section_tipo
-		const tipo					= options.tipo
-		const lang					= options.lang
-		const process_id			= options.selected_process_id
-		const revert_process_label	= options.revert_process_label
+		const section_id				= options.section_id
+		const section_tipo				= options.section_tipo
+		const tipo						= options.tipo
+		const lang						= options.lang
+		const bulk_process_id			= options.selected_bulk_process_id
+		const bulk_revert_process_label	= options.bulk_revert_process_label
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'revert_process'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'revert_process')
+		const source = create_source(self, 'bulk_revert_process')
 
 	// rqo
 		const rqo = {
@@ -474,12 +474,12 @@ tool_time_machine.prototype.revert_process = function(options) {
 			action	: 'tool_request',
 			source	: source,
 			options	: {
-				section_id				: section_id,
-				section_tipo			: section_tipo,
-				tipo					: tipo,
-				lang					: lang,
-				process_id				: process_id,
-				revert_process_label	: revert_process_label
+				section_id					: section_id,
+				section_tipo				: section_tipo,
+				tipo						: tipo,
+				lang						: lang,
+				bulk_process_id				: bulk_process_id,
+				bulk_revert_process_label	: bulk_revert_process_label
 			}
 		}
 
@@ -491,13 +491,13 @@ tool_time_machine.prototype.revert_process = function(options) {
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> revert_process API response:",'DEBUG',response);
+					dd_console("-> bulk revert_process API response:",'DEBUG',response);
 				}
 
 				resolve(response)
 			})
 		})
-}//end revert_process
+}//end bulk_revert_process
 
 
 
@@ -511,7 +511,7 @@ tool_time_machine.prototype.get_bulk_process_label = async function(options){
 
 	const self = this
 
-	const process_id		= options.process_id
+	const bulk_process_id	= options.bulk_process_id
 	const section_tipo		= 'dd800'
 	const component_tipo	= 'dd796'
 
@@ -523,7 +523,7 @@ tool_time_machine.prototype.get_bulk_process_label = async function(options){
 			action			: 'get_value',
 			tipo			: component_tipo,
 			section_tipo	: section_tipo,
-			section_id		: process_id,
+			section_id		: bulk_process_id,
 		}
 
 	// rqo

@@ -552,8 +552,8 @@ class section extends common {
 					$save_options->time_machine_section_id_key	= (int)$component_obj->caller_dataframe->section_id_key;
 				}
 
-				if( isset($component_obj->process_id) ){
-					$save_options->time_machine_process_id	= $component_obj->process_id;
+				if( isset($component_obj->bulk_process_id) ){
+					$save_options->time_machine_bulk_process_id	= $component_obj->bulk_process_id;
 				}
 
 
@@ -846,7 +846,7 @@ class section extends common {
 				$options->time_machine_tipo				= false;
 				$options->time_machine_section_id		= (int)$this->section_id; // always
 				$options->time_machine_section_id_key	= null;
-				$options->time_machine_process_id		= null;
+				$options->time_machine_bulk_process_id	= null;
 
 				$options->save_tm						= $this->save_tm;
 				$options->previous_component_dato		= null; // only when save from component
@@ -3596,7 +3596,7 @@ class section extends common {
 					$lang			= $db_record->lang;
 					$id				= $db_record->id;
 					$timestamp		= $db_record->timestamp;
-					$process_id		= $db_record->process_id;
+					$bulk_process_id		= $db_record->bulk_process_id;
 					$user_id		= $db_record->userID;
 					$tipo			= $db_record->tipo;
 					$dato			= $db_record->dato;
@@ -3661,14 +3661,14 @@ class section extends common {
 
 							case ($current_ddo_tipo==='dd1371'): // process id (model: component_section_id)
 								$data_item = (object)[
-									'id'					=> 'process_id',
+									'id'					=> 'bulk_process_id',
 									'section_id'			=> $section_id,
 									'section_tipo'			=> $section_tipo,
 									'tipo'					=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
 									'lang'					=> DEDALO_DATA_NOLAN,
 									'mode'					=> $mode, // expected 'tm'
 									'from_component_tipo'	=> $current_ddo_tipo,  // fake tipo only used to match ddo with data
-									'value'					=> [$process_id], // always need to be array
+									'value'					=> [$bulk_process_id], // always need to be array
 									'debug_model'			=> 'component_number',
 									'debug_label'			=> 'Process id',
 									'matrix_id'				=> $id

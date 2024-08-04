@@ -19,7 +19,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	protected $userID;
 	protected $state;
 	protected $section_id_key; // used by component_dataframe
-	protected $process_id; // used for bulk processes as common id (Unix timestamp of the first change)
+	protected $bulk_process_id; // used for bulk processes as common id (section_id of the bulk process section)
 
 
 	public $dato;
@@ -63,7 +63,7 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 			'state'				=> 'state',				// string char 32
 			'dato'				=> 'dato',				// jsonb format
 			'section_id_key'	=> 'section_id_key',	// integer
-			'process_id'		=> 'process_id'			// integer
+			'bulk_process_id'	=> 'bulk_process_id'	// integer
 		));
 	}//end defineRelationMap
 
@@ -96,10 +96,10 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 	* @param int $limit = 10
 	* @param int $offset = 0
 	* @param int $section_id_key = 0
-	* @param int $process_id = 0
+	* @param int $bulk_process_id = 0
 	* @return array $ar_id
 	*/
-	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0, int $section_id_key=null, int $process_id=null) : array {
+	public static function get_ar_time_machine_of_this(string $tipo=null, int|string $parent=null, string $lang=null, string $section_tipo=null, int $limit=10, int $offset=0, int $section_id_key=null, int $bulk_process_id=null) : array {
 
 		/// Temporal !!!
 		#$limit = 1000000;
@@ -114,8 +114,8 @@ class RecordObj_time_machine extends RecordDataBoundObject {
 		if(isset($section_id_key)){
 			$arguments['section_id_key']	= $section_id_key;
 		}
-		if(isset($process_id)){
-			$arguments['process_id']	= $process_id;
+		if(isset($bulk_process_id)){
+			$arguments['bulk_process_id']	= $bulk_process_id;
 		}
 		if(!empty($lang))
 		$arguments['lang']			= $lang;

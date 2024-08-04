@@ -172,9 +172,9 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 		const component_tipo		= self.main_element.tipo
 		const lang					= self.main_element.lang
 		const propagate_data_value	= self.component_to_propagate.data.value
-		const process_text 			= self.get_tool_label('process_label') || 'Data propagation'
+		const bulk_process_text 	= self.get_tool_label('bulk_process_label') || 'Data propagation'
 		const action_label 			= self.get_tool_label(action) || action
-		const process_label 		= `${process_text} | ${action_label}`
+		const bulk_process_label 	= `${bulk_process_text} | ${action_label}`
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -193,7 +193,7 @@ tool_propagate_component_data.prototype.propagate_component_data = function(acti
 				action					: action,
 				lang					: lang,
 				propagate_data_value	: propagate_data_value,
-				process_label 			: process_label
+				bulk_process_label 		: bulk_process_label
 			}
 		}
 
