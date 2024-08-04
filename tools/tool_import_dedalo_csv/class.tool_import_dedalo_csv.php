@@ -287,9 +287,9 @@ class tool_import_dedalo_csv extends tool_common {
 			$import_response=[];
 			foreach ((array)$files as $current_file_obj) {
 
-				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
-				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
-				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+				$current_file		= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
+				$section_tipo		= $current_file_obj->section_tipo; // string like 'oh1'
+				$ar_columns_map		= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
 				$bulk_process_label	= $current_file_obj->bulk_process_label; // string like 'exported_oral-history_-1-oh1.csv'
 				// print the process_info
 					if ( running_in_cli()===true ) {
@@ -327,7 +327,7 @@ class tool_import_dedalo_csv extends tool_common {
 						$import_csv_options->time_machine_save	= $time_machine_save;
 						$import_csv_options->ar_columns_map		= $ar_columns_map;
 						$import_csv_options->current_file		= $current_file;
-						$import_csv_options->bulk_process_label		= $bulk_process_label;
+						$import_csv_options->bulk_process_label	= $bulk_process_label;
 
 					$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file($import_csv_options);
 					$current_file_response->file			= $current_file;
@@ -886,17 +886,17 @@ class tool_import_dedalo_csv extends tool_common {
 
 		// PROCESS
 			// create new process section
-				$process_section = section::get_instance(
+				$bulk_process_section = section::get_instance(
 					null, // string|null section_id
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$process_section->Save();
+				$bulk_process_section->Save();
 
 			// get the bulk_process_id as the section_id of the section process
-				$bulk_process_id = $process_section->get_section_id();
+				$bulk_process_id = $bulk_process_section->get_section_id();
 
 			// Save the file name into the process section
-				$file_component = component_common::get_instance(
+				$bulk_file_component = component_common::get_instance(
 					'component_input_text', // string model
 					DEDALO_BULK_PROCESS_FILE_TIPO, // string tipo
 					$bulk_process_id, // string section_id
@@ -904,8 +904,8 @@ class tool_import_dedalo_csv extends tool_common {
 					DEDALO_DATA_NOLAN, // string lang
 					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$file_component->set_dato($current_file);
-				$file_component->Save();
+				$bulk_file_component->set_dato($current_file);
+				$bulk_file_component->Save();
 
 			// Save the process name into the process section
 				$bulk_process_label_component = component_common::get_instance(
