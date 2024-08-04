@@ -263,8 +263,8 @@ export const render_publication_items = function(self) {
 			const item		= current_diffusion_map[i]
 			const data_item	= ar_data[diffusion_group_key]
 
-			// process_id like 'process_diffusion_mht2_rsc170'
-			const process_id = 'process_diffusion_' + item.element_tipo + '_' + self.caller.section_tipo
+			// local_db_id like 'process_diffusion_mht2_rsc170'
+			const local_db_id = 'process_diffusion_' + item.element_tipo + '_' + self.caller.section_tipo
 
 			const current_diffusion_element_tipo = item.element_tipo
 
@@ -526,7 +526,7 @@ export const render_publication_items = function(self) {
 						response_message		: response_message,
 						publication_button		: publication_button,
 						diffusion_element_tipo	: current_diffusion_element_tipo,
-						process_id				: process_id
+						local_db_id				: local_db_id
 					})
 				})
 				// disable cases :
@@ -540,7 +540,7 @@ export const render_publication_items = function(self) {
 				// check process status always
 				const check_process_data = () => {
 					data_manager.get_local_db_data(
-						process_id,
+						local_db_id,
 						'status'
 					)
 					.then(function(local_data){
@@ -548,7 +548,7 @@ export const render_publication_items = function(self) {
 							update_process_status({
 								pid			: local_data.value.pid,
 								pfile		: local_data.value.pfile,
-								process_id	: process_id,
+								local_db_id	: local_db_id,
 								container	: response_message,
 								lock_items	: lock_items
 							})
@@ -579,7 +579,7 @@ const publish_content = async (self, options) => {
 		const response_message			= options.response_message
 		const publication_button		= options.publication_button
 		const diffusion_element_tipo	= options.diffusion_element_tipo
-		const process_id				= options.process_id
+		const local_db_id				= options.local_db_id
 
 	// clean previous messages
 		response_message.classList.remove('error')
@@ -607,7 +607,7 @@ const publish_content = async (self, options) => {
 		update_process_status({
 			pid			: api_response.pid,
 			pfile		: api_response.pfile,
-			process_id	: process_id,
+			local_db_id	: local_db_id,
 			container	: response_message,
 			lock_items	: [publication_button]
 		})
@@ -625,7 +625,7 @@ const update_process_status = (options) => {
 
 	const pid			= options.pid
 	const pfile			= options.pfile
-	const process_id	= options.process_id
+	const local_db_id	= options.local_db_id
 	const container		= options.container
 	const lock_items	= options.lock_items
 
@@ -660,7 +660,7 @@ const update_process_status = (options) => {
 		// the stream reader events
 		const render_response = render_stream({
 			container	: container,
-			id			: process_id,
+			id			: local_db_id,
 			pid			: pid,
 			pfile		: pfile
 		})

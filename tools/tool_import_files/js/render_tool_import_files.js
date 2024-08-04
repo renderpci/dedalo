@@ -66,7 +66,7 @@ const get_content_data_edit = async function(self) {
 
 	// short vars
 		const ar_file_processor	= self.tool_config.file_processor || null
-		const process_id		= 'process_import_files_' + self.section_tipo
+		const local_db_id		= 'process_import_files_' + self.section_tipo
 		const lock_items		= []
 
 	// options_container
@@ -181,7 +181,7 @@ const get_content_data_edit = async function(self) {
 				update_process_status({
 					pid			: api_response.pid,
 					pfile		: api_response.pfile,
-					process_id	: process_id,
+					local_db_id	: local_db_id,
 					container	: response_message,
 					lock_items	: lock_items,
 					self		: self
@@ -201,7 +201,7 @@ const get_content_data_edit = async function(self) {
 	// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				process_id,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
@@ -209,7 +209,7 @@ const get_content_data_edit = async function(self) {
 					update_process_status({
 						pid			: local_data.value.pid,
 						pfile		: local_data.value.pfile,
-						process_id	: process_id,
+						local_db_id	: local_db_id,
 						container	: response_message,
 						lock_items	: lock_items,
 						self		: self
@@ -590,7 +590,7 @@ const update_process_status = (options) => {
 
 	const pid			= options.pid
 	const pfile			= options.pfile
-	const process_id	= options.process_id
+	const local_db_id	= options.local_db_id
 	const container		= options.container
 	const lock_items	= options.lock_items
 	const self			= options.self
@@ -626,7 +626,7 @@ const update_process_status = (options) => {
 		// the stream reader events
 		const render_response = render_stream({
 			container	: container,
-			id			: process_id,
+			id			: local_db_id,
 			pid			: pid,
 			pfile		: pfile
 		})
