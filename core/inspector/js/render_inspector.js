@@ -838,7 +838,7 @@ export const render_component_info = function(self, component) {
 			container.classList.toggle('auto_height')
 		})
 		// parse data. This time out prevents lock component selection
-		setTimeout(function(){
+		const callback = () => {
 			const value = component.data && component.data.value
 				? JSON.stringify(component.data.value, null, 1)
 				: ''
@@ -863,7 +863,8 @@ export const render_component_info = function(self, component) {
 					navigator.clipboard.writeText( JSON.stringify(component.data.value) )
 				}
 			})
-		}, 50)
+		}
+		requestIdleCallback(callback)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -1168,9 +1169,16 @@ const render_relation_list = function(self) {
 			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
 			collapse_callback	: unload_relation_list,
-			expose_callback		: load_relation_list,
+			expose_callback		: expose, // load_relation_list
 			default_state		: 'closed'
 		})
+		function expose() {
+			const load = () => {
+				load_relation_list(self)
+				relation_list_head.classList.add('up')
+			}
+			requestIdleCallback(load)
+		}
 
 
 	return relation_list_container
@@ -1235,8 +1243,11 @@ export const render_time_machine_list = function(self) {
 			time_machine_list_head.classList.remove('up')
 		}
 		function expose() {
-			load_time_machine_list(self)
-			time_machine_list_head.classList.add('up')
+			const load = () => {
+				load_time_machine_list(self)
+				time_machine_list_head.classList.add('up')
+			}
+			requestIdleCallback(load)
 		}
 
 
@@ -1368,8 +1379,11 @@ const render_component_history = function(self) {
 			component_history_head.classList.remove('up')
 		}
 		function expose() {
-			load_component_history(self, self.actived_component)
-			component_history_head.classList.add('up')
+			const load = () => {
+				load_component_history(self, self.actived_component)
+				component_history_head.classList.add('up')
+			}
+			requestIdleCallback(load)
 		}
 
 
