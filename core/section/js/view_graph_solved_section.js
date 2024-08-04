@@ -749,9 +749,9 @@ const get_graph = async function(options) {
 
 		// when user move the mouse out of the path remove all text role nodes
 		function link_mouse_leave(event, p) {
-
-			const source_text_node = d3.selectAll("#role").remove();
+			d3.selectAll("#role").remove();
 		}
+
 
 	return svg.node();
 }//end get_graph
@@ -900,8 +900,9 @@ const render_left = async (self) => {
 */
 const render_source_section = async function(options) {
 
-	const section_tipo = options.section_tipo
-	const rqo = options.rqo
+	// options
+		const section_tipo	= options.section_tipo
+		const rqo			= options.rqo
 
 	const old_ddo_map = rqo.show.ddo_map.filter(el => el.section_tipo === section_tipo)
 
@@ -1139,7 +1140,6 @@ view_graph_solved_section.render_column_drag = function(options) {
 * @return bool true
 */
 export const on_dragstart = function(node, event, options) {
-	// event.preventDefault();
 	event.stopPropagation();
 
 	// will be necessary the original locator (send as value) of the section_record and the paginated_key (the position in the array of data)

@@ -12,7 +12,6 @@
 		render_login,
 		render_files_loader
 	} from './render_login.js'
-	import {saml} from '../saml/js/saml.js'
 
 
 
@@ -136,11 +135,16 @@ login.prototype.build = async function(autoload=false) {
 	// saml
 		const saml_config = self.context?.properties?.saml_config
 		if (saml_config) {
-			self.saml = new saml()
-			await self.saml.init({
-				caller		: self,
-				saml_config	: saml_config
-			})
+			try {
+				const {saml} = await import('../../../lib/dedalo/login/saml/js/saml.js')
+				self.saml = new saml()
+				await self.saml.init({
+					caller		: self,
+					saml_config	: saml_config
+				})
+			} catch (error) {
+				console.error(error)
+			}
 		}
 
 	// status update

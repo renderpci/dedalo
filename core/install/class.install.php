@@ -385,7 +385,7 @@ class install extends common {
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed '.__METHOD__;
 
-		// cli msg
+		// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => (label::get_label('processing_wait') ?? 'Processing... please wait')
@@ -396,7 +396,7 @@ class install extends common {
 			$config = install::get_config();
 
 		// clone database to dedalo_install
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Cloning database'
@@ -409,7 +409,7 @@ class install extends common {
 			}
 
 		// clean ontology (structure)
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Cleaning Ontology'
@@ -421,7 +421,7 @@ class install extends common {
 			}
 
 		// clean counters (truncate all counters to force re-create later)
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Cleaning counters'
@@ -433,7 +433,7 @@ class install extends common {
 			}
 
 		// clean general tables ($to_clean_tables)
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Cleaning tables'
@@ -445,7 +445,7 @@ class install extends common {
 			}
 
 		// create extensions (unaccent, pg_trgm ..)
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating extensions (unaccent, pg_trgm ..)'
@@ -463,7 +463,7 @@ class install extends common {
 			// }
 
 		// create default blank root user
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating root user'
@@ -475,7 +475,7 @@ class install extends common {
 			}
 
 		// create default main project
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating main project'
@@ -487,7 +487,7 @@ class install extends common {
 			}
 
 		// create default main profiles
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating main profiles'
@@ -499,7 +499,7 @@ class install extends common {
 			}
 
 		// create default test_record
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating default test record'
@@ -511,7 +511,7 @@ class install extends common {
 			}
 
 		// import_hierarchy_main_records (matrix_hierarchy_main records)
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Importing main hierarchy records'
@@ -568,7 +568,7 @@ class install extends common {
 			// }
 
 		// vacuum analyze
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Vacuum database'
@@ -580,7 +580,7 @@ class install extends common {
 			}
 
 		// build install DDBB to default compressed psql file
-			// cli msg
+			// CLI msg
 			if ( running_in_cli()===true ) {
 				print_cli((object)[
 					'msg' => 'Creating compressed psql file'
@@ -1075,7 +1075,7 @@ class install extends common {
 		// clean matrix and accessory tables
 			$items = array_map(function($table){
 
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg' => 'Cleaning table: ' . $table

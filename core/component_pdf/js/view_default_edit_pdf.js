@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {when_in_viewport} from '../../common/js/events.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -314,7 +313,7 @@ const get_content_value = function(i, current_value, self) {
 
 
 	return content_value
-}//end input_element
+}//end get_content_value
 
 
 

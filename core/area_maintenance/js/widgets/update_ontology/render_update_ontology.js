@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
 
@@ -70,7 +69,6 @@ const get_content_data_edit = async function(self) {
 		const value					= self.value || {}
 		const current_ontology		= value.current_ontology
 		const ontology_db			= value.ontology_db
-		const body					= value.body
 		const structure_from_server	= value.structure_from_server
 		const structure_server_url	= value.structure_server_url
 		const structure_server_code	= value.structure_server_code
@@ -82,8 +80,8 @@ const get_content_data_edit = async function(self) {
 			element_type : 'div'
 		})
 
-	// info
-		const info = ui.create_dom_element({
+	// info_text
+		ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'info_text',
 			inner_html		: `Current Ontology version: <b>${current_ontology}</b>`,
@@ -133,26 +131,27 @@ const get_content_data_edit = async function(self) {
 					add_to_grid('STRUCTURE_SERVER_CODE', structure_server_code)
 					add_to_grid('DEDALO_PREFIX_TIPOS', prefix_tipos.join(', '))
 
+
 			// form init
-			self.caller.init_form({
-				submit_label	: 'Update Dédalo Ontology to the latest version',
-				confirm_text	: confirm_text,
-				body_info		: content_data,
-				body_response	: body_response,
-				inputs			: [{
-					type		: 'text',
-					name		: 'dedalo_prefix_tipos',
-					label		: 'TLD list to update',
-					mandatory	: true,
-					value		: prefix_tipos
-				}],
-				trigger : {
-					dd_api	: 'dd_area_maintenance_api',
-					action	: 'update_ontology',
-					options	: null
-				}
-			})
-		}
+				self.caller.init_form({
+					submit_label	: 'Update Dédalo Ontology to the latest version',
+					confirm_text	: confirm_text,
+					body_info		: content_data,
+					body_response	: body_response,
+					inputs			: [{
+						type		: 'text',
+						name		: 'dedalo_prefix_tipos',
+						label		: 'TLD list to update',
+						mandatory	: true,
+						value		: prefix_tipos
+					}],
+					trigger : {
+						dd_api	: 'dd_area_maintenance_api',
+						action	: 'update_ontology',
+						options	: null
+					}
+				})
+		}//end if (ontology_db)
 
 	// add at end body_response
 		content_data.appendChild(body_response)
@@ -162,5 +161,5 @@ const get_content_data_edit = async function(self) {
 }//end get_content_data_edit
 
 
-// @license-end
 
+// @license-end

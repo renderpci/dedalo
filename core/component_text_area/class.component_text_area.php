@@ -780,6 +780,31 @@ class component_text_area extends component_common {
 
 
 	/**
+	* GET_PLAIN_TEXT
+	* Get only the text without tags or HTML
+	* Used in publication to search
+	* @return string $text
+	*/
+	public function get_plain_text() : string {
+
+		$raw_data = $this->get_value();
+
+		// empty text
+		$text = '';
+
+		# Clean
+		if(!empty($raw_data)) {
+			$text	= TR::deleteMarks($raw_data);
+			$text	= strip_tags($text);
+		}
+
+		return $text;
+	}//end get_plain_text
+
+
+
+
+	/**
 	* CLEAN_RAW_TEXT_FOR_PREVIEW
 	* (!) Removed 22-05-2023 because no one calls here
 	* Used when we have a raw text from database and we want show a preview for tool time machine list for example
@@ -1641,7 +1666,7 @@ class component_text_area extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*

@@ -12,11 +12,11 @@
 
 /**
 * RENDER_COMPONENTS_LIST
-* Create dom elements to generate list of components and section groups of current section
+* Create DOM elements to generate list of components and section groups of current section
 * @see this.get_section_elements_context
 * @param object options
 *	string options.section_tipo (section to load components and render)
-*	DOM element options.target_div (Target dom element on new data will be added)
+*	DOM element options.target_div (Target DOM element on new data will be added)
 *	array path (Cumulative array of component path objects)
 * @return array ar_components
 */
@@ -93,12 +93,13 @@ export const render_components_list = function(options) {
 					parent 		 : list_container
 				})
 				// Section group label (li)
-				ui.create_dom_element({
+				const section_group_label = ui.create_dom_element({
 					element_type	: 'li',
 					parent			: section_group,
 					class_name		: 'section_group_label',
 					inner_html		: element.label
 				})
+				section_group_label.addEventListener('click', toggle_section_group_label_siblings)
 				break;
 
 			default: {
@@ -196,13 +197,51 @@ export const render_components_list = function(options) {
 
 
 /**
+* TOGGLE_SECTION_GROUP_LABEL_SIBLINGS
+* Toggle HTMLElemnt section_group_label style
+* If 'closed', hide all sibling nodes, otherwise show them again.
+* @param e event
+* @return void
+*/
+const toggle_section_group_label_siblings = function (e) {
+	e.stopPropagation()
+
+	// clicked node
+	const section_group_label = e.target
+
+	// toggle style
+	section_group_label.classList.toggle('closed')
+
+	// sibling nodes
+	const ar_sibling		= section_group_label.parentNode.childNodes
+	const ar_sibling_length	= ar_sibling.length
+
+	// toggle siblings
+	const is_closed = section_group_label.classList.contains('closed')
+	for (let i = 0; i < ar_sibling_length; i++) {
+		const item = ar_sibling[i]
+		if (item===section_group_label) {
+			// ignore self node
+			continue
+		}
+		if (is_closed) {
+			item.classList.add('hide')
+		}else{
+			item.classList.remove('hide')
+		}
+	}
+}//end toggle_section_group_label_siblings
+
+
+
+/**
 * RENDER_SERVER_RESPONSE_ERROR
 * Render generic page error (Raspa background)
 * @param array errors
 * 	sample:
 * 	[
 * 		{
-*	 		error : 'not_logged',
+*			error : 'not_logged',
 * 			msg : 'Invalid result',
 * 			trace : 'page build',
 * 		}

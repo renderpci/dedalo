@@ -143,7 +143,7 @@ search.prototype.init = async function(options) {
 		async function fn_change_search_element(instance) {
 
 			// parse filter to DOM
-			await self.parse_dom_to_json_filter({
+			self.parse_dom_to_json_filter({
 				mode : self.mode
 			})
 			// Set as changed, it will fire the event to save the temp search section (temp preset)
@@ -1199,27 +1199,6 @@ search.prototype.reset = async function () {
 
 	return true
 }//end reset
-
-
-
-/**
-* INIT_TIPOLOGY_SELECTOR
-* @return
-*/
-	// search.prototype.init_tipology_selector = function(options) {
-
-	// 	const thesaurus_typology_selector = self.wrapper_sections_selector.querySelector(".thesaurus_typology_selector")
-	// 	const selected_value 			  = read_cookie("selected_tipology") || thesaurus_typology_selector.value;
-
-	// 	// Force update selector with selected value
-	// 		thesaurus_typology_selector.value = selected_value;
-
-	// 	// Build checkboxes
-	// 		render_thesaurus_sections_checkboxes(selected_value, options.ar_data_string);
-
-
-	// 	return true;
-	// }//end init_tipology_selector
 
 
 

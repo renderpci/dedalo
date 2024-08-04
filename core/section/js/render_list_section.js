@@ -10,11 +10,9 @@
 	import {
 		clone,
 		get_font_fit_size,
-		// url_vars_to_object,
 		object_to_url_vars,
 		open_window
 	} from '../../common/js/utils/index.js'
-	// import {create_source, push_browser_history} from '../../common/js/common.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
 	import {view_default_list_section} from './view_default_list_section.js'
 	import {view_graph_list_section} from './view_graph_list_section.js'
@@ -355,7 +353,7 @@ export const render_column_id = function(options) {
 
 								// MODE USING PAGE USER_NAVIGATION
 								// sqo. Note that sqo will be used as request_config.sqo on navigate
-									const sqo = clone(self.request_config_object.sqo)
+									const sqo = clone(self.rqo.sqo)
 									// set updated filter
 									sqo.filter = self.rqo.sqo.filter
 									// reset pagination

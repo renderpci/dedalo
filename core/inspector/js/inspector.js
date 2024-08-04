@@ -17,7 +17,6 @@
 		update_project_container_body,
 		open_ontology_window
 	} from './render_inspector.js'
-	// import * as instances from '../../common/js/instances.js'
 
 
 

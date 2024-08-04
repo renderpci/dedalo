@@ -40,7 +40,6 @@ declare(strict_types=1);
 	require_once 'components/elements.php';
 	require_once dirname(__FILE__) . '/login/login_Test.php';
 
-
 // PHPUnitUtil reflection
 	class PHPUnitUtil
 	{

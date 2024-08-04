@@ -213,6 +213,9 @@ class component_filter extends component_relation_common {
 						);
 					}else{
 						$found = array_find($defaults, function($el){
+							if (isset($el->section_tipo)) {
+								return $el->tipo===$this->tipo && $el->section_tipo===$this->section_tipo; // Note if is defined section_tipo, use it to compare
+							}
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (is_object($found)) {

@@ -16,12 +16,16 @@
 				display: block;
 			}
 
-			.button_save {
+			>.button_save {
 				top: 5rem;
 				position: sticky;
 				float: right;
 				flex: none;
 				white-space: nowrap;
+
+				&.disable {
+					visibility: hidden;
+				}
 			}
 
 			>.changes_container {
@@ -249,6 +253,7 @@
 					margin-right: 1.5rem;
 
 					&:after {
+						cursor: pointer;
 						background-color: #0075ff;
 						right: -1.45rem;
 						height: 1.2rem;

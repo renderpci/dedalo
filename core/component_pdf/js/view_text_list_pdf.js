@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 
 
@@ -31,7 +30,6 @@ export const view_text_list_pdf = function() {
 view_text_list_pdf.render = async function(self, options) {
 
 	// image append to wrapper
-		// const url = DEDALO_CORE_URL + '/themes/default/pdf_icon.png'
 		const url = DEDALO_CORE_URL + '/themes/default/icons/file-pdf-o.svg'
 
 	// wrapper
