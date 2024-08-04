@@ -568,14 +568,14 @@ final class dd_core_api {
 	*/
 	public static function read(object $rqo) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-			$response->error	= null;
-
 		// validate input data
 			if (empty($rqo->source->section_tipo)) {
-				$response->msg = 'Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+
+				$response = new stdClass();
+					$response->result	= false;
+					$response->msg		= 'Error: ('.__FUNCTION__.') Empty source \'section_tipo\' (is mandatory)';
+					$response->error	= null;
+
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
 					.' rqo: ' . to_string($rqo)
@@ -584,17 +584,21 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// ignore_user_abort
-			// ignore_user_abort(true);
+		// redirect to the method
+			switch ($rqo->source->action) {
+				case 'get_value':
+					// get component value
+					$response = self::get_component_value($rqo);
+					break;
 
-		// build rows (context & data)
-			$json_rows = self::build_json_rows($rqo);
-
-		// response success
-			$response->result	= $json_rows;
-			$response->msg		= 'OK. Request done';
+				default:
+					// build rows (context & data)
+					$response = self::build_json_rows($rqo);
+					break;
+			}
 
 		// activity
+		// register of the activity
 			if ($rqo->source->action==='search') {
 				// Prevent infinite loop saving self
 				if (!in_array($rqo->source->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
@@ -1696,10 +1700,16 @@ final class dd_core_api {
 	* Gets context and data from given element (section, component, area)
 	* @see class.request_query_object.php
 	* @param object $rqo
-	* @return object $result
+	* @return object $response
 	*/
 	private static function build_json_rows(object $rqo) : object {
 		$start_time	= start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
 
 		// default result
 			$result = new stdClass();
@@ -2275,8 +2285,12 @@ final class dd_core_api {
 				$result->debug = $debug;
 			}
 
+		// response
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done successfully';
 
-		return $result;
+
+		return $response;
 	}//end build_json_rows
 
 
@@ -2350,6 +2364,74 @@ final class dd_core_api {
 
 		return $clean_context;
 	}//end smart_remove_context_duplicates
+
+
+
+	/**
+	* GET_COMPONENT_VALUE
+	* Used to get the component value as text representation of the component data
+	* @param object $json_data
+	* @return object $response
+	*/
+	private static function get_component_value(object $rqo) : object {
+
+		session_write_close();
+
+		// rqo vars
+			$source			= $rqo->source;
+			$tipo			= $source->tipo ?? null;
+			$section_tipo	= $source->section_tipo ?? $source->tipo ?? null;
+			$model			= $source->model ?? RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang			= $source->lang ?? DEDALO_DATA_LANG;
+			$mode			= $source->mode ?? 'list';
+			$section_id		= $source->section_id ?? null; // only used by tools (it needed to load the section_tool record to get the context )
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->error	= null;
+
+		// build element
+			switch (true) {
+
+				case strpos($model, 'component_')===0:
+
+					$component_lang	= (RecordObj_dd::get_translatable($tipo)===true)
+						? $lang
+						: DEDALO_DATA_NOLAN;
+
+					$element = component_common::get_instance(
+						$model,
+						$tipo,
+						$section_id, // string section_id
+						$mode,
+						$component_lang,
+						$section_tipo
+					);
+					break;
+
+				default:
+					// throw new Exception("Error Processing Request", 1);
+					debug_log(__METHOD__
+						." invalid element. exception msg: only components are accepted here "
+						, logger::ERROR
+					);
+					$response->msg = 'Error. model not valid: '.$model;
+					return $response;
+			}
+
+		// element JSON
+			$value = $element->get_value();
+
+		// response
+			$response->result	= $value;
+			$response->msg		= 'OK. Request done successfully';
+
+
+		return $response;
+	}//end get_component_value
+
 
 
 
