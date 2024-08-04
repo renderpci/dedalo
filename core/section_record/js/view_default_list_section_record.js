@@ -157,7 +157,7 @@ const get_content_data = async function(self) {
 						const column_node = render_column_node_callback(current_column, self)
 
 					// content_node. Normally a DocumentFragment
-						const content_node = current_column.callback({
+						const content_node = await current_column.callback({
 							section_tipo		: self.section_tipo,
 							section_id			: self.section_id,
 							row_key				: self.row_key,
@@ -201,22 +201,29 @@ const get_content_data = async function(self) {
 						if (current_instance.node!==null) {
 							resolve(true)
 						}else{
+							// render the instance
+							// if the column has defined a render_callback use it to render the instance
+							// else use the common render
+							// render_callback allow to add event listeners to the instance nodes
+							const render_promise = (current_column.render_callback && typeof current_column.render_callback==='function')
+								? current_column.render_callback(current_instance)
+								: current_instance.render()
 
-							current_instance.render()
+							render_promise
 							.then(function(current_instance_node){
-								// bad node case
-								if (!current_instance_node) {
-									console.error('Invalid instance_node', current_instance);
-									reject(false)
-									return
-								}
+									// bad node case
+									if (!current_instance_node) {
+										console.error('Invalid instance_node', current_instance);
+										reject(false)
+										return
+									}
 
-								resolve(true)
-							}).catch((errorMsg) => {
-								// error occurred case
-								console.error(errorMsg);
-							})
-						}
+									resolve(true)
+								}).catch((errorMsg) => {
+									// error occurred case
+									console.error(errorMsg);
+								})
+							}
 					})
 					ar_promises.push(current_promise)
 				}//end for (let k = 0; k < ar_instances_length; k++)
