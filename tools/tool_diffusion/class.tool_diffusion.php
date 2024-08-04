@@ -349,6 +349,11 @@ class tool_diffusion extends tool_common {
 						print_cli($pdata);
 					}
 
+					// if found records number is lower than limit, we are done
+					if ($found_records < $chunk_n_rows) {
+						break;
+					}
+
 					// (!) update offset on every loop
 					$sqo->offset = $sqo->offset + $chunk_n_rows;
 
