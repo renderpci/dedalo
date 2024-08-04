@@ -290,7 +290,7 @@ class tool_import_dedalo_csv extends tool_common {
 				$current_file	= $current_file_obj->file; // string like 'exported_oral-history_-1-oh1.csv'
 				$section_tipo	= $current_file_obj->section_tipo; // string like 'oh1'
 				$ar_columns_map	= $current_file_obj->ar_columns_map; // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
-
+				$process_label	= $current_file_obj->process_label; // string like 'exported_oral-history_-1-oh1.csv'
 				// print the process_info
 					if ( running_in_cli()===true ) {
 						$process_info->msg			= label::get_label('reading');
@@ -327,6 +327,7 @@ class tool_import_dedalo_csv extends tool_common {
 						$import_csv_options->time_machine_save	= $time_machine_save;
 						$import_csv_options->ar_columns_map		= $ar_columns_map;
 						$import_csv_options->current_file		= $current_file;
+						$import_csv_options->process_label		= $process_label;
 
 					$current_file_response = (object)tool_import_dedalo_csv::import_dedalo_csv_file($import_csv_options);
 					$current_file_response->file			= $current_file;
@@ -828,6 +829,7 @@ class tool_import_dedalo_csv extends tool_common {
 		$time_machine_save	= $options->time_machine_save;
 		$ar_columns_map		= $options->ar_columns_map;
 		$current_file		= $options->current_file;
+		$process_label		= $options->process_label;
 
 		// Disable logging activity (!) IMPORTANT
 			logger_backend_activity::$enable_log = false;
@@ -882,8 +884,41 @@ class tool_import_dedalo_csv extends tool_common {
 		$counter		= 0;
 		$csv_head_row	= $ar_csv_data[0];
 
-		// get the process_id as the current time as unix timestamp
-			$process_id = dd_date::get_now_as_unix_timestamp();
+		// PROCESS
+			// create new process section
+				$process_section = section::get_instance(
+					null, // string|null section_id
+					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$process_section->Save();
+
+			// get the process_id as the section_id of the section process
+				$process_id = $process_section->get_section_id();
+
+			// Save the file name into the process section
+				$file_component = component_common::get_instance(
+					'component_input_text', // string model
+					DEDALO_PROCESS_FILE_TIPO, // string tipo
+					$process_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$file_component->set_dato($current_file);
+				$file_component->Save();
+
+			// Save the process name into the process section
+				$process_label_component = component_common::get_instance(
+					'component_input_text', // string model
+					DEDALO_PROCESS_LABEL_TIPO, // string tipo
+					$process_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$process_label_component->set_dato($process_label);
+				$process_label_component->Save();
+
 
 		foreach ($ar_csv_data as $rkey => $columns) {
 
