@@ -354,7 +354,7 @@ const render_file_info = function(self, item) {
 						// section_label
 						section_label.innerHTML = item.section_label || ''
 
-						bulk_process_label.value = `${self.context.label} | ${item.section_tipo} | ${item.section_label} `
+						bulk_process_label.value = self.context.label
 						bulk_process_label.dispatchEvent(new Event('input'));
 
 						columns_maper.classList.remove('loading')
@@ -420,8 +420,8 @@ const render_file_info = function(self, item) {
 		// updated by the render_columns_mapper
 		ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'process_name_label',
-			inner_html		: self.get_tool_label('process_title') || 'Process title: ',
+			class_name		: 'bulk_process_name_label',
+			inner_html		: self.get_tool_label('bulk_process_title') || 'Process title: ',
 			parent			: info_container
 		})
 		item.bulk_process_label = `${self.context.label} | ${item.section_tipo} | ${item.section_label}`
