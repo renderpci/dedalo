@@ -2406,7 +2406,7 @@ function create_directory(string $folder_path, int $create_dir_permissions) {
 			// error creating directory
 			debug_log(__METHOD__
 				.' Error on read or create directory. Permission denied' . PHP_EOL
-				.' php user:' . exec('whoami') .PHP_EOL
+				.' php user: ' . exec('whoami') .PHP_EOL
 				.' folder_path: ' .$folder_path . PHP_EOL
 				.' create_dir_permissions: ' . to_string($create_dir_permissions)
 				, logger::ERROR
