@@ -75,7 +75,7 @@ const get_content_data_edit = async function(self) {
 		const value			= self.value || {}
 		const body			= value.body
 		const files			= value.files || []
-		const process_id	= 'process_move_tld'
+		const local_db_id	= 'process_move_tld'
 
 	// files sort
 		files.sort((a, b) => new Intl.Collator().compare(a.file_name, b.file_name));
@@ -202,7 +202,7 @@ const get_content_data_edit = async function(self) {
 				self.exec_move_tld(files_selected)
 				.then(function(response){
 					update_process_status(
-						process_id,
+						local_db_id,
 						response.pid,
 						response.pfile,
 						body_response
@@ -260,13 +260,13 @@ const get_content_data_edit = async function(self) {
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				process_id,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
 				if (local_data && local_data.value) {
 					update_process_status(
-						process_id,
+						local_db_id,
 						local_data.value.pid,
 						local_data.value.pfile,
 						body_response

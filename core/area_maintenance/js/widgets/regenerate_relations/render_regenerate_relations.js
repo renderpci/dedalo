@@ -76,7 +76,7 @@ const get_content_data_edit = async function(self) {
 		const structure_server_code	= value.structure_server_code
 		const prefix_tipos			= value.prefix_tipos || []
 		const confirm_text			= value.confirm_text || 'Sure?'
-		const process_id			= 'process_regenerate_relations'
+		const local_db_id			= 'process_regenerate_relations'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -168,7 +168,7 @@ const get_content_data_edit = async function(self) {
 					// the stream reader events
 					const render_stream_response = render_stream({
 						container		: container,
-						id				: process_id,
+						id				: local_db_id,
 						pid				: pid,
 						pfile			: pfile,
 						display_json	: true
@@ -196,7 +196,7 @@ const get_content_data_edit = async function(self) {
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				process_id,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){

@@ -79,7 +79,7 @@ const get_content_data = async function(self) {
 		const current_version_in_db		= value.current_version_in_db
 		const dedalo_version			= value.dedalo_version
 		const updates					= value.updates
-		const process_id				= 'process_update_data_version'
+		const local_db_id				= 'process_update_data_version'
 
 	// maintenance_mode from environment
 		const maintenance_mode = page_globals.maintenance_mode
@@ -320,7 +320,7 @@ const get_content_data = async function(self) {
 					// the stream reader events
 					const render_stream_response = render_stream({
 						container		: container,
-						id				: process_id,
+						id				: local_db_id,
 						pid				: pid,
 						pfile			: pfile,
 						display_json	: true
@@ -348,7 +348,7 @@ const get_content_data = async function(self) {
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				process_id,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){

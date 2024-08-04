@@ -70,7 +70,7 @@ const get_content_data_edit = async function(self) {
 		const value								= self.value || {}
 		const dedalo_source_version_url			= value.dedalo_source_version_url
 		const dedalo_source_version_local_dir	= value.dedalo_source_version_local_dir
-		const process_id						= 'process_update_code'
+		const local_db_id						= 'process_update_code'
 
 	// content_data
 		const content_data = ui.create_dom_element({
@@ -130,7 +130,7 @@ const get_content_data_edit = async function(self) {
 					// the stream reader events
 					const render_stream_response = render_stream({
 						container		: container,
-						id				: process_id,
+						id				: local_db_id,
 						pid				: pid,
 						pfile			: pfile,
 						display_json	: true
@@ -165,7 +165,7 @@ const get_content_data_edit = async function(self) {
 		// check process status always
 		const check_process_data = () => {
 			data_manager.get_local_db_data(
-				process_id,
+				local_db_id,
 				'status'
 			)
 			.then(function(local_data){
