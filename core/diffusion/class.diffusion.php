@@ -556,7 +556,7 @@ abstract class diffusion  {
 			);
 
 			// dato
-			$dato = (property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
+			$dato = (is_object($properties) && property_exists($properties, 'get_field_value') && isset($properties->get_field_value->get_dato_method))
 				? $current_component->{$properties->get_field_value->get_dato_method}()
 				: $current_component->get_dato();
 
@@ -1229,7 +1229,8 @@ abstract class diffusion  {
 
 	/**
 	* UPDATE_PUBLICATION_DATA
-	*
+	* Updates the information of the published section about the publication
+	* such as date and user publishing
 	* @param string $section_tipo
 	* @param string|int $section_id
 	* @return bool
@@ -1249,7 +1250,7 @@ abstract class diffusion  {
 		// current user dato
 			$user_id = logged_user_id();
 
-		// first . component publication first. save if not exist
+		// first publication. component publication first. save if it does not exist
 			// date
 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_first_tipo,true);
 				$component	= component_common::get_instance(
@@ -1291,10 +1292,11 @@ abstract class diffusion  {
 					// section avoid save_modified by user in diffusion
 						$section = $component->get_my_section();
 						$section->save_modified = false;
+						$section->save_tm = false; // prevent to save time machine record
 					$component->Save();
 				}
 
-		// last . publication last. save updated date always
+		// last publication. save updated date always
 			// date
 				$model_name	= RecordObj_dd::get_modelo_name_by_tipo($publication_last_tipo,true);
 				$component	= component_common::get_instance(
@@ -1331,6 +1333,7 @@ abstract class diffusion  {
 				// section avoid save_modified by user in diffusion
 					$section = $component->get_my_section();
 					$section->save_modified = false;
+					$section->save_tm = false; // prevent to save time machine record
 				$component->Save();
 
 		// debug

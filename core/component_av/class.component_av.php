@@ -310,16 +310,7 @@ class component_av extends component_media_common implements component_media_int
 				}
 			}
 
-		// file
-			// $bytes		= filesize($src_file);
-			// $mega_bytes	= number_format($bytes / 1048576, 2);
-			// if ($mega_bytes>1000) {
-			// 	debug_log(__METHOD__
-			// 		. " Trying to create a posterframe from large archive ($mega_bytes MB)" . PHP_EOL
-			// 		, logger::WARNING
-			// 	);
-			// }
-
+		// FFMPEG create_posterframe
 		$Ffmpeg	= new Ffmpeg();
 		$command_response = $Ffmpeg->create_posterframe((object)[
 			'timecode'				=> $current_time, // like '00:00:10',
@@ -327,6 +318,11 @@ class component_av extends component_media_common implements component_media_int
 			'quality'				=> $quality,
 			'posterframe_filepath'	=> $posterframe_filepath
 		]);
+
+		// re-create the thumb image
+		if ($command_response===true) {
+			$this->create_thumb();
+		}
 
 
 		return $command_response;
@@ -370,13 +366,7 @@ class component_av extends component_media_common implements component_media_int
 
 	/**
 	* CREATE_THUMB
-	*
-	* OSX Brew problem: [source: http://www.imagemagick.org/discourse-server/viewtopic.php?t=29096]
-	* Looks like the issue is that because the PATH variable is not necessarily available to Apache, IM does not actually know where Ghostscript is located.
-	* So I modified my delegates.xml file, which in my case is located in [i]/usr/local/Cellar/imagemagick/6.9.3-0_1/etc/ImageMagick-6/delegates.xml[/] and replaced
-	* command="&quot;gs&quot;
-	* with
-	* command="&quot;/usr/local/bin/gs&quot;
+	* Creates a thumbnail version of av file using the posterframe if available
 	* @return bool
 	*/
 	public function create_thumb() : bool {
@@ -400,7 +390,7 @@ class component_av extends component_media_common implements component_media_int
 			if (!file_exists($posterframe)) {
 
 				// try to create an automatic posterframe at 5 second
-				$this->create_posterframe(5);
+				$this->create_posterframe(5.00);
 
 				if (!file_exists($posterframe)) {
 					debug_log(__METHOD__

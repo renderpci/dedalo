@@ -492,17 +492,10 @@ class component_3d extends component_media_common implements component_media_int
 					$folder				= $this->get_folder(); // like DEDALO_3D_FOLDER
 					$additional_path	= $this->additional_path;
 
-					// delete dir
+					// delete dir check/creation
 						$folder_path_del = DEDALO_MEDIA_PATH . $folder . '/posterframe' . $additional_path . '/deleted';
-						if( !is_dir($folder_path_del) ) {
-							$create_dir = mkdir($folder_path_del, 0775, true);
-							if(!$create_dir) {
-								debug_log(__METHOD__
-									." Error on read or create directory \"deleted\". Permission denied ".to_string($folder_path_del)
-									, logger::ERROR
-								);
-								return false;
-							}
+						if(!create_directory($folder_path_del, 0750)) {
+							return false;
 						}
 
 					// date now
@@ -684,21 +677,11 @@ class component_3d extends component_media_common implements component_media_int
 				}else{
 					// target directory check
 					$target_dir = dirname($default_quality_file_path);
-					if (!is_dir($target_dir)) {
-						if(!mkdir($target_dir, 0750, true)) {
-							debug_log(__METHOD__
-								.' Error creating directory: ' . PHP_EOL
-								.' target_dir: ' . $target_dir
-								, logger::ERROR
-							);
-							$response->msg .= ' Error creating directory';
-							debug_log(__METHOD__
-								. ' '.$response->msg
-								, logger::ERROR
-							);
-							return $response;
-						}
+					if(!create_directory($target_dir, 0750)) {
+						$response->msg .= ' Error creating target_dir directory';
+						return $response;
 					}
+
 					// copy file from original quality to default quality
 					if (!copy($original_file_path, $default_quality_file_path)) {
 						debug_log(__METHOD__

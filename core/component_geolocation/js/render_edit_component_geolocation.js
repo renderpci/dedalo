@@ -7,7 +7,6 @@
 // imports
 	import {ui} from '../../common/js/ui.js'
 	import {view_default_edit_geolocation} from './view_default_edit_geolocation.js'
-	// import {view_text_geolocation} from './view_text_geolocation.js'
 	import {view_mini_geolocation} from './view_mini_geolocation.js'
 
 
@@ -199,7 +198,7 @@ export const render_color_picker = function(self, layer, layer_id) {
 	}
 
 	// listen to a color picker's color:change event
-	color_picker.on(["color:change"], color_selected);
+	color_picker.on(['color:change'], color_selected);
 
 
 	return color_container

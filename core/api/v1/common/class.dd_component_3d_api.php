@@ -84,20 +84,9 @@ final class dd_component_3d_api {
 
 			// target directory check
 				$full_target_dir = dirname($target_file_path);
-				if (!is_dir($full_target_dir)) {
-					if(!mkdir($full_target_dir, 0750, true)) {
-						debug_log(__METHOD__
-							.' Error creating directory: ' . PHP_EOL
-							.' target_dir: ' . $full_target_dir
-							, logger::ERROR
-						);
-						$response->msg .= ' Error creating directory';
-						debug_log(__METHOD__
-							. ' '.$response->msg
-							, logger::ERROR
-						);
-						return $response;
-					}
+				if(!create_directory($full_target_dir, 0750)) {
+					$response->msg .= ' Error creating directory';
+					return $response;
 				}
 
 			$result = rename($source_file_path, $target_file_path);
@@ -131,7 +120,61 @@ final class dd_component_3d_api {
 
 
 		return $response;
-	}//end add_posterframe
+	}//end move_file_to_dir
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* Deletes posterframe file
+	*
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "delete_posterframe",
+	*	dd_api	: 'dd_component_3d_api',
+	*	source	: {
+	*		tipo			: 'rsc36',
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function delete_posterframe( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+
+		// move file
+			$result = $component->delete_posterframe();
+
+		// response
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end delete_posterframe
 
 
 

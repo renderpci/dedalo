@@ -789,20 +789,9 @@ final class dd_utils_api {
 
 				// Check the target_dir, if it's not created will be make to be used.
 					// Target folder exists test
-					if( !is_dir($tmp_dir) ) {
-						if(!mkdir($tmp_dir, 0750, true)) {
-							$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
-							debug_log(__METHOD__
-								. " $response->msg" .PHP_EOL
-								. ' tmp_dir: ' . $tmp_dir
-								, logger::ERROR
-							);
-							return $response;
-						}
-						debug_log(__METHOD__
-							." CREATED DIR:  ". $tmp_dir
-							, logger::DEBUG
-						);
+					if(!create_directory($tmp_dir, 0750)) {
+						$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
+						return $response;
 					}
 
 				// move file to target path
@@ -1427,6 +1416,7 @@ final class dd_utils_api {
 						'data'			=> $data,
 						'time'			=> date("Y-m-d H:i:s"),
 						'total_time' 	=> exec_time_unit_auto($start_time),
+						'update_rate'	=> $update_rate,
 						'errors'		=> []
 					];
 
@@ -1454,10 +1444,14 @@ final class dd_utils_api {
 					// 		ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10
 					// to prevent this behavior, but the problem doesn't disappear completely.
 					// With h2 protocol and SSL the problem disappear, but is necessary to be compatibles with http 1.1
-					if(DEDALO_PROTOCOL === 'http://'){
+					// if(DEDALO_PROTOCOL === 'http://'){
+					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
 						$len = strlen($a);
 						if ($len < 4096) {
-							$a .= str_pad(' ', 4095-$len);
+							// re-create the output object and the final string
+							$fill_length = 4096 - $len;
+							$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+							$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
 						}
 					}
 					// format the message to be analyzed in client side.

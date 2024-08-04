@@ -1709,4 +1709,58 @@ final class core_functions_test extends TestCase {
 
 
 
+	/**
+	* TEST_create_directory
+	* @return void
+	*/
+	public function test_create_directory() {
+
+		$directory = DEDALO_MEDIA_PATH . '/test_creation';
+
+		// remove test directory
+			// if (is_dir($directory)) {
+			// 	rmdir($directory);
+			// }
+
+		// first try
+			$result = create_directory(
+				$directory,
+				0750
+			);
+
+			$eq = gettype($result)==='boolean';
+			$this->assertTrue(
+				$eq,
+				'expected boolean, but received type: '
+					. gettype( $result )
+			);
+
+			$eq = $result===true;
+			$this->assertTrue(
+				$eq,
+				'expected true, but received: '
+					. to_string( $result )
+			);
+
+		// try again when is already created
+			$result = create_directory(
+				$directory,
+				0750
+			);
+
+			$eq = $result===true;
+			$this->assertTrue(
+				$eq,
+				'expected true, but received: '
+					. to_string( $result )
+			);
+
+		// remove test directory
+			if (is_dir($directory)) {
+				rmdir($directory);
+			}
+	}//end test_create_directory
+
+
+
 }//end class core_functions_test

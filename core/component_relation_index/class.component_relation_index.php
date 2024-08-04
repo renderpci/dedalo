@@ -9,8 +9,8 @@ class component_relation_index extends component_relation_common {
 	public $filter_section;
 
 	/**
- 	* @var
- 	*/
+	* @var
+	*/
 	// relation_type defaults
 	protected $default_relation_type		= DEDALO_RELATION_TYPE_INDEX_TIPO; // dd96
 	protected $default_relation_type_rel	= null;
@@ -97,9 +97,10 @@ class component_relation_index extends component_relation_common {
 	* because is used to display remote references of relation type (DEDALO_RELATION_TYPE_INDEX_TIPO)
 	* to current section
 	* But, values are saved too to allow easy search
+	* @param int|null $custom_limit = null
 	* @return array|null $dato
 	*/
-	public function get_dato_paginated( ?int $custom_limit=null ) : array {
+	public function get_dato_paginated(?int $custom_limit=null) : array {
 
 		// pagination
 			$limit			= $custom_limit ?? $this->pagination->limit;
@@ -154,7 +155,6 @@ class component_relation_index extends component_relation_common {
 
 
 
-
 	/**
 	* COUNT_DATA
 	* Full count of data.
@@ -200,7 +200,7 @@ class component_relation_index extends component_relation_common {
 	* Use the group_by variable to count by any criteria the records
 	* the result include the total as sum of all.
 	* @param array $group_by
-	* ['section_tipo']
+	*  as ['section_tipo']
 	* @return object $count_data_group_by
 	*/
 	public function count_data_group_by(array $group_by) : object {
@@ -227,7 +227,6 @@ class component_relation_index extends component_relation_common {
 
 
 
-
 	/**
 	* GET_DATO_FULL
 	* Returns dato. Alias of get_dato
@@ -238,7 +237,6 @@ class component_relation_index extends component_relation_common {
 
 		return $this->get_dato();
 	}//end get_dato_full
-
 
 
 
@@ -315,13 +313,12 @@ class component_relation_index extends component_relation_common {
 
 
 
-
 	/**
 	* GET_SECTION_DATUM_FROM_LOCATOR
 	* @param locator $locator
 	* @return object $datum
 	*/
-	public function get_section_datum_from_locator( locator $locator) : object {
+	public function get_section_datum_from_locator(locator $locator) : object {
 
 		// cache
 			$solved_section_datum_tipo = [];
@@ -468,18 +465,30 @@ class component_relation_index extends component_relation_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @see class.diffusion_mysql.php
 	*
 	* @param string|null $lang = null
 	* @param object|null $option_obj = null
-	*
 	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		$dato = $this->get_dato();
+
+		// v5 compatibly workaround
+			// Note that this component in v5, stores data from related tag as
+			// [{
+			// 	"type": "dd96",
+			// 	"tag_id": "1",
+			// 	"section_id": "501",
+			// 	"section_tipo": "rsc167",
+			// 	"component_tipo": "rsc36",
+			// 	"section_top_id": "501",
+			// 	"section_top_tipo": "oh1",
+			// 	"from_component_tipo": "rsc1051"
+			// }]
 
 		// empty dato case
 			if (empty($dato)) {
@@ -587,7 +596,7 @@ class component_relation_index extends component_relation_common {
 	* @param object $locator
 	* @return bool
 	*/
-	public function remove_locator( object $locator ) : bool {
+	public function remove_locator(object $locator) : bool {
 
 		$locator = clone($locator);
 
@@ -628,7 +637,7 @@ class component_relation_index extends component_relation_common {
 	* @param object $query_object
 	* @return object $query_object
 	*/
-	public static function resolve_query_object_sql( object $query_object ) : object {
+	public static function resolve_query_object_sql(object $query_object) : object {
 
 		$with_references = false;
 
@@ -735,6 +744,7 @@ class component_relation_index extends component_relation_common {
 	* for all of them is the same. Use this cache-able function to prevent calculate inverse locators
 	* for every language
 	* @param object $locator
+	* @param string $cache_key
 	* @return array $referenced_locators
 	*/
 	public static function get_referended_locators_with_cache(object $locator, string $cache_key) : array {

@@ -157,6 +157,11 @@ const render_long_process = function() {
 			// locks the button submit
 			button_run_long_process.classList.add('loading')
 
+			// update_rate
+			const update_rate = input_update_rate.value
+				? parseInt(input_update_rate.value)
+				: 1000
+
 			// counter long process fire
 			const response  = await data_manager.request({
 				body		: {
@@ -167,7 +172,8 @@ const render_long_process = function() {
 					},
 					options : {
 						background_running	: true, // set run in background CLI
-						iterations			: iterations
+						iterations			: iterations,
+						update_rate			: update_rate // milliseconds
 					}
 				}
 			})
@@ -178,12 +184,16 @@ const render_long_process = function() {
 	// update_process_status
 		const update_process_status = function(pid, pfile, container) {
 
+			const update_rate = input_update_rate.value
+				? parseInt(input_update_rate.value)
+				: 1000
+
 			// get_process_status from API and returns a SEE stream
 				data_manager.request_stream({
 					body : {
 						dd_api		: 'dd_utils_api',
 						action		: 'get_process_status',
-						update_rate	: 1000, // int milliseconds
+						update_rate	: update_rate, // int milliseconds
 						options		: {
 							pid		: pid,
 							pfile	: pfile
@@ -271,6 +281,20 @@ const render_long_process = function() {
 				)
 			})
 		})
+		const label_update_rate = ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'info_text',
+			inner_html		: 'Update rate',
+			parent			: long_process_container
+		})
+		const input_update_rate = ui.create_dom_element({
+			element_type	: 'input',
+			type			: 'text',
+			class_name		: 'input_update_rate',
+			value			: 1000,
+			title			: 'Milliseconds',
+			parent			: long_process_container
+		})
 
 		// long_process_response
 		const long_process_response = ui.create_dom_element({
@@ -278,6 +302,22 @@ const render_long_process = function() {
 			class_name		: 'long_process_response',
 			parent			: long_process_container
 		})
+
+	// warning
+		ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'info_text',
+			inner_html		: `Note about SEE problems: <br>
+				Apache have issues where small chunks are not sent correctly over HTTP/1.1 <br>
+				Sometimes, the Apache server joins some outputs into one message (merge). <br>
+				On old versions, you can try this Apache vhosts configuration: <br>
+				<b>ProxyPass fcgi://127.0.0.1:9000/dedalo/ enablereuse=on flushpackets=on max=10</b> <br>
+				to prevent this behavior, but the problem doesn't disappear completely. <br>
+				With h2 protocol and SSL the problem disappear, but it is necessary to be compatibles with HTTP/1.1
+			`,
+			parent : long_process_container
+		})
+
 
 	return long_process_container
 }//end render_long_process

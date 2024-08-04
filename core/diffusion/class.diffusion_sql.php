@@ -612,7 +612,12 @@ class diffusion_sql extends diffusion  {
 				}
 
 			// section diffusion info - check. On finish record update, update current section diffusion_info
-				$section		= section::get_instance($current_section_id, $section_tipo, 'list', false);
+				$section = section::get_instance(
+					$current_section_id,
+					$section_tipo,
+					'list',
+					false // cache force to false
+				);
 				$diffusion_info	= $section->get_diffusion_info();
 				if ( isset($diffusion_info->{$diffusion_element_tipo}) ) {
 					if($skip_publication_state_check===1) {
@@ -803,6 +808,7 @@ class diffusion_sql extends diffusion  {
 					$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
 					$section->add_diffusion_info_default($diffusion_element_tipo);
 					$section->save_modified = false;
+					$section->save_tm = false; // prevent to save time machine record
 					$section->Save();
 
 					debug_log(__METHOD__

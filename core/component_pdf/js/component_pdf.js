@@ -94,15 +94,24 @@ component_pdf.prototype.build = async function(autoload=false) {
 * GO_TO_PAGE
 * called by the click into the tag (in component_text_area)
 * the tag will send the ar_layer_id that it's pointing to
+* @param object options
+* {
+* 	tag : object
+* }
+* @return void
 */
 component_pdf.prototype.go_to_page = async function(options) {
 
 	const self = this
-	// convert the tag dataset to 'real' object for manage it
-	const page = JSON.parse(options.tag.dataset.data)
-	// for every layer_id in the tag load the data from the DDBB
-	self.pdf_viewer.page = page[0]
 
+	// options
+		const tag = options.tag
+
+	// convert the tag dataset to 'real' object for manage it
+		const page = JSON.parse(tag.dataset.data)
+
+	// for every layer_id in the tag load the data from the DDBB
+		self.pdf_viewer.page = page[0]
 }//end go_to_page
 
 
@@ -226,8 +235,7 @@ function get_text() {
 	// })
 
 	// console.log("2222_extractText",self.pdf_viewer.pdfViewer.getPageView(3))
-
-}
+}//end
 
 ///// not used
 function getHightlightCoords() {
@@ -242,7 +250,7 @@ function getHightlightCoords() {
 	     viewport.convertToPdfPoint(r.right - pageRect.x, r.bottom - pageRect.y));
 	});
 	return {page: pageIndex, coords: selected};
-}
+}//end getHightlightCoords
 
 ///// not used
 function showHighlight(selected) {
@@ -258,7 +266,7 @@ function showHighlight(selected) {
 	    'width:' + Math.abs(bounds[0] - bounds[2]) + 'px; height:' + Math.abs(bounds[1] - bounds[3]) + 'px;');
 	  pageElement.appendChild(el);
 	});
-}
+}//end showHighlight
 
 
 

@@ -7,7 +7,6 @@
 // import
 	import {clone} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
@@ -217,6 +216,8 @@ tool_export.prototype.get_export_grid = async function(options) {
 			self.dd_grid.config.show_tipo_in_label = show_tipo_in_label
 			// reset fill_the_gaps
 			self.dd_grid.config.fill_the_gaps = fill_the_gaps
+			// reset data_format
+			self.dd_grid.config.data_format = data_format
 			// build
 			await self.dd_grid.build(false)
 			// reset node
@@ -233,9 +234,10 @@ tool_export.prototype.get_export_grid = async function(options) {
 			tipo				: self.caller.section_tipo,
 			mode				: 'list',
 			view				: view, // 'table',
-			config : {
+			config				: {
 				show_tipo_in_label	: show_tipo_in_label, // true of false
 				fill_the_gaps		: fill_the_gaps, // true of false
+				data_format			: data_format // like 'dedalo_raw'
 			},
 			lang				: page_globals.dedalo_data_lang,
 			data				: api_response.result

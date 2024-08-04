@@ -656,6 +656,9 @@ abstract class component_common extends common {
 						);
 					}else{
 						$found = array_find($defaults, function($el){
+							if (isset($el->section_tipo)) {
+								return $el->tipo===$this->tipo && $el->section_tipo===$this->section_tipo; // Note if is defined section_tipo, use it to compare
+							}
 							return $el->tipo===$this->tipo; // Note that match only uses component tipo (case hierarchy25 problem)
 						});
 						if (is_object($found)) {
@@ -3310,11 +3313,6 @@ abstract class component_common extends common {
 						}//end if($this->section_id==$user_id)
 				}//end if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO)
 		}
-
-		// check if the action is search with autocomplete and return 1 (read).
-			if ($this->permissions <1 && $this->autocomplete===true) {
-				$this->permissions = 1;
-			}
 
 
 		return $this->permissions;

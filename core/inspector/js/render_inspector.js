@@ -13,6 +13,7 @@
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 
 
 
@@ -761,79 +762,6 @@ export const render_component_info = function(self, component) {
 			const docu_links = render_docu_links(self, tipo)
 			info_container.appendChild(docu_links)
 
-		/*
-		// docu_link. Link to dedalo.dev Ontology info
-			const docu_link = ui.create_dom_element({
-				element_type	: 'a',
-				class_name		: 'button link',
-				title			: 'Documentation',
-				parent			: info_container
-			})
-			docu_link.addEventListener('mousedown', function(e) {
-				e.stopPropagation()
-				open_ontology_window(
-					self,
-					tipo,
-					'https://dedalo.dev/ontology/' + tipo + '?lang=' + page_globals.dedalo_application_lang,
-					'docu_link'
-				)
-			})
-		// local_ontology
-			if (SHOW_DEVELOPER===true) {
-				const local_ontology = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button pen',
-					title			: 'Local Ontology',
-					parent			: info_container
-				})
-				local_ontology.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					open_ontology_window(
-						self,
-						tipo,
-						DEDALO_CORE_URL + '/ontology/dd_edit.php?terminoID=' + tipo,
-						'local_ontology'
-					)
-				})
-			}
-		// master_ontology
-			if (SHOW_DEVELOPER===true) {
-				const master_ontology = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button edit',
-					title			: 'Master Ontology',
-					parent			: info_container
-				})
-				master_ontology.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					open_ontology_window(
-						self,
-						tipo,
-						'https://master.render.es/dedalo/lib/dedalo/ontology/dd_edit.php?terminoID=' + tipo,
-						'master_ontology'
-					)
-				})
-			}
-		// local ontology tree search
-			if (SHOW_DEVELOPER===true) {
-				const local_ontology_search = ui.create_dom_element({
-					element_type	: 'a',
-					class_name		: 'button tree',
-					title			: 'Local Ontology tree search',
-					parent			: info_container
-				})
-				local_ontology_search.addEventListener('mousedown', function(e) {
-					e.stopPropagation()
-					open_ontology_window(
-						self,
-						tipo,
-						DEDALO_CORE_URL + `/ontology/trigger.dd.php?modo=tesauro_edit&terminoID=${tipo}&accion=searchTSform`,
-						'local_ontology_search'
-					)
-				})
-			}
-		*/
-
 	// model
 		// label
 			ui.create_dom_element({
@@ -890,22 +818,6 @@ export const render_component_info = function(self, component) {
 			parent			: fragment
 		})
 
-	// ontology info
-		// // label
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'key',
-		// 	inner_html		: 'Info',
-		// 	parent			: fragment
-		// })
-		// // value
-		// ui.create_dom_element({
-		// 	element_type	: 'span',
-		// 	class_name		: 'value',
-		// 	inner_html		: ontology_info,
-		// 	parent			: fragment
-		// })
-
 	// value
 		// label
 		const value_label_node = ui.create_dom_element({
@@ -918,20 +830,30 @@ export const render_component_info = function(self, component) {
 		const value_node = ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'value wide code hide',
-			// text_content	: value,
 			text_content	: 'Parsing data..',
 			parent			: fragment
 		})
+		value_node.addEventListener('dblclick', function(e) {
+			e.stopPropagation()
+			// toggle value container max-height from default to none
+			container.classList.toggle('auto_height')
+		})
 		// parse data. This time out prevents lock component selection
-		setTimeout(function(){
+		const callback = () => {
 			const value = component.data && component.data.value
 				? JSON.stringify(component.data.value, null, 1)
 				: ''
 			value_node.textContent = value
 
+			// monospace for JSON data
+			// Note that this node is rendered again on each user component selection
+			if (value.indexOf('[{')===0) {
+				value_node.classList.add('monospace')
+			}
+
 			const button_value_copy_node = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'warning',
+				class_name		: 'button_value_copy warning',
 				inner_html		: get_label.copy || 'Copy',
 				parent			: value_node
 			})
@@ -942,7 +864,8 @@ export const render_component_info = function(self, component) {
 					navigator.clipboard.writeText( JSON.stringify(component.data.value) )
 				}
 			})
-		}, 50)
+		}
+		dd_request_idle_callback(callback)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
@@ -980,6 +903,7 @@ export const render_component_info = function(self, component) {
 * RENDER_ELEMENT_INFO
 * Note that self.element_info_containe is fixed to allow inspector init event
 * to locate the target node when is invoked
+* @param object self
 * @return HTMLElement element_info_wrap
 */
 const render_element_info = function(self) {
@@ -1091,6 +1015,7 @@ const render_project_block = function(self) {
 /**
 * UPDATE_PROJECT_CONTAINER_BODY
 * Clean project_container_body and add init event what fixed node: 'self.component_filter_node'
+* @param object self
 * @return bool true
 */
 export const update_project_container_body = function(self) {
@@ -1102,6 +1027,7 @@ export const update_project_container_body = function(self) {
 
 	// add the new component_filter_node
 		self.project_container_body.appendChild(self.component_filter_node)
+
 
 	return true
 }//end update_project_container_body
@@ -1160,6 +1086,7 @@ const render_indexation_list = function() {
 
 /**
 * RENDER_RELATION_LIST
+* @param object self
 * @return HTMLElement relation_list_container
 */
 const render_relation_list = function(self) {
@@ -1243,9 +1170,16 @@ const render_relation_list = function(self) {
 			container			: relation_list_body,
 			collapsed_id		: 'inspector_relation_list',
 			collapse_callback	: unload_relation_list,
-			expose_callback		: load_relation_list,
+			expose_callback		: expose, // load_relation_list
 			default_state		: 'closed'
 		})
+		function expose() {
+			const load = () => {
+				load_relation_list(self)
+				relation_list_head.classList.add('up')
+			}
+			dd_request_idle_callback(load)
+		}
 
 
 	return relation_list_container
@@ -1310,8 +1244,11 @@ export const render_time_machine_list = function(self) {
 			time_machine_list_head.classList.remove('up')
 		}
 		function expose() {
-			load_time_machine_list(self)
-			time_machine_list_head.classList.add('up')
+			const load = () => {
+				load_time_machine_list(self)
+				time_machine_list_head.classList.add('up')
+			}
+			dd_request_idle_callback(load)
 		}
 
 
@@ -1443,8 +1380,11 @@ const render_component_history = function(self) {
 			component_history_head.classList.remove('up')
 		}
 		function expose() {
-			load_component_history(self, self.actived_component)
-			component_history_head.classList.add('up')
+			const load = () => {
+				load_component_history(self, self.actived_component)
+				component_history_head.classList.add('up')
+			}
+			dd_request_idle_callback(load)
 		}
 
 
@@ -1486,16 +1426,6 @@ export const load_component_history = async function(self, component) {
 		if (!is_open) {
 			return null
 		}
-
-	// track collapse toggle state of content
-		// 	ui.collapse_toggle_track({
-		// 		toggler				: component_history_head,
-		// 		container			: component_history_body,
-		// 		collapsed_id		: 'inspector_component_history',
-		// 		collapse_callback	: unload_component_history,
-		// 		expose_callback		: load_component_history,
-		// 		default_state		: 'closed'
-		// 	})
 
 	// set as loading
 		container.classList.add('loading')
@@ -1638,12 +1568,6 @@ export const load_activity_info = async function(self, options) {
 	// container
 		const container	= self.activity_info_container
 
-	// container. Prevent to load data when the viewer is collapsed
-		// const is_open = container && !container.classList.contains('hide')
-		// if (!is_open) {
-		// 	return null
-		// }
-
 	// render notification bubble
 		const node_info = render_node_info(options)
 
@@ -1743,7 +1667,6 @@ const render_docu_links = function(self, tipo) {
 					'local_ontology'
 				)
 			})
-
 
 		// local ontology tree search
 			const local_ontology_search = ui.create_dom_element({
