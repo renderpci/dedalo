@@ -16,12 +16,16 @@
 				display: block;
 			}
 
-			.button_save {
+			>.button_save {
 				top: 5rem;
 				position: sticky;
 				float: right;
 				flex: none;
 				white-space: nowrap;
+
+				&.disable {
+					visibility: hidden;
+				}
 			}
 
 			>.changes_container {
