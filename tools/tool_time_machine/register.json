@@ -80,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 29,
-              "hour": 12,
-              "time": 65071515344,
+              "day": 3,
+              "hour": 13,
+              "time": 65071951000,
               "year": 2024,
-              "month": 7,
-              "minute": 55,
-              "second": 44
+              "month": 8,
+              "minute": 56,
+              "second": 40
             }
           }
         ]
@@ -404,7 +404,7 @@
             {
               "lang": "lg-fra",
               "name": "revert_confirm_msg",
-              "value": "Êtes-vous sûr de vouloir inverser le processus en vrac : {0}?\n\nToutes les modifications effectuées dans ce processus seront annulées dans tous les enregistrements."
+              "value": "Êtes-vous sûr de vouloir inverser le processus en vrac : {0}? Toutes les modifications effectuées dans ce processus seront annulées dans tous les enregistrements."
             },
             {
               "lang": "lg-ita",
@@ -430,6 +430,56 @@
               "lang": "lg-nep",
               "name": "revert_confirm_msg",
               "value": "के तपाइँ बल्क प्रक्रियालाई उल्टाउन निश्चित हुनुहुन्छ: {0}?\\n\\nयस प्रक्रियामा गरिएका सबै परिवर्तनहरू सबै रेकर्डहरूमा उल्टाइनेछन्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "revert_process_label",
+              "value": "Reversed the process with id"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "revert_process_label",
+              "value": "Revertido el proceso con id"
+            },
+            {
+              "lang": "lg-por",
+              "name": "revert_process_label",
+              "value": "Reverter o processo com id"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "revert_process_label",
+              "value": "Inverser le processus avec id"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "revert_process_label",
+              "value": "Invertire il processo con id"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "revert_process_label",
+              "value": "Αντιστρέφει τη διαδικασία με id"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "revert_process_label",
+              "value": "Umkehrung des Prozesses mit id"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "revert_process_label",
+              "value": "आईडीको साथ प्रक्रियालाई उल्टाइयो"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "revert_process_label",
+              "value": "Revertit el procés amb id"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "revert_process_label",
+              "value": ""
             }
           ]
         ]
@@ -447,7 +497,7 @@
   "section_id": 2,
   "created_date": "2019-12-02 12:44:58",
   "section_tipo": "dd1340",
-  "modified_date": "2024-07-29 12:55:44",
+  "modified_date": "2024-08-03 13:56:40",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd1324",
