@@ -407,7 +407,6 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 					0, // int limit
 					0, // int offset
 					$section_id_key,// dataframe id
-					$process_id // common id for bulk processes
 				);
 				if (!empty($tm_records)) {
 
