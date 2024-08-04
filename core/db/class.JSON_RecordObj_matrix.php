@@ -370,7 +370,7 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 			// saving from component cases
 			$previous_component_dato	= $save_options->previous_component_dato ?? null;
 			$time_machine_date			= $save_options->time_machine_date ?? dd_date::get_timestamp_now_for_db();
-			$process_id					= $save_options->time_machine_process_id ?? null;
+			$bulk_process_id			= $save_options->time_machine_bulk_process_id ?? null;
 
 		// short vars
 			// $section_tipo = $this->get_section_tipo();
@@ -436,11 +436,11 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 							$created_date = $this->datos->created_date;
 							$new_options->time_machine_date = $created_date;
 						}
-						// unset the process_id
+						// unset the bulk_process_id
 						// unsaved time_machine data is a fix of previous saved data, it need to be outside the process because
 						// the process need to be coherent to the change, the fix time_machine is other process than not happen previously.
 						//save current data as previous of the process, to prevent revert it.
-						$new_options->time_machine_process_id = null;
+						$new_options->time_machine_bulk_process_id = null;
 					$this->save_time_machine( $new_options );
 					debug_log(__METHOD__
 						." Saved time machine NOT already saved component dato. tipo: $tipo, section_tipo: $section_tipo, section_id: $section_id" . PHP_EOL
@@ -478,9 +478,9 @@ class JSON_RecordObj_matrix extends JSON_RecordDataBoundObject {
 				if (isset($section_id_key)) {
 					$RecordObj_time_machine->set_section_id_key( $section_id_key );
 				}
-			// process_id
-				if (isset($process_id)) {
-					$RecordObj_time_machine->set_process_id( $process_id );
+			// bulk_process_id
+				if (isset($bulk_process_id)) {
+					$RecordObj_time_machine->set_bulk_process_id( $bulk_process_id );
 				}
 
 		// Save obj

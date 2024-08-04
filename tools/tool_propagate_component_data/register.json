@@ -254,13 +254,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 3,
-              "hour": 21,
-              "time": 65071979889,
+              "day": 4,
+              "hour": 12,
+              "time": 65072030767,
               "year": 2024,
               "month": 8,
-              "minute": 58,
-              "second": 9
+              "minute": 6,
+              "second": 7
             }
           }
         ]
@@ -754,47 +754,47 @@
             },
             {
               "lang": "lg-eng",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Data propagation"
             },
             {
               "lang": "lg-spa",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Propagación de datos"
             },
             {
               "lang": "lg-cat",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Propagació de dades"
             },
             {
               "lang": "lg-por",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Propagação de dados"
             },
             {
               "lang": "lg-fra",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Propagation des données"
             },
             {
               "lang": "lg-ita",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Propagazione dei dati"
             },
             {
               "lang": "lg-ell",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Διάδοση δεδομένων"
             },
             {
               "lang": "lg-deu",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "Datenvermehrung"
             },
             {
               "lang": "lg-nep",
-              "name": "process_label",
+              "name": "bulk_process_label",
               "value": "डाटा प्रसार"
             },
             {
@@ -987,7 +987,7 @@
   "section_id": 11,
   "created_date": "2022-02-28 16:55:15",
   "section_tipo": "dd1340",
-  "modified_date": "2024-08-03 21:58:09",
+  "modified_date": "2024-08-04 12:06:07",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

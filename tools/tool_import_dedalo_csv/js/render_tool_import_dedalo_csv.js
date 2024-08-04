@@ -161,10 +161,10 @@ const get_content_data = async function(self) {
 			// array of file names
 				const files = selected_files.map(el => {
 					return {
-						file			: el.name, // string like 'exported_oral-history_-1-oh1.csv'
-						section_tipo	: el.section_tipo, // string like 'oh1'
-						ar_columns_map	: el.ar_columns_map, // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
-						process_label	: el.process_label // name of the process fired, it could be changed by user.
+						file				: el.name, // string like 'exported_oral-history_-1-oh1.csv'
+						section_tipo		: el.section_tipo, // string like 'oh1'
+						ar_columns_map		: el.ar_columns_map, // array of objects like [{checked: false, label: "", mapped_to: "", model: "", tipo: "section_id"}]
+						bulk_process_label	: el.bulk_process_label // name of the process fired, it could be changed by user.
 					}
 				})
 
@@ -354,8 +354,8 @@ const render_file_info = function(self, item) {
 						// section_label
 						section_label.innerHTML = item.section_label || ''
 
-						process_label.value = `${self.context.label} | ${item.section_tipo} | ${item.section_label} `
-						process_label.dispatchEvent(new Event('input'));
+						bulk_process_label.value = `${self.context.label} | ${item.section_tipo} | ${item.section_label} `
+						bulk_process_label.dispatchEvent(new Event('input'));
 
 						columns_maper.classList.remove('loading')
 					})
@@ -424,16 +424,16 @@ const render_file_info = function(self, item) {
 			inner_html		: self.get_tool_label('process_title') || 'Process title: ',
 			parent			: info_container
 		})
-		item.process_label = `${self.context.label} | ${item.section_tipo} | ${item.section_label}`
-		const process_label = ui.create_dom_element({
+		item.bulk_process_label = `${self.context.label} | ${item.section_tipo} | ${item.section_label}`
+		const bulk_process_label = ui.create_dom_element({
 			element_type	: 'input',
 			type			: 'text',
-			class_name		: 'process_label input_section_tipo',
-			value			: item.process_label,
+			class_name		: 'bulk_process_label input_section_tipo',
+			value			: item.bulk_process_label,
 			parent			: info_container
 		})
-		process_label.addEventListener('input', function(e){
-			item.process_label = process_label.value
+		bulk_process_label.addEventListener('input', function(e){
+			item.bulk_process_label = bulk_process_label.value
 		})
 
 

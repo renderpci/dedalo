@@ -159,10 +159,10 @@ define('DEDALO_INDEXATION_TITLE_TIPO',					'rsc379');
 define('DEDALO_INDEXATION_DESCRIPTION_TIPO',			'rsc380');
 
 // Processes
-define('DEDALO_PROCESS_SECTION_TIPO',					'dd800');
-define('DEDALO_PROCESS_LABEL_TIPO',						'dd796');
-define('DEDALO_PROCESS_TEXT_TIPO',						'dd801');
-define('DEDALO_PROCESS_FILE_TIPO',						'dd797');
+define('DEDALO_BULK_PROCESS_SECTION_TIPO',				'dd800');
+define('DEDALO_BULK_PROCESS_LABEL_TIPO',				'dd796');
+define('DEDALO_BULK_PROCESS_TEXT_TIPO',					'dd801');
+define('DEDALO_BULK_PROCESS_FILE_TIPO',					'dd797');
 
 // References (to thesaurus)
 define('DEDALO_TS_REFERENCES_SECTION_TIPO',				'rsc425');

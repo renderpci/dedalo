@@ -243,16 +243,16 @@ class tool_time_machine extends tool_common {
 
 
 	/**
-	* REVERT_PROCESS
+	* BULK_REVERT_PROCESS
 	* Revert a bulk process done previously
-	* Use the process_id to get all changes done by this process in all sections.
+	* Use the bulk_process_id to get all changes done by this process in all sections.
 	* Get all changes done in the component affected by the bulk process
 	* Revert the component to the previous data of the bulk process.
 	* If the component has not previous data, set a empty data.
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function revert_process(object $request_options) : object {
+	public static function bulk_revert_process(object $request_options) : object {
 		$start_time = start_time();
 
 		$response = new stdClass();
@@ -261,27 +261,27 @@ class tool_time_machine extends tool_common {
 
 		// options get and set
 			$options = new stdClass();
-				$options->section_tipo			= $request_options->section_tipo ?? null;
-				$options->section_id			= $request_options->section_id ?? null;
-				$options->tipo					= $request_options->tipo ?? null;
-				$options->lang					= $request_options->lang ?? null;
-				$options->process_id			= $request_options->process_id ?? null;
-				$options->revert_process_label	= $request_options->revert_process_label ?? null;
+				$options->section_tipo				= $request_options->section_tipo ?? null;
+				$options->section_id				= $request_options->section_id ?? null;
+				$options->tipo						= $request_options->tipo ?? null;
+				$options->lang						= $request_options->lang ?? null;
+				$options->bulk_process_id			= $request_options->bulk_process_id ?? null;
+				$options->bulk_revert_process_label	= $request_options->bulk_revert_process_label ?? null;
 
 		// short vars
-			$section_tipo			= $options->section_tipo;
-			$section_id				= $options->section_id;
-			$tipo					= $options->tipo;
-			$lang					= $options->lang;
-			$process_id				= $options->process_id;
-			$revert_process_label	= $options->revert_process_label;
-			$model					= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$section_tipo				= $options->section_tipo;
+			$section_id					= $options->section_id;
+			$tipo						= $options->tipo;
+			$lang						= $options->lang;
+			$bulk_process_id			= $options->bulk_process_id;
+			$bulk_revert_process_label	= $options->bulk_revert_process_label;
+			$model						= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 
-		// get all changes saved in time_machine with the same process_id
-			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE process_id = $process_id ORDER BY id DESC";
+		// get all changes saved in time_machine with the same bulk_process_id
+			$strQuery	= "SELECT * FROM \"matrix_time_machine\" WHERE bulk_process_id = $bulk_process_id ORDER BY id DESC";
 			$result		= JSON_RecordDataBoundObject::search_free($strQuery);
 			if($result===false) {
-				$response->msg = "Failed Search process_id $process_id. Data is not found.";
+				$response->msg = "Failed Search bulk_process_id $bulk_process_id. Data is not found.";
 				debug_log(__METHOD__
 					." ERROR: $response->msg "
 					, logger::ERROR
@@ -298,23 +298,23 @@ class tool_time_machine extends tool_common {
 			// create new process section
 				$process_section = section::get_instance(
 					null, // string|null section_id
-					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
 				$process_section->Save();
 
-			// get the process_id as the section_id of the section process
-				$new_process_id = $process_section->get_section_id();
+			// get the bulk_process_id as the section_id of the section process
+				$new_bulk_process_id = $process_section->get_section_id();
 
 			// Save the process name into the process section
 				$process_label_component = component_common::get_instance(
 					'component_input_text', // string model
-					DEDALO_PROCESS_LABEL_TIPO, // string tipo
-					$new_process_id, // string section_id
+					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+					$new_bulk_process_id, // string section_id
 					'list', // string mode
 					DEDALO_DATA_NOLAN, // string lang
-					DEDALO_PROCESS_SECTION_TIPO // string section_tipo
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
 				);
-				$process_label_component->set_dato($revert_process_label);
+				$process_label_component->set_dato($bulk_revert_process_label);
 				$process_label_component->Save();
 
 		// 2. revert the values in time machine
@@ -340,29 +340,29 @@ class tool_time_machine extends tool_common {
 				// next row is the data to be reverted.
 				$reverted_next = false;
 				while($current_row = pg_fetch_assoc($sub_result)) {
-					// get the process_id to be checked with the global proces_id
-					// loop the component data saved in tm one of this has the process_id to revert
-					$current_process_id	= (int)$current_row['process_id'];
+					// get the bulk_process_id to be checked with the global proces_id
+					// loop the component data saved in tm one of this has the bulk_process_id to revert
+					$current_bulk_process_id	= (int)$current_row['bulk_process_id'];
 					$time_machine_data	= $current_row['dato'];
 
-					// if the time_machine doesn't has any other register than the process_id change
+					// if the time_machine doesn't has any other register than the bulk_process_id change
 					// set it to null, to bypass the next if
 					// set the data as empty array to remove the component data.
 					if ($sub_n_rows===1){
-						$current_process_id = null;
+						$current_bulk_process_id = null;
 						$time_machine_data = [];
 					}
-					// check if the process_id is the same than current record of the time_machine
-					// if the row is the process_id row, the next record will be the row to be recovery.
-					if( $current_process_id === $process_id ){
+					// check if the bulk_process_id is the same than current record of the time_machine
+					// if the row is the bulk_process_id row, the next record will be the row to be recovery.
+					if( $current_bulk_process_id === $bulk_process_id ){
 						$reverted_next = true;
 						continue;
 					}
-					// if the row is previous to the process_id don't process it
+					// if the row is previous to the bulk_process_id don't process it
 					if( $reverted_next === false ){
 						continue;
 					}
-					// process the row (after the row of the process_id)
+					// process the row (after the row of the bulk_process_id)
 					// component. Inject tm data to the component
 						$element = component_common::get_instance(
 							$model,
@@ -374,9 +374,9 @@ class tool_time_machine extends tool_common {
 							false
 						);
 
-					// set the new_process_id to save it into time_machine
+					// set the new_bulk_process_id to save it into time_machine
 					// this allow to revert the bulk import
-						$element->set_process_id($new_process_id);
+						$element->set_bulk_process_id($new_bulk_process_id);
 
 					// Set data overwrites the data of the current element
 						$element->set_dato($time_machine_data);
@@ -416,7 +416,7 @@ class tool_time_machine extends tool_common {
 			}
 
 		return (object)$response;
-	}//end revert_process
+	}//end bulk_revert_process
 
 
 

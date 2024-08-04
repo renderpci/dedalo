@@ -154,7 +154,7 @@ const rebuild_columns_map = async function(self) {
 			.map(el => {
 				switch (el) {
 					case 'matrix_id'	: return 'dd1573';
-					case 'process_id'	: return 'dd1371';
+					case 'bulk_process_id'	: return 'dd1371';
 					case 'when'			: return 'dd547';
 					case 'who'			: return 'dd543';
 					case 'where'		: return 'dd546';
@@ -198,7 +198,7 @@ const render_column_id = async function(options) {
 		const section_tipo			= options.section_tipo
 		const matrix_id				= options.matrix_id
 		const modification_date		= options.modification_date
-		const process_id			= options.locator.process_id
+		const bulk_process_id		= options.locator.bulk_process_id
 
 	// short vars
 		const tool			= service_time_machine.caller
@@ -249,13 +249,13 @@ const render_column_id = async function(options) {
 
 				// publish event
 					const data = {
-						tipo		: section_tipo,
-						section_id	: section_id,
-						matrix_id	: matrix_id,
-						date		: modification_date || null,
-						process_id	: process_id || null,
-						mode		: 'tm',
-						caller 		: options
+						tipo			: section_tipo,
+						section_id		: section_id,
+						matrix_id		: matrix_id,
+						date			: modification_date || null,
+						bulk_process_id	: bulk_process_id || null,
+						mode			: 'tm',
+						caller			: options
 					}
 					if(service_time_machine.config.caller_dataframe){
 						data.caller_dataframe = service_time_machine.config.caller_dataframe
