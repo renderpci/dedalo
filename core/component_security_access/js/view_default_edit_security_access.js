@@ -135,14 +135,15 @@ const get_content_data = async function(self) {
 		// button_save
 			const button_save = ui.create_dom_element({
 				element_type	: 'button',
-				class_name		: 'primary save button_save folding hide',
+				class_name		: 'primary save button_save folding disable',
 				inner_html		: get_label.save || 'Save',
 				parent			: content_data
 			})
-			button_save.addEventListener("click", async function(e){
+			button_save.addEventListener('click', async function(e){
 				e.stopPropagation()
+
 				await self.save_changes()
-				button_save.classList.add('hide')
+				button_save.classList.add('disable')
 				const warning_label_text = self.node.querySelector('.warning_label_text')
 				if (warning_label_text) {
 					warning_label_text.remove()
@@ -152,7 +153,7 @@ const get_content_data = async function(self) {
 				event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
 			)
 			function fn_show_save_button() {
-				button_save.classList.remove('hide')
+				button_save.classList.remove('disable')
 				const label = self.node.querySelector('.label')
 				if (label && !label.querySelector('.warning_label_text')) {
 					// warning_label_text
@@ -350,13 +351,7 @@ const render_area_item = function(item, datalist, value, self) {
 			}
 		}
 		// update value, subscription to the changes: if the DOM input value was changed, observers DOM elements will be changed own value with the observable value
-			self.events_tokens.push(
-				event_manager.subscribe(
-					'update_item_value_' + self.id + '_' + tipo + '_' + section_tipo,
-					fn_update_value)
-			)
-			function fn_update_value(changed_data) {
-				// console.log("-------------- - event update_value changed_data:", changed_data);
+			const fn_update_value = (changed_data) => {
 				// change the value of the current DOM element
 				if (changed_data>=2) {
 					input_checkbox.checked			= true
@@ -368,9 +363,16 @@ const render_area_item = function(item, datalist, value, self) {
 					input_checkbox.checked			= false
 					input_checkbox.indeterminate	= false
 				}
-			}
+			}//end fn_update_value
+			self.events_tokens.push(
+				event_manager.subscribe(
+					'update_item_value_' + self.id + '_' + tipo + '_' + section_tipo,
+					fn_update_value
+				)
+			)
+
 		// change event
-			input_checkbox.addEventListener('change', async function(e) {
+			const change_handler = async (e) => {
 				e.preventDefault()
 
 				// input_value
@@ -428,7 +430,8 @@ const render_area_item = function(item, datalist, value, self) {
 
 				// show_save_button_
 					event_manager.publish( 'show_save_button_' + self.id )
-			})//end input_checkbox.addEventListener("change", async function(e) {
+			}//end change_handler
+			input_checkbox.addEventListener('change', change_handler)
 
 	// label
 		const css_selected = self.selected_tipo===item.tipo ? ' selected' : ''
@@ -467,14 +470,17 @@ const render_area_item = function(item, datalist, value, self) {
 				const expose = function() {
 					label.classList.add('up')
 					if (!branch.hasChildNodes()) {
-						// direct_children render (return hierarchized children nodes)
-						const tree_node = render_tree_items(
-							direct_children,
-							datalist,
-							value,
-							self
-						) // return li node
-						branch.appendChild(tree_node)
+						const callback = () => {
+							// direct_children render (return hierarchized children nodes)
+							const tree_node = render_tree_items(
+								direct_children,
+								datalist,
+								value,
+								self
+							) // return li node
+							branch.appendChild(tree_node)
+						}
+						window.requestAnimationFrame(callback);
 					}
 				}
 				ui.collapse_toggle_track({
@@ -498,18 +504,21 @@ const render_area_item = function(item, datalist, value, self) {
 				// )
 
 				// children create radio_group for permissions_global
-					self.get_children(item, datalist)
-					.then(function(children){
-						const radio_group = create_global_radio_group(
-							self,
-							item,
-							permissions,
-							datalist,
-							branch, // HTMLElement components_container
-							children // array of nodes
-						)
-						permissions_global.appendChild(radio_group)
-					})
+					const callback = () => {
+						self.get_children(item, datalist)
+						.then(function(children){
+							const radio_group = create_global_radio_group(
+								self,
+								item,
+								permissions,
+								datalist,
+								branch, // HTMLElement components_container
+								children // array of nodes
+							)
+							permissions_global.appendChild(radio_group)
+						})
+					}
+					requestIdleCallback(callback)
 
 			// add branch at last position
 			li.appendChild(branch)
@@ -664,7 +673,10 @@ const create_permissions_radio_group = function(self, item, permissions) {
 						self.update_value(item, input_value)
 
 					// parents_radio_butons. update the state of all parents, checking his children state
-						self.update_parents_radio_butons(item, input_value)
+						const callback = () => {
+							self.update_parents_radio_butons(item, input_value)
+						}
+						requestIdleCallback(callback)
 
 					// show_save_button
 						event_manager.publish('show_save_button_'+self.id)
@@ -704,8 +716,7 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 	const fragment = new DocumentFragment()
 
 	// child_value
-		// const children		= self.get_children(item) // already given
-		const children_length	= children.length
+		const children_length = children.length
 		// by default the child_value is 0 (without any permission)
 		// if all children has the same value (0,1 or 2) child_value will be the this common value
 		// else (if any child has a different value) the value has to be null, because is not possible represent all values in the node
@@ -804,7 +815,10 @@ const create_global_radio_group = function(self, item, permissions, datalist, co
 				}
 
 				// update_parents_radio_butons
-					self.update_parents_radio_butons(item, input_value)
+					const callback = () => {
+						self.update_parents_radio_butons(item, input_value)
+					}
+					requestIdleCallback(callback)
 
 				// show_save_button
 					event_manager.publish('show_save_button_'+self.id)
@@ -1022,12 +1036,15 @@ const render_area_item_read = function(item, datalist, value) {
 					label.classList.add('up')
 					if (!branch.hasChildNodes()) {
 						// direct_children render (return hierarchized children nodes)
-						const tree_node = render_tree_items_read(
-							direct_children,
-							datalist,
-							value
-						) // return li node
-						branch.appendChild(tree_node)
+						const callback = () => {
+							const tree_node = render_tree_items_read(
+								direct_children,
+								datalist,
+								value
+							) // return li node
+							branch.appendChild(tree_node)
+						}
+						window.requestAnimationFrame(callback);
 					}
 				}
 				ui.collapse_toggle_track({
@@ -1043,13 +1060,14 @@ const render_area_item_read = function(item, datalist, value) {
 			li.appendChild(branch)
 		}//end direct_children
 
+
 	return li
 }//end render_area_item_read
 
 
 
 /**
-* render_permissions_item_read
+* RENDER_PERMISSIONS_ITEM_READ
 * Create tree item node to check permissions (components, section_groups, buttons, etc.)
 * @param object item
 * 	datalist current item
