@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {validate_tipo} from '../../../core/common/js/common.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
@@ -436,7 +435,6 @@ const render_file_info = function(self, item) {
 			item.bulk_process_label = bulk_process_label.value
 		})
 
-
 	// preview
 		const button_preview = ui.create_dom_element({
 			element_type	: 'button',
@@ -444,7 +442,9 @@ const render_file_info = function(self, item) {
 			inner_html		: self.get_tool_label('preview') || 'Preview',
 			parent			: fragment
 		})
-		button_preview.addEventListener('click', function(){
+		button_preview.addEventListener('click', function(e){
+			e.stopPropagation()
+
 			preview.classList.toggle('hide')
 		})
 		// preview text
@@ -994,7 +994,6 @@ const render_final_report = function(options){
 				})
 
 
-
 			if(current_rensponse.result) {
 
 				// failed_rows info
@@ -1010,7 +1009,7 @@ const render_final_report = function(options){
 
 						const created_label = ui.create_dom_element({
 							element_type	: 'div',
-							class_name 		: 'label',
+							class_name		: 'label',
 							inner_html		: self.get_tool_label('failed') || 'Failed' + ':',
 							parent			: header
 						})
@@ -1057,8 +1056,9 @@ const render_final_report = function(options){
 							})
 
 						const failed_rows_len = failed_rows.length
-						for (let i = 0; i < failed_rows_len; i++) {
-							const failed = failed_rows[i]
+						for (let g = 0; g < failed_rows_len; g++) {
+
+							const failed = failed_rows[g]
 
 							const failed_id = ui.create_dom_element({
 								element_type	: 'div',
@@ -1067,7 +1067,7 @@ const render_final_report = function(options){
 								parent			: result_info_container
 							})
 
-							const failed_data= ui.create_dom_element({
+							const failed_data = ui.create_dom_element({
 								element_type	: 'div',
 								class_name		: 'failed_data_container error',
 								inner_html		: JSON.stringify( failed.data ),
@@ -1101,7 +1101,7 @@ const render_final_report = function(options){
 								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
 								parent			: header
 							})
-							copy_to_find_button.addEventListener( 'click', (e) => {
+							copy_to_find_button.addEventListener('click', (e) => {
 								e.stopPropagation()
 
 								navigator.clipboard.writeText(current_rensponse.created_rows.join(','))
@@ -1143,7 +1143,6 @@ const render_final_report = function(options){
 
 				// updated_rows info
 					if(current_rensponse.updated_rows.length>0) {
-						// const updated_nodes = current_rensponse.updated_rows.map(el => '<span>'+el+',</span>')
 
 						// header
 							const header = ui.create_dom_element({
@@ -1167,7 +1166,7 @@ const render_final_report = function(options){
 								inner_html		: self.get_tool_label('copy_to_find') || 'Copy as comma separated',
 								parent			: header
 							})
-							copy_to_find_button.addEventListener( 'click', () => {
+							copy_to_find_button.addEventListener('click', (e) => {
 								e.stopPropagation()
 
 								const clipboard_data = current_rensponse.updated_rows.join(',')
@@ -1195,8 +1194,9 @@ const render_final_report = function(options){
 								inner_html		: self.get_tool_label('copy_as_column') || 'Copy as column',
 								parent			: header
 							})
-							copy_as_column_button.addEventListener( 'click', () => {
+							copy_as_column_button.addEventListener('click', (e) => {
 								e.stopPropagation()
+
 								if(!navigator.clipboard){
 									const insecure_label = self.get_tool_label('insecure_context') || 'Insecure context, used only in https'
 									alert(insecure_label);
@@ -1237,17 +1237,17 @@ const render_final_report = function(options){
 const update_process_status = (options) => {
 
 	// options
-		const self 						= options.self
+		const self						= options.self
 		const pid						= options.pid
 		const pfile						= options.pfile
 		const button_submit				= options.button_submit
 		const process_info_container	= options.process_info_container
 
-	// locks the button submit
-	button_submit.classList.add('loading')
-	if (process_info_container.classList.contains('hide')) {
-		process_info_container.classList.remove('hide')
-	}
+	// button_submit. locks the submit button
+		button_submit.classList.add('loading')
+		if (process_info_container.classList.contains('hide')) {
+			process_info_container.classList.remove('hide')
+		}
 
 	// get_process_status from API and returns a SEE stream
 	data_manager.request_stream({
