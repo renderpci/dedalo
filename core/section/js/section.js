@@ -191,6 +191,20 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
+
+					// rebuild sqo when is a separated window
+					// and session is not the main session
+					// in those cases, the section has a filter_by_locators
+					// and is necessary add the new locator.
+					if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
+
+						const new_locator = {
+							section_tipo : self.tipo,
+							section_id : api_response.result
+						}
+						self.rqo.sqo.filter_by_locators.push(new_locator)
+					}
+
 					// const section_id = api_response.result
 					const offset = self.total
 					// update total (added one record)
@@ -222,6 +236,20 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
+
+					// rebuild sqo when is a separated window
+					// and session is not the main session
+					// in those cases, the section has a filter_by_locators
+					// and is necessary add the new locator.
+					if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
+
+						const new_locator = {
+							section_tipo : self.tipo,
+							section_id : api_response.result
+						}
+						self.rqo.sqo.filter_by_locators.push(new_locator)
+					}
+
 					// const section_id = api_response.result
 					const offset = self.total
 					// update total (added one record)
