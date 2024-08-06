@@ -503,7 +503,7 @@
 		min-height: 1.8rem;
 
 		// button (could be button_edit, button_delete)
-		>button.button_edit, >button.button_delete, >button.link_button {
+		>.button_edit, >.button_delete, >.link_button {
 			display: flex;
 			width: 100%;
 			margin: 0px;
@@ -512,6 +512,8 @@
 			padding-bottom: 0.25rem;
 			border-radius: 0px;
 			justify-content: flex-end;
+			text-decoration: none;
+			color: @color_dark;
 
 			&.link_button {
 				font-size: 1.25rem;

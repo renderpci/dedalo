@@ -318,9 +318,19 @@ export const render_column_id = function(options) {
 				// button_edit (pen)
 					if (permissions>1) {
 
+						// url
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo			: section_tipo,
+								section_tipo	: section_tipo,
+								id				: section_id,
+								mode			: 'edit',
+								session_save	: false, // prevent to overwrite current section session
+								menu			: false // prevent navigation when session_save = false
+							})
+
 						// button_edit
 							const button_edit = ui.create_dom_element({
-								element_type	: 'button',
+								element_type	: 'button', // button|a
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
@@ -328,14 +338,6 @@ export const render_column_id = function(options) {
 							button_edit.open_window = (features) => {
 
 								// open a new window
-								const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-									tipo			: section_tipo,
-									section_tipo	: section_tipo,
-									id				: section_id,
-									mode			: 'edit',
-									session_save	: false, // prevent to overwrite current section session
-									menu			: true
-								})
 								open_window({
 									url			: url,
 									name		: 'record_view_' + section_id,
@@ -386,73 +388,100 @@ export const render_column_id = function(options) {
 							// Prevent to show the context menu
 							// open new window with the content
 							// if user has alt pressed, open new tab
-							button_edit.addEventListener('contextmenu', (e) => {
-								e.stopPropagation()
-								e.preventDefault();
-								console.log('e:', e);
+								button_edit.addEventListener('contextmenu', (e) => {
+									e.stopPropagation()
+									e.preventDefault();
 
-								// if alt is pressed open new tab instead new window
-								const features = e.altKey===true
-									? 'new_tab'
-									: null
+									// if alt is pressed open new tab instead new window
+									const features = e.altKey===true
+										? 'new_tab'
+										: null
 
-								// function to execute. see definition in common.set_context_vars
-								// values: string navigate|open_window
-								const fn = show_interface.button_edit_options?.action_contextmenu || 'open_window'
-								if (typeof button_edit[fn]==='function') {
-									return button_edit[fn](features)
-								}
-							})
+									// function to execute. see definition in common.set_context_vars
+									// values: string navigate|open_window
+									const fn = show_interface.button_edit_options?.action_contextmenu || 'open_window'
+									if (typeof button_edit[fn]==='function') {
+										return button_edit[fn](features)
+									}
+								})
 							// mousedown event
-							button_edit.addEventListener('mousedown', (e) => {
-								e.stopPropagation()
+								button_edit.addEventListener('mousedown', (e) => {
+									e.stopPropagation()
+									e.preventDefault()
 
-								// if the user click with right mouse button, stop here
-								if (e.which == 3 || e.altKey===true) {
-									return
-								}
+									// if the user click with right mouse button, stop here
+									if (e.which == 3 || e.altKey===true) {
+										return
+									}
 
-								// function to execute. see definition in common.set_context_vars
-								// values: string navigate|open_window
-								const fn = show_interface.button_edit_options?.action_mousedown || 'navigate'
-								if (typeof button_edit[fn]==='function') {
-									return button_edit[fn]()
-								}
+									// function to execute. see definition in common.set_context_vars
+									// values: string navigate|open_window
+									const fn = show_interface.button_edit_options?.action_mousedown || 'navigate'
+									if (typeof button_edit[fn]==='function') {
+										return button_edit[fn]()
+									}
 
-								/* MODE USING SECTION change_mode
-									// menu. Get from caller page
-										const menu = self.caller && self.caller.ar_instances
-											? self.caller.ar_instances.find(el => el.model==='menu')
-											: null;
-									// change section mode. Creates a new instance and replace DOM node wrapper
-										self.change_mode({
-											mode : 'edit'
-										})
-										.then(function(new_instance){
+									/* MODE USING SECTION change_mode
+										// menu. Get from caller page
+											const menu = self.caller && self.caller.ar_instances
+												? self.caller.ar_instances.find(el => el.model==='menu')
+												: null;
+										// change section mode. Creates a new instance and replace DOM node wrapper
+											self.change_mode({
+												mode : 'edit'
+											})
+											.then(function(new_instance){
 
-											async function section_label_on_click(e) {
-												e.stopPropagation();
+												async function section_label_on_click(e) {
+													e.stopPropagation();
 
-												new_instance.change_mode({
-													mode : 'list'
-												})
-												.then(function(list_instance){
+													new_instance.change_mode({
+														mode : 'list'
+													})
+													.then(function(list_instance){
 
-													// update_section_label value
+														// update_section_label value
+														menu.update_section_label({
+															value					: list_instance.label,
+															mode					: 'list',
+															section_label_on_click	: null
+														})
+
+														// update browser url and navigation history
+														const source	= create_source(list_instance, null)
+														const sqo		= list_instance.request_config_object.sqo
+														const title		= list_instance.id
+														// url search. Append section_id if exists
+														const url_vars = url_vars_to_object({
+															tipo : list_instance.tipo,
+															mode : list_instance.mode
+														})
+														const url = '?' + object_to_url_vars(url_vars)
+														// browser navigation update
+														push_browser_history({
+															source	: source,
+															sqo		: sqo,
+															title	: title,
+															url		: url
+														})
+													})
+												}//end section_label_on_click
+
+												// update_section_label value
 													menu.update_section_label({
-														value					: list_instance.label,
-														mode					: 'list',
-														section_label_on_click	: null
+														value					: new_instance.label,
+														mode					: new_instance.mode,
+														section_label_on_click	: section_label_on_click
 													})
 
-													// update browser url and navigation history
-													const source	= create_source(list_instance, null)
-													const sqo		= list_instance.request_config_object.sqo
-													const title		= list_instance.id
+												// update browser url and navigation history
+													const source	= create_source(new_instance, null)
+													const sqo		= new_instance.request_config_object.sqo
+													const title		= new_instance.id
 													// url search. Append section_id if exists
 													const url_vars = url_vars_to_object({
-														tipo : list_instance.tipo,
-														mode : list_instance.mode
+														tipo : new_instance.tipo,
+														mode : new_instance.mode
 													})
 													const url = '?' + object_to_url_vars(url_vars)
 													// browser navigation update
@@ -462,36 +491,9 @@ export const render_column_id = function(options) {
 														title	: title,
 														url		: url
 													})
-												})
-											}//end section_label_on_click
-
-											// update_section_label value
-												menu.update_section_label({
-													value					: new_instance.label,
-													mode					: new_instance.mode,
-													section_label_on_click	: section_label_on_click
-												})
-
-											// update browser url and navigation history
-												const source	= create_source(new_instance, null)
-												const sqo		= new_instance.request_config_object.sqo
-												const title		= new_instance.id
-												// url search. Append section_id if exists
-												const url_vars = url_vars_to_object({
-													tipo : new_instance.tipo,
-													mode : new_instance.mode
-												})
-												const url = '?' + object_to_url_vars(url_vars)
-												// browser navigation update
-												push_browser_history({
-													source	: source,
-													sqo		: sqo,
-													title	: title,
-													url		: url
-												})
-										})//end then
-										*/
-							})
+											})//end then
+											*/
+								})
 							button_edit.appendChild(section_id_node)
 
 						// edit_icon
