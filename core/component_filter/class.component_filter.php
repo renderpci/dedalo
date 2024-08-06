@@ -115,11 +115,10 @@ class component_filter extends component_relation_common {
 	/**
 	* SET_DATO_DEFAULT
 	* Overwrite component common method.
-	* Set the dato default of the user for this component
-	* if the user has not write access to the component it will not set
-	* in these cases the component will be empty
-	* and only the user that create the section and the global administrator
-	* will can access to the record
+	* Set the dato default of the user for this component.
+	* If the user has not write access to the component it will not set.
+	* In these cases, the component will be empty and
+	* only the user who created the section and the global administrator can access the record
 	* @return bool true
 	*/
 	protected function set_dato_default() : bool {
@@ -130,7 +129,7 @@ class component_filter extends component_relation_common {
 			// 	return false;
 			// }
 
-		// tm mode case
+		// tm (time_machine) mode case
 			if ($this->mode==='tm' || $this->data_source==='tm') {
 				debug_log(__METHOD__
 					. " Warning on set_dato_default: invalid mode or data_source (tm) ! . Ignored order" . PHP_EOL
