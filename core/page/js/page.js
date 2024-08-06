@@ -302,7 +302,7 @@ page.prototype.build = async function(autoload=false) {
 				? section_info.label.replace(/<[^>]+>/ig,'')
 				: ''
 
-			document.title =  'V6 ' + tipo + ' ' + label
+			document.title =  `${section_info.section_id} ${label} ${tipo}`
 		}
 
 	// status update
