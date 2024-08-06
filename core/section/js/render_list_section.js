@@ -318,9 +318,19 @@ export const render_column_id = function(options) {
 				// button_edit (pen)
 					if (permissions>1) {
 
+						// url
+							const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+								tipo			: section_tipo,
+								section_tipo	: section_tipo,
+								id				: section_id,
+								mode			: 'edit',
+								session_save	: false, // prevent to overwrite current section session
+								menu			: false // prevent navigation when session_save = false
+							})
+
 						// button_edit
 							const button_edit = ui.create_dom_element({
-								element_type	: 'button',
+								element_type	: 'button', // button|a
 								class_name		: 'button_edit',
 								parent			: fragment
 							})
@@ -328,14 +338,6 @@ export const render_column_id = function(options) {
 							button_edit.open_window = (features) => {
 
 								// open a new window
-								const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-									tipo			: section_tipo,
-									section_tipo	: section_tipo,
-									id				: section_id,
-									mode			: 'edit',
-									session_save	: false, // prevent to overwrite current section session
-									menu			: true
-								})
 								open_window({
 									url			: url,
 									name		: 'record_view_' + section_id,
@@ -489,36 +491,9 @@ export const render_column_id = function(options) {
 														title	: title,
 														url		: url
 													})
-												})
-											}//end section_label_on_click
-
-											// update_section_label value
-												menu.update_section_label({
-													value					: new_instance.label,
-													mode					: new_instance.mode,
-													section_label_on_click	: section_label_on_click
-												})
-
-											// update browser url and navigation history
-												const source	= create_source(new_instance, null)
-												const sqo		= new_instance.request_config_object.sqo
-												const title		= new_instance.id
-												// url search. Append section_id if exists
-												const url_vars = url_vars_to_object({
-													tipo : new_instance.tipo,
-													mode : new_instance.mode
-												})
-												const url = '?' + object_to_url_vars(url_vars)
-												// browser navigation update
-												push_browser_history({
-													source	: source,
-													sqo		: sqo,
-													title	: title,
-													url		: url
-												})
-										})//end then
-										*/
-							})
+											})//end then
+											*/
+								})
 							button_edit.appendChild(section_id_node)
 
 						// edit_icon
