@@ -323,6 +323,22 @@ section.prototype.init = async function(options) {
 
 				// call only for direct page created sections
 					if ( self.caller?.model==='page' ) {
+
+						// Resolve the label of the section
+						// if the section is called by a section_tool as 'oh81', get his label (transcription, indexation, etc. )
+						// it's stored into the tool_congext of the config.
+						// else get the section label
+						const section_label = self.config?.tool_context?.label
+							? self.config.tool_context.label
+							: self.label
+
+						// set the window document.title
+						const page_title = ( self.mode === 'edit' )
+							? `${self.section_id} - ${section_label} - ${self.tipo}`
+							: `${get_label.list || 'List'} - ${section_label} - ${self.tipo}`
+
+						self.caller.set_document_title(page_title)
+
 						// menu. Get instance from caller page
 						const menu_instance = self.caller.ar_instances.find(el => el.model==='menu')
 						if (menu_instance) {
