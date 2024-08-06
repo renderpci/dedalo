@@ -2384,3 +2384,43 @@ function get_cookie_properties() : object {
 
 	return $cookie_properties;
 }//end get_cookie_properties
+
+
+
+/**
+* CREATE_DIRECTORY
+* Create given directory if not already exists
+* @param string $folder_path
+* 	Absolute directory path as '/home/html/dedalo/media/folder'
+* @param int $create_dir_permissions
+* 	PHP target directory permissions expressed like 0750
+* @return bool
+* 	true when directory already exists or is created successfully
+* 	false when not exists and is not possible to create it for any reason
+*/
+function create_directory(string $folder_path, int $create_dir_permissions) {
+
+	if( !is_dir($folder_path) ) {
+		if(!mkdir($folder_path, $create_dir_permissions, true)) {
+
+			// error creating directory
+			debug_log(__METHOD__
+				.' Error on read or create directory. Permission denied' . PHP_EOL
+				.' php user: ' . exec('whoami') .PHP_EOL
+				.' folder_path: ' .$folder_path . PHP_EOL
+				.' create_dir_permissions: ' . to_string($create_dir_permissions)
+				, logger::ERROR
+			);
+
+			return false;
+		}
+
+		// directory created successfully
+		debug_log(__METHOD__
+			." CREATED DIR: $folder_path"
+			, logger::WARNING
+		);
+	}
+
+	return true;
+}//end create_directory

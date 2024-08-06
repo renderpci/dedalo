@@ -57,19 +57,10 @@
 self.onmessage = async function(e) {
 	const t1 = performance.now()
 
-
 	// options
-		const url			= e.data.url
-		// const dd_api		= e.data.dd_api
-		// const action		= e.data.action
-		// const options	= e.data.options
+		const url = e.data.url
 
-	// Dynamic import
-		// const data_manager_instance	= await import('../../common/js/data_manager.js')
-		// const data_manager			= data_manager_instance.data_manager
-
-
-	// data_manager
+	// get_dedalo_files from API
 		const api_response = await data_manager.request({
 			url : url,
 			body : {
@@ -78,9 +69,9 @@ self.onmessage = async function(e) {
 			}
 		});
 
-	// error case
+	// API error case
 		if (!api_response.result) {
-			console.log('Error on get api response:', api_response);
+			console.error('Error on get api response:', api_response);
 			self.postMessage({
 				status	: 'finish',
 				error	: 'Error on get api response'
@@ -97,7 +88,7 @@ self.onmessage = async function(e) {
 			total_files	: api_response_result_length,
 		});
 
-	// headers
+	// headers for JS and CSS files
 		const get_headers = (item) => {
 
 			const headers = new Headers();
@@ -116,13 +107,17 @@ self.onmessage = async function(e) {
 					// mime: text/css
 					headers.append('Content-Type', 'text/css');
 					break;
-				default:
 
+				default:
+					headers.append('Cache-Control', 'stale-while-revalidate=604800');
 					break;
 			}
 
 			return headers
 		}
+
+	// fetch cache @see https://developer.mozilla.org/en-US/docs/Web/API/Request/cache
+		const cache = 'no-cache'; // (!) The only mode that really work's for all browsers is 'no-cache'
 
 	// fetch each file. Force cache reload (https://hacks.mozilla.org/2016/03/referrer-and-cache-control-apis-for-fetch/)
 		const ar_promises = []
@@ -130,31 +125,24 @@ self.onmessage = async function(e) {
 
 			const item = api_response.result[i]
 
-			const headers	= get_headers(item)
-			// const cache	= item.type==='css'
-			// 	? 'no-cache'
-			// 	: 'reload'
-			// @see https://developer.mozilla.org/en-US/docs/Web/API/Request/cache
-			const cache = 'reload';
+			const headers = get_headers(item)
 
 			ar_promises.push(
 				fetch(item.url, {
 					headers		: headers,
 					method		: 'GET',
 					cache		: cache, // "no-store","reload","no-cache","force-cache"
-					credentials	: 'same-origin',
-					credentials	: 'omit'
+					credentials	: 'same-origin'
 				})
 				.then((response) => {
 
 					// worker msg
 					self.postMessage({
-						file_loaded	: true,
+						status		: 'loading',
 						total_files	: api_response_result_length,
-						status		: 'loading'
+						file_loaded	: true
 					});
 
-					// console.log('response:', response);
 					if (!response.ok) {
 						throw new Error('Network response was not OK', item);
 					}
@@ -165,7 +153,7 @@ self.onmessage = async function(e) {
 			)
 		}
 
-	// wait until all is done
+	// wait until all fetch are done
 		await Promise.all(ar_promises)
 
 	// worker msg

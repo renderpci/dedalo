@@ -236,4 +236,119 @@ final class dd_component_av_api {
 
 
 
+	/**
+	* CREATE_POSTERFRAME
+	* Deletes posterframe file
+	*
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "create_posterframe",
+	*	dd_api	: 'dd_component_3d_api',
+	*	source	: {
+	*		tipo			: 'rsc36',
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id
+	*	},
+	* 	options: {
+	* 		current_time : float as 17.852
+	* 	}
+	* }
+	* @return object $response
+	*/
+	public static function create_posterframe( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+
+		// options
+			$options		= $rqo->options;
+			$current_time	= $options->current_time;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+
+		// result boolean
+			$result = $component->create_posterframe($current_time);
+
+		// response
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end create_posterframe
+
+
+
+	/**
+	* DELETE_POSTERFRAME
+	* Deletes posterframe file
+	*
+	* @param object $rqo
+	* 	Sample:
+	* {
+	* 	action	: "delete_posterframe",
+	*	dd_api	: 'dd_component_3d_api',
+	*	source	: {
+	*		tipo			: 'rsc36',
+	*		section_tipo	: section_tipo,
+	*		section_id		: section_id
+	*	}
+	* }
+	* @return object $response
+	*/
+	public static function delete_posterframe( object $rqo ) : object {
+
+		// source
+			$source			= $rqo->source;
+			$tipo			= $source->tipo;
+			$section_tipo	= $source->section_tipo;
+			$section_id		= $source->section_id;
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed '.__METHOD__;
+
+		// component
+			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$component	= component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$section_id, // string section_id
+				'list', // string mode
+				DEDALO_DATA_NOLAN, // string lang
+				$section_tipo // string section_tipo
+			);
+
+		// result boolean
+			$result = $component->delete_posterframe();
+
+		// response
+			$response->result	= $result;
+			$response->msg		= 'OK. Request done '.__METHOD__;
+
+
+		return $response;
+	}//end delete_posterframe
+
+
+
 }//end dd_component_av_api

@@ -4383,13 +4383,6 @@ class section extends common {
 				return 1;
 			}
 
-		// check if the section has called to search by autocomplete
-		// in those cases set permissions and return 1 (read).
-		if ($this->permissions<1 && $this->autocomplete===true) {
-			$this->permissions = 1;
-			return $this->permissions;
-		}
-
 
 		return $this->permissions;
 	}//end get_permissions

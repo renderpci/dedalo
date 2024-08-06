@@ -446,9 +446,8 @@ component_security_access.prototype.save_changes = async function() {
 
 	// change_value to save
 		const result = self.change_value({
-			changed_data			: changed_data,
-			refresh					: false
-			// from_save_changes	: true
+			changed_data	: changed_data,
+			refresh			: false
 		})
 
 
@@ -479,8 +478,8 @@ component_security_access.prototype.get_changes_data = async function(filename){
 		console.log('get_changes_data api_response:', api_response);
 	}
 
-	return api_response.result
 
+	return api_response.result
 }//end get_changes_data
 
 

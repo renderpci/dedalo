@@ -281,7 +281,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '< 10s',
 			parent			: fragment
 		})
-		av_minus_10_seg.addEventListener('mouseup', () =>{
+		av_minus_10_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime - 10
 			self.go_to_time({
 				seconds : seconds
@@ -295,12 +297,39 @@ const get_av_control_buttons = (self) => {
 			text_content	: '< 5s',
 			parent			: fragment
 		})
-		av_minus_5_seg.addEventListener('mouseup', () =>{
+		av_minus_5_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime - 5
 			self.go_to_time({
 				seconds : seconds
 			});
 		})
+
+	// move_frame function
+		const move_frame = (e) => {
+			e.stopPropagation()
+
+			const media_stream = self.media_streams[0] || null
+			if (!media_stream) {
+				console.error('Error getting media_stream:', self.media_streams);
+				return
+			}
+
+			const direction = e.target.direction
+
+			// get the r_frame_rate of the video stream and get the time for 1 frame
+			const r_frame_rate				= media_stream.r_frame_rate
+			const ar_frame_rate_operator	= r_frame_rate.split('/')
+			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
+			const time_for_frame			= 1 / frame_rate
+			const seconds					= (direction==='forward')
+				? (self.video.currentTime + time_for_frame).toFixed(3)
+				: (self.video.currentTime - time_for_frame).toFixed(3)
+			self.go_to_time({
+				seconds : seconds
+			});
+		}//end move_frame
 
 	// av_minus_1_frame. Go to 1 frame before of the current time ( - 1 frame )
 		// the server send the head information in the media_info streams
@@ -311,17 +340,8 @@ const get_av_control_buttons = (self) => {
 			text_content	: '- 1',
 			parent			: fragment
 		})
-		av_minus_1_frame.addEventListener('mouseup', () =>{
-			// get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate				= self.media_streams[0].r_frame_rate
-			const ar_frame_rate_operator	= r_frame_rate.split('/')
-			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
-			const time_for_frame			= 1 / frame_rate
-			const seconds					= (self.video.currentTime - time_for_frame).toFixed(3)
-			self.go_to_time({
-				seconds : seconds
-			});
-		})
+		av_minus_1_frame.direction = 'backward'
+		av_minus_1_frame.addEventListener('mouseup', move_frame)
 
 	// av_plus_1_frame. go to 1 frame after of the current time ( + 1 frame )
 		// the server send the head information in the media_info streams
@@ -332,17 +352,8 @@ const get_av_control_buttons = (self) => {
 			text_content	: '+ 1',
 			parent			: fragment
 		})
-		av_plus_1_frame.addEventListener('mouseup', () =>{
-			// get the r_frame_rate of the video stream and get the time for 1 frame
-			const r_frame_rate				= self.media_streams[0].r_frame_rate
-			const ar_frame_rate_operator	= r_frame_rate.split('/')
-			const frame_rate				=  parseInt(ar_frame_rate_operator[0]) / parseInt(ar_frame_rate_operator[1])
-			const time_for_frame			= (1 / frame_rate)
-			const seconds					= (self.video.currentTime + time_for_frame).toFixed(3)
-			self.go_to_time({
-				seconds : seconds
-			});
-		})
+		av_plus_1_frame.direction = 'forward'
+		av_plus_1_frame.addEventListener('mouseup', move_frame)
 
 	// av_plus_5_seg. Go to 5 seconds after of the current time ( + 5 seconds )
 		const av_plus_5_seg = ui.create_dom_element({
@@ -351,7 +362,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '> 5s',
 			parent			: fragment
 		})
-		av_plus_5_seg.addEventListener('mouseup', () =>{
+		av_plus_5_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime + 5
 			self.go_to_time({
 				seconds : seconds
@@ -365,7 +378,9 @@ const get_av_control_buttons = (self) => {
 			text_content	: '> 10s',
 			parent			: fragment
 		})
-		av_plus_10_seg.addEventListener('mouseup', () =>{
+		av_plus_10_seg.addEventListener('mouseup', (e) =>{
+			e.stopPropagation()
+
 			const seconds = self.video.currentTime + 10
 			self.go_to_time({
 				seconds : seconds

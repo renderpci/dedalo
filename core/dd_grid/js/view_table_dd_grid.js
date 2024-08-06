@@ -191,6 +191,7 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 				value		: '',
 				class_list	: 'empty_value'
 			}
+
 		// if the column is the last column with data, identify by cell_type property, render the node
 		if(column_value && column_value.type === 'column' && column_value.cell_type){
 
@@ -259,6 +260,8 @@ const get_table_columns = function(self, current_data) {
 
 	const column_nodes = []
 
+	const data_format = self.config.data_format || null
+
 	if (current_data && current_data.type) {
 
 		// column
@@ -291,7 +294,7 @@ const get_table_columns = function(self, current_data) {
 
 					case 'json':
 						column_nodes.push(
-							render_json_column(current_data)
+							render_json_column(current_data, data_format)
 						)
 						break;
 
@@ -554,18 +557,31 @@ const render_button_column = function(current_data) {
 * RENDER_JSON_COLUMN
 * Render table td node for a component_json value
 * @param object current_data
+* @param string|null data_format
+* 	Like 'dedalo_raw'
 * @return HTMLElement td_node
 */
-const render_json_column = function(current_data) {
+const render_json_column = function(current_data, data_format) {
 
 	const class_list = current_data.class_list || ''
+
+	// stringify value
+		const string_value = (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
+			? ''
+			: JSON.stringify(current_data.value)
+
+	// value
+	// if data_format is passed and is 'dedalo_raw', encode the HTML characters to prevent the browser from rendering it
+		const value = data_format && data_format==='dedalo_raw'
+			? string_value.replace(/[\u00A0-\u9999<>\&]/gim, (i) => {
+				return '&#' + i.charCodeAt(0) + ';';
+			  })
+			: string_value
 
 	const td_node = ui.create_dom_element({
 		element_type	: 'td',
 		class_name		: class_list,
-		inner_html		: (!current_data.value || (Array.isArray(current_data.value) && !current_data.value.length))
-			? ''
-			: JSON.stringify(current_data.value)
+		inner_html		: value
 	})
 
 	return td_node

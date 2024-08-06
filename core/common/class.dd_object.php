@@ -1,5 +1,4 @@
 <?php
-
 declare(strict_types=1);
 /**
 * CLASS DD_OBJECT (ddo)
@@ -7,6 +6,7 @@ declare(strict_types=1);
 *
 */
 class dd_object extends stdClass {
+
 
 
 	// properties
@@ -40,7 +40,7 @@ class dd_object extends stdClass {
 		// developer			: string like 'Dédalo team' // Used by tools
 		// show_in_inspector	: bool // Used by tools
 		// show_in_component	: bool // Used by tools
-		// config				: object // Used by tools
+		// config				: object // Used by tools and services
 		// sortable				: bool // Used by components (columns)
 		// fields_separator		: string like ", " // used by portal to join different fields
 		// records_separator	: string like " | " // used by portal to join different records (rows)
@@ -71,6 +71,7 @@ class dd_object extends stdClass {
 
 		// debug				: object
 		*/
+
 
 
 	// ar_type_allowed
@@ -293,7 +294,7 @@ class dd_object extends stdClass {
 	* 	Could be array or string
 	* @return bool
 	*/
-	public function set_section_tipo(string|array $value) : bool  { // string|array
+	public function set_section_tipo(string|array $value) : bool  {
 
 		$this->section_tipo = $value;
 
@@ -871,6 +872,7 @@ class dd_object extends stdClass {
 	}//end set_view
 
 
+
 	/**
 	* GET_CHILDREN_VIEW
 	* Return property value
@@ -1250,7 +1252,6 @@ class dd_object extends stdClass {
 
 
 
-
 	/**
 	* SET_COLOR
 	* Used by sections
@@ -1266,7 +1267,6 @@ class dd_object extends stdClass {
 
 
 
-
 	/**
 	* GET_COLOR
 	* Return property value
@@ -1276,7 +1276,6 @@ class dd_object extends stdClass {
 
 		return $this->color ?? null;
 	}//end get_color
-
 
 
 
@@ -1306,7 +1305,6 @@ class dd_object extends stdClass {
 
 
 
-
 	/**
 	* SET_DATA_FN
 	* data_fn defines the function to be used to get data of the ddo
@@ -1324,7 +1322,6 @@ class dd_object extends stdClass {
 
 
 
-
 	/**
 	* GET_DATA_FN
 	* Return property value
@@ -1334,7 +1331,6 @@ class dd_object extends stdClass {
 
 		return $this->data_fn ?? null;
 	}//end get_data_fn
-
 
 
 

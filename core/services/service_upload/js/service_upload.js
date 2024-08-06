@@ -594,7 +594,6 @@ service_upload.prototype.upload_file = async function(options) {
 
 
 
-
 /**
 * GET_SYSTEM_INFO
 * Call API to obtain useful system info

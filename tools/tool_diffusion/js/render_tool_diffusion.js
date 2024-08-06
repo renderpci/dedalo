@@ -706,7 +706,7 @@ const update_process_status = (options) => {
 						}
 						if (data.total_ms) {
 							parts.push( time_unit_auto(data.total_ms) )
-						}else{
+						}else if(sse_response.total_time) {
 							parts.push(sse_response.total_time)
 						}
 						if (data.current && data.current.time) {

@@ -7,9 +7,7 @@
 // import needed modules
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_posterframe} from './render_tool_posterframe.js' // self tool rendered (called from render common)
 
@@ -35,6 +33,11 @@ export const tool_posterframe = function () {
 	this.langs			= null
 	this.caller			= null
 
+	// allowed models
+	this.ar_allowed		= [
+		'component_av',
+		'component_3d'
+	]
 
 	return true
 }//end page
@@ -121,46 +124,30 @@ tool_posterframe.prototype.get_ar_identifying_image = async function() {
 * CREATE_POSTERFRAME
 * 	Creates a new posterframe file from current_time overwriting old file if exists
 * @param float current_time
-* 	Fom main_element video current_time value
+* 	From main_element video current_time value
 * @return promise > bool
 */
-tool_posterframe.prototype.create_posterframe = function(current_time) {
+tool_posterframe.prototype.create_posterframe = async function() {
 
 	const self = this
 
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'create_posterframe')
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options	: {
-				tipo			: self.main_element.tipo,
-				section_tipo	: self.main_element.section_tipo,
-				section_id		: self.main_element.section_id,
-				current_time	: current_time
-			}
+	// allowed_components
+		if (!self.ar_allowed.includes(self.main_element.model)) {
+			console.error('Not supported model:', self.main_element.model);
+			return false
 		}
 
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+	// execute 'create_posterframe' in client side by component
+		const result = await self.main_element.create_posterframe()
 
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> create_posterframe API response:",'DEBUG',response);
-				}
+	// refresh
+		if (self.main_element.data?.posterframe_url===page_globals.fallback_image) {
+			// initial no posterframe case
+			await self.main_element.refresh()
+		}
 
-				const result = response.result // array of objects
-
-				resolve(result)
-			})
-		})
+		// return bool
+		return result
 }//end create_posterframe
 
 
@@ -168,7 +155,7 @@ tool_posterframe.prototype.create_posterframe = function(current_time) {
 /**
 * DELETE_POSTERFRAME
 * 	Delete the posterframe file
-* @return promise > array
+* @return bool
 */
 tool_posterframe.prototype.delete_posterframe = async function() {
 
@@ -179,38 +166,17 @@ tool_posterframe.prototype.delete_posterframe = async function() {
 			return false
 		}
 
-	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'delete_posterframe')
-
-	// rqo
-		const rqo = {
-			dd_api	: 'dd_tools_api',
-			action	: 'tool_request',
-			source	: source,
-			options : {
-				tipo			: self.main_element.tipo,
-				section_tipo	: self.main_element.section_tipo,
-				section_id		: self.main_element.section_id
-			}
+	// allowed_components
+		if (!self.ar_allowed.includes(self.main_element.model)) {
+			console.error('Not supported model:', self.main_element.model);
+			return false
 		}
 
-	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
+	// exec delete
+		const result = await self.main_element.delete_posterframe()
 
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> delete_posterframe API response:",'DEBUG',response);
-				}
-
-				const result = response.result // array of objects
-
-				resolve(result)
-			})
-		})
+	// return bool
+	return result
 }//end delete_posterframe
 
 

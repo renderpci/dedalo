@@ -596,6 +596,13 @@ class area_maintenance extends area_common {
 		// truncate relations table on *
 			if ($tables==='*') {
 
+				// CLI msg
+				if ( running_in_cli()===true ) {
+					print_cli((object)[
+						'msg' => 'Truncating table "relations"'
+					]);
+				}
+
 				// truncate relations table data
 				$strQuery	= 'TRUNCATE "relations";';
 				$result		= JSON_RecordDataBoundObject::search_free($strQuery);
@@ -633,7 +640,7 @@ class area_maintenance extends area_common {
 					? -1
 					: 1;
 
-			// cli msg
+			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Processing table: ' . $table .' | Records: ' . $max,
@@ -683,7 +690,8 @@ class area_maintenance extends area_common {
 								// CLI msg
 									if ( running_in_cli()===true ) {
 										print_cli((object)[
-											'msg' => 'Propagating section_tipo: ' . $section_tipo .' | section_id: ' . $section_id .' | component_tipo: ' . $from_component_tipo
+											'msg'		=> 'Propagating table: ' . $table . ' | section_tipo: ' . $section_tipo .' | section_id: ' . $section_id .' | component_tipo: ' . $from_component_tipo,
+											'tables'	=> $ar_tables
 										]);
 									}
 
@@ -698,7 +706,13 @@ class area_maintenance extends area_common {
 							}
 
 					}else{
-						debug_log(__METHOD__." ERROR: Empty datos from: $table $section_tipo $section_id ".to_string(), logger::ERROR);
+						debug_log(__METHOD__
+							." ERROR: Empty datos from: " . PHP_EOL
+							.' table: ' . to_string($table) . PHP_EOL
+							.' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+							.' section_id: ' . to_string($section_id)
+							, logger::ERROR
+						);
 					}
 				}
 
@@ -706,7 +720,7 @@ class area_maintenance extends area_common {
 					if(SHOW_DEBUG===true) {
 						# Show log msg every 100 id
 						if ($counter===1) {
-							debug_log(__METHOD__." Updated section data table $table $i".to_string(), logger::DEBUG);
+							debug_log(__METHOD__." Updated section data table $table $i", logger::DEBUG);
 						}
 						$counter++;
 						if ($counter>300) {
@@ -2526,14 +2540,16 @@ class area_maintenance extends area_common {
 	* Used to test long processes and timeouts issues
 	* @param object $options
 	* {
-	* 	iterations: int
+	* 	iterations: int,
+	* 	update_rate: int
 	* }
 	* @return object|void
 	*/
 	public static function long_process_stream(object $options) {
 
 		// options
-			$iterations = $options->iterations ?? 10;
+			$iterations		= $options->iterations ?? 10;
+			$update_rate	= $options->update_rate ?? 1000;
 
 		if (running_in_cli()===true) {
 
@@ -2547,8 +2563,10 @@ class area_maintenance extends area_common {
 				// end runner case
 				if ($counter>$iterations) {
 					$result = (object)[
-						'msg'		=> 'Iterations completed ' . $iterations,
-						'memory'	=> dd_memory_usage()
+						'msg'			=> 'Iterations completed ' . $iterations,
+						'iterations'	=> $iterations,
+						'update_rate'	=> $update_rate,
+						'memory'		=> dd_memory_usage()
 					];
 					// return is printed by manager too
 					return $result; // stop the loop here
@@ -2556,12 +2574,14 @@ class area_maintenance extends area_common {
 
 				// print notification
 				print_cli((object)[
-					'msg'		=> 'Iteration ' . $counter . ' of ' . $iterations,
-					'memory'	=> dd_memory_usage()
+					'msg'			=> 'Iteration ' . $counter . ' of ' . $iterations,
+					'iterations'	=> $iterations,
+					'update_rate'	=> $update_rate,
+					'memory'		=> dd_memory_usage()
 				]);
 
 				// sleep process
-				$ms = 1000; usleep( $ms * 1000 );
+				$ms = $update_rate; usleep( $ms * 1000 );
 			}
 
 		}else{
@@ -2590,12 +2610,11 @@ class area_maintenance extends area_common {
 				];
 
 				$output = (object)[
-					// 'pid'		=> $pid,
-					// 'pfile'		=> $pfile,
 					'is_running'	=> true,
 					'data'			=> $data,
 					'time'			=> date("Y-m-d H:i:s"),
-					'total_time' 	=> exec_time_unit_auto($start_time),
+					'total_time'	=> exec_time_unit_auto($start_time),
+					'update_rate'	=> $update_rate,
 					'errors'		=> []
 				];
 
@@ -2605,12 +2624,21 @@ class area_maintenance extends area_common {
 					}
 
 				// output the response JSON string
-					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE) . PHP_EOL ;
-					echo $a;
-					// fix Apache issue where small chunks are not sent correctly over HTTP
-					if (strlen($a) < 4096) {
-						echo str_pad(' ', 4096) . PHP_EOL;
+					$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+
+				// fix Apache issue where small chunks are not sent correctly over HTTP
+					if ($_SERVER['SERVER_PROTOCOL']==='HTTP/1.1') {
+						$len = strlen($a);
+						if ($len < 4096) {
+							// re-create the output object and the final string
+							$fill_length = 4096 - $len;
+							$output->fill_buffer = $fill_length . str_pad(' ', $fill_length);
+							$a = json_handler::encode($output, JSON_UNESCAPED_UNICODE);
+						}
 					}
+
+					echo $a;
+					echo "\n\n";
 
 				while (ob_get_level() > 0) {
 					ob_end_flush();
@@ -2620,7 +2648,7 @@ class area_maintenance extends area_common {
 				// break the loop if the client aborted the connection (closed the page)
 				if ( connection_aborted() ) break;
 
-				$ms = 1000;
+				$ms = $update_rate;
 				usleep( $ms * 1000 );
 			}
 			die();
@@ -2809,7 +2837,7 @@ class area_maintenance extends area_common {
 
 			debug_log(__METHOD__." Start downloading file ".DEDALO_SOURCE_VERSION_URL, logger::DEBUG);
 
-			// cli msg
+			// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Start downloading file: ' . DEDALO_SOURCE_VERSION_URL,
@@ -2881,7 +2909,7 @@ class area_maintenance extends area_common {
 				];
 
 			// extract files from zip. (!) Note that 'ZipArchive' need to be installed in PHP to allow work
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Extracting zip file',
@@ -2909,7 +2937,7 @@ class area_maintenance extends area_common {
 				);
 
 			// rsync
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Updating files',
@@ -2962,7 +2990,7 @@ class area_maintenance extends area_common {
 				);
 
 			// update JAVASCRIPT labels
-				// cli msg
+				// CLI msg
 				if ( running_in_cli()===true ) {
 					print_cli((object)[
 						'msg'		=> 'Updating js lang files',

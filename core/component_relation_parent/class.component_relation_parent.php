@@ -959,11 +959,11 @@ class component_relation_parent extends component_relation_common {
 
 				// skip self
 					if ($current_locator->section_tipo===$section_tipo && $current_locator->section_id==$section_id) {
-						debug_log(__METHOD__
-							. " Reference to self is omitted (current_locator) " . PHP_EOL
-							. ' current_locator: ' . to_string($current_locator)
-							, logger::WARNING
-						);
+						// debug_log(__METHOD__
+						// 	. " Reference to self is omitted (current_locator) " . PHP_EOL
+						// 	. ' current_locator: ' . to_string($current_locator)
+						// 	, logger::WARNING
+						// );
 						continue;
 					}
 
@@ -993,11 +993,11 @@ class component_relation_parent extends component_relation_common {
 
 							// skip self
 								if ($parent_locator->section_tipo===$section_tipo && $parent_locator->section_id==$section_id) {
-									debug_log(__METHOD__
-										. " Reference to self is omitted (parent_locator) " . PHP_EOL
-										. ' parent_locator: ' . to_string($parent_locator)
-										, logger::WARNING
-									);
+									// debug_log(__METHOD__
+									// 	. " Reference to self is omitted (parent_locator) " . PHP_EOL
+									// 	. ' parent_locator: ' . to_string($parent_locator)
+									// 	, logger::WARNING
+									// );
 									continue;
 								}
 

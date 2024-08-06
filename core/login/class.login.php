@@ -330,7 +330,9 @@ class login extends common {
 			$response->errors	= [];
 
 		// options
-			$code = $options->code ?? null;
+			$code = isset($options->code)
+				? (is_array($options->code) ? $options->code[0] : $options->code)
+				: null;
 
 		// IP validation
 			if (!empty(SAML_CONFIG['idp_ip'])) {
@@ -357,7 +359,7 @@ class login extends common {
 
 				// Ok
 
-					$section_id = $ar_result[0];
+					$section_id = (int)$ar_result[0];
 					$username 	= 'saml_user';
 
 					// Is already logged check

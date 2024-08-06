@@ -7,11 +7,8 @@
 
 // imports
 	import {render_components_list} from '../../../core/common/js/render_common.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {when_in_dom} from '../../../core/common/js/events.js'
 
 
 
@@ -99,7 +96,6 @@ const get_content_data_edit = async function(self) {
 				path				: [],
 				section_elements	: section_elements
 			})
-			// console.log("get_content_data_edit self.components_list:",self.components_list);
 
 	// user_selection_list (right side)
 		const selection_list_contaniner = ui.create_dom_element({

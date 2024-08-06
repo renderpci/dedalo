@@ -1180,16 +1180,9 @@ class component_image extends component_media_common implements component_media_
 			$path_parts	= pathinfo($file_path);
 			$media_path	= $path_parts['dirname'];
 
-		// check target folder is accessible (EXISTS AND PERMISSIONS)
-			if( !is_dir($media_path) ) {
-				if( !mkdir($media_path, 0775,  true) ) {
-					debug_log(__METHOD__
-						." Failed to create directory for default SVG file in media_path: " . PHP_EOL
-						.' media_path: ' . $media_path
-						, logger::ERROR
-					);
-					return false;
-				}
+		// check target folder exists or create it
+			if(!create_directory($media_path, 0750)) {
+				return false;
 			}
 
 		// write string_node to disk file
@@ -1686,18 +1679,9 @@ class component_image extends component_media_common implements component_media_
 			$target_pixels_height	= $ar_target[1] ?? null;
 
 		// Target folder verify (exists and permissions)
-			$target_dir = $this->get_media_path_dir($target_quality) ;
-			if( !is_dir($target_dir) ) {
-				if(!mkdir($target_dir, 0775, true)) {
-					// throw new Exception(" Error on read or create directory \"$target_quality\". Permission denied $target_dir (2)");
-					debug_log(__METHOD__
-						. " Error on read or create directory \"$target_quality\". Permission denied (2) " . PHP_EOL
-						. ' target_quality: ' . $target_quality . PHP_EOL
-						. ' target_dir: ' . $target_dir
-						, logger::ERROR
-					);
-					return false;
-				}
+			$target_dir = $this->get_media_path_dir($target_quality);
+			if(!create_directory($target_dir, 0750)) {
+				return false;
 			}
 
 		// Avoid enlarge images

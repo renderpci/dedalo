@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {get_fallback_value} from '../../common/js/common.js'
