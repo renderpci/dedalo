@@ -2663,6 +2663,17 @@ class component_text_area extends component_common {
 
 					$data = $dato_unchanged[0];
 
+					// empty values cases ([''],[null])
+					if (empty($data)) {
+
+						$response = new stdClass();
+							$response->result	= 1;
+							$response->new_dato	= null;
+							$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to null.<br />";
+
+						break;
+					}
+
 					$to_be_saved = false;
 
 					// update the label of draw tags
