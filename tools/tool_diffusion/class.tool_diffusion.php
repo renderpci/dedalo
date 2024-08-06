@@ -311,6 +311,32 @@ class tool_diffusion extends tool_common {
 				// reset offset
 				$sqo->offset = 0;
 
+
+				// BULK PROCESS ID
+				// create new process section
+					$bulk_process_section = section::get_instance(
+						null, // string|null section_id
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+					);
+					$bulk_process_section->Save();
+
+				// get the bulk_process_id as the section_id of the section process
+					$bulk_process_id = $bulk_process_section->get_section_id();
+
+				// Save the process name into the process section
+					$bulk_process_label_component = component_common::get_instance(
+						'component_input_text', // string model
+						DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+						$bulk_process_id, // string section_id
+						'list', // string mode
+						DEDALO_DATA_NOLAN, // string lang
+						DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+					);
+					$bulk_process_label_component->set_dato(['publication']);
+					$bulk_process_label_component->Save();
+					//set the static var with the bulk_process_id, it will be use to save last publication date
+					diffusion::$bulk_process_id = $bulk_process_id;// bulk process id to group the section published.
+
 				// iterate as long as search records are found
 				while (true) {
 
@@ -327,7 +353,7 @@ class tool_diffusion extends tool_common {
 						$diffusion_element_tipo,
 						$diffusion_class_name,
 						$counter, // passed by reference
-						$pdata // passed by reference
+						$pdata, // passed by reference
 					);
 
 					// store errors if occurred
@@ -374,6 +400,8 @@ class tool_diffusion extends tool_common {
 					, logger::ERROR
 				);
 			}
+			//remove the bulk_process_id
+			diffusion::$bulk_process_id = null;
 
 		// response OK
 			$response->result						= true;
