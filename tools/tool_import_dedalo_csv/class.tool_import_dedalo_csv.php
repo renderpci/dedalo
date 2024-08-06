@@ -957,7 +957,7 @@ class tool_import_dedalo_csv extends tool_common {
 				// Set section to save data for time machine
 				// No component time machine data will be saved when section saves later
 				// (based on checkbox value 'Save time machine history on import')
-				$section->save_tm = ((bool)$time_machine_save===true)
+				$section->save_tm = ($time_machine_save===true)
 					? true
 					: false;
 
