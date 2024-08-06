@@ -287,9 +287,14 @@ const render_item_hierarchy = (options) => {
 			const text_fallback	= is_fallback === -1 ? '' : 'mark'
 			const label_text	= item.label.replace(/(<([^>]+)>)/ig,"");
 
+		// url
+			const base_url	= window.location.pathname
+			const url		= base_url + '?tipo=' + item.tipo + '&mode=list'
+
 		// a element with the link to the area or section to go
 			const link = ui.create_dom_element({
 				element_type	: 'a',
+				href			: url,
 				class_name		: 'area_label ' + text_fallback,
 				inner_html		: label_text,
 				parent			: li
@@ -300,6 +305,7 @@ const render_item_hierarchy = (options) => {
 		// the action can be executed mainly in page, but it can be used for any instance.
 			link.addEventListener('click', fn_click)
 			async function fn_click(e) {
+				e.preventDefault()
 
 				// nonactive menu case
 				if (self.menu_active===false) {
@@ -316,8 +322,6 @@ const render_item_hierarchy = (options) => {
 
 				if (e.altKey===true) {
 					// open in new tab
-					const base_url = window.location.pathname
-					const url = base_url + "?tipo=" + item.tipo + "&mode=list"
 					const win = window.open(url, '_blank');
 						  win.focus();
 				}else{
