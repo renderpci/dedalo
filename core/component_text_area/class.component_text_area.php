@@ -2744,7 +2744,7 @@ class component_text_area extends component_common {
 							true // bool standalone
 						);
 						// Search math pattern tags
-						preg_match_all($pattern_all,  $data, $all_reference_tags, PREG_PATTERN_ORDER);
+						preg_match_all($pattern_all, $data, $all_reference_tags, PREG_PATTERN_ORDER);
 
 						// in and out references
 						$ar_full_references = $all_reference_tags[0];
@@ -2817,7 +2817,7 @@ class component_text_area extends component_common {
 						$response = new stdClass();
 							$response->result	= 1;
 							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 
 					}else{
 						$response = new stdClass();
@@ -3017,7 +3017,7 @@ class component_text_area extends component_common {
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					$response = new stdClass();

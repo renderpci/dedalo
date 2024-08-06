@@ -795,9 +795,9 @@ $updates->$v = new stdClass();
 
 				DROP INDEX IF EXISTS public.matrix_tools_datos_idx;
 				CREATE INDEX IF NOT EXISTS matrix_tools_datos_idx
-				    ON public.matrix_tools USING gin
-				    (datos jsonb_path_ops)
-				    TABLESPACE pg_default;
+					ON public.matrix_tools USING gin
+					(datos jsonb_path_ops)
+					TABLESPACE pg_default;
 			");
 			// re-create index matrix_tools_datos_idx because in some cases is wrong (inm v5 for example)
 
