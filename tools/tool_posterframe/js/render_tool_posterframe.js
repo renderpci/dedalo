@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -52,7 +51,6 @@ render_tool_posterframe.prototype.edit = async function(options) {
 		const main_element_container = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'main_element_container'
-			// parent		: wrapper
 		})
 		wrapper.tool_header.after(main_element_container)
 		// spinner
@@ -73,19 +71,7 @@ render_tool_posterframe.prototype.edit = async function(options) {
 					spinner.remove()
 				})
 			}, 10)
-
 		})
-
-	// modal container
-		// if (!window.opener) {
-		// 	const header	= wrapper.tool_header // is created by ui.tool.build_wrapper_edit
-		// 	const modal		= ui.attach_to_modal(header, wrapper, null)
-		// 	modal.on_close	= () => {
-		// 		self.caller.refresh()
-		// 		// when closing the modal, common destroy is called to remove tool and elements instances
-		// 		self.destroy(true, true, true)
-		// 	}
-		// }
 
 
 	return wrapper
@@ -102,27 +88,6 @@ render_tool_posterframe.prototype.edit = async function(options) {
 const get_content_data = async function(self) {
 
 	const fragment = new DocumentFragment()
-
-	// main_element_container
-		// const main_element_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'main_element_container',
-		// 	parent			: fragment
-		// })
-		// // temporal image to show while main_element is rebuilt and rendered
-		// const main_element_image = ui.create_dom_element({
-		// 	element_type	: 'img',
-		// 	src				: self.main_element.data.posterframe_url,
-		// 	parent			: main_element_container
-		// })
-		// // rebuild it in 'player' mode to get stream info (allow navidation frame by frame)
-		// self.main_element.mode = 'player'
-		// self.main_element.build(true)
-		// .then(async function(){
-		// 	const component_node = await self.main_element.render()
-		// 	main_element_image.remove()
-		// 	main_element_container.appendChild(component_node)
-		// })
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -159,48 +124,49 @@ const get_buttons = function(self) {
 			class_name		: 'identifying_image_block',
 			parent			: fragment
 		})
+		if (self.main_element.model==='component_av') {
+			// button_create_identifying_image
+				const button_create_identifying_image = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'light create_identifying_image',
+					inner_html		: get_label.create_identify_image || 'Create identifying image',
+					parent			: identifying_image_block
+				})
+				button_create_identifying_image.addEventListener('click', async function(){
+					self.node.content_data.classList.add('loading')
+					const item_value	= JSON.parse(identifying_image_selector.value)
+					const current_time	= self.main_element.video.currentTime
+					await self.create_identifying_image(
+						item_value,
+						current_time
+					)
+					self.node.content_data.classList.remove('loading')
+				})
 
-		// button_create_identifying_image
-			const button_create_identifying_image = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'light create_identifying_image',
-				inner_html		: get_label.create_identify_image || 'Create identifying image',
-				parent			: identifying_image_block
-			})
-			button_create_identifying_image.addEventListener('click', async function(){
-				self.node.content_data.classList.add('loading')
-				const item_value	= JSON.parse(identifying_image_selector.value)
-				const current_time	= self.main_element.video.currentTime
-				await self.create_identifying_image(
-					item_value,
-					current_time
-				)
-				self.node.content_data.classList.remove('loading')
-			})
+			// identifying_image_selector
+				const identifying_image_selector = ui.create_dom_element({
+					element_type	: 'select',
+					class_name		: 'identifying_image_selector',
+					parent			: identifying_image_block
+				})
+				// options
+				self.get_ar_identifying_image()
+				.then(function(ar_identifying_image){
 
-		// identifying_image_selector
-			const identifying_image_selector = ui.create_dom_element({
-				element_type	: 'select',
-				class_name		: 'identifying_image_selector',
-				parent			: identifying_image_block
-			})
-			// options
-			self.get_ar_identifying_image()
-			.then(function(ar_identifying_image){
+					const ar_identifying_image_length = ar_identifying_image.length
+					for (let i = 0; i < ar_identifying_image_length; i++) {
 
-				const ar_identifying_image_length = ar_identifying_image.length
-				for (let i = 0; i < ar_identifying_image_length; i++) {
-
-					const item = ar_identifying_image[i]
-					// option
-					ui.create_dom_element({
-						element_type	: 'option',
-						value			: JSON.stringify(item),
-						inner_html		: item.label + ' - ' + item.section_id,
-						parent			: identifying_image_selector
-					})
-				}
-			})
+						const item = ar_identifying_image[i]
+						// option
+						ui.create_dom_element({
+							element_type	: 'option',
+							value			: JSON.stringify(item),
+							inner_html		: item.label + ' - ' + item.section_id,
+							parent			: identifying_image_selector
+						})
+					}
+				})
+		}
 
 	// manage_posterframe_block
 		const manage_posterframe_block = ui.create_dom_element({
@@ -216,19 +182,25 @@ const get_buttons = function(self) {
 				inner_html		: get_label.create || 'Create',
 				parent			: manage_posterframe_block
 			})
-			button_create_posterframe.addEventListener('click', async function(){
+
+			const create_posterframe_handler = async (e) => {
+				e.stopPropagation()
+
+				// loading CSS add
 				self.node.content_data.classList.add('loading')
-				const current_time = self.main_element.video.currentTime
-				await self.create_posterframe(
-					current_time
-				)
-				if (self.main_element.data.posterframe_url===page_globals.fallback_image) {
-					// initial no posterframe case
-					await self.main_element.refresh()
-				}
-				image_posterframe.src = self.main_element.data.posterframe_url + '?' + Math.random()
+
+				// create_posterframe
+				const result = await self.create_posterframe()
+
+				// update tool image_posterframe
+				image_posterframe.src = result===true
+					? self.main_element.data.posterframe_url + '?' + (new Date()).getTime()
+					: page_globals.fallback_image
+
+				// loading CSS remove
 				self.node.content_data.classList.remove('loading')
-			})
+			}//end create_posterframe_handler
+			button_create_posterframe.addEventListener('click', create_posterframe_handler)
 
 		// button_delete_posterframe
 			const button_delete_posterframe = ui.create_dom_element({
@@ -237,14 +209,27 @@ const get_buttons = function(self) {
 				inner_html		: get_label.delete || 'Delete',
 				parent			: manage_posterframe_block
 			})
-			button_delete_posterframe.addEventListener('click', async function(){
+
+			const delete_posterframe_handler = async (e) => {
+				e.stopPropagation()
+
+				// loading CSS add
 				self.node.content_data.classList.add('loading')
-				const deleted = await self.delete_posterframe()
-				image_posterframe.src = deleted===true
+
+				// delete_posterframe
+				const result = await self.delete_posterframe()
+
+				// update tool image_posterframe
+				image_posterframe.src = result===true
 					? page_globals.fallback_image
-					: self.main_element.data.posterframe_url + '?' + Math.random()
+					: self.main_element.data.posterframe_url
+						? self.main_element.data.posterframe_url + '?' + (new Date()).getTime()
+						: page_globals.fallback_image
+
+				// loading CSS remove
 				self.node.content_data.classList.remove('loading')
-			})
+			}//end delete_posterframe_handler
+			button_delete_posterframe.addEventListener('click', delete_posterframe_handler)
 
 		// image_posterframe
 			const image_posterframe = ui.create_dom_element({
@@ -252,6 +237,11 @@ const get_buttons = function(self) {
 				class_name		: 'image_posterframe',
 				src				: self.main_element.data.posterframe_url + '?' + Math.random(),
 				parent			: fragment
+			})
+			image_posterframe.addEventListener('error', function(e) {
+				if (image_posterframe.src!==page_globals.fallback_image) {
+					image_posterframe.src = page_globals.fallback_image
+				}
 			})
 			// const token = event_manager.subscribe('render_'+self.main_element.id, fn_update_posterframe)
 			// self.events_tokens.push(token)

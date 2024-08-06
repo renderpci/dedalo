@@ -74,7 +74,6 @@ view_base_list_section.render = async function(self, options) {
 	// DocumentFragment
 		const fragment = new DocumentFragment()
 
-
 	// buttons add
 		if (self.buttons && self.mode!=='tm') {
 			const buttons_node = get_buttons(self);

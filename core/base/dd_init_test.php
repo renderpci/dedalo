@@ -149,7 +149,7 @@
 
 
 // BACKUPS_ONTOLOGY_DOWNLOAD_DIR
-	# Target folder exists test
+	// Target folder exists test
 	$folder_path = ONTOLOGY_DOWNLOAD_DIR;
 	if( !is_dir($folder_path) ) {
 		if(!mkdir($folder_path, 0700, true)) {
@@ -227,7 +227,7 @@
 
 
 // DEDALO_PREFIX_TIPOS
-	# Maintain consistency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
+	// Maintains consistency on defined DEDALO_PREFIX_TIPOS and extras folder dirs
 	$DEDALO_PREFIX_TIPOS = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
 	foreach ($DEDALO_PREFIX_TIPOS as $current_tipo) {
 		$folder_path = DEDALO_EXTRAS_PATH . '/' . $current_tipo;
@@ -560,24 +560,37 @@
 
 
 // DEDALO_UPLOAD_TMP_DIR
-	$folder_path = DEDALO_UPLOAD_TMP_DIR;
-	if( !is_dir($folder_path) ) {
-		if(!mkdir($folder_path, $create_dir_permissions, true)) {
-			$init_response->msg[]	= "Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied (php user: $php_user)";
-			$init_response->errors	= true;
-			debug_log(__METHOD__
-				.' '.implode(PHP_EOL, $init_response->msg) . PHP_EOL
-				.' folder_path: ' .$folder_path . PHP_EOL
-				.' create_dir_permissions: ' . to_string($create_dir_permissions) . PHP_EOL
-				, logger::ERROR
-			);
+	if(!create_directory(
+		DEDALO_UPLOAD_TMP_DIR,
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on read or create DEDALO_UPLOAD_TMP_DIR directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
+	}
 
-			return $init_response;
-		}
-		debug_log(__METHOD__
-			." CREATED DIR: $folder_path "
-			, logger::DEBUG
-		);
+
+
+// IMPORT DIR
+	if(!create_directory(
+		DEDALO_MEDIA_PATH . '/import',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on read or create import directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
+	}
+
+
+
+// IMPORT HISTORY DIR
+	if(!create_directory(
+		DEDALO_MEDIA_PATH . '/import/history',
+		$create_dir_permissions
+	)) {
+		$init_response->msg[]	= "Error on read or create import history directory. Permission denied (php user: $php_user)";
+		$init_response->errors	= true;
+		return $init_response;
 	}
 
 

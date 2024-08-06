@@ -12,7 +12,6 @@
 
 
 
-
 /**
 * RENDER_EDIT_SERVICE_dropzone
 * Manages the service's logic and appearance in client side
@@ -275,9 +274,6 @@ const render_template = async function(self) {
 				inner_html		: get_label.start_upload || 'Start upload',
 				parent			: buttons_container
 			})
-			// button_submit_files.addEventListener('click', function(e) {
-			// 	e.stopPropagation()
-			// })
 
 		// button_cancel_upload
 			const button_cancel_upload = ui.create_dom_element({

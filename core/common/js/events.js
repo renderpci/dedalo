@@ -184,4 +184,24 @@ export const when_in_viewport = function(node, callback, once=true) {
 
 
 
+/**
+* DD_REQUEST_IDLE_CALLBACK
+* Queues a function to be called during a browser's idle periods.
+* This enables to perform background and low priority work on the main event loop,
+* without impacting latency-critical events such as animation and input response
+* @param function callback
+* @return void
+*/
+export const dd_request_idle_callback = function (callback) {
+
+	const is_safari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+	if (!is_safari) {
+		requestIdleCallback(callback)
+	}else{
+		window.requestAnimationFrame(callback)
+	}
+}//end dd_request_idle_callback
+
+
+
 // @license-end

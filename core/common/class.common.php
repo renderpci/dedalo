@@ -1593,7 +1593,7 @@ abstract class common {
 				: $this->RecordObj_dd->get_parent();
 
 		// tools
-			$tools		= [];
+			$tools = [];
 			// get the section tools in list
 			// get the component tools in edit
 			// (!) Note that some tools like 'tool_upload' are used in list mode,
@@ -2181,12 +2181,8 @@ abstract class common {
 								// Exception:
 								// if the user can read or read/write permissions, do not change it.
 									$child_permissions = $related_element->get_component_permissions();
-									if( strpos(get_called_class(), 'component_')===0 ||
-										(get_called_class() === 'section' && $this->autocomplete===true)
-									){
-										if($child_permissions <1){
-											$related_element->set_permissions(1);
-										}
+									if( strpos(get_called_class(), 'component_')===0 && $child_permissions <1 ){
+										$related_element->set_permissions(1);
 									}
 
 								// component_text_area lang case. Change lang before get dato (!)
@@ -4156,18 +4152,23 @@ abstract class common {
 	/**
 	* GET_SECTION_ELEMENTS_CONTEXT
 	* Get list of all components available for current section using get_context_simple
-	* Used to build search presets in filter
-	* @param object $request_options
+	* Used to build search presets in filter, and components list in tool_export
+	* @param object $options
+	* {
+	* 	ar_section_tipo: array|null
+	* 	use_real_sections: bool = false
+	* 	skip_permissions: bool = false
+	* 	ar_tipo_exclude_elements: array (optional)
+	* 	ar_components_exclude: array (optional)
+	* }
 	* @return array $context
 	*/
 	public static function get_section_elements_context(object $options) : array {
 
 		// options
-			$context_type				= $options->context_type ?? 'simple';
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
 			$use_real_sections			= $options->use_real_sections ?? false;
-			$skip_permissions 			= $options->skip_permissions ?? false;
-			$path						= $options->path ?? [];
+			$skip_permissions			= $options->skip_permissions ?? false;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_password',
@@ -4189,7 +4190,7 @@ abstract class common {
 				'component_semantic_node',
 				'section_tab'
 			];
-			$ar_include_elements		= $options->ar_include_elements ?? [
+			$ar_include_elements = $options->ar_include_elements ?? [
 				'component',
 				'section_group',
 				'section_group_div',
@@ -4215,10 +4216,7 @@ abstract class common {
 				$section_permisions = ($skip_permissions === true)
 					? 1
 					: security::get_security_permissions($section_tipo, $section_tipo);
-
-				// $section_permisions =  security::get_security_permissions($section_tipo, $section_tipo);
-
-			// skip section if permissions are not enough (except thesaurus 'hierarchy20')
+				// skip section if permissions are not enough (except thesaurus 'hierarchy20')
 				if ( $section_permisions<1  && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
 					// user don't have access to current section. skip section
 					continue;
@@ -4278,6 +4276,16 @@ abstract class common {
 					// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
 					continue;
 				}
+
+				// permissions (element: component, grouper)
+					$element_permisions = ($skip_permissions === true)
+						? 1
+						: security::get_security_permissions($section_tipo, $element_tipo);
+					// skip element if permissions are not enough
+					if ( $element_permisions<1 ) {
+						// user don't have access to current element. skip element
+						continue;
+					}
 
 				// model
 					$model = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
@@ -4382,7 +4390,6 @@ abstract class common {
 		// debug
 			if(SHOW_DEBUG===true) {
 				$start_time=start_time();
-
 				// metrics
 				metrics::$get_tools_total_calls++;
 			}
@@ -4390,6 +4397,12 @@ abstract class common {
 		// already set
 			if (isset($this->tools)) {
 				return $this->tools;
+			}
+
+		// autocomplete case. For speed and accessibility, return fixed value here
+			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
+			if ($autocomplete) {
+				return [];
 			}
 
 		// cache

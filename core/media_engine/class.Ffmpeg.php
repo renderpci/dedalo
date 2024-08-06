@@ -784,20 +784,54 @@ final class Ffmpeg {
 	* 	quality : string current quality used like 'original'
 	* 	posterframe_filepath : string full path to target image file
 	* }
-	*
 	* @return bool
+	* 	true: allow to create thumbnail
+	* 	false: disallow to create it (audio files)
 	*/
 	// public function create_posterframe(AVObj $AVObj, $timecode, ?array $ar_target=null) {
 	public function create_posterframe(object $options) : bool {
 
 		// options
-			$timecode			= $options->timecode;
-			$src_file			= $options->src_file;
-			$quality			= $options->quality;
+			$timecode				= $options->timecode;
+			$src_file				= $options->src_file;
+			$quality				= $options->quality;
 			$posterframe_filepath	= $options->posterframe_filepath;
 
+		// media_streams. get streams
+			$media_streams = Ffmpeg::get_media_streams($src_file);
+			// media_streams sample result:
+			// {
+			// 	"streams": [
+			// 		{
+			// 			"index": 0,
+			// 			"codec_name": "h264",
+			// 			"codec_long_name": "H.264 / AVC / MPEG-4 AVC / MPEG-4 part 10",
+			// 			"profile": "High",
+			// 			"codec_type": "video",
+			//			"avg_frame_rate": "30000/1001",
+			// 			...
+			// 		},
+			// 		{
+			// 			"index": 1,
+			// 			"codec_name": "aac",
+			// 			"codec_long_name": "AAC (Advanced Audio Coding)",
+			// 			"profile": "LC",
+			// 			"codec_type": "audio",
+			// 			"codec_tag_string": "mp4a",
+			// 			...
+			// 		}
+			// 	]
+			// }
+			$video_stream = isset($media_streams->streams)
+				? Ffmpeg::find_video_stream($media_streams->streams)
+				: null;
+			if (empty($video_stream)) {
+				// audio file (return false prevents creating thumb here)
+				return false;
+			}
+
 		// aspect_ratio_cmd
-			$raw_aspect_ratio	= Ffmpeg::get_aspect_ratio($src_file, $quality);
+			$raw_aspect_ratio = Ffmpeg::get_aspect_ratio($src_file, $quality);
 			if ($quality==='original') {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '936x720'

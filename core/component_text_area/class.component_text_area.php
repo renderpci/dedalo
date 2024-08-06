@@ -780,6 +780,31 @@ class component_text_area extends component_common {
 
 
 	/**
+	* GET_PLAIN_TEXT
+	* Get only the text without tags or HTML
+	* Used in publication to search
+	* @return string $text
+	*/
+	public function get_plain_text() : string {
+
+		$raw_data = $this->get_value();
+
+		// empty text
+		$text = '';
+
+		# Clean
+		if(!empty($raw_data)) {
+			$text	= TR::deleteMarks($raw_data);
+			$text	= strip_tags($text);
+		}
+
+		return $text;
+	}//end get_plain_text
+
+
+
+
+	/**
 	* CLEAN_RAW_TEXT_FOR_PREVIEW
 	* (!) Removed 22-05-2023 because no one calls here
 	* Used when we have a raw text from database and we want show a preview for tool time machine list for example
@@ -1641,7 +1666,7 @@ class component_text_area extends component_common {
 	/**
 	* GET_DIFFUSION_VALUE
 	* Overwrite component common method
-	* Calculate current component diffusion value for target field (usually a mysql field)
+	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
 	* @return string|null $diffusion_value
 	*
@@ -2638,6 +2663,17 @@ class component_text_area extends component_common {
 
 					$data = $dato_unchanged[0];
 
+					// empty values cases ([''],[null])
+					if (empty($data)) {
+
+						$response = new stdClass();
+							$response->result	= 1;
+							$response->new_dato	= null;
+							$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to null.<br />";
+
+						break;
+					}
+
 					$to_be_saved = false;
 
 					// update the label of draw tags
@@ -2708,7 +2744,7 @@ class component_text_area extends component_common {
 							true // bool standalone
 						);
 						// Search math pattern tags
-						preg_match_all($pattern_all,  $data, $all_reference_tags, PREG_PATTERN_ORDER);
+						preg_match_all($pattern_all, $data, $all_reference_tags, PREG_PATTERN_ORDER);
 
 						// in and out references
 						$ar_full_references = $all_reference_tags[0];
@@ -2781,7 +2817,7 @@ class component_text_area extends component_common {
 						$response = new stdClass();
 							$response->result	= 1;
 							$response->new_dato	= $new_dato;
-							$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+							$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 
 					}else{
 						$response = new stdClass();
@@ -2981,7 +3017,7 @@ class component_text_area extends component_common {
 					$response = new stdClass();
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
+						$response->msg		= "[$reference_id] Data were changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
 				}else{
 
 					$response = new stdClass();

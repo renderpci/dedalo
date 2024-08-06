@@ -6,8 +6,6 @@
 
 // imports
 	import {get_section_records} from '../../section/js/section.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {pause} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 	import {no_records_node} from '../../section/js/render_common_section.js'
@@ -232,6 +230,13 @@ const rebuild_columns_map = async function(self) {
 /**
 * RENDER_COLUMN_APPLY_PRESET
 * @param object options
+* {
+* 	ar_instances: array
+* 	caller: object (section instance)
+* 	locator: object,
+* 	section_id: string|int
+* 	section_tipo: string (dd623)
+* }
 * @return HTMLElement button_apply
 */
 export const render_column_apply_preset = function(options) {
@@ -245,8 +250,11 @@ export const render_column_apply_preset = function(options) {
 			element_type	: 'span',
 			class_name		: 'button_apply_preset button icon arrow_link'
 		})
-		button_apply.addEventListener('click', async function(e) {
+		const apply_preset_handler = async (e) => {
 			e.stopPropagation()
+
+			// loading
+			self.node.classList.add('loading')
 
 			// load DDBB component_json data
 			load_search_preset({
@@ -272,8 +280,12 @@ export const render_column_apply_preset = function(options) {
 
 				// fix user_preset_section_id
 				self.user_preset_section_id = section_id
+
+				// loading
+				self.node.classList.remove('loading')
 			})
-		})
+		}
+		button_apply.addEventListener('mousedown', apply_preset_handler)
 
 
 	return button_apply
@@ -284,6 +296,10 @@ export const render_column_apply_preset = function(options) {
 /**
 * RENDER_COLUMN_ID
 * @param object options
+* {
+* 	caller: instance,
+* 	section:id: string|int
+* }
 * @return HTMLElement button_edit
 */
 export const render_column_id = function(options) {
@@ -297,7 +313,7 @@ export const render_column_id = function(options) {
 			element_type	: 'span',
 			class_name		: 'button_edit button icon edit button_view_' + self.context.view
 		})
-		button_edit.addEventListener('click', async function(e) {
+		const click_handler = async (e) => {
 			e.stopPropagation()
 
 			// modal body
@@ -308,14 +324,14 @@ export const render_column_id = function(options) {
 
 			// modal attach to document
 				const modal_container = ui.attach_to_modal({
-					header	: get_label.search_presets || 'User search preset',
-					body	: body,
-					footer	: null,
-					size 	: 'small'
+					header		: get_label.search_presets || 'User search preset',
+					body		: body,
+					footer		: null,
+					size		: 'small',
+					callback	: (dd_modal) => {
+						dd_modal.modal_content.style.width = '20rem'
+					}
 				})
-				modal_container.on_close = function(){
-					// nothing to do
-				}
 
 			// load section
 				ui.load_item_with_spinner({
@@ -331,7 +347,8 @@ export const render_column_id = function(options) {
 						return section_node
 					}
 				})
-		})
+		}
+		button_edit.addEventListener('click', click_handler)
 
 
 	return button_edit

@@ -114,7 +114,7 @@
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, object $option_obj=null) : ?string {
+	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 

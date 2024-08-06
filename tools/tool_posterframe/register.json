@@ -33,15 +33,21 @@
     },
     {
       "type": "dd151",
+      "section_id": "1",
+      "section_tipo": "dd64",
+      "from_component_tipo": "dd1354"
+    },
+    {
+      "type": "dd151",
       "section_id": "8",
       "section_tipo": "dd1342",
       "from_component_tipo": "dd1330"
     },
     {
       "type": "dd151",
-      "section_id": "1",
-      "section_tipo": "dd64",
-      "from_component_tipo": "dd1354"
+      "section_id": "52",
+      "section_tipo": "dd1342",
+      "from_component_tipo": "dd1330"
     },
     {
       "type": "dd151",
@@ -74,13 +80,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057516819,
+              "day": 12,
+              "hour": 17,
+              "time": 65070064334,
               "year": 2024,
-              "month": 2,
-              "minute": 26,
-              "second": 59
+              "month": 7,
+              "minute": 52,
+              "second": 14
             }
           }
         ]
@@ -99,14 +105,14 @@
           "Eina posterframe"
         ],
         "lg-eng": [
-          "Tool posterframe"
+          "Posterframe"
         ],
         "lg-nep": [
           "उपकरण पोस्टर फ्रेम"
         ],
         "lg-por": [],
         "lg-spa": [
-          "Herramienta posterframe"
+          "Posterframe"
         ]
       }
     },
@@ -127,7 +133,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.2"
+          "2.0.3"
         ]
       }
     },
@@ -150,7 +156,7 @@
   "section_id": 8,
   "created_date": "2022-02-11 20:15:17",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:26:59",
+  "modified_date": "2024-07-12 17:52:14",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

@@ -31,8 +31,8 @@ class relation_index_v5_to_v6 extends v5_to_v6 {
 
 	/**
 	* CHANGE_INDEX_DATA_TO_PORTAL
-	* Create inverted locators for each indexation and save in rsc167 (Audiovisuals the locator to current
-	* section record
+	* Create inverted locators for each indexation and save in rsc167 (Audiovisuals)
+	* the locator to current section record
 	* Like
 	* {
     *    "type": "dd96",
