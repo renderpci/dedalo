@@ -49,6 +49,14 @@ view_viewer_pdf.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
+	// permissions
+	// set read only permissions, remove the context menu
+		if(self.permissions < 2){
+			wrapper.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				return false
+			});
+		}
 
 	return wrapper
 }//end render
