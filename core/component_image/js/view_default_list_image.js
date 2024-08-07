@@ -83,7 +83,7 @@ view_default_list_image.render = function(self, options) {
 		image.src = url
 
 	// open viewer. Media common handler for 3d, av, image, pdf, svg
-			image.addEventListener('mousedown', handler_open_viewer.bind(self))
+		image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 
 	return wrapper
