@@ -199,13 +199,13 @@ component_geolocation.prototype.load_libs = async function () {
 		self.get_json_langs()
 
 	// turf
-		common.prototype.load_script(
+		await common.prototype.load_script(
 			DEDALO_ROOT_WEB + '/lib/leaflet/dist/turf/turf.min.js',
 			license
 		)
 
 	// iro
-		common.prototype.load_script(
+		await common.prototype.load_script(
 			DEDALO_ROOT_WEB + '/lib/iro/dist/iro.min.js',
 			license
 		)
