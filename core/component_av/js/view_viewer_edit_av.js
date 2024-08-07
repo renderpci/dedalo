@@ -47,6 +47,15 @@ view_viewer_edit_av.render = async function(self, options) {
 			class_name		: 'wrapper_component component_av view_viewer'
 		})
 
+	// permissions
+	// set read only permissions, remove the context menu
+		if(self.permissions < 2){
+			wrapper.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				return false
+			});
+		}
+
 	// url to download
 		const quality	= page_globals.dedalo_av_quality_default // '404'
 		const file_info	= files_info.find(el => el.quality===quality && el.extension===extension)
@@ -68,12 +77,15 @@ view_viewer_edit_av.render = async function(self, options) {
 		})
 		image.src = posterframe_url
 
-		// background color
-			// image.addEventListener('load', set_bg_color, false)
-			// function set_bg_color() {
-			// 	this.removeEventListener('load', set_bg_color, false)
-			// 	ui.set_background_image(this, wrapper)
-			// }
+		// set the parameter when the posterframe is loaded
+			image.addEventListener('load', function(e) {
+
+				// show download_image_button
+				// only if the user has permissions
+				if(self.permissions > 1){
+					download_image_button.classList.remove('hidden')
+				}
+			})
 
 	// fragment. if url params contains tc_in, set a fragment
 		const url_vars = url_vars_to_object(window.location.search)
@@ -94,7 +106,7 @@ view_viewer_edit_av.render = async function(self, options) {
 	// button download
 		const download_image_button = ui.create_dom_element({
 			element_type	: 'button',
-			class_name		: 'primary download',
+			class_name		: 'primary download hidden',
 			title			: get_label.download || 'Download',
 			parent			: wrapper
 		})

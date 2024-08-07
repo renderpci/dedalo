@@ -185,7 +185,7 @@ export const ui = {
 					}
 
 				// read only. Add 'disabled_component' class if permissions are less than 2
-					if (!instance.permissions || parseInt(instance.permissions)<2) {
+					if ( !instance.permissions || parseInt(instance.permissions)<2 ) {
 						wrapper.classList.add('disabled_component')
 					}
 

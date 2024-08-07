@@ -2841,7 +2841,8 @@ class search {
 					$msg = " Failed Insert relations record ";
 					debug_log(__METHOD__
 						." ERROR: $msg " .PHP_EOL
-						. ' strQuery: ' . $strQuery
+						. ' strQuery: ' . $strQuery .PHP_EOL
+						. ' bt: ' . to_string( debug_backtrace() )
 						, logger::ERROR
 					);
 					$response->msg .= $msg;

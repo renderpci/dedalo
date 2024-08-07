@@ -180,14 +180,18 @@ export const render_column_id = function(options) {
 		button_edit.addEventListener('mouseenter', function(e) {
 			e.stopPropagation()
 
-			if (drag_node.classList.contains('hide')) {
+			// permissions control
+			// with read only permissions, stop
+			if ( self.permissions >= 2 && drag_node.classList.contains('hide') ) {
 				drag_node.classList.remove('hide')
 			}
 		});
 		button_edit.addEventListener('mouseleave', function(e) {
 			e.stopPropagation()
 
-			if (!drag_node.classList.contains('hide')) {
+			// permissions control
+			// with read only permissions, stop
+			if ( self.permissions >= 2 && !drag_node.classList.contains('hide') ) {
 				drag_node.classList.add('hide')
 			}
 		});
@@ -211,6 +215,12 @@ export const render_column_id = function(options) {
 			})
 
 	// drag and drop
+
+	// permissions control
+	// with read only permissions, stop
+		if(self.permissions < 2){
+			return fragment
+		}
 
 	// drag_node
 		const drag_node = render_drag_node(options)

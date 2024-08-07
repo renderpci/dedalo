@@ -162,6 +162,10 @@ area.prototype.build = async function(autoload=true) {
 
 		self.label = self.context.label
 
+		// set the window document.title
+			const page_title = `${self.label} - ${self.tipo}`
+			self.caller.set_document_title(page_title)
+
 
 	// debug
 		if(SHOW_DEBUG===true) {

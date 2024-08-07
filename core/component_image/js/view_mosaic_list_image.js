@@ -9,7 +9,7 @@
 	import {ui} from '../../common/js/ui.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
-
+	import {handler_open_viewer} from '../../component_media_common/js/component_media_common.js'
 
 
 /**
@@ -81,12 +81,17 @@ const get_content_data = function(self) {
 	// image
 		const image = ui.create_dom_element({
 			element_type	: 'img',
-			class_name		: 'hidden', // loading
+			class_name		: 'hidden link', // loading
 			parent			: content_data
 		})
 		image.draggable = false
 		image.loading = 'lazy'
-		// image.setAttribute('crossOrigin', 'Anonymous');
+
+		// tells handler_open_viewer window dimensions
+		image.open_window_features = {
+			width	: 320,
+			height	: 240
+		}
 
 	// load event
 		image.addEventListener('load', set_bg_color, false)
@@ -106,43 +111,18 @@ const get_content_data = function(self) {
 	// set source url
 		image.src = url
 
+	// permissions control
+	// set on read only permissions, remove the context menu
+		if(self.permissions < 2){
+			image.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				return false
+			});
+		}
+
 	// open viewer
-		image.addEventListener('mouseup', function (e) {
-			e.stopPropagation();
-
-			// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so it could be used
-			// else open the player to show the image
-			if((!file_info || file_info.file_exist!==true) && !external_source) {
-
-				// get the upload tool to be fired
-					const tool_upload = self.tools.find(el => el.model === 'tool_upload')
-
-				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-
-			}else{
-
-				// open a new window
-					const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
-						tipo			: self.tipo,
-						section_tipo	: self.section_tipo,
-						id				: self.section_id,
-						mode			: 'edit',
-						view			: 'viewer',
-						menu			: false
-					})
-					open_window({
-						url		: url,
-						target	: 'viewer',
-						width	: 320,
-						height	: 240
-					})
-			}
-		})
-
+	//open viewer. Media common handler for 3d, av, image, pdf, svg
+	image.addEventListener('mousedown', handler_open_viewer.bind(self))
 
 	return content_data
 }//end get_content_data

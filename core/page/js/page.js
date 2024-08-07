@@ -294,16 +294,18 @@ page.prototype.build = async function(autoload=false) {
 		}
 
 	// page title update
-		const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
-		if (section_info) {
+		// const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
+		// if (section_info) {
 
-			const tipo = section_info.tipo || 'Unknown tipo'
-			const label = section_info.label
-				? section_info.label.replace(/<[^>]+>/ig,'')
-				: ''
+		// 	const tipo = section_info.tipo || 'Unknown tipo'
+		// 	const label = section_info.label
+		// 		? section_info.label.replace(/<[^>]+>/ig,'')
+		// 		: ''
 
-			document.title =  `${section_info.section_id} ${label} ${tipo}`
-		}
+		// 	document.title =  section_info.mode === 'edit'
+		// 		? `${tipo}` //`${section_insance.data.section_id} ${label} ${tipo}`
+		// 		: get_label.list || 'List'
+		// }
 
 	// status update
 		self.status = 'built'
@@ -768,6 +770,23 @@ const update_css_file = function(sheet_name) {
 
 	return false
 }//end update_css_file
+
+
+/**
+* SET_DOCUMENT_TITLE
+* Change the window title
+* Used by section and area to label the browser window
+* see section.js
+* @param string title
+* 	Sample: '22 - Oral history - oh1'
+* @return bool
+*/
+page.prototype.set_document_title = function (title) {
+
+	document.title = title
+
+	return true
+}//end set_document_title
 
 
 
