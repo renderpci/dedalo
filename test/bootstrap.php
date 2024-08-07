@@ -5,7 +5,7 @@ declare(strict_types=1);
 // require __DIR__ . '/autoload.php';
 
 // SHOW_DEBUG. Overwrite config SHOW_DEBUG
-	define('SHOW_DEBUG', false);
+	define('SHOW_DEBUG', true);
 
 // TEST_USER_ID: [
 	// 	-1, // root development user

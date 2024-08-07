@@ -50,6 +50,7 @@ final class tool_import_dedalo_csv_Test extends TestCase {
 	            {
 	                "file": "'.$file_name.'",
 	                "section_tipo": "test3",
+	                "bulk_process_label": "import test",
 	                "ar_columns_map": [
 	                    {
 	                        "tipo": "section_id",
