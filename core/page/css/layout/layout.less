@@ -684,12 +684,15 @@
 			pointer-events: none !important;
 			user-select: none;
 		}
+		.content_data.component .column .media .link, .button_edit{
+			pointer-events: all !important;
+		}
 
 		.autocomplete_search_wrapper {
 			display: none !important;
 		}
 
-		.buttons_container, .button {
+		.buttons_container, .button:not(.button_edit) {
 			display: none !important;
 		}
 
