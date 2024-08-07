@@ -526,4 +526,38 @@ class security {
 
 
 
+	/**
+	* GET_SECTION_NEW_PERMISSIONS
+	* Resolve section create record permissions from
+	* button 'New' permissions
+	* @see component_filter->set_dato_default()
+	* @param string $section_tipo
+	* @return int|null $permissions
+	* 	null indicates that no button new is available or permissions are not set
+	*/
+	public static function get_section_new_permissions(string $section_tipo) : ?int {
+
+		// locate section button new
+		$ar_button_new = section::get_ar_children_tipo_by_model_name_in_section(
+			$section_tipo, // section_tipo
+			['button_new'], // ar_model_name_required
+			true, // from_cache
+			true, // resolve_virtual
+			false, // recursive
+			true, // search_exact
+			false //ar_tipo_exclude_elements
+		);
+		$button_new_tipo = $ar_button_new[0] ?? null;
+		if (empty($button_new_tipo)) {
+			return null;
+		}
+
+		$permissions = common::get_permissions($section_tipo, $button_new_tipo);
+
+
+		return $permissions;
+	}//end get_section_new_permissions
+
+
+
 }//end class security
