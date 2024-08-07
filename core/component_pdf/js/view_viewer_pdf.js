@@ -49,11 +49,6 @@ view_viewer_pdf.render = async function(self, options) {
 		// set pointers
 		wrapper.content_data = content_data
 
-	// close window when the user click in the image
-		// image.addEventListener('mousedown', function() {
-		// 	window.close()
-		// })
-
 
 	return wrapper
 }//end render

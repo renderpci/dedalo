@@ -193,7 +193,6 @@ const get_content_value = function(i, current_value, self) {
 		// webviewerloaded event. When the standard html of pdf.js is loaded, it is possible to get the library and set the PDF file
 			top.document.addEventListener('webviewerloaded', fn_webviewerloaded, false)
 			async function fn_webviewerloaded() {
-				// console.log("webviewerloaded e:",e);
 
 				// shadow.addEventListener('load', (e) =>{
 				const locale_code = page_globals.locale || 'es-ES'

@@ -64,6 +64,7 @@ view_default_list_pdf.render = async function(self, options) {
 			src				: url,
 			parent			: wrapper
 		})
+		image.classList.add('link')
 		// tells handler_open_viewer window dimensions
 		image.open_window_features = {
 			width	: 1024,
