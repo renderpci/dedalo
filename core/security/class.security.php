@@ -1,4 +1,5 @@
 <?php
+declare(strict_types=1);
 /**
 * CLASS SECURITY
 *
@@ -282,6 +283,7 @@ class security {
 	/**
 	* GET_USER_SECURITY_ACCESS
 	* Locate component_security_access of current logged user based on user profile
+	* and return the component instance
 	* @param int $user_id
 	* @return object|null $component_security_access
 	*/
