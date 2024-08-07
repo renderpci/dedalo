@@ -226,6 +226,15 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
 
+	// permissions control
+	// set on read only permissions, remove the context menu
+		if(self.permissions < 2){
+			wrapper.addEventListener("contextmenu", (e) => {
+				e.preventDefault();
+				return false
+			});
+		}
+
 	// autocomplete
 		wrapper.addEventListener('click', function(e) {
 			e.stopPropagation()
@@ -271,13 +280,17 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 						section_record_node.prepend(hover_view)
 
 					// drag and drop
-						drag_and_drop({
-							section_record_node	: section_record_node,
-							paginated_key		: i,
-							total_records		: self.total,
-							locator 			: section_record.locator,
-							caller 				: self
-						})
+					// permissions control
+					// with read only permissions, remove drag and drop
+						if(self.permissions >= 2){
+							drag_and_drop({
+								section_record_node	: section_record_node,
+								paginated_key		: i,
+								total_records		: self.total,
+								locator 			: section_record.locator,
+								caller 				: self
+							})
+						}
 
 					// mouseenter event
 						section_record_node.addEventListener('mouseenter',function(e){
