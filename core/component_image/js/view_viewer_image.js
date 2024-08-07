@@ -81,7 +81,11 @@ view_viewer_image.render = function(self, options) {
 				image.classList.add('fit')
 
 				// show download_image_button
-				download_image_button.classList.remove('hidden')
+				// only if the user has permissions
+				if(self.permissions > 1){
+					download_image_button.classList.remove('hidden')
+				}
+
 			}
 
 		// error event

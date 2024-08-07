@@ -414,7 +414,7 @@ const render_selection_info = function(self) {
 				const button_list = ui.create_dom_element({
 					element_type	: 'span',
 					class_name		: 'button light list',
-					title			: get_label.listado || 'List',
+					title			: get_label.list || 'List',
 					parent			: selection_info_node
 				})
 				button_list.addEventListener('mousedown', (e) => {

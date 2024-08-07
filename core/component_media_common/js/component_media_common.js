@@ -20,17 +20,22 @@ export const handler_open_viewer = function(e) {
 	const self = this
 
 	// short vars
-		const data			= self.data || {}
-		const value			= data.value || [] // value is a files_info list
-		const files_info	= value
+		const data				= self.data || {}
+		const value				= data.value || [] // value is a files_info list
+		const files_info		= value
+		const external_source	= data.external_source
 		// open_window_features. Optional property of the caller image node
-		const width			= e.srcElement.open_window_features.width || 1024
-		const height		= e.srcElement.open_window_features.height || 720
+		const width			= e.srcElement.open_window_features?.width || 1024
+		const height		= e.srcElement.open_window_features?.height || 720
 
 	// if the files_info doesn't has any quality with file, fire the tool_upload, enable it, so
 	// it could be used, else open the player to show the image
 	const file_exist = files_info.find(item => item.file_exist===true)
-	if(!file_exist){
+	if(!file_exist && !external_source){
+
+		if( self.permissions < 2 ){
+			return true
+		}
 
 		// get the upload tool to be fired
 			const tool_upload_context = self.tools.find(el => el.model === 'tool_upload')
