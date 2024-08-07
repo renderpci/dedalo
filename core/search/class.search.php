@@ -1590,9 +1590,9 @@ class search {
 									$search_locator->set_section_tipo($current_project_locator->section_tipo);
 									$search_locator->set_section_id($current_project_locator->section_id);
 									$search_locator->set_type($current_project_locator->type);
-									if (property_exists($this->search_query_object, 'id') && $this->search_query_object->id!=='thesaurus') {
+								if (property_exists($this->search_query_object, 'id') && $this->search_query_object->id!=='thesaurus') {
 									$search_locator->set_from_component_tipo($component_filter_tipo);
-									}
+								}
 
 								$ar_query[] = $section_alias.'.'.$datos_container.'#>\'{relations}\'@>\'['.json_encode($search_locator).']\'::jsonb';
 
