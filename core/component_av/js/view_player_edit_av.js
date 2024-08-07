@@ -131,6 +131,16 @@ export const get_content_data_player = function(options) {
 				video.setAttribute('tabindex', 0)
 				video.appendChild(source)
 
+			// permissions
+			// set read only permissions, remove the contextmenu and nodownload
+				if(self.permissions <= 1){
+					video.addEventListener("contextmenu", (e) => {
+						e.preventDefault();
+						return false
+					});
+					video.controlsList	= 'nodownload'
+				}
+
 			// subtitles track.
 				if (tc_in) {
 					// Add only if its not a fragment
