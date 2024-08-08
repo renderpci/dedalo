@@ -194,11 +194,13 @@ export const when_in_viewport = function(node, callback, once=true) {
 */
 export const dd_request_idle_callback = function (callback) {
 
-	const is_safari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-	if (!is_safari) {
+	if (typeof window.requestIdleCallback === 'function') {
+		// Use requestIdleCallback to schedule work if available
 		requestIdleCallback(callback)
-	}else{
-		window.requestAnimationFrame(callback)
+	} else {
+		// window.requestAnimationFrame(callback)
+		// Fallback for browsers without requestIdleCallback support like Safari
+        setTimeout(callback, 1);
 	}
 }//end dd_request_idle_callback
 
