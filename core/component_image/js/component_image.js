@@ -117,13 +117,33 @@ component_image.prototype.get_data_tag = function() {
 
 	const self = this
 
+	const data_tag = {
+		type			: 'draw',
+		tag_id			: null,
+		state			: 'n',
+		label			: '',
+		data			: '',
+		last_layer_id	: null,
+		layers			: [{
+			layer_id		: 0,
+			user_layer_name	: 'raster'
+		}]
+	}
+
+	// get the lib_data of the image component
+	const lib_data	= self.get_lib_data()
+
+	// if the image has not lib data stop
+	if(!lib_data){
+		return data_tag
+	}
+
 	// last_layer_id
 		const last_layer_id	= self.get_last_layer_id()
 
 	// layers
-		const lib_data	= self.get_lib_data()
-		const layers	= lib_data.map((item) => {
-		const layer		= {
+		const layers = lib_data.map((item) => {
+			const layer	= {
 				layer_id		: item.layer_id,
 				user_layer_name	: item.user_layer_name
 			}
@@ -131,16 +151,8 @@ component_image.prototype.get_data_tag = function() {
 		})
 
 	// data_tag
-		const data_tag = {
-			type			: 'draw',
-			tag_id			: null,
-			state			: 'n',
-			label			: '',
-			data			: '',
-			last_layer_id	: last_layer_id + 1,
-			layers			: layers
-		}
-
+		data_tag.last_layer_id	= last_layer_id + 1
+		data_tag.layers			= layers
 
 	return data_tag
 }//end get_data_tag
@@ -150,7 +162,7 @@ component_image.prototype.get_data_tag = function() {
 /**
 * GET_LIB_DATA
 * get the lib_data in self.data, lib_data is the specific data of the library used (svgEdit js)
-* @return array lib_data
+* @return array|null lib_data
 */
 component_image.prototype.get_lib_data = function() {
 
@@ -179,7 +191,9 @@ component_image.prototype.get_last_layer_id = function() {
 	const self = this
 
 	const lib_data		= self.get_lib_data()
+
 	const ar_layer_id	= lib_data.map((item) => item.layer_id)
+
 	const last_layer_id	= Math.max(...ar_layer_id)
 
 
