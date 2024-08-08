@@ -28,7 +28,7 @@
     "edicion": "Auflage",
     "entrada": "Login",
     "salida": "Logout",
-    "listado": "Liste",
+    "list": "Liste",
     "automatic_translation": "Automatische Übersetzung",
     "copiar_a_destino": "Ins Ziel kopieren",
     "propagar_marcas": "Zeichen verbreiten",

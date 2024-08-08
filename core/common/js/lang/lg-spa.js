@@ -28,7 +28,7 @@
     "edicion": "Edición",
     "entrada": "Entrada",
     "salida": "Salida",
-    "listado": "Listado",
+    "list": "Listado",
     "automatic_translation": "Traducción automática",
     "copiar_a_destino": "Copiar a destino",
     "propagar_marcas": "Propagar marcas",
