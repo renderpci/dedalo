@@ -5,11 +5,7 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {tool_common} from '../../tool_common/js/tool_common.js'
-	// import * as instances from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	// import {pause} from '../../../core/common/js/utils/index.js'
 
 
 

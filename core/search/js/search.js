@@ -838,9 +838,13 @@ search.prototype.update_state = async function(options) {
 			const caller = self.caller
 
 		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
-			const json_query_obj = self.parse_dom_to_json_filter({
-				mode : "search"
+			const json_filter = self.parse_dom_to_json_filter({
+				mode : 'search'
 			})
+			const json_query_obj = {
+				filter	: json_filter.filter, // generated filter
+				order	: [] // reset order
+			}
 
 		const js_promise = update_caller(
 			caller,
@@ -871,7 +875,8 @@ search.prototype.update_state = async function(options) {
 
 		// json_query_obj
 			const json_query_obj = {
-				filter : {$and:[]}
+				filter	: {$and:[]}, // reset filter
+				order	: [] // reset order
 			}
 
 		// update_caller
@@ -892,7 +897,17 @@ search.prototype.update_state = async function(options) {
 
 	/**
 	* UPDATE_CALLER
-	* caller could be section or area_thesaurus
+	* Modifies the caller SQO and navigate to generate an
+	* updated version of caller data and DOM nodes
+	* @param object caller_instance
+	* 	Could be section or area_thesaurus
+	* @param object json_query_obj
+	* {
+	* 	filter	: {$and:[]},
+	* 	order	: []
+	* }
+	* @param array|null filter_by_locators
+	* @param object self
 	* @return promise
 	*/
 	const update_caller = async function(caller_instance, json_query_obj, filter_by_locators, self) {
@@ -907,6 +922,7 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.limit				= limit
 			caller_instance.rqo.sqo.offset				= 0
 			caller_instance.rqo.sqo.filter				= json_query_obj.filter || null
+			caller_instance.rqo.sqo.order				= json_query_obj.order || null
 			caller_instance.rqo.sqo.filter_by_locators	= filter_by_locators
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo

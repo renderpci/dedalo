@@ -7,10 +7,7 @@
 // imports
 	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
-	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
-	import {open_tool} from '../../tool_common/js/tool_common.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
 
 
 
@@ -116,7 +113,6 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
-
 
 
 
@@ -348,12 +344,12 @@ const get_ordered_coins = async function(self){
 
 
 
-
 /**
 * DROP
 * This is used to build the ordered coins node ans assign the drop
 * @param object self
 * 	instance of current tool
+* @return void
 */
 render_tool_numisdata_order_coins.prototype.drop = function (options) {
 
@@ -420,8 +416,8 @@ render_tool_numisdata_order_coins.prototype.drop = function (options) {
 						})
 				},false)
 	}// end for (let i = drop_zones_len - 1; i >= 0; i--)
+}//end drop
 
-}// end drop
 
 
 // @license-end

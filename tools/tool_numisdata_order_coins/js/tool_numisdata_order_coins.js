@@ -5,18 +5,15 @@
 
 
 // import
-	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
-	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
-	import {common, create_source} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
+	import {common} from '../../../core/common/js/common.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_numisdata_order_coins} from './render_tool_numisdata_order_coins.js'
 
 
 
 /**
-* tool_numisdata_order_coins
+* TOOL_NUMISDATA_ORDER_COINS
 * Tool to translate contents from one language to other in any text component
 */
 export const tool_numisdata_order_coins = function () {
@@ -283,10 +280,6 @@ tool_numisdata_order_coins.prototype.set_original_copy = async function(options)
 
 	return true
 }//end set_original_copy
-
-
-
-
 
 
 
