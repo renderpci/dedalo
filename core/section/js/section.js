@@ -187,7 +187,7 @@ section.prototype.init = async function(options) {
 	// event subscriptions
 
 		// New and duplicate rebuild rqo and sqo
-			const navigate_to_new_section = function(section_id){
+			const navigate_to_new_section = async function(section_id){
 
 				const source = create_source(self, 'search')
 					source.section_id	= section_id
@@ -208,7 +208,6 @@ section.prototype.init = async function(options) {
 				// in those cases, the section has a filter_by_locators
 				// and is necessary add the new locator.
 				if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-
 					const old_locators = self.rqo.sqo.filter_by_locators
 					sqo.filter_by_locators.push(...old_locators)
 				}
@@ -219,7 +218,36 @@ section.prototype.init = async function(options) {
 					section_id		: section_id
 				})
 
-				sqo.offset	= sqo.filter_by_locators.length - 1
+				sqo.offset = sqo.filter_by_locators.length - 1
+
+				// save pagination
+				// Updates local DB pagination values to preserve consistence
+				if (self.session_save===true) {
+					// list pagination
+					await data_manager.set_local_db_data(
+						{
+							id		: `${self.tipo}_list`,
+							value	: {
+								limit : (self.mode==='list' && self.rqo.sqo?.limit)
+									? self.rqo.sqo.limit
+									: 10,
+								offset : 0
+							}
+						},
+						'pagination'
+					)
+					// edit pagination
+					await data_manager.set_local_db_data(
+						{
+							id		: `${self.tipo}_edit`,
+							value	: {
+								limit	: 1,
+								offset	: sqo.offset
+							}
+						},
+						'pagination'
+					)
+				}
 
 				// launch event 'user_navigation' that page is watching
 				event_manager.publish('user_navigation', {
@@ -245,7 +273,6 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
-
 					const section_id = api_response.result
 					navigate_to_new_section(section_id)
 				}
@@ -1359,9 +1386,8 @@ const build_sqo_id = function(tipo) {
 
 /**
 * UPDATE_PAGINATION
-* This is fired on new and duplicate section events and in paginator goto function
+* This is fired in paginator_goto_ event function
 * Is a unified mode to update navigation history and offset
-* navigation section
 * @see self.navigate
 * @param int offset
 * @return bool
