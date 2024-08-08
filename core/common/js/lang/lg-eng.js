@@ -28,7 +28,7 @@
     "edicion": "Edit",
     "entrada": "Login",
     "salida": "Logout",
-    "listado": "List",
+    "list": "List",
     "automatic_translation": "Automatic translation",
     "copiar_a_destino": "Copy to target",
     "propagar_marcas": "Propagate marks",

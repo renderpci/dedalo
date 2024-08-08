@@ -28,7 +28,7 @@
     "edicion": "Modifica",
     "entrada": "Entrata",
     "salida": "Uscita",
-    "listado": "Elenco",
+    "list": "Elenco",
     "automatic_translation": "Traduzione automatica",
     "copiar_a_destino": "Copiare nella destinazione",
     "propagar_marcas": "Diffondere segnali",
