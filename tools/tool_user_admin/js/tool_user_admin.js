@@ -5,11 +5,8 @@
 
 
 // import needed modules
-	// import {clone} from '../../../core/common/js/utils/index.js'
-	// import {data_manager} from '../../../core/common/js/data_manager.js'
 	import * as instances from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_user_admin} from './render_tool_user_admin.js' // self tool rendered (called from render common)
 

@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 

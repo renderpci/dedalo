@@ -10,8 +10,6 @@
 	import {ui} from '../../../core/common/js/ui.js'
 	import {
 		render_column_id,
-		// render_column_component_info,
-		// render_column_remove,
 		get_buttons,
 		activate_autocomplete,
 		render_references
@@ -26,7 +24,7 @@
 
 
 /**
-* view_coins_mosaic_portal
+* VIEW_COINS_MOSAIC_PORTAL
 * Manage the components logic and appearance in client side
 */
 export const view_coins_mosaic_portal = function() {
@@ -237,99 +235,99 @@ const drag_and_drop = function(options) {
 
 
 
-// /**
-// * RENDER_ALTERNATIVE_TABLE_VIEW
-// * Render all received section records and place it into a DocumentFragment
-// * @param instance self
-// * @param array ar_section_record
-// * @param DOM node alt_list_body
-// *
-// * @return DocumentFragment
-// */
-// const render_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
+/**
+* RENDER_ALTERNATIVE_TABLE_VIEW
+* Render all received section records and place it into a DocumentFragment
+* @param instance self
+* @param array ar_section_record
+* @param DOM node alt_list_body
+*
+* @return DocumentFragment
+*/
+	// const render_alternative_table_view = async function(self, ar_section_record, alt_list_body) {
 
-// 	// build_values
-// 		const fragment = new DocumentFragment()
+	// 	// build_values
+	// 		const fragment = new DocumentFragment()
 
-// 	// add all section_record rendered nodes
-// 		const ar_section_record_length = ar_section_record.length
-// 		if (ar_section_record_length>0) {
+	// 	// add all section_record rendered nodes
+	// 		const ar_section_record_length = ar_section_record.length
+	// 		if (ar_section_record_length>0) {
 
-// 			for (let i = 0; i < ar_section_record_length; i++) {
+	// 			for (let i = 0; i < ar_section_record_length; i++) {
 
-// 				// section_record
-// 					const section_record		= ar_section_record[i]
-// 					const section_record_node	= await section_record.render()
-// 						  section_record_node.classList.add('display_none')
+	// 				// section_record
+	// 					const section_record		= ar_section_record[i]
+	// 					const section_record_node	= await section_record.render()
+	// 						  section_record_node.classList.add('display_none')
 
-// 				// event subscribe
-// 				// On user click button 'alt' trigger a event that we subscribe here to show the
-// 				// proper table section record and hide the others
-// 					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
-// 					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
-// 					// console.log("// subscribe event_id:",event_id);
-// 					const found = event_manager.events.find(el => el.event_name===event_id)
-// 					if (!found) {
-// 						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
-// 						self.events_tokens.push(token)
-// 					}
-// 					function fn_mosaic_show_alt() {
+	// 				// event subscribe
+	// 				// On user click button 'alt' trigger a event that we subscribe here to show the
+	// 				// proper table section record and hide the others
+	// 					// const event_id = 'mosaic_show_' + section_record_node.id + '_' + self.section_tipo + '_' + self.section_id
+	// 					const event_id = `mosaic_show_${section_record.id_base}_${section_record.caller.section_tipo}_${section_record.caller.section_id}`
+	// 					// console.log("// subscribe event_id:",event_id);
+	// 					const found = event_manager.events.find(el => el.event_name===event_id)
+	// 					if (!found) {
+	// 						const token = event_manager.subscribe(event_id, fn_mosaic_show_alt)
+	// 						self.events_tokens.push(token)
+	// 					}
+	// 					function fn_mosaic_show_alt() {
 
-// 						// hide all except the header
-// 							const ar_child_node	= section_record_node.parentNode.children;
-// 							const len			= ar_child_node.length
-// 							for (let i = len - 1; i >= 0; i--) {
-// 								const node = ar_child_node[i]
-// 								if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
-// 									continue
-// 								}
-// 								node.classList.add('display_none')
-// 							}
-// 						// show list
-// 							alt_list_body.classList.remove('display_none')
-// 							section_record_node.classList.remove('display_none')
+	// 						// hide all except the header
+	// 							const ar_child_node	= section_record_node.parentNode.children;
+	// 							const len			= ar_child_node.length
+	// 							for (let i = len - 1; i >= 0; i--) {
+	// 								const node = ar_child_node[i]
+	// 								if(node.classList.contains('header_wrapper_list') || node.classList.contains('close_alt_list_body')){
+	// 									continue
+	// 								}
+	// 								node.classList.add('display_none')
+	// 							}
+	// 						// show list
+	// 							alt_list_body.classList.remove('display_none')
+	// 							section_record_node.classList.remove('display_none')
 
-// 						// header
-// 							const header = ui.create_dom_element({
-// 								element_type	: 'div',
-// 								// class_name	: 'header label',
-// 								inner_html		: "Editing inline"
-// 							})
+	// 						// header
+	// 							const header = ui.create_dom_element({
+	// 								element_type	: 'div',
+	// 								// class_name	: 'header label',
+	// 								inner_html		: "Editing inline"
+	// 							})
 
-// 						// modal way
-// 							const modal = ui.attach_to_modal({
-// 								header	: header,
-// 								body	: alt_list_body,
-// 								footer	: null,
-// 								size	: 'normal'
-// 							})
-// 							self.modal = modal
-// 							// modal.on_close = () => {
-// 							// 	self.refresh()
-// 							// }
+	// 						// modal way
+	// 							const modal = ui.attach_to_modal({
+	// 								header	: header,
+	// 								body	: alt_list_body,
+	// 								footer	: null,
+	// 								size	: 'normal'
+	// 							})
+	// 							self.modal = modal
+	// 							// modal.on_close = () => {
+	// 							// 	self.refresh()
+	// 							// }
 
-// 						// user click edit button action close the modal box
-// 							const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
-// 							self.events_tokens.push(token)
-// 							function fn_button_edit_click() {
-// 								event_manager.unsubscribe('button_edit_click')
-// 								modal.close()
-// 							}
-// 					}
+	// 						// user click edit button action close the modal box
+	// 							const token = event_manager.subscribe('button_edit_click', fn_button_edit_click)
+	// 							self.events_tokens.push(token)
+	// 							function fn_button_edit_click() {
+	// 								event_manager.unsubscribe('button_edit_click')
+	// 								modal.close()
+	// 							}
+	// 					}
 
-// 				// section record append
-// 					fragment.appendChild(section_record_node)
-// 			}
-// 		}//end if (ar_section_record_length===0)
+	// 				// section record append
+	// 					fragment.appendChild(section_record_node)
+	// 			}
+	// 		}//end if (ar_section_record_length===0)
 
-// 	// build references
-// 		if(self.data.references && self.data.references.length>0){
-// 			const references_node = render_references(self.data.references)
-// 			fragment.appendChild(references_node)
-// 		}
+	// 	// build references
+	// 		if(self.data.references && self.data.references.length>0){
+	// 			const references_node = render_references(self.data.references)
+	// 			fragment.appendChild(references_node)
+	// 		}
 
-// 	return fragment
-// }//end render_alternative_table_view
+	// 	return fragment
+	// }//end render_alternative_table_view
 
 
 
@@ -584,7 +582,7 @@ const render_column_original_copy = function(options){
 		})
 
 	return fragment
-}
+}//end render_column_original_copy
 
 
 

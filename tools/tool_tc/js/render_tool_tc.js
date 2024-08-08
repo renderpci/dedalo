@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -204,6 +203,7 @@ export const change_component_lang = async (options) => {
 
 	return true
 }//end change_component_lang
+
 
 
 // @license-end

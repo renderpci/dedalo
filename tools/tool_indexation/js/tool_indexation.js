@@ -7,9 +7,7 @@
 // import
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {instances, get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
 	import {event_manager} from '../../../core/common/js/event_manager.js'
@@ -788,6 +786,7 @@ tool_indexation.prototype.delete_tag = function(tag_id) {
 		resolve(response)
 	})
 }//end delete_tag
+
 
 
 // @license-end
