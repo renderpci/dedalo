@@ -29,11 +29,11 @@ $updates->$v = new stdClass();
 			<br>
 			<br>
 			<br>This update changes the way we work with relationships in the component_text_area when it is related to media files.
-			<br>Now, reference links and drawing zones use a component_portal to store the locators associated to these tags
-			<br>(the locator is no longer stored in the tag).
+			<br>Now, reference links and drawing zones in images use a component_portal to store the locators associated to these tags
+			<br>(the locator is no longer stored in the component_text_area tag).
 			<br>For the Audiovisual section (rsc167) a new component name ‘References’ (rsc1368) is added.
 			<br>For the Image section (rsc170) a new component called ‘Image drawing layers’ (rsc1369) is added.
-			<br>If you want to use this functionality or have used it before, please review the profiles to give access to the new components.
+			<br>If you want to use those functionalities or has been used it before, please review the profiles to give access to the new components.
 		";
 		$updates->$v->alert_update[] = $alert;
 
@@ -53,6 +53,44 @@ $updates->$v = new stdClass();
 						COMMENT ON COLUMN "matrix_time_machine"."bulk_process_id" IS \'Bulk process id identifying the massive change\';
 					END IF;
 				END $$;
+			');
+		// Drop id_matrix index from time machine, the column was removed.
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				DROP INDEX IF EXISTS public.matrix_time_machine_id_matrix;
+			');
+		// Create the bulk_process_id index (replace the id_matrix index)
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_time_machine_bulk_process_id
+					ON public.matrix_time_machine USING btree
+					(bulk_process_id ASC NULLS LAST)
+					TABLESPACE pg_default;
+			');
+
+		// Create the ontology term id (dd1475) index
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_dd_dd1475_gin ON public.matrix_dd USING gin ((datos #> \'{components,dd1475,dato,lg-nolan}\'::text[]) jsonb_path_ops);
+			');
+		// Re-index matrix_dd, prepare to use the ontology matrix table in next versions, instead jer_dd.
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				REINDEX TABLE public.matrix_dd;
+			');
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
+			');
+		// Create the tld index of main_dd, optimize the location of sections.
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS main_dd_tld ON public.main_dd USING btree (tld COLLATE pg_catalog."default" ASC NULLS LAST);
+			');
+		// Create the counter of section
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_counter_dd_tipo ON public.matrix_counter_dd USING btree (tipo ASC NULLS LAST);
+			');
+		// Create the name (rsc85) and surname (rsc86) indexes
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_rsc86_gin ON matrix USING gin(f_unaccent(datos#>>\'{components, rsc86, dato}\') gin_trgm_ops);
+			');
+			$updates->$v->SQL_update[]	= PHP_EOL.sanitize_query('
+				CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>\'{components, rsc85, dato}\') gin_trgm_ops);
 			');
 
 	// UPDATE COMPONENTS
