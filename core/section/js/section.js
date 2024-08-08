@@ -185,6 +185,49 @@ section.prototype.init = async function(options) {
 		self.view					= options.view ?? null
 
 	// event subscriptions
+
+		// New and duplicate rebuild rqo and sqo
+			const navigate_to_new_section = function(section_id){
+
+				const source = create_source(self, 'search')
+					source.section_id	= section_id
+					source.mode			= 'edit'
+
+				// get sqo after modification for proper navigation
+				const sqo = {
+					mode				: self.mode,
+					section_tipo		: [{tipo:self.section_tipo}],
+					filter_by_locators	: [],
+					filter 				: null,
+					limit				: 1,
+					offset				: 0
+				}
+
+				// rebuild sqo when is a separated window
+				// and session is not the main session
+				// in those cases, the section has a filter_by_locators
+				// and is necessary add the new locator.
+				if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
+
+					const old_locators = self.rqo.sqo.filter_by_locators
+					sqo.filter_by_locators.push(...old_locators)
+				}
+
+				// new section generated
+				sqo.filter_by_locators.push({
+					section_tipo	: self.section_tipo,
+					section_id		: section_id
+				})
+
+				sqo.offset	= sqo.filter_by_locators.length - 1
+
+				// launch event 'user_navigation' that page is watching
+				event_manager.publish('user_navigation', {
+					source	: source,
+					sqo		: sqo
+				})
+			}
+
 		// new_section_ event
 			self.events_tokens.push(
 				event_manager.subscribe('new_section_' + self.id, fn_create_new_section)
@@ -203,25 +246,8 @@ section.prototype.init = async function(options) {
 				})
 				if (api_response.result && api_response.result>0) {
 
-					// rebuild sqo when is a separated window
-					// and session is not the main session
-					// in those cases, the section has a filter_by_locators
-					// and is necessary add the new locator.
-					if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-
-						const new_locator = {
-							section_tipo	: self.tipo,
-							section_id		: api_response.result
-						}
-						self.rqo.sqo.filter_by_locators.push(new_locator)
-					}
-
-					// const section_id = api_response.result
-					const offset = self.total
-					// update total (added one record)
-					self.total++
-					// update pagination sqo and local DB
-					self.update_pagination(offset)
+					const section_id = api_response.result
+					navigate_to_new_section(section_id)
 				}
 			}//end fn_create_new_section
 
@@ -247,26 +273,8 @@ section.prototype.init = async function(options) {
 					body : rqo
 				})
 				if (api_response.result && api_response.result>0) {
-
-					// rebuild sqo when is a separated window
-					// and session is not the main session
-					// in those cases, the section has a filter_by_locators
-					// and is necessary add the new locator.
-					if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
-
-						const new_locator = {
-							section_tipo : self.tipo,
-							section_id : api_response.result
-						}
-						self.rqo.sqo.filter_by_locators.push(new_locator)
-					}
-
-					// const section_id = api_response.result
-					const offset = self.total
-					// update total (added one record)
-					self.total++
-					// update pagination sqo and local DB
-					self.update_pagination(offset)
+					const section_id = api_response.result
+					navigate_to_new_section(section_id)
 				}
 			}//end fn_duplicate_section
 
