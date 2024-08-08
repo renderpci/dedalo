@@ -48,29 +48,40 @@ export const instances = []
 */
 export const get_instance = async function(options){
 
-	// options. mandatory vars
+	// options. main vars
 		const tipo				= options.tipo
 		const section_tipo		= options.section_tipo
 		const section_id		= options.section_id // string format
 
-	// options. optional vars (only mandatory for build the instance)
+	// options. optional vars (only mandatory to build the instance)
 		const direct_path		= options.direct_path
 		const mode				= options.mode  || 'list'
 		const lang				= options.lang  || page_globals.dedalo_data_lang || null
-		const model				= options.model || await ( async () => {
+
+	// Resolve the model if not provided
+		const model = options.model || await ( async () => {
+
+			if (!tipo) {
+				console.error('Error: unable to get element context without tipo. options:', options);
+				return null
+			}
 
 			const element_context_response = await data_manager.get_element_context({
 				tipo			: tipo,
 				section_tipo	: section_tipo,
 				section_id		: section_id
 			})
-			if(SHOW_DEBUG===true) {
-				console.log("// [get_instance] element_context API response:", element_context_response);
-				console.trace();
+
+			if(SHOW_DEBUG===true || !element_context_response.result) {
+				console.warn('// [get_instance] element_context API response:', element_context_response);
 			}
 
 			// resolved model
-			const resolved_model = element_context_response.result[0].model
+			const resolved_model = element_context_response.result?.[0]?.model;
+			if (!resolved_model) {
+				console.error('Error: unable to resolve element context. options:', options);
+				return null;
+			}
 
 			// set context if is not already set
 			if(typeof options.context==='undefined'){
@@ -82,88 +93,39 @@ export const get_instance = async function(options){
 			// Note that some components may change their lang depending on whether they are with_lang_versions or allow transliteration.
 			options.lang = element_context_response.result[0].lang
 
-		    return resolved_model
+			return resolved_model
 		})();
 
-		// options fill empty
-			if (!options.model) {
-				options.model = model
-			}
-			if (!options.mode) {
-				options.mode = mode
-			}
-			if (!options.lang) {
-				options.lang = lang
-			}
+		if (!model) {
+			console.error('Error: unable to resolve instance model. options:', options);
+			return null
+		}
+
+	// Fill missing options with defaults
+		if (!options.model) {
+			options.model = model
+		}
+		if (!options.mode) {
+			options.mode = mode
+		}
+		if (!options.lang) {
+			options.lang = lang
+		}
 
 	// key. build the key locator of the instance
 		const key = options.key || key_instances_builder(options)
 
-	// if the instance is not in the cache, build one new instance of the element
-		// DES
-			// const load_instance = async () => {
-
-			// 	// search. first we see if the instance is inside the instances cache
-			// 	const found_instance = instances.filter(instance => instance.id===key)
-
-			// 	if (found_instance.length===0) {
-			// 		//console.log("---Creating instance of:", model, tipo, " - " + key)
-
-			// 		// element file import path
-			// 			const base_path = model.indexOf('tool_') !== -1 ? '../../../tools/' : '../../'
-			// 			const path = base_path + model + '/js/' + model + '.js' // + '?v=' + page_globals.dedalo_version
-
-			// 		// import element mod file once (and wait until finish)
-			// 			const current_element = await import(path)
-
-			// 		// check
-			// 			if (typeof current_element[model]!=="function") {
-			// 				console.warn(`------- INVALID MODEL!!! [${model}] path:`, path);
-			// 				return null
-			// 			}
-
-			// 		// instance the element
-			// 			const instance_element = new current_element[model]()
-
-			// 		// serialize element id
-			// 		// add the id for init the instance with the id
-			// 			instance_element.id = key
-			// 			//instance_element.id_base = key_instances_builder(options, false)
-			// 			instance_element.id_base = section_tipo+'_'+section_id+'_'+tipo
-			// 		// id_variant . Propagate a custom instance id to children
-			// 			if (options.id_variant) {
-			// 				instance_element.id_variant = options.id_variant
-			// 			}
-
-			// 		// init the element
-			// 			await instance_element.init(options)
-
-			// 		// add to the instances cache
-			// 			instances.push(instance_element)
-
-			// 			// console.log("Created fresh instance of :", model, section_tipo, section_id, key, instance_element.label)
-
-			// 		// return the new created instance
-			// 			return instance_element
-
-			// 	}else{
-			// 		// resolve the promise with the cache instance found
-			// 			// console.log("Recycled instance of :",model, section_tipo, section_id)
-			// 			return found_instance[0]
-			// 	}
-			// }
-
+	// Return a promise that resolves the instance
 	return new Promise(async function(resolve){
 
-		// search. first we see if the instance is inside the instances cache
+		// search. Check if the instance is already in the cache
 			const found_instance = instances.find(instance => instance.id===key)
 			// resolve the promise with the cache instance found
 			if (found_instance) {
-				// console.warn("returned already resolved instance from cache:", found_instance[0]);
 				resolve(found_instance)
 			}
 
-		// element file import path
+		// element file import path. Determine the path for importing the module
 			const base_path	= model.indexOf('tool_')!==-1
 				? '../../../tools/'
 				: model.indexOf('service_')!==-1
@@ -178,15 +140,14 @@ export const get_instance = async function(options){
 				? direct_path
 				: base_path + model + '/js/' + name + '.js'
 
-		// import element mod file once (and wait until finish)
+		// import element module file once (and wait until finish)
 		import(path)
 		.then(async function(module){
 
 			// check module
-				if (typeof module[model]!=="function") {
-					console.warn(`------- INVALID MODEL!!! [model:${model}] path: `, path);
-					resolve(false)
-					return
+				if (typeof module[model]!=='function') {
+					console.warn(`Invalid model: ${model} at path:`, path);
+					return resolve(null)
 				}
 
 			// instance the element
@@ -211,9 +172,8 @@ export const get_instance = async function(options){
 				resolve(instance_element)
 		})
 		.catch((error) => {
-			console.error(`------- ERROR ON IMPORT ELEMENT!!! [model:${model}] [path:${path}] \n Error: \n`, error);
-			resolve(false)
-			return
+			console.error(`Error importing element [model:${model}] [path:${path}]`, error);
+			resolve(null)
 		});
 	})
 	.catch(err => { console.error(err) });
