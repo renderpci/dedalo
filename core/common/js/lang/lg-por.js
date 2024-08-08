@@ -28,7 +28,7 @@
     "edicion": "<mark>Edición<\/mark>",
     "entrada": "<mark>Entrada<\/mark>",
     "salida": "<mark>Salida<\/mark>",
-    "listado": "<mark>Listado<\/mark>",
+    "list": "<mark>Listado<\/mark>",
     "automatic_translation": "<mark>Traducción automática<\/mark>",
     "copiar_a_destino": "<mark>Copiar a destino<\/mark>",
     "propagar_marcas": "<mark>Propagar marcas<\/mark>",
