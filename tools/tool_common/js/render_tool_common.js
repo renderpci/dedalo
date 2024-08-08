@@ -3,7 +3,6 @@
 /*eslint no-undef: "error"*/
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 

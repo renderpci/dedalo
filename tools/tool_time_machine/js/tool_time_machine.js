@@ -445,7 +445,6 @@ tool_time_machine.prototype.apply_value = function(options) {
 
 
 
-
 /**
 * BULK_REVERT_PROCESS
 * Set selected version value to active component and close the tool
@@ -548,5 +547,7 @@ tool_time_machine.prototype.get_bulk_process_label = async function(options){
 
 	return api_response.result
 }//end get_bulk_process_label
+
+
 
 // @license-end

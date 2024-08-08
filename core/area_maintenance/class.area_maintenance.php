@@ -2249,13 +2249,15 @@ class area_maintenance extends area_common {
 			ON public.matrix_time_machine USING gin
 			(dato jsonb_path_ops)
 			TABLESPACE pg_default;
-			-- Index: matrix_time_machine_id_matrix
+			-- Index: matrix_time_machine_bulk_process_id
 
-			-- DROP INDEX IF EXISTS public.matrix_time_machine_id_matrix;
+			DROP INDEX IF EXISTS public.matrix_time_machine_id_matrix;
 
-			CREATE INDEX IF NOT EXISTS matrix_time_machine_id_matrix
+			-- DROP INDEX IF EXISTS public.matrix_time_machine_bulk_process_id;
+
+			CREATE INDEX IF NOT EXISTS matrix_time_machine_bulk_process_id
 			ON public.matrix_time_machine USING btree
-			(id_matrix ASC NULLS LAST)
+			(bulk_process_id ASC NULLS LAST)
 			TABLESPACE pg_default;
 			-- Index: matrix_time_machine_lang
 
@@ -2473,6 +2475,22 @@ class area_maintenance extends area_common {
 			ON public.relations USING btree
 			(target_section_tipo COLLATE pg_catalog."default" ASC NULLS LAST, target_section_id ASC NULLS LAST)
 			TABLESPACE pg_default;
+		';
+
+		// People special indexes (name [rsc85], surname [rsc86])
+		$ar_sql_query[] = '
+			CREATE INDEX IF NOT EXISTS matrix_rsc85_gin ON matrix USING gin(f_unaccent(datos#>>\'{components, rsc85, dato}\') gin_trgm_ops);
+			CREATE INDEX IF NOT EXISTS matrix_rsc86_gin ON matrix USING gin(f_unaccent(datos#>>\'{components, rsc86, dato}\') gin_trgm_ops);
+		';
+
+		// matrix_dd REINDEX
+		$ar_sql_query[] = '
+			REINDEX TABLE public.matrix_dd;
+		';
+
+		// matrix_dd vacuum
+		$ar_sql_query[] = '
+			VACUUM FULL VERBOSE ANALYZE public.matrix_dd;
 		';
 
 		// vacuum. Vacuum analyze main tables
