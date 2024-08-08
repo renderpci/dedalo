@@ -1402,6 +1402,10 @@ final class dd_core_api {
 			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
 				$sqo->filter = $sqo_session->filter;
 			}
+			if ( !property_exists($sqo, 'filter_by_locators') && isset($sqo_session) && isset($sqo_session->filter_by_locators) ) {
+				$sqo->filter_by_locators = $sqo_session->filter_by_locators;
+			}
+
 
 		// search
 			if (!isset($result)) {
@@ -1785,6 +1789,11 @@ final class dd_core_api {
 					// add offset from session if not defined (and session yes)
 					if ( !isset($sqo->offset) && isset($sqo_session) && isset($sqo_session->offset) ) {
 						$sqo->offset = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->offset;
+					}
+
+					// add filter_by_locators from session if not defined (and session yes)
+					if ( !property_exists($sqo, 'filter_by_locators') && isset($sqo_session) && isset($sqo_session->filter_by_locators) ) {
+						$sqo->filter_by_locators = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter_by_locators;
 					}
 				}
 
