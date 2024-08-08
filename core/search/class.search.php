@@ -1118,15 +1118,22 @@ class search {
 					// $query_inside .= ', '.$this->main_section_tipo_alias.'.id'; // avoid ambiguity in pagination of equal values
 					// from
 						$query_inside .= PHP_EOL . 'FROM ' . $main_from_sql;
-					// join virtual tables
-						$query_inside .= $sql_joins;
+
+						// join virtual tables
+							$query_inside .= $sql_joins;
+						// join filter projects
+							if (!empty($this->filter_join)) {
+							$query_inside .= PHP_EOL . $this->filter_join;
+							}
+
 					// where
 						$query_inside .= PHP_EOL . 'WHERE ' . $main_where_sql;
 						if (!empty($sql_filter)) {
 							$query_inside .= $sql_filter;
 						}
-						if (!empty($sql_projects_filter)) {
-							$query_inside .= $sql_projects_filter;
+						// join filter projects
+						if (!empty($this->filter_join_where)) {
+							$query_inside .= $this->filter_join_where;
 						}
 						if (isset($this->filter_by_user_records)) {
 							$query_inside .= $this->filter_by_user_records;
