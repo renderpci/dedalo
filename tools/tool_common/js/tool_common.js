@@ -542,8 +542,8 @@ export const open_tool = async (options) => {
 				return null
 			  })()
 			 : options.tool_context
-			 	? clone(options.tool_context) // (!) full clone here to avoid circular references
-			 	: null
+				? clone(options.tool_context) // (!) full clone here to avoid circular references
+				: null
 		// caller. Instance that calls the tool, normally a component or section
 		const caller = options.caller
 		// caller_options. Object with additional data for the the tool
@@ -588,6 +588,10 @@ export const open_tool = async (options) => {
 /**
 * VIEW_MODAL
 * @param object options
+* {
+* 	tool_context: object
+* 	caller: object (instance)
+* }
 * @return promise
 * 	Resolve: object tool_instance
 */
@@ -609,7 +613,6 @@ const view_modal = async function(options) {
 
 	// instance load / recover
 		const tool_instance = await get_instance(instance_options)
-
 
 	// stop if already loaded (toggle tool)
 		if (tool_instance.status && tool_instance.status!=='initialized') {
@@ -636,7 +639,8 @@ const view_modal = async function(options) {
 			header		: header,
 			body		: body,
 			footer		: null,
-			callback	: () => {
+			callback	: (dd_modal) => {
+
 				ui.load_item_with_spinner({
 					container			: body,
 					label				: tool_context.label,
@@ -644,29 +648,68 @@ const view_modal = async function(options) {
 					replace_container	: true,
 					callback			: async () => {
 
-						await tool_instance.build(true)
-						const wrapper = await tool_instance.render()
-						if (!wrapper.tool_header) {
-							console.error('Invalid tool wrapper:', wrapper);
-							return
+						// invalid tool common render
+						const render_invalid_tool = () => {
+							// Create a wrapper element with a message indicating the tool is invalid
+							const msg = tool_instance
+								? `${tool_instance.context?.label} (${tool_instance.model}) called from: ${caller.label} (${caller.model} - ${caller.tipo})`
+								: `Called from: ${caller.label} (${caller.model} - ${caller.tipo})`
+							const wrapper = ui.create_dom_element({
+								element_type	: 'div',
+								inner_html		: msg,
+								class_name		: 'body content'
+							});
+							wrapper.slot = 'body';
+
+							// Create and configure the tool header for the invalid tool case
+							const tool_header = ui.create_dom_element({
+								element_type	: 'div',
+								inner_html		: 'Invalid tool configuration',
+								class_name		: 'tool_name_container label header'
+							});
+							tool_header.slot = 'header';
+							header.replaceWith(tool_header);
+
+							return wrapper;
 						}
 
-						// header
-						wrapper.tool_header.slot = 'header'
-						wrapper.tool_header.classList.add('header')
-						header.replaceWith(wrapper.tool_header);
+						// no valid tool instance case
+						if (!tool_instance) {
+							return render_invalid_tool();
+						}
 
-						// body
-						wrapper.slot = 'body'
-						// body.replaceWith(wrapper);
+						try {
+							// Build and render the tool instance
+							await tool_instance.build(true);
+							const wrapper = await tool_instance.render();
 
-						// pointer from wrapper to modal
-						wrapper.modal = modal
+							// Ensure the wrapper contains a valid tool header
+							if (!wrapper.tool_header) {
+								throw new Error('Invalid tool wrapper: missing tool_header');
+							}
 
-						// ! note that function 'load_item_with_spinner' will replace
-						// body content with tool instance rendered node
+							// Set up the header
+							wrapper.tool_header.slot = 'header';
+							wrapper.tool_header.classList.add('header');
+							header.replaceWith(wrapper.tool_header);
 
-						return wrapper
+							// Set up the body
+							wrapper.slot = 'body';
+							// body.replaceWith(wrapper);
+
+							// ! note that function 'load_item_with_spinner' will replace
+							// body content with tool instance rendered node
+
+							// Link the wrapper to the modal
+							wrapper.modal = modal;
+
+							// Return the configured wrapper
+							return wrapper;
+						} catch (error) {
+							console.log('tool_instance:', tool_instance);
+							console.error(error.message, caller);
+							return render_invalid_tool();
+						}
 					}
 				})
 			}
