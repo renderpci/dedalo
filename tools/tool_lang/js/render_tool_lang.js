@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {clone} from '../../../core/common/js/utils/index.js'
@@ -495,6 +494,7 @@ const render_status = async function(self) {
 
 	return fragment
 }//end render_status
+
 
 
 // @license-end

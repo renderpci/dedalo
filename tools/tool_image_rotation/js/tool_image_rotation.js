@@ -7,9 +7,7 @@
 // import needed modules
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
-	// import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common} from '../../tool_common/js/tool_common.js'
 	import {render_tool_image_rotation} from './render_tool_image_rotation.js' // self tool rendered (called from render common)
 
@@ -76,6 +74,8 @@ tool_image_rotation.prototype.init = async function(options) {
 /**
 * BUILD
 * Custom tool build
+* @param bool autoload = false
+* @return bool
 */
 tool_image_rotation.prototype.build = async function(autoload=false) {
 
@@ -104,9 +104,14 @@ tool_image_rotation.prototype.build = async function(autoload=false) {
 
 
 /**
-* apply_rotation
+* APPLY_ROTATION
 * 	rotate all quality images with the value set by user in degrees
-* @param float degrees
+* @param object options
+* {
+* 	rotation_degrees: float like '64.8'
+* 	background_color: string like '#ffffff'
+* 	alpha: bool
+* }
 * @return promise > bool
 */
 tool_image_rotation.prototype.apply_rotation = function(options) {

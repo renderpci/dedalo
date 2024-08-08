@@ -1981,7 +1981,7 @@ final class dd_core_api {
 							$_SESSION['dedalo']['config']['sqo'][$sqo_id] = $safe_sqo;
 							debug_log(__METHOD__
 								. " -> saved in session sqo sqo_id: '$sqo_id'" . PHP_EOL
-								. ' sqo:' . to_string($sqo)
+								. ' sqo:' . to_string($safe_sqo)
 								, logger::DEBUG
 							);
 							// close current session and set as read only to unlock thread
