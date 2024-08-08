@@ -1664,7 +1664,6 @@ class component_image extends component_media_common implements component_media_
 		// Image source
 			$source_image			= $normalized_file;
 			$image_dimensions		= $this->get_image_dimensions($normalized_file);
-
 			$source_pixels_width	= $image_dimensions->width ?? null;
 			$source_pixels_height	= $image_dimensions->height ?? null;
 
@@ -1971,19 +1970,19 @@ class component_image extends component_media_common implements component_media_
 					switch($exif['Orientation']) {
 						case 8:// rotate 90
 						case 6:// rotate 270 || -90
-							$width 	= $exif['COMPUTED']['Height'];
-							$height = $exif['COMPUTED']['Width'];
+							$width 	= $exif['COMPUTED']['Height'] ?? null;
+							$height = $exif['COMPUTED']['Width'] ?? null;
 							break;
 						case 1:	// rotate 0
 						case 3: // rotate 180
 						default:
-							$width 	= $exif['COMPUTED']['Width'];
-							$height = $exif['COMPUTED']['Height'];
+							$width 	= $exif['COMPUTED']['Width'] ?? null;
+							$height = $exif['COMPUTED']['Height'] ?? null;
 							break;
 					}
 				}else{
-					$width 	= $exif['COMPUTED']['Width'];
-					$height = $exif['COMPUTED']['Height'];
+					$width 	= $exif['COMPUTED']['Width'] ?? null;
+					$height = $exif['COMPUTED']['Height'] ?? null;
 				}
 				// check valid values
 				if(empty($width) || empty($height)) {
