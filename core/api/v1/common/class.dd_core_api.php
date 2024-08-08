@@ -1399,7 +1399,7 @@ final class dd_core_api {
 				? section::build_sqo_id($tipo)
 				: 'undefined';
 			$sqo_session = $_SESSION['dedalo']['config']['sqo'][$sqo_id] ?? null;
-			if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
+			if ( !property_exists($sqo, 'filter') && isset($sqo_session) && isset($sqo_session->filter) ) {
 				$sqo->filter = $sqo_session->filter;
 			}
 			if ( !property_exists($sqo, 'filter_by_locators') && isset($sqo_session) && isset($sqo_session->filter_by_locators) ) {
@@ -1772,22 +1772,22 @@ final class dd_core_api {
 				// to maintain the filter and order, get it from session when the client doesn't send it
 				if($session_save===true){
 					// add filter from session if not defined (and session yes)
-					if ( !isset($sqo->filter) && isset($sqo_session) && isset($sqo_session->filter) ) {
+					if ( !property_exists($sqo, 'filter') && isset($sqo_session) && isset($sqo_session->filter) ) {
 						$sqo->filter = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->filter;
 					}
 
 					// add order from session if not defined (and session yes)
-					if ( !isset($sqo->order) && isset($sqo_session) && isset($sqo_session->order) ) {
+					if ( !property_exists($sqo, 'order') && isset($sqo_session) && isset($sqo_session->order) ) {
 						$sqo->order = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->order;
 					}
 
 					// add limit from session if not defined (and session yes)
-					if ( !isset($sqo->limit) && isset($sqo_session) && isset($sqo_session->limit) ) {
+					if ( !property_exists($sqo, 'limit') && isset($sqo_session) && isset($sqo_session->limit) ) {
 						$sqo->limit = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->limit;
 					}
 
 					// add offset from session if not defined (and session yes)
-					if ( !isset($sqo->offset) && isset($sqo_session) && isset($sqo_session->offset) ) {
+					if ( !property_exists($sqo, 'offset') && isset($sqo_session) && isset($sqo_session->offset) ) {
 						$sqo->offset = $_SESSION['dedalo']['config']['sqo'][$sqo_id]->offset;
 					}
 
