@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {ui} from '../../../core/common/js/ui.js'
 
 
@@ -63,7 +62,15 @@ const get_content_data = async function(self) {
 
 	const default_file_info = self.main_element.get_default_file_info()
 
-	const fragment = new DocumentFragment()
+	// no image case
+		if (!default_file_info) {
+			const content_data = ui.tool.build_content_data(self)
+			content_data.innerHTML = '<br><h3> No image is available </h3>'
+			return content_data
+		}
+
+	// DocumentFragment
+		const fragment = new DocumentFragment()
 
 	// main_element_container
 		const main_element_container = ui.create_dom_element({
@@ -83,22 +90,23 @@ const get_content_data = async function(self) {
 			// temporal image to show while main_element is rebuilt and rendered
 			const main_element_image = ui.create_dom_element({
 				element_type	: 'img',
-				src				: DEDALO_MEDIA_URL + default_file_info.file_path + '?t=' + (new Date()).getTime(),
+				src				: DEDALO_MEDIA_URL + default_file_info?.file_path + '?t=' + (new Date()).getTime(),
 				parent			: image_container
 			})
 			self.main_element_image = main_element_image
 
 			main_element_image.onload = () => {
-				const image_size	= main_element_image.getBoundingClientRect()
-				image_container.style.width	= image_size.width +'px'
+				const image_size = main_element_image.getBoundingClientRect()
+				image_container.style.width		= image_size.width +'px'
 				image_container.style.height	= image_size.height +'px'
 			}
 
-		const axis_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'axis_container',
-			parent			: main_element_container
-		})
+		// axis_container
+			const axis_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'axis_container',
+				parent			: main_element_container
+			})
 			const horizontal_axis = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'horizontal_axis',
