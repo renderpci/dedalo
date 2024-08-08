@@ -18,6 +18,7 @@
 		push_browser_history,
 		build_autoload
 	} from '../../common/js/common.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {check_unsaved_data} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
@@ -1103,7 +1104,7 @@ section.prototype.navigate = async function(options) {
 				event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 			})
 		}
-		dd_request_idle_callback(clean_lock, 1)
+		dd_request_idle_callback(clean_lock)
 
 
 	return true
