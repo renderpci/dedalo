@@ -1351,9 +1351,12 @@ section.prototype.update_pagination = async function (offset) {
 
 	const self = this
 
-	// update section sqo
-		self.request_config_object.sqo.offset	= offset
-		self.rqo.sqo.offset						= offset
+	// update section rqo sqo
+		self.rqo.sqo.offset = offset
+	// update section request_config_object sqo
+		if (self.request_config_object.sqo) {
+			self.request_config_object.sqo.offset = offset
+		}
 
 	// get sqo after modification for proper navigation
 		const sqo = clone(self.rqo.sqo)
