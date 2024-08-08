@@ -199,8 +199,8 @@ section.prototype.init = async function(options) {
 					if (self.session_save===false && self.rqo.sqo.filter_by_locators) {
 
 						const new_locator = {
-							section_tipo : self.tipo,
-							section_id : api_response.result
+							section_tipo	: self.tipo,
+							section_id		: api_response.result
 						}
 						self.rqo.sqo.filter_by_locators.push(new_locator)
 					}
@@ -1081,7 +1081,7 @@ section.prototype.navigate = async function(options) {
 		}
 
 	// clean previous locks of current user in current section
-		setTimeout(()=>{
+		const clean_lock = () => {
 			data_manager.request({
 				use_worker	: true,
 				body		: {
@@ -1102,7 +1102,8 @@ section.prototype.navigate = async function(options) {
 				// dedalo_notification from config file
 				event_manager.publish('dedalo_notification', page_globals.dedalo_notification)
 			})
-		}, 0)
+		}
+		dd_request_idle_callback(clean_lock, 1)
 
 
 	return true
