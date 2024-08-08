@@ -28,7 +28,7 @@
     "edicion": "सम्पादन गर्नुहोस्",
     "entrada": "लग - इन",
     "salida": "बाहिर निस्कनु",
-    "listado": "सूची",
+    "list": "सूची",
     "automatic_translation": "<mark>Traducción automática<\/mark>",
     "copiar_a_destino": "<mark>Copiar a destino<\/mark>",
     "propagar_marcas": "<mark>Propagar marcas<\/mark>",

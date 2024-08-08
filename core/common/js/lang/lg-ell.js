@@ -28,7 +28,7 @@
     "edicion": "έκδοση",
     "entrada": "εγγραφή",
     "salida": "παραγωγή",
-    "listado": "λίστα",
+    "list": "λίστα",
     "automatic_translation": "αυτόματη μετάφραση",
     "copiar_a_destino": "Αντιγραφή στον προορισμό",
     "propagar_marcas": "διαδίδονται μάρκες",
