@@ -91,6 +91,9 @@ class search {
 		// ar_sql_joins
 		public $ar_sql_joins;
 
+		// control for duplicated operator to include itself in the where ( operator !! )
+		public $skip_duplicated = false;
+
 
 
 	/**
@@ -1871,6 +1874,25 @@ class search {
 		$ar_value	= $this->search_query_object->filter->{$operator};
 		if(!empty($ar_value)) {
 
+			// Duplicated caller
+			// if the skip duplicated control is in true
+			// the caller is inside of the component with duplicated search operator(!!)
+			// the call is inside the get_sql_where() of the component
+			// it need the filter of other components to be applied into the duplicated search
+			// but it can't include itself in the filter, so, here remove all duplicated search components
+			// it ensure that other search will applied to get the duplicates.
+			if($this->skip_duplicated === true){
+				$ar_value = array_filter($ar_value, function($item){
+					$duplicated = $item->duplicated ?? false;
+					return $duplicated===false;
+				});
+				// remove the key of the array (added by the array filter)
+				$ar_value = array_values($ar_value);
+				// reset the skip control for the next calls.
+				$this->skip_duplicated = false;
+			}
+
+
 			$parsed_string = $this->filter_parser($operator, $ar_value);
 			if (!empty($parsed_string)) {
 				$filter_query .= ' AND (' . $parsed_string . ')';
@@ -2084,15 +2106,16 @@ class search {
 
 					$string_query .= $this->get_sql_where($search_object);
 
-					if ($key+1 !== $total) {
+					// if the where get empty value don' add operator
+					if ($key+1 !== $total && !empty($string_query)) {
 						#$operator = strtoupper( substr($op, 1) );
 						#$string_query .= ") ".$operator." (";
 						$string_query .= ' '.$operator.' ';
 					}
 				#}
 			}
-		}//end foreach ($ar_value as $key => $search_object) {
 
+		}//end foreach ($ar_value as $key => $search_object)
 
 		return $string_query;
 	}//end filter_parser
@@ -2362,19 +2385,44 @@ class search {
 					// if the record is in the column return it.
 					// the window will us the id as other where clauses.
 					if($search_object_duplicated===true){
+
+						// skip control the duplicated where
+						// set to true to get the filter of other components
+						$this->skip_duplicated = true;
+
 						// get the main from and main where
 						$main_from_sql	= $this->build_main_from_sql();
 						$main_where_sql	= $this->build_main_where_sql();
 
-						$sql_where .= '(';
+						// get other component filters to be applied to the duplicated search
+						$sql_filter					= $this->build_sql_filter();
+						$sql_filter_by_locators		= $this->build_sql_filter_by_locators();
+
+						$sql_where .= '-- Search duplicated value with !!';
+						$sql_where .= PHP_EOL . '(';
 							$sql_where .= PHP_EOL . $json_sql_component_path . ' in (';
 							$sql_where .= PHP_EOL . 'SELECT '.$json_sql_component_path;
 							$sql_where .= PHP_EOL . 'FROM '.$main_from_sql;
 							$sql_where .= PHP_EOL . 'WHERE '.$main_where_sql;
+
+								if (!empty($sql_filter)) {
+									$sql_where .= $sql_filter;
+								}elseif (!empty($sql_filter_by_locators)) {
+									$sql_where .= $sql_filter_by_locators;
+								}
+								if (isset($this->filter_by_user_records)) {
+									$sql_where .= $this->filter_by_user_records;
+								}
+								if (!empty($this->filter_join_where)) {
+									$sql_where .= $this->filter_join_where;
+								}
+
 							$sql_where .= PHP_EOL . ' AND ('.$json_sql_component_path. ' IS NOT NULL)';
 							$sql_where .= PHP_EOL . 'GROUP BY ' . $json_sql_component_path ;
 							$sql_where .= PHP_EOL . 'HAVING count(*) > 1)';
-						$sql_where .= ')';
+						$sql_where .= PHP_EOL . ')' . PHP_EOL;
+						$sql_where .= '-- END Search duplicated value with !!';
+						$sql_where .= PHP_EOL;
 						break;
 					}
 
