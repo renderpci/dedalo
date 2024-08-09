@@ -194,7 +194,8 @@ export const quit = async function(options) {
 
 			}else{
 
-				window.location.reload(false)
+				// redirect to Dédalo base URL to force access to default user section
+				window.location.href = DEDALO_ROOT_WEB
 			}
 
 		}else{
