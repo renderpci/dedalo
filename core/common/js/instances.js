@@ -126,32 +126,40 @@ export const get_instance = async function(options){
 			}
 
 		// element file import path. Determine the path for importing the module
-			const base_path	= model.indexOf('tool_')!==-1
-				? '../../../tools/'
-				: model.indexOf('service_')!==-1
-					? '../../services/'
-					: '../../'
-
-			const name = model.indexOf('tool_')!==-1
-				? 'index'
-				: model
-
-			const path = direct_path
-				? direct_path
-				: base_path + model + '/js/' + name + '.js'
-
 		// import element module file once (and wait until finish)
-		import(path)
+		const module = (()=>{
+			switch (true) {
+
+				// tools (/tools: tool_transcriptions, tool_upload, ...)
+				case (model.indexOf('tool_')!==-1) : {
+					const short_path = model + '/js/' + model
+					return import(`../../../tools/${short_path}.js`)
+				}
+
+				// service (/core/services: servide_time_machine, service_autocomplete, ..)
+				case (model.indexOf('service_')!==-1) : {
+					const short_path = model + '/js/' + model
+					return import(`../../../core/services/${short_path}.js`)
+				}
+
+				// default (/core: page, section, menu, components..)
+				default: {
+					const short_path = model + '/js/' + model
+					return import(`../../../core/${short_path}.js`)
+				}
+			}
+		})()
 		.then(async function(module){
 
 			// check module
-				if (typeof module[model]!=='function') {
-					console.warn(`Invalid model: ${model} at path:`, path);
+				const module_main_function = model
+				if (typeof module[module_main_function]!=='function') {
+					console.warn(`Invalid module main function. It should be named as the model: ${model}`);
 					return resolve(null)
 				}
 
 			// instance the element
-				const instance_element = new module[model]()
+				const instance_element = new module[module_main_function]()
 
 			// serialize element id
 			// add the id for init the instance with the id
@@ -172,7 +180,7 @@ export const get_instance = async function(options){
 				resolve(instance_element)
 		})
 		.catch((error) => {
-			console.error(`Error importing element [model:${model}] [path:${path}]`, error);
+			console.error(`Error importing ES6 module [model:${model}]`, error);
 			resolve(null)
 		});
 	})
