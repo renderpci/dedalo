@@ -31,6 +31,10 @@ export const view_mini_time_machine_list = function() {
 */
 view_mini_time_machine_list.render = async function(self, options) {
 
+	// fix self.config.template_columns
+	// Note that first column is process
+	self.config.template_columns = '0px 1fr 1fr 1fr 2fr'
+
 	const wrapper = common_render(self, options)
 
 	return wrapper
