@@ -1,0 +1,3 @@
+[
+	{"old":"tch2"	,"new": "tch10" 		,"type":"section"	,"perform":["replace_tipo"]	,"info": "Old Register section => New Register section"}
+]
