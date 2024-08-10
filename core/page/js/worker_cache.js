@@ -117,7 +117,26 @@ self.onmessage = async function(e) {
 		}
 
 	// fetch cache @see https://developer.mozilla.org/en-US/docs/Web/API/Request/cache
-		const cache = 'no-cache'; // (!) The only mode that really work's for all browsers is 'no-cache'
+		// cache modes
+			// reload :
+				// Download a resource with cache busting, but update the HTTP
+				// cache with the downloaded resource.
+			// no-cache:
+				// Download a resource with cache busting when dealing with a
+				// properly configured server that will send the correct ETag
+				// and Date headers and properly handle If-Modified-Since and
+				// If-None-Match request headers, therefore we can rely on the
+				// validation to guarantee a fresh response.
+		const cache = 'no-cache';
+
+	// fetch credentials
+		// omit
+			// Never send credentials in the request or include credentials in the response.
+		// same-origin (default)
+			// Only send and include credentials for same-origin requests.
+		// include
+			// Always include credentials, even for cross-origin requests.
+		const credentials = 'same-origin'
 
 	// fetch each file. Force cache reload (https://hacks.mozilla.org/2016/03/referrer-and-cache-control-apis-for-fetch/)
 		const ar_promises = []
@@ -125,14 +144,16 @@ self.onmessage = async function(e) {
 
 			const item = api_response.result[i]
 
+			const url = item.url
+
 			const headers = get_headers(item)
 
 			ar_promises.push(
-				fetch(item.url, {
+				fetch(url, {
 					headers		: headers,
 					method		: 'GET',
 					cache		: cache, // "no-store","reload","no-cache","force-cache"
-					credentials	: 'same-origin'
+					credentials	: credentials // include, *same-origin, omit
 				})
 				.then((response) => {
 
