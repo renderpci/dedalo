@@ -6,6 +6,7 @@ const t0 = performance.now()
 
 // page instance imports
 	import '../js/page.js'
+	import '../js/worker_cache.js'
 	import {events_init} from '../../common/js/events.js'
 	import {get_instance} from '../../common/js/instances.js'
 
