@@ -109,9 +109,6 @@ component_info.prototype.get_widgets = async function() {
 				continue
 			}
 
-			// import widget js file
-				const widget_path = DEDALO_CORE_URL + '/widgets' + path  + '/js/' + widget_name + '.js'
-
 			// sequential mode
 				// // import
 				// const element_widget = await import(widget_path)
@@ -139,8 +136,9 @@ component_info.prototype.get_widgets = async function() {
 			// parallel mode
 				const current_promise = new Promise(async function(resolve){
 
-					// import module file
-						const element_widget = await import(widget_path)
+					// import module file. Use short_path to enable file discovery by packers
+						const short_path		= path + '/js/' + widget_name
+						const element_widget	= await import(`../../../core/widgets${short_path}.js`)
 
 					// instance widget
 						const new_widget = new element_widget[widget_name]()

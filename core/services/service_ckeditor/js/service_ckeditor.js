@@ -7,8 +7,7 @@
 // imports
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {common} from '../../../common/js/common.js'
-	import {clone} from '../../../common/js/utils/index.js'
-	import {data_manager} from '../../../common/js/data_manager.js'
+	import {clone, get_json_langs} from '../../../common/js/utils/index.js'
 	import {delete_instance} from '../../../common/js/instances.js'
 	import {render_button, render_find_and_replace} from './render_text_editor.js'
 
@@ -66,7 +65,6 @@ export const service_ckeditor = function() {
 
 		// load ckeditor files if not already loaded
 			if(typeof ckeditor==='undefined'){
-				const t0 = performance.now()
 
 				// load dependencies
 					const load_promises = []
@@ -78,27 +76,16 @@ export const service_ckeditor = function() {
 					)
 
 				// load and set JSON langs file
-					if (!window['json_langs']) {
-						load_promises.push(
-							new Promise(function(resolve){
-								data_manager.request({
-									url		: '../common/js/lang.json',
-									method	: 'GET',
-									cache	: 'force-cache' // force use cache because the file do not changes
-								})
-								.then(function(response){
-									// set json_langs
-									window['json_langs'] = response
-									resolve(response)
-								})
-							})
-						)
-					}
+					load_promises.push(
+						get_json_langs()
+					)
+
+				// wait for all
 					await Promise.all(load_promises)
 			}
 
 		// set json_langs (loaded once and set to global var)
-			self.json_langs = window['json_langs']
+			self.json_langs = await get_json_langs()
 
 		// create editor (ddEditor|InlineEditor)
 			const create = async function (){
