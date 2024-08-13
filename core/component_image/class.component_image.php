@@ -68,6 +68,31 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
+	* GET_DIFFUSION_VALUE
+	* Overwrite component common method
+	* Calculate current component diffusion value for target field (usually a MYSQL field)
+	* Used for diffusion_mysql to unify components diffusion value call
+	* @return string|null $diffusion_value
+	*
+	* @see class.diffusion_mysql.php
+	* @test true
+	*/
+	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
+
+		// external resolution check
+			$external_source = $this->get_external_source();
+
+		// diffusion_value
+			$diffusion_value = !empty($external_source)
+				? $external_source // external resolution way
+				: parent::get_diffusion_value($lang, $option_obj); // media common resolution way
+
+		return $diffusion_value;
+	}//end get_diffusion_value
+
+
+
+	/**
 	* GET_ID
 	* By default it's built with the type of the current component_image and the order number, eg. 'dd20_rsc750_1'
 	* It can be overwritten in properties with JSON ex. {"id": "dd851"} and will be read from the content of the referenced component
