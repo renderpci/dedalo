@@ -261,14 +261,20 @@ const get_content_value = function(i, value, self) {
 */
 const render_image_external = function(file_url) {
 
+	const image_container = ui.create_dom_element({
+		element_type	: 'div',
+		class_name 		: 'image_container work_area'
+	})
+
 	const image_external_node = ui.create_dom_element({
 		element_type	: 'img',
-		class_name		: 'image',
-		src 			: file_url
+		class_name		: 'image image_external',
+		src				: file_url,
+		parent			: image_container
 	})
 
 
-	return image_external_node
+	return image_container
 }//end render_image_external
 
 
