@@ -3019,73 +3019,9 @@ abstract class common {
 						// get_ddo_map. Get the ddo_map from ontology, defined by specific term, like "section_map"
 						// see sample at 'numisdata656' or 'dmm26'
 							$get_ddo_map		= $parsed_item->show->get_ddo_map ?? false;
-							$ar_ddo_calcutaled	= [];
-							if($get_ddo_map!==false) {
-								switch ($get_ddo_map->model) {
-
-									case 'section_map':
-										$procesed_component_tipo = [];
-										foreach ($ar_section_tipo as $current_section_tipo) {
-
-											$section_map = section::get_section_map( $current_section_tipo );
-											if(empty($section_map)) {
-												debug_log(__METHOD__
-													." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
-													.' tipo: ' . $this->tipo . PHP_EOL
-													.' section_tipo: ' . $this->section_tipo . PHP_EOL
-													.' section_id: ' . $this->section_id
-													, logger::WARNING
-												);
-												continue;
-											}
-											foreach ($get_ddo_map->columns as $current_column_path) {
-
-												$section_map_value = get_object_property($section_map, $current_column_path);
-
-												// ignore value
-												if(empty($section_map_value)){
-													debug_log(__METHOD__
-														." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
-														.' tipo: ' . $this->tipo . PHP_EOL
-														.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
-														.' section_id: ' . $this->section_id
-														, logger::WARNING
-													);
-													continue;
-												}
-												$ar_component_tipo = (array)$section_map_value;
-
-												foreach ($ar_component_tipo as $current_component_tipo) {
-													if(in_array($current_component_tipo, $procesed_component_tipo)){
-
-														$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
-															return $ddo->tipo === $current_component_tipo;
-														});
-														if (is_object($to_change_ddo)) {
-															$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
-														}
-
-													}else{
-														// $column_name = end($current_column_path);
-														$ddo = new dd_object();
-															$ddo->set_tipo($current_component_tipo);
-															$ddo->set_section_tipo($current_section_tipo);
-															$ddo->set_parent($tipo);
-															// $ddo->set_column($column_name);
-
-														$procesed_component_tipo[] = $current_component_tipo;
-														$ar_ddo_calcutaled[] = $ddo;
-													}
-												}
-											}
-										}//end foreach ($ar_section_tipo as $current_section_tipo)
-										break;
-
-									default:
-										// Nothing to do
-										break;
-								}//end switch ($get_ddo_map->model)
-							}//end if($get_ddo_map!==false)
+							$ar_ddo_calcutaled	= ($get_ddo_map!==false)
+								? $this->resolve_get_ddo_map($ar_section_tipo, $get_ddo_map)
+								: [];
 
 						// get all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
 							$ar_ddo_map = $parsed_item->show->ddo_map ?? $ar_ddo_calcutaled;
@@ -3431,7 +3367,6 @@ abstract class common {
 								}
 							}
 						}
-
 					// add complete parsed item
 						$ar_request_query_objects[] = $parsed_item;
 				}//end foreach ($properties->source->request_config as $item_request_config)
@@ -3859,6 +3794,104 @@ abstract class common {
 
 		return $dd_info;
 	}//end get_ddinfo_parents
+
+
+
+	/**
+	* RESOLVE_GET_DDO_MAP
+	* @param array $ar_section_tipo
+	* @param object $get_ddo_map
+	* @return array $ar_ddo_calcutaled
+	*/
+	private function resolve_get_ddo_map(array $ar_section_tipo, object $get_ddo_map) : array {
+
+		$ar_ddo_calcutaled	= [];
+
+		switch ($get_ddo_map->model) {
+
+			case 'section_map':
+				$procesed_component_tipo = [];
+				foreach ($ar_section_tipo as $current_section_tipo) {
+
+					$section_map = section::get_section_map( $current_section_tipo );
+					if(empty($section_map)) {
+						debug_log(__METHOD__
+							." Ignored section_tipo without section_map (1) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+							.' tipo: ' . $this->tipo . PHP_EOL
+							.' section_tipo: ' . $this->section_tipo . PHP_EOL
+							.' section_id: ' . $this->section_id
+							, logger::WARNING
+						);
+						continue;
+					}
+					foreach ($get_ddo_map->columns as $original_column) {
+
+
+						$current_column = is_array($original_column)
+							? (object)[ // compatibility with previous version ontology of 10-08-2024
+								'path' => $original_column
+							  ]
+							: $original_column;
+
+						$current_column_path = $current_column->path;
+
+						$section_map_value = get_object_property($section_map, $current_column_path);
+
+						// ignore value
+						if(empty($section_map_value)){
+							debug_log(__METHOD__
+								." Ignored section_tipo without section_map (2) current_section_tipo: ".to_string($current_section_tipo) . PHP_EOL
+								.' tipo: ' . $this->tipo . PHP_EOL
+								.' section_tipo: ' . ($this->section_tipo ?? null) . PHP_EOL
+								.' section_id: ' . $this->section_id
+								, logger::WARNING
+							);
+							continue;
+						}
+						$ar_component_tipo = (array)$section_map_value;
+
+						foreach ($ar_component_tipo as $current_component_tipo) {
+							if(in_array($current_component_tipo, $procesed_component_tipo)){
+
+								$to_change_ddo = array_find($ar_ddo_calcutaled, function($ddo) use($current_component_tipo){
+									return $ddo->tipo === $current_component_tipo;
+								});
+								if (is_object($to_change_ddo)) {
+									$to_change_ddo->section_tipo = array_merge( (array)$to_change_ddo->section_tipo, [$current_section_tipo] );
+								}
+
+							}else{
+								// $column_name = end($current_column_path);
+								$ddo = new dd_object();
+									$ddo->set_tipo($current_component_tipo);
+									$ddo->set_section_tipo($current_section_tipo);
+									$ddo->set_parent( $this->get_tipo() );
+									// $ddo->set_column($column_name);
+
+								foreach ($current_column as $current_column_key => $current_column_value) {
+
+									if($current_column_key === 'path'){
+										continue;
+									}
+									$set_ddo_key = 'set_'.$current_column_key;
+									$ddo->{$set_ddo_key}($current_column_value);
+								}
+
+								$procesed_component_tipo[] = $current_component_tipo;
+								$ar_ddo_calcutaled[] = $ddo;
+							}
+						}
+					}
+				}//end foreach ($ar_section_tipo as $current_section_tipo)
+				break;
+
+			default:
+				// Nothing to do
+				break;
+		}//end switch ($get_ddo_map->model)
+
+		return $ar_ddo_calcutaled;
+	}// end resolve_get_ddo_map()
 
 
 
