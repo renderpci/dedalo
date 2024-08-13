@@ -686,24 +686,24 @@ class web_data {
 				// WHERE lang = 'lg-spa' AND author_others LIKE '%ripolles%')
 				// ORDER BY ordinal, case authors_count when 1 then 1 else 2 end, author_main, author_others, publication_date;
 
-			# Options defaults
+			// Options defaults
 				$sql_options = new stdClass();
-					$sql_options->table					 = 'publications';
-					$sql_options->ar_fields				 = ['*'];
-					$sql_options->sql_filter			 = '';
-					$sql_options->use_union				 = false; // default false
-					$sql_options->lang					 = null;
-					$sql_options->limit					 = 0;
-					$sql_options->offset				 = false;
-					$sql_options->count					 = false;
-					$sql_options->resolve_portal		 = false; // bool
-					$sql_options->resolve_portals_custom = false; // array | bool
-					$sql_options->apply_postprocess		 = false;
-					$sql_options->map					 = false;
-					$sql_options->process_result		 = false;
-					$sql_options->db_name				 = false;
-					$sql_options->conn					 = false;
-					$sql_options->caller				 = 'bibliography_rows';
+					$sql_options->table						= 'publications';
+					$sql_options->ar_fields					= ['*'];
+					$sql_options->sql_filter				= '';
+					$sql_options->use_union					= false; // default false
+					$sql_options->lang						= null;
+					$sql_options->limit						= 0;
+					$sql_options->offset					= false;
+					$sql_options->count						= false;
+					$sql_options->resolve_portal			= false; // bool
+					$sql_options->resolve_portals_custom	= false; // array | bool
+					$sql_options->apply_postprocess			= false;
+					$sql_options->map						= false;
+					$sql_options->process_result			= false;
+					$sql_options->db_name					= false;
+					$sql_options->conn						= false;
+					$sql_options->caller					= 'bibliography_rows';
 
 					foreach ($request_options as $key => $value) {if (property_exists($sql_options, $key)) $sql_options->$key = $value;}
 
@@ -719,7 +719,7 @@ class web_data {
 			// where base
 				$where_base = 'WHERE `lang`=\''.$sql_options->lang.'\' ';
 
-			// authors conditionate union
+			// authors conditions union
 				if ($sql_options->use_union===true) {
 
 					// where
@@ -786,27 +786,27 @@ class web_data {
 
 			// exec query
 				$query_options = new stdClass();
-					$query_options->strQuery 				= $strQuery;
-					$query_options->caller 					= $sql_options->caller;
-					$query_options->count 					= $sql_options->count;
-					$query_options->ar_fields 				= $sql_options->ar_fields;
-					$query_options->resolve_portal 			= $sql_options->resolve_portal;
-					$query_options->resolve_portals_custom 	= $sql_options->resolve_portals_custom;
-					$query_options->portal_filter 			= $sql_options->portal_filter ?? false;
-					$query_options->table 					= $sql_options->table;
-					$query_options->apply_postprocess 		= $sql_options->apply_postprocess;
-					$query_options->map 					= $sql_options->map;
+					$query_options->strQuery				= $strQuery;
+					$query_options->caller					= $sql_options->caller;
+					$query_options->count					= $sql_options->count;
+					$query_options->ar_fields				= $sql_options->ar_fields;
+					$query_options->resolve_portal			= $sql_options->resolve_portal;
+					$query_options->resolve_portals_custom	= $sql_options->resolve_portals_custom;
+					$query_options->portal_filter			= $sql_options->portal_filter ?? false;
+					$query_options->table					= $sql_options->table;
+					$query_options->apply_postprocess		= $sql_options->apply_postprocess;
+					$query_options->map						= $sql_options->map;
 					$query_options->process_result			= $sql_options->process_result;
-					$query_options->lang 					= $sql_options->lang;
-					$query_options->db_name 				= $sql_options->db_name;
-					$query_options->conn 					= $sql_options->conn;
+					$query_options->lang					= $sql_options->lang;
+					$query_options->db_name					= $sql_options->db_name;
+					$query_options->conn					= $sql_options->conn;
 
 				$exec_query_response = self::exec_query($query_options);
 
 
-			$response->result 	= $exec_query_response->result;
-			$response->total 	= $exec_query_response->total;
-			$response->msg 		= "Ok request done. " . $exec_query_response->msg;
+			$response->result	= $exec_query_response->result;
+			$response->total	= $exec_query_response->total;
+			$response->msg		= "Ok request done. " . $exec_query_response->msg;
 
 
 			return $response;
@@ -1098,7 +1098,7 @@ class web_data {
 				}
 
 				if (!isset($result) || !$result) {
-					# Si hay problemas en la búsqueda, no lanzaremos error ya que esta función se usa en partes públicas
+					// If there are problems in the search, we will not throw an error as this function is used in public parts.
 					$response->result = false;
 					$response->msg    = "Error on sql request (no result) ";
 					$msg = "Error processing request (no result)";
@@ -1272,9 +1272,9 @@ class web_data {
 				if(SHOW_DEBUG===true) {
 					$query_parts = explode(PHP_EOL, $strQuery);
 					$response->debug = (object)[
-						'count_query' 	=> $count_query ?? false,
-						'strQuery' 		=> implode(' ', $query_parts),
-						'time' 	 		=> round(microtime(1)-$start_time,3)
+						'count_query'	=> $count_query ?? false,
+						'strQuery'		=> implode(' ', $query_parts),
+						'time'			=> round(microtime(1)-$start_time,3)
 					];
 				}
 
@@ -2427,7 +2427,7 @@ class web_data {
 
 		// Search fragment_text
 			# Dato raw from matrix db
-			$raw_text = $options->raw_text;
+			$raw_text = $options->raw_text ?? '';
 
 			// delete_options
 				$delete_options =new stdClass();
