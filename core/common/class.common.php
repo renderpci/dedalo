@@ -3184,7 +3184,16 @@ abstract class common {
 							$parsed_item->set_search(
 								$item_request_config->search
 							);
-							$ar_search_ddo_map = $parsed_item->search->ddo_map ?? null;
+
+							// get_ddo_map. Get the ddo_map from ontology, defined by specific term, like "section_map"
+							// see sample at 'numisdata656' or 'dmm26' or 'ww50'
+								$search_get_ddo_map			= $item_request_config->search->get_ddo_map ?? false;
+								$ar_search_ddo_calcutaled	= ( $search_get_ddo_map!==false )
+									? $this->resolve_get_ddo_map($ar_section_tipo, $search_get_ddo_map)
+									: [];
+
+							// get all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
+							$ar_search_ddo_map = $parsed_item->search->ddo_map ?? $ar_search_ddo_calcutaled;
 							if($ar_search_ddo_map){
 								// ddo_map
 								$final_search_ddo_map = [];
