@@ -1021,6 +1021,32 @@ class dd_object extends stdClass {
 
 
 	/**
+	* SET_VALUE_WITH_PARENTS
+	* Used by tools
+	* @param bool|null $value
+	* @return bool
+	*/
+	public function set_value_with_parents(?bool $value) : bool {
+
+		$this->value_with_parents = $value;
+
+		return true;
+	}//end set_value_with_parents
+
+
+
+	/**
+	* GET_VALUE_WITH_PARENTS
+	* Return property value
+	* @return bool|null $this->value_with_parents
+	*/
+	public function get_value_with_parents() : ?bool {
+
+		return $this->value_with_parents ?? null;
+	}//end get_value_with_parents
+
+
+	/**
 	* SET_SHOW_IN_COMPONENT
 	* Used by tools
 	* @param bool|null $value

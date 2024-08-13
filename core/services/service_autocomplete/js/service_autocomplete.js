@@ -159,12 +159,9 @@ service_autocomplete.prototype.build = async function(options={}) {
 		})
 
 	// column component_info
-		if (self.caller.add_component_info===true) {
-			self.columns_map.push({
-				id			: 'ddinfo',
-				label		: 'Info',
-				callback	: render_column_component_info
-			})
+		const has_ddinfo = self.columns_map.find(el => el.id === 'ddinfo')
+		if (has_ddinfo) {
+			has_ddinfo.callback	= render_column_component_info
 		}
 
 	// limit. Get from localStorage if exists
