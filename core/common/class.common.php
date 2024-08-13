@@ -3278,7 +3278,16 @@ abstract class common {
 					// choose
 						if (isset($item_request_config->choose)) {
 
-							$choose_ddo_map = $item_request_config->choose->ddo_map;
+							// get_ddo_map. Get the ddo_map from ontology, defined by specific term, like "section_map"
+							// see sample at 'numisdata656' or 'dmm26' or 'ww50'
+								$choose_get_ddo_map			= $item_request_config->choose->get_ddo_map ?? false;
+								$ar_choose_ddo_calcutaled	= ( $choose_get_ddo_map!==false )
+									? $this->resolve_get_ddo_map($ar_section_tipo, $choose_get_ddo_map)
+									: [];
+
+							// get all ddo and set the label to every ddo (used for showing into the autocomplete like es1: Spain, fr1: France)
+							$choose_ddo_map = $item_request_config->choose->ddo_map ?? $ar_choose_ddo_calcutaled;
+							$final_choose_ddo_map = [];
 							foreach ($choose_ddo_map as $current_choose_ddo) {
 
 								// check if the ddo is active into the ontology
@@ -3315,13 +3324,14 @@ abstract class common {
 											? 'list'
 											: $mode);
 
-								$final_ddo_map[] = $current_choose_ddo;
+								$final_choose_ddo_map[] = $current_choose_ddo;
 							}
 
 							// set item
 							$parsed_item->set_choose(
 								$item_request_config->choose
 							);
+							$parsed_item->choose->ddo_map = $final_choose_ddo_map;
 						}
 
 					// hide
