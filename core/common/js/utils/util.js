@@ -4,6 +4,10 @@
 
 
 
+import {data_manager} from '../../../common/js/data_manager.js'
+
+
+
 /**
 * CLONE
 * Exec a deep safe clone of object
@@ -710,6 +714,35 @@ export function time_unit_auto(total_ms) {
 	return `${total_ms.toFixed(0)} ms`;
 }//end time_unit_auto
 
+
+
+/**
+* GET_JSON_LANGS
+* Reads '../common/js/lang.json' JSON file and store value in window['json_langs']
+* It's used by service_ckeditor and component_geolocation
+* Sample data:
+* [{"section_id":34,"dd_lang":"lg-aar","tld4":"aar","tld2":"aa","glotocode":"afar1241","walls":"qaf","lat":12.0,"long":42.0,"locale":"aa"},...]
+* @return array|null json_langs
+*/
+export const get_json_langs = async function () {
+
+	// return from page global value
+		if (window['json_langs']) {
+			return window['json_langs']
+		}
+
+	// calculate from server
+		const json_langs = await data_manager.request({
+			url		: '../common/js/lang.json',
+			method	: 'GET',
+			cache	: 'force-cache' // force use cache because the file do not changes
+		})
+		// fix as page global
+		window['json_langs'] = json_langs
+
+
+	return json_langs
+}//end get_json_langs
 
 
 

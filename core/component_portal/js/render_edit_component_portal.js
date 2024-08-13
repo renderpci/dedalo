@@ -91,7 +91,7 @@ render_edit_component_portal.prototype.edit = async function(options) {
 			// dynamic try
 				const render_view = self.render_views.find(el => el.view===view && el.mode===self.mode)
 				if (render_view) {
-					const path			= render_view.path || './' + render_view.render +'.js'
+					const path			= render_view.path || ('./' + render_view.render +'.js')
 					const render_method	= await import (path)
 					return render_method[render_view.render].render(self, options)
 				}
