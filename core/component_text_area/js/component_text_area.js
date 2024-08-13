@@ -553,11 +553,6 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 
 	const self = this
 
-	// html_text case. Do not apply post-processing
-		if (self.context.legacy_model==='component_html_text') {
-			return html_value
-		}
-
 	// clone text. Avoid interactions between html nodes
 		const cloned_text = document.createElement('div')
 			  cloned_text.insertAdjacentHTML('afterbegin', html_value);
@@ -575,7 +570,7 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 				const tag_id		= reference_elements[i].dataset.tag_id
 				const state			= reference_elements[i].dataset.state
 				const label			= reference_elements[i].dataset.label
-				const data			= reference_elements[i].dataset.data
+				const data			= reference_elements[i].dataset.data ?? null
 				// Compose Dédalo tags
 				const tag_in		= self.build_data_tag('referenceIn', tag_id, state, label, data)
 				const tag_out		= self.build_data_tag('referenceOut', tag_id, state, label, data)
@@ -588,6 +583,12 @@ component_text_area.prototype.preprocess_text_to_save = async function(html_valu
 				unwrap_element(reference_elements[i]);
 			}//end for (var i = len - 1; i >= 0; i--) {
 		}//end reference_elements
+
+
+	// html_text case. Do not apply post-processing
+		if (self.context.legacy_model==='component_html_text') {
+			return cloned_text.innerHTML
+		}
 
 	// img tags (index, tc, svg, geo, person, etc.)
 		const image_elements = cloned_text.querySelectorAll('img') // ! use querySelectorAll to avoid loop problems on i++
@@ -833,7 +834,7 @@ component_text_area.prototype.build_data_tag = function(type, tag_id, state, lab
 			: (label.substring(0,22)).replace(new RegExp('-', 'g'), '_');
 
 	// data
-		const data_string = data
+		const data_string = ( data )
 			? 'data:' + data + ':data'
 			: 'data::data'
 

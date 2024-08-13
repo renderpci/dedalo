@@ -1321,6 +1321,16 @@ export const get_columns_map = function(options) {
 		// exec parse_columns of result columns_map
 		parse_columns(columns_map)
 
+
+	// column component_info
+		const value_with_parents = full_ddo_map.find(el => el.value_with_parents === true)
+		if (value_with_parents) {
+			columns_map.push({
+				id			: 'ddinfo',
+				label		: 'Info'
+			})
+		}
+
 	// debug
 		if(SHOW_DEBUG===true) {
 			// console.log("full_ddo_map---------:"+self.tipo,full_ddo_map);
