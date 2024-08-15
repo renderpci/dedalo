@@ -114,43 +114,6 @@ final class dd_area_maintenance_api {
 
 
 	/**
-	* UPDATE_ONTOLOGY
-	* @param object $rqo
-	* @return object $response
-	*/
-	public static function update_ontology(object $rqo) : object {
-
-		session_write_close();
-
-		// options
-			$options = $rqo->options ?? [];
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		// dedalo_prefix_tipos
-			$dedalo_prefix_tipos_item = array_find($options, function($item) {
-				return $item->name === 'dedalo_prefix_tipos';
-			});
-			$dedalo_prefix_tipos	= is_object($dedalo_prefix_tipos_item) ? $dedalo_prefix_tipos_item->value : '';
-			$ar_dedalo_prefix_tipos	= array_map('trim', explode(',', $dedalo_prefix_tipos));
-			if (empty($ar_dedalo_prefix_tipos)) {
-				// error
-				$response->msg .= ' - Empty dedalo_prefix_tipos value!';
-				return $response;
-			}
-
-		$response = backup::update_ontology( $ar_dedalo_prefix_tipos );
-
-
-		return $response;
-	}//end update_ontology
-
-
-
-	/**
 	* STRUCTURE_TO_JSON
 	* @param object $rqo
 	* @return object $response
