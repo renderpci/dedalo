@@ -33,16 +33,8 @@ export const view_text_list_portal = function() {
 */
 view_text_list_portal.render = async function(self, options) {
 
-	// // Value as string
-	// 	const data	= self.data || {}
-	// 	const value	= data.value || []
-	// 	console.log('self:', self);
-
-	// const value_string = value.join(self.context.fields_separator)
-
-	// const text_node = document.createTextNode(value_string)
-
-	// return text_node
+	// options
+		const render_level = options.render_level || 'full'
 
 	// ddinfo. column component_info
 		if (self.add_component_info===true) {
@@ -52,9 +44,6 @@ view_text_list_portal.render = async function(self, options) {
 				callback	: render_column_component_info
 			})
 		}
-
-	// options
-		const render_level = options.render_level || 'full'
 
 	// ar_section_record
 		const ar_section_record = await get_section_records({
