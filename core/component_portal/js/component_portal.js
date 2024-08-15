@@ -5,14 +5,8 @@
 
 
 // imports
-	import {
-		clone,
-		dd_console,
-		object_to_url_vars,
-		open_window
-	} from '../../common/js/utils/index.js'
+	import {clone,object_to_url_vars,open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import * as instances from '../../common/js/instances.js'
 	import {get_instance} from '../../common/js/instances.js'
 	import {data_manager} from '../../common/js/data_manager.js'
 	import {
@@ -24,7 +18,6 @@
 	} from '../../common/js/common.js'
 	import {component_common, init_events_subscription} from '../../component_common/js/component_common.js'
 	import {paginator} from '../../paginator/js/paginator.js'
-	// import {render_component_portal} from '../../component_portal/js/render_component_portal.js'
 	import {render_edit_component_portal} from '../../component_portal/js/render_edit_component_portal.js'
 	import {render_list_component_portal} from '../../component_portal/js/render_list_component_portal.js'
 	import {render_search_component_portal} from '../../component_portal/js/render_search_component_portal.js'
@@ -83,8 +76,6 @@ export const component_portal = function() {
 */
 // prototypes assign
 	// life-cycle
-	// component_portal.prototype.init				= component_common.prototype.init
-	// component_portal.prototype.build				= component_common.prototype.build
 	component_portal.prototype.render				= common.prototype.render
 	component_portal.prototype.refresh				= common.prototype.refresh
 	component_portal.prototype.destroy				= common.prototype.destroy
@@ -1012,9 +1003,7 @@ component_portal.prototype.filter_data_by_tag_id = function(options) {
 	const self = this
 
 	// options
-		// const caller			= options.caller // not used
-		// const text_editor	= options.text_editor // not used
-		const tag				= options.tag // object
+		const tag = options.tag // object
 
 	// Fix received options from event as 'active_tag'
 		self.active_tag = options
@@ -1518,7 +1507,6 @@ component_portal.prototype.focus_first_input = function() {
 
 	return true
 }//end focus_first_input
-
 
 
 

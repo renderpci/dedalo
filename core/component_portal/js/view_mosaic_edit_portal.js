@@ -5,15 +5,9 @@
 
 
 // imports
-	import {event_manager} from '../../common/js/event_manager.js'
 	import {get_section_records} from '../../section/js/section.js'
-	// import {clone} from '../../common/js/utils/index.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
-	// import {get_instance, delete_instance} from '../../common/js/instances.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {set_element_css} from '../../page/js/css.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
 	import {
 		render_column_id,
 		render_column_component_info,
