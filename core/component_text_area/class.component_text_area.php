@@ -40,9 +40,9 @@ class component_text_area extends component_common {
 	public function set_dato($dato) : bool {
 
 		// remove data when data is null
-		if(is_null($dato)) {
-			return parent::set_dato(null);
-		}
+			if(is_null($dato)) {
+				return parent::set_dato(null);
+			}
 
 		// check string
 			if (is_string($dato)) { // Tool Time machine case, dato is string
@@ -1668,58 +1668,60 @@ class component_text_area extends component_common {
 	* Overwrite component common method
 	* Calculate current component diffusion value for target field (usually a MySQL field)
 	* Used for diffusion_mysql to unify components diffusion value call
-	* @return string|null $diffusion_value
-	*
 	* @see class.diffusion_mysql.php
+	* @param string|null $lang = null
+	* @param object|null $option_obj = null
+	* @return string|null $diffusion_value
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
-		$dato = $this->get_dato();  # Important: use raw text (!)
+		$dato = $this->get_dato(); // Important: use raw text (!)
 
 		// Decode entities
 			$diffusion_value = isset($dato[0]) && !empty($dato[0])
 				? html_entity_decode( strval($dato[0]) )
 				: null;
 
-		// empty diffusion value data
+		// empty diffusion value data case
 			if (empty($diffusion_value)) {
 				return null;
 			}
 
-		// remove empty paragraphs
-			if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
-				$diffusion_value = '';
-			}
+		// clean HTML
+			// remove empty paragraphs
+				if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
+					$diffusion_value = '';
+				}
 
-		// change p by br to preserve v5 compatibility (ck/tiny)
-			$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
-			$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
+			// change p by br to preserve v5 compatibility (ck/tiny)
+				$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+				$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
 
-		// Remove first br
-			if(mb_strpos($diffusion_value,'<br />')===0) {
-				$diffusion_value = mb_substr($diffusion_value, 6, mb_strlen($diffusion_value));
-			}
-			if(mb_strpos($diffusion_value,'<br>')===0) {
-				$diffusion_value = mb_substr($diffusion_value, 4, mb_strlen($diffusion_value));
-			}
+			// Remove first br
+				if(mb_strpos($diffusion_value,'<br />')===0) {
+					$diffusion_value = mb_substr($diffusion_value, 6, mb_strlen($diffusion_value));
+				}
+				if(mb_strpos($diffusion_value,'<br>')===0) {
+					$diffusion_value = mb_substr($diffusion_value, 4, mb_strlen($diffusion_value));
+				}
 
-		// Remove last br
-			if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-6)=='<br />' ) {
-				$diffusion_value = mb_substr($diffusion_value, 0, -6);
-			}
-			if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-4)=='<br>' ) {
-				$diffusion_value = mb_substr($diffusion_value, 0, -4);
-			}
+			// Remove last br
+				if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-6)=='<br />' ) {
+					$diffusion_value = mb_substr($diffusion_value, 0, -6);
+				}
+				if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-4)=='<br>' ) {
+					$diffusion_value = mb_substr($diffusion_value, 0, -4);
+				}
 
 		// Compatibility of the reference tag
 			// check if the component has a tags_reference component associated
-			// if the component has, the references need to be change into a text ref in data-data property.
+			// if the component has, the references need to be changed into a text ref in data-data property.
 			$tags_reference_tipo = $this->properties->tags_reference->tipo ?? null;
 			if( !empty($tags_reference_tipo) ){
 
 				$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
 
-				// create the component relation with saved the references
+				// create the component relation with saved references
 				$reference_tags_component = component_common::get_instance(
 					$model,
 					$tags_reference_tipo,
@@ -1751,14 +1753,13 @@ class component_text_area extends component_common {
 					// process only the the in tags
 					if ($match_key % 2 == 0) {
 
-						// locate the locator associated to the tag
+						// find the locator associated to the tag
 						$tag_locator = array_find($ar_reference_locators, function($locator) use( $tag_id ){
-							return ( (int)$locator->tag_id === (int)$tag_id && $locator->tag_type === 'reference');
+							return ( (int)$locator->tag_id === (int)$tag_id && $locator->tag_type === 'reference' );
 						});
-
 						if(is_object($tag_locator)){
 
-							// transform to text html compatible.
+							// transform to text HTML compatible.
 							$text_locator	= json_encode($tag_locator);
 							$data_string	= str_replace('"', '\'',  $text_locator);
 							// create reference tag and assign it to the text
@@ -1778,19 +1779,19 @@ class component_text_area extends component_common {
 								$new_reference_tag	= '[/reference-n-'.$tag_id.'-reference '.$tag_id.'-data:['.$data_string.']:data]';
 								$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
 								$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
-							}// end if (!isset($ar_full_references[$match_key+1])
-						}// end if(isset($tag_locator))
-					}// end if ($match_key % 2 == 0
-				}// end foreach ($all_reference_tags[3] as $match_key => $tag_id)
+							}//end if (!isset($ar_full_references[$match_key+1])
+						}//end if(isset($tag_locator))
+					}//end if ($match_key % 2 == 0
+				}//end foreach ($all_reference_tags[3] as $match_key => $tag_id)
 
 				// set the references as v5, with tag locator as text
 				$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 				if( $legacy_model === 'component_html_text' ){
 					// change the reference tag to html equivalent
-						$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
-				}// end if( $legacy_model === 'component_html_text' )
+					$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
+				}//end if( $legacy_model === 'component_html_text' )
 
-			}// end if( isset($tags_reference_tipo)
+			}//end if( isset($tags_reference_tipo)
 
 
 		return $diffusion_value;
@@ -1898,7 +1899,7 @@ class component_text_area extends component_common {
 	* GET_TAGS_PERSONS
 	* Get available tags for insert in text area. Interviewed, informants, etc..
 	* @param string $related_section_tipo = TOP_TIPO
-	* @param  array $ar_related_sections = []
+	* @param array $ar_related_sections = []
 	* @return array $ar_tags_inspector
 	*/
 	public function get_tags_persons(string $related_section_tipo=TOP_TIPO, array $ar_related_sections=[]) : array {
@@ -2072,9 +2073,8 @@ class component_text_area extends component_common {
 			$locator_json	= json_encode($locator);
 			$data			= $locator_json;
 
-		// tag
-			$person_tag	= TR::build_tag($type, $state, $tag_id, $label, $data); 	// '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
-			// $person_tag = '[person-data:'.$section_tipo.'_'.$section_id.':data]';
+		// tag like '[person-'.$state.'-'.$label.'-data:'.$locator_json.':data]';
+			$person_tag	= TR::build_tag($type, $state, $tag_id, $label, $data);
 
 
 		return $person_tag;
@@ -2108,7 +2108,7 @@ class component_text_area extends component_common {
 		foreach ($ar_tipos as $key => $tipo) {
 
 			$model_name	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-			$component		= component_common::get_instance(
+			$component	= component_common::get_instance(
 				$model_name,
 				$tipo,
 				$locator->section_id,
@@ -2686,7 +2686,7 @@ class component_text_area extends component_common {
 				$query_object->q_parsed	= '\'.*".*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
 				break;
-		}//end switch (true) {
+		}//end switch (true)
 
 
 		return $query_object;
@@ -3417,31 +3417,32 @@ class component_text_area extends component_common {
 	* GET_ORIGINAL_LANG
 	* Check if a related component component_select_lang exists like rsc36 case
 	* If exists, return the lang value
-	* @return string|null
+	* @return string|null $original_lang
 	*/
 	public function get_original_lang() : ?string {
 
-		$ar_related_component_lang_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
+		$ar_related_component_tipo = RecordObj_dd::get_ar_terminoID_by_modelo_name_and_relation(
 			$this->tipo, // tipo
 			'component_select_lang', // model name
 			'termino_relacionado', // relation_type
 			true // search_exact
 		);
-		if (!empty($ar_related_component_lang_tipo)) {
-			$related_component_lang_tipo	= reset($ar_related_component_lang_tipo);
-			$related_component_lang_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_lang_tipo, true);
-			$related_component_lang			= component_common::get_instance(
-				$related_component_lang_model, // string model
-				$related_component_lang_tipo, // string tipo
+		if (!empty($ar_related_component_tipo)) {
+
+			$related_component_tipo		= reset($ar_related_component_tipo);
+			$related_component_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_tipo, true);
+			$related_component			= component_common::get_instance(
+				$related_component_model, // string model
+				$related_component_tipo, // string tipo
 				$this->section_id, // string section_id
 				'list', // string mode
 				DEDALO_DATA_NOLAN, // string lang
 				$this->section_tipo // string section_tipo
 			);
-			$related_component_lang_dato = $related_component_lang->get_dato();
-			if (!empty($related_component_lang_dato[0])) {
+			$related_component_dato = $related_component->get_dato();
+			if (!empty($related_component_dato[0])) {
 
-				$original_lang = lang::get_code_from_locator($related_component_lang_dato[0]);
+				$original_lang = lang::get_code_from_locator($related_component_dato[0]);
 
 				// set original lang
 				return $original_lang;
