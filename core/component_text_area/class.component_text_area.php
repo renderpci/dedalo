@@ -1754,9 +1754,9 @@ class component_text_area extends component_common {
 								$text = $all_reference_tags[6][$match_key] ?? '';
 								// locate the locator associated to the tag
 								$tag_locator = array_find($ar_reference_locators, function($locator) use( $tag_id ){
-									return ($locator->tag_id === $tag_id && $locator->tag_type === 'reference');
+									return ( (int)$locator->tag_id === (int)$tag_id && $locator->tag_type === 'reference');
 								});
-								if(isset($tag_locator)){
+								if(is_object($tag_locator)){
 									// transform to text html compatible.
 									$text_locator	= json_encode($tag_locator);
 									$data_string	= str_replace('"', '\'',  $text_locator);
@@ -1778,13 +1778,13 @@ class component_text_area extends component_common {
 										$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
 										$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
 									}// end if (!isset($ar_full_references[$match_key+1])
-
-									// change the reference tag to html equivalent
-									$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
-
 								}// end if(isset($tag_locator))
 							}// end if ($match_key % 2 == 0
 						}// end foreach ($all_reference_tags[3] as $match_key => $tag_id)
+
+						// change the reference tag to html equivalent
+							$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
+
 					}// end if( isset($tags_reference_tipo)
 				}// end if( $legacy_model === 'component_html_text' )
 		}
