@@ -1764,4 +1764,197 @@ class area_maintenance extends area_common {
 
 
 
+	/**
+	* UPDATE_ONTOLOGY
+	* Is called from area_maintenence widget 'update_ontology' across dd_area_maintenance::class_request
+	* Connect with master server, download ontology files and update local DDBB and lang files
+	* @param object $options
+	* {
+	* 	ar_dedalo_prefix_tipos : array ['numisdata','rsc']
+	* }
+	* @return object $response
+	* {
+	* 	result: bool,
+	* 	msg: string,
+	* 	errors: array
+	* }
+	*/
+	public static function update_ontology(object $options) : object {
+		$start_time=start_time();
+
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+				$response->errors	= [];
+
+		// options
+			$ar_dedalo_prefix_tipos = $options->ar_dedalo_prefix_tipos;
+			if (empty($ar_dedalo_prefix_tipos) || !is_array($ar_dedalo_prefix_tipos)) {
+				$response->errors[] = 'Empty mandatory ar_dedalo_prefix_tipos value';
+				return $response;
+			}
+			foreach ($ar_dedalo_prefix_tipos as $prefix) {
+				if(!hierarchy::valid_tld($prefix)) {
+					$response->errors[] = 'Error. Invalid prefix value: '. to_string($prefix);
+					return $response;
+				}
+			}
+
+		// ar_msg
+			$ar_msg = [];
+
+		// Remote server check
+			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
+
+				debug_log(__METHOD__
+					." Checking remote_server status. Expected header code 200 .... "
+					, logger::DEBUG
+				);
+
+				// Check remote server status before begins
+					$remote_server_response = (object)backup::check_remote_server();
+					if (	$remote_server_response->result!==false
+						 && $remote_server_response->code===200
+						 && $remote_server_response->error===false) {
+
+						// success
+						$ar_msg[] = $remote_server_response->msg;
+
+					}else{
+
+						if(SHOW_DEBUG===true) {
+							$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
+							debug_log(__METHOD__
+								." REMOTE_SERVER_STATUS ($check_status_exec_time). remote_server_response: " .PHP_EOL
+								. to_string($remote_server_response)
+								, logger::ERROR
+							);
+						}
+
+						// error
+						$response->msg		= 'Error. Request failed 1 ['.__FUNCTION__.'] ' . $remote_server_response->msg;
+						$response->result	= false;
+						$response->errors[]	= $remote_server_response->msg;
+						return $response;
+					}
+			}
+
+		// simple_schema_of_sections. Get current simple schema of sections before update data
+		// Will used to compare with the new schema (after update)
+			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
+
+		// export. Before import, export a copy ;-)
+			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
+			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
+			if ($res_export_structure->result===false) {
+
+				// error on export current DDBB
+				$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
+				$response->errors[]	= $response->msg;
+				return $response;
+
+			}else{
+				// Append msg
+				$ar_msg[] = $res_export_structure->msg . ' - export time: '.exec_time_unit_auto($start_time);
+			}
+
+		// import
+			$prev_time = start_time(); // reset exec time
+			$import_structure_response = backup::import_structure(
+				'dedalo4_development_str.custom', // string db_name
+				true, // bool check_server
+				$ar_dedalo_prefix_tipos // array dedalo_prefix_tipos
+			);
+			if ($import_structure_response->result===false) {
+				// error on import current DDBB
+				$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
+				$response->errors	= array_merge($response->errors, $import_structure_response->errors);
+				return $response;
+
+			}else{
+				// Append msg
+				$import_structure_response_ar_msg = explode(PHP_EOL, $import_structure_response->msg);
+				$ar_msg		=  array_merge($ar_msg, $import_structure_response_ar_msg);
+				$ar_msg[]	= 'Import time: '.exec_time_unit_auto($prev_time);
+			}
+
+		// optimize tables
+			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
+			backup::optimize_tables($ar_tables);
+
+		// delete all session data except auth
+			foreach ($_SESSION['dedalo'] as $key => $value) {
+				if ($key==='auth') continue;
+				unset($_SESSION['dedalo'][$key]);
+			}
+
+		// update javascript labels
+			$ar_langs = DEDALO_APPLICATION_LANGS;
+			foreach ($ar_langs as $lang => $label) {
+
+				// direct
+					$write_file = backup::write_lang_file($lang);
+					if ($write_file===false) {
+						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
+						continue;
+					}
+
+				// debug
+					debug_log(__METHOD__
+						. " Writing lang file " . PHP_EOL
+						. ' lang: ' . to_string($lang)
+						, logger::WARNING
+					);
+			}
+
+		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
+			logger::$obj['activity']->log_message(
+				'SAVE',
+				logger::INFO,
+				DEDALO_ROOT_TIPO,
+				NULL,
+				[
+					'msg'		=> 'Updated Ontology',
+					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
+				]
+			);
+
+		// save_simple_schema_file. Get new simple_schema_of_sections
+		// to compare with the previous scheme and save the changes
+			$save_simple_schema_file_response = hierarchy::save_simple_schema_file((object)[
+				'old_simple_schema_of_sections' => $old_simple_schema_of_sections
+			]);
+			if($save_simple_schema_file_response->result===false){
+				$response->result	= false;
+				$response->msg		= 'Error saving simple_schema_file: '.$save_simple_schema_file_response->msg;
+				$response->errors	= array_merge($response->errors, $save_simple_schema_file_response->errors);
+				return $response;
+			}else{
+				$ar_msg[] = 'OK. Saved a new simple schema changes file: ' . basename($save_simple_schema_file_response->filepath);
+			}
+
+		// force reset cache of hierarchy tree
+			// delete previous cache files
+			dd_cache::delete_cache_files();
+
+		// get new Ontology info
+			$RecordObj_dd = new RecordObj_dd(DEDALO_ROOT_TIPO);
+			$root_info = (object)[
+				'term' => RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO, DEDALO_STRUCTURE_LANG, false, false),
+				'properties' => $RecordObj_dd->get_properties()
+			];
+
+		// response
+			$response->result	= true;
+			array_unshift( $ar_msg, 'OK. Request done '.__METHOD__);
+			$response->msg = implode(PHP_EOL, $ar_msg);
+			$response->root_info = $root_info;
+
+
+		return $response;
+	}//end update_ontology
+
+
+
 }//end class area_maintenance

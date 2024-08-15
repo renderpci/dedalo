@@ -2392,4 +2392,93 @@ class hierarchy {
 
 
 
+	/**
+	* SAVE_SIMPLE_SCHEMA_FILE
+	* Calculates and writes the simple_schema_changes file
+	* @param object options
+	* {
+	* 	name: string = 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json'
+	* }
+	* @return object response
+	*/
+	public static function save_simple_schema_file(object $options) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// options
+			// previous version of simple_schema_of_sections (normally before update Ontology)
+			$old_simple_schema_of_sections	= $options->old_simple_schema_of_sections;
+			// target file name, normally is calculated by default with current date
+			$name = $options->name ?? 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json';
+			// dir_path. Target directory where save the file
+			$dir_path = $options->dir_path ?? DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+
+		// simple_schema_of_sections. Get updated version
+			$new_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
+
+		// build changes list
+			$simple_schema_changes = hierarchy::build_simple_schema_changes(
+				$old_simple_schema_of_sections,
+				$new_simple_schema_of_sections
+			);
+
+		// target file path. Create directory if not already exists
+			$directory_is_ready = create_directory($dir_path, 0750);
+			if(!$directory_is_ready){
+				$response->result	= false;
+				$response->msg		= "Error on read or create directory. Permission denied ($dir_path)";
+				return $response;
+			}
+
+		// save changes list data to the target file
+			$filepath			= $dir_path . $name;
+			$save_simple_schema	= file_put_contents($filepath, json_encode($simple_schema_changes));
+			if($save_simple_schema===false){
+				$response->result	= false;
+				$response->msg		= "Error on read or create file of simple schema changes. Permission denied ($filepath)";
+				return $response;
+			}
+			debug_log(__METHOD__
+				. " Saved a new simple schema changes file " . PHP_EOL
+				. ' filepath: ' . to_string($filepath) . PHP_EOL
+				. ' simple_schema_changes: ' . to_string($simple_schema_changes)
+				, logger::WARNING
+			);
+
+		// response OK
+			$response->result	= true;
+			$response->msg		= 'OK. Request successfully processed';
+			$response->filepath	= $filepath;
+
+
+		return $response;
+	}//end save_simple_schema_file
+
+
+
+	/**
+	* VALID_TLD
+	* Validate tld using a regex
+	* tld are used as prefix for tipos
+	* Only lower case are accepted !
+	* @param string $tld
+	* 	Like 'dd'
+	* @return bool
+	*/
+	public static function valid_tld(string $tld) : bool {
+
+		preg_match("/^[a-z]{2,}$/", $tld, $output_array);
+		$found = $output_array[0] ?? false;
+		if (!$found) {
+			return false;
+		}
+
+		return true;
+	}//end valid_tld
+
+
+
 }//end class hierarchy
