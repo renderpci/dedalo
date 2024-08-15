@@ -4,10 +4,6 @@
 
 
 
-// import {ui} from '../../common/js/ui.js'
-
-
-
 /**
 * ON_DRAGSTART
 * Get element dataset path as event.dataTransfer from selected component
