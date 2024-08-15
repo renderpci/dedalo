@@ -468,6 +468,7 @@ abstract class backup {
 			$response = new stdClass();
 				$response->result	= false;
 				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+				$response->errors	= [];
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
 			if (defined('DEDALO_DB_MANAGEMENT') && DEDALO_DB_MANAGEMENT===false) {
@@ -484,6 +485,7 @@ abstract class backup {
 			$system_config_verify = self::db_system_config_verify();
 			if ($system_config_verify->result===false) {
 				$response->msg .= $system_config_verify->msg;
+				$response->errors[] = 'Bad db_system_config_verify response';
 				return $response;
 			}
 
@@ -513,82 +515,65 @@ abstract class backup {
 		$command .= ' ' . DEDALO_DATABASE_CONN.' > "'.$mysqlExportPath .'"';
 		// -T "jer_dd" -T "matrix_descriptors_dd"
 
-		# LOW PRIORITY ( nice , at 22:56 , etc)
-		#$command = " nice ".$command ;
-		#debug_log(__METHOD__." command  ".to_string($command), logger::DEBUG);
-
+		// exec command
 		exec($command.' 2>&1', $output, $worked_result);
-			#debug_log(__METHOD__." command ".to_string($output)." - ".to_string($worked_result), logger::DEBUG);
 
-		$res_html='';
+		$ar_msg = [];
 		switch($worked_result){
-			case 0:
+
+			case 0: // success
 				$label = ($exclude_tables===true) ? 'EXPORT_BASE_STRUCTURE' : 'EXPORT_FULL_STRUCTURE';
-				#$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
-				$res_html .= '<div class="ok text-left">';
-				$res_html .= $label.': <br>Database : <b>' .DEDALO_DATABASE_CONN .'</b><br> successfully exported to file<br>' .$mysqlExportPath;
-				if(SHOW_DEBUG===true) {
-					#$res_html .= "<pre>$command</pre>";
-					$file_size = "0";
-					if(file_exists($mysqlExportPath)) {
-						$file_size = format_size_units( filesize($mysqlExportPath) );
-					}
-					$res_html .= "<br>File size: $file_size";
-				}
-				$res_html .= '</div>';
+				$ar_msg[] = 'OK. Mode: ' . $label;
+				$ar_msg[] = 'Database: ' . DEDALO_DATABASE_CONN . ' successfully exported to file: ' . basename($mysqlExportPath);
+				$ar_msg[] = (file_exists($mysqlExportPath))
+					? 'File size: ' . format_size_units( filesize($mysqlExportPath) )
+					: 'File size: 0';
+
 				$response->result 	= true;
-				$response->msg 		= $res_html;
+				$response->msg 		= implode(PHP_EOL, $ar_msg);
 				break;
-			case 1:
-				#$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
-				$res_html .= '<div class="error text-left">';
-				$res_html .= 'There was a problem during the export of <b>' .DEDALO_DATABASE_CONN .'</b> to ' .$mysqlExportPath .'';
+
+			case 1: // error 1
+				$ar_msg[] = 'There was a problem during the export of ' .DEDALO_DATABASE_CONN .' to ' . $mysqlExportPath;
+				$ar_msg[] = 'If you are using pgpass, check config, owner an permissions';
 				if(SHOW_DEBUG===true) {
-					$res_html .= "<span class=\"warning\">If you are using pgpass, check config, owner an permissions</span>";
-					$res_html .= "<pre>$command</pre>";
+				$ar_msg[] = 'Command: ' . $command;
 				}
-				$res_html .= '</div>';
 				$response->result 	= false;
-				$response->msg 		= $res_html;
+				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->errors[] = 'Error 1. Unable to export database';
 				return $response; // Stop execution here
-				break;
-			case 2:
-				#$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
-				$res_html .= '<div class="error text-left">';
-				$res_html .= 'There was an error during export. Please check your values:<br/><br/>';
-				$res_html .= '<table>';
-				$res_html .= '<tr><td>DB Database Name: </td><td> ' .DEDALO_DATABASE_CONN .'</td></tr>';
-				$res_html .= '<tr><td>DB DB_BIN_PATH: </td><td> ' .DB_BIN_PATH .'</td></tr>';
-				$res_html .= '<tr><td>DB User Name: </td><td> ' .DEDALO_USERNAME_CONN .'</td></tr>';
-				$res_html .= '<tr><td>DB Password: </td><td> NOTSHOWN</td></tr>';
-				$res_html .= '<tr><td>DB Host Name: </td><td> ' .DEDALO_HOSTNAME_CONN.'</td>';
-				$res_html .= '</tr>';
-				$res_html .= '</table>';
-				if(SHOW_DEBUG===true) {
-					$res_html .= "<span class=\"warning\">If you are using pgpass, check config, owner an permissions</span>";
-					$res_html .= "<pre>$command</pre>";
-				}
-				$res_html .= '</div>';
+
+			case 2: // error 2
+				$ar_msg[] = 'There was an error during export. Please check your DB config:';
+				$ar_msg[] = 'DB Database Name: ' . DEDALO_DATABASE_CONN;
+				$ar_msg[] = 'DB DB_BIN_PATH: ' . DB_BIN_PATH;
+				$ar_msg[] = 'DB User Name: ' . DEDALO_USERNAME_CONN;
+				$ar_msg[] = 'DB Host Name: ' . DEDALO_HOSTNAME_CONN;
+				$ar_msg[] = 'If you are using pgpass, check config, owner an permissions';
+
 				$response->result 	= false;
-				$response->msg 		= $res_html;
+				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->errors[] = 'Error 2. Unable to export database';
 				return $response; // Stop execution here
-				break;
-			default:
-				$res_html .= $worked_result;
+
+			default: // error unknown
+				$ar_msg[] = $worked_result;
 				$response->result 	= false;
-				$response->msg 		= $res_html;
+				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->errors[] = 'Error unknown. Unable to export database. ' . to_string($worked_result);
 		}
 
-		#
-		# SAVE_DEDALO_STR_TABLES_DATA
-		# Save partials str data based on tld to independent files
-		if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
-			$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
-			$response->msg .= $res_dedalo_str_tables_data->msg;
-			if ($res_dedalo_str_tables_data->result===false) {
-				$response->result = false;
+		// save_dedalo_str_tables_data. Save partials str data based on tld to independent files
+			if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
+				// save_dedalo_str_tables_data
+				$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
+				$ar_msg[] = $res_dedalo_str_tables_data->msg;
+				if ($res_dedalo_str_tables_data->result===false) {
+					$response->result = false;
+					$response->errors[] = 'Error on save_dedalo_str_tables_data. Unable to save partials';
+				}
 			}
-		}
 
 
 		return (object)$response;
@@ -770,10 +755,11 @@ abstract class backup {
 			$system_config_verify = self::db_system_config_verify();
 			if ($system_config_verify->result===false) {
 				// error
-				$response->msg 		.= $system_config_verify->msg;
 				$response->result 	= false;
+				$response->msg 		= $system_config_verify->msg;
 				$response->errors[]	= $system_config_verify->msg;
-				return (object)$response;
+
+				return $response;
 			}
 
 		// file_path
@@ -793,118 +779,109 @@ abstract class backup {
 					}
 				}
 				if (!isset($mysqlImportFilename)) {
-					$response->msg .= " Error getting main_file name from all_str_files ";
-					if(SHOW_DEBUG===true) {
-						$response->msg .= "<pre>".print_r($all_str_files,true)."</pre>";
-					}
+
 					$response->result	= false;
+					$response->msg .= ' Error getting main_file name from all_str_files';
+					if(SHOW_DEBUG===true) {
+					$response->msg .= PHP_EOL . json_encode($all_str_files, JSON_PRETTY_PRINT);
+					}
 					$response->errors[]	= "Error getting main_file name from all_str_files ";
-					return (object)$response;
+
+					return $response;
 				}
 			}else{
-				# Default path
+				// Default path
 				$file_path = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
-				$mysqlImportFilename = $file_path .'/'. $db_name . ".backup";
+				$mysqlImportFilename = $file_path .'/'. $db_name . '.backup';
 			}
 
-		if (!file_exists($mysqlImportFilename)) {
-			$response->msg 		.= "Error: source file not found : $mysqlImportFilename";
-			$response->result 	= false;
-			$response->errors[]	= "Error: source file not found : $mysqlImportFilename";
-			return (object)$response;
-		}
+			// file do not exists case
+			if (!file_exists($mysqlImportFilename)) {
+
+				$response->result 	= false;
+				$response->msg 		.= "Error: source file not found : $mysqlImportFilename";
+				$response->errors[]	= "Error: source file not found : $mysqlImportFilename";
+
+				return $response;
+			}
 
 		// Import the database and output the status to the page
-		// $port_command = !empty(DEDALO_DB_PORT_CONN) ? (' -p '.DEDALO_DB_PORT_CONN) : '';
-		// $command  = DB_BIN_PATH.'pg_restore -h '.DEDALO_HOSTNAME_CONN . $port_command . ' -U "'.DEDALO_USERNAME_CONN.'" --dbname '.DEDALO_DATABASE_CONN.' ';
-		$command  = DB_BIN_PATH.'pg_restore ' . DBi::get_connection_string() . ' --dbname '.DEDALO_DATABASE_CONN;
-		$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"';
+			$command  = DB_BIN_PATH.'pg_restore ' . DBi::get_connection_string() . ' --dbname '.DEDALO_DATABASE_CONN;
+			$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"';
 
-		# LOW PRIORITY ( nice , at 22:56 , etc)
-		#$command = "nice ".$command ;
+		// exec command
+			exec($command.' 2>&1', $output, $worked_result);
 
-		#exec($command,$output,$worked);
-		exec($command.' 2>&1', $output, $worked_result);
-		$res_html='';
-		switch($worked_result){
+		$ar_msg = [];
+		switch($worked_result) {
 
-			# OK (0)
-			case 0:
-				#$res_html .= '<div style="color:white;background-color:green;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
-				$res_html .= '<div class="ok text-left">';
-				$res_html .= 'IMPORT file:<br> File <br>' .$mysqlImportFilename .'<br> successfully imported to database<br>' . DEDALO_DATABASE_CONN .'';
+			case 0: // success
+				$ar_msg[] = 'OK. File ' . basename($mysqlImportFilename) .' successfully imported to database ' . DEDALO_DATABASE_CONN;
 				if(SHOW_DEBUG===true) {
-					$res_html .= "<pre>$command</pre>";
+				$ar_msg[] = 'Command: ' . $command;
 				}
-				$res_html .= '</div>';
-				$response->result 	 = true;
-				$response->msg 		.= $res_html;
 
-				#
-				# LOAD_DEDALO_STR_TABLES_DATA_from_files
-				# Load partials srt data based on tld to independent files
-				#if ($db_name=='dedalo4_development_str.custom') {
-					$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();
-					if ($res_str_tables_data_from_files->result===false) {
-						$response->result 	 = false;
-						$response->msg 		.= $res_str_tables_data_from_files->msg;
-						$response->errors[]	= 'Error during load_dedalo_str_tables_data_from_files: ';
-						foreach ($res_str_tables_data_from_files->errors as $current_error) {
-							$response->errors[]	= $current_error;
-						}
-						return (object)$response;
-					}else{
-						$response->msg 		.= $res_str_tables_data_from_files->msg;
-					}
-				#}
+				// load_dedalo_str_tables_data_from_files
+				// Load partials srt data based on tld to independent files
+				$res_str_tables_data_from_files = (object)self::load_dedalo_str_tables_data_from_files();
+				if ($res_str_tables_data_from_files->result===false) {
+
+					$response->result	= false;
+					$ar_msg[]			= $res_str_tables_data_from_files->msg ?? 'Unknown error on load_dedalo_str_tables_data_from_files';
+					$response->errors[]	= 'Error during load_dedalo_str_tables_data_from_files: ';
+					$response->errors	= array_merge($response->errors, (array)$res_str_tables_data_from_files->errors);
+
+				}else{
+
+					$response->result	= true;
+					$ar_msg[]			= '-----------------------------------------------------------------------';
+					$ar_msg[]			= $res_str_tables_data_from_files->msg;
+					$ar_msg[]			= '-----------------------------------------------------------------------';
+				}
 				break;
 
-			# ERROR (1)
-			case 1:
-				#$res_html .= '<div style="color:white;background-color:red;padding:10px;font-family:arial;font-size:13px;word-wrap:break-word;border-radius:5px;margin:5px;width:100%">';
-				$res_html .= '<div class="error text-left">';
-				$res_html .= 'There was an error during import (pg_restore). Please make sure the import file is saved in the same folder as this script and check your values:<br/><br/>';
-				$res_html .= 'worked_result: ' . to_string($worked_result) .'<hr>';
-				$res_html .= '<table>';
-				$res_html .= '<tr><td>DB Name:</td><td><b>' .DEDALO_DATABASE_CONN.'</b></td></tr>';
-				$res_html .= '<tr><td>DB User Name:</td><td><b>' .DEDALO_USERNAME_CONN.'</b></td></tr>';
-				$res_html .= '<tr><td>DB Password:</td><td><b>NOTSHOWN</b></td></tr>';
-				$res_html .= '<tr><td>DB Host Name:</td><td><b>' .DEDALO_HOSTNAME_CONN.'</b></td></tr>';
-				$res_html .= '<tr><td>DB Import Filename:</td><td><b>' .$mysqlImportFilename .'</b></td></tr>';
-				$res_html .= '</table>';
+			case 1: // error 1
+				$ar_msg[] = 'There was an error during import (pg_restore). Please make sure the import file is saved in the same folder as this script and check your values:';
+				$ar_msg[] = 'Command result: ' . to_string($worked_result);
+				$ar_msg[] = 'DB Name: ' . DEDALO_DATABASE_CONN;
+				$ar_msg[] = 'DB User Name: ' . DEDALO_USERNAME_CONN;
+				$ar_msg[] = 'DB Host Name: ' . DEDALO_HOSTNAME_CONN;
+				$ar_msg[] = 'DB Import Filename: ' . basename($mysqlImportFilename);
 				if(SHOW_DEBUG===true) {
-					$res_html .= "<pre>$command</pre>";
+				$ar_msg[] = 'Command: ' . $command;
 				}
-				$res_html .= '</div>';
-				$response->result 	 = false;
-				$response->msg 		.= $res_html;
+				$response->result	= false;
 				$response->errors[]	= 'Error during import (pg_restore)';
-				return (object)$response;
 				break;
 
-			default:
-				$res_html .= '<div class="error text-left">';
-				$res_html .= "Command response error: ".$worked_result. " (code expected: 0)";
+			default: // error unknown
+				$ar_msg[] = 'Error. Command result: ' . to_string($worked_result) . ' (code expected: 0)';
 				if ($worked_result==127) {
-					$res_html .= "<br>Check your DDBB path: DB_BIN_PATH: ".DB_BIN_PATH;
+				$ar_msg[] = 'Check your DDBB path. Current config DB_BIN_PATH: '.DB_BIN_PATH;
 				}
 				if(SHOW_DEBUG===true) {
-					$res_html .= "<pre>$command</pre>";
+				$ar_msg[] = 'Command: ' . $command;
 				}
-				$res_html .= '</div>';
-				$response->result 	 = false;
-				$response->msg 		.= $res_html;
-				$response->errors[]	= 'Error during command execution. code: ' . $worked_result;
-				return (object)$response;
+				$response->result	= false;
+				$response->errors[]	= 'Error during command execution (unknown). code: ' . to_string($worked_result);
+				break;
 		}
 
-		if ($response->result===false) {
-			$response->msg		= 'Error. Request failed '.__METHOD__ ." <br> ".$response->msg;
-			$response->errors[]	= $response->msg;
-		}
+		// response
+			if ($response->result===false) {
+				// error case
+				array_unshift( $ar_msg, 'Error. Request failed '.__METHOD__);
+				$response->msg		= implode(PHP_EOL, $ar_msg);
+				$response->errors[]	= $response->msg;
+			}else{
+				// success case
+				$response->result = true;
+				array_unshift( $ar_msg, 'OK. Request done successfully '.__METHOD__);
+				$response->msg		= implode(PHP_EOL, $ar_msg);
+			}
 
 
-		return (object)$response;
+		return $response;
 	}//end import_structure
 
 
@@ -1865,179 +1842,6 @@ abstract class backup {
 
 		return $response;
 	}//end import_structure_json_data
-
-
-
-	/**
-	* UPDATE_ONTOLOGY
-	* Called by area_development -> Update Ontology widget
-	* Connect with master server, download ontology files and update local DDBB and lang files
-	* @param array $dedalo_prefix_tipos
-	* @return object $response
-	*/
-	public static function update_ontology(array $dedalo_prefix_tipos) : object {
-		$start_time=start_time();
-
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= ''; // 'Error. Request failed ['.__FUNCTION__.']';
-				$response->errors	= [];
-
-		// Remote server check
-			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-
-				debug_log(__METHOD__
-					." Checking remote_server status. Expected header code 200 .... "
-					, logger::DEBUG
-				);
-
-				// Check remote server status before begins
-					$remote_server_response = (object)backup::check_remote_server();
-					if(SHOW_DEBUG===true) {
-						$check_status_exec_time = exec_time_unit($start_time,'ms').' ms';
-						debug_log(__METHOD__
-							." REMOTE_SERVER_STATUS ($check_status_exec_time). remote_server_response: " .PHP_EOL
-							. to_string($remote_server_response)
-							, logger::DEBUG
-						);
-					}
-
-					if (	$remote_server_response->result!==false
-						 && $remote_server_response->code===200
-						 && $remote_server_response->error===false) {
-
-						// success
-						$response->msg		.= $remote_server_response->msg;
-
-					}else{
-
-						// error
-						$response->msg		= 'Error. Request failed 1 ['.__FUNCTION__.'] ' . $remote_server_response->msg;
-						$response->result	= false;
-						$response->errors[]	= $response->msg;
-						return $response;
-					}
-			}
-
-		// simple_schema_of_sections. Get current simple schema of sections, will use to compare with the new schema
-			$old_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
-
-		// EXPORT. Before import, EXPORT ;-)
-			$db_name = 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
-			$res_export_structure = (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
-			if ($res_export_structure->result===false) {
-
-				// error on export current DDBB
-				$response->msg		= 'Error. Request failed 2 ['.__FUNCTION__.'] ' . $res_export_structure->msg;
-				$response->errors[]	= $response->msg;
-				return $response;
-
-			}else{
-				// Exec time
-				$prev_time = start_time();
-				// Append msg
-				$response->msg .= $res_export_structure->msg . ' - export time: '.exec_time_unit($start_time,'ms').' ms';
-			}
-
-		// IMPORT
-			$import_structure_response = backup::import_structure(
-				'dedalo4_development_str.custom', // string db_name
-				true, // bool check_server
-				$dedalo_prefix_tipos
-			);
-
-			if ($import_structure_response->result===false) {
-				// error on import current DDBB
-				$response->msg		= 'Error. Request import_structure failed 3 ['.__FUNCTION__.'] ' .$import_structure_response->msg;
-				$response->errors	= array_merge($response->errors, $import_structure_response->errors);
-				return $response;
-
-			}else{
-				// Append msg
-				$response->msg .= $import_structure_response->msg . ' - export time: '.exec_time_unit($prev_time,'ms').' ms';
-			}
-
-		// optimize tables
-			$ar_tables = ['jer_dd','matrix_descriptors_dd','matrix_dd','matrix_list'];
-			backup::optimize_tables($ar_tables);
-
-		// delete all session data except auth
-			foreach ($_SESSION['dedalo'] as $key => $value) {
-				if ($key==='auth') continue;
-				unset($_SESSION['dedalo'][$key]);
-			}
-
-		// update JAVASCRIPT labels
-			$ar_langs = DEDALO_APPLICATION_LANGS;
-			foreach ($ar_langs as $lang => $label) {
-
-				// direct
-					$write_file = backup::write_lang_file($lang);
-					if ($write_file===false) {
-						$response->errors[]	= 'Error writing write_lang_file of lang: ' . $lang;
-						continue;
-					}
-
-				// debug
-					debug_log(__METHOD__
-						. " Writing lang file " . PHP_EOL
-						. ' lang: ' . to_string($lang)
-						, logger::WARNING
-					);
-			}
-
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			logger::$obj['activity']->log_message(
-				'SAVE',
-				logger::INFO,
-				DEDALO_ROOT_TIPO,
-				NULL,
-				[
-					'msg'		=> 'Updated Ontology',
-					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
-				]
-			);
-
-
-		// get new simple_schema_of_sections, will use to compare with the previous schema
-			$new_simple_schema_of_sections = hierarchy::get_simple_schema_of_sections();
-			// build changes list
-			$simple_schema_changes = hierarchy::build_simple_schema_changes(
-				$old_simple_schema_of_sections,
-				$new_simple_schema_of_sections
-			);
-			// target file path
-			$simple_schema_changes_name	= 'simple_schema_changes_'.date("Y-m-d_H-i-s").'.json';
-			$simple_schema_dir_path		= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
-			// create directory if not already exists
-			if( !is_dir($simple_schema_dir_path) ){
-				if(!mkdir($simple_schema_dir_path, 0750, true)){
-					$response->result	= false;
-					$response->msg		= "Error on read or create directory. Permission denied ($simple_schema_dir_path)";
-					return $response;
-				}
-			}
-			// save changes list data to the target file
-			$filepath			= $simple_schema_dir_path.$simple_schema_changes_name;
-			$save_simple_schema	= file_put_contents($filepath, json_encode($simple_schema_changes));
-			if($save_simple_schema===false){
-				$response->result	= false;
-				$response->msg		= "Error on read or create file of simple schema changes. Permission denied ($filepath)";
-				return $response;
-			}
-
-		// force reset cache of hierarchy tree
-			// delete previous cache files
-			dd_cache::delete_cache_files();
-
-		// response
-			$response->result	= true;
-			$response->msg		= 'OK. Request done ['.__FUNCTION__.'] ' .$response->msg ;
-
-
-		return $response;
-	}//end update_ontology
 
 
 
