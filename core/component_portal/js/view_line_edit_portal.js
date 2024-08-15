@@ -358,5 +358,4 @@ view_line_edit_portal.render_column_remove = function(options) {
 
 
 
-
 // @license-end

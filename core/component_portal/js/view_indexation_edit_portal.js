@@ -5,15 +5,11 @@
 
 
 // imports
-	import {ui} from '../../common/js/ui.js'
 	import {get_section_records} from '../../section/js/section.js'
+	import {ui} from '../../common/js/ui.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {create_source} from '../../common/js/common.js'
 	import {instances} from '../../common/js/instances.js'
-	// import {service_autocomplete} from '../../services/service_autocomplete/js/service_autocomplete.js'
-	// import {clone, dd_console} from '../../common/js/utils/index.js'
-	// import {select_tag} from '../../component_text_area/js/view_default_edit_text_area.js'
+	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {
 		render_column_component_info,
 		render_column_remove,
@@ -270,15 +266,21 @@ const render_column_id = function(options) {
 			title_label		: get_label.open || 'Open',
 			parent			: fragment
 		})
-		button_edit.addEventListener('click', function(){
+		button_edit.addEventListener('click', function(e){
+			e.stopPropagation()
 
-			// open in new window
-			const url = DEDALO_CORE_URL + '/page/?tipo='+section_tipo+'&id='+section_id+'&menu=false'
-			window.open(
-				url,
-				'edit_window',
-				'menubar=no,location=yes,resizable=yes,scrollbars=yes,status=yes'
-			)
+			const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
+				tipo			: section_tipo,
+				id				: section_id,
+				mode			: 'edit',
+				menu			: false,
+				session_save	: false
+			})
+
+			open_window({
+				url			: url,
+				target		: 'edit_window'
+			})
 		})
 
 	// edit icon
@@ -307,7 +309,6 @@ const render_tag_column = function(options) {
 		const data			= caller.data || {}
 		const value			= data.value || []
 		const value_tags	= value.filter(el => el.section_tipo===locator.section_tipo && el.section_id==locator.section_id)
-		// const value_tags	= [locator]
 
 	const self = caller
 

@@ -7,10 +7,7 @@
 // imports
 	import {get_section_records} from '../../section/js/section.js'
 	import {ui} from '../../common/js/ui.js'
-	import {
-		// activate_autocomplete,
-		render_references
-	} from './render_edit_component_portal.js'
+	import {render_references} from './render_edit_component_portal.js'
 
 
 
@@ -22,7 +19,6 @@ export const view_line_list_portal = function() {
 
 	return true
 }//end view_line_list_portal
-
 
 
 
