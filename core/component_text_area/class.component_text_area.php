@@ -1681,113 +1681,116 @@ class component_text_area extends component_common {
 				? html_entity_decode( strval($dato[0]) )
 				: null;
 
-		if (!empty($diffusion_value)) {
+		// empty diffusion value data
+			if (empty($diffusion_value)) {
+				return null;
+			}
 
-			// remove empty paragraphs
-				if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
-					$diffusion_value = '';
-				}
+		// remove empty paragraphs
+			if ($diffusion_value==='<p></p>' || $diffusion_value==='<p> </p>') {
+				$diffusion_value = '';
+			}
 
-			// change p by br to preserve v5 compatibility (ck/tiny)
-				$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
-				$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
+		// change p by br to preserve v5 compatibility (ck/tiny)
+			$diffusion_value = preg_replace('/(<p>)/i', '<br>', $diffusion_value);
+			$diffusion_value = preg_replace('/(<\/p>)/i', '', $diffusion_value);
 
-			// Remove first br
-				if(mb_strpos($diffusion_value,'<br />')===0) {
-					$diffusion_value = mb_substr($diffusion_value, 6, mb_strlen($diffusion_value));
-				}
-				if(mb_strpos($diffusion_value,'<br>')===0) {
-					$diffusion_value = mb_substr($diffusion_value, 4, mb_strlen($diffusion_value));
-				}
+		// Remove first br
+			if(mb_strpos($diffusion_value,'<br />')===0) {
+				$diffusion_value = mb_substr($diffusion_value, 6, mb_strlen($diffusion_value));
+			}
+			if(mb_strpos($diffusion_value,'<br>')===0) {
+				$diffusion_value = mb_substr($diffusion_value, 4, mb_strlen($diffusion_value));
+			}
 
-			// Remove last br
-				if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-6)=='<br />' ) {
-					$diffusion_value = mb_substr($diffusion_value, 0, -6);
-				}
-				if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-4)=='<br>' ) {
-					$diffusion_value = mb_substr($diffusion_value, 0, -4);
-				}
+		// Remove last br
+			if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-6)=='<br />' ) {
+				$diffusion_value = mb_substr($diffusion_value, 0, -6);
+			}
+			if(mb_substr($diffusion_value, mb_strlen($diffusion_value)-4)=='<br>' ) {
+				$diffusion_value = mb_substr($diffusion_value, 0, -4);
+			}
 
-			// Compatibility of the reference tad in the html_text cases
-			// set the references as v5, with tag locator as text
+		// Compatibility of the reference tag
+			// check if the component has a tags_reference component associated
+			// if the component has, the references need to be change into a text ref in data-data property.
+			$tags_reference_tipo = $this->properties->tags_reference->tipo ?? null;
+			if( !empty($tags_reference_tipo) ){
+
+				$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
+
+				// create the component relation with saved the references
+				$reference_tags_component = component_common::get_instance(
+					$model,
+					$tags_reference_tipo,
+					$this->section_id,
+					'list',
+					DEDALO_DATA_NOLAN,
+					$this->section_tipo,
+					false
+				);
+				$ar_reference_locators = $reference_tags_component->get_dato();
+
+				// get all references
+				$all_reference_tags		= null;
+				$pattern_all_reference	= TR::get_mark_pattern(
+					'reference', // string mark
+					true // bool standalone
+				);
+				// Search math pattern tags
+				preg_match_all($pattern_all_reference, $diffusion_value, $all_reference_tags, PREG_PATTERN_ORDER);
+
+				// in and out references
+				$ar_full_references = $all_reference_tags[0];
+
+				// key 6 is the data stored in the result of the preg_match_all
+				// key 3 is the id
+				// key 5 is the label
+				// The locator data are with " and is necessary change to '
+				foreach ($all_reference_tags[3] as $match_key => $tag_id) {
+					// process only the the in tags
+					if ($match_key % 2 == 0) {
+
+						// locate the locator associated to the tag
+						$tag_locator = array_find($ar_reference_locators, function($locator) use( $tag_id ){
+							return ( (int)$locator->tag_id === (int)$tag_id && $locator->tag_type === 'reference');
+						});
+
+						if(is_object($tag_locator)){
+
+							// transform to text html compatible.
+							$text_locator	= json_encode($tag_locator);
+							$data_string	= str_replace('"', '\'',  $text_locator);
+							// create reference tag and assign it to the text
+							$new_reference_tag	= '[reference-n-'.$tag_id.'-reference '.$tag_id.'-data:['.$data_string.']:data]';
+							$search				= '/'.preg_quote($ar_full_references[$match_key], '/').'/';
+							$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
+							// check the out reference
+							if (!isset($ar_full_references[$match_key+1]) || strpos($ar_full_references[$match_key+1], '[/reference')!==0) {
+								debug_log(__METHOD__
+									. " Bad reference tag " . PHP_EOL
+									. " match_key " . $match_key . PHP_EOL
+									. ' ar_full_references: ' . to_string($ar_full_references)
+									, logger::ERROR
+								);
+							}else{
+								// create the out tag reference
+								$new_reference_tag	= '[/reference-n-'.$tag_id.'-reference '.$tag_id.'-data:['.$data_string.']:data]';
+								$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
+								$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
+							}// end if (!isset($ar_full_references[$match_key+1])
+						}// end if(isset($tag_locator))
+					}// end if ($match_key % 2 == 0
+				}// end foreach ($all_reference_tags[3] as $match_key => $tag_id)
+
+				// set the references as v5, with tag locator as text
 				$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
 				if( $legacy_model === 'component_html_text' ){
-					// check if the component has a tags_reference component associated
-					// if the component has, the references need to be change into a text ref in data-data property.
-					$tags_reference_tipo = $this->properties->tags_reference->tipo;
-					if( isset($tags_reference_tipo) ){
-
-						$model = RecordObj_dd::get_modelo_name_by_tipo($tags_reference_tipo, true);
-
-						// create the component relation with saved the references
-						$reference_tags_component = component_common::get_instance(
-							$model,
-							$tags_reference_tipo,
-							$this->section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$this->section_tipo,
-							false
-						);
-						$ar_reference_locators = $reference_tags_component->get_dato();
-
-						// get all references
-						$all_reference_tags		= null;
-						$pattern_all_reference	= TR::get_mark_pattern(
-							'reference', // string mark
-							true // bool standalone
-						);
-						// Search math pattern tags
-						preg_match_all($pattern_all_reference, $diffusion_value, $all_reference_tags, PREG_PATTERN_ORDER);
-
-						// in and out references
-						$ar_full_references = $all_reference_tags[0];
-
-						// key 6 is the data stored in the result of the preg_match_all
-						// key 3 is the id
-						// key 5 is the label
-						// The locator data are with " and is necessary change to '
-						foreach ($all_reference_tags[3] as $match_key => $tag_id) {
-							// process only the the in tags
-							if ($match_key % 2 == 0) {
-
-								$text = $all_reference_tags[6][$match_key] ?? '';
-								// locate the locator associated to the tag
-								$tag_locator = array_find($ar_reference_locators, function($locator) use( $tag_id ){
-									return ( (int)$locator->tag_id === (int)$tag_id && $locator->tag_type === 'reference');
-								});
-								if(is_object($tag_locator)){
-									// transform to text html compatible.
-									$text_locator	= json_encode($tag_locator);
-									$data_string	= str_replace('"', '\'',  $text_locator);
-									// create reference tag and assign it to the text
-									$new_reference_tag	= '[reference-n-'.$tag_id.'-reference '.$tag_id.'-data:['.$data_string.']:data]';
-									$search				= '/'.preg_quote($ar_full_references[$match_key], '/').'/';
-									$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
-									// check the out reference
-									if (!isset($ar_full_references[$match_key+1]) || strpos($ar_full_references[$match_key+1], '[/reference')!==0) {
-										debug_log(__METHOD__
-											. " Bad reference tag " . PHP_EOL
-											. " match_key " . $match_key . PHP_EOL
-											. ' ar_full_references: ' . to_string($ar_full_references)
-											, logger::ERROR
-										);
-									}else{
-										// create the out tag reference
-										$new_reference_tag	= '[/reference-n-'.$tag_id.'-reference '.$tag_id.'-data:'.$data_string.':data]';
-										$search				= '/'.preg_quote($ar_full_references[$match_key+1], '/').'/';
-										$diffusion_value	= preg_replace($search, $new_reference_tag, $diffusion_value, 1);
-									}// end if (!isset($ar_full_references[$match_key+1])
-								}// end if(isset($tag_locator))
-							}// end if ($match_key % 2 == 0
-						}// end foreach ($all_reference_tags[3] as $match_key => $tag_id)
-
-						// change the reference tag to html equivalent
-							$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
-
-					}// end if( isset($tags_reference_tipo)
+					// change the reference tag to html equivalent
+						$diffusion_value = TR::add_tag_img_on_the_fly($diffusion_value);
 				}// end if( $legacy_model === 'component_html_text' )
-		}
+
+			}// end if( isset($tags_reference_tipo)
 
 
 		return $diffusion_value;
