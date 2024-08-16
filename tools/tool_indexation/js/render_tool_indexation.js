@@ -179,53 +179,6 @@ const get_content_data_edit = async function(self) {
 				parent			: info_container
 			})
 
-		// tag_info_container. line info about tag
-			const tag_info_container = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'tag_info_container hide',
-				parent			: tag_info
-			})
-			// fix node
-			self.tag_info_container = tag_info_container
-
-			// tab_indexation
-				const tab_indexation = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tab_label active',
-					inner_html		: 'Indexation',
-					parent			: info_container
-				})
-				tab_indexation.addEventListener('click', function(e){
-					e.stopPropagation()
-					component_indexing_container.classList.add('active')
-					if (indexation_note.classList.contains('active')) {
-						indexation_note.classList.remove('active')
-					}
-					this.classList.add('active')
-					if (tab_info.classList.contains('active')) {
-						tab_info.classList.remove('active')
-					}
-				})
-
-			// tab_info
-				const tab_info = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'tab_label',
-					inner_html		: 'Info',
-					parent			: info_container
-				})
-				tab_info.addEventListener('click', function(e){
-					e.stopPropagation()
-					indexation_note.classList.add('active')
-					if (component_indexing_container.classList.contains('active')) {
-						component_indexing_container.classList.remove('active')
-					}
-					this.classList.add('active')
-					if (tab_indexation.classList.contains('active')) {
-						tab_indexation.classList.remove('active')
-					}
-				})
-
 		// indexation_container
 			const indexation_container = ui.create_dom_element({
 				element_type	: 'div',
@@ -246,18 +199,121 @@ const get_content_data_edit = async function(self) {
 					component_indexing_container.appendChild(indexing_component_node)
 				})
 
-			// info (indexation note)
-				const indexation_note = ui.create_dom_element({
+		// info (indexation note)
+			const indexation_note = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'indexation_note tab',
+				parent			: indexation_container
+			})
+			// fix
+			self.indexation_note = indexation_note
+			// self.indexing_component.render()
+			// .then(function(indexing_component_node){
+			// 	component_indexing_container.appendChild(indexing_component_node)
+			// })
+
+		// references component
+			const references_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'indexation_container',
+				parent			: right_container
+			})
+
+				const component_references_container = ui.create_dom_element({
 					element_type	: 'div',
-					class_name		: 'indexation_note tab',
-					parent			: indexation_container
+					class_name		: 'component_indexing_container tab',
+					parent			: references_container
 				})
-				// fix
-				self.indexation_note = indexation_note
-				// self.indexing_component.render()
-				// .then(function(indexing_component_node){
-				// 	component_indexing_container.appendChild(indexing_component_node)
-				// })
+
+				const references_component = self.references_component
+
+				references_component.render()
+				.then(function(references_component_node){
+					component_references_container.appendChild(references_component_node)
+				})
+
+		// tag_info_container. line info about tag
+			const tag_info_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'tag_info_container hide',
+				parent			: tag_info
+			})
+			// fix node
+			self.tag_info_container = tag_info_container
+
+			const tab_nodes = []
+
+			const activate_tab = function( name ){
+
+				const tab_nodes_len = tab_nodes.length
+
+				for (let i = tab_nodes_len - 1; i >= 0; i--) {
+					const current_tab = tab_nodes[i]
+
+					if(current_tab.name === name){
+						current_tab.node.classList.add('active')
+						current_tab.component_node.classList.add('active')
+					}else{
+						current_tab.node.classList.remove('active')
+						current_tab.component_node.classList.remove('active')
+					}
+				}
+			}
+
+			// tab_indexation
+				const tab_indexation = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tab_label active',
+					inner_html		: 'Indexation',
+					parent			: info_container
+				})
+				tab_indexation.addEventListener('click', function(e){
+					e.stopPropagation()
+					activate_tab('indexation')
+				})
+
+				tab_nodes.push({
+					name: 'indexation',
+					node: tab_indexation,
+					component_node: component_indexing_container
+				})
+
+			// tab_info
+				const tab_info = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tab_label',
+					inner_html		: 'Info',
+					parent			: info_container
+				})
+				tab_info.addEventListener('click', function(e){
+					e.stopPropagation()
+					activate_tab('info')
+				})
+
+				tab_nodes.push({
+					name: 'info',
+					node: tab_info,
+					component_node: indexation_note
+				})
+
+			// tab_references
+				const tab_references = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'tab_label',
+					inner_html		: 'References',
+					parent			: info_container
+				})
+				tab_references.addEventListener('click', function(e){
+					e.stopPropagation()
+					activate_tab('references')
+				})
+				tab_nodes.push({
+					name: 'references',
+					node: tab_references,
+					component_node: component_references_container
+				})
+
+
 
 	// split
 	// @see https://github.com/nathancahill/split/tree/master/packages/splitjs
