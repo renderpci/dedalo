@@ -127,7 +127,7 @@ self.onmessage = async function(e) {
 				// and Date headers and properly handle If-Modified-Since and
 				// If-None-Match request headers, therefore we can rely on the
 				// validation to guarantee a fresh response.
-		const cache = 'no-cache';
+		const cache = 'reload';
 
 	// fetch credentials
 		// omit
