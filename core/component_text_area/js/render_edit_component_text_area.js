@@ -170,7 +170,7 @@ export const render_layer_selector = function(options){
 				// layer_color.style.backgroundColor = typeof layer.layer_color !== 'undefined'
 				// 	? layer.layer_color
 				// 	: 'black'
-		}// end for
+		}//end for
 
 	const layer_selector = ui.create_dom_element({
 		element_type	: 'div',

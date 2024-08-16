@@ -205,7 +205,7 @@ const get_content_value = (i, current_value, self) => {
 				e.stopPropagation()
 				remove_handler(input, i, self)
 			})
-		}// end if(mode)
+		}//end if(i>0)
 
 	// transliterate_value
 		if (with_lang_versions && self.data.transliterate_value) {

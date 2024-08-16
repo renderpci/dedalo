@@ -954,7 +954,7 @@ const get_custom_events = (self, i, text_editor) => {
 									text_editor.set_content(tag)
 									break;
 								}
-							}// end switch
+							}//end switch
 						}
 					*/
 					break;
@@ -1407,7 +1407,7 @@ const render_persons_list = function(self, text_editor, i) {
 							inner_html		: label,
 							parent			: section_container
 						})
-				}// end if check the section
+				}//end if check the section
 
 				// get the people for every section, self section and related sections
 				const ar_persons_for_this_section = ar_persons.filter(el => el.section_tipo === current_locator.section_tipo && el.section_id === current_locator.section_id)

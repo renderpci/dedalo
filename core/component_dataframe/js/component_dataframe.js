@@ -81,7 +81,7 @@ component_dataframe.prototype.create_new_section = async function(options) {
 	}
 
 	return api_response
-}// end  create_new_section
+}//end  create_new_section
 
 
 /**

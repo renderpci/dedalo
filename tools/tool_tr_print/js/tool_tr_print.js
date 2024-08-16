@@ -195,7 +195,7 @@ tool_tr_print.prototype.build_subtitles = async function() {
 
 
 	return self.service_subtitles
-}// end build_subtitles
+}//end build_subtitles
 
 
 

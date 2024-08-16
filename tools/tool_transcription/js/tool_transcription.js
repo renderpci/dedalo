@@ -250,7 +250,7 @@ tool_transcription.prototype.get_user_tools = async function(ar_requested_tools)
 				resolve(result)
 			})
 		})
-}// end get_user_tools
+}//end get_user_tools
 
 
 
