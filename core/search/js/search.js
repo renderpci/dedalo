@@ -838,13 +838,12 @@ search.prototype.update_state = async function(options) {
 			const caller = self.caller
 
 		// json_query_obj. Recalculate json_query_obj from DOM in default mode (include components with empty values)
-			const json_filter = self.parse_dom_to_json_filter({
+			const json_query_obj = self.parse_dom_to_json_filter({
 				mode : 'search'
 			})
-			const json_query_obj = {
-				filter	: json_filter.filter, // generated filter
-				order	: [] // reset order
-			}
+
+		 // reset order
+			json_query_obj.order = [];
 
 		const js_promise = update_caller(
 			caller,
