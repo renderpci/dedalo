@@ -11,18 +11,22 @@
 
 
 // imports
-	import {tool_indexation} from './tool_indexation.js'
 	import {get_instance} from '../../../core/common/js/instances.js'
 	import {ui} from '../../../core/common/js/ui.js'
 	import {JSON_parse_safely} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {when_in_viewport} from '../../../core/common/js/events.js'
-	// import {event_manager} from '../../../core/common/js/event_manager.js'
 
 
 
-// tag notes vars
-	tool_indexation.title_instance
+/**
+* TAG_NOTE
+* Manages the component's logic and appearance in client side
+*/
+export const tag_note = function() {
+
+	return true
+}//end tag_note
 
 
 
@@ -33,7 +37,7 @@
 * @param object tag
 * @return HTMLElement|null tag_note_node
 */
-tool_indexation.prototype.render_indexation_note = async function(tag) {
+tag_note.prototype.render_indexation_note = async function(tag) {
 
 	const self = this
 
@@ -86,7 +90,7 @@ tool_indexation.prototype.render_indexation_note = async function(tag) {
 * @param object tag
 * @return HTMLElement empty_note_container
 */
-tool_indexation.prototype.render_empty_note = function(tag) {
+tag_note.prototype.render_empty_note = function(tag) {
 
 	const self = this
 
@@ -192,7 +196,7 @@ tool_indexation.prototype.render_empty_note = function(tag) {
 * @param object options
 * @return HTMLElement fragment
 */
-tool_indexation.prototype.render_note = async function(options) {
+tag_note.prototype.render_note = async function(options) {
 
 	const self = this
 
