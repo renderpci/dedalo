@@ -17,7 +17,7 @@
 
 /**
 * TOOL_INDEXATION
-* Tool to translate contents from one language to other in any text component
+* Tool to create indexation tags relating text fragments with the thesaurus
 */
 export const tool_indexation = function () {
 
@@ -69,7 +69,7 @@ export const tool_indexation = function () {
 
 /**
 * INIT
-*
+* Custom tool init
 * @param object options
 * Sample:
 * {
@@ -122,40 +122,12 @@ tool_indexation.prototype.init = async function(options) {
 			console.warn(self.error, 'options:', options);
 			return false
 		}
+		// id_base
 		const id_base = transcription_component_ddo.section_tipo +'_'+ transcription_component_ddo.section_id +'_'+ transcription_component_ddo.tipo
 
-	// load libs
-		// common.prototype.load_script(DEDALO_TOOLS_URL + '/tool_indexation/js/lib/split.min.js')
-
-
 	// events
-		// delete_tag_
-			// self.events_tokens.push(
-			// 	event_manager.subscribe('delete_tag_' + self.id, fn_delete_tag)
-			// )
-			// function fn_delete_tag(options) {
-
-			// 	// options
-			// 	const tag_id = options.tag_id
-
-			// 	self.delete_tag(tag_id)
-			// 	.then(function(response){
-			// 		if (response.result!==false) {
-			// 			// indexing_component. Remember force clean full data and datum before refresh
-			// 				self.indexing_component.data	= null
-			// 				self.indexing_component.datum	= null
-			// 				self.indexing_component.refresh()
-			// 			// transcription_component (text_area)
-			// 				self.transcription_component.refresh()
-			// 		}
-			// 	})
-			// }
-
 		// click_no_tag_
-			self.events_tokens.push(
-				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
-			)
-			function fn_click_no_tag() {
+			const fn_click_no_tag = () => {
 				// reset selection
 					self.active_tag_id = null
 
@@ -169,21 +141,20 @@ tool_indexation.prototype.init = async function(options) {
 						self.indexation_note.removeChild(self.indexation_note.lastChild)
 					}
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('click_no_tag_' + id_base, fn_click_no_tag)
+			)
 
 		// click_tag_index_. Observe user tag selection in text area.
 			// (!) Note subscribe uses 'id_base' instead 'self.id' to allow switch main component lang
-			self.events_tokens.push(
-				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
-			)
-			function fn_click_tag_index(options) {
-				if(SHOW_DEVELOPER===true) {
-					dd_console(`+++++++ [tool_indexation] click_tag_index ${id_base}`, 'DEBUG', options)
-				}
+			const fn_click_tag_index = (options) => {
+				// debug
+					if(SHOW_DEVELOPER===true) {
+						dd_console(`+++++++ [tool_indexation] click_tag_index ${id_base}`, 'DEBUG', options)
+					}
 
 				// options
-					const tag				= options.tag || {} // object
-					// const caller			= options.caller // instance of component text area
-					// const text_editor	= options.text_editor // not used
+					const tag = options.tag || {} // object
 
 				// short vars
 					const tag_id	= tag.tag_id
@@ -217,9 +188,10 @@ tool_indexation.prototype.init = async function(options) {
 							container.appendChild(tag_note_node)
 						}
 					})
-
-				return true
-			}//end fn_click_tag_index
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('click_tag_index_'+ id_base, fn_click_tag_index)
+			)
 
 
 	return common_init
@@ -298,57 +270,6 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 	return common_build
 }//end build_custom
-
-
-
-/**
-* LOAD_INDEXING_COMPONENT
-* @return promise bool true
-*/
-	// tool_indexation.prototype.load_indexing_component = async function() {
-
-	// 	const self = this
-
-	// 	// indexing_component
-	// 		const component					= self.caller
-	// 		const indexing_component_tipo	= component.context.properties.indexing_component
-
-	// 	// search the component instance in the global array of instances first
-	// 		const found_instance = instances.find(el => el.tipo===indexing_component_tipo
-	// 												 && el.section_id===component.section_id
-	// 												 && el.section_tipo===component.section_tipo )
-
-	// 		if (found_instance) {
-
-	// 			// use existing instance
-
-	// 			self.indexing_component = found_instance
-
-	// 		}else{
-
-	// 			// create a new one
-
-	// 			const indexing_component_options = {
-	// 				model			: 'component_relation_index',
-	// 				tipo			: indexing_component_tipo,
-	// 				section_tipo	: component.section_tipo,
-	// 				section_id		: component.section_id,
-	// 				mode			: 'edit',
-	// 				lang			: 'lg-nolan', // The only different property from caller
-	// 				context			: {},
-	// 				id_variant		: 'tool_indexation'
-	// 			}
-
-	// 			// init and build instance
-	// 				self.indexing_component = await get_instance(indexing_component_options)
-	// 				await self.indexing_component.build(true)
-
-	// 			// store instances to remove on destroy
-	// 				self.ar_instances.push(self.indexing_component)
-	// 		}
-
-	// 	return true
-	// }//end load_indexing_component
 
 
 
@@ -439,194 +360,6 @@ tool_indexation.prototype.load_related_sections_list = async function() {
 
 	return datum
 }//end load_related_sections_list
-
-
-
-/**
-* GET_THESAURUS
-* Creates a instance of area_thesaurus ready to render
-* @return instance
-*/
-	// tool_indexation.prototype.get_thesaurus = async function() {
-
-	// 	// short vars
-	// 		const tipo	= 'dd100';
-	// 		const model	= 'area_thesaurus';
-	// 		const lang	= self.lang || page_globals.dedalo_data_lang
-	// 		const mode	= 'list';
-
-
-	// 	// context
-	// 		const context = {
-	// 			type			: 'area',
-	// 			typo			: 'ddo',
-	// 			tipo			: tipo,
-	// 			section_tipo	: tipo,
-	// 			lang			: lang,
-	// 			mode			: mode,
-	// 			model			: 'section',
-	// 			parent			: tipo,
-	// 			// request_config	: request_config
-	// 		}
-
-	// 	// instance options
-	// 		const instance_options = {
-	// 			model			: model,
-	// 			tipo			: tipo,
-	// 			section_tipo	: tipo,
-	// 			mode			: mode,
-	// 			lang			: lang,
-	// 			context			: context,
-	// 			caller			: self
-	// 		}
-
-	// 	// init section instance
-	// 		const area_thesaurus = await get_instance(instance_options)
-
-	// 	// set instance in thesaurus mode 'relation'
-	// 		area_thesaurus.thesaurus_mode = "relation"
-
-	// 	// build instance
-	// 		await area_thesaurus.build()
-
-
-	// 	return area_thesaurus
-	// }//end get_thesaurus
-
-
-
-/**
-* CREATE FRAGMENT
-* Create the images (with the tags) at the beginning and the end of the selected text, and save the data
-*/
-	// tool_indexation.prototype.create_fragment = function ( button_obj, event ) {
-	// 	dd_console('button_obj','DEBUG', button_obj)
-
-	// 	return alert("Don't use this function! Use compoent_text_area function instead")
-
-	// 	event.preventDefault()
-	// 	event.stopPropagation()
-
-	// 	// btn dataset vars
-	// 		const identificador_unico	= button_obj.dataset.identificador_unico
-	// 		const parent				= button_obj.dataset.parent
-	// 		const tipo					= button_obj.dataset.tipo
-	// 		const section_tipo			= button_obj.dataset.section_tipo
-	// 		const lang					= button_obj.dataset.lang
-
-	// 	// component_id is 'dataset.identificador_unico'
-	// 		const component_id = identificador_unico
-
-	// 	// ed. Select current editor
-	// 		const ed = tinyMCE.get(component_id);
-	// 		if ($(ed).length<1) { return alert("Editor " + component_id + " not found [1]!") }
-
-	// 	// current_text_area
-	// 		const current_text_area = document.getElementById(component_id);
-	// 		if (!current_text_area) {
-	// 			return alert("Editor " + component_id + " not found [2]!")
-	// 		}
-
-	// 	// last_tag_index_id
-	// 		const last_tag_index_id = parseInt( component_text_area.get_last_tag_id(ed, 'index') )
-
-	// 	// string_selected
-	// 		const string_selected	= ed.selection.getContent({format : 'raw'}); // Get the selected text in raw format
-	// 		const string_len		= string_selected.length ;
-	// 		if(string_len<1) return alert("Please, select a text fragment before ! " +string_len);
-
-	// 	// New tag_id to use
-	// 		const tag_id = parseInt(last_tag_index_id+1);		//alert("new tag_id:"+last_tag_index_id + " "+component_id); return false;
-
-	// 	// State. Default is 'n' (normal)
-	// 		const state = 'n';
-
-	// 	// Final string to replace
-	// 		const image_in  = component_text_area.build_dom_element_from_data('indexIn', tag_id, state, "label in "+tag_id, '')
-	// 		const image_out = component_text_area.build_dom_element_from_data('indexOut', tag_id, state, "label out "+tag_id, '')
-
-	// 	// Get selection range
-	// 		const range			= ed.selection.getRng(0)
-	// 		const range_clon	= range.cloneRange()
-	// 	// Save start and end position
-	// 		const startOffset		= range_clon.startOffset
-	// 		const startContainer	= range_clon.startContainer
-	// 		range_clon.collapse(false)	// Go to end of range position
-
-	// 	// Insert end out image
-	// 		range_clon.insertNode(image_out)
-
-	// 	// Positioned to begin of range
-	// 		range_clon.setStart(startContainer, startOffset)
-
-	// 	// Insert note at beginning of range
-	// 		range_clon.collapse(true) // Go to start of range position
-	// 		range_clon.insertNode(image_in)
-
-	// 	// Force ed dirty state
-	// 		ed.setDirty(true);
-
-	// 	// Update last_tag_index_id data on current text area
-	// 		current_text_area.dataset.last_tag_index_id = tag_id
-
-	// 	// Force update and save real text area content (and save is triggered when text area changes)
-	// 		const js_promise = component_text_area.Save(current_text_area, null, ed)
-	// 		.then(function(response) {
-	// 			// fragment_info update
-	// 			tool_indexation.fragment_info(image_in, tipo, parent, section_tipo, lang);	//tag_obj, tipo, parent, section_tipo, lang
-	// 		})
-
-	// 	// Hide "Create New Fragment" button
-	// 		button_obj.style.display = 'none'
-
-	// 	return js_promise
-	// }//end create_fragment
-
-
-
-/**
-* CREATE_INDEXATION (REMOVED 04-05-2022 NOT USED ANYMORE)
-* Add a new locator value to the target indexing_component (component_relation_index usually)
-* @param object data
-* 	{ section_tipo, section_id, label } from thesaurus selected term
-* @return boolean from portal.add_value method
-*/
-	// tool_indexation.prototype.create_indexation = async function ( data ) {
-
-	// 	const self = this
-
-	// 	// tag_id. Previously selected by user. Check if is already selected before continue
-	// 		const tag_id = self.active_tag_id || false
-	// 		if(!tag_id){
-	// 			console.warn("Must to be selected a index tag in text to continue");
-	// 			alert("Please select a tag");
-	// 			// should activate the component (focus)
-	// 			event_manager.publish('activate_component', self.transcription_component)
-	// 			return false
-	// 		}
-
-	// 	// locator value. Build from selected term section_tipo, section_id, and selected tag_id
-	// 		const new_index_locator = {
-	// 			section_id			: data.section_id, // thesaurus term section_id
-	// 			section_tipo		: data.section_tipo, // thesaurus term section_tipo
-	// 			tag_id				: tag_id, // user selected tag id
-	// 			tag_component_tipo	: self.transcription_component.tipo, // (component_text_area tag source)
-	// 			section_top_tipo	: self.top_locator.section_top_tipo, // the transcription_component section_tipo to the resource like oh1
-	// 			section_top_id		: self.top_locator.section_top_id // the transcription_component section_id to the resource like 4
-	// 		}
-
-	// 	// add value to the indexing component
-	// 		const result = await self.indexing_component.add_value(new_index_locator)
-
-	// 	// re-filter indexing_component data according current selected tag_id
-	// 		self.indexing_component.data.value = self.indexing_component.data.value.filter(el => el.tag_id===tag_id )
-
-	// 	// force render indexing_component content again (as refresh)
-	// 		self.indexing_component.render({render_level : 'content'})
-
-
-	// 	return result
-	// }// end create_indexation
 
 
 
