@@ -8,9 +8,10 @@
 	import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 	import {data_manager} from '../../../core/common/js/data_manager.js'
 	import {common} from '../../../core/common/js/common.js'
+	import {event_manager} from '../../../core/common/js/event_manager.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_indexation} from './render_tool_indexation.js'
-	import {event_manager} from '../../../core/common/js/event_manager.js'
+	import {tag_note} from './tag_note.js'
 
 
 
@@ -41,6 +42,8 @@ export const tool_indexation = function () {
 	this.DEDALO_INDEXATION_TITLE_TIPO		= 'rsc379'
 	this.DEDALO_INDEXATION_DESCRIPTION_TIPO	= 'rsc380'
 
+	// tag notes vars
+	this.title_instance
 
 	return true
 }//end page
@@ -52,10 +55,15 @@ export const tool_indexation = function () {
 * extend component functions from component common
 */
 // prototypes assign
-	tool_indexation.prototype.render	= tool_common.prototype.render
-	tool_indexation.prototype.destroy	= common.prototype.destroy
-	tool_indexation.prototype.refresh	= common.prototype.refresh
-	tool_indexation.prototype.edit		= render_tool_indexation.prototype.edit
+	tool_indexation.prototype.render					= tool_common.prototype.render
+	tool_indexation.prototype.destroy					= common.prototype.destroy
+	tool_indexation.prototype.refresh					= common.prototype.refresh
+	tool_indexation.prototype.edit						= render_tool_indexation.prototype.edit
+	// tag notes extend
+	tool_indexation.prototype.render_indexation_note	= tag_note.prototype.render_indexation_note
+	tool_indexation.prototype.render_empty_note			= tag_note.prototype.render_empty_note
+	tool_indexation.prototype.render_note				= tag_note.prototype.render_note
+	tool_indexation.prototype.new_tag_note				= tag_note.prototype.new_tag_note
 
 
 
