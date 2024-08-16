@@ -277,6 +277,10 @@ tool_indexation.prototype.build = async function(autoload=false) {
 			const status_admin_ddo		= self.tool_config.ddo_map.find(el => el.role==="status_admin_component")
 			self.status_admin_component	= self.ar_instances.find(el => el.tipo===status_admin_ddo.tipo)
 
+		// references_component. Add references into the text
+			const references_component	= self.tool_config.ddo_map.find(el => el.role==="references_component")
+			self.references_component	= self.ar_instances.find(el => el.tipo===references_component.tipo)
+
 		// related_sections_list. load_related_sections_list. Get the relation list.
 		// This is used to build a select element to allow
 		// user select the top_section_tipo and top_section_id of current indexation
