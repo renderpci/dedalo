@@ -72,8 +72,7 @@ view_indexation_edit_portal.render = async function(self, options) {
 			mode		: 'list',
 			columns_map	: self.columns_map,
 			value		: value_combined,
-			id_variant	: id_variant,
-			view 		: 'text'
+			id_variant	: id_variant
 		})
 		// store to allow destroy later
 		self.ar_instances.push(...ar_section_record)
