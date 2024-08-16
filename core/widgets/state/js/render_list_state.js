@@ -398,7 +398,7 @@ const get_value_tooltip = (output_item, data, self) => {
 
 
 	return fragment
-}// end get_value_tooltip
+}//end get_value_tooltip
 
 
 

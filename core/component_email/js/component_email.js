@@ -210,14 +210,14 @@ component_email.prototype.get_ar_emails = async function() {
 						ar_emails.push(...result)
 					}else{
 						ar_emails.push(part_two)
-					}// end if(part_two.length > max_characters)
+					}//end if(part_two.length > max_characters)
 				}//end if(truncate_position === -1)
 
 			}else{
 				ar_emails.push(emails)
 			}//end if(emails.length > max_characters)
 			return ar_emails
-		}// end get_ar_emails
+		}//end get_ar_emails
 
 		// build the final array checking if the client SO is windows (it has a limitation of characters), else pass the full string.
 		const ar_emails = is_windows

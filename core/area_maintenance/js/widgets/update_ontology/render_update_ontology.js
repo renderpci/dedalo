@@ -215,9 +215,7 @@ const get_content_data_edit = async function(self) {
 									if (!required_version) {
 										api_response.errors.push('Unable to get required_version from Ontology')
 									}else{
-										console.log('self.supported_code_version:', self.supported_code_version);
 										const version_is_supported = self.supported_code_version(required_version)
-										console.log('version_is_supported:', version_is_supported);
 										if (!version_is_supported) {
 											ui.create_dom_element({
 												element_type	: 'h3',

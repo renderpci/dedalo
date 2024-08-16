@@ -362,7 +362,7 @@ export const render_column_node_callback = function(column_obj, self){
 
 
 	return column_node
-}// end render_column_node_callback
+}//end render_column_node_callback
 
 
 
@@ -395,7 +395,7 @@ const render_empty_column_node = function(column_obj, self){
 
 
 	return column_node
-}// end render_empty_column_node
+}//end render_empty_column_node
 
 
 

@@ -1387,7 +1387,7 @@ export const get_ar_inverted_paths = function(full_ddo_map) {
 		}
 
 	return ar_inverted_paths
-}// end get_ar_inverted_paths
+}//end get_ar_inverted_paths
 
 
 
