@@ -113,7 +113,8 @@ tool_transcription.prototype.build = async function(autoload=false) {
 				'media_component',
 				'transcription_component',
 				'status_user_component',
-				'status_admin_component'
+				'status_admin_component',
+				'references_component'
 			];
 			const roles_length = roles.length
 			for (let i = 0; i < roles_length; i++) {

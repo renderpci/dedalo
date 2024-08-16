@@ -82,7 +82,7 @@ render_tool_transcription.prototype.edit = async function(options={}) {
 * @param object self
 * @return HTMLElement content_data
 */
-const get_content_data_edit = async function(self) {
+const get_content_data_edit = function(self) {
 
 	const fragment = new DocumentFragment()
 
@@ -114,7 +114,7 @@ const get_content_data_edit = async function(self) {
 	// media_component
 		self.media_component.mode			= 'edit'
 		self.media_component.context.view	= 'player'
-		await self.media_component.build(false) // build only to force new view
+		self.media_component.build(false) // build only to force new view
 		self.media_component.render()
 		.then(function(media_component_node) {
 			right_container.appendChild(media_component_node)
@@ -371,7 +371,18 @@ const get_content_data_edit = async function(self) {
 						lang : self.transcription_component.data.lang
 					})
 			}//end if (self.media_component.model==='component_av')
+
+
+			// references component
+			const references_component = self.references_component
+
+			references_component.render()
+			.then(function(references_component_node){
+				right_container.appendChild(references_component_node)
+			})
+
 		})
+
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
