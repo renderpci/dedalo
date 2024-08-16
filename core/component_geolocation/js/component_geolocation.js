@@ -1457,7 +1457,7 @@ const init_feature = function(options) {
 			 });
 		// addLayer
 			self.FeatureGroup[layer_id].addLayer(data_layer)
-	}// end if (data_layer)
+	}//end if (data_layer)
 }//end init_feature
 
 

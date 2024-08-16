@@ -1631,7 +1631,7 @@ export const get_dataframe = async function(options) {
 
 
 	return component_dataframe
-}// end get_dataframe
+}//end get_dataframe
 
 
 
@@ -1712,7 +1712,6 @@ export const delete_dataframe = async function(options) {
 
 	return true
 }//end delete_dataframe
-
 
 
 

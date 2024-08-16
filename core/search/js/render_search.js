@@ -1307,7 +1307,7 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 
 		return true
 	}//end toggle_type
-// end toggles
+//end toggles
 
 
 

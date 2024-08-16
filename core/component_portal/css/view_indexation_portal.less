@@ -8,6 +8,7 @@
 	>.content_data {
 		display: flex;
 		overflow: auto;
+		padding-right: 0.33rem;
 
 		.section_record.list {
 			display: flex;
@@ -23,7 +24,10 @@
 				background-color: @color_grey_ultralight;
 			}
 
-			>.column {
+			// section_record view default
+			&.view_default {
+
+				>.column_DES {
 				display: flex;
 				flex: 0 0 auto;
 				outline: none;
@@ -106,14 +110,14 @@
 								white
 							);
 						}
-						&.reference{
-							.fn_build_tag_reference(
+						&.reference {
+							.fn_build_tag_reference (
 								@color_tag_indexation_normal,
 								#fff
 							);
 						}
 						&.draw{
-							.fn_build_tag_draw(
+							.fn_build_tag_draw (
 								@color_tag_indexation_normal,
 								#fff
 							);
@@ -139,6 +143,91 @@
 					}
 				}
 			}
+			}//end &.view_default
+
+			// section_record view text
+			&.view_text {
+
+				>.button_edit {
+					width: 1rem;
+					margin: 0px;
+				}
+
+				// tags (reference, indexation...)
+				>.tags {
+					margin-left: 0.25rem;
+					margin-right: 0px;
+					&.index{
+						.fn_build_tag_indexation(
+							@color_tag_indexation_normal,
+							white
+						);
+					}
+					&.reference {
+						.fn_build_tag_reference (
+							@color_tag_indexation_normal,
+							#fff
+						);
+					}
+					&.draw{
+						.fn_build_tag_draw (
+							@color_tag_indexation_normal,
+							#fff
+						);
+					}
+				}
+
+				// contains hierarchy name and button delete
+				>.note.italic {
+					color: @color_grey_medium_2;
+					text-align: right;
+					flex: 2 1 auto;
+					display: block;
+					padding-right: 0;
+
+					mark {
+						opacity: unset;
+					}
+
+					>button {
+						width: 1.25rem;
+						height: 1.25rem;
+						padding: 0px;
+						margin-right: 0;
+						vertical-align: sub;
+
+						&.edit_button {
+
+							>.icon {
+								margin-right: 1px;
+							}
+						}
+
+						&.button_remove {
+							>.icon {
+
+							}
+						}
+					}
+				}
+
+				>.no_tag {
+					background-color: #4065ce;
+					color: white;
+					margin-left: 0.25rem;
+					border-radius: 3px;
+					padding: 0.25rem;
+					line-height: 0.96rem;
+					font-size: 0.8rem;
+					padding-top: 0.1rem;
+					padding-bottom: 0.1rem;
+					cursor: pointer;
+
+					&:active {
+						opacity: 0.5;
+					}
+				}
+			}//end &.view_text
 		}
 
 		.list_footer {

@@ -1713,6 +1713,10 @@ class component_text_area extends component_common {
 					$diffusion_value = mb_substr($diffusion_value, 0, -4);
 				}
 
+			// trim text to prevent non-breaking spaces and spaces at beginning and end
+				$diffusion_value	= preg_replace('~^&nbsp;|&nbsp;$~', '', $diffusion_value);
+				$diffusion_value	= trim($diffusion_value);
+
 		// Compatibility of the reference tag
 		// set the references as v5, with tag locator as text
 			$legacy_model = RecordObj_dd::get_legacy_model_name_by_tipo($this->tipo);
