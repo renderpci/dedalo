@@ -279,7 +279,7 @@ tool_numisdata_epigraphy.prototype.get_user_tools = async function(ar_requested_
 				resolve(result)
 			})
 		})
-}// end get_user_tools
+}//end get_user_tools
 
 
 

@@ -145,7 +145,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 	}
 
 	return fragment
-}// end get_portal_rows
+}//end get_portal_rows
 
 
 
@@ -244,7 +244,7 @@ const get_columns = function(self, column_data, ar_columns_obj, parent_row_key) 
 	}
 
 	return fragment
-}// end get_columns
+}//end get_columns
 
 
 
@@ -317,7 +317,7 @@ const get_table_columns = function(self, current_data) {
 						)
 						break;
 				}//end switch(current_data.cell_type)
-			}// end if(current_data.type==='column' && current_data.cell_type)
+			}//end if(current_data.type==='column' && current_data.cell_type)
 
 	}else{
 

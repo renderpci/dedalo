@@ -1315,7 +1315,7 @@ component_text_area.prototype.build_tag = function(options) {
 			}
 		}// end switch
 	}
-}// end build_tag
+}//end build_tag
 
 
 
@@ -1465,7 +1465,7 @@ component_text_area.prototype.build_tag = function(options) {
 		// insert the new note tag in the caret position of the text_editor
 		const inserted_tag = text_editor.set_content(draw_view_tag)
 
-	}// end create_draw_tag
+	}//end create_draw_tag
 
 /**
 * CHANGE_LANG

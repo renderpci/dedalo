@@ -148,7 +148,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 
 	return portal_rows
-}// end get_portal_rows
+}//end get_portal_rows
 
 
 

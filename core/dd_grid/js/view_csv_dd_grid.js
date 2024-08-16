@@ -157,7 +157,7 @@ const get_portal_rows = function(self, row, ar_columns_obj) {
 
 
 	return portal_rows
-}// end get_portal_rows
+}//end get_portal_rows
 
 
 
@@ -253,7 +253,7 @@ export const get_columns = function(self, column_data, ar_columns_obj, parent_ro
 	}
 
 	return columns
-}// end get_columns
+}//end get_columns
 
 
 
