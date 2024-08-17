@@ -282,7 +282,17 @@ menu.prototype.build_local_db_id = function(lang) {
 
 	const self = this
 
-	return self.model + '_' + self.tipo + '_' + (lang || page_globals.dedalo_application_lang)
+	// user id. Logged user id
+	const user_id = page_globals?.user_id || ''
+
+	// lang cascade fallback
+	lang = lang || page_globals?.dedalo_application_lang || ''
+
+	// id composition
+	const id = `${self.model}_${self.tipo}_${lang}_${user_id}`
+
+
+	return id
 }//end build_local_db_id
 
 
