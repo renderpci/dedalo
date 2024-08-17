@@ -288,6 +288,11 @@ tool_user_admin.prototype.build_user_section = async function() {
 			type		: 'main',
 			show		: {
 				ddo_map : ddo_map
+			},
+			sqo : {
+				section_tipo	: [section_tipo],
+				limit			: 1,
+				offset			: 0
 			}
 		}]
 
