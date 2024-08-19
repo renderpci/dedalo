@@ -120,23 +120,24 @@ final class ImageMagick {
 		# Layers info
 		# get thumbnail identification
 		$ar_valid_layers = [];
-		if(!isset($ar_layers)){
+		if(!isset($ar_layers) && $thumbnail===false && $is_opaque===false){
 
-			// get the layer number of the image
-			// layer number include the layer 0 that is a flat version of the image,
-			// in tiff the layer 0 is a flat without transparency and is not possible to use it
-			// in psd format layer 0 is a flat version with transparency.
-			// to be compatible doesn't use the layer 0
-			$layer_number = (int)self::get_layers_file_info( $source_file );
+			// // get the layer number of the image
+			// // layer number include the layer 0 that is a flat version of the image,
+			// // in tiff the layer 0 is a flat without transparency and is not possible to use it
+			// // in psd format layer 0 is a flat version with transparency.
+			// // to be compatible doesn't use the layer 0
+			// $layer_number = (int)self::get_layers_file_info( $source_file );
 
-			// fill the valid layers removing the layer 0
-			if($layer_number > 1){
-				for ($i=1; $i < $layer_number; $i++) {
-					$ar_valid_layers[] = $i;
-				}
-			}
+			// // fill the valid layers removing the layer 0
+			// if($layer_number > 1){
+			// 	for ($i=1; $i < $layer_number; $i++) {
+			// 		$ar_valid_layers[] = $i;
+			// 	}
+			// }
+			$ar_valid_layers = [0];
 		}else{
-			$ar_valid_layers = $ar_layers;
+			$ar_valid_layers = $ar_layers ?? [];
 		}
 
 		$source_file_with_layers = empty($ar_valid_layers)
@@ -175,7 +176,7 @@ final class ImageMagick {
 			}
 
 			$middle_flags .= ($thumbnail===true)
-				? '-thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
+				? ' -thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
 				: '';
 
 			$middle_flags	.= ($coalesce === true && $is_opaque === false)
@@ -237,10 +238,11 @@ final class ImageMagick {
 					break;
 			}
 
-			$middle_flags .= '-quality '.$quality.' ';
-			$middle_flags .= ' -auto-orient -quiet '; // Always add
+			$middle_flags .= ' -quality '.$quality.' ';
+			$middle_flags .= ' -auto-orient '; // Always add
+			$middle_flags .= ' -quiet ';
 			$middle_flags .= isset($resize)
-				? '-resize '. $resize.' ' // sample: 25% | 1024x756
+				? ' -resize '. $resize.' ' // sample: 25% | 1024x756
 				: '';
 
 		// command
@@ -478,7 +480,10 @@ final class ImageMagick {
 
 		// check the output, if the output has any True, the image will be opaque, else (all layers are false) the image is transparent.
 			if (!empty($output)) {
-				$is_opaque = str_contains($output, 'True');
+				$output		= strtolower($output);
+				$is_opaque	= str_contains($output, 'false')
+					? false
+					: true;
 			}
 
 		return $is_opaque;
@@ -503,7 +508,7 @@ final class ImageMagick {
 		if(empty($DateTimeOriginal)){
 			$command			= MAGICK_PATH . 'identify -quiet -format "%[date:modify]" ' .'"'.$file.'"';
 			$DateTimeOriginal	= shell_exec($command);
-			$regex   = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
+			$regex = "/^(\d{4})[-:\/.]?(\d{2})[-:\/.]?(\d{2})T?(\d{2}):(\d{2}):(\d{2})[.]?(\d+)?[\+]?(\d{2})?[-:\/.]?(\d{2})?/";
 		}
 
 		if (!empty($DateTimeOriginal)) {
