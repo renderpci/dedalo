@@ -2454,12 +2454,7 @@ final class dd_core_api {
 			$value			= $ddo_source->value ?? null; // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 
 			// pagination
-			$sqo	= $rqo->sqo ?? new stdClass();
-
-			$limit			= $sqo->limit ?? 500;
-			$offset			= $sqo->offset ?? 0;
-			$total			= $sqo->total ?? null;
-			$filter_section	= $sqo->section_tipo ?? null;
+			$sqo			= $rqo->sqo ?? new stdClass();
 
 			// response
 			$response = new stdClass();
@@ -2483,7 +2478,7 @@ final class dd_core_api {
 
 		// diffusion_index_ts
 			$indexation_grid	= new indexation_grid($section_tipo, $section_id, $tipo, $value);
-			$index_grid			= $indexation_grid->build_indexation_grid($limit, $offset, $total, $filter_section);
+			$index_grid			= $indexation_grid->build_indexation_grid($sqo);
 
 		// response OK
 			$response->msg		= 'OK. Request done successfully';
