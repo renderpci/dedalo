@@ -248,7 +248,7 @@ final class ImageMagick {
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" '
+				MAGICK_PATH . 'magick '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" '
 			]);
 
 		// debug
