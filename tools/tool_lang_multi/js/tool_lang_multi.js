@@ -99,7 +99,6 @@ tool_lang_multi.prototype.build = async function(autoload=false) {
 			const main_element_ddo	= self.tool_config.ddo_map.find(el => el.role==="main_element")
 			self.main_element		= self.ar_instances.find(el => el.tipo===main_element_ddo.tipo)
 
-
 		// target translator. When user changes it, a local DB var is stored as 'translator_engine_select' in table 'status'
 			const translator_engine_select_object = await data_manager.get_local_db_data(
 				'translator_engine_select',
