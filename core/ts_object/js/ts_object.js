@@ -165,6 +165,87 @@ export const ts_object = new function() {
 
 
 	/**
+	* GET_CHILDREN_RECURSIVE
+	* Get all children section of the caller term
+	* Data is built from parent node info (section_tipo and section_id)
+	* @param object options
+	* @return promise
+	*/
+	this.get_children_recursive = function( options ) {
+
+		// short vars
+			const section_tipo	= options.section_tipo
+			const section_id	= options.section_id
+
+		// check vars
+			if (!section_tipo || typeof section_tipo==="undefined") {
+				console.log("[get_children_recursive] Error. section_tipo is not defined");
+				return Promise.resolve(false);
+			}
+			if (!section_id || typeof section_id==="undefined") {
+				console.log("[get_children_recursive] Error. section_id is not defined");
+				return Promise.resolve(false);
+			}
+
+
+		return new Promise(function(resolve){
+
+			// API call
+			const rqo = {
+				action			: 'read',
+				source			: {
+					typo			: 'source',
+					type			: 'section',
+					action			: 'search',
+					model			: 'section',
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					section_id		: null,
+					mode			: 'list',
+					lang			: page_globals.dedalo_data_nolan,
+				},
+				show 			: {
+					ddo_map			: []
+				},
+				sqo: {
+					section_tipo	: [section_tipo],
+					limit			: 0,
+					offset			: 0,
+					filter_by_locators: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id
+					}],
+					children_recursive: true
+				}
+			}
+			data_manager.request({
+				body : rqo
+			})
+			.then(async function(response) {
+
+				if (response && response.result) {
+					const section_data = response.result.data.find(el => el.tipo === section_tipo)
+					const children_recursive = section_data.value.map(el =>{
+						return {
+							section_tipo	: el.section_tipo,
+							section_id		: el.section_id
+						}
+					})
+
+					resolve(children_recursive)
+
+				}else{
+					// error case
+					console.warn("[ts_object.get_children] Error, response is null");
+					resolve(false)
+				}
+			})
+		})
+	}//end get_children_recursive
+
+
+
+	/**
 	* UPDATE_ARROW_STATE
 	* Updates arrow state when updated wrap
 	* @param HTMLElement link_children_element
