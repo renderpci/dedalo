@@ -38,17 +38,42 @@ final class tools_register_Test extends TestCase {
 	*/
 	public function test_import_tools() {
 
-		$tools = tools_register::import_tools();
+		$info_file_processed = tools_register::import_tools();
 
 		$this->assertTrue(
-			gettype($tools)==='array',
+			gettype($info_file_processed)==='array',
 			'expected gettype tools is array'
-				.' and is : '.gettype($tools)
+				.' and is : '.gettype($info_file_processed)
 		);
 		$this->assertTrue(
-			!empty($tools),
+			!empty($info_file_processed),
 			'expected no empty $tools'
 		);
+
+		$tool_diffusion = array_find($info_file_processed, function($el){
+			return $el->name==='tool_diffusion';
+		});
+
+		$this->assertTrue(
+			is_object($tool_diffusion),
+			'expected found tool_diffusion object'
+				.' and is : '.gettype($tool_diffusion)
+		);
+
+		if (is_object($tool_diffusion)) {
+
+			$this->assertTrue(
+				$tool_diffusion->dir==='/tool_diffusion',
+				'expected tool_diffusion->dir is /tool_diffusion'
+					.' and is : '.to_string($tool_diffusion->dir)
+			);
+
+			$this->assertTrue(
+				$tool_diffusion->imported===true,
+				'expected tool_diffusion->imported is true'
+					.' and is : '.to_string($tool_diffusion->imported)
+			);
+		}
 	}//end test_import_tools
 
 
@@ -165,6 +190,61 @@ final class tools_register_Test extends TestCase {
 				'expected not empty name value '
 			);
 		}
+
+		// check tools lang
+		$tool_lang_config = array_find($all_config_tool_client, function($el){
+			return $el->name==='tool_lang';
+		});
+
+		$this->assertTrue(
+			is_object($tool_lang_config),
+			'expected found object'
+				.' and is : '.gettype($tool_lang_config)
+		);
+
+		if (is_object($tool_lang_config)) {
+
+			$translator_engine = $tool_lang_config->config->translator_engine ?? null;
+
+			$this->assertTrue(
+				is_object($translator_engine),
+				'expected translator_engine object'
+					.' and is : '.gettype($translator_engine)
+			);
+
+			// "client": true,
+			$this->assertTrue(
+				$translator_engine->client===true,
+				'expected translator_engine->client as true'
+					.' and is : '.to_string($translator_engine->client)
+			);
+
+			$expected = json_decode('{
+				"type": "array",
+				"value": [
+					{
+						"name": "babel",
+						"label": "Babel"
+					},
+					{
+						"name": "google_translation",
+						"label": "Google translator"
+					},
+					{
+						"name": "pepe_translation",
+						"label": "Pepe translator"
+					}
+				],
+				"client": true,
+				"default": []
+			}');
+			$this->assertTrue(
+				$translator_engine==$expected,
+				'unexpected translator_engine value'
+					.' translator_engine is : '.to_string($translator_engine) . PHP_EOL
+					.' expected is : '.to_string($expected)
+			);
+		}
 	}//end test_get_all_config_tool_client
 
 
@@ -189,7 +269,95 @@ final class tools_register_Test extends TestCase {
 				'expected not empty tool name value '
 			);
 		}
+
+		// check tool_propagate_component_data
+		$found = array_find($all_config_tool_client, function($el) {
+			return $el->name==='tool_propagate_component_data';
+		});
+
+		$this->assertTrue(
+			gettype($found)==='object',
+			'expected gettype found is object'
+				.' and is : '.gettype($found)
+		);
+
+		if (is_object($found)) {
+
+			// expected
+			$expected = json_decode('{
+				"name": "tool_propagate_component_data",
+				"config": {
+					"components_monovalue": {
+						"value": [
+							"component_3d",
+							"component_av",
+							"component_geolocation",
+							"component_image",
+							"component_json",
+							"component_password",
+							"component_pdf",
+							"component_publication",
+							"component_model",
+							"component_section_id",
+							"component_security_access",
+							"component_select",
+							"component_select_lang",
+							"component_svg",
+							"component_text_area"
+						],
+						"client": true
+					}
+				}
+			}');
+
+			$this->assertTrue(
+				$found==$expected,
+				'expected is different to found'
+					.' found is : '.to_string($found) . PHP_EOL
+					.' expected is : '.to_string($expected)
+			);
+		}
 	}//end test_get_all_default_config_tool_client
+
+
+
+	/**
+	* TEST_clean_cache
+	* @return void
+	*/
+	public function test_clean_cache() {
+
+		$result = tools_register::clean_cache();
+
+		$this->assertTrue(
+			gettype($result)==='boolean',
+			'expected gettype result is boolean'
+				.' and is : '.gettype($result)
+		);
+
+		$this->assertTrue(
+			$result===true,
+			'expected result true'
+				.' and is : '.to_string($result)
+		);
+
+		$this->assertTrue(
+			isset($_SESSION['dedalo']['registered_tools'])===false,
+			'expected false isset($_SESSION[\'dedalo\'][\'registered_tools\'])'
+				.' and is : '.to_string(isset($_SESSION['dedalo']['registered_tools']))
+		);
+
+		$file_name		= 'cache_registered_tools.json';
+		$base_path		= DEDALO_CACHE_MANAGER['files_path'];
+		$file_path		= $base_path .'/'. $file_name;
+		$file_exists	= (file_exists($file_path));
+
+		$this->assertTrue(
+			$file_exists===false,
+			'expected file_exists result false'
+				.' and is : '.to_string($file_exists)
+		);
+	}//end test_clean_cache
 
 
 
