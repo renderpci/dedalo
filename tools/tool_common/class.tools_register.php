@@ -2,7 +2,11 @@
 declare(strict_types=1);
 /**
 * TOOLS_REGISTER
-*
+* Manages tools registration process, from /tools directory elements to the
+* database, in section 'Registered Tools' (dd1324) where are parsed and saved
+* That section is not editable, is only for read, and is re-created on each
+* import tools action from management area.
+* Tools configuration section (dd996) is used to store the custom local configuration of the tools
 */
 class tools_register {
 
@@ -144,7 +148,6 @@ class tools_register {
 						'version'	=> $version
 					];
 			}//end foreach ($ar_tools)
-
 
 		// DB Updates
 			// structure
@@ -416,11 +419,11 @@ class tools_register {
 						if (!empty($tool_info)) {
 							$item->installed_version = $tool_info->version  ?? null;
 						}
-				}
+				}//end if($register_contents===false)
 
 			// add
 				$files_list[] = $item;
-		}
+		}//end foreach ($files as $path)
 
 
 		return $files_list;
@@ -482,9 +485,8 @@ class tools_register {
 	/**
 	* CREATE_SIMPLE_TOOL_OBJECT
 	* Build a tool object from section tools register development
-	*
-	* @param object $current_info_object
-	*	Full dedalo section data object from one record
+	* @param string $section_tipo
+	* @param int|string $section_id
 	* @return object $tool_object
 	*	Simple and human readable JSON object to use with components, sections, areas..
 	*/
@@ -799,55 +801,6 @@ class tools_register {
 
 
 	/**
-	* IMPORT_INFO_OBJECT
-	* Info object is exactly a dedalo raw record data
-	* @return int $section_id
-	*/
-		// private static function import_info_object($info_object, &$section_id_counter) {
-
-		// 	// replace object section_id with new forced counter
-		// 	$info_object->section_id = $section_id_counter;
-		// 	$info_object->label 	 = 'Tools register';
-		// 	$datos 	 				 = json_handler::encode($info_object);
-		// 	$section_registered_tools_tipo 	 = tools_register::$section_registered_tools_tipo; //  'dd1324';
-
-		// 	$strQuery = 'INSERT INTO "matrix_tools" (section_id, section_tipo, datos) VALUES ($1, $2, $3) RETURNING section_id';
-		// 	$result   = pg_query_params(DBi::_getConnection(), $strQuery, array( $section_id_counter, $section_registered_tools_tipo, $datos ));
-
-		// 	// update counter on every imported record
-		// 	counter::update_counter($section_registered_tools_tipo, $matrix_table='matrix_counter', $current_value=$section_id_counter);
-
-		// 	// if all is ok, update counter value
-		// 	$section_id_counter++;
-
-		// 	$section_id = pg_fetch_result($result,0,'section_id');
-
-		// 	return $section_id;
-		// }//end import_info_object
-
-
-
-	/**
-	* CLEAN_SECTION_TOOLS_DATA
-	* @return bool true
-	*/
-		// private static function clean_section_tools_data() {
-
-		// 	// section
-		// 		$section_registered_tools_tipo 	= 'dd1324';
-		// 		$sql_query 				= 'DELETE FROM "matrix_tools" WHERE "section_tipo" = \''.$section_registered_tools_tipo.'\';';
-		// 		$result_delete_section 	= pg_query(DBi::_getConnection(), $sql_query);
-
-		// 		// reset counter
-		// 		$sql_reset_counter 	  	= 'DELETE FROM "matrix_counter" WHERE "tipo" = \''.$section_registered_tools_tipo.'\';';
-		// 		$result_reset_counter 	= pg_query(DBi::_getConnection(), $sql_reset_counter);
-
-		// 	return true;
-		// }//end clean_section_tools_data
-
-
-
-	/**
 	* RENUMERATE_TERM_ID
 	* @param array $ontology
 	* @param int $counter
@@ -1000,23 +953,6 @@ class tools_register {
 				}
 			}//end if(empty($tool_by_name))
 
-			// else{
-			// 	$record = reset($result->ar_records);
-			// 	$section = section::get_instance($record->section_id, $record->section_tipo);
-			// 	$section->set_dato($record->datos);
-			//
-			// 	$component_tipo 		= 'dd999';
-			// 	$component_model 		= RecordObj_dd::get_modelo_name_by_tipo($component_tipo,true);
-			//
-			// 	$component = component_common::get_instance($component_model,
-			// 												$component_tipo,
-			// 												$record->section_id,
-			// 												'list',
-			// 												DEDALO_DATA_NOLAN,
-			// 												$record->section_tipo);
-			// 	$dato 	= $component->get_dato();
-			// 	$config = reset($dato);
-			// }
 
 		return true;
 	}//end create_tool_config
@@ -1194,6 +1130,28 @@ class tools_register {
 	* GET_ALL_CONFIG_TOOL_CLIENT
 	* Filter the client part of the config defined with the "client" property to true
 	* Config record without client property will be ignored
+	* Expected item config object as (note that only config properties with 'client == true' will be included !):
+		* {
+		*	  "translator_engine": {
+		* 		"client": true, <-- (!)
+		*		"type": "array",
+		*		"value": [
+		*		  {
+		*			"name": "babel",
+		*			"label": "Babel"
+		*		  },
+		*		  {
+		*			"name": "google_translation",
+		*			"label": "Google translator"
+		*		  },
+		*		  {
+		*			"name": "pepe_translation",
+		*			"label": "Pepe translator"
+		*		  }
+		*		],
+		*		"default": []
+		*	  }
+		* }
 	* @return array $ar_client_config
 	*/
 	public static function get_all_config_tool_client() : array {
@@ -1206,10 +1164,11 @@ class tools_register {
 		// get all tools config sections
 		$ar_config = tools_register::get_all_config_tool();
 
+		// normalize config values
 		$ar_client_defautl_config = array_map(function($item){
 
 			$new_config = [];
-			if( $item->config!==false && is_iterable($item->config) ) {
+			if( !empty($item->config) ) {
 				foreach ($item->config as $key => $value) {
 					if (isset($value->client) && $value->client===true) {
 						$new_config[$key] = $value;
@@ -1225,6 +1184,7 @@ class tools_register {
 		}, $ar_config);
 
 		$cache_ar_client_default_config = $ar_client_defautl_config;
+
 
 		return $ar_client_defautl_config;
 	}//end get_all_config_tool_client
@@ -1292,13 +1252,13 @@ class tools_register {
 
 	/**
 	* CLEAN_CACHE
+	* Delete session and cache files from tools
 	* @return bool
 	*/
 	public static function clean_cache() {
 
-
 		// session. Remove previous stored data in session
-			// unset($_SESSION['dedalo']['tools']); // cache of already calculated tools
+			// cache of already calculated tools
 			if (isset($_SESSION['dedalo']['registered_tools'])) {
 				unset($_SESSION['dedalo']['registered_tools']);
 			}
@@ -1317,159 +1277,4 @@ class tools_register {
 
 
 
-	/**
-	* GET_PROFILE_ALLOWED_TOOLS
-	* Get activated tool names of given profile
-	* @param int $user_id
-	* @return array $allowed_tools
-	* 	Array of tool names as ['tool_lang','tool_print']
-	*/
-		// public static function get_profile_allowed_tools($user_id) {
-
-		// 	// user profile
-		// 		$user_profile = security::get_user_profile($user_id);
-		// 		if (empty($user_profile)) {
-		// 			return false;
-		// 		}
-		// 		$user_profile_id = (int)$user_profile->section_id;
-
-		// 	// tool permissions (DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO)
-		// 		$model		= RecordObj_dd::get_modelo_name_by_tipo(DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,true);
-		// 		$component	= component_common::get_instance(
-		// 			$model,
-		// 			DEDALO_COMPONENT_SECURITY_TOOLS_PROFILES_TIPO,
-		// 			$user_profile_id,
-		// 			'list',
-		// 			DEDALO_DATA_NOLAN,
-		// 			DEDALO_SECTION_PROFILES_TIPO
-		// 		);
-
-		// 	// dato
-		// 		$dato = $component->get_dato();
-		// 			dump($dato, ' dato ++ '.to_string());
-		// 		if (empty($dato)) {
-		// 			return [];
-		// 		}
-
-		// 	// allowed_tools
-		// 		$allowed_tools		= [];
-		// 		$registered_tools	= tool_common::get_all_registered_tools();
-		// 		$ar_id = array_map(function($el){
-		// 			return $el->section_id;
-		// 		}, $dato);
-		// 		foreach ($registered_tools as $tool_data) {
-		// 			if (in_array($tool_data->section_id, $ar_id)) {
-		// 				$allowed_tools[] = $tool_data->name;
-		// 			}
-		// 		}
-
-		// 	return $allowed_tools;
-		// }//end get_profile_allowed_tools
-
-
-
 }//end class tools_register
-
-
-
-/*
-DBi::_getConnection();
-include('class.RecordObj_dd_edit.php');
-$ontology_data = json_decode('[
-  {
-    "tipo": "oh81",
-    "tld": "oh",
-    "model": "section_tool",
-    "model_tipo": "dd125",
-    "parent": "oh80",
-    "order": 1,
-    "translatable": false,
-    "properties": {
-      "context": {
-        "context_name": "section_tool",
-        "tool_section_tipo": "oh81",
-        "top_tipo": "oh1",
-        "target_section_tipo": "rsc167",
-        "target_component_tipo": "rsc35",
-        "target_tool": "tool_transcription",
-        "prueba":"Hola test 7"
-      }
-    },
-    "relations": null,
-    "descriptors": [
-      {
-        "value": "Transcription nuevisimo",
-        "lang": "lg-eng",
-        "type": "term"
-      },
-      {
-        "value": "Transcripción entrevistas",
-        "lang": "lg-spa",
-        "type": "term"
-      },
-      {
-        "value": "Transcripció dentrevistes",
-        "lang": "lg-cat",
-        "type": "term"
-      },
-      {
-        "value": "Μεταγραφή συνεντεύξεις",
-        "lang": "lg-ell",
-        "type": "term"
-      }
-    ]
-  },
-  {
-    "tipo": "oh82",
-    "tld": "oh",
-    "model": "section_list",
-    "model_tipo": "dd91",
-    "parent": "oh81",
-    "order": 1,
-    "translatable": false,
-    "properties": null,
-    "relations": [
-      {
-        "tipo": "rsc21"
-      },
-      {
-        "tipo": "rsc19"
-      },
-      {
-        "tipo": "rsc23"
-      },
-      {
-        "tipo": "rsc263"
-      },
-      {
-        "tipo": "rsc36"
-      },
-      {
-        "tipo": "rsc244"
-      },
-      {
-        "tipo": "rsc35"
-      }
-    ],
-    "descriptors": [
-      {
-        "value": "Listado",
-        "lang": "lg-spa",
-        "type": "term"
-      },
-      {
-        "value": "Llistat",
-        "lang": "lg-cat",
-        "type": "term"
-      },
-      {
-        "value": "List",
-        "lang": "lg-eng",
-        "type": "term"
-      }
-    ]
-  }
-]');
-#ontology::import($ontology_data);
-ontology::import_tools();
-*/
