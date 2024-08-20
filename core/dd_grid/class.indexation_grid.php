@@ -16,7 +16,8 @@ class indexation_grid {
 		protected $section_tipo;
 		protected $value;
 		protected $pagination;
-		protected $filter_section;
+		protected $target_section;
+		protected $sqo;
 
 
 
@@ -45,26 +46,28 @@ class indexation_grid {
 
 	/**
 	* BUILD_INDEXATION_GRID
-	* @param int $limit
-	* @param int $offset
-	* @param int|null $total
+	* @param object $sqo
 	* @return array $ar_indexation_grid
 	*/
-	public function build_indexation_grid( ?int $limit=500, ?int $offset=0, ?int $total=null, array $filter_section=null) : array {
+	public function build_indexation_grid( object $sqo ) : array {
 
 		$ar_indexation_grid = [];
 
+		// sqo
+			$this->sqo = $sqo;
+
 		// set pagination
-			$this->pagination->limit	= $limit;
-			$this->pagination->offset	= $offset;
-			$this->pagination->total	= $total;
+			$this->pagination->limit	= $sqo->limit ?? 500;
+			$this->pagination->offset	= $sqo->offset ?? 0;
+			$this->pagination->total	= $sqo->total ?? null;
+
+		//target section tipo
+			$this->target_section		= $sqo->section_tipo ?? null;
 
 		// set filter section
-			if( empty($filter_section) ){
+			if( empty($this->target_section) ){
 				return $ar_indexation_grid;
 			}
-			$this->filter_section = $filter_section;
-
 
 		// ar_section_top_tipo
 			$ar_section_top_tipo = $this->get_ar_section_top_tipo();
@@ -550,9 +553,11 @@ class indexation_grid {
 	public function get_ar_locators() : array {
 
 		// short vars
-		$limit			= $this->pagination->limit;
-		$offset			= $this->pagination->offset;
-		$filter_section	= $this->filter_section;
+		$sqo				= $this->sqo;
+		$limit				= $this->pagination->limit;
+		$offset				= $this->pagination->offset;
+		$target_section		= $this->target_section;
+		$filter_by_locators	= $sqo->filter_by_locators;
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($this->tipo, true);
 
@@ -567,15 +572,44 @@ class indexation_grid {
 			true // bool cache
 		);
 
-		// set the pagination into the component
-		$component->pagination->limit	= $limit;
-		$component->pagination->offset	= $offset;
+		$relation_type = $component->get_relation_type();
 
-		// set the filter section, is used to get specific sections
-		$component->filter_section		= $filter_section;
+		$filter_locators = [];
+		foreach ($filter_by_locators as $current_locator) {
 
-		// use the data paginated instead the data, sometimes the data could be huge (thousands)
-		$ar_locators = $component->get_dato_paginated();
+			// filter_locator
+			$filter_locator = new locator();
+				$filter_locator->set_type( $relation_type ); // as dd96
+				$filter_locator->set_section_tipo($current_locator->section_tipo);
+				$filter_locator->set_section_id($current_locator->section_id);
+
+			$filter_locators[] = $filter_locator;
+		}
+
+		// ar_inverse_locators locators. Get calculated inverse locators for all matrix tables
+		// referenced_locators from search_related
+			$ar_inverse_locators = search_related::get_referenced_locators(
+				$filter_locators,
+				$limit,
+				$offset,
+				false,
+				$target_section
+			);
+
+		// format result
+			$ar_locators = component_relation_index::parse_data($ar_inverse_locators);
+
+
+
+		// // set the pagination into the component
+		// $component->pagination->limit	= $limit;
+		// $component->pagination->offset	= $offset;
+
+		// // set the filter section, is used to get specific sections
+		// $component->target_section		= $target_section;
+
+		// // use the data paginated instead the data, sometimes the data could be huge (thousands)
+		// $ar_locators = $component->get_dato_paginated();
 
 		return $ar_locators;
 	}//end get_ar_locators
