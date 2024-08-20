@@ -384,8 +384,10 @@ tool_common.prototype.render = async function(options={}) {
 
 /**
 * LOAD_COMPONENT
-* Loads component to place it in respective containers: current preview and preview version
+* Loads a component to place it in respective container.
+* Initialize and build the component with given options.
 * @param object options
+* {
 * 	self				: instance of the caller
 * 	model				: model of the component to load
 * 	mode				: mode of the component to load
@@ -398,7 +400,8 @@ tool_common.prototype.render = async function(options={}) {
 * 	data_source			: data_source of the component to load
 * 	id_variant			: id_variant of the component to load, if not set use the model of the tool
 * 	to_delete_instances	: array of instance object
-* @return promise: object component_instance
+* }
+* @return object component_instance
 */
 export const load_component = async function(options) {
 
@@ -753,6 +756,12 @@ const view_modal = async function(options) {
 /**
 * VIEW_WINDOW
 * @param object options
+* {
+* 	tool_context: object
+* 	caller: object (instance)
+* 	caller_options: object|null
+* 	windowFeatures: object|null
+* }
 * @return promise
 * 	Resolve: object tool_window
 */
@@ -797,8 +806,7 @@ const view_window = async function(options) {
 			caller_ddo.caller_dataframe = {
 				section_tipo	: caller.section_tipo,
 				section_id		: caller.section_id,
-				section_id_key	: caller.data.section_id_key,
-				// tipo_key		: caller.data.tipo_key
+				section_id_key	: caller.data.section_id_key
 			}
 		}
 
@@ -806,7 +814,6 @@ const view_window = async function(options) {
 		// raw_data will be compressed and de-compressed from target window
 		const raw_data	= lzstring.compressToEncodedURIComponent(
 			JSON.stringify({
-				// caller_id	: caller.id,
 				caller_ddo		: caller_ddo,
 				tool_config		: tool_config,
 				caller_options	: caller_options
@@ -890,7 +897,6 @@ const view_window = async function(options) {
 * GET_TOOL_LABEL
 * Return the label in the current language.
 * If the label is not defined, try with lang_default, not lang and received label_name if nothing is found
-*
 * @param string label_name like 'indexation_tool'
 * @param string rest
 * 	Accept an undefined (infinite) number of arguments in the function parameters

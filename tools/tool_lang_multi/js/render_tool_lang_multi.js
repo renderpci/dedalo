@@ -91,7 +91,6 @@ const get_content_data_edit = async function(self) {
 			top_container.appendChild(automatic_tranlation_node)
 		}//end if (translator_engine)
 
-
 	// components container
 		const components_container = ui.create_dom_element({
 			element_type	: 'div',
@@ -106,13 +105,6 @@ const get_content_data_edit = async function(self) {
 			const target_component_container = create_target_component(current_lang, self)
 			components_container.appendChild(target_component_container)
 		}
-
-	// buttons container
-		// const buttons_container = ui.create_dom_element({
-		// 	element_type	: 'div',
-		// 	class_name		: 'buttons_container',
-		// 	parent			: components_container
-		// })
 
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
@@ -154,27 +146,22 @@ export const create_target_component = (lang, self) => {
 		if (lang.value===self.source_lang) {
 
 			target_component_container.classList.add('source')
-			// self.main_element.render()
-			// .then(function(node){
-			// 	target_component_container.appendChild(node)
-			// 	node.classList.add('disabled_component')
-			// })
 			target_component_title.classList.add('bold')
 		}
 
 		// load component gracefully
-		const node = ui.load_item_with_spinner({
+		ui.load_item_with_spinner({
 			container			: target_component_container,
 			preserve_content	: true,
 			label				: lang.label,
 			callback			: async () => {
 
-				// component load
+				// component load (init and build component)
 					const component = await self.get_component(lang.value)
 					component.show_interface.tools = false
-				// render node
+					// render node
 					const node = await component.render({
-						render_mode : 'edit'//mode // 'edit'
+						render_mode : 'edit'
 					})
 
 				// translator_engine. Append translation button if exists
@@ -226,7 +213,6 @@ export const create_target_component = (lang, self) => {
 				return node
 			}
 		})//end ui.load_item_with_spinner
-
 
 
 	return target_component_container
