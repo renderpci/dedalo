@@ -101,44 +101,62 @@
 				$data[] = $item;
 
 			// subdatum
-				foreach ($value as $locator) {
 
-					$datum = $this->get_section_datum_from_locator($locator);
+				if(isset($properties->source->request_config)){
 
-					// context become calculated and merged with previous
-					$context = array_merge($context, $datum->context);
+					$subdatum = $this->get_subdatum($tipo, $value);
 
-					$ar_subdata	= $datum->data;
+					$ar_subcontext = $subdatum->context;
+					foreach ($ar_subcontext as $current_context) {
+						$context[] = $current_context;
+					}
+
+					$ar_subdata = $subdatum->data;
 					foreach ($ar_subdata as $sub_value) {
-						$sub_value->parent = $tipo;
 						$data[] = $sub_value;
 					}
-				}//end foreach ($value as $locator)
 
-			// update parents (only when parent is into the sqo sections list).
-			// To allow client JS to get calculated subdatum, it is necessary to change
-			// the parent of each ddo within the request config
-				$found = array_find($context, function($el){
-					return $el->tipo===$this->tipo;
-				});
-				if (is_object($found)) {
-					$found_request_config = array_find($found->request_config, function($el){
-						return $el->api_engine==='dedalo';
-					});
-					if (is_object($found_request_config)) {
+				}else{
 
-						$ar_section_tipo = array_map(function($el){
-							return $el->tipo;
-						}, $found_request_config->sqo->section_tipo);
+					foreach ($value as $locator) {
 
-						foreach ($found_request_config->show->ddo_map as $current_ddo) {
-							// change the ddo parent of the section to the component, only if the parent is the section_tipo
-							// is necessary don't change the ddo with deep dependence
-							if (in_array($current_ddo->parent, $ar_section_tipo)) {
-								$current_ddo->parent = $tipo;
+						$datum = $this->get_section_datum_from_locator($locator);
+
+						// context become calculated and merged with previous
+						$context = array_merge($context, $datum->context);
+
+						$ar_subdata	= $datum->data;
+						foreach ($ar_subdata as $sub_value) {
+							$sub_value->parent = $tipo;
+							$data[] = $sub_value;
+						}
+					}//end foreach ($value as $locator)
+
+					// update parents (only when parent is into the sqo sections list).
+					// To allow client JS to get calculated subdatum, it is necessary to change
+					// the parent of each ddo within the request config
+						$found = array_find($context, function($el){
+							return $el->tipo===$this->tipo;
+						});
+						if (is_object($found)) {
+							$found_request_config = array_find($found->request_config, function($el){
+								return $el->api_engine==='dedalo';
+							});
+							if (is_object($found_request_config)) {
+
+								$ar_section_tipo = array_map(function($el){
+									return $el->tipo;
+								}, $found_request_config->sqo->section_tipo);
+
+								foreach ($found_request_config->show->ddo_map as $current_ddo) {
+									// change the ddo parent of the section to the component, only if the parent is the section_tipo
+									// is necessary don't change the ddo with deep dependence
+									if (in_array($current_ddo->parent, $ar_section_tipo)) {
+										$current_ddo->parent = $tipo;
+									}
+								}
 							}
 						}
-					}
 				}
 
 			// des
