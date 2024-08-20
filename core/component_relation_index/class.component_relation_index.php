@@ -6,7 +6,6 @@ declare(strict_types=1);
 */
 class component_relation_index extends component_relation_common {
 
-	public $filter_section;
 
 	/**
 	* @var
@@ -17,7 +16,9 @@ class component_relation_index extends component_relation_common {
 	// test_equal_properties is used to verify duplicates when add locators
 	public $test_equal_properties			= ['section_tipo','section_id','type','from_component_tipo','component_tipo','tag_id'];
 
-
+	// default_target_section, when is not set in properties it will set as all related sections than call.
+	protected $default_target_section		= ['all'];
+	public $target_section;
 
 	/**
 	* GET_DATO
@@ -36,47 +37,20 @@ class component_relation_index extends component_relation_common {
 			}
 
 		// reference_locator
-			$reference_locator = new locator();
-				$reference_locator->set_type( $this->relation_type ); // set a dinamic assignation to get any relation type as dd151 or dd96
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
+			$filter_locator = $this->get_filter_locator();
 
 		// referenced locators. Get calculated inverse locators for all matrix tables
 			// $ar_inverse_locators = search_related::get_referenced_locators($reference_locator);
 			$ar_inverse_locators = component_relation_index::get_referended_locators_with_cache(
-				$reference_locator,
+				$filter_locator,
 				$this->relation_type . '_' . $this->section_tipo . '_' . $this->section_id // cache_key
 			);
 
 		// format result like own dato
-			$new_dato = [];
-			foreach ($ar_inverse_locators as $current_locator) {
-
-				$locator = new locator();
-					$locator->set_type($current_locator->type);
-					$locator->set_section_tipo($current_locator->from_section_tipo);
-					$locator->set_section_id($current_locator->from_section_id);
-					if(isset($current_locator->tag_component_tipo)){
-						$locator->set_component_tipo($current_locator->tag_component_tipo);
-					}
-					if(isset($current_locator->tag_id)){
-						$locator->set_tag_id($current_locator->tag_id);
-					}
-					if(isset($current_locator->section_top_id)){
-						$locator->set_section_top_id($current_locator->section_top_id);
-					}
-					if(isset($current_locator->section_top_id)){
-						$locator->set_section_top_tipo($current_locator->section_top_tipo);
-					}
-					if(isset($current_locator->from_component_tipo)){
-						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
-					}
-
-					$new_dato[] = $locator;
-			}
+			$new_data = component_relation_index::parse_data($ar_inverse_locators);
 
 		// fix resolved dato
-			parent::set_dato($new_dato);
+			parent::set_dato($new_data);
 
 		// Set as loaded. Already set on set parent::set_dato
 			// $this->bl_loaded_matrix_data = true;
@@ -105,26 +79,39 @@ class component_relation_index extends component_relation_common {
 		// pagination
 			$limit			= $custom_limit ?? $this->pagination->limit;
 			$offset			= $this->pagination->offset;
-			$filter_section	= $this->filter_section ?? ['all'];
 
-		// reference_locator
-			$reference_locator = new locator();
-				$reference_locator->set_type( $this->relation_type ); // dd96
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
+			$target_section	= $this->get_target_section();
+
+		// filter_locator
+			$filter_locator = $this->get_filter_locator();
 
 		// ar_inverse_locators locators. Get calculated inverse locators for all matrix tables
 		// referenced_locators from search_related
 			$ar_inverse_locators = search_related::get_referenced_locators(
-				$reference_locator,
+				[$filter_locator],
 				$limit,
 				$offset,
 				false,
-				$filter_section
+				$target_section
 			);
 
 		// format result like own dato
-			$new_dato_paginated = [];
+			$new_dato_paginated = component_relation_index::parse_data($ar_inverse_locators);
+
+		return $new_dato_paginated;
+	}//end get_dato_paginated
+
+
+
+	/**
+	* PARSE_DATA
+	* @param array $ar_inverse_locators
+	* @return array $parse_data
+	*/
+	public static function parse_data( array $ar_inverse_locators ) : array {
+
+		// format result like own dato
+			$parse_data = [];
 			foreach ($ar_inverse_locators as $current_locator) {
 
 				$locator = new locator();
@@ -140,18 +127,18 @@ class component_relation_index extends component_relation_common {
 					if(isset($current_locator->section_top_id)){
 						$locator->set_section_top_id($current_locator->section_top_id);
 					}
-					if(isset($current_locator->section_top_id)){
+					if(isset($current_locator->section_top_tipo)){
 						$locator->set_section_top_tipo($current_locator->section_top_tipo);
 					}
 					if(isset($current_locator->from_component_tipo)){
 						$locator->set_from_component_top_tipo($current_locator->from_component_tipo);
 					}
 
-					$new_dato_paginated[] = $locator;
+					$parse_data[] = $locator;
 			}
 
-		return $new_dato_paginated;
-	}//end get_dato_paginated
+		return $parse_data;
+	}//end parse_data
 
 
 
@@ -167,17 +154,17 @@ class component_relation_index extends component_relation_common {
 			return $this->pagination->total;
 		}
 
-		// reference_locator
-			$reference_locator = new locator();
-				$reference_locator->set_type( $this->relation_type ); // dd96
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
+		// filter_locator
+			$filter_locator = $this->get_filter_locator();
+
+		// target section
+			$target_section	= $this->get_target_section();
 
 		// create a sqo to count all the references
 			$sqo_count = new search_query_object();
-				$sqo_count->set_section_tipo(['all']);
+				$sqo_count->set_section_tipo( $target_section );
 				$sqo_count->set_mode('related');
-				$sqo_count->set_filter_by_locators([$reference_locator]);
+				$sqo_count->set_filter_by_locators([$filter_locator]);
 
 		// search to get
 			$search		= search::get_instance($sqo_count);
@@ -203,19 +190,22 @@ class component_relation_index extends component_relation_common {
 	*  as ['section_tipo']
 	* @return object $count_data_group_by
 	*/
-	public function count_data_group_by(array $group_by) : object {
+	public function count_data_group_by(array $group_by, array $filter_locators=null) : object {
 
 		// reference_locator
-			$reference_locator = new locator();
-				$reference_locator->set_type( $this->relation_type ); // dd96
-				$reference_locator->set_section_tipo($this->section_tipo);
-				$reference_locator->set_section_id($this->section_id);
+			$filter_by_locators = !empty($filter_locators)
+				? $filter_locators
+				: [$this->get_filter_locator()];
+
+		// target section
+			$target_section	= $this->get_target_section();
+
 
 		// create a sqo to count all the references
 			$sqo_count = new search_query_object();
-				$sqo_count->set_section_tipo(['all']);
+				$sqo_count->set_section_tipo($target_section);
 				$sqo_count->set_mode('related');
-				$sqo_count->set_filter_by_locators([$reference_locator]);
+				$sqo_count->set_filter_by_locators($filter_by_locators);
 				$sqo_count->set_group_by($group_by);
 
 		// search to get
@@ -756,7 +746,7 @@ class component_relation_index extends component_relation_common {
 			}
 
 		// referenced_locators from search_related
-			$referenced_locators = search_related::get_referenced_locators($locator);
+			$referenced_locators = search_related::get_referenced_locators([$locator]);
 
 		// cache
 			$referended_locators_cache[$cache_key] = $referenced_locators;
@@ -781,6 +771,44 @@ class component_relation_index extends component_relation_common {
 
 		return $ar_operators;
 	}//end search_operators_info
+
+
+	/**
+	* GET_TARGET_SECTION
+	* Return the target section in different situations.
+	* target section could be defined in the request_config -> sqo -> section_tipo
+	* dd_grid could inject the target section selected by users, in this case use $this->target_section
+	* and target section could be not defined, in this case use the default_target_section defined in the class ['all']
+	* @return array $target_section
+	*/
+	private function get_target_section() : array {
+
+		// target section
+			$target_section	= isset($this->target_section)
+				? $this->target_section
+				: (isset( $this->properties->source->request_config )
+					? $this->get_ar_target_section_tipo()
+					: $this->default_target_section);
+
+		return $target_section;
+	}//end get_target_section
+
+
+
+	/**
+	* GET_FILTER_LOCATOR
+	* @return locator $filter_locator
+	*/
+	private function get_filter_locator() : locator {
+
+		// filter_locator
+			$filter_locator = new locator();
+				$filter_locator->set_type( $this->relation_type ); // dd96
+				$filter_locator->set_section_tipo($this->section_tipo);
+				$filter_locator->set_section_id($this->section_id);
+
+		return $filter_locator;
+	}//end get_filter_locator
 
 
 
