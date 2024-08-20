@@ -151,7 +151,7 @@ class search_related extends search {
 	* Get the sections pointed by any type of locator to the caller (reference_locator)
 	* @see section::get_inverse_references
 	*
-	* @param object $reference_locator
+	* @param array $filter_locators
 	*	Basic locator with section_tipo and section_id properties
 	* @param int|null $limit = null
 	* @param int|null $offset = null
@@ -159,26 +159,26 @@ class search_related extends search {
 	*
 	* @return array $ar_inverse_locators
 	*/
-	public static function get_referenced_locators( object $reference_locator, ?int $limit=null, ?int $offset=null, bool $count=false, array $filter_section=['all'] ) : array {
+	public static function get_referenced_locators( array $filter_locators, ?int $limit=null, ?int $offset=null, bool $count=false, array $target_section=['all'] ) : array {
 		$start_time = start_time();
 
 		// cache
 			// static $referenced_locators_cache;
-			// $cache_key = implode('_', get_object_vars($reference_locator)) .'_'. $limit .'_'. $offset .'_'. $count;
+			// $cache_key = implode('_', get_object_vars($filter_locators)) .'_'. $limit .'_'. $offset .'_'. $count;
 			// if (isset($referenced_locators_cache[$cache_key])) {
 			// 	return $referenced_locators_cache[$cache_key];
 			// }
 
-		$ar_inverse_locators = [];
+
 
 		// new way done in relations field with standard sqo
 			$sqo = new search_query_object();
-				$sqo->set_section_tipo($filter_section);
+				$sqo->set_section_tipo($target_section);
 				$sqo->set_mode('related');
 				$sqo->set_full_count(false);
 				$sqo->set_limit($limit);
 				$sqo->set_offset($offset);
-				$sqo->set_filter_by_locators([$reference_locator]);
+				$sqo->set_filter_by_locators($filter_locators);
 
 			$search		= search::get_instance($sqo);
 			$rows_data	= $search->search();
@@ -194,19 +194,22 @@ class search_related extends search {
 				$time_ms		= exec_time_unit($start_time, 'ms');
 				debug_log(__METHOD__
 					. " Calculated referenced_locators step 1 (total: $total_records)" . PHP_EOL
-					. ' reference_locator: ' . to_string($reference_locator) . PHP_EOL
+					. ' reference_locator: ' . to_string($filter_locators) . PHP_EOL
 					. ' time: ' . $time_ms .' ms'
 					, logger::DEBUG
 				);
 			}
 
+		$ar_inverse_locators = [];
+		foreach($filter_locators as $current_filter_locator){
+
 			// Compare all properties of received locator in each relations locator
-			$ar_properties = array();
-			foreach ($reference_locator as $key => $value) {
+			$ar_properties = [];
+			foreach ($current_filter_locator as $key => $value) {
 				$ar_properties[] = $key;
 			}
 
-		// filter results
+			// filter results
 			foreach ($result as $row) {
 
 				$current_section_id		= $row->section_id;
@@ -214,7 +217,7 @@ class search_related extends search {
 				$current_relations		= $row->datos->relations;
 
 				foreach ($current_relations as $current_locator) {
-					if ( true===locator::compare_locators($reference_locator, $current_locator, $ar_properties) ) {
+					if ( true===locator::compare_locators($current_filter_locator, $current_locator, $ar_properties) ) {
 						// Add some temporal info to current locator for build component later
 						$current_locator->from_section_tipo	= $current_section_tipo;
 						$current_locator->from_section_id	= $current_section_id;
@@ -223,11 +226,12 @@ class search_related extends search {
 					}
 				}
 			}
+		}
 
 		// debug
 			debug_log(__METHOD__
 				. ' Calculated referenced_locators step 2 (total: ' .count($ar_inverse_locators). ')' . PHP_EOL
-				. ' reference_locator: ' . to_string($reference_locator) . PHP_EOL
+				. ' filter_locators: ' . to_string($filter_locators) . PHP_EOL
 				. ' time: ' . exec_time_unit($start_time, 'ms').' ms'
 				// . ' - memory: ' .dd_memory_usage()
 				, logger::DEBUG
