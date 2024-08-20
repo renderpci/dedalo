@@ -165,6 +165,87 @@ export const ts_object = new function() {
 
 
 	/**
+	* GET_CHILDREN_RECURSIVE
+	* Get all children section of the caller term
+	* Data is built from parent node info (section_tipo and section_id)
+	* @param object options
+	* @return promise
+	*/
+	this.get_children_recursive = function( options ) {
+
+		// short vars
+			const section_tipo	= options.section_tipo
+			const section_id	= options.section_id
+
+		// check vars
+			if (!section_tipo || typeof section_tipo==="undefined") {
+				console.log("[get_children_recursive] Error. section_tipo is not defined");
+				return Promise.resolve(false);
+			}
+			if (!section_id || typeof section_id==="undefined") {
+				console.log("[get_children_recursive] Error. section_id is not defined");
+				return Promise.resolve(false);
+			}
+
+
+		return new Promise(function(resolve){
+
+			// API call
+			const rqo = {
+				action			: 'read',
+				source			: {
+					typo			: 'source',
+					type			: 'section',
+					action			: 'search',
+					model			: 'section',
+					tipo			: section_tipo,
+					section_tipo	: section_tipo,
+					section_id		: null,
+					mode			: 'list',
+					lang			: page_globals.dedalo_data_nolan,
+				},
+				show 			: {
+					ddo_map			: []
+				},
+				sqo: {
+					section_tipo	: [section_tipo],
+					limit			: 0,
+					offset			: 0,
+					filter_by_locators: [{
+						section_tipo	: section_tipo,
+						section_id		: section_id
+					}],
+					children_recursive: true
+				}
+			}
+			data_manager.request({
+				body : rqo
+			})
+			.then(async function(response) {
+
+				if (response && response.result) {
+					const section_data = response.result.data.find(el => el.tipo === section_tipo)
+					const children_recursive = section_data.value.map(el =>{
+						return {
+							section_tipo	: el.section_tipo,
+							section_id		: el.section_id
+						}
+					})
+
+					resolve(children_recursive)
+
+				}else{
+					// error case
+					console.warn("[ts_object.get_children] Error, response is null");
+					resolve(false)
+				}
+			})
+		})
+	}//end get_children_recursive
+
+
+
+	/**
 	* UPDATE_ARROW_STATE
 	* Updates arrow state when updated wrap
 	* @param HTMLElement link_children_element
@@ -1466,42 +1547,51 @@ export const ts_object = new function() {
 	* 	Load the fragment list and render the grid
 	* @param object options
 	* @return promise
-	* 	resolve object dd_grid
+	* 	resolve void
 	*/
 	this.show_indexations = async function(options) {
 
 		// options
-			const section_tipo		= options.section_tipo
-			const section_id		= options.section_id
-			const component_tipo	= options.component_tipo
-			const container_id		= options.container_id
-			const value				= options.value || null
-			const pagination		= options.pagination || {}
-			const totals_group		= options.totals_group || [{key: ['all']}]
+			const uid					= options.uid
+			const button_obj			= options.button_obj
+			const section_tipo			= options.section_tipo
+			const section_id			= options.section_id
+			const component_tipo		= options.component_tipo
+			const target_div			= options.target_div
+			const value					= options.value || null
+			const pagination			= options.pagination || {}
+			const totals_group			= options.totals_group || [{key: 'all'}]
+			const filter_by_locators	= options.filter_by_locators || []
 
 		// pagination vars
 			const total = options.total || null
 
 		// get the filter section
-			const filter_section = totals_group.map(el => el.key)
+			const target_section = totals_group.map(el => el.key)
 
-		// target_div
-			const target_div = document.getElementById(container_id);
-			if (!target_div) {
-				alert('show_indexations. Target div do not exist for section_id: '+section_id+' !')
-				return false
+		// empty the target_div container
+			while (target_div.firstChild) {
+				target_div.removeChild(target_div.firstChild);
 			}
-			// already loaded. toggle visible
-			if (target_div.firstChild) {
 
-				if (!target_div.classList.contains('hide')) {
-					// hide only
-					target_div.classList.add('hide')
-					return
-				}else{
+		// close the target_div when is open and the caller component is the same
+			if (!target_div.classList.contains('hide') && target_div.uid === uid) {
+				// hide only
+				target_div.classList.add('hide')
+				return
+			}
+
+		// already loaded. render the dd_grid again and toggle to visible
+			if( button_obj.dd_grid){
+				const dd_grid = button_obj.dd_grid
+				dd_grid.render()
+				.then(function(node){
+					target_div.appendChild(node)
 					// force reload again
 					target_div.classList.remove('hide')
-				}
+					target_div.uid = uid
+				})
+				return
 			}
 
 		// rqo. create
@@ -1514,18 +1604,13 @@ export const ts_object = new function() {
 					value			: value // ["oh1",] array of section_tipo \ used to filter the locator with specific section_tipo (like 'oh1')
 				},
 				sqo: {
-					mode 			: 'related',
-					section_tipo	: filter_section,
-					total			: total,
-					limit			: 200,
-					offset			: 0,
-					filter_by_locators: [{
-						section_tipo	: section_tipo,
-						section_id		: section_id,
-						tipo			: component_tipo,
-					}]
+					mode				: 'related',
+					section_tipo		: target_section,
+					total				: total,
+					limit				: 200,
+					offset				: 0,
+					filter_by_locators	: filter_by_locators
 				}
-
 			}
 
 		// dd_grid
@@ -1538,7 +1623,7 @@ export const ts_object = new function() {
 				view				: 'indexation',
 				lang				: page_globals.dedalo_data_lang,
 				rqo					: rqo,
-				id_variant			: container_id,
+				id_variant			: uid,
 				totals_group 		: totals_group,
 				paginator_options	: {
 					view 				: 'micro',
@@ -1548,13 +1633,14 @@ export const ts_object = new function() {
 				}
 			})
 			await dd_grid.build(true)
+			// assign the dd_grid to be reused by same caller.
+			button_obj.dd_grid = dd_grid
 			dd_grid.render()
 			.then(function(node){
 				target_div.appendChild(node)
+				target_div.classList.remove('hide')
+				target_div.uid = uid
 			})
-
-
-		return dd_grid
 	}//end show_indexations
 
 

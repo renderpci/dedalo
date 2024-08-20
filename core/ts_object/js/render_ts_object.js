@@ -114,42 +114,95 @@ export const render_ts_line = function(options) {
 			}
 
 			// INDEXATIONS AND STRUCTURATIONS
-			case (child_data.ar_elements[j].model==='component_relation_index'): {
+			case (child_data.ar_elements[j].model==='component_relation_index'
+				&& !child_data.ar_elements[j].show_data): {
 
 				// if (   child_data.ar_elements[j].tipo==='hierarchy40' && child_data.permissions_indexation>=1
 				// 	|| child_data.ar_elements[j].tipo==='ww34' && child_data.permissions_indexation>=1
 				// 	|| child_data.ar_elements[j].tipo==='hierarchy91' && child_data.permissions_structuration>=1
 				// 	) {
+				const total = parseInt( child_data.ar_elements[j].count_result.total )
 
-					// element_show_indexations. Build button
-					const element_show_indexations	= ui.create_dom_element({
+				if(total > 0){
+					// button_show_indexations. Build button
+					const button_show_indexations	= ui.create_dom_element({
 						element_type	: 'div',
-						class_name		: class_for_all + ' show_indexations',
+						class_name		: class_for_all + ' button_show_indexations',
 						data_set		: children_dataset,
 						text_node		: child_data.ar_elements[j].value, // generates a span with the value like '<span>U:37</span>'
 						parent			: fragment
 					})
-					element_show_indexations.addEventListener('mousedown', (e)=>{
+					button_show_indexations.addEventListener('mousedown', (e)=>{
 						e.stopPropagation()
 
-						element_show_indexations.classList.add('loading')
+						button_show_indexations.classList.add('loading')
 
 						self.show_indexations({
-							button_obj		: element_show_indexations,
-							event			: e,
-							section_tipo	: child_data.section_tipo,
-							section_id		: child_data.section_id,
-							component_tipo	: child_data.ar_elements[j].tipo,
-							container_id	: indexations_container_id,
-							value			: null,
-							total			: parseInt( child_data.ar_elements[j].count_result.total ),
-							totals_group	: child_data.ar_elements[j].count_result.totals_group
+							uid 				: child_data.ar_elements[j].tipo,
+							button_obj			: button_show_indexations,
+							event				: e,
+							section_tipo		: child_data.section_tipo,
+							section_id			: child_data.section_id,
+							component_tipo		: child_data.ar_elements[j].tipo,
+							target_div			: document.getElementById(indexations_container_id),
+							value				: null,
+							total				: parseInt( child_data.ar_elements[j].count_result.total ),
+							totals_group		: child_data.ar_elements[j].count_result.totals_group,
+							filter_by_locators	: [{
+								section_tipo	: child_data.section_tipo,
+								section_id		: child_data.section_id,
+								tipo			: child_data.ar_elements[j].tipo
+							}]
 						})
 						.then(function(){
-							element_show_indexations.classList.remove('loading')
+							button_show_indexations.classList.remove('loading')
 						})
 					})
-				// }
+				}
+				break;
+			}
+			case (child_data.ar_elements[j].model==='component_relation_index'
+				&& child_data.ar_elements[j].show_data === 'children'): {
+				// if(child_data.ar_elements[j].data_type === 'related') {
+
+					// recursive indexations
+						const button_recusive_indexations = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: class_for_all + ' button_show_indexations',
+							data_set		: children_dataset,
+							text_node		: `⇣${child_data.ar_elements[j].value}`, // generates a span with the value like '<span>U:37</span>', // generates a span with the value like '<span>U:37</span>'
+							parent			: fragment
+						})
+						button_recusive_indexations.addEventListener('mousedown', (e)=>{
+							e.stopPropagation()
+
+							button_recusive_indexations.classList.add('loading')
+
+							self.get_children_recursive({
+								section_tipo	: child_data.section_tipo,
+								section_id		: child_data.section_id
+							})
+							.then(function(children_recursive){
+
+								self.show_indexations({
+									uid 				: `${child_data.ar_elements[j].tipo}_recursive`,
+									button_obj			: button_recusive_indexations,
+									event				: e,
+									section_tipo		: child_data.section_tipo,
+									section_id			: child_data.section_id,
+									component_tipo		: child_data.ar_elements[j].tipo,
+									target_div			: document.getElementById(indexations_container_id),
+									value				: null,
+									total				: null,
+									totals_group		: child_data.ar_elements[j].count_result.totals_group,
+									filter_by_locators	: children_recursive
+								})
+								.then(function(){
+									button_recusive_indexations.classList.remove('loading')
+								})
+							})
+						})
+
 				break;
 			}
 
@@ -371,7 +424,7 @@ export const render_children_list = function(options) {
 			ui.create_dom_element({
 				element_type	: 'div',
 				id				: indexations_container_id,
-				class_name		: 'indexations_container',
+				class_name		: 'indexations_container hide',
 				parent			: wrap_ts_object
 			})
 

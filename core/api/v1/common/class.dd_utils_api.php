@@ -215,9 +215,18 @@ final class dd_utils_api {
 	*/
 	public static function convert_search_object_to_sql_query(object $rqo) : object {
 
+		set_time_limit ( 259200 );  // 3 days
 		// session_write_close();
 
-		set_time_limit ( 259200 );  // 3 days
+		// response
+			$response = new stdClass();
+				$response->result	= false;
+				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+
+		// only super admin users can do it
+			if( security::is_global_admin(logged_user_id()) !== true ){
+				return $response;
+			}
 
 		// options
 			$options	= $rqo->options ?? null;
@@ -225,10 +234,6 @@ final class dd_utils_api {
 				? json_handler::decode($options)
 				: $options;
 
-		// response
-			$response = new stdClass();
-				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
 
 		// search if not empty
 			if (!empty($sqo)) {

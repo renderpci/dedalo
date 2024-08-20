@@ -396,9 +396,46 @@ class ts_object {
 								# icon Not need more info. Value is property 'type'
 								$element_obj->value = $render_vars->icon;
 
+								$filter_locators = null;
 								if ($model_name==='component_relation_index') {
+
+									if (isset($current_object->show_data)) {
+
+										$filter_by_locator = new locator();
+											$filter_by_locator->set_section_tipo($this->section_tipo);
+											$filter_by_locator->set_section_id($this->section_id);
+
+
+										$sqo = new search_query_object();
+											$sqo->set_section_tipo([$this->section_tipo]);
+											$sqo->set_limit(0);
+											$sqo->set_offset(0);
+											$sqo->set_filter_by_locators([$filter_by_locator]);
+											$sqo->set_children_recursive(true);
+
+										$search = search::get_instance(
+											$sqo, // object sqo
+										);
+										$response = $search->search();
+										$ar_records = $response->ar_records;
+
+										$relation_type = $component->get_relation_type();
+
+										$filter_locators = [];
+										foreach ($ar_records as $current_row) {
+
+											// filter_locator
+											$filter_locator = new locator();
+												$filter_locator->set_type( $relation_type ); // as dd96
+												$filter_locator->set_section_tipo($current_row->section_tipo);
+												$filter_locator->set_section_id($current_row->section_id);
+
+											$filter_locators[] = $filter_locator;
+										}
+									}
+
 									// get the total sections that are calling and the total of every specific section
-									$count_data_group_by = $component->count_data_group_by(['section_tipo']);
+									$count_data_group_by = $component->count_data_group_by(['section_tipo'], $filter_locators);
 
 									if($count_data_group_by->total === 0){
 										continue 3;
@@ -451,6 +488,10 @@ class ts_object {
 						if (!isset($element_obj->model)) {
 							$element_obj->model = $model_name;
 						}
+					// set data_type. set the data_type when is set.
+						if (isset($current_object->show_data)) {
+							$element_obj->show_data = $current_object->show_data;
+						}
 				}//end foreach ($ar_element_tipo as $element_tipo)
 
 			// Add
@@ -464,7 +505,6 @@ class ts_object {
 				// $child_data->total_time = $total;
 				// error_log('********************* get_child_data total:'. exec_time_unit($start_time,'ms'));
 			}
-
 
 		return $child_data;
 	}//end get_child_data
