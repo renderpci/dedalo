@@ -2767,13 +2767,13 @@ class section extends common {
 		}
 
 		// Create a minimal locator based on current section
-			$reference_locator = new locator();
-				$reference_locator->set_section_tipo($this->tipo);
-				$reference_locator->set_section_id($this->section_id);
+			$filter_locator = new locator();
+				$filter_locator->set_section_tipo($this->tipo);
+				$filter_locator->set_section_id($this->section_id);
 
 		// Get calculated inverse locators for all matrix tables
 			$ar_inverse_locators = search_related::get_referenced_locators(
-				$reference_locator
+				[$filter_locator]
 			);
 
 

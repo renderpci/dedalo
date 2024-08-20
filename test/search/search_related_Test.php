@@ -100,13 +100,13 @@ final class search_related_test extends TestCase {
 	*/
 	public function test_get_referenced_locators() {
 
-		$reference_locator = (object)[
+		$filter_locator = (object)[
 			'section_tipo'	=> 'test3',
 			'section_id'	=> '1'
 		];
 
 		$result = search_related::get_referenced_locators(
-			$reference_locator
+			[$filter_locator]
 		);
 
 		$this->assertTrue(
