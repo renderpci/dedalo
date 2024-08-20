@@ -848,9 +848,6 @@ const view_window = async function(options) {
 				return parsed_string
 			  })()
 
-	// main_window
-		const main_window = window
-
 	// tool_window
 		const window_name	= name +'_'+ (caller.id_base || '')
 		const tool_window	= open_window({
