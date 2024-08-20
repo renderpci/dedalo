@@ -1335,7 +1335,11 @@ final class dd_utils_api {
 				}
 
 		// response
+			// result: list of all Dédalo main files (JS/CSS) without the libraries
 			$response->result = $files;
+			// dedalo_version: used to set the cache version in worker
+			$response->dedalo_version = DEDALO_VERSION;
+			// msg: Success message for browser
 			$response->msg = 'OK. Request done successfully';
 
 
