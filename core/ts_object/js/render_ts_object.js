@@ -158,7 +158,51 @@ export const render_ts_line = function(options) {
 							button_show_indexations.classList.remove('loading')
 						})
 					})
-				// }
+				}
+				break;
+			}
+			case (child_data.ar_elements[j].model==='component_relation_index'
+				&& child_data.ar_elements[j].show_data === 'children'): {
+				// if(child_data.ar_elements[j].data_type === 'related') {
+
+					// recursive indexations
+						const button_recusive_indexations = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: class_for_all + ' button_show_indexations',
+							data_set		: children_dataset,
+							text_node		: `⇣${child_data.ar_elements[j].value}`, // generates a span with the value like '<span>U:37</span>', // generates a span with the value like '<span>U:37</span>'
+							parent			: fragment
+						})
+						button_recusive_indexations.addEventListener('mousedown', (e)=>{
+							e.stopPropagation()
+
+							button_recusive_indexations.classList.add('loading')
+
+							self.get_children_recursive({
+								section_tipo	: child_data.section_tipo,
+								section_id		: child_data.section_id
+							})
+							.then(function(children_recursive){
+
+								self.show_indexations({
+									uid 				: `${child_data.ar_elements[j].tipo}_recursive`,
+									button_obj			: button_recusive_indexations,
+									event				: e,
+									section_tipo		: child_data.section_tipo,
+									section_id			: child_data.section_id,
+									component_tipo		: child_data.ar_elements[j].tipo,
+									target_div			: document.getElementById(indexations_container_id),
+									value				: null,
+									total				: null,
+									totals_group		: child_data.ar_elements[j].count_result.totals_group,
+									filter_by_locators	: children_recursive
+								})
+								.then(function(){
+									button_recusive_indexations.classList.remove('loading')
+								})
+							})
+						})
+
 				break;
 			}
 
