@@ -637,6 +637,10 @@ export const ui = {
 					return false
 				}
 
+			// component active status update
+			// Its important to fix the value here because prevents duplicate events like component_text_area focus
+				component.active = true
+
 			// deactivate current active if exists
 				if (page_globals.component_active &&
 					page_globals.component_active.id!==component.id
@@ -708,8 +712,7 @@ export const ui = {
 					}
 				}
 
-			// component active status
-				component.active = true
+
 
 			// fix component as active
 				page_globals.component_active = component
