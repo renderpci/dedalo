@@ -262,12 +262,6 @@ const get_content_data = function(self) {
 			content_data.appendChild(project_block)
 		}
 
-	// indexation_list container
-		// if (self.caller.context.indexation_list) {
-			const indexation_list = render_indexation_list(self)
-			content_data.appendChild(indexation_list)
-		// }
-
 	// relation_list container
 		if (self.caller.context.config && self.caller.context.config.relation_list_tipo) {
 			const relation_list = render_relation_list(self)
@@ -1031,56 +1025,6 @@ export const update_project_container_body = function(self) {
 
 	return true
 }//end update_project_container_body
-
-
-
-/**
-* RENDER_INDEXATION_LIST
-* @return HTMLElement indexation_list_container
-*/
-const render_indexation_list = function() {
-
-	// wrapper
-		const indexation_list_container = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'indexation_list_container'
-		})
-
-	// indexation_list_head
-		const indexation_list_head = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'indexation_list_head icon_arrow',
-			inner_html		: get_label.indexings || 'Indexations',
-			parent			: indexation_list_container
-		})
-
-	// indexation_list_body
-		const indexation_list_body = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'indexation_list_body hide',
-			inner_html		: 'Working here..',
-			parent			: indexation_list_container
-		})
-
-	// track collapse toggle state of content
-		ui.collapse_toggle_track({
-			toggler				: indexation_list_head,
-			container			: indexation_list_body,
-			collapsed_id		: 'inspector_indexation_list_block',
-			collapse_callback	: collapse,
-			expose_callback		: expose,
-			default_state		: 'closed'
-		})
-		function collapse() {
-			indexation_list_head.classList.remove('up')
-		}
-		function expose() {
-			indexation_list_head.classList.add('up')
-		}
-
-
-	return indexation_list_container
-}//end render_indexation_list
 
 
 
