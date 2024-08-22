@@ -170,10 +170,10 @@ login.prototype.build = async function(autoload=false) {
 export const quit = async function(options) {
 
 	// set page style as loading
-		const main = document.getElementById('main')
-		if (main) {
-			main.classList.add('loading')
-		}
+		document.body.classList.add('loading')
+
+	// is_developer
+		const is_developer = page_globals.is_developer ?? false;
 
 	// data_manager API call
 		const api_response = await data_manager.request({
@@ -219,8 +219,15 @@ export const quit = async function(options) {
 
 			}else{
 
-				// redirect to Dédalo base URL to force access to default user section
-				window.location.href = DEDALO_ROOT_WEB
+				setTimeout(()=>{
+					if (is_developer) {
+						// reload window to show the login form without loosing the current URL
+						window.location.replace(window.location.href);
+					}else{
+						// redirect to Dédalo base URL to force access to default user section
+						window.location.href = DEDALO_ROOT_WEB
+					}
+				}, 1)
 			}
 
 		}else{
