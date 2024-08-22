@@ -324,24 +324,26 @@ login.prototype.action_dispatch = async function(api_response) {
 					// It's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
 					if (api_response.result_options?.redirect) {
 
-						setTimeout(function(){
+						setTimeout(() => {
 							window.location.replace( api_response.result_options.redirect )
 						}, 1)
-
-					}else{
-
-						// has_tipo in url
-							const urlParams	= new URLSearchParams(window.location.search);
-							const has_tipo	= urlParams.has('tipo')
-
-						if (api_response.default_section && !has_tipo) {
-							// user has defined default_section case in database
-							window.location.replace( DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section );
-						}else{
-							// non defined user default_section case
-							window.location.reload(false);
-						}
+						return
 					}
+
+					// has_tipo in url
+						const urlParams	= new URLSearchParams(window.location.search);
+						const has_tipo	= urlParams.has('tipo')
+
+					if (api_response.default_section && !has_tipo) {
+						// user has defined default_section case in database
+						window.location.replace(
+							DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section
+						);
+					}else{
+						// non defined user default_section case
+						window.location.reload(false);
+					}
+
 				}//end load_finish
 
 			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (updated by messages info)
@@ -380,12 +382,32 @@ login.prototype.action_dispatch = async function(api_response) {
 							load_finish()
 						}, 40);
 					}
+			// on_message. Handle worker message events
+				const on_message = (event) => {
+					switch (event.data.status) {
+
+						case 'ready':
+							// set CSS styles and animations to start loading
+							ready_handler()
+							break;
+
+						case 'loading':
+							// send message data to files_loader function
+							loading_handler(event.data)
+							break;
+
+						case 'finish':
+							// The update_files if finish
+							// Then, we can consinue the login normmally
+							// reload or redirect the page
+							finish_handler()
+							break;
+					}
+				}
 
 			// service worker registry (uses service worker as cache proxy)
 				run_service_worker({
-					ready_handler	: ready_handler,
-					loading_handler : loading_handler,
-					finish_handler	: finish_handler
+					on_message	: on_message
 				})
 				.then(function(response){
 					// on service worker registration error (not https support for example)
@@ -400,9 +422,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 						// launch worker cache (uses regular browser memory cache)
 							run_worker_cache({
-								ready_handler	: ready_handler,
-								loading_handler : loading_handler,
-								finish_handler	: finish_handler
+								on_message	: on_message
 							})
 					}
 				})
@@ -421,9 +441,7 @@ login.prototype.action_dispatch = async function(api_response) {
 * and the login sequence (circle animation, etc.)
 * @param objecr options
 * {
-* 	ready_handler : function ready_handler
-*	loading_handler : function loading_handler
-*	finish_handler : function finish_handler
+* 	on_message : function on_message
 * }
 * @return bool
 * 	True if registration succed, false if fails
@@ -432,9 +450,7 @@ const run_service_worker = async (options) => {
 
 	// options unpack
 	const {
-		ready_handler,
-		loading_handler,
-		finish_handler
+		on_message
 	} = options
 
 	if ('serviceWorker' in navigator) {
@@ -447,12 +463,17 @@ const run_service_worker = async (options) => {
 			);
 
 			// debug info about registration status
-			if (registration.installing) {
-				console.log('Service worker installing');
-			} else if (registration.waiting) {
-				console.log('Service worker installed');
-			} else if (registration.active) {
-				console.log('Service worker active');
+			switch (registration.installing) {
+				case true:
+					console.log('Service worker installing');
+					break;
+				case false:
+					if (registration.waiting) {
+						console.log('Service worker installed');
+					} else if (registration.active) {
+						console.log('Service worker active');
+					}
+					break;
 			}
 
 			// serviceWorker is ready. Post message 'update_files' to
@@ -465,28 +486,7 @@ const run_service_worker = async (options) => {
 			});
 
 			// message event listener
-			navigator.serviceWorker.addEventListener('message', (event) => {
-				// console.log(`The service worker sent me a message:`, event.data);
-
-				// ready
-				if (event.data.status==='ready') {
-					// set CSS styles and animations to start loading
-					ready_handler()
-				}
-
-				// loading
-				if (event.data.status==='loading') {
-					// send message data to files_loader function
-					loading_handler(event.data)
-				}
-
-				// loaded. If update_files if finish, the serviceWorker post a message 'loaded'.
-				// Then, we can finish the login normmally
-				if (event.data.status==='finish') {
-					// reload or redirect the page
-					finish_handler()
-				}
-			});
+			navigator.serviceWorker.addEventListener('message', on_message);
 
 		} catch (error) {
 			console.error(`Registration failed with ${error}`);
@@ -502,16 +502,14 @@ const run_service_worker = async (options) => {
 
 
 /**
-* run_WORKER_CACHE
+* RUN_WORKER_CACHE
 * Run worker cache and updates files_loader
 * On finish, exec the callback ('load_finish' function)
 * Worker cache is used as browser cache proxy, instead the
 * default memory cache. This allow improved control about the cached files
 * @param object options
 * {
-* 	ready_handler : function ready_handler
-*	loading_handler : function loading_handler
-*	finish_handler : function finish_handler
+* 	on_message : function on_message
 * }
 * @return void
 */
@@ -519,9 +517,7 @@ const run_worker_cache = (options) => {
 
 	// options unpack
 	const {
-		ready_handler,
-		loading_handler,
-		finish_handler
+		on_message
 	} = options
 
 	// crate a new worker
@@ -536,23 +532,8 @@ const run_worker_cache = (options) => {
 			? DEDALO_API_URL
 			: '../../api/v1/json/' // DEDALO_API_URL
 	});
-	current_worker.onmessage = function(e) {
 
-		if (e.data.status==='ready') {
-			// set CSS styles and animations to start loading
-			ready_handler()
-		}
-
-		if (e.data.status==='loading') {
-			// send message data to files_loader function
-			loading_handler(e.data)
-		}
-
-		if (e.data.status==='finish') {
-			// reload or redirect the page
-			finish_handler()
-		}
-	}
+	current_worker.addEventListener('message', on_message)
 }//end run_worker_cache
 
 

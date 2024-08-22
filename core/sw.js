@@ -23,9 +23,8 @@
 * DATA_MANGER REQUEST CUSTOM
 * Avoid to use data_manager module to allow happy Firefox users
 */
-	const data_manager = {}
-	data_manager.request = async function(options) {
-		// console.log("// request options:",options);
+const data_manager = {
+	request : async function(options) {
 
 		// options
 			this.url			= options.url
@@ -103,7 +102,8 @@
 
 
 		return api_response
-	}//end request
+	}
+}//end data_manager
 
 
 
