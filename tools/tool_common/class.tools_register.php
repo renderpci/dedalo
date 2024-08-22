@@ -965,6 +965,12 @@ class tools_register {
 	*/
 	public static function get_all_config_tool() : array {
 
+		// cache
+			static $cache_all_config_tool;
+			if( isset($cache_all_config_tool) ){
+				return $cache_all_config_tool;
+			}
+
 		// short vars
 			$section_tools_config_tipo	= self::$section_tools_config_tipo; // 'dd996'
 			$name_tipo					= self::$tipo_tool_name; // 'dd1326';
@@ -1026,6 +1032,9 @@ class tools_register {
 
 				return $value;
 			}, $ar_records);
+
+		// cache. save the result into the cache
+			$cache_all_config_tool = $ar_config;
 
 
 		return $ar_config;
