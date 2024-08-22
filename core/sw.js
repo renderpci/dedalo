@@ -337,9 +337,16 @@ self.addEventListener('message', async (event) => {
 */
 self.addEventListener('fetch', (event) => {
 
-	event.respondWith(
-		cache_first(event.request)
-	);
+	// Manage only javascript files excluding images, css, etc.
+	// that will be handled by the browser normally
+	if (	event.request.url.endsWith('.js')
+		&& !event.request.url.endsWith('/worker_data.js')
+		&& !event.request.url.endsWith('/sw.js')
+		) {
+		event.respondWith(
+			cache_first(event.request)
+		);
+	}
 });
 
 
