@@ -276,7 +276,9 @@ render_menu.prototype.edit = async function() {
 
 /**
 * RENDER_DEBUG_INFO_BAR
+* Must to be rendered only for developers (SHOW_DEVELOPER===true || SHOW_DEBUG===true)
 * @param object self
+* 	menu instance
 * @return HTMLElement debug_info_bar
 */
 const render_debug_info_bar = (self) => {
@@ -337,6 +339,7 @@ const render_debug_info_bar = (self) => {
 			text_content	: 'memory: ' + php_memory,
 			parent			: debug_info_bar
 		})
+
 	// php_sapi_name
 		ui.create_dom_element({
 			element_type	: 'div',
@@ -384,6 +387,7 @@ const render_debug_info_bar = (self) => {
 			text_content	: ip_server,
 			parent			: debug_info_bar
 		})
+
 
 	return debug_info_bar
 }//end render_debug_info_bar
