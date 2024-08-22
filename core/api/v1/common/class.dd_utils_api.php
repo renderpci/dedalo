@@ -1267,10 +1267,10 @@ final class dd_utils_api {
 
 			// CORE
 				// css
-				$files[] = (object)[
-					'type'	=> 'css',
-					'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
-				];
+				// $files[] = (object)[
+				// 	'type'	=> 'css',
+				// 	'url'	=>  DEDALO_CORE_URL . '/page/css/main.css'
+				// ];
 				// js
 				$core_js_files	= get_dir_files(DEDALO_CORE_PATH, ['js'], function($el) {
 					// remove self base directory from file path
@@ -1282,7 +1282,9 @@ final class dd_utils_api {
 						 stripos($file, '/lib/')!==false || // ignore libraries
 						 strpos($file, '/test/')!==false || // ignore test
 						 strpos($file, '/plug-ins/')!==false || // ignore test
-						 strpos($file, '/fonts/')!==false // ignore fonts
+						 strpos($file, '/fonts/')!==false || // ignore fonts
+						 strpos($file, 'worker_cache.js')!==false ||
+						 strpos($file, '/sw.js')!==false // ignore service worker
 						) {
 						return null; // item does not will be added to the result
 					}
