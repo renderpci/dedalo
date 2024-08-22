@@ -84,8 +84,6 @@ const get_content_data = function(self) {
 			class_name		: 'top hide',
 			parent			: fragment
 		})
-		// const files_loader = render_files_loader()
-		// top.appendChild(files_loader)
 
 	// select_lang
 		if (self.add_select_lang) {
@@ -537,7 +535,9 @@ export const render_files_loader = function() {
 			}
 
 			// animate
-			animate_circle(loaded)
+			requestAnimationFrame(()=>{
+				animate_circle(loaded)
+			})
 		}
 
 	// bar_circle animation
@@ -546,7 +546,7 @@ export const render_files_loader = function() {
 		const cst			= Math.PI*(radio*2);
 		function animate_circle(value) {
 
-			if (value>0 && value<2) {
+			if (value>0 && bar_circle.classList.contains('hide')) {
 				bar_circle.classList.remove('hide')
 			}
 
@@ -570,6 +570,7 @@ export const render_files_loader = function() {
 			inner_html		: get_label.loading_dedalo_files || 'Loading Dédalo files',
 			parent			: fragment
 		})
+
 
 	return fragment
 }//end render_files_loader

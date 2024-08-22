@@ -187,6 +187,31 @@ export const quit = async function(options) {
 	// manage result
 		if (api_response.result===true) {
 
+			// unregister serviceWorker
+			// If serviceWorker is available and registerd, force unregister
+			// to allow update sw.js file and clean the cache
+			if ('serviceWorker' in navigator) {
+				try {
+
+					// registrate serviceWorker
+					const registration = await navigator.serviceWorker.register(
+						DEDALO_CORE_URL + '/sw.js',
+						{ scope: DEDALO_CORE_URL + '/' }
+					);
+
+					registration.unregister().then(async (boolean) => {
+						// if boolean = true, unregister is successful
+						console.log('Unregistered serviceWorker :', boolean );
+					});
+
+					// delete dedalo_files caches
+					caches.delete('dedalo_files');
+
+				} catch (error) {
+					console.error(`Registration failed with ${error}`);
+				}
+			}
+
 			// SAML redirection check
 			if (typeof api_response.saml_redirect!=='undefined' && api_response.saml_redirect.length>2) {
 
@@ -241,6 +266,10 @@ login.prototype.action_dispatch = async function(api_response) {
 	// default behavior
 		if (api_response.result===true) {
 
+			// short vars
+			const user_id				= api_response.result_options?.user_id
+			const is_development_server	= typeof DEVELOPMENT_SERVER!=='undefined' && DEVELOPMENT_SERVER===true
+
 			// hide component_message OK
 				const component_message = self.node.content_data.querySelector('.component_message.ok')
 				if (component_message) {
@@ -252,7 +281,7 @@ login.prototype.action_dispatch = async function(api_response) {
 					? api_response.result_options.user_image
 					: DEDALO_ROOT_WEB + '/core/themes/default/icons/dedalo_icon_grey.svg'
 				if (bg_image) {
-					// force preload image
+					// force preload background image
 					await (()=>{
 						return new Promise(function(resolve, reject){
 							const img = document.createElement('img')
@@ -263,7 +292,9 @@ login.prototype.action_dispatch = async function(api_response) {
 							img.addEventListener('error', function(e) {
 								reject(false)
 							})
-							img.src = bg_image
+							requestAnimationFrame(()=>{
+								img.src = bg_image
+							})
 						})
 						.catch((error) => {
 							console.error('Error loading image:', bg_image);
@@ -272,12 +303,10 @@ login.prototype.action_dispatch = async function(api_response) {
 					})();
 					// CSS
 					self.node.style.setProperty('--user_login_image', `url('${bg_image}')`);
-					if (api_response.result_options?.user_id &&
-						api_response.result_options?.user_id===-1 &&
-						typeof DEVELOPMENT_SERVER!=='undefined' && DEVELOPMENT_SERVER===true
-						) {
+					if (user_id===-1 && is_development_server===true) {
 						self.node.classList.add('raspa_loading')
 					}
+					// wait for some extra time to allow CSS transitions to be completed
 					await (()=>{
 						return new Promise(function(resolve){
 							setTimeout(function(){
@@ -287,83 +316,244 @@ login.prototype.action_dispatch = async function(api_response) {
 					})();
 				}
 
-			// load_finish. Fired by render_files_loader when worker finish to load all files
-				const load_finish = function() {
-					// result_options is defined when the user is root or developer and the tools are not loaded
-					// it's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
-					if (api_response.result_options && api_response.result_options.redirect) {
+			// load_finish. Redirects to the proper page after the login
+			// Fired by render_files_loader when the worker finishes loading all files.
+				const load_finish = () => {
+
+					// api_response.result_options.redirect is set when the user is root or developer and the tools are not registered.
+					// It's defined in dd_init_test to force to go to the development area to control the DDBB and ontology version
+					if (api_response.result_options?.redirect) {
 
 						setTimeout(function(){
 							window.location.replace( api_response.result_options.redirect )
-						}, 3)
+						}, 1)
 
 					}else{
 
 						// has_tipo in url
-							const queryString	= window.location.search
-							const urlParams		= new URLSearchParams(queryString);
-							const has_tipo		= urlParams.has('tipo')
+							const urlParams	= new URLSearchParams(window.location.search);
+							const has_tipo	= urlParams.has('tipo')
 
 						if (api_response.default_section && !has_tipo) {
-							// user defined default_section case
+							// user has defined default_section case in database
 							window.location.replace( DEDALO_CORE_URL + '/page/?tipo=' + api_response.default_section );
 						}else{
+							// non defined user default_section case
 							window.location.reload(false);
 						}
 					}
 				}//end load_finish
 
-			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (by messages info)
-				const files_loader = render_files_loader({
-					on_load_finish : load_finish
-				})
+			// files loader. Circle with progressive fill draw based on percentage of loaded files by worker (updated by messages info)
+				const files_loader = render_files_loader()
 				self.node.content_data.top.appendChild(files_loader)
 
-			// launch worker cache
-				const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
-					type : 'module'
-				});
-				current_worker.postMessage({
-					action	: 'clear_cache',
-					url		: typeof DEDALO_API_URL!=='undefined'
-						? DEDALO_API_URL
-						: '../../api/v1/json/' // DEDALO_API_URL
-				});
-				current_worker.onmessage = function(e) {
-
-					if (e.data.status==='ready') {
+			// handlers
+				// ready handler. Fired when ready status is triggered in workers
+					const ready_handler = () => {
 						// hide things
 						if (self.node.content_data.select_lang) {
 							self.node.content_data.select_lang.classList.add('hide')
 						}
 						self.node.content_data.form.classList.add('hide')
-						// self.node.content_data.info_container.classList.add('hide')
 
 						// show things
 						self.node.content_data.top.classList.remove('hide')
 
 						// raspa_loading Development local only
-						if (api_response.result_options?.user_id && api_response.result_options?.user_id===-1) {
-							self.node.classList.add('active')
+						if (user_id===-1) {
+							requestAnimationFrame(()=>{
+								self.node.classList.add('active')
+							})
 						}
 					}
-
-					// send message data to files_loader function
-					files_loader.update(e.data)
-
-					if (e.data.status==='finish') {
-						// login continue
-						setTimeout(function(){
-							load_finish()
-						}, 450)
+				// loading handler. Fired when loading status is triggered in workers.
+				// Generally, at each file load completion in the list
+					const loading_handler = (data) => {
+						files_loader.update(data)
 					}
-				}
-				// load_finish()
+				// finish handler. Fired when finish status is triggered in workers
+				// Ussually when all files are loaded
+					const finish_handler = () => {
+						// login continue
+						setTimeout(()=>{
+							load_finish()
+						}, 40);
+					}
+
+			// service worker registry (uses service worker as cache proxy)
+				run_service_worker({
+					ready_handler	: ready_handler,
+					loading_handler : loading_handler,
+					finish_handler	: finish_handler
+				})
+				.then(function(response){
+					// on service worker registration error (not https support for example)
+					// fallback to the former method of loading cache files
+					if (response===false) {
+
+						// notify error
+							const error = location.protocol==='http:'
+								? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
+								: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
+							console.error(error);
+
+						// launch worker cache (uses regular browser memory cache)
+							run_worker_cache({
+								ready_handler	: ready_handler,
+								loading_handler : loading_handler,
+								finish_handler	: finish_handler
+							})
+					}
+				})
+
 		}//end if (api_response.result===true)
 
 
 	return true
 }//end action_dispatch
+
+
+
+/**
+* RUN_SERVICE_WORKER
+* Prepares the service worker to manage the files cache
+* and the login sequence (circle animation, etc.)
+* @param objecr options
+* {
+* 	ready_handler : function ready_handler
+*	loading_handler : function loading_handler
+*	finish_handler : function finish_handler
+* }
+* @return bool
+* 	True if registration succed, false if fails
+*/
+const run_service_worker = async (options) => {
+
+	// options unpack
+	const {
+		ready_handler,
+		loading_handler,
+		finish_handler
+	} = options
+
+	if ('serviceWorker' in navigator) {
+		try {
+			// registrate serviceWorker
+			// Once registered, it will be loaded in every page load across the site
+			const registration = await navigator.serviceWorker.register(
+				DEDALO_CORE_URL + '/sw.js',
+				{ scope: DEDALO_CORE_URL + '/' }
+			);
+
+			// debug info about registration status
+			if (registration.installing) {
+				console.log('Service worker installing');
+			} else if (registration.waiting) {
+				console.log('Service worker installed');
+			} else if (registration.active) {
+				console.log('Service worker active');
+			}
+
+			// serviceWorker is ready. Post message 'update_files' to
+			// force serviceWorker to reload the De´dalo main files
+			navigator.serviceWorker.ready.then((registration) => {
+				console.log('Service worker is ready. Posting messge update_files');
+				// posting 'update_files' message, tells serviceWorker that cache files
+				// must to be updated.
+				registration.active.postMessage('update_files')
+			});
+
+			// message event listener
+			navigator.serviceWorker.addEventListener('message', (event) => {
+				// console.log(`The service worker sent me a message:`, event.data);
+
+				// ready
+				if (event.data.status==='ready') {
+					// set CSS styles and animations to start loading
+					ready_handler()
+				}
+
+				// loading
+				if (event.data.status==='loading') {
+					// send message data to files_loader function
+					loading_handler(event.data)
+				}
+
+				// loaded. If update_files if finish, the serviceWorker post a message 'loaded'.
+				// Then, we can finish the login normmally
+				if (event.data.status==='finish') {
+					// reload or redirect the page
+					finish_handler()
+				}
+			});
+
+		} catch (error) {
+			console.error(`Registration failed with ${error}`);
+			return false
+		}
+
+		return true
+	}
+
+	return false
+}//end run_service_worker
+
+
+
+/**
+* run_WORKER_CACHE
+* Run worker cache and updates files_loader
+* On finish, exec the callback ('load_finish' function)
+* Worker cache is used as browser cache proxy, instead the
+* default memory cache. This allow improved control about the cached files
+* @param object options
+* {
+* 	ready_handler : function ready_handler
+*	loading_handler : function loading_handler
+*	finish_handler : function finish_handler
+* }
+* @return void
+*/
+const run_worker_cache = (options) => {
+
+	// options unpack
+	const {
+		ready_handler,
+		loading_handler,
+		finish_handler
+	} = options
+
+	// crate a new worker
+	const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
+		type : 'module'
+	});
+
+	// posting worker message 'clear_cache'
+	current_worker.postMessage({
+		action	: 'clear_cache',
+		url		: typeof DEDALO_API_URL!=='undefined'
+			? DEDALO_API_URL
+			: '../../api/v1/json/' // DEDALO_API_URL
+	});
+	current_worker.onmessage = function(e) {
+
+		if (e.data.status==='ready') {
+			// set CSS styles and animations to start loading
+			ready_handler()
+		}
+
+		if (e.data.status==='loading') {
+			// send message data to files_loader function
+			loading_handler(e.data)
+		}
+
+		if (e.data.status==='finish') {
+			// reload or redirect the page
+			finish_handler()
+		}
+	}
+}//end run_worker_cache
 
 
 
