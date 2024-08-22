@@ -252,15 +252,18 @@ render_menu.prototype.edit = async function() {
 					// subtract debug_info_bar_height from wrapper height
 					const limit = Math.floor(wrapper_height - debug_info_bar_height)
 
-					if (limit > 50) {
-						menu_wrapper.classList.add('wrapping')
-						// fix width edge
-						menu_wrapper.width_edge = entry.contentRect.width
-					}else{
-						if (menu_wrapper.width_edge && entry.contentRect.width > menu_wrapper.width_edge) {
-							menu_wrapper.classList.remove('wrapping')
+					const adjust_size = () => {
+						if (limit > 50) {
+							menu_wrapper.classList.add('wrapping')
+							// fix width edge
+							menu_wrapper.width_edge = entry.contentRect.width
+						}else{
+							if (menu_wrapper.width_edge && entry.contentRect.width > menu_wrapper.width_edge) {
+								menu_wrapper.classList.remove('wrapping')
+							}
 						}
 					}
+					requestAnimationFrame(adjust_size)
 				});
 			});
 			observer.observe(menu_wrapper);
