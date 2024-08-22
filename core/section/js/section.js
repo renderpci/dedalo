@@ -1269,13 +1269,21 @@ section.prototype.get_total = async function() {
 		self.loading_total_status = 'resolving'
 
 	// API request
-		const count_sqo = clone(self.rqo.sqo )
+
+		// count sqo. Simplified version from current self.rqo.sqo
+		const count_sqo = clone(self.rqo.sqo)
+		// remove unused properties
 		delete count_sqo.limit
 		delete count_sqo.offset
 		delete count_sqo.select
 		delete count_sqo.order
 		delete count_sqo.generated_time
-		const source	= create_source(self, null)
+
+		// source
+		const source = create_source(self, null)
+		// remove unused properties
+		delete source.properties
+
 		const rqo_count	= {
 			action			: 'count',
 			sqo				: count_sqo,
