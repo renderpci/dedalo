@@ -33,6 +33,8 @@ final class metrics {
 	// get_tools (current element context tools calculations)
 		static $get_tools_total_time = 0;
 		static $get_tools_total_calls = 0;
+		static $get_tool_config_total_time = 0;
+		static $get_tool_config_total_calls = 0;
 
 	// section_save
 		static $section_save_total_time = 0;

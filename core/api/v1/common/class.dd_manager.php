@@ -155,6 +155,8 @@ final class dd_manager {
 						'Get tools',
 						'--> get_tools_total_time: ' . metrics::$get_tools_total_time.' ms',
 						'--> get_tools_total_calls: '. metrics::$get_tools_total_calls,
+						'--> get_tool_config_total_time: ' . metrics::$get_tool_config_total_time.' ms',
+						'--> get_tool_config_total_calls: '. metrics::$get_tool_config_total_calls,
 						// get_tools stats
 						'section_save',
 						'--> section_save_total_time: ' . metrics::$section_save_total_time.' ms',

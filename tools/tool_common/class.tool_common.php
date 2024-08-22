@@ -584,6 +584,13 @@ class tool_common {
 	*/
 	public static function get_config(string $tool_name) : ?object {
 
+		// debug
+			if(SHOW_DEBUG===true) {
+				$start_time=start_time();
+				// metrics
+				metrics::$get_tool_config_total_calls++;
+			}
+
 		// cache
 			static $cache_config_tool = [];
 			if( array_key_exists($tool_name, $cache_config_tool) ){
@@ -616,6 +623,13 @@ class tool_common {
 
 		// cache. save the result into the cache
 			$cache_config_tool[$tool_name] = $config;
+
+		// debug
+			if(SHOW_DEBUG===true) {
+				// metrics
+				$total_time_ms = exec_time_unit($start_time, 'ms');
+				metrics::$get_tool_config_total_time += $total_time_ms;
+			}
 
 
 		return $config;
