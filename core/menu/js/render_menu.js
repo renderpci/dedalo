@@ -358,6 +358,22 @@ const render_debug_info_bar = (self) => {
 			parent			: debug_info_bar
 		})
 
+	// environment
+		const environment_link = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'environment',
+			title			: 'Environment',
+			parent			: debug_info_bar
+		})
+		environment_link.addEventListener('click', function(e) {
+			e.stopPropagation()
+			window.open(
+				DEDALO_ROOT_WEB + '/core/common/js/environment.js.php',
+				'Environment',
+				null
+			)
+		})
+
 	// ip_server
 		ui.create_dom_element({
 			element_type	: 'div',
