@@ -342,6 +342,7 @@ self.addEventListener('fetch', (event) => {
 	if (	event.request.url.endsWith('.js')
 		&& !event.request.url.endsWith('/worker_data.js')
 		&& !event.request.url.endsWith('/sw.js')
+		&& !event.request.url.includes('/lib/')
 		) {
 		event.respondWith(
 			cache_first(event.request)
