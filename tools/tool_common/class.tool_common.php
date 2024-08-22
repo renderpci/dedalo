@@ -940,6 +940,14 @@ class tool_common {
 					}
 			}
 
+		// tool_config
+		// Add resolved tool_config property to cached file
+		// Will be used later to get resolved user tools config from cache
+		// for example in get_structure_context or get_buttons_context
+			array_map(function($tool){
+				$tool->tool_config = tool_common::get_config($tool->name);
+			}, $user_tools);
+
 		// cache
 			if ($use_cache===true) {
 				// static
@@ -971,9 +979,16 @@ class tool_common {
 	*	3 else get the ontology properties
 	*
 	* @param object $options
+	* {
+	* 	tool_name: string as 'tool_lang'
+	* 	tipo: string as 'dd47'
+	* 	section_tipo: string as 'rsc167'
+	* }
+	* @param object|null $tool_config = null
+	* 	Normally, is get from tools cache file, else will be calculated
 	* @return object|null $tool_config
 	*/
-	public static function get_tool_configuration(object $options) : ?object {
+	public static function get_tool_configuration(object $options, ?object $tool_config=null) : ?object {
 
 		$tool_name 		= $options->tool_name;
 		$tipo			= $options->tipo;
@@ -981,7 +996,7 @@ class tool_common {
 
 		// get the config, get_config check is the specific configuration isset
 		// else get the configuration in register record
-			$tool_configuration = tool_common::get_config($tool_name);
+			$tool_configuration = $tool_config ?? tool_common::get_config($tool_name);
 
 			// check if has a properties and tool_config definition
 			if( isset($tool_configuration->config)
