@@ -999,6 +999,7 @@ class tool_common {
 				return $tool_config;
 			}
 
+
 		return null;
 	}//end get_tool_config
 
