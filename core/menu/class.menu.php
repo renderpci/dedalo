@@ -307,7 +307,7 @@ class menu extends common {
 			$lang	= $this->get_lang();
 			$model	= get_class($this);
 
-		// tools
+		// tools (menu tools like 'tool_user_admin')
 			$tools		= [];
 			$tools_list	= $this->get_tools();
 			foreach ($tools_list as $tool_object) {

@@ -4434,7 +4434,9 @@ abstract class common {
 
 	/**
 	* GET_TOOLS
-	* Get element (component, section, ...) tools filtered by user permissions
+	* Resolves current element (component, section, ...) tools filtered by user permissions
+	* Gets tool_common::get_user_tools and filters the tools that affect this element
+	* Note that the resultant tools list is always shorter than the user full tools list
 	* @return array $tools
 	*/
 	public function get_tools() : array {
@@ -4614,6 +4616,8 @@ abstract class common {
 					if($model==='button_import' || $model==='button_trigger'){
 
 						// tools_list
+						// (!) Use here the full list of user tools,
+						// not the filtered version for '$this->get_tools'
 						$tools_list	= tool_common::get_user_tools( logged_user_id() );
 
 						$tools = [];

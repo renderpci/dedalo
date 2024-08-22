@@ -543,24 +543,24 @@ final class dd_utils_api {
 	* Sample expected $json_data:
 	* {
 		"action": "upload",
-	    "dd_api": "dd_utils_api",
-	    "options": {
-	        "key_dir": "av",
-	        "file_name": "foc-intro.mp4",
-	        "chunked": "true",
-	        "start": "2097152",
-	        "end": "4194304",
-	        "chunk_index": "1",
-	        "total_chunks": "19",
-	        "file_to_upload": {
-	            "name": "blob",
-	            "full_path": "blob",
-	            "type": "application/octet-stream",
-	            "tmp_name": "/private/var/tmp/phprfdEk5",
-	            "error": 0,
-	            "size": 2097152
-	        }
-	    }
+		"dd_api": "dd_utils_api",
+		"options": {
+			"key_dir": "av",
+			"file_name": "foc-intro.mp4",
+			"chunked": "true",
+			"start": "2097152",
+			"end": "4194304",
+			"chunk_index": "1",
+			"total_chunks": "19",
+			"file_to_upload": {
+				"name": "blob",
+				"full_path": "blob",
+				"type": "application/octet-stream",
+				"tmp_name": "/private/var/tmp/phprfdEk5",
+				"error": 0,
+				"size": 2097152
+			}
+		}
 	* }
 	* @param object $rqo
 	* @return object $response
