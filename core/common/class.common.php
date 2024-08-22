@@ -1628,10 +1628,17 @@ abstract class common {
 								$tool_config_options->tool_name		= $tool_object->name;
 								$tool_config_options->tipo			= $tipo;
 								$tool_config_options->section_tipo	= $section_tipo;
-							$specific_tool_config = tool_common::get_tool_configuration($tool_config_options);
+
+							$specific_tool_config = tool_common::get_tool_configuration(
+								$tool_config_options,
+								$tool_object->tool_config // already cached tool_config value
+							);
 
 						// if the configuration was defined, replace the ddo_map of the ontology with it.
 							if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
+								if (!isset($tool_config)) {
+									$tool_config = new stdClass();
+								}
 								$tool_config->ddo_map = $specific_tool_config->ddo_map;
 							}
 
@@ -4646,10 +4653,17 @@ abstract class common {
 									$tool_config_options->tool_name		= $tool_object->name;
 									$tool_config_options->tipo			= $current_button_tipo;
 									$tool_config_options->section_tipo	= $tipo;
-								$specific_tool_config = tool_common::get_tool_configuration($tool_config_options);
+
+								$specific_tool_config = tool_common::get_tool_configuration(
+									$tool_config_options,
+									$tool_object->tool_config // already cached tool_config value
+								);
 
 							// if the configuration was defined, replace the ddo_map of the ontology with it.
 								if( is_object($specific_tool_config) && isset($specific_tool_config->ddo_map) ){
+									if (!isset($tool_config)) {
+										$tool_config = new stdClass();
+									}
 									$tool_config->ddo_map = $specific_tool_config->ddo_map;
 								}
 
