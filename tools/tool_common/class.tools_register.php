@@ -1048,6 +1048,12 @@ class tools_register {
 	*/
 	public static function get_all_default_config() : array {
 
+		// cache
+			static $cache_all_default_config;
+			if( isset($cache_all_default_config) ){
+				return $cache_all_default_config;
+			}
+
 		// short vars
 			$section_tools_config_tipo	= self::$section_registered_tools_tipo; // 'dd1324'
 			$name_tipo					= self::$tipo_tool_name; // 'dd1326';
@@ -1128,6 +1134,9 @@ class tools_register {
 
 				return $value;
 			}, $ar_records);
+
+		// cache. save the result into the cache
+			$cache_all_default_config = $ar_config;
 
 
 		return $ar_config;
