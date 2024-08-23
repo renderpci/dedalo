@@ -131,7 +131,7 @@ const load_files_list = async () => {
 
 	// get_dedalo_files from API
 		const api_response = await data_manager.request({
-			url		: 'api/v1/json/', // DEDALO_API_URL,
+			url		: './api/v1/json/', // DEDALO_API_URL,
 			body	: {
 				action	: 'get_dedalo_files',
 				dd_api	: 'dd_utils_api'
@@ -337,6 +337,9 @@ self.addEventListener('message', async (event) => {
 */
 self.addEventListener('fetch', (event) => {
 
+	// debug
+		// console.log('event.request.url:', event.request.url);
+
 	// Manage only javascript files excluding images, css, etc.
 	// that will be handled by the browser normally
 	if (	event.request.url.endsWith('.js')
@@ -344,6 +347,7 @@ self.addEventListener('fetch', (event) => {
 		&& !event.request.url.endsWith('/sw.js')
 		&& !event.request.url.includes('/lib/')
 		) {
+
 		event.respondWith(
 			cache_first(event.request)
 		);
