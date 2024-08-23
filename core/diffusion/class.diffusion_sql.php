@@ -4376,11 +4376,11 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* OBJECT_TO_STRING
-	* @return
+	* @return string
 	*/
 	public static function object_to_string($options, $dato) {
 
-		return json_encode($dato);
+		return json_encode($dato, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 	}//end object_to_string
 
 
