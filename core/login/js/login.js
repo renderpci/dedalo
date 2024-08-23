@@ -195,8 +195,7 @@ export const quit = async function(options) {
 
 					// registrate serviceWorker
 					const registration = await navigator.serviceWorker.register(
-						DEDALO_CORE_URL + '/sw.js',
-						{ scope: DEDALO_CORE_URL + '/' }
+						DEDALO_ROOT_WEB + '/core/sw.js'
 					);
 
 					registration.unregister().then(async (boolean) => {
@@ -465,8 +464,7 @@ const run_service_worker = async (options) => {
 			// registrate serviceWorker
 			// Once registered, it will be loaded in every page load across the site
 			const registration = await navigator.serviceWorker.register(
-				DEDALO_CORE_URL + '/sw.js',
-				{ scope: DEDALO_CORE_URL + '/' }
+				DEDALO_ROOT_WEB + '/core/sw.js'
 			);
 
 			// debug info about registration status
