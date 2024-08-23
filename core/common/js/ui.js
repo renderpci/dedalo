@@ -2949,24 +2949,30 @@ export const ui = {
 				parent			: container_placeholder
 			})
 
-		// callback wait (expect promise resolving DOM node)
-			const result_node = await callback()
-			if (!result_node) {
-				console.warn('Unexpected result. no node returned from callback. Removing container_placeholder:', options);
-				container_placeholder.remove()
-				return null
+		// callback wait (expect promise resolving DOM node) and handle the result
+			try {
+				const result_node = await callback();
+
+				if (!result_node || !(result_node instanceof HTMLElement)) {
+					console.warn('Callback did not return a valid DOM node.', options);
+					container_placeholder.remove();
+					return null;
+				}
+
+				// Replace container or placeholder with result_node
+				if (replace_container) {
+					container.replaceWith(result_node);
+				} else {
+					// default
+					container_placeholder.replaceWith(result_node);
+				}
+
+				return result_node;
+			} catch (error) {
+				console.error('Error during callback execution:', error);
+				container_placeholder.remove();
+				return null;
 			}
-
-		// replace node
-			if (replace_container===true) {
-				await container.replaceWith(result_node);
-			}else{
-				// default
-				await container_placeholder.replaceWith(result_node);
-			}
-
-
-		return result_node
 	},//end load_item_with_spinner
 
 
