@@ -4748,7 +4748,7 @@ class diffusion_sql extends diffusion  {
 				# Merge all arrays values in one only array
 				#$ar_value	= array_unique($ar_value);
 				$ar_value	= array_values($ar_value); // Restore array keys
-				$value		= json_encode($ar_value, JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);
+				$value		= json_encode($ar_value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 				break;
 
 			default:
