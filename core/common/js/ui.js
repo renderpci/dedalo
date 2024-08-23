@@ -2929,7 +2929,7 @@ export const ui = {
 
 		// placeholder_class
 			const placeholder_class = model
-				? ' ' + model + '_placeholder'
+				? ` ${model}_placeholder` + (SHOW_DEBUG ? ` placeholder_debug` : '')
 				: ''
 
 		// container_placeholder
