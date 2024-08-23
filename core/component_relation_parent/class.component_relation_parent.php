@@ -439,7 +439,7 @@ class component_relation_parent extends component_relation_common {
 		}//end if (isset($option_obj->add_parents))
 
 		$diffusion_value = !empty($new_dato)
-			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE) : $new_dato)
+			? (is_array($new_dato) ? json_encode($new_dato, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : $new_dato)
 			: null;
 
 
