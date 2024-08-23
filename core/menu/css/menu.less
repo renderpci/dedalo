@@ -512,3 +512,16 @@
 		}
 
 }//end .menu_wrapper
+
+// out of element styles
+
+// menu_placeholder (spinner container when ui.load_item_with_spinner is used)
+.menu_placeholder {
+	// default menu height is 28.59px
+
+	// placeholder_debug is higher than regular menu because contains debug_info_bar
+	&.placeholder_debug {
+		// default menu height is 57.19px
+		height: 57.19px;
+	}
+}
