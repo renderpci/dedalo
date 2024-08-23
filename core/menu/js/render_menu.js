@@ -364,6 +364,29 @@ const render_debug_info_bar = (self) => {
 			parent			: debug_info_bar
 		})
 
+	// service_worker_active
+		if ('serviceWorker' in navigator) {
+			const service_worker_active = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'service_worker_active hide',
+				text_content	: 'sw',
+				parent			: debug_info_bar
+			})
+			try {
+				navigator.serviceWorker.getRegistrations().then(registrations => {
+					const script_url = registrations[0]?.active?.scriptURL
+					if (script_url) {
+						service_worker_active.classList.remove('hide')
+						service_worker_active.title = 'Service worker is active at ' + script_url
+					}else{
+						service_worker_active.remove()
+					}
+				});
+			} catch (error) {
+				console.error(error)
+			}
+		}
+
 	// environment
 		const environment_link = ui.create_dom_element({
 			element_type	: 'div',
