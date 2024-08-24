@@ -5,10 +5,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {keyup_handler, remove_handler} from './render_edit_button.js'
 
 
 

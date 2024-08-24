@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {
 		get_content_data,
@@ -62,6 +61,7 @@ view_line_edit_filter.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
 
 
 // @license-end

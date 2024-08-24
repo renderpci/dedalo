@@ -7,7 +7,6 @@
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
-	// import {pause} from '../../common/js/utils/index.js'
 	import {render_paginator} from './render_paginator.js'
 	import {render_paginator_mini} from './render_paginator_mini.js'
 	import {render_paginator_micro} from './render_paginator_micro.js'

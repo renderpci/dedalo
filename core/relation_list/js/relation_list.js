@@ -84,7 +84,6 @@
 
 
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {render_relation_list} from './render_relation_list.js'
 	import {data_manager} from '../../common/js/data_manager.js'

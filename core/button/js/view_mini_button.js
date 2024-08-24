@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
 
@@ -44,6 +43,7 @@ view_mini_button.render = async function(self, options) {
 
 	return wrapper
 }//end render
+
 
 
 // @license-end

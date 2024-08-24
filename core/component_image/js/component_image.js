@@ -5,11 +5,9 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {common} from '../../common/js/common.js'
-	import {clone, dd_console} from '../../common/js/utils/index.js'
+	import {clone} from '../../common/js/utils/index.js'
 	import {component_common} from '../../component_common/js/component_common.js'
-	// import {vector_editor} from '../../component_image/js/vector_editor.js'
 	import {render_edit_component_image} from '../../component_image/js/render_edit_component_image.js'
 	import {render_list_component_image} from '../../component_image/js/render_list_component_image.js'
 	import {render_search_component_image} from '../../component_image/js/render_search_component_image.js'
@@ -450,6 +448,7 @@ component_image.prototype.update_draw_data = function() {
 }//end update_draw_data
 
 
+
 /**
 * GET_DEFAULT_FILE_INFO
 *
@@ -468,6 +467,7 @@ component_image.prototype.get_default_file_info = function(key=0) {
 
 	return default_file_info
 }//end get_default_file_info
+
 
 
 // @license-end

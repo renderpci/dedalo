@@ -7,14 +7,12 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import * as instances from '../../common/js/instances.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
 
 
 
 /**
-* view_line_edit_text_area
+* VIEW_LINE_EDIT_TEXT_AREA
 * Manage the components logic and appearance in client side
 */
 export const view_line_edit_text_area = function() {
@@ -443,6 +441,7 @@ const get_custom_events = (self, i, text_editor) => {
 
 	return custom_events
 }//end get_custom_events
+
 
 
 // @license-end

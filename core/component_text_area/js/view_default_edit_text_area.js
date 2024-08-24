@@ -11,7 +11,6 @@
 	import {get_fallback_value} from '../../common/js/common.js'
 	import {pause, url_vars_to_object} from '../../common/js/utils/index.js'
 	import {LZString as lzstring} from '../../common/js/utils/lzstring.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
 	import {render_draw} from './render_draw.js'
 
 

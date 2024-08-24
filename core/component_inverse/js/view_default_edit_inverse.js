@@ -4,7 +4,6 @@
 
 // import
 	import {ui} from '../../common/js/ui.js'
-	// import {common} from '../../common/js/common.js'
 
 
 
@@ -137,4 +136,3 @@ const get_buttons = (self) => {
 
 
 // @license-end
-

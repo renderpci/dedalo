@@ -10,7 +10,6 @@
 	import {get_instance, delete_instance} from '../../../core/common/js/instances.js'
 	import {common, create_source} from '../../../core/common/js/common.js'
 	import {tr} from '../../../core/common/js/tr.js'
-	// import {ui} from '../../../core/common/js/ui.js'
 	import {tool_common, load_component} from '../../tool_common/js/tool_common.js'
 	import {render_tool_subtitles} from './render_tool_subtitles.js'
 	import {service_ckeditor} from '../../../core/services/service_ckeditor/js/service_ckeditor.js'

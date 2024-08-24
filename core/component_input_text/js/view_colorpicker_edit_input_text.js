@@ -5,15 +5,14 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {when_in_viewport} from '../../common/js/events.js'
 	import {ui} from '../../common/js/ui.js'
 	import {get_fallback_value} from '../../common/js/common.js'
-	import {change_handler, remove_handler} from './render_edit_component_input_text.js'
+	import {change_handler} from './render_edit_component_input_text.js'
+
 
 
 /**
-* view_colorpicker_edit_input_text
+* VIEW_COLORPICKER_EDIT_INPUT_TEXT
 * Manages the component's logic and appearance in client side
 */
 export const view_colorpicker_edit_input_text = function() {

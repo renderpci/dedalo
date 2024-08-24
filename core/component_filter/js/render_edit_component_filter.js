@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {view_default_edit_filter} from './view_default_edit_filter.js'
 	import {view_line_edit_filter} from './view_line_edit_filter.js'
@@ -440,4 +439,3 @@ export const get_buttons = (self) => {
 
 
 // @license-end
-

@@ -6,12 +6,11 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 
 
 /**
-* RENDER_sequences_status
+* RENDER_SEQUENCES_STATUS
 * Manages the component's logic and appearance in client side
 */
 export const render_sequences_status = function() {
@@ -87,6 +86,7 @@ const get_content_data_edit = async function(self) {
 
 	return content_data
 }//end get_content_data_edit
+
 
 
 // @license-end

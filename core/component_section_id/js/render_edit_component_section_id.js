@@ -5,8 +5,6 @@
 
 
 // import
-	// import {ui} from '../../common/js/ui.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {view_default_edit_section_id} from './view_default_edit_section_id.js'
 
 

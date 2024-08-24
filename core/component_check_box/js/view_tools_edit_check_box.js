@@ -5,10 +5,10 @@
 
 
 // import
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {strip_tags} from '../../common/js/utils/index.js'
 	import {get_buttons} from './render_edit_component_check_box.js'
+
 
 
 /**

@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {ui} from '../../common/js/ui.js'
 	import {view_mini_list_svg} from './view_mini_list_svg.js'
 	import {view_default_list_svg} from './view_default_list_svg.js'
 	import {view_tag_list_svg} from './view_tag_list_svg.js'

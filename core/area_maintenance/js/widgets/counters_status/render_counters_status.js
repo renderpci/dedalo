@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../../../common/js/ui.js'
-	// import {data_manager} from '../../../../common/js/data_manager.js'
 	import {open_window, object_to_url_vars} from '../../../../common/js/utils/index.js'
 
 

@@ -5,8 +5,7 @@
 
 
 // import
-
-import {event_manager} from './event_manager.js'
+	import {event_manager} from './event_manager.js'
 
 
 

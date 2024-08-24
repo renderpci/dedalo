@@ -5,19 +5,7 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {
-	// 	get_text_column,
-	// 	get_av_column,
-	// 	get_img_column,
-	// 	get_label_column,
-	// 	get_button_column,
-	// 	get_json_column,
-	// 	get_section_id_column,
-	// 	get_iri_column
-	// } from './render_list_dd_grid.js'
 
 
 

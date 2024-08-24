@@ -6,9 +6,6 @@
 
 // imports
 	import {view_default_edit_button} from './view_default_edit_button.js'
-	// import {view_line_edit_button} from './view_line_edit_button.js'
-	// import {view_text_button} from './view_text_button.js'
-	// import {view_mini_button} from './view_mini_button.js'
 
 
 

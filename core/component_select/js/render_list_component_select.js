@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {ui} from '../../common/js/ui.js'
 	import {view_default_list_select} from './view_default_list_select.js'
 	import {view_mini_list_select} from './view_mini_list_select.js'
 	import {view_text_list_select} from './view_text_list_select.js'

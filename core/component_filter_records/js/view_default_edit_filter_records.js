@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_before_unload} from '../../common/js/events.js'
 	import {array_equals} from '../../common/js/utils/index.js'

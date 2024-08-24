@@ -6,7 +6,6 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	// import {tr} from '../../common/js/tr.js'
 	import * as instances from '../../common/js/instances.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'

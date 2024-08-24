@@ -10,7 +10,6 @@
 	import {render_edit_component_check_box} from '../../component_check_box/js/render_edit_component_check_box.js'
 	import {render_list_component_check_box} from '../../component_check_box/js/render_list_component_check_box.js'
 	import {render_search_component_check_box} from '../../component_check_box/js/render_search_component_check_box.js'
-	// import {output_component_check_box} from '../../component_check_box/js/output_component_check_box.js'
 
 
 
