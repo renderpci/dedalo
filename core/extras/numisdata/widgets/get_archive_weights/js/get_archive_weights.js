@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
 	import {widget_common} from '../../../../../component_info/widgets/widget_common.js'
 	import {render_get_archive_weights} from '../../get_archive_weights/js/render_get_archive_weights.js'
 
@@ -86,7 +85,6 @@ get_archive_weights.prototype.render = async function(options={render_level:'ful
 
 	return node
 }//end render
-
 
 
 

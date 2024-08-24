@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
 	import * as instances from '../../common/js/instances.js'
 	import {clone} from '../../common/js/utils/index.js'
@@ -79,7 +78,7 @@ export const render_reference = async function(options) {
 				existing_values.push(used_locator)
 			}
 		}
-		
+
 	// get the reference portal
 	// used as temporal portal to search into thesaurus and get the locator to be assigned to the tag
 		const references_section_tipo		= self.context.features.references_section_tipo // the section with a empty autocomplete to be use to search

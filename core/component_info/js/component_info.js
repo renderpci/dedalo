@@ -5,7 +5,6 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {event_manager} from '../../common/js/event_manager.js'

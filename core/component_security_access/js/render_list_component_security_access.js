@@ -5,12 +5,10 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {ui} from '../../common/js/ui.js'
 	import {view_default_list_security_access} from './view_default_list_security_access.js'
 	import {view_mini_list_security_access} from './view_mini_list_security_access.js'
 	import {view_text_list_security_access} from './view_text_list_security_access.js'
+
 
 
 /**

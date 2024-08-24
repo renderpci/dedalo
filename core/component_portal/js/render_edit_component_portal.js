@@ -540,9 +540,12 @@ export const render_column_remove = function(options) {
 								section_id		: section_id
 							})
 
-							// delete_dataframe_record. if it is not dataframe it will be ignored
-							await self.delete_dataframe_record({
-								section_id : section_id
+							// delete_dataframe_record. if it is not dataframe it will be ignored						)
+							await delete_dataframe({
+								self			: self,
+								section_id		: self.section_id,
+								section_tipo	: self.section_tipo,
+								section_id_key	: section_id
 							})
 
 							// refresh the component. Don't wait here

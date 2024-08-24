@@ -448,12 +448,12 @@ login.prototype.action_dispatch = async function(api_response) {
 * RUN_SERVICE_WORKER
 * Prepares the service worker to manage the files cache
 * and the login sequence (circle animation, etc.)
-* @param objecr options
+* @param object options
 * {
 * 	on_message : function on_message
 * }
 * @return bool
-* 	True if registration succed, false if fails
+* 	True if registration succeed, false if fails
 */
 const run_service_worker = async (options) => {
 
@@ -464,7 +464,7 @@ const run_service_worker = async (options) => {
 
 	if ('serviceWorker' in navigator) {
 		try {
-			// registrate serviceWorker
+			// register serviceWorker
 			// Once registered, it will be loaded in every page load across the site
 			const registration = await navigator.serviceWorker.register(
 				DEDALO_ROOT_WEB + '/core/sw.js'
@@ -485,9 +485,9 @@ const run_service_worker = async (options) => {
 			}
 
 			// serviceWorker is ready. Post message 'update_files' to
-			// force serviceWorker to reload the De´dalo main files
+			// force serviceWorker to reload the Dédalo main files
 			navigator.serviceWorker.ready.then((registration) => {
-				console.log('Service worker is ready. Posting messge update_files');
+				console.log('Service worker is ready. Posting message update_files');
 				// posting 'update_files' message, tells serviceWorker that cache files
 				// must to be updated.
 				registration.active.postMessage('update_files')

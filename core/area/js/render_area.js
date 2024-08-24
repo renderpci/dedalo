@@ -5,9 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {data_manager} from '../../common/js/data_manager.js'
-	// import {render_tree_data} from '../../common/js/common.js'
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
 

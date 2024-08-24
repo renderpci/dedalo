@@ -7,7 +7,6 @@
 // imports
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {ui} from '../../common/js/ui.js'
-	// import {no_records_node} from '../../section/js/render_common_section.js'
 
 
 

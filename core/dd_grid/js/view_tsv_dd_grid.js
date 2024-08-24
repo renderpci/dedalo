@@ -5,9 +5,8 @@
 
 
 // imports
-	// import {ui} from '../../common/js/ui.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {get_columns} from './view_csv_dd_grid.js'
+
 
 
 /**

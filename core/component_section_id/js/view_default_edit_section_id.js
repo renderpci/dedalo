@@ -7,7 +7,6 @@
 // import
 	import {ui} from '../../common/js/ui.js'
 	import {set_element_css} from '../../page/js/css.js'
-	// import {event_manager} from '../../common/js/event_manager.js'
 
 
 

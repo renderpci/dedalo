@@ -10,7 +10,6 @@
 	import {keyboard_codes} from '../../../core/common/js/utils/keyboard.js'
 	import {render_node_info} from '../../../core/common/js/utils/notifications.js'
 	import {open_tool} from '../../tool_common/js/tool_common.js'
-	// import {clone, dd_console} from '../../../core/common/js/utils/index.js'
 
 
 

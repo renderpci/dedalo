@@ -7,9 +7,7 @@
 // import
 	import {event_manager} from '../../../common/js/event_manager.js'
 	import {data_manager} from '../../../common/js/data_manager.js'
-	// // import {get_instance, delete_instance} from '../../../common/js/instances.js'
 	import {clone, dd_console} from '../../../common/js/utils/index.js'
-	// import {ui} from '../../../common/js/ui.js'
 	import {common} from '../../../common/js/common.js'
 
 

@@ -5,13 +5,10 @@
 
 
 // imports
-	// import {data_manager} from '../../common/js/data_manager.js'
 	import {common} from '../../common/js/common.js'
-	// import {events_subscription} from './events_subscription.js'
 	import {render_edit_button} from '../../button/js/render_edit_button.js'
 	import {set_context_vars, create_source} from '../../common/js/common.js'
 	import {render_list_button} from '../../button/js/render_list_button.js'
-	// import {render_search_button} from '../../button/js/render_search_button.js'
 
 
 

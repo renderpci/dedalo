@@ -5,8 +5,6 @@
 
 
 // imports
-	// import {event_manager} from '../../common/js/event_manager.js'
-	// import {clone,dd_console} from '../../common/js/utils/index.js'
 	import {ui} from '../../common/js/ui.js'
 	import {view_csv_dd_grid} from './view_csv_dd_grid.js'
 	import {view_tsv_dd_grid} from './view_tsv_dd_grid.js'
