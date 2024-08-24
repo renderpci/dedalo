@@ -584,7 +584,7 @@ export const render_column_remove = function(options) {
 						})
 
 						// delete_dataframe_record. if it is not dataframe it will be ignored
-						delete_dataframe({
+						await delete_dataframe({
 							self			: self,
 							section_id		: self.section_id,
 							section_tipo	: self.section_tipo,
