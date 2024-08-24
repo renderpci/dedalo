@@ -577,6 +577,7 @@ export const render_column_remove = function(options) {
 						footer.classList.add('loading')
 
 						// deletes the locator from component data and refresh the component
+						// (!) Note that this function refresh the component and wait for it
 						await self.unlink_record({
 							paginated_key	: paginated_key,
 							row_key			: row_key,
