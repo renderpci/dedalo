@@ -158,89 +158,92 @@ login.prototype.build = async function(autoload=false) {
 
 /**
 * QUIT
-* Close user session
+* Close current user session
 * (!) Note that quit menu event removes local indexedDB menu data before quit
-* @param options
+* @see menu.quit_handler()
+* If the service worker is registered (this happens when logging in), his registration
+* shall be de-registered and the cache deleted.
+* At the end, a page reload/redirection is made
+* @param object options = {}
 * Sample:
 * {
-* 	caller : { menu {id: 'menu_dd85_dd85_edit_lg-eng'.. }
+* 	caller : object like: { menu {id: 'menu_dd85_dd85_edit_lg-eng'.. }
 * }
-* @return object api_response
+* @return void
 */
-export const quit = async function(options) {
+export const quit = async function(options={}) {
 
 	// set page style as loading
 		document.body.classList.add('loading')
 
-	// is_developer
+	// is_developer. Determine if the user is a developer
 		const is_developer = page_globals.is_developer ?? false;
 
-	// data_manager API call
-		const api_response = await data_manager.request({
-			body : {
-				action	: 'quit',
-				dd_api	: 'dd_utils_api',
-				options	: {}
-			}
-		})
+	try {
 
-	// manage result
-		if (api_response.result===true) {
-
-			// unregister serviceWorker
-			// If serviceWorker is available and registerd, force unregister
-			// to allow update sw.js file and clean the cache
-			if ('serviceWorker' in navigator) {
-				try {
-
-					// registrate serviceWorker
-					const registration = await navigator.serviceWorker.register(
-						DEDALO_ROOT_WEB + '/core/sw.js'
-					);
-
-					registration.unregister().then(async (boolean) => {
-						// if boolean = true, unregister is successful
-						console.log('Unregistered serviceWorker :', boolean );
-					});
-
-					// delete dedalo_files caches
-					caches.delete('dedalo_files');
-
-				} catch (error) {
-					console.error(`Registration failed with ${error}`);
+		// data_manager. Make API call to quit
+			const api_response = await data_manager.request({
+				body : {
+					action	: 'quit',
+					dd_api	: 'dd_utils_api',
+					options	: {}
 				}
-			}
+			})
 
-			// SAML redirection check
-			if (typeof api_response.saml_redirect!=='undefined' && api_response.saml_redirect.length>2) {
+		// manage result
+			if (api_response.result===true) {
 
-				window.location.href = api_response.saml_redirect
+				// unregister serviceWorker
+				// Handle service worker unregistration if supported
+				// to allow update sw.js file and clean the cache
+				if ('serviceWorker' in navigator) {
+					try {
+
+						const registration = await navigator.serviceWorker.register(
+							DEDALO_ROOT_WEB + '/core/sw.js'
+						);
+
+						if (registration) {
+
+							const unregistered = await registration.unregister()
+							console.log('Unregistered serviceWorker:', unregistered);
+
+							// delete dedalo_files caches
+							await caches.delete('dedalo_files');
+						}
+					} catch (error) {
+						console.error('ServiceWorker unregistration failed:', error);
+					}
+				}
+
+				// SAML redirection check
+				if (api_response.saml_redirect && api_response.saml_redirect.length>2) {
+
+					window.location.href = api_response.saml_redirect
+
+				}else{
+
+					setTimeout(()=>{
+						if (is_developer) {
+							// reload window to show the login form without loosing the current URL
+							window.location.replace(window.location.href);
+						}else{
+							// redirect to Dédalo base URL to force access to default user section
+							window.location.href = DEDALO_ROOT_WEB
+						}
+					}, 1)
+				}
 
 			}else{
-
-				setTimeout(()=>{
-					if (is_developer) {
-						// reload window to show the login form without loosing the current URL
-						window.location.replace(window.location.href);
-					}else{
-						// redirect to Dédalo base URL to force access to default user section
-						window.location.href = DEDALO_ROOT_WEB
-					}
-				}, 1)
+				console.error('API call failed:', api_response);
+				// Remove loading style from body
+				document.body.classList.remove('loading');
 			}
-
-		}else{
-
-			console.error(api_response.msg);
-		}
-
-	// set page style as loading
-		if (main) {
-			main.classList.remove('loading')
-		}
-
-
-	return api_response
+	} catch (error) {
+		console.error('Error in quit function:', error);
+		// Remove loading style from body
+		document.body.classList.remove('loading');
+	}
 }//end quit
 
 
