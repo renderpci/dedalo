@@ -287,7 +287,15 @@
 
 			>.label {
 				height: var(--component_label_height);
-				color: #a1a1a1;
+				color: @color_grey_darken_2;
+
+				// windows fix
+					// font-weight: use 400 to see labels properly in windows
+					font-weight: 400;
+					// -webkit-font-smoothing: use antialiased to smooth weight in mac;
+					-webkit-font-smoothing: antialiased;
+					// Helvetica way test
+					// font-family: Helvetica, system-ui, "Segoe UI", Arial, sans-serif;
 
 				>.icon {
 					vertical-align: bottom;
