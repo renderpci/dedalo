@@ -546,10 +546,19 @@ class component_json extends component_common {
 		// $q
 			$q = is_array($query_object->q)
 				? reset($query_object->q)
-				: $query_object->q;
-			if (is_string($q)) {
-				$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+				: ($query_object->q ?? '');
+
+		// split q case
+			$q_split = $query_object->q_split ?? false;
+			if ($q_split===true && !search::is_literal($q)) {
+				$q_items = preg_split('/\s/', $q);
+				if (count($q_items)>1) {
+					return self::handle_query_splitting($query_object, $q_items, '$and');
+				}
 			}
+
+		// escape q string for DB
+			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		// q_operator
 			$q_operator = $query_object->q_operator ?? null;

@@ -38,6 +38,9 @@ export const component_json = function(){
 
 	// save_on_deactivate. Prevent to auto-save value when component is deactivated
 	this.save_on_deactivate	= false
+
+	// search config
+	this.q_split = true
 }//end component_json
 
 
