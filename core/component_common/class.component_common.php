@@ -3428,6 +3428,11 @@ abstract class component_common extends common {
 		// Iterate over each query item
 		foreach ($q_items as $current_q) {
 
+			// ignore empty values (like double spaces issues)
+			if (empty($current_q)) {
+				continue;
+			}
+
 			// clone the original query object to avoid modifying the original
 			$query_object_clon = clone($query_object);
 			// overwrite q value
