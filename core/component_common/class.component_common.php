@@ -3375,10 +3375,8 @@ abstract class component_common extends common {
 			$called_class = get_called_class();
 
 		// split multiple (true by default)
-			$q_split				= isset($query_object->q_split) ? (bool)$query_object->q_split : true;
-			$current_query_object	= ($q_split===false)
-				? $query_object // With query_object property 'q_split' as false (autocomplete_hi)
-				: component_common::split_query($query_object); // Default mode
+			// (!) Moved split logic to components
+			$current_query_object = $query_object;
 
 		// conform each object
 			if (search::is_search_operator($current_query_object)===true) {
@@ -3402,6 +3400,51 @@ abstract class component_common extends common {
 
 		return $ar_query_object;
 	}//end get_search_query
+
+
+
+	/**
+	* HANDLE_QUERY_SPLITTING
+	* Component split queries manager resolves each q part individually and
+	* creates an group with all query elements resolved.
+	* @param object $query_object
+	* 	The original query object.
+	* @param array $q_items
+	* 	An array of query items (e.g., ['Perez', 'Lopez']).
+	* @param string $operator_between = '$and'
+	* 	The logical operator used to combine the split queries. Default is '$and'.
+	* @return object $group
+	* 	The group object containing resolved queries.
+	*/
+	public static function handle_query_splitting(object $query_object, array $q_items, string $operator_between='$and') : object {
+
+		// Determine the resolver method dynamically from the called class (component)
+    	$resolver = [get_called_class(), 'resolve_query_object_sql'];
+
+		// Initialize the group object with the specified operator
+		$group = new stdClass();
+			$group->{$operator_between} = [];
+
+		// Iterate over each query item
+		foreach ($q_items as $current_q) {
+
+			// clone the original query object to avoid modifying the original
+			$query_object_clon = clone($query_object);
+			// overwrite q value
+			$query_object_clon->q = $current_q;
+			// overwrite q_split
+			$query_object_clon->q_split	= false;
+
+			// Resolve the individual query object using the resolver method
+			$current_parsed_query_object = call_user_func($resolver, $query_object_clon);
+
+			// Add the resolved query object to the group under the specified operator
+			$group->{$operator_between}[] = $current_parsed_query_object;
+		}
+
+
+		return $group;
+	}//end handle_query_splitting
 
 
 
