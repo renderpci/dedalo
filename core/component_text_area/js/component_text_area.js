@@ -51,6 +51,9 @@ export const component_text_area = function(){
 	this.service_text_editor_instance	= []
 	// auto_init_editor. default is false. To activate, set Ontology property 'auto_init_editor' as true, or configure this component in run-time from tool (like tool_indexation do)
 	this.auto_init_editor				= undefined
+
+	// search config
+	this.q_split = true
 }//end component_text_area
 
 

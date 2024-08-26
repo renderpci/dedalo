@@ -604,8 +604,9 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 			// Q . Search argument
 			// Get value from component wrapper dataset (previously fixed on change value)
-			let q 			= null // default
-			let q_operator 	= null // default
+			let q			= null // default
+			let q_operator	= null // default
+			let q_split		= false // default is false
 			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
 			if (add_arguments!==false) {
 
@@ -613,8 +614,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				const component_instance	= self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
 
 				if(!component_instance){
+					console.log('Error. Ignored not found component instance id:', component_wrapper.id);
 					continue
 				}
+
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.
@@ -623,10 +626,11 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					: component_instance.data.value
 
 				// overwrite
-				if (typeof component_instance!=="undefined") {
 					q			= search_value
 					q_operator	= component_instance.data.q_operator
-				}
+
+				// q_split
+					q_split = component_instance.q_split ?? false
 			}
 
 			// Add component
@@ -642,6 +646,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 						q			: q,
 						q_operator	: q_operator,
 						path		: JSON.parse(element.dataset.path),
+						q_split		: q_split,
 						type		: "jsonb"
 					})
 				}
@@ -651,6 +656,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					q			: q,
 					q_operator	: q_operator,
 					path		: JSON.parse(element.dataset.path),
+					q_split		: q_split,
 					type		: "jsonb"
 				})
 			}
