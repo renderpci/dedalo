@@ -3326,7 +3326,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Builds a search_query taking care of split multiple values and conform output objects
+	* Builds a search_query_object filter item taking care of split multiple values and conform output objects
 	* @param object $query_object
 	*  sample
 		* {
@@ -3349,7 +3349,7 @@ abstract class component_common extends common {
 		*   ]
 		* }
 	* @return array $ar_query_object
-	* 	Array of one or more SQO (search query object)
+	* 	Array of one or more SQO (search query object) filter items
 	*/
 	public static function get_search_query( object $query_object ) : array {
 

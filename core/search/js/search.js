@@ -515,6 +515,10 @@ search.prototype.get_component_instance = async function(options) {
 /**
 * PARSE_DOM_TO_JSON_FILTER
 * @param object options
+* {
+*	mode: string like "search",
+* 	save_arguments: undefined|boolean
+* }
 * @return object json_query_obj
 */
 search.prototype.parse_dom_to_json_filter = function(options) {
@@ -542,7 +546,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 	// Calculate recursively all groups inside
 		const filter_obj = self.recursive_groups(root_search_group, add_arguments, mode)
 		if(SHOW_DEBUG===true) {
-			console.warn("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
+			console.warn("[parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
 	// children_recursive checkbox
@@ -916,7 +920,7 @@ search.prototype.update_state = async function(options) {
 				? self.limit
 				: 10
 
-		// pagination
+		// rqo.sqo update
 			caller_instance.total						= null
 			caller_instance.rqo.sqo.limit				= limit
 			caller_instance.rqo.sqo.offset				= 0
@@ -926,7 +930,7 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
-		// request_config_object. Copy rqo.sqo pagination values to request_config_object
+		// request_config_object.sqo update. Copy rqo.sqo pagination values to request_config_object
 			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 
