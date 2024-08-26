@@ -41,6 +41,9 @@ export const login = function() {
 	this.select_lang
 
 	this.status
+
+	// use_service_worker. default is true
+	this.use_service_worker = true
 }//end login
 
 
@@ -415,26 +418,33 @@ login.prototype.action_dispatch = async function(api_response) {
 				}
 
 			// service worker registry (uses service worker as cache proxy)
-				run_service_worker({
-					on_message	: on_message
-				})
-				.then(function(response){
-					// on service worker registration error (not https support for example)
-					// fallback to the former method of loading cache files
-					if (response===false) {
+				if (!this.use_service_worker) {
+					// development server deactivate service worker by default to prevent unwanted caches
+					run_worker_cache({
+						on_message	: on_message
+					})
+				}else{
+					run_service_worker({
+						on_message	: on_message
+					})
+					.then(function(response){
+						// on service worker registration error (not https support for example)
+						// fallback to the former method of loading cache files
+						if (response===false) {
 
-						// notify error
-							const error = location.protocol==='http:'
-								? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
-								: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
-							console.error(error);
+							// notify error
+								const error = location.protocol==='http:'
+									? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
+									: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
+								console.error(error);
 
-						// launch worker cache (uses regular browser memory cache)
-							run_worker_cache({
-								on_message	: on_message
-							})
-					}
-				})
+							// launch worker cache (uses regular browser memory cache)
+								run_worker_cache({
+									on_message	: on_message
+								})
+						}
+					})
+				}
 
 		}//end if (api_response.result===true)
 
