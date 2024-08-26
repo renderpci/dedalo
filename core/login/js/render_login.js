@@ -123,7 +123,8 @@ const get_content_data = function(self) {
 		})
 		form.addEventListener('submit', (e) => {
 			e.preventDefault()
-			button_enter.click()
+			// fire button enter mousedown event
+			button_enter.dispatchEvent(new Event('mousedown'));
 		})
 
 	// login_items
