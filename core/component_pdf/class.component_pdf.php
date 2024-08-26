@@ -458,7 +458,7 @@ class component_pdf extends component_media_common implements component_media_in
 			// copy original to default quality (in the future, a quality conversion script will be placed here)
 				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
 				$default_extension	= $this->get_extension(); // normally .pdf
-				if ($file_extension!==$default_extension) {
+				if (strtolower($file_extension)!==strtolower($default_extension)) {
 					// file is NOT PDF, probably a .doc or similar . Don't copy the file
 				}else{
 					// copying file PDF (original) to PDF (web)
