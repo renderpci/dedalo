@@ -2692,7 +2692,6 @@ class component_text_area extends component_common {
 				$query_object->unaccent = true;
 				break;
 			# LITERAL
-			// case (substr($q, 0, 1)==='"' && substr($q, -1)==='"'):
 			case (search::is_literal($q)===true):
 				$operator = '~*';
 				$q_clean  = str_replace("'", '', $q);
