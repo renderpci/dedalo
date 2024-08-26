@@ -3513,10 +3513,6 @@ abstract class component_common extends common {
 
 
 	/**
-
-
-
-	/**
 	* SEARCH_OPERATORS_INFO
 	* Return valid operators for search in current component
 	* @return array $ar_operators
