@@ -163,6 +163,35 @@ const get_content_data = function(self) {
 		})
 		auth_input.autocomplete= 'current-password'
 
+	// development server. Value is set in environment as global var (set in server config file)
+		if (DEVELOPMENT_SERVER) {
+
+			// set self.use_service_worker as false by default
+			self.use_service_worker = false;
+
+			const use_service_worker_container = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'use_service_worker_container unselectable',
+				inner_html		: 'Dev. server. Use service worker',
+				title			: 'Disable by default in development servers (config DEVELOPMENT_SERVER)',
+				parent			: form
+			})
+			ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'button icon gears',
+				parent			: use_service_worker_container
+			})
+			const checkbox_use_service_worker = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox',
+				parent			: use_service_worker_container
+			})
+			checkbox_use_service_worker.addEventListener('change', (e) => {
+				self.use_service_worker = checkbox_use_service_worker.checked ?? false
+			})
+			use_service_worker_container.prepend(checkbox_use_service_worker)
+		}
+
 	// DEMO user
 	// add demo user if the installation is the open public demo: demo.dedalo.dev
 	// do not use this user pw and entity in production

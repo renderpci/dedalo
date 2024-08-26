@@ -369,7 +369,6 @@ const render_debug_info_bar = (self) => {
 			const service_worker_active = ui.create_dom_element({
 				element_type	: 'div',
 				class_name		: 'service_worker_active hide',
-				text_content	: 'sw',
 				parent			: debug_info_bar
 			})
 			try {

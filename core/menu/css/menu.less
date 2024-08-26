@@ -485,6 +485,23 @@
 				font-size: 94%;
 			}
 
+			>.service_worker_active {
+				.fn_build_button('gears.svg');
+
+				width: 1.3rem;
+				height: 2.2rem;
+				display: inline-block;
+				margin-left: 0.9rem;
+				margin-right: 0px;
+				opacity: 1;
+				cursor: default;
+				background-color: @color_orange_dedalo;
+
+				@media screen and (max-width: @width_break_point_0) { // 1024px
+					height: 1.5rem;
+				}
+			}
+
 			>.environment {
 				.fn_build_button('gear.svg');
 
