@@ -88,7 +88,8 @@ class component_check_box extends component_relation_common {
 		);
 		$diffusion_value = !empty($diffusion_value)
 			? strip_tags($diffusion_value)
-			: null;
+			: ''; // do not use null here (compatibility v5 sites issues)
+
 
 		return $diffusion_value;
 	}//end get_diffusion_value

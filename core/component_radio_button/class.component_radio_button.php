@@ -104,7 +104,7 @@ class component_radio_button extends component_relation_common {
 
 		$diffusion_value = !empty($diffusion_value)
 			? strip_tags($diffusion_value)
-			: null;
+			: ''; // do not use null here (compatibility v5 sites issues)
 
 
 		return $diffusion_value;
