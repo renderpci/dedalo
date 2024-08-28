@@ -88,14 +88,18 @@ final class ImageMagick {
 		$coalesce		= $options->coalesce ?? true;
 		$resize			= $options->resize ?? null;  // sample: 25% | 1024x756
 
+		$source_extension		= pathinfo($source_file, PATHINFO_EXTENSION);
 		$extension				= pathinfo($target_file, PATHINFO_EXTENSION);
 		$ar_opaque_extensions	= ['jpg','jpeg'];
 
-		// check if the original image is opaque or transparent
+		// check if the original image is opaque or transparent (it doesn't check if the image has meta channel)
 		$is_opaque = true;
 		if(!in_array($extension, $ar_opaque_extensions)){
 			$is_opaque = self::is_opaque($source_file);
 		}
+
+		//check if the original image has a meta channel (transparent channel, alpha channel)
+		$has_meta_channel = self::has_meta_channel($source_file);
 
 		// Valid path verify
 		$folder_path = pathinfo($target_file)['dirname'];
@@ -117,33 +121,6 @@ final class ImageMagick {
 		]);
 		$colorspace_info = shell_exec($command);	//-format "%[EXIF:DateTimeOriginal]"
 
-		# Layers info
-		# get thumbnail identification
-		$ar_valid_layers = [];
-		if(!isset($ar_layers) && $thumbnail===false && $is_opaque===false){
-
-			// // get the layer number of the image
-			// // layer number include the layer 0 that is a flat version of the image,
-			// // in tiff the layer 0 is a flat without transparency and is not possible to use it
-			// // in psd format layer 0 is a flat version with transparency.
-			// // to be compatible doesn't use the layer 0
-			// $layer_number = (int)self::get_layers_file_info( $source_file );
-
-			// // fill the valid layers removing the layer 0
-			// if($layer_number > 1){
-			// 	for ($i=1; $i < $layer_number; $i++) {
-			// 		$ar_valid_layers[] = $i;
-			// 	}
-			// }
-			$ar_valid_layers = [0];
-		}else{
-			$ar_valid_layers = $ar_layers ?? [];
-		}
-
-		$source_file_with_layers = empty($ar_valid_layers)
-			? '"'. $source_file . '"'
-			: '"'. $source_file . '"[' . implode(',', $ar_valid_layers) . ']';
-
 		// begin flags : Command flags before source file.
 			$begin_flags = '';
 
@@ -161,31 +138,51 @@ final class ImageMagick {
 		// Middle flags : Command flags between source and output files.
 			$middle_flags = '';
 
-			// when the image has layer remove the composite and flatten option to preserve the transparency
-			if(!empty($ar_valid_layers)){
-				$composite		= false;
-				$flatten		= false;
-
-				// set white background when the final image is opaque (as .jpg images)
-				$background = ($is_opaque === true)
-					? '-background "#FFFFFF"'
+			// set white background when the final image is opaque (as .jpg images)
+			// or set none for transparent images (all images except the defines by opaque_extension)
+				$background = ($is_opaque === true || in_array($extension, $ar_opaque_extensions) )
+					? '-background "#ffffff"'
 					: '-background none';
 
-				// set the layer merge with his relative position into the image
-				$middle_flags	.=' -layers coalesce '.$background.' -layers merge ';
-			}
+			// If the image has a meta channel, the original image is transparent and the meta channel need to be apply as alpha channel
+				if($has_meta_channel === true){
+					$composite		= false;
+					$flatten		= false;
+					// copy the first meta channel into the alpha channel
+					// Note: multiple meta channels are not supported
+					$middle_flags =  '-channel-fx "meta0=>alpha"';
 
-			$middle_flags .= ($thumbnail===true)
-				? ' -thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
-				: '';
+				}else if( $is_opaque === false ){
+					// the image is transparent because any of the layers has a transparent pixels
+					// in these cases copy the merge layer (layer 0 is always the composition of the image)
+					// apply the alpha channel to it and set as new layer
+					$composite		= false;
+					$flatten		= false;
+					$coalesce		= false;
 
-			$middle_flags	.= ($coalesce === true && $is_opaque === false)
-				? " -coalesce "
-				: '';
+					$middle_flags = '\( -clone 0 -alpha on -channel rgba -evaluate set 0 \)';
+					// in tiff formats is necessary delete the original layer 0
+					// in .psd, .avif or other transparent formats if the layer 0 is removed loose the composition
+					if($source_extension === 'tif' || $source_extension === 'tiff' ){
+						$middle_flags .= ' -delete 0';
+					}
+				}
 
-			$middle_flags	.= ($composite === true && $is_opaque === false && count($ar_valid_layers)>1)
-				? " -composite "
-				: '';
+			// set the layer merge with his relative position into the image
+				$middle_flags	.=' '.$background.' -layers merge '; //-layers coalesce
+
+
+				$middle_flags .= ($thumbnail===true)
+					? ' -thumbnail '.DEDALO_IMAGE_THUMB_WIDTH.'x'.DEDALO_IMAGE_THUMB_HEIGHT
+					: '';
+
+				$middle_flags	.= ($coalesce === true && $is_opaque === false && $has_meta_channel === false)
+					? " -coalesce "
+					: '';
+
+				$middle_flags	.= ($composite === true && $is_opaque === false && $has_meta_channel === false)
+					? " -composite "
+					: '';
 
 			switch (true) {
 
@@ -216,12 +213,10 @@ final class ImageMagick {
 						);
 					}
 
-					// Remove possible '-thumbnail' flag when profile is used
-					$middle_flags = str_replace('-thumbnail', '', $middle_flags);
 
 					# Command middle_flags
-					$middle_flags	.= '-profile "'.$profile_source.'" ';
-					$middle_flags	.= '-profile "'.$profile_file.'" ';
+					$middle_flags	.= ' -profile "'.$profile_source.'" ';
+					$middle_flags	.= ' -profile "'.$profile_file.'" ';
 					$middle_flags	.= ($flatten === true && $is_opaque === true)
 						? " -flatten "
 						: '';
@@ -248,7 +243,7 @@ final class ImageMagick {
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				MAGICK_PATH . 'magick '.$begin_flags.' '.$source_file_with_layers.' '.$middle_flags.' "'.$target_file.'" '
+				MAGICK_PATH . 'magick '.$begin_flags.' '.$source_file.' '.$middle_flags.' "'.$target_file.'" '
 			]);
 
 		// debug
@@ -343,29 +338,54 @@ final class ImageMagick {
 
 			return 1; //$ar_lines[0]
 
-		// // image format
-		// $ar_layers = array();
-		// 	$command	= MAGICK_PATH . 'identify -quiet -format "%[scene]:%[tiff:subfiletype]\n" '. $source_file;
-		// 	$output		= shell_exec($command);
-		// // parse output
-		// 	if (!empty($output)) {
-		// 		$output		= trim($output);
-		// 		$ar_lines	= explode("\n", $output);
-		// 		foreach ($ar_lines as $key => $value) {
-
-		// 			$ar_part2	= explode(":", $value);
-		// 			$layer_key	= $ar_part2[0];
-
-		// 			// $layer_type = ($tiff_format<=2 && $key>0)
-		// 			// 	? 'REDUCEDIMAGE'
-		// 			// 	: ($ar_part2[1] ?? null);
-
-		// 			$ar_layers[$layer_key] = $ar_part2[1];;
-		// 		}
-		// 	}
-
-		// return $ar_layers;
 	}//end get_layers_file_info
+
+
+
+
+	/**
+	* HAS_META_CHANNEL
+	* Check all channels in the image and find if any of them has a meta channel
+	* Meta channel is use as alpha channel to define areas to be transparent
+	* imagemagick don't apply meta channels as alpha channels
+	* but tiff format or psd formats use it as alpha channel defining transparent pixels
+	* @param string $source_file
+	* @return bool $meta_channel
+	*/
+	public static function has_meta_channel( string $source_file ) : bool {
+
+		// tiff info. Get the channel number of TIFF (PSD use the same property) :
+			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. $source_file;
+			$string_channels	= shell_exec($command);
+
+			debug_log(__METHOD__
+				. " has_meta_channel command " . PHP_EOL
+				. 'command: ' .to_string($command) . PHP_EOL
+				. 'channels: ' . json_encode($string_channels)
+				, logger::WARNING
+			);
+
+		// the result could be:
+		// srgb  3.0 -> 3 channels 0 meta channels, without any meta channel (transparent channel)
+		// srgb  4.1 -> 4 channels 1 of them is meta channel (transparent channel)
+		// srgba 6.2 -> 6 channels 2 of them is meta channel (transparent channel)
+
+		// find every number into the string 3.1
+		preg_match_all('/\d+.\d+/', $string_channels, $ar_channels_info);
+
+		$meta_channel = false;
+		foreach ($ar_channels_info[0] as $channels_data) {
+			$ar_channel_info 	= explode('.', $channels_data);
+			$meta_channel_info = (int)$ar_channel_info[1];
+
+			if($meta_channel_info > 0){
+				$meta_channel = true;
+				break;
+			}
+		}
+
+		return $meta_channel;
+	}//end has_meta_channel
 
 
 
