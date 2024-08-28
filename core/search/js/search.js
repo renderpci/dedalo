@@ -515,6 +515,10 @@ search.prototype.get_component_instance = async function(options) {
 /**
 * PARSE_DOM_TO_JSON_FILTER
 * @param object options
+* {
+*	mode: string like "search",
+* 	save_arguments: undefined|boolean
+* }
 * @return object json_query_obj
 */
 search.prototype.parse_dom_to_json_filter = function(options) {
@@ -542,7 +546,7 @@ search.prototype.parse_dom_to_json_filter = function(options) {
 	// Calculate recursively all groups inside
 		const filter_obj = self.recursive_groups(root_search_group, add_arguments, mode)
 		if(SHOW_DEBUG===true) {
-			console.warn("++++++++ [parse_dom_to_json_filter] filter_obj: ", filter_obj);
+			console.warn("[parse_dom_to_json_filter] filter_obj: ", filter_obj);
 		}
 
 	// children_recursive checkbox
@@ -600,8 +604,9 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 
 			// Q . Search argument
 			// Get value from component wrapper dataset (previously fixed on change value)
-			let q 			= null // default
-			let q_operator 	= null // default
+			let q			= null // default
+			let q_operator	= null // default
+			let q_split		= false // default is false
 			// add_arguments . if true, calculate and save inputs value to preset (temp preset)
 			if (add_arguments!==false) {
 
@@ -609,8 +614,10 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 				const component_instance	= self.ar_instances.find(instance => instance && instance.id===component_wrapper.id)
 
 				if(!component_instance){
+					console.log('Error. Ignored not found component instance id:', component_wrapper.id);
 					continue
 				}
+
 				// get the search value
 				// if the component has a specific function get the value from his function (ex: portal remove some properties from his locator before search)
 				// else get the value as search value.
@@ -619,10 +626,11 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					: component_instance.data.value
 
 				// overwrite
-				if (typeof component_instance!=="undefined") {
 					q			= search_value
 					q_operator	= component_instance.data.q_operator
-				}
+
+				// q_split
+					q_split = component_instance.q_split ?? false
 			}
 
 			// Add component
@@ -638,6 +646,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 						q			: q,
 						q_operator	: q_operator,
 						path		: JSON.parse(element.dataset.path),
+						q_split		: q_split,
 						type		: "jsonb"
 					})
 				}
@@ -647,6 +656,7 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 					q			: q,
 					q_operator	: q_operator,
 					path		: JSON.parse(element.dataset.path),
+					q_split		: q_split,
 					type		: "jsonb"
 				})
 			}
@@ -916,7 +926,7 @@ search.prototype.update_state = async function(options) {
 				? self.limit
 				: 10
 
-		// pagination
+		// rqo.sqo update
 			caller_instance.total						= null
 			caller_instance.rqo.sqo.limit				= limit
 			caller_instance.rqo.sqo.offset				= 0
@@ -926,7 +936,7 @@ search.prototype.update_state = async function(options) {
 			caller_instance.rqo.sqo.children_recursive	= json_query_obj.children_recursive || false
 			caller_instance.rqo.sqo.section_tipo		= self.target_section_tipo
 
-		// request_config_object. Copy rqo.sqo pagination values to request_config_object
+		// request_config_object.sqo update. Copy rqo.sqo pagination values to request_config_object
 			caller_instance.request_config_object.sqo.limit		= caller_instance.rqo.sqo.limit
 			caller_instance.request_config_object.sqo.offset	= caller_instance.rqo.sqo.offset
 

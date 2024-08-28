@@ -3098,4 +3098,20 @@ class search {
 
 
 
+	/**
+	* IS_LITERAL
+	* Check if given value is literal or not
+	* A literal is identified by being enclosed in single quotes.
+	* Used by components to identify literals
+	* @param string $q The string to check.
+	* @return bool True if the string is a literal, false otherwise.
+	*/
+	public static function is_literal(string $q) : bool {
+
+		// Check if the string starts and ends with a single quote
+    	return strlen($q) > 1 && $q[0] === "'" && $q[-1] === "'";
+	}//end is_literal
+
+
+
 }//end class search

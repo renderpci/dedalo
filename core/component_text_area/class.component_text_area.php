@@ -2495,16 +2495,31 @@ class component_text_area extends component_common {
 
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
+	* @param object $query_object
 	* @return object $query_object
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
-		# Always set fixed values
-		$query_object->type = 'string';
-
+		// q
 		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
-		$q = is_array($query_object->q) ? reset($query_object->q) : $query_object->q;
-		$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+			$q = is_array($query_object->q)
+				? reset($query_object->q)
+				: ($query_object->q ?? '');
+
+		// split q case
+			$q_split = $query_object->q_split ?? false;
+			if ($q_split===true && !search::is_literal($q)) {
+				$q_items = preg_split('/\s/', $q);
+				if (count($q_items)>1) {
+					return self::handle_query_splitting($query_object, $q_items, '$and');
+				}
+			}
+
+		// escape q string for DB
+			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+
+		// Always set fixed values
+		$query_object->type = 'string';
 
 		switch (true) {
 			# IS NULL
@@ -2677,9 +2692,9 @@ class component_text_area extends component_common {
 				$query_object->unaccent = true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==='"' && substr($q, -1)==='"'):
+			case (search::is_literal($q)===true):
 				$operator = '~*';
-				$q_clean  = str_replace('"', '', $q);
+				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator = $operator;
 				$query_object->q_parsed	= '\'.*'.$q_clean.'.*\'';
 				$query_object->unaccent = true;
@@ -2716,7 +2731,7 @@ class component_text_area extends component_common {
 			'*text*'	=> 'contains',
 			'text*'		=> 'begins_with',
 			'*text'		=> 'end_with',
-			'"text"'	=> 'literal'
+			'\'text\''	=> 'literal'
 		];
 
 		return $ar_operators;

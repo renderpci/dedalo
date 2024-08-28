@@ -384,7 +384,7 @@ login.prototype.action_dispatch = async function(api_response) {
 						files_loader.update(data)
 					}
 				// finish handler. Fired when finish status is triggered in workers
-				// Ussually when all files are loaded
+				// Usually when all files are loaded
 					const finish_handler = () => {
 						// login continue
 						setTimeout(()=>{
@@ -407,7 +407,7 @@ login.prototype.action_dispatch = async function(api_response) {
 
 						case 'finish':
 							// The update_files if finish
-							// Then, we can consinue the login normmally
+							// Then, we can continue the login normally
 							// reload or redirect the page
 							finish_handler()
 							break;

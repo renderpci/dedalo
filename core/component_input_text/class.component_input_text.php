@@ -399,18 +399,51 @@ class component_input_text extends component_common {
 	/**
 	* RESOLVE_QUERY_OBJECT_SQL
 	* @param object $query_object
+	* sample:
+		* {
+		*    "q": [
+		*        "Raurich Pérez"
+		*    ],
+		*    "q_operator": null,
+		*    "path": [
+		*        {
+		*            "name": "Surname",
+		*            "model": "component_input_text",
+		*            "section_tipo": "rsc197",
+		*            "component_tipo": "rsc86"
+		*        }
+		*    ],
+		*    "q_split": true,
+		*    "type": "jsonb",
+		*    "component_path": [
+		*        "components",
+		*        "rsc86",
+		*        "dato"
+		*    ],
+		*    "lang": "all"
+		* }
 	* @return object $query_object
 	*	Edited/parsed version of received object
 	*/
 	public static function resolve_query_object_sql(object $query_object) : object {
 
 		// $q
+		// Note that $query_object->q v6 is array (before was string) but only one element is expected. So select the first one
 			$q = is_array($query_object->q)
 				? reset($query_object->q)
-				: $query_object->q;
-			if (is_string($q)) {
-				$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
+				: ($query_object->q ?? '');
+
+		// split q case
+			$q_split = $query_object->q_split ?? false;
+			if ($q_split===true && !search::is_literal($q)) {
+				$q_items = preg_split('/\s/', $q);
+				if (count($q_items)>1) {
+					return self::handle_query_splitting($query_object, $q_items, '$and');
+				}
 			}
+
+		// escape q string for DB
+			$q = pg_escape_string(DBi::_getConnection(), stripslashes($q));
 
 		// q_operator
 			$q_operator = $query_object->q_operator ?? null;
@@ -591,7 +624,7 @@ class component_input_text extends component_common {
 				$query_object->unaccent	= true;
 				break;
 			# LITERAL
-			case (substr($q, 0, 1)==="'" && substr($q, -1)==="'"):
+			case (search::is_literal($q)===true):
 				$operator = '~';
 				$q_clean  = str_replace("'", '', $q);
 				$query_object->operator	= $operator;

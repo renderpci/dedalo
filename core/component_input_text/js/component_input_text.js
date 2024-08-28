@@ -39,6 +39,9 @@ export const component_input_text = function(){
 
 	// ui
 	this.minimum_width_px = 90 // integer pixels
+
+	// search config
+	this.q_split = true
 }//end component_input_text
 
 
