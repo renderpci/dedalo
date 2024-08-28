@@ -99,6 +99,12 @@ const get_content_data = async function(self) {
 				const image_size = main_element_image.getBoundingClientRect()
 				image_container.style.width		= image_size.width +'px'
 				image_container.style.height	= image_size.height +'px'
+
+				//save current values as default values (will use into the no-expand option)
+				self.image_container.dd_options = {
+					width	: image_size.width,
+					height	: image_size.height
+				}
 			}
 
 		// axis_container
@@ -204,6 +210,10 @@ const get_buttons = function(self) {
 				range.addEventListener('input', function(){
 					output.value = range.value
 					self.main_element_image.style.transform = "rotate("+ (range.value % 360) +"deg)"
+					if(expanded_checkbox.checked === true){
+						const image_size = self.main_element_image.getBoundingClientRect()
+						self.image_container.style.width	= image_size.width +'px'
+					}
 				})
 
 	// color options
@@ -233,7 +243,7 @@ const get_buttons = function(self) {
 			color_picker.addEventListener("input", function(e){
 				// color_picker.value = e.target.value;
 				self.image_container.style.background = e.target.value;
-				input_checkbox.checked = false
+				alpha_checkbox.checked = false
 			});
 
 			// transparent check box
@@ -244,23 +254,54 @@ const get_buttons = function(self) {
 				parent			: color_options_container
 			})
 
-		// input_checkbox
-			const input_checkbox = ui.create_dom_element({
-				element_type	: 'input',
-				type			: 'checkbox'
-			})
-			option_label.prepend(input_checkbox)
-			input_checkbox.addEventListener('change', function(e) {
+			// alpha_checkbox
+				const alpha_checkbox = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox'
+				})
+				option_label.prepend(alpha_checkbox)
+				alpha_checkbox.addEventListener('change', function(e) {
 
-				if(e.target.checked === true){
-					self.image_container.classList.add('checkborad');
-					self.image_container.style.background = null
-					color_picker.value = '#ffffff'
-				}else{
-					self.image_container.classList.remove('checkborad');
-				}
+					if(e.target.checked === true){
+						self.image_container.classList.add('checkborad');
+						self.image_container.style.background = null
+						color_picker.value = '#ffffff'
+					}else{
+						self.image_container.classList.remove('checkborad');
+					}
 
+				})
+
+			// expanded check box
+			// label
+			const expanded_label = ui.create_dom_element({
+				element_type	: 'label',
+				inner_html		: self.get_tool_label('expanded') || 'Expanded',
+				parent			: color_options_container
 			})
+
+			// expanded_checkbox
+				const expanded_checkbox = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox'
+				})
+				expanded_label.prepend(expanded_checkbox)
+				expanded_checkbox.addEventListener('change', function(e) {
+
+					if(e.target.checked === true){
+
+						const image_size = self.main_element_image.getBoundingClientRect()
+							self.image_container.style.width	= image_size.width +'px'
+
+
+					}else{
+
+						self.image_container.style.width	= self.image_container.dd_options.width +'px'
+						self.image_container.style.height	= self.image_container.dd_options.height +'px'
+
+					}
+
+				})
 
 	// apply_rotation_button_container
 		const apply_rotation_button_container = ui.create_dom_element({
@@ -282,7 +323,8 @@ const get_buttons = function(self) {
 				const result = await self.apply_rotation({
 					rotation_degrees	: rotation_degrees,
 					background_color	: color_picker.value,
-					alpha				: input_checkbox.checked
+					alpha				: alpha_checkbox.checked,
+					rotation_mode		: expanded_checkbox.checked ? 'expanded' : 'default'
 				})
 				if (result===true) {
 					// reload the image
