@@ -63,31 +63,21 @@ export const update_ontology = function() {
 */
 update_ontology.prototype.supported_code_version = (required_version) => {
 
-	// current code version from environment
-	const current_version = page_globals.dedalo_version
+	// Parse version strings into arrays of integers
+	const required_version_parts	= required_version.split('.').map(Number);
+	const current_version_parts		= page_globals.dedalo_version.split('.').map(Number);
 
-	const ar_required_version	= required_version.split('.')
-	const ar_current_version	= current_version.split('.')
-
-	if (parseInt(ar_required_version[0]) > parseInt(ar_current_version[0])) {
-		return true
+	// Iterate over version parts and compare
+	for (let i = 0; i < required_version_parts.length; i++) {
+		if (current_version_parts[i] > required_version_parts[i]) {
+			return true; // Current version is greater
+		} else if (current_version_parts[i] < required_version_parts[i]) {
+			return false; // Current version is less
+		}
 	}
 
-	if (parseInt(ar_required_version[0]) === parseInt(ar_current_version[0]) &&
-		parseInt(ar_required_version[1]) > parseInt(ar_current_version[1])
-		) {
-		return true
-	}
-
-	if (parseInt(ar_required_version[0]) === parseInt(ar_current_version[0]) &&
-		parseInt(ar_required_version[1]) === parseInt(ar_current_version[1]) &&
-		parseInt(ar_required_version[2]) >= parseInt(ar_current_version[2])
-		) {
-		return true
-	}
-
-
-	return false
+	// If all parts are equal, current version is supported
+	return true;
 }//end supported_code_version
 
 
