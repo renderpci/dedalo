@@ -1859,16 +1859,40 @@ class component_image extends component_media_common implements component_media_
 				return false;
 			}
 
-		// source file
-			$source_file = $this->get_media_filepath($quality);
-			if (!file_exists($source_file)) {
+		// current_quality file
+			$current_quality_file = $this->get_media_filepath($quality);
+			if (!file_exists($current_quality_file)) {
 				debug_log(__METHOD__
 					. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
-					. 'source_file: ' . to_string($source_file)
+					. 'current_quality_file: ' . to_string($current_quality_file)
 					, logger::WARNING
 				);
 				return false;
 			}
+
+		// source file
+			// get uploaded image as source | modified, original or high quality available.
+				$image_source	= $this->get_image_source( $quality );
+					$source_file	= $image_source->source_file;
+					$source_quality	= $image_source->source_quality;
+
+			// get the original file with the extension of the alternative image
+			// if the original directory has a copy with the same extension, use it (avif -> avif),
+			// else use the original source file (tiff -> avif)
+				$alternative_source_file = $this->get_media_filepath($source_quality, $extension);
+				if( file_exists($alternative_source_file) ){
+					$source_file = $alternative_source_file;
+				}
+
+				if (!file_exists($source_file)) {
+					debug_log(__METHOD__
+						. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
+						. 'quality: ' . to_string($quality) . PHP_EOL
+						. 'source_file: ' . to_string($source_file)
+						, logger::WARNING
+					);
+					return false;
+				}
 
 		// short vars
 			$file_name		= $this->get_id();
