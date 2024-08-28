@@ -273,10 +273,11 @@ const get_buttons = function(self) {
 				})
 
 			// expanded check box
+			// rotate the image and expand the canvas, with this option active the image expand the background avoiding crop.
 			// label
 			const expanded_label = ui.create_dom_element({
 				element_type	: 'label',
-				inner_html		: self.get_tool_label('expanded') || 'Expanded',
+				inner_html		: self.get_tool_label('expand') || 'Expand',
 				parent			: color_options_container
 			})
 
@@ -289,18 +290,12 @@ const get_buttons = function(self) {
 				expanded_checkbox.addEventListener('change', function(e) {
 
 					if(e.target.checked === true){
-
 						const image_size = self.main_element_image.getBoundingClientRect()
 							self.image_container.style.width	= image_size.width +'px'
-
-
 					}else{
-
 						self.image_container.style.width	= self.image_container.dd_options.width +'px'
 						self.image_container.style.height	= self.image_container.dd_options.height +'px'
-
 					}
-
 				})
 
 	// apply_rotation_button_container
