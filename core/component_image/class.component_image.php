@@ -1223,7 +1223,7 @@ class component_image extends component_media_common implements component_media_
 		$quality			= $options->quality ?? null;
 		$extension			= $options->extension ?? null;
 		$degrees			= $options->degrees;
-		$rotation_mode		= $options->rotation_mode ?? 'right_angles'; // right_angles || free
+		$rotation_mode		= $options->rotation_mode ?? 'default'; // default || expanded
 		$background_color	= $options->background_color ?? null;
 		$alpha				= $options->alpha ?? false;
 
