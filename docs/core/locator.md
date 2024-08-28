@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Locator is the connection, the relation, between data. Dédalo use a NoSQL model to store data in database, but we want to have relation data as classical SQL has, relation data is great, you have only 1 record with the information and is called by lots of other records. One change in the related data is automatically update in the caller. No duplicate data make than your catalogue could be maintainable in the time. Dédalo use the best of this two wolds the flexibility of NoSQL and the relations of SQL, why we need to choose?
+Locator is the connection, the relation, between data. Dédalo uses a NoSQL model to store data in database, it is a flexible way to create schemas that can change by the time, usually NoSQL models has not relations between data, but we want to have data relations as classical SQL has, relation data is great, you have only 1 record with the information and is called by lots of other records. One change in the related data is automatically update in the caller. No duplicate data make than your catalogue could be maintainable in the time. Dédalo use the best of this two wolds the flexibility of NoSQL and the relations of SQL, why we need to choose one?
 
 ## locator definition
 
@@ -16,7 +16,7 @@ Locator is an extensible object, it depends of the data pointed and his properti
 
 ### Function and structure
 
-To understand how locator works, keep in mind that Dédalo use few tables with lots of sections named "matrix_XXX" and all of these tables has the same schema:
+To understand how locator works, keep in mind that Dédalo uses a few tables to store lot of sections named, this tables are named as "matrix_XXX" and all of these tables has the same schema:
 
 ```mermaid
 erDiagram
@@ -106,13 +106,13 @@ Then the result will be:
 
 Locators can point to:
 
-- sections : with section_id and section_tipo
-- components : with component_tipo
-- tags (part of components) : with tag_id
+- sections : with `section_id` and `section_tipo`
+- components : with `component_tipo`
+- tags (parts or fragments of components) : with `tag_id`
 
-Locator reference the source with the prefix *from*:
+Locator defines the source with the prefix *from*:
 
-from_section_tipo: the section that has the component that store the locator, the source.
+`from_section_tipo`: the section that has the component that store the locator, the caller, the source.
 
 ### Properties
 
