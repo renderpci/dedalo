@@ -16,7 +16,7 @@
 | tch | beta | 90% | 90% | 90%  | Install and test it, but don't use in production |  not compatible |
 | tchi | production | 100% | 100% | 100%  | All definitions are ready  | not compatible |
 | dmm | production | 100% | 100% | 100% | All definitions are ready | October 2024 |
-| mdcat | RC | 90% | 100% | 100% | Install and test it, but don't use in production | October 2024 |
+| mdcat | production | 100% | 100% | 100% | All definitions are ready| October 2024 |
 
 
 ## 1. What is Dédalo?
@@ -145,8 +145,6 @@ Then, install Dédalo manually [following this instruction(https://dedalo.dev/do
 
 ## 6. Update
 
-*Please read the "Updates.md" file for specific notes, procedures, etc, of the versions.*
-
 You can follow the instruction to [update here](https://dedalo.dev/docs/management/updates/).
 In a nutshell, Dédalo has three main updates procedures:
 
@@ -199,16 +197,16 @@ Dédalo version V6+ is only tested in chromium and webkit browsers (Chrome, Safa
 
 | Browser | Version | Compatible with Dédalo |
 | --- | --- | --- |
-| Chrome | 115+ | YES - recommended |
-| Chrome | 100 to 114 | Deprecated (Please update as soon as possible) |
-| Chrome | 0 to 100 | NO |
+| Chrome | 120+ | YES - recommended |
+| Chrome | 110 to 119 | Deprecated (Please update as soon as possible) |
+| Chrome | 0 to 110 | NO |
 | Safari | 16.4+ | YES |
 | Safari | 16.3 | Deprecated (Please update as soon as possible) |
 | Safari | 0 to 15 | NO |
 | Firefox | 115+ | YES |
 | Firefox | 100 to 114 | Deprecated (Please update as soon as possible) |
 | Firefox | 0-99 | NO |
-| EDGE | 115+ | YES |
-| EDGE |  100 to 114 | Deprecated (Please update as soon as possible) |
-| EDGE |  0 to 100 | NO |
+| EDGE | 120+ | YES |
+| EDGE |  110 to 119 | Deprecated (Please update as soon as possible) |
+| EDGE |  0 to 110 | NO |
 | IExplorer | All  | NO |
