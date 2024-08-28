@@ -126,6 +126,7 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 	const rotation_degrees	= options.rotation_degrees
 	const background_color	= options.background_color
 	const alpha				= options.alpha
+	const rotation_mode		= options.rotation_mode
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -142,6 +143,7 @@ tool_image_rotation.prototype.apply_rotation = function(options) {
 				section_id			: self.main_element.section_id,
 				rotation_degrees	: rotation_degrees,
 				background_color	: background_color,
+				rotation_mode 		: rotation_mode,
 				alpha				: alpha
 			}
 		}

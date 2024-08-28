@@ -197,7 +197,7 @@ class tool_media_versions extends tool_common {
 					$rotation_options->quality			= $value->quality;
 					$rotation_options->extension		= $value->extension;
 					$rotation_options->degrees			= $degrees;
-					$rotation_options->rotation_mode	= 'right_angles';
+					$rotation_options->rotation_mode	= 'expanded';
 
 				// result boolean
 				$command_result = $component->rotate($rotation_options);

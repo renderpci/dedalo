@@ -397,7 +397,8 @@ final class ImageMagick {
 	*	"tipo"				: "rsc29", 		// string
 	*	"section_tipo"		: "rsc170", 	// string
 	*	"section_id"		: "1",			// string
-	*	"rotation_degrees"	: "60.49", 		// sting
+	*	"degrees"			: "60.49", 		// sting
+	* 	"rotation_mode"		: "expanded" 	// string; default || expanded
 	*	"background_color"	: "#ffffff", 	// string
 	*	"alpha"				: false 		// bool; true || false
 	* }
@@ -409,22 +410,22 @@ final class ImageMagick {
 		$source				= $options->source;
 		$target				= $options->target;
 		$degrees			= $options->degrees;
-		$rotation_mode		= $options->rotation_mode ?? 'right_angles'; // right_angles || free
+		$rotation_mode		= $options->rotation_mode ?? 'default'; // default || expanded
 		$background_color	= $options->background_color ?? null;
 		$alpha				= $options->alpha ?? false;
 
 		// command
-			if($rotation_mode === 'free'){
-				$color = isset($background_color)
-					? "-virtual-pixel background -background '$background_color' -interpolate Mesh"
-					: '';
-				// if alpha is set and true replace the background color to transparent
-				if(isset($alpha) && $alpha === true){
-					$color =  "-alpha set -virtual-pixel transparent -interpolate Mesh";
-				};
-				$command = MAGICK_PATH ."convert '$source' $color -distort SRT $degrees '$target'";
+			$color = isset($background_color)
+				? "-virtual-pixel background -background '$background_color' -interpolate Mesh"
+				: '';
+			// if alpha is set and true replace the background color to transparent
+			if(isset($alpha) && $alpha === true){
+				$color =  "-alpha set -virtual-pixel transparent -background none -interpolate Mesh";
+			};
+			if($rotation_mode === 'expanded'){
+				$command = MAGICK_PATH ."convert '$source' $color +distort SRT $degrees '$target'";
 			}else{
-				$command = MAGICK_PATH . "convert -rotate \"$degrees\" '$source' '$target'";
+				$command = MAGICK_PATH . "convert '$source' $color -distort SRT $degrees '$target'";
 			}
 
 			$result = shell_exec($command);

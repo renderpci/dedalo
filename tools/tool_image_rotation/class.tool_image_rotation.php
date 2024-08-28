@@ -30,6 +30,7 @@ class tool_image_rotation extends tool_common {
 			$degrees			= $options->rotation_degrees ?? 0;
 			$background_color	= $options->background_color ?? '#ffffff';
 			$alpha				= $options->alpha?? null;
+			$rotation_mode		= $options->rotation_mode?? 'default';
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -58,7 +59,7 @@ class tool_image_rotation extends tool_common {
 					$rotation_options->quality			= $value->quality;
 					$rotation_options->extension		= $value->extension;
 					$rotation_options->degrees			= $degrees;
-					$rotation_options->rotation_mode	= 'free';
+					$rotation_options->rotation_mode	= $rotation_mode;
 					$rotation_options->background_color	= $background_color;
 					$rotation_options->alpha			= $alpha ?? null;
 
