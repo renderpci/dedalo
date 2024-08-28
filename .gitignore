@@ -164,4 +164,7 @@ tool_leaflet_special_tools
 
 # phpunit test
 phpunit-results.*
+
 /lab
+/core/lab
+/webpack*
