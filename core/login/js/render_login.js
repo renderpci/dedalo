@@ -169,10 +169,17 @@ const get_content_data = function(self) {
 			// set self.use_service_worker as false by default
 			self.use_service_worker = false;
 
+			const dev_server_options = ui.create_dom_element({
+				element_type	: 'h4',
+				class_name		: 'dev_server_options',
+				inner_html		: 'Developer server options',
+				parent			: form
+			})
+
 			const use_service_worker_container = ui.create_dom_element({
 				element_type	: 'label',
 				class_name		: 'use_service_worker_container unselectable',
-				inner_html		: 'Dev. server. Use service worker',
+				inner_html		: 'Use service worker',
 				title			: 'Disable by default in development servers (config DEVELOPMENT_SERVER)',
 				parent			: form
 			})
