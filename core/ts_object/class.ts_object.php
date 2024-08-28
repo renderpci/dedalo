@@ -290,7 +290,7 @@ class ts_object {
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($element_tipo,true);
 					// remove the box elements
 					// it could be any old component not used as old component_relation_struct
-					if($model_name === 'box elements'){
+					if(empty($model_name) || $model_name === 'box elements'){
 						continue 2;
 					}
 					// ignore v5 component_relation_struct
