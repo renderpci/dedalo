@@ -511,7 +511,9 @@ const render_tanscription_options = async function(self) {
 			action		: async function(e){
 				const lang = e.target.value
 				self.transcription_component.lang = lang
-				self.transcription_component.refresh()
+				self.transcription_component.refresh({
+					render_level : 'full' // use full here to force update label lang as [lg-spa]
+				})
 			}
 		})
 		lang_container.appendChild(lang_selector)
