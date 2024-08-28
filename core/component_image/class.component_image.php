@@ -1422,44 +1422,9 @@ class component_image extends component_media_common implements component_media_
 			$response->errors	= [];
 
 		// source
-			$source_file = null; // default
-
-			// modified_file full file path try
-			$uploaded_modified_file = $this->get_uploaded_file(
-				$this->get_modified_quality()
-			);
-			if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
-				$source_quality	= $this->get_modified_quality();
-				$source_file	= $uploaded_modified_file;
-			}else{
-				// original_file full file path try
-				$uploaded_original_file = $this->get_uploaded_file(
-					$this->get_original_quality()
-				);
-				if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
-					$source_quality	= $this->get_original_quality();
-					$source_file	= $uploaded_original_file;
-				}
-			}
-
-			// try to use non original / modified / default qualities
-			// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
-			if(empty($source_file)){
-				// iterate qualities from high to low until
-				foreach ($this->get_ar_quality() as $current_quality) {
-					if ($current_quality!==$quality) {
-						if (file_exists($this->get_media_filepath($current_quality))) {
-							$source_quality	= $current_quality;
-							$source_file	= $this->get_media_filepath($current_quality);
-							break;
-						}
-					}
-					if ($current_quality===$this->quality) {
-						// do not use quality smaller than current instance quality
-						break;
-					}
-				}
-			}
+			$image_source	= $this->get_image_source( $quality );
+			$source_file	= $image_source->source_file;
+			$source_quality	= $image_source->source_quality;
 
 		// source file not found case
 			if(empty($source_file)){
@@ -1534,6 +1499,66 @@ class component_image extends component_media_common implements component_media_
 
 		return $response;
 	}//end build_version
+
+
+
+	/**
+	* GET_IMAGE_SOURCE
+	* get the uploaded file to be used as source file to be converted into other qualities and formats
+	* the $quality parameter is used to check high qualities of it as source when the original and modified has not files.
+	* @param string $quality
+	* @return object $source_file
+	* {
+	* 	source_file : string | null // resolve file path of the original or modified or other high quality file
+	* 	source_quality: string | null // the quality of where the source_file was selected
+	* }
+	*/
+	public function get_image_source( string $quality ) : object {
+
+		// modified_file full file path try
+		$uploaded_modified_file = $this->get_uploaded_file(
+			$this->get_modified_quality()
+		);
+		if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
+			$source_quality	= $this->get_modified_quality();
+			$source_file	= $uploaded_modified_file;
+		}else{
+			// original_file full file path try
+			$uploaded_original_file = $this->get_uploaded_file(
+				$this->get_original_quality()
+			);
+			if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
+				$source_quality	= $this->get_original_quality();
+				$source_file	= $uploaded_original_file;
+			}
+		}
+
+		// try to use non original / modified / default qualities
+		// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
+		if(empty($source_file)){
+			// iterate qualities from high to low until
+			foreach ($this->get_ar_quality() as $current_quality) {
+				if ($current_quality!==$quality) {
+					if (file_exists($this->get_media_filepath($current_quality))) {
+						$source_quality	= $current_quality;
+						$source_file	= $this->get_media_filepath($current_quality);
+						break;
+					}
+				}
+				if ($current_quality===$this->quality) {
+					// do not use quality smaller than current instance quality
+					break;
+				}
+			}
+		}
+
+		// image_source
+			$image_source = new stdClass();
+				$image_source->source_file		= $source_file ?? null;
+				$image_source->source_quality	= $source_quality ?? null;
+
+		return $image_source;
+	}//end get_image_source
 
 
 
