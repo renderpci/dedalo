@@ -535,5 +535,67 @@ final class ImageMagick {
 	}//end get_date_time_original
 
 
+	/**
+	* GET_IMAGE_DIMENSIONS
+	* Calculate image size in pixels
+	* File used to read data will be the quality received version,
+	* usually default
+	* @param string $file_path
+	* @return object $image_dimensions
+	* 	{
+	* 		width: 1280
+	* 		height: 1024
+	* 	}
+	*/
+	public static function get_dimensions(string $file_path) : object {
+
+		$image_dimensions = new stdClass();
+
+		$command_orientation	= MAGICK_PATH . 'identify -quiet -format "%[orientation]" ' .'"'.$file_path.'"[0]';
+		$orientation			= shell_exec($command_orientation);
+
+		$commnad_w	= MAGICK_PATH . 'identify -quiet -format %w ' .'"'.$file_path.'"[0]';
+		$width		= shell_exec($commnad_w);
+
+		$commnad_h	= MAGICK_PATH . 'identify -quiet -format %h ' .'"'.$file_path.'"[0]';
+		$height		= shell_exec($commnad_h);
+
+			// Undefined  - 0
+			// Undefined  - [When no metadata]
+			// TopLeft  - 1
+			// TopRight  - 2
+			// BottomRight  - 3
+			// BottomLeft  - 4
+			// LeftTop  - 5
+			// RightTop  - 6
+			// RightBottom  - 7
+			// LeftBottom  - 8
+			// Unrecognized  - any value between 9-65535, since
+			// 				there is no mapping from value 9-65535
+			// 				to some geometry like 'LeftBottom'
+
+			switch( $orientation ) {
+				case 'LeftBottom':// rotate 90
+				case 'RightTop':// rotate 270 || -90
+					$width 	= $height;
+					$height = $width;
+					break;
+				case 'TopLeft':	// rotate 0
+				case 'BottomRight': // rotate 180
+				default:
+					$width 	= $width ?? null;
+					$height = $height ?? null;
+					break;
+			}
+
+		// image_dimensions set value
+			$image_dimensions->width	= (int)$width;
+			$image_dimensions->height	= (int)$height;
+
+
+		return $image_dimensions;
+	}//end get_image_dimensions
+
+
 
 }//end ImageMagick class

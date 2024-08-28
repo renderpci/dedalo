@@ -1652,55 +1652,7 @@ class component_image extends component_media_common implements component_media_
 
 		try {
 
-			// read file exif data with PHP
-				// sample result data:
-				// {
-				//     "FileName": "rsc29_rsc170_49.jpg",
-				//     "FileDateTime": 1551715486,
-				//     "FileSize": 122953,
-				//     "FileType": 2,
-				//     "MimeType": "image/jpeg",
-				//     "SectionsFound": "",
-				//     "COMPUTED": {
-				//         "html": "width=\"608\" height=\"862\"",
-				//         "Height": 862,
-				//         "Width": 608,
-				//         "IsColor": 1
-				//     }
-				// }
-				$exif = @exif_read_data($file_path);
-				if(!empty($exif['Orientation'])) {
-					switch($exif['Orientation']) {
-						case 8:// rotate 90
-						case 6:// rotate 270 || -90
-							$width 	= $exif['COMPUTED']['Height'] ?? null;
-							$height = $exif['COMPUTED']['Width'] ?? null;
-							break;
-						case 1:	// rotate 0
-						case 3: // rotate 180
-						default:
-							$width 	= $exif['COMPUTED']['Width'] ?? null;
-							$height = $exif['COMPUTED']['Height'] ?? null;
-							break;
-					}
-				}else{
-					$width 	= $exif['COMPUTED']['Width'] ?? null;
-					$height = $exif['COMPUTED']['Height'] ?? null;
-				}
-				// check valid values
-				if(empty($width) || empty($height)) {
-					debug_log(__METHOD__
-						." Error. get_image_dimensions error 1 ". PHP_EOL
-						.' filename: ' . $file_path . PHP_EOL
-						.' exif: ' . to_string($exif)
-						, logger::ERROR
-					);
-					return $image_dimensions;
-				}
-
-			// image_dimensions set value
-				$image_dimensions->width	= $width;
-				$image_dimensions->height	= $height;
+			$image_dimensions = ImageMagick::get_dimensions($file_path);
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__
