@@ -458,23 +458,22 @@ class component_pdf extends component_media_common implements component_media_in
 			// copy original to default quality (in the future, a quality conversion script will be placed here)
 				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
 				$default_extension	= $this->get_extension(); // normally .pdf
-				if ($file_extension!==$default_extension) {
+				if (strtolower($file_extension)!==strtolower($default_extension)) {
 					// file is NOT PDF, probably a .doc or similar . Don't copy the file
 				}else{
 					// copying file PDF (original) to PDF (web)
 					$default_quality		= $this->get_default_quality();
 					$default_quality_path	= $this->get_media_path_dir($default_quality);
-					// check directory exists before copy
-					if (!is_dir($default_quality_path)) {
-						if(!mkdir($default_quality_path, 0750, true)) {
-							debug_log(__METHOD__
-								.' Error. Unable to create default_quality_path directory' . PHP_EOL
-								.' default_quality_path: ' .$default_quality_path
-								, logger::ERROR
-							);
-							$response->msg .= ' : Unable to create default_quality_path directory';
-							return $response;
-						}
+					// check directory exists before copy (if folder do not exists, it will be created)
+					$dir_exists = create_directory($default_quality_path, 0750);
+					if (!$dir_exists) {
+						debug_log(__METHOD__
+							.' Error. Unable to create default_quality_path directory' . PHP_EOL
+							.' default_quality_path: ' .$default_quality_path
+							, logger::ERROR
+						);
+						$response->msg .= ' : Unable to create default_quality_path directory';
+						return $response;
 					}
 					$target_file_path = $default_quality_path . '/' . $full_file_name;
 					// copy file if is not default quality

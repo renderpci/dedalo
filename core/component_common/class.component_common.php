@@ -3326,7 +3326,7 @@ abstract class component_common extends common {
 
 	/**
 	* GET_SEARCH_QUERY
-	* Builds a search_query taking care of split multiple values and conform output objects
+	* Builds a search_query_object filter item taking care of split multiple values and conform output objects
 	* @param object $query_object
 	*  sample
 		* {
@@ -3349,7 +3349,7 @@ abstract class component_common extends common {
 		*   ]
 		* }
 	* @return array $ar_query_object
-	* 	Array of one or more SQO (search query object)
+	* 	Array of one or more SQO (search query object) filter items
 	*/
 	public static function get_search_query( object $query_object ) : array {
 
@@ -3375,10 +3375,8 @@ abstract class component_common extends common {
 			$called_class = get_called_class();
 
 		// split multiple (true by default)
-			$q_split				= isset($query_object->q_split) ? (bool)$query_object->q_split : true;
-			$current_query_object	= ($q_split===false)
-				? $query_object // With query_object property 'q_split' as false (autocomplete_hi)
-				: component_common::split_query($query_object); // Default mode
+			// (!) Moved split logic to components
+			$current_query_object = $query_object;
 
 		// conform each object
 			if (search::is_search_operator($current_query_object)===true) {
@@ -3402,6 +3400,56 @@ abstract class component_common extends common {
 
 		return $ar_query_object;
 	}//end get_search_query
+
+
+
+	/**
+	* HANDLE_QUERY_SPLITTING
+	* Component split queries manager resolves each q part individually and
+	* creates an group with all query elements resolved.
+	* @param object $query_object
+	* 	The original query object.
+	* @param array $q_items
+	* 	An array of query items (e.g., ['Perez', 'Lopez']).
+	* @param string $operator_between = '$and'
+	* 	The logical operator used to combine the split queries. Default is '$and'.
+	* @return object $group
+	* 	The group object containing resolved queries.
+	*/
+	public static function handle_query_splitting(object $query_object, array $q_items, string $operator_between='$and') : object {
+
+		// Determine the resolver method dynamically from the called class (component)
+    	$resolver = [get_called_class(), 'resolve_query_object_sql'];
+
+		// Initialize the group object with the specified operator
+		$group = new stdClass();
+			$group->{$operator_between} = [];
+
+		// Iterate over each query item
+		foreach ($q_items as $current_q) {
+
+			// ignore empty values (like double spaces issues)
+			if (empty($current_q)) {
+				continue;
+			}
+
+			// clone the original query object to avoid modifying the original
+			$query_object_clon = clone($query_object);
+			// overwrite q value
+			$query_object_clon->q = $current_q;
+			// overwrite q_split
+			$query_object_clon->q_split	= false;
+
+			// Resolve the individual query object using the resolver method
+			$current_parsed_query_object = call_user_func($resolver, $query_object_clon);
+
+			// Add the resolved query object to the group under the specified operator
+			$group->{$operator_between}[] = $current_parsed_query_object;
+		}
+
+
+		return $group;
+	}//end handle_query_splitting
 
 
 
@@ -3461,115 +3509,6 @@ abstract class component_common extends common {
 
 		return $select_object;
 	}//end get_select_query
-
-
-
-	/**
-	* SPLIT_QUERY
-	* @param object $query_object
-	*	Query object value (q) could be an object, array or string
-	* @return object $split_query_object
-	*/
-	public static function split_query( object $query_object) : object {
-
-		// search value
-			$search_value = $query_object->q;
-			// For unification, all non string are JSON encoded
-			// This allow accept mixed values (encoded and no encoded)
-			if (!is_string($search_value)) {
-				$search_value = json_encode($search_value);
-			}
-
-		// operator
-			$q_operator			= $query_object->q_operator ?? null;
-			$operator_between	= '$or';	// default (!)
-
-		// q
-			$q = $query_object->q ?? null;
-			if ($q==='only_operator') {
-				return $query_object;
-			}
-
-		// JSON CASE
-		if ($json_value = json_decode($search_value)) {
-
-			if (is_array($json_value) && count($json_value)>1) {
-				$group = new stdClass();
-					$name = $operator_between;
-					$group->{$name} = [];
-				foreach ($json_value as $current_value) {
-					$current_value			= array($current_value);
-					$query_object->type		= 'jsonb';
-					$query_object_clon		= clone($query_object);
-					$query_object_clon->q	= json_encode($current_value);
-					$group->{$name}[]		= $query_object_clon;
-				}
-				$split_query_object = $group;
-			}else{
-				$query_object->type	= 'jsonb';
-				$split_query_object	= $query_object;
-			}
-
-		// STRING CASE
-		}else{
-
-			// model
-			if (!isset(end($query_object->path)->model)) {
-				end($query_object->path)->model = RecordObj_dd::get_termino_by_tipo(
-					end($query_object->path)->component_tipo
-				);
-			}
-			$model = end($query_object->path)->model;
-			if ($model==='component_json' || $q_operator==='=='
-				|| (!empty($query_object->q) && strpos($query_object->q, '==')===0) ) {
-
-				// component JSON case
-				// $query_object->q	= str_replace('"', '\"', $search_value);
-				$split_query_object	= $query_object;
-
-			}else{
-
-				// all others
-				$operator_between = ($model==='component_input_text' || $model==='component_text_area')
-					? '$and' // Like 'Pepe García'
-					: '$or'; // like '2008 2009'
-
-				// \S?"([^\"]+)"|\S?'([^\']+)'|[^\s]+
-				$pattern = '/\S?"([^\"]+)"|\S?\'([^\\\']+)\'|[^\s]+/iu';
-				preg_match_all($pattern, $search_value, $matches);
-
-				// split into searchable units
-				$total_count = count($matches[0]);
-
-				if ($total_count===1) {
-
-					$current_search_value = reset($matches[0]);
-
-					$query_object->q = self::remove_first_and_last_quotes($current_search_value);
-					$split_query_object = $query_object;
-
-				}else{
-
-					$group = new stdClass();
-						$name = $operator_between;
-						$group->{$name} = [];
-
-					foreach ($matches[0] as $current_search_value) {
-
-						$query_object_clon		= clone($query_object);
-						$query_object_clon->q	= self::remove_first_and_last_quotes($current_search_value);
-						$group->{$name}[]		= $query_object_clon;
-
-					}//end foreach ($matches[0] as $key => $value)
-
-					$split_query_object = $group;
-				}//end if ($total_count===1) {
-			}//end if ($model==='component_json')
-		}//end if ($json_value = json_decode($search_value))
-
-
-		return $split_query_object;
-	}//end split_query
 
 
 

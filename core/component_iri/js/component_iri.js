@@ -33,6 +33,9 @@ export const component_iri = function() {
 
 	// ui
 	this.minimum_width_px = 135 // integer pixels
+
+	// search config
+	this.q_split = true
 }//end component_iri
 
 
