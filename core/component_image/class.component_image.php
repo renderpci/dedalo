@@ -365,206 +365,6 @@ class component_image extends component_media_common implements component_media_
 
 
 
-	/**
-	* GENERATE_DEFAULT_QUALITY_FILE
-	* Generates the default quality image from retouched or original file
-	* @param bool $overwrite = true
-	* @return bool
-	*/
-		// public function generate_default_quality_file(object $options) : bool {
-
-		// 	// options
-		// 		$overwrite	= $options->overwrite ?? true;
-		// 		$from		= $options->from ?? null;
-
-		// 	// from value switch
-		// 	switch ($from) {
-
-		// 		case 'original_real':
-		// 			// source data (default quality is source)
-		// 				$original_quality			= $this->get_original_quality();
-		// 				$original_image_path		= $this->get_media_filepath($original_quality);
-		// 				$path						= pathinfo($original_image_path);
-		// 				$original_image_extension	= $this->get_original_extension(
-		// 					true // bool exclude_converted
-		// 				);
-		// 				$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-		// 				if (!file_exists($original_image_path_real)) {
-
-		// 					// notification
-		// 						debug_log(__METHOD__
-		// 							. " Original image path excluding converted file does not exists. Trying with standard extension: " .DEDALO_IMAGE_EXTENSION . PHP_EOL
-		// 							. ' original_image_path_real: ' . $original_image_path_real
-		// 							, logger::WARNING
-		// 						);
-
-		// 					// second try with standard extension (normally jpg)
-		// 						$original_image_extension	= $this->get_original_extension(
-		// 							false // bool exclude_converted
-		// 						);
-		// 						$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-		// 						if (!file_exists($original_image_path_real)) {
-		// 							debug_log(__METHOD__
-		// 								. " Original image path file does not exists ". PHP_EOL
-		// 								. ' original_image_path_real: ' . $original_image_path_real
-		// 								, logger::WARNING
-		// 							);
-
-		// 							return false;
-		// 						}
-		// 				}
-
-		// 			// target data (target quality is thumb)
-		// 				$default_quality	= $this->get_default_quality();
-		// 				$image_default_path	= $this->get_media_filepath($default_quality);
-
-		// 			// conversion
-		// 				if ($overwrite===true) {
-
-		// 					// original quality create
-		// 						ImageMagick::convert((object)[
-		// 							'source_file'	=> $original_image_path_real,
-		// 							'target_file'	=> $original_image_path,
-		// 							'quality'		=> 100
-		// 						]);
-
-		// 					// default quality create
-		// 						ImageMagick::convert((object)[
-		// 							'source_file'	=> $original_image_path,
-		// 							'target_file'	=> $image_default_path
-		// 						]);
-		// 				}
-		// 			break;
-
-		// 		default:
-
-		// 			$uploaded_modified_file = $this->get_modified_uploaded_file();
-		// 			$uploaded_original_file = $this->get_uploaded_file();
-
-		// 			$source_file = isset($uploaded_modified_file) && file_exists($uploaded_modified_file)
-		// 				? $uploaded_modified_file
-		// 				: (isset($uploaded_original_file) && file_exists($uploaded_original_file)
-		// 					? $uploaded_original_file
-		// 					: null);
-
-		// 			if(!empty($source_file)){
-
-		// 				// quality default
-		// 					$default_quality	= $this->get_default_quality();
-		// 					$image_default_path	= $this->get_media_filepath($default_quality);
-		// 					// overwrite or create default quality image version
-		// 					if ($overwrite===true || !file_exists($image_default_path)) {
-
-		// 						return $this->convert_quality(
-		// 							$source_file,
-		// 							$default_quality
-		// 						);
-		// 					}
-		// 			}else{
-		// 				debug_log(__METHOD__
-		// 					." Unable locate source_file. File does not exists:" . PHP_EOL
-		// 					.' source_file: ' . $source_file
-		// 					, logger::ERROR
-		// 				);
-		// 			}
-		// 			break;
-
-		// 			// // quality retouched
-		// 			// 	if (defined('DEDALO_IMAGE_QUALITY_RETOUCHED') && DEDALO_IMAGE_QUALITY_RETOUCHED!==false) {
-		// 			// 		# source data (modified is source)
-		// 			// 		$original_image_path	= $this->get_media_filepath(DEDALO_IMAGE_QUALITY_RETOUCHED);
-		// 			// 		$real_orig_quality		= DEDALO_IMAGE_QUALITY_RETOUCHED;	// Modified
-		// 			// 	}
-
-		// 			// // quality original
-		// 			// 	if (!isset($original_image_path) || !file_exists($original_image_path)) {
-		// 			// 		// source data (default quality is source
-		// 			// 		$original_quality		= $this->get_original_quality();
-		// 			// 		$original_image_path	= $this->get_media_filepath($original_quality);
-		// 			// 		$real_orig_quality		= $original_quality; // Original
-		// 			// 	}
-		// 			// 	// check original file again
-		// 			// 	if (!file_exists($original_image_path)) {
-		// 			// 		debug_log(__METHOD__
-		// 			// 			." Unable locate original_image. File does not exists:" . PHP_EOL
-		// 			// 			.' original_image_path: ' . $original_image_path
-		// 			// 			, logger::ERROR
-		// 			// 		);
-		// 			// 		return false;
-		// 			// 	}
-
-		// 			// // quality default
-		// 			// 	$default_quality	= $this->get_default_quality();
-		// 			// 	$image_default_path	= $this->get_media_filepath($default_quality);
-		// 			// 	// overwrite or create default quality image version
-		// 			// 	if ($overwrite===true || !file_exists($image_default_path)) {
-
-		// 			// 		return $this->convert_quality(
-		// 			// 			$real_orig_quality,
-		// 			// 			$default_quality
-		// 			// 		);
-		// 			// 	}
-		// 			// break;
-		// 	}
-
-
-		// 	return true;
-		// }//end generate_default_quality_file
-
-
-
-	/**
-	* GENERATE_DEFAULT_FROM_ORIGINAL_REAL (! Integrated into generate_default_quality_file)
-	* Creates default quality version from real original. That means
-	* that myfile.tiff will be preferred over myfile.jpg from original folder
-	* @param bool $overwrite = true
-	* @return bool true
-	*/
-		// public function generate_default_from_original_real(bool $overwrite=true) : bool {
-
-		// 	// source data (default quality is source)
-		// 		$original_quality			= $this->get_original_quality();
-		// 		$original_image_path		= $this->get_media_filepath($original_quality);
-		// 		$path						= pathinfo($original_image_path);
-		// 		$original_image_extension	= $this->get_original_extension(
-		// 			true // bool exclude_converted
-		// 		);
-		// 		$original_image_path_real = $path['dirname'] . '/' .  $path['filename'] . '.' . $original_image_extension;
-		// 		if (!file_exists($original_image_path_real)) {
-		// 			debug_log(__METHOD__
-		// 				. " Original image path file does not exists ". PHP_EOL
-		// 				. ' original_image_path_real: ' . $original_image_path_real
-		// 				, logger::WARNING
-		// 			);
-		// 			return false;
-		// 		}
-
-		// 	// target data (target quality is thumb)
-		// 		$default_quality	= $this->get_default_quality();
-		// 		$image_default_path	= $this->get_media_filepath($default_quality);
-
-		// 	// conversion
-		// 		if ($overwrite===true) {
-
-		// 			// original quality create
-		// 				ImageMagick::convert((object)[
-		// 					'source_file'	=> $original_image_path_real,
-		// 					'target_file'	=> $original_image_path,
-		// 					'quality'		=> 100
-		// 				]);
-
-		// 			// default quality create
-		// 				ImageMagick::convert((object)[
-		// 					'source_file'	=> $original_image_path,
-		// 					'target_file'	=> $image_default_path
-		// 				]);
-		// 		}
-
-
-		// 	return true;
-		// }//end generate_default_from_original_real
-
-
 
 	/**
 	* CREATE_THUMB
@@ -670,153 +470,6 @@ class component_image extends component_media_common implements component_media_
 		return $number;
 	}//end convert_quality_to_megabytes
 
-
-
-	/**
-	* REMOVE_COMPONENT_MEDIA_FILES (! Moved to media common)
-	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
-	* Is triggered when section that contain media elements is deleted
-	* @see section:remove_section_media_files
-	* @param array $ar_quality = []
-	* @return bool
-	*/
-		// public function remove_component_media_files(array $ar_quality=[]) : bool {
-
-		// 	$date = date("Y-m-d_Hi");
-
-		// 	// ar_quality
-		// 		if (empty($ar_quality)) {
-		// 			$ar_quality = $this->get_ar_quality();
-		// 		}
-
-		// 	// files remove
-		// 		foreach ($ar_quality as $current_quality) {
-
-		// 			// media_path is full path of file like '/www/dedalo/media_test/media_development/image/thumb/rsc29_rsc170_77.jpg'
-		// 				$media_path = $this->get_media_filepath($current_quality);
-		// 				if (!file_exists($media_path)) {
-		// 					continue; // Skip
-		// 				}
-
-		// 			// delete dir
-		// 				$folder_path_del = $this->get_media_path_dir($current_quality)  . '/deleted';
-		// 				if( !is_dir($folder_path_del) ) {
-		// 					if( !mkdir($folder_path_del, 0775, true) ) {
-		// 						debug_log(__METHOD__
-		// 							. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
-		// 							. ' folder_path_del: ' . $folder_path_del
-		// 							, logger::ERROR
-		// 						);
-		// 						return false;
-		// 					}
-		// 				}
-
-		// 			// move/rename file
-		// 				$image_name			= $this->get_name();
-		// 				$media_path_moved	= $folder_path_del . '/' . $image_name . '_deleted_' . $date . '.' . $this->get_extension();
-		// 				if( !rename($media_path, $media_path_moved) ) {
-		// 					debug_log(__METHOD__
-		// 						. " Error on read or  move files to folder \"deleted\" [1]. Permission denied . The files are not deleted " . PHP_EOL
-		// 						. ' media_path: ' . $media_path . PHP_EOL
-		// 						. ' media_path_moved: ' . $media_path_moved
-		// 						, logger::ERROR
-		// 					);
-		// 					return false;
-		// 				}
-
-		// 				debug_log(__METHOD__
-		// 					." >>> Moved file $media_path to $media_path_moved " . PHP_EOL
-		// 					.' media_path: ' . $media_path . PHP_EOL
-		// 					.' media_path_moved: ' . $media_path_moved
-		// 					, logger::DEBUG
-		// 				);
-
-		// 			// Move original files too (PNG,TIF,Etc.)
-		// 			// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
-		// 				$original_extension	= $this->get_original_extension(
-		// 					true // bool exclude_converted
-		// 				);
-		// 				$path_parts				= pathinfo($media_path);
-		// 				$original_file			= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-		// 				$original_file_moved	= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-		// 				if (file_exists($original_file)) {
-		// 					if( !rename($original_file, $original_file_moved) ) {
-		// 						debug_log(__METHOD__
-		// 							. " Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted " . PHP_EOL
-		// 							. ' original_file: ' . $original_file . PHP_EOL
-		// 							. ' original_file_moved: ' . $original_file_moved
-		// 							, logger::DEBUG
-		// 						);
-		// 						return false;
-		// 					}
-		// 				}
-		// 		}//end foreach
-
-		// 	#
-		// 	# Original image remove
-		// 	# remove additional source images like 'original_image.tif'
-		// 	# WORK IN PROGRESS !!
-
-		// 	return true;
-		// }//end remove_component_media_files
-
-
-
-	/**
-	* RESTORE_COMPONENT_MEDIA_FILES (! Moved to media common)
-	* "Restore" last version of deleted media files (renamed and stored in 'deleted' folder)
-	* Is triggered when tool_time_machine recover a section
-	* @see tool_time_machine::recover_section_from_time_machine
-	*/
-		// public function restore_component_media_files() : bool {
-
-		// 	// Image restore
-		// 	$ar_quality = DEDALO_IMAGE_AR_QUALITY;
-		// 	foreach ($ar_quality as $current_quality) {
-
-		// 		# media_path
-		// 		$media_path 	 = $this->get_media_filepath($current_quality);
-		// 		$folder_path_del = pathinfo($media_path,PATHINFO_DIRNAME).'/deleted';
-		// 		$id 		 = $this->get_id();
-		// 		if(SHOW_DEBUG===true) {
-		// 			#dump($folder_path_del, "folder_path_del current_quality:$current_quality - get_id:$id");
-		// 		}
-		// 		$file_pattern 	= $folder_path_del .'/'.$id .'_*.'. $this->get_extension();
-		// 		$ar_files 		= glob($file_pattern);
-		// 		if(SHOW_DEBUG===true) {
-		// 			#dump($ar_files, ' ar_files');#continue;
-		// 		}
-		// 		if (empty($ar_files)) {
-		// 			debug_log(__METHOD__."  No files to restore were found for id:$id in quality:$current_quality. Nothing was restored for this quality ".to_string(), logger::DEBUG);
-		// 			continue; // Skip
-		// 		}
-		// 		natsort($ar_files);	# sort the files from newest to oldest
-		// 		$last_file_path = end($ar_files);
-		// 		$new_file_path 	= $this->get_media_filepath($current_quality);
-		// 		if( !rename($last_file_path, $new_file_path) ) throw new Exception(" Error on move files to restore folder. Permission denied . Nothing was restored (2)");
-
-
-		// 		/* POR ACABAR
-		// 		// Move original files too (PNG,TIF,Etc.)
-		// 		// NOTE : 'original files' are NOT 'original quality'. Are uploaded files with extension different to DEDALO_IMAGE_EXTENSION
-		// 		$original_extension = $this->get_original_extension( $current_quality );
-		// 		$path_parts 		= pathinfo($media_path);
-		// 		$original_file  	= $path_parts['dirname'].'/'.$path_parts['filename'].'.'.$original_extension;
-		// 		#$original_file_moved= $path_parts['dirname'].'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-		// 		$original_file_moved= $folder_path_del.'/'.$path_parts['filename'].'_deleted_'.$date.'.'.$original_extension;
-		// 		if (file_exists($original_file)) {
-		// 			if( !rename($original_file, $original_file_moved) ) {
-		// 				#throw new Exception(" Error on move files to folder \"deleted\" . Permission denied . The files are not deleted");
-		// 				trigger_error(" Error on move files to folder \"deleted\" [2]. Permission denied . The files are not deleted");
-		// 			}
-		// 		}
-		// 		*/
-
-		// 		debug_log(__METHOD__." Successful Moved file \n$last_file_path to \n$new_file_path ".to_string(), logger::DEBUG);
-		// 	}//end foreach
-
-		// 	return true;
-		// }//end restore_component_media_files
 
 
 
@@ -1769,44 +1422,9 @@ class component_image extends component_media_common implements component_media_
 			$response->errors	= [];
 
 		// source
-			$source_file = null; // default
-
-			// modified_file full file path try
-			$uploaded_modified_file = $this->get_uploaded_file(
-				$this->get_modified_quality()
-			);
-			if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
-				$source_quality	= $this->get_modified_quality();
-				$source_file	= $uploaded_modified_file;
-			}else{
-				// original_file full file path try
-				$uploaded_original_file = $this->get_uploaded_file(
-					$this->get_original_quality()
-				);
-				if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
-					$source_quality	= $this->get_original_quality();
-					$source_file	= $uploaded_original_file;
-				}
-			}
-
-			// try to use non original / modified / default qualities
-			// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
-			if(empty($source_file)){
-				// iterate qualities from high to low until
-				foreach ($this->get_ar_quality() as $current_quality) {
-					if ($current_quality!==$quality) {
-						if (file_exists($this->get_media_filepath($current_quality))) {
-							$source_quality	= $current_quality;
-							$source_file	= $this->get_media_filepath($current_quality);
-							break;
-						}
-					}
-					if ($current_quality===$this->quality) {
-						// do not use quality smaller than current instance quality
-						break;
-					}
-				}
-			}
+			$image_source	= $this->get_image_source( $quality );
+			$source_file	= $image_source->source_file;
+			$source_quality	= $image_source->source_quality;
 
 		// source file not found case
 			if(empty($source_file)){
@@ -1881,6 +1499,66 @@ class component_image extends component_media_common implements component_media_
 
 		return $response;
 	}//end build_version
+
+
+
+	/**
+	* GET_IMAGE_SOURCE
+	* get the uploaded file to be used as source file to be converted into other qualities and formats
+	* the $quality parameter is used to check high qualities of it as source when the original and modified has not files.
+	* @param string $quality
+	* @return object $source_file
+	* {
+	* 	source_file : string | null // resolve file path of the original or modified or other high quality file
+	* 	source_quality: string | null // the quality of where the source_file was selected
+	* }
+	*/
+	public function get_image_source( string $quality ) : object {
+
+		// modified_file full file path try
+		$uploaded_modified_file = $this->get_uploaded_file(
+			$this->get_modified_quality()
+		);
+		if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
+			$source_quality	= $this->get_modified_quality();
+			$source_file	= $uploaded_modified_file;
+		}else{
+			// original_file full file path try
+			$uploaded_original_file = $this->get_uploaded_file(
+				$this->get_original_quality()
+			);
+			if(isset($uploaded_original_file) && file_exists($uploaded_original_file)) {
+				$source_quality	= $this->get_original_quality();
+				$source_file	= $uploaded_original_file;
+			}
+		}
+
+		// try to use non original / modified / default qualities
+		// e.g. user upload a file to a intermediate quality like '3MB' with tool media versions
+		if(empty($source_file)){
+			// iterate qualities from high to low until
+			foreach ($this->get_ar_quality() as $current_quality) {
+				if ($current_quality!==$quality) {
+					if (file_exists($this->get_media_filepath($current_quality))) {
+						$source_quality	= $current_quality;
+						$source_file	= $this->get_media_filepath($current_quality);
+						break;
+					}
+				}
+				if ($current_quality===$this->quality) {
+					// do not use quality smaller than current instance quality
+					break;
+				}
+			}
+		}
+
+		// image_source
+			$image_source = new stdClass();
+				$image_source->source_file		= $source_file ?? null;
+				$image_source->source_quality	= $source_quality ?? null;
+
+		return $image_source;
+	}//end get_image_source
 
 
 
@@ -1974,55 +1652,7 @@ class component_image extends component_media_common implements component_media_
 
 		try {
 
-			// read file exif data with PHP
-				// sample result data:
-				// {
-				//     "FileName": "rsc29_rsc170_49.jpg",
-				//     "FileDateTime": 1551715486,
-				//     "FileSize": 122953,
-				//     "FileType": 2,
-				//     "MimeType": "image/jpeg",
-				//     "SectionsFound": "",
-				//     "COMPUTED": {
-				//         "html": "width=\"608\" height=\"862\"",
-				//         "Height": 862,
-				//         "Width": 608,
-				//         "IsColor": 1
-				//     }
-				// }
-				$exif = @exif_read_data($file_path);
-				if(!empty($exif['Orientation'])) {
-					switch($exif['Orientation']) {
-						case 8:// rotate 90
-						case 6:// rotate 270 || -90
-							$width 	= $exif['COMPUTED']['Height'] ?? null;
-							$height = $exif['COMPUTED']['Width'] ?? null;
-							break;
-						case 1:	// rotate 0
-						case 3: // rotate 180
-						default:
-							$width 	= $exif['COMPUTED']['Width'] ?? null;
-							$height = $exif['COMPUTED']['Height'] ?? null;
-							break;
-					}
-				}else{
-					$width 	= $exif['COMPUTED']['Width'] ?? null;
-					$height = $exif['COMPUTED']['Height'] ?? null;
-				}
-				// check valid values
-				if(empty($width) || empty($height)) {
-					debug_log(__METHOD__
-						." Error. get_image_dimensions error 1 ". PHP_EOL
-						.' filename: ' . $file_path . PHP_EOL
-						.' exif: ' . to_string($exif)
-						, logger::ERROR
-					);
-					return $image_dimensions;
-				}
-
-			// image_dimensions set value
-				$image_dimensions->width	= $width;
-				$image_dimensions->height	= $height;
+			$image_dimensions = ImageMagick::get_dimensions($file_path);
 
 		} catch (Exception $e) {
 			debug_log(__METHOD__
@@ -2229,16 +1859,40 @@ class component_image extends component_media_common implements component_media_
 				return false;
 			}
 
-		// source file
-			$source_file = $this->get_media_filepath($quality);
-			if (!file_exists($source_file)) {
+		// current_quality file
+			$current_quality_file = $this->get_media_filepath($quality);
+			if (!file_exists($current_quality_file)) {
 				debug_log(__METHOD__
 					. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
-					. 'source_file: ' . to_string($source_file)
+					. 'current_quality_file: ' . to_string($current_quality_file)
 					, logger::WARNING
 				);
 				return false;
 			}
+
+		// source file
+			// get uploaded image as source | modified, original or high quality available.
+				$image_source	= $this->get_image_source( $quality );
+					$source_file	= $image_source->source_file;
+					$source_quality	= $image_source->source_quality;
+
+			// get the original file with the extension of the alternative image
+			// if the original directory has a copy with the same extension, use it (avif -> avif),
+			// else use the original source file (tiff -> avif)
+				$alternative_source_file = $this->get_media_filepath($source_quality, $extension);
+				if( file_exists($alternative_source_file) ){
+					$source_file = $alternative_source_file;
+				}
+
+				if (!file_exists($source_file)) {
+					debug_log(__METHOD__
+						. " Ignored alternative_version creation. Source file do not exists " . PHP_EOL
+						. 'quality: ' . to_string($quality) . PHP_EOL
+						. 'source_file: ' . to_string($source_file)
+						, logger::WARNING
+					);
+					return false;
+				}
 
 		// short vars
 			$file_name		= $this->get_id();
