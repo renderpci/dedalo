@@ -405,13 +405,25 @@
 		// quality default. Default: '1.5MB'
 		define('DEDALO_IMAGE_QUALITY_DEFAULT',		'1.5MB');
 		// image_ar_quality. Array of image quality specifications like [DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_DEFAULT,'<1MB',DEDALO_QUALITY_THUMB]
-		define('DEDALO_IMAGE_AR_QUALITY',			[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'25MB','6MB','1.5MB',DEDALO_QUALITY_THUMB]);
+		define('DEDALO_IMAGE_AR_QUALITY',			[DEDALO_IMAGE_QUALITY_ORIGINAL,DEDALO_IMAGE_QUALITY_RETOUCHED,'100MB','25MB','6MB','1.5MB',DEDALO_QUALITY_THUMB]);
 		// image_print_dpi (default int 150. Used to calculate print size of images -tool_image_versions-)
 		define('DEDALO_IMAGE_PRINT_DPI',			150);
 		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL',				DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
 		define('MAGICK_PATH',						'/usr/bin/'); 	# Like '/usr/bin/';
+		// Magick config
+		define('MAGICK_CONFIG', [
+			// Transparent tiff, remove the layer 0 (flat composition layer)
+				// see: /core/media_engine/class.ImageMagick.php -> convert()
+				// Ubuntu : false | don't remove the composition layer, because it delete the color layers (the image disappear)
+				// Rocky, RedHat, MacOS: true | remove the composition layer, because it has the flat image with background color and it doesn't preserve the transparency
+			'remove_layer_0'	=> false, // default false
+			// set a fixed value for transparent images
+				// Rocky, RedHat | set it as false | active the property, it set that all images are transparent (is_opaque = false), Rocky version of ImageMagick can not detect if the image has transparent pixels
+				// Ubuntu, MacOs | set it as null | remove the property, it will check if the image has a transparent pixels correctly.
+			'is_opaque'			=> null // default null, if isset as false, all images will be processed as transparent, if isset as true, all images will be processed as opaque.
+		]);
 		// color_profiles_path
 		define('COLOR_PROFILES_PATH',				DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
