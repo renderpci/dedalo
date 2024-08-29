@@ -706,108 +706,107 @@ const render_file_versions = function(quality, self) {
 			class_name		: 'file_info render_file_versions' + (quality===self.caller.context.features.default_quality ? ' default' : '')
 		})
 
-		const files_info = custom_files_info.filter(el => el.quality===quality)
-
-		const files_info_length = files_info.length
+	// iterate files_info
+		const files_info		= custom_files_info.filter(el => el.quality===quality)
+		const files_info_length	= files_info.length
 		for (let k = 0; k < files_info_length; k++) {
 
 			const file_info = files_info[k]
 
+			// check file_exists
+				if (!file_info || file_info.file_exist!==true) {
+					continue;
+				}
+
 			// size
-			const size = bytes_format(file_info.file_size)
+				const size = bytes_format(file_info.file_size)
 
 			// extension
 				const extension	= file_info && file_info.file_path
 					? file_info.file_path.split('.').pop()
 					: null;
 
-			// buttons
-				if (file_info && file_info.file_exist===true) {
+			// file_url
+				const file_url = DEDALO_MEDIA_URL + file_info.file_path
 
-					const cell_node = ui.create_dom_element({
-						element_type	: 'div',
-						class_name		: 'cell_node',
-						parent			: file_info_node
+			// cell_node
+				const cell_node = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'cell_node',
+					parent			: file_info_node
+				})
+
+			// button_link
+				const button_link = ui.create_dom_element({
+					element_type	: 'a',
+					class_name		: 'button find',
+					title			: (get_label.open || 'Open') + ' ' + file_url,
+					parent			: cell_node
+				})
+				button_link.addEventListener('click', function(e) {
+					e.stopPropagation()
+
+					open_window({
+						url : file_url + '?t=' + (new Date()).getTime()
 					})
+				})
 
-					// button_link
-						const file_url = DEDALO_MEDIA_URL + file_info.file_path
+			// button_file_download
+				const button_file_download = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button download',
+					title			: (get_label.download || 'Download') + ' ' + size,
+					parent			: cell_node
+				})
+				button_file_download.addEventListener('click', function(e){
+					e.stopPropagation()
 
-						// icon file
-						const button_link = ui.create_dom_element({
-							element_type	: 'a',
-							class_name		: 'button find',
-							title			: get_label.open || 'Open',
-							parent			: cell_node
-						})
-						button_link.addEventListener('click', function(e) {
-							e.stopPropagation()
+					const url		= DEDALO_MEDIA_URL + file_info.file_path
+					const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
 
-							open_window({
-								url : file_url + '?t=' + (new Date()).getTime()
+					download_file({
+						url			: url,
+						file_name	: file_name
+					})
+				})
+
+			// file_info_extension
+				ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button file_info_extension',
+					title			: get_label.extension || 'Extension',
+					inner_html		: extension,
+					parent			: cell_node
+				})
+
+			// button_file_delete
+				const button_file_delete = ui.create_dom_element({
+					element_type	: 'span',
+					class_name		: 'button delete',
+					title			: get_label.delete || 'Delete',
+					parent			: cell_node
+				})
+				button_file_delete.addEventListener('click', function(e){
+					e.stopPropagation()
+
+					if (!confirm(get_label.sure + '\n\nFile: '+file_info.file_name)) {
+						return false
+					}
+
+					self.node.content_data.classList.add('loading')
+
+					self.delete_version(quality, extension)
+					.then(function(response){
+						if (response.result===true) {
+							self.refresh({
+								build_autoload : false
 							})
-						})
-
-					// button_file_download
-						const button_file_download = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button download',
-							title			: (get_label.download || 'Download') + ' ' + size,
-							parent			: cell_node
-						})
-						button_file_download.addEventListener('click', function(e){
-							e.stopPropagation()
-
-							const url		= DEDALO_MEDIA_URL + file_info.file_path
-							const file_name	= `dedalo_download_${quality}_` + url.substring(url.lastIndexOf('/')+1);
-
-							download_file({
-								url			: url,
-								file_name	: file_name
-							})
-						})
-
-					// file_info_extension
-						ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button file_info_extension',
-							title			: get_label.extension || 'Extension',
-							inner_html		: extension,
-							parent			: cell_node
-						})
-
-					// button_file_delete
-						const disable_style = extension===self.caller.context.features.extension
-							? ' disable'
-							: ''
-						const button_file_delete = ui.create_dom_element({
-							element_type	: 'span',
-							class_name		: 'button delete',
-							title			: get_label.delete || 'Delete',
-							parent			: cell_node
-						})
-						button_file_delete.addEventListener('click', function(e){
-							e.stopPropagation()
-
-							if (!confirm(get_label.sure + '\n\nFile: '+file_info.file_name)) {
-								return false
-							}
-
-							self.node.content_data.classList.add('loading')
-
-							self.delete_version(quality, extension)
-							.then(function(response){
-								if (response.result===true) {
-									self.refresh({
-										build_autoload : false
-									})
-								}else{
-									self.node.content_data.classList.remove('loading')
-									alert('Error: ' + (response.msg || 'Unknown') )
-								}
-							})
-						})
-				}
+						}else{
+							self.node.content_data.classList.remove('loading')
+							alert('Error: ' + (response.msg || 'Unknown') )
+						}
+					})
+				})
 		}//end for (let k = 0; k < files_info_length; k++)
 
 

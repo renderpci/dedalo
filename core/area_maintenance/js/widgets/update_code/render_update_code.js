@@ -7,6 +7,7 @@
 // imports
 	import {ui} from '../../../../common/js/ui.js'
 	import {data_manager} from '../../../../common/js/data_manager.js'
+	import {run_service_worker,run_worker_cache} from '../../../../login/js/login.js'
 
 
 
@@ -148,7 +149,7 @@ const get_content_data_edit = async function(self) {
 						render_stream_response.done()
 						// reload JS files
 						reload_js_files()
-						.then(function(response){
+						.then(function(){
 							if( confirm('It is recommended to refresh the page to avoid cache problems. Do you wish to continue to do so?') ) {
 								location.reload(true);
 							}
@@ -205,36 +206,7 @@ const get_content_data_edit = async function(self) {
 					},
 					options	: {}
 				},
-				on_done			: reload_js_files // clean browser cache
-				// on_submit	: async (e, values) => {
-				// 	// update_code process fire
-				// 	const api_response = await data_manager.request({
-				// 		body		: {
-				// 			dd_api	: 'dd_area_maintenance_api',
-				// 			action	: 'class_request',
-				// 			source	: {
-				// 				action	: 'update_code',
-				// 			},
-				// 			options : {
-				// 				background_running	: true // set run in background CLI
-				// 			}
-				// 		}
-				// 	})
-
-				// 	// error case
-				// 		if (!api_response || !api_response.result) {
-				// 			alert("Server error updating code");
-				// 			console.error('update_code api_response:', api_response);
-				// 			return
-				// 		}
-
-				// 	// update_process_status
-				// 		update_process_status(
-				// 			api_response.pid,
-				// 			api_response.pfile,
-				// 			body_response
-				// 		)
-				// }
+				on_done : reload_js_files // clean browser cache
 			})
 		}
 
@@ -249,35 +221,44 @@ const get_content_data_edit = async function(self) {
 
 /**
 * RELOAD_JS_FILES
-* Force to clean cache of Dédalo JS/CSS files
-* @return promise
-* 	resolve bool
+* Force to clean cache of Dédalo main JS files
+* @see login.run_service_worker, login.run_worker_cache
+* @return bool
 */
-const reload_js_files = function () {
+const reload_js_files = async function () {
 
-	return new Promise(function(resolve){
-
-		// launch worker cache
-		const current_worker = new Worker(DEDALO_CORE_URL + '/page/js/worker_cache.js', {
-			type : 'module'
-		});
-		current_worker.postMessage({
-			action	: 'clear_cache',
-			url		: typeof DEDALO_API_URL!=='undefined'
-				? DEDALO_API_URL
-				: '../../api/v1/json/' // DEDALO_API_URL
-		});
-		current_worker.onmessage = function(e) {
-
-			if (e.data.status==='ready') {
-				console.log('Loading Dédalo JS files..');
-			}
-
-			if (e.data.status==='finish') {
-				console.log('Loading Dédalo JS files done');
-				resolve(true)
-			}
+	const on_message = (event) => {
+		switch (event.data.status) {
+			case 'ready':
+				console.log(`Loading total_files: ${event.data.total_files}`);
+				break;
+			case 'finish':
+				console.log(`Updated total_files: ${event.data.total_files}`, event.data.api_response);
+				break;
 		}
+	}
+
+	run_service_worker({
+		on_message	: on_message
+	})
+	.then(function(response){
+		// on service worker registration error (not https support for example)
+		// fallback to the former method of loading cache files
+		if (response===false) {
+
+			// notify error
+				const error = location.protocol==='http:'
+					? `register_service_worker fails. Protocol '${location.protocol}' is not supported by service workers. Retrying with run_worker_cache.`
+					: `register_service_worker fails (${location.protocol}). Retrying with run_worker_cache.`
+				console.error(error);
+
+			// launch worker cache (uses regular browser memory cache)
+				run_worker_cache({
+					on_message	: on_message
+				})
+		}
+
+		return true
 	})
 }//end reload_js_files
 
