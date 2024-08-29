@@ -465,7 +465,7 @@ login.prototype.action_dispatch = async function(api_response) {
 * @return bool
 * 	True if registration succeed, false if fails
 */
-const run_service_worker = async (options) => {
+export const run_service_worker = async (options) => {
 
 	// options unpack
 	const {
@@ -531,7 +531,7 @@ const run_service_worker = async (options) => {
 * }
 * @return void
 */
-const run_worker_cache = (options) => {
+export const run_worker_cache = (options) => {
 
 	// options unpack
 	const {
