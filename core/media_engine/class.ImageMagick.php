@@ -8,6 +8,24 @@
 final class ImageMagick {
 
 
+	/**
+	* GET_MAGICK_CONFIG
+	* get the parameters defined into the config.php
+	* it check if the parameters are defined and set the defaults.
+	* @return object $magick_config
+	*/
+	public static function get_magick_config() : object {
+
+		$config = defined('MAGICK_CONFIG') ? (object)MAGICK_CONFIG : new stdClass();
+
+		$magick_config = new stdClass();
+			$magick_config->remove_layer_0	= $config->remove_layer_0 ?? false;
+			$magick_config->is_opaque		= $config->is_opaque ?? null;
+
+		return $magick_config;
+	}//end get_magick_config
+
+
 
 	/**
 	* DD_THUMB
@@ -161,9 +179,10 @@ final class ImageMagick {
 					$coalesce		= false;
 
 					$middle_flags = '\( -clone 0 -alpha on -channel rgba -evaluate set 0 \)';
-					// in tiff formats is necessary delete the original layer 0
-					// in .psd, .avif or other transparent formats if the layer 0 is removed loose the composition
-					if($source_extension === 'tif' || $source_extension === 'tiff' ){
+					// In some operating systems (Roky, RedHat, MacOsX, ...), in tiff formats is necessary to delete the original layer 0
+					// in .psd, .avif or other transparent formats if the layer 0 is removed the final image loose the composition
+					$remove_layer_0  = ImageMagick::get_magick_config()->remove_layer_0;
+					if( $remove_layer_0 === true && ($source_extension === 'tif' || $source_extension === 'tiff') ){
 						$middle_flags .= ' -delete 0';
 					}
 				}
@@ -491,6 +510,12 @@ final class ImageMagick {
 	* @return bool $is_opaque
 	*/
 	public static function is_opaque( string $source_file ) : bool {
+
+		$is_opaque = ImageMagick::get_magick_config()->is_opaque;
+
+		if( isset($is_opaque) ){
+			return $is_opaque;
+		}
 
 		// default the image is opaque
 		$is_opaque = true;
