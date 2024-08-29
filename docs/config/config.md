@@ -1947,6 +1947,41 @@ define('MAGICK_PATH', '/usr/bin/');
 
 ---
 
+#### Defining Image Magick configuration
+
+./dedalo/config/config.php
+
+MAGICK_CONFIG `object`
+
+This constant defines the configuration parameters of ImageMagick library in the server.
+ImageMagick has different behaviors for transparent images, in some OS the library can detect opacity in others no, if the version is v6 the meta channel has not detected and in Ubuntu the transparent tiff needs to remove the composition channel to preserve the transparency.
+MAGICK_CONFIG allow to set specific behavior for every installation.
+
+```php
+define('MAGICK_PATH', [
+    'remove_layer_0'    => false, // default false
+    'is_opaque'         => null // default null
+]);
+```
+
+**remove_layer0** `bool`, by default `false`
+
+Use to control the composition layer of transparent tiff, when isset as true Dédalo will remove the layer 0 (flat composition layer)
+
+* Ubuntu : false | don't remove the composition layer, because it delete the color layers (the image disappear)
+* Rocky, RedHat, MacOS: true | remove the composition layer, because it has the flat image with background color and it doesn't preserve the transparency
+
+**is_opaque** `bool` || `null`, by default `null`
+
+Used to set a fixed value for transparent images, if isset this parameter will remove the transparent pixel check and force to process the images as transparent or opaque.
+If isset as `false`, all images will be processed as transparent, if isset as `true`, all images will be processed as opaque.
+
+* Rocky, RedHat | set it as `false` | active the property, it set that all images are transparent (is_opaque = false), Rocky version of ImageMagick can not detect if the image has transparent pixels
+* Ubuntu, MacOs | set it as `null` | remove the property, it will check if the image has a transparent pixels correctly.
+* To remove the preservation of the transparency set it as `true`
+
+---
+
 #### Defining Color profiles paths
 
 ./dedalo/config/config.php
