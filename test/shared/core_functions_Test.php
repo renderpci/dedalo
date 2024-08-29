@@ -83,7 +83,7 @@ final class core_functions_test extends TestCase {
 			, logger::DEBUG
 		);
 
-		$eq = gettype($result)==='NULL';
+		$eq = !isset($result);
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
