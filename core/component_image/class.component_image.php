@@ -1566,11 +1566,12 @@ class component_image extends component_media_common implements component_media_
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* Alias of component_medai_common method with some additions
 	* @param array $ar_quality = []
+	* @param string|null $extension = null
 	* @return bool
 	*/
-	public function remove_component_media_files(array $ar_quality=[]) : bool {
+	public function remove_component_media_files(array $ar_quality=[], string $extension=null ) : bool {
 
-		$result = parent::remove_component_media_files($ar_quality);
+		$result = parent::remove_component_media_files($ar_quality, $extension);
 
 		// delete svg file when quality is default_quality
 			$default_quality = $this->get_default_quality();
