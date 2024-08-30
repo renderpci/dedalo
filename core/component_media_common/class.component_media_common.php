@@ -33,8 +33,6 @@ interface component_media_interface {
 	public function get_size(string $quality);
 	public function restore_component_media_files();
 	public function create_alternative_versions(?object $options=null);
-	public function delete_alternative_version(string $quality, string $extension, ?object $options=null);
-
 
 	// others
 	public function get_ar_quality();
@@ -2179,20 +2177,13 @@ class component_media_common extends component_common {
 	* @return bool
 	* @test true
 	*/
-	public function regenerate_component() : bool {
+	public function regenerate_component( object $options = null) : bool {
 
-		// check default quality
-			$default_quality	= $this->get_default_quality();
-			$file_path			= $this->get_media_filepath($default_quality);
-			if (!file_exists($file_path)) {
-				$this->build_version($default_quality);
-			}
+		// default. Check default quality
+			$this->build_version( $this->get_default_quality() );
 
-		// re-create thumb always (from default quality file)
+		// thumb. Re-create thumb always (from default quality file)
 			$this->create_thumb();
-
-		// force to re-create alternatives
-			$this->create_alternative_versions();
 
 		// files_info. Updates component dato files info values iterating available files
 		// This action updates the component data ($this->data) but does not save it
@@ -2353,7 +2344,7 @@ class component_media_common extends component_common {
 		$path = $this->get_media_path_dir($quality) .'/'. $this->get_name() . '.' . $extension;
 
 
-		return	$path;
+		return $path;
 	}//end get_media_filepath
 
 
