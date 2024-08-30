@@ -79,7 +79,10 @@
 	}//end .switcher_publication
 
 	&.view_default {
-		box-shadow: none;
+		// box-shadow: remove in wide windows;
+		@media screen and (min-width: @width_break_point_0) {
+			box-shadow: none;
+		}
 
 		>.content_data {
 
