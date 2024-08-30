@@ -540,53 +540,6 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
-	* BUILD_STANDARD_IMAGE_FORMAT
-	* If uploaded file is not in Dedalo standard format (jpg), is converted, and original is conserved (like filename.tif)
-	* Used in tool_upload post-processing file
-	* @param string $uploaded_file_path
-	* @return string|null $file_path
-	*/
-	public static function build_standard_image_format(string $uploaded_file_path) : ?string {
-
-		$f_extension = strtolower(pathinfo($uploaded_file_path, PATHINFO_EXTENSION));
-		if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
-
-			// Create new file path
-			$new_file_path = substr($uploaded_file_path, 0, -(strlen($f_extension)) ) . DEDALO_IMAGE_EXTENSION;
-
-			// Convert
-			$options = new stdClass();
-				$options->source_file	= $uploaded_file_path;
-				$options->target_file	= $new_file_path;
-				$options->quality		= 100;
-
-			$result = ImageMagick::convert($options);
-			if ($result===false) {
-				debug_log(__METHOD__
-					. " Error on build standard_image_format from non Dédalo extension " . PHP_EOL
-					. ' f_extension: ' . $f_extension .PHP_EOL
-					. ' DEDALO_IMAGE_EXTENSION: ' . DEDALO_IMAGE_EXTENSION .PHP_EOL
-					. ' convert options: ' . to_string($options)
-					, logger::ERROR
-				);
-				return null;
-			}
-
-			$file_path = $new_file_path;
-
-		}else{
-
-			// Unchanged path
-			$file_path = $uploaded_file_path;
-		}
-
-
-		return $file_path;
-	}//end build_standard_image_format
-
-
-
-	/**
 	* GET_ALTERNATIVE_EXTENSIONS
 	* @return array|null $alternative_extensions
 	*/
@@ -679,7 +632,14 @@ class component_image extends component_media_common implements component_media_
 
 			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
 			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
-				self::build_standard_image_format($full_file_path);
+				$f_extension = strtolower(pathinfo($full_file_path, PATHINFO_EXTENSION));
+				if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
+
+					$this->convert_quality((object)[
+						'source_quality'	=> $this->quality,
+						'target_quality'	=> $this->quality
+					]);
+				}
 
 			// target_filename. Save original file name in a component_input_text if defined
 				$properties = $this->get_properties();
@@ -1265,79 +1225,30 @@ class component_image extends component_media_common implements component_media_
 
 		// options
 			$source_quality	= $options->source_quality;
-			$source_file	= $options->source_file;
 			$target_quality	= $options->target_quality;
-
-		// invalid targets check
-			$original_quality = $this->get_original_quality();
-			if ($target_quality===$original_quality) {
-				debug_log(__METHOD__
-					." Ignored wrong target quality [convert_quality]" .PHP_EOL
-					.' source_file: ' . to_string($source_file) .PHP_EOL
-					.' target_quality: ' . to_string($target_quality)
-					, logger::ERROR
-				);
-				return false;
-			}
 
 		// CLI process data
 			if ( running_in_cli()===true ) {
+				$start_time2=start_time();
 				if (!isset(common::$pdata)) {
 					common::$pdata = new stdClass();
 				}
 			}
 
 		// source_quality files check and create it if they not are created before.
-			// original_file check (normalized Dédalo original viewable). If not exist, create it
-				$normalized_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
+		// original_file check (normalized Dédalo original viewable). If not exist, create it
+			$normalized_file = $this->get_media_filepath($source_quality); //  $this->get_original_file_path('original');
 
-			// normalized_file . create if not already exist
-				$normalized_file_exists = file_exists($normalized_file);
-				if (!$normalized_file_exists) {
-
-					$target_file = $normalized_file;
-
-					$options = new stdClass();
-						$options->source_file	= $source_file;
-						$options->target_file	= $target_file;
-						$options->quality		= 100;
-
-					ImageMagick::convert($options);
+		// check the normalized files
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' normalized files | id: ' . $this->section_id;
+					common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
+					common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+					// send to output
+					print_cli(common::$pdata);
 				}
-
-			// alternative_files . create if not already exist
-				$normalized_file_path	= pathinfo($normalized_file);
-				$alternative_extensions	= $this->get_alternative_extensions() ?? [];
-				foreach ($alternative_extensions as $alternative_extension) {
-					$start_time2=start_time();
-
-					$alternative_target_file = $normalized_file_path['dirname'] .'/'.  $normalized_file_path['filename'] .'.'. $alternative_extension;
-					if(!file_exists($alternative_target_file)){
-
-						// CLI process data
-							if ( running_in_cli()===true ) {
-								common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $alternative_extension . ' | id: ' . $this->section_id;
-								common::$pdata->memory		= dd_memory_usage();
-								common::$pdata->target_file	= (SHOW_DEBUG===true) ? $alternative_target_file : $normalized_file_path['filename'];
-								// send to output
-								print_cli(common::$pdata);
-							}
-
-						// create_alternative_version
-							$this->create_alternative_version(
-								$source_quality,
-								$alternative_extension
-							);
-
-						// CLI process data
-							if ( running_in_cli()===true ) {
-								common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
-								common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
-								// send to output
-								print_cli(common::$pdata);
-							}
-					}
-				}
+			$this->check_normalized_files();
 
 		// Image source
 			$source_image			= $normalized_file;
@@ -1346,14 +1257,34 @@ class component_image extends component_media_common implements component_media_
 			$source_pixels_height	= $image_dimensions->height ?? null;
 
 		// Image target
-			$target_image			= $this->get_media_filepath($target_quality);
-			$ar_target				= component_image::get_target_pixels_to_quality_conversion(
-				$source_pixels_width,
-				$source_pixels_height,
-				$target_quality
-			);
-			$target_pixels_width	= $ar_target[0] ?? null;
-			$target_pixels_height	= $ar_target[1] ?? null;
+			$target_image = $this->get_media_filepath($target_quality);
+
+		// Resize
+			$resize = null;
+			if( $target_quality !== $this->get_original_quality() &&
+				$target_quality !== $this->get_modified_quality() &&
+				$target_quality !== $this->get_thumb_quality() ){
+
+				$ar_target				= component_image::get_target_pixels_to_quality_conversion(
+					$source_pixels_width,
+					$source_pixels_height,
+					$target_quality
+				);
+				$target_pixels_width	= $ar_target[0] ?? null;
+				$target_pixels_height	= $ar_target[1] ?? null;
+
+				// Avoid enlarge images
+					if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
+						$target_pixels_width	= $source_pixels_width;
+						$target_pixels_height	= $source_pixels_height;
+					}
+
+				// defaults when no value is available
+					if((int)$target_pixels_width<1)  $target_pixels_width  = 720;
+					if((int)$target_pixels_height<1) $target_pixels_height = 720;
+
+					$resize = $target_pixels_width.'x'.$target_pixels_height;
+			}
 
 		// Target folder verify (exists and permissions)
 			$target_dir = $this->get_media_path_dir($target_quality);
@@ -1361,40 +1292,60 @@ class component_image extends component_media_common implements component_media_
 				return false;
 			}
 
-		// Avoid enlarge images
-			if ( ($source_pixels_width*$source_pixels_height)<($target_pixels_width*$target_pixels_height) ) {
-				$target_pixels_width	= $source_pixels_width;
-				$target_pixels_height	= $source_pixels_height;
+		// convert
+			$convert_options = new stdClass();
+				$convert_options->source_file = $source_image;
+				$convert_options->target_file = $target_image;
+
+			// thumbnail
+			if ($target_quality===$this->get_thumb_quality()) {
+				$convert_options->thumbnail = true;
+			}
+			// resize
+			if( isset($resize) ){
+				$convert_options->resize = $resize;
+			}
+			// quality
+			if( $target_quality === $this->get_original_quality() ||
+				$target_quality === $this->get_modified_quality() ){
+				$convert_options->quality = 100;
 			}
 
-		// defaults when no value is available
-			if((int)$target_pixels_width<1)  $target_pixels_width  = 720;
-			if((int)$target_pixels_height<1) $target_pixels_height = 720;
+			// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->msg			= (label::get_label('processing') ?? 'Processing') . ' version: ' . $target_quality . ' | id: ' . $this->section_id;
+					common::$pdata->current_time= exec_time_unit($start_time2, 'ms');
+					common::$pdata->total_ms	= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+					// send to output
+					print_cli(common::$pdata);
+				}
 
-		// convert options
-			$options = new stdClass();
-				$options->source_file = $source_image;
-				$options->target_file = $target_image;
-
-		// convert with ImageMagick command
-			$thumb_quality = $this->get_thumb_quality();
-			if ($target_quality===$thumb_quality) {
-				$options->thumbnail = true;
-			}else{
-				$options->resize = $target_pixels_width.'x'.$target_pixels_height;
-			}
-			ImageMagick::convert($options);
+			// convert with ImageMagick command
+			ImageMagick::convert($convert_options);
 
 		// alternative_versions
-			$alternative_extensions = $this->get_alternative_extensions() ?? [];
+			$alternative_convert_options = new stdClass();
+				$alternative_convert_options->resize = $resize;
+
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
 			foreach ($alternative_extensions as $current_extension) {
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg				= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $current_extension . ' | id: ' . $this->section_id;
+						common::$pdata->memory			= dd_memory_usage();
+						common::$pdata->target_quality	= $target_quality;
+						common::$pdata->current_time	= exec_time_unit($start_time2, 'ms');
+						common::$pdata->total_ms		= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+						// send to output
+						print_cli(common::$pdata);
+					}
+
 				// create alternative version file
 				$this->create_alternative_version(
 					$target_quality,
 					$current_extension,
-					(object)[
-						'resize' => ($target_pixels_width.'x'.$target_pixels_height)
-					]
+					$alternative_convert_options
 				);
 			}
 
@@ -1450,7 +1401,6 @@ class component_image extends component_media_common implements component_media_
 		// convert_quality
 			$result = $this->convert_quality((object)[
 				'source_quality'	=> $source_quality,
-				'source_file'		=> $source_file,
 				'target_quality'	=> $quality
 			]);
 
@@ -1519,7 +1469,7 @@ class component_image extends component_media_common implements component_media_
 		$uploaded_modified_file = $this->get_uploaded_file(
 			$this->get_modified_quality()
 		);
-		if (isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
+		if ($quality!==$this->get_original_quality() && isset($uploaded_modified_file) && file_exists($uploaded_modified_file)) {
 			$source_quality	= $this->get_modified_quality();
 			$source_file	= $uploaded_modified_file;
 		}else{
@@ -1674,6 +1624,7 @@ class component_image extends component_media_common implements component_media_
 
 		return true;
 	}//end delete_normalized_files
+
 
 
 	/**
