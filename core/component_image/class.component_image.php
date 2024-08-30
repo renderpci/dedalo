@@ -1673,6 +1673,62 @@ class component_image extends component_media_common implements component_media_
 
 		return true;
 	}//end delete_normalized_files
+
+
+	/**
+	* CHECK_NORMALIZED_FILES
+	* @return void
+	*/
+	public function check_normalized_files() {
+
+		// use qualities
+		$original_quality	= $this->get_original_quality();
+		$modified_quality	= $this->get_modified_quality();
+
+		$ar_quality = [$original_quality, $modified_quality];
+
+		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+
+		foreach ($ar_quality as $quality) {
+
+			$source_file = $this->get_uploaded_file($quality);
+			if( empty($source_file) || !file_exists($source_file) ){
+				continue;
+			}
+
+			$normalized_file = $this->get_media_filepath($quality);
+
+			// normalized_file . Create if it does not already exist
+			if ( !file_exists($normalized_file) ) {
+
+				$target_file = $normalized_file;
+
+				$options = new stdClass();
+					$options->source_file	= $source_file;
+					$options->target_file	= $target_file;
+					$options->quality		= 100;
+
+				ImageMagick::convert($options);
+			}
+
+			foreach ($alternative_extensions as $alternative_extension) {
+
+				$alternative_target_file = $this->get_media_filepath($quality, $alternative_extension);
+				if( !file_exists($alternative_target_file) ){
+
+					// create_alternative_version
+						$this->create_alternative_version(
+							$quality,
+							$alternative_extension
+						);
+				}
+			}
+		}
+	}//end check_normalized_files
+
+
+
+	/**
 	* GET_MEDIA_ATTRIBUTES
 	* Read file and get attributes using ffmpeg
 	* @param string $file_path
