@@ -1215,14 +1215,17 @@ class component_media_common extends component_common {
 		if ($result===true) {
 
 			// update dato on delete original
-				$original_quality	= $this->get_original_quality();
-				$modified_quality	= $this->get_modified_quality();
-				if ($quality===$original_quality || $quality===$modified_quality) {
-					$dato = $this->get_dato();
-					if (isset($dato[0]) && is_object($dato[0])) {
-						foreach ($dato[0] as $name => $current_value) {
-							if (strpos($name, $quality.'_')===0 && isset($dato[0]->{$name})) {
-								unset($dato[0]->{$name});
+				if( !isset($extension) ){
+					$original_quality	= $this->get_original_quality();
+					$modified_quality	= $this->get_modified_quality();
+					if ($quality===$original_quality || $quality===$modified_quality) {
+						$dato = $this->get_dato();
+						if (isset($dato[0]) && is_object($dato[0])) {
+							foreach ($dato[0] as $name => $current_value) {
+								// delete all info about the current quality (file_name, upload_date, normalized_name, ..)
+								if (strpos($name, $quality.'_')===0 && isset($dato[0]->{$name})) {
+									unset($dato[0]->{$name});
+								}
 							}
 						}
 					}
@@ -1277,14 +1280,9 @@ class component_media_common extends component_common {
 			}
 
 		// ar_extensions
-			$extension				= $this->get_extension();
-			$alternative_extensions	= $this->get_alternative_extensions();
-			$ar_extensions			= !empty($alternative_extensions)
-				? array_merge([$extension], $alternative_extensions)
-				: [$extension];
-
-		// date to add at file names
-			$date = date('Y-m-d_Hi');
+			$normalized_extension	= $this->get_extension();
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			$ar_extensions			= array_merge([$normalized_extension], $alternative_extensions);
 
 		// dato
 			$dato = $this->get_dato();
@@ -1305,21 +1303,8 @@ class component_media_common extends component_common {
 						continue;
 					}
 
-				// deleted directory check
-					$folder_path_del = $this->get_media_path_dir($current_quality) . '/deleted';
-					if( !is_dir($folder_path_del) ) {
-						if( !mkdir($folder_path_del, 0750, true) ) {
-							debug_log(__METHOD__
-								. " Error on read or create directory \"deleted\". Permission denied " . PHP_EOL
-								. ' folder_path_del: ' . $folder_path_del
-								, logger::ERROR
-							);
-							continue;
-						}
-					}
-
 				// original case. If defined 'original_normalized_name', add extension to list to delete
-					if ($current_quality==='original') {
+					if ( $current_quality===$this->get_original_quality() ) {
 						$original_normalized_name	= isset($dato[0]) && isset($dato[0]->original_normalized_name)
 							? $dato[0]->original_normalized_name
 							: null;
@@ -1332,7 +1317,7 @@ class component_media_common extends component_common {
 					}
 
 				// modified case. If defined 'modified_normalized_name', add extension to list to delete
-					if ($current_quality==='modified') {
+					if ( $current_quality===$this->get_modified_quality() ) {
 						$modified_normalized_name	= isset($dato[0]) && isset($dato[0]->modified_normalized_name)
 							? $dato[0]->modified_normalized_name
 							: null;
@@ -1347,6 +1332,10 @@ class component_media_common extends component_common {
 				// files by ar_extensions
 					foreach ($ar_extensions as $current_extension) {
 
+						if( isset($extension) && $current_extension !== $extension ){
+							continue;
+						}
+
 						// media_path is full path of file like '/www/dedalo/media_test/media_development/svg/standard/rsc29_rsc170_77.svg'
 							$media_path = $this->get_media_filepath($current_quality, $current_extension);
 							if (!file_exists($media_path)) {
@@ -1354,16 +1343,15 @@ class component_media_common extends component_common {
 								continue; // Skip
 							}
 
-						// move/rename file
-							$file_name			= $this->get_name();
-							$media_path_moved	= $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $current_extension;
-							if( !rename($media_path, $media_path_moved) ) {
-								debug_log(__METHOD__
-									. " Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted" . PHP_EOL
-									. ' media_path: ' . $media_path . PHP_EOL
-									. ' media_path_moved: ' . $media_path_moved
-									, logger::ERROR
-								);
+							$move_file_options = new stdClass();
+								$move_file_options->quality			= $current_quality;
+								$move_file_options->file			= $media_path;
+								$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
+								$move_file_options->file_name		= $this->get_name();
+
+							$move_file = $this->move_deleted_file( $move_file_options );
+
+							if( $move_file === false ) {
 								return false;
 							}
 
@@ -1371,7 +1359,7 @@ class component_media_common extends component_common {
 							debug_log(__METHOD__
 								. ' Moved file'. PHP_EOL
 								. ' media_path: ' . $media_path . PHP_EOL
-								. ' media_path_moved: ' . $media_path_moved
+								. ' move_file: ' . json_encode( $move_file )
 								, logger::WARNING
 							);
 					}//end foreach ($ar_extensions as $current_extension)
@@ -1383,6 +1371,58 @@ class component_media_common extends component_common {
 
 		return $result;
 	}//end remove_component_media_files
+
+
+
+	/**
+	* MOVE_DELETED_FILE
+	* @param object $options
+	* @return bool
+	*/
+	public function move_deleted_file( object $options) : bool {
+
+		//options
+		$quality			= $options->quality;
+		$file				= $options->file;
+		$bulk_process_id	= $options->bulk_process_id ?? null;
+		$file_name			= $options->file_name;
+
+		// get the file extension
+		$extension			= get_file_extension($file);
+
+		// date to add at file names
+			$date = date('Y-m-d_Hi');
+
+		$bulk_proccess_dir = isset($bulk_process_id)
+			? '/' . $bulk_process_id
+			: '';
+
+		// deleted directory check
+			$folder_path_del = $this->get_media_path_dir($quality) . '/deleted' . $bulk_proccess_dir;
+
+			$check_directory = create_directory($folder_path_del, 0750);
+
+			if( $check_directory === false ) {
+				return false;
+			}
+
+		// move the file to de directory
+			$media_path_moved = isset( $bulk_process_id )
+				? $folder_path_del . '/' . $file_name . '.' . $extension
+				: $folder_path_del . '/' . $file_name . '_deleted_' . $date . '.' . $extension;
+
+			if( !rename($file, $media_path_moved) ) {
+				debug_log(__METHOD__
+					. " Error on move files to folder \"deleted\" [1]. Permission denied . The files are not deleted" . PHP_EOL
+					. ' file: ' . $file . PHP_EOL
+					. ' media_path_moved: ' . $media_path_moved
+					, logger::ERROR
+				);
+				return false;
+			}
+
+		return true;
+	}//end move_deleted_file
 
 
 
@@ -1698,7 +1738,6 @@ class component_media_common extends component_common {
 				];
 				return $dato_item;
 			}
-
 
 		// file path
 			$file_path = $this->get_media_filepath($quality, $extension);
@@ -2737,83 +2776,6 @@ class component_media_common extends component_common {
 
 		return true;
 	}//end create_alternative_versions
-
-
-
-	/**
-	* DELETE_ALTERNATIVE_VERSION
-	* Remove alternative version file from disk
-	* @param string $quality
-	* @param string $extension
-	* @param object|null $options = null
-	* @return bool
-	*/
-	public function delete_alternative_version(string $quality, string $extension, ?object $options=null) {
-
-		// options
-			// nothing to define yet
-
-		// skip thumb quality
-			if ($quality===$this->get_thumb_quality()) {
-				return false;
-			}
-
-		// skip non defined extensions
-			if ( !in_array($extension, $this->get_alternative_extensions()) ) {
-				debug_log(__METHOD__
-					. " Trying to create alternative version with invalid extension: '$extension' "
-					, logger::ERROR
-				);
-				return false;
-			}
-
-		// short vars
-			$file_name		= $this->get_id();
-			$target_path	= $this->get_media_path_dir($quality);
-			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
-
-		// target_file check
-			if (!file_exists($target_file)) {
-				debug_log(__METHOD__
-					. " Ignored alternative_version deletion. Target file do not exists " . PHP_EOL
-					. 'target_file: ' . to_string($target_file)
-					, logger::ERROR
-				);
-				return false;
-			}
-
-		// unlink file
-			if ( !unlink($target_file) ) {
-				debug_log(__METHOD__
-					. " Error deleting alternative file. Unable to unlink file " . PHP_EOL
-					. 'target_file: ' . to_string($target_file)
-					, logger::ERROR
-				);
-				return false;
-			}
-
-		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-				logger::$obj['activity']->log_message(
-					'DELETE FILE',
-					logger::INFO,
-					$this->tipo,
-					NULL,
-					[
-						'msg'		=> 'Deleted alternative media file (destructive)',
-						'tipo'		=> $this->tipo,
-						'parent'	=> $this->section_id,
-						'id'		=> $this->id,
-						'quality'	=> $quality,
-						'extension'	=> $extension
-					]
-				);
-
-			// save to force update dato files_info
-				$this->Save();
-
-
-		return true;
-	}//end delete_alternative_version
 
 
 
