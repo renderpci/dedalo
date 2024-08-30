@@ -1188,10 +1188,11 @@ class component_media_common extends component_common {
 	* Remove quality version moving the file to a deleted files directory
 	* @see component_image->remove_component_media_files
 	* @param string $quality
+	* @param string|null $extension = null
 	* @return object $response
 	* @test true
 	*/
-	public function delete_file(string $quality) : object {
+	public function delete_file(string $quality, string $extension=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1208,7 +1209,8 @@ class component_media_common extends component_common {
 
 		// remove_component_media_files returns bool value
 		$result = $this->remove_component_media_files(
-			[$quality] // array ar_quality
+			[$quality], // array ar_quality
+			$extension
 		);
 		if ($result===true) {
 
@@ -1261,10 +1263,11 @@ class component_media_common extends component_common {
 	* Is triggered wen section that contain media elements is deleted
 	* @see section:remove_section_media_files
 	* @param array $ar_quality = []
+	* @param string|null $extension = null
 	* @return bool
 	* @test true
 	*/
-	public function remove_component_media_files(array $ar_quality=[]) : bool {
+	public function remove_component_media_files(array $ar_quality=[], string $extension=null) : bool {
 
 		$result = false;
 
