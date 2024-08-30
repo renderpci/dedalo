@@ -4,12 +4,12 @@
 	<meta charset="utf-8">
 	<title>Dédalo V6 unit test</title>
 	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<link rel="shortcut icon" href="../../favicon.ico?ckcachebust=20C9E48A97F649F6FCA9500A5AEA9416" />
-	<link rel="stylesheet" href="../page/css/main.css?ckcachebust=6742E4DE4C5420B1E6D7CC035183A34B" />
+	<link rel="shortcut icon" href="../../favicon.ico" />
+	<link rel="stylesheet" href="../page/css/main.css" />
 	<!-- add unit_test custom styles -->
-	<link rel="stylesheet" href="css/unit_test.css?ckcachebust=EFDB08ED8C67B96B777CC843B68F34F7" media="print" onload="this.media='all'; this.onload=null;">
+	<link rel="stylesheet" href="css/unit_test.css" media="print" onload="this.media='all'; this.onload=null;">
 	<!-- add mocha css, to show results https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.css | https://unpkg.com/mocha/mocha.css -->
-	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css?ckcachebust=F68A5C09509644BEFECB37A5B89F60C4">
+	<link rel="stylesheet" href="../../lib/mocha/dist/mocha.css">
 	<script type="importmap">
 		{
 			"imports": {
@@ -19,7 +19,7 @@
 		}
 	</script>
 	<!-- add mocha framework code https://cdnjs.cloudflare.com/ajax/libs/mocha/3.2.0/mocha.js | https://unpkg.com/mocha/mocha.js -->
-	<script src="../../lib/mocha/dist/mocha.js?ckcachebust=811B98F04B30ADB2056D4CEDE44C858D"></script>
+	<script src="../../lib/mocha/dist/mocha.js"></script>
 	<script>
 		// mocha.setup. Use "tdd" interface, check global leaks, and force all tests to be asynchronous
 		mocha.setup({
@@ -27,7 +27,7 @@
 			checkLeaks	: true,
 			asyncOnly	: true
 		});
-		//mocha.growl(); // <-- Enables web notifications
+		// mocha.growl(); // <-- Enables web notifications
 	</script>
 	<!-- add chai  https://unpkg.com/chai/chai.js | https://cdnjs.cloudflare.com/ajax/libs/chai/3.5.0/chai.js -->
 	<script src="../../lib/chai/chai.js"></script>
@@ -44,6 +44,6 @@
 		<div id="content" class="section_record"></div>
 
 	<!-- tests file -->
-		<script defer="defer" type="module" src="js/index.js?ckcachebust=00A9F3D104DCB006BEFEB9F1AFA4AF6B"></script>
+		<script defer="defer" type="module" src="js/index.js"></script>
 </body>
 </html>
