@@ -1596,6 +1596,83 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
+	* DELETE_NORMALIZED_FILES
+	* Remove all image versions that are different of the uploaded files (normalized files), including the alternative versions
+	* Remove in original and modified qualities only
+	* Keep the original uploaded files
+	* @return bool
+	*/
+	public function delete_normalized_files() : bool {
+
+		// use qualities
+		$original_quality	= $this->get_original_quality();
+		$modified_quality	= $this->get_modified_quality();
+		$default_quality	= $this->get_default_quality();
+
+		$ar_quality = [$original_quality, $modified_quality, $default_quality];
+
+		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+
+		foreach ($ar_quality as $quality) {
+
+			// uploaded_file full file path try
+			$uploaded_file = $quality===$default_quality
+				? null
+				: $this->get_uploaded_file($quality);
+
+			// media_filepath
+			$media_filepath = $this->get_media_filepath(
+				$quality
+			);
+
+			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) ) {
+
+				$move_file_options = new stdClass();
+					$move_file_options->quality			= $quality;
+					$move_file_options->file			= $media_filepath;
+					$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
+					$move_file_options->file_name		= $this->get_name();
+
+				$move_file = $this->move_deleted_file( $move_file_options );
+
+				if (!$move_file) {
+					debug_log(__METHOD__
+						. " Error on delete media_filepath file " . PHP_EOL
+						. ' media_filepath: ' . $media_filepath
+						, logger::ERROR
+					);
+					return false;
+				}
+			}
+
+			foreach ($alternative_extensions as $alternative_extension) {
+
+				$alternative_path = $this->get_media_filepath($quality, $alternative_extension);
+
+				if ($alternative_path!==$uploaded_file && file_exists($alternative_path)) {
+
+					$move_file_options = new stdClass();
+						$move_file_options->quality			= $quality;
+						$move_file_options->file			= $alternative_path;
+						$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
+						$move_file_options->file_name		= $this->get_name();
+
+					$move_file = $this->move_deleted_file( $move_file_options );
+					if (!$move_file) {
+						debug_log(__METHOD__
+							. " Error on delete alternative version file " . PHP_EOL
+							. ' current_path: ' . $alternative_path
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+			}
+		}
+
+
+		return true;
+	}//end delete_normalized_files
 	* GET_MEDIA_ATTRIBUTES
 	* Read file and get attributes using ffmpeg
 	* @param string $file_path
