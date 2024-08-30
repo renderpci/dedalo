@@ -1775,17 +1775,29 @@ class component_image extends component_media_common implements component_media_
 				return null;
 			}
 
-		// thumbs. To generate thumbs, the measurements are fixed
-			$thumb_quality = defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
-			if($target_quality===$thumb_quality) {
-				// Default 102x57
+		// thumb_quality v6.2.0
+		$thumb_quality = defined('DEDALO_QUALITY_THUMB') ? DEDALO_QUALITY_THUMB : 'thumb';
+
+		switch ($target_quality) {
+
+			case $thumb_quality:
+				// Default 222x148
 				$result = [
 					DEDALO_IMAGE_THUMB_WIDTH,
 					DEDALO_IMAGE_THUMB_HEIGHT
 				];
+				break;
 
-		// others. Calculated
-			}else{
+			case DEDALO_IMAGE_QUALITY_ORIGINAL:
+			case DEDALO_IMAGE_QUALITY_RETOUCHED:
+				// resizing is not allowed
+				$result = [
+					$source_pixels_width,
+					$source_pixels_height
+				];
+				break;
+
+			default:
 				// ratio
 					$source_ratio = (int)$source_pixels_width / (int)$source_pixels_height;
 				// target megabytes
@@ -1801,7 +1813,9 @@ class component_image extends component_media_common implements component_media_
 					$width,
 					$height
 				];
-			}
+				break;
+		}
+
 
 		return $result;
 	}//end get_target_pixels_to_quality_conversion
@@ -1846,9 +1860,13 @@ class component_image extends component_media_common implements component_media_
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
+	* @param object $options=null
 	* @return bool
 	*/
-	public function regenerate_component() : bool {
+	public function regenerate_component( object $options=null ) : bool {
+
+		// options
+			$delete_normalized_files = $options->delete_normalized_files ?? true;
 
 		// svg file. Create file if not exists
 			$svg_file_path = $this->get_svg_file_path();
@@ -1886,26 +1904,10 @@ class component_image extends component_media_common implements component_media_
 				}
 			}
 
-		/**
-		* @todo working here
-		// default quality replace file when a original or modified exists
-		// This forces to create a fresh version of the modified/original file
-		// because in some situations (like modified manual upload file) we
-		// need to update default. Note that thumb is always updated
-		// Note that this action, re-creates the SVG file too
-			// $sources = [
-			// 	$this->get_media_filepath( $this->get_modified_quality() ), // option 1
-			// 	$this->get_media_filepath( $this->get_original_quality() ) // options 2
-			// ];
-			// foreach ($sources as $current_path) {
-			// 	if (file_exists($current_path)) {
-			// 		// create a new default quality file
-			// 		$this->build_version(
-			// 			$this->get_default_quality()
-			// 		);
-			// 	}
-			// }
-			*/
+		// full remove the original files except the uploaded file (.tiff, .psd, etc)
+			if( $delete_normalized_files===true ){
+				$this->delete_normalized_files();
+			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
@@ -1957,7 +1959,7 @@ class component_image extends component_media_common implements component_media_
 
 		// source file
 			// get uploaded image as source | modified, original or high quality available.
-				$image_source	= $this->get_image_source( $quality );
+				$image_source = $this->get_image_source( $quality );
 					$source_file	= $image_source->source_file;
 					$source_quality	= $image_source->source_quality;
 
@@ -1965,7 +1967,7 @@ class component_image extends component_media_common implements component_media_
 			// if the original directory has a copy with the same extension, use it (avif -> avif),
 			// else use the original source file (tiff -> avif)
 				$alternative_source_file = $this->get_media_filepath($source_quality, $extension);
-				if( file_exists($alternative_source_file) ){
+				if($source_quality!==$quality && file_exists($alternative_source_file) ){
 					$source_file = $alternative_source_file;
 				}
 
