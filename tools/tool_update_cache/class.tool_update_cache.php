@@ -55,6 +55,36 @@ class tool_update_cache extends tool_common {
 				return $response;
 			}
 
+		// PROCESS
+			// create new process section
+				$bulk_process_section = section::get_instance(
+					null, // string|null section_id
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$bulk_process_section->Save();
+
+			// get the bulk_process_id as the section_id of the section process
+				$bulk_process_id = (int)$bulk_process_section->get_section_id();
+
+			// Save the process name into the process section
+				$bulk_process_label_component = component_common::get_instance(
+					'component_input_text', // string model
+					DEDALO_BULK_PROCESS_LABEL_TIPO, // string tipo
+					$bulk_process_id, // string section_id
+					'list', // string mode
+					DEDALO_DATA_NOLAN, // string lang
+					DEDALO_BULK_PROCESS_SECTION_TIPO // string section_tipo
+				);
+				$section_name = RecordObj_dd::get_termino_by_tipo( $section_tipo );
+				$ar_component_names = [];
+				foreach ($ar_component_tipo as $current_component_tipo){
+					$ar_component_names[] = RecordObj_dd::get_termino_by_tipo( $current_component_tipo ) . '['.$current_component_tipo .']';
+				}
+				$component_names = implode(', ', $ar_component_names);
+				$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
+				$bulk_process_label_component->set_dato($bulk_process_label);
+				$bulk_process_label_component->Save();
+
 		// process_chunk
 			$sqo			= clone $_SESSION['dedalo']['config']['sqo'][$sqo_id];
 			$sqo->limit		= 1000;
@@ -66,7 +96,7 @@ class tool_update_cache extends tool_common {
 			self::$total	= $rows_data->total;
 
 		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
-			tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
+			tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo, $bulk_process_id);
 
 		// Enable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log				= true;
@@ -96,7 +126,7 @@ class tool_update_cache extends tool_common {
 	* @param array $ar_component_tipo
 	* @return bool
 	*/
-	public static function process_chunk(object $sqo, string $section_tipo, array $ar_component_tipo) : bool {
+	public static function process_chunk(object $sqo, string $section_tipo, array $ar_component_tipo, int $bulk_process_id) : bool {
 		$start_time=start_time();
 
 		// search
@@ -153,6 +183,9 @@ class tool_update_cache extends tool_common {
 							$section_tipo,
 							false // cache
 						);
+						// set the bulk_process_id
+						// this allow to revert the bulk import
+						$current_component->set_bulk_process_id($bulk_process_id);
 
 					// regenerate data
 						$current_component->get_dato(); // !! Important get dato before regenerate
@@ -190,7 +223,7 @@ class tool_update_cache extends tool_common {
 					gc_collect_cycles();
 
 				$sqo->offset = $sqo->offset + $sqo->limit;
-				return tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo);
+				return tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo, $bulk_process_id);
 			}
 
 		// Forces collection of any existing garbage cycles
