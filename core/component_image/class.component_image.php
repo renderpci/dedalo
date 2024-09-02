@@ -591,28 +591,24 @@ class component_image extends component_media_common implements component_media_
 			}
 
 		// upload info. Update dato information about original or modified quality
-			$original_quality = $this->get_original_quality();
-			if ($this->quality===$original_quality) {
-				// update upload file info
-				$dato = $this->get_dato();
+		// Data will save in regenerate() avoid save twice;
+			// set the data ket to 0
 				$key = 0;
-				if (!isset($dato[$key])) {
+
+			// update upload file info
+				$dato = $this->get_dato();
+				if (!isset($dato[$key]) || !is_object($dato[$key])) {
 					$dato[$key] = new stdClass();
 				}
+
+			if ($this->quality===$this->get_original_quality()) {
 				$dato[$key]->original_file_name			= $original_file_name;
 				$dato[$key]->original_normalized_name	= $original_normalized_name;
 				$dato[$key]->original_upload_date		= component_date::get_date_now();
 
 				$this->set_dato($dato);
-			}
-			$modified_quality = $this->get_modified_quality();
-			if ($this->quality===$modified_quality) {
-				// update upload file info
-				$dato = $this->get_dato();
-				$key = 0;
-				if (!isset($dato[$key]) || !is_object($dato[$key])) {
-					$dato[$key] = new stdClass();
-				}
+
+			}else if ($this->quality===$this->get_modified_quality()) {
 				$dato[$key]->modified_file_name			= $original_file_name;
 				$dato[$key]->modified_normalized_name	= $original_normalized_name;
 				$dato[$key]->modified_upload_date		= component_date::get_date_now();
@@ -629,17 +625,6 @@ class component_image extends component_media_common implements component_media_
 			);
 
 		try {
-
-			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
-			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
-				$f_extension = strtolower(pathinfo($full_file_path, PATHINFO_EXTENSION));
-				if ($f_extension!==DEDALO_IMAGE_EXTENSION) {
-
-					$this->convert_quality((object)[
-						'source_quality'	=> $this->quality,
-						'target_quality'	=> $this->quality
-					]);
-				}
 
 			// target_filename. Save original file name in a component_input_text if defined
 				$properties = $this->get_properties();
@@ -660,63 +645,25 @@ class component_image extends component_media_common implements component_media_
 					$component_target_filename->Save();
 				}
 
+			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
+			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
+			// regenerate component will create the default quality image calling build()
+			// build() will check the normalized files of the original and modified quality
+			// then if the normalized files doesn't exist, will create it
+			// then will create the SVG format of the default
+			// then save the data.
+				$result = $this->regenerate_component();
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
+
 			// custom_postprocessing_image. postprocessing_image_script
 				if (defined('POSTPROCESSING_IMAGE_SCRIPT')) {
 					sleep(1);
 					require( POSTPROCESSING_IMAGE_SCRIPT );
 					$result = custom_postprocessing_image($this);
 				}
-
-			// original and retouched cases rewrites default, svg and thumb files
-				$original_quality	= $this->get_original_quality();
-				$modified_quality	= $this->get_modified_quality();
-				$overwrite_default = ($this->quality===$original_quality || $this->quality===$modified_quality);
-				if ($overwrite_default===true) {
-
-					// Generate default image quality from original if is needed
-						$quality_default	= $this->get_default_quality();
-						$default			= $this->build_version($quality_default, true, false);
-
-						// debug
-						debug_log(__METHOD__
-							." SAVING COMPONENT IMAGE: generate_default_quality_file response: ".to_string($default)
-							, logger::DEBUG
-						);
-				}else{
-
-					// case uploaded image is different from original_quality and modified_quality,
-					// but NO original_quality / modified_quality files already exits
-					// e.g. user upload file directly to any quality from tool media versions
-					// In these cases, create a svg file if is not already created
-					$default_quality = $this->get_default_quality();
-					if ($this->quality!==$default_quality) {
-						// force to create the default quality
-						$this->build_version($default_quality, true, false);
-					}
-
-					$svg_file_path = $this->get_svg_file_path();
-					if (!file_exists($svg_file_path)) {
-						$svg_string_node = $this->create_default_svg_string_node();
-						if (!empty($svg_string_node)) {
-							// create the svg default file
-							$this->create_svg_file($svg_string_node);
-						}
-
-						// debug
-						debug_log(__METHOD__
-							." GENERATING SVG FILE for default quality"
-							, logger::DEBUG
-						);
-					}
-				}
-
-			// Generate thumb image quality from default always (if default exits)
-				$this->create_thumb();
-
-			// save component dato
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info
-				$this->Save();
 
 			// all is OK
 				$response->result	= true;
@@ -1868,6 +1815,14 @@ class component_image extends component_media_common implements component_media_
 		// options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;
 
+		// full remove the original files except the uploaded file (.tiff, .psd, etc)
+			if( $delete_normalized_files===true ){
+				$this->delete_normalized_files();
+			}
+
+		// common regenerate_component exec after specific actions (this action saves at the end)
+			$result = parent::regenerate_component();
+
 		// svg file. Create file if not exists
 			$svg_file_path = $this->get_svg_file_path();
 			if (!file_exists($svg_file_path)) {
@@ -1903,15 +1858,6 @@ class component_image extends component_media_common implements component_media_
 					}
 				}
 			}
-
-		// full remove the original files except the uploaded file (.tiff, .psd, etc)
-			if( $delete_normalized_files===true ){
-				$this->delete_normalized_files();
-			}
-
-		// common regenerate_component exec after specific actions (this action saves at the end)
-			$result = parent::regenerate_component();
-
 
 		return $result;
 	}//end regenerate_component
