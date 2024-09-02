@@ -3326,38 +3326,37 @@ class diffusion_sql extends diffusion  {
 			}
 
 		// Trigger update parent here
-			if ($locator) {
+			if (!empty($locator)) {
 
 				$section_tipo 			= $locator->section_tipo;
 				$section_id 			= $locator->section_id;
 				$diffusion_element_tipo = $options->diffusion_element_tipo;
 
 				// Force section tipo from locator
-					$options->section_tipo = $section_tipo;
+				$options->section_tipo = $section_tipo;
 
+				// compose term id
 				$terminoID = diffusion_sql::map_to_terminoID($options, $section_id);
 
+				// Set temporally to skip and force parent publication
 				$current_skip_publication_state_check = $_SESSION['dedalo']['config']['skip_publication_state_check'] ?? 0;
-
-				# Set temporally to skip and force parent publication
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = 1;
 
-				// tool_diffusion::export_record($section_tipo, $section_id, $diffusion_element_tipo, $resolve_references=true);
-				tool_diffusion::export((object)[
-					'section_tipo'				=> $section_tipo,
-					'section_id'				=> $section_id,
-					'diffusion_element_tipo'	=> $diffusion_element_tipo
-				]);
-				debug_log(__METHOD__
-					." Triggered tool_diffusion::export_record for parent ($section_tipo  - $section_id)"
-					, logger::DEBUG
-				);
+				// update record
+					$diffusion = new diffusion_sql();
+					$diffusion->update_record((object)[
+						'section_tipo'				=> $section_tipo,
+						'section_id'				=> (int)$section_id,
+						'diffusion_element_tipo'	=> $diffusion_element_tipo,
+						'resolve_references'		=> true
+					]);
+					debug_log(__METHOD__
+						." Triggered diffusion::update_record for parent ($section_tipo  - $section_id)"
+						, logger::DEBUG
+					);
 
-				# Restore previous skip_publication_state_check state
+				// Restore previous skip_publication_state_check state
 				$_SESSION['dedalo']['config']['skip_publication_state_check'] = $current_skip_publication_state_check;
-
-			}else{
-				#debug_log(__METHOD__." ============ NOT Triggered tool_diffusion::export_record dato: ".to_string($dato), logger::ERROR);
 			}
 
 
