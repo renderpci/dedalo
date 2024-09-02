@@ -418,11 +418,11 @@
 				// see: /core/media_engine/class.ImageMagick.php -> convert()
 				// Ubuntu : false | don't remove the composition layer, because it delete the color layers (the image disappear)
 				// Rocky, RedHat, MacOS: true | remove the composition layer, because it has the flat image with background color and it doesn't preserve the transparency
-			'remove_layer_0'	=> false, // default false
+			'remove_layer_0' => false, // default false
 			// set a fixed value for transparent images
 				// Rocky, RedHat | set it as false | active the property, it set that all images are transparent (is_opaque = false), Rocky version of ImageMagick can not detect if the image has transparent pixels
 				// Ubuntu, MacOs | set it as null | remove the property, it will check if the image has a transparent pixels correctly.
-			'is_opaque'			=> null // default null, if isset as false, all images will be processed as transparent, if isset as true, all images will be processed as opaque.
+			'is_opaque' => null // default null, if isset as false, all images will be processed as transparent, if isset as true, all images will be processed as opaque.
 		]);
 		// color_profiles_path
 		define('COLOR_PROFILES_PATH',				DEDALO_CORE_PATH . '/media_engine/lib/color_profiles_icc/');

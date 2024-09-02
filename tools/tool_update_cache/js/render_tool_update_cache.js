@@ -126,11 +126,18 @@ const get_content_data = async function(self) {
 
 			const item = component_list[i]
 
- 			// checkbox label
+			// container
+				const container = ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'item_container',
+					parent			: components_list_container
+				})
+
+ 			// option_label. checkbox label
 				const option_label = ui.create_dom_element({
 					element_type	: 'label',
 					inner_html		: item.label,
-					parent			: components_list_container
+					parent			: container
 				})
 				// info
 				ui.create_dom_element({
@@ -138,6 +145,13 @@ const get_content_data = async function(self) {
 					inner_html		: `${item.model} - ${item.tipo}`,
 					parent			: option_label
 				})
+
+			// hilite
+				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo) ||
+					hilite_models.includes(item.model)
+					) {
+					option_label.classList.add('hilite')
+				}
 
 			// input checkbox
 				const option = ui.create_dom_element({
@@ -151,11 +165,11 @@ const get_content_data = async function(self) {
 				}
 				option_label.prepend(option)
 
-			// hilite
-				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo) ||
-					hilite_models.includes(item.model)
-					) {
-					option_label.classList.add('hilite')
+			// regenerate_options. Options for update (like component_image)
+				if (item.regenerate_options) {
+					container.appendChild(
+						render_regenerate_options(self, item)
+					)
 				}
 
 			// add
@@ -260,6 +274,102 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_REGENERATE_OPTIONS
+* Creates the component regenerate options nodes
+* @param object self
+* @param object item
+* @return HTMLElement wrapper
+*/
+const render_regenerate_options = function(self, item) {
+
+	const tipo = item.tipo
+
+	// wrapper
+		const wrapper = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'regenerate_options_container'
+		})
+
+	// head_node
+		const head_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'head_node icon_arrow',
+			title			: self.get_tool_label('regenerate_options') || 'Regenerate options',
+			parent			: wrapper
+		})
+
+	// body_node
+		const body_node = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body_node hide',
+			parent			: wrapper
+		})
+
+	// track collapse toggle state of content
+		ui.collapse_toggle_track({
+			toggler				: head_node,
+			container			: body_node,
+			collapsed_id		: 'regenerate_options_' + item.tipo,
+			collapse_callback	: collapse,
+			expose_callback		: expose
+		})
+		function collapse() {
+			head_node.classList.remove('up')
+		}
+		function expose() {
+			head_node.classList.add('up')
+		}
+
+	// render regenerate_options
+		const regenerate_options = item.regenerate_options
+		const regenerate_options_length = regenerate_options.length
+		for (let i = 0; i < regenerate_options_length; i++) {
+
+			const regenerate_item = regenerate_options[i]
+
+			switch (regenerate_item.type) {
+
+				// boolean. Use a checkbox
+				case 'boolean':
+					// label
+					const option_label = ui.create_dom_element({
+						element_type	: 'label',
+						inner_html		: self.get_tool_label(regenerate_item.name) || regenerate_item.name,
+						parent			: body_node
+					})
+					// input_checkbox
+					const input_checkbox = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox'
+					})
+					option_label.prepend(input_checkbox)
+					// change event
+					const handle_change = () => {
+						// set tool var regenerate_options item value
+						self.regenerate_options[tipo] = {
+							[regenerate_item.name] : input_checkbox.checked
+						}
+						if(SHOW_DEBUG===true) {
+							console.log('self.regenerate_options:', self.regenerate_options);
+						}
+					}
+					input_checkbox.addEventListener('change', handle_change)
+					break;
+
+				default:
+					console.warn('Ignored regenerate item type not allowed: ', regenerate_item.type);
+					break;
+			}
+
+		}//end for (let i = 0; i < regenerate_options_length; i++)
+
+
+	return wrapper
+}//end render_regenerate_options
 
 
 

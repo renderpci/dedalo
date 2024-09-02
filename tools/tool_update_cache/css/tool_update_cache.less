@@ -49,28 +49,57 @@
 				display: block;
 			}
 
-			>label {
-				display: block;
-				padding: 0.25rem;
-				width: 100%;
-				cursor: pointer;
+			>.item_container {
+				position: relative;
 
-				&.hilite {
-					background: linear-gradient(90deg, rgb(255 222 179) 0%, rgb(255 255 255 / 0%) 100%);
-				}
-
-				span {
-					color: #989898;
-					font-weight: 200;
-					font-size: 0.8rem;
+				>label {
 					display: block;
-					padding-left: 1.1rem;
-				}
-			}
+					padding: 0.25rem;
+					width: 100%;
+					cursor: pointer;
 
-			input {
-				margin-right: 0.33rem;
-				vertical-align: bottom;
+					&.hilite {
+						background: linear-gradient(90deg, rgb(255 222 179) 0%, rgb(255 255 255 / 0%) 100%);
+					}
+
+					span {
+						color: #989898;
+						font-weight: 200;
+						font-size: 0.8rem;
+						display: block;
+						padding-left: 1.1rem;
+					}
+
+					input {
+						margin-right: 0.33rem;
+						vertical-align: bottom;
+					}
+				}
+
+				>.regenerate_options_container {
+
+					>.head_node {
+						width: 2rem;
+						position: absolute;
+						top: 0px;
+						right: 0px;
+					}
+
+					>.body_node {
+						padding: 0.5rem;
+						padding-left: 1.5rem;
+						padding-bottom: 0.66rem;
+
+						label {
+							color: @color_grey_darken;
+						}
+
+						input {
+							margin-right: 0.33rem;
+							vertical-align: bottom;
+						}
+					}
+				}
 			}
 		}
 

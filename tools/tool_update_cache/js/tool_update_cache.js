@@ -35,6 +35,8 @@ export const tool_update_cache = function () {
 
 	this.component_list = null
 
+	this.regenerate_options = {}
+
 	return true
 }//end page
 
@@ -155,7 +157,21 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 
 	const self = this
 
-	const section_tipo = self.caller.section_tipo
+	const section_tipo			= self.caller.section_tipo
+	const regenerate_options	= self.regenerate_options
+
+	// components_selection. Compose user components selection adding regenerate_options
+		const selection = []
+		const ar_component_tipo_length = ar_component_tipo.length
+		for (let i = 0; i < ar_component_tipo_length; i++) {
+
+			const tipo = ar_component_tipo[i]
+
+			selection.push({
+				tipo				: tipo,
+				regenerate_options	: regenerate_options[tipo] || null
+			})
+		}
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
@@ -167,10 +183,10 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 			action	: 'tool_request',
 			source	: source,
 			options : {
-				background_running	: true, // set run in background CLI
-				section_tipo		: section_tipo,
-				ar_component_tipo	: ar_component_tipo,
-				lang				: page_globals.dedalo_application_lang
+				background_running		: true, // set run in background CLI
+				section_tipo			: section_tipo,
+				components_selection	: components_selection,
+				lang					: page_globals.dedalo_application_lang
 			}
 		}
 

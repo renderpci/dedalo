@@ -7,8 +7,10 @@
 class tool_update_cache extends tool_common {
 
 
+
 	static $n_records = 0;
 	static $total; // count records search
+
 
 
 	/**
@@ -16,6 +18,10 @@ class tool_update_cache extends tool_common {
 	* Exec a custom action called from client
 	* Note that tool config is stored in the tool section data (tools_register)
 	* @param object $options
+	* {
+	* 	section_tipo: string as 'rsc197'
+	* 	components_selection: array as [{tipo:'rsc197', regenerate_options:{delete_normalized_files:true}}]
+	* }
 	* @return object $response
 	*/
 	public static function update_cache(object $options) : object {
@@ -28,8 +34,8 @@ class tool_update_cache extends tool_common {
 			ignore_user_abort();
 
 		// options
-			$section_tipo		= $options->section_tipo ?? null;
-			$ar_component_tipo	= $options->ar_component_tipo ?? null;
+			$section_tipo			= $options->section_tipo ?? null;
+			$components_selection	= $options->components_selection ?? null;
 
 		// response
 			$response = new stdClass();
@@ -96,7 +102,13 @@ class tool_update_cache extends tool_common {
 			self::$total	= $rows_data->total;
 
 		// recursive process_chunk. Chunked by sqo limit to prevent memory issues
-			tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo, $bulk_process_id);
+
+			tool_update_cache::process_chunk(
+				$sqo,
+				$section_tipo,
+				$ar_component_tipo,
+				$bulk_process_id
+			);
 
 		// Enable logging activity and time machine # !IMPORTANT
 			logger_backend_activity::$enable_log				= true;
@@ -109,7 +121,7 @@ class tool_update_cache extends tool_common {
 			$response->msg			= "Updated cache of section $section_label ($section_tipo) successfully";
 			$response->counter		= self::$n_records;
 			$response->total		= self::$total;
-			$response->n_components	= count($ar_component_tipo);
+			$response->n_components	= count($components_selection);
 
 
 		return $response;
@@ -123,10 +135,11 @@ class tool_update_cache extends tool_common {
 	* Chunk the process into chunks by sqo limit
 	* @param object object $sqo
 	* @param string $section_tipo
-	* @param array $ar_component_tipo
+	* @param array $components_selection
 	* @return bool
 	*/
-	public static function process_chunk(object $sqo, string $section_tipo, array $ar_component_tipo, int $bulk_process_id) : bool {
+	public static function process_chunk(object $sqo, string $section_tipo, array $components_selection, int $bulk_process_id) : bool {
+
 		$start_time=start_time();
 
 		// search
@@ -161,7 +174,11 @@ class tool_update_cache extends tool_common {
 					print_cli($pdata);
 				}
 
-				foreach ($ar_component_tipo as $current_component_tipo) {
+				// iterate components_selection (user selected components)
+				foreach ($components_selection as $components_selection_item) {
+
+					$current_component_tipo		= $components_selection_item->tipo;
+					$current_regenerate_options	= $components_selection_item->regenerate_options;
 
 					// model
 						$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
@@ -189,8 +206,11 @@ class tool_update_cache extends tool_common {
 
 					// regenerate data
 						$current_component->get_dato(); // !! Important get dato before regenerate
-						$result = $current_component->regenerate_component();
-						if ($result!==true) {
+						// exec component regeneration with options
+						$result = $current_component->regenerate_component(
+							$current_regenerate_options
+						);
+						if (!$result) {
 							debug_log(__METHOD__
 								. ' Error on regenerate component ' .PHP_EOL
 								. ' model: ' .$model .PHP_EOL
@@ -200,7 +220,7 @@ class tool_update_cache extends tool_common {
 								, logger::ERROR
 							);
 						}
-				}//end foreach ($related_terms as $current_component_tipo)
+				}//end foreach ($components_selection as $components_selection_item)
 
 				// update records counter
 				self::$n_records++;
@@ -223,7 +243,8 @@ class tool_update_cache extends tool_common {
 					gc_collect_cycles();
 
 				$sqo->offset = $sqo->offset + $sqo->limit;
-				return tool_update_cache::process_chunk($sqo, $section_tipo, $ar_component_tipo, $bulk_process_id);
+
+				return tool_update_cache::process_chunk($sqo, $section_tipo, $components_selection, $bulk_process_id);
 			}
 
 		// Forces collection of any existing garbage cycles
@@ -296,11 +317,17 @@ class tool_update_cache extends tool_common {
 					continue;
 				}
 
-				$component_list[] = (object)[
-					'tipo'	=> $current_component_tipo,
-					'model'	=> $model,
-					'label'	=> RecordObj_dd::get_termino_by_tipo($current_component_tipo, $lang)
+				// regenerate_options. Object normally empty except for component_image
+				$regenerate_options = $model::get_regenerate_options();
+
+				$item = (object)[
+					'tipo'					=> $current_component_tipo,
+					'model'					=> $model,
+					'label'					=> RecordObj_dd::get_termino_by_tipo($current_component_tipo, $lang),
+					'regenerate_options'	=> $regenerate_options
 				];
+
+				$component_list[] = $item;
 			}
 
 		// response

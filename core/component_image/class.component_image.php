@@ -1932,7 +1932,7 @@ class component_image extends component_media_common implements component_media_
 			$target_path	= $this->get_media_path_dir($quality);
 			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
 
-		// generate from PDF
+		// generate from source_file
 			$im_options = new stdClass();
 				$im_options->source_file	= $source_file;
 				$im_options->target_file	= $target_file;
@@ -1954,6 +1954,29 @@ class component_image extends component_media_common implements component_media_
 
 		return true;
 	}//end create_alternative_version
+
+
+
+	/**
+	* GET_REGENERATE_OPTIONS
+	* Used by tool_update_cache to get custom regeneration options from component
+	* @return array|null $options
+	*/
+	public static function get_regenerate_options() : ?array {
+
+		$options = [];
+
+		// delete_normalized_files
+			$delete_normalized_files = new stdClass();
+				$delete_normalized_files->name		= 'delete_normalized_files';
+				$delete_normalized_files->type		= 'boolean';
+				$delete_normalized_files->default	= false;
+
+		$options[] = $delete_normalized_files;
+
+
+		return $options;
+	}//end get_regenerate_options
 
 
 

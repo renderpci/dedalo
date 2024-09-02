@@ -435,14 +435,16 @@ final class component_input_text_test extends TestCase {
 
 		$value = $component->set_permissions($new_value);
 
-		$permissions = $component->get_permissions();
-
 		$this->assertTrue(
 			gettype($value)==='NULL',
 				'expected value do not match:' . PHP_EOL
 				.' expected type: NULL' . PHP_EOL
 				.' type: '.gettype($value)
 		);
+
+		// permissions
+		// $permissions = $component->get_permissions();
+		$permissions = $component->get_component_permissions();
 
 		$this->assertTrue(
 			$component->permissions===$new_value,

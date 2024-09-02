@@ -74,13 +74,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 25,
-              "hour": 11,
-              "time": 65063127961,
+              "day": 31,
+              "hour": 7,
+              "time": 65074348093,
               "year": 2024,
-              "month": 4,
-              "minute": 6,
-              "second": 1
+              "month": 8,
+              "minute": 48,
+              "second": 13
             }
           }
         ]
@@ -154,7 +154,7 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.4"
+          "2.0.5"
         ]
       }
     },
@@ -304,8 +304,143 @@
               "lang": "lg-ita",
               "name": "records",
               "value": "Registrazioni"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "delete_normalized_files",
+              "value": "Delete normalised files"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "delete_normalized_files",
+              "value": "Borrar archivos normalizados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "delete_normalized_files",
+              "value": "Elimina els fitxers normalitzats"
+            },
+            {
+              "lang": "lg-por",
+              "name": "delete_normalized_files",
+              "value": "Eliminar ficheiros normalizados"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "delete_normalized_files",
+              "value": "Supprimer les fichiers normalisés"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "delete_normalized_files",
+              "value": "Eliminare i file normalizzati"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "delete_normalized_files",
+              "value": "Διαγραφή κανονικοποιημένων αρχείων"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "delete_normalized_files",
+              "value": "Normalisierte Dateien löschen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "delete_normalized_files",
+              "value": "सामान्य फाइलहरू मेटाउनुहोस्"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "delete_normalized_files",
+              "value": "Ezabatu normalizatutako fitxategiak"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "updated",
+              "value": "Eguneratua"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "components",
+              "value": "Osagaiak"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "records",
+              "value": "Erregistroak"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "regenerate_options",
+              "value": "Regeneration options"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "regenerate_options",
+              "value": "Opciones de regeneración"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "regenerate_options",
+              "value": "Opcions de regeneració"
+            },
+            {
+              "lang": "lg-por",
+              "name": "regenerate_options",
+              "value": "Opções de regeneração"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "regenerate_options",
+              "value": "Options de régénération"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "regenerate_options",
+              "value": "Opzioni di rigenerazione"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "regenerate_options",
+              "value": "Επιλογές ανάπλασης"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "regenerate_options",
+              "value": "Optionen für die Regeneration"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "regenerate_options",
+              "value": "पुनर्जन्म विकल्प"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "regenerate_options",
+              "value": "Birsortzeko aukerak"
             }
           ]
+        ]
+      }
+    },
+    "dd1633": {
+      "inf": "Configuración por defecto [component_json]",
+      "dato": {
+        "lg-nolan": [
+          {
+            "hilite_tipos": {
+              "info": "Sets a list of items to highlight for easy location in the list.",
+              "value": [
+                "rsc201",
+                "rsc35",
+                "rsc29",
+                "rsc37",
+                "rsc855"
+              ],
+              "client": true
+            }
+          }
         ]
       }
     },
@@ -321,7 +456,7 @@
   "section_id": 10,
   "created_date": "2022-02-28 10:50:50",
   "section_tipo": "dd1340",
-  "modified_date": "2024-04-25 11:06:01",
+  "modified_date": "2024-08-31 07:48:13",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
