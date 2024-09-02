@@ -1115,7 +1115,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @see class.tool_update_cache.php
 	* @return bool
 	*/
-	public function regenerate_component() : bool {
+	public function regenerate_component(object $options = null) : bool {
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
 			$result = parent::regenerate_component();
