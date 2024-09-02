@@ -2490,6 +2490,7 @@ class component_media_common extends component_common {
 	* @test true
 	*/
 	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+		$start_time=start_time();
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -2572,6 +2573,32 @@ class component_media_common extends component_common {
 					. ' original_file_path: ' . $original_file_path . PHP_EOL
 					. ' target_quality_path: ' . $target_quality_path
 					, logger::DEBUG
+				);
+			}
+
+		// Alternative versions
+			$alternative_convert_options = new stdClass();
+			// 	$alternative_convert_options->resize = $resize;
+
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			foreach ($alternative_extensions as $current_extension) {
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg				= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $current_extension . ' | id: ' . $this->section_id;
+						common::$pdata->memory			= dd_memory_usage();
+						common::$pdata->target_quality	= $quality;
+						common::$pdata->current_time	= exec_time_unit($start_time, 'ms');
+						common::$pdata->total_ms		= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+						// send to output
+						print_cli(common::$pdata);
+					}
+
+				// create alternative version file
+				$this->create_alternative_version(
+					$quality,
+					$current_extension,
+					$alternative_convert_options
 				);
 			}
 
