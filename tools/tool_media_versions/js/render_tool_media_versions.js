@@ -201,6 +201,28 @@ const render_sync_data = function(self) {
 				})
 			})
 
+		// delete_normalized_files check box
+			// Check for activate the delete of all images created by the upload process and recreate all of them
+			// if will delete original, modified, default generated images, keeping the uploaded file (.tiff, .psd, etc)
+			// label
+			const delete_normalized_files_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'delete_normalized_files_label',
+				inner_html		: self.get_tool_label('delete_normalized_files') || 'Delete normalized files',
+				parent			: versions_container
+			})
+
+			// delete_normalized_files_checkbox
+				const delete_normalized_files_checkbox = ui.create_dom_element({
+					element_type	: 'input',
+					type			: 'checkbox'
+				})
+				delete_normalized_files_label.prepend(delete_normalized_files_checkbox)
+				delete_normalized_files_checkbox.addEventListener('change', function(e) {
+					// set the delete option checked by the user into the global regenerate options object.
+					self.regenerate_options.delete_normalized_files = delete_normalized_files_checkbox.checked
+				})
+
 		// pre_data JSON data
 			const pre_data = ui.create_dom_element({
 				element_type	: 'pre',
@@ -847,8 +869,8 @@ const render_file_delete = function(quality, self) {
 			})
 			button_file_download.addEventListener('click', async function(){
 				self.node.classList.add('loading')
-				// exec delete_file
-				const response = await self.delete_file(quality)
+				// exec delete_quality
+				const response = await self.delete_quality(quality)
 				if (response===true) {
 					// self.main_element_quality = quality
 					self.refresh({
