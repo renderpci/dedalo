@@ -83,8 +83,8 @@ class tool_update_cache extends tool_common {
 				);
 				$section_name = RecordObj_dd::get_termino_by_tipo( $section_tipo );
 				$ar_component_names = [];
-				foreach ($ar_component_tipo as $current_component_tipo){
-					$ar_component_names[] = RecordObj_dd::get_termino_by_tipo( $current_component_tipo ) . '['.$current_component_tipo .']';
+				foreach ($components_selection as $current_item) {
+					$ar_component_names[] = RecordObj_dd::get_termino_by_tipo($current_item->tipo) . '['.$current_item->tipo .']';
 				}
 				$component_names = implode(', ', $ar_component_names);
 				$bulk_process_label = 'Update cache | ' . $section_name.'['.$section_tipo .'] | ' . $component_names;
@@ -106,7 +106,7 @@ class tool_update_cache extends tool_common {
 			tool_update_cache::process_chunk(
 				$sqo,
 				$section_tipo,
-				$ar_component_tipo,
+				$components_selection,
 				$bulk_process_id
 			);
 
