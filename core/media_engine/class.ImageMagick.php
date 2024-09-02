@@ -139,6 +139,11 @@ final class ImageMagick {
 		]);
 		$colorspace_info = shell_exec($command);	//-format "%[EXIF:DateTimeOriginal]"
 
+		// set layer
+			$source_file = isset($ar_layers)
+				? $source_file.json_encode($ar_layers)
+				: $source_file;
+
 		// begin flags : Command flags before source file.
 			$begin_flags = '';
 
