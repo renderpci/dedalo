@@ -412,7 +412,7 @@
 		define('DEDALO_IMAGE_FILE_URL',				DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
 		define('MAGICK_PATH',						'/usr/bin/'); 	# Like '/usr/bin/';
-		// Magick config
+		// ImageMagick config
 		define('MAGICK_CONFIG', [
 			// Transparent tiff, remove the layer 0 (flat composition layer)
 				// see: /core/media_engine/class.ImageMagick.php -> convert()

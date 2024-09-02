@@ -14,7 +14,7 @@ abstract class logger_backend {
 	/**
 	* __CONSTRUCT
 	* Require url_data string like: 'mysql://user:password@host/database?tabe=matrix_activity' for caompatibity
-	* @param array|null $url_data
+	* @param array $url_data
 	*/
 	public function __construct(array $url_data) {
 		$this->url_data = $url_data;
