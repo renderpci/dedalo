@@ -92,7 +92,7 @@ tool_diffusion.prototype.build = async function(autoload=false) {
 			self.resolve_levels = self.diffusion_info.resolve_levels ?? 1
 
 		// fix skip_publication_state_check value
-			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 0
+			self.skip_publication_state_check = self.diffusion_info.skip_publication_state_check ?? 1
 
 	} catch (error) {
 		self.error = error
