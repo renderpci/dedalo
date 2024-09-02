@@ -792,8 +792,7 @@ final class dd_utils_api {
 					$user_id = logged_user_id();
 					$tmp_dir = DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $key_dir;
 
-				// Check the target_dir, if it's not created will be make to be used.
-					// Target folder exists test
+				// tmp_dir. Check the target_dir, if it is not created it will be created for use.
 					if(!create_directory($tmp_dir, 0750)) {
 						$response->msg .= ' Error on read or create tmp_dir directory. Permission denied';
 						return $response;

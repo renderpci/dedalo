@@ -4281,4 +4281,16 @@ abstract class component_common extends common {
 
 
 
+	/**
+	* GET_REGENERATE_OPTIONS
+	* Used by tool_update_cache to get custom regeneration options from component
+	* @return array|null $options
+	*/
+	public static function get_regenerate_options() : ?array {
+
+		return null;
+	}//end get_regenerate_options
+
+
+
 }//end class component_common

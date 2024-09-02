@@ -113,7 +113,7 @@ class tool_diffusion extends tool_common {
 		// skip_publication_state_check
 			$skip_publication_state_check = isset($_SESSION['dedalo']['config']['skip_publication_state_check'])
 				? (int)$_SESSION['dedalo']['config']['skip_publication_state_check']
-				: 0;
+				: 1;
 
 		// result info
 			$result = (object)[
