@@ -597,82 +597,11 @@ final class dd_core_api {
 					break;
 			}
 
-		// activity
-		// register of the activity
-			if ($rqo->source->action==='search') {
-				// only sections and areas generate activity (prevent autocomplete activity footprint)
-				$model = RecordObj_dd::get_modelo_name_by_tipo($rqo->source->tipo, true);
-				if (strpos($model, 'component')===false) {
-					// Prevent infinite loop saving self
-					if (!in_array($rqo->source->tipo, logger_backend_activity::$ar_elements_activity_tipo)) {
-
-						// mode. set mode_to_activity
-						// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
-						// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
-							$mode				= $rqo->source->mode;
-							$mode_to_activity	= $mode;
-							if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
-								$mode_to_activity = 'edit';
-							}
-
-						// activity dato
-							$dato_activity = [
-								'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
-							];
-
-							switch (true) {
-
-								case ($mode==='edit'):
-									$section_id						= isset($json_rows->data[0]) && isset($json_rows->data[0]->value[0])
-										? $json_rows->data[0]->value[0]->section_id
-										: null;
-									$dato_activity['id']			= $section_id;
-									$dato_activity['tipo']			= $rqo->source->tipo;
-									// $dato_activity['top_id']		= TOP_ID;	#$_SESSION['dedalo4']['config']['top_id'];
-									// $dato_activity['top_tipo']	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-									break;
-
-								case ($mode==='list') :
-									$dato_activity['tipo']			= $rqo->source->tipo;
-									#$dato_activity['top_id']		= null;
-									// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
-									break;
-
-								case ($mode==='tm') :
-									$dato_activity['tipo']			= $rqo->options->caller_tipo;
-									#$dato_activity['top_id']		= null;
-									// $dato_activity['top_tipo']	= TOP_TIPO;	#$tipo;
-									break;
-
-								// case ( strpos($mode, 'tool_portal')!==false ) :
-								// 	#$dato_activity['id']		= $id;
-								// 	$dato_activity['tipo']		= $tipo;
-								// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-								// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-								// 	break;
-
-								// case ( strpos($mode, 'tool_')!==false ) :
-								// 	#$dato_activity['id']		= $id;
-								// 	$dato_activity['tipo']		= $tipo;
-								// 	$dato_activity['top_id'] 	= $parent;	#$_SESSION['dedalo4']['config']['top_id'];
-								// 	$dato_activity['top_tipo'] 	= TOP_TIPO;	#$_SESSION['dedalo4']['config']['top_tipo'];
-								// 	break;
-
-								default:
-									break;
-							}
-
-						// LOGGER ACTIVITY : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-							logger::$obj['activity']->log_message(
-								'LOAD'.' '.strtoupper($mode_to_activity),
-								logger::INFO,
-								$rqo->source->tipo,
-								null,
-								$dato_activity
-							);
-					}//end if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo))
-				}
-			}//end if ($rqo->source->action==='search')
+		// activity. Logging activity with Dédalo logger
+			self::log_activity((object)[
+				'rqo'			=> $rqo,
+				'section_id'	=> $response->result->data[0]->value[0]->section_id ?? null
+			]);
 
 		// debug
 			if(SHOW_DEBUG===true) {
@@ -2793,6 +2722,106 @@ final class dd_core_api {
 
 		return $lang_labels;
 	}//end get_lang_labels
+
+
+
+	/**
+	* LOG_ACTIVITY
+	* Writes log_message in Dédalo logger
+	* It is used to registrate the navigation of the users by sections and areas.
+	* @see dd_core_api::read
+	* @param object $options
+	* {
+	* 	rqo: object (full rqo object from read request)
+	* 	section_id: int|null (available in edit mode only)
+	* }
+	* @return void
+	*/
+	private static function log_activity(object $options) : void {
+
+		// options
+			$rqo		= $options->rqo;
+			$section_id	= $options->section_id ?? null;
+
+		// short vars
+			$tipo	= $rqo->source->tipo ?? '';
+			$mode	= $rqo->source->mode ?? '';
+
+		// Prevent infinite loop saving self
+			if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo, true)) {
+				return;
+			}
+
+		// exclude other tipos
+			$ar_exclude_tipo = [
+				DEDALO_TEMP_PRESET_SECTION_TIPO, // dd655
+				DEDALO_SEARCH_PRESET_SECTION_TIPO, // dd623
+			];
+			if (in_array($tipo, $ar_exclude_tipo, true)) {
+				return;
+			}
+
+		// exclude modes
+			if ($mode==='tm') {
+				return;
+			}
+
+		// exclude components
+		// only sections and areas generate activity (prevent autocomplete activity footprint)
+			$model = RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
+			if (strpos($model, 'section')===false && strpos($model, 'area')===false) {
+				return;
+			}
+
+		// mode. set mode_to_activity
+		// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
+		// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
+			$mode_to_activity = $mode;
+			if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
+				$mode_to_activity = 'edit';
+			}
+
+		// dato_activity. Create dato_activity array
+			$dato_activity = [
+				'msg' => 'HTML Page is loaded in mode: '.$mode_to_activity .' ['.$mode.']'
+			];
+
+		// create custom log based on caller and context
+			switch (true) {
+
+				// area
+				case (strpos($model, 'area')!==false):
+					$dato_activity['tipo'] = $tipo;
+					break;
+
+				// section
+				case ($model==='section' && $rqo->source->action==='search'):
+
+					switch ($mode) {
+						case 'edit' :
+							$dato_activity['id']	= $section_id;
+							$dato_activity['tipo']	= $tipo;
+							break;
+						case 'list' :
+							$dato_activity['tipo'] = $tipo;
+							break;
+					}
+					break;
+
+				default:
+					// code...
+					break;
+			}
+
+		// logger activity. Write message
+			logger::$obj['activity']->log_message(
+				'LOAD ' . strtoupper($mode_to_activity), // string message
+				logger::INFO, // int log_level
+				$tipo, // string|null tipo_where
+				null, // string|null operations
+				$dato_activity // array|null datos
+			);
+	}//end log_activity
 
 
 
