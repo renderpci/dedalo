@@ -179,6 +179,7 @@ define('DEDALO_LANGS_SECTION_TIPO',						'lg1');
 
 // SEARCH PRESETS
 define('DEDALO_TEMP_PRESET_SECTION_TIPO',				'dd655');
+define('DEDALO_SEARCH_PRESET_SECTION_TIPO',				'dd623');
 
 // SEARCH_QUERY_OBJECT OPERATORS
 define('OP_OR',											'$or');
