@@ -19,23 +19,24 @@
 */
 export const tool_media_versions = function () {
 
-	this.id				= null
-	this.model			= null
-	this.mode			= null
-	this.node			= null
-	this.ar_instances	= null
-	this.events_tokens	= null
-	this.status			= null
-	this.main_element	= null
-	this.type			= null
-	this.source_lang	= null
-	this.target_lang	= null
-	this.langs			= null
-	this.caller			= null
-	this.timer			= null
-
-	this.main_element_quality = null
-
+	this.id						= null
+	this.model					= null
+	this.mode					= null
+	this.node					= null
+	this.ar_instances			= null
+	this.events_tokens			= null
+	this.status					= null
+	this.main_element			= null
+	this.type					= null
+	this.source_lang			= null
+	this.target_lang			= null
+	this.langs					= null
+	this.caller					= null
+	this.timer					= null
+	this.main_element_quality	= null
+	this.regenerate_options		= {
+		delete_normalized_files : false
+	}
 
 	return true
 }//end tool_media_versions
@@ -255,13 +256,13 @@ tool_media_versions.prototype.get_files_info = async function() {
 
 
 /**
-* DELETE_FILE
+* DELETE_quality
 * Delete version of given quality
 * @param string quality
 * @return promise
 * 	resolve: array of objects
 */
-tool_media_versions.prototype.delete_file = async function(quality) {
+tool_media_versions.prototype.delete_quality = async function(quality) {
 
 	const self = this
 
@@ -272,7 +273,7 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
 	// this generates a call as my_tool_name::my_function_name(options)
-		const source = create_source(self, 'delete_file')
+		const source = create_source(self, 'delete_quality')
 
 	// rqo
 		const rqo = {
@@ -295,7 +296,7 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 			})
 			.then(function(response){
 				if(SHOW_DEVELOPER===true) {
-					dd_console("-> delete_file API response:",'DEBUG',response);
+					dd_console("-> delete_quality API response:",'DEBUG',response);
 				}
 
 				const result = response.result // array of objects
@@ -303,7 +304,7 @@ tool_media_versions.prototype.delete_file = async function(quality) {
 				resolve(result)
 			})
 		})
-}//end delete_file
+}//end delete_quality
 
 
 
@@ -493,9 +494,10 @@ tool_media_versions.prototype.sync_files = async function() {
 			action	: 'tool_request',
 			source	: source,
 			options	: {
-				tipo			: self.main_element.tipo,
-				section_tipo	: self.main_element.section_tipo,
-				section_id		: self.main_element.section_id
+				tipo				: self.main_element.tipo,
+				section_tipo		: self.main_element.section_tipo,
+				section_id			: self.main_element.section_id,
+				regenerate_options	: self.regenerate_options
 			}
 		}
 
