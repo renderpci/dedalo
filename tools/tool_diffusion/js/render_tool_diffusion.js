@@ -147,7 +147,6 @@ const get_content_data = async function(self) {
 			const resolve_levels_value	= parseInt(saved_diffusion_levels)
 			resolve_levels_input.value	= resolve_levels_value
 			self.resolve_levels			= resolve_levels_value
-
 		}
 		ui.create_dom_element({
 			element_type	: 'label',

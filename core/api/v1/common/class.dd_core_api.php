@@ -587,7 +587,7 @@ final class dd_core_api {
 		// redirect to the method
 			switch ($rqo->source->action) {
 				case 'get_value':
-					// get component value
+					// get component value (plain value)
 					$response = self::get_component_value($rqo);
 					break;
 
