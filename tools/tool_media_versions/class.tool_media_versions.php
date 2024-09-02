@@ -55,12 +55,12 @@ class tool_media_versions extends tool_common {
 
 
 	/**
-	* DELETE_FILE
+	* DELETE_QUALITY
 	* Delete file of given quality
 	* @param object $request_options
 	* @return object $response
 	*/
-	public static function delete_file(object $options) : object {
+	public static function delete_quality(object $options) : object {
 
 		// options
 			$tipo			= $options->tipo ?? null;
@@ -83,7 +83,7 @@ class tool_media_versions extends tool_common {
 
 
 		return (object)$response;
-	}//end delete_file
+	}//end delete_quality
 
 
 
@@ -232,9 +232,10 @@ class tool_media_versions extends tool_common {
 			$response->msg		= 'Error. Request failed';
 
 		// options
-			$tipo			= $options->tipo;
-			$section_tipo	= $options->section_tipo;
-			$section_id		= $options->section_id;
+			$tipo				= $options->tipo;
+			$section_tipo		= $options->section_tipo;
+			$section_id			= $options->section_id;
+			$regenerate_options	= $options->regenerate_options;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo, true);
@@ -251,7 +252,7 @@ class tool_media_versions extends tool_common {
 
 		// regenerate data
 			$component->get_dato(); // !! Important get dato before regenerate
-			$result = $component->regenerate_component();
+			$result = $component->regenerate_component($regenerate_options);
 			if ($result!==true) {
 				debug_log(__METHOD__
 					. ' Error on regenerate component ' .PHP_EOL
@@ -329,10 +330,9 @@ class tool_media_versions extends tool_common {
 					$response->errors	= $result===false ? ['file not deleted'] : [];
 					break;
 
-				case ( strtolower($extension)===$component->get_extension() ):
-
+				default:
 					// main file like 'rsc37_rsc176_25.pdf' for component_pdf
-					$delete_file_response = $component->delete_file($quality);
+					$delete_file_response = $component->delete_file($quality, $extension);
 
 					// update response object
 					$response->result	= $delete_file_response->result;
@@ -340,22 +340,7 @@ class tool_media_versions extends tool_common {
 					$response->errors	= $delete_file_response->errors;
 					break;
 
-				default:
-
-					// alternative versions
-					// Note that this action is destructive
-					$result = $component->delete_alternative_version(
-						$quality,
-						$extension
-					);
-
-					// update response object
-					$response->result	= $result;
-					$response->msg		= $result===false ? 'Error. Request failed' : 'OK file delete successfully';
-					$response->errors	= $result===false ? ['file not deleted'] : [];
-					break;
 			}
-
 
 		return $response;
 	}//end delete_version

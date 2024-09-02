@@ -546,8 +546,8 @@ const fit_image = function(self) {
 		const bb_image_container	= image_container.getBoundingClientRect()
 
 	// object_node
-		const object_node	= image_container.object_node
-		if (!object_node) {
+		const object_node = image_container.object_node
+		if (!object_node || !object_node.contentDocument) {
 			console.error('object_node not found in image_container!', image_container);
 			return
 		}

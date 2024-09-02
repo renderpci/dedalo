@@ -666,10 +666,11 @@ class component_av extends component_media_common implements component_media_int
 	* Is triggered wen section that contains media elements is deleted
 	* @see section:remove_section_media_files
 	* @param array $ar_quality = []
+	* @param string|null $extension = null
 	* @param bool $remove_posterframe = true
 	* @return bool
 	*/
-	public function remove_component_media_files(array $ar_quality=[], bool $remove_posterframe=true) : bool {
+	public function remove_component_media_files(array $ar_quality=[], string $extension=null, bool $remove_posterframe=true) : bool {
 
 		// ar_quality
 			if (empty($ar_quality)) {
@@ -1244,10 +1245,14 @@ class component_av extends component_media_common implements component_media_int
 	* DELETE_FILE
 	* Remove quality version moving the file to a deleted files dir
 	* @see component_av->remove_component_media_files
-	*
+	* @param string $quality
+	* 	Quality to delete as '1.5MB'
+	* @param string $extension=null
+	* 	Optional extension as 'avif'. On empty, all quality files will be deleted,
+	* 	else only the selected file in current quality will be deleted
 	* @return object $response
 	*/
-	public function delete_file(string $quality) : object {
+	public function delete_file(string $quality, string $extension=null) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1265,6 +1270,7 @@ class component_av extends component_media_common implements component_media_int
 		// remove_component_media_files returns bool value
 		$result = $this->remove_component_media_files(
 			[$quality], // array ar_quality
+			$extension, // file extension
 			false // bool remove_posterframe
 		);
 		if ($result===true) {

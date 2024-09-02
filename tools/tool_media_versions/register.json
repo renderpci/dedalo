@@ -98,13 +98,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 22,
-              "hour": 12,
-              "time": 65057516766,
+              "day": 30,
+              "hour": 9,
+              "time": 65074266360,
               "year": 2024,
-              "month": 2,
-              "minute": 26,
-              "second": 6
+              "month": 8,
+              "minute": 6,
+              "second": 0
             }
           }
         ]
@@ -112,8 +112,17 @@
     },
     "dd612": {
       "dato": {
+        "lg-cat": [
+          "<p>Gestiona fitxers multimèdia amb diferents versions de qualitat</p>"
+        ],
         "lg-eng": [
           "Manages media files with different quality versions"
+        ],
+        "lg-ita": [
+          "<p>Gestisce file multimediali con diverse versioni di qualità</p>"
+        ],
+        "lg-por": [
+          "<p>Gere ficheiros multimédia com diferentes versões de qualidade</p>"
         ],
         "lg-spa": [
           "<p>Gestiona archivos multimedia con diferentes versiones de calidad.</p>"
@@ -161,14 +170,14 @@
     "dd1327": {
       "dato": {
         "lg-nolan": [
-          "2.0.3"
+          "2.0.4"
         ]
       }
     },
     "dd1328": {
       "dato": {
         "lg-nolan": [
-          "6.0.0"
+          "6.2.6"
         ]
       }
     },
@@ -194,12 +203,42 @@
         "lg-nolan": [
           [
             {
-              "lang": "lg-spa",
+              "lang": "lg-fra",
+              "name": "show_data",
+              "value": "Afficher les données"
+            },
+            {
+              "lang": "lg-deu",
               "name": "files_info_is_unsync",
-              "value": "Los datos de información de los archivos no están sincronizados"
+              "value": "Datei-Infodaten sind unsynchronisiert"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "show_data",
+              "value": "Daten anzeigen"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "sync_data",
+              "value": "Daten synchronisieren"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "sync_data",
+              "value": "Dati di sincronizzazione"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "sync_data",
+              "value": "Données de synchronisation"
             },
             {
               "lang": "lg-eng",
+              "name": "files_info_is_unsync",
+              "value": "Files info data is unsync"
+            },
+            {
+              "lang": "lg-ita",
               "name": "files_info_is_unsync",
               "value": "Files info data is unsync"
             },
@@ -209,14 +248,34 @@
               "value": "Les dades d'informació dels fitxers no estan sincronitzades"
             },
             {
-              "lang": "lg-deu",
-              "name": "files_info_is_unsync",
-              "value": "Datei-Infodaten sind unsynchronisiert"
-            },
-            {
               "lang": "lg-fra",
               "name": "files_info_is_unsync",
               "value": "Les données d'information sur les fichiers ne sont pas synchronisées"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "files_info_is_unsync",
+              "value": "Los datos de información de los archivos no están sincronizados"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "show_data",
+              "value": "Mostra dati"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "show_data",
+              "value": "Mostrar dades"
+            },
+            {
+              "lang": "lg-por",
+              "name": "show_data",
+              "value": "Mostrar dados"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "show_data",
+              "value": "Mostrar datos"
             },
             {
               "lang": "lg-por",
@@ -224,14 +283,19 @@
               "value": "Os dados de informação dos ficheiros não estão sincronizados"
             },
             {
-              "lang": "lg-ita",
-              "name": "files_info_is_unsync",
-              "value": "Files info data is unsync"
+              "lang": "lg-eng",
+              "name": "show_data",
+              "value": "Show data"
             },
             {
-              "lang": "lg-ell",
-              "name": "files_info_is_unsync",
-              "value": "Τα δεδομένα πληροφοριών αρχείων δεν είναι συγχρονισμένα"
+              "lang": "lg-cat",
+              "name": "sync_data",
+              "value": "Sincronitzar dades"
+            },
+            {
+              "lang": "lg-por",
+              "name": "sync_data",
+              "value": "Sincronizar dados"
             },
             {
               "lang": "lg-spa",
@@ -244,89 +308,9 @@
               "value": "Sync data"
             },
             {
-              "lang": "lg-por",
-              "name": "sync_data",
-              "value": "Sincronizar dados"
-            },
-            {
               "lang": "lg-ell",
               "name": "sync_data",
               "value": "Δεδομένα συγχρονισμού"
-            },
-            {
-              "lang": "lg-ara",
-              "name": "sync_data",
-              "value": ""
-            },
-            {
-              "lang": "lg-fra",
-              "name": "sync_data",
-              "value": "Données de synchronisation"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "sync_data",
-              "value": "Dati di sincronizzazione"
-            },
-            {
-              "lang": "lg-ara",
-              "name": "files_info_is_unsync",
-              "value": ""
-            },
-            {
-              "lang": "lg-deu",
-              "name": "sync_data",
-              "value": "Daten synchronisieren"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "sync_data",
-              "value": "Sincronitzar dades"
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "sync_data",
-              "value": ""
-            },
-            {
-              "lang": "lg-vlca",
-              "name": "files_info_is_unsync",
-              "value": ""
-            },
-            {
-              "lang": "lg-eus",
-              "name": "files_info_is_unsync",
-              "value": ""
-            },
-            {
-              "lang": "lg-spa",
-              "name": "show_data",
-              "value": "Mostrar datos"
-            },
-            {
-              "lang": "lg-cat",
-              "name": "show_data",
-              "value": "Mostrar dades"
-            },
-            {
-              "lang": "lg-eng",
-              "name": "show_data",
-              "value": "Show data"
-            },
-            {
-              "lang": "lg-por",
-              "name": "show_data",
-              "value": "Mostrar dados"
-            },
-            {
-              "lang": "lg-fra",
-              "name": "show_data",
-              "value": "Afficher les données"
-            },
-            {
-              "lang": "lg-ita",
-              "name": "show_data",
-              "value": "Mostra dati"
             },
             {
               "lang": "lg-ell",
@@ -334,19 +318,14 @@
               "value": "Εμφάνιση δεδομένων"
             },
             {
-              "lang": "lg-deu",
-              "name": "show_data",
-              "value": "Daten anzeigen"
-            },
-            {
-              "lang": "lg-eus",
-              "name": "show_data",
-              "value": ""
+              "lang": "lg-ell",
+              "name": "files_info_is_unsync",
+              "value": "Τα δεδομένα πληροφοριών αρχείων δεν είναι συγχρονισμένα"
             },
             {
               "lang": "lg-nep",
-              "name": "files_info_is_unsync",
-              "value": "फाइल जानकारी डेटा सिंक छैन"
+              "name": "show_data",
+              "value": "डाटा देखाउनुहोस्"
             },
             {
               "lang": "lg-nep",
@@ -355,8 +334,108 @@
             },
             {
               "lang": "lg-nep",
-              "name": "show_data",
-              "value": "डाटा देखाउनुहोस्"
+              "name": "files_info_is_unsync",
+              "value": "फाइल जानकारी डेटा सिंक छैन"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "delete_normalized_files",
+              "value": "Delete normalized files"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "delete_normalized_files",
+              "value": "Borrar archivos normalizados"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "delete_normalized_files",
+              "value": "Esborrar fitxers normalitzats"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "delete_normalized_files",
+              "value": ""
+            },
+            {
+              "lang": "lg-por",
+              "name": "delete_normalized_files",
+              "value": "Eliminar ficheiros normalizados"
+            },
+            {
+              "lang": "lg-fra",
+              "name": "delete_normalized_files",
+              "value": "Supprimer les fichiers normalisés"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "delete_normalized_files",
+              "value": "Eliminare i file normalizzati"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "delete_normalized_files",
+              "value": "Διαγραφή κανονικοποιημένων αρχείων"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "delete_normalized_files",
+              "value": "Normalisierte Dateien löschen"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "delete_normalized_files",
+              "value": "सामान्यीकृत फाइलहरू मेटाउनुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "regenerate",
+              "value": "Regenerate files"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "regenerate",
+              "value": "Regenerar ficheros"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "regenerate",
+              "value": "Regenerar fitxers"
+            },
+            {
+              "lang": "lg-por",
+              "name": "regenerate",
+              "value": "Regenerar ficheiros"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "regenerate",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "regenerate",
+              "value": "Régénérer les fichiers\n"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "regenerate",
+              "value": "Rigenerare i file"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "regenerate",
+              "value": "Αναγέννηση αρχείων"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "regenerate",
+              "value": "Dateien neu generieren"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "regenerate",
+              "value": "फाइलहरू पुन: उत्पन्न गर्नुहोस्"
             }
           ]
         ]
@@ -374,7 +453,7 @@
   "section_id": 7,
   "created_date": "2022-02-07 17:34:02",
   "section_tipo": "dd1340",
-  "modified_date": "2024-02-22 12:26:06",
+  "modified_date": "2024-08-30 09:06:00",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
