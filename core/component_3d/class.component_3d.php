@@ -55,6 +55,22 @@ class component_3d extends component_media_common implements component_media_int
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$default_quality = $this->get_default_quality();
+
+		$normalized_ar_quality = [$default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_3D_EXTENSION from config
 	*/
@@ -642,60 +658,6 @@ class component_3d extends component_media_common implements component_media_int
 
 		try {
 
-			// extension
-				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-				if (empty($file_ext)) {
-					// throw new Exception("Error Processing Request. File extension is unknown", 1);
-					$response->msg .= ' Error Processing Request. File extension is unknown';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// id (without extension, like 'test81_test65_2')
-				$id = $this->get_id();
-				if (empty($id)) {
-					$response->msg .= ' Error Processing Request. Invalid id';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// copy from original to default quality
-				$original_file_path			= $full_file_path;
-				$default_quality			= $this->get_default_quality();
-				$default_quality_file_path	= $this->get_media_filepath($default_quality);
-				if ($original_file_path===$default_quality_file_path) {
-					debug_log(__METHOD__
-						. " File is already in default quality " . PHP_EOL
-						. ' Nothing is moved '
-						, logger::WARNING
-					);
-				}else{
-					// target directory check
-					$target_dir = dirname($default_quality_file_path);
-					if(!create_directory($target_dir, 0750)) {
-						$response->msg .= ' Error creating target_dir directory';
-						return $response;
-					}
-
-					// copy file from original quality to default quality
-					if (!copy($original_file_path, $default_quality_file_path)) {
-						debug_log(__METHOD__
-							. " Error on copy original file to default quality file " . PHP_EOL
-							. ' original_file_path: ' .$original_file_path .PHP_EOL
-							. ' default_quality_file_path: ' .$default_quality_file_path
-							, logger::ERROR
-						);
-						$response->msg = 'Error on copy original file to default quality file';
-						return $response;
-					}
-				}
-
 			// upload info
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
@@ -712,10 +674,18 @@ class component_3d extends component_media_common implements component_media_int
 					$this->set_dato($dato);
 				}
 
-			// save component dato.
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info'
-				$this->Save();
+			// Generate default_3d_format : If uploaded file is not in Dedalo standard format (glb), is saved and not processed.
+			// original file with standard format (like myfilename.glb) will copied to default quality
+			// regenerate component will create the default quality 3d calling build()
+			// build() will check the normalized files of the original
+			// then if the normalized files doesn't exist, will create it
+			// then will create the JPG format of the default
+			// then save the data.
+				$result = $this->regenerate_component();
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// response OK
 				$response->result	= true;
