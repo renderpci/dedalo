@@ -902,10 +902,14 @@ class component_media_common extends component_common {
 			$ar_quality[] = $thumb_quality;
 		}
 
-		$alternative_extensions	= $this->get_alternative_extensions();
-		$extensions				= is_array($alternative_extensions)
-			? array_merge([$this->get_extension()], $alternative_extensions)
-			: [$this->get_extension()];
+		$extensions = [$this->get_extension()];
+
+		$allowed_extensions		= $this->get_allowed_extensions();
+		$extensions				= array_merge($extensions, $allowed_extensions);
+
+		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+		$extensions				= array_merge( $extensions, $alternative_extensions);
+
 		$unique_extensions		= array_unique($extensions);
 		$dato					= $this->get_dato();
 
@@ -1297,7 +1301,12 @@ class component_media_common extends component_common {
 		// ar_extensions
 			$normalized_extension	= $this->get_extension();
 			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
-			$ar_extensions			= array_merge([$normalized_extension], $alternative_extensions);
+			$allowed_extensions 	= $this->get_allowed_extensions();
+			$ar_extensions			= array_merge(
+				[$normalized_extension],
+				$alternative_extensions,
+				$allowed_extensions
+			);
 
 		// dato
 			$dato = $this->get_dato();
