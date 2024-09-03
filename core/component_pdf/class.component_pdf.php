@@ -435,6 +435,7 @@ class component_pdf extends component_media_common implements component_media_in
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.pdf"
 			$original_normalized_name	= $full_file_name;
+			$file_extension 			= get_file_extension( $full_file_path );// like «pfd» or «doc»
 
 		// check full_file_path
 			if (!file_exists($full_file_path)) {
@@ -502,6 +503,12 @@ class component_pdf extends component_media_common implements component_media_in
 					$regenerate_options->ocr			= $process_options->ocr ?? false;
 					$regenerate_options->ocr_lang		= $process_options->ocr_lang ?? null;
 
+			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
+			// this cases are: «odt», «doc», «pages» files, or other document file.
+				if( $file_extension !== $this->get_extension() ){
+					$regenerate_options->ocr			= false;
+					$regenerate_options->transcription	= false;
+				}
 				$result = $this->regenerate_component( $regenerate_options );
 				if ($result === false) {
 					$response->msg .= ' Error processing the uploaded file';
