@@ -100,6 +100,7 @@ class tool_media_versions extends tool_common {
 			$section_tipo	= $options->section_tipo ?? null;
 			$section_id		= $options->section_id ?? null;
 			$quality		= $options->quality ?? null;
+			$async			= $options->async ?? true;
 
 		// component
 			$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
@@ -112,7 +113,7 @@ class tool_media_versions extends tool_common {
 				$section_tipo
 			);
 
-			$response = $component->build_version($quality);
+			$response = $component->build_version($quality, $async);
 
 
 		return (object)$response;
