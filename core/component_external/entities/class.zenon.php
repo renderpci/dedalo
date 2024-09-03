@@ -2,6 +2,7 @@
 /**
 * CLASS ZENON
 * Manage specific entity Dainst Zenon API elements
+* @see https://zenon.dainst.org/swagger-ui/
 */
 class zenon {
 
@@ -46,4 +47,4 @@ class zenon {
 
 
 
-}//end class
+}//end class zenon

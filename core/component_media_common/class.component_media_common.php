@@ -2272,7 +2272,7 @@ class component_media_common extends component_common {
 	* @return bool
 	* @test true
 	*/
-	public function regenerate_component( object $options = null) : bool {
+	public function regenerate_component(object $options = null) : bool {
 
 		// Options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;

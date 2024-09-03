@@ -76,23 +76,30 @@ class component_external extends component_common {
 
 			// ar_fields
 				$ar_fields = [];
-				$ar_component_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-					$section_tipo, ['component'], true, true, true, false, false
+				$children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo,
+					['component'],
+					true,
+					true,
+					true,
+					false,
+					false
 				);
-				foreach ($ar_component_tipo as $component_tipo) {
+				foreach ($children_tipo as $component_tipo) {
 
 					$RecordObj_dd			= new RecordObj_dd($component_tipo);
 					$component_properties	= $RecordObj_dd->get_properties();
 
-					if (empty($component_properties) || !isset($component_properties->fields_map)) {
+					// check component_properties
+					if(empty($component_properties) || !isset($component_properties->fields_map)){
 						continue;
 					}
 
-					$field_name = array_reduce($component_properties->fields_map, function($carry, $item){
-						return ($item->local==='dato') ? $item->remote : $carry;
+					$field_name = array_find((array)$component_properties->fields_map, function($el){
+						return $el->local==='dato';
 					});
-					if (!empty($field_name)) {
-						$ar_fields[] = $field_name;
+					if (is_object($field_name)) {
+						$ar_fields[] = $field_name->remote;
 					}
 				}
 

@@ -701,7 +701,7 @@ class diffusion_mysql extends diffusion_sql  {
 
 				// delete_previous. if it don't work with versions, delete current record in all langs if exists
 					if ($delete_previous===true) {
-						$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, false);
+						$delete_result = self::delete_sql_record($section_id, $database_name, $table_name, $section_tipo);
 						$response->msg[] = $delete_result->msg;
 					}
 
@@ -1107,31 +1107,37 @@ class diffusion_mysql extends diffusion_sql  {
 
 	/**
 	* DELETE_SQL_RECORD
+	* Removes a database record based on params
+	* @param string|int $section_id
+	* @param string $database_name
+	* @param string $table_name
+	* @param string $section_tipo
+	* @param object $custom = null
 	* @return object $response
 	*/
-	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo=null, $custom=false) {
+	public static function delete_sql_record($section_id, $database_name, $table_name, $section_tipo=null, object $custom=null) {
 
 		$response = new stdClass();
 			$response->result 	= false;
 			$response->msg 		= '';
 
-		if ($custom!==false) {
-			// Custom is a object
+		if (is_object($custom)) {
+			// Custom delete way
+			// custom is a object used by search_global tables to create the proper filter for deleting
 			$field_name  = (array)$custom->field_name; 	// arrayze to allow multiple
 			$field_value = (array)$custom->field_value; // arrayze to allow multiple
-			$ar_query = array();
-			foreach ((array)$field_name as $key => $current_field_name) {
+
+			$ar_query = [];
+			foreach ($field_name as $key => $current_field_name) {
+
 				$current_field_value = $field_value[$key];
-				/*
-				if (is_integer($current_field_value)) {
-					$ar_query[] = "`{$current_field_name}` = {$current_field_value}";
-				}else{
-					$ar_query[] = "`{$current_field_name}` = '{$current_field_value}'";
-				}*/
+
 				$ar_query[] = "`{$current_field_name}` = '{$current_field_value}'";
 			}
+
 			$filter_query = implode(" AND ", $ar_query);
-			#$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE `{$field_name}` = '{$field_value}' ";
+
+			// custom query
 			$strQuery="DELETE FROM `$database_name`.`$table_name` WHERE {$filter_query} ";
 
 		}else{
@@ -1155,7 +1161,6 @@ class diffusion_mysql extends diffusion_sql  {
 			$response->result = true;
 			$response->msg 	  = "Deleted record section_id:$section_id, table:$table_name, all langs. Affected rows:".DBi::_getConnection_mysql()->affected_rows;
 		}
-		#debug_log(__METHOD__." response ".json_encode($response, JSON_PRETTY_PRINT), logger::DEBUG);
 
 
 		return (object)$response;
