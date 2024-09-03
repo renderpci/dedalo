@@ -1266,67 +1266,93 @@ class component_pdf extends component_media_common implements component_media_in
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
+	* @param object $options=null
 	* @return bool
 	*/
-	public function regenerate_component() : bool {
+	public function regenerate_component( object $options=null ) : bool {
+
+		// Options
+			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
+			$transcription				= $options->transcription ?? false;
+			$ocr						= $options->ocr ?? false;
+			$ocr_lang					= $options->ocr_lang ?? null;
+			$delete_normalized_files	= $options->delete_normalized_files ?? true;
+
+		// source file
+			$source_file = $this->get_media_filepath( $this->get_original_quality() );
+
+		// generate OCR version
+			if( $ocr===true && file_exists($source_file) ){
+
+				$ocr_options = new stdClass();
+					$ocr_options->source_file	= (string)$source_file;	# full source pdf file path
+					$ocr_options->ocr_lang		= $ocr_lang;		# lang used to process the file
+
+				$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
+			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
-			$result = parent::regenerate_component();
+			$regenerate_options = new stdClass();
+				$regenerate_options->delete_normalized_files = $delete_normalized_files;
+
+			$result = parent::regenerate_component( $regenerate_options );
 
 		// regenerate PDF text
 			// transcription to text automatic
-			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-			if (!empty($ar_related_component_text_area_tipo)) {
+			if( $transcription === true && file_exists($source_file) ){
+				$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
+				if (!empty($ar_related_component_text_area_tipo)) {
 
-				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+					$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+					$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
 
-				$component_text_area = component_common::get_instance(
-					$related_component_text_area_model,
-					$related_component_text_area_tipo,
-					$this->section_id,
-					'edit',
-					DEDALO_DATA_LANG,
-					$this->section_tipo,
-					false
-				);
-				// current value
-				$component_text_area_dato	= $component_text_area->get_dato();
-				$component_text_area_value	= $component_text_area_dato[0] ?? null;
+					$component_text_area = component_common::get_instance(
+						$related_component_text_area_model,
+						$related_component_text_area_tipo,
+						$this->section_id,
+						'edit',
+						DEDALO_DATA_LANG,
+						$this->section_tipo,
+						false
+					);
+					// current value
+					// $component_text_area_dato	= $component_text_area->get_dato();
+					// $component_text_area_value	= $component_text_area_dato[0] ?? null;
 
-				// extract text only if text area value is empty
-				if (empty($component_text_area_value)) {
-					$quality			= $this->get_default_quality();
-					$target_pdf_path	= $this->get_media_filepath($quality);
-					if (file_exists($target_pdf_path)) {
+					// extract text only if text area value is empty
+					// if (empty($component_text_area_value)) {
+						$quality			= $this->get_default_quality();
+						$target_pdf_path	= $this->get_media_filepath($quality);
+						if (file_exists($target_pdf_path)) {
 
-						$text_options = new stdClass();
-							$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
-							$text_options->first_page	= 1; // number of first page. default is 1
+							$text_options = new stdClass();
+								$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
+								$text_options->first_page	= $first_page; // number of first page. default is 1
 
-						try {
-							$text_from_pdf_response = component_pdf::get_text_from_pdf( $text_options );
-						} catch (Exception $e) {
-							debug_log(__METHOD__
-								. " Caught exception: " . PHP_EOL
-								. $e->getMessage()
-								, logger::ERROR
-							);
-						}
+							try {
+								$text_from_pdf_response = $this->get_text_from_pdf( $text_options );
+							} catch (Exception $e) {
+								debug_log(__METHOD__
+									. " Caught exception: " . PHP_EOL
+									. $e->getMessage()
+									, logger::ERROR
+								);
+							}
 
-						if (
-							isset($text_from_pdf_response) &&
-							$text_from_pdf_response->result!=='error' &&
-							strlen($text_from_pdf_response->original)>2
-							) {
+							if (
+								isset($text_from_pdf_response) &&
+								$text_from_pdf_response->result!==false &&
+								strlen($text_from_pdf_response->original)>2
+								) {
 
-							// set and save extracted text
-							$component_text_area->set_dato($text_from_pdf_response->result);
-							$component_text_area->Save();
-						}
-					}//end if (file_exists($target_pdf_path))
-				}//end if (empty($component_text_area_value))
-			}//end if (!empty($related_component_text_area_tipo))
+								// set and save extracted text
+								$component_text_area->set_dato($text_from_pdf_response->result);
+								$component_text_area->Save();
+							}
+						}//end if (file_exists($target_pdf_path))
+					// }//end if (empty($component_text_area_value))
+				}//end if (!empty($related_component_text_area_tipo))
+			}//end  if( $transcription === true && file_exists($source_file) )
 
 
 		return $result;
