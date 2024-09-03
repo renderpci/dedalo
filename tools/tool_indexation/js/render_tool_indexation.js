@@ -219,18 +219,21 @@ const get_content_data_edit = async function(self) {
 				parent			: right_container
 			})
 
-				const component_references_container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'component_indexing_container tab',
-					parent			: references_container
-				})
+			const component_references_container = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'component_indexing_container tab',
+				parent			: references_container
+			})
 
-				const references_component = self.references_component
-
+			const references_component = self.references_component
+			if (references_component) {
 				references_component.render()
 				.then(function(references_component_node){
 					component_references_container.appendChild(references_component_node)
 				})
+			}else{
+				console.error('Ignored references_component render. Not found');
+			}
 
 		// tag_info_container. line info about tag
 			const tag_info_container = ui.create_dom_element({
