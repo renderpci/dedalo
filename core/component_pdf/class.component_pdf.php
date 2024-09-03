@@ -58,6 +58,22 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$default_quality = $this->get_default_quality();
+
+		$normalized_ar_quality = [$default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
@@ -418,10 +434,7 @@ class component_pdf extends component_media_common implements component_media_in
 			$original_file_name			= $file_data->original_file_name;	// like "my doc is beaty.psdf"
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$first_page					= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 			$original_normalized_name	= $full_file_name;
-			$ocr 						= $process_options->ocr ?? false;
-			$ocr_lang 					= $process_options->ocr_lang ?? null;
 
 		// check full_file_path
 			if (!file_exists($full_file_path)) {
@@ -455,105 +468,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		try {
 
-			// copy original to default quality (in the future, a quality conversion script will be placed here)
-				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
-				$default_extension	= $this->get_extension(); // normally .pdf
-				if (strtolower($file_extension)!==strtolower($default_extension)) {
-					// file is NOT PDF, probably a .doc or similar . Don't copy the file
-				}else{
-					// copying file PDF (original) to PDF (web)
-					$default_quality		= $this->get_default_quality();
-					$default_quality_path	= $this->get_media_path_dir($default_quality);
-					// check directory exists before copy (if folder do not exists, it will be created)
-					$dir_exists = create_directory($default_quality_path, 0750);
-					if (!$dir_exists) {
-						debug_log(__METHOD__
-							.' Error. Unable to create default_quality_path directory' . PHP_EOL
-							.' default_quality_path: ' .$default_quality_path
-							, logger::ERROR
-						);
-						$response->msg .= ' : Unable to create default_quality_path directory';
-						return $response;
-					}
-					$target_file_path = $default_quality_path . '/' . $full_file_name;
-					// copy file if is not default quality
-					if ($target_file_path!==$full_file_path) {
-
-						$copy_result = copy(
-							$full_file_path, // from original quality directory
-							$target_file_path // to default quality directory
-						);
-						if ($copy_result===false) {
-							debug_log(__METHOD__ . PHP_EOL
-								. " Error: Unable to copy PDF file : " . PHP_EOL
-								. ' Source path: ' . $full_file_path . PHP_EOL
-								. ' Target path: ' . $target_file_path
-								, logger::ERROR
-							);
-						}else{
-							debug_log(__METHOD__ . PHP_EOL
-								. " Copied PDF file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
-								. ' Source path: ' . $full_file_path . PHP_EOL
-								. ' Target path: ' . $target_file_path
-								, logger::DEBUG
-							);
-						}
-					}
-
-
-					if( $ocr===true && file_exists($target_file_path) ){
-
-						$ocr_options = new stdClass();
-							$ocr_options->path_pdf	= (string)$target_file_path;	# full source pdf file path
-							$ocr_options->ocr_lang	= $ocr_lang;		# lang used to process the file
-
-						$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
-					}
-
-					// create alternative image versions of the PDF
-						$this->create_alternative_versions();
-
-					// thumb : Create pdf_thumb image
-						$this->create_thumb();
-
-					// transcription to text automatic
-						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-						if (!empty($ar_related_component_text_area_tipo)) {
-
-							$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-							$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-							$quality							= $this->get_default_quality();
-							$target_pdf_path					= $this->get_media_filepath($quality);
-
-							try {
-								$options = new stdClass();
-									$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
-									$options->first_page	= (int)$first_page;		# number of first page. default is 1
-								$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
-									#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
-									// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
-
-								if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
-
-									$component_text_area = component_common::get_instance(
-										$related_component_text_area_model,
-										$related_component_text_area_tipo,
-										$this->section_id,
-										'edit',
-										DEDALO_DATA_LANG,
-										$this->section_tipo,
-										false
-									);
-									$component_text_area->set_dato([$text_from_pdf_response->result]); // Text with page numbers
-									$component_text_area->Save();
-								}
-
-							} catch (Exception $e) {
-								debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
-							}
-						}//end if (!empty($related_component_text_area_tipo))
-				}//end if ($file_extension!==$default_extension)
-
 			// target_filename. Save original file name in a component_input_text if defined
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
@@ -574,10 +488,25 @@ class component_pdf extends component_media_common implements component_media_in
 					$component_target_filename->Save();
 				}
 
-			// save component dato
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info
-				$this->Save();
+
+			// Generate default_pdf_format : copy the PDF to web format
+			// original file is conserved (like myfilename.pdf and myfilename.doc)
+			// regenerate component will create the default quality calling build()
+			// build() will check the normalized files of the original
+			// then if the normalized files doesn't exist, will create it
+			// then will create the JPG format of the default
+			// then save the data.
+				$regenerate_options = new stdClass();
+					$regenerate_options->first_page		= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
+					$regenerate_options->transcription	= true;
+					$regenerate_options->ocr			= $process_options->ocr ?? false;
+					$regenerate_options->ocr_lang		= $process_options->ocr_lang ?? null;
+
+				$result = $this->regenerate_component( $regenerate_options );
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// all is OK
 				$response->result	= true;
