@@ -914,19 +914,31 @@ class component_pdf extends component_media_common implements component_media_in
 		$response = new stdClass();
 
 		// options vars
-		$pdf_file = $options->path_pdf;
-		$ocr_lang = $options->ocr_lang;
+		$source_file	= $options->source_file;
+		$ocr_lang		= $options->ocr_lang;
 
 		// test OCR engine
-			if (defined('PDF_OCR_ENGINE')===false) {
+			if ( defined('PDF_OCR_ENGINE')===false ) {
 				$response->result	= 'error';
 				$response->msg		= "Error OCR Processing Request: config PDF_OCR_ENGINE is not defined";
+
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' PDF_OCR_ENGINE is not defined: ' . to_string(PDF_OCR_ENGINE)
+					, logger::ERROR
+				);
 				return $response;
 			}else{
 				$ocr_engine = shell_exec('type -P '.PDF_OCR_ENGINE);
 				if (empty($ocr_engine)) {
 					$response->result	= 'error';
 					$response->msg		= "Error OCR Processing Request: daemon engine not found";
+
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' ocr engine: ' . to_string($ocr_engine)
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -949,21 +961,21 @@ class component_pdf extends component_media_common implements component_media_in
 
 		$command  = escapeshellcmd(PDF_OCR_ENGINE.' --pdfa-image-compression lossless -l '
 			.escapeshellarg($lang).' --force-ocr '
-			.escapeshellarg($pdf_file).' '
-			.escapeshellarg($pdf_file));
+			.escapeshellarg($source_file).' '
+			.escapeshellarg($source_file));
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
 			, logger::WARNING
 		);
-		$output = exec("$command 2>&1", $result); // Generate OCR pdf file in the same directory, replace the input file (usually the web version)
+		$output = exec($command, $result); // Generate OCR pdf file in the same directory, replace the input file (usually the web version)
 		if ( strpos( strtolower($output), 'error') ) {
 			$response->result	= 'error';
 			$response->msg		= "$output";
 			return $response;
 		}
 
-		if (!file_exists($pdf_file)) {
+		if (!file_exists($source_file)) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
 			return $response;
