@@ -219,6 +219,24 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$original_quality	= $this->get_original_quality();
+		$modified_quality	= $this->get_modified_quality();
+		$default_quality	= $this->get_default_quality();
+
+		$normalized_ar_quality = [$original_quality, $modified_quality, $default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string $this->extension
 	* 	Normally DEDALO_IMAGE_EXTENSION from config
@@ -1494,87 +1512,6 @@ class component_image extends component_media_common implements component_media_
 
 
 	/**
-	* DELETE_NORMALIZED_FILES
-	* Remove all image versions that are different of the uploaded files (normalized files), including the alternative versions
-	* Remove in original and modified qualities only
-	* Keep the original uploaded files
-	* @return bool
-	*/
-	public function delete_normalized_files() : bool {
-
-		// use qualities
-		$original_quality	= $this->get_original_quality();
-		$modified_quality	= $this->get_modified_quality();
-		$default_quality	= $this->get_default_quality();
-
-		$ar_quality = [$original_quality, $modified_quality, $default_quality];
-
-		$alternative_extensions	= $this->get_alternative_extensions() ?? [];
-
-		foreach ($ar_quality as $quality) {
-
-			// uploaded_file full file path try
-			$uploaded_file = $quality===$default_quality
-				? null
-				: $this->get_uploaded_file($quality);
-
-			// media_filepath
-			$media_filepath = $this->get_media_filepath(
-				$quality
-			);
-
-			if ( $media_filepath!==$uploaded_file && file_exists($media_filepath) ) {
-
-				$move_file_options = new stdClass();
-					$move_file_options->quality			= $quality;
-					$move_file_options->file			= $media_filepath;
-					$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
-					$move_file_options->file_name		= $this->get_name();
-
-				$move_file = $this->move_deleted_file( $move_file_options );
-
-				if (!$move_file) {
-					debug_log(__METHOD__
-						. " Error on delete media_filepath file " . PHP_EOL
-						. ' media_filepath: ' . $media_filepath
-						, logger::ERROR
-					);
-					return false;
-				}
-			}
-
-			foreach ($alternative_extensions as $alternative_extension) {
-
-				$alternative_path = $this->get_media_filepath($quality, $alternative_extension);
-
-				if ($alternative_path!==$uploaded_file && file_exists($alternative_path)) {
-
-					$move_file_options = new stdClass();
-						$move_file_options->quality			= $quality;
-						$move_file_options->file			= $alternative_path;
-						$move_file_options->bulk_process_id	= $this->bulk_process_id ?? null;
-						$move_file_options->file_name		= $this->get_name();
-
-					$move_file = $this->move_deleted_file( $move_file_options );
-					if (!$move_file) {
-						debug_log(__METHOD__
-							. " Error on delete alternative version file " . PHP_EOL
-							. ' current_path: ' . $alternative_path
-							, logger::ERROR
-						);
-						return false;
-					}
-				}
-			}
-		}
-
-
-		return true;
-	}//end delete_normalized_files
-
-
-
-	/**
 	* CHECK_NORMALIZED_FILES
 	* @return void
 	*/
@@ -1815,13 +1752,11 @@ class component_image extends component_media_common implements component_media_
 		// options
 			$delete_normalized_files = $options->delete_normalized_files ?? true;
 
-		// full remove the original files except the uploaded file (.tiff, .psd, etc)
-			if( $delete_normalized_files===true ){
-				$this->delete_normalized_files();
-			}
-
 		// common regenerate_component exec after specific actions (this action saves at the end)
-			$result = parent::regenerate_component();
+			$regenerate_options = new stdClass();
+				$regenerate_options->delete_normalized_files = $delete_normalized_files;
+
+			$result = parent::regenerate_component( $regenerate_options );
 
 		// svg file. Create file if not exists
 			$svg_file_path = $this->get_svg_file_path();
@@ -1932,7 +1867,7 @@ class component_image extends component_media_common implements component_media_
 			$target_path	= $this->get_media_path_dir($quality);
 			$target_file	= $target_path . '/' . $file_name . '.' . strtolower($extension);
 
-		// generate from source_file
+		// generate from PDF
 			$im_options = new stdClass();
 				$im_options->source_file	= $source_file;
 				$im_options->target_file	= $target_file;
@@ -1954,29 +1889,6 @@ class component_image extends component_media_common implements component_media_
 
 		return true;
 	}//end create_alternative_version
-
-
-
-	/**
-	* GET_REGENERATE_OPTIONS
-	* Used by tool_update_cache to get custom regeneration options from component
-	* @return array|null $options
-	*/
-	public static function get_regenerate_options() : ?array {
-
-		$options = [];
-
-		// delete_normalized_files
-			$delete_normalized_files = new stdClass();
-				$delete_normalized_files->name		= 'delete_normalized_files';
-				$delete_normalized_files->type		= 'boolean';
-				$delete_normalized_files->default	= false;
-
-		$options[] = $delete_normalized_files;
-
-
-		return $options;
-	}//end get_regenerate_options
 
 
 

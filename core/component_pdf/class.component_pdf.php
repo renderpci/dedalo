@@ -58,6 +58,22 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$default_quality = $this->get_default_quality();
+
+		$normalized_ar_quality = [$default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_PDF_EXTENSION from config
 	*/
@@ -418,10 +434,7 @@ class component_pdf extends component_media_common implements component_media_in
 			$original_file_name			= $file_data->original_file_name;	// like "my doc is beaty.psdf"
 			$full_file_path				= $file_data->full_file_path;		// like "/mypath/media/pdf/original/test175_test65_1.jpg"
 			$full_file_name				= $file_data->full_file_name;		// like "test175_test65_1.pdf"
-			$first_page					= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
 			$original_normalized_name	= $full_file_name;
-			$ocr 						= $process_options->ocr ?? false;
-			$ocr_lang 					= $process_options->ocr_lang ?? null;
 
 		// check full_file_path
 			if (!file_exists($full_file_path)) {
@@ -455,105 +468,6 @@ class component_pdf extends component_media_common implements component_media_in
 
 		try {
 
-			// copy original to default quality (in the future, a quality conversion script will be placed here)
-				$file_extension		= pathinfo($original_file_name)['extension']; // could be .pages, .doc, .pdf, etc.
-				$default_extension	= $this->get_extension(); // normally .pdf
-				if (strtolower($file_extension)!==strtolower($default_extension)) {
-					// file is NOT PDF, probably a .doc or similar . Don't copy the file
-				}else{
-					// copying file PDF (original) to PDF (web)
-					$default_quality		= $this->get_default_quality();
-					$default_quality_path	= $this->get_media_path_dir($default_quality);
-					// check directory exists before copy (if folder do not exists, it will be created)
-					$dir_exists = create_directory($default_quality_path, 0750);
-					if (!$dir_exists) {
-						debug_log(__METHOD__
-							.' Error. Unable to create default_quality_path directory' . PHP_EOL
-							.' default_quality_path: ' .$default_quality_path
-							, logger::ERROR
-						);
-						$response->msg .= ' : Unable to create default_quality_path directory';
-						return $response;
-					}
-					$target_file_path = $default_quality_path . '/' . $full_file_name;
-					// copy file if is not default quality
-					if ($target_file_path!==$full_file_path) {
-
-						$copy_result = copy(
-							$full_file_path, // from original quality directory
-							$target_file_path // to default quality directory
-						);
-						if ($copy_result===false) {
-							debug_log(__METHOD__ . PHP_EOL
-								. " Error: Unable to copy PDF file : " . PHP_EOL
-								. ' Source path: ' . $full_file_path . PHP_EOL
-								. ' Target path: ' . $target_file_path
-								, logger::ERROR
-							);
-						}else{
-							debug_log(__METHOD__ . PHP_EOL
-								. " Copied PDF file (".$full_file_path." -> ".$target_file_path.") : " . PHP_EOL
-								. ' Source path: ' . $full_file_path . PHP_EOL
-								. ' Target path: ' . $target_file_path
-								, logger::DEBUG
-							);
-						}
-					}
-
-
-					if( $ocr===true && file_exists($target_file_path) ){
-
-						$ocr_options = new stdClass();
-							$ocr_options->path_pdf	= (string)$target_file_path;	# full source pdf file path
-							$ocr_options->ocr_lang	= $ocr_lang;		# lang used to process the file
-
-						$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
-					}
-
-					// create alternative image versions of the PDF
-						$this->create_alternative_versions();
-
-					// thumb : Create pdf_thumb image
-						$this->create_thumb();
-
-					// transcription to text automatic
-						$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-						if (!empty($ar_related_component_text_area_tipo)) {
-
-							$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-							$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
-							$quality							= $this->get_default_quality();
-							$target_pdf_path					= $this->get_media_filepath($quality);
-
-							try {
-								$options = new stdClass();
-									$options->path_pdf		= (string)$target_pdf_path;	# full source pdf file path
-									$options->first_page	= (int)$first_page;		# number of first page. default is 1
-								$text_from_pdf_response = (object)component_pdf::get_text_from_pdf( $options );
-									#debug_log(__METHOD__." tool_transcription response ".to_string($text_from_pdf_response), logger::DEBUG);
-									// dump($text_from_pdf_response, ' text_from_pdf_response ++ '.to_string());
-
-								if( $text_from_pdf_response->result!=='error' && strlen($text_from_pdf_response->original)>2  ) {
-
-									$component_text_area = component_common::get_instance(
-										$related_component_text_area_model,
-										$related_component_text_area_tipo,
-										$this->section_id,
-										'edit',
-										DEDALO_DATA_LANG,
-										$this->section_tipo,
-										false
-									);
-									$component_text_area->set_dato([$text_from_pdf_response->result]); // Text with page numbers
-									$component_text_area->Save();
-								}
-
-							} catch (Exception $e) {
-								debug_log(__METHOD__." Caught exception:  ".$e->getMessage(), logger::ERROR);
-							}
-						}//end if (!empty($related_component_text_area_tipo))
-				}//end if ($file_extension!==$default_extension)
-
 			// target_filename. Save original file name in a component_input_text if defined
 				$properties = $this->get_properties();
 				if (isset($properties->target_filename)) {
@@ -574,10 +488,25 @@ class component_pdf extends component_media_common implements component_media_in
 					$component_target_filename->Save();
 				}
 
-			// save component dato
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info
-				$this->Save();
+
+			// Generate default_pdf_format : copy the PDF to web format
+			// original file is conserved (like myfilename.pdf and myfilename.doc)
+			// regenerate component will create the default quality calling build()
+			// build() will check the normalized files of the original
+			// then if the normalized files doesn't exist, will create it
+			// then will create the JPG format of the default
+			// then save the data.
+				$regenerate_options = new stdClass();
+					$regenerate_options->first_page		= $file_data->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
+					$regenerate_options->transcription	= true;
+					$regenerate_options->ocr			= $process_options->ocr ?? false;
+					$regenerate_options->ocr_lang		= $process_options->ocr_lang ?? null;
+
+				$result = $this->regenerate_component( $regenerate_options );
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// all is OK
 				$response->result	= true;
@@ -592,6 +521,160 @@ class component_pdf extends component_media_common implements component_media_in
 
 		return $response;
 	}//end process_uploaded_file
+
+
+
+	/**
+	* BUILD_VERSION - Overwrite in each component for real process
+	* Creates a new version based on target quality
+	* (!) Note that this generic method only copy files,
+	* to real process, overwrite in each component !
+	* @param string $quality
+	* @param bool $async = true
+	* @param bool $save = true
+	* @return object $response
+	* @test true
+	*/
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				$start_time=start_time();
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+			}
+
+		// thumb case
+			if($quality===$this->get_thumb_quality()){
+				// thumb quality
+				$result = $this->create_thumb();
+
+				$response->result	= $result;
+				$response->msg		= $result===false ? 'Error building version' : 'OK request done';
+				return $response;
+			}
+
+		// short vars
+			$original_quality	= $this->get_original_quality();
+			$original_file_path	= $this->get_original_file_path($original_quality);
+
+			// check path from original file
+			if (empty($original_file_path)) {
+				$response->msg .= ' Invalid empty original_file_path. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				$response->errors[] = 'invalid empty original_file_path';
+				return $response;
+			}
+			if (!file_exists($original_file_path)) {
+				$response->msg .= ' original_file_path file not found. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				$response->errors[] = 'original_file_path file not found';
+				return $response;
+			}
+			$target_quality_path = $this->get_media_filepath($quality);
+
+			// check target directory
+			$target_dir = pathinfo($target_quality_path)['dirname'];
+			if (!is_dir($target_dir)) {
+				// create it
+				if(!mkdir($target_dir, 0750, true)) {
+					$msg = ' Error. Creating directory ' . $target_dir ;
+					debug_log(__METHOD__
+						.$msg . PHP_EOL
+						.' target_dir: ' .$target_dir
+						, logger::ERROR
+					);
+					$response->msg .= $msg;
+					$response->errors[] = 'creating directory failed';
+					return $response;
+				}
+			}
+
+		// copying file PDF (original) to PDF (web)
+			$default_quality		= $this->get_default_quality();
+			$default_quality_path	= $this->get_media_path_dir($default_quality);
+			// check directory exists before copy (if folder do not exists, it will be created)
+			$dir_exists = create_directory($default_quality_path, 0750);
+			if (!$dir_exists) {
+				debug_log(__METHOD__
+					.' Error. Unable to create default_quality_path directory' . PHP_EOL
+					.' default_quality_path: ' .$default_quality_path
+					, logger::ERROR
+				);
+				$response->msg .= ' : Unable to create default_quality_path directory';
+				return $response;
+			}
+
+			// copy file if is not default quality
+			if ($target_quality_path!==$original_file_path) {
+
+				$copy_result = copy(
+					$original_file_path, // from original quality directory
+					$target_quality_path // to default quality directory
+				);
+				if ($copy_result===false) {
+					debug_log(__METHOD__ . PHP_EOL
+						. " Error: Unable to copy PDF file : " . PHP_EOL
+						. ' Source path: ' . $original_file_path . PHP_EOL
+						. ' Target path: ' . $target_quality_path
+						, logger::ERROR
+					);
+				}else{
+					debug_log(__METHOD__ . PHP_EOL
+						. " Copied PDF file (".$original_file_path." -> ".$target_quality_path.") : " . PHP_EOL
+						. ' Source path: ' . $original_file_path . PHP_EOL
+						. ' Target path: ' . $target_quality_path
+						, logger::DEBUG
+					);
+				}
+			}
+
+		// Alternative versions
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			foreach ($alternative_extensions as $current_extension) {
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg				= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $current_extension . ' | id: ' . $this->section_id;
+						common::$pdata->memory			= dd_memory_usage();
+						common::$pdata->target_quality	= $quality;
+						common::$pdata->current_time	= exec_time_unit($start_time, 'ms');
+						common::$pdata->total_ms		= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+						// send to output
+						print_cli(common::$pdata);
+					}
+
+				// create alternative version file
+				$this->create_alternative_version(
+					$quality,
+					$current_extension
+				);
+			}
+
+			// all is OK
+			$response->result			= $copy_result;
+			$response->msg				= 'Building file version in background';
+			$response->command_response	= null;
+
+
+		return $response;
+	}//end build_version
 
 
 
@@ -643,71 +726,127 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* GET_TEXT_FROM_PDF
 	* Extract text from PDF file
-	* @param object $new_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function get_text_from_pdf(object $new_options) : object {
+	public function get_text_from_pdf(object $options) : object {
 
 		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
-		$options = new stdClass();
-			$options->path_pdf		= null;	// full source pdf file path
-			$options->first_page	= 1; 	// number of first page. default is 1
+		//options
+			$engine			= $options->engine ?? PDF_AUTOMATIC_TRANSCRIPTION_ENGINE;
+			$method			= $options->method ?? 'text_engine'; // string text|html
+			$page_in		= $options->page_in ?? 1; // number of first page. default is 1
+			$page_out		= $options->page_out ?? null;
 
-		// new_options overwrite options defaults
-			foreach ((object)$new_options as $key => $value) {
-				if (property_exists($options, $key)) {
-					$options->$key = $value;
-				}
-			}
+		// Source file
+			$source_file = $this->get_media_filepath( $this->get_default_quality() );
 
 		// error on missing properties
-			if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
-				$response->result	= 'error';
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: source PDF file not found";
+			if ( !file_exists($source_file) ) {
+				$response->result = false;
+				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source PDF file not found";
+				debug_log(__METHOD__
+					." $response->msg "
+					.' pdf_path:' . to_string($source_file)
+					, logger::ERROR
+				);
+				$response->errors[] = 'source file not found';
 				return $response;
 			}
 
-		// test engine pdf to text
-			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
-				$response->result	= 'error';
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
+		// test transcription_engine pdf to text
+			$transcription_engine = shell_exec( 'type -P '.$engine ?? '' );
+			if ( empty($transcription_engine) ) {
+				$response->result	= false;
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' extractor_engine: ' . to_string($transcription_engine)
+					, logger::ERROR
+				);
+				$response->errors[] = 'daemon engine not found';
 				return $response;
-			}else{
-				$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
-				if (empty($transcription_engine)) {
-					$response->result	= 'error';
-					$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
-					return $response;
-				}
 			}
+
+			// engine config $options:
+			// text_engine
+				// -f <int>				: first page to convert
+				// -l <int>				: last page to convert
+				// -layout				: maintain original physical layout
+				// -simple				: simple one-column page layout
+				// -enc <string>		: output text encoding name
+			// html_engine
+				// -f <int> 			: first page to convert
+				// -l <int> 			: last page to convert
+				// -p					: exchange .pdf links by .html
+				// -c					: generate complex document
+				// -s					: generate single document that includes all pages
+				// -i					: ignore images
+				// -noframes			: generate no frames
+				// -stdout				: use standard output
+				// -hidden				: output hidden text
+				// -nomerge				: do not merge paragraphs
+				// -enc <string>		: output text encoding name
+
+		// Engine config
+
+		$engine_config = '';
+
+		if(!empty($page_in)){
+			$engine_config .= ' -f ' .$page_in;
+		}
+		if(!empty($page_out)){
+			$engine_config .= ' -l ' .$page_out;
+		}
+
+		$file_extension = '.txt';
+		if($method==='html_engine'){
+			$engine_config .= ' -i -p -noframes -layout ' ;
+			$file_extension = '.html';
+		}
 
 		#
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
-		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
+		$text_filename 	= substr($source_file, 0, -4) . $file_extension;
 
-		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
+		$command  = $engine ." -enc UTF-8". "$engine_config $source_file $text_filename";
+
+		// $command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $source_file";
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
 			, logger::WARNING
 		);
-		$output = exec("$command 2>&1", $result); // Generate text version file in same dir as pdf
+		$output = exec($command, $result); // Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error') ) {
-			$response->result	= 'error';
+			$response->result	= false;
 			$response->msg		= "$output";
+			debug_log(__METHOD__
+				." $response->msg ".PHP_EOL
+				. 'result: '.to_string($result)
+				, logger::ERROR
+			);
 			return $response;
 		}
 
-		if (!file_exists($text_filename)) {
-			$response->result	= 'error';
+		if ( !file_exists($text_filename) ) {
+			$response->result	= false;
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::ERROR
+			);
+			$response->errors[] = 'extraction file do not exists';
 			return $response;
 		}
-		$pdf_text = file_get_contents($text_filename);	# Read current text file
 
+		// pdf_text contents
+		$pdf_text = file_get_contents($text_filename);	// Read current text file
 
-		#
 		# TEST STRING VALUE IS VALID
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
@@ -738,18 +877,20 @@ class component_pdf extends component_media_common implements component_media_in
 
 		#
 		# PAGES TAGS
-		$original_text	= str_replace("","", $pdf_text);
-		$pages			= explode("", $pdf_text);
-		$i				= (int)$options->first_page;
-		$pdf_text		= '';
-		foreach ($pages as $current_page) {
-			$pdf_text .= '<p>';
-			$pdf_text .= '[page-n-'. $i .']';
-			$pdf_text .= '</p>';
-			$pdf_text .= '<p>';
-			$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
-			$pdf_text .= '</p>';
-			$i++;
+		$original_text	= str_replace("","", $pdf_text); // original text without page marks
+		if($method==='text_engine'){
+			$pages			= explode("", $pdf_text); // split by the page mark invisible text of return character
+			$i				= (int)$page_in;
+			$pdf_text		= '';
+			foreach ($pages as $current_page) {
+				$pdf_text .= '<p>';
+				$pdf_text .= '[page-n-'. $i .']';
+				$pdf_text .= '</p>';
+				$pdf_text .= '<p>';
+				$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+				$pdf_text .= '</p>';
+				$i++;
+			}
 		}
 
 		$response->result	= (string)$pdf_text;
@@ -773,19 +914,31 @@ class component_pdf extends component_media_common implements component_media_in
 		$response = new stdClass();
 
 		// options vars
-		$pdf_file = $options->path_pdf;
-		$ocr_lang = $options->ocr_lang;
+		$source_file	= $options->source_file;
+		$ocr_lang		= $options->ocr_lang;
 
 		// test OCR engine
-			if (defined('PDF_OCR_ENGINE')===false) {
+			if ( defined('PDF_OCR_ENGINE')===false ) {
 				$response->result	= 'error';
 				$response->msg		= "Error OCR Processing Request: config PDF_OCR_ENGINE is not defined";
+
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' PDF_OCR_ENGINE is not defined: ' . to_string(PDF_OCR_ENGINE)
+					, logger::ERROR
+				);
 				return $response;
 			}else{
 				$ocr_engine = shell_exec('type -P '.PDF_OCR_ENGINE);
 				if (empty($ocr_engine)) {
 					$response->result	= 'error';
 					$response->msg		= "Error OCR Processing Request: daemon engine not found";
+
+					debug_log(__METHOD__
+						. " $response->msg " . PHP_EOL
+						. ' ocr engine: ' . to_string($ocr_engine)
+						, logger::ERROR
+					);
 					return $response;
 				}
 			}
@@ -808,21 +961,21 @@ class component_pdf extends component_media_common implements component_media_in
 
 		$command  = escapeshellcmd(PDF_OCR_ENGINE.' --pdfa-image-compression lossless -l '
 			.escapeshellarg($lang).' --force-ocr '
-			.escapeshellarg($pdf_file).' '
-			.escapeshellarg($pdf_file));
+			.escapeshellarg($source_file).' '
+			.escapeshellarg($source_file));
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
 			, logger::WARNING
 		);
-		$output = exec("$command 2>&1", $result); // Generate OCR pdf file in the same directory, replace the input file (usually the web version)
+		$output = exec($command, $result); // Generate OCR pdf file in the same directory, replace the input file (usually the web version)
 		if ( strpos( strtolower($output), 'error') ) {
 			$response->result	= 'error';
 			$response->msg		= "$output";
 			return $response;
 		}
 
-		if (!file_exists($pdf_file)) {
+		if (!file_exists($source_file)) {
 			$response->result	= 'error';
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
 			return $response;
@@ -1113,67 +1266,93 @@ class component_pdf extends component_media_common implements component_media_in
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
+	* @param object $options=null
 	* @return bool
 	*/
-	public function regenerate_component(object $options = null) : bool {
+	public function regenerate_component( object $options=null ) : bool {
+
+		// Options
+			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
+			$transcription				= $options->transcription ?? false;
+			$ocr						= $options->ocr ?? false;
+			$ocr_lang					= $options->ocr_lang ?? null;
+			$delete_normalized_files	= $options->delete_normalized_files ?? true;
+
+		// source file
+			$source_file = $this->get_media_filepath( $this->get_original_quality() );
+
+		// generate OCR version
+			if( $ocr===true && file_exists($source_file) ){
+
+				$ocr_options = new stdClass();
+					$ocr_options->source_file	= (string)$source_file;	# full source pdf file path
+					$ocr_options->ocr_lang		= $ocr_lang;		# lang used to process the file
+
+				$ocr_response = (object)component_pdf::process_ocr_file( $ocr_options );
+			}
 
 		// common regenerate_component exec after specific actions (this action saves at the end)
-			$result = parent::regenerate_component();
+			$regenerate_options = new stdClass();
+				$regenerate_options->delete_normalized_files = $delete_normalized_files;
+
+			$result = parent::regenerate_component( $regenerate_options );
 
 		// regenerate PDF text
 			// transcription to text automatic
-			$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
-			if (!empty($ar_related_component_text_area_tipo)) {
+			if( $transcription === true && file_exists($source_file) ){
+				$ar_related_component_text_area_tipo = $this->get_related_component_text_area_tipo();
+				if (!empty($ar_related_component_text_area_tipo)) {
 
-				$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
-				$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
+					$related_component_text_area_tipo	= reset($ar_related_component_text_area_tipo);
+					$related_component_text_area_model	= RecordObj_dd::get_modelo_name_by_tipo($related_component_text_area_tipo,true);
 
-				$component_text_area = component_common::get_instance(
-					$related_component_text_area_model,
-					$related_component_text_area_tipo,
-					$this->section_id,
-					'edit',
-					DEDALO_DATA_LANG,
-					$this->section_tipo,
-					false
-				);
-				// current value
-				$component_text_area_dato	= $component_text_area->get_dato();
-				$component_text_area_value	= $component_text_area_dato[0] ?? null;
+					$component_text_area = component_common::get_instance(
+						$related_component_text_area_model,
+						$related_component_text_area_tipo,
+						$this->section_id,
+						'edit',
+						DEDALO_DATA_LANG,
+						$this->section_tipo,
+						false
+					);
+					// current value
+					// $component_text_area_dato	= $component_text_area->get_dato();
+					// $component_text_area_value	= $component_text_area_dato[0] ?? null;
 
-				// extract text only if text area value is empty
-				if (empty($component_text_area_value)) {
-					$quality			= $this->get_default_quality();
-					$target_pdf_path	= $this->get_media_filepath($quality);
-					if (file_exists($target_pdf_path)) {
+					// extract text only if text area value is empty
+					// if (empty($component_text_area_value)) {
+						$quality			= $this->get_default_quality();
+						$target_pdf_path	= $this->get_media_filepath($quality);
+						if (file_exists($target_pdf_path)) {
 
-						$text_options = new stdClass();
-							$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
-							$text_options->first_page	= 1; // number of first page. default is 1
+							$text_options = new stdClass();
+								$text_options->path_pdf		= $target_pdf_path;	// full source PDF file path
+								$text_options->first_page	= $first_page; // number of first page. default is 1
 
-						try {
-							$text_from_pdf_response = component_pdf::get_text_from_pdf( $text_options );
-						} catch (Exception $e) {
-							debug_log(__METHOD__
-								. " Caught exception: " . PHP_EOL
-								. $e->getMessage()
-								, logger::ERROR
-							);
-						}
+							try {
+								$text_from_pdf_response = $this->get_text_from_pdf( $text_options );
+							} catch (Exception $e) {
+								debug_log(__METHOD__
+									. " Caught exception: " . PHP_EOL
+									. $e->getMessage()
+									, logger::ERROR
+								);
+							}
 
-						if (
-							isset($text_from_pdf_response) &&
-							$text_from_pdf_response->result!=='error' &&
-							strlen($text_from_pdf_response->original)>2
-							) {
+							if (
+								isset($text_from_pdf_response) &&
+								$text_from_pdf_response->result!==false &&
+								strlen($text_from_pdf_response->original)>2
+								) {
 
-							// set and save extracted text
-							$component_text_area->set_dato($text_from_pdf_response->result);
-							$component_text_area->Save();
-						}
-					}//end if (file_exists($target_pdf_path))
-				}//end if (empty($component_text_area_value))
-			}//end if (!empty($related_component_text_area_tipo))
+								// set and save extracted text
+								$component_text_area->set_dato($text_from_pdf_response->result);
+								$component_text_area->Save();
+							}
+						}//end if (file_exists($target_pdf_path))
+					// }//end if (empty($component_text_area_value))
+				}//end if (!empty($related_component_text_area_tipo))
+			}//end  if( $transcription === true && file_exists($source_file) )
 
 
 		return $result;
