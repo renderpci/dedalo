@@ -12,12 +12,14 @@ namespace PHPUnit\Framework\MockObject\Generator;
 use function sprintf;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class NameAlreadyInUseException extends \PHPUnit\Framework\Exception implements Exception
 {
     /**
-     * @psalm-param class-string|trait-string $name
+     * @param class-string|trait-string $name
      */
     public function __construct(string $name)
     {

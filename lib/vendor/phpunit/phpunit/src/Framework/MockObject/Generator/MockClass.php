@@ -13,6 +13,8 @@ use function class_exists;
 use PHPUnit\Framework\MockObject\ConfigurableMethod;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class MockClass implements MockType
@@ -20,18 +22,18 @@ final readonly class MockClass implements MockType
     private string $classCode;
 
     /**
-     * @psalm-var class-string
+     * @var class-string
      */
     private string $mockName;
 
     /**
-     * @psalm-var list<ConfigurableMethod>
+     * @var list<ConfigurableMethod>
      */
     private array $configurableMethods;
 
     /**
-     * @psalm-param class-string $mockName
-     * @psalm-param list<ConfigurableMethod> $configurableMethods
+     * @param class-string             $mockName
+     * @param list<ConfigurableMethod> $configurableMethods
      */
     public function __construct(string $classCode, string $mockName, array $configurableMethods)
     {
@@ -41,7 +43,7 @@ final readonly class MockClass implements MockType
     }
 
     /**
-     * @psalm-return class-string
+     * @return class-string
      */
     public function generate(): string
     {
@@ -58,7 +60,7 @@ final readonly class MockClass implements MockType
     }
 
     /**
-     * @psalm-return list<ConfigurableMethod>
+     * @return list<ConfigurableMethod>
      */
     public function configurableMethods(): array
     {

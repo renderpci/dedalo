@@ -10,17 +10,38 @@
 namespace PHPUnit\Metadata;
 
 /**
- * @psalm-immutable
+ * @immutable
  *
  * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class AfterClass extends Metadata
 {
     /**
-     * @psalm-assert-if-true AfterClass $this
+     * @var non-negative-int
      */
-    public function isAfterClass(): bool
+    private int $priority;
+
+    /**
+     * @param 0|1              $level
+     * @param non-negative-int $priority
+     */
+    protected function __construct(int $level, int $priority)
+    {
+        parent::__construct($level);
+
+        $this->priority = $priority;
+    }
+
+    public function isAfterClass(): true
     {
         return true;
+    }
+
+    /**
+     * @return non-negative-int
+     */
+    public function priority(): int
+    {
+        return $this->priority;
     }
 }

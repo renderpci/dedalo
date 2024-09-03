@@ -15,12 +15,14 @@ use PHPUnit\Event\Test\DeprecationTriggered;
 use PHPUnit\Event\UnknownSubscriberTypeException;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class Collector
 {
     /**
-     * @psalm-var list<non-empty-string>
+     * @var list<non-empty-string>
      */
     private array $deprecations = [];
 
@@ -37,7 +39,7 @@ final class Collector
     }
 
     /**
-     * @psalm-return list<non-empty-string>
+     * @return list<non-empty-string>
      */
     public function deprecations(): array
     {

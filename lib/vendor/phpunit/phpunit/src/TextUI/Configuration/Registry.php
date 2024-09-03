@@ -24,6 +24,8 @@ use PHPUnit\Util\VersionComparisonOperator;
  * CLI options and XML configuration are static within a single PHPUnit process.
  * It is therefore okay to use a Singleton registry here.
  *
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class Registry
@@ -55,8 +57,12 @@ final class Registry
      */
     public static function loadFrom(string $path): void
     {
+        $buffer = file_get_contents($path);
+
+        assert($buffer !== false);
+
         self::$instance = unserialize(
-            file_get_contents($path),
+            $buffer,
             [
                 'allowed_classes' => [
                     Configuration::class,

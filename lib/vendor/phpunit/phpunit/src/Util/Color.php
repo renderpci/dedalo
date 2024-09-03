@@ -27,12 +27,14 @@ use function strtr;
 use function trim;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class Color
 {
     /**
-     * @psalm-var array<string,string>
+     * @var array<string,string>
      */
     private const WHITESPACE_MAP = [
         ' '  => '·',
@@ -40,7 +42,7 @@ final class Color
     ];
 
     /**
-     * @psalm-var array<string,string>
+     * @var array<string,string>
      */
     private const WHITESPACE_EOL_MAP = [
         ' '  => '·',
@@ -50,7 +52,7 @@ final class Color
     ];
 
     /**
-     * @psalm-var array<string,string>
+     * @var array<string,string>
      */
     private static array $ansiCodes = [
         'reset'      => '0',
@@ -89,7 +91,7 @@ final class Color
 
         foreach ($codes as $code) {
             if (isset(self::$ansiCodes[$code])) {
-                $styles[] = self::$ansiCodes[$code] ?? '';
+                $styles[] = self::$ansiCodes[$code];
             }
         }
 

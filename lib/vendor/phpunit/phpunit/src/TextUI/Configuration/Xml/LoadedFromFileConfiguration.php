@@ -17,14 +17,16 @@ use PHPUnit\TextUI\XmlConfiguration\CodeCoverage\CodeCoverage;
 use PHPUnit\TextUI\XmlConfiguration\Logging\Logging;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  *
- * @psalm-immutable
+ * @immutable
  */
 final readonly class LoadedFromFileConfiguration extends Configuration
 {
     /**
-     * @psalm-var non-empty-string
+     * @var non-empty-string
      */
     private string $filename;
     private ValidationResult $validationResult;
@@ -50,7 +52,7 @@ final readonly class LoadedFromFileConfiguration extends Configuration
     }
 
     /**
-     * @psalm-return non-empty-string
+     * @return non-empty-string
      */
     public function filename(): string
     {

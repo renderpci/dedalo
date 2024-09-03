@@ -21,6 +21,8 @@ use function json_last_error;
 use function ksort;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class Json
@@ -40,12 +42,11 @@ final readonly class Json
     }
 
     /**
-     * To allow comparison of JSON strings, first process them into a consistent
-     * format so that they can be compared as strings.
+     * Element 0 is true and element 1 is null when JSON decoding did not work.
+     * * Element 0 is false and element 1 has the decoded value when JSON decoding did work.
+     * * This is used to avoid ambiguity with JSON strings consisting entirely of 'null' or 'false'.
      *
-     * @return array ($error, $canonicalized_json)  The $error parameter is used
-     *               to indicate an error decoding the json. This is used to avoid ambiguity
-     *               with JSON strings consisting entirely of 'null' or 'false'.
+     * @return array{0: false, 1: mixed}|array{0: true, 1: null}
      */
     public static function canonicalize(string $json): array
     {

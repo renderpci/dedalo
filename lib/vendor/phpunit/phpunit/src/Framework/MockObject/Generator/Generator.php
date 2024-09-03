@@ -10,6 +10,8 @@
 namespace PHPUnit\Framework\MockObject\Generator;
 
 use const PHP_EOL;
+use const PHP_MAJOR_VERSION;
+use const PHP_MINOR_VERSION;
 use const PREG_OFFSET_CAPTURE;
 use const WSDL_CACHE_NONE;
 use function array_merge;
@@ -70,6 +72,8 @@ use Throwable;
 use Traversable;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class Generator
@@ -77,7 +81,7 @@ final class Generator
     use TemplateLoader;
 
     /**
-     * @var array
+     * @var array<non-empty-string, true>
      */
     private const EXCLUDED_METHOD_NAMES = [
         '__CLASS__'       => true,
@@ -93,12 +97,15 @@ final class Generator
     ];
 
     /**
-     * @psalm-var array<non-empty-string, MockClass>
+     * @var array<non-empty-string, MockClass>
      */
     private static array $cache = [];
 
     /**
      * Returns a test double for the specified class.
+     *
+     * @param ?list<non-empty-string> $methods
+     * @param list<mixed>             $arguments
      *
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
@@ -161,7 +168,7 @@ final class Generator
     }
 
     /**
-     * @psalm-param list<class-string> $interfaces
+     * @param list<class-string> $interfaces
      *
      * @throws RuntimeException
      * @throws UnknownTypeException
@@ -232,6 +239,9 @@ final class Generator
      *
      * Concrete methods to mock can be specified with the $mockedMethods parameter.
      *
+     * @param list<mixed>             $arguments
+     * @param ?list<non-empty-string> $mockedMethods
+     *
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
      * @throws DuplicateMethodException
@@ -290,7 +300,9 @@ final class Generator
      * of the trait mocked. Concrete methods to mock can be specified with the
      * `$mockedMethods` parameter.
      *
-     * @psalm-param trait-string $traitName
+     * @param trait-string            $traitName
+     * @param list<mixed>             $arguments
+     * @param ?list<non-empty-string> $mockedMethods
      *
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
@@ -338,7 +350,8 @@ final class Generator
     /**
      * Returns an object for the specified trait.
      *
-     * @psalm-param trait-string $traitName
+     * @param trait-string $traitName
+     * @param list<mixed>  $arguments
      *
      * @throws ReflectionException
      * @throws RuntimeException
@@ -380,6 +393,8 @@ final class Generator
     }
 
     /**
+     * @param ?list<non-empty-string> $methods
+     *
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
      * @throws ReflectionException
@@ -433,6 +448,11 @@ final class Generator
     }
 
     /**
+     * @param non-empty-string       $wsdlFile
+     * @param class-string           $className
+     * @param list<non-empty-string> $methods
+     * @param array<mixed>           $options
+     *
      * @throws RuntimeException
      * @throws SoapExtensionNotAvailableException
      *
@@ -532,7 +552,7 @@ final class Generator
     /**
      * @throws ReflectionException
      *
-     * @psalm-return list<MockMethod>
+     * @return list<MockMethod>
      */
     public function mockClassMethods(string $className, bool $callOriginalMethods, bool $cloneArguments): array
     {
@@ -549,11 +569,11 @@ final class Generator
     }
 
     /**
-     * @psalm-param class-string $interfaceName
+     * @param class-string $interfaceName
      *
      * @throws ReflectionException
      *
-     * @psalm-return list<ReflectionMethod>
+     * @return list<ReflectionMethod>
      */
     private function userDefinedInterfaceMethods(string $interfaceName): array
     {
@@ -572,6 +592,8 @@ final class Generator
     }
 
     /**
+     * @param array<mixed> $arguments
+     *
      * @throws ReflectionException
      * @throws RuntimeException
      */
@@ -595,8 +617,6 @@ final class Generator
 
         if ($object instanceof StubInternal && $mockClass instanceof MockClass) {
             /**
-             * @psalm-suppress MissingThrowsDocblock
-             *
              * @noinspection PhpUnhandledExceptionInspection
              */
             $reflector->getProperty('__phpunit_state')->setValue(
@@ -627,6 +647,8 @@ final class Generator
     }
 
     /**
+     * @param ?list<non-empty-string> $explicitMethods
+     *
      * @throws ClassIsEnumerationException
      * @throws ClassIsFinalException
      * @throws ReflectionException
@@ -788,7 +810,7 @@ final class Generator
             );
         }
 
-        /** @psalm-var trait-string[] $traits */
+        /** @var trait-string[] $traits */
         $traits  = [];
         $isPhp82 = PHP_MAJOR_VERSION === 8 && PHP_MINOR_VERSION === 2;
 
@@ -879,6 +901,9 @@ final class Generator
         );
     }
 
+    /**
+     * @return array{className: non-empty-string, originalClassName: non-empty-string, fullClassName: non-empty-string, namespaceName: string}
+     */
     private function generateClassName(string $type, string $className, string $prefix): array
     {
         if ($type[0] === '\\') {
@@ -911,6 +936,10 @@ final class Generator
         ];
     }
 
+    /**
+     * @param array{className: non-empty-string, originalClassName: non-empty-string, fullClassName: non-empty-string, namespaceName: string} $mockClassName
+     * @param list<class-string>                                                                                                              $additionalInterfaces
+     */
     private function generateTestDoubleClassDeclaration(bool $mockObject, array $mockClassName, bool $isInterface, array $additionalInterfaces, bool $isReadonly): string
     {
         if ($mockObject) {
@@ -993,6 +1022,8 @@ final class Generator
     }
 
     /**
+     * @param ?list<non-empty-string> $methods
+     *
      * @throws DuplicateMethodException
      * @throws InvalidMethodNameException
      */
@@ -1031,7 +1062,8 @@ final class Generator
     }
 
     /**
-     * @psalm-param class-string $type
+     * @param class-string $type
+     * @param array<mixed> $arguments
      *
      * @throws ReflectionException
      */
@@ -1063,15 +1095,19 @@ final class Generator
     }
 
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      *
      * @throws ReflectionException
+     *
+     * @phpstan-ignore missingType.generics
      */
     private function reflectClass(string $className): ReflectionClass
     {
         try {
             $class = new ReflectionClass($className);
+
             // @codeCoverageIgnoreStart
+            /** @phpstan-ignore catch.neverThrown */
         } catch (\ReflectionException $e) {
             throw new ReflectionException(
                 $e->getMessage(),
@@ -1085,11 +1121,11 @@ final class Generator
     }
 
     /**
-     * @psalm-param class-string $classOrInterfaceName
-     *
-     * @psalm-return list<string>
+     * @param class-string $classOrInterfaceName
      *
      * @throws ReflectionException
+     *
+     * @return list<string>
      */
     private function namesOfMethodsIn(string $classOrInterfaceName): array
     {
@@ -1106,11 +1142,11 @@ final class Generator
     }
 
     /**
-     * @psalm-param class-string $interfaceName
-     *
-     * @psalm-return list<MockMethod>
+     * @param class-string $interfaceName
      *
      * @throws ReflectionException
+     *
+     * @return list<MockMethod>
      */
     private function interfaceMethods(string $interfaceName, bool $cloneArguments): array
     {
