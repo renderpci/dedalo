@@ -2283,6 +2283,23 @@ class component_media_common extends component_common {
 				$this->delete_normalized_files();
 			}
 
+		// default check default quality
+			$default_quality	= $this->get_default_quality();
+			$file_path			= $this->get_media_filepath($default_quality);
+			if (!file_exists($file_path)) {
+				$this->build_version($default_quality);
+			}
+
+		// check alternatives
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			foreach ($alternative_extensions as $current_extension) {
+
+				$alternative_source_file = $this->get_media_filepath($default_quality, $current_extension);
+				if (!file_exists($alternative_source_file)) {
+					$this->build_version($default_quality);
+				}
+			}
+
 		// thumb. Re-create thumb always (from default quality file)
 			$this->create_thumb();
 
