@@ -343,7 +343,8 @@ final class Ffmpeg {
 
 		// import vars from settings file
 			try {
-				require_once(DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting_name .'.php');
+				$setting_file_path = DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting_name .'.php';
+				require($setting_file_path);
 				// sample vars:
 				// $vb				= '960k';			# video rate kbs
 				// $s				= '720x404';		# scale
@@ -360,10 +361,11 @@ final class Ffmpeg {
 				// $ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
 				// $acodec			= 'libvo_aacenc';	# default libvo_aacenc
 				// $target_path		= "404";			# like '404'
+
 			} catch (Exception $e) {
 				debug_log(__METHOD__.
 					" $response->msg" . PHP_EOL
-					.' file: ' . DEDALO_AV_FFMPEG_SETTINGS .'/'. $setting_name .'.php' . PHP_EOL
+					.' file: ' . $setting_file_path . PHP_EOL
 					.' Caught exception: ' . $e->getMessage()
 					, logger::ERROR
 				);
