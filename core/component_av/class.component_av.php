@@ -57,6 +57,19 @@ class component_av extends component_media_common implements component_media_int
 
 
 	/**
+	* GET_AUDIO_QUALITY
+	* @return string $audio_quality
+	*/
+	public function get_audio_quality() : string {
+
+		$audio_quality = 'audio';
+
+		return $audio_quality;
+	}//end get_audio_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_AV_EXTENSION from config
 	*/
@@ -390,7 +403,7 @@ class component_av extends component_media_common implements component_media_int
 			if (!file_exists($posterframe)) {
 
 				// try to create an automatic posterframe at 5 second
-				$this->create_posterframe(5.00);
+				$this->create_posterframe(10.00);
 
 				if (!file_exists($posterframe)) {
 					debug_log(__METHOD__
@@ -992,144 +1005,11 @@ class component_av extends component_media_common implements component_media_int
 				}
 
 			// quality default in upload is 'original' (!)
-				$quality			= $this->get_quality();
-				$quality_default	= $this->get_default_quality();
-
-			// audio case
-			if ($quality==='audio') {
-
-				// audio extensions supported
-				$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
-				if (in_array($file_ext, $ar_audio_only_ext)) {
-					// Audio conversion
-					// output_file_path is the final target file
-					$output_file_path	= $this->get_media_filepath($quality);
-					// uploaded_file_path is the current uploaded file path
-					$uploaded_file_path	= $full_file_path;
-					Ffmpeg::convert_audio( (object)[
-						'output_file_path'		=> $output_file_path,
-						'uploaded_file_path'	=> $uploaded_file_path
-					]);
-				}else{
-					$response->msg .= " Error Processing Request. Current audio extension [$file_ext] is not supported (q:$quality)";
-					debug_log(__METHOD__
-						. $response->msg . PHP_EOL
-						. ' audio extensions allowed: ' . to_string($ar_audio_only_ext)
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// video case
-			}else{
-
-				// dedalo_av_recompress_all
-				// When config DEDALO_AV_RECOMPRESS_ALL is set to 1, all video files are
-				// re-compressed to 960k/s variable bit rate and keyframe every 75 frames
-					if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL===1) {
-
-						debug_log(__METHOD__
-							." RECOMPRESSING AV FROM '$quality' PLEASE WAIT.. "
-							, logger::DEBUG
-						);
-
-						// If default quality file do not exists, generate default quality version now
-						$default_quality				= $this->get_default_quality();
-						$quality_default_target_file	= $this->get_media_filepath($default_quality);
-
-						// if ( !file_exists($quality_default_target_file) ) {
-							$source_file = $full_file_path; // actually full original path and name
-							if ( !file_exists($source_file) ) {
-								// error. unable to convert
-								debug_log(__METHOD__
-									." ERROR: Source file do not exists! Ignored conversion to default_quality ($default_quality) ". PHP_EOL
-									.' source_file: ' . $source_file
-									, logger::ERROR
-								);
-							}else{
-
-								// target directory check
-								$target_dir = dirname($quality_default_target_file);
-								if (!is_dir($target_dir)) {
-									if(!mkdir($target_dir, 0750, true)) {
-										debug_log(__METHOD__
-											.' Error creating directory: ' . PHP_EOL
-											.' target_dir: ' . $target_dir
-											, logger::ERROR
-										);
-										$response->msg .= ' Error creating directory';
-										debug_log(__METHOD__
-											. ' '.$response->msg
-											, logger::ERROR
-										);
-										return $response;
-									}
-								}
-
-								$setting_name			= Ffmpeg::get_setting_name($source_file, $quality_default);
-								$target_file_path		= $this->get_media_filepath($quality_default);
-								$av_alternate_response	= Ffmpeg::build_av_alternate_command((object)[
-									'setting_name'		=> $setting_name,
-									'source_file_path'	=> $source_file,
-									'target_file_path'	=> $target_file_path
-								]);
-
-								if ($av_alternate_response->result===true) {
-
-									// execute the command to convert with ffmpeg
-									exec("$av_alternate_response->command  > /dev/null &");
-
-									// posterframe. Create posterframe of current video
-									$this->create_posterframe(
-										'00:00:10',
-										$quality_default // 404 normally
-									);
-
-									// thumb. Create thumb from posterframe
-									$this->create_thumb();
-
-								}else{
-									$msg = ' Error Processing Request. build_av_alternate_command fails. ' . to_string($av_alternate_response->msg);
-									debug_log(__METHOD__.$msg, logger::ERROR);
-									$response->msg .= $msg;
-									return $response;
-								}
-							}
-						// }else{
-						// 	debug_log(__METHOD__
-						// 		." WARNING: Ignored conversion to default quality (".$quality_default."). File already exists"
-						// 		, logger::WARNING
-						// 	);
-						// }//end if (!file_exists($target_file)) {
-					}//end if (defined('DEDALO_AV_RECOMPRESS_ALL') && DEDALO_AV_RECOMPRESS_ALL==1)
-
-			}//end if ($quality=='audio') {
-
+				$quality = $this->get_quality();
 
 			// audio files. Audio files always generate an audio file
-				$ar_audio_only_ext = array('mp3','aiff','aif','wave','wav');
-				if (in_array($file_ext, $ar_audio_only_ext) && $quality===DEDALO_AV_QUALITY_ORIGINAL) {
-
-					// Audio conversion
-					$target_file = $this->get_media_filepath($quality);
-					// if ( !file_exists($target_file) ) {
-						$source_file = $full_file_path;
-						if (!file_exists($source_file)) {
-							debug_log(__METHOD__
-								." ERROR converting to audio file: Source file do not exists (2) " . PHP_EOL
-								.' source_file:' . to_string($source_file)
-								, logger::ERROR
-							);
-						}
-						Ffmpeg::convert_to_dedalo_av(
-							$source_file,
-							$target_file
-						);
-
-						debug_log(__METHOD__
-							." Converted source audio file from 'original' to 'audio' quality "
-							, logger::DEBUG
-						);
+				if ( $quality===$this->get_original_quality() ) {
+					$this->build_version( $this->get_audio_quality() );
 					// }//end if (!file_exists($target_file))
 				}
 
@@ -1197,10 +1077,18 @@ class component_av extends component_media_common implements component_media_int
 					$this->set_dato($dato);
 				}
 
-			// save component dato
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info
-				$this->Save();
+			// Generate default_av_format : If uploaded file is not in Dedalo standard format (mpeg), it will converted,
+			// and original file is conserved (like myfilename.mov and myfilename.avi)
+			// regenerate component will create the default quality av calling build()
+			// build() will check the normalized files of the original
+			// then if the normalized files doesn't exist, will create it
+			// then will create the Thumb and Posterframe format of the default
+			// then save the data.
+				$result = $this->regenerate_component();
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// all is OK
 				$response->result	= true;
@@ -1397,7 +1285,7 @@ class component_av extends component_media_common implements component_media_int
 	* @param bool $async = true
 	* @return object $response
 	*/
-	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+	public function build_version(string $quality, bool $async=false, bool $save=true) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -1447,6 +1335,11 @@ class component_av extends component_media_common implements component_media_int
 			if (!file_exists($source_file_path)) {
 				$response->msg .= ' Invalid source_file_path';
 				$response->errors[] = 'invalid source_file_path';
+				debug_log(__METHOD__
+					." ERROR: Source file do not exists! Ignored conversion to quality ($quality) ". PHP_EOL
+					.' source_file_path: ' . $source_file_path
+					, logger::ERROR
+				);
 				return $response;
 			}
 			$setting_name			= Ffmpeg::get_setting_name($source_file_path, $quality);
