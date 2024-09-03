@@ -466,23 +466,27 @@ function curl_request(object $options) : object {
 			$msg = '';
 			switch ($httpcode) {
 				case 200:
-					$msg .= "OK. check_remote_server passed successfully (status code: $httpcode)";
+					$debug_level = logger::WARNING;
+					$msg .= "OK. check_remote_server passed successfully";
 					break;
 				case 401:
-					$msg .= "Error. Unauthorized code (status code: $httpcode)";
+					$debug_level = logger::ERROR;
+					$msg .= "Error. Unauthorized code";
 					break;
 				case 400:
-					$msg .= "Error. Bad Request. Server has problems connecting to file (status code: $httpcode)";
+					$debug_level = logger::WARNING;
+					$msg .= "Error. Bad Request. Server has problems connecting to file";
 					break;
 				default:
-					$msg .= "Error. check_remote_server problem found (status code: $httpcode)";
+					$debug_level = logger::ERROR;
+					$msg .= "Error. check_remote_server problem found";
 					break;
 			}
-			$debug_level = $httpcode===200 ? logger::WARNING : logger::ERROR;
-			debug_log(__METHOD__ . ' ' .$httpcode. ' : '. PHP_EOL
+			debug_log(__METHOD__
+				. ' httpcode: ' . $httpcode . PHP_EOL
 				. ' url: ' . $url . PHP_EOL
-				. ' msg: ' .$msg . PHP_EOL
-				. ' bt: ' . to_string( debug_backtrace()[0] )
+				. ' msg: ' . $msg . PHP_EOL
+				. ' bt:  ' . to_string( debug_backtrace()[0] )
 				, $debug_level
 			);
 

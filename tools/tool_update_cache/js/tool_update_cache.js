@@ -161,13 +161,13 @@ tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
 	const regenerate_options	= self.regenerate_options
 
 	// components_selection. Compose user components selection adding regenerate_options
-		const selection = []
+		const components_selection = []
 		const ar_component_tipo_length = ar_component_tipo.length
 		for (let i = 0; i < ar_component_tipo_length; i++) {
 
 			const tipo = ar_component_tipo[i]
 
-			selection.push({
+			components_selection.push({
 				tipo				: tipo,
 				regenerate_options	: regenerate_options[tipo] || null
 			})

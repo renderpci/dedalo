@@ -7,12 +7,6 @@ class logger_backend_activity extends logger_backend {
 
 
 
-	// private $log_level;
-	// private $h_conn;
-	// private static $activity_matrix_table = 'matrix_activity';
-
-
-
 	/**
 	* @var
 	*/
@@ -145,15 +139,21 @@ class logger_backend_activity extends logger_backend {
 					return null;
 				}
 
-			// if tipo of activity is not senT is not possible generate log
+			// if the type of activity is not sent, it is not possible to generate log
 				if (empty($tipo_where)) {
-					debug_log(__METHOD__." Error on log_message (var 'tipo_donde' is empty) ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on log_message (var 'tipo_donde' is empty) "
+						, logger::ERROR
+					);
 					return null;
 				}
 
 			// auto-log stop. Prevent infinite loop saving self
 				if (in_array($tipo_where, self::$ar_elements_activity_tipo)) {
-					debug_log(__METHOD__." Error on log_message (infinite loop stopped) ".to_string(), logger::ERROR);
+					debug_log(__METHOD__
+						." Error on log_message (infinite loop stopped) "
+						, logger::ERROR
+					);
 					return null;
 				}
 
@@ -213,6 +213,11 @@ class logger_backend_activity extends logger_backend {
 						PHP_EOL.'message: '.to_string($message),
 						logger::ERROR
 					);
+					if(SHOW_DEBUG===true) {
+						$bt = debug_backtrace();
+						dump($bt, ' bt ++ '.to_string());
+					}
+
 				}else{
 					$locator_what = new locator();
 						$locator_what->set_section_id($what_section_id);
@@ -254,7 +259,7 @@ class logger_backend_activity extends logger_backend {
 			$component_tipo = self::$_COMPONENT_PROJECTS['tipo']; // dd550 component_filter
 			if ( !empty($user_id) && $user_id!=='unknown' ) {
 				// value
-				$projects_dato = filter::get_user_projects($user_id);
+				$projects_dato = filter::get_user_projects( (int)$user_id );
 				if (!empty($projects_dato)) {
 					foreach ($projects_dato as $project_locator) {
 						if (isset($project_locator->from_component_tipo)) {
@@ -320,10 +325,10 @@ class logger_backend_activity extends logger_backend {
 
 		// debug
 			if(SHOW_DEBUG===true) {
-				// $total_time = exec_time_unit($start_time,'ms').' ms';
+				// $total_time = exec_time_unit($start_time,'ms');
 				// debug_log(__METHOD__.
 				// 	' Activity log total time:  '.
-				// 	exec_time_unit($start_time,'ms').' ms',
+				// 	$total_time.' ms',
 				// 	logger::DEBUG
 				// );
 			}

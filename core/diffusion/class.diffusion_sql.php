@@ -883,83 +883,135 @@ class diffusion_sql extends diffusion  {
 
 	/**
 	* CHECK_PUBLICATION_VALUE
-	* @param object $request_options
+	* @param object $options
 	* @return bool
 	*/
-	public static function check_publication_value(object $request_options) {
+	public static function check_publication_value(object $options) : bool {
 
-		$to_publish = true;
+		// options
+			$component_publication_tipo	= $options->component_publication_tipo ?? null;
+			$section_id					= $options->section_id ?? null;
+			$section_tipo				= $options->section_tipo ?? null;
+			$database_name				= $options->database_name ?? null;
+			$table_name					= $options->table_name ?? null;
+			$diffusion_element_tipo		= $options->diffusion_element_tipo ?? null;
+			$table_properties			= $options->table_properties ?? null;
+			$delete_previous			= $options->delete_previous ?? true;
 
-		$options = new stdClass();
-			$options->component_publication_tipo	= null;
-			$options->section_id					= null;
-			$options->section_tipo					= null;
-			$options->database_name					= null;
-			$options->table_name					= null;
-			$options->diffusion_element_tipo		= null;
-			$options->table_properties				= null;
-			$options->delete_previous				= true;
-			foreach ($request_options as $key => $value) {if (property_exists($options, $key)) $options->$key = $value;}
+		// to_publish. Default = true
+			$to_publish = true;
 
-		# Resolve table alias name
-		$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $options->diffusion_element_tipo );
-		$section_tipo = $options->section_tipo;
-		if (isset($diffusion_element_tables_map->{$section_tipo}->from_alias)) {
-			$options->table_name  = $diffusion_element_tables_map->{$section_tipo}->name;
-		}
+		// Resolve table alias name
+			$diffusion_element_tables_map = diffusion_sql::get_diffusion_element_tables_map( $diffusion_element_tipo );
+			if (isset($diffusion_element_tables_map->{$section_tipo}->from_alias)) {
+				$table_name = $diffusion_element_tables_map->{$section_tipo}->name;
+			}
 
-		#
-		# COMPONENT PUBLICATION - CHECK (once)
-		$component_publication_bool_value = (bool)diffusion::get_component_publication_bool_value($options->component_publication_tipo, $options->section_id, $options->section_tipo);
+		// component publication - check (once)
+			$component_publication_bool_value = (bool)diffusion::get_component_publication_bool_value(
+				$component_publication_tipo,
+				$section_id,
+				$section_tipo
+			);
 
 		if ($component_publication_bool_value===false) {
-			# Delete this record
-			if ($options->delete_previous===true) {
-				diffusion_sql::delete_sql_record($options->section_id, $options->database_name, $options->table_name, $options->section_tipo);
+
+			// Delete this record
+			if ($delete_previous===true) {
+
+				diffusion_sql::delete_sql_record(
+					$section_id,
+					$database_name,
+					$table_name,
+					$section_tipo
+				);
 				debug_log(__METHOD__
-					." Skipped (and MYSQL deleted) record $options->section_id ".$options->table_name." (publication=no)"
+					." Skipped (and MYSQL deleted) record $section_id ".$table_name." (publication=no)"
 					, logger::DEBUG
 				);
 
-				// Global search case
-					if (isset($options->table_properties) && isset($options->table_properties->global_search_map)) {
-						# exists search global table (mdcat fix)
-						diffusion_sql::delete_sql_record($options->section_id, $options->database_name, 'global_search', $options->section_tipo);
-						debug_log(__METHOD__
-							." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)"
-							, logger::DEBUG
+				// Global search case (legacy)
+					if (isset($table_properties) && isset($table_properties->global_search_map)) {
+
+						// delete global table record
+						$deleted = diffusion_sql::delete_sql_record(
+							$section_id,
+							$database_name,
+							'global_search',
+							$section_tipo
 						);
+						if (!$deleted) {
+							debug_log(__METHOD__
+								." Error deleting global_search record {$section_tipo}_{$section_id} (publication=no)"
+								, logger::ERROR
+							);
+						}
+					}
+
+				// save_global_table_data (new)
+					if (isset($table_properties->global_table_maps)) {
+						foreach ($table_properties->global_table_maps as $current_global_table_map) {
+
+							// resolve table name by table tipo
+							$current_table_name = RecordObj_dd::get_termino_by_tipo(
+								$current_global_table_map->table_tipo,
+								DEDALO_STRUCTURE_LANG,
+								true,
+								false
+							);
+
+							// delete global table record
+							// Note that 'custom' argument is used to select the proper
+							// column and value to delete in special global tables
+							$deleted = diffusion_mysql::delete_sql_record(
+								$section_id,
+								$database_name,
+								$current_table_name,
+								$section_tipo,
+								(object)[ // custom
+									'field_name'	=> ['section_id'],
+									'field_value'	=> [$section_tipo .'_'. $section_id]
+								]
+							);
+							if (!$deleted) {
+								debug_log(__METHOD__
+									." Error deleting global_table $current_table_name record {$section_tipo}_{$section_id} (publication=no)"
+									, logger::ERROR
+								);
+							}
+						}
 					}
 			}
 
 			$section = section::get_instance(
-				$options->section_id,
-				$options->section_tipo,
+				$section_id,
+				$section_tipo,
 				'list', // string mode
 				false // bool cache
 			);
 			$section->set_bl_loaded_matrix_data(false); // force section to update dato from current database to prevent loose user changes on publication time lapse
-			$section->add_diffusion_info_default($options->diffusion_element_tipo);
+			$section->add_diffusion_info_default($diffusion_element_tipo);
 			$section->save_modified = false;
 			$section->Save();
 			debug_log(__METHOD__
-				." Added current diffusion_element_tipo $options->diffusion_element_tipo to data. Section diffusion_info updated and saved [{$options->section_tipo}-{$options->section_id}]. "
+				." Added current diffusion_element_tipo $diffusion_element_tipo to data. Section diffusion_info updated and saved [{$section_tipo}-{$section_id}]. "
 				, logger::DEBUG
 			);
 
 			# Cascade delete
-			# dump( json_decode($options->table_properties), ' options->table_properties ++ '.to_string());
-			if ($options->delete_previous===true && isset($options->table_properties) && isset($options->table_properties->cascade_delete)) {
-				foreach ((array)$options->table_properties->cascade_delete as $tvalue) {
+			# dump( json_decode($table_properties), ' table_properties ++ '.to_string());
+			if ($delete_previous===true && isset($table_properties) && isset($table_properties->cascade_delete)) {
+				foreach ((array)$table_properties->cascade_delete as $tvalue) {
 					$cd_table_name = $tvalue->table;
+
 					diffusion_sql::delete_sql_record(
-						$options->section_id,
-						$options->database_name,
+						$section_id,
+						$database_name,
 						$cd_table_name,
-						$options->section_tipo
+						$section_tipo
 					);
 					debug_log(__METHOD__
-						." Deleted (cascade_delete) record $options->section_id ".$cd_table_name." "
+						." Deleted (cascade_delete) record $section_id ".$cd_table_name." "
 						, logger::DEBUG
 					);
 				}
@@ -973,7 +1025,7 @@ class diffusion_sql extends diffusion  {
 		}
 
 
-		return (bool)$to_publish;
+		return $to_publish;
 	}//end check_publication_value
 
 
@@ -1562,6 +1614,7 @@ class diffusion_sql extends diffusion  {
 						}
 
 					// save
+						// save MYSQL record, deleting previous record
 						$save_response = diffusion_mysql::save_record($save_options);
 						if ($save_response->result===false) {
 							debug_log(__METHOD__
@@ -1588,26 +1641,10 @@ class diffusion_sql extends diffusion  {
 					// save_global_table_data
 						if (isset($table_properties->global_table_maps)) {
 
-							// ref:
-								// "global_table_maps": [
-								//     {
-								//       "table_name": "myglobaltable",
-								//       "columns_map": [
-								//         {
-								//           "target_column": "full_data",
-								//           "source_columns": [
-								//             "nombre"
-								//           ]
-								//         }
-								//       ]
-								//     }
-								//   ]
-
 							foreach ($table_properties->global_table_maps as $current_global_table_map) {
 								self::save_global_table_data((object)[
 									'global_table_map'			=> $current_global_table_map,
 									'diffusion_element_tipo'	=> $diffusion_element_tipo,
-									'diffusion_section'			=> $diffusion_section,
 									'section_tipo'				=> $section_tipo,
 									'database_name'				=> $database_name,
 									'ar_field_data'				=> $ar_field_data
@@ -2372,32 +2409,35 @@ class diffusion_sql extends diffusion  {
 			#dump($ar_fields_global, ' ar_fields_global ++ '.to_string());
 			#dump($list_data, ' list_data ++ '.to_string());
 
-		$ar_field_data = [
-			"database_name"		=> $database_name,
-			"table_name"		=> 'global_search',
-			"diffusion_section"	=> $options->diffusion_section,
-			"ar_fields"			=> $ar_fields_global
-		];
+		// ar_field_data
+			$ar_field_data = [
+				"database_name"		=> $database_name,
+				"table_name"		=> 'global_search',
+				"diffusion_section"	=> $options->diffusion_section,
+				"ar_fields"			=> $ar_fields_global
+			];
 
-		$save_options = new stdClass();
-			$save_options->diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$save_options->section_tipo				= $options->section_tipo;
-			$save_options->record_data				= $ar_field_data;
-			$save_options->delete_previous			= true;
-		$save = diffusion_mysql::save_record($save_options);
+		// save record
+			$save_options = new stdClass();
+				$save_options->diffusion_element_tipo	= $options->diffusion_element_tipo;
+				$save_options->section_tipo				= $options->section_tipo;
+				$save_options->record_data				= $ar_field_data;
+				$save_options->delete_previous			= true;
 
-		if (!isset($save->new_id)) {
-			debug_log(__METHOD__
-				." ERROR ON INERT RECORD (global_search) !!! (diffusion_mysql::save_record) " .PHP_EOL
-				.'save: ' . to_string($save)
-				, logger::ERROR
-			);
-		}else{
-			debug_log(__METHOD__
-				." Saved new record in global_search - ".$save->new_id
-				, logger::DEBUG
-			);
-		}
+			$save = diffusion_mysql::save_record($save_options);
+
+			if (!isset($save->new_id)) {
+				debug_log(__METHOD__
+					." ERROR ON INERT RECORD (global_search) !!! (diffusion_mysql::save_record) " .PHP_EOL
+					.'save: ' . to_string($save)
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__
+					." Saved new record in global_search - ".$save->new_id
+					, logger::DEBUG
+				);
+			}
 
 
 		return (object)$save;
@@ -2422,15 +2462,14 @@ class diffusion_sql extends diffusion  {
 	*
 	* @return object $save
 	*/
-	public function save_global_table_data($options) {
+	public function save_global_table_data(object $options) : object {
 
 		// options
 			$global_table_map		= $options->global_table_map;
 			$diffusion_element_tipo	= $options->diffusion_element_tipo;
-			$diffusion_section		= $options->diffusion_section;
 			$section_tipo			= $options->section_tipo;
-			$ar_field_data			= $options->ar_field_data;
 			$database_name			= $options->database_name;
+			$ar_field_data			= $options->ar_field_data;
 
 		// short vars
 			$ar_fields			= $ar_field_data['ar_fields'];
@@ -2532,7 +2571,6 @@ class diffusion_sql extends diffusion  {
 								}
 							})($column_values);
 
-
 						$new_items[] = [
 							'field_name'	=> $target_column,
 							'field_value'	=> $field_value
@@ -2540,48 +2578,65 @@ class diffusion_sql extends diffusion  {
 					}
 
 					$values[$section_id][$lang] = $new_items;
-
 				}//end loop lang
-
-
 			}//end foreach($ar_fields as $section_id => $data)
 
-		$ar_field_data = [
-			"database_name" 	=> $database_name,
-			"table_name" 		=> $table_name,
-			"diffusion_section" => $table_tipo,
-			"ar_fields" 		=> $values
-		];
+		// ar_field_data
+			$ar_field_data = [
+				"database_name" 	=> $database_name,
+				"table_name" 		=> $table_name,
+				"diffusion_section" => $table_tipo,
+				"ar_fields" 		=> $values
+			];
 
 		// delete previous records if exists (custom way using section_id and table combination)
 			if (diffusion_mysql::table_exits($database_name, $table_name)) {
 				foreach($ar_fields as $section_id => $data) {
-					$custom = new stdClass();
-						$custom->field_name		= ['section_id'];
-						$custom->field_value	= [$section_tipo .'_'. $section_id];
-					$deleted = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo, $custom);
+
+					$deleted = diffusion_mysql::delete_sql_record(
+						$section_id,
+						$database_name,
+						$table_name,
+						$section_tipo,
+						(object)[ // custom
+							'field_name'	=> ['section_id'],
+							'field_value'	=> [$section_tipo .'_'. $section_id]
+						]
+					);
+					if (!$deleted) {
+						debug_log(__METHOD__
+							. " Error deleting record " . PHP_EOL
+							. ' section_id: ' . to_string($section_id) . PHP_EOL
+							. ' section_tipo: ' . to_string($section_tipo) . PHP_EOL
+							. ' database_name: ' . to_string($database_name) . PHP_EOL
+							. ' table_name: ' . to_string($table_name)
+							, logger::ERROR
+						);
+					}
 				}
 			}
 
-		$save_options = new stdClass();
-			$save_options->diffusion_element_tipo	= $diffusion_element_tipo;
-			$save_options->section_tipo				= $table_tipo; // $section_tipo;
-			$save_options->record_data				= $ar_field_data;
-			$save_options->delete_previous			= false; // already custom deleted
-		$save = diffusion_mysql::save_record($save_options);
+		// save record
+			$save_options = new stdClass();
+				$save_options->diffusion_element_tipo	= $diffusion_element_tipo;
+				$save_options->section_tipo				= $table_tipo; // $section_tipo;
+				$save_options->record_data				= $ar_field_data;
+				$save_options->delete_previous			= false; // already custom diffusion_mysql deleted
 
-		if (!isset($save->new_id)) {
-			debug_log(__METHOD__
-				. " ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) " . PHP_EOL
-				. 'save: ' . to_string($save)
-				, logger::ERROR
-			);
-		}else{
-			debug_log(__METHOD__
-				. " Saved new record in global_search - new_id: " . $save->new_id
-				, logger::DEBUG
-			);
-		}
+			$save = diffusion_mysql::save_record($save_options);
+
+			if (!isset($save->new_id)) {
+				debug_log(__METHOD__
+					. " ERROR ON INERT RECORD !!! (diffusion_mysql::save_record) " . PHP_EOL
+					. 'save: ' . to_string($save)
+					, logger::ERROR
+				);
+			}else{
+				debug_log(__METHOD__
+					. " Saved new record in global_search - new_id: " . $save->new_id
+					, logger::DEBUG
+				);
+			}
 
 
 		return (object)$save;
@@ -3005,8 +3060,16 @@ class diffusion_sql extends diffusion  {
 				$global_search_tables = ['global_search'];
 				foreach ($global_search_tables as $global_search_table) {
 					if( diffusion_mysql::table_exits($database_name, $global_search_table) ) {
+
 						$global_search_section_id = $section_tipo . '_' . $section_id;
-						$response = diffusion_mysql::delete_sql_record($global_search_section_id, $database_name, $global_search_table, $section_tipo); // $section_id, $database_name, $global_search_table, $section_tipo=null, $custom=false
+
+						$response = diffusion_mysql::delete_sql_record(
+							$global_search_section_id,
+							$database_name,
+							$global_search_table,
+							$section_tipo
+						); // $section_id, $database_name, $global_search_table, $section_tipo=null, $custom=false
+
 						if ($response->result===true) {
 							debug_log(__METHOD__
 								." MySQL record '$global_search_section_id' is deleted from global_search table '$global_search_table' (publication=no) $response->msg "
@@ -3017,7 +3080,14 @@ class diffusion_sql extends diffusion  {
 				}
 
 				if( diffusion_mysql::table_exits($database_name, $table_name) ) {
-					$response = diffusion_mysql::delete_sql_record($section_id, $database_name, $table_name, $section_tipo); // $section_id, $database_name, $table_name, $section_tipo=null, $custom=false
+
+					$response = diffusion_mysql::delete_sql_record(
+						$section_id,
+						$database_name,
+						$table_name,
+						$section_tipo
+					); // $section_id, $database_name, $table_name, $section_tipo=null, $custom=false
+
 					if ($response->result===true) {
 						debug_log(__METHOD__
 							." MySQL record '$section_tipo - $section_id' is deleted (publication=no) $response->msg "

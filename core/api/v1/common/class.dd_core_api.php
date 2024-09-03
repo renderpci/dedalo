@@ -2776,10 +2776,9 @@ final class dd_core_api {
 		// mode. set mode_to_activity
 		// In cases like 'tool_transcription' the mode passed is neither 'edit' nor 'list' so we will
 		// force 'edit' in the logger as there are only 2 page load options defined: 'LOAD EDIT' and 'LOAD LIST'
-			$mode_to_activity = $mode;
-			if ( strpos($mode, 'edit')===false && strpos($mode, 'list')===false ) {
-				$mode_to_activity = 'edit';
-			}
+			$mode_to_activity = in_array($mode, ['edit','list'])
+				? $mode
+				: 'edit';
 
 		// dato_activity. Create dato_activity array
 			$dato_activity = [
@@ -2795,7 +2794,7 @@ final class dd_core_api {
 					break;
 
 				// section
-				case ($model==='section' && $rqo->source->action==='search'):
+				case ($model==='section'):
 
 					switch ($mode) {
 						case 'edit' :
@@ -2803,13 +2802,14 @@ final class dd_core_api {
 							$dato_activity['tipo']	= $tipo;
 							break;
 						case 'list' :
+						default:
 							$dato_activity['tipo'] = $tipo;
 							break;
 					}
 					break;
 
 				default:
-					// code...
+
 					break;
 			}
 
