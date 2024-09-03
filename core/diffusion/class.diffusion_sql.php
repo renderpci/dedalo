@@ -929,6 +929,38 @@ class diffusion_sql extends diffusion  {
 							." Deleted global_search record {$options->section_tipo}_{$options->section_id} (publication=no)"
 							, logger::DEBUG
 						);
+				// save_global_table_data (new)
+					if (isset($table_properties->global_table_maps)) {
+						foreach ($table_properties->global_table_maps as $current_global_table_map) {
+
+							// resolve table name by table tipo
+							$current_table_name = RecordObj_dd::get_termino_by_tipo(
+								$current_global_table_map->table_tipo,
+								DEDALO_STRUCTURE_LANG,
+								true,
+								false
+							);
+
+							// delete global table record
+							// Note that 'custom' argument is used to select the proper
+							// column and value to delete in special global tables
+							$deleted = diffusion_mysql::delete_sql_record(
+								$section_id,
+								$database_name,
+								$current_table_name,
+								$section_tipo,
+								(object)[ // custom
+									'field_name'	=> ['section_id'],
+									'field_value'	=> [$section_tipo .'_'. $section_id]
+								]
+							);
+							if (!$deleted) {
+								debug_log(__METHOD__
+									." Error deleting global_table $current_table_name record {$section_tipo}_{$section_id} (publication=no)"
+									, logger::ERROR
+								);
+							}
+						}
 					}
 			}
 
