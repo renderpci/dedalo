@@ -4348,6 +4348,17 @@ abstract class common {
 					$element_permisions = ($skip_permissions === true)
 						? 1
 						: security::get_security_permissions($section_tipo, $element_tipo);
+
+					// check the section info components
+					// if the user are not global_admin, the components will not showed.
+					if( in_array($element_tipo, $section_info_elements) ){
+
+						$user_id			= logged_user_id();
+						$is_global_admin	= security::is_global_admin($user_id);
+						if( $is_global_admin === true ){
+							$element_permisions = 1;
+						}
+					}
 					// skip element if permissions are not enough
 					if ( $element_permisions<1 ) {
 						// user don't have access to current element. skip element
