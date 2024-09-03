@@ -19,6 +19,3 @@ $ac				= "1";				# numero de canales de audio 2 = stereo, 1 = nomo
 $acodec			= 'libvo_aacenc';	# default libvo_aacenc
 
 $target_path 	= "240";			# like '404'
-
-
-?>
