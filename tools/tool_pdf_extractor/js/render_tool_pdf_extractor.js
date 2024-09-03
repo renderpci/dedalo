@@ -193,7 +193,7 @@ const get_content_data = async function(self) {
 
 			// pdf_data. Extract PDF file text/html
 				const extracted_data_response = await self.get_pdf_data()
-				if(!extracted_data_response || !extracted_data_response.result || !extracted_data_response.result==='error') {
+				if(!extracted_data_response || !extracted_data_response.result || extracted_data_response.result===false) {
 
 					// loading css
 					elements.map(el => el.classList.remove('loading'))

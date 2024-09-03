@@ -48,25 +48,11 @@ class tool_pdf_extractor extends tool_common {
 				$lang,
 				$section_tipo
 			);
-			$pdf_path = $component->get_media_filepath();
 
-		// pdf_path error on missing properties
-			if (empty($pdf_path) || !file_exists($pdf_path)) {
-				$response->result = false;
-				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source PDF file not found";
-				debug_log(__METHOD__
-					." $response->msg "
-					.' pdf_path:' . to_string($pdf_path)
-					, logger::ERROR
-				);
-				$response->errors[] = 'source file not found';
-				return $response;
-			}
-
-		// test engine PDF to text
-			$config				= tool_common::get_config('tool_pdf_extractor');
-			$extractor_engine	= $config->config->{$method}->default ?? null;
-			if (!isset($extractor_engine)) {
+		// extractor_engine
+			$config	= tool_common::get_config('tool_pdf_extractor');
+			$engine	= $config->config->{$method}->default ?? null;
+			if (!isset($engine)) {
 
 				$response->result	= false;
 				$response->msg		= "Error Processing Request pdf_automatic_transcription: config extractor engine is not defined";
@@ -78,122 +64,27 @@ class tool_pdf_extractor extends tool_common {
 				$response->errors[] = 'config extractor engine is not defined';
 				return $response;
 
-			}else{
-
-				$transcription_engine = trim( shell_exec('type -P '.$extractor_engine) ?? '' );
-				if (empty($transcription_engine)) {
-					$response->result	= false;
-					$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. ' extractor_engine: ' . to_string($extractor_engine)
-						, logger::ERROR
-					);
-					$response->errors[] = 'daemon engine not found';
-					return $response;
-				}
 			}
+			$transctipton_options = new stdClass();
+				$transctipton_options->engine	= $engine;
+				$transctipton_options->method	= $method; // string text|html
+				$transctipton_options->page_in	= $page_in; // number of first page. default is 1
+				$transctipton_options->page_out	= $page_out;
 
-		// engine config $options:
-			// text_engine
-				// -f <int> 			: first page to convert
-		 		// -l <int> 			: last page to convert
-				// -layout 				: maintain original physical layout
-		  		// -simple 				: simple one-column page layout
-				// -enc <string> 		: output text encoding name
-			// html_engine
-				// -f <int> 			: first page to convert
-				// -l <int> 			: last page to convert
-				// -p                    : exchange .pdf links by .html
-			    // -c                    : generate complex document
-			    // -s                    : generate single document that includes all pages
-			    // -i                    : ignore images
-			    // -noframes             : generate no frames
-			    // -stdout               : use standard output
-			    // -hidden               : output hidden text
-			    // -nomerge              : do not merge paragraphs
-			    // -enc <string>         : output text encoding name
-
-			$engine_config = '';
-
-			if(!empty($page_in)){
-				$engine_config .= ' -f ' .$page_in;
-			}
-			if(!empty($page_out)){
-				$engine_config .= ' -l ' .$page_out;
-			}
-
-			$file_extension = '.txt';
-			if($method==='html_engine'){
-				$engine_config .= ' -i -p -noframes ' ;
-				$file_extension = '.html';
-			}
-
-		// file text from PDF. Create a new text file from pdf text content (.txt for text, .html for html)
-			$extraction_filename = substr($pdf_path, 0, -4) . $file_extension;
-
-		// exec the extraction
-			// $command  = $extractor_engine ." -enc UTF-8 $engine_config $pdf_path 2>&1";
-			$command  = $extractor_engine ." -enc UTF-8 $engine_config $pdf_path $extraction_filename";
-			debug_log(__METHOD__
-				." Executing command: ".PHP_EOL
-				. $command
-				, logger::DEBUG
-			);
-			$output = exec($command, $result);	// Generate text version file in same dir as pdf
-			if ( strpos( strtolower($output), 'error') ) {
-				$response->result	= false;
-				$response->msg		= "$output";
+			try {
+				$process_text_response = $component->get_text_from_pdf( $transctipton_options );
+			} catch (Exception $e) {
 				debug_log(__METHOD__
-					." $response->msg ".PHP_EOL
-					. 'result: '.to_string($result)
+					. " Caught exception: " . PHP_EOL
+					. $e->getMessage()
 					, logger::ERROR
 				);
-
-				return $response;
 			}
-
-		// test if the file is saved
-			if (!file_exists($extraction_filename)) {
-				$response->result	= false;
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: Extraction file not found";
-				debug_log(__METHOD__
-					." $response->msg "
-					, logger::ERROR
-				);
-				$response->errors[] = 'extraction file do not exists';
-				return $response;
-			}
-
-		// pdf_text contents
-			$pdf_text = file_get_contents($extraction_filename); // Read current text/html file
 
 		// response
-			$response->result	= htmlentities($pdf_text);
+			$response->result	= htmlentities($process_text_response->result);
 			$response->msg		= "OK Processing Request pdf_automatic_transcription: text processed";
 			// $response->original = trim($original_text);
-
-		// (!) Note: This tool is not finished!
-
-			// Work in progress !
-
-		// #
-		// # PAGES TAGS
-		// $original_text = str_replace("","", $pdf_text);
-		// // explode by the page mark invisible text of return character
-		// $pages = explode("", $pdf_text);
-		// $i=(int)$options->first_page;
-		// $pdf_text='';
-		// foreach ($pages as $current_page) {
-		// 	$pdf_text .= '[page-n-'. $i .']';
-		// 	$pdf_text .= '<br>';
-		// 	$pdf_text .= nl2br($current_page);
-		// 	$i++;
-		// }
-		//
-		// $response->result  = (string)$pdf_text;
-		// $response->msg 	   = "Ok Processing Request pdf_automatic_transcription: text processed";
-		// $response->original = trim($original_text);
 
 
 		return $response;

@@ -188,22 +188,12 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 
 	let final_text = ''
 	switch (method) {
-
+		// if the engine is text the server will provide the final version.
+		// it ensure coherent process with the process of uploaded file or regenerate
+		// Don't add any process here, change the buil_pdf_transcription method into the componnet_pdf class.
 		case 'text_engine':
-			// split by the page mark invisible text of return character
-			const pages = original_text.split("")
-			// total pages are the length of the split -1 because the counter use 0 to the page like cover page or blank pages before the text
-			const total_pages = pages.length-1
-			for (let i = 0; i < total_pages; i++) {
-				// create the page tag with <hr> separator to set visual cut between pages
-				const page_tag = `<hr>[page-n-${i + page_in}-${((i + page_in)-1)+ offset}-data:[${i + page_in}]:data]<br>`
-				// change the return characters of txt format by html <br>
-				const clean_page = (pages[i] + '').replace(/(\r\n|\n\r|\r|\n)/g, '<br>' + '$1')
-				// create the final page to send to component_text_area
-				final_text += page_tag + clean_page
-			}
-			break;
-
+			final_text = original_text
+			break
 		case 'html_engine':
 			// the original_text is html but become txt and it need to be parsed
 			const html = new DOMParser().parseFromString(original_text, "text/html")
@@ -219,9 +209,11 @@ tool_pdf_extractor.prototype.process_pdf_data = async function(original_text) {
 				const page_tag = `[page-n-${page_number}-${key}-data:[${page_number}]:data]` // + '<br>'
 				// create the text node with the tag
 				const new_tag = document.createTextNode(page_tag)
-				// const new_tag = document.createElement(page_tag)
+				// create the paragraph of the tag
+				const tag_paragraph = document.createElement('p')
+				tag_paragraph.appendChild(new_tag)
 				// replace the anchor node with the tag node
-			 	ar_pages[i].parentNode.replaceChild(new_tag, ar_pages[i]);
+			 	ar_pages[i].parentNode.replaceChild(tag_paragraph, ar_pages[i]);
 				// get the body content to send to component_text_area
 				final_text = body.innerHTML
 			}
