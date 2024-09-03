@@ -9,6 +9,8 @@
  */
 namespace PHPUnit\Metadata\Api;
 
+use const JSON_ERROR_NONE;
+use const PREG_OFFSET_CAPTURE;
 use function array_key_exists;
 use function assert;
 use function explode;
@@ -36,15 +38,19 @@ use ReflectionMethod;
 use Throwable;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class DataProvider
 {
     /**
-     * @psalm-param class-string $className
-     * @psalm-param non-empty-string $methodName
+     * @param class-string     $className
+     * @param non-empty-string $methodName
      *
      * @throws InvalidDataProviderException
+     *
+     * @return ?array<array<mixed>>
      */
     public function providedData(string $className, string $methodName): ?array
     {
@@ -82,10 +88,12 @@ final readonly class DataProvider
     }
 
     /**
-     * @psalm-param class-string $className
-     * @psalm-param non-empty-string $methodName
+     * @param class-string     $className
+     * @param non-empty-string $methodName
      *
      * @throws InvalidDataProviderException
+     *
+     * @return array<array<mixed>>
      */
     private function dataProvidedByMethods(string $className, string $methodName, MetadataCollection $dataProvider): array
     {
@@ -184,6 +192,9 @@ final readonly class DataProvider
         return $result;
     }
 
+    /**
+     * @return array<array<mixed>>
+     */
     private function dataProvidedByMetadata(MetadataCollection $testWith): array
     {
         $result = [];
@@ -213,9 +224,11 @@ final readonly class DataProvider
     }
 
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      *
      * @throws InvalidDataProviderException
+     *
+     * @return ?array<array<mixed>>
      */
     private function dataProvidedByTestWithAnnotation(string $className, string $methodName): ?array
     {

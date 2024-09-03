@@ -30,6 +30,8 @@ use SebastianBergmann\Type\Type;
 use SebastianBergmann\Type\UnknownType;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class MockMethod
@@ -37,12 +39,12 @@ final class MockMethod
     use TemplateLoader;
 
     /**
-     * @psalm-var class-string
+     * @var class-string
      */
     private readonly string $className;
 
     /**
-     * @psalm-var non-empty-string
+     * @var non-empty-string
      */
     private readonly string $methodName;
     private readonly bool $cloneArguments;
@@ -56,12 +58,12 @@ final class MockMethod
     private readonly ?string $deprecation;
 
     /**
-     * @psalm-var array<int, mixed>
+     * @var array<int, mixed>
      */
     private readonly array $defaultParameterValues;
 
     /**
-     * @psalm-var non-negative-int
+     * @var non-negative-int
      */
     private readonly int $numberOfParameters;
 
@@ -139,10 +141,10 @@ final class MockMethod
     }
 
     /**
-     * @psalm-param class-string $className
-     * @psalm-param non-empty-string $methodName
-     * @psalm-param array<int, mixed> $defaultParameterValues
-     * @psalm-param non-negative-int $numberOfParameters
+     * @param class-string      $className
+     * @param non-empty-string  $methodName
+     * @param array<int, mixed> $defaultParameterValues
+     * @param non-negative-int  $numberOfParameters
      */
     private function __construct(string $className, string $methodName, bool $cloneArguments, string $modifier, string $argumentsForDeclaration, string $argumentsForCall, array $defaultParameterValues, int $numberOfParameters, Type $returnType, string $reference, bool $callOriginalMethod, bool $static, ?string $deprecation)
     {
@@ -162,7 +164,7 @@ final class MockMethod
     }
 
     /**
-     * @psalm-return non-empty-string
+     * @return non-empty-string
      */
     public function methodName(): string
     {
@@ -235,7 +237,7 @@ EOT;
     }
 
     /**
-     * @psalm-return array<int, mixed>
+     * @return array<int, mixed>
      */
     public function defaultParameterValues(): array
     {
@@ -243,7 +245,7 @@ EOT;
     }
 
     /**
-     * @psalm-return non-negative-int
+     * @return non-negative-int
      */
     public function numberOfParameters(): int
     {
@@ -366,7 +368,7 @@ EOT;
     }
 
     /**
-     * @psalm-return array<int, mixed>
+     * @return array<int, mixed>
      */
     private static function methodParametersDefaultValues(ReflectionMethod $method): array
     {

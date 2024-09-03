@@ -13,11 +13,15 @@ use const GLOB_ONLYDIR;
 use function array_filter;
 use function array_map;
 use function array_merge;
+use function array_unique;
 use function array_values;
 use function glob;
 use function is_dir;
 use function is_string;
 use function realpath;
+use function sort;
+use function stripos;
+use function substr;
 use AppendIterator;
 use FilesystemIterator;
 use RecursiveDirectoryIterator;
@@ -92,7 +96,7 @@ final class Factory
         $_paths = [[]];
 
         foreach ($paths as $path) {
-            if ($locals = glob($path, GLOB_ONLYDIR)) {
+            if ($locals = $this->globstar($path)) {
                 $_paths[] = array_map('\realpath', $locals);
             } else {
                 // @codeCoverageIgnoreStart
@@ -102,5 +106,49 @@ final class Factory
         }
 
         return array_values(array_filter(array_merge(...$_paths)));
+    }
+
+    /**
+     * @see https://gist.github.com/funkjedi/3feee27d873ae2297b8e2370a7082aad
+     *
+     * @return list<string>
+     */
+    private function globstar(string $pattern)
+    {
+        if (stripos($pattern, '**') === false) {
+            $files = glob($pattern, GLOB_ONLYDIR);
+        } else {
+            $position    = stripos($pattern, '**');
+            $rootPattern = substr($pattern, 0, $position - 1);
+            $restPattern = substr($pattern, $position + 2);
+
+            $patterns = [$rootPattern . $restPattern];
+            $rootPattern .= '/*';
+
+            while ($dirs = glob($rootPattern, GLOB_ONLYDIR)) {
+                $rootPattern .= '/*';
+
+                foreach ($dirs as $dir) {
+                    $patterns[] = $dir . $restPattern;
+                }
+            }
+
+            $files = [];
+
+            foreach ($patterns as $pat) {
+                $files = array_merge($files, $this->globstar($pat));
+            }
+        }
+
+        if ($files !== false) {
+            $files = array_unique($files);
+            sort($files);
+
+            return $files;
+        }
+
+        // @codeCoverageIgnoreStart
+        return [];
+        // @codeCoverageIgnoreEnd
     }
 }

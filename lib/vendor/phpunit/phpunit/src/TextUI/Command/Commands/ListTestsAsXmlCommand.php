@@ -9,6 +9,7 @@
  */
 namespace PHPUnit\TextUI\Command;
 
+use const PHP_EOL;
 use function file_put_contents;
 use function ksort;
 use function sprintf;
@@ -17,18 +18,20 @@ use PHPUnit\Runner\PhptTestCase;
 use XMLWriter;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class ListTestsAsXmlCommand implements Command
 {
     /**
-     * @psalm-var list<TestCase|PhptTestCase>
+     * @var list<PhptTestCase|TestCase>
      */
     private array $tests;
     private string $filename;
 
     /**
-     * @psalm-param list<TestCase|PhptTestCase> $tests
+     * @param list<PhptTestCase|TestCase> $tests
      */
     public function __construct(array $tests, string $filename)
     {

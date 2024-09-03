@@ -9,6 +9,7 @@
  */
 namespace PHPUnit\TextUI\Command;
 
+use const PHP_EOL;
 use function copy;
 use function file_put_contents;
 use function sprintf;
@@ -16,6 +17,8 @@ use PHPUnit\TextUI\XmlConfiguration\Migrator;
 use Throwable;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class MigrateConfigurationCommand implements Command

@@ -14,12 +14,14 @@ use PHPUnit\Exception;
 use RuntimeException;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class AnnotationsAreNotSupportedForInternalClassesException extends RuntimeException implements Exception
 {
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      */
     public function __construct(string $className)
     {

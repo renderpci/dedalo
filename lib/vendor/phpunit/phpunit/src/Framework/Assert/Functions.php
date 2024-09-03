@@ -73,7 +73,9 @@ if (!function_exists('PHPUnit\Framework\assertArrayIsEqualToArrayOnlyConsidering
     /**
      * Asserts that two arrays are equal while only considering a list of keys.
      *
-     * @psalm-param non-empty-list<array-key> $keysToBeConsidered
+     * @param array<mixed>              $expected
+     * @param array<mixed>              $actual
+     * @param non-empty-list<array-key> $keysToBeConsidered
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -92,7 +94,9 @@ if (!function_exists('PHPUnit\Framework\assertArrayIsEqualToArrayIgnoringListOfK
     /**
      * Asserts that two arrays are equal while ignoring a list of keys.
      *
-     * @psalm-param non-empty-list<array-key> $keysToBeIgnored
+     * @param array<mixed>              $expected
+     * @param array<mixed>              $actual
+     * @param non-empty-list<array-key> $keysToBeIgnored
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -111,7 +115,9 @@ if (!function_exists('PHPUnit\Framework\assertArrayIsIdenticalToArrayOnlyConside
     /**
      * Asserts that two arrays are identical while only considering a list of keys.
      *
-     * @psalm-param non-empty-list<array-key> $keysToBeConsidered
+     * @param array<mixed>              $expected
+     * @param array<mixed>              $actual
+     * @param non-empty-list<array-key> $keysToBeConsidered
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -130,7 +136,9 @@ if (!function_exists('PHPUnit\Framework\assertArrayIsIdenticalToArrayIgnoringLis
     /**
      * Asserts that two arrays are equal while ignoring a list of keys.
      *
-     * @psalm-param non-empty-list<array-key> $keysToBeIgnored
+     * @param array<mixed>              $expected
+     * @param array<mixed>              $actual
+     * @param non-empty-list<array-key> $keysToBeIgnored
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -149,6 +157,8 @@ if (!function_exists('PHPUnit\Framework\assertArrayHasKey')) {
     /**
      * Asserts that an array has a specified key.
      *
+     * @param array<mixed>|ArrayAccess<array-key, mixed> $array
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      *
@@ -165,6 +175,8 @@ if (!function_exists('PHPUnit\Framework\assertArrayHasKey')) {
 if (!function_exists('PHPUnit\Framework\assertArrayNotHasKey')) {
     /**
      * Asserts that an array does not have a specified key.
+     *
+     * @param array<mixed>|ArrayAccess<array-key, mixed> $array
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -197,6 +209,8 @@ if (!function_exists('PHPUnit\Framework\assertContains')) {
     /**
      * Asserts that a haystack contains a needle.
      *
+     * @param iterable<mixed> $haystack
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      *
@@ -212,6 +226,8 @@ if (!function_exists('PHPUnit\Framework\assertContains')) {
 
 if (!function_exists('PHPUnit\Framework\assertContainsEquals')) {
     /**
+     * @param iterable<mixed> $haystack
+     *
      * @throws ExpectationFailedException
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -228,6 +244,8 @@ if (!function_exists('PHPUnit\Framework\assertNotContains')) {
     /**
      * Asserts that a haystack does not contain a needle.
      *
+     * @param iterable<mixed> $haystack
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      *
@@ -243,6 +261,8 @@ if (!function_exists('PHPUnit\Framework\assertNotContains')) {
 
 if (!function_exists('PHPUnit\Framework\assertNotContainsEquals')) {
     /**
+     * @param iterable<mixed> $haystack
+     *
      * @throws ExpectationFailedException
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
@@ -258,6 +278,8 @@ if (!function_exists('PHPUnit\Framework\assertNotContainsEquals')) {
 if (!function_exists('PHPUnit\Framework\assertContainsOnly')) {
     /**
      * Asserts that a haystack contains only values of a given type.
+     *
+     * @param iterable<mixed> $haystack
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -276,6 +298,8 @@ if (!function_exists('PHPUnit\Framework\assertContainsOnlyInstancesOf')) {
     /**
      * Asserts that a haystack contains only instances of a given class name.
      *
+     * @param iterable<mixed> $haystack
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      *
@@ -292,6 +316,8 @@ if (!function_exists('PHPUnit\Framework\assertContainsOnlyInstancesOf')) {
 if (!function_exists('PHPUnit\Framework\assertNotContainsOnly')) {
     /**
      * Asserts that a haystack does not contain only values of a given type.
+     *
+     * @param iterable<mixed> $haystack
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -310,6 +336,8 @@ if (!function_exists('PHPUnit\Framework\assertCount')) {
     /**
      * Asserts the number of elements of an array, Countable or Traversable.
      *
+     * @param Countable|iterable<mixed> $haystack
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      * @throws GeneratorNotSupportedException
@@ -327,6 +355,8 @@ if (!function_exists('PHPUnit\Framework\assertCount')) {
 if (!function_exists('PHPUnit\Framework\assertNotCount')) {
     /**
      * Asserts the number of elements of an array, Countable or Traversable.
+     *
+     * @param Countable|iterable<mixed> $haystack
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -505,7 +535,7 @@ if (!function_exists('PHPUnit\Framework\assertEmpty')) {
      * @throws ExpectationFailedException
      * @throws GeneratorNotSupportedException
      *
-     * @psalm-assert empty $actual
+     * @phpstan-assert empty $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -524,7 +554,7 @@ if (!function_exists('PHPUnit\Framework\assertNotEmpty')) {
      * @throws ExpectationFailedException
      * @throws GeneratorNotSupportedException
      *
-     * @psalm-assert !empty $actual
+     * @phpstan-assert !empty $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1066,7 +1096,7 @@ if (!function_exists('PHPUnit\Framework\assertTrue')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert true $condition
+     * @phpstan-assert true $condition
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1084,7 +1114,7 @@ if (!function_exists('PHPUnit\Framework\assertNotTrue')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !true $condition
+     * @phpstan-assert !true $condition
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1102,7 +1132,7 @@ if (!function_exists('PHPUnit\Framework\assertFalse')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert false $condition
+     * @phpstan-assert false $condition
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1120,7 +1150,7 @@ if (!function_exists('PHPUnit\Framework\assertNotFalse')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !false $condition
+     * @phpstan-assert !false $condition
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1138,7 +1168,7 @@ if (!function_exists('PHPUnit\Framework\assertNull')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert null $actual
+     * @phpstan-assert null $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1156,7 +1186,7 @@ if (!function_exists('PHPUnit\Framework\assertNotNull')) {
      *
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !null $actual
+     * @phpstan-assert !null $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1254,13 +1284,13 @@ if (!function_exists('PHPUnit\Framework\assertSame')) {
      * Used on objects, it asserts that two variables reference
      * the same object.
      *
+     * @template ExpectedType
+     *
+     * @param ExpectedType $expected
+     *
      * @throws ExpectationFailedException
      *
-     * @psalm-template ExpectedType
-     *
-     * @psalm-param ExpectedType $expected
-     *
-     * @psalm-assert =ExpectedType $actual
+     * @phpstan-assert =ExpectedType $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1294,15 +1324,15 @@ if (!function_exists('PHPUnit\Framework\assertInstanceOf')) {
     /**
      * Asserts that a variable is of a given type.
      *
+     * @template ExpectedType of object
+     *
+     * @param class-string<ExpectedType> $expected
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      * @throws UnknownClassOrInterfaceException
      *
-     * @psalm-template ExpectedType of object
-     *
-     * @psalm-param class-string<ExpectedType> $expected
-     *
-     * @psalm-assert =ExpectedType $actual
+     * @phpstan-assert =ExpectedType $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1318,14 +1348,14 @@ if (!function_exists('PHPUnit\Framework\assertNotInstanceOf')) {
     /**
      * Asserts that a variable is not of a given type.
      *
+     * @template ExpectedType of object
+     *
+     * @param class-string<ExpectedType> $expected
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-template ExpectedType of object
-     *
-     * @psalm-param class-string<ExpectedType> $expected
-     *
-     * @psalm-assert !ExpectedType $actual
+     * @phpstan-assert !ExpectedType $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1344,7 +1374,7 @@ if (!function_exists('PHPUnit\Framework\assertIsArray')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert array $actual
+     * @phpstan-assert array $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1363,7 +1393,7 @@ if (!function_exists('PHPUnit\Framework\assertIsBool')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert bool $actual
+     * @phpstan-assert bool $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1382,7 +1412,7 @@ if (!function_exists('PHPUnit\Framework\assertIsFloat')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert float $actual
+     * @phpstan-assert float $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1401,7 +1431,7 @@ if (!function_exists('PHPUnit\Framework\assertIsInt')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert int $actual
+     * @phpstan-assert int $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1420,7 +1450,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNumeric')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert numeric $actual
+     * @phpstan-assert numeric $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1439,7 +1469,7 @@ if (!function_exists('PHPUnit\Framework\assertIsObject')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert object $actual
+     * @phpstan-assert object $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1458,7 +1488,7 @@ if (!function_exists('PHPUnit\Framework\assertIsResource')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert resource $actual
+     * @phpstan-assert resource $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1477,7 +1507,7 @@ if (!function_exists('PHPUnit\Framework\assertIsClosedResource')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert resource $actual
+     * @phpstan-assert resource $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1496,7 +1526,7 @@ if (!function_exists('PHPUnit\Framework\assertIsString')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert string $actual
+     * @phpstan-assert string $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1515,7 +1545,7 @@ if (!function_exists('PHPUnit\Framework\assertIsScalar')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert scalar $actual
+     * @phpstan-assert scalar $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1534,7 +1564,7 @@ if (!function_exists('PHPUnit\Framework\assertIsCallable')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert callable $actual
+     * @phpstan-assert callable $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1553,7 +1583,7 @@ if (!function_exists('PHPUnit\Framework\assertIsIterable')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert iterable $actual
+     * @phpstan-assert iterable $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1572,7 +1602,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotArray')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !array $actual
+     * @phpstan-assert !array $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1591,7 +1621,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotBool')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !bool $actual
+     * @phpstan-assert !bool $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1610,7 +1640,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotFloat')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !float $actual
+     * @phpstan-assert !float $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1629,7 +1659,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotInt')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !int $actual
+     * @phpstan-assert !int $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1648,7 +1678,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotNumeric')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !numeric $actual
+     * @phpstan-assert !numeric $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1667,7 +1697,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotObject')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !object $actual
+     * @phpstan-assert !object $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1686,7 +1716,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotResource')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !resource $actual
+     * @phpstan-assert !resource $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1705,7 +1735,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotClosedResource')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !resource $actual
+     * @phpstan-assert !resource $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1724,7 +1754,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotString')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !string $actual
+     * @phpstan-assert !string $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1743,7 +1773,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotScalar')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !scalar $actual
+     * @phpstan-assert !scalar $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1762,7 +1792,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotCallable')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !callable $actual
+     * @phpstan-assert !callable $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1781,7 +1811,7 @@ if (!function_exists('PHPUnit\Framework\assertIsNotIterable')) {
      * @throws Exception
      * @throws ExpectationFailedException
      *
-     * @psalm-assert !iterable $actual
+     * @phpstan-assert !iterable $actual
      *
      * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
      *
@@ -1830,6 +1860,9 @@ if (!function_exists('PHPUnit\Framework\assertSameSize')) {
      * Assert that the size of two arrays (or `Countable` or `Traversable` objects)
      * is the same.
      *
+     * @param Countable|iterable<mixed> $expected
+     * @param Countable|iterable<mixed> $actual
+     *
      * @throws Exception
      * @throws ExpectationFailedException
      * @throws GeneratorNotSupportedException
@@ -1848,6 +1881,9 @@ if (!function_exists('PHPUnit\Framework\assertNotSameSize')) {
     /**
      * Assert that the size of two arrays (or `Countable` or `Traversable` objects)
      * is not the same.
+     *
+     * @param Countable|iterable<mixed> $expected
+     * @param Countable|iterable<mixed> $actual
      *
      * @throws Exception
      * @throws ExpectationFailedException
@@ -1997,7 +2033,7 @@ if (!function_exists('PHPUnit\Framework\assertStringStartsWith')) {
     /**
      * Asserts that a string starts with a given prefix.
      *
-     * @psalm-param non-empty-string $prefix
+     * @param non-empty-string $prefix
      *
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
@@ -2016,7 +2052,7 @@ if (!function_exists('PHPUnit\Framework\assertStringStartsNotWith')) {
     /**
      * Asserts that a string starts not with a given prefix.
      *
-     * @psalm-param non-empty-string $prefix
+     * @param non-empty-string $prefix
      *
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
@@ -2091,7 +2127,7 @@ if (!function_exists('PHPUnit\Framework\assertStringEndsWith')) {
     /**
      * Asserts that a string ends with a given suffix.
      *
-     * @psalm-param non-empty-string $suffix
+     * @param non-empty-string $suffix
      *
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
@@ -2110,7 +2146,7 @@ if (!function_exists('PHPUnit\Framework\assertStringEndsNotWith')) {
     /**
      * Asserts that a string ends not with a given suffix.
      *
-     * @psalm-param non-empty-string $suffix
+     * @param non-empty-string $suffix
      *
      * @throws ExpectationFailedException
      * @throws InvalidArgumentException
@@ -2652,11 +2688,11 @@ if (!function_exists('PHPUnit\Framework\objectEquals')) {
 
 if (!function_exists('PHPUnit\Framework\callback')) {
     /**
-     * @psalm-template CallbackInput of mixed
+     * @template CallbackInput of mixed
      *
-     * @psalm-param callable(CallbackInput $callback): bool $callback
+     * @param callable(CallbackInput $callback): bool $callback
      *
-     * @psalm-return Callback<CallbackInput>
+     * @return Callback<CallbackInput>
      */
     function callback(callable $callback): Callback
     {
@@ -2748,6 +2784,9 @@ if (!function_exists('PHPUnit\Framework\returnValue')) {
 }
 
 if (!function_exists('PHPUnit\Framework\returnValueMap')) {
+    /**
+     * @param array<mixed> $valueMap
+     */
     function returnValueMap(array $valueMap): ReturnValueMapStub
     {
         return new ReturnValueMapStub($valueMap);

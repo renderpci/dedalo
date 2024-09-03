@@ -42,23 +42,25 @@ use PHPUnit\Framework\TestCase;
 use PHPUnit\Metadata\Parser\Registry as MetadataRegistry;
 use PHPUnit\Metadata\TestDox;
 use PHPUnit\Util\Color;
+use PHPUnit\Util\Exporter;
 use ReflectionEnum;
 use ReflectionMethod;
 use ReflectionObject;
-use SebastianBergmann\Exporter\Exporter;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class NamePrettifier
 {
     /**
-     * @psalm-var array<string, int>
+     * @var array<string, int>
      */
     private static array $strings = [];
 
     /**
-     * @psalm-param class-string $className
+     * @param class-string $className
      */
     public function prettifyTestClassName(string $className): string
     {
@@ -220,6 +222,9 @@ final class NamePrettifier
         return Color::dim(' with ') . Color::colorize('fg-cyan', Color::visualizeWhitespace($test->dataName()));
     }
 
+    /**
+     * @return array<non-empty-string, non-empty-string>
+     */
     private function mapTestMethodParameterNamesToProvidedDataValues(TestCase $test, bool $colorize): array
     {
         assert(method_exists($test, $test->name()));
@@ -267,7 +272,7 @@ final class NamePrettifier
             }
 
             if (is_bool($value) || is_int($value) || is_float($value)) {
-                $value = (new Exporter)->export($value);
+                $value = Exporter::export($value);
             }
 
             if ($value === '') {
