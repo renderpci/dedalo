@@ -726,71 +726,127 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* GET_TEXT_FROM_PDF
 	* Extract text from PDF file
-	* @param object $new_options
+	* @param object $options
 	* @return object $response
 	*/
-	public static function get_text_from_pdf(object $new_options) : object {
+	public function get_text_from_pdf(object $options) : object {
 
 		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
+			$response->errors	= [];
 
-		$options = new stdClass();
-			$options->path_pdf		= null;	// full source pdf file path
-			$options->first_page	= 1; 	// number of first page. default is 1
+		//options
+			$engine			= $options->engine ?? PDF_AUTOMATIC_TRANSCRIPTION_ENGINE;
+			$method			= $options->method ?? 'text_engine'; // string text|html
+			$page_in		= $options->page_in ?? 1; // number of first page. default is 1
+			$page_out		= $options->page_out ?? null;
 
-		// new_options overwrite options defaults
-			foreach ((object)$new_options as $key => $value) {
-				if (property_exists($options, $key)) {
-					$options->$key = $value;
-				}
-			}
+		// Source file
+			$source_file = $this->get_media_filepath( $this->get_default_quality() );
 
 		// error on missing properties
-			if (empty($options->path_pdf) || !file_exists($options->path_pdf)) {
-				$response->result	= 'error';
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: source PDF file not found";
+			if ( !file_exists($source_file) ) {
+				$response->result = false;
+				$response->msg 	  = "Error Processing Request pdf_automatic_transcription: source PDF file not found";
+				debug_log(__METHOD__
+					." $response->msg "
+					.' pdf_path:' . to_string($source_file)
+					, logger::ERROR
+				);
+				$response->errors[] = 'source file not found';
 				return $response;
 			}
 
-		// test engine pdf to text
-			if (defined('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE')===false) {
-				$response->result	= 'error';
-				$response->msg		= "Error Processing Request pdf_automatic_transcription: config PDF_AUTOMATIC_TRANSCRIPTION_ENGINE is not defined";
+		// test transcription_engine pdf to text
+			$transcription_engine = shell_exec( 'type -P '.$engine ?? '' );
+			if ( empty($transcription_engine) ) {
+				$response->result	= false;
+				$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. ' extractor_engine: ' . to_string($transcription_engine)
+					, logger::ERROR
+				);
+				$response->errors[] = 'daemon engine not found';
 				return $response;
-			}else{
-				$transcription_engine = shell_exec('type -P '.PDF_AUTOMATIC_TRANSCRIPTION_ENGINE);
-				if (empty($transcription_engine)) {
-					$response->result	= 'error';
-					$response->msg		= "Error Processing Request pdf_automatic_transcription: daemon engine not found";
-					return $response;
-				}
 			}
+
+			// engine config $options:
+			// text_engine
+				// -f <int>				: first page to convert
+				// -l <int>				: last page to convert
+				// -layout				: maintain original physical layout
+				// -simple				: simple one-column page layout
+				// -enc <string>		: output text encoding name
+			// html_engine
+				// -f <int> 			: first page to convert
+				// -l <int> 			: last page to convert
+				// -p					: exchange .pdf links by .html
+				// -c					: generate complex document
+				// -s					: generate single document that includes all pages
+				// -i					: ignore images
+				// -noframes			: generate no frames
+				// -stdout				: use standard output
+				// -hidden				: output hidden text
+				// -nomerge				: do not merge paragraphs
+				// -enc <string>		: output text encoding name
+
+		// Engine config
+
+		$engine_config = '';
+
+		if(!empty($page_in)){
+			$engine_config .= ' -f ' .$page_in;
+		}
+		if(!empty($page_out)){
+			$engine_config .= ' -l ' .$page_out;
+		}
+
+		$file_extension = '.txt';
+		if($method==='html_engine'){
+			$engine_config .= ' -i -p -noframes -layout ' ;
+			$file_extension = '.html';
+		}
 
 		#
 		# FILE TEXT FROM PDF . Create a new text file from pdf text content
-		$text_filename 	= substr($options->path_pdf, 0, -4) .'.txt';
+		$text_filename 	= substr($source_file, 0, -4) . $file_extension;
 
-		$command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $options->path_pdf";
+		$command  = $engine ." -enc UTF-8". "$engine_config $source_file $text_filename";
+
+		// $command  = PDF_AUTOMATIC_TRANSCRIPTION_ENGINE . " -enc UTF-8 $source_file";
 		debug_log(__METHOD__
 			. " Executing PDF command:" . PHP_EOL
 			. $command . PHP_EOL
 			, logger::WARNING
 		);
-		$output = exec("$command 2>&1", $result); // Generate text version file in same dir as pdf
+		$output = exec($command, $result); // Generate text version file in same dir as pdf
 		if ( strpos( strtolower($output), 'error') ) {
-			$response->result	= 'error';
+			$response->result	= false;
 			$response->msg		= "$output";
+			debug_log(__METHOD__
+				." $response->msg ".PHP_EOL
+				. 'result: '.to_string($result)
+				, logger::ERROR
+			);
 			return $response;
 		}
 
-		if (!file_exists($text_filename)) {
-			$response->result	= 'error';
+		if ( !file_exists($text_filename) ) {
+			$response->result	= false;
 			$response->msg		= "Error Processing Request pdf_automatic_transcription: Text file not found";
+			debug_log(__METHOD__
+				." $response->msg "
+				, logger::ERROR
+			);
+			$response->errors[] = 'extraction file do not exists';
 			return $response;
 		}
-		$pdf_text = file_get_contents($text_filename);	# Read current text file
 
+		// pdf_text contents
+		$pdf_text = file_get_contents($text_filename);	// Read current text file
 
-		#
 		# TEST STRING VALUE IS VALID
 		# Test is valid utf8
 		$test_utf8 = self::valid_utf8($pdf_text);
@@ -821,18 +877,20 @@ class component_pdf extends component_media_common implements component_media_in
 
 		#
 		# PAGES TAGS
-		$original_text	= str_replace("","", $pdf_text);
-		$pages			= explode("", $pdf_text);
-		$i				= (int)$options->first_page;
-		$pdf_text		= '';
-		foreach ($pages as $current_page) {
-			$pdf_text .= '<p>';
-			$pdf_text .= '[page-n-'. $i .']';
-			$pdf_text .= '</p>';
-			$pdf_text .= '<p>';
-			$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
-			$pdf_text .= '</p>';
-			$i++;
+		$original_text	= str_replace("","", $pdf_text); // original text without page marks
+		if($method==='text_engine'){
+			$pages			= explode("", $pdf_text); // split by the page mark invisible text of return character
+			$i				= (int)$page_in;
+			$pdf_text		= '';
+			foreach ($pages as $current_page) {
+				$pdf_text .= '<p>';
+				$pdf_text .= '[page-n-'. $i .']';
+				$pdf_text .= '</p>';
+				$pdf_text .= '<p>';
+				$pdf_text .= str_replace(["\r\n", "\n\r", "\n", "\r"], '</p><p>' , $current_page);
+				$pdf_text .= '</p>';
+				$i++;
+			}
 		}
 
 		$response->result	= (string)$pdf_text;
