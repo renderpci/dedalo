@@ -2946,4 +2946,27 @@ class component_media_common extends component_common {
 
 
 
+	/**
+	* GET_REGENERATE_OPTIONS
+	* Used by tool_update_cache to get custom regeneration options from component
+	* @return array|null $options
+	*/
+	public static function get_regenerate_options() : ?array {
+
+		$options = [];
+
+		// delete_normalized_files
+			$delete_normalized_files = new stdClass();
+				$delete_normalized_files->name		= 'delete_normalized_files';
+				$delete_normalized_files->type		= 'boolean';
+				$delete_normalized_files->default	= false;
+
+		$options[] = $delete_normalized_files;
+
+
+		return $options;
+	}//end get_regenerate_options
+
+
+
 }//end component_media_common
