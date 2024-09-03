@@ -55,6 +55,22 @@ class component_3d extends component_media_common implements component_media_int
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$default_quality = $this->get_default_quality();
+
+		$normalized_ar_quality = [$default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_3D_EXTENSION from config
 	*/
@@ -372,103 +388,6 @@ class component_3d extends component_media_common implements component_media_int
 
 
 	/**
-	* GET_ORIGINAL_FILE_PATH
-	* Returns the full path of the original file if exists
-	* The original files are saved renamed but with the file ending preserved. This function is used to locate them by checking
-	* if there is more than one.
-	* @param string $quality
-	* @return string|null $result
-	*/
-		// public function get_original_file_path(string $quality) : ?string {
-
-		// 	$result = null;
-
-		// 	// store initial_quality
-		// 		$initial_quality = $this->get_quality();
-
-		// 	// quality. Changes current component quality temporally
-		// 		$this->set_quality($quality);
-
-		// 	// file do not exists case
-		// 		$target_dir = $this->get_media_path_dir($quality);
-		// 		if( !file_exists($target_dir) ) {
-		// 			debug_log(__METHOD__.
-		// 				" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-		// 				logger::WARNING
-		// 			);
-		// 			return null;
-		// 		}
-
-		// 	// ar_originals
-		// 		$ar_originals	= [];
-		// 		$findme			= $this->get_id() . '.';
-		// 		if ($handle = opendir($target_dir)) {
-
-		// 			while (false !== ($file = readdir($handle))) {
-
-		// 				// is dir case (DVD files)
-		// 				if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
-
-		// 					// DES
-		// 						// $dvd_folder = $target_dir.'/'.$file;
-		// 						// # dvd_folder dir set permissions 0777
-
-		// 						// $stat = stat($dvd_folder);
-		// 						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
-
-		// 						// if(posix_geteuid() != $stat['uid']){
-		// 						// 	chown($dvd_folder, posix_geteuid());
-		// 						// }
-
-		// 						// $wantedPerms = 0777;
-		// 						// $actualPerms = fileperms($dvd_folder);
-		// 						// if($actualPerms < $wantedPerms) {
-		// 						// 	$chmod = chmod($dvd_folder, $wantedPerms);
-		// 						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-		// 						// }
-
-		// 					$ar_originals[] = $file;
-		// 					continue;
-		// 				}
-
-		// 				// note that '.' and '..' is returned even
-		// 				if( strpos($file, $findme)!==false ) {
-		// 					$ar_originals[] = $file;
-		// 				}
-		// 			}
-		// 			closedir($handle);
-		// 		}
-
-		// 	$n = count($ar_originals);
-		// 	if ($n===0) {
-		// 		// nothing found case
-		// 	}elseif($n===1) {
-		// 		// OK. File found
-		// 		#$path = $_FILES['image']['name'];
-		// 		#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-		// 		$result = $target_dir.'/'.$ar_originals[0];
-		// 	}else{
-		// 		// Error. More than one original found
-		// 		debug_log(__METHOD__
-		// 			. " ERROR (DEBUG ONLY): Current quality have more than one file " . PHP_EOL
-		// 			. to_string($ar_originals)
-		// 			, logger::ERROR
-		// 		);
-		// 		if(SHOW_DEBUG===true) {
-		// 			dump($ar_originals, "ar_originals ".to_string($ar_originals));
-		// 		}
-		// 	}
-
-		// 	// restore component quality
-		// 		$this->set_quality($initial_quality);
-
-
-		// 	return $result;
-		// }//end get_original_file_path
-
-
-
-	/**
 	* REMOVE_COMPONENT_MEDIA_FILES
 	* "Remove" (rename and move files to deleted folder) all media file linked to current component (all quality versions)
 	* Is triggered wen section that contains media elements is deleted
@@ -642,60 +561,6 @@ class component_3d extends component_media_common implements component_media_int
 
 		try {
 
-			// extension
-				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-				if (empty($file_ext)) {
-					// throw new Exception("Error Processing Request. File extension is unknown", 1);
-					$response->msg .= ' Error Processing Request. File extension is unknown';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// id (without extension, like 'test81_test65_2')
-				$id = $this->get_id();
-				if (empty($id)) {
-					$response->msg .= ' Error Processing Request. Invalid id';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// copy from original to default quality
-				$original_file_path			= $full_file_path;
-				$default_quality			= $this->get_default_quality();
-				$default_quality_file_path	= $this->get_media_filepath($default_quality);
-				if ($original_file_path===$default_quality_file_path) {
-					debug_log(__METHOD__
-						. " File is already in default quality " . PHP_EOL
-						. ' Nothing is moved '
-						, logger::WARNING
-					);
-				}else{
-					// target directory check
-					$target_dir = dirname($default_quality_file_path);
-					if(!create_directory($target_dir, 0750)) {
-						$response->msg .= ' Error creating target_dir directory';
-						return $response;
-					}
-
-					// copy file from original quality to default quality
-					if (!copy($original_file_path, $default_quality_file_path)) {
-						debug_log(__METHOD__
-							. " Error on copy original file to default quality file " . PHP_EOL
-							. ' original_file_path: ' .$original_file_path .PHP_EOL
-							. ' default_quality_file_path: ' .$default_quality_file_path
-							, logger::ERROR
-						);
-						$response->msg = 'Error on copy original file to default quality file';
-						return $response;
-					}
-				}
-
 			// upload info
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
@@ -712,10 +577,18 @@ class component_3d extends component_media_common implements component_media_int
 					$this->set_dato($dato);
 				}
 
-			// save component dato.
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info'
-				$this->Save();
+			// Generate default_3d_format : If uploaded file is not in Dedalo standard format (glb), is saved and not processed.
+			// original file with standard format (like myfilename.glb) will copied to default quality
+			// regenerate component will create the default quality 3d calling build()
+			// build() will check the normalized files of the original
+			// then if the normalized files doesn't exist, will create it
+			// then will create the JPG format of the default
+			// then save the data.
+				$result = $this->regenerate_component();
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// response OK
 				$response->result	= true;
@@ -792,94 +665,6 @@ class component_3d extends component_media_common implements component_media_int
 			$response->msg		= 'File deleted successfully. ' . $quality;
 		}
 
-		// DES
-			// // short vars
-			// 	$id			= $this->get_id();
-			// 	$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
-			// 	$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER .'/'. $quality . '/deleted';
-
-			// // file_path
-			// 	$file_path = ($quality==='original')
-			// 			? $this->get_original_file_path($quality)
-			// 			: $this->get_media_filepath($quality);
-
-			// if(!file_exists($file_path)) {
-
-			// 	$response->msg .= PHP_EOL . 'File not found';
-			// 	debug_log(__METHOD__." Error deleting file. File not found: ".to_string($file_path), logger::ERROR);
-			// }else{
-
-			// 	try{
-
-			// 		// delete folder. Check exists
-			// 			if( !is_dir($folder_path_del) ) {
-			// 				$create_dir = mkdir($folder_path_del, 0777,true);
-			// 				if(!$create_dir) {
-			// 					$response->msg .= PHP_EOL . 'Error on read or create directory "deleted". Permission denied . The files are not deleted';
-			// 					return $response;
-			// 				}
-			// 			}
-
-			// 		// delete folder set permissions
-			// 			$wantedPerms	= 0777;
-			// 			$actualPerms	= fileperms($folder_path_del);
-			// 			if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
-
-			// 		// move / rename file
-			// 			$file_base_name	= pathinfo($file_path, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
-			// 			$file_ext		= pathinfo($file_path, PATHINFO_EXTENSION);// Like mov
-			// 			$target_name	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
-			// 			if(!rename($file_path, $target_name)){
-			// 				$response->msg .= PHP_EOL . 'Error on move files to folder "deleted" . Permission denied . The files are not deleted';
-			// 				return $response;
-			// 			}
-
-			// 		// delete temp sh file
-			// 			$tmp_file = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER . "/tmp/".$quality.'_'.$id.'.sh';
-			// 			if(file_exists($tmp_file)) {
-			// 				$del_sh = unlink($tmp_file);
-			// 				if(!$del_sh) {
-			// 					$response->msg .= PHP_EOL . 'Error on delete temp file . Temp file is not deleted';
-			// 					return $response;
-			// 				}
-			// 			}
-
-			// 		// delete posterframe if media deleted is quality default
-			// 			if($quality===DEDALO_3D_QUALITY_DEFAULT) {
-			// 				$poster_file = DEDALO_MEDIA_PATH . DEDALO_3D_FOLDER ."/posterframe/{$id}.jpg";
-			// 				if(file_exists($poster_file)) {
-			// 					unlink($poster_file);
-			// 				}
-			// 			}
-
-			// 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			// 			logger::$obj['activity']->log_message(
-			// 				'DELETE FILE',
-			// 				logger::INFO,
-			// 				$this->tipo,
-			// 				NULL,
-			// 				[
-			// 					'msg'			=> 'Deleted av file (file is renamed and moved to delete folder)',
-			// 					'tipo'			=> $this->tipo,
-			// 					'section_tipo'	=> $this->section_tipo,
-			// 					'section_id'	=> $this->section_id,
-			// 					'top_id'		=> TOP_ID ?? null,
-			// 					'top_tipo'		=> TOP_TIPO ?? null,
-			// 					'id'		=> $id,
-			// 					'quality'		=> $quality
-			// 				]
-			// 			);
-
-			// 		// response OK
-			// 			$response->result	= true;
-			// 			$response->msg		= 'File deleted successfully. ' . $file_name;
-
-			// 	} catch (Exception $e) {
-			// 		$response->msg .= PHP_EOL . $e->getMessage();
-			// 	}
-			// }//end if(!file_exists($file))
-
-
 		return $response;
 	}//end delete_file
 
@@ -950,121 +735,6 @@ class component_3d extends component_media_common implements component_media_int
 						$response->result	= 1;
 						$response->new_dato	= $new_dato;
 						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				break;
-
-			case '6.0.0':
-				$is_old_dato = (
-					empty($dato_unchanged) || // v5 early case
-					isset($dato_unchanged->section_id) || // v5 modern case
-					(isset($dato_unchanged[0]) && isset($dato_unchanged[0]->original_file_name)) // v6 alpha case
-				);
-				// $is_old_dato = true; // force
-				if ($is_old_dato===true) {
-
-					// note that old dato could be a locator object as:
-						// {
-						// 	"section_id": "54",
-						// 	"section_tipo": "test38",
-						// 	"component_tipo": "test207"
-						// }
-
-					// create the component 3d
-						$model		= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
-						$component	= component_common::get_instance(
-							$model, // string 'component_3d'
-							$tipo,
-							$section_id,
-							'list',
-							DEDALO_DATA_NOLAN,
-							$section_tipo,
-							false
-						);
-
-					// get existing files data
-						$file_name			= $component->get_name();
-						$source_quality		= $component->get_original_quality();
-						$folder				= $component->get_folder(); // like DEDALO_3D_FOLDER
-						$additional_path	= $component->additional_path;
-						$original_extension	= $component->get_original_extension(
-							false // bool exclude_converted
-						) ?? $component->get_extension();
-
-						$base_path	= $folder . '/' . $source_quality . $additional_path;
-						$file		= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $original_extension;
-
-						// no original file found. Use default quality file
-							if(!file_exists($file)) {
-								// use default quality as original
-								$source_quality	= $component->get_default_quality();
-								$base_path		= $folder . '/' . $source_quality . $additional_path;
-								$file			= DEDALO_MEDIA_PATH . $base_path . '/' . $file_name . '.' . $component->get_extension();
-							}
-							// try again
-							if(!file_exists($file)) {
-								// reset bad dato
-								$response = new stdClass();
-									$response->result	= 1;
-									$response->new_dato	= null;
-									$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string(null).".<br />";
-								// $response = new stdClass();
-								// 	$response->result	= 2;
-								// 	$response->msg		= "[$reference_id] Current dato don't need update. No files found (original,default)<br />";	// to_string($dato_unchanged)."
-								return $response;
-							}
-
-					// source_file_upload_date
-						$upload_date_timestamp				= date ("Y-m-d H:i:s", filemtime($file));
-						$source_file_upload_date			= dd_date::get_dd_date_from_timestamp($upload_date_timestamp);
-						$source_file_upload_date->time		= dd_date::convert_date_to_seconds($source_file_upload_date);
-						$source_file_upload_date->timestamp	= $upload_date_timestamp;
-
-					// get the original file name
-						$source_file_name = pathinfo($file)['basename'];
-
-					// lib_data
-						$lib_data = null;
-
-					// get files info
-						$files_info	= [];
-						$ar_quality = DEDALO_3D_AR_QUALITY;
-						foreach ($ar_quality as $current_quality) {
-							if ($current_quality==='thumb') continue;
-							// read file if exists to get file_info
-							$file_info = $component->get_quality_file_info($current_quality);
-							// add non empty quality files data
-							if (!empty($file_info)) {
-								// Note that source_quality could be original or default
-								if ($current_quality===$source_quality) {
-									$file_info->upload_info = (object)[
-										'file_name'	=> $source_file_name ?? null,
-										'date'		=> $source_file_upload_date ?? null,
-										'user'		=> null // unknown here
-									];
-								}
-								// add
-								$files_info[] = $file_info;
-							}
-						}
-
-					// create new dato
-						$dato_item = new stdClass();
-							$dato_item->files_info	= $files_info;
-							$dato_item->lib_data	= $lib_data;
-
-					// fix final dato with new format as array
-						$new_dato = [$dato_item];
-						debug_log(__METHOD__." update_version new_dato ".to_string($new_dato), logger::DEBUG);
-
-					$response = new stdClass();
-						$response->result	= 1;
-						$response->new_dato	= $new_dato;
-						$response->msg		= "[$reference_id] Dato is changed from ".to_string($dato_unchanged)." to ".to_string($new_dato).".<br />";
-				}else{
-
-					$response = new stdClass();
-						$response->result	= 2;
-						$response->msg		= "[$reference_id] Current dato don't need update.<br />";	// to_string($dato_unchanged)."
-				}
 				break;
 
 			default:

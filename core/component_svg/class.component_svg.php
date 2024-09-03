@@ -54,6 +54,22 @@ class component_svg extends component_media_common implements component_media_in
 
 
 	/**
+	* GET_NORMALIZED_AR_QUALITY
+	* @return array $normalized_ar_quality
+	*/
+	public function get_normalized_ar_quality() : array {
+
+		// use qualities
+		$default_quality = $this->get_default_quality();
+
+		$normalized_ar_quality = [$default_quality];
+
+		return $normalized_ar_quality;
+	}//end get_normalized_ar_quality
+
+
+
+	/**
 	* GET_EXTENSION
 	* @return string DEDALO_SVG_EXTENSION from config
 	*/
@@ -316,72 +332,6 @@ class component_svg extends component_media_common implements component_media_in
 
 		try {
 
-			// extension
-				$file_ext = pathinfo($original_file_name, PATHINFO_EXTENSION);
-				if (empty($file_ext)) {
-					// throw new Exception("Error Processing Request. File extension is unknown", 1);
-					$response->msg .= ' Error Processing Request. File extension is unknown';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// id (without extension, like 'test81_test65_2')
-				$id = $this->get_id();
-				if (empty($id)) {
-					$response->msg .= ' Error Processing Request. Invalid id';
-					debug_log(__METHOD__
-						. ' '.$response->msg
-						, logger::ERROR
-					);
-					return $response;
-				}
-
-			// copy from original to default quality
-				$original_file_path			= $full_file_path;
-				$default_quality			= $this->get_default_quality();
-				$default_quality_file_path	= $this->get_media_filepath($default_quality);
-				if ($original_file_path===$default_quality_file_path) {
-					debug_log(__METHOD__
-						. " File is already in default quality " . PHP_EOL
-						. ' Nothing is moved '
-						, logger::WARNING
-					);
-				}else{
-
-					// target directory check
-						$target_dir = dirname($default_quality_file_path);
-						if (!is_dir($target_dir)) {
-							if(!mkdir($target_dir, 0750, true)) {
-								debug_log(__METHOD__
-									.' Error creating directory: ' . PHP_EOL
-									.' target_dir: ' . $target_dir
-									, logger::ERROR
-								);
-								$response->msg .= ' Error creating directory';
-								debug_log(__METHOD__
-									. ' '.$response->msg
-									, logger::ERROR
-								);
-								return $response;
-							}
-						}
-
-					// copy file
-						if (!copy($original_file_path, $default_quality_file_path)) {
-							debug_log(__METHOD__
-								. " Error on copy original file to default quality file " . PHP_EOL
-								. 'original_file_path: ' .$original_file_path .PHP_EOL
-								. 'default_quality_file_path: ' .$default_quality_file_path
-								, logger::ERROR
-							);
-							$response->msg = 'Error on copy original file to default quality file';
-							return $response;
-						}
-				}
-
 			// upload info
 				$original_quality = $this->get_original_quality();
 				if ($this->quality===$original_quality) {
@@ -398,13 +348,18 @@ class component_svg extends component_media_common implements component_media_in
 					$this->set_dato($dato);
 				}
 
-			// thumb. Create thumb from PDF file
-				$this->create_thumb();
-
-			// save component dato
-				// Note that save action don't change upload info properties,
-				// but force updates every quality file info in property 'files_info
-				$this->Save();
+			// Generate default_image_format : If uploaded file is not in Dedalo standard format (jpg), is converted,
+			// and original file is conserved (like myfilename.tiff and myfilename.jpg)
+			// regenerate component will create the default quality image calling build()
+			// build() will check the normalized files of the original and modified quality
+			// then if the normalized files doesn't exist, will create it
+			// then will create the SVG format of the default
+			// then save the data.
+				$result = $this->regenerate_component();
+				if ($result === false) {
+					$response->msg .= ' Error processing the uploaded file';
+					return $response;
+				}
 
 			// response OK
 				$response->result	= true;
