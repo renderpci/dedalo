@@ -19,18 +19,22 @@ use PHPUnit\Framework\ExpectationFailedException;
 use PHPUnit\Framework\MockObject\Invocation as BaseInvocation;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class Parameters implements ParametersRule
 {
     /**
-     * @psalm-var list<Constraint>
+     * @var list<Constraint>
      */
     private array $parameters           = [];
     private ?BaseInvocation $invocation = null;
     private null|bool|ExpectationFailedException $parameterVerificationResult;
 
     /**
+     * @param array<mixed> $parameters
+     *
      * @throws \PHPUnit\Framework\Exception
      */
     public function __construct(array $parameters)
