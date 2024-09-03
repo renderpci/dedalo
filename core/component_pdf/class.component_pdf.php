@@ -525,6 +525,160 @@ class component_pdf extends component_media_common implements component_media_in
 
 
 	/**
+	* BUILD_VERSION - Overwrite in each component for real process
+	* Creates a new version based on target quality
+	* (!) Note that this generic method only copy files,
+	* to real process, overwrite in each component !
+	* @param string $quality
+	* @param bool $async = true
+	* @param bool $save = true
+	* @return object $response
+	* @test true
+	*/
+	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				$start_time=start_time();
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+			}
+
+		// thumb case
+			if($quality===$this->get_thumb_quality()){
+				// thumb quality
+				$result = $this->create_thumb();
+
+				$response->result	= $result;
+				$response->msg		= $result===false ? 'Error building version' : 'OK request done';
+				return $response;
+			}
+
+		// short vars
+			$original_quality	= $this->get_original_quality();
+			$original_file_path	= $this->get_original_file_path($original_quality);
+
+			// check path from original file
+			if (empty($original_file_path)) {
+				$response->msg .= ' Invalid empty original_file_path. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				$response->errors[] = 'invalid empty original_file_path';
+				return $response;
+			}
+			if (!file_exists($original_file_path)) {
+				$response->msg .= ' original_file_path file not found. Skip conversion';
+				debug_log(__METHOD__
+					. " $response->msg " . PHP_EOL
+					. " original_quality: " . $original_quality . PHP_EOL
+					. ' original_file_path: ' . to_string($original_file_path)
+					, logger::ERROR
+				);
+				$response->errors[] = 'original_file_path file not found';
+				return $response;
+			}
+			$target_quality_path = $this->get_media_filepath($quality);
+
+			// check target directory
+			$target_dir = pathinfo($target_quality_path)['dirname'];
+			if (!is_dir($target_dir)) {
+				// create it
+				if(!mkdir($target_dir, 0750, true)) {
+					$msg = ' Error. Creating directory ' . $target_dir ;
+					debug_log(__METHOD__
+						.$msg . PHP_EOL
+						.' target_dir: ' .$target_dir
+						, logger::ERROR
+					);
+					$response->msg .= $msg;
+					$response->errors[] = 'creating directory failed';
+					return $response;
+				}
+			}
+
+		// copying file PDF (original) to PDF (web)
+			$default_quality		= $this->get_default_quality();
+			$default_quality_path	= $this->get_media_path_dir($default_quality);
+			// check directory exists before copy (if folder do not exists, it will be created)
+			$dir_exists = create_directory($default_quality_path, 0750);
+			if (!$dir_exists) {
+				debug_log(__METHOD__
+					.' Error. Unable to create default_quality_path directory' . PHP_EOL
+					.' default_quality_path: ' .$default_quality_path
+					, logger::ERROR
+				);
+				$response->msg .= ' : Unable to create default_quality_path directory';
+				return $response;
+			}
+
+			// copy file if is not default quality
+			if ($target_quality_path!==$original_file_path) {
+
+				$copy_result = copy(
+					$original_file_path, // from original quality directory
+					$target_quality_path // to default quality directory
+				);
+				if ($copy_result===false) {
+					debug_log(__METHOD__ . PHP_EOL
+						. " Error: Unable to copy PDF file : " . PHP_EOL
+						. ' Source path: ' . $original_file_path . PHP_EOL
+						. ' Target path: ' . $target_quality_path
+						, logger::ERROR
+					);
+				}else{
+					debug_log(__METHOD__ . PHP_EOL
+						. " Copied PDF file (".$original_file_path." -> ".$target_quality_path.") : " . PHP_EOL
+						. ' Source path: ' . $original_file_path . PHP_EOL
+						. ' Target path: ' . $target_quality_path
+						, logger::DEBUG
+					);
+				}
+			}
+
+		// Alternative versions
+			$alternative_extensions	= $this->get_alternative_extensions() ?? [];
+			foreach ($alternative_extensions as $current_extension) {
+
+				// CLI process data
+					if ( running_in_cli()===true ) {
+						common::$pdata->msg				= (label::get_label('processing') ?? 'Processing') . ' alternative version: ' . $current_extension . ' | id: ' . $this->section_id;
+						common::$pdata->memory			= dd_memory_usage();
+						common::$pdata->target_quality	= $quality;
+						common::$pdata->current_time	= exec_time_unit($start_time, 'ms');
+						common::$pdata->total_ms		= (common::$pdata->total_ms ?? 0) + common::$pdata->current_time; // cumulative time
+						// send to output
+						print_cli(common::$pdata);
+					}
+
+				// create alternative version file
+				$this->create_alternative_version(
+					$quality,
+					$current_extension
+				);
+			}
+
+			// all is OK
+			$response->result			= $copy_result;
+			$response->msg				= 'Building file version in background';
+			$response->command_response	= null;
+
+
+		return $response;
+	}//end build_version
+
+
+
+	/**
 	* RENAME_OLD_FILES
 	* @param $file_name string as 'test175_test65_3'
 	* @param $folder_path string
