@@ -33,15 +33,17 @@ use PHPUnit\Metadata\RequiresSetting;
 use PHPUnit\Runner\Version;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class Requirements
 {
     /**
-     * @psalm-param class-string $className
-     * @psalm-param non-empty-string $methodName
+     * @param class-string     $className
+     * @param non-empty-string $methodName
      *
-     * @psalm-return list<string>
+     * @return list<string>
      */
     public function requirementsNotSatisfiedFor(string $className, string $methodName): array
     {

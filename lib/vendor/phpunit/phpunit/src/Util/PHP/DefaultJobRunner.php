@@ -30,6 +30,8 @@ use function unlink;
 use SebastianBergmann\Environment\Runtime;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final readonly class DefaultJobRunner implements JobRunner
@@ -69,7 +71,7 @@ final readonly class DefaultJobRunner implements JobRunner
     }
 
     /**
-     * @psalm-param ?non-empty-string $temporaryFile
+     * @param ?non-empty-string $temporaryFile
      *
      * @throws PhpProcessException
      */
@@ -78,6 +80,7 @@ final readonly class DefaultJobRunner implements JobRunner
         $environmentVariables = null;
 
         if ($job->hasEnvironmentVariables()) {
+            /** @phpstan-ignore nullCoalesce.variable */
             $environmentVariables = $_SERVER ?? [];
 
             unset($environmentVariables['argv'], $environmentVariables['argc']);
@@ -144,11 +147,14 @@ final readonly class DefaultJobRunner implements JobRunner
             unlink($temporaryFile);
         }
 
+        assert($stdout !== false);
+        assert($stderr !== false);
+
         return new Result($stdout, $stderr);
     }
 
     /**
-     * @psalm-return non-empty-list<string>
+     * @return non-empty-list<string>
      */
     private function buildCommand(Job $job, ?string $file): array
     {
@@ -157,17 +163,25 @@ final readonly class DefaultJobRunner implements JobRunner
         $phpSettings = $job->phpSettings();
 
         if ($runtime->hasPCOV()) {
+            $pcovSettings = ini_get_all('pcov');
+
+            assert($pcovSettings !== false);
+
             $phpSettings = array_merge(
                 $phpSettings,
                 $runtime->getCurrentSettings(
-                    array_keys(ini_get_all('pcov')),
+                    array_keys($pcovSettings),
                 ),
             );
         } elseif ($runtime->hasXdebug()) {
+            $xdebugSettings = ini_get_all('xdebug');
+
+            assert($xdebugSettings !== false);
+
             $phpSettings = array_merge(
                 $phpSettings,
                 $runtime->getCurrentSettings(
-                    array_keys(ini_get_all('xdebug')),
+                    array_keys($xdebugSettings),
                 ),
             );
         }
@@ -201,6 +215,8 @@ final readonly class DefaultJobRunner implements JobRunner
     }
 
     /**
+     * @param list<string> $settings
+     *
      * @return list<string>
      */
     private function settingsToParameters(array $settings): array

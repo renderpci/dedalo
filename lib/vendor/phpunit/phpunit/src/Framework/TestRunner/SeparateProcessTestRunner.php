@@ -42,7 +42,9 @@ use SebastianBergmann\Template\InvalidArgumentException;
 use SebastianBergmann\Template\Template;
 
 /**
- * @internal This interface is not covered by the backward compatibility promise for PHPUnit
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
+ * @internal This class is not covered by the backward compatibility promise for PHPUnit
  */
 final class SeparateProcessTestRunner implements IsolatedTestRunner
 {
@@ -115,11 +117,15 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
         $serializedConfiguration = $this->saveConfigurationForChildProcess();
         $processResultFile       = tempnam(sys_get_temp_dir(), 'phpunit_');
 
+        $file = $class->getFileName();
+
+        assert($file !== false);
+
         $var = [
             'bootstrap'                      => $bootstrap,
             'composerAutoload'               => $composerAutoload,
             'phar'                           => $phar,
-            'filename'                       => $class->getFileName(),
+            'filename'                       => $file,
             'className'                      => $class->getName(),
             'collectCodeCoverageInformation' => $coverage,
             'linesToBeIgnored'               => $linesToBeIgnored,
@@ -132,8 +138,8 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
             'included_files'                 => $includedFiles,
             'iniSettings'                    => $iniSettings,
             'name'                           => $test->name(),
-            'offsetSeconds'                  => $offset[0],
-            'offsetNanoseconds'              => $offset[1],
+            'offsetSeconds'                  => (string) $offset[0],
+            'offsetNanoseconds'              => (string) $offset[1],
             'serializedConfiguration'        => $serializedConfiguration,
             'processResultFile'              => $processResultFile,
         ];
@@ -154,7 +160,7 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
     }
 
     /**
-     * @psalm-param non-empty-string $code
+     * @param non-empty-string $code
      *
      * @throws Exception
      * @throws NoPreviousThrowableException
@@ -168,6 +174,8 @@ final class SeparateProcessTestRunner implements IsolatedTestRunner
 
         if (file_exists($processResultFile)) {
             $processResult = file_get_contents($processResultFile);
+
+            assert($processResult !== false);
 
             @unlink($processResultFile);
         }

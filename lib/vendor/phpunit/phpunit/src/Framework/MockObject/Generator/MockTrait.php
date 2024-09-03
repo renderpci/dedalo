@@ -12,6 +12,8 @@ namespace PHPUnit\Framework\MockObject\Generator;
 use function class_exists;
 
 /**
+ * @no-named-arguments Parameter names are not covered by the backward compatibility promise for PHPUnit
+ *
  * @internal This class is not covered by the backward compatibility promise for PHPUnit
  *
  * @deprecated https://github.com/sebastianbergmann/phpunit/issues/5243
@@ -21,12 +23,12 @@ final readonly class MockTrait implements MockType
     private string $classCode;
 
     /**
-     * @psalm-var class-string
+     * @var class-string
      */
     private string $mockName;
 
     /**
-     * @psalm-param class-string $mockName
+     * @param class-string $mockName
      */
     public function __construct(string $classCode, string $mockName)
     {
@@ -35,7 +37,7 @@ final readonly class MockTrait implements MockType
     }
 
     /**
-     * @psalm-return class-string
+     * @return class-string
      */
     public function generate(): string
     {
