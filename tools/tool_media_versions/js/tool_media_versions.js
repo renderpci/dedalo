@@ -337,7 +337,8 @@ tool_media_versions.prototype.build_version = async function(quality) {
 				tipo			: self.main_element.tipo,
 				section_tipo	: self.main_element.section_tipo,
 				section_id		: self.main_element.section_id,
-				quality			: quality
+				quality			: quality,
+				async			: true
 			}
 		}
 
