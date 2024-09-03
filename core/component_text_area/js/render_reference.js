@@ -15,7 +15,8 @@
 * RENDER_REFERENCE
 *
 * @param object options
-* @return HTMLElement fragment
+* @return bool
+* 	True if all is alright, false on missing vars or problems
 */
 export const render_reference = async function(options) {
 
@@ -26,7 +27,8 @@ export const render_reference = async function(options) {
 		const view_tag			= options.tag
 		const tags_reference	= self.properties.tags_reference // the component with all locator references
 		const selected_tag 		= clone(options.tag)
-			selected_tag.reuse = false
+			  selected_tag.reuse = false
+
 	// component with the tag data
 		const tag_component_options = {
 			tipo			: tags_reference.tipo,
@@ -35,8 +37,9 @@ export const render_reference = async function(options) {
 			mode			: 'edit',
 			lang			: page_globals.dedalo_data_nolan
 		}
+
 		// get the reference component instance
-		const found_instances = await instances.find_instances(tag_component_options)
+		const found_instances = instances.find_instances(tag_component_options)
 
 		const component_tags_reference = found_instances.length > 0
 			? found_instances[0]
@@ -98,11 +101,12 @@ export const render_reference = async function(options) {
 		// get the instance, built and render
 			const reference_component = await instances.get_instance(instance_options)
 										await reference_component.build(true)
+
 			if(reference_component.permissions<1){
 				const label = get_label.no_access  || 'No access here'
 
 				// modal
-				const modal = ui.attach_to_modal({
+				ui.attach_to_modal({
 					header	: get_label.warning || 'Warning',
 					body	: label+': '+ reference_component.label,
 					footer	: false,
@@ -218,7 +222,6 @@ export const render_reference = async function(options) {
 				})
 			}
 
-
 	// footer
 		const footer = ui.create_dom_element({
 			element_type	: 'div',
@@ -272,8 +275,7 @@ export const render_reference = async function(options) {
 				text_content	: get_label.apply || 'Apply',
 				parent			: footer
 			})
-			button_apply.addEventListener('mouseup',function(evt) {
-
+			button_apply.addEventListener('mouseup',function(e) {
 
 				// save the locator when is a new tag_id
 				// if a reuse is active, the locator already exist into the portal

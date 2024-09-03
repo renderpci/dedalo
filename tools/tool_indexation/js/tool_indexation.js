@@ -259,7 +259,9 @@ tool_indexation.prototype.build = async function(autoload=false) {
 
 		// references_component. Add references into the text
 			const references_component	= self.tool_config.ddo_map.find(el => el.role==="references_component")
-			self.references_component	= self.ar_instances.find(el => el.tipo===references_component.tipo)
+			self.references_component	= references_component
+				? self.ar_instances.find(el => el.tipo===references_component.tipo)
+				: null
 
 		// related_sections_list. load_related_sections_list. Get the relation list.
 		// This is used to build a select element to allow

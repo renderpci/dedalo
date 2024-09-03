@@ -315,7 +315,8 @@ const render_regenerate_options = function(self, item) {
 			container			: body_node,
 			collapsed_id		: 'regenerate_options_' + item.tipo,
 			collapse_callback	: collapse,
-			expose_callback		: expose
+			expose_callback		: expose,
+			default_state		: 'closed'
 		})
 		function collapse() {
 			head_node.classList.remove('up')
