@@ -246,6 +246,32 @@ search.prototype.build = async function() {
 
 
 /**
+* GET_SECTION_ELEMENTS
+* @return promise
+* 	resolve array section_elements
+*/
+search.prototype.get_section_elements = async function(options) {
+
+	const self = this
+
+	const default_options = {
+		section_tipo			: self.target_section_tipo,
+		ar_components_exclude	: self.ar_components_exclude,
+		caller_tipo				: self.caller.tipo // used to skip permissions when caller is area_thesaurus
+	}
+
+	// section_elements_options
+	const section_elements_options = Object.assign({}, default_options, options);
+
+	const section_elements = await self.get_section_elements_context(section_elements_options)
+
+
+	return section_elements
+}//end get_section_elements
+
+
+
+/**
 * DES LOAD_COMPONENT_CONTEXT
 * Call to dd_core_api to obtain the list of components associated to current options section_tipo
 * @param object options
