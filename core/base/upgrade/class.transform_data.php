@@ -1084,4 +1084,201 @@ class transform_data {
 
 
 
+
+	/**
+	* DELETE_TIPOS
+	* Delete tipos, his time machine and his relations
+	* @param array $ar_tables
+	* @param array $ar_to_delete
+	* [
+	* 	{
+	* 		"component_tipo"	: "tchi59",
+	* 		"delete_tm"			: true,
+	* 		"delete_relations"	: true,
+	* 		"info"				: "Delete data of tchi relation index in thesaurus"
+	* 	}
+	* ]
+	* @return bool
+	*/
+	public static function delete_tipos(array $ar_tables, array $ar_to_delete) : bool {
+
+		debug_log(__METHOD__ . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			. " CONVERTING ... " . PHP_EOL
+			. " delete_tipos - tables: " . json_encode($ar_tables) . PHP_EOL
+			. " delete_tipos - ar_to_delete: " . json_encode($ar_to_delete) . PHP_EOL
+			. " ))))))))))))))))))))))))))))))))))))))))))))))))))))))) " . PHP_EOL
+			, logger::WARNING
+		);
+
+		// get transform map from files
+			$ar_delete_map = [];
+			foreach ($ar_to_delete as $object_to_delete) {
+				$ar_delete_map[$object_to_delete->component_tipo] = $object_to_delete;
+			}
+
+		// CLI process data
+			if ( running_in_cli()===true ) {
+				if (!isset(common::$pdata)) {
+					common::$pdata = new stdClass();
+				}
+				common::$pdata->table = '';
+				common::$pdata->memory = '';
+				common::$pdata->counter = 0;
+			}
+
+		// delete into matrix tables
+			update::tables_rows_iterator(
+				$ar_tables, // array of tables to iterate
+				function($row, $table, $max) use($ar_delete_map) { // callback function
+
+					$id				= $row['id'];
+					$section_tipo	= $row['section_tipo'] ?? null;
+					$datos			= (isset($row['datos'])) ? json_handler::decode($row['datos']) : null;
+					$tipo			= $row['tipo'] ?? null; // matrix_time_machine
+
+					// CLI process data
+						if ( running_in_cli()===true ) {
+							common::$pdata->msg	= (label::get_label('processing') ?? 'Processing') . ': delete_tipos'
+								. ' | table: ' 			. $table
+								. ' | id: ' 			. $id .' - ' . $max
+								. ' | section_tipo: ' 	. $section_tipo
+								. ' | section_id: '  	. ($row['section_id'] ?? '');
+							common::$pdata->memory = (common::$pdata->counter % 5000 === 0)
+								? dd_memory_usage() // update memory information once every 5000 items
+								: common::$pdata->memory;
+							common::$pdata->table = $table;
+							common::$pdata->section_tipo = $section_tipo;
+							common::$pdata->counter++;
+							// send to output
+							print_cli(common::$pdata);
+						}
+
+					// datos. Common matrix tables
+					if( isset($datos) ){
+
+						// check sections to change data to prevent change virtual sections data, etc.
+						if ($table==='matrix_activity') {
+
+							return;
+						}
+
+						// datos properties
+						foreach ($datos as $datos_key => $datos_value) {
+
+							if( empty($datos_value) ){
+								continue;
+							}
+
+							switch ($datos_key) {
+								case 'relations_search':
+								case 'relations':
+									// update relations array
+									$relations = $datos_value ?? [];
+
+									foreach ($relations as $rel_key => $locator) {
+										foreach ($locator as $loc_key => $loc_value) {
+
+											if (!is_string($loc_value) && !is_int($loc_value)) {
+												debug_log(__METHOD__
+													. " Ignored locator value ! " . PHP_EOL
+													. ' loc_key: ' . to_string($loc_key) . PHP_EOL
+													. ' loc_value: ' . to_string($loc_value) . PHP_EOL
+													. ' loc_value type: ' . gettype($loc_value) . PHP_EOL
+													. ' table: ' . $table . PHP_EOL
+													. ' id: ' . $id . PHP_EOL
+													. ' locator: ' . to_string($locator)
+													, logger::ERROR
+												);
+												continue;
+											}
+
+											if( isset($ar_delete_map[$loc_value]) && $loc_key==='from_component_tipo' ){
+												unset( $relations[$rel_key] );
+											}
+										}
+									}
+
+									// replace whole object
+									$datos->$datos_key = array_values($relations);
+									break;
+
+								case 'diffusion_info':
+								case 'components':
+									// update components object
+									$literal_components = $datos_value ?? [];
+
+									$new_components = new stdClass();
+
+									foreach ($literal_components as $literal_tipo => $literal_value) {
+
+										// is the component is not set in the transform_map
+										// assign it to the new_components.
+										if( !isset($ar_delete_map[$literal_tipo]) ){
+											$new_components->{$literal_tipo} = $literal_value;
+										}
+									}
+									// replace whole object
+									$datos->$datos_key = $new_components;
+									break;
+							}
+						}//end foreach ($datos as $datos_key => $datos_value)
+
+						$section_data_encoded = json_encode($datos);
+
+						$strQuery	= "UPDATE $table SET datos = $1 WHERE id = $2 ";
+						$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $section_data_encoded, $id ));
+						if($result===false) {
+							$msg = "Failed Update section_data ($table) $id";
+							debug_log(__METHOD__
+								." ERROR: $msg "
+								, logger::ERROR
+							);
+							return false;
+						}
+					}//end if( isset($datos) )
+
+					// tipo. Time machine matrix table
+					if( isset($tipo) && $table!=='matrix_counter'){
+
+						// check $tipo need to be deleted already exists
+						if( isset($ar_delete_map[$tipo]) && $ar_delete_map[$tipo]->delete_tm === true ){
+							$strQuery	= "DELETE FROM $table WHERE id = $1 ";
+							$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $id ));
+							if($result===false) {
+								$msg = "Failed delete time machine ($table) record $id";
+								debug_log(__METHOD__
+									." ERROR: $msg "
+									, logger::ERROR
+								);
+								return false;
+							}
+						}
+
+					}//end if( isset($dato) )
+				}//end anonymous function
+			);
+
+		// delete into relations table
+			foreach ($ar_delete_map as $delete_item) {
+				if(isset($delete_item->delete_relations) && $delete_item->delete_relations === true ){
+					$strQuery	= "DELETE FROM \"relations\" WHERE \"from_component_tipo\" = $1 ";
+					$result		= pg_query_params(DBi::_getConnection(), $strQuery, array( $delete_item->component_tipo ));
+					if($result===false) {
+						$msg = "Failed delete relations table records $delete_item->component_tipo";
+						debug_log(__METHOD__
+							." ERROR: $msg "
+							, logger::ERROR
+						);
+						return false;
+					}
+				}
+			}
+
+
+		return true;
+	}//end delete_tipos
+
+
+
 }//end class transform_data
