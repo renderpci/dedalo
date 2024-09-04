@@ -2177,7 +2177,7 @@ final class dd_core_api {
 				// $result->data = [];
 
 				debug_log(__METHOD__
-					.' Catching non enough permissions call' . PHP_EOL
+					.' Identified non enough permissions call' . PHP_EOL
 					.' User: '. logged_user_id() . PHP_EOL
 					.' tipo: '. $tipo . PHP_EOL
 					.' section_tipo: '. $section_tipo . PHP_EOL

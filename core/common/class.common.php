@@ -4257,7 +4257,7 @@ abstract class common {
 				'component_semantic_node',
 				'section_tab'
 			];
-			$ar_include_elements = $options->ar_include_elements ?? [
+			$ar_include_elements		= $options->ar_include_elements ?? [
 				'component',
 				'section_group',
 				'section_group_div',
@@ -4284,7 +4284,7 @@ abstract class common {
 					? 1
 					: security::get_security_permissions($section_tipo, $section_tipo);
 				// skip section if permissions are not enough (except thesaurus 'hierarchy20')
-				if ( $section_permisions<1  && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
+				if ( $section_permisions<1 && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
 					// user don't have access to current section. skip section
 					continue;
 				}
@@ -4338,11 +4338,12 @@ abstract class common {
 
 			foreach ($ar_elements as $element_tipo) {
 
-				if($element_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
-					// 'component_security_areas' removed in v6 but the component will stay in ontology,
-					// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
-					continue;
-				}
+				// security_areas_profiles
+					if($element_tipo===DEDALO_COMPONENT_SECURITY_AREAS_PROFILES_TIPO) {
+						// 'component_security_areas' removed in v6 but the component will stay in ontology,
+						// PROVISIONAL, only in the alpha state of V6 for compatibility of the ontology of V5.
+						continue;
+					}
 
 				// permissions (element: component, grouper)
 					$element_permisions = ($skip_permissions === true)

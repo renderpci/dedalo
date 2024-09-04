@@ -47,8 +47,8 @@ render_search.prototype.list = async function() {
 	// components_list. render section component list [left]
 		const section_elements = await self.get_section_elements_context({
 			section_tipo			: self.target_section_tipo,
-			use_real_sections		: true,
-			ar_components_exclude	: self.ar_components_exclude
+			ar_components_exclude	: self.ar_components_exclude,
+			use_real_sections		: true
 		})
 		render_components_list({
 			self				: self,
@@ -960,6 +960,48 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 			// 	]
 			// }
 
+	// update sections components list (left)
+		const update_sections_list = async () => {
+
+			// loading add
+				self.search_container_selector.classList.add('loading')
+
+			// reset and update var value
+				self.target_section_tipo = []
+				const ar_check_box_length = ar_check_box.length
+				for (let i = 0; i < ar_check_box_length; i++) {
+					const item = ar_check_box[i]
+					if (item.checked) {
+						self.target_section_tipo.push(item.value)
+					}
+				}
+
+			// refresh the section list at left (use_real_sections)
+				const section_elements = await self.get_section_elements_context({
+					section_tipo			: self.target_section_tipo,
+					ar_components_exclude	: self.ar_components_exclude,
+					use_real_sections		: true
+				})
+				render_components_list({
+					self				: self,
+					section_tipo		: self.target_section_tipo,
+					target_div			: self.search_container_selector,
+					path				: [],
+					section_elements	: section_elements
+				})
+
+			// Store selected value as cookie to recover later
+				selected_search_sections[typology_id] = self.target_section_tipo
+				create_cookie(
+					cookie_name,
+					JSON.stringify(selected_search_sections),
+					365
+				)
+
+			// loading remove
+				self.search_container_selector.classList.remove('loading')
+		}//end update_sections_list
+
 	// clean wrapper_sections_selector_ul
 		while (ul.hasChildNodes()) {
 			ul.removeChild(ul.lastChild);
@@ -1047,48 +1089,6 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 				}
 				check_box.addEventListener('change', fn_change)
 		}//end if (ar_check_box.length>1)
-
-	// update sections components list (left)
-		async function update_sections_list() {
-
-			// reset and update var value
-				self.target_section_tipo = []
-				const ar_check_box_length = ar_check_box.length
-				for (let i = 0; i < ar_check_box_length; i++) {
-					const item = ar_check_box[i]
-					if (item.checked) {
-						self.target_section_tipo.push(item.value)
-					}
-				}
-
-			// loading add
-				self.search_container_selector.classList.add('loading')
-
-			// refresh the section list at left (use_real_sections)
-				const section_elements = await self.get_section_elements_context({
-					section_tipo			: self.target_section_tipo,
-					use_real_sections		: true,
-					ar_components_exclude	: self.ar_components_exclude
-				})
-				render_components_list({
-					self				: self,
-					section_tipo		: self.target_section_tipo,
-					target_div			: self.search_container_selector,
-					path				: [],
-					section_elements	: section_elements
-				})
-
-			// Store selected value as cookie to recover later
-				selected_search_sections[typology_id] = self.target_section_tipo
-				create_cookie(
-					cookie_name,
-					JSON.stringify(selected_search_sections),
-					365
-				)
-
-			// loading remove
-				self.search_container_selector.classList.remove('loading')
-		}//end update_sections_list
 
 	// event subscription. Fire update on each publication of update_sections_list_
 		event_manager.subscribe('update_sections_list_' + self.id, update_sections_list)
