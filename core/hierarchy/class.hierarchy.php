@@ -374,72 +374,72 @@ class hierarchy {
 					}
 
 			// virtual search-list . terms
-				$options = new stdClass();
-					$options->terminoID		= $tld2.'7';
-					$options->parent		= $tld2.'1';
-					$options->modelo		= 'dd524';
-					$options->esmodelo		= 'no';
-					$options->esdescriptor	= 'si';
-					$options->visible		= 'si';
-					$options->traducible	= 'no';
-					$options->relaciones	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-					$options->properties	= null;
-					$options->tld2			= $tld2;
-					$options->name			= 'Search';
+				// $options = new stdClass();
+				// 	$options->terminoID		= $tld2.'7';
+				// 	$options->parent		= $tld2.'1';
+				// 	$options->modelo		= 'dd524';
+				// 	$options->esmodelo		= 'no';
+				// 	$options->esdescriptor	= 'si';
+				// 	$options->visible		= 'si';
+				// 	$options->traducible	= 'no';
+				// 	$options->relaciones	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
+				// 	$options->properties	= null;
+				// 	$options->tld2			= $tld2;
+				// 	$options->name			= 'Search';
 
-				// create_term
-					$create_term = self::create_term( $options );
-					if ($create_term) {
-						$response->result	= $create_term->result;
-						$response->msg[]	= $create_term->msg;
-					}
+				// // create_term
+				// 	$create_term = self::create_term( $options );
+				// 	if ($create_term) {
+				// 		$response->result	= $create_term->result;
+				// 		$response->msg[]	= $create_term->msg;
+				// 	}
 
 			// virtual search-list . model . model terms
-				$options = new stdClass();
-					$options->terminoID		= $tld2.'8';
-					$options->parent		= $tld2.'2';
-					$options->modelo		= 'dd524';
-					$options->esmodelo		= 'no';
-					$options->esdescriptor	= 'si';
-					$options->visible		= 'si';
-					$options->traducible	= 'no';
-					$options->relaciones	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
-					$options->properties	= null;
-					$options->tld2			= $tld2;
-					$options->name			= 'Search';
+				// $options = new stdClass();
+				// 	$options->terminoID		= $tld2.'8';
+				// 	$options->parent		= $tld2.'2';
+				// 	$options->modelo		= 'dd524';
+				// 	$options->esmodelo		= 'no';
+				// 	$options->esdescriptor	= 'si';
+				// 	$options->visible		= 'si';
+				// 	$options->traducible	= 'no';
+				// 	$options->relaciones	= json_decode('[{"dd1747":"hierarchy22"},{"dd9":"hierarchy25"},{"dd428":"hierarchy27"},{"dd57":"hierarchy23"},{"dd10":"hierarchy28"},{"dd429":"hierarchy36"},{"dd57":"hierarchy24"},{"dd57":"hierarchy26"},{"dd43":"hierarchy41"},{"dd635":"hierarchy30"},{"dd10":"hierarchy32"},{"dd10":"hierarchy33"},{"dd530":"hierarchy35"},{"dd592":"hierarchy40"}]');
+				// 	$options->properties	= null;
+				// 	$options->tld2			= $tld2;
+				// 	$options->name			= 'Search';
 
-				// create_term
-					$create_term = self::create_term( $options );
-					if ($create_term) {
-						$response->result	= $create_term->result;
-						$response->msg[]	= $create_term->msg;
-					}
+				// // create_term
+				// 	$create_term = self::create_term( $options );
+				// 	if ($create_term) {
+				// 		$response->result	= $create_term->result;
+				// 		$response->msg[]	= $create_term->msg;
+				// 	}
 
 			// virtual section-list-thesaurus . thesaurus list
 			// use section-list-thesaurus from real section. only overwrite when really need
-				$options = new stdClass();
-					$options->terminoID		= $tld2.'9';
-					$options->parent		= $tld2.'1';
-					$options->modelo		= 'dd144';	// 'dd91';
-					$options->esmodelo		= 'no';
-					$options->esdescriptor	= 'si';
-					$options->visible		= 'si';
-					$options->traducible	= 'no';
+				// $options = new stdClass();
+				// 	$options->terminoID		= $tld2.'9';
+				// 	$options->parent		= $tld2.'1';
+				// 	$options->modelo		= 'dd144';	// 'dd91';
+				// 	$options->esmodelo		= 'no';
+				// 	$options->esdescriptor	= 'si';
+				// 	$options->visible		= 'si';
+				// 	$options->traducible	= 'no';
 
-					// Thesaurus list . Reference for new element
-					$RecordObj_dd = new RecordObj_dd('hierarchy44');
+				// 	// Thesaurus list . Reference for new element
+				// 	$RecordObj_dd = new RecordObj_dd('hierarchy44');
 
-					$options->relaciones	= $RecordObj_dd->get_relaciones();
-					$options->properties	= $RecordObj_dd->get_properties();
-					$options->tld2			= $tld2;
-					$options->name			= 'Thesaurus list';
+				// 	$options->relaciones	= $RecordObj_dd->get_relaciones();
+				// 	$options->properties	= $RecordObj_dd->get_properties();
+				// 	$options->tld2			= $tld2;
+				// 	$options->name			= 'Thesaurus list';
 
-				// create_term
-					$create_term = self::create_term( $options );
-					if ($create_term) {
-						$response->result	= $create_term->result;
-						$response->msg[]	= $create_term->msg;
-					}
+				// // create_term
+				// 	$create_term = self::create_term( $options );
+				// 	if ($create_term) {
+				// 		$response->result	= $create_term->result;
+				// 		$response->msg[]	= $create_term->msg;
+				// 	}
 
 			// set main_dd counter. Creates a counter in main_dd with $current_value +1 (9)
 				// $counter_value = RecordObj_dd_edit::update_counter($tld2, $current_value=8);
