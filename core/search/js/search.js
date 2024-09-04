@@ -214,19 +214,6 @@ search.prototype.build = async function() {
 				})
 			}))
 
-		// section_elements. Get section elements context list
-			ar_promises.push( new Promise(function(resolve){
-
-				self.get_section_elements_context({
-					section_tipo			: self.section_tipo,
-					ar_components_exclude	: self.ar_components_exclude,
-					use_real_sections		: false
-				})
-				.then(function(response){
-					resolve(response)
-				})
-			}))
-
 		// wait until all request are resolved or rejected
 		await Promise.allSettled(ar_promises);
 
