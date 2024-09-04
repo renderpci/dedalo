@@ -582,8 +582,6 @@ class component_pdf extends component_media_common implements component_media_in
 				$source_file = $this->get_media_filepath( $this->get_original_quality() );
 
 			// // get the extension of the document to be checked if valid to be processed
-			// 	$original_extension = $this->get_original_extension();// like «pfd» or «doc»
-
 			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
 			// this cases are: «odt», «doc», «pages» files, or other document file.
 				if( !file_exists($source_file) ){
@@ -591,10 +589,6 @@ class component_pdf extends component_media_common implements component_media_in
 					$response->msg		= 'File can not be processed';
 					return $response;
 				}
-
-				// if( isset($original_extension) && ( $original_extension !== $this->get_extension() )){
-				// 	$delete_normalized_files = false;
-				// }
 
 		// short vars
 			$original_quality	= $this->get_original_quality();
