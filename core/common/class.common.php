@@ -4236,6 +4236,7 @@ abstract class common {
 			$ar_section_tipo			= $options->ar_section_tipo ?? null;
 			$use_real_sections			= $options->use_real_sections ?? false;
 			$skip_permissions			= $options->skip_permissions ?? false;
+			$caller_tipo				= $options->caller_tipo ?? null;
 			$ar_tipo_exclude_elements	= $options->ar_tipo_exclude_elements ?? false;
 			$ar_components_exclude		= $options->ar_components_exclude ?? [
 				'component_password',
@@ -4279,12 +4280,23 @@ abstract class common {
 		$context			= [];
 		foreach ((array)$ar_section_tipo as $section_tipo) {
 
+			// store base section tipo
+				$base_section_tipo = $section_tipo;
+
+			// skip_permissions thesaurus case
+				// Because some different thesaurus sections share same real section as hierarchy20
+				// it's not possible control the permissions separately.
+				// Use then skip_permissions as true in this cases (area_thesaurus calling 'dd100')
+				if($caller_tipo===DEDALO_THESAURUS_TIPO) {
+					$skip_permissions = true;
+				}
+
 			// permissions
 				$section_permisions = ($skip_permissions === true)
 					? 1
-					: security::get_security_permissions($section_tipo, $section_tipo);
+					: security::get_security_permissions($base_section_tipo, $section_tipo);
 				// skip section if permissions are not enough (except thesaurus 'hierarchy20')
-				if ( $section_permisions<1 && $section_tipo!==DEDALO_THESAURUS_SECTION_TIPO ) {
+				if ( $section_permisions<1 ) {
 					// user don't have access to current section. skip section
 					continue;
 				}
@@ -4348,18 +4360,20 @@ abstract class common {
 				// permissions (element: component, grouper)
 					$element_permisions = ($skip_permissions === true)
 						? 1
-						: security::get_security_permissions($section_tipo, $element_tipo);
+						: security::get_security_permissions($base_section_tipo, $element_tipo);
 
-					// check the section info components
-					// if the user are not global_admin, the components will not showed.
-					if( in_array($element_tipo, $section_info_elements) ){
+					// section_info_elements
+						// check the section info components
+						// if the user are not global_admin, the components will not showed.
+						if( in_array($element_tipo, $section_info_elements) ){
 
-						$user_id			= logged_user_id();
-						$is_global_admin	= security::is_global_admin($user_id);
-						if( $is_global_admin === true ){
-							$element_permisions = 1;
+							$user_id			= logged_user_id();
+							$is_global_admin	= security::is_global_admin($user_id);
+							if( $is_global_admin === true ){
+								$element_permisions = 1;
+							}
 						}
-					}
+
 					// skip element if permissions are not enough
 					if ( $element_permisions<1 ) {
 						// user don't have access to current element. skip element

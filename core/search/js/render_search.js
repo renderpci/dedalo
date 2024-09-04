@@ -45,10 +45,8 @@ render_search.prototype.list = async function() {
 		const wrapper = self.render_base()
 
 	// components_list. render section component list [left]
-		const section_elements = await self.get_section_elements_context({
-			section_tipo			: self.target_section_tipo,
-			ar_components_exclude	: self.ar_components_exclude,
-			use_real_sections		: true
+		const section_elements = await self.get_section_elements({
+			use_real_sections : true
 		})
 		render_components_list({
 			self				: self,
@@ -977,10 +975,8 @@ const build_sections_check_boxes = (self, typology_id, parent) => {
 				}
 
 			// refresh the section list at left (use_real_sections)
-				const section_elements = await self.get_section_elements_context({
-					section_tipo			: self.target_section_tipo,
-					ar_components_exclude	: self.ar_components_exclude,
-					use_real_sections		: true
+				const section_elements = await self.get_section_elements({
+					use_real_sections : true
 				})
 				render_components_list({
 					self				: self,
