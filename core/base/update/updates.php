@@ -6,6 +6,67 @@ global $updates;
 $updates = new stdClass();
 
 
+
+$v=627; #####################################################################################
+$updates->$v = new stdClass();
+
+	# UPDATE TO
+	$updates->$v->version_major			= 6;
+	$updates->$v->version_medium		= 2;
+	$updates->$v->version_minor			= 7;
+
+	# MINIMUM UPDATE FROM
+	$updates->$v->update_from_major		= 6;
+	$updates->$v->update_from_medium	= 2;
+	$updates->$v->update_from_minor		= 5;
+
+	// alert
+		$alert					= new stdClass();
+		$alert->notification	= 'V '.$v;
+
+		$alert->command			= "
+			<h1>🧐 WARNING! Before apply this update:</h1>
+			<br>Before run this update, make sure that your current Ontology is updated to the latest version!
+			<br>The minimum version of Ontology need to be: <b>Dédalo 2024-09-04T18:51:21+02:00 Benimamet</b>
+			<br>
+			<br>
+			<br>This update changes the Tangible and Intangible portals in thesaurus, (tchi59, tch60)
+			<br>Now, the components will not save related data into it.
+			<br>Therefore, this script remove the previous saved data into them.
+		";
+		$updates->$v->alert_update[] = $alert;
+
+	// RUN_SCRIPTS
+		// DATA INSIDE DATABASE UPDATES
+		// clean_section_and_component_dato. Update 'datos' to section_data
+			$ar_tables = [
+				'matrix_hierarchy',
+				'matrix_time_machine'
+			];
+			$ar_to_delete =	json_decode('[
+				{"component_tipo":"tchi59",	"delete_tm":true,	"delete_relations":true, 	"info": "Delete data of tchi relation index in thesaurus"},
+				{"component_tipo":"tch60",	"delete_tm":true,	"delete_relations":true,	"info": "Delete data of tch relation index in thesaurus"}
+			]');
+			require_once dirname(dirname(__FILE__)) .'/upgrade/class.transform_data.php';
+			$script_obj = new stdClass();
+				$script_obj->info			= "Delete tch and tchi related data of thesaurus. Now those components calculate his data and not save it";
+				$script_obj->script_class	= "transform_data";
+				$script_obj->script_method	= "delete_tipos";
+				$script_obj->script_vars	= [
+					$ar_tables,
+					$ar_to_delete
+				]; // Note that only ONE argument encoded is sent
+			$updates->$v->run_scripts[] = $script_obj;
+
+	// DATABASE UPDATES
+
+		// move the models and toponomy terms to hierarchy tld
+		// move all countries model sections to hierarchy122
+			$sql_contents = file_get_contents( dirname(dirname(__FILE__)) .'/include/6-2-7_sql_thesaurus_clean.sql' );
+			$updates->$v->SQL_update[] 	= PHP_EOL.sanitize_query( $sql_contents );
+
+
+
 $v=625; #####################################################################################
 $updates->$v = new stdClass();
 
@@ -97,6 +158,7 @@ $updates->$v = new stdClass();
 		$updates->$v->components_update = [
 			'component_text_area'
 		]; // Force convert from string to array
+
 
 
 $v=622; #####################################################################################
