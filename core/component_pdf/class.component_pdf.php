@@ -490,6 +490,20 @@ class component_pdf extends component_media_common implements component_media_in
 				}
 
 
+			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
+			// this cases are: «odt», «doc», «pages» files, or other document file.
+				if( $file_extension !== $this->get_extension() ){
+
+					// Save to update the data of the component with the new file
+					$this->Save();
+
+					// all is OK
+					$response->result	= true;
+					$response->msg		= 'OK. Request done ['.__METHOD__.'] ';
+					return $response;
+				}
+
+
 			// Generate default_pdf_format : copy the PDF to web format
 			// original file is conserved (like myfilename.pdf and myfilename.doc)
 			// regenerate component will create the default quality calling build()
@@ -503,13 +517,9 @@ class component_pdf extends component_media_common implements component_media_in
 					$regenerate_options->ocr			= $process_options->ocr ?? false;
 					$regenerate_options->ocr_lang		= $process_options->ocr_lang ?? null;
 
-			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
-			// this cases are: «odt», «doc», «pages» files, or other document file.
-				if( $file_extension !== $this->get_extension() ){
-					$regenerate_options->ocr			= false;
-					$regenerate_options->transcription	= false;
-				}
+			// process PDF files regenerating the component.
 				$result = $this->regenerate_component( $regenerate_options );
+
 				if ($result === false) {
 					$response->msg .= ' Error processing the uploaded file';
 					return $response;
@@ -566,6 +576,19 @@ class component_pdf extends component_media_common implements component_media_in
 				$response->msg		= $result===false ? 'Error building version' : 'OK request done';
 				return $response;
 			}
+
+		//check files that can not be processed
+			// source file
+				$source_file = $this->get_media_filepath( $this->get_original_quality() );
+
+			// // get the extension of the document to be checked if valid to be processed
+			// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
+			// this cases are: «odt», «doc», «pages» files, or other document file.
+				if( !file_exists($source_file) ){
+					$response->result	= 'Ok';
+					$response->msg		= 'File can not be processed';
+					return $response;
+				}
 
 		// short vars
 			$original_quality	= $this->get_original_quality();
@@ -1284,6 +1307,22 @@ class component_pdf extends component_media_common implements component_media_in
 			$ocr						= $options->ocr ?? false;
 			$ocr_lang					= $options->ocr_lang ?? null;
 			$delete_normalized_files	= $options->delete_normalized_files ?? true;
+
+		// source file
+			$source_file = $this->get_media_filepath( $this->get_original_quality() );
+
+		// get the extension of the document to be checked if valid to be processed
+			$original_extension = $this->get_original_extension();// like «pfd» or «doc»
+
+		// if the file uploaded is not a valid PDF, don't process as OCR of get his text.
+		// this cases are: «odt», «doc», «pages» files, or other document file.
+			if( !file_exists($source_file) ){
+				return true;
+			}
+
+			if( isset($original_extension) && ( $original_extension !== $this->get_extension() )){
+				$delete_normalized_files = false;
+			}
 
 		// source file
 			$source_file = $this->get_media_filepath( $this->get_original_quality() );
