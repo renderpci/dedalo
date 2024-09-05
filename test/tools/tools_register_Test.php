@@ -32,6 +32,10 @@ final class tools_register_Test extends TestCase {
 
 
 
+	/////////// ⬇︎ test start ⬇︎ ////////////////
+
+
+
 	/**
 	* TEST_IMPORT_TOOLS
 	* @return void
