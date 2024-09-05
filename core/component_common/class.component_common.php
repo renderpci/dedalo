@@ -2095,7 +2095,7 @@ abstract class component_common extends common {
 
 					// target_section_tipo
 						// get_ar_related_by_model: $model_name, $tipo, $strict=true
-		  				// $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
+						// $target_section_tipo = common::get_ar_related_by_model('section', $this->tipo, true);
 						$ar_target_section_tipo	= $this->get_ar_target_section_tipo();
 						$target_section_tipo	= reset($ar_target_section_tipo);
 
@@ -3419,7 +3419,7 @@ abstract class component_common extends common {
 	public static function handle_query_splitting(object $query_object, array $q_items, string $operator_between='$and') : object {
 
 		// Determine the resolver method dynamically from the called class (component)
-    	$resolver = [get_called_class(), 'resolve_query_object_sql'];
+		$resolver = [get_called_class(), 'resolve_query_object_sql'];
 
 		// Initialize the group object with the specified operator
 		$group = new stdClass();
@@ -3743,10 +3743,10 @@ abstract class component_common extends common {
 	* @param object $changed_data
 	* sample:
 	* {
-    *  	"action": "add_new_element",
-    *	"key": null,
-    *	"value": "rsc167"
-    * }
+	*  	"action": "add_new_element",
+	*	"key": null,
+	*	"value": "rsc167"
+	* }
 	* @return bool
 	*/
 	public function update_data_value(object $changed_data) : bool {
@@ -4023,24 +4023,24 @@ abstract class component_common extends common {
 			$sqo = json_decode('{
 			  "mode": "tm",
 			  "section_tipo": [
-			    "'.$section_tipo.'"
+				"'.$section_tipo.'"
 			  ],
 			  "filter_by_locators": [
-			    {
-			      "matrix_id": "'.$matrix_id.'",
-			      "section_tipo": "'.$section_tipo.'",
-			      "tipo": "'.$tipo.'"
-			    }
+				{
+				  "matrix_id": "'.$matrix_id.'",
+				  "section_tipo": "'.$section_tipo.'",
+				  "tipo": "'.$tipo.'"
+				}
 			  ],
 			  "order": [
-			    {
-			      "direction": "DESC",
-			      "path": [
-			        {
+				{
+				  "direction": "DESC",
+				  "path": [
+					{
 					 "component_tipo": "id"
-			        }
-			      ]
-			    }
+					}
+				  ]
+				}
 			  ]
 			}');
 
