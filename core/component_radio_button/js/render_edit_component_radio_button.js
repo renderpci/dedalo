@@ -148,7 +148,8 @@ const get_content_value = (i, datalist_item, self) => {
 			element_type	: 'div',
 			class_name		: 'content_value'
 		})
-		content_value.addEventListener('mousedown', function(e) {
+		// mousedown_handler. On user mousedown, reset value
+		const mousedown_handler = function(e) {
 			if (e.altKey===true) {
 				e.stopPropagation()
 				e.preventDefault()
@@ -173,7 +174,8 @@ const get_content_value = (i, datalist_item, self) => {
 					}
 				})
 			}
-		})
+		}
+		content_value.addEventListener('mousedown', mousedown_handler)
 
 	// label
 		const input_label = ui.create_dom_element({
@@ -190,7 +192,8 @@ const get_content_value = (i, datalist_item, self) => {
 			name			: self.id
 		})
 		input_label.prepend(input)
-		input.addEventListener('change', function() {
+		// change handler
+		const change_handler = function() {
 
 			const changed_data = [Object.freeze({
 				action	: 'update',
@@ -204,7 +207,8 @@ const get_content_value = (i, datalist_item, self) => {
 
 			// update label checked status
 			update_status(this)
-		})//end change event
+		}
+		input.addEventListener('change', change_handler)
 		// permissions. Set disabled on low permissions
 		if (self.permissions<2) {
 			input.disabled = 'disabled'
