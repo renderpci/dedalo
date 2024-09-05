@@ -594,21 +594,28 @@ abstract class component_common extends common {
 	/**
 	* GET_IDENTIFIER
 	* Compound a chained plain flat identifier string for use as media component name, etc..
-	* @return string $name Like 'dd42_dd207_1'
+	* @return string $identifier
+	* 	Example: 'dd42_dd207_1'
+	* @throws InvalidArgumentException if any required component data is missing.
 	*/
 	public function get_identifier() : string {
 
-		if ( empty($this->get_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty component_tipo", 1);
+		$tipo			= $this->get_tipo();
+		$section_tipo	= $this->get_section_tipo();
+		$section_id		= $this->get_section_id();
+
+		// Validate required fields
+		if (empty($tipo)) {
+			throw new InvalidArgumentException("Error: empty component_tipo.");
 		}
-		if ( empty($this->get_section_tipo() ) ) {
-			throw new Exception("Error Processing Request. empty section_tipo", 1);
+		if (empty($section_tipo)) {
+			throw new InvalidArgumentException("Error: empty section_tipo.");
 		}
-		if ( empty($this->get_section_id() ) ) {
-			throw new Exception("Error Processing Request. empty section_id", 1);
+		if (empty($section_id)) {
+			throw new InvalidArgumentException("Error: empty section_id.");
 		}
 
-		$identifier = $this->tipo . locator::DELIMITER . $this->section_tipo . locator::DELIMITER . $this->section_id;
+		$identifier = $tipo . locator::DELIMITER . $section_tipo . locator::DELIMITER . $section_id;
 
 		return $identifier;
 	}//end get_identifier
