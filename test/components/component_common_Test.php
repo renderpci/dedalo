@@ -158,6 +158,48 @@ final class component_common_test extends TestCase {
 
 
 	/**
+	* TEST_get_identifier
+	* @return void
+	*/
+	public function test_get_identifier() {
+
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo // string section_tipo
+			);
+
+			$result = $component->get_identifier();
+
+			$this->assertTrue(
+				gettype($result)==='string',
+				'result type expected string. current type: ' .gettype($result)
+			);
+
+			$expected = $component->get_tipo() . locator::DELIMITER . $component->get_section_tipo() . locator::DELIMITER . $component->get_section_id();
+			$this->assertTrue(
+				$result===$expected,
+				'result expected is not correct ' . PHP_EOL
+					.'expected: ' . $expected . PHP_EOL
+					.'result: ' . $result
+			);
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+		}
+	}//end test_get_identifier
+
+
+
+	/**
 	* TEST_SET_DATO_DEFAULT
 	* @return void
 	*/
@@ -183,6 +225,62 @@ final class component_common_test extends TestCase {
 			);
 		}
 	}//end test_set_dato_default
+
+
+
+	/**
+	* TEST_set_dato_resolved
+	* @return void
+	*/
+	public function test_set_dato_resolved() {
+
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			if ($element->model==='component_check_box') {
+				continue;
+			}
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false // cache
+			);
+
+			// null case
+				$dato		= ['fake data'];
+				$expected	= ['fake data'];
+
+				$component->set_dato_resolved($dato);
+
+				$result = $component->dato_resolved;
+
+				$this->assertTrue(
+					$result===$expected,
+					'result expected is not correct (dato_resolved) '. $component->label . PHP_EOL
+						.'expected: ' . json_encode($expected) . PHP_EOL
+						.'result: ' . json_encode($result)
+				);
+
+				// $result = $component->get_dato();
+
+				// $this->assertTrue(
+				// 	$result===$expected,
+				// 	'result expected is not correct (get_dato) ' . $component->label . PHP_EOL
+				// 		.'expected: ' . json_encode($expected) . PHP_EOL
+				// 		.'result: ' . json_encode($result)
+				// );
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+		}
+	}//end test_set_dato_resolved
 
 
 
