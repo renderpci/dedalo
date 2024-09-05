@@ -827,39 +827,53 @@ export const render_component_info = function(self, component) {
 			text_content	: 'Parsing data..',
 			parent			: fragment
 		})
-		value_node.addEventListener('dblclick', function(e) {
+		// dblclick event
+		value_node.addEventListener('dblclick', (e) => {
 			e.stopPropagation()
 			// toggle value container max-height from default to none
 			container.classList.toggle('auto_height')
 		})
 		// parse data. This time out prevents lock component selection
 		const callback = () => {
-			const value = component.data && component.data.value
-				? JSON.stringify(component.data.value, null, 1)
-				: ''
-			value_node.textContent = value
+
+			// set value
+				const value = component.data?.value
+					? JSON.stringify(component.data.value, null, 1)
+					: ''
+				value_node.textContent = value
 
 			// monospace for JSON data
-			// Note that this node is rendered again on each user component selection
-			if (value.indexOf('[{')===0) {
-				value_node.classList.add('monospace')
-			}
-
-			const button_value_copy_node = ui.create_dom_element({
-				element_type	: 'button',
-				class_name		: 'button_value_copy warning',
-				inner_html		: get_label.copy || 'Copy',
-				parent			: value_node
-			})
-			button_value_copy_node.addEventListener('click', function(e) {
-				e.stopPropagation()
-				// only available in https context for security reasons
-				if (navigator && navigator.clipboard) {
-					navigator.clipboard.writeText( JSON.stringify(component.data.value) )
+				// Note that this node is rendered again on each user component selection
+				if (value.indexOf('[\n {')===0) {
+					value_node.classList.add('monospace')
 				}
-			})
+
+			// button copy value
+				const button_value_copy_node = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'button_value_copy warning',
+					inner_html		: get_label.copy || 'Copy',
+					parent			: value_node
+				})
+				// click event
+				button_value_copy_node.addEventListener('click', (e) => {
+					e.stopPropagation()
+					// only available in https context for security reasons
+					if (navigator && navigator.clipboard) {
+						navigator.clipboard.writeText( JSON.stringify(component.data.value) )
+					}
+				})
 		}
-		dd_request_idle_callback(callback)
+		const exec_idle_callback = ()=>{ dd_request_idle_callback(callback) }
+		exec_idle_callback(callback)
+
+		// event subscribe
+		if (container.update_value_event_token) {
+			// unsubscribe previous component subscription
+			event_manager.unsubscribe(container.update_value_event_token)
+		}
+		// store subscription token to prevent duplicates
+		container.update_value_event_token = event_manager.subscribe('update_value_'+ component.id_base, exec_idle_callback)
 
 	// track collapse toggle state of content
 		ui.collapse_toggle_track({
