@@ -2577,6 +2577,12 @@ common.prototype.get_section_elements_context = async function(options) {
 		const use_real_sections		= options.use_real_sections
 		const skip_permissions		= options.skip_permissions ?? false;
 
+	// check self.components_list
+		if (!self.components_list) {
+			self.components_list = []
+			console.error('Forced add missing self.components_list:', self.components_list);
+		}
+
 	// components
 		const get_components = async () => {
 			if (self.components_list[section_tipo]) {
