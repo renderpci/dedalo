@@ -21,7 +21,6 @@
 * @return array ar_components
 */
 export const render_components_list = function(options) {
-	// console.log("render_components_list options:", options);
 
 	const ar_components = []
 
@@ -46,16 +45,14 @@ export const render_components_list = function(options) {
 	// list_container
 		const list_container = ui.create_dom_element({
 			element_type	: 'ul',
-			// class_name	: "search_section_container",
-			class_name		: "list_container",
+			class_name		: 'list_container',
 			parent			: target_div
 		})
 
 	// target_list_container
 		const target_list_container = ui.create_dom_element({
 			element_type	: 'ul',
-			// class_name	: "search_section_container target_container",
-			class_name		: "list_container target_list_container",
+			class_name		: 'list_container target_list_container',
 			parent			: target_div
 		})
 
@@ -71,33 +68,37 @@ export const render_components_list = function(options) {
 				// section title bar
 				const section_bar = ui.create_dom_element({
 					element_type	: 'li',
-					class_name		: "section_bar_label",
+					class_name		: 'section_bar_label',
 					inner_html		: element.label || element.tipo,
 					parent			: list_container
 				})
 				if (path.length===0) {
 					section_bar.classList.add('close_hide')
 				}
-				section_bar.addEventListener('click', function(){
+				// click event
+				const handle_click = (e) => {
+					e.stopPropagation()
 					if (target_div.classList.contains('target_list_container')) {
 						target_div.innerHTML = ''
 					}
-				})
+				}
+				section_bar.addEventListener('click', handle_click)
 				break;
 			}
 
 			case element.model==='section_group' || element.model==='section_tab':
 				// Section group container (ul)
 				section_group = ui.create_dom_element({
-					element_type : 'ul',
-					parent 		 : list_container
+					element_type	: 'ul',
+					class_name		: 'ul_regular',
+					parent			: list_container
 				})
 				// Section group label (li)
 				const section_group_label = ui.create_dom_element({
 					element_type	: 'li',
-					parent			: section_group,
 					class_name		: 'section_group_label',
-					inner_html		: element.label
+					inner_html		: element.label,
+					parent			: section_group,
 				})
 				section_group_label.addEventListener('click', toggle_section_group_label_siblings)
 				break;
@@ -106,25 +107,13 @@ export const render_components_list = function(options) {
 				// Calculated path (from DOM position)
 				const calculated_component_path = self.calculate_component_path( element, path )
 
-				// const class_names	= 'search_component_label element_draggable'
-				const class_names		= 'component_label element_draggable'
-				const is_draggable		= true
-				// if (element.model==="component_portal") {
-				// 	// Autocompletes only
-				// 	// Pointer to open "children" section (portals and autocompletes)
-				// 	// Builds li element
-				// 	class_names = "search_component_label element_draggable"
-				// }else if (element.model==="component_portal"){
-				// 	class_names = "search_component_label"
-				// 	is_draggable 		= false
-				// }
-
-				const section_id = self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
+				const class_names	= 'component_label element_draggable'
+				const is_draggable	= true
+				const section_id	= self.get_section_id() // defined by the caller, sometimes "tmp_seach_" sometimes "list_" etc
 
 				// component node
-					const component		= ui.create_dom_element({
+					const component	= ui.create_dom_element({
 						element_type	: 'li',
-						parent			: section_group,
 						class_name		: class_names,
 						inner_html		: element.label,
 						draggable		: is_draggable,
@@ -133,15 +122,14 @@ export const render_components_list = function(options) {
 							tipo			: element.tipo,
 							section_tipo	: element.section_tipo,
 							section_id		: section_id
-						}
+						},
+						parent			: section_group
 					})
 					component.ddo	= element
 					component.path	= calculated_component_path
 
 				// drag events
 					component.addEventListener('dragstart',function(e){self.on_dragstart(this,e)})
-					//component.addEventListener('dragend',function(e){self.on_drag_end(this,e)})
-					// component.addEventListener('drop',function(e){self.on_drop(this,e)})
 
 				// add
 					ar_components.push(component)
@@ -153,12 +141,18 @@ export const render_components_list = function(options) {
 
 						component.classList.add('has_subquery')
 
-						const fn_click = async function(e) {
+						const target_click_handler = async function(e) {
+							e.stopPropagation()
+
+							// loading
+							target_list_container.classList.add('loading')
+
 							// section_elements_context
 								const current_section_elements = await self.get_section_elements_context({
 									section_tipo			: target_section,
 									ar_components_exclude	: null // use defaults from server
 								})
+
 							// recursion render_components_list
 								render_components_list({
 									self				: self,
@@ -168,18 +162,21 @@ export const render_components_list = function(options) {
 									section_elements	: current_section_elements
 								})
 							// Reset active in current wrap
-								const ar_active_now	= await list_container.querySelectorAll('li.active')
+								const ar_active_now	= list_container.querySelectorAll('li.active')
 								const len			= ar_active_now.length
 								for (let i = len - 1; i >= 0; i--) {
 									ar_active_now[i].classList.remove('active');
 								}
 							// Active current
 							this.classList.add('active');
-						}//end fn_click
+
+							// loading
+							target_list_container.classList.remove('loading')
+						}//end target_click_handler
 
 						// Event on click load "children" section inside target_list_container recursively
 						const target_section = element.target_section_tipo[0] // Select first only
-						component.addEventListener('click', fn_click)
+						component.addEventListener('click', target_click_handler)
 					}
 				break;
 			}
