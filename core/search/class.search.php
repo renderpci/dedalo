@@ -590,26 +590,48 @@ class search {
 				$filter->{$op_and}[] = $new_sqo->fixed_children_filter;
 			}
 
-			// children filter
-			$children_filter = [];
-			foreach ($ar_rows as $row_value) {
+		// children filter
+			// old version using OR
+				// $children_filter = [];
+				// foreach ($ar_rows as $row_value) {
 
-				$item = json_decode('{
-					"q": "'.$row_value->section_id.'",
-					"q_operator": null,
-					"path": [
-					  {
-						"section_tipo": "'.$row_value->section_tipo.'",
-						"component_tipo": "section_id",
-						"model": "component_section_id",
-						"name": "Id"
-					  }
-					]
-				  }');
+				// 	$item = json_decode('{
+				// 		"q": "'.$row_value->section_id.'",
+				// 		"q_operator": null,
+				// 		"format": "in_column",
+				// 		"path": [
+				// 		  {
+				// 			"section_tipo": "'.$row_value->section_tipo.'",
+				// 			"component_tipo": "section_id",
+				// 			"model": "component_section_id",
+				// 			"name": "Id"
+				// 		  }
+				// 		]
+				// 	  }');
 
-				$children_filter[] = $item;
-			}
+				// 	$children_filter[] = $item;
+				// }
 
+		// optimized version using IN
+			$ar_section_id = array_map(function($el){
+				return $el->section_id;
+			}, $ar_rows);
+			$section_tipo = $ar_rows[0]->section_tipo ?? '';
+			$item = json_decode('{
+				"q": "'. implode(',', $ar_section_id) .'",
+				"q_operator": null,
+				"path": [
+				  {
+					"section_tipo": "'. $section_tipo .'",
+					"component_tipo": "section_id",
+					"model": "component_section_id",
+					"name": "Id"
+				  }
+				]
+			}');
+			$children_filter = [$item];
+
+		// filter
 			if(isset($filter->{$op_and})){
 
 				$add_children = new stdClass();
