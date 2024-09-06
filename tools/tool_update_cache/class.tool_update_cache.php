@@ -267,72 +267,41 @@ class tool_update_cache extends tool_common {
 	/**
 	* GET_COMPONENT_LIST
 	* List of components ready to update cache
+	* Uses get_section_elements_context to get a full list
+	* of elements context including section_groups
+	* @see common::get_section_elements_context
+	* Note that whole options are passed to method get_section_elements_context
 	* @param object $options
+	* {
+	* 	ar_section_tipo: array|null
+	* 	use_real_sections: bool = false
+	* 	skip_permissions: bool = false
+	* 	ar_tipo_exclude_elements: array (optional)
+	* 	ar_components_exclude: array (optional)
+	* }
 	* @return object $response
 	* 	->result = array of objects
 	*/
 	public static function get_component_list(object $options) : object {
 
-		$response = new stdClass();
-			$response->result	= false;
-			$response->msg		= 'Error. Request failed ['.__FUNCTION__.']';
-
-		// options
-			$section_tipo	= $options->section_tipo;
-			$lang			= $options->lang ?? DEDALO_DATA_LANG;
-
-		// All section components
-			$related_terms = section::get_ar_children_tipo_by_model_name_in_section(
-				$section_tipo, // section_tipo
-				['component_'], // ar_model_name_required
-				true, // from_cache
-				true, // resolve_virtual
-				true, // recursive
-				false, // search_exact
-				false // ar_tipo_exclude_elements
+		// filtered_components
+			$component_list = common::get_section_elements_context(
+				$options
 			);
 
-		// Only section list defined components
-			// $ar_section_list_tipo = section::get_ar_children_tipo_by_model_name_in_section($section_tipo, ['section_list'], true);
-			// if (!isset($section_list_tipo[0])) {
-			// 	// throw new Exception("Error Processing Request. Section list not found for $section_tipo", 1);
-			// 	$msg = " Error Processing Request. Section list not found for section_tipo: $section_tipo";
-			// 	trigger_error($msg);
-			// 	$response->msg .= $msg;
-			// 	return $response;
-			// }
-			// $section_list_tipo	= $ar_section_list_tipo[0];
-			// $RecordObj_dd		= new RecordObj_dd($section_list_tipo);
-			// $related_terms		= $RecordObj_dd->get_ar_terminos_relacionados($section_list_tipo, $cache=true, $simple=true);
+		// add regenerate_options to components
+			array_map(function($el){
 
-		// component_list
-			$component_list = [];
-			foreach ($related_terms as $current_component_tipo) {
-				$model = RecordObj_dd::get_modelo_name_by_tipo($current_component_tipo,true);
-				if (strpos($model, 'component_')===false) {
-					debug_log(__METHOD__
-						." Skipped element model: '$model' tipo: $current_component_tipo (is not a component)"
-						, logger::DEBUG
-					);
-					continue;
+				if ($el->type==='component') {
+					$regenerate_options = call_user_func([$el->model, 'get_regenerate_options']);
 				}
-
-				// regenerate_options. Object normally empty except for component_image
-				$regenerate_options = $model::get_regenerate_options();
-
-				$item = (object)[
-					'tipo'					=> $current_component_tipo,
-					'model'					=> $model,
-					'label'					=> RecordObj_dd::get_termino_by_tipo($current_component_tipo, $lang),
-					'regenerate_options'	=> $regenerate_options
-				];
-
-				$component_list[] = $item;
-			}
+				$el->regenerate_options = $regenerate_options ?? null;
+			}, $component_list);
 
 		// response
-			$response->result	= $component_list;
-			$response->msg		= 'OK. Request done successfully';
+			$response = new stdClass();
+				$response->result	= $component_list;
+				$response->msg		= 'OK. Request done successfully';
 
 
 		return $response;

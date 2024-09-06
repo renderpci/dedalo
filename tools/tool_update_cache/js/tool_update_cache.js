@@ -33,9 +33,13 @@ export const tool_update_cache = function () {
 	this.langs			= null
 	this.caller			= null
 
-	this.component_list = null
+	// selected_tipos: array of selected tipos as ['rsc187','rsc185'..]
+	this.selected_tipos		= []
+	// regenerate_options: user selected regenerate_options as {'rsc178':{"delete_normalized_files":true}}
+	this.regenerate_options	= {}
 
-	this.regenerate_options = {}
+	// full list of components context from API tool call
+	this.components_list = []
 
 	return true
 }//end page
@@ -89,7 +93,7 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 		const common_build = await tool_common.prototype.build.call(this, autoload);
 
 	// specific actions.. like fix main_element for convenience
-		self.component_list = await self.get_component_list()
+		self.components_list = await self.get_components_list()
 
 
 	return common_build
@@ -98,74 +102,75 @@ tool_update_cache.prototype.build = async function(autoload=false) {
 
 
 /**
-* GET_COMPONENT_LIST
+* GET_COMPONENTS_LIST
 * 	Get the list of section components available to update cache
 * @return promise
 * 	resolve array result
 */
-tool_update_cache.prototype.get_component_list = function() {
+tool_update_cache.prototype.get_components_list = async function() {
 
 	const self = this
 
 	const section_tipo = self.caller.section_tipo
 
 	// source. Note that second argument is the name of the function to manage the tool request like 'apply_value'
-	// this generates a call as my_tool_name::my_function_name(options)
+		// this generates a call as my_tool_name::my_function_name(options)
 		const source = create_source(self, 'get_component_list')
+
+	// options
+		const options = {
+			ar_section_tipo				: [section_tipo],
+			use_real_sections			: false,
+			skip_permissions			: true,
+			ar_tipo_exclude_elements	: null,
+			ar_components_exclude		: [] // force to get all components
+		}
 
 	// rqo
 		const rqo = {
 			dd_api	: 'dd_tools_api',
 			action	: 'tool_request',
 			source	: source,
-			options	: {
-				section_tipo : section_tipo
-			}
+			options	: options
 		}
 
 	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			data_manager.request({
-				use_worker	: true,
-				body		: rqo
-			})
-			.then(function(response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> get_component_list API response:",'DEBUG',response);
-				}
-
-				const list = response.result || [] // array of objects
-
-				// sort list
-				list.sort((a, b) => new Intl.Collator().compare(a.label, b.label));
-
-				resolve(list)
-			})
+		const response = await data_manager.request({
+			body : rqo
 		})
-}//end get_component_list
+
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> get_component_list API response:",'DEBUG',response);
+		}
+
+		const components_list = response.result // array of objects
+
+
+	return components_list
+}//end get_components_list
 
 
 
 /**
 * UPDATE_CACHE
 * Get the list of section components available to update cache
-* @param array ar_component_tipo
 * @return promise > bool
 */
-tool_update_cache.prototype.update_cache = function(ar_component_tipo) {
+tool_update_cache.prototype.update_cache = function() {
 
 	const self = this
 
-	const section_tipo			= self.caller.section_tipo
-	const regenerate_options	= self.regenerate_options
+	// short vars
+		const section_tipo			= self.caller.section_tipo
+		const selected_tipos		= self.selected_tipos
+		const regenerate_options	= self.regenerate_options
 
 	// components_selection. Compose user components selection adding regenerate_options
 		const components_selection = []
-		const ar_component_tipo_length = ar_component_tipo.length
-		for (let i = 0; i < ar_component_tipo_length; i++) {
+		const selected_tipos_length = selected_tipos.length
+		for (let i = 0; i < selected_tipos_length; i++) {
 
-			const tipo = ar_component_tipo[i]
+			const tipo = selected_tipos[i]
 
 			components_selection.push({
 				tipo				: tipo,
