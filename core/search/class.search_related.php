@@ -49,6 +49,7 @@ class search_related extends search {
 					$ar_section_filter[] = 'section_tipo = \''.$section_tipo.'\'';
 				}
 			}
+			// sample: 'section_tipo = 'tch1' OR section_tipo = 'tch100' OR section_tipo = 'tch178'
 			$section_filter = !empty($ar_section_filter)
 				? implode(' OR ', $ar_section_filter)
 				: false;
