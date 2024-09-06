@@ -75,11 +75,7 @@ const get_content_data = async function(self) {
 	const fragment = new DocumentFragment()
 
 	// short vars
-		const section_tipo		= self.caller.section_tipo
-		const component_list	= self.component_list
-		const config			= self.config || {}
-		const hilite_tipos		= config.hilite_tipos || {}
-		const local_db_id		= 'process_update_cache'
+		const local_db_id = 'process_update_cache'
 
 	// section_info
 		const section_info = ui.create_dom_element({
@@ -110,71 +106,9 @@ const get_content_data = async function(self) {
 			parent			: fragment
 		})
 
-	// hilite models
-		const hilite_models = [
-			'component_3d',
-			'component_av',
-			'component_image',
-			'component_pdf',
-			'component_svg'
-		]
-
 	// components list checkbox
-		const options_nodes = []
-		const components_list_length = component_list.length
-		for (let i = 0; i < components_list_length; i++) {
-
-			const item = component_list[i]
-
-			// container
-				const container = ui.create_dom_element({
-					element_type	: 'div',
-					class_name		: 'item_container',
-					parent			: components_list_container
-				})
-
- 			// option_label. checkbox label
-				const option_label = ui.create_dom_element({
-					element_type	: 'label',
-					inner_html		: item.label,
-					parent			: container
-				})
-				// info
-				ui.create_dom_element({
-					element_type	: 'span',
-					inner_html		: `${item.model} - ${item.tipo}`,
-					parent			: option_label
-				})
-
-			// hilite
-				if (hilite_tipos.value && hilite_tipos.value.includes(item.tipo) ||
-					hilite_models.includes(item.model)
-					) {
-					option_label.classList.add('hilite')
-				}
-
-			// input checkbox
-				const option = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					id				: section_tipo + '_' +  item.tipo,
-					value			: item.tipo
-				})
-				if (item.model==='component_section_id') {
-					option.disabled = true
-				}
-				option_label.prepend(option)
-
-			// regenerate_options. Options for update (like component_image)
-				if (item.regenerate_options) {
-					container.appendChild(
-						render_regenerate_options(self, item)
-					)
-				}
-
-			// add
-				options_nodes.push(option)
-		}
+		const components_list_node = render_components_list(self)
+		components_list_container.appendChild(components_list_node)
 
 	// buttons_container
 		const buttons_container = ui.create_dom_element({
@@ -195,7 +129,7 @@ const get_content_data = async function(self) {
 			e.preventDefault()
 
 			// selection
-				const checked_list			= options_nodes.filter(el => el.checked===true)
+				const checked_list			= self.selected_tipos
 				const checked_list_length	= checked_list.length
 				// empty case
 				if (checked_list_length<1) {
@@ -215,8 +149,7 @@ const get_content_data = async function(self) {
 				document.activeElement.blur()
 
 			// API request
-				const ar_component_tipo	= checked_list.map(el => el.value)
-				const api_response		= await self.update_cache(ar_component_tipo)
+				const api_response = await self.update_cache()
 
 			// response error case
 				if (api_response.result===false) {
@@ -266,7 +199,6 @@ const get_content_data = async function(self) {
 		}
 		check_process_data()
 
-
 	// content_data
 		const content_data = ui.tool.build_content_data(self)
 		content_data.appendChild(fragment)
@@ -274,6 +206,172 @@ const get_content_data = async function(self) {
 
 	return content_data
 }//end get_content_data
+
+
+
+/**
+* RENDER_COMPONENTS_LIST
+* Creates the components list check-boxes and labels
+* @param object self
+* @return DocumentFragment
+*/
+const render_components_list = function(self) {
+
+	const fragment = new DocumentFragment()
+
+	// short vars
+		const section_tipo		= self.caller.section_tipo
+		const section_elements	= self.components_list
+		const config			= self.config || {}
+
+	// hilite
+		const hilite_tipos = config.hilite_tipos || {}
+	// hilite models
+		const hilite_models = [
+			'component_3d',
+			'component_av',
+			'component_image',
+			'component_pdf',
+			'component_svg'
+		]
+
+	// list_container
+		const list_container = ui.create_dom_element({
+			element_type	: 'ul',
+			class_name		: 'list_container',
+			parent			: fragment
+		})
+
+	let section_group
+
+	const section_elements_length = section_elements.length
+	for (let i = 0; i < section_elements_length; i++) {
+
+		const element = section_elements[i]
+
+		switch (true) {
+
+			case element.model==='section': {
+				// ignore section
+				break;
+			}
+
+			case element.model==='section_group' || element.model==='section_tab': {
+
+				// Section group container (ul). Set var `section_group` on each iteration
+					section_group = ui.create_dom_element({
+						element_type	: 'ul',
+						class_name		: 'ul_regular',
+						parent			: list_container
+					})
+
+				// li section_group_label
+					const section_group_label = ui.create_dom_element({
+						element_type	: 'li',
+						class_name		: 'li_line section_group_label',
+						parent			: section_group,
+					})
+
+				// label
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: element.label,
+						parent			: section_group_label,
+					})
+
+				// regenerate_options
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: self.get_tool_label('regenerate_options') || 'Regenerate options',
+						parent			: section_group_label,
+					})
+
+				// info
+					ui.create_dom_element({
+						element_type	: 'span',
+						inner_html		: self.get_tool_label('info') || 'Info',
+						parent			: section_group_label,
+					})
+				break;
+			}
+
+			default: {
+
+				// li_container
+					const li_container	= ui.create_dom_element({
+						element_type	: 'li',
+						class_name		: 'li_line li_container',
+						parent			: section_group
+					})
+
+				// component_label
+					const component_label = ui.create_dom_element({
+						element_type	: 'label',
+						class_name		: 'component_label',
+						inner_html		: element.label,
+						title			: `${element.model} - ${element.tipo}`,
+						parent			: li_container,
+					})
+					component_label.ddo = element
+
+					// hilite
+					if (hilite_tipos.value && hilite_tipos.value.includes(element.tipo) ||
+						hilite_models.includes(element.model)
+						) {
+						component_label.classList.add('hilite')
+					}
+
+				// input checkbox
+					const input_checkbox = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						id				: section_tipo + '_' +  element.tipo,
+						value			: element.tipo
+					})
+					if (element.model==='component_section_id') {
+						input_checkbox.disabled = true
+					}
+					component_label.prepend(input_checkbox)
+					// change event handler
+						const handle_change = (e) => {
+							if (input_checkbox.checked) {
+								self.selected_tipos.push(element.tipo)
+							}else{
+								const index = self.selected_tipos.indexOf(element.tipo)
+								if (index > -1) {
+									self.selected_tipos.splice(index, 1)
+								}
+							}
+						}
+						input_checkbox.addEventListener('change', handle_change)
+
+				// regenerate_container. Regeneration options for update (like component_image)
+					const regenerate_container = ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'regenerate_container',
+						parent			: li_container
+					})
+					if (element.regenerate_options) {
+						regenerate_container.appendChild(
+							render_regenerate_options(self, element)
+						)
+					}
+
+				// info_node (model, tipo, etc.)
+					ui.create_dom_element({
+						element_type	: 'div',
+						class_name		: 'info_node',
+						inner_html		: `${element.model} - ${element.tipo}`,
+						parent			: li_container
+					})
+				break;
+			}
+		}//end switch (true)
+	}
+
+
+	return fragment
+}//end render_components_list
 
 
 
@@ -316,7 +414,7 @@ const render_regenerate_options = function(self, item) {
 			collapsed_id		: 'regenerate_options_' + item.tipo,
 			collapse_callback	: collapse,
 			expose_callback		: expose,
-			default_state		: 'closed'
+			default_state		: 'opened' // 'opened|closed'
 		})
 		function collapse() {
 			head_node.classList.remove('up')
@@ -365,7 +463,6 @@ const render_regenerate_options = function(self, item) {
 					console.warn('Ignored regenerate item type not allowed: ', regenerate_item.type);
 					break;
 			}
-
 		}//end for (let i = 0; i < regenerate_options_length; i++)
 
 

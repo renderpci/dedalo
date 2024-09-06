@@ -280,6 +280,7 @@
 			}
 
 			@media screen and (max-width: @width_break_point_1) {
+				display: block; // avoid PDF player issue in small screens
 				flex: 0 0 100%;
 				overflow-x: auto;
 				max-width: calc(100vw - 2rem);
