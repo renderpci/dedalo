@@ -396,52 +396,22 @@ class ts_object {
 								# icon Not need more info. Value is property 'type'
 								$element_obj->value = $render_vars->icon;
 
-								$filter_locators = null;
 								if ($model_name==='component_relation_index') {
 
-									if (isset($current_object->show_data)) {
+									// Counts indexation related items
+									$count_data_group_by = $this->get_count_data_group_by(
+										$component,
+										$current_object
+									);
 
-										$filter_by_locator = new locator();
-											$filter_by_locator->set_section_tipo($this->section_tipo);
-											$filter_by_locator->set_section_id($this->section_id);
-
-
-										$sqo = new search_query_object();
-											$sqo->set_section_tipo([$this->section_tipo]);
-											$sqo->set_limit(0);
-											$sqo->set_offset(0);
-											$sqo->set_filter_by_locators([$filter_by_locator]);
-											$sqo->set_children_recursive(true);
-
-										$search = search::get_instance(
-											$sqo, // object sqo
-										);
-										$response = $search->search();
-										$ar_records = $response->ar_records;
-
-										$relation_type = $component->get_relation_type();
-
-										$filter_locators = [];
-										foreach ($ar_records as $current_row) {
-
-											// filter_locator
-											$filter_locator = new locator();
-												$filter_locator->set_type( $relation_type ); // as dd96
-												$filter_locator->set_section_tipo($current_row->section_tipo);
-												$filter_locator->set_section_id($current_row->section_id);
-
-											$filter_locators[] = $filter_locator;
-										}
-									}
-
-									// get the total sections that are calling and the total of every specific section
-									$count_data_group_by = $component->count_data_group_by(['section_tipo'], $filter_locators);
-
+									// total 0 case. Nothing to display, skip
 									if($count_data_group_by->total === 0){
 										continue 3;
 									}
+
 									$element_obj->value .= ':' . $count_data_group_by->total;
 
+									// flat key and set label
 									array_map(function($item){
 										$item->label	= RecordObj_dd::get_termino_by_tipo($item->key[0]);
 										$item->key		= $item->key[0]; // flat the key to be more useful in JavaScript, only 1 section is received
@@ -935,6 +905,89 @@ class ts_object {
 
 		return (int)$permissions;
 	}//end get_permissions_element
+
+
+
+	/**
+	* GET_COUNT_DATA_GROUP_BY
+	* Counts indexation related items
+	* @param object $component
+	* 	component indexation
+	* @param object section_list_thesaurus_item
+	* sample:
+	* {
+	*    "icon": "TCHI",
+	*    "tipo": "tchi59",
+	*    "type": "icon",
+	*    "show_data": "children"
+	* }
+	* @return object $count_data_group_by
+	*/
+	public function get_count_data_group_by(object $component, object $section_list_thesaurus_item) : object {
+
+		// cache
+			static $resolved_child;
+
+		// filter_locators
+			$filter_locators = null;
+			if (isset($section_list_thesaurus_item->show_data)) {
+
+				// filter_by_locator
+					$filter_by_locator = new locator();
+						$filter_by_locator->set_section_tipo($this->section_tipo);
+						$filter_by_locator->set_section_id($this->section_id);
+
+				// sqo
+					$sqo = new search_query_object();
+						$sqo->set_section_tipo([$this->section_tipo]);
+						$sqo->set_limit(0);
+						$sqo->set_offset(0);
+						$sqo->set_filter_by_locators([$filter_by_locator]);
+						$sqo->set_children_recursive(true);
+
+				// search
+					// This search is for resolve children recursively
+					// Store same sqo search to prevent duplicate queries
+					$hash = md5(json_encode($sqo));
+					if (isset($resolved_child[$hash])) {
+						// return from cache
+						$ar_records = $resolved_child[$hash];
+					}else{
+						$search = search::get_instance(
+							$sqo // object sqo
+						);
+						$response	= $search->search();
+						$ar_records	= $response->ar_records;
+
+						// cache
+						$resolved_child[$hash] = $ar_records;
+					}
+
+				// relation_type is used to filter in relations
+				$relation_type = $component->get_relation_type();
+
+				$filter_locators = [];
+				foreach ($ar_records as $current_row) {
+
+					// filter_locator
+					$filter_locator = new locator();
+						$filter_locator->set_type( $relation_type ); // as dd96
+						$filter_locator->set_section_tipo($current_row->section_tipo);
+						$filter_locator->set_section_id($current_row->section_id);
+
+					$filter_locators[] = $filter_locator;
+				}
+			}//end if (isset($section_list_thesaurus_item->show_data))
+
+		// count_data_group_by. Get the total sections that are calling and the totals of every specific section
+			$count_data_group_by = $component->count_data_group_by(
+				['section_tipo'],
+				$filter_locators
+			);
+
+
+		return $count_data_group_by;
+	}//end get_count_data_group_by
 
 
 
