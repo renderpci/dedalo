@@ -380,7 +380,7 @@ class ts_object {
 									continue 3;
 								}
 
-								// ND element can change term value when 'esdecriptor' value is 'no' (locator of 'no')
+								// ND element can change term value when 'esdescriptor' value is 'no' (locator of 'no')
 									if($render_vars->icon==='ND') {
 										#debug_log(__METHOD__." children_data->ar_elements ".to_string($child_data->ar_elements), logger::DEBUG);
 										#debug_log(__METHOD__." dato->section_id ".to_string($dato), logger::DEBUG);

@@ -507,9 +507,24 @@ abstract class JSON_RecordDataBoundObject {
 				metrics::$search_free_total_calls++;
 
 				// query additional info
-				if (isset(debug_backtrace()[1]['function'])) {
-					$strQuery = '-- search_free : '.debug_backtrace()[1]['function']."\n" . $strQuery;
-				}
+					if (isset(debug_backtrace()[1]['function'])) {
+						$sql_prepend = '-- search_free : ' ."\n";
+
+						foreach ([1,2,3,4,5,6,7,8] as $key) {
+							if (isset(debug_backtrace()[$key]['function'])) {
+								$sql_prepend .= '--  ['.$key.'] ' . debug_backtrace()[$key]['function'] . "\n";
+							}
+						}
+
+						$strQuery = $sql_prepend . trim($strQuery);
+					}
+
+				// development only
+					// debug_log(__METHOD__
+					// 	. " strQuery " . PHP_EOL
+					// 	. to_string($strQuery)
+					// 	, logger::WARNING
+					// );
 			}
 
 		// connection to DDBB
