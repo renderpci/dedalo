@@ -302,7 +302,7 @@ tool_common.prototype.build = async function(autoload=false, options={}) {
 			  }//end async function() load_ddo_map
 
 	// load self style
-		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css'
+		const tool_css_url = DEDALO_TOOLS_URL + '/' + self.model + '/css/' + self.model + '.css' + `?v=${page_globals.dedalo_version}`
 		common.prototype.load_style(tool_css_url)
 
 	// load_ddo_map. Exec load ddo_map elements
