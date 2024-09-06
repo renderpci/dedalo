@@ -928,8 +928,10 @@ class ts_object {
 		// cache
 			static $resolved_child;
 
+		// (!) FORCE DISABLED TEMPORALLY THE FILTER_LOCATORS CALCULATION (BETA) !
+			$section_list_thesaurus_item->show_data = null;
+
 		// filter_locators
-			$filter_locators = null;
 			if (isset($section_list_thesaurus_item->show_data)) {
 
 				// filter_by_locator
@@ -982,7 +984,7 @@ class ts_object {
 		// count_data_group_by. Get the total sections that are calling and the totals of every specific section
 			$count_data_group_by = $component->count_data_group_by(
 				['section_tipo'],
-				$filter_locators
+				$filter_locators ?? null
 			);
 
 
