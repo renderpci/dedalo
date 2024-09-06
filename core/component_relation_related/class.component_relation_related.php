@@ -398,8 +398,6 @@ class component_relation_related extends component_relation_common {
 			$locator->set_type_rel($type_rel);
 		}
 
-		$locator_json = json_encode($locator);
-
 		// Path
 		$base_path = new stdClass();
 			$base_path->name			= $this->label;
@@ -414,7 +412,7 @@ class component_relation_related extends component_relation_common {
 
 		// Filter
 		$filter_group = new stdClass();
-			$filter_group->q				= $locator_json;
+			$filter_group->q				= $locator;
 			$filter_group->lang				= 'all';
 			$filter_group->path				= $path;
 			$filter_group->component_path	= $component_path;
