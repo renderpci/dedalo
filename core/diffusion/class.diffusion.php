@@ -400,15 +400,27 @@ abstract class diffusion  {
 			// 	return $diffusion_sections_from_diffusion_element[$diffusion_element_tipo];
 			// }
 
-		include_once DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+		try {
 
-		$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+			include_once DEDALO_CORE_PATH.'/diffusion/class.'.$class_name.'.php';
+
+			$ar_diffusion_sections = $class_name::get_diffusion_sections_from_diffusion_element($diffusion_element_tipo);
+
+		} catch (Exception $e) {
+			error_log( 'Caught exception: ' . $e->getMessage() );
+			debug_log(__METHOD__
+				. " Caught exception: " . $e->getMessage() . PHP_EOL
+				. ' diffusion_element_tipo: ' . to_string($diffusion_element_tipo) . PHP_EOL
+				. ' class_name: ' . to_string($class_name)
+				, logger::ERROR
+			);
+		}
 
 		// cache
 			// $diffusion_sections_from_diffusion_element[$diffusion_element_tipo] = $ar_diffusion_sections;
 
 
-		return $ar_diffusion_sections;
+		return $ar_diffusion_sections ?? [];
 	}//end get_diffusion_sections_from_diffusion_element
 
 
