@@ -144,7 +144,7 @@ class security {
 				$model_name = RecordObj_dd::get_modelo_name_by_tipo($parent_tipo, true);
 				if ($model_name==='section') {
 					$matrix_table = common::get_matrix_table_from_tipo($parent_tipo);
-					if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd'){
+					if ($matrix_table==='matrix_list' || $matrix_table==='matrix_dd' || $matrix_table==='matrix_notes'){
 						$permissions = 1;
 					}
 				}
