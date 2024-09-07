@@ -5,7 +5,7 @@
 */
 .relation_list {
 	font-size: 0.90rem;
-	color: #999999;
+	color: @color_grey_darken_2;
 
 	>.relation_list_paginator {
 		-moz-user-select: none;
@@ -31,7 +31,7 @@
 				margin-left: 0.5rem;
 				padding: 0px;
 				opacity: 0.5;
-				.fn_build_button('play.svg', black, 1, 1em);
+				.fn_build_button('play.svg', @color_grey_ultradark, 1, 1em);
 				cursor: pointer;
 
 				&.relation_list_paginator_next {
@@ -55,7 +55,7 @@
 	>.content_data {
 
 		.relation_list_grid {
-			border-left: 2px solid #ff951f;
+			border-left: 2px solid @color_orange_dedalo;
 			margin-bottom: 5px;
 			padding-left: 5px;
 			-webkit-user-select: none;
@@ -64,24 +64,27 @@
 			user-select: none;
 
 			>.relation_list_header {
-				color: #333333;
-				padding: 0.25rem;
 
-				&.relation_list_count {
+				>span {
+					color: @color_grey_ultradark;
+					padding: 0.25rem;
+				}
+
+				>.relation_list_count {
 					float: right;
 				}
 			}
 
 			>ul.relation_list_data_header {
-				background-color: #eeeeee;
+				background-color: @color_grey_light;
 				width: 100%;
 			}
 
 			>ul.relation_list_data_row {
-				border-bottom: 0.5px solid #d5d5d5;
+				border-bottom: 0.5px solid @color_grey_medium;
 
 				&:hover {
-					color: #000000;
+					color: @color_black;
 					cursor: pointer;
 				}
 			}
