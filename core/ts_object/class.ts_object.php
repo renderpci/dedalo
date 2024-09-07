@@ -928,9 +928,6 @@ class ts_object {
 		// cache
 			static $resolved_child;
 
-		// (!) FORCE DISABLED TEMPORALLY THE FILTER_LOCATORS CALCULATION (BETA) !
-			$section_list_thesaurus_item->show_data = null;
-
 		// filter_locators
 			if (isset($section_list_thesaurus_item->show_data)) {
 
