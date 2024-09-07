@@ -239,7 +239,8 @@ class search {
 			'matrix_hierarchy_main',
 			'matrix_langs',
 			'matrix_tools',
-			'matrix_stats'
+			'matrix_stats',
+			'matrix_notes'
 		];
 		$this->skip_projects_filter = (in_array($this->matrix_table, $ar_tables_skip_projects, true))
 			? true
