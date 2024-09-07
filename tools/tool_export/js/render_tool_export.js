@@ -453,7 +453,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_csv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success download',
-				inner_html		: (get_label.download || 'Download') + ' csv',
+				inner_html		: (get_label.download || 'Download') + ' CSV',
 				parent			: export_buttons_options
 			})
 			button_export_csv.addEventListener('click', async function() {
@@ -480,7 +480,7 @@ const get_content_data_edit = async function(self) {
 			const button_export_tsv = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success download',
-				inner_html		: (get_label.download || 'Export') + ' tsv',
+				inner_html		: (get_label.download || 'Export') + ' TSV',
 				parent			: export_buttons_options
 			})
 			button_export_tsv.addEventListener('click', async function() {
@@ -503,46 +503,56 @@ const get_content_data_edit = async function(self) {
 					document.body.removeChild(link);
 			})
 
-		// excel. button_export Excel
+		// ods. button_export ODS Libre office
+			const button_export_ods = ui.create_dom_element({
+				element_type	: 'button',
+				class_name		: 'processing_import success download',
+				inner_html		: (get_label.download || 'Export') + ' ODS',
+				parent			: export_buttons_options
+			})
+			button_export_ods.addEventListener('click', function() {
+				// Download it
+					const file	= filename+ '.ods';
+
+					self.export_table_with_xlsx_lib({
+						table		: export_data_container,
+						filename	: file
+					})
+			})
+
+		// xlsx. button_export Excel
 			const button_export_excel = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success download',
-				inner_html		: (get_label.download || 'Export') + ' Excel',
+				inner_html		: (get_label.download || 'Export') + ' XLSX',
 				parent			: export_buttons_options
 			})
 			button_export_excel.addEventListener('click', function() {
-
 				// Download it
-					const file	= filename+ '.xls';
-					const link	= document.createElement('a');
-					link.style.display = 'none';
-					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', file);
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
+					const file	= filename+ '.xlsx';
+
+					self.export_table_with_xlsx_lib({
+						table		: export_data_container,
+						filename	: file
+					})
 			})
 
 		// html. button export html
 			const button_export_html = ui.create_dom_element({
 				element_type	: 'button',
 				class_name		: 'processing_import success download',
-				inner_html		: (get_label.download || 'Export') + ' html',
+				inner_html		: (get_label.download || 'Export') + ' HTML',
 				parent			: export_buttons_options
 			})
 			button_export_html.addEventListener('click', function() {
 
 				// Download it
 					const file	= filename + '.html';
-					const link	= document.createElement('a');
-					link.style.display = 'none';
-					link.setAttribute('target', '_blank');
-					link.setAttribute('href', 'data	:text/html;charset=utf-8,' +  export_data_container.innerHTML);
-					link.setAttribute('download', file);
-					document.body.appendChild(link);
-					link.click();
-					document.body.removeChild(link);
+
+					self.export_table_with_xlsx_lib({
+						table		: export_data_container,
+						filename	: file
+					})
 			})
 
 		// print. button export print
