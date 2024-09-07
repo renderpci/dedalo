@@ -345,6 +345,34 @@ tool_export.prototype.get_export_xsl = async function (options) {
 }//end get_export_xsl
 
 
+/**
+* EXPORT_TABLE_WITH_XLSX_LIB
+* Convert and export table to xlsx using the library xlsx.js
+* see: https://docs.sheetjs.com/docs/getting-started/installation/standalone#ecmascript-module-imports
+* @param options options
+* 	{
+* 		table : node html table
+* 		filename: string
+* 	}
+* @return promise: bool
+*/
+tool_export.prototype.export_table_with_xlsx_lib = async function( options ) {
+
+	// dynamically import the library when is fired this function with the event listener
+	// downloaded library from https://cdn.sheetjs.com/xlsx-0.20.3/package/xlsx.mjs
+  	const XLSX = await import( DEDALO_ROOT_WEB+"/lib/xlsx/build/xlsx.js" );
+
+	const table		= options.table.firstChild
+	const filename	= options.filename
+
+	const workbook = XLSX.utils.table_to_book(table)
+
+	// Export the workbook to Excel file
+	XLSX.writeFile(workbook, filename);
+
+}// end export_table_with_xlsx_lib
+
+
 
 /**
 * ON_CLOSE_ACTIONS
