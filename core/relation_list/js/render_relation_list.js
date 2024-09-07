@@ -160,7 +160,7 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 		//create the counter
 		const header_count = ui.create_dom_element({
 			element_type	: 'span',
-			class_name		: 'relation_list_header relation_list_count',
+			class_name		: 'relation_list_count',
 			text_node		: count_data.length,
 			parent			: header
 		})
