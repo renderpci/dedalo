@@ -293,20 +293,6 @@ page.prototype.build = async function(autoload=false) {
 			return false
 		}
 
-	// page title update
-		// const section_info = self.context.find(el => el.model==='section' || el.model.indexOf('area')===0)
-		// if (section_info) {
-
-		// 	const tipo = section_info.tipo || 'Unknown tipo'
-		// 	const label = section_info.label
-		// 		? section_info.label.replace(/<[^>]+>/ig,'')
-		// 		: ''
-
-		// 	document.title =  section_info.mode === 'edit'
-		// 		? `${tipo}` //`${section_insance.data.section_id} ${label} ${tipo}`
-		// 		: get_label.list || 'List'
-		// }
-
 	// status update
 		self.status = 'built'
 
