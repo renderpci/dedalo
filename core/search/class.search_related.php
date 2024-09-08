@@ -131,7 +131,7 @@ class search_related extends search {
 		// count and pagination are optional
 			if($full_count===false) {
 				$str_query .= PHP_EOL . 'ORDER BY section_tipo, section_id ASC';
-				if($limit !== false){
+				if(!empty($limit)){
 					$str_query .= PHP_EOL . 'LIMIT '.$limit;
 					if($offset !== false){
 						$str_query .= PHP_EOL . 'OFFSET '.$offset;
