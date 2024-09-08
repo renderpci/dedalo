@@ -97,27 +97,30 @@ const event_manager_class = function(){
 
 	/**
 	* PUBLISH
-	* when the publish event is fired it need propagated to the subscribers events
+	* Exec the callback of all subscriptions
+	* When the publication event is fired, it is necessary to propagate it to the subscribers' events.
 	* @param string event_name
 	* 	Like: 'activate_component'
-	* @param object data
-	* 	object container to pass data ta to the target callback
+	* @param array|false data
+	* 	A new array with each element being the result of the callback function.
+	* 	Sample: [undefined, undefined]
 	*/
 	this.publish = function(event_name, data={}) {
-		// if(SHOW_DEBUG===true) {
-		// 	console.log("[publish] event_name:",event_name)
-		// 	console.log("[publish] data:",data)
-		// }
 
 		// find the events that has the same event_name for exec
 		const current_events = this.events.filter(current_event => current_event.event_name===event_name)
 
-		const result = (current_events)
-			? current_events.map(current_event => current_event.callback(data)) // exec the subscribed events callbacks
-			: false // if don't find events, don't run
+		// if don't find events, don't run
+		if (current_events.length<1) {
+			return false
+		}
+
+		// exec the subscribed events callbacks
+		const result = current_events.map(current_event => current_event.callback(data))
+
 
 		return result
-	}//end  publish
+	}//end publish
 
 
 
