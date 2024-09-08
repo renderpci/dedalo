@@ -170,6 +170,11 @@ export async function observe_changes(element, config, once) {
 /**
 * OBJECT_TO_URL_VARS
 * @param object vars_obj
+* sample:
+* {
+* 	tipo: 'rsc197',
+* 	menu: false
+* }
 * @return string url_vars
 */
 export function object_to_url_vars(vars_obj) {
