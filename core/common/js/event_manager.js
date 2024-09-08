@@ -68,6 +68,8 @@ const event_manager_class = function(){
 
 	/**
 	* UNSUBSCRIBE
+	* Removes event subscriptions based on token value
+	* event_token is a unique string returned on each subscription
 	* @param string event_token
 	* 	custom string incremental like: 'event_270'
 	* @return array new_events_list
@@ -89,6 +91,7 @@ const event_manager_class = function(){
 			const new_events_list = self.events.map( (current_event, key, events) => {
 				(current_event.token === event_token) ? events.splice(key, 1) : null
 			})
+
 
 		return new_events_list
 	}//end unsubscribe
@@ -137,7 +140,7 @@ const event_manager_class = function(){
 	this.get_events = function() {
 
 		return this.events
-	}//end  get_events
+	}//end get_events
 
 
 

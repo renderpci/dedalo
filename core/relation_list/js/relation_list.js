@@ -6,10 +6,10 @@
 
 /*
 
-    # FORMAT OF THE JSON GET FROM SERVER
-    # the context is the header of the list, with the columns resolution
-    # the data is the rows of the list
-    # it can mix some different columns (number, types, name of columns) which come from different sections
+	// FORMAT OF THE JSON GET FROM SERVER
+	// the context is the header of the list, with the columns resolution
+	// the data is the rows of the list
+	// it can mix some different columns (number, types, name of columns) which come from different sections
 
 	{
 		"context": [
@@ -118,6 +118,7 @@ export const relation_list = function() {
 	this.request_config_object	= null
 	this.rqo					= null
 
+
 	return true
 }//end relation_list
 
@@ -193,6 +194,7 @@ relation_list.prototype.build = async function(autoload=true){
 			model			: self.model,
 			action			: 'get_relation_list'
 		}
+
 	// sqo, use the "related" mode to get related sections that call to the current record (current section_tipo and section_id)
 		const sqo = {
 			section_tipo		: ['all'],
@@ -205,13 +207,8 @@ relation_list.prototype.build = async function(autoload=true){
 				section_id		: self.section_id
 			}]
 		}
+
 	// rqo, use the 'get_realtion_list' action from the API
-		// const rqo = {
-		// 	action	: 'get_relation_list',
-		// 	source	: source,
-		// 	sqo		: sqo
-		// }
-		// (!) Unified 17-04-2023 using API 'read' instead custom function 'get_relation_list'
 		const rqo = {
 			action	: 'read',
 			source	: source,
@@ -226,7 +223,7 @@ relation_list.prototype.build = async function(autoload=true){
 				use_worker	: true,
 				body		: self.rqo
 			})
-				// console.log("RELATION_LIST api_response:", self.id, api_response);
+			// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
