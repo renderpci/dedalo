@@ -184,11 +184,13 @@ export function object_to_url_vars(vars_obj) {
 		if (key==='t') {
 			console.error('url key "t" is not valid for tipo');
 		}
-		const current_value = vars_obj[key]
-		pairs.push( key+'='+ encodeURIComponent(current_value) )
+		const current_value = encodeURIComponent( vars_obj[key] )
+
+		pairs.push( key +'='+ current_value )
 	}
 
 	const url_vars = pairs.join('&')
+
 
 	return url_vars
 }//end object_to_url_vars
