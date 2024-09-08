@@ -370,13 +370,15 @@ relation_list.prototype.open_related_records = async function(section_tipo, ar_s
 			add_show		: true, // force to use request_config 'show' value
 			caller			: self,
 			request_config	: request_config,
-			id_variant		: section_tipo +'_relation_list'
+			id_variant		: 'relation_list_' + (new Date()).getTime()
 		}
 
 	// dummy section init and build
 		const section = await get_instance(instance_options)
 		// build. Force to load section data and fix filter in server session
 		await section.build(true)
+		// destroy after use it
+		section.destroy()
 
 	// open a new window without additional params.
 		// Note that the new window will be use the fixed session value fixed in server
