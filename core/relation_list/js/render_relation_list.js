@@ -67,7 +67,7 @@ const get_content_data = function(self) {
 		  content_data.classList.add('content_data', self.type)
 
 	// Render the data html
-		parse_html(self.datum, content_data)
+		parse_html(self, content_data)
 
 
 	return content_data
@@ -78,11 +78,14 @@ const get_content_data = function(self) {
 /**
 * PARSE_HTML
 * process the JSON received
-* @param object datum
+* @param object self
 * @param HTMLElement content_data_node
 * @return bool
 */
-const parse_html = function(datum, content_data_node) {
+const parse_html = function(self, content_data_node) {
+
+	// datum
+		const datum = self.datum
 
 	// empty datum case
 		if(!datum) {
@@ -108,7 +111,14 @@ const parse_html = function(datum, content_data_node) {
 		const count_data				= current_data.filter(current_data_count => current_data_count.component_tipo === 'id');
 
 		// render the list html for current section_tipo
-		const node = build_grid_html(current_context, current_context_colums, current_data, count_data, CSS_style_sheet)
+		const node = build_grid_html(
+			self,
+			current_context,
+			current_context_colums,
+			current_data,
+			count_data,
+			CSS_style_sheet
+		)
 
 		content_data_node.appendChild(node)
 	})
@@ -122,16 +132,25 @@ const parse_html = function(datum, content_data_node) {
 /**
 * BUILD_GRID_HTML
 * build the relation list html with the section selected
+* @param object self
 * @param object context
+* {
+* 	component_label: "id"
+*	component_tipo: "id"
+*	section_label: "Antropology"
+*	section_tipo: "aa1"
+* }
 * @param array columns
 * @param array data
 * @param array count_data
 * @param object CSS_style_sheet
 * @return DocumentFragment
 */
-const build_grid_html = function(context, columns, data, count_data, CSS_style_sheet) {
+const build_grid_html = function(self, context, columns, data, count_data, CSS_style_sheet) {
 
 	const fragment = new DocumentFragment()
+
+	const section_tipo = context.section_tipo
 
 	// create the css selector for the variable gid style
 	const css_selector = 'relation_grid_'+context.section_tipo
@@ -153,12 +172,25 @@ const build_grid_html = function(context, columns, data, count_data, CSS_style_s
 		const header = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'relation_list_header',
-			text_node		: context.section_label,
+			inner_html		: context.section_label,
 			parent			: grid
 		})
+		// click handler
+		const click_handler = async (e) => {
+			e.stopPropagation()
+			// loading class
+			grid.classList.add('loading')
+			// calculate all related records to current section
+			const related_records = await self.get_related_records(section_tipo)
+			// open new window with them
+			await self.open_related_records(section_tipo, related_records)
+			// loading class
+			grid.classList.remove('loading')
+		}
+		header.addEventListener('click', click_handler)
 
-		//create the counter
-		const header_count = ui.create_dom_element({
+		// Create the counter
+		ui.create_dom_element({
 			element_type	: 'span',
 			class_name		: 'relation_list_count',
 			text_node		: count_data.length,
