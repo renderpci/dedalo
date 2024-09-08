@@ -64,10 +64,25 @@
 			user-select: none;
 
 			>.relation_list_header {
+				cursor: pointer;
+				color: @color_grey_darken;
+				padding: 0.25rem;
 
-				>span {
-					color: @color_grey_ultradark;
-					padding: 0.25rem;
+				mark {
+					opacity: 1;
+				}
+
+				&:hover {
+					color: @color_black;
+				}
+				&:active {
+					opacity: 0.5;
+				}
+
+				.fn_append_icon('pen.svg');
+				&:before {
+					vertical-align: top;
+					background-color: @color_grey_darken_2;
 				}
 
 				>.relation_list_count {
