@@ -6,10 +6,10 @@
 
 /*
 
-    # FORMAT OF THE JSON GET FROM SERVER
-    # the context is the header of the list, with the columns resolution
-    # the data is the rows of the list
-    # it can mix some different columns (number, types, name of columns) which come from different sections
+	// FORMAT OF THE JSON GET FROM SERVER
+	// the context is the header of the list, with the columns resolution
+	// the data is the rows of the list
+	// it can mix some different columns (number, types, name of columns) which come from different sections
 
 	{
 		"context": [
@@ -87,6 +87,8 @@
 	import {common} from '../../common/js/common.js'
 	import {render_relation_list} from './render_relation_list.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {get_instance} from '../../common/js/instances.js'
+	import {clone, open_window} from '../../common/js/utils/index.js'
 
 
 
@@ -117,6 +119,7 @@ export const relation_list = function() {
 
 	this.request_config_object	= null
 	this.rqo					= null
+
 
 	return true
 }//end relation_list
@@ -193,6 +196,7 @@ relation_list.prototype.build = async function(autoload=true){
 			model			: self.model,
 			action			: 'get_relation_list'
 		}
+
 	// sqo, use the "related" mode to get related sections that call to the current record (current section_tipo and section_id)
 		const sqo = {
 			section_tipo		: ['all'],
@@ -205,13 +209,8 @@ relation_list.prototype.build = async function(autoload=true){
 				section_id		: self.section_id
 			}]
 		}
+
 	// rqo, use the 'get_realtion_list' action from the API
-		// const rqo = {
-		// 	action	: 'get_relation_list',
-		// 	source	: source,
-		// 	sqo		: sqo
-		// }
-		// (!) Unified 17-04-2023 using API 'read' instead custom function 'get_relation_list'
 		const rqo = {
 			action	: 'read',
 			source	: source,
@@ -226,7 +225,7 @@ relation_list.prototype.build = async function(autoload=true){
 				use_worker	: true,
 				body		: self.rqo
 			})
-				// console.log("RELATION_LIST api_response:", self.id, api_response);
+			// console.log("RELATION_LIST api_response:", self.id, api_response);
 
 			// set the result to the datum
 				self.datum = api_response.result
@@ -272,6 +271,125 @@ relation_list.prototype.build = async function(autoload=true){
 
 	return true
 }//end build
+
+
+
+/**
+* GET_RELATED_RECORDS
+* Used to get unlimited related records for given section
+* @param string section_tipo
+* @return array ar_section_id
+*/
+relation_list.prototype.get_related_records = async function(section_tipo) {
+
+	const self = this
+
+	// get full list of records (without limit) from relation_list for this section
+
+	// clone existing rqo
+		const rqo = clone(self.rqo)
+
+	// change some custom properties
+		rqo.sqo.section_tipo	= [section_tipo]
+		rqo.sqo.limit			= 0
+
+	// call API
+		const api_response = await data_manager.request({
+			body : rqo
+		})
+
+	// check response
+		if (!api_response.result) {
+			console.error('invalid response from API:', api_response);
+			return false
+		}
+
+	// ar_section_id. Array of section_id used for filter q
+		const ar_section_id = api_response.result.data
+			.filter(el => el.component_tipo==='id')
+			.map(el => el.section_id)
+
+
+	return ar_section_id
+}//end get_related_records
+
+
+
+/**
+* OPEN_RELATED_RECORDS
+* Target section filter is calculated and fixed in server.
+* Then, opens a new window to navigate the results
+* @param string section_tipo
+* @return bool true
+*/
+relation_list.prototype.open_related_records = async function(section_tipo, ar_section_id) {
+
+	const self = this
+
+	// create a dummy section with calculated section_id array as filter
+
+	// ! NOTE: This session server solution is adopted because passing the whole list of section_id
+	// using the URL is not feasible for large arrays (e.g., for person relationships),
+	// and events between windows is very unstable depending on whether the window is new or recycled, etc.
+
+	// request_config
+		const request_config = [{
+			api_engine	: 'dedalo',
+			type		: 'main',
+			show		: { ddo_map : [] },
+			sqo : {
+				section_tipo	: [section_tipo],
+				limit			: 10,
+				offset			: 0,
+				filter			: {
+					'$and' : [
+						{
+							q : [ ar_section_id.join(',') ],
+							path : [{
+								section_tipo	:  section_tipo,
+								component_tipo	: 'section_id',
+								model			: 'component_section_id',
+								name			: 'Id'
+							}]
+						}
+					]
+				}
+			}
+		}]
+
+	// instance_options (context)
+		const instance_options = {
+			type			: 'section',
+			typo			: 'ddo',
+			tipo			: section_tipo,
+			section_tipo	: section_tipo,
+			section_id		: null,
+			lang			: page_globals.dedalo_data_nolan,
+			mode			: 'edit',
+			model			: 'section',
+			add_show		: true, // force to use request_config 'show' value
+			caller			: self,
+			request_config	: request_config,
+			id_variant		: 'relation_list_' + (new Date()).getTime()
+		}
+
+	// dummy section init and build
+		const section = await get_instance(instance_options)
+		// build. Force to load section data and fix filter in server session
+		await section.build(true)
+		// destroy after use it
+		section.destroy()
+
+	// open a new window without additional params.
+		// Note that the new window will be use the fixed session value fixed in server
+		// for this section tipo by the previous dummy section build
+		open_window({
+			url : `${DEDALO_CORE_URL}/page/?tipo=${section_tipo}&menu=false`
+		})
+
+
+	return true
+}//end open_related_records
 
 
 

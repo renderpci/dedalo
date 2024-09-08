@@ -68,6 +68,8 @@ const event_manager_class = function(){
 
 	/**
 	* UNSUBSCRIBE
+	* Removes event subscriptions based on token value
+	* event_token is a unique string returned on each subscription
 	* @param string event_token
 	* 	custom string incremental like: 'event_270'
 	* @return array new_events_list
@@ -90,6 +92,7 @@ const event_manager_class = function(){
 				(current_event.token === event_token) ? events.splice(key, 1) : null
 			})
 
+
 		return new_events_list
 	}//end unsubscribe
 
@@ -97,27 +100,30 @@ const event_manager_class = function(){
 
 	/**
 	* PUBLISH
-	* when the publish event is fired it need propagated to the subscribers events
+	* Exec the callback of all subscriptions
+	* When the publication event is fired, it is necessary to propagate it to the subscribers' events.
 	* @param string event_name
 	* 	Like: 'activate_component'
-	* @param object data
-	* 	object container to pass data ta to the target callback
+	* @param array|false data
+	* 	A new array with each element being the result of the callback function.
+	* 	Sample: [undefined, undefined]
 	*/
 	this.publish = function(event_name, data={}) {
-		// if(SHOW_DEBUG===true) {
-		// 	console.log("[publish] event_name:",event_name)
-		// 	console.log("[publish] data:",data)
-		// }
 
 		// find the events that has the same event_name for exec
 		const current_events = this.events.filter(current_event => current_event.event_name===event_name)
 
-		const result = (current_events)
-			? current_events.map(current_event => current_event.callback(data)) // exec the subscribed events callbacks
-			: false // if don't find events, don't run
+		// if don't find events, don't run
+		if (current_events.length<1) {
+			return false
+		}
+
+		// exec the subscribed events callbacks
+		const result = current_events.map(current_event => current_event.callback(data))
+
 
 		return result
-	}//end  publish
+	}//end publish
 
 
 
@@ -134,7 +140,7 @@ const event_manager_class = function(){
 	this.get_events = function() {
 
 		return this.events
-	}//end  get_events
+	}//end get_events
 
 
 
