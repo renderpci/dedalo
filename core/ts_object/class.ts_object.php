@@ -167,19 +167,21 @@ class ts_object {
 
 				foreach ($ar_properties as $value_obj) {
 
+					$type = $value_obj->type ?? null;
+
 					// link_children. optional model variations
-						if ($model===false && ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model')) {
+						if ($model===false && ($value_obj==='link_childrens_model' || $value_obj==='link_children_model')) {
 							// unset($ar_properties[$key]);
 							continue;
 						}else if ($model===true) {
-							if (($value_obj->type==='link_childrens' || $value_obj->type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
+							if (($type==='link_childrens' || $type==='link_children') && $section_tipo===DEDALO_HIERARCHY_SECTION_TIPO) {
 								// unset($ar_properties[$key]);
 								continue;
-							}else if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_children_model') {
+							}else if ($type==='link_childrens_model' || $type==='link_children_model') {
 								$value_obj->type = 'link_children';
 							}
 						}
-						if ($value_obj->type==='link_childrens_model' || $value_obj->type==='link_childrens') {
+						if ($type==='link_childrens_model' || $type==='link_childrens') {
 							$value_obj->type = 'link_children';
 						}
 
@@ -259,12 +261,13 @@ class ts_object {
 			$render_vars = $current_object;
 
 			// element_tipo
-				$current_element_tipo = $current_object->tipo;
+				$current_element_tipo = $current_object->tipo ?? null;
 				if (empty($current_element_tipo)) {
 					debug_log(__METHOD__
-						." Error. Empty element_tipo in current_object: " . PHP_EOL
+						." Error. Ignored empty element_tipo in current_object" . PHP_EOL
+						.' current_element_tipo:'. to_string($current_element_tipo) . PHP_EOL
 						.' current_object:'. to_string($current_object)
-						, logger::ERROR
+						, logger::WARNING
 					);
 					continue;
 				}
