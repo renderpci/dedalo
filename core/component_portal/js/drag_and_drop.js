@@ -2,7 +2,12 @@
 /*global  */
 /*eslint no-undef: "error"*/
 
+// imports
+	import {get_all_instances} from '../../common/js/instances.js'
 
+
+// Temporary object to provide access to `dataTransfer`` object that is not available in all events
+	const tmp = {}
 
 /**
 * ON_DRAGSTART
@@ -18,17 +23,25 @@ export const on_dragstart = function(node, event, options) {
 
 	// transfer_data. Will be necessary the original locator of the section_record and
 	// the paginated_key (the position in the array of data)
+		const draggable_to = options.caller.properties.draggable_to || []
 		const transfer_data = {
 			locator			: options.locator,
-			paginated_key	: options.paginated_key
+			paginated_key	: options.paginated_key,
+			source_tipo		: options.caller.tipo || null,
+			source_id		: options.caller.id || null,
+			draggable_to 	: draggable_to
 		}
 		// console.log('>> on_dragstart transfer_data:', transfer_data);
+
+	// set tmp data to be used by the `dragover`
+		tmp.data = transfer_data
 
 	// data. The data will be transfer to drop in text format
 		const data = JSON.stringify(transfer_data)
 
 		event.dataTransfer.effectAllowed = 'move';
 		event.dataTransfer.setData('text/plain', data);
+
 
 	// style the drag element to be showed in drag mode
 		node.classList.add('dragging')
@@ -86,16 +99,25 @@ export const on_dragstart_mosaic = function(node, event, options) {
 	event.stopPropagation();
 
 	// will be necessary the original locator of the section_record and the paginated_key (the position in the array of data)
+	const draggable_to = options.caller.properties.draggable_to || []
+
 	const transfer_data = {
 		locator			: options.locator,
-		paginated_key	: options.paginated_key
+		paginated_key	: options.paginated_key,
+		source_tipo		: options.caller.tipo || null,
+		source_id		: options.caller.id || null,
+		draggable_to 	: draggable_to
 	}
 
-	// the data will be transfer to drop in text format
-	const data = JSON.stringify(transfer_data)
+	// set tmp data to be used by the `dragover`
+		tmp.data = transfer_data
 
-	event.dataTransfer.effectAllowed = 'move';
-	event.dataTransfer.setData('text/plain', data);
+	// the data will be transfer to drop in text format
+		const data = JSON.stringify(transfer_data)
+
+		event.dataTransfer.effectAllowed = 'move';
+		event.dataTransfer.setData('text/plain', data);
+
 
 	// style the drag element to be showed in drag mode
 	node.classList.add('dragging')
@@ -113,9 +135,24 @@ export const on_dragstart_mosaic = function(node, event, options) {
 * @param event
 * @return void
 */
-export const on_dragover = function(node, event) {
+export const on_dragover = function(node, event, options) {
 	event.preventDefault();
 	event.stopPropagation();
+
+	const self = options.caller || null
+
+	const data			= tmp.data
+	const source_tipo	= data.source_tipo;
+	const draggable_to	= data.draggable_to;// element that's move
+
+	if(source_tipo !== self.tipo){
+	// Check if the node is compatible with the source
+		const found = draggable_to.find(el => el === self.tipo)
+
+		if(!found){
+			return false
+		}
+	}
 
 	node.classList.add('dragover')
 }//end on_dragover
@@ -131,6 +168,7 @@ export const on_dragover = function(node, event) {
 */
 export const on_dragleave = function(node, event) {
 	event.preventDefault()
+	event.stopPropagation();
 
 	node.classList.remove('dragover')
 }//end on_dragleave
@@ -187,39 +225,75 @@ export const on_drop = function(node, event, options) {
 	const self	= options.caller
 	const data	= event.dataTransfer.getData('text/plain');// element that's move
 
+	// remove the drag style
 	node.classList.remove('dragover')
 
 	// the drag element will sent the data of the original position, the source_key
 	const data_parse = JSON.parse(data)
 
-	// check if the position is the same that the origin
-	if(options.paginated_key === data_parse.paginated_key){
-		return false
-	}
+	// COPY
+		// copy data from other portal
+		if( data_parse.source_tipo !== self.tipo){
 
-	// set wrapper as loading
-		self.node.classList.add('loading')
+			// check if the portal is compatible
+			// checking properties
+			const source_draggable_to = data_parse.draggable_to
+			const able_to_drop = source_draggable_to.find(el => el === self.tipo)
+			if( !able_to_drop ){
+				return false
+			}
 
-	// sort data with the old and new position
-	// the locator will be checked in server to be sure that the source position
-	// is the same that the data in the server, if not the server will send a error
-		const offset = self.paginator.offset || 0
-		const sort_data_options = {
-			value		: data_parse.locator,
-			source_key	: data_parse.locator.paginated_key,
-			target_key	: options.paginated_key + offset
+			// add new locator to the target portal
+			self.add_value(data_parse.locator)
+
+			// remove the locator from the source portal
+			const source_id		= data_parse.source_id
+			const ar_instances	= get_all_instances()
+
+			const source_instance = ar_instances.find(el => el.id === source_id)
+			if(source_instance){
+				source_instance.unlink_record({
+					paginated_key	: data_parse.locator.paginated_key,
+					section_id		: source_instance.section_id,
+				})
+			}
+
+			return true
 		}
 
-	// exec async sort_data (call to API)
-		self.sort_data(sort_data_options)
-		.then(function(){
-			// remove wrapper loading
-			self.node.classList.remove('loading')
-		})
+	// REORDER
+		// reorder data from the same portal
+		// check if the position is the same that the origin
+		if(	options.paginated_key === data_parse.paginated_key || typeof options.paginated_key === "undefined"){
+			return false
+		}
+
+		// set wrapper as loading
+			self.node.classList.add('loading')
+
+		// sort data with the old and new position
+		// the locator will be checked in server to be sure that the source position
+		// is the same that the data in the server, if not the server will send a error
+			const offset = self.paginator.offset || 0
+			const sort_data_options = {
+				value		: data_parse.locator,
+				source_key	: data_parse.locator.paginated_key,
+				target_key	: options.paginated_key + offset
+			}
+
+		// exec async sort_data (call to API)
+			self.sort_data(sort_data_options)
+			.then(function(){
+				// remove wrapper loading
+				self.node.classList.remove('loading')
+			})
 
 
 	return true
 }//end on_drop
+
+
+
 
 
 

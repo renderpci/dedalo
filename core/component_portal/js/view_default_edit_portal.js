@@ -17,7 +17,11 @@
 		build_header,
 		render_references
 	} from './render_edit_component_portal.js'
-
+	import {
+		on_dragover,
+		on_dragleave,
+		on_drop, // used to reorder inside the same portal
+	} from './drag_and_drop.js'
 
 
 /**
@@ -116,6 +120,20 @@ view_default_edit_portal.render = async function(self, options) {
 	// set pointers
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
+
+		wrapper.addEventListener('dragover',function(e){
+			on_dragover(this, e, {
+				caller	: self
+			})
+		})
+		wrapper.addEventListener('dragleave',function(e){
+			on_dragleave(this, e,)
+		})
+		wrapper.addEventListener('drop',function(e){
+			on_drop( this, e, {
+				caller	: self
+			})
+		})
 
 	// service autocomplete
 		wrapper.addEventListener('click', function(e) {

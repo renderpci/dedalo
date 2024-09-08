@@ -232,7 +232,7 @@ export const render_column_id = function(options) {
 			class_name		: 'drop hide',
 			parent			: fragment
 		})
-		drop_node.addEventListener('dragover', function(e) { return on_dragover(this, e)})
+		drop_node.addEventListener('dragover', function(e) { return on_dragover(this, e, options)})
 		drop_node.addEventListener('dragleave', function(e) { return on_dragleave(this, e)})
 		drop_node.addEventListener('drop', function(e) { return on_drop(this, e, options)})
 
