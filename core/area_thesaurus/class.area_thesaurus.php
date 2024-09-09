@@ -185,7 +185,7 @@ class area_thesaurus extends area_common {
 			"filter": {
 				"$and": [
 					{
-						"q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.$active_tipo.'\"}",
+						"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"'.$active_tipo.'"},
 						"path": [
 							{
 								"name": "Active",
