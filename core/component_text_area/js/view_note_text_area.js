@@ -52,8 +52,36 @@ view_note_text_area.render = async function(self, options) {
 			title			: 'matrix_id: ' + matrix_id,
 			parent			: wrapper
 		})
-		image_note.addEventListener('click', async function(e) {
+		// click event handler
+		const click_handler = async (e) => {
 			e.stopPropagation()
+
+			// validating note creation
+				// created_by_userID: component text area note creation if is already created
+				const created_by_userID	= self.data.created_by_userID
+				// user_id: current logged user
+				const user_id			= page_globals.user_id
+				// tm_user_id: column userID from time machine record
+				const tm_user_id		= parseInt(self.data.tm_user_id)
+
+				// If a note does not yet exist, one will be created, but only the user who
+				// made the change will be able to create it.
+				if (!created_by_userID && user_id!==tm_user_id) {
+					alert(get_label.no_access || 'No access')
+					console.error('Access prohibited. This note is not yours');
+					return
+				}
+
+			// user_instance: contains the resolved user name
+				const section_record	= self.caller
+				const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd543')
+				if (!user_instance) {
+					console.error('Unable to get user instance (dd543)');
+					return
+				}
+
+			// loading
+				wrapper.classList.add('loading')
 
 			// parent_section_id. Get existing or create a new one
 				const parent_section_id	= self.data.parent_section_id
@@ -66,8 +94,12 @@ view_note_text_area.render = async function(self, options) {
 			// error creating parent_section_id
 				if (!parent_section_id) {
 					console.error('Invalid parent_section_id!', self);
+					// loading
+					wrapper.classList.remove('loading')
 					return
 				}
+
+			// modal creation
 
 			// content. Modal content node
 				const content = ui.create_dom_element({
@@ -80,14 +112,16 @@ view_note_text_area.render = async function(self, options) {
 					element_type	: 'div',
 					class_name		: 'footer content distribute'
 				})
+
 				// button_delete
 					const button_delete = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'danger delete',
+						class_name		: 'danger delete loading',
 						inner_html		: get_label.delete || 'Delete',
 						parent			: footer
 					})
-					button_delete.addEventListener('click', async function(e) {
+					// click event
+					const click_delete_handler = async (e) => {
 						e.stopPropagation()
 
 						if (!confirm(get_label.sure || 'Sure?')) {
@@ -115,22 +149,25 @@ view_note_text_area.render = async function(self, options) {
 							self.caller.caller.refresh()
 							modal_container.close()
 						}
-					})
+					}
+					button_delete.addEventListener('click', click_delete_handler)
+
 				// button_ok
 					const button_ok = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'success',
+						class_name		: 'success loading',
 						inner_html		: 'OK',
 						parent			: footer
 					})
-					button_ok.addEventListener('click', async function(e) {
+					// click event
+					const click_ok_handler = (e) => {
 						e.stopPropagation()
 						if (self.caller.caller && self.caller.caller.model==='service_time_machine') {
-							await component.save()
 							self.caller.caller.refresh()
 							modal_container.close()
 						}
-					})
+					}
+					button_ok.addEventListener('click', click_ok_handler)
 
 			// modal. create new modal
 				const modal_container = ui.attach_to_modal({
@@ -164,22 +201,55 @@ view_note_text_area.render = async function(self, options) {
 						await component.build(true)
 						// force to remove buttons
 						component.show_interface.tools = false
+						// render component
+						component.auto_init_editor = true
 						const node = await component.render()
 
+						// if user has enough permissions, activate buttons
+						const permissions = component.permissions || 1
+						if (permissions>1) {
+							[button_delete,button_ok].map(el => el.classList.remove('loading'))
+						}
+
+						// activate
+						ui.component.activate(component)
+
 						// event subscription. Focus editor when ready
-						event_manager.subscribe(
-							'editor_ready_' + component.id,
-							function(service_text_editor){
-								// force focus component editor
-								// service_text_editor.editor.editing.view.focus()
-							}
-						)
+							event_manager.subscribe(
+								'editor_ready_' + component.id,
+								function(service_text_editor){
+									// force focus component editor
+									service_text_editor.editor.editing.view.focus()
+								}
+							)
 
 						return node
 					}
 				})
+
+				// user_name_info
+					// const section_record = self.caller
+					// const user_instance = section_record.ar_instances.find(el => el.tipo==='dd543')
+					if (user_instance) {
+						// user_name_info
+						const user_name_info = ui.create_dom_element({
+							element_type	: 'div',
+							class_name		: 'user_name_info block',
+							inner_html		: (get_label.created || 'Created') +' '+ (get_label.by_user || 'By user') + ': ',
+							parent			: content
+						})
+						user_instance.render()
+						.then(function(node){
+							user_name_info.appendChild(node)
+						})
+					}
+
 				content.appendChild(node)
-		})
+
+			// loading
+				wrapper.classList.remove('loading')
+		}
+		image_note.addEventListener('click', click_handler)
 
 	// add value
 		// wrapper.insertAdjacentHTML('beforeend', value_string)

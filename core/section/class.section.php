@@ -3658,7 +3658,8 @@ class section extends common {
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
-									'matrix_id'				=> $id
+									'matrix_id'				=> $id,
+									'user_id'				=> $user_id
 								];
 								$ar_subdata[]		= $data_item;
 								$ar_subcontext[]	= $ddo;
@@ -3745,6 +3746,9 @@ class section extends common {
 										// parent properties
 										$data_item->parent_section_tipo	= $sqo->section_tipo;
 										$data_item->parent_section_id	= $note_section_id;
+
+									// tm_user_id. Add time machine info
+										$data_item->tm_user_id = $user_id;
 
 									$ar_subdata[]		= $data_item;
 									$ar_subcontext[]	= $ddo;
