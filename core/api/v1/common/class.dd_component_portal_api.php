@@ -51,7 +51,7 @@ final class dd_component_portal_api {
 		// options
 			$options		= $rqo->options;
 			$locator		= $options->locator; // object e.g. {tag_id:"2",type:"dd96"}
-			$ar_properties	= $options->ar_properties; // array properties to compare e.g. ['tag_id','type']
+			$ar_properties	= $options->ar_properties ?? []; // array properties to compare e.g. ['tag_id','type']
 
 
 		// tags_index. component. Remove locators with the tag_id given
