@@ -227,9 +227,7 @@ view_note_text_area.render = async function(self, options) {
 					}
 				})
 
-				// user_name_info
-					// const section_record = self.caller
-					// const user_instance = section_record.ar_instances.find(el => el.tipo==='dd543')
+				// user_name_info. Append user name (change owner) before the component
 					if (user_instance) {
 						// user_name_info
 						const user_name_info = ui.create_dom_element({
@@ -250,9 +248,6 @@ view_note_text_area.render = async function(self, options) {
 				wrapper.classList.remove('loading')
 		}
 		image_note.addEventListener('click', click_handler)
-
-	// add value
-		// wrapper.insertAdjacentHTML('beforeend', value_string)
 
 
 	return wrapper
