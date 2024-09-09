@@ -147,6 +147,7 @@ define('DEDALO_RELATION_TYPE_RELATED_TIPO',				'dd89');
 define('DEDALO_NOTES_SECTION_TIPO',						'rsc326');
 define('DEDALO_NOTES_TEXT_TIPO',						'rsc329');
 define('DEDALO_NOTES_PUBLICATION_TIPO',					'rsc399');
+define('DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO',		'rsc832');
 
 // structuration notes
 define('DEDALO_STRUCTURATION_SECTION_TIPO',				'rsc370');
