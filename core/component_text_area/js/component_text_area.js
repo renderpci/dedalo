@@ -1193,6 +1193,19 @@ component_text_area.prototype.add_component_history_note = async function(option
 			return
 		}
 
+	// check user creator
+		// created_by_userID: component text area note creation if is already created
+		const created_by_userID	= self.data.created_by_userID
+		// user_id: current logged user
+		const user_id			= page_globals.user_id
+		// tm_user_id: column userID from time machine record
+		const tm_user_id		= parseInt(self.data.tm_user_id)
+
+		if (user_id!==tm_user_id) {
+			console.error('Only the owner can create a time machine note');
+			return
+		}
+
 	// create new notes record
 		const rqo = {
 			action	: 'create',
