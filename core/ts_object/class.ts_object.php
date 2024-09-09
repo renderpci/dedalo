@@ -170,7 +170,7 @@ class ts_object {
 					$type = $value_obj->type ?? null;
 
 					// link_children. optional model variations
-						if ($model===false && ($value_obj==='link_childrens_model' || $value_obj==='link_children_model')) {
+						if ($model===false && ($type==='link_childrens_model' || $type==='link_children_model')) {
 							// unset($ar_properties[$key]);
 							continue;
 						}else if ($model===true) {
