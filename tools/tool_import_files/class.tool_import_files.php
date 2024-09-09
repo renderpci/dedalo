@@ -499,7 +499,9 @@ class tool_import_files extends tool_common {
 					if ($import_mode==='section') {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
-
+							// match case
+							// used to find the filename in the previous uploaded files.
+							// it use the filename to match into image section.
 							case 'match':
 
 								$target_section_tipo = $target_ddo_component->section_tipo;
@@ -569,6 +571,10 @@ class tool_import_files extends tool_common {
 
 										 tool_import_files::set_components_data($compoonet_processor_options);
 								}
+
+								// stop the other processes done by other modes and go to the next image
+								// match mode is not compatible with the other process
+								// continue 2 skip the switch() and the foreach() of images.
 								continue 2;
 								breaK;
 							case 'enumerate':
@@ -781,6 +787,11 @@ class tool_import_files extends tool_common {
 
 	/**
 	* GET_IMAGE_SECTION_MATCH
+	* check the filename uploaded with the previous names saved into image section
+	* 1 get the target section to get all images into the section_id (as tch 11)
+	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
+	* 3 match the filename without the extensions 11-1 === 11-1
+	* return all section_id of the image section that filename match.
 	* @param  object $options
 	* @return array $match_section_id
 	*/
@@ -792,7 +803,9 @@ class tool_import_files extends tool_common {
 		$full_name				= $options->full_name;
 		$target_filename		= $options->target_filename;
 
-
+		// target section of the tool as tch, tch1,...
+		// as filename could has the section_id as 11-1.tiff (section_id = 11)
+		// create the section and give his all data.
 		$section = section::get_instance(
 			$section_id, // string|null section_id
 			$section_tipo // string section_tipo
@@ -800,19 +813,21 @@ class tool_import_files extends tool_common {
 
 		$data = $section->get_dato();
 
+		// give all locators that match with the target_section_tipo (as rsc170, image section)
 		$target_locators = array_filter($data->relations, function( $item ) use ($target_section_tipo){
 			return $item->section_tipo === $target_section_tipo;
 		});
 
+		// create the image section and check the filename saved previously.
 		$match_section_id = [];
 		foreach ($target_locators as $target_locator) {
 
 			$tipo	= $target_filename->tipo;
 
-
 			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
 			$lang	= RecordObj_dd::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
 
+			// component with the previous filename saved
 			$target_name_component = component_common::get_instance(
 				$model, // string model
 				$tipo, // string tipo
@@ -824,6 +839,7 @@ class tool_import_files extends tool_common {
 
 			$value = $target_name_component->get_value();
 
+			// check without extension, uploaded files could be different format of the previous upload.
 			$basename_value		= pathinfo($value)['filename'];
 			$basename_full_name	= pathinfo($full_name)['filename'];
 
