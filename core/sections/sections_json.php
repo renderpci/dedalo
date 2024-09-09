@@ -219,6 +219,7 @@
 							$current_value->timestamp		= $current_record->timestamp;
 							$current_value->state			= $current_record->state;
 							$current_value->bulk_process_id	= (int)$current_record->bulk_process_id;
+							$current_value->user_id			= $current_record->userID;
 						}
 					// add value
 						$item->value[] = $current_value;
