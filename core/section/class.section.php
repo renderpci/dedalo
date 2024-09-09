@@ -3596,15 +3596,15 @@ class section extends common {
 					}
 
 				// sub-data time machine from record columns
-					$section_id		= $db_record->section_id;
-					$section_tipo	= $db_record->section_tipo;
-					$lang			= $db_record->lang;
-					$id				= $db_record->id;
-					$timestamp		= $db_record->timestamp;
-					$bulk_process_id		= $db_record->bulk_process_id;
-					$user_id		= $db_record->userID;
-					$tipo			= $db_record->tipo;
-					$dato			= $db_record->dato;
+					$section_id			= $db_record->section_id;
+					$section_tipo		= $db_record->section_tipo;
+					$lang				= $db_record->lang;
+					$id					= $db_record->id;
+					$timestamp			= $db_record->timestamp;
+					$bulk_process_id	= $db_record->bulk_process_id;
+					$user_id			= $db_record->userID;
+					$tipo				= $db_record->tipo;
+					$dato				= $db_record->dato;
 
 				// empty tipo case catch
 					if (empty($tipo)) {
