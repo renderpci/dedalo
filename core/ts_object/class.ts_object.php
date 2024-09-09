@@ -787,7 +787,8 @@ class ts_object {
 						$current_value = component_common::get_value_with_fallback_from_dato_full(
 							$dato_full,
 							true,
-							$main_lang
+							$main_lang,
+							$lang
 						);
 					}
 

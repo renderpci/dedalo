@@ -2231,7 +2231,9 @@ abstract class component_common extends common {
 						$dato_full_json	= $current_row->{$related_tipo};
 						$current_label	= self::get_value_with_fallback_from_dato_full(
 							$dato_full_json,
-							true // bool decore_untranslated
+							true, // bool decore_untranslated
+							DEDALO_DATA_LANG_DEFAULT,
+							$lang
 						);
 					}
 
@@ -3139,7 +3141,12 @@ abstract class component_common extends common {
 	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return string|null $value
 	*/
-	public static function get_value_with_fallback_from_dato_full(mixed $dato_full_json, bool $decore_untranslated=false, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : ?string {
+	public static function get_value_with_fallback_from_dato_full(
+		mixed $dato_full_json,
+		bool $decore_untranslated=false,
+		string $main_lang=DEDALO_DATA_LANG_DEFAULT,
+		string $lang=DEDALO_DATA_LANG
+		) : ?string {
 
 		if (empty($dato_full_json)) {
 			return null;
@@ -3163,9 +3170,7 @@ abstract class component_common extends common {
 		$is_fallback  = false;
 
 		# Try direct value
-		$lang 	= DEDALO_DATA_LANG;
-		$value	= isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
-
+		$value = isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
 
 		if (empty($value)) {
 
