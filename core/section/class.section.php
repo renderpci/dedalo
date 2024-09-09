@@ -2209,6 +2209,7 @@ class section extends common {
 			'modified_date'				=> $this->get_modified_date(),
 			'created_by_user_name'		=> $this->get_created_by_user_name(false),
 			'modified_by_user_name'		=> $this->get_modified_by_user_name(false),
+			'created_by_userID'			=> $this->get_created_by_userID(),
 			// publication
 			'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
 			'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
