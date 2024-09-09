@@ -313,7 +313,11 @@ class section extends common {
 	public function get_dato() : object {
 
 		// check valid call
-			if ( abs(intval($this->section_id))<1 && (strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false && strpos($this->section_id, 'search')===false) ) {
+			if ( abs(intval($this->section_id))<1 &&
+				(strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false &&
+				strpos((string)$this->section_id, 'search')===false)
+				) {
+
 				if(SHOW_DEBUG===true) {
 					if ($this->section_id==='result') {
 						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
