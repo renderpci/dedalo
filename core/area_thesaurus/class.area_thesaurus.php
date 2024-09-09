@@ -196,7 +196,7 @@ class area_thesaurus extends area_common {
 						]
 					},
 					{
-						"q": "{\"section_id\":\"1\",\"section_tipo\":\"dd64\",\"type\":\"dd151\",\"from_component_tipo\":\"'.$active_in_ts_tipo.'\"}",
+						"q": {"section_id":"1","section_tipo":"dd64","type":"dd151","from_component_tipo":"'.$active_in_ts_tipo.'"},
 						"path": [
 							{
 								"name": "Active",
