@@ -3279,51 +3279,69 @@ abstract class component_common extends common {
 			// permissions
 				$this->permissions = common::get_permissions($permissions_section_tipo, $this->tipo);
 
-			// DEDALO_SECTION_USERS_TIPO
-				if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO) {
+			// special cases
+				switch (true) {
 
-					// logged user id
-						$user_id = logged_user_id();
+					// dedalo_section_users_tipo
+					case ($this->section_tipo===DEDALO_SECTION_USERS_TIPO):
+						// logged user id
+							$user_id = logged_user_id();
 
-					// his own section
-						if($this->section_id==$user_id) {
+						// his own section
+							if($this->section_id==$user_id) {
 
-							switch (true) {
+								switch (true) {
 
-								// Admin General. Former component_security_administrator. Always read only for self user
-								case ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) :
-									$this->permissions = 1;
-									break;
+									// Admin General. Former component_security_administrator. Always read only for self user
+									case ($this->tipo===DEDALO_SECURITY_ADMINISTRATOR_TIPO) :
+										$this->permissions = 1;
+										break;
 
-								// check profile
-								// check developer
-								// check if the section is the user_id section and remove write permissions
-								// the user can not set more permissions to itself
-								case (  in_array($this->tipo, [
-											DEDALO_USER_PROFILE_TIPO, // profile selector
-											DEDALO_USER_DEVELOPER_TIPO, // developer radio button
-											DEDALO_USER_NAME_TIPO,  // username input_text
-											'dd330' // section_id
-										]) && security::is_global_admin($user_id)===false) :
-									$this->permissions = 1;
-									break;
+									// check profile
+									// check developer
+									// check if the section is the user_id section and remove write permissions
+									// the user can not set more permissions to itself
+									case (  in_array($this->tipo, [
+												DEDALO_USER_PROFILE_TIPO, // profile selector
+												DEDALO_USER_DEVELOPER_TIPO, // developer radio button
+												DEDALO_USER_NAME_TIPO,  // username input_text
+												'dd330' // section_id
+											]) && security::is_global_admin($user_id)===false) :
+										$this->permissions = 1;
+										break;
 
-								// Allow user edit self data name, email, password and image (used by tool_user_admin)
-								case (  in_array($this->tipo, [
-											DEDALO_FULL_USER_NAME_TIPO,
-											DEDALO_USER_EMAIL_TIPO,
-											DEDALO_USER_PASSWORD_TIPO,
-											DEDALO_USER_IMAGE_TIPO
-										]) ) :
-									$this->permissions = 2;
-									break;
+									// Allow user edit self data name, email, password and image (used by tool_user_admin)
+									case (  in_array($this->tipo, [
+												DEDALO_FULL_USER_NAME_TIPO,
+												DEDALO_USER_EMAIL_TIPO,
+												DEDALO_USER_PASSWORD_TIPO,
+												DEDALO_USER_IMAGE_TIPO
+											]) ) :
+										$this->permissions = 2;
+										break;
 
-								default :
-									// Nothing to change
-									break;
-							}
-						}//end if($this->section_id==$user_id)
-				}//end if ($this->section_tipo===DEDALO_SECTION_USERS_TIPO)
+									default :
+										// Nothing to change
+										break;
+								}
+							}//end if($this->section_id==$user_id)
+						break;
+
+					// time machine notes case (rsc832)
+					case ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
+
+						// his own section
+							$section = $this->get_my_section();
+
+							$this->permissions = (logged_user_id()===$section->get_created_by_userID())
+								? 2
+								: 1;
+						break;
+				}//end switch (true) - special cases
+		}
+
+		if ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
+				dump($this->permissions, ' this->permissions ++ '.to_string());
 		}
 
 
