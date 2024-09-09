@@ -1,7 +1,4 @@
 {
-    "herramienta": "Herramienta",
-    "etiquetas_perdidas": "Etiquetas perdidas",
-    "comenzar_la_carga": "Comenzar la carga",
     "update_ontology": "Actualizar Ontología",
     "total_records": "Registros totales",
     "transcripcion_automatica": "Transcripción automática",
@@ -89,6 +86,9 @@
     "by_user": "por usuario",
     "modified": "modificado",
     "etiqueta_salvar_texto": "y guarde el texto",
+    "etiquetas_perdidas": "Etiquetas perdidas",
+    "comenzar_la_carga": "Comenzar la carga",
+    "herramienta": "Herramienta",
     "visualizar": "Visualizar",
     "rotate": "Rotar",
     "imagen": "imagen",
