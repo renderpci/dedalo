@@ -608,146 +608,20 @@ class tool_import_files extends tool_common {
 					// 	}
 					// }
 
-				// ar_ddo_map iterate. role based actions
-					// Create the ddo components with the data to store with the import
-					// when the component has a input in the tool propagate temp section_data
-					// Update created section with temp section data
-					// when the component stored the filename, get the filename and save it
-					foreach ($ar_ddo_map as $ddo) {
+				// component processor
+					$compoonet_processor_options = new stdClass();
+						$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
+						$compoonet_processor_options->section_tipo					= $section_tipo;
+						$compoonet_processor_options->section_id					= $section_id;
+						$compoonet_processor_options->target_section_id				= $target_section_id;
+						$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
+						$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
+						$compoonet_processor_options->file_data						= $file_data;
+						$compoonet_processor_options->current_file_name				= $current_file_name;
+						$compoonet_processor_options->target_component_model		= $target_component_model;
+						$compoonet_processor_options->components_temp_data			= $components_temp_data;
 
-						if($ddo->role === 'component_option'){
-							continue;
-						}
-
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-						$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$destination_section_id	= ($ddo->section_tipo===$section_tipo)
-							? $section_id
-							: $target_section_id;
-
-						$component = component_common::get_instance(
-							$model,
-							$ddo->tipo,
-							$destination_section_id,
-							'list',
-							$current_lang,
-							$ddo->section_tipo
-						);
-
-						switch ($ddo->role) {
-							case 'target_filename':
-
-								// fill the component with image data only when the field is empty
-								// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
-								$component_data = $component->get_dato();
-
-								if(empty($component_data)){
-									// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
-									$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
-										? $file_data['regex']->base_name // only the name of the file without section_id or field
-										: $current_file_name; // full name with extension
-
-									$component->set_dato([$name_to_save]);
-									$component->Save();
-								}
-								break;
-
-							case 'target_date':
-
-								// media_file_date (using EXIF or similar metadata source into the file)
-									$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
-									if (!empty($dd_date)) {
-										$dato = new stdClass();
-											$dato->start = $dd_date;
-										$component->set_dato([$dato]);
-										$component->Save();
-									}
-								break;
-
-							case 'input_component':
-
-								// input_components_section_tipo store
-									if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
-										$input_components_section_tipo[] = $ddo->section_tipo;
-									}
-
-								// component_data save
-									$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
-									if ($is_translatable===false) {
-
-										// use value from request
-
-										// component_data. Get from request and save
-										$component_data = array_find($components_temp_data, function($item) use($ddo){
-											return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-										});
-										if(is_object($component_data) && !empty($component_data->value)){
-											$component->set_dato($component_data->value);
-											$component->Save();
-										}
-
-									}else{
-
-										// get value from instances of the temporal component in each lang
-
-										$temp_component = component_common::get_instance(
-											$model,
-											$ddo->tipo,
-											DEDALO_SECTION_ID_TEMP,
-											'list',
-											$current_lang,
-											$ddo->section_tipo
-										);
-
-										$ar_langs		= $temp_component->get_component_ar_langs();
-										$original_lang	= $current_lang;
-										foreach ($ar_langs as $current_lang) {
-
-											$temp_component->set_lang($current_lang);
-											$temp_dato = $temp_component->get_dato();
-
-											if (empty($temp_dato)) {
-												continue;
-											}
-
-											// apply value
-											$component->set_lang($current_lang);
-											$component->set_dato($temp_dato);
-											$component->Save();
-										}
-										// restore lang
-										$component->set_lang($original_lang);
-									}
-
-								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
-									if($model==='component_filter'){
-										// get the component_filter of the target_ddo section_tipo
-										$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-											$target_ddo_component->section_tipo,
-											[$model],
-											true,
-											true
-										);
-										$component_filter_tipo= $ar_children_tipo[0];
-
-										$target_component = component_common::get_instance(
-											$model,
-											$component_filter_tipo,
-											$target_section_id,
-											'list',
-											$current_lang,
-											$target_ddo_component->section_tipo
-										);
-										$target_component->set_dato($component_data->value);
-										$target_component->Save();
-									}
-								break;
-
-							default:
-								// Nothing to do here
-								break;
-						}//end switch ($ddo->role)
-					}//end foreach ($ar_ddo_map as $ddo)
+					 tool_import_files::set_components_data($compoonet_processor_options);
 
 				// file_processor
 					// Global var button properties JSON data array
@@ -831,6 +705,168 @@ class tool_import_files extends tool_common {
 		return $response;
 	}//end import_files
 
+
+
+	/**
+	* SET_COMPONENTS_DATA
+	* @return
+	*/
+	public static function set_components_data( object $options ) {
+
+		$ar_ddo_map						= $options->ar_ddo_map;
+		$section_tipo					= $options->section_tipo;
+		$section_id						= $options->section_id;
+		$target_section_id				= $options->target_section_id;
+		$input_components_section_tipo	= $options->input_components_section_tipo;
+		$target_ddo_component			= $options->target_ddo_component;
+		$file_data						= $options->file_data;
+		$current_file_name				= $options->current_file_name;
+		$target_component_model			= $options->target_component_model;
+		$components_temp_data			= $options->components_temp_data;
+
+		// ar_ddo_map iterate. role based actions
+		// Create the ddo components with the data to store with the import
+		// when the component has a input in the tool propagate temp section_data
+		// Update created section with temp section data
+		// when the component stored the filename, get the filename and save it
+		foreach ($ar_ddo_map as $ddo) {
+
+			if($ddo->role === 'component_option'){
+				continue;
+			}
+
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+			$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
+				? $section_id
+				: $target_section_id;
+
+			$component = component_common::get_instance(
+				$model,
+				$ddo->tipo,
+				$destination_section_id,
+				'list',
+				$current_lang,
+				$ddo->section_tipo
+			);
+
+			switch ($ddo->role) {
+				case 'target_filename':
+
+					// fill the component with image data only when the field is empty
+					// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
+					$component_data = $component->get_dato();
+
+					if(empty($component_data)){
+						// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
+						$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
+							? $file_data['regex']->base_name // only the name of the file without section_id or field
+							: $current_file_name; // full name with extension
+
+						$component->set_dato([$name_to_save]);
+						$component->Save();
+					}
+					break;
+
+				case 'target_date':
+
+					// media_file_date (using EXIF or similar metadata source into the file)
+						$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
+						if (!empty($dd_date)) {
+							$dato = new stdClass();
+								$dato->start = $dd_date;
+							$component->set_dato([$dato]);
+							$component->Save();
+						}
+					break;
+
+				case 'input_component':
+
+					// input_components_section_tipo store
+						if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+							$input_components_section_tipo[] = $ddo->section_tipo;
+						}
+
+					// component_data save
+						$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
+						if ($is_translatable===false) {
+
+							// use value from request
+
+							// component_data. Get from request and save
+							$component_data = array_find($components_temp_data, function($item) use($ddo){
+								return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
+							});
+							if(is_object($component_data) && !empty($component_data->value)){
+								$component->set_dato($component_data->value);
+								$component->Save();
+							}
+
+						}else{
+
+							// get value from instances of the temporal component in each lang
+
+							$temp_component = component_common::get_instance(
+								$model,
+								$ddo->tipo,
+								DEDALO_SECTION_ID_TEMP,
+								'list',
+								$current_lang,
+								$ddo->section_tipo
+							);
+
+							$ar_langs		= $temp_component->get_component_ar_langs();
+							$original_lang	= $current_lang;
+							foreach ($ar_langs as $current_lang) {
+
+								$temp_component->set_lang($current_lang);
+								$temp_dato = $temp_component->get_dato();
+
+								if (empty($temp_dato)) {
+									continue;
+								}
+
+								// apply value
+								$component->set_lang($current_lang);
+								$component->set_dato($temp_dato);
+								$component->Save();
+							}
+							// restore lang
+							$component->set_lang($original_lang);
+						}
+
+					// component_filter. Propagate the project to the media section, that will be the target_section_tipo
+						if($model==='component_filter'){
+							// get the component_filter of the target_ddo section_tipo
+							$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+								$target_ddo_component->section_tipo,
+								[$model],
+								true,
+								true
+							);
+							$component_filter_tipo= $ar_children_tipo[0];
+
+							$target_component = component_common::get_instance(
+								$model,
+								$component_filter_tipo,
+								$target_section_id,
+								'list',
+								$current_lang,
+								$target_ddo_component->section_tipo
+									);
+									$target_component->set_dato($component_data->value);
+									$target_component->Save();
+								}
+							break;
+
+				default:
+					// Nothing to do here
+					break;
+			}//end switch ($ddo->role)
+		}//end foreach ($ar_ddo_map as $ddo)
+
+
+	}//end set_components_data
 
 
 }//end class tool_import_files
