@@ -3169,7 +3169,7 @@ abstract class component_common extends common {
 		# Declare as false
 		$is_fallback  = false;
 
-		# Try direct value
+		// Try direct value
 		$value = isset($decoded_obj->$lang) ? $decoded_obj->$lang : null;
 
 		if (empty($value)) {
