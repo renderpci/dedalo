@@ -21,7 +21,7 @@
 		on_dragover,
 		on_dragleave,
 		// on_dragend,
-		on_drop
+		on_drop, // used to reorder inside the same portal
 	} from './drag_and_drop.js'
 
 
@@ -148,15 +148,6 @@ view_mosaic_edit_portal.render = async function(self, options) {
 
 		// render_level
 			if (render_level==='content') {
-				// show header_wrapper_list if is hidden
-					// if (ar_section_record.length>0) {
-					// 	self.node.map(el => {
-					// 		const header_wrapper_list = el.querySelector(":scope >.list_body>.header_wrapper_list")
-					// 		if (header_wrapper_list) {
-					// 			header_wrapper_list.classList.remove('hide')
-					// 		}
-					// 	})
-					// }
 				return content_data
 			}
 
@@ -165,40 +156,9 @@ view_mosaic_edit_portal.render = async function(self, options) {
 				element_type	: 'div',
 				class_name		: 'list_body ' + self.mode +  ' view_'+self.view
 			})
-			// css des
-				// const items				= ui.flat_column_items(columns_map);
-				// const template_columns	= items.join(' ')
-				// Object.assign(
-				// 	list_body.style,
-				// 	{
-				// 		"grid-template-columns" : template_columns
-				// 	}
-				// )
-				// const element_css = {
-				// 	".wrapper_component .list_body" : {
-				// 		"grid-template-columns" : template_columns,
-				// 		"color" : "red"
-				// 	}
-				// }
-				// console.log("element_css:",element_css);
-				// set_element_css(self.section_tipo+'_'+self.tipo, element_css)
+
 
 			list_body.appendChild(content_data)
-			// css des
-				// set_element_css()
-				// css
-				// const element_css		= self.context.css || {}
-				// const legacy_selector	= '.list_body'
-				// if (element_css[legacy_selector]) {
-				// 	// style
-				// 	if (element_css[legacy_selector].style) {
-				// 		Object.assign(
-				// 			list_body.style,
-				// 			element_css[legacy_selector].style
-				// 		)
-				// 	}
-				// 	console.log("element_css[legacy_selector].style:",element_css[legacy_selector].style);
-				// }
 
 	// buttons
 		const buttons = (self.permissions > 1)
@@ -219,6 +179,20 @@ view_mosaic_edit_portal.render = async function(self, options) {
 		// set pointers
 		wrapper.list_body		= list_body
 		wrapper.content_data	= content_data
+
+		wrapper.addEventListener('dragover',function(e){
+			on_dragover(this, e, {
+				caller	: self
+			})
+		})
+		wrapper.addEventListener('dragleave',function(e){
+			on_dragleave(this, e)
+		})
+		wrapper.addEventListener('drop',function(e){
+			on_drop( this, e, {
+				caller	: self
+			})
+		})
 
 	// permissions control
 	// set on read only permissions, remove the context menu
@@ -344,15 +318,15 @@ const get_content_data = async function(self, ar_section_record, hover_ar_sectio
 const drag_and_drop = function(options) {
 
 	// options
-		const drag_node	= options.section_record_node
+		const node	= options.section_record_node
 
 	// set properties/events
-		drag_node.draggable = true
-		drag_node.classList.add('draggable')
-		drag_node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
-		drag_node.addEventListener('dragover',function(e){on_dragover(this, e)})
-		drag_node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
-		drag_node.addEventListener('drop',function(e){on_drop(this, e, options)})
+		node.draggable = true
+		node.classList.add('draggable')
+		node.addEventListener('dragstart',function(e){on_dragstart_mosaic(this, e, options)})
+		node.addEventListener('dragover',function(e){on_dragover(this, e, options)})
+		node.addEventListener('dragleave',function(e){on_dragleave(this, e)})
+		node.addEventListener('drop',function(e){on_drop(this, e, options)})
 
 	return true
 }//end drag_and_drop

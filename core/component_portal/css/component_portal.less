@@ -100,6 +100,13 @@
 			}
 		}
 
+		&.dragover {
+			background-color: #ffffff;
+			outline: 4px dotted @color_orange_dedalo;
+			z-index: 3;
+			opacity: 0.5;
+		}
+
 		.drop {
 			z-index: 1;
 			display: block;
@@ -108,7 +115,8 @@
 
 			&.dragover {
 				background-color: #ffffff8c;
-				border-top: 2px dotted #ff8a00;
+				outline: 4px dotted @color_orange_dedalo;
+				z-index: 3;
 				width: 100%;
 			}
 		}
@@ -124,7 +132,8 @@
 		.draggable {
 			&.dragover {
 				background-color: #ffffff;
-				border-top: 2px dotted #ff8a00;
+				outline: 4px dotted @color_orange_dedalo !important;
+				z-index: 3;
 				opacity: 0.5;
 			}
 		}

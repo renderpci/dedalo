@@ -3901,8 +3901,9 @@ abstract class component_common extends common {
 						return false;
 					}
 
-				// remove old key value ans add value at $target_key position
+				// remove old key value and add value at $target_key position
 					$new_dato = [];
+
 					foreach ($dato as $key => $current_value) {
 						if ($key===$source_key) {
 							continue;
