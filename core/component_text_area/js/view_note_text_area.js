@@ -116,7 +116,7 @@ view_note_text_area.render = async function(self, options) {
 				// button_delete
 					const button_delete = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'danger delete loading',
+						class_name		: 'danger delete hide',
 						inner_html		: get_label.delete || 'Delete',
 						parent			: footer
 					})
@@ -155,7 +155,7 @@ view_note_text_area.render = async function(self, options) {
 				// button_ok
 					const button_ok = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'success loading',
+						class_name		: 'success hide',
 						inner_html		: 'OK',
 						parent			: footer
 					})
@@ -208,7 +208,7 @@ view_note_text_area.render = async function(self, options) {
 						// if user has enough permissions, activate buttons
 						const permissions = component.permissions || 1
 						if (permissions>1) {
-							[button_delete,button_ok].map(el => el.classList.remove('loading'))
+							[button_delete,button_ok].map(el => el.classList.remove('hide'))
 						}
 
 						// activate
