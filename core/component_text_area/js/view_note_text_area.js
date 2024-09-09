@@ -67,7 +67,7 @@ view_note_text_area.render = async function(self, options) {
 				// If a note does not yet exist, one will be created, but only the user who
 				// made the change will be able to create it.
 				if (!created_by_userID && user_id!==tm_user_id) {
-					alert(get_label.no_access || 'No access')
+					alert(get_label.not_allow_to_create_note || 'Cannot create notes of a change that is not yours')
 					console.error('Access prohibited. This note is not yours');
 					return
 				}
