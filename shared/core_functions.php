@@ -2428,3 +2428,24 @@ function create_directory(string $folder_path, int $create_dir_permissions=0750)
 
 	return true;
 }//end create_directory
+
+
+
+/**
+* GET_BACTRACE_SEQUENCE
+* Gets sequence of function calls to current section
+* Used for debug only
+* @return array $seq
+*/
+function get_bactrace_sequence() : array  {
+
+	$bt = debug_backtrace();
+	$seq = [];
+	foreach ([1,2,3,4,5,6,7,8] as $key) {
+		if (isset($bt[$key]['function'])) {
+			$seq[] = $bt[$key]['function'];
+		}
+	}
+
+	return $seq;
+}//end get_bactrace_sequence
