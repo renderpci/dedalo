@@ -3680,7 +3680,7 @@ class section extends common {
 							case ($current_ddo_tipo==='rsc329'): // user notes
 								// search notes with current matrix_id
 									$sqo = new search_query_object();
-										$sqo->section_tipo	= 'rsc832';
+										$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
 										$sqo->filter		= json_decode('{
 											"$and": [
 												{
@@ -3688,7 +3688,7 @@ class section extends common {
 													"q_operator": null,
 													"path": [
 														{
-															"section_tipo": "rsc832",
+															"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
 															"component_tipo": "rsc835",
 															"model": "component_number",
 															"name": "Code"
