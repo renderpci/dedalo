@@ -1991,6 +1991,9 @@ export const ui = {
 			const on_close			= options.on_close || null
 			const callback			= options.callback || null
 
+		// previous_component_selection. Current active component before open the modal
+			const previous_component_selection = page_globals.component_active || null
+
 		// page_y_offset. Current window scroll position (used to restore later)
 			const page_y_offset = window.scrollY || 0
 
@@ -2093,6 +2096,11 @@ export const ui = {
 				if (typeof on_close==='function') {
 					// exec callback
 					on_close()
+				}
+
+				// re-activate previous component selection
+				if (previous_component_selection) {
+					ui.component.activate(previous_component_selection)
 				}
 			}
 
