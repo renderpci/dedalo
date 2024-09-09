@@ -1181,6 +1181,8 @@ component_text_area.prototype.updated_layer_data = function(options) {
 */
 component_text_area.prototype.add_component_history_note = async function(options) {
 
+	const self = this
+
 	// options
 		const notes_section_tipo	= options.notes_section_tipo
 		const matrix_id				= options.matrix_id

@@ -56,6 +56,8 @@
 			$record = $this->get_record();
 			if (!empty($record)) {
 
+				// full record with all columns as
+				// [{"id":"6098668","bulk_process_id":null,"section_id":"1684","section_tipo":"rsc170","tipo":"rsc1166","lang":"lg-eng",..}]
 				$value_tm = [$record];
 
 				// subcontext. Is specific for tm and is calculated in class section
