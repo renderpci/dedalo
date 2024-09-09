@@ -840,8 +840,12 @@ final class dd_core_api {
 		// options
 			$options = $rqo->options ?? null;
 
-		// permissions check
-			$permissions = common::get_permissions($section_tipo, $section_tipo);
+		// permissions check (only sections area expected here)
+			$section = section::get_instance(
+				$section_id, // string|null section_id
+				$section_tipo // string section_tipo
+			);
+			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
 
 			debug_log(__METHOD__
 				." to delete section. Permissions: $permissions ".to_string($section_tipo)
