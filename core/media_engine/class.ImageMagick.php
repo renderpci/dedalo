@@ -267,7 +267,7 @@ final class ImageMagick {
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file.' '.$middle_flags.' "'.$target_file.'" '
+				MAGICK_PATH . 'convert '.$begin_flags.' "'.$source_file.'" '.$middle_flags.' "'.$target_file.'" '
 			]);
 
 		// debug
@@ -379,7 +379,7 @@ final class ImageMagick {
 	public static function has_meta_channel( string $source_file ) : bool {
 
 		// tiff info. Get the channel number of TIFF (PSD use the same property) :
-			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. $source_file;
+			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. '"'. $source_file . '"';
 			$string_channels	= shell_exec($command);
 
 			debug_log(__METHOD__
