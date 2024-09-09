@@ -176,6 +176,10 @@
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
 
+				$item->created_by_userID = abs(intval($this->section_id))>0
+					? $this->get_my_section()->get_created_by_userID()
+					: null;
+
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
 					$item->related_sections	= $related_sections;
