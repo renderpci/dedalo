@@ -4364,27 +4364,32 @@ class section extends common {
 	public function get_section_permissions() : int {
 
 		// check if the permissions are set previously, then return it.
-		if(isset($this->permissions)){
-			return $this->permissions;
-		}
-
-		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
-
-		// logged user id
-			$user_id = logged_user_id();
-
-		// user section . Allow user edit self data (used by tool_user_admin)
-			if ($this->permissions<2 &&
-				$this->tipo===DEDALO_SECTION_USERS_TIPO &&
-				$this->section_id==$user_id) {
-
-				$this->permissions = 1; // set to 1 to allow tool_user_admin access
+			if(isset($this->permissions)){
 				return $this->permissions;
 			}
 
-		// maintains dedalo_activity_section_tipo < 2 to prevent edition
-			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
-				return 1;
+		// common cases permissions calculation
+			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
+
+		// special cases
+			switch (true) {
+
+				// maintains dedalo_activity_section_tipo < 2 to prevent edition
+				case ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1):
+					return 1;
+
+				// user section . Allow user edit self data (used by tool_user_admin)
+				case ($this->tipo===DEDALO_SECTION_USERS_TIPO && $this->permissions<1 && $this->section_id==logged_user_id()):
+					$this->permissions = 1; // set to 1 to allow tool_user_admin access
+					break;
+
+				// time machine notes case (rsc832)
+				case ($this->tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
+					// his own section
+					$this->permissions = (logged_user_id()===$this->get_created_by_userID())
+						? 2
+						: 1;
+					break;
 			}
 
 
