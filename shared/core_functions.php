@@ -2436,6 +2436,8 @@ function create_directory(string $folder_path, int $create_dir_permissions=0750)
 * Gets sequence of function calls to current section
 * Used for debug only
 * @return array $seq
+* 	Array of strings with the name of the functions ordered from newest to oldest
+* 	e.g. ['get_children','read']
 */
 function get_bactrace_sequence() : array  {
 
