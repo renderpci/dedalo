@@ -1241,7 +1241,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 			body : code_rqo
 		})
 		if (!code_api_response.result || code_api_response.result<1) {
-			console.error('Error on set matrix note code. code_api_response:', code_api_response);
+			// console.error('Error on set matrix note code. code_api_response:', code_api_response);
 			return null
 		}
 		console.log(`Created a new record in ${notes_section_tipo}:`, new_section_id, matrix_id );

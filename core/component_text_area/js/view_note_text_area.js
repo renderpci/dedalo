@@ -35,8 +35,6 @@ view_note_text_area.render = async function(self, options) {
 	// short vars
 		const data					= self.data
 		const value					= data.value || []
-		// const value_string		= tr.add_tag_img_on_the_fly( value.join(self.context.fields_separator) )
-		// const value_string		= value.join(self.context.fields_separator)
 		const matrix_id				= data.matrix_id
 		const parent_section_tipo	= data.parent_section_tipo || self.section_tipo
 
