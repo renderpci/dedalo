@@ -173,8 +173,7 @@ view_note_text_area.render = async function(self, options) {
 				const modal_container = ui.attach_to_modal({
 					header	: `Note ${parent_section_tipo}-${parent_section_id} TM: ${matrix_id}`,
 					body	: content,
-					footer	: footer,
-					size	: 'small'
+					footer	: footer
 				})
 
 			// component. Create a component_text_area in edit mode
