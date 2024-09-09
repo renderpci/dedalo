@@ -563,6 +563,11 @@ page.prototype.add_events = function() {
 			switch(true) {
 
 				case evt.key==='Escape':
+					// modal is open case
+						if (window.modal) {
+							// Note that dd-modal has is own ESC event to close the modal
+							return
+						}
 					// inactive user activated component
 						if (page_globals.component_active) {
 							ui.component.deactivate(page_globals.component_active)
