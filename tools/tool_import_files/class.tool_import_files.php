@@ -500,6 +500,77 @@ class tool_import_files extends tool_common {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
 
+							case 'match':
+
+								$target_section_tipo = $target_ddo_component->section_tipo;
+								$target_filename = array_find($ar_ddo_map, function($item) use ($target_section_tipo){
+									return $item->role==='target_filename' && $item->section_tipo === $target_section_tipo;
+								});
+
+								$match_options = new stdClass();
+									$match_options->section_id			= $file_data['regex']->section_id;
+									$match_options->section_tipo		= $section_tipo;
+									$match_options->full_name			= $current_file_name;
+									$match_options->target_section_tipo	= $target_section_tipo;
+									$match_options->target_filename		= $target_filename;
+
+								$ar_target_section_id = tool_import_files::get_image_section_match( $match_options );
+								foreach ($ar_target_section_id as $target_section_id) {
+
+									$target_filename = $current_file_name;
+									if( $target_section_id !== end($ar_target_section_id) ){
+
+										$basename_value		= pathinfo($current_file_name)['filename'];
+										$basename_extension	= pathinfo($current_file_name)['extension'];
+
+										$target_filename = $basename_value .'_'. $target_section_id .'.'. $basename_extension;
+										$source_file	= $tmp_dir . '/' . $current_file_name;
+										$target_file	= $tmp_dir . '/' . $target_filename;
+										if (false===copy($source_file, $target_file)) {
+											debug_log(__METHOD__
+												.' Error coping file: ' . PHP_EOL
+												. ' source_file: ' . $source_file . PHP_EOL
+												. ' target_file: ' . $target_file
+												, logger::ERROR
+											);
+										}
+									}
+
+									// set_media_file. Move uploaded file to media folder and create default versions
+										$add_file_options = new stdClass();
+											$add_file_options->name			= $target_filename; // string original file name like 'IMG_3007.jpg'
+											$add_file_options->key_dir		= $key_dir; // string upload caller name like 'oh1_oh1'
+											$add_file_options->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR'; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+											$add_file_options->tmp_name		= $target_filename; // string like 'phpJIQq4e'
+											$add_file_options->quality		= $custom_target_quality;
+											$add_file_options->source_file	= null;
+											$add_file_options->size			= $file_data['file_size'];
+											$add_file_options->extension	= $file_data['extension'];
+
+										tool_import_files::set_media_file(
+											$add_file_options,
+											$target_section_tipo,
+											$target_section_id,
+											$target_component_tipo
+										);
+
+										// component processor
+										$compoonet_processor_options = new stdClass();
+											$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
+											$compoonet_processor_options->section_tipo					= $section_tipo;
+											$compoonet_processor_options->section_id					= $section_id;
+											$compoonet_processor_options->target_section_id				= $target_section_id;
+											$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
+											$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
+											$compoonet_processor_options->file_data						= $file_data;
+											$compoonet_processor_options->current_file_name				= $target_filename;
+											$compoonet_processor_options->target_component_model		= $target_component_model;
+											$compoonet_processor_options->components_temp_data			= $components_temp_data;
+
+										 tool_import_files::set_components_data($compoonet_processor_options);
+								}
+								continue 2;
+								breaK;
 							case 'enumerate':
 								if (!empty($file_data['regex']->section_id)) {
 									// Direct numeric case like 1.jpg
@@ -544,6 +615,7 @@ class tool_import_files extends tool_common {
 								$section_id 	= $section->get_section_id();
 								break;
 						}//end switch ($import_file_name_mode)
+
 						// set target_ddo from tool_config ddo_map
 						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
 							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
@@ -708,6 +780,65 @@ class tool_import_files extends tool_common {
 
 
 	/**
+	* GET_IMAGE_SECTION_MATCH
+	* @param  object $options
+	* @return array $match_section_id
+	*/
+	public static function get_image_section_match( object $options ) : array {
+
+		$section_id				= $options->section_id;
+		$section_tipo			= $options->section_tipo;
+		$target_section_tipo	= $options->target_section_tipo;
+		$full_name				= $options->full_name;
+		$target_filename		= $options->target_filename;
+
+
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo // string section_tipo
+		);
+
+		$data = $section->get_dato();
+
+		$target_locators = array_filter($data->relations, function( $item ) use ($target_section_tipo){
+			return $item->section_tipo === $target_section_tipo;
+		});
+
+		$match_section_id = [];
+		foreach ($target_locators as $target_locator) {
+
+			$tipo	= $target_filename->tipo;
+
+
+			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang	= RecordObj_dd::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
+			$target_name_component = component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$target_locator->section_id, // string section_id
+				'list', // string mode
+				$lang, // string lang
+				$target_locator->section_tipo // string section_tipo
+			);
+
+			$value = $target_name_component->get_value();
+
+			$basename_value		= pathinfo($value)['filename'];
+			$basename_full_name	= pathinfo($full_name)['filename'];
+
+			if($basename_value === $basename_full_name){
+				$match_section_id[] = $target_locator->section_id;
+			}
+		}
+
+
+		return $match_section_id;
+	}//end get_image_section_match
+
+
+
+	/**
 	* SET_COMPONENTS_DATA
 	* @return
 	*/
@@ -867,6 +998,7 @@ class tool_import_files extends tool_common {
 
 
 	}//end set_components_data
+
 
 
 }//end class tool_import_files

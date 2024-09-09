@@ -164,6 +164,12 @@ const get_content_data_edit = async function(self) {
 					? 'named'
 					: null
 
+			// match is active
+			self.tool_config.import_file_name_mode = !options_container.control_name_match_check_box.checked
+				? self.tool_config.import_file_name_mode
+				: 'match'
+
+
 			// API request
 				const api_response = await self.import_files({
 					components_temp_data : components_temp_data
@@ -401,7 +407,46 @@ const render_options_container = function (self, content_data) {
 					})
 					option_procesor_node.value = option
 				}//end for (let i = 0; i < ar_quality.length; i++)
+
 		}//end if(ar_quality)
+
+		// name_match previous uploaded images
+			const name_match = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'name_control name_match',
+				parent			: options_container
+			})
+			// switcher
+				const control_name_match_switcher = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'switcher text_unselectable',
+					parent			: name_match
+				})
+				// check_box
+					const control_name_match_check_box = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: control_name_match_switcher
+					})
+					control_name_match_check_box.addEventListener('change', function(e) {
+
+					})
+					// switch_label
+					ui.create_dom_element({
+						element_type	: 'i',
+						parent			: control_name_match_switcher
+					})
+
+				// label_section_id_check_box
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: get_label.name_to_record_id || 'Prefix indicates id',
+						parent			: name_match
+					})
+				// set the node to be used when data will send to server
+					options_container.control_name_match_check_box = control_name_match_check_box
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
