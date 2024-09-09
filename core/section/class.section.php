@@ -3577,10 +3577,6 @@ class section extends common {
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
-			$component_dataframe = array_find($ddo_map, function($el) {
-				return $el->model==='component_dataframe';
-			});
-
 		// get the context and data for every locator
 			foreach($ar_db_record as $db_record) {
 
