@@ -4394,6 +4394,10 @@ class section extends common {
 					$this->permissions = (logged_user_id()===$this->get_created_by_userID())
 						? 2
 						: 1;
+					// open access for super admins to the section list of Time Machine notes
+					if ($this->permissions<2 && $this->mode==='list' && security::is_global_admin(logged_user_id())) {
+						$this->permissions = 2;
+					}
 					break;
 			}
 
