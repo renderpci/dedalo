@@ -1083,9 +1083,6 @@ export const build_node_tag = function(view_data) {
 
 
 
-
-
-
 /**
 * RENDER_NOTE
 * Creates a modal dialog with note options
@@ -1583,75 +1580,6 @@ const render_langs_list = function(self, text_editor, i) {
 
 	return true
 }//end render_langs_list
-
-
-
-/**
-* SELECT_TAG (!) Not used
-* Selects programmatically a tag into the text editor and scroll to his position
-* @param string|int tag_id
-* 	like '7'
-* @return HTMLElement fragment
-*/
-	// export const select_tag = function(tag_id, editor, click=false) {
-
-	// 	// editor_element
-	// 		const iterator			= editor.editing.view.domRoots.entries()
-	// 		const editor_container	= iterator.next().value[1]
-	// 		if (!editor_container) {
-	// 			console.log('DOM node not found for editor_container:', editor);
-	// 			return
-	// 		}
-
-	// 	// element SPAN
-	// 		const element = editor_container.querySelector('.dd_tag[data-tag_id="'+tag_id+'"]')
-	// 		// const element = document.querySelector('.dd_tag[data-tag_id="'+tag_id+'"]')
-	// 		if (!element) {
-	// 			console.log('DOM node not found in editor:', tag_id);
-	// 			return
-	// 		}
-	// 		// const element_top = element.getBoundingClientRect().top
-	// 		// console.log('element_top:', element_top);
-
-	// 	// image inside
-	// 		const image = element.querySelector('img')
-	// 		// console.log('image:', image);
-
-	// 	// ck_content DIV
-	// 		const ck_content	= editor_container //  document.querySelector('.ck-content')
-	// 		// const ck_top		= ck_content.getBoundingClientRect().top
-
-	// 	// scroll
-	// 		// const top = Math.ceil(element_top - ck_top - 4)
-
-	// 		// ck_content.scroll({
-	// 		// 	top : top
-	// 		// })
-	// 		element.scrollIntoView({
-	// 			behavior	: "smooth",
-	// 			block		: "start",
-	// 			inline		: "nearest"
-	// 		});
-	// 		// window.scrollBy(0, -50);
-
-	// 	// test
-	// 		// const tag_obj =  {
-	// 		// 	node_name	: image,
-	// 		// 	// dataset
-	// 		// 	type		: element.getAttribute('data-type'),
-	// 		// 	tag_id		: element.getAttribute('data-tag_id'),
-	// 		// 	state		: element.getAttribute('data-state'),
-	// 		// 	label		: element.getAttribute('data-label'),
-	// 		// 	data		: element.getAttribute('data-data')
-	// 		// }
-	// 		// self.tag = tag_obj
-
-	// 	// click event
-	// 		if (click===true) {
-	// 			image.click()
-	// 		}
-
-	// }//end select_tag
 
 
 
