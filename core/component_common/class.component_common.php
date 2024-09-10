@@ -190,8 +190,8 @@ abstract class component_common extends common {
 		// section_tipo check : optional (if empty, section_tipo is calculated from: 1. page globals, 2. structure -only useful for real sections-)
 			if (empty($section_tipo)) {
 				debug_log(__METHOD__
-					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASASP '
-					. ' sectiom_tipo: ' . to_string($section_tipo)
+					. '  Error. resolve_section_tipo is not supported anymore. Please fix this call ASAP '
+					. ' section_tipo: ' . to_string($section_tipo)
 					, logger::ERROR
 				);
 				if(SHOW_DEBUG===true) {
@@ -2148,12 +2148,12 @@ abstract class component_common extends common {
 				return $response;
 			}
 
-		// ar_componets_related. get_ar_related_by_model: $model_name, $tipo, $strict=true
-			$ar_componets_related = common::get_ar_related_by_model('component_', $this->tipo, false);
+		// ar_components_related. get_ar_related_by_model: $model_name, $tipo, $strict=true
+			$ar_components_related = common::get_ar_related_by_model('component_', $this->tipo, false);
 
 		// search_query_object select. Build query select
 			$query_select = [];
-			foreach ($ar_componets_related as $related_tipo) {
+			foreach ($ar_components_related as $related_tipo) {
 
 				// path
 					$path = search::get_query_path(
@@ -2194,17 +2194,17 @@ abstract class component_common extends common {
 				$value->section_id		= $current_row->section_id;
 				$value->section_tipo	= $current_row->section_tipo;
 
-			// get_locator_value: $locator, $lang, $show_parents=false, $ar_componets_related, $fields_separator=', '
+			// get_locator_value: $locator, $lang, $show_parents=false, $ar_components_related, $fields_separator=', '
 			// $label = component_relation_common::get_locator_value(
 			// 	$value, // object locator
 			// 	$lang, // string lang
 			// 	false, // bool show_parents
-			// 	$ar_componets_related, // array|null ar_components_related
+			// 	$ar_components_related, // array|null ar_components_related
 			// );
 
 			// Build label
 				$ar_label = [];
-				foreach ($ar_componets_related as $related_tipo) {
+				foreach ($ar_components_related as $related_tipo) {
 
 					$model_name = RecordObj_dd::get_modelo_name_by_tipo($related_tipo,true);
 					// if ($model_name==='component_autocomplete_hi') {
@@ -2215,7 +2215,7 @@ abstract class component_common extends common {
 							$value, // object locator
 							$lang, // string lang
 							false, // bool show_parents
-							$ar_componets_related,  // array|null ar_components_related
+							$ar_components_related,  // array|null ar_components_related
 							true // bool include_self
 						);
 						$current_label = !empty($ar_current_label)
@@ -2487,7 +2487,7 @@ abstract class component_common extends common {
 		}else{
 
 			debug_log(__METHOD__
-				. " Error: component without requetst_config!!!" .PHP_EOL
+				. " Error: component without request_config!!!" .PHP_EOL
 				. ' tipo: ' . $this->tipo . PHP_EOL
 				. ' section_id: '. $this->section_id .PHP_EOL
 				. ' section_tipo: '. $this->section_tipo
@@ -2828,8 +2828,9 @@ abstract class component_common extends common {
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
 		// Default behavior is get value
+			$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
 			$diffusion_value = $this->get_valor(
-				$lang ?? DEDALO_DATA_LANG
+				$diffusion_lang
 			);
 
 		// strip_tags all values (remove untranslated mark elements)
@@ -2966,23 +2967,6 @@ abstract class component_common extends common {
 
 
 	/**
-	* IS_DATO_EMPTY (DEPRECATED)
-	* @return bool
-	*/
-		// public static function is_dato_empty($dato) : bool {
-
-		// 	foreach ((array)$dato as $value) {
-		// 		if (!empty($value)) {
-		// 			return false;
-		// 		}
-		// 	}
-
-		// 	return true;
-		// }//end is_dato_empty
-
-
-
-	/**
 	* EXTRACT_COMPONENT_DATO_FALLBACK
 	* @param object $component
 	* @param string $lang = DEDALO_DATA_LANG
@@ -2992,7 +2976,7 @@ abstract class component_common extends common {
 	public static function extract_component_dato_fallback(object $component, string $lang=DEDALO_DATA_LANG, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : array {
 
 		// get and store initial lang to restore later
-			$inital_lang = $component->get_lang();
+			$initial_lang = $component->get_lang();
 
 		// Try direct dato
 			$dato = $component->get_dato();
@@ -3063,7 +3047,7 @@ abstract class component_common extends common {
 		}
 
 		// restore initial lang
-			$component->set_lang($inital_lang);
+			$component->set_lang($initial_lang);
 
 
 		return $dato_fb;
@@ -3340,10 +3324,6 @@ abstract class component_common extends common {
 				}//end switch (true) - special cases
 		}
 
-		if ($this->section_tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO) {
-				dump($this->permissions, ' this->permissions ++ '.to_string());
-		}
-
 
 		return $this->permissions;
 	}//end get_component_permissions
@@ -3464,14 +3444,14 @@ abstract class component_common extends common {
 			}
 
 			// clone the original query object to avoid modifying the original
-			$query_object_clon = clone($query_object);
+			$query_object_clone = clone($query_object);
 			// overwrite q value
-			$query_object_clon->q = $current_q;
+			$query_object_clone->q = $current_q;
 			// overwrite q_split
-			$query_object_clon->q_split	= false;
+			$query_object_clone->q_split	= false;
 
 			// Resolve the individual query object using the resolver method
-			$current_parsed_query_object = call_user_func($resolver, $query_object_clon);
+			$current_parsed_query_object = call_user_func($resolver, $query_object_clone);
 
 			// Add the resolved query object to the group under the specified operator
 			$group->{$operator_between}[] = $current_parsed_query_object;
@@ -4014,11 +3994,11 @@ abstract class component_common extends common {
 		// offset
 			$offset = $this->pagination->offset ?? 0;
 
-		// array_lenght. avoid use zero as limit. Instead this, use null
-			$array_lenght = $limit>0 ? $limit : null;
+		// array_length. avoid use zero as limit. Instead this, use null
+			$array_length = $limit>0 ? $limit : null;
 
 		// slice
-			$dato_paginated = array_slice($dato, $offset, $array_lenght);
+			$dato_paginated = array_slice($dato, $offset, $array_length);
 
 		// pagination keys. Set an offset relative key to each element of paginated array
 			foreach ($dato_paginated as $key => $value) {
@@ -4097,7 +4077,7 @@ abstract class component_common extends common {
 		// check type
 			if (!is_null($tm_dato) && !is_array($tm_dato)) {
 				debug_log(__METHOD__
-					. " TM dato type is not as expected (array/null) . NULL will be return as temp value. review time_amchine record  " . PHP_EOL
+					. " TM dato type is not as expected (array/null) . NULL will be return as temp value. review time_machine record  " . PHP_EOL
 					. ' type: ' . gettype($tm_dato) . PHP_EOL
 					. ' tm_dato: ' . json_encode($tm_dato, JSON_PRETTY_PRINT) . PHP_EOL
 					. ' matrix_id: ' . to_string($matrix_id) . PHP_EOL
@@ -4252,12 +4232,12 @@ abstract class component_common extends common {
 
 
 	/**
-	* GET_ONTLOGY_INFO
+	* GET_ONTOLOGY_INFO
 	* Get the component information (former 'def', now 'Definition') from the Ontology
 	* for current component term_id
-	* @return string|null $ontlogy_info
+	* @return string|null $ontology_info
 	*/
-	public function get_ontlogy_info() : ?string {
+	public function get_ontology_info() : ?string {
 
 		$section_tipo	= ONTOLOGY_SECTION_TIPOS['section_tipo'];
 
@@ -4275,11 +4255,11 @@ abstract class component_common extends common {
 		);
 		$dato = $component->get_dato();
 
-		$ontlogy_info = $dato[0] ?? null;
+		$ontology_info = $dato[0] ?? null;
 
 
-		return $ontlogy_info;
-	}//end get_ontlogy_info
+		return $ontology_info;
+	}//end get_ontology_info
 
 
 
