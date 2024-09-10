@@ -367,6 +367,7 @@
     "find_and_replace": "फेला पार्नुहोस् र बदल्नुहोस्",
     "months": "महिना",
     "month": "महिना",
+    "not_allow_to_create_note": "तपाईंको होइन परिवर्तनको नोटहरू सिर्जना गर्न सकिँदैन",
     "eliminar_imagenes_tras_la_importacion": "<mark>Eliminar imágenes tras la importación<\/mark>",
     "extension": "<mark>extensión<\/mark>",
     "filter": "फिल्टर",

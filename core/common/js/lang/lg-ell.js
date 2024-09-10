@@ -367,6 +367,7 @@
     "find_and_replace": "Βρίσκω και αντικαθιστώ",
     "months": "μήνες",
     "month": "μήνας",
+    "not_allow_to_create_note": "<mark>No puede crear notas de un cambio que no es suyo<\/mark>",
     "eliminar_imagenes_tras_la_importacion": "Διαγραφή φωτογραφιών μετά την εισαγωγή",
     "extension": "επέκταση",
     "filter": "φίλτρο",
