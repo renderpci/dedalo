@@ -11,6 +11,7 @@
 	import {render_layer_selector} from './render_edit_component_text_area.js'
 
 
+
 /**
 * RENDER_draw
 *
@@ -37,7 +38,7 @@ export const render_draw = async function(options) {
 			lang			: page_globals.dedalo_data_nolan
 		}
 		// get the reference component instance
-		const found_instances = await instances.find_instances(tag_component_options)
+		const found_instances = instances.find_instances(tag_component_options)
 
 		const component_tags_draw = found_instances.length > 0
 			? found_instances[0]
@@ -281,7 +282,7 @@ export const render_draw = async function(options) {
 				if(window.confirm(delete_label)) {
 
 					if(locator.length > 0){
-						
+
 						// if the locator is not empty, remove it of the component.
 						component_tags_draw.unlink_record({
 							paginated_key	: locator[0].paginated_key,

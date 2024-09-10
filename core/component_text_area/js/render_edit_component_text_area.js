@@ -10,6 +10,8 @@
 	import {view_line_edit_text_area} from './view_line_edit_text_area.js'
 	import {ui} from '../../common/js/ui.js'
 
+
+
 /**
 * RENDER_EDIT_COMPONENT_text_area
 * Manage the components logic and appearance in client side
@@ -184,7 +186,6 @@ export const render_layer_selector = function(options){
 
 
 
-
 /**
 * RENDER_PAGE_SELECTOR
 * Creates a modal dialog with page_selector options
@@ -290,5 +291,7 @@ export const render_page_selector = function(self, data_tag, tag_id, text_editor
 
 	return true
 }//end render_page_selector
+
+
 
 // @license-end
