@@ -880,6 +880,12 @@ const get_custom_events = (self, i, text_editor) => {
 			// use the observe property into ontology of the components to subscribe to this events
 			switch(true) {
 
+				// NumpadEnter (enter key from numeric keyboard)
+				case (evt.code==='NumpadEnter'):
+					evt.preventDefault()
+					text_editor.save()
+					break;
+
 				// 'Escape'
 				case features.av_player && evt.code===features.av_player.av_play_pause_code: {
 					evt.stopPropagation()
