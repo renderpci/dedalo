@@ -1190,7 +1190,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 	// check
 		if (!matrix_id) {
 			console.error('Undefined matrix_id. options:', options);
-			return
+			return null
 		}
 
 	// check user creator
@@ -1203,7 +1203,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 
 		if (user_id!==tm_user_id) {
 			console.error('Only the owner can create a time machine note');
-			return
+			return null
 		}
 
 	// create new notes record
@@ -1223,7 +1223,7 @@ component_text_area.prototype.add_component_history_note = async function(option
 		const new_section_id = api_response.result || null
 		if (!new_section_id) {
 			console.error('Error on create the note record:', api_response);
-			return
+			return null
 		}
 
 	// set code (component_number) value wit matrix_id
