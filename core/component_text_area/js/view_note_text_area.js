@@ -72,16 +72,11 @@ view_note_text_area.render = async function(self, options) {
 					return
 				}
 
-			// user_instance: contains the resolved user name
-				const section_record	= self.caller
-				const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd543')
-				if (!user_instance) {
-					console.error('Unable to get user instance (dd543)');
-					return
-				}
-
 			// loading
 				wrapper.classList.add('loading')
+
+			// refresh service. Only refresh if a new history note record needs to be created
+				const refresh_service = self.data.parent_section_id ? false : true
 
 			// parent_section_id. Get existing or create a new one
 				const parent_section_id	= self.data.parent_section_id
@@ -91,12 +86,18 @@ view_note_text_area.render = async function(self, options) {
 						matrix_id			: matrix_id
 					})
 
-			// error creating parent_section_id
+			// error creating parent_section_id check
 				if (!parent_section_id) {
 					console.error('Invalid parent_section_id!', self);
 					// loading
 					wrapper.classList.remove('loading')
 					return
+				}
+
+			// force to refresh this component caller (service time machine) (new note is created)
+				if (refresh_service) {
+					const service_time_machine = self.caller.caller
+					await service_time_machine.refresh(true)
 				}
 
 			// modal creation
@@ -116,7 +117,7 @@ view_note_text_area.render = async function(self, options) {
 				// button_delete
 					const button_delete = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'danger delete loading',
+						class_name		: 'danger delete hide',
 						inner_html		: get_label.delete || 'Delete',
 						parent			: footer
 					})
@@ -145,58 +146,57 @@ view_note_text_area.render = async function(self, options) {
 							console.error('Error on delete matrix note record. api_response:', api_response);
 							return null
 						}
-						if (self.caller.caller && self.caller.caller.model==='service_time_machine') {
-							self.caller.caller.refresh()
-							modal_container.close()
-						}
+
+						modal_container.close()
 					}
 					button_delete.addEventListener('click', click_delete_handler)
 
 				// button_ok
 					const button_ok = ui.create_dom_element({
 						element_type	: 'button',
-						class_name		: 'success loading',
+						class_name		: 'success hide',
 						inner_html		: 'OK',
 						parent			: footer
 					})
 					// click event
 					const click_ok_handler = (e) => {
 						e.stopPropagation()
-						if (self.caller.caller && self.caller.caller.model==='service_time_machine') {
-							self.caller.caller.refresh()
-							modal_container.close()
-						}
+
+						modal_container.close()
 					}
 					button_ok.addEventListener('click', click_ok_handler)
 
 			// modal. create new modal
 				const modal_container = ui.attach_to_modal({
-					header	: `Note ${parent_section_tipo}-${parent_section_id} TM: ${matrix_id}`,
-					body	: content,
-					footer	: footer,
-					size	: 'small'
+					header		: `Note ${parent_section_tipo}-${parent_section_id} TM: ${matrix_id}`,
+					body		: content,
+					footer		: footer,
+					on_close	: () => {
+						// service_time_machine refresh, forces to update tag color (green|grey)
+						self.caller.caller.refresh()
+					}
 				})
 
-			// component. Create a component_text_area in edit mode
-				const options = {
-					model				: self.model,
-					tipo				: self.tipo,
-					section_tipo		: parent_section_tipo,
-					section_id			: parent_section_id,
-					mode				: 'edit',
-					view				: 'default',
-					lang				: self.lang,
-					auto_init_editor	: true,
-					caller				: self
-				}
-				const component = await instances.get_instance(options)
-
-			// load component gracefully
+			// create and load a component_text_area gracefully
 				const node = await ui.load_item_with_spinner({
 					container			: content,
 					preserve_content	: false,
 					label				: self.tipo,
 					callback			: async () => {
+
+						// component. Create a component_text_area in edit mode
+						const options = {
+							model				: self.model,
+							tipo				: self.tipo,
+							section_tipo		: parent_section_tipo,
+							section_id			: parent_section_id,
+							mode				: 'edit',
+							view				: 'default',
+							lang				: self.lang,
+							auto_init_editor	: true,
+							caller				: self
+						}
+						const component = await instances.get_instance(options)
 
 						await component.build(true)
 						// force to remove buttons
@@ -208,26 +208,29 @@ view_note_text_area.render = async function(self, options) {
 						// if user has enough permissions, activate buttons
 						const permissions = component.permissions || 1
 						if (permissions>1) {
-							[button_delete,button_ok].map(el => el.classList.remove('loading'))
+							[button_delete,button_ok].map(el => el.classList.remove('hide'))
 						}
 
 						// activate
 						ui.component.activate(component)
 
 						// event subscription. Focus editor when ready
-							event_manager.subscribe(
-								'editor_ready_' + component.id,
-								function(service_text_editor){
-									// force focus component editor
-									service_text_editor.editor.editing.view.focus()
-								}
-							)
+						event_manager.subscribe(
+							'editor_ready_' + component.id,
+							function(service_text_editor){
+								// force focus component editor
+								service_text_editor.editor.editing.view.focus()
+							}
+						)
 
 						return node
 					}
 				})
 
 				// user_name_info. Append user name (change owner) before the component
+					// user_instance: contains the resolved user name (from section record)
+					const section_record	= self.caller
+					const user_instance		= section_record.ar_instances.find(el => el.tipo==='dd543')
 					if (user_instance) {
 						// user_name_info
 						const user_name_info = ui.create_dom_element({
@@ -236,12 +239,16 @@ view_note_text_area.render = async function(self, options) {
 							inner_html		: (get_label.created || 'Created') +' '+ (get_label.by_user || 'By user') + ': ',
 							parent			: content
 						})
-						user_instance.render()
-						.then(function(node){
-							user_name_info.appendChild(node)
-						})
+						user_name_info.appendChild( user_instance.node.cloneNode(true) )
+					}else{
+						// If refresh_service is false, the section_id is not new and the section_record
+						// must to contains the component 'dd543'
+						if (!refresh_service) {
+							console.error('Unable to get user instance (dd543) from section_record:', section_record);
+						}
 					}
 
+				// append component at end
 				content.appendChild(node)
 
 			// loading

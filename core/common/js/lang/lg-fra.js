@@ -367,6 +367,7 @@
     "find_and_replace": "Rechercher et remplacer",
     "months": "mois",
     "month": "mois",
+    "not_allow_to_create_note": "<mark>No puede crear notas de un cambio que no es suyo<\/mark>",
     "eliminar_imagenes_tras_la_importacion": "Supprimer les images après l'importation",
     "extension": "extension",
     "filter": "Filtre ",

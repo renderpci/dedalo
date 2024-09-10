@@ -367,6 +367,7 @@
     "find_and_replace": "Trova e sostituisci",
     "months": "metodo",
     "month": "mesi",
+    "not_allow_to_create_note": "Non è possibile creare note di una modifica che non è vostra",
     "eliminar_imagenes_tras_la_importacion": "Eliminare immagini dopo l'importazione",
     "extension": "Estensione",
     "filter": "Filtro",
