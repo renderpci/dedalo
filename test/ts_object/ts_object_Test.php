@@ -101,10 +101,10 @@ final class ts_object_test extends TestCase {
 
 
 	/**
-	* TEST_have_children_of_type
+	* TEST_has_children_of_type
 	* @return void
 	*/
-	public function test_have_children_of_type(): void {
+	public function test_has_children_of_type(): void {
 
 		$_ENV['DEDALO_LAST_ERROR'] = null; // reset
 
@@ -131,7 +131,7 @@ final class ts_object_test extends TestCase {
 		]');
 
 		// descriptor
-			$result = $ts_object->have_children_of_type(
+			$result = $ts_object->has_children_of_type(
 				$locators,
 				'descriptor'
 			);
@@ -156,7 +156,7 @@ final class ts_object_test extends TestCase {
 			);
 
 		// nd
-			$result = $ts_object->have_children_of_type(
+			$result = $ts_object->has_children_of_type(
 				$locators,
 				'nd'
 			);
@@ -167,7 +167,7 @@ final class ts_object_test extends TestCase {
 				$eq,
 				'expected true (result===true) and received type: ' . json_encode($eq)
 			);
-	}//end test_have_children_of_type
+	}//end test_has_children_of_type
 
 
 
