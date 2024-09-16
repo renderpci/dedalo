@@ -114,7 +114,9 @@ final class core_functions_test extends TestCase {
 		$this->assertTrue(
 			$eq,
 			'expected true, but received is: '
-				. to_string( $eq )
+				. json_encode( $eq ) . PHP_EOL
+				. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
+
 		);
 
 		$eq = $response->code===200;
@@ -123,7 +125,8 @@ final class core_functions_test extends TestCase {
 			'expected true, but received is: '
 				. to_string( $eq ) .PHP_EOL
 				. ' response code: ' . to_string( $response->code ) . PHP_EOL
-				. ' api_url: ' . $api_url
+				. ' api_url: ' . $api_url . PHP_EOL
+				. ' response: ' . json_encode( $response, JSON_PRETTY_PRINT )
 		);
 	}//end test_curl_request
 
