@@ -109,6 +109,7 @@ class logger_backend_activity extends logger_backend {
 			$tipo_where	= $options->tipo_where;
 			$operations	= $options->operations;
 			$datos		= $options->datos;
+			$user_id	= $options->user_id;
 
 		// check values
 
@@ -164,7 +165,7 @@ class logger_backend_activity extends logger_backend {
 			$component_tipo = self::$_COMPONENT_WHO['tipo']; // dd543 component_autocomplete
 
 			// value
-				$user_id = logged_user_id() ?? '-666';
+				$user_id = $user_id ?? logged_user_id() ?? '-666';
 				$locator_user_id = new locator();
 					$locator_user_id->set_section_id($user_id);
 					$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
@@ -344,6 +345,7 @@ class logger_backend_activity extends logger_backend {
 		*		"table"				=> "matrix",
 		*		"section_tipo"		=> "oh1"
 		*	]
+	* @param int|null $user_id
 	* @return void
 	*/
 	public function log_message(
@@ -351,7 +353,8 @@ class logger_backend_activity extends logger_backend {
 		int $log_level=logger::INFO,
 		string $tipo_where=null,
 		string $operations=null,
-		array $datos=null
+		array $datos=null,
+		int $user_id=null
 		) {
 
 		$options = (object)[
@@ -359,7 +362,8 @@ class logger_backend_activity extends logger_backend {
 			'log_level'		=> $log_level,
 			'tipo_where'	=> $tipo_where,
 			'operations'	=> $operations,
-			'datos'			=> $datos
+			'datos'			=> $datos,
+			'user_id'		=> $user_id
 		];
 
 		register_shutdown_function([logger::$obj['activity'],'log_message_defer'], $options);

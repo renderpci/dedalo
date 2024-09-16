@@ -1293,7 +1293,8 @@ class login extends common {
 				logger::INFO,
 				self::get_login_tipo(),
 				null,
-				$data
+				$data,
+				logged_user_id() // int user_id
 			);
 	}//end login_activity_report
 

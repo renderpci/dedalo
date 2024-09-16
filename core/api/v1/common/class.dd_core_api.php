@@ -2872,7 +2872,8 @@ final class dd_core_api {
 				logger::INFO, // int log_level
 				$tipo, // string|null tipo_where
 				null, // string|null operations
-				$dato_activity // array|null datos
+				$dato_activity, // array|null datos
+				logged_user_id() // int
 			);
 	}//end log_activity
 
