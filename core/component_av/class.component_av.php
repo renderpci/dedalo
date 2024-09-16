@@ -1175,7 +1175,8 @@ class component_av extends component_media_common implements component_media_int
 						'parent'	=> $this->section_id,
 						'id'		=> $this->id,
 						'quality'	=> $quality
-					]
+					],
+					logged_user_id() // int
 				);
 
 			// save To update valor_list
@@ -1416,7 +1417,8 @@ class component_av extends component_media_common implements component_media_int
 					'quality'			=> $quality,
 					'source_quality'	=> $source_quality,
 					'target_quality'	=> $quality
-				]
+				],
+				logged_user_id() // int
 			);
 
 		// response
@@ -1483,7 +1485,8 @@ class component_av extends component_media_common implements component_media_int
 					'top_tipo'	=> TOP_TIPO ?? null,
 					'id'		=> $id,
 					'quality'	=> $quality
-				]
+				],
+				logged_user_id() // int
 			);
 
 
