@@ -63,7 +63,10 @@ class diffusion_section_stats extends diffusion {
 	public static function update_user_activity_stats( int $user_id ) {
 		$start_time = start_time();
 
-		debug_log(__METHOD__." Updating user activity of user: $user_id".to_string(), logger::DEBUG);
+		debug_log(__METHOD__
+			." Updating user activity of user: $user_id"
+			, logger::WARNING
+		);
 
 		$response = new stdClass();
 			$response->result	= false;
