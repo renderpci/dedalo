@@ -496,7 +496,7 @@ function curl_request(object $options) : object {
 			// Check if any error occurred
 			if(curl_errno($ch)) {
 				$error_info	 = curl_error($ch);
-				$msg		.= '. curl_request Curl error:' . $error_info;
+				$msg		.= '. curl_request Curl error: ' . $error_info;
 				debug_log(__METHOD__
 					.' '.$url.' error_info: '.$error_info
 					, logger::ERROR
@@ -510,9 +510,9 @@ function curl_request(object $options) : object {
 					// );
 			}
 		} catch (Exception $e) {
-			$msg .= '. curl_request Caught exception:' . $e->getMessage();
+			$msg .= '. curl_request Caught exception: ' . $e->getMessage();
 			debug_log(__METHOD__
-				.' curl_request Caught exception:' . $e->getMessage()
+				.' curl_request Caught exception: ' . $e->getMessage()
 				, logger::ERROR
 			);
 		}
