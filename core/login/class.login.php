@@ -816,8 +816,6 @@ class login extends common {
 				debug_log(__METHOD__." $e ", logger::CRITICAL);
 			}
 
-
-
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -873,6 +871,7 @@ class login extends common {
 		// OK response
 			$response->result	= true;
 			$response->msg		= 'OK init_user_login_sequence is done';
+
 
 		return $response;
 	}//end init_user_login_sequence
