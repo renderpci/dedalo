@@ -824,7 +824,7 @@ const delete_record = function (options) {
 				const button_delete = ui.create_dom_element({
 					element_type	: 'button',
 					class_name		: 'danger remove',
-					text_content	: get_label.delete || 'Delete',
+					text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
 					parent			: footer
 				})
 				const fn_click_unlink_and_delete = async function(e) {
