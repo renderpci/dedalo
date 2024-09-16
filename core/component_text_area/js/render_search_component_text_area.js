@@ -87,8 +87,8 @@ const add_events = function(self, wrapper) {
 
 				return true
 			}
-
 	})
+
 
 	return true
 }//end add_events

@@ -313,7 +313,11 @@ class section extends common {
 	public function get_dato() : object {
 
 		// check valid call
-			if ( abs(intval($this->section_id))<1 && (strpos($this->section_id, DEDALO_SECTION_ID_TEMP)===false && strpos($this->section_id, 'search')===false) ) {
+			if ( abs(intval($this->section_id))<1 &&
+				(strpos((string)$this->section_id, DEDALO_SECTION_ID_TEMP)===false &&
+				strpos((string)$this->section_id, 'search')===false)
+				) {
+
 				if(SHOW_DEBUG===true) {
 					if ($this->section_id==='result') {
 						throw new Exception("Error Processing Request. 'result' is not valid section_id. Maybe you are using foreach 'ar_list_of_values' incorrectly", 1);
@@ -2205,6 +2209,7 @@ class section extends common {
 			'modified_date'				=> $this->get_modified_date(),
 			'created_by_user_name'		=> $this->get_created_by_user_name(false),
 			'modified_by_user_name'		=> $this->get_modified_by_user_name(false),
+			'created_by_userID'			=> $this->get_created_by_userID(),
 			// publication
 			'publication_first_date'	=> $this->get_publication_date(diffusion::$publication_first_tipo),
 			'publication_last_date'		=> $this->get_publication_date(diffusion::$publication_last_tipo),
@@ -3572,10 +3577,6 @@ class section extends common {
 			// remove duplicates, sometimes the portal point to other portal with two different bifurcations, and the portal pointed is duplicated in the request_config (dedalo, Zenon,...)
 			$ddo_map = array_unique($full_ddo_map, SORT_REGULAR);
 
-			$component_dataframe = array_find($ddo_map, function($el) {
-				return $el->model==='component_dataframe';
-			});
-
 		// get the context and data for every locator
 			foreach($ar_db_record as $db_record) {
 
@@ -3591,15 +3592,15 @@ class section extends common {
 					}
 
 				// sub-data time machine from record columns
-					$section_id		= $db_record->section_id;
-					$section_tipo	= $db_record->section_tipo;
-					$lang			= $db_record->lang;
-					$id				= $db_record->id;
-					$timestamp		= $db_record->timestamp;
-					$bulk_process_id		= $db_record->bulk_process_id;
-					$user_id		= $db_record->userID;
-					$tipo			= $db_record->tipo;
-					$dato			= $db_record->dato;
+					$section_id			= $db_record->section_id;
+					$section_tipo		= $db_record->section_tipo;
+					$lang				= $db_record->lang;
+					$id					= $db_record->id;
+					$timestamp			= $db_record->timestamp;
+					$bulk_process_id	= $db_record->bulk_process_id;
+					$user_id			= $db_record->userID;
+					$tipo				= $db_record->tipo;
+					$dato				= $db_record->dato;
 
 				// empty tipo case catch
 					if (empty($tipo)) {
@@ -3653,7 +3654,8 @@ class section extends common {
 									'value'					=> $id,
 									'debug_model'			=> 'component_section_id',
 									'debug_label'			=> 'matrix ID',
-									'matrix_id'				=> $id
+									'matrix_id'				=> $id,
+									'user_id'				=> $user_id
 								];
 								$ar_subdata[]		= $data_item;
 								$ar_subcontext[]	= $ddo;
@@ -3680,7 +3682,7 @@ class section extends common {
 							case ($current_ddo_tipo==='rsc329'): // user notes
 								// search notes with current matrix_id
 									$sqo = new search_query_object();
-										$sqo->section_tipo	= 'rsc832';
+										$sqo->section_tipo	= DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO; // rsc832
 										$sqo->filter		= json_decode('{
 											"$and": [
 												{
@@ -3688,7 +3690,7 @@ class section extends common {
 													"q_operator": null,
 													"path": [
 														{
-															"section_tipo": "rsc832",
+															"section_tipo": "'.DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO.'",
 															"component_tipo": "rsc835",
 															"model": "component_number",
 															"name": "Code"
@@ -3740,6 +3742,9 @@ class section extends common {
 										// parent properties
 										$data_item->parent_section_tipo	= $sqo->section_tipo;
 										$data_item->parent_section_id	= $note_section_id;
+
+									// tm_user_id. Add time machine info
+										$data_item->tm_user_id = $user_id;
 
 									$ar_subdata[]		= $data_item;
 									$ar_subcontext[]	= $ddo;
@@ -4360,27 +4365,36 @@ class section extends common {
 	public function get_section_permissions() : int {
 
 		// check if the permissions are set previously, then return it.
-		if(isset($this->permissions)){
-			return $this->permissions;
-		}
-
-		$this->permissions = common::get_permissions($this->tipo, $this->tipo);
-
-		// logged user id
-			$user_id = logged_user_id();
-
-		// user section . Allow user edit self data (used by tool_user_admin)
-			if ($this->permissions<2 &&
-				$this->tipo===DEDALO_SECTION_USERS_TIPO &&
-				$this->section_id==$user_id) {
-
-				$this->permissions = 1; // set to 1 to allow tool_user_admin access
+			if(isset($this->permissions)){
 				return $this->permissions;
 			}
 
-		// maintains dedalo_activity_section_tipo < 2 to prevent edition
-			if ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1) {
-				return 1;
+		// common cases permissions calculation
+			$this->permissions = common::get_permissions($this->tipo, $this->tipo);
+
+		// special cases
+			switch (true) {
+
+				// maintains dedalo_activity_section_tipo < 2 to prevent edition
+				case ($this->tipo===DEDALO_ACTIVITY_SECTION_TIPO && $this->permissions>1):
+					return 1;
+
+				// user section . Allow user edit self data (used by tool_user_admin)
+				case ($this->tipo===DEDALO_SECTION_USERS_TIPO && $this->permissions<1 && $this->section_id==logged_user_id()):
+					$this->permissions = 1; // set to 1 to allow tool_user_admin access
+					break;
+
+				// time machine notes case (rsc832)
+				case ($this->tipo===DEDALO_TIME_MACHINE_NOTES_SECTION_TIPO):
+					// his own section
+					$this->permissions = (logged_user_id()===$this->get_created_by_userID())
+						? 2
+						: 1;
+					// open access for super admins to the section list of Time Machine notes
+					if ($this->permissions<2 && $this->mode==='list' && security::is_global_admin(logged_user_id())) {
+						$this->permissions = 2;
+					}
+					break;
 			}
 
 

@@ -5,7 +5,7 @@
 /*
 	UNDER GNU PUBLIC LICENSE
 	http://www.gnu.org/licenses/licenses.es.html
-	Versión 4, 14 de marzo de 2012 / 21 Abril 2015
+	Versión 4, 14 de Marzo de 2012 / 21 Abril 2015
 
 	Juan Francisco Onielfa Veneros
 	Alejandro Peña Carbonell
@@ -105,7 +105,7 @@
 
 // dedalo entity
 	// dedalo_entity string. Do not use here spaces or non ASCII chars
-	define('DEDALO_ENTITY', 'my_entity_name'); # Like 'dedalo4'
+	define('DEDALO_ENTITY', 'my_entity_name'); // Like 'dedalo4'
 	// dedalo_entity_label . (Showed title of html pages)
 	define('DEDALO_ENTITY_LABEL', DEDALO_ENTITY);
 	// dedalo_entity_id . (From Dédalo private list. You need to be register before but it's not mandatory fill this)
@@ -128,23 +128,22 @@
 	include(DEDALO_CORE_PATH . '/base/version.inc');
 
 
+
 // SESSIONS
 	define('DEDALO_SESSIONS_PATH', dirname(dirname(DEDALO_ROOT_PATH)) . '/sessions');
 
-
-
 	if (session_status()!==PHP_SESSION_ACTIVE) {
 
-		# HANDLER
+		// HANDLER
 		$SESSION_HANDLER = 'files';	// files | memcached | user | postgresql
 		define('DEDALO_SESSION_HANDLER', $SESSION_HANDLER);
 
-		# LIFETIME
-		# Set max duration of dedalo user session
-		# Use ini directive to set session.gc_maxlifetime (Garbage Collection lifetime)
-		# Use session_cache_expire to set duration of session
-		# Set duration max of session data in hours (default 8 hours)
-		# Set before session start
+		// LIFETIME
+		// Set max duration of dedalo user session
+		// Use ini directive to set session.gc_maxlifetime (Garbage Collection lifetime)
+		// Use session_cache_expire to set duration of session
+		// Set duration max of session data in hours (default 8 hours)
+		// Set before session start
 		$session_duration_hours	= $session_duration_hours ?? 8;
 		$timeout_seconds		= intval($session_duration_hours*3600); // in seconds
 
@@ -179,7 +178,7 @@
 
 // show_debug
 	if (!defined('SHOW_DEBUG')) {
-		// Application debug config. When user is DEDALO_SUPERUSER is active by default, else is not
+		// Application debug config. When the user is DEDALO_SUPERUSER it is active by default, otherwise it is not active.
 		define('SHOW_DEBUG', (logged_user_id()==DEDALO_SUPERUSER)
 			? true
 			: false // default false
@@ -189,7 +188,7 @@
 
 
 // is_developer
-	// Logged user is developer value. Depends of user config 'is_developer' value from database
+	// Logged user is developer value. Depends of user config 'is_developer' value from database (user section)
 	define('SHOW_DEVELOPER', (logged_user_is_developer()===true)
 		? true
 		: false // default false
@@ -198,21 +197,23 @@
 
 
 // loader
-	// auto load basic and called classes
+	// auto load main classes and manages classes calls
 	include DEDALO_CORE_PATH . '/base/class.loader.php';
 
 
 
 // backup : Automatic backups control
-	# DEDALO_BACKUP_ON_LOGIN : true / false
+	// DEDALO_BACKUP_ON_LOGIN : true / false
 	define('DEDALO_BACKUP_ON_LOGIN', true);
-	# DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 8
+	// DEDALO_BACKUP_TIME_RANGE Minimum lapse of time (in hours) for run backup script again. Default: (int) 8
+	// Note that backups are fired in background when user is logging when the time lapse is bigger than this value
 	define('DEDALO_BACKUP_TIME_RANGE', 8);
-	// backups paths. Try to keep backups directory out of httpdocs scope for security
+	// backups paths. Keep the backup directory outside the scope of httpdocs for security reasons.
 	define('DEDALO_BACKUP_PATH',			dirname(dirname(DEDALO_ROOT_PATH)) . '/backups');
 	define('DEDALO_BACKUP_PATH_TEMP',		DEDALO_BACKUP_PATH . '/temp');
 	define('DEDALO_BACKUP_PATH_DB',			DEDALO_BACKUP_PATH . '/db');
 	define('DEDALO_BACKUP_PATH_ONTOLOGY',	DEDALO_BACKUP_PATH . '/ontology');
+
 
 
 // log and errors : Store application activity data info and errors to DDBB
@@ -243,8 +244,8 @@
 
 
 // lang
-	// dedalo structure lang. Ontology lang (default 'lg-spa'). Do not touch this value
-	define('DEDALO_STRUCTURE_LANG', 'lg-spa');
+	// dedalo structure (Ontology) lang. Ontology lang default is 'lg-spa'. Do not change this value !
+	define('DEDALO_STRUCTURE_LANG', 'lg-spa'); // only 'lg-spa' is accepted now
 	// dedalo_application_langs
 	define('DEDALO_APPLICATION_LANGS', [
 		'lg-eng'	=> 'English',
@@ -258,7 +259,7 @@
 		'lg-ell'	=> 'Ελληνικά',
 		'lg-nep'	=> 'नेपाली'
 	]);
-	// dedalo_application_langs_default
+	// dedalo_application_langs_default. The default lang used when is not set
 	define('DEDALO_APPLICATION_LANGS_DEFAULT', 'lg-eng');
 	// dedalo_application_lang. Current Dédalo application lang (cascade calculate from get, post, session vars, default)
 	define('DEDALO_APPLICATION_LANG',			fix_cascade_config_var('dedalo_application_lang',DEDALO_APPLICATION_LANGS_DEFAULT));
@@ -282,6 +283,7 @@
 	define('DEDALO_DIFFUSION_LANGS', DEDALO_PROJECTS_DEFAULT_LANGS);
 
 
+
 // dedalo default config values
 	// dedalo_prefix_tipos. Array of main active tipos of the ontology to be imported and managed by Dédalo.
 	// mandatory: ['dd','rsc','hierarchy','lg','nexus']
@@ -298,7 +300,7 @@
 		'actv'
 	]);
 	// main_fallback_section. Default section tipo to go when it's not defined any
-	define('MAIN_FALLBACK_SECTION', 'oh1'); # go after login (tipo inventory)
+	define('MAIN_FALLBACK_SECTION', 'oh1'); // go after login (tipo inventory)
 	// numerical matrix values of list of values 'yes/no'. Do not change this values !
 	define('NUMERICAL_MATRIX_VALUE_YES', 1);
 	define('NUMERICAL_MATRIX_VALUE_NO',  2);
@@ -325,7 +327,8 @@
 		//		}
 		//	]
 		// }]
-			//define('CONFIG_DEFAULT_FILE_PATH',		DEDALO_CONFIG_PATH .'/config_defaults.json');
+		//define('CONFIG_DEFAULT_FILE_PATH', DEDALO_CONFIG_PATH .'/config_defaults.json');
+
 
 
 // media config
@@ -342,7 +345,6 @@
 		// thumbs dedalo_image_thumb sizes. Integer as pixels
 		define('DEDALO_IMAGE_THUMB_WIDTH',			222);	// int Default 102 | 222
 		define('DEDALO_IMAGE_THUMB_HEIGHT',			148);	// int Default 57 | 148
-
 
 	// av media
 		// dedalo_av_folder. string default '/av'
@@ -411,7 +413,7 @@
 		// image_file_url
 		define('DEDALO_IMAGE_FILE_URL',				DEDALO_CORE_URL . '/media_engine/img.php');
 		// lib ImageMagick magick_path
-		define('MAGICK_PATH',						'/usr/bin/'); 	# Like '/usr/bin/';
+		define('MAGICK_PATH',						'/usr/bin/'); // Like '/usr/bin/';
 		// ImageMagick config
 		define('MAGICK_CONFIG', [
 			// Transparent tiff, remove the layer 0 (flat composition layer)
@@ -434,8 +436,6 @@
 		// Optional Extensions list of preferable extensions in original or modified qualities.
 		// define('DEDALO_IMAGE_BEST_EXTENSIONS',		['tif','tiff','psd']);
 
-
-
 	// pdf media
 		// pdf_folder. Default '/pdf'
 		define('DEDALO_PDF_FOLDER',					'/pdf');
@@ -448,7 +448,7 @@
 		define('DEDALO_PDF_ALTERNATIVE_EXTENSIONS', ['jpg']);
 		// pdf_mime_type. Default: 'application/pdf'
 		define('DEDALO_PDF_MIME_TYPE',				'application/pdf');
-		# pdf_type. Default: 'pdf'
+		// pdf_type. Default: 'pdf'
 		define('DEDALO_PDF_TYPE',					'pdf');
 		// dedalo_pdf_quality_original. string default 'original'
 		define('DEDALO_PDF_QUALITY_ORIGINAL',		'original');
@@ -462,8 +462,6 @@
 		define('PDF_AUTOMATIC_TRANSCRIPTION_ENGINE','/usr/bin/pdftotext');
 		// OCR engine (path of daemon of OCR) Using ocrmypdf https://ocrmypdf.readthedocs.io/en/latest/index.html
 		// define('PDF_OCR_ENGINE',					'/usr/bin/ocrmypdf');
-
-
 
 	// 3d media
 		// dedalo_3d_foler. string default '/3d'
@@ -489,7 +487,6 @@
 		// dedalo_3d_collada2gltf_path normally /usr/local/bin/COLLADA2GLTF-bin or /opt/COLLADA2GLTF-bin (converts .dae to .glb/.gltf)
 		define('DEDALO_3D_COLLADA2GLTF_PATH',		'/usr/local/bin/COLLADA2GLTF-bin');
 
-
 	// svg media
 		// svg_folder. Default: '/svg'
 		define('DEDALO_SVG_FOLDER',					'/svg');
@@ -506,10 +503,10 @@
 		// svg_ar_quality
 		define('DEDALO_SVG_AR_QUALITY',				[DEDALO_SVG_QUALITY_ORIGINAL, DEDALO_SVG_QUALITY_DEFAULT]);
 
-
 	// html_files
 		define('DEDALO_HTML_FILES_FOLDER',			'/html_files');
 		define('DEDALO_HTML_FILES_EXTENSION',		'html');
+
 
 
 // upload config
@@ -532,9 +529,9 @@
 
 
 // media entity menu config
-	# DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
+	// DEDALO_ENTITY_MEDIA_AREA_TIPO = remove the Real sections from menu ALL sections
 	define('DEDALO_ENTITY_MEDIA_AREA_TIPO', '');
-	# DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the children, used for groupings that don't want see into the menu "Oral History" "list of values"...
+	// DEDALO_ENTITY_MENU_SKIP_TIPOS = skip the array of tipos but walk the children, used for groupings that don't want see into the menu "Oral History" "list of values"...
 	define('DEDALO_ENTITY_MENU_SKIP_TIPOS', []);
 
 
@@ -565,15 +562,16 @@
 	define('DEDALO_LOCK_COMPONENTS', true);
 
 
+
 // protect media files, when active the access to media files are controlled and only register users can access to it.
 	define('DEDALO_PROTECT_MEDIA_FILES', false);
+
 
 
 // notifications
 	// Send notifications to user browser. E.g. Current lock components..
 	define('DEDALO_NOTIFICATIONS',	false);
-	// define('DEDALO_NODEJS',			'/usr/bin/node');
-	// define('DEDALO_NODEJS_PM2',		'/usr/bin/pm2');
+
 
 
 // dedalo_ar_exclude_components
@@ -589,7 +587,7 @@
 
 
 // geonames
-	// geonames_account_username. Only to development
+	// geonames_account_username. For development only
 	// define('GEONAMES_ACCOUNT_USERNAME', 'my_account');
 
 
@@ -622,6 +620,7 @@
 	]);
 
 
+
 // remote_structure_server_code
 	define('STRUCTURE_FROM_SERVER',			true);
 	define('STRUCTURE_SERVER_CODE',			'x3a0B4Y020Eg9w');
@@ -631,6 +630,7 @@
 	define('STRUCTURE_DOWNLOAD_JSON_FILE',	DEDALO_BACKUP_PATH_ONTOLOGY);
 	// SERVER_PROXY Optional IP and port like 'XXX.XXX.XXX.XXX:3128'. Do not remove comment if its not necessary
 	// define('SERVER_PROXY', 				'XXX.XXX.XXX.XXX:3128');
+
 
 
 // dedalo_code
@@ -687,12 +687,13 @@
 		define('IP_API', [
 			'url'			=> 'https://ipapi.co/$ip/json/', // https capable as free
 			'href'			=> 'https://ipapi.co/?q=$ip', // page to jump on click
-			'country_code'	=> 'country_code' // / property where look country code for flag
+			'country_code'	=> 'country_code' // property where look country code for flag
 		]);
 
 
+
 // maintenance
-	// maintenance mode active / inactive
+	// maintenance mode active (true) / inactive (false)
 	define('DEDALO_MAINTENANCE_MODE', false);
 
 
@@ -703,4 +704,3 @@
 	After a few minutes, you can re-login to Dédalo and work again";
 	// to activate it, uncomment the next line
 		// define('DEDALO_NOTIFICATION', ['msg' => $notice, 'class_name' => 'warning']);
-

@@ -214,10 +214,9 @@ abstract class common {
 			case 'set_' :
 				if(!isset($arArguments[0])) return(false);	#throw new Exception("Error Processing Request: called $strFunction without arguments", 1);
 				return($this->SetAccessor($strMethodMember, $arArguments[0]));
-				break;
+
 			case 'get_' :
 				return($this->GetAccessor($strMethodMember));
-				break;
 		}
 		return(false);
 	}
@@ -1761,7 +1760,7 @@ abstract class common {
 							: null;
 
 						// component info from Ontology (!) For now it is not used because it affects speed.
-						// $dd_object->ontology_info = $this->get_ontlogy_info();
+						// $dd_object->ontology_info = $this->get_ontology_info();
 					}
 
 					// set the show_interface of shared sections
@@ -1960,7 +1959,7 @@ abstract class common {
 				];
 			}
 
-		// children_resursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
+		// children_recursive function, used to get all children for specific ddo and inject the result to new request_config (inheritance request from parent)
 			if (!function_exists('get_children_recursive')) {
 				function get_children_recursive(array $ar_ddo, object $dd_object) : array {
 					$ar_children = [];

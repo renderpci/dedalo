@@ -87,8 +87,9 @@ class component_select extends component_relation_common {
 	*/
 	public function get_diffusion_value(?string $lang=null, ?object $option_obj=null) : ?string {
 
+		$diffusion_lang = $lang ?? DEDALO_DATA_LANG;
 		$diffusion_value = $this->get_valor(
-			$lang ?? DEDALO_DATA_LANG
+			$diffusion_lang
 		);
 
 		$diffusion_value = !empty($diffusion_value)

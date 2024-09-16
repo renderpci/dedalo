@@ -126,7 +126,7 @@
 				case 'edit':
 				default:
 					// person. tags for persons
-					// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
+						// get the tags for persons, will be used when the text_area need include the "person that talk" in transcription
 						if(isset($properties->tags_persons)) {
 
 							// related_sections add
@@ -175,6 +175,11 @@
 				$item->parent_tipo			= $this->get_tipo();
 				$item->parent_section_id	= $this->get_section_id();
 				$item->fallback_value		= $fallback_value;
+
+				// created_by_userID. Used for time machine notes user verification
+				$item->created_by_userID = abs(intval($this->section_id))>0
+					? $this->get_my_section()->get_created_by_userID()
+					: null;
 
 				// optional data to add
 				if(isset($properties->tags_persons) && $mode==='edit') {
