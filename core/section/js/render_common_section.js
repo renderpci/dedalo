@@ -243,6 +243,13 @@ export const render_relation_list = function(options) {
 
 			relation_list_head.classList.add('up')
 
+			// spinner
+				ui.create_dom_element({
+					element_type	: 'div',
+					class_name		: 'spinner',
+					parent			: relation_list_body
+				})
+
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
 				: await instances.get_instance({

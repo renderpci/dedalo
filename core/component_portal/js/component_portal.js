@@ -66,6 +66,9 @@ export const component_portal = function() {
 	this.rqo					= null
 
 	this.fixed_columns_map		= null
+
+	// delete_diffusion_records bool (on delete record, check this value)
+	self.delete_diffusion_records = null
 }//end  component_portal
 
 
@@ -1342,6 +1345,9 @@ component_portal.prototype.delete_linked_record = async function(options) {
 		const section_tipo		= options.section_tipo
 		const caller_dataframe	= options.caller_dataframe || null
 
+	// delete_diffusion_records
+		const delete_diffusion_records = self.delete_diffusion_records ?? true
+
 	// create the instance of the section called by the row of the portal,
 	// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
 		const instance_options = {
@@ -1370,9 +1376,10 @@ component_portal.prototype.delete_linked_record = async function(options) {
 
 	// call to the section and delete it
 		const delete_section_result = section.delete_section({
-			sqo					: sqo,
-			delete_mode			: 'delete_record',
-			caller_dataframe	: caller_dataframe
+			sqo							: sqo,
+			delete_mode					: 'delete_record',
+			caller_dataframe			: caller_dataframe,
+			delete_diffusion_records	: delete_diffusion_records
 		})
 
 
