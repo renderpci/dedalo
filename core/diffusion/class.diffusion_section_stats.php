@@ -85,7 +85,11 @@ class diffusion_section_stats extends diffusion {
 			  "filter": {
 				"$and": [
 				  {
-					"q": "[{\"section_tipo\":\"'.DEDALO_SECTION_USERS_TIPO.'\",\"section_id\":\"'.$user_id.'\",\"from_component_tipo\":\"'.USER_ACTIVITY_USER_TIPO.'\"}]",
+					"q": {
+						"section_tipo" : "'.DEDALO_SECTION_USERS_TIPO.'",
+						"section_id" : "'.$user_id.'",
+						"from_component_tipo" : "'.USER_ACTIVITY_USER_TIPO.'"
+					},
 					"q_operator": null,
 					"path": [
 					  {
