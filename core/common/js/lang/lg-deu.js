@@ -449,6 +449,7 @@
     "show_buttons": "Schaltflächen anzeigen",
     "find": "Suchen",
     "order_change": "Änderung der Reihenfolge",
+    "skip_deletion_cause_children": "Löschung des aktuellen Datensatzes übersprungen, da er Kinder hat",
     "acabado": "Beendet",
     "component_history": "Komponentenverlauf",
     "build_install_version": "Erstellen Sie eine Installationsversion",

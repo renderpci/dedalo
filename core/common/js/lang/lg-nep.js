@@ -449,6 +449,7 @@
     "show_buttons": "बटनहरू देखाउनुहोस्",
     "find": "खोज्नुहोस्",
     "order_change": "<mark>Cambio de orden<\/mark>",
+    "skip_deletion_cause_children": "हालको रेकर्ड मेटाउन छोडियो किनभने उहाँसँग बच्चाहरू छन्",
     "acabado": "समाप्त गर्नुहोस्",
     "component_history": "घटक इतिहास",
     "build_install_version": "<mark>Construir una versión de instalación<\/mark>",
