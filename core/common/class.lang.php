@@ -48,38 +48,11 @@ class lang {
 				return $resolve_response[$lang_tld];
 			}
 
-		// short vars
-			$tipo		= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
-			$table		= lang::$langs_matrix_table;
-			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
+		// resolve using unified method resolve_multiple
+			$items = lang::resolve_multiple([$lang_tld]);
 
-		// query
-			$strQuery	= '';
-			$strQuery	.= 'SELECT';
-			$strQuery	.= PHP_EOL . 'section_id, section_tipo, datos#>\'{components, '.$term_tipo.', dato}\' AS names';
-			$strQuery	.= PHP_EOL . 'FROM "'.$table.'"';
-			$strQuery	.= PHP_EOL . 'WHERE';
-			$strQuery	.= PHP_EOL . 'datos#>\'{components, '.$tipo.', dato, lg-nolan}\' ? \''.$lang_tld.'\';';
-
-		// DB query exec
-			$result = JSON_RecordObj_matrix::search_free($strQuery);
-			if ($result===false) {
-				debug_log(__METHOD__." Error on search_free  ".to_string($strQuery), logger::ERROR);
-				return null;
-			}
-
-		// response
-			$response = new stdClass();
-			while ($rows = pg_fetch_assoc($result)) {
-
-				$names = $rows['names'];
-				$names = json_decode($names);
-
-				$response->section_id	= $rows['section_id'];
-				$response->names		= $names;
-
-				break; // only one is expected
-			}
+		// select first array item (one is expected)
+			$response = $items[0] ?? null;
 
 		// cache
 			$resolve_response[$lang_tld] = $response;
@@ -87,6 +60,74 @@ class lang {
 
 		return $response;
 	}//end resolve
+
+
+
+	/**
+	* RESOLVE_MULTIPLE
+	* Exec a SQL search against the database filtering by lang data
+	* using 'matrix_langs_hierarchy41_gin' index
+	* @param array $ar_lang_tld
+	* as ['spa','eng']
+	* @return array $items
+	*/
+	public static function resolve_multiple(array $ar_lang_tld) {
+
+		// short vars
+			$tipo		= DEDALO_THESAURUS_CODE_TIPO; // hierarchy41
+			$table		= lang::$langs_matrix_table;
+			$term_tipo	= DEDALO_THESAURUS_TERM_TIPO;
+
+		// query
+			$strQuery	= '';
+			$strQuery	.= PHP_EOL . 'SELECT';
+			$strQuery	.= PHP_EOL . 'section_id, section_tipo,';
+			$strQuery	.= PHP_EOL . 'datos#>\'{components, '.$term_tipo.', dato}\' AS names,'; // as {"lg-eng": ["Spanish"], "lg-spa": ["Castellano"]}
+			$strQuery	.= PHP_EOL . 'datos#>\'{components, hierarchy41, dato, lg-nolan}\' ->> 0 AS code'; // as 'spa'
+			$strQuery	.= PHP_EOL . 'FROM "'.$table.'"';
+			$strQuery	.= PHP_EOL . 'WHERE';
+
+		// ar_lang_tld_clean. Clean tld from 'lg-' prefix
+			$ar_lang_tld_clean = array_map(function($lang_tld){
+				// lang tld formatting
+				if (strpos($lang_tld, 'lg-')===0) {
+					$lang_tld = substr($lang_tld, 3);
+				}
+				return $lang_tld;
+			}, $ar_lang_tld);
+
+		// add
+			$strQuery .= PHP_EOL . 'datos#>\'{components, hierarchy41, dato, lg-nolan}\' ?| array[\'' . implode('\',\'', $ar_lang_tld_clean) .'\'];';
+
+		// DB query exec
+			$result = JSON_RecordObj_matrix::search_free($strQuery);
+			if ($result===false) {
+				debug_log(__METHOD__
+					." Error on search_free. strQuery: " . PHP_EOL
+					.to_string($strQuery)
+					, logger::ERROR
+				);
+				return null;
+			}
+
+		// response
+			$items = [];
+			while ($rows = pg_fetch_assoc($result)) {
+
+				$section_id	= (int)$rows['section_id'];
+				$names		= json_handler::decode($rows['names']);
+				$code		= $rows['code'];
+
+				$items[] = (object)[
+					'code'			=> $code,
+					'section_id'	=> $section_id,
+					'names'			=> $names
+				];
+			}
+
+
+		return $items;
+	}//end resolve_multiple
 
 
 

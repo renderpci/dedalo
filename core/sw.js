@@ -343,7 +343,6 @@ self.addEventListener('fetch', (event) => {
 	// Manage only javascript files excluding images, css, etc.
 	// that will be handled by the browser normally
 	if (	event.request.url.endsWith('.js')
-		&& !event.request.url.endsWith('/worker_data.js')
 		&& !event.request.url.endsWith('/sw.js')
 		&& !event.request.url.includes('/lib/')
 		) {

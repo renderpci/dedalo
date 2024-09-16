@@ -140,7 +140,7 @@ view_text_section_record.render = async function(self, options) {
 						ar_nodes.push( current_instance_node )
 				}//end for (let j = 0; j < ar_instances_length; j++)
 
-			// join instances nodes with separator between them
+			// join instances nodes, fields, with separator between them
 				const value_separator = self.context.fields_separator || ' | '
 				const ar_nodes_length = ar_nodes.length
 				for (let k = 0; k < ar_nodes_length; k++) {
@@ -148,7 +148,7 @@ view_text_section_record.render = async function(self, options) {
 					if(k < ar_nodes_length -1) {
 						const node_fields_separator = ui.create_dom_element({
 							element_type	: 'span',
-							class_name		: 'separator',
+							class_name		: 'separator fields_separator',
 							inner_html		: value_separator
 						})
 						wrapper.appendChild(node_fields_separator)
@@ -173,7 +173,7 @@ view_text_section_record.render = async function(self, options) {
 					const fields_separator		= self.context.fields_separator || ', '
 					const node_fields_separator = ui.create_dom_element({
 						element_type	: 'span',
-						class_name		: 'separator',
+						class_name		: 'separator column_separator',
 						inner_html		: fields_separator
 					})
 					wrapper.appendChild(node_fields_separator)

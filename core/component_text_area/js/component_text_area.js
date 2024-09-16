@@ -1181,6 +1181,8 @@ component_text_area.prototype.updated_layer_data = function(options) {
 */
 component_text_area.prototype.add_component_history_note = async function(options) {
 
+	const self = this
+
 	// options
 		const notes_section_tipo	= options.notes_section_tipo
 		const matrix_id				= options.matrix_id
@@ -1188,7 +1190,20 @@ component_text_area.prototype.add_component_history_note = async function(option
 	// check
 		if (!matrix_id) {
 			console.error('Undefined matrix_id. options:', options);
-			return
+			return null
+		}
+
+	// check user creator
+		// created_by_userID: component text area note creation if is already created
+		const created_by_userID	= self.data.created_by_userID
+		// user_id: current logged user
+		const user_id			= page_globals.user_id
+		// tm_user_id: column userID from time machine record
+		const tm_user_id		= parseInt(self.data.tm_user_id)
+
+		if (user_id!==tm_user_id) {
+			console.error('Only the owner can create a time machine note');
+			return null
 		}
 
 	// create new notes record
@@ -1206,6 +1221,10 @@ component_text_area.prototype.add_component_history_note = async function(option
 			return null
 		}
 		const new_section_id = api_response.result || null
+		if (!new_section_id) {
+			console.error('Error on create the note record:', api_response);
+			return null
+		}
 
 	// set code (component_number) value wit matrix_id
 		const code_tipo	= 'rsc835'
@@ -1244,7 +1263,11 @@ component_text_area.prototype.add_component_history_note = async function(option
 			console.error('Error on set matrix note code. code_api_response:', code_api_response);
 			return null
 		}
-		console.log(`Created a new record in ${notes_section_tipo}:`, new_section_id, matrix_id );
+
+	// All is OK
+		if(SHOW_DEBUG===true) {
+			console.log(`Created a new record in ${notes_section_tipo}:`, new_section_id, matrix_id );
+		}
 
 
 	return new_section_id

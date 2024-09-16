@@ -1245,7 +1245,7 @@ class component_relation_common extends component_common {
 					true, // bool mark
 					DEDALO_DATA_LANG_DEFAULT // string main_lang
 				);
-				// dump($current_value , ' $current_value  ++ '.to_string($component_tipo));
+				// dump($current_value , ' $current_value  ++ '.to_string("$component_tipo - $lang"));
 
 				$value[] = $current_value;
 			}//end foreach ($ar_components_related as $component_tipo)
@@ -1258,6 +1258,7 @@ class component_relation_common extends component_common {
 
 			// $locator_value = implode($fields_separator, $ar_values_clean);
 			$ar_value = array_merge($ar_value, $ar_values_clean);
+
 		}else{
 
 			if ($show_parents===true) {
@@ -1291,6 +1292,7 @@ class component_relation_common extends component_common {
 				$locator_value = ts_object::get_term_by_locator( $locator, $lang, true );
 
 				$ar_value[] = $locator_value;
+
 
 			}//end if ($show_parents===true)
 		}
@@ -1506,7 +1508,8 @@ class component_relation_common extends component_common {
 				. " Expected q type is object " . PHP_EOL
 				. ' type: ' . gettype($q) . PHP_EOL
 				. ' q: ' . json_encode($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object)
+				. ' query_object: ' . to_string($query_object) . PHP_EOL
+				. ' seq: ' . implode(PHP_EOL.' - ', get_bactrace_sequence())
 				, logger::WARNING
 			);
 		}

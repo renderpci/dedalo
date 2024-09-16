@@ -518,13 +518,6 @@ abstract class JSON_RecordDataBoundObject {
 
 						$strQuery = $sql_prepend . trim($strQuery);
 					}
-
-				// development only
-					// debug_log(__METHOD__
-					// 	. " strQuery " . PHP_EOL
-					// 	. to_string($strQuery)
-					// 	, logger::WARNING
-					// );
 			}
 
 		// connection to DDBB
@@ -594,10 +587,11 @@ abstract class JSON_RecordDataBoundObject {
 				// metrics
 				metrics::$search_free_total_time += $total_time_ms;
 
-				// debug_log(__METHOD__ . PHP_EOL
-				// 	. ' search_free total_time_ms: ' . $total_time_ms . PHP_EOL
-				// 	. ' ' . to_string($strQuery)
-				// 	, logger::DEBUG
+				// debug_log(__METHOD__
+				// 	.' search_free: ' . PHP_EOL
+				// 	.' ' . to_string($strQuery) . PHP_EOL
+				// 	.' Search time ms: ' . $total_time_ms
+				// 	, logger::WARNING
 				// );
 			}
 

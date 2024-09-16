@@ -400,7 +400,6 @@ const get_custom_buttons = (self, text_editor, i) => {
 const get_custom_events = (self, i, text_editor) => {
 
 	const custom_events	= {}
-	const features		= self.context.features || {}
 
 	// focus
 		custom_events.focus = (evt, options) => {
