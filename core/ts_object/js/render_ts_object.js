@@ -6,6 +6,8 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
+	import {when_in_dom} from '../../common/js/events.js'
+	import {render_relation_list} from '../../section/js/render_common_section.js'
 	import {ts_object} from './ts_object.js'
 
 
@@ -361,9 +363,11 @@ export const render_children_list = function(options) {
 			}
 
 			// dataset
+				const current_section_id	= ar_children_data[i].section_id
+				const current_section_tipo	= ar_children_data[i].section_tipo
 				const dataset = {
-					section_tipo	: ar_children_data[i].section_tipo,
-					section_id		: ar_children_data[i].section_id,
+					section_tipo	: current_section_tipo,
+					section_id		: current_section_id,
 					node_type		: next_node_type
 				}
 				if (target_section_tipo) {
@@ -394,6 +398,8 @@ export const render_children_list = function(options) {
 		// ID COLUMN . id column content
 			const id_column_node = render_id_column({
 				self			: self,
+				section_tipo	: current_section_tipo,
+				section_id		: current_section_id,
 				node_type		: node_type,
 				is_descriptor	: is_descriptor,
 				is_indexable	: is_indexable,
@@ -495,6 +501,8 @@ const render_id_column = function(options) {
 
 	// options
 		const self			= options.self
+		const section_tipo	= options.section_tipo
+		const section_id	= options.section_id
 		const node_type		= options.node_type
 		const is_descriptor	= options.is_descriptor
 		const is_indexable	= options.is_indexable
@@ -654,20 +662,26 @@ const render_id_column = function(options) {
 
 			// DELETE . button delete element
 				if (children_data.permissions_button_delete>=2) {
-					// var event_function 	= [{'type':'click','name':'ts_object.delete'}];
-					const link_delete 	= ui.create_dom_element({
+					const link_delete = ui.create_dom_element({
 						element_type	: 'a',
 						class_name		: 'id_column_link ts_object_delete',
 						title_label		: 'delete',
 						parent			: id_column_content
 					})
-					link_delete.addEventListener('click', (e)=>{
+					// click event
+					link_delete.addEventListener('click', (e) =>{
 						e.stopPropagation()
-						self.delete(link_delete)
+						// delete record using wrapper data
+						delete_record({
+							self					: self,
+							section_id				: section_id,
+							section_tipo			: section_tipo,
+							has_descriptor_children	: children_data.has_descriptor_children
+						})
 					})
 					// delete icon
 					ui.create_dom_element({
-						element_type	: 'div',
+						element_type    : 'div',
 						class_name		: 'ts_object_delete_icon',
 						parent			: link_delete
 					 })
@@ -728,6 +742,180 @@ const render_id_column = function(options) {
 
 	return id_column_content
 }//end render_id_column
+
+
+
+/**
+* DELETE_RECORD
+* Creates the modal with relations and buttons for delete record
+* @param object options
+* {
+* 	self: object,
+* 	section_id: int,
+* 	section_tipo: string,
+* 	has_descriptor_children: bool
+* }
+* @return bool
+*/
+const delete_record = function (options) {
+
+	// options
+		const self						= options.self
+		const section_id				= options.section_id
+		const section_tipo				= options.section_tipo
+		const has_descriptor_children	= options.has_descriptor_children
+
+	// invalid permissions
+		if (self.permissions<2) {
+			return
+		}
+
+	// header
+		const header = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'header'
+		})
+		ui.create_dom_element({
+			element_type	: 'span',
+			class_name		: 'label',
+			inner_html		: (get_label.delete || 'Delete') + ` ID: ${section_id} <span class="note">[${section_tipo}]</span>`,
+			parent			: header
+		})
+
+	// body
+		const body = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'body content',
+			inner_html		: ' '
+		})
+
+	// relation_list
+		const relation_list_placeholder = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'relation_list_placeholder',
+			parent			: body
+		})
+		const relation_list = render_relation_list({
+			section_id		: section_id,
+			section_tipo	: section_tipo
+		})
+		relation_list_placeholder.replaceWith(relation_list);
+
+	// footer
+		const footer = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'footer content'
+		})
+
+	if (has_descriptor_children) {
+
+		ui.create_dom_element({
+			element_type	: 'div',
+			inner_html		: 'Sorry. It is not possible to delete an element with children. Please remove all children before deleting.',
+			class_name		: 'content warning',
+			parent			: footer
+		})
+		footer.classList.add('left')
+
+	}else{
+
+		// button_delete (Deletes real target record)
+			// button_delete
+				const button_delete = ui.create_dom_element({
+					element_type	: 'button',
+					class_name		: 'danger remove',
+					text_content	: get_label.delete || 'Delete',
+					parent			: footer
+				})
+				const fn_click_unlink_and_delete = async function(e) {
+					e.stopPropagation()
+
+					// stop if the user don't confirm 1
+					if (!confirm(get_label.are_you_sure_to_delete_this_record || 'Sure?')) {
+						return
+					}
+
+					footer.classList.add('loading')
+
+					// delete the record and pointers to it
+					const deleted = await self.delete_term({
+						section_tipo	: section_tipo,
+						section_id		: section_id
+					})
+
+					footer.classList.remove('loading')
+
+					if (!deleted) {
+						return
+					}
+
+					// refresh wrap
+					ts_object.refresh_element(section_tipo, section_id)
+
+					// close modal
+					modal.close()
+				}
+				button_delete.addEventListener('click', fn_click_unlink_and_delete)
+
+			// delete diffusion records checkbox
+			const delete_diffusion_records_label = ui.create_dom_element({
+				element_type	: 'label',
+				class_name		: 'block_label unselectable',
+				inner_html		: get_label.delete_diffusion_records || 'Delete diffusion records',
+				parent			: footer
+			})
+			const delete_diffusion_records_checkbox = ui.create_dom_element({
+				element_type	: 'input',
+				type			: 'checkbox'
+			})
+			// default value is true
+			delete_diffusion_records_checkbox.checked	= true
+			self.delete_diffusion_records				= true
+			// change event
+			delete_diffusion_records_checkbox.addEventListener('change', (e) => {
+				self.delete_diffusion_records = delete_diffusion_records_checkbox.checked
+			})
+			// append node
+			delete_diffusion_records_label.prepend(delete_diffusion_records_checkbox)
+			delete_diffusion_records_label.style = 'float:left'
+
+		// focus button
+			// Set the default button to be fired when the modal is active
+			// when the user press the Enter key in the keyboard
+			// the unlink option will be fired
+			const focus_the_button = function() {
+				// set the focus to the button_unlink
+				setTimeout(function(){
+					button_delete.focus()
+					button_delete.classList.add('focus')
+				}, 100)
+				button_delete.addEventListener('keyup', (e)=>{
+					e.preventDefault()
+					if(e.key==='Enter'){
+						console.log('button_delete:', button_delete);
+						// button_delete.click()
+					}
+				})
+			}
+			// when the modal will be ready in DOM fire the function to attack the event
+			when_in_dom(button_delete, focus_the_button)
+	}
+
+	// modal
+		const modal = ui.attach_to_modal({
+			header		: header,
+			body		: body,
+			footer		: footer,
+			size		: 'normal', // string size small|big|normal
+			callback	: (dd_modal) => {
+				dd_modal.modal_content.style.width = '50rem'
+				dd_modal.modal_content.style.maxWidth = '100%'
+			}
+		})
+
+	// self.delete(link_delete)
+
+}//end delete_record
 
 
 
