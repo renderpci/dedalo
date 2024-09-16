@@ -513,50 +513,74 @@ export const render_column_remove = function(options) {
 					// interface control defined in Ontology properties. Default is true set in common init
 					const button_delete_link_and_record	= show_interface.button_delete_link_and_record
 					if (button_delete_link_and_record && button_delete.permissions>1) {
-						const button_unlink_and_delete = ui.create_dom_element({
-							element_type	: 'button',
-							class_name		: 'danger remove',
-							text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
-							parent			: footer
-						})
-						const fn_click_unlink_and_delete = async function(e) {
-							e.stopPropagation()
-
-							// stop if the user don't confirm 1
-							if (!confirm(get_label.sure)) {
-								return
-							}
-
-							// stop if the user don't confirm 2
-							if (!confirm(get_label.sure)) {
-								return
-							}
-
-							footer.classList.add('loading')
-
-							// delete the record and pointers to it
-							await self.delete_linked_record({
-								section_tipo	: section_tipo,
-								section_id		: section_id
+						// button_unlink_and_delete
+							const button_unlink_and_delete = ui.create_dom_element({
+								element_type	: 'button',
+								class_name		: 'danger remove',
+								text_content	: get_label.delete_resource_and_links || 'Delete resource and all links',
+								parent			: footer
 							})
+							const unlink_and_delete_handler = async function(e) {
+								e.stopPropagation()
 
-							// delete_dataframe_record. if it is not dataframe it will be ignored						)
-							await delete_dataframe({
-								self			: self,
-								section_id		: self.section_id,
-								section_tipo	: self.section_tipo,
-								section_id_key	: section_id
+								// stop if the user don't confirm 1
+								if (!confirm(get_label.sure)) {
+									return
+								}
+
+								// stop if the user don't confirm 2
+								if (!confirm(get_label.sure)) {
+									return
+								}
+
+								footer.classList.add('loading')
+
+								// delete the record and pointers to it
+								await self.delete_linked_record({
+									section_tipo	: section_tipo,
+									section_id		: section_id
+								})
+
+								// delete_dataframe_record. if it is not dataframe it will be ignored						)
+								await delete_dataframe({
+									self			: self,
+									section_id		: self.section_id,
+									section_tipo	: self.section_tipo,
+									section_id_key	: section_id
+								})
+
+								// refresh the component. Don't wait here
+								self.refresh()
+
+								// close modal
+								modal.close()
+
+								footer.classList.remove('loading')
+							}
+							button_unlink_and_delete.addEventListener('click', unlink_and_delete_handler)
+							button_unlink_and_delete.style = 'float:left'
+
+						// delete diffusion records checkbox
+							const delete_diffusion_records_label = ui.create_dom_element({
+								element_type	: 'label',
+								class_name		: 'block_label unselectable',
+								inner_html		: get_label.delete_diffusion_records || 'Delete diffusion records',
+								parent			: footer
 							})
-
-							// refresh the component. Don't wait here
-							self.refresh()
-
-							// close modal
-							modal.close()
-
-							footer.classList.remove('loading')
-						}
-						button_unlink_and_delete.addEventListener('click', fn_click_unlink_and_delete)
+							const delete_diffusion_records_checkbox = ui.create_dom_element({
+								element_type	: 'input',
+								type			: 'checkbox'
+							})
+							// default value is true
+							delete_diffusion_records_checkbox.checked	= true
+							self.delete_diffusion_records				= true
+							// change event
+							delete_diffusion_records_checkbox.addEventListener('change', (e) => {
+								self.delete_diffusion_records = delete_diffusion_records_checkbox.checked
+							})
+							// append node
+							delete_diffusion_records_label.prepend(delete_diffusion_records_checkbox)
+							delete_diffusion_records_label.style = 'float:left'
 					}
 
 				// button_unlink_record (Only delete the locator)
@@ -604,9 +628,9 @@ export const render_column_remove = function(options) {
 						header		: header,
 						body		: body,
 						footer		: footer,
-						size		: 'small', // string size small|big|normal
+						size		: 'normal', // string size small|big|normal
 						callback	: (dd_modal) => {
-							dd_modal.modal_content.style.width = '34rem'
+							dd_modal.modal_content.style.width = '54rem'
 							dd_modal.modal_content.style.maxWidth = '100%'
 						}
 					})
@@ -620,13 +644,14 @@ export const render_column_remove = function(options) {
 							button_unlink_record.classList.add('focus')
 						}, 100)
 						button_unlink_record.addEventListener('keyup', (e)=>{
+							e.preventDefault()
 							if(e.key==='Enter'){
 								button_unlink_record.click()
 							}
 						})
 					}
 					// when the modal will be ready in DOM fire the function to attack the event
-					when_in_dom(modal, focus_the_button)
+					when_in_dom(button_unlink_record, focus_the_button)
 
 				// data pagination offset. Check and update self data to allow save API request return the proper paginated data
 					const key = parseInt(row_key)
