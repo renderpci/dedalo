@@ -1175,7 +1175,7 @@ class login extends common {
 			}
 
 		// user activity update stats
-			register_shutdown_function('diffusion_section_stats::update_user_activity_stats', (int)$user_id);
+			diffusion_section_stats::update_user_activity_stats( (int)$user_id );
 
 		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
