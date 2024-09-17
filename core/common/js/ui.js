@@ -1226,11 +1226,17 @@ export const ui = {
 
 					// label
 					if (label!==null) {
+
+						// get the string label of the tool with the caller name
+						const string_label = (instance.caller?.label)
+							? `${label} | ${instance.caller.label}`
+							: label
+
 						// default
 						const component_label = ui.create_dom_element({
 							element_type	: 'div',
 							class_name		: 'label',
-							inner_html		: label,
+							inner_html		: string_label,
 							parent			: tool_name_container
 						})
 
