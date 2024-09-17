@@ -238,33 +238,20 @@ const item_value_factory = function(id, label, data) {
 		})
 
 	// value
-		let value_node
-		if (page_globals.is_root===true) {
 
-			// show temporal debug data
+		// show temporally the debug JSON data. Pending graphics render
 
-			const found			= data.find(item => item.id===id)
-			const current_value	= found
-				? JSON.stringify(found.value, null, "   ")
-				: ''
+		const found			= data.find(item => item.id===id)
+		const current_value	= found
+			? JSON.stringify(found.value, null, "   ")
+			: ''
 
-			value_node = ui.create_dom_element({
-				element_type	: 'pre',
-				class_name		: 'raw_value',
-				inner_html		: current_value, // +'', // prevent zero values hide
-				parent			: wrapper
-			})
-
-		}else{
-
-			value_node = ui.create_dom_element({
-				element_type	: 'div',
-				class_name		: 'value',
-				inner_html		: '',
-				parent			: wrapper
-			})
-		}
-
+		const value_node = ui.create_dom_element({
+			element_type	: 'pre',
+			class_name		: 'raw_value',
+			inner_html		: current_value,
+			parent			: wrapper
+		})
 
 	// wrapper add values and pointers
 		wrapper.value	= value_node
