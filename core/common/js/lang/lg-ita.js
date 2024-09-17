@@ -449,6 +449,7 @@
     "show_buttons": "Mostra i pulsanti",
     "find": "Cercare",
     "order_change": "Cambio in ordine",
+    "skip_deletion_cause_children": "Saltata la cancellazione del record attuale perché ha dei figli",
     "acabado": "Terminato",
     "component_history": "<mark>Historial del componente<\/mark>",
     "build_install_version": "Crea una versione di installazione",

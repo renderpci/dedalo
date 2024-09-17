@@ -449,6 +449,7 @@
     "show_buttons": "εμφάνιση κουμπιών",
     "find": "αναζήτησή",
     "order_change": "Αλλαγή παραγγελίας",
+    "skip_deletion_cause_children": "<mark>Se ha omitido la eliminación del registro actual porque tiene hijos<\/mark>",
     "acabado": "τελικού",
     "component_history": "Ιστορικό συστατικών",
     "build_install_version": "Δημιουργήστε μια έκδοση εγκατάστασης",

@@ -449,6 +449,7 @@
     "show_buttons": "Mostrar botones",
     "find": "Buscar",
     "order_change": "Cambio de orden",
+    "skip_deletion_cause_children": "Se ha omitido la eliminación del registro actual porque tiene hijos",
     "acabado": "Acabado",
     "component_history": "Historial del componente",
     "build_install_version": "Construir una versión de instalación",
