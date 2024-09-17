@@ -70,7 +70,7 @@ const get_content_data = async function(self) {
 			class_name		: 'current_component_container',
 			parent			: fragment
 		})
-		if(self.main_element.model !=='section') {
+		if(self.main_element.model!=='section') {
 			// add component
 			await add_component(
 				self, // tool instance
