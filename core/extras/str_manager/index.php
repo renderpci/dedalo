@@ -11,18 +11,36 @@ session_write_close();
 
 // DATA . The only one var received is a JSON encoded var called "data"
 	$data = json_decode($_REQUEST['data']);
+	if (empty($data)) {
+		trigger_error(
+			__METHOD__
+			. " EMPTY _REQUEST DATA ! " . PHP_EOL
+			. json_encode($_REQUEST['data'], JSON_PRETTY_PRINT)
+		);
+		http_response_code(401); // Unauthorized
+		exit();
+	}
 
 	// debug
 		error_log('Update Ontology request data: ' . PHP_EOL . to_string($data));
 
 // CODE auth. Check valid code match, received with config defined STRUCTURE_SERVER_CODE
 // If not is the same, return error code 401 and exit
-	$valid_codes = defined('STRUCTURE_SERVER_CODE_OTHERS')
-		? STRUCTURE_SERVER_CODE_OTHERS
-		: [];
-	$valid_codes[] = STRUCTURE_SERVER_CODE;	 // add main code
-	if (!$data || !in_array($data->code, $valid_codes)) {
-		http_response_code(401); // Unauthorized
+	$code = $data->code ?? null;
+	$valid_codes = [];
+	// add main code
+	$valid_codes[] = STRUCTURE_SERVER_CODE;
+	// add STRUCTURE_SERVER_CODE_OTHERS if exists
+	if (defined('STRUCTURE_SERVER_CODE_OTHERS') && is_array(STRUCTURE_SERVER_CODE_OTHERS)) {
+		$valid_codes = array_merge($valid_codes, STRUCTURE_SERVER_CODE_OTHERS);
+	}
+	if (!in_array($code, $valid_codes)) {
+		trigger_error(
+			__METHOD__
+			. " INVALID CODE ! " . PHP_EOL
+			. json_encode($code, JSON_PRETTY_PRINT)
+		);
+		http_response_code(403); // Unauthorized
 		exit();
 	}
 
