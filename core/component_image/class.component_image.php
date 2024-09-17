@@ -1398,7 +1398,8 @@ class component_image extends component_media_common implements component_media_
 					'quality'			=> $quality,
 					// 'source_quality'	=> $source_quality,
 					'target_quality'	=> $quality
-				]
+				],
+				logged_user_id() // int
 			);
 
 		// update component dato files info and save

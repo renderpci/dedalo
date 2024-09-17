@@ -852,6 +852,52 @@ final class component_common_test extends TestCase {
 
 
 	/**
+	* TEST_get_grid_flat_value
+	* @return void
+	*/
+	public function test_get_grid_flat_value() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$dd_grid_cell_object = $component->get_grid_flat_value();
+				// dump($dd_grid_cell_object, ' raw_value dd_grid_cell_object ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($dd_grid_cell_object)==='object',
+				'expected get_grid_value type is object. ' .gettype($dd_grid_cell_object) ." ($element->model)"
+			);
+
+			if (!empty($dd_grid_cell_object->value)) {
+				$this->assertTrue(
+					gettype($dd_grid_cell_object->value)==='string',
+					'expected get_grid_value type is string. type:' .gettype($dd_grid_cell_object->value) . PHP_EOL
+					." ($element->model)" . PHP_EOL
+					. json_encode($dd_grid_cell_object)
+				);
+			}
+		}
+	}//end test_get_grid_flat_value
+
+
+
+	/**
 	* TEST_SAVE
 	* @return void
 	*/
@@ -1031,6 +1077,67 @@ final class component_common_test extends TestCase {
 			);
 		}
 	}//end test_propagate_to_observers
+
+
+
+	/**
+	* TEST_empty_data
+	* @return void
+	*/
+	public function test_empty_data() {
+
+		// default dato
+		foreach (get_elements() as $element) {
+			$_ENV['DEDALO_LAST_ERROR'] = null; // reset
+
+			$component = component_common::get_instance(
+				$element->model, // string model
+				$element->tipo, // string tipo
+				$element->section_id, // string section_id
+				$element->mode, // string mode
+				$element->lang, // string lang
+				$element->section_tipo, // string section_tipo
+				false
+			);
+
+			$response = $component->empty_data();
+				// dump($response, ' $response ++ '.to_string($element->model));
+
+			$this->assertTrue(
+				empty($_ENV['DEDALO_LAST_ERROR']),
+				'expected running without errors'
+			);
+
+			$this->assertTrue(
+				gettype($response)==='boolean',
+				'response type expected boolean. current type: ' .gettype($response) .' - '.$element->model
+			);
+
+			$this->assertTrue(
+				$response===true,
+				'response type expected true. current: ' . PHP_EOL
+				.json_encode($response) . PHP_EOL
+				.' - '.$element->model
+			);
+
+			if (in_array($element->model, component_relation_common::get_components_with_relations())
+				&& $element->model!=='component_inverse') {
+				$this->assertTrue(
+					$component->dato===[],
+					'response component->dato expected []. current: ' . PHP_EOL
+					.json_encode($component->dato) . PHP_EOL
+					.' - '.$element->model
+				);
+			}else{
+				$this->assertTrue(
+					$component->dato===null,
+					'response component->dato expected null. current: ' . PHP_EOL
+					.json_encode($component->dato) . PHP_EOL
+					.' - '.$element->model
+				);
+			}
+		}
+	}//end test_empty_data
 
 
 

@@ -1316,7 +1316,8 @@ abstract class component_common extends common {
 						'component_name'	=> get_called_class(),
 						'table'				=> $matrix_table,
 						'section_tipo'		=> $this->section_tipo
-					]
+					],
+					logged_user_id() // int
 				);
 			} catch (Exception $e) {
 				debug_log(__METHOD__

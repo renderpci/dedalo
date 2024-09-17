@@ -514,7 +514,8 @@ export const render_column_id = function(options) {
 									class_name		: 'button_delete',
 									parent			: fragment
 								})
-								delete_button.addEventListener('click', function(e){
+								// delete event
+								const delete_handler = (e) => {
 									e.stopPropagation()
 
 									// fire delete_section event, see section.init
@@ -531,7 +532,8 @@ export const render_column_id = function(options) {
 											limit				: 1
 										}
 									})
-								})
+								}
+								delete_button.addEventListener('click', delete_handler)
 							// delete_icon
 								ui.create_dom_element({
 									element_type	: 'span',

@@ -816,8 +816,6 @@ class login extends common {
 				debug_log(__METHOD__." $e ", logger::CRITICAL);
 			}
 
-
-
 		// precalculate profiles datalist security access in background
 		// This file is generated on every user login, launching the process in background
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -873,6 +871,7 @@ class login extends common {
 		// OK response
 			$response->result	= true;
 			$response->msg		= 'OK init_user_login_sequence is done';
+
 
 		return $response;
 	}//end init_user_login_sequence
@@ -1176,7 +1175,7 @@ class login extends common {
 			}
 
 		// user activity update stats
-			diffusion_section_stats::update_user_activity_stats( (int)$user_id );
+			register_shutdown_function('diffusion_section_stats::update_user_activity_stats', (int)$user_id);
 
 		// delete previous cache files (prevents reuse of old files when the user does not quit from the browser)
 			if (defined('DEDALO_CACHE_MANAGER') && isset(DEDALO_CACHE_MANAGER['files_path'])) {
@@ -1294,7 +1293,8 @@ class login extends common {
 				logger::INFO,
 				self::get_login_tipo(),
 				null,
-				$data
+				$data,
+				logged_user_id() // int user_id
 			);
 	}//end login_activity_report
 
