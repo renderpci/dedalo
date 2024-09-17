@@ -1732,5 +1732,12 @@
 		"typology": 11,
 		"active_in_thesaurus": true,
 		"install_checked_default": false
+	},
+	{
+		"tld": "category",
+		"label": "Category",
+		"typology": 11,
+		"active_in_thesaurus": true,
+		"install_checked_default": false
 	}
 ]
