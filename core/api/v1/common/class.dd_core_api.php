@@ -2800,6 +2800,11 @@ final class dd_core_api {
 			$tipo	= $rqo->source->tipo ?? '';
 			$mode	= $rqo->source->mode ?? '';
 
+		// Prevent search mode write activity
+			if ($mode==='search') {
+				return;
+			}
+
 		// Prevent infinite loop saving self
 			if (in_array($tipo, logger_backend_activity::$ar_elements_activity_tipo, true)) {
 				return;
