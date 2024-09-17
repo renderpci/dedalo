@@ -449,6 +449,7 @@
     "show_buttons": "Afficher les boutons",
     "find": "Recherche",
     "order_change": "Changement d'ordre",
+    "skip_deletion_cause_children": "Il a ignoré la suppression de l'enregistrement actuel car il a des enfants",
     "acabado": "Terminer",
     "component_history": "Historique des composants",
     "build_install_version": "Créer une version d'installation",

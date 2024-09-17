@@ -449,6 +449,7 @@
     "show_buttons": "<mark>Mostrar botones<\/mark>",
     "find": "<mark>Buscar<\/mark>",
     "order_change": "<mark>Cambio de orden<\/mark>",
+    "skip_deletion_cause_children": "Ignorou a eliminação do registo atual porque tem filhos",
     "acabado": "<mark>Acabado<\/mark>",
     "component_history": "<mark>Historial del componente<\/mark>",
     "build_install_version": "Crie uma versão de instalação",
