@@ -449,6 +449,7 @@
     "show_buttons": "Show buttons",
     "find": "Search",
     "order_change": "Order change",
+    "skip_deletion_cause_children": "Skipped current record deletion because he has children",
     "acabado": "Finish",
     "component_history": "Component history",
     "build_install_version": "Build install version",
