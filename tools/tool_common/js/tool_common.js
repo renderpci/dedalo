@@ -110,8 +110,12 @@ tool_common.prototype.init = async function(options) {
 
 						// set label (see self.view_window())
 							self.caller.label = caller_ddo.label ?? null
+
+						// build caller when is not section
+							if(caller_ddo.model!=='section'){
+								// build only when the caller is a component, section will build by tm
 								await self.caller.build(true)
-						}
+							}
 
 						// set tool_config
 							self.tool_config = tool_config
@@ -125,7 +129,6 @@ tool_common.prototype.init = async function(options) {
 				console.warn(self.error, self)
 				// return false
 			}
-			// console.log("self.caller:",self.caller);
 
 		// tool_config. Contains the needed ddo_map
 			if (!self.tool_config && self.caller) {
