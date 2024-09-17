@@ -410,7 +410,7 @@ function curl_request(object $options) : object {
 		$url			= $options->url; // mandatory
 		$post			= $options->post ?? true;
 		$postfields		= $options->postfields ?? null;
-		$returntransfer	= $options->returntransfer ?? 1;
+		$returntransfer	= $options->returntransfer ?? true;
 		$followlocation	= $options->followlocation ?? true;
 		$header			= $options->header ?? true;
 		$ssl_verifypeer	= $options->ssl_verifypeer ?? false;
@@ -430,7 +430,7 @@ function curl_request(object $options) : object {
 	// set basic options
 		curl_setopt($ch, CURLOPT_URL, $url); // Like 'http://domain.com/get-post.php'
 		curl_setopt($ch, CURLOPT_POST, $post); // bool default true
-		curl_setopt($ch, CURLOPT_RETURNTRANSFER, $returntransfer); // int default 1
+		curl_setopt($ch, CURLOPT_RETURNTRANSFER, $returntransfer); // bool default true
 		curl_setopt($ch, CURLOPT_FOLLOWLOCATION, $followlocation); // bool default true
 		curl_setopt($ch, CURLOPT_HEADER, $header); // we want headers. default true
 
