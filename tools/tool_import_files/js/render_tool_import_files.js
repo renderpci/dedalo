@@ -167,7 +167,7 @@ const get_content_data_edit = async function(self) {
 			// match is active
 			// when match is active all previous set will be overwrite.
 			//This mode is incompatible with other options
-			self.tool_config.import_file_name_mode = !options_container.control_name_match_check_box.checked
+			self.tool_config.import_file_name_mode = !options_container.control_name_with_id_match_check_box.checked
 				? self.tool_config.import_file_name_mode
 				: 'match'
 
@@ -415,64 +415,139 @@ const render_options_container = function (self, content_data) {
 		}//end if(ar_quality)
 
 	// name_match previous uploaded images
-		const name_match = ui.create_dom_element({
-			element_type	: 'div',
-			class_name		: 'name_control name_match',
-			parent			: options_container
-		})
-		// switcher
-			const control_name_match_switcher = ui.create_dom_element({
-				element_type	: 'label',
-				class_name		: 'switcher text_unselectable',
-				parent			: name_match
+
+		// tool_name_match_options
+			const tool_name_match_options = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'tool_name_match_options',
+				parent			: options_container
 			})
-			// check_box
-				const control_name_match_check_box = ui.create_dom_element({
-					element_type	: 'input',
-					type			: 'checkbox',
-					class_name		: 'ios-toggle',
-					parent			: control_name_match_switcher
-				})
-				control_name_match_check_box.addEventListener('change', function(e) {
-					control_field_check_box.checked			= false
-					same_name_check_box.checked				= false
-					control_section_id_check_box.checked	= false
-					content_data.template_container.classList.remove('name_id')
-					content_data.template_container.classList.remove('same_name_section')
-					if(control_name_match_check_box.checked === true){
-						content_data.template_container.classList.add('match')
-						if(options_container.processor){
-							options_container.processor.classList.add('lock')
-						}
-						if(options_container.target_component){
-							options_container.target_component.classList.add('lock')
-						}
-					}else{
-						content_data.template_container.classList.remove('match')
-						if(options_container.processor){
-							options_container.processor.classList.remove('lock')
-						}
-						if(options_container.target_component){
-							options_container.target_component.classList.remove('lock')
-						}
-					}
+			const tool_name_match_label = ui.create_dom_element({
+				element_type	: 'span',
+				class_name		: 'label',
+				inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with a previous upload:',
+				parent			: tool_name_match_options
+			})
 
+			const name_match_id = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'name_control name_match',
+				parent			: tool_name_match_options
+			})
+			// switcher
+				const control_name_match_switcher = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'switcher text_unselectable',
+					parent			: name_match_id
 				})
-				// switch_label
-				ui.create_dom_element({
-					element_type	: 'i',
-					parent			: control_name_match_switcher
-				})
+				// check_box
+					const control_name_with_id_match_check_box = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: control_name_match_switcher
+					})
+					control_name_with_id_match_check_box.addEventListener('change', function(e) {
+						control_field_check_box.checked			= false
+						same_name_check_box.checked				= false
+						control_section_id_check_box.checked	= false
+						content_data.template_container.classList.remove('name_id')
+						content_data.template_container.classList.remove('same_name_section')
+						if(control_name_with_id_match_check_box.checked === true){
+							content_data.template_container.classList.add('match')
+							if(options_container.processor){
+								options_container.processor.classList.add('lock')
+							}
+							if(options_container.target_component){
+								options_container.target_component.classList.add('lock')
+							}
+						}else{
+							content_data.template_container.classList.remove('match')
+							if(options_container.processor){
+								options_container.processor.classList.remove('lock')
+							}
+							if(options_container.target_component){
+								options_container.target_component.classList.remove('lock')
+							}
+						}
 
-			// label_section_id_check_box
-				ui.create_dom_element({
-					element_type	: 'span',
-					class_name		: 'checkbox-label',
-					inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with a previous upload',
+					})
+					// switch_label
+					ui.create_dom_element({
+						element_type	: 'i',
+						parent			: control_name_match_switcher
+					})
+
+				// label_section_id_check_box
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with ID',
+						parent			: name_match_id
+					})
+				// set the node to be used when data will send to server
+					options_container.control_name_with_id_match_check_box = control_name_with_id_match_check_box
+
+			const name_match = ui.create_dom_element({
+				element_type	: 'div',
+				class_name		: 'name_control name_match',
+				parent			: tool_name_match_options
+			})
+
+			// switcher
+				const control_name_free_match_switcher = ui.create_dom_element({
+					element_type	: 'label',
+					class_name		: 'switcher text_unselectable',
 					parent			: name_match
 				})
-			// set the node to be used when data will send to server
-				options_container.control_name_match_check_box = control_name_match_check_box
+				// check_box
+					const control_free_name_with_match_check_box = ui.create_dom_element({
+						element_type	: 'input',
+						type			: 'checkbox',
+						class_name		: 'ios-toggle',
+						parent			: control_name_free_match_switcher
+					})
+					control_free_name_with_match_check_box.addEventListener('change', function(e) {
+						control_field_check_box.checked			= false
+						same_name_check_box.checked				= false
+						control_section_id_check_box.checked	= false
+						content_data.template_container.classList.remove('name_id')
+						content_data.template_container.classList.remove('same_name_section')
+						if(control_free_name_with_match_check_box.checked === true){
+							content_data.template_container.classList.add('match')
+							if(options_container.processor){
+								options_container.processor.classList.add('lock')
+							}
+							if(options_container.target_component){
+								options_container.target_component.classList.add('lock')
+							}
+						}else{
+							content_data.template_container.classList.remove('match')
+							if(options_container.processor){
+								options_container.processor.classList.remove('lock')
+							}
+							if(options_container.target_component){
+								options_container.target_component.classList.remove('lock')
+							}
+						}
+
+					})
+					// switch_label
+					ui.create_dom_element({
+						element_type	: 'i',
+						parent			: control_name_match_switcher
+					})
+
+				// label_section_id_check_box
+					ui.create_dom_element({
+						element_type	: 'span',
+						class_name		: 'checkbox-label',
+						inner_html		: self.get_tool_label('match_free_name_previous_upload') || 'Matching the name',
+						parent			: name_match
+					})
+				// set the node to be used when data will send to server
+					options_container.control_free_name_with_match_check_box = control_free_name_with_match_check_box
+
 
 	// file name control
 		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
@@ -509,7 +584,7 @@ const render_options_container = function (self, content_data) {
 					})
 					control_field_check_box.addEventListener('change', function(e) {
 						// match deactivate
-							control_name_match_check_box.checked = false
+							control_name_with_id_match_check_box.checked = false
 							if(options_container.processor){
 								options_container.processor.classList.remove('lock')
 							}
@@ -579,7 +654,7 @@ const render_options_container = function (self, content_data) {
 						})
 						control_section_id_check_box.addEventListener('change', function(e) {
 							// match deactivate
-								control_name_match_check_box.checked = false
+								control_name_with_id_match_check_box.checked = false
 								if(options_container.processor){
 									options_container.processor.classList.remove('lock')
 								}
@@ -636,7 +711,7 @@ const render_options_container = function (self, content_data) {
 						})
 						same_name_check_box.addEventListener('change', function(e) {
 							// match deactivate
-								control_name_match_check_box.checked = false
+								control_name_with_id_match_check_box.checked = false
 								if(options_container.processor){
 									options_container.processor.classList.remove('lock')
 								}
