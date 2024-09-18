@@ -314,7 +314,18 @@ export const render_column_id = function(options) {
 			}
 
 			default: {
-				if ( permissions > 1 ) {
+				if ( permissions < 2 ) {
+
+					// read only case
+
+					const button_edit = ui.create_dom_element({
+						element_type	: 'button', // button|a
+						class_name		: 'button_edit disable',
+						parent			: fragment
+					})
+					button_edit.appendChild(section_id_node)
+
+				}else{
 
 					// url
 						const url = DEDALO_CORE_URL + '/page/?' + object_to_url_vars({
@@ -384,9 +395,9 @@ export const render_column_id = function(options) {
 						}//end navigate
 
 						// contextmenu event
-						// Prevent to show the context menu
-						// open new window with the content
-						// if user has alt pressed, open new tab
+							// Prevent to show the context menu
+							// open new window with the content
+							// if user has alt pressed, open new tab
 							button_edit.addEventListener('contextmenu', (e) => {
 								e.stopPropagation()
 								e.preventDefault();
@@ -403,6 +414,7 @@ export const render_column_id = function(options) {
 									return button_edit[fn](features)
 								}
 							})
+
 						// mousedown event
 							button_edit.addEventListener('mousedown', (e) => {
 								e.stopPropagation()
@@ -541,7 +553,7 @@ export const render_column_id = function(options) {
 									parent			: delete_button
 								})
 						}
-					}
+				}
 				break;
 			}
 		}
