@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 9,
-              "hour": 19,
-              "time": 65075169231,
+              "day": 17,
+              "hour": 18,
+              "time": 65075855717,
               "year": 2024,
               "month": 9,
-              "minute": 53,
-              "second": 51
+              "minute": 35,
+              "second": 17
             }
           }
         ]
@@ -400,6 +400,96 @@
               "lang": "lg-nep",
               "name": "match_name_with_previous_upload",
               "value": "अघिल्लो अपलोडसँग नाम मिलाउँदै"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "matching_id",
+              "value": "Matching ID"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "matching_id",
+              "value": "Coincidencia de ID"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "matching_id",
+              "value": "Coincidència d'ID"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "matching_id",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "matching_id",
+              "value": "ID correspondant\n\n"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "matching_id",
+              "value": "ID di corrispondenza"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "matching_id",
+              "value": "Αντίστοιχη ταυτότητα\n\n"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "matching_id",
+              "value": "Passende ID\n\n"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "matching_id",
+              "value": "मिल्दो ID"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "matching_name",
+              "value": "Matching name"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "matching_name",
+              "value": "Nombre coincidente"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "matching_name",
+              "value": "Nom coincident"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "matching_name",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "matching_name",
+              "value": "Nom correspondant"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "matching_name",
+              "value": "Nome corrispondente"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "matching_name",
+              "value": "Αντίστοιχο όνομα"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "matching_name",
+              "value": "Passender Name"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "matching_name",
+              "value": "Matching name"
             }
           ]
         ]
@@ -417,7 +507,7 @@
   "section_id": 19,
   "created_date": "2023-11-01 21:16:17",
   "section_tipo": "dd1340",
-  "modified_date": "2024-09-09 19:53:51",
+  "modified_date": "2024-09-17 18:35:17",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",

@@ -502,24 +502,49 @@ class tool_import_files extends tool_common {
 							// match case
 							// used to find the filename in the previous uploaded files.
 							// it use the filename to match into image section.
+							case 'match_freename':
 							case 'match':
 
 								$target_section_tipo = $target_ddo_component->section_tipo;
 								$target_filename = array_find($ar_ddo_map, function($item) use ($target_section_tipo){
 									return $item->role==='target_filename' && $item->section_tipo === $target_section_tipo;
 								});
+								// get the id of name of the file and match the id of the caller section
+								// then use the match to find the image section and match with the filename
+								// it match filenames as 1-1-A.jpg
+								if( $import_file_name_mode === 'match' ){
 
-								$match_options = new stdClass();
-									$match_options->section_id			= $file_data['regex']->section_id;
-									$match_options->section_tipo		= $section_tipo;
-									$match_options->full_name			= $current_file_name;
-									$match_options->target_section_tipo	= $target_section_tipo;
-									$match_options->target_filename		= $target_filename;
+									$match_options = new stdClass();
+										$match_options->section_id			= $file_data['regex']->section_id;
+										$match_options->section_tipo		= $section_tipo;
+										$match_options->full_name			= $current_file_name;
+										$match_options->target_section_tipo	= $target_section_tipo;
+										$match_options->target_filename		= $target_filename;
 
-								$ar_target_section_id = tool_import_files::get_image_section_match( $match_options );
+									$ar_target_section_id = tool_import_files::get_image_section_match_from_souce( $match_options );
+
+								}
+								// get the filename and match directly into the image section
+								// the match will be into the original filename field into the image section
+								// it match filenames as: 0a90723c2936028b08093d7560a098cb-b.jpg
+								else if( $import_file_name_mode === 'match_freename' ){
+
+									$match_options = new stdClass();
+										$match_options->target_filename		= $target_filename;
+										$match_options->full_name			= $current_file_name;
+
+									$ar_target_section_id = tool_import_files::get_image_section_match( $match_options );
+								}
+
+								// in both cases is not possible close the search to 1 record
+								// so assume that the file could match in multiple image sections
 								foreach ($ar_target_section_id as $target_section_id) {
 
 									$target_filename = $current_file_name;
+									// as target section_id could has multiple matches for the same image
+									// then copy the image with the section_id and do not touch the original file
+									// it will be copied for other sections.
+									// last section_id will copy the file without create a copy, it remove the uploaded file.
 									if( $target_section_id !== end($ar_target_section_id) ){
 
 										$basename_value		= pathinfo($current_file_name)['filename'];
@@ -786,7 +811,7 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* GET_IMAGE_SECTION_MATCH
+	* GET_IMAGE_SECTION_MATCH_FROM_SOUCE
 	* check the filename uploaded with the previous names saved into image section
 	* 1 get the target section to get all images into the section_id (as tch 11)
 	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
@@ -795,7 +820,7 @@ class tool_import_files extends tool_common {
 	* @param  object $options
 	* @return array $match_section_id
 	*/
-	public static function get_image_section_match( object $options ) : array {
+	public static function get_image_section_match_from_souce( object $options ) : array {
 
 		$section_id				= $options->section_id;
 		$section_tipo			= $options->section_tipo;
@@ -848,6 +873,67 @@ class tool_import_files extends tool_common {
 			}
 		}
 
+
+		return $match_section_id;
+	}//end get_image_section_match_from_souce
+
+
+
+
+	/**
+	* GET_IMAGE_SECTION_MATCH
+	* @param  object $options
+	* @return array $match_section_id
+	*/
+	public static function get_image_section_match( object $options ) : array {
+
+		// short vars
+		$target_tipo			= $options->target_filename->tipo; // string tipo
+		$target_section_tipo	= $options->target_filename->section_tipo; // string section_tipo
+		$full_name 				= $options->full_name;
+
+		// path of the component to be find
+		$path = search::get_query_path(
+			$target_tipo, // string tipo
+			$target_section_tipo, // string section_tipo
+			true // bool resolve_related
+		);
+		// the image has extension, is possible that the image can change the extension
+		// the original is a .jpg and modified is a .tiff with alpha channel.
+		$basename_full_name	= pathinfo($full_name)['filename'];
+
+		// build the search
+			$operator = '$and';
+			$filter = new stdClass();
+				$filter->{$operator} = [];
+
+			// set the filter with the base name and add '.' to the final,
+			// the point is between name and extension
+			// adding it could avoid false match with short names
+			// as my_image.tiff and my_image2.tiff
+			// searching `my_image.` will remove the second case
+			$filter_item = new stdClass();
+				$filter_item->q = $basename_full_name .'.';
+				$filter_item->path = $path;
+
+			$filter->{$operator}[] = $filter_item;
+
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo([$target_section_tipo]);
+				$sqo->set_limit(0);
+				$sqo->set_skip_projects_filter(true);
+				$sqo->set_filter($filter);
+
+
+		// search exec
+		$search				= search::get_instance($sqo);
+		$records_data		= $search->search();
+		$ar_current_dato	= $records_data->ar_records;
+
+		$match_section_id = [];
+		foreach ($ar_current_dato as $section_data) {
+			$match_section_id[] = $section_data->section_id;
+		}
 
 		return $match_section_id;
 	}//end get_image_section_match
