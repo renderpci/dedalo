@@ -1029,6 +1029,13 @@ section.prototype.delete_section = async function (options) {
 		const api_response = await data_manager.request({
 			body : rqo
 		})
+
+		// manage errors
+		const errors = api_response?.errors || []
+		if (errors.length>0) {
+			alert('Errors: \n' + errors.join('\n'));
+		}
+
 		if (api_response.result && api_response.result.length>0) {
 
 			// force to recalculate total records
@@ -1036,6 +1043,7 @@ section.prototype.delete_section = async function (options) {
 			// refresh self section
 			self.refresh()
 		}else{
+			console.error('api_response.errors:', api_response.errors);
 			console.error( api_response.msg || 'Error on delete records!');
 		}
 

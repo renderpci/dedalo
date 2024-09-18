@@ -6,7 +6,7 @@
 
 // imports
 	import {ui} from '../../common/js/ui.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {object_to_url_vars, open_window} from '../../common/js/utils/index.js'
 	import {event_manager} from '../../common/js/event_manager.js'
 	import {data_manager} from '../../common/js/data_manager.js'
@@ -1294,81 +1294,70 @@ export const ts_object = new function() {
 
 
 	/**
-	* DELETE
-	* Removed selected record from database
-	* @param DOM node button_obj
-	* @return promise
+	* DELETE_TERM
+	* Removes selected record from database if not has children
+	* @see section.delete_section
+	* @param object options
+	* {
+	*	section_tipo : section_tipo,
+	*	section_id : section_id,
+	*	caller_dataframe : caller_dataframe
+	* }
+	* @return bool delete_section_result
 	*/
-	this.delete = function(button_obj) {
+	this.delete_term = async function(options) {
 
-		// confirm dialog
-			if (!confirm("You are sure to delete current element?")) {
-				return Promise.resolve(false);
+		const self = this
+
+		// options
+			const section_id		= options.section_id
+			const section_tipo		= options.section_tipo
+			const caller_dataframe	= options.caller_dataframe || null
+
+		// delete_diffusion_records
+			const delete_diffusion_records = self.delete_diffusion_records ?? true
+
+		// create the instance of the section called by the row of the portal,
+		// section will be in list because it's not necessary get all data, only the instance context to be deleted it.
+			const instance_options = {
+				model			: 'section',
+				tipo			: section_tipo,
+				section_tipo	: section_tipo,
+				section_id		: section_id,
+				mode			: 'list',
+				lang			: self.lang,
+				caller			: self,
+				inspector		: false,
+				filter			: false,
+				id_variant		: 'delete_section'
+			}
+		// get the instance
+			const section =	await get_instance(instance_options)
+
+		// create the sqo to be used to find the section will be deleted
+			const sqo = {
+				section_tipo		: [section_tipo],
+				filter_by_locators	: [{
+					section_tipo	: section_tipo,
+					section_id		: section_id
+				}],
+				limit				: 1
 			}
 
-		// wrap
-			const wrap = button_obj.parentNode.parentNode;
-			if(!wrap) {
-				console.log("[delete] Error on find wrap");
-				return Promise.resolve(false);
-			}
+		// call to the section and delete it
+			const delete_section_result = await section.delete_section({
+				sqo							: sqo,
+				delete_mode					: 'delete_record',
+				caller_dataframe			: caller_dataframe,
+				delete_diffusion_records	: delete_diffusion_records
+			})
 
-		// Get all wrap_ts_object wraps whit this section_tipo, section_id
-		// Find wrap of wrap and inside, button list_thesaurus_element
-		// const ar_wrap_ts_object = document.querySelectorAll('.wrap_ts_object[data-section_id="'+wrap.dataset.section_id+'"][data-section_tipo="'+wrap.dataset.section_tipo+'"]')	//
-
-		// short vars
-			const section_id	= wrap.dataset.section_id
-			const section_tipo	= wrap.dataset.section_tipo
-			const node_type		= wrap.dataset.node_type || null
+		// destroy section after use it
+			section.destroy()
 
 
-		return new Promise(function(resolve){
-
-			// API call
-				const rqo = {
-					dd_api			: 'dd_ts_api',
-					prevent_lock	: true,
-					action			: 'delete',
-					source			: {
-						section_id		: section_id,
-						section_tipo	: section_tipo,
-						node_type		: node_type
-					}
-				}
-				data_manager.request({
-					body : rqo
-				})
-				.then(function(response) {
-
-					// debug
-						if(SHOW_DEBUG===true) {
-							console.log("[ts_object.delete] response",response);
-						}
-
-					if (response.result===false) {
-
-						// error response
-						alert("Sorry. You can't delete a element with children. Please, remove all children before delete.")
-
-					}else{
-
-						// all is OK
-
-						// refresh wrap
-							ts_object.refresh_element(wrap.dataset.section_tipo, wrap.dataset.section_id)
-					}
-
-					// Refresh children container
-						// var update_children_promise = ts_object.get_children(button_obj).then(function() {
-						// 	// On children refresh is done, trigger edit button
-						// 	console.log("update_children_promise done");
-						// })
-
-					resolve(response)
-				});
-		})
-	}//end delete
+		return delete_section_result
+	}//end delete_term
 
 
 
@@ -1422,7 +1411,7 @@ export const ts_object = new function() {
 			const render_component_node = async function(tipo, key) {
 
 				// component instance
-					const current_component = await instances.get_instance({
+					const current_component = await get_instance({
 						section_tipo	: section_tipo,
 						section_id		: section_id,
 						tipo			: tipo,
@@ -1614,7 +1603,7 @@ export const ts_object = new function() {
 			}
 
 		// dd_grid
-			const dd_grid = await instances.get_instance({
+			const dd_grid = await get_instance({
 				model				: 'dd_grid',
 				section_tipo		: section_tipo,
 				section_id			: section_id,
