@@ -1508,8 +1508,7 @@ class component_relation_common extends component_common {
 				. " Expected q type is object " . PHP_EOL
 				. ' type: ' . gettype($q) . PHP_EOL
 				. ' q: ' . json_encode($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object) . PHP_EOL
-				. ' seq: ' . implode(PHP_EOL.' - ', get_bactrace_sequence())
+				. ' query_object: ' . to_string($query_object)
 				, logger::WARNING
 			);
 		}
