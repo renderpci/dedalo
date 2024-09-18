@@ -96,41 +96,20 @@ class logger_backend_activity extends logger_backend {
 
 
 	/**
-	* LOG MESSAGES
-	* 	LINE:
-	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
-	*	IP_ADDRESS 	QUIEN 	QUE 	DONDE 	CUANDO 	DATOS
-	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), DATOS(array of related info)
-	*
-	* @param string $message
-	* 	sample: 'SAVE'
-	* @param int $log_level = logger::INFO
-	* 	sample: 75
-	* @param string|null $tipo_where = null
-	* 	sample: 'oh32'
-	* @param string|null $operations = null
-	* 	sample: null
-	* @param array|null $datos = null
-	* 	sample: [
-		*		"msg"				=> "Saved component data",
-		*		"tipo"				=> "oh32",
-		*		"section_id"		=> "1",
-		*		"lang"				=> "lg-nolan",
-		*		"top_id"			=> "1",
-		*		"top_tipo"			=> "oh1",
-		*		"component_name"	=> "component_publication",
-		*		"table"				=> "matrix",
-		*		"section_tipo"		=> "oh1"
-		*	]
+	* LOG_MESSAGE_DEFER
+	* Write record in database activity section
+	* @param object $options
 	* @return int|null section_id
 	*/
-	public function log_message(
-		string $message,
-		int $log_level=logger::INFO,
-		string $tipo_where=null,
-		string $operations=null,
-		array $datos=null
-	) : ?int {
+	public function log_message_defer(object $options) : ?int {
+
+		// options
+			$message	= $options->message;
+			$log_level	= $options->log_level;
+			$tipo_where	= $options->tipo_where;
+			$operations	= $options->operations;
+			$datos		= $options->datos;
+			$user_id	= $options->user_id;
 
 		// check values
 
@@ -186,7 +165,7 @@ class logger_backend_activity extends logger_backend {
 			$component_tipo = self::$_COMPONENT_WHO['tipo']; // dd543 component_autocomplete
 
 			// value
-				$user_id = logged_user_id() ?? '-666';
+				$user_id = $user_id ?? logged_user_id() ?? '-666';
 				$locator_user_id = new locator();
 					$locator_user_id->set_section_id($user_id);
 					$locator_user_id->set_section_tipo(DEDALO_SECTION_USERS_TIPO);
@@ -337,6 +316,58 @@ class logger_backend_activity extends logger_backend {
 		return $id_section;
 	}//end log_message
 
+
+
+	/**
+	* LOG MESSAGES
+	* 	LINE:
+	*	MODULE  TIME  USER  IP  REFERRER  MESSAGE  SEVERITY_LEVEL  OPERATIONS
+	*	IP_ADDRESS 	QUIEN 	QUE 	DONDE 	CUANDO 	DATOS
+	*	QUE(like 'LOAD EDIT'), LOGLEVEL(INFO), TIPO(like 'dd120'), DATOS(array of related info)
+	*
+	* @param string $message
+	* 	sample: 'SAVE'
+	* @param int $log_level = logger::INFO
+	* 	sample: 75
+	* @param string|null $tipo_where = null
+	* 	sample: 'oh32'
+	* @param string|null $operations = null
+	* 	sample: null
+	* @param array|null $datos = null
+	* 	sample: [
+		*		"msg"				=> "Saved component data",
+		*		"tipo"				=> "oh32",
+		*		"section_id"		=> "1",
+		*		"lang"				=> "lg-nolan",
+		*		"top_id"			=> "1",
+		*		"top_tipo"			=> "oh1",
+		*		"component_name"	=> "component_publication",
+		*		"table"				=> "matrix",
+		*		"section_tipo"		=> "oh1"
+		*	]
+	* @param int|null $user_id
+	* @return void
+	*/
+	public function log_message(
+		string $message,
+		int $log_level=logger::INFO,
+		string $tipo_where=null,
+		string $operations=null,
+		array $datos=null,
+		int $user_id=null
+		) {
+
+		$options = (object)[
+			'message'		=> $message,
+			'log_level'		=> $log_level,
+			'tipo_where'	=> $tipo_where,
+			'operations'	=> $operations,
+			'datos'			=> $datos,
+			'user_id'		=> $user_id
+		];
+
+		register_shutdown_function([logger::$obj['activity'],'log_message_defer'], $options);
+	}//end log_message
 
 
 }//end class logger_backend_activity

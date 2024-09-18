@@ -120,7 +120,8 @@ class tool_time_machine extends tool_common {
 										'top_tipo'		=> $section_tipo,
 										'table'			=> $matrix_table,
 										'tm_id'			=> $matrix_id
-									]
+									],
+									logged_user_id() // int
 								);
 						}
 					break;
@@ -208,7 +209,8 @@ class tool_time_machine extends tool_common {
 								'section_tipo'	=> $section_tipo,
 								'table'			=> $matrix_table,
 								'tm_id'			=> $matrix_id
-							]
+							],
+							logged_user_id() // int
 						);
 					break;
 
@@ -400,7 +402,8 @@ class tool_time_machine extends tool_common {
 								'section_tipo'	=> $section_tipo,
 								'table'			=> $matrix_table,
 								'tm_id'			=> $current_row['id']
-							]
+							],
+							logged_user_id() // int
 						);
 
 					break;

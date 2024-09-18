@@ -159,7 +159,8 @@ class tool_import_files extends tool_common {
 							// 'file_size'	=> format_size_units($file_data->size),
 							// 'time_sec'	=> $file_data->time_sec,
 							// 'f_error'	=> $file_data->error || null
-						]
+						],
+						logged_user_id() // int
 					);
 
 				// component_image

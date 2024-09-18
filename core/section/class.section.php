@@ -1169,7 +1169,8 @@ class section extends common {
 							// "top_tipo"	=> TOP_TIPO,
 							// "tm_id"		=> 'desactivo',#$time_machine_last_id,
 							// "counter"	=> counter::get_counter_value($this->tipo, $matrix_table_counter),
-						]
+						],
+						logged_user_id() // int
 					);
 
 				##
@@ -1606,7 +1607,8 @@ class section extends common {
 					'table'			=> $matrix_table,
 					'delete_mode'	=> $delete_mode,
 					'section_tipo'	=> $this->tipo
-				)
+				),
+				logged_user_id() // int
 			);
 
 

@@ -655,7 +655,8 @@ class component_3d extends component_media_common implements component_media_int
 						'parent'	=> $this->section_id,
 						'id'		=> $this->id,
 						'quality'	=> $quality
-					]
+					],
+					logged_user_id() // int
 				);
 
 			// save To update valor_list

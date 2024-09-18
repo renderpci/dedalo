@@ -1413,7 +1413,8 @@ class area_maintenance extends area_common {
 					NULL,
 					[
 						'msg' => 'Updated code to v. ' . $new_version_info
-					]
+					],
+					logged_user_id() // int
 				);
 
 		} catch (Exception $e) {
@@ -1917,7 +1918,8 @@ class area_maintenance extends area_common {
 				[
 					'msg'		=> 'Updated Ontology',
 					'version'	=> RecordObj_dd::get_termino_by_tipo(DEDALO_ROOT_TIPO,'lg-spa')
-				]
+				],
+				logged_user_id() // int
 			);
 
 		// save_simple_schema_file. Get new simple_schema_of_sections

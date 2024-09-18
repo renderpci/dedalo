@@ -1262,7 +1262,8 @@ class component_media_common extends component_common {
 						'parent'	=> $this->section_id,
 						'id'		=> $this->id,
 						'quality'	=> $quality
-					]
+					],
+					logged_user_id() // int
 				);
 
 			// save to force update dato files_info
@@ -2743,7 +2744,8 @@ class component_media_common extends component_common {
 					'quality'			=> $quality,
 					'source_quality'	=> $original_quality,
 					'target_quality'	=> $quality
-				]
+				],
+				logged_user_id() // int
 			);
 
 		// update component dato files info and save

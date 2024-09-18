@@ -814,10 +814,15 @@ final class dd_core_api {
 		$response = new stdClass();
 			$response->result	= false;
 			$response->msg		= 'Error. Request failed. ';
-			$response->error	= null;
+			$response->errors	= [];
 
 		// ddo_source
-			$ddo_source = $rqo->source;
+			$ddo_source = $rqo->source ?? null;
+			if (!$ddo_source) {
+				$response->errors[] = 'missing dd_source';
+				$response->msg .= ' [1] Missing ddo_source.';
+				return $response;
+			}
 
 		// source vars
 			$delete_mode	= $ddo_source->delete_mode ?? 'delete_data'; // delete_record|delete_data*
@@ -825,8 +830,9 @@ final class dd_core_api {
 			$section_id		= $ddo_source->section_id ?? null;
 			$tipo			= $ddo_source->tipo;
 			$model			= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			// Ensure model is 'section'
 			if($model!=='section') {
-				$response->error = 1;
+				$response->errors[] = 'invalid model';
 				$response->msg 	.= '[1] Model is not expected section: '.$model;
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
@@ -846,14 +852,14 @@ final class dd_core_api {
 				$section_tipo // string section_tipo
 			);
 			$permissions = $section->get_section_permissions($section_tipo, $section_tipo);
-
+			// debug
 			debug_log(__METHOD__
 				." to delete section. Permissions: $permissions ".to_string($section_tipo)
 				, logger::DEBUG
 			);
 			if ($permissions<2) {
 				$msg = '[2] Insufficient permissions to delete record (delete mode: '.$delete_mode.'): '.$permissions;
-				$response->error = 2;
+				$response->errors[] = 'insufficient permissions to delete';
 				$response->msg 	.= $msg;
 				debug_log(__METHOD__
 					." $response->msg " . PHP_EOL
@@ -870,7 +876,7 @@ final class dd_core_api {
 
 				// section_id check (is mandatory when no sqo is received)
 					if (empty($section_id)) {
-						$response->error = 3;
+						$response->errors[] = 'empty sqo section_id';
 						$response->msg 	.= '[3] section_id = null and $sqo = null, impossible to determinate the sections to delete. ';
 						debug_log(__METHOD__
 							." $response->msg " . PHP_EOL
@@ -880,7 +886,7 @@ final class dd_core_api {
 						return $response;
 					}
 
-				// sqo to create new one
+				// Build sqo if not provided
 					$self_locator = new locator();
 						$self_locator->set_section_tipo($section_tipo);
 						$self_locator->set_section_id($section_id);
@@ -920,26 +926,69 @@ final class dd_core_api {
 				return $response;
 			}
 
-		// normal delete use
-			$errors = [];
+		// component_relation_children check (thesaurus cases)
+			$relation_children_tipo = null;
+			if ($delete_mode==='delete_record') {
+				$relation_children_model	= 'component_relation_children';
+				$ar_children_tipo			= section::get_ar_children_tipo_by_model_name_in_section(
+					$section_tipo,
+					[$relation_children_model],
+					true, // bool from_cache
+					true, // bool resolve_virtual
+					true, // bool recursive
+					true // bool search_exact
+				);
+				$relation_children_tipo = $ar_children_tipo[0] ?? null;
+			}
+
+		// Determine if diffusion records should be deleted
+			$delete_diffusion_records = is_object($options) && isset($options->delete_diffusion_records)
+				? (bool)$options->delete_diffusion_records
+				: true; // default is true
+
+		// Perform delete on each record
 			foreach ($ar_records as $record) {
 
 				$current_section_tipo	= $record->section_tipo;
 				$current_section_id		= $record->section_id;
 
-				$delete_diffusion_records = is_object($options) && isset($options->delete_diffusion_records)
-					? (bool)$options->delete_diffusion_records
-					: true; // default is true
+				// Check if section has children and skip deletion if it does
+					if ($delete_mode==='delete_record' && !empty($relation_children_tipo)) {
+						$component_relation_children = component_common::get_instance(
+							$relation_children_model,
+							$relation_children_tipo,
+							$current_section_id,
+							'list',
+							DEDALO_DATA_NOLAN,
+							$current_section_tipo
+						);
+						$dato = $component_relation_children->get_dato();
+						if (!empty($dato)) {
+							$children = array_map(function($el){
+								return $el->section_id;
+							}, $dato);
+							$response->errors[] = (label::get_label('skip_deletion_cause_children') ?? 'skipped record deletion because he has children')
+								.' : ' . to_string($current_section_id). ' ['.join(',',$children).']';
+							continue;
+						}
+					}
 
-				// Delete method
-				$section 	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
-				$deleted 	= $section->Delete($delete_mode, $delete_diffusion_records);
-				if ($deleted!==true) {
-					$errors[] = (object)[
-						'section_tipo'	=> $current_section_tipo,
-						'section_id'	=> $current_section_id
-					];
-				}
+				// Delete the section
+					$section	= section::get_instance($current_section_id, $current_section_tipo, 'list', true, $caller_dataframe);
+					$deleted	= $section->Delete($delete_mode, $delete_diffusion_records);
+					if ($deleted!==true) {
+						$response->errors[] = 'unable to delete record: '.to_string($current_section_id);
+					}else{
+						// remove_parent_references
+						if ($delete_mode==='delete_record' && !empty($relation_children_tipo)) {
+							// references. Calculate component parent and removes references to current section
+							component_relation_common::remove_parent_references(
+								$current_section_tipo,
+								$current_section_id,
+								null
+							);
+						}
+					}
 			}
 
 		// ar_delete section_id
@@ -959,11 +1008,12 @@ final class dd_core_api {
 						return $record->section_id;
 					}, $check_ar_records);
 
-					$response->error = 4;
+					$response->errors[] = 'record not deleted: '.to_string($check_ar_section_id);
 					$response->msg 	.= '[4] Some records were not deleted: '.json_encode($check_ar_section_id, JSON_PRETTY_PRINT);
 					debug_log(__METHOD__
 						." $response->msg " . PHP_EOL
-						.' rqo: '.to_string($rqo)
+						.' rqo: '.to_string($rqo) . PHP_EOL
+						.' errors: ' . json_encode($response->errors, JSON_PRETTY_PRINT)
 						, logger::ERROR
 					);
 					return $response;
@@ -972,7 +1022,6 @@ final class dd_core_api {
 
 		// response OK
 			$response->result		= $ar_delete_section_id;
-			$response->error		= !empty($errors) ? $errors : null;
 			$response->delete_mode	= $delete_mode;
 			$response->msg			= !empty($errors)
 				? 'Some errors occurred when delete sections.'
@@ -2823,7 +2872,8 @@ final class dd_core_api {
 				logger::INFO, // int log_level
 				$tipo, // string|null tipo_where
 				null, // string|null operations
-				$dato_activity // array|null datos
+				$dato_activity, // array|null datos
+				logged_user_id() // int
 			);
 	}//end log_activity
 

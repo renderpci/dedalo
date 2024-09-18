@@ -49,7 +49,7 @@ $global_start_time = hrtime(true);
 			$response->msg		= 'Error. Request failed. This PHP version is not supported ('.phpversion().'). You need: >=8.1';
 		error_log('Error: '.$response->msg);
 		echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-		die();
+		exit( 0 );
 	}
 
 

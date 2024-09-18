@@ -434,14 +434,17 @@ class ts_object {
 
 							case ($element_obj->type==='link_children'):
 
+								// set has_descriptor_children value
+								$child_data->has_descriptor_children = $this->has_children_of_type($dato, 'descriptor')===true;
+
 								// D : Descriptors
-								$element_obj->value = ($this->have_children_of_type($dato, 'descriptor')===true)
+								$element_obj->value = ($child_data->has_descriptor_children===true)
 									? 'button show children'
 									: 'button show children unactive';
 
 								// ND : No descriptors case
-								$have_children_of_type_result = $this->have_children_of_type($dato, 'nd');
-								if($have_children_of_type_result===true) {
+								$has_children_of_type_result = $this->has_children_of_type($dato, 'nd');
+								if($has_children_of_type_result===true) {
 
 									$nd_element = new stdClass();
 										$nd_element->type	= 'link_children_nd';
@@ -485,14 +488,14 @@ class ts_object {
 
 
 	/**
-	* HAVE_CHILDREN_OF_TYPE
+	* HAS_CHILDREN_OF_TYPE
 	* @param array $ar_children
 	* 	Array of locators
 	* @param string $type
 	* 	As 'descriptor'
 	* @return bool
 	*/
-	public function have_children_of_type( array $ar_children, string $type ) : bool {
+	public function has_children_of_type( array $ar_children, string $type ) : bool {
 
 		if (empty($ar_children)) {
 
@@ -541,7 +544,7 @@ class ts_object {
 
 
 		return false;
-	}//end have_children_of_type
+	}//end has_children_of_type
 
 
 
