@@ -139,8 +139,12 @@ const get_content_data = async function(self) {
 				inner_html		: get_label.save || 'Save',
 				parent			: content_data
 			})
-			button_save.addEventListener('click', async function(e){
+			// click event
+			const save_handler = async (e) => {
 				e.stopPropagation()
+
+				// loading
+				content_data.classList.add('loading')
 
 				await self.save_changes()
 				button_save.classList.add('disable')
@@ -148,11 +152,13 @@ const get_content_data = async function(self) {
 				if (warning_label_text) {
 					warning_label_text.remove()
 				}
-			})
-			self.events_tokens.push(
-				event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
-			)
-			function fn_show_save_button() {
+
+				// loading
+				content_data.classList.remove('loading')
+			}
+			button_save.addEventListener('click', save_handler)
+			// subscribe event show_save_button_
+			const fn_show_save_button = () => {
 				button_save.classList.remove('disable')
 				const label = self.node.querySelector('.label')
 				if (label && !label.querySelector('.warning_label_text')) {
@@ -164,11 +170,13 @@ const get_content_data = async function(self) {
 						parent			: label
 					})
 				}
-
 				// page unload event
-					// set_before_unload (bool) add
-					set_before_unload(true)
+				// set_before_unload (bool) add
+				set_before_unload(true)
 			}
+			self.events_tokens.push(
+				event_manager.subscribe('show_save_button_'+self.id, fn_show_save_button)
+			)
 
 			// debug
 				// value.push({
