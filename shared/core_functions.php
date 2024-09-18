@@ -303,6 +303,17 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 	// level string
 		$level_string = logger::level_to_string($level);
 
+	// backtrace (WARNING, ERROR, CRITICAL)
+		if ($level < 50) {
+			// backtrace
+			$bt			= debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 1);
+			$bt_first	= $bt[0];
+			// bactrace_sequence. Array of function names in reverse order
+			$bts = array_reverse( get_bactrace_sequence() );
+			// remove last (current function 'dump') from list
+			array_pop($bts);
+		}
+
 	// msg building based on level
 	switch ($level) {
 		case logger::DEBUG:
@@ -319,29 +330,30 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 
 		case logger::WARNING:
 			if ( running_in_cli()===true ) {
+
 				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
+
 			}else{
-				$msg = sprintf(
-					$colorFormats['cyan'],
-					'DEBUG_LOG ['.$level_string.'] '. $info
-				);
+
+				$base_msg = 'DEBUG_LOG ['.$level_string.'] ' . $info . PHP_EOL
+					. '[seq]: '  . implode(' > ', $bts);
+
+				$msg = sprintf($colorFormats['cyan'], $base_msg);
 			}
 			break;
 
 		case logger::ERROR:
-
 			if ( running_in_cli()===true ) {
 
 				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
 
 			}else{
-				// backtrace
-				$bt			= debug_backtrace();
-				$source		= $bt[0];
-				$base_msg	= 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
+
+				$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
 					. ' ' . $info .' '. PHP_EOL
-					. ' [File]: ' . $source['file'].' '. PHP_EOL
-					. ' [Line]: ' . $source['line'].' ';
+					. ' [File]: ' . $bt_first['file'].' ' . PHP_EOL
+					. ' [Line]: ' . $bt_first['line'].' ' . PHP_EOL
+					. ' [seq]: '  . implode(' > ', $bts);
 
 				$msg = sprintf($colorFormats['bg_yellow'], $base_msg);
 			}
@@ -351,21 +363,17 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			break;
 
 		case logger::CRITICAL:
-
 			if ( running_in_cli()===true ) {
 
 				$msg = 'DEBUG_LOG ['.$level_string.'] '. $info;
 
 			}else{
 
-				// backtrace
-					$bt		= debug_backtrace();
-					$source	= $bt[0];
-
 				$base_msg = 'DEBUG_LOG ['.$level_string.']' . PHP_EOL
 					. ' ' . $info .' '. PHP_EOL
-					. ' [File]: ' . $source['file'].' '. PHP_EOL
-					. ' [Line]: ' . $source['line'].' ';
+					. ' [File]: ' . $bt_first['file'].' ' . PHP_EOL
+					. ' [Line]: ' . $bt_first['line'].' ' . PHP_EOL
+					. ' [seq]: '  . implode(' > ', $bts);
 
 				$msg = sprintf($colorFormats['bg_red'], $base_msg);
 			}
