@@ -104,10 +104,10 @@ final class core_functions_test extends TestCase {
 			: 'https://localhost:8443/' .DEDALO_API_URL;
 
 		$response = curl_request((object)[
-			'url'			=> $api_url,
-			'post'			=> true,
-			'header'		=> false,
-			'httpheader'	=> array('Content-Type:application/json')
+			'url'				=> $api_url,
+			'post'				=> true,
+			'header'			=> false,
+			'httpheader'		=> ['Content-Type: application/json']
 		]);
 
 		$eq = gettype($response)==='object';
