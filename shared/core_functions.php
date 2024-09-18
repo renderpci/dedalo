@@ -43,10 +43,13 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 			}
 
 		// var_name
-			if(isset($var_name)) {
-				$msg .= PHP_EOL . ' name: '. $var_name . PHP_EOL
-				. ' +++++++++++++++++++++++++++++++++++++++++++++++++++// '.$var_name.' //+++++++++++++++++++++++++++++++++++++++++++++++++++';
-			}
+			// bactrace_sequence. Array of function names in reverse order
+			$bts = array_reverse( get_bactrace_sequence() );
+			// remove last (current function 'dump') from list
+			array_pop($bts);
+			$msg .= PHP_EOL . ' name: '. ($var_name ?? '') . PHP_EOL
+				. ' +++++++++++++++++++++++++++++++++++++++++++++++++++// '.$var_name.' //+++++++++++++++++++++++++++++++++++++++++++++++++++' . PHP_EOL
+				. ' '.implode(' > ', $bts); // backtrace sequence
 
 		// arguments (optional)
 			if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
