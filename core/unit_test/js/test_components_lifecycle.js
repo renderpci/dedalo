@@ -219,7 +219,8 @@ async function life_cycle_test(element, view) {
 							'component_relation_index',
 							'component_relation_related',
 							'component_relation_parent',
-							'component_text_area'
+							'component_text_area',
+							'component_json'
 						]
 						if (!skip_models.includes(new_instance.model)) {
 							// assert.equal(new_instance.node.content_data, undefined, 'content_data must be undefined on list mode');

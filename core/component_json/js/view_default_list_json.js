@@ -32,7 +32,48 @@ view_default_list_json.render = async function(self, options) {
 
 	// wrapper
 		const wrapper = ui.component.build_wrapper_list(self, {
-			value_string : value_string
+			// value_string : value_string
+		})
+		if (self.show_interface.read_only!==true) {
+			wrapper.addEventListener('click', function(e){
+				e.stopPropagation()
+
+				// modal way
+					// lang. Use lang from data instead from context because the problem with component_text_area context lang
+					const lang = self.data && self.data.lang
+						? self.data.lang
+						: self.lang
+					// modal
+					ui.render_edit_modal({
+						self		: self,
+						e			: e,
+						lang		: lang, // to use in new instance
+						callback	: (dd_modal) => {
+							dd_modal.modal_content.style.width = '90%'
+
+							dd_modal.on_close = () => {
+								// refresh whole component
+								self.refresh({
+									autoload : false
+								})
+							}
+						}
+					})
+			})
+		}
+
+	// content_data
+		const content_data = document.createElement('div')
+			  content_data.classList.add('content_data', self.mode, self.type)
+			  wrapper.appendChild(content_data)
+			  // set pointers
+			  wrapper.content_data = content_data
+
+	// value
+		ui.create_dom_element({
+			element_type	: 'span',
+			inner_html		: value_string,
+			parent			: content_data
 		})
 
 

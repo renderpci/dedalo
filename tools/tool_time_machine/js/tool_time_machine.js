@@ -146,8 +146,6 @@ tool_time_machine.prototype.init = async function(options) {
 				self.button_bulk_revert_process.classList.add('hide','lock')
 				self.label_bulk_revert_process.classList.add('hide','lock')
 			}
-
-
 		}//end fn_tm_edit_record
 		self.events_tokens.push(
 			event_manager.subscribe('tm_edit_record', fn_tm_edit_record)
