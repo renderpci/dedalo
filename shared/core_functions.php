@@ -29,27 +29,28 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 
 	// Back-trace info of current execution
 		$bt = debug_backtrace();
+		// bactrace_sequence. Array of function names in reverse order
+		$bts = array_reverse( get_bactrace_sequence() );
+		// remove last (current function 'dump') from list
+		array_pop($bts);
 
 	// msg
 		$msg  = ' DUMP ' . PHP_EOL
 			   .' Caller: ' . str_replace(DEDALO_ROOT_PATH, '', $bt[0]['file']) . PHP_EOL
-			   .' Line: '.@$bt[0]['line'];
+			   .' Line: ' . @$bt[0]['line'];
 
 	// LEVEL 1
 
 		// function
 			if (isset($bt[1]['function'])) {
-				$msg .= PHP_EOL . ' Inside method: ' . $bt[1]['function'];
+				// $msg .= PHP_EOL . ' Inside method: ' . $bt[1]['function'];
+				$msg .= PHP_EOL . ' Method: ' . implode(' > ', $bts); // backtrace sequence
 			}
 
 		// var_name
-			// bactrace_sequence. Array of function names in reverse order
-			$bts = array_reverse( get_bactrace_sequence() );
-			// remove last (current function 'dump') from list
-			array_pop($bts);
-			$msg .= PHP_EOL . ' name: '. ($var_name ?? '') . PHP_EOL
-				. ' +++++++++++++++++++++++++++++++++++++++++++++++++++// '.$var_name.' //+++++++++++++++++++++++++++++++++++++++++++++++++++' . PHP_EOL
-				. ' '.implode(' > ', $bts); // backtrace sequence
+			if (isset($var_name)) {
+				$msg .= PHP_EOL . ' ' .str_repeat("-=", 32) . ' // '.$var_name.' // ' . str_repeat("-=", 32);
+			}
 
 		// arguments (optional)
 			if(isset($arguments) && is_array($arguments)) foreach ($arguments as $key => $value) {
