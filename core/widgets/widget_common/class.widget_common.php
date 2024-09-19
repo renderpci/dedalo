@@ -63,4 +63,16 @@ class widget_common {
 
 
 
+	/**
+	* GET_DATO
+	* @return
+	*/
+	public function get_dato() {
+
+		debug_log(__METHOD__
+			." Do not use this method, overwrite it in every widget ".get_called_class()." : ". PHP_EOL
+			, logger::WARNING
+		);
+		return null;
+	}//end get_dato
 }//end class widget_common
