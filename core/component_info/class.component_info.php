@@ -79,6 +79,72 @@ class component_info extends component_common {
 	}//end get_dato
 
 
+
+	/**
+	* GET_DATO_PARSED
+	* @return array|null $dato_parsed
+	*/
+	public function get_dato_parsed() : ?array {
+
+		// widgets check
+			$widgets = $this->get_widgets();
+			if (empty($widgets) || !is_array($widgets)) {
+				debug_log(__METHOD__
+					." Empty defined widgets for ".get_called_class()." : ". PHP_EOL
+					.' label: ' .$this->label . PHP_EOL
+					.' tipo: ' .$this->tipo . PHP_EOL
+					.' widgets:' . to_string($widgets)
+					, logger::ERROR
+				);
+
+				return null;
+			}
+
+		// the component info dato will be the all widgets data
+			$dato_parsed = [];
+
+		// each widget will be created and compute its own data
+			foreach ($widgets as $widget_obj) {
+
+				$widget_options = new stdClass();
+					$widget_options->section_tipo		= $this->get_section_tipo();
+					$widget_options->section_id			= $this->get_section_id();
+					$widget_options->lang				= DEDALO_DATA_LANG;
+					// $widget_options->component_info	= $this;
+					$widget_options->widget_name		= $widget_obj->widget_name;
+					$widget_options->path				= $widget_obj->path;
+					$widget_options->ipo				= $widget_obj->ipo;
+					$widget_options->mode				= $this->get_mode();
+
+				// instance the current widget
+					$widget = widget_common::get_instance($widget_options);
+
+				// Widget data
+					$widget_value = $widget->get_dato_parsed();
+					if (!empty($widget_value)) {
+						$dato_parsed = array_merge($dato_parsed, $widget_value);
+					}
+			}//end foreach ($widgets as $widget)
+
+		return $dato_parsed;
+	}//end get_dato_parsed
+
+
+
+	/**
+	* GET_DATO_FULL
+	* @return object|null $dato_full
+	* 	sample: [{"widget":"get_archive_weights","key":0,"id":"media_weight","value":2}]
+	*/
+	public function get_dato_full() {
+
+		$dato_full			= $this->get_dato();
+
+		return $dato_full;
+	}//end get_dato_full
+
+
+
 	/**
 	* GET_DB_DATA
 	* @return
