@@ -621,4 +621,16 @@ class component_info extends component_common {
 
 		return $value;
 	}//end get_grid_value
+
+
+	/**
+	* GET_GRID_FLAT_VALUE
+	* @return
+	*/
+	public function get_grid_flat_value(object $ddo=null) : dd_grid_cell_object {
+
+		return $this->get_grid_value($ddo);
+	}//end get_grid_flat_value
+
+
 }//end class component_info
