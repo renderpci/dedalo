@@ -350,4 +350,120 @@ class sum_dates extends widget_common {
 		return $dato;
 	}//end get_dato
 
+
+
+	/**
+	* GET_DATO_PARSED
+	* format the data as text to be exported
+	* @return array $data_parsed
+	*/
+	public function get_dato_parsed() : ?array  {
+
+		$data = $this->get_dato();
+		$data_parsed = [];
+
+		$found_sum_intervals =  array_find( $data, function($item){
+			return $item->id === 'sum_intervals';
+		}) ?? new stdClass();
+		$sum_intervals = $found_sum_intervals->value ?? new stdClass();
+
+		$found_sum_estitmated_time_add =  array_find( $data, function($item){
+			return $item->id === 'sum_estitmated_time_add';
+		}) ?? new stdClass();
+		$sum_estitmated_time_add = $found_sum_estitmated_time_add->value ?? null;
+
+		$found_estitmated_time_undefined =  array_find( $data, function($item){
+			return $item->id === 'estitmated_time_undefined';
+		}) ?? new stdClass();
+		$estitmated_time_undefined = $found_estitmated_time_undefined->value ?? null;
+
+		// get the text of the sum_interval
+			$ar_sum_intervals = [];
+
+			if( isset($sum_intervals->y) && $sum_intervals->y > 0 ){
+				$year_label = ($sum_intervals->y > 1)
+					? label::get_label( 'years' )
+					: label::get_label( 'year' );
+				$year_text = $sum_intervals->y.' '.$year_label;
+				$ar_sum_intervals[] = $year_text;
+			}
+			if( isset($sum_intervals->m) && $sum_intervals->m > 0 ){
+				$month_label = ($sum_intervals->m > 1)
+					? label::get_label( 'months' )
+					: label::get_label( 'month' );
+				$month_text = $sum_intervals->m.' '.$month_label;
+				$ar_sum_intervals[] = $month_text;
+			}
+			if( isset($sum_intervals->d) && $sum_intervals->d > 0){
+				$day_label = ($sum_intervals->d > 1)
+					? label::get_label( 'days' )
+					: label::get_label( 'day' );
+				$day_text = $sum_intervals->d.' '.$day_label;
+				$ar_sum_intervals[] = $day_text;
+			}
+
+			$sum_intervals = implode(' ', $ar_sum_intervals);
+			$intervals_data = new stdClass();
+				$intervals_data->id = 'sum_intervals';
+				$intervals_data->value = $sum_intervals;
+			$data_parsed[] = $intervals_data;
+
+		// get the text of the sum_estitmated_time_add
+			$ar_sum_estitmated_time_add = [];
+
+			if( isset($sum_estitmated_time_add->y) && $sum_estitmated_time_add->y > 0 ){
+				$estimated_year_label = ($sum_estitmated_time_add->y > 1)
+					? label::get_label( 'years' )
+					: label::get_label( 'year' );
+				$estimated_year_text = $sum_estitmated_time_add->y.' '.$estimated_year_label;
+				$ar_sum_estitmated_time_add[] = $estimated_year_text;
+			}
+			if( isset($sum_estitmated_time_add->m) && $sum_estitmated_time_add->m > 0 ){
+				$estimated_month_label = ($sum_estitmated_time_add->m > 1)
+					? label::get_label( 'months' )
+					: label::get_label( 'month' );
+				$estimated_month_text = $estimated_year_text = $sum_estitmated_time_add->m.' '.$estimated_month_label;
+				$ar_sum_estitmated_time_add[] = $estimated_month_text;
+			}
+			if( isset($sum_estitmated_time_add->d) && $sum_estitmated_time_add->d > 0 ){
+				$estimated_day_label = ($sum_estitmated_time_add->d > 1)
+					? label::get_label( 'days' )
+					: label::get_label( 'day' );
+				$estimated_day_text = $sum_estitmated_time_add->d.' '.$estimated_day_label;
+				$ar_sum_estitmated_time_add[] = $estimated_day_text;
+			}
+
+			$ar_indeterminate = [];
+			if( !empty($ar_sum_estitmated_time_add) || $estitmated_time_undefined === true){
+
+				if( !empty($ar_sum_estitmated_time_add) ){
+					$ar_indeterminate[] = implode(' ', $ar_sum_estitmated_time_add);
+				}
+				if( $estitmated_time_undefined === true ){
+
+					if( !empty($ar_sum_estitmated_time_add) ){
+						$ar_indeterminate[] = ' + ';
+					}
+					$ar_indeterminate[] = 'indeterminat';
+				}
+			}
+
+			$sum_estitmated = implode('', $ar_indeterminate);
+			$estitmated_data = new stdClass();
+				$estitmated_data->id = 'sum_estitmated_time_add';
+				$estitmated_data->value = $sum_estitmated;
+			$data_parsed[] = $estitmated_data;
+
+		// add estimated time undefined
+			$time_undefined_data = new stdClass();
+				$time_undefined_data->id = 'estitmated_time_undefined';
+				$time_undefined_data->value = $estitmated_time_undefined;
+			$data_parsed[] = $time_undefined_data;
+
+		return $data_parsed;
+	}//end get_dato_parsed
+
+
+
+
 }//end sum_dates
