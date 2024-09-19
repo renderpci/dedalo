@@ -251,6 +251,9 @@ class tool_export extends tool_common {
 							: $column_tipo;
 					}else{
 						$column_label = RecordObj_dd::get_termino_by_tipo($column_tipo, DEDALO_APPLICATION_LANG, true);
+						if (empty($column_label)) {
+							$column_label = $column_tipo;
+						}
 						$column_labels[] = (sizeof($column_path)>1 && ($column_key === $column_tipos_len))
 							? $column_label.' '.$column_path[1]+1
 							: $column_label;
