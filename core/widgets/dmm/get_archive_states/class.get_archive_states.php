@@ -142,56 +142,54 @@ class get_archive_states extends widget_common {
 				}
 
 				// closed
-					$closed = new stdClass();
 					if(isset($total_closed["1"]) && $total_closed["1"]>0 ) {
 
 						$closed_percent = ($total_closed["1"] * 100 ) / $total_dato;
 
-						$closed->afirmative			= $total_closed["1"];
-						$closed->afirmative_percent	= round($closed_percent, 1);
+						$closed_afirmative			= $total_closed["1"];
+						$closed_afirmative_percent	= round($closed_percent, 1);
 					}
 					if(isset($total_closed["2"]) && $total_closed["2"]>0) {
 
-						$closed__neg_percent = ($total_closed["2"] * 100 ) / $total_dato;
+						$closed_neg_percent = ($total_closed["2"] * 100 ) / $total_dato;
 
-						$closed->negative			= $total_closed["2"];
-						$closed->negative_percent	= round($closed__neg_percent, 1);
+						$closed_negative			= $total_closed["2"];
+						$closed_negative_percent	= round($closed_neg_percent, 1);
 					}
 					if(isset($count_closed) && $count_closed>0) {
 
 						$closed_total_percent	= ($count_closed * 100 ) / $total_dato;
 
-						$closed->count			= $count_closed;
-						$closed->count_percent	= round($closed_total_percent, 1);
-						$closed->total			= $total_dato;
+						$closed_count			= $count_closed;
+						$closed_count_percent	= round($closed_total_percent, 1);
+						$closed_total			= $total_dato;
 					}
-					$closed->label = $closed_label;
+					$closed_label = $closed_label;
 
 				// answer
-					$answer = new stdClass();
 					if(isset($total_answer["1"]) && $total_answer["1"]>0 ) {
 
 						$answer_percent = ($total_answer["1"] * 100 ) / $total_dato;
 
-						$answer->afirmative			= $total_answer["1"];
-						$answer->afirmative_percent	= round($answer_percent, 1);
+						$answer_afirmative			= $total_answer["1"];
+						$answer_afirmative_percent	= round($answer_percent, 1);
 					}
 					if(isset($total_answer["2"]) && $total_answer["2"]>0) {
 
 						$answer_neg_percent = ($total_answer["2"] * 100 ) / $total_dato;
 
-						$answer->negative			= $total_answer["2"];
-						$answer->negative_percent	= round($answer_neg_percent, 1);
+						$answer_negative			= $total_answer["2"];
+						$answer_negative_percent	= round($answer_neg_percent, 1);
 					}
 					if(isset($count_answer) && $count_answer>0) {
 
 						$answer_total_percent	= ($count_answer * 100 ) / $total_dato;
 
-						$answer->count			= $count_answer;
-						$answer->count_percent	= round($answer_total_percent, 1);
-						$answer->total			= $total_dato;
+						$answer_count			= $count_answer;
+						$answer_count_percent	= round($answer_total_percent, 1);
+						$answer_total			= $total_dato;
 					}
-					$answer->label = $answer_label;
+					$answer_label = $answer_label;
 
 
 				// fix dato
@@ -203,10 +201,14 @@ class get_archive_states extends widget_common {
 				foreach ($output as $data_map) {
 					$current_id = $data_map->id;
 					$current_data = new stdClass();
-						$current_data->widget 	= get_class($this);
-						$current_data->key  	= $key;
-						$current_data->id 		= $current_id;
-						$current_data->value 	= $$current_id ?? null;
+						$current_data->widget		= get_class($this);
+						$current_data->key			= $key;
+						$current_data->id			= $current_id;
+						if($current_id === 'closed_afirmative'){
+							$current_data->closed_label	= $closed_label;
+							$current_data->answer_label	= $answer_label;
+						}
+						$current_data->value		= $$current_id ?? null;
 					$dato[] = $current_data;
 				}
 		}//foreach ipo
