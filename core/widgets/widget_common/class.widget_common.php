@@ -75,4 +75,18 @@ class widget_common {
 		);
 		return null;
 	}//end get_dato
+
+
+
+	/**
+	* GET_DATO_PARSED
+	* @return array|null $dato_parsed
+	*/
+	public function get_dato_parsed() : ?array {
+
+		return $this->get_dato();
+	}
+
+
+
 }//end class widget_common
