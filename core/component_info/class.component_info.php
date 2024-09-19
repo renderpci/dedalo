@@ -485,4 +485,140 @@ class component_info extends component_common {
 
 
 
+	/**
+	* GET_GRID_VALUE
+	* Get the data parsed of the widgets.
+	* Component info only process breakdown situation because the widget could process multiple data output!
+	* Widget use the ipo (input, process, output) object to define how process the data
+	* grid value use the `output` definition to create columns for every value
+	* The column will named as the output id as label (TODO, add tipo for the label of the column)
+	* By default the widget will return his data, but is possible to overwrite it with get_dato_parsed() in the widget
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object $dd_grid_cell_object
+	*/
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$fields_separator	= $ddo->fields_separator ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list			= $ddo->class_list ?? null;
+
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
+
+		// short vars
+			$data		= $this->get_dato_parsed();// use data parsed to be processed by the widget if needed. see mdcat->sum_dates
+			$label		= $this->get_label();
+			$properties	= $this->get_properties();
+			$widgets 	= $this->get_widgets();
+
+		$ar_cells		= [];
+		$ar_columns_obj	= [];
+		$ar_columns		= [];
+		$column_count	= 0;
+
+		// get the widget to use his IPO definition and use the output map to create the columns
+		// every output object will create a column
+		foreach ($widgets as $item) {
+			foreach ($item->ipo as $current_ipo) {
+				// get output
+				foreach ($current_ipo->output as $data_map) {
+
+					$column_count++;
+					$current_id	= $data_map->id;
+					// get the data of the widget to match with the column
+					$found = array_find( $data, function($item) use($current_id){
+						return $item->id===$current_id;
+					});
+					$value	= is_object( $found )
+						? $found->value
+						: null;
+
+					if( is_object( $value ) ){
+						$value= json_encode($value);
+					}
+
+					$value	= [$value];
+
+					// create the new column obj id getting the previous id and add the new path
+					// it will set to the column_obj for the next loop
+					// note that id will use to calculate the column label
+					// (TODO: add ontology labels into output definition for translation)
+					$current_column_obj = new stdClass();
+						$current_column_obj->id		= $column_obj->id.'_widget_'. str_replace('_', ' ', $current_id);
+						$current_column_obj->group	= $column_obj->id.'_widget_'.$this->tipo;
+
+					$ar_columns_obj[] = $current_column_obj;
+
+					// records_separator
+						$records_separator = isset($records_separator)
+							? $records_separator
+							: (isset($properties->records_separator)
+								? $properties->records_separator
+								: ' | ');
+
+					// fallback value. Overwrite in translatable components like input_text or text_area
+						$fallback_value = $value ?? null;
+
+					// dd_grid_cell_object
+						$dd_grid_cell_object = new dd_grid_cell_object();
+							// $dd_grid_cell_object->set_id( $column_obj->id.'_'.$current_id );
+							$dd_grid_cell_object->set_type('column');
+							$dd_grid_cell_object->set_label($current_id);
+							$dd_grid_cell_object->set_cell_type('text');
+
+							$dd_grid_cell_object->set_ar_columns_obj( [$current_column_obj] );
+							if(isset($class_list)){
+								$dd_grid_cell_object->set_class_list($class_list);
+							}
+							$dd_grid_cell_object->set_records_separator($records_separator);
+							$dd_grid_cell_object->set_value($value);
+							$dd_grid_cell_object->set_fallback_value($fallback_value);
+
+
+					// store the columns into the full columns array
+					$ar_columns[] = $dd_grid_cell_object;
+				}
+			}
+		}
+
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
+
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
+
+		// fallback value. Overwrite in translatable components like input_text or text_area
+			$fallback_value = $data ?? null;
+
+		// dd_grid_cell_object
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_row_count(1);
+				$value->set_column_count($column_count);
+				$value->set_label($label);
+				$value->set_ar_columns_obj( $ar_columns_obj );
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_fields_separator($fields_separator);
+				$value->set_records_separator($records_separator);
+				$value->set_value($ar_columns);
+
+
+		return $value;
+	}//end get_grid_value
 }//end class component_info
