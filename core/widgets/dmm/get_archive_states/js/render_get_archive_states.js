@@ -91,13 +91,27 @@ const get_content_data_edit = async function(self) {
 */
 const get_value_element = (i, data, values_container, self) => {
 
-	const closed = data.find(item => item.id === 'closed').value
-	const answer = data.find(item => item.id === 'answer').value
+	const closed_afirmative			= data.find(item => item.id === 'closed_afirmative').value
+	const closed_label 				= data.find(item => item.id === 'closed_afirmative').closed_label
+	const answer_label 				= data.find(item => item.id === 'closed_afirmative').answer_label
+	const closed_afirmative_percent	= data.find(item => item.id === 'closed_afirmative_percent').value
+	const closed_negative			= data.find(item => item.id === 'closed_negative').value
+	const closed_negative_percent	= data.find(item => item.id === 'closed_negative_percent').value
+	const closed_count				= data.find(item => item.id === 'closed_count').value
+	const closed_count_percent		= data.find(item => item.id === 'closed_count_percent').value
+	const closed_total				= data.find(item => item.id === 'closed_total').value
+	const answer_afirmative			= data.find(item => item.id === 'answer_afirmative').value
+	const answer_afirmative_percent	= data.find(item => item.id === 'answer_afirmative_percent').value
+	const answer_negative			= data.find(item => item.id === 'answer_negative').value
+	const answer_negative_percent	= data.find(item => item.id === 'answer_negative_percent').value
+	const answer_count				= data.find(item => item.id === 'answer_count').value
+	const answer_count_percent		= data.find(item => item.id === 'answer_count_percent').value
+	const answer_total				= data.find(item => item.id === 'answer_total').value
 
 	const label_yes	= get_label.yes || 'yes'
 	const label_no	= get_label.no || 'no'
 	const label_of	= get_label.of || 'of'
-	// li
+
 	// li
 		const li = ui.create_dom_element({
 			element_type	: 'li',
@@ -113,28 +127,28 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 		// label
-		const closed_label = ui.create_dom_element({
+		const closed_label_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'states_label closed_label',
-			inner_html		: closed.label + ':',
+			inner_html		: closed_label + ':',
 			parent			: closed_node
 		})
 			//answer_text_node
 			const closed_text =[]
-			const closed_afirmative = closed.afirmative && closed.afirmative > 0
-				? `${label_yes}: ${closed.afirmative} (${closed.afirmative_percent}%)`
+			const closed_afirmative_text = closed_afirmative && closed_afirmative > 0
+				? `${label_yes}: ${closed_afirmative} (${closed_afirmative_percent}%)`
 				: ''
 
-			const closed_negative = closed.negative && closed.negative > 0
-				? `${label_no}: ${closed.negative} (${closed.negative_percent}%)`
+			const closed_negative_text = closed_negative && closed_negative > 0
+				? `${label_no}: ${closed_negative} (${closed_negative_percent}%)`
 				: ''
 
-			const closed_total = closed.count && closed.count > 0
-				? `n: ${closed.count} ${label_of} ${closed.total} (${closed.count_percent}%)`
+			const closed_total_text = closed_count && closed_count > 0
+				? `n: ${closed_count} ${label_of} ${closed_total} (${closed_count_percent}%)`
 				: ''
-			closed_text.push(closed_afirmative)
-			closed_text.push(closed_negative)
-			closed_text.push(closed_total)
+			closed_text.push(closed_afirmative_text)
+			closed_text.push(closed_negative_text)
+			closed_text.push(closed_total_text)
 
 			//closed_text_node
 				const closed_text_node = ui.create_dom_element({
@@ -152,28 +166,28 @@ const get_value_element = (i, data, values_container, self) => {
 		})
 
 		// label
-		const answer_label = ui.create_dom_element({
+		const answer_label_node = ui.create_dom_element({
 			element_type	: 'div',
 			class_name		: 'states_label answer_label',
-			inner_html		: answer.label + ':',
+			inner_html		: answer_label + ':',
 			parent			: answer_node
 		})
 			//answer_text_node
 			const answer_text =[]
-			const answer_afirmative = answer.afirmative && answer.afirmative > 0
-				? `pos: ${answer.afirmative} (${answer.afirmative_percent}%)`
+			const answer_afirmative_text = answer_afirmative && answer_afirmative > 0
+				? `pos: ${answer_afirmative} (${answer_afirmative_percent}%)`
 				: ''
 
-			const answer_negative = answer.negative && answer.negative > 0
-				? `neg: ${answer.negative} (${answer.negative_percent}%)`
+			const answer_negative_text = answer_negative && answer_negative > 0
+				? `neg: ${answer_negative} (${answer_negative_percent}%)`
 				: ''
 
-			const answer_total = answer.count && answer.count > 0
-				? `n: ${answer.count} ${label_of} ${answer.total} (${answer.count_percent}%)`
+			const answer_total_text = answer_count && answer_count > 0
+				? `n: ${answer_count} ${label_of} ${answer_total} (${answer_count_percent}%)`
 				: ''
-			answer_text.push(answer_afirmative)
-			answer_text.push(answer_negative)
-			answer_text.push(answer_total)
+			answer_text.push(answer_afirmative_text)
+			answer_text.push(answer_negative_text)
+			answer_text.push(answer_total_text)
 
 			//answer_text_node
 				const answer_text_node = ui.create_dom_element({
