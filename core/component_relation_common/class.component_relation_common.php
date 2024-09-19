@@ -563,7 +563,7 @@ class component_relation_common extends component_common {
 					}
 				}
 			}//end foreach ($locator_column_obj as $column_pos => $current_column_obj)
-		}
+		}//end foreach($data as $current_key => $locator)
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$locator_count	= sizeof($data);
