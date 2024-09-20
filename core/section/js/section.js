@@ -172,10 +172,10 @@ section.prototype.init = async function(options) {
 		self.request_config			= options.request_config || null
 
 		// add_show to rqo to configure specific show
-		self.add_show 				= options.add_show || false
+		self.add_show 				= options.add_show ?? false
 
 		// buttons. bool to show / hide the buttons in list
-		self.buttons 				= options.buttons || true
+		self.buttons 				= options.buttons ?? true
 
 		// session_key
 		self.session_save			= options.session_save ?? true
