@@ -11,7 +11,8 @@
 		render_input_element_range,
 		render_input_element_period,
 		render_input_element_time,
-		render_input_element_date
+		render_input_element_date,
+		render_input_element_time_range
 	} from './render_edit_component_date.js'
 
 
