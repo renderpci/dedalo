@@ -133,12 +133,12 @@ class component_json extends component_common {
 
 	/**
 	* GET_VALOR
+	* Is equal to dato in this component
+	* @return array|null $valor
 	*/
 	public function get_valor() {
-		$dato  = $this->get_dato();
-		//$valor = json_encode($dato);
 
-		$valor = $dato;
+		$valor = $this->get_dato();
 
 		return $valor;
 	}//end get_valor
@@ -168,7 +168,7 @@ class component_json extends component_common {
 
 		$valid = in_array($file_extension, $allowed_extensions);
 
-		return (bool)$valid;
+		return $valid;
 	}//end valid_file_extension
 
 
@@ -186,7 +186,10 @@ class component_json extends component_common {
 		// Default behavior is get value
 		$dato = $this->get_dato();
 
-		$value = $dato[0] ?? null;
+		$value = is_array($dato)
+			? ($dato[0] ?? null)
+			: null;
+
 		if (is_string($value)) {
 			// do not encode here
 			debug_log(__METHOD__
@@ -460,8 +463,8 @@ class component_json extends component_common {
 	* sample:
 	* {
 	*	"original_file_name": "my file name.json",
-    *	"full_file_name": "test3_test18_1.json",
-    *	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
+	*	"full_file_name": "test3_test18_1.json",
+	*	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
 	* }
 	* @return object $response
 	*/
@@ -601,28 +604,6 @@ class component_json extends component_common {
 						$clone->operator	= 'IS NULL';
 						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
-
-				// langs check all
-					// $ar_query_object = [];
-					// $ar_all_langs 	 = common::get_ar_all_langs();
-					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					// foreach ($ar_all_langs as $current_lang) {
-					// 	// Empty data is blank array []
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = '=';
-					// 		$clone->q_parsed = '\'[]\'';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-
-					// 	// legacy data (set as null instead [])
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = 'IS NULL';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-					// }
-					// $new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
 
 				// override
 				$query_object = $new_query_json;

@@ -933,7 +933,7 @@ class area_maintenance extends area_common {
 
 		if (running_in_cli()===true) {
 
-			// executing from dd_utils_api::get_process_status
+			// executing from dd_utils_api::get_process_status (area maintenance panel)
 
 			$counter = 0;
 			while(1){
