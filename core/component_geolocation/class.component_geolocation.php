@@ -79,7 +79,10 @@ class component_geolocation extends component_common {
 			$this->set_dato($dato);
 			debug_log(__METHOD__
 				. ' Fixed and set bad format dato to array ' . PHP_EOL
-				. ' saved dato: ' . to_string($dato)
+				. ' saved dato: ' . to_string($dato) . PHP_EOL
+				. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
+				. ' section_id: ' . $this->get_section_id() . PHP_EOL
+				. ' mode: ' . $this->get_mode()
 				, logger::WARNING
 			);
 			$this->Save();
@@ -103,7 +106,10 @@ class component_geolocation extends component_common {
 			if (is_string($dato)) {
 				debug_log(__METHOD__
 					." Trying to decode string dato ". PHP_EOL
-					.' dato: ' . to_string($dato)
+					.' dato: ' . to_string($dato) . PHP_EOL
+					. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
+					. ' section_id: ' . $this->get_section_id() . PHP_EOL
+					. ' mode: ' . $this->get_mode()
 					, logger::ERROR
 				);
 				$dato = json_handler::decode($dato);
@@ -113,11 +119,15 @@ class component_geolocation extends component_common {
 			if (!is_null($dato) && !is_array($dato)) {
 				debug_log(__METHOD__
 					.' Converted non array dato to array '. PHP_EOL
-					.' dato: ' . to_string($dato)
+					.' dato: ' . to_string($dato) . PHP_EOL
+					. ' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
+					. ' section_id: ' . $this->get_section_id() . PHP_EOL
+					. ' mode: ' . $this->get_mode()
 					, logger::ERROR
 				);
 				$dato = [$dato];
 			}
+
 
 		return parent::set_dato( $dato );
 	}//end set_dato
