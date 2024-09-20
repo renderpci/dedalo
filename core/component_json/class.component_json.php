@@ -778,4 +778,59 @@ class component_json extends component_common {
 
 
 
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-save its data
+	* Note that the first action is always load dato to avoid save empty content
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// Force loads dato always !IMPORTANT
+		$dato = $this->get_dato();
+
+		if (is_array($dato)) {
+			$new_dato = [];
+			foreach ($dato as $value) {
+				// If value is a string, attempt to decode as JSON
+				if (is_string($value)) {
+					$decoded = json_decode($value);
+
+					if (json_last_error() !== JSON_ERROR_NONE) {
+						// Log error if JSON decoding fails
+						debug_log(
+							__METHOD__ . " Unable to decode JSON value from dato." . PHP_EOL
+							.' dato: ' . to_string($value) . PHP_EOL
+							.' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
+							.' section_id: ' . $this->get_section_id()
+							,logger::ERROR
+						);
+						// continue; // Skip the invalid JSON value
+						// Stop regeneration. Let admin to check invalid values
+						return false;
+					}
+
+					$new_dato[] = $decoded;
+				}else{
+					// If not a string, add the original value
+					$new_dato[] = $value;
+				}
+			}
+			// Overwrite
+			$dato = $new_dato;
+		}
+
+		// force format correctly empty data like [null] -> null
+		$this->set_dato($dato);
+
+		// Save component data
+		$this->Save();
+
+
+		return true;
+	}//end regenerate_component
+
+
+
 }//end class component_json
