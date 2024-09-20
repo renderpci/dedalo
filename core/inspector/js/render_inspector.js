@@ -122,6 +122,13 @@ const get_content_data = function(self) {
 		})
 		// fix pointer to node placeholder
 		self.paginator_container = paginator_container
+		// section_id. Create node and set pointer to paginator_container
+		paginator_container.section_id = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_id',
+			inner_html		: section.section_id,
+			parent			: paginator_container
+		})
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
