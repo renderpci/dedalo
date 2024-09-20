@@ -31,7 +31,10 @@ class db_data_check {
 
 			$response->msg .= "TEST ALL SEQUENCES IN DATABASE: ".DEDALO_DATABASE_CONN;
 
-			$ar_skip_tables = array(); // 'sqlmapfile','sqlmapoutput'
+			// skip tables
+			$ar_skip_tables = [
+				'session_data'
+			];
 
 
 			# Find and iterate all db tables
