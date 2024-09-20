@@ -98,10 +98,13 @@ class component_json extends component_common {
 
 			// old format v5
 				if (is_string($dato)) {
-					if (!$dato = json_decode($dato)) {
+
+					$decoded = json_decode($dato);
+					if (json_last_error() !== JSON_ERROR_NONE) {
 						debug_log(__METHOD__
 							. " Error. Only valid JSON is accepted as dato " . PHP_EOL
-							. ' dato: ' . to_string($dato)
+							. ' dato: ' . to_string($dato) . PHP_EOL
+							.' decoded: ' . to_string($decoded)
 							, logger::ERROR
 						);
 						return false;
