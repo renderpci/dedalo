@@ -136,102 +136,94 @@ class tool_import_files extends tool_common {
 		) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
-		switch ($model) {
-			case 'component_image':
 
-				// custom_target_quality
-					$custom_target_quality = $add_file_options->quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
 
-				// logger activity. Note that this log is here because generic service_upload
-				// is not capable to know if the uploaded file is the last one in a chunked file scenario
-					// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
-					$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-					$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
-					logger::$obj['activity']->log_message(
-						'UPLOAD COMPLETE',
-						logger::INFO,
-						$target_component_tipo,
-						NULL,
-						[
-							'msg'			=> 'Upload file complete. Processing uploaded file',
-							'file_data'		=> $safe_file_data
-							// 'file_name'	=> $file_data->name,
-							// 'file_size'	=> format_size_units($file_data->size),
-							// 'time_sec'	=> $file_data->time_sec,
-							// 'f_error'	=> $file_data->error || null
-						],
-						logged_user_id() // int
+		// logger activity. Note that this log is here because generic service_upload
+		// is not capable to know if the uploaded file is the last one in a chunked file scenario
+			// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
+			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+			$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
+			logger::$obj['activity']->log_message(
+				'UPLOAD COMPLETE',
+				logger::INFO,
+				$target_component_tipo,
+				NULL,
+				[
+					'msg'			=> 'Upload file complete. Processing uploaded file',
+					'file_data'		=> $safe_file_data
+					// 'file_name'	=> $file_data->name,
+					// 'file_size'	=> format_size_units($file_data->size),
+					// 'time_sec'	=> $file_data->time_sec,
+					// 'f_error'	=> $file_data->error || null
+				],
+				logged_user_id() // int
+			);
+
+		// component_image
+			$component = component_common::get_instance(
+				$model,
+				$target_component_tipo,
+				$current_section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+		// get the quality specified if is not set get the original quality.
+			$custom_target_quality = $add_file_options->quality ?? $component->get_original_quality();
+
+		// fix current component target quality (defines the destination directory for the file, like 'original')
+			$component->set_quality($custom_target_quality);
+
+		// add file
+			$add_file = $component->add_file($add_file_options);
+			if ($add_file->result===false) {
+				// $response->msg .= $add_file->msg;
+				// return $response;
+
+				// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->errors[] = $add_file->msg;
+					// send to output
+					print_cli(common::$pdata);
+				}
+				return false;
+			}
+
+		// post processing file (add_file returns final renamed file with path info)
+			$process_file = $component->process_uploaded_file(
+				$add_file->ready,
+				null
+			);
+			if ($process_file->result===false) {
+				// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
+				// return $response;
+
+				// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->errors[] = $process_file->msg;
+					// send to output
+					print_cli(common::$pdata);
+				}
+				return false;
+			}
+
+		// Delete the thumbnail copy
+			$user_id		= logged_user_id();
+			$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
+
+			$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
+			$original_file_thumb	= $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
+
+			if (file_exists($original_file_thumb)) {
+				if(!unlink($original_file_thumb)){
+					debug_log(__METHOD__
+						." Thumb Delete ERROR of: ".to_string($original_file_thumb)
+						, logger::ERROR
 					);
-
-				// component_image
-					$component = component_common::get_instance(
-						$model,
-						$target_component_tipo,
-						$current_section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_section_tipo
-					);
-
-				// fix current component target quality (defines the destination directory for the file, like 'original')
-					$component->set_quality($custom_target_quality);
-
-				// add file
-					$add_file = $component->add_file($add_file_options);
-					if ($add_file->result===false) {
-						// $response->msg .= $add_file->msg;
-						// return $response;
-
-						// CLI process data
-						if ( running_in_cli()===true ) {
-							common::$pdata->errors[] = $add_file->msg;
-							// send to output
-							print_cli(common::$pdata);
-						}
-						return false;
-					}
-
-				// post processing file (add_file returns final renamed file with path info)
-					$process_file = $component->process_uploaded_file(
-						$add_file->ready,
-						null
-					);
-					if ($process_file->result===false) {
-						// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
-						// return $response;
-
-						// CLI process data
-						if ( running_in_cli()===true ) {
-							common::$pdata->errors[] = $process_file->msg;
-							// send to output
-							print_cli(common::$pdata);
-						}
-						return false;
-					}
-
-				// Delete the thumbnail copy
-					$user_id		= logged_user_id();
-					$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
-
-					$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
-					$original_file_thumb	= $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
-
-					if (file_exists($original_file_thumb)) {
-						if(!unlink($original_file_thumb)){
-							debug_log(__METHOD__
-								." Thumb Delete ERROR of: ".to_string($original_file_thumb)
-								, logger::ERROR
-							);
-							return false;
-						}
-					}
-				break;
-
-			default:
-				debug_log(__METHOD__." Error. Media type not allowed ".to_string(), logger::ERROR);
-				break;
-		}
-
+					return false;
+				}
+			}
 
 		return true;
 	}//end set_media_file
