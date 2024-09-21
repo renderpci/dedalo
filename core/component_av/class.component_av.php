@@ -11,8 +11,6 @@ class component_av extends component_media_common implements component_media_int
 	/**
 	* CLASS VARS
 	*/
-		// string id .file name formatted as 'tipo'-'order_id' like dd732-1
-		// public $video_url;
 
 
 
@@ -156,17 +154,6 @@ class component_av extends component_media_common implements component_media_int
 			}else{
 				$current_url = '';
 			}
-
-		// data item
-			// $item  = new stdClass();
-			// 	$item->posterframe_url = $this->get_posterframe_url(
-			// 		true, // bool test_file
-			// 		false, // bool absolute
-			// 		false // bool avoid_cache
-			// 	);
-			// 	$item->url = $this->quality_file_exist( $quality )
-			// 		? $this->get_url()
-			// 		: null;
 
 		// label
 			$label = $this->get_label();
@@ -459,104 +446,6 @@ class component_av extends component_media_common implements component_media_int
 
 
 	/**
-	* GET_ORIGINAL_FILE_PATH
-	* Returns the full path of the original file (with no default extension) if exists
-	* If a file with an extension other than DEDALO_xxx_EXTENSION is uploaded, it is converted to DEDALO_xxx_EXTENSION.
-	* The original files are saved renamed but keeping the ending. This function is used to locate them by checking if
-	* there is more than one.
-	* @param string $quality
-	* @return string|null $result
-	*/
-		// public function get_original_file_path(string $quality) : ?string {
-
-		// 	$result = null;
-
-		// 	// store initial_quality
-		// 		// $initial_quality = $this->get_quality();
-
-		// 	// quality. Changes current component quality temporally
-		// 		// $this->set_quality($quality);
-
-		// 	// directory do not exists case
-		// 		$target_dir = $this->get_media_path_dir($quality);
-		// 		if( !file_exists($target_dir) ) {
-		// 			debug_log(__METHOD__.
-		// 				" Directory '$target_dir' do not exists !. quality: ".to_string($quality),
-		// 				logger::WARNING
-		// 			);
-		// 			return null;
-		// 		}
-
-		// 	// ar_originals
-		// 		$ar_originals	= [];
-		// 		$findme			= $this->get_id() . '.';
-		// 		if ($handle = opendir($target_dir)) {
-
-		// 			while (false !== ($file = readdir($handle))) {
-
-		// 				// is dir case (DVD files)
-		// 				if($this->get_id() == $file && is_dir($target_dir.'/'.$file)){
-
-		// 					// DES
-		// 						// $dvd_folder = $target_dir.'/'.$file;
-		// 						// # dvd_folder dir set permissions 0777
-
-		// 						// $stat = stat($dvd_folder);
-		// 						// 	//dump($stat['uid'], ' stat: '.posix_geteuid() ) ; die();
-
-		// 						// if(posix_geteuid() != $stat['uid']){
-		// 						// 	chown($dvd_folder, posix_geteuid());
-		// 						// }
-
-		// 						// $wantedPerms = 0777;
-		// 						// $actualPerms = fileperms($dvd_folder);
-		// 						// if($actualPerms < $wantedPerms) {
-		// 						// 	$chmod = chmod($dvd_folder, $wantedPerms);
-		// 						// 	if(!$chmod) die(" Sorry. Error on set valid permissions to directory for \"$dvd_folder\".  ") ;
-		// 						// }
-
-		// 					$ar_originals[] = $file;
-		// 					continue;
-		// 				}
-
-		// 				// note that '.' and '..' is returned even
-		// 				if( strpos($file, $findme)!==false ) {
-		// 					$ar_originals[] = $file;
-		// 				}
-		// 			}
-		// 			closedir($handle);
-		// 		}
-
-		// 	$n = count($ar_originals);
-		// 	if ($n===0) {
-		// 		// nothing found case
-		// 	}elseif($n===1) {
-		// 		// OK. File found
-		// 		#$path = $_FILES['image']['name'];
-		// 		#$ext = pathinfo($ar_originals[0], PATHINFO_EXTENSION);
-		// 		$result = $target_dir.'/'.$ar_originals[0];
-		// 	}else{
-		// 		// Error. More than one original found
-		// 			debug_log(__METHOD__
-		// 				." ERROR (DEBUG ONLY): Current quality have more than one file." . PHP_EOL
-		// 				.' ar_originals: ' . to_string($ar_originals)
-		// 				, logger::ERROR
-		// 			);
-		// 			if(SHOW_DEBUG===true) {
-		// 				dump($ar_originals, "ar_originals ++++++++++++++++++ ".to_string($ar_originals));
-		// 			}
-		// 	}
-
-		// 	// restore component quality
-		// 		// $this->set_quality($initial_quality);
-
-
-		// 	return $result;
-		// }//end get_original_file_path
-
-
-
-	/**
 	* GET_VIDEO SIZE
 	* Calculate the current quality file size in the more human readable unit (kilobytes, megabytes, et.)
 	* @param string $quality = null
@@ -692,33 +581,6 @@ class component_av extends component_media_common implements component_media_int
 
 		// files remove
 			$result = parent::remove_component_media_files($ar_quality);
-			// des
-				// foreach ($ar_quality as $current_quality) {
-
-				// 	// media_path
-				// 		$media_path = $this->get_video_path($current_quality);
-				// 		if (!file_exists($media_path)) continue; # Skip
-
-				// 	// delete dir
-				// 		$folder_path_del = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $current_quality . '/deleted';
-				// 		if( !is_dir($folder_path_del) ) {
-				// 			$create_dir = mkdir($folder_path_del, 0777, true);
-				// 			if(!$create_dir) {
-				// 				debug_log(__METHOD__." Error on read or create directory \"deleted\". Permission denied. ".to_string($folder_path_del), logger::ERROR);
-				// 				return false;
-				// 			}
-				// 		}
-
-				// 	// move/rename file
-				// 		$reelID				= $this->get_id();
-				// 		$media_path_moved	= $folder_path_del . "/$reelID" . '_deleted_' . $date . '.' . $this->get_extension();
-				// 		if( !rename($media_path, $media_path_moved) ) {
-				// 			debug_log(__METHOD__." Error on move files to folder \"deleted\" . Permission denied . The files are not deleted ".to_string($media_path_moved), logger::ERROR);
-				// 			return false;
-				// 		}
-
-				// 	debug_log(__METHOD__." Moved file \n$media_path to \n$media_path_moved ", logger::DEBUG);
-				// }//end foreach ($ar_quality as $current_quality)
 
 		// posterframe remove (default is true)
 			if ($remove_posterframe===true) {
@@ -1185,94 +1047,6 @@ class component_av extends component_media_common implements component_media_int
 			$response->result	= true;
 			$response->msg		= 'File deleted successfully. ' . $quality;
 		}
-
-		// DES
-			// // short vars
-			// 	$id					= $this->get_id();
-			// 	$file_name			= $this->get_target_filename(); // ex. rsc15_rsc78_45.mp4
-			// 	$folder_path_del	= DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER .'/'. $quality . '/deleted';
-
-			// // file_path
-			// 	$file_path = ($quality==='original')
-			// 			? $this->get_original_file_path($quality)
-			// 			: $this->get_media_filepath($quality);
-
-			// if(!file_exists($file_path)) {
-
-			// 	$response->msg .= PHP_EOL . 'File not found';
-			// 	debug_log(__METHOD__." Error deleting file. File not found: ".to_string($file_path), logger::ERROR);
-			// }else{
-
-			// 	try{
-
-			// 		// delete folder. Check exists
-			// 			if( !is_dir($folder_path_del) ) {
-			// 				$create_dir = mkdir($folder_path_del, 0777,true);
-			// 				if(!$create_dir) {
-			// 					$response->msg .= PHP_EOL . 'Error on read or create directory "deleted". Permission denied . The files are not deleted';
-			// 					return $response;
-			// 				}
-			// 			}
-
-			// 		// delete folder set permissions
-			// 			$wantedPerms	= 0777;
-			// 			$actualPerms	= fileperms($folder_path_del);
-			// 			if($actualPerms < $wantedPerms) chmod($folder_path_del, $wantedPerms);
-
-			// 		// move / rename file
-			// 			$file_base_name	= pathinfo($file_path, PATHINFO_BASENAME); // Like rsc15_rsc78_45.mov._original
-			// 			$file_ext		= pathinfo($file_path, PATHINFO_EXTENSION);// Like mov
-			// 			$target_name	= $folder_path_del . "/$file_base_name" . '_deleted_' . date("Y-m-dHi") . '.' . $file_ext;
-			// 			if(!rename($file_path, $target_name)){
-			// 				$response->msg .= PHP_EOL . 'Error on move files to folder "deleted" . Permission denied . The files are not deleted';
-			// 				return $response;
-			// 			}
-
-			// 		// delete temp sh file
-			// 			$tmp_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER . "/tmp/".$quality.'_'.$id.'.sh';
-			// 			if(file_exists($tmp_file)) {
-			// 				$del_sh = unlink($tmp_file);
-			// 				if(!$del_sh) {
-			// 					$response->msg .= PHP_EOL . 'Error on delete temp file . Temp file is not deleted';
-			// 					return $response;
-			// 				}
-			// 			}
-
-			// 		// delete posterframe if media deleted is quality default
-			// 			if($quality===DEDALO_AV_QUALITY_DEFAULT) {
-			// 				$poster_file = DEDALO_MEDIA_PATH . DEDALO_AV_FOLDER ."/posterframe/{$id}.jpg";
-			// 				if(file_exists($poster_file)) {
-			// 					unlink($poster_file);
-			// 				}
-			// 			}
-
-			// 		// logger activity : QUE(action normalized like 'LOAD EDIT'), LOG LEVEL(default 'logger::INFO'), TIPO(like 'dd120'), DATOS(array of related info)
-			// 			logger::$obj['activity']->log_message(
-			// 				'DELETE FILE',
-			// 				logger::INFO,
-			// 				$this->tipo,
-			// 				NULL,
-			// 				[
-			// 					'msg'			=> 'Deleted av file (file is renamed and moved to delete folder)',
-			// 					'tipo'			=> $this->tipo,
-			// 					'section_tipo'	=> $this->section_tipo,
-			// 					'section_id'	=> $this->section_id,
-			// 					'top_id'		=> TOP_ID ?? null,
-			// 					'top_tipo'		=> TOP_TIPO ?? null,
-			// 					'id'		=> $id,
-			// 					'quality'		=> $quality
-			// 				]
-			// 			);
-
-			// 		// response OK
-			// 			$response->result	= true;
-			// 			$response->msg		= 'File deleted successfully. ' . $file_name;
-
-			// 	} catch (Exception $e) {
-			// 		$response->msg .= PHP_EOL . $e->getMessage();
-			// 	}
-			// }//end if(!file_exists($file))
-
 
 		return $response;
 	}//end delete_file
