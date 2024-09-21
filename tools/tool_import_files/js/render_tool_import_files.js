@@ -433,8 +433,8 @@ const render_options_container = function (self, content_data) {
 				parent			: options_container
 			})
 			const tool_name_match_label = ui.create_dom_element({
-				element_type	: 'span',
-				class_name		: 'label',
+				element_type	: 'div',
+				class_name		: 'label match',
 				inner_html		: self.get_tool_label('match_name_with_previous_upload') || 'Matching the name with a previous upload:',
 				parent			: tool_name_match_options
 			})
