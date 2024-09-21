@@ -554,7 +554,7 @@ class tool_import_files extends tool_common {
 										$match_options->target_section_tipo	= $target_section_tipo;
 										$match_options->target_filename		= $target_filename;
 
-									$ar_target_section_id = tool_import_files::get_image_section_match_from_souce( $match_options );
+									$ar_target_section_id = tool_import_files::get_media_section_match_from_souce( $match_options );
 
 								}
 								// get the filename and match directly into the image section
@@ -566,7 +566,7 @@ class tool_import_files extends tool_common {
 										$match_options->target_filename		= $target_filename;
 										$match_options->full_name			= $current_file_name;
 
-									$ar_target_section_id = tool_import_files::get_image_section_match( $match_options );
+									$ar_target_section_id = tool_import_files::get_media_section_match( $match_options );
 								}
 
 								// in both cases is not possible close the search to 1 record
@@ -843,16 +843,16 @@ class tool_import_files extends tool_common {
 
 
 	/**
-	* GET_IMAGE_SECTION_MATCH_FROM_SOUCE
-	* check the filename uploaded with the previous names saved into image section
-	* 1 get the target section to get all images into the section_id (as tch 11)
+	* GET_MEDIA_SECTION_MATCH_FROM_SOUCE
+	* check the filename uploaded with the previous names saved into media sections (image, av, document)
+	* 1 get the target section to get all media files into the section_id (as tch11)
 	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
 	* 3 match the filename without the extensions 11-1 === 11-1
 	* return all section_id of the image section that filename match.
 	* @param  object $options
 	* @return array $match_section_id
 	*/
-	public static function get_image_section_match_from_souce( object $options ) : array {
+	public static function get_media_section_match_from_souce( object $options ) : array {
 
 		$section_id				= $options->section_id;
 		$section_tipo			= $options->section_tipo;
@@ -907,17 +907,20 @@ class tool_import_files extends tool_common {
 
 
 		return $match_section_id;
-	}//end get_image_section_match_from_souce
+	}//end get_media_section_match_from_souce
 
 
 
 
 	/**
-	* GET_IMAGE_SECTION_MATCH
+	* GET_MEDIA_SECTION_MATCH
+	* uses the name of the uploaded file as: 7ftTgmN-Mn.tiff | 456Mnc.mov
+	* remove the extension but use the '.' to close match in the search
+	* the sections that match will returned as array of his section_id
 	* @param  object $options
 	* @return array $match_section_id
 	*/
-	public static function get_image_section_match( object $options ) : array {
+	public static function get_media_section_match( object $options ) : array {
 
 		// short vars
 		$target_tipo			= $options->target_filename->tipo; // string tipo
@@ -958,17 +961,18 @@ class tool_import_files extends tool_common {
 
 
 		// search exec
-		$search				= search::get_instance($sqo);
-		$records_data		= $search->search();
-		$ar_current_dato	= $records_data->ar_records;
+			$search				= search::get_instance($sqo);
+			$records_data		= $search->search();
+			$ar_current_dato	= $records_data->ar_records;
 
+		// stored the section_id of the match sections.
 		$match_section_id = [];
 		foreach ($ar_current_dato as $section_data) {
 			$match_section_id[] = $section_data->section_id;
 		}
 
 		return $match_section_id;
-	}//end get_image_section_match
+	}//end get_media_section_match
 
 
 
