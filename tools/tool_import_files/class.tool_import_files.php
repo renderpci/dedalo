@@ -247,6 +247,10 @@ class tool_import_files extends tool_common {
 				$dd_date = ImageMagick::get_date_time_original($source_full_path);
 				break;
 
+			case 'component_av':
+				$dd_date = Ffmpeg::get_date_time_original($source_full_path);
+				break;
+
 			case 'component_pdf':
 				$command =  MAGICK_PATH. '/pdfinfo -rawdates ' . $source_full_path . ' | grep -i CreationDate';
 
