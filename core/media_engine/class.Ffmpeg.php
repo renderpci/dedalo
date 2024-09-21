@@ -643,6 +643,7 @@ final class Ffmpeg {
 					. ' media_streams: ' . to_string($media_streams)
 					, logger::WARNING
 				);
+				$video_stream = null;
 			}
 
 
