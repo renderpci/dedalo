@@ -247,6 +247,42 @@ class tool_import_files extends tool_common {
 				$dd_date = ImageMagick::get_date_time_original($source_full_path);
 				break;
 
+			case 'component_pdf':
+				$command =  MAGICK_PATH. '/pdfinfo -rawdates ' . $source_full_path . ' | grep -i CreationDate';
+
+				// exec command
+				$result = exec($command.' 2>&1', $output, $worked_result);
+				// error case
+					if ($worked_result!=0) {
+						debug_log(__METHOD__
+							. ' exec command bad result' . PHP_EOL
+							. ' command:' . to_string($command) . PHP_EOL
+							. ' worked_result:' . to_string($worked_result) . PHP_EOL
+							. ' result: ' .to_string($result) . PHP_EOL
+							. ' output: ' . to_string($output). PHP_EOL
+							, logger::WARNING
+						);
+						if(SHOW_DEBUG===true) {
+							$bt = debug_backtrace();
+							dump($bt[1], ' bt[1] -- source_full_path: ++ '.to_string($source_full_path));
+						}
+						if (stripos(to_string($output), 'ERROR:')!==false) {
+							break;
+						}
+					}
+
+				// PDF date format is:
+				// D:20110816234339-04'00'
+				// all is optional except the first 4 digits that are the year
+				$regex = '/(D:)?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(-|\+|Z{1})?(\d{2})?(\'{1})?(\d{2})?(\'{1})?/';
+				preg_match($regex, $result, $matches);
+
+				$dd_date		= new dd_date();
+				if(isset($matches[2])) $dd_date->set_year((int)$matches[2]);
+				if(isset($matches[3])) $dd_date->set_month((int)$matches[3]);
+				if(isset($matches[4])) $dd_date->set_day((int)$matches[4]);
+
+				break;
 			default:
 				debug_log(__METHOD__
 					. " Error. get_media_file_date . Model is not defined ". PHP_EOL
@@ -608,7 +644,6 @@ class tool_import_files extends tool_common {
 								}
 								$section_id = (int)$_base_section_id;
 								break;
-
 							case 'named':
 								// String case like ánfora.jpg
 								// Look already imported files
