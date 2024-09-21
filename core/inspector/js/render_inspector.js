@@ -9,7 +9,7 @@
 	import {create_source} from '../../common/js/common.js'
 	import {data_manager, download_data} from '../../common/js/data_manager.js'
 	import {event_manager} from '../../common/js/event_manager.js'
-	import * as instances from '../../common/js/instances.js'
+	import {get_instance} from '../../common/js/instances.js'
 	import {render_node_info} from '../../common/js/utils/notifications.js'
 	import {open_window, object_to_url_vars} from '../../common/js/utils/index.js'
 	import {open_tool} from '../../../tools/tool_common/js/tool_common.js'
@@ -122,6 +122,13 @@ const get_content_data = function(self) {
 		})
 		// fix pointer to node placeholder
 		self.paginator_container = paginator_container
+		// section_id. Create node and set pointer to paginator_container
+		paginator_container.section_id = ui.create_dom_element({
+			element_type	: 'div',
+			class_name		: 'section_id',
+			inner_html		: section.section_id,
+			parent			: paginator_container
+		})
 
 	// buttons container
 		const buttons_container = ui.create_dom_element({
@@ -1102,7 +1109,7 @@ const render_relation_list = function(self) {
 
 			const relation_list	= (instance && instance.model==='relation_list')
 				? instance // pagination case do not need to init relation_list
-				: await instances.get_instance({
+				: await get_instance({
 					model			: 'relation_list',
 					tipo			: relation_list_tipo, // self.caller.context['relation_list'],
 					section_tipo	: self.caller.section_tipo,
@@ -1238,7 +1245,7 @@ export const load_time_machine_list = async function(self) {
 	// even if user close and re-open the time_machine_list inspector tab
 
 	// create and render a service_time_machine instance
-		const service_time_machine	= await instances.get_instance({
+		const service_time_machine	= await get_instance({
 			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,
@@ -1392,7 +1399,7 @@ export const load_component_history = async function(self, component) {
 	// even if user close and re-open the component_history inspector tab
 
 	// create and render a component_history instance
-		const service_time_machine	= await instances.get_instance({
+		const service_time_machine	= await get_instance({
 			model			: 'service_time_machine',
 			section_tipo	: self.caller.section_tipo,
 			section_id		: self.caller.section_id,

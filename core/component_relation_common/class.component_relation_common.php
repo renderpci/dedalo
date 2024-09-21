@@ -563,7 +563,7 @@ class component_relation_common extends component_common {
 					}
 				}
 			}//end foreach ($locator_column_obj as $column_pos => $current_column_obj)
-		}
+		}//end foreach($data as $current_key => $locator)
 
 		// get the total of locators of the data, it will be use to render the rows separated.
 			$locator_count	= sizeof($data);
@@ -1508,8 +1508,7 @@ class component_relation_common extends component_common {
 				. " Expected q type is object " . PHP_EOL
 				. ' type: ' . gettype($q) . PHP_EOL
 				. ' q: ' . json_encode($q) . PHP_EOL
-				. ' query_object: ' . to_string($query_object) . PHP_EOL
-				. ' seq: ' . implode(PHP_EOL.' - ', get_bactrace_sequence())
+				. ' query_object: ' . to_string($query_object)
 				, logger::WARNING
 			);
 		}

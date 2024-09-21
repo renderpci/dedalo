@@ -79,6 +79,72 @@ class component_info extends component_common {
 	}//end get_dato
 
 
+
+	/**
+	* GET_DATO_PARSED
+	* @return array|null $dato_parsed
+	*/
+	public function get_dato_parsed() : ?array {
+
+		// widgets check
+			$widgets = $this->get_widgets();
+			if (empty($widgets) || !is_array($widgets)) {
+				debug_log(__METHOD__
+					." Empty defined widgets for ".get_called_class()." : ". PHP_EOL
+					.' label: ' .$this->label . PHP_EOL
+					.' tipo: ' .$this->tipo . PHP_EOL
+					.' widgets:' . to_string($widgets)
+					, logger::ERROR
+				);
+
+				return null;
+			}
+
+		// the component info dato will be the all widgets data
+			$dato_parsed = [];
+
+		// each widget will be created and compute its own data
+			foreach ($widgets as $widget_obj) {
+
+				$widget_options = new stdClass();
+					$widget_options->section_tipo		= $this->get_section_tipo();
+					$widget_options->section_id			= $this->get_section_id();
+					$widget_options->lang				= DEDALO_DATA_LANG;
+					// $widget_options->component_info	= $this;
+					$widget_options->widget_name		= $widget_obj->widget_name;
+					$widget_options->path				= $widget_obj->path;
+					$widget_options->ipo				= $widget_obj->ipo;
+					$widget_options->mode				= $this->get_mode();
+
+				// instance the current widget
+					$widget = widget_common::get_instance($widget_options);
+
+				// Widget data
+					$widget_value = $widget->get_dato_parsed();
+					if (!empty($widget_value)) {
+						$dato_parsed = array_merge($dato_parsed, $widget_value);
+					}
+			}//end foreach ($widgets as $widget)
+
+		return $dato_parsed;
+	}//end get_dato_parsed
+
+
+
+	/**
+	* GET_DATO_FULL
+	* @return object|null $dato_full
+	* 	sample: [{"widget":"get_archive_weights","key":0,"id":"media_weight","value":2}]
+	*/
+	public function get_dato_full() {
+
+		$dato_full			= $this->get_dato();
+
+		return $dato_full;
+	}//end get_dato_full
+
+
+
 	/**
 	* GET_DB_DATA
 	* @return
@@ -417,6 +483,154 @@ class component_info extends component_common {
 		return $data;
 	}//end get_calculation_data
 
+
+
+	/**
+	* GET_GRID_VALUE
+	* Get the data parsed of the widgets.
+	* Component info only process breakdown situation because the widget could process multiple data output!
+	* Widget use the ipo (input, process, output) object to define how process the data
+	* grid value use the `output` definition to create columns for every value
+	* The column will named as the output id as label (TODO, add tipo for the label of the column)
+	* By default the widget will return his data, but is possible to overwrite it with get_dato_parsed() in the widget
+	* @param object|null $ddo = null
+	* @return dd_grid_cell_object $dd_grid_cell_object
+	*/
+	public function get_grid_value(object $ddo=null) : dd_grid_cell_object {
+
+		// set the separator if the ddo has a specific separator, it will be used instead the component default separator
+			$fields_separator	= $ddo->fields_separator ?? null;
+			$records_separator	= $ddo->records_separator ?? null;
+			$format_columns		= $ddo->format_columns ?? null;
+			$class_list			= $ddo->class_list ?? null;
+
+			if(isset($this->column_obj)){
+				$column_obj = $this->column_obj;
+			}else{
+				$column_obj = new stdClass();
+					$column_obj->id = $this->section_tipo.'_'.$this->tipo;
+			}
+
+		// short vars
+			$data		= $this->get_dato_parsed();// use data parsed to be processed by the widget if needed. see mdcat->sum_dates
+			$label		= $this->get_label();
+			$properties	= $this->get_properties();
+			$widgets 	= $this->get_widgets();
+
+		$ar_cells		= [];
+		$ar_columns_obj	= [];
+		$ar_columns		= [];
+		$column_count	= 0;
+
+		// get the widget to use his IPO definition and use the output map to create the columns
+		// every output object will create a column
+		foreach ($widgets as $item) {
+			foreach ($item->ipo as $current_ipo) {
+				// get output
+				foreach ($current_ipo->output as $data_map) {
+
+					$column_count++;
+					$current_id	= $data_map->id;
+					// get the data of the widget to match with the column
+					$found = array_find( $data, function($item) use($current_id){
+						return $item->id===$current_id;
+					});
+					$value	= is_object( $found )
+						? $found->value
+						: null;
+
+					if( is_object( $value ) ){
+						$value= json_encode($value);
+					}
+
+					$value	= [$value];
+
+					// create the new column obj id getting the previous id and add the new path
+					// it will set to the column_obj for the next loop
+					// note that id will use to calculate the column label
+					// (TODO: add ontology labels into output definition for translation)
+					$current_column_obj = new stdClass();
+						$current_column_obj->id		= $column_obj->id.'_widget_'. str_replace('_', ' ', $current_id);
+						$current_column_obj->group	= $column_obj->id.'_widget_'.$this->tipo;
+
+					$ar_columns_obj[] = $current_column_obj;
+
+					// records_separator
+						$records_separator = isset($records_separator)
+							? $records_separator
+							: (isset($properties->records_separator)
+								? $properties->records_separator
+								: ' | ');
+
+					// fallback value. Overwrite in translatable components like input_text or text_area
+						$fallback_value = $value ?? null;
+
+					// dd_grid_cell_object
+						$dd_grid_cell_object = new dd_grid_cell_object();
+							// $dd_grid_cell_object->set_id( $column_obj->id.'_'.$current_id );
+							$dd_grid_cell_object->set_type('column');
+							$dd_grid_cell_object->set_label($current_id);
+							$dd_grid_cell_object->set_cell_type('text');
+
+							$dd_grid_cell_object->set_ar_columns_obj( [$current_column_obj] );
+							if(isset($class_list)){
+								$dd_grid_cell_object->set_class_list($class_list);
+							}
+							$dd_grid_cell_object->set_records_separator($records_separator);
+							$dd_grid_cell_object->set_value($value);
+							$dd_grid_cell_object->set_fallback_value($fallback_value);
+
+
+					// store the columns into the full columns array
+					$ar_columns[] = $dd_grid_cell_object;
+				}
+			}
+		}
+
+		// fields_separator
+			$fields_separator = isset($fields_separator)
+				? $fields_separator
+				: (isset($properties->fields_separator)
+					? $properties->fields_separator
+					: ', ');
+
+		// records_separator
+			$records_separator = isset($records_separator)
+				? $records_separator
+				: (isset($properties->records_separator)
+					? $properties->records_separator
+					: ' | ');
+
+		// fallback value. Overwrite in translatable components like input_text or text_area
+			$fallback_value = $data ?? null;
+
+		// dd_grid_cell_object
+			$value = new dd_grid_cell_object();
+				$value->set_type('column');
+				$value->set_row_count(1);
+				$value->set_column_count($column_count);
+				$value->set_label($label);
+				$value->set_ar_columns_obj( $ar_columns_obj );
+				if(isset($class_list)){
+					$value->set_class_list($class_list);
+				}
+				$value->set_fields_separator($fields_separator);
+				$value->set_records_separator($records_separator);
+				$value->set_value($ar_columns);
+
+
+		return $value;
+	}//end get_grid_value
+
+
+	/**
+	* GET_GRID_FLAT_VALUE
+	* @return
+	*/
+	public function get_grid_flat_value(object $ddo=null) : dd_grid_cell_object {
+
+		return $this->get_grid_value($ddo);
+	}//end get_grid_flat_value
 
 
 }//end class component_info

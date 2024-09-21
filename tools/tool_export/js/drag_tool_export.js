@@ -114,7 +114,7 @@ export const on_drop = function(container, event) {
 
 			// Update the ddo_export. Move to the new array position
 				const from_index	= self.ar_ddo_to_export.findIndex(el => el.id===dragged.ddo.id)
-				const to_index		= [...element.parentNode.children].indexOf(dragged) // exclude title node
+				const to_index		= [...dragged.parentNode.children].indexOf(dragged) // exclude title node
 				// remove
 				const item_moving_ddo = self.ar_ddo_to_export.splice(from_index, 1)[0];
 				// add
