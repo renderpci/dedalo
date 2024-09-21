@@ -6,6 +6,7 @@
 
 // import
 	import {event_manager} from '../../common/js/event_manager.js'
+	import {dd_request_idle_callback} from '../../common/js/events.js'
 	import {common} from '../../common/js/common.js'
 	import {
 		render_inspector,
@@ -72,19 +73,30 @@ inspector.prototype.init = async function(options) {
 
 	// events
 		// render_ section
-			self.events_tokens.push(
-				event_manager.subscribe('render_' + self.caller.id, fn_update_section_info)
-			)
-			function fn_update_section_info() {
+			const fn_update_section_info = () => {
+				// section is inspector caller
+				const section = self.caller
+				// reset actived_component
 				self.actived_component = null
+				// update section info
 				render_section_info(self)
 				// time_machine_list load info
 				load_time_machine_list(self)
 				// component_history remove content id exists
 				load_component_history(self, null)
 				// selection info. Display current selected component label as 'Description'
-				self.selection_info_node.update_label(self.caller)
+				self.selection_info_node.update_label(section)
+				// section_id (updates section id value in inspector paginator if changes)
+				if (section.section_id!==self.paginator_container.section_id.innerHTML) {
+					self.paginator_container.section_id.innerHTML = section.section_id ?? '';
+				}
 			}
+			const render_handler = () => {
+				dd_request_idle_callback(fn_update_section_info)
+			}
+			self.events_tokens.push(
+				event_manager.subscribe('render_' + self.caller.id, render_handler)
+			)
 		// activate_component (when user focus it in DOM)
 			self.events_tokens.push(
 				event_manager.subscribe('activate_component', fn_activate_component)

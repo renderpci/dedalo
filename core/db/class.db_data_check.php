@@ -27,16 +27,17 @@ class db_data_check {
 			$server_version			= pg_fetch_result($result_v, 0, 'server_version');
 			$ar_parts				= explode('.', $server_version);
 			$server_major_version	= (int)$ar_parts[0];
-				#dump($server_major_version, ' server_version ++ '.to_string());
 
 			$response->msg .= "TEST ALL SEQUENCES IN DATABASE: ".DEDALO_DATABASE_CONN;
 
-			$ar_skip_tables = array(); // 'sqlmapfile','sqlmapoutput'
+			// skip tables
+			$ar_skip_tables = [
+				'session_data'
+			];
 
-
-			# Find and iterate all db tables
-			$sql 	= " SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name ASC ";
-			$result = JSON_RecordObj_matrix::search_free($sql);
+			// Find and iterate all db tables
+			$sql	= " SELECT table_name FROM information_schema.tables WHERE table_schema='public' ORDER BY table_name ASC ";
+			$result	= JSON_RecordObj_matrix::search_free($sql);
 			while ($rows = pg_fetch_assoc($result)) {
 
 				$table_name = $rows['table_name'];
@@ -66,7 +67,7 @@ class db_data_check {
 					$search_table	= $table_name."_id_seq";
 					$sql			= " SELECT last_value, start_value FROM $search_table ; ";
 				}
-				$result_seq 	= JSON_RecordObj_matrix::search_free($sql);
+				$result_seq = JSON_RecordObj_matrix::search_free($sql);
 				if (pg_num_rows($result_seq) === 0) {
 					debug_log(__METHOD__
 						." Warning. {$table_name}_id_seq not found in $search_table "
@@ -74,8 +75,8 @@ class db_data_check {
 					);
 					continue;	// Skip empty tables
 				}
-				$last_value 	= pg_fetch_result($result_seq, 0, 'last_value');
-				$start_value 	= pg_fetch_result($result_seq, 0, 'start_value');
+				$last_value		= pg_fetch_result($result_seq, 0, 'last_value');
+				$start_value	= pg_fetch_result($result_seq, 0, 'start_value');
 
 				$response->values[] = (object)[
 					'table_name'	=> $table_name,
@@ -118,7 +119,7 @@ class db_data_check {
 
 		} catch (Exception $e) {
 			$response->result	= false;
-			$response->msg		= 'Caught exception: ' .  $e->getMessage();
+			$response->msg		= 'Caught exception: ' . $e->getMessage();
 			return $response;
 		}
 

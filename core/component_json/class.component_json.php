@@ -98,10 +98,13 @@ class component_json extends component_common {
 
 			// old format v5
 				if (is_string($dato)) {
-					if (!$dato = json_decode($dato)) {
+
+					$decoded = json_decode($dato);
+					if (json_last_error() !== JSON_ERROR_NONE) {
 						debug_log(__METHOD__
 							. " Error. Only valid JSON is accepted as dato " . PHP_EOL
-							. ' dato: ' . to_string($dato)
+							. ' dato: ' . to_string($dato) . PHP_EOL
+							.' decoded: ' . to_string($decoded)
 							, logger::ERROR
 						);
 						return false;
@@ -130,12 +133,12 @@ class component_json extends component_common {
 
 	/**
 	* GET_VALOR
+	* Is equal to dato in this component
+	* @return array|null $valor
 	*/
 	public function get_valor() {
-		$dato  = $this->get_dato();
-		//$valor = json_encode($dato);
 
-		$valor = $dato;
+		$valor = $this->get_dato();
 
 		return $valor;
 	}//end get_valor
@@ -165,7 +168,7 @@ class component_json extends component_common {
 
 		$valid = in_array($file_extension, $allowed_extensions);
 
-		return (bool)$valid;
+		return $valid;
 	}//end valid_file_extension
 
 
@@ -183,7 +186,10 @@ class component_json extends component_common {
 		// Default behavior is get value
 		$dato = $this->get_dato();
 
-		$value = $dato[0] ?? null;
+		$value = is_array($dato)
+			? ($dato[0] ?? null)
+			: null;
+
 		if (is_string($value)) {
 			// do not encode here
 			debug_log(__METHOD__
@@ -457,8 +463,8 @@ class component_json extends component_common {
 	* sample:
 	* {
 	*	"original_file_name": "my file name.json",
-    *	"full_file_name": "test3_test18_1.json",
-    *	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
+	*	"full_file_name": "test3_test18_1.json",
+	*	"full_file_path": "/fake_path/component_json/test3_test18_1.json"
 	* }
 	* @return object $response
 	*/
@@ -598,28 +604,6 @@ class component_json extends component_common {
 						$clone->operator	= 'IS NULL';
 						$clone->lang		= $lang;
 					$new_query_json->$logical_operator[] = $clone;
-
-				// langs check all
-					// $ar_query_object = [];
-					// $ar_all_langs 	 = common::get_ar_all_langs();
-					// $ar_all_langs[]  = DEDALO_DATA_NOLAN; // Added no lang also
-					// foreach ($ar_all_langs as $current_lang) {
-					// 	// Empty data is blank array []
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = '=';
-					// 		$clone->q_parsed = '\'[]\'';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-
-					// 	// legacy data (set as null instead [])
-					// 	$clone = clone($query_object);
-					// 		$clone->operator = 'IS NULL';
-					// 		$clone->lang 	 = $current_lang;
-
-					// 	$ar_query_object[] = $clone;
-					// }
-					// $new_query_json->$logical_operator = array_merge($new_query_json->$logical_operator, $ar_query_object);
 
 				// override
 				$query_object = $new_query_json;
@@ -791,6 +775,61 @@ class component_json extends component_common {
 
 		return $ar_operators;
 	}//end search_operators_info
+
+
+
+	/**
+	* REGENERATE_COMPONENT
+	* Force the current component to re-save its data
+	* Note that the first action is always load dato to avoid save empty content
+	* @see class.tool_update_cache.php
+	* @return bool
+	*/
+	public function regenerate_component() : bool {
+
+		// Force loads dato always !IMPORTANT
+		$dato = $this->get_dato();
+
+		if (is_array($dato)) {
+			$new_dato = [];
+			foreach ($dato as $value) {
+				// If value is a string, attempt to decode as JSON
+				if (is_string($value)) {
+					$decoded = json_decode($value);
+
+					if (json_last_error() !== JSON_ERROR_NONE) {
+						// Log error if JSON decoding fails
+						debug_log(
+							__METHOD__ . " Unable to decode JSON value from dato." . PHP_EOL
+							.' dato: ' . to_string($value) . PHP_EOL
+							.' section_tipo: ' . $this->get_section_tipo() . PHP_EOL
+							.' section_id: ' . $this->get_section_id()
+							,logger::ERROR
+						);
+						// continue; // Skip the invalid JSON value
+						// Stop regeneration. Let admin to check invalid values
+						return false;
+					}
+
+					$new_dato[] = $decoded;
+				}else{
+					// If not a string, add the original value
+					$new_dato[] = $value;
+				}
+			}
+			// Overwrite
+			$dato = $new_dato;
+		}
+
+		// force format correctly empty data like [null] -> null
+		$this->set_dato($dato);
+
+		// Save component data
+		$this->Save();
+
+
+		return true;
+	}//end regenerate_component
 
 
 
