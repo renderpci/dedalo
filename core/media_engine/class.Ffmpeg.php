@@ -1281,6 +1281,35 @@ final class Ffmpeg {
 
 
 	/**
+	* GET_DATE_TIME_ORIGINAL
+	* FFPROBE try to get date from file metadata
+	* @param string $file
+	* 	full file path
+	* @return dd_date|null $dd_date
+	* 	dd_date object
+	*/
+	public static function get_date_time_original(string $file) : ?dd_date {
+
+		$attributes = Ffmpeg::get_media_attributes( $file );
+
+		if( !isset($attributes) ){
+			return null;
+		}
+
+		//check the tags->creation_time
+		if( !isset($attributes->format->tags->creation_time) ){
+			return null;
+		}
+
+		$creation_time	= $attributes->format->tags->creation_time;
+		$dd_date		= dd_date::get_dd_date_from_timestamp($creation_time);
+
+		return $dd_date;
+	}//end get_date_time_original
+
+
+
+	/**
 	* GET_MEDIA_STREAMS
 	* @param string $source_file
 	* @return object|null $output
