@@ -312,6 +312,7 @@ const render_options_container = function (self, content_data) {
 					role				: 'component_option',
 					tipo				: self.caller.tipo,
 					map_name			: null,
+					label				: self.caller.label,
 					section_id			: 'self',
 					section_tipo		: self.caller.tipo,
 					target_section_tipo	: self.tool_config.ddo_map.find(el => el.role === 'target_component').section_tipo
