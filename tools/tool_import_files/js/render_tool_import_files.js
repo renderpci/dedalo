@@ -420,10 +420,16 @@ const render_options_container = function (self, content_data) {
 
 	// name_match previous uploaded images
 
+		// file name control
+		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
+			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode==='section')
+				? ''
+				: ' hide'
+
 		// tool_name_match_options
 			const tool_name_match_options = ui.create_dom_element({
 				element_type	: 'span',
-				class_name		: 'tool_name_match_options',
+				class_name		: 'tool_name_match_options'+class_name_configuration,
 				parent			: options_container
 			})
 			const tool_name_match_label = ui.create_dom_element({
@@ -553,11 +559,7 @@ const render_options_container = function (self, content_data) {
 					options_container.free_name_match_check_box = free_name_match_check_box
 
 
-	// file name control
-		// hide the options when the tool is caller by components, the import_mode is defined in preferences.
-			const class_name_configuration = (self.tool_config.import_mode && self.tool_config.import_mode==='section')
-				? ''
-				: ' hide'
+
 
 		// tool_configuration_options
 			const tool_configuration_options = ui.create_dom_element({
