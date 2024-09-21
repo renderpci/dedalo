@@ -302,10 +302,10 @@ const render_options_container = function (self, content_data) {
 		}//end if(ar_file_processor)
 
 	// component options to store the file, normally the component_portal,
-	// it could be defined in the preferences or could be the caller
+	// it could be defined in the preferences or it could be the caller
 		const ddo_option_components = self.tool_config.ddo_map.filter(el => el.role === 'component_option')
 
-		const option_components = (ddo_option_components)
+		const option_components = (ddo_option_components.length > 0)
 			? ddo_option_components
 			: [
 				{
