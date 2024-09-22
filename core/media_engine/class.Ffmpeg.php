@@ -643,6 +643,7 @@ final class Ffmpeg {
 					. ' media_streams: ' . to_string($media_streams)
 					, logger::WARNING
 				);
+				$video_stream = null;
 			}
 
 
@@ -849,6 +850,10 @@ final class Ffmpeg {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '936x720'
 					: '1280x720';
+			}if ($quality==='thumbnail') {
+				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
+					? floor(4 * DEDALO_IMAGE_THUMB_HEIGHT / 3).'x'.DEDALO_IMAGE_THUMB_HEIGHT
+					: floor(16 * DEDALO_IMAGE_THUMB_HEIGHT / 9).'x'.DEDALO_IMAGE_THUMB_HEIGHT; // default for 16x9
 			}else {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '540x404'
@@ -1265,7 +1270,8 @@ final class Ffmpeg {
 	* 			"major_brand": "isom",
 	* 			"minor_version": "512",
 	* 			"compatible_brands": "isomiso2avc1mp41",
-	* 			"encoder": "Lavf59.16.100"
+	* 			"encoder": "Lavf59.16.100",
+	* 			"creation_time": "2023-10-23T10:00:26.000000Z"
 	* 		}
 	* 	}
 	* }
@@ -1277,6 +1283,35 @@ final class Ffmpeg {
 
 		return $output;
 	}//end get_media_attributes
+
+
+
+	/**
+	* GET_DATE_TIME_ORIGINAL
+	* FFPROBE try to get date from file metadata
+	* @param string $file
+	* 	full file path
+	* @return dd_date|null $dd_date
+	* 	dd_date object
+	*/
+	public static function get_date_time_original(string $file) : ?dd_date {
+
+		$attributes = Ffmpeg::get_media_attributes( $file );
+
+		if( !isset($attributes) ){
+			return null;
+		}
+
+		//check the tags->creation_time
+		if( !isset($attributes->format->tags->creation_time) ){
+			return null;
+		}
+
+		$creation_time	= $attributes->format->tags->creation_time;
+		$dd_date		= dd_date::get_dd_date_from_timestamp($creation_time);
+
+		return $dd_date;
+	}//end get_date_time_original
 
 
 

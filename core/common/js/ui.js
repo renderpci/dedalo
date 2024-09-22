@@ -1265,6 +1265,7 @@ export const ui = {
 						})
 					}
 
+
 				// tool_buttons_container
 					const tool_buttons_container = ui.create_dom_element({
 						element_type	: 'div',

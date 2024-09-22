@@ -136,102 +136,94 @@ class tool_import_files extends tool_common {
 		) : bool {
 
 		$model = RecordObj_dd::get_modelo_name_by_tipo($target_component_tipo, true);
-		switch ($model) {
-			case 'component_image':
 
-				// custom_target_quality
-					$custom_target_quality = $add_file_options->quality ?? DEDALO_IMAGE_QUALITY_ORIGINAL;
 
-				// logger activity. Note that this log is here because generic service_upload
-				// is not capable to know if the uploaded file is the last one in a chunked file scenario
-					// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
-					$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
-					$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
-					logger::$obj['activity']->log_message(
-						'UPLOAD COMPLETE',
-						logger::INFO,
-						$target_component_tipo,
-						NULL,
-						[
-							'msg'			=> 'Upload file complete. Processing uploaded file',
-							'file_data'		=> $safe_file_data
-							// 'file_name'	=> $file_data->name,
-							// 'file_size'	=> format_size_units($file_data->size),
-							// 'time_sec'	=> $file_data->time_sec,
-							// 'f_error'	=> $file_data->error || null
-						],
-						logged_user_id() // int
+		// logger activity. Note that this log is here because generic service_upload
+		// is not capable to know if the uploaded file is the last one in a chunked file scenario
+			// safe_file_data. Prevent single quotes problems like file names as L'osuna.jpg
+			$file_data_encoded	= json_encode($add_file_options, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+			$safe_file_data		= pg_escape_string(DBi::_getConnection(), $file_data_encoded);
+			logger::$obj['activity']->log_message(
+				'UPLOAD COMPLETE',
+				logger::INFO,
+				$target_component_tipo,
+				NULL,
+				[
+					'msg'			=> 'Upload file complete. Processing uploaded file',
+					'file_data'		=> $safe_file_data
+					// 'file_name'	=> $file_data->name,
+					// 'file_size'	=> format_size_units($file_data->size),
+					// 'time_sec'	=> $file_data->time_sec,
+					// 'f_error'	=> $file_data->error || null
+				],
+				logged_user_id() // int
+			);
+
+		// component_image
+			$component = component_common::get_instance(
+				$model,
+				$target_component_tipo,
+				$current_section_id,
+				'list',
+				DEDALO_DATA_NOLAN,
+				$target_section_tipo
+			);
+
+		// get the quality specified if is not set get the original quality.
+			$custom_target_quality = $add_file_options->quality ?? $component->get_original_quality();
+
+		// fix current component target quality (defines the destination directory for the file, like 'original')
+			$component->set_quality($custom_target_quality);
+
+		// add file
+			$add_file = $component->add_file($add_file_options);
+			if ($add_file->result===false) {
+				// $response->msg .= $add_file->msg;
+				// return $response;
+
+				// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->errors[] = $add_file->msg;
+					// send to output
+					print_cli(common::$pdata);
+				}
+				return false;
+			}
+
+		// post processing file (add_file returns final renamed file with path info)
+			$process_file = $component->process_uploaded_file(
+				$add_file->ready,
+				null
+			);
+			if ($process_file->result===false) {
+				// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
+				// return $response;
+
+				// CLI process data
+				if ( running_in_cli()===true ) {
+					common::$pdata->errors[] = $process_file->msg;
+					// send to output
+					print_cli(common::$pdata);
+				}
+				return false;
+			}
+
+		// Delete the thumbnail copy
+			$user_id		= logged_user_id();
+			$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
+
+			$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
+			$original_file_thumb	= $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
+
+			if (file_exists($original_file_thumb)) {
+				if(!unlink($original_file_thumb)){
+					debug_log(__METHOD__
+						." Thumb Delete ERROR of: ".to_string($original_file_thumb)
+						, logger::ERROR
 					);
-
-				// component_image
-					$component = component_common::get_instance(
-						$model,
-						$target_component_tipo,
-						$current_section_id,
-						'list',
-						DEDALO_DATA_NOLAN,
-						$target_section_tipo
-					);
-
-				// fix current component target quality (defines the destination directory for the file, like 'original')
-					$component->set_quality($custom_target_quality);
-
-				// add file
-					$add_file = $component->add_file($add_file_options);
-					if ($add_file->result===false) {
-						// $response->msg .= $add_file->msg;
-						// return $response;
-
-						// CLI process data
-						if ( running_in_cli()===true ) {
-							common::$pdata->errors[] = $add_file->msg;
-							// send to output
-							print_cli(common::$pdata);
-						}
-						return false;
-					}
-
-				// post processing file (add_file returns final renamed file with path info)
-					$process_file = $component->process_uploaded_file(
-						$add_file->ready,
-						null
-					);
-					if ($process_file->result===false) {
-						// $response->msg .= 'Errors occurred when processing file: '.$process_file->msg;
-						// return $response;
-
-						// CLI process data
-						if ( running_in_cli()===true ) {
-							common::$pdata->errors[] = $process_file->msg;
-							// send to output
-							print_cli(common::$pdata);
-						}
-						return false;
-					}
-
-				// Delete the thumbnail copy
-					$user_id		= logged_user_id();
-					$source_path	= DEDALO_UPLOAD_TMP_DIR . '/'. $user_id . '/' . $add_file_options->key_dir;
-
-					$thumbnail_name			= pathinfo($add_file_options->name, PATHINFO_FILENAME);
-					$original_file_thumb	= $source_path .'/thumbnail/'. $thumbnail_name. '.jpg';
-
-					if (file_exists($original_file_thumb)) {
-						if(!unlink($original_file_thumb)){
-							debug_log(__METHOD__
-								." Thumb Delete ERROR of: ".to_string($original_file_thumb)
-								, logger::ERROR
-							);
-							return false;
-						}
-					}
-				break;
-
-			default:
-				debug_log(__METHOD__." Error. Media type not allowed ".to_string(), logger::ERROR);
-				break;
-		}
-
+					return false;
+				}
+			}
 
 		return true;
 	}//end set_media_file
@@ -255,6 +247,46 @@ class tool_import_files extends tool_common {
 				$dd_date = ImageMagick::get_date_time_original($source_full_path);
 				break;
 
+			case 'component_av':
+				$dd_date = Ffmpeg::get_date_time_original($source_full_path);
+				break;
+
+			case 'component_pdf':
+				$command =  MAGICK_PATH. '/pdfinfo -rawdates ' . $source_full_path . ' | grep -i CreationDate';
+
+				// exec command
+				$result = exec($command.' 2>&1', $output, $worked_result);
+				// error case
+					if ($worked_result!=0) {
+						debug_log(__METHOD__
+							. ' exec command bad result' . PHP_EOL
+							. ' command:' . to_string($command) . PHP_EOL
+							. ' worked_result:' . to_string($worked_result) . PHP_EOL
+							. ' result: ' .to_string($result) . PHP_EOL
+							. ' output: ' . to_string($output). PHP_EOL
+							, logger::WARNING
+						);
+						if(SHOW_DEBUG===true) {
+							$bt = debug_backtrace();
+							dump($bt[1], ' bt[1] -- source_full_path: ++ '.to_string($source_full_path));
+						}
+						if (stripos(to_string($output), 'ERROR:')!==false) {
+							break;
+						}
+					}
+
+				// PDF date format is:
+				// D:20110816234339-04'00'
+				// all is optional except the first 4 digits that are the year
+				$regex = '/(D:)?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?(-|\+|Z{1})?(\d{2})?(\'{1})?(\d{2})?(\'{1})?/';
+				preg_match($regex, $result, $matches);
+
+				$dd_date		= new dd_date();
+				if(isset($matches[2])) $dd_date->set_year((int)$matches[2]);
+				if(isset($matches[3])) $dd_date->set_month((int)$matches[3]);
+				if(isset($matches[4])) $dd_date->set_day((int)$matches[4]);
+
+				break;
 			default:
 				debug_log(__METHOD__
 					. " Error. get_media_file_date . Model is not defined ". PHP_EOL
@@ -500,7 +532,109 @@ class tool_import_files extends tool_common {
 					if ($import_mode==='section') {
 						// switch import_file_name_mode
 						switch ($import_file_name_mode) {
+							// match case
+							// used to find the filename in the previous uploaded files.
+							// it use the filename to match into image section.
+							case 'match_freename':
+							case 'match':
 
+								$target_section_tipo = $target_ddo_component->section_tipo;
+								$target_filename = array_find($ar_ddo_map, function($item) use ($target_section_tipo){
+									return $item->role==='target_filename' && $item->section_tipo === $target_section_tipo;
+								});
+								// get the id of name of the file and match the id of the caller section
+								// then use the match to find the image section and match with the filename
+								// it match filenames as 1-1-A.jpg
+								if( $import_file_name_mode === 'match' ){
+
+									$match_options = new stdClass();
+										$match_options->section_id			= $file_data['regex']->section_id;
+										$match_options->section_tipo		= $section_tipo;
+										$match_options->full_name			= $current_file_name;
+										$match_options->target_section_tipo	= $target_section_tipo;
+										$match_options->target_filename		= $target_filename;
+
+									$ar_target_section_id = tool_import_files::get_media_section_match_from_souce( $match_options );
+
+								}
+								// get the filename and match directly into the image section
+								// the match will be into the original filename field into the image section
+								// it match filenames as: 0a90723c2936028b08093d7560a098cb-b.jpg
+								else if( $import_file_name_mode === 'match_freename' ){
+
+									$match_options = new stdClass();
+										$match_options->target_filename		= $target_filename;
+										$match_options->full_name			= $current_file_name;
+
+									$ar_target_section_id = tool_import_files::get_media_section_match( $match_options );
+								}
+
+								// in both cases is not possible close the search to 1 record
+								// so assume that the file could match in multiple image sections
+								foreach ($ar_target_section_id as $target_section_id) {
+
+									$target_filename = $current_file_name;
+									// as target section_id could has multiple matches for the same image
+									// then copy the image with the section_id and do not touch the original file
+									// it will be copied for other sections.
+									// last section_id will copy the file without create a copy, it remove the uploaded file.
+									if( $target_section_id !== end($ar_target_section_id) ){
+
+										$basename_value		= pathinfo($current_file_name)['filename'];
+										$basename_extension	= pathinfo($current_file_name)['extension'];
+
+										$target_filename = $basename_value .'_'. $target_section_id .'.'. $basename_extension;
+										$source_file	= $tmp_dir . '/' . $current_file_name;
+										$target_file	= $tmp_dir . '/' . $target_filename;
+										if (false===copy($source_file, $target_file)) {
+											debug_log(__METHOD__
+												.' Error coping file: ' . PHP_EOL
+												. ' source_file: ' . $source_file . PHP_EOL
+												. ' target_file: ' . $target_file
+												, logger::ERROR
+											);
+										}
+									}
+
+									// set_media_file. Move uploaded file to media folder and create default versions
+										$add_file_options = new stdClass();
+											$add_file_options->name			= $target_filename; // string original file name like 'IMG_3007.jpg'
+											$add_file_options->key_dir		= $key_dir; // string upload caller name like 'oh1_oh1'
+											$add_file_options->tmp_dir		= 'DEDALO_UPLOAD_TMP_DIR'; // constant string name like 'DEDALO_UPLOAD_TMP_DIR'
+											$add_file_options->tmp_name		= $target_filename; // string like 'phpJIQq4e'
+											$add_file_options->quality		= $custom_target_quality;
+											$add_file_options->source_file	= null;
+											$add_file_options->size			= $file_data['file_size'];
+											$add_file_options->extension	= $file_data['extension'];
+
+										tool_import_files::set_media_file(
+											$add_file_options,
+											$target_section_tipo,
+											$target_section_id,
+											$target_component_tipo
+										);
+
+										// component processor
+										$compoonet_processor_options = new stdClass();
+											$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
+											$compoonet_processor_options->section_tipo					= $section_tipo;
+											$compoonet_processor_options->section_id					= $section_id;
+											$compoonet_processor_options->target_section_id				= $target_section_id;
+											$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
+											$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
+											$compoonet_processor_options->file_data						= $file_data;
+											$compoonet_processor_options->current_file_name				= $target_filename;
+											$compoonet_processor_options->target_component_model		= $target_component_model;
+											$compoonet_processor_options->components_temp_data			= $components_temp_data;
+
+										 tool_import_files::set_components_data($compoonet_processor_options);
+								}
+
+								// stop the other processes done by other modes and go to the next image
+								// match mode is not compatible with the other process
+								// continue 2 skip the switch() and the foreach() of images.
+								continue 2;
+								breaK;
 							case 'enumerate':
 								if (!empty($file_data['regex']->section_id)) {
 									// Direct numeric case like 1.jpg
@@ -514,7 +648,6 @@ class tool_import_files extends tool_common {
 								}
 								$section_id = (int)$_base_section_id;
 								break;
-
 							case 'named':
 								// String case like ánfora.jpg
 								// Look already imported files
@@ -545,6 +678,7 @@ class tool_import_files extends tool_common {
 								$section_id 	= $section->get_section_id();
 								break;
 						}//end switch ($import_file_name_mode)
+
 						// set target_ddo from tool_config ddo_map
 						$target_ddo = array_find($ar_ddo_map, function($item) use($current_component_option_tipo){
 							return $item->role === 'component_option' && $item->tipo===$current_component_option_tipo;
@@ -609,146 +743,20 @@ class tool_import_files extends tool_common {
 					// 	}
 					// }
 
-				// ar_ddo_map iterate. role based actions
-					// Create the ddo components with the data to store with the import
-					// when the component has a input in the tool propagate temp section_data
-					// Update created section with temp section data
-					// when the component stored the filename, get the filename and save it
-					foreach ($ar_ddo_map as $ddo) {
+				// component processor
+					$compoonet_processor_options = new stdClass();
+						$compoonet_processor_options->ar_ddo_map					= $ar_ddo_map;
+						$compoonet_processor_options->section_tipo					= $section_tipo;
+						$compoonet_processor_options->section_id					= $section_id;
+						$compoonet_processor_options->target_section_id				= $target_section_id;
+						$compoonet_processor_options->input_components_section_tipo	= $input_components_section_tipo;
+						$compoonet_processor_options->target_ddo_component			= $target_ddo_component;
+						$compoonet_processor_options->file_data						= $file_data;
+						$compoonet_processor_options->current_file_name				= $current_file_name;
+						$compoonet_processor_options->target_component_model		= $target_component_model;
+						$compoonet_processor_options->components_temp_data			= $components_temp_data;
 
-						if($ddo->role === 'component_option'){
-							continue;
-						}
-
-						$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
-						$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
-						$destination_section_id	= ($ddo->section_tipo===$section_tipo)
-							? $section_id
-							: $target_section_id;
-
-						$component = component_common::get_instance(
-							$model,
-							$ddo->tipo,
-							$destination_section_id,
-							'list',
-							$current_lang,
-							$ddo->section_tipo
-						);
-
-						switch ($ddo->role) {
-							case 'target_filename':
-
-								// fill the component with image data only when the field is empty
-								// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
-								$component_data = $component->get_dato();
-
-								if(empty($component_data)){
-									// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
-									$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
-										? $file_data['regex']->base_name // only the name of the file without section_id or field
-										: $current_file_name; // full name with extension
-
-									$component->set_dato([$name_to_save]);
-									$component->Save();
-								}
-								break;
-
-							case 'target_date':
-
-								// media_file_date (using EXIF or similar metadata source into the file)
-									$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
-									if (!empty($dd_date)) {
-										$dato = new stdClass();
-											$dato->start = $dd_date;
-										$component->set_dato([$dato]);
-										$component->Save();
-									}
-								break;
-
-							case 'input_component':
-
-								// input_components_section_tipo store
-									if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
-										$input_components_section_tipo[] = $ddo->section_tipo;
-									}
-
-								// component_data save
-									$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
-									if ($is_translatable===false) {
-
-										// use value from request
-
-										// component_data. Get from request and save
-										$component_data = array_find($components_temp_data, function($item) use($ddo){
-											return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
-										});
-										if(is_object($component_data) && !empty($component_data->value)){
-											$component->set_dato($component_data->value);
-											$component->Save();
-										}
-
-									}else{
-
-										// get value from instances of the temporal component in each lang
-
-										$temp_component = component_common::get_instance(
-											$model,
-											$ddo->tipo,
-											DEDALO_SECTION_ID_TEMP,
-											'list',
-											$current_lang,
-											$ddo->section_tipo
-										);
-
-										$ar_langs		= $temp_component->get_component_ar_langs();
-										$original_lang	= $current_lang;
-										foreach ($ar_langs as $current_lang) {
-
-											$temp_component->set_lang($current_lang);
-											$temp_dato = $temp_component->get_dato();
-
-											if (empty($temp_dato)) {
-												continue;
-											}
-
-											// apply value
-											$component->set_lang($current_lang);
-											$component->set_dato($temp_dato);
-											$component->Save();
-										}
-										// restore lang
-										$component->set_lang($original_lang);
-									}
-
-								// component_filter. Propagate the project to the media section, that will be the target_section_tipo
-									if($model==='component_filter'){
-										// get the component_filter of the target_ddo section_tipo
-										$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
-											$target_ddo_component->section_tipo,
-											[$model],
-											true,
-											true
-										);
-										$component_filter_tipo= $ar_children_tipo[0];
-
-										$target_component = component_common::get_instance(
-											$model,
-											$component_filter_tipo,
-											$target_section_id,
-											'list',
-											$current_lang,
-											$target_ddo_component->section_tipo
-										);
-										$target_component->set_dato($component_data->value);
-										$target_component->Save();
-									}
-								break;
-
-							default:
-								// Nothing to do here
-								break;
-						}//end switch ($ddo->role)
-					}//end foreach ($ar_ddo_map as $ddo)
+					 tool_import_files::set_components_data($compoonet_processor_options);
 
 				// file_processor
 					// Global var button properties JSON data array
@@ -831,6 +839,303 @@ class tool_import_files extends tool_common {
 
 		return $response;
 	}//end import_files
+
+
+
+	/**
+	* GET_MEDIA_SECTION_MATCH_FROM_SOUCE
+	* check the filename uploaded with the previous names saved into media sections (image, av, document)
+	* 1 get the target section to get all media files into the section_id (as tch11)
+	* 2 get all filenames saved into the uploaded filename (as 11-1.tiff)
+	* 3 match the filename without the extensions 11-1 === 11-1
+	* return all section_id of the image section that filename match.
+	* @param  object $options
+	* @return array $match_section_id
+	*/
+	public static function get_media_section_match_from_souce( object $options ) : array {
+
+		$section_id				= $options->section_id;
+		$section_tipo			= $options->section_tipo;
+		$target_section_tipo	= $options->target_section_tipo;
+		$full_name				= $options->full_name;
+		$target_filename		= $options->target_filename;
+
+		// target section of the tool as tch, tch1,...
+		// as filename could has the section_id as 11-1.tiff (section_id = 11)
+		// create the section and give his all data.
+		$section = section::get_instance(
+			$section_id, // string|null section_id
+			$section_tipo // string section_tipo
+		);
+
+		$data = $section->get_dato();
+
+		// give all locators that match with the target_section_tipo (as rsc170, image section)
+		$target_locators = array_filter($data->relations, function( $item ) use ($target_section_tipo){
+			return $item->section_tipo === $target_section_tipo;
+		});
+
+		// create the image section and check the filename saved previously.
+		$match_section_id = [];
+		foreach ($target_locators as $target_locator) {
+
+			$tipo	= $target_filename->tipo;
+
+			$model	= RecordObj_dd::get_modelo_name_by_tipo($tipo,true);
+			$lang	= RecordObj_dd::get_translatable($tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+
+			// component with the previous filename saved
+			$target_name_component = component_common::get_instance(
+				$model, // string model
+				$tipo, // string tipo
+				$target_locator->section_id, // string section_id
+				'list', // string mode
+				$lang, // string lang
+				$target_locator->section_tipo // string section_tipo
+			);
+
+			$value = $target_name_component->get_value();
+
+			// check without extension, uploaded files could be different format of the previous upload.
+			$basename_value		= pathinfo($value)['filename'];
+			$basename_full_name	= pathinfo($full_name)['filename'];
+
+			if($basename_value === $basename_full_name){
+				$match_section_id[] = $target_locator->section_id;
+			}
+		}
+
+
+		return $match_section_id;
+	}//end get_media_section_match_from_souce
+
+
+
+
+	/**
+	* GET_MEDIA_SECTION_MATCH
+	* uses the name of the uploaded file as: 7ftTgmN-Mn.tiff | 456Mnc.mov
+	* remove the extension but use the '.' to close match in the search
+	* the sections that match will returned as array of his section_id
+	* @param  object $options
+	* @return array $match_section_id
+	*/
+	public static function get_media_section_match( object $options ) : array {
+
+		// short vars
+		$target_tipo			= $options->target_filename->tipo; // string tipo
+		$target_section_tipo	= $options->target_filename->section_tipo; // string section_tipo
+		$full_name 				= $options->full_name;
+
+		// path of the component to be find
+		$path = search::get_query_path(
+			$target_tipo, // string tipo
+			$target_section_tipo, // string section_tipo
+			true // bool resolve_related
+		);
+		// the image has extension, is possible that the image can change the extension
+		// the original is a .jpg and modified is a .tiff with alpha channel.
+		$basename_full_name	= pathinfo($full_name)['filename'];
+
+		// build the search
+			$operator = '$and';
+			$filter = new stdClass();
+				$filter->{$operator} = [];
+
+			// set the filter with the base name and add '.' to the final,
+			// the point is between name and extension
+			// adding it could avoid false match with short names
+			// as my_image.tiff and my_image2.tiff
+			// searching `my_image.` will remove the second case
+			$filter_item = new stdClass();
+				$filter_item->q = $basename_full_name .'.';
+				$filter_item->path = $path;
+
+			$filter->{$operator}[] = $filter_item;
+
+			$sqo = new search_query_object();
+				$sqo->set_section_tipo([$target_section_tipo]);
+				$sqo->set_limit(0);
+				$sqo->set_skip_projects_filter(true);
+				$sqo->set_filter($filter);
+
+
+		// search exec
+			$search				= search::get_instance($sqo);
+			$records_data		= $search->search();
+			$ar_current_dato	= $records_data->ar_records;
+
+		// stored the section_id of the match sections.
+		$match_section_id = [];
+		foreach ($ar_current_dato as $section_data) {
+			$match_section_id[] = $section_data->section_id;
+		}
+
+		return $match_section_id;
+	}//end get_media_section_match
+
+
+
+	/**
+	* SET_COMPONENTS_DATA
+	* @return
+	*/
+	public static function set_components_data( object $options ) {
+
+		$ar_ddo_map						= $options->ar_ddo_map;
+		$section_tipo					= $options->section_tipo;
+		$section_id						= $options->section_id;
+		$target_section_id				= $options->target_section_id;
+		$input_components_section_tipo	= $options->input_components_section_tipo;
+		$target_ddo_component			= $options->target_ddo_component;
+		$file_data						= $options->file_data;
+		$current_file_name				= $options->current_file_name;
+		$target_component_model			= $options->target_component_model;
+		$components_temp_data			= $options->components_temp_data;
+
+		// ar_ddo_map iterate. role based actions
+		// Create the ddo components with the data to store with the import
+		// when the component has a input in the tool propagate temp section_data
+		// Update created section with temp section data
+		// when the component stored the filename, get the filename and save it
+		foreach ($ar_ddo_map as $ddo) {
+
+			if($ddo->role === 'component_option'){
+				continue;
+			}
+
+			$model					= RecordObj_dd::get_modelo_name_by_tipo($ddo->tipo,true);
+			$current_lang			= RecordObj_dd::get_translatable($ddo->tipo) ? DEDALO_DATA_LANG : DEDALO_DATA_NOLAN;
+			$destination_section_id	= ($ddo->section_tipo===$section_tipo)
+				? $section_id
+				: $target_section_id;
+
+			$component = component_common::get_instance(
+				$model,
+				$ddo->tipo,
+				$destination_section_id,
+				'list',
+				$current_lang,
+				$ddo->section_tipo
+			);
+
+			switch ($ddo->role) {
+				case 'target_filename':
+
+					// fill the component with image data only when the field is empty
+					// if the ddo of component has ddo->only_basename and is set to true, remove the section_id, field and extension
+					$component_data = $component->get_dato();
+
+					if(empty($component_data)){
+						// file_name. Stores the original file name like 'My añorada.foto.jpg' to a component_input_text
+						$name_to_save = (isset($ddo->only_basename) && $ddo->only_basename === true)
+							? $file_data['regex']->base_name // only the name of the file without section_id or field
+							: $current_file_name; // full name with extension
+
+						$component->set_dato([$name_to_save]);
+						$component->Save();
+					}
+					break;
+
+				case 'target_date':
+
+					// media_file_date (using EXIF or similar metadata source into the file)
+						$dd_date = tool_import_files::get_media_file_date($file_data, $target_component_model);
+						if (!empty($dd_date)) {
+							$dato = new stdClass();
+								$dato->start = $dd_date;
+							$component->set_dato([$dato]);
+							$component->Save();
+						}
+					break;
+
+				case 'input_component':
+
+					// input_components_section_tipo store
+						if(!in_array($ddo->section_tipo, $input_components_section_tipo)){
+							$input_components_section_tipo[] = $ddo->section_tipo;
+						}
+
+					// component_data save
+						$is_translatable = RecordObj_dd::get_translatable($ddo->tipo);
+						if ($is_translatable===false) {
+
+							// use value from request
+
+							// component_data. Get from request and save
+							$component_data = array_find($components_temp_data, function($item) use($ddo){
+								return isset($item->tipo) && $item->tipo===$ddo->tipo && $item->section_tipo===$ddo->section_tipo;
+							});
+							if(is_object($component_data) && !empty($component_data->value)){
+								$component->set_dato($component_data->value);
+								$component->Save();
+							}
+
+						}else{
+
+							// get value from instances of the temporal component in each lang
+
+							$temp_component = component_common::get_instance(
+								$model,
+								$ddo->tipo,
+								DEDALO_SECTION_ID_TEMP,
+								'list',
+								$current_lang,
+								$ddo->section_tipo
+							);
+
+							$ar_langs		= $temp_component->get_component_ar_langs();
+							$original_lang	= $current_lang;
+							foreach ($ar_langs as $current_lang) {
+
+								$temp_component->set_lang($current_lang);
+								$temp_dato = $temp_component->get_dato();
+
+								if (empty($temp_dato)) {
+									continue;
+								}
+
+								// apply value
+								$component->set_lang($current_lang);
+								$component->set_dato($temp_dato);
+								$component->Save();
+							}
+							// restore lang
+							$component->set_lang($original_lang);
+						}
+
+					// component_filter. Propagate the project to the media section, that will be the target_section_tipo
+						if($model==='component_filter'){
+							// get the component_filter of the target_ddo section_tipo
+							$ar_children_tipo = section::get_ar_children_tipo_by_model_name_in_section(
+								$target_ddo_component->section_tipo,
+								[$model],
+								true,
+								true
+							);
+							$component_filter_tipo= $ar_children_tipo[0];
+
+							$target_component = component_common::get_instance(
+								$model,
+								$component_filter_tipo,
+								$target_section_id,
+								'list',
+								$current_lang,
+								$target_ddo_component->section_tipo
+									);
+									$target_component->set_dato($component_data->value);
+									$target_component->Save();
+								}
+							break;
+
+				default:
+					// Nothing to do here
+					break;
+			}//end switch ($ddo->role)
+		}//end foreach ($ar_ddo_map as $ddo)
+
+
+	}//end set_components_data
 
 
 

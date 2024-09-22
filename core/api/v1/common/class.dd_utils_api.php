@@ -1849,6 +1849,17 @@ final class dd_utils_api {
 					]);
 					break;
 
+				case ($file_type==='video'):
+
+				$Ffmpeg	= new Ffmpeg();
+					$Ffmpeg->create_posterframe((object)[
+						'timecode'				=> '10', // like '00:00:10',
+						'src_file'				=> $target_path,
+						'quality'				=> 'thumbnail',
+						'posterframe_filepath'	=> $thumbnail_file
+					]);
+					break;
+
 				default:
 					// Nothing to do with videos
 					return null;
