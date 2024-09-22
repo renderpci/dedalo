@@ -751,7 +751,7 @@ abstract class backup {
 				return $response;
 			}
 
-		// db_system_config_verify
+		// db_system_config_verify. Test pgpass file existence and permissions
 			$system_config_verify = self::db_system_config_verify();
 			if ($system_config_verify->result===false) {
 				// error
@@ -762,52 +762,52 @@ abstract class backup {
 				return $response;
 			}
 
-		// file_path
+		// main_sql_file_path
+			// files list
+			$ontology_file_list = backup::get_ontology_file_list($dedalo_prefix_tipos);
+
+			// download from remote
 			if(defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) {
-
-				// Check remote server status before begins
-				 // ALREADY CHECKED IN TRIGGER, AT BEGINING OF PROCESS
-				// 	$remote_server_status = (int)self::check_remote_server();
-
-				// Download once all str files from server
-				$all_str_files = backup::collect_all_str_files($dedalo_prefix_tipos);
-				foreach ($all_str_files as $obj) {
-					if($obj->type==="main_file") {
-						$file_path  = ONTOLOGY_DOWNLOAD_DIR;
-						$mysqlImportFilename = $file_path .'/'. $obj->name;
-						break;
-					}
-				}
-				if (!isset($mysqlImportFilename)) {
-
-					$response->result	= false;
-					$response->msg .= ' Error getting main_file name from all_str_files';
-					if(SHOW_DEBUG===true) {
-					$response->msg .= PHP_EOL . json_encode($all_str_files, JSON_PRETTY_PRINT);
-					}
-					$response->errors[]	= "Error getting main_file name from all_str_files ";
-
-					return $response;
-				}
-			}else{
-				// Default path
-				$file_path = rtrim(DEDALO_BACKUP_PATH_ONTOLOGY, '/');
-				$mysqlImportFilename = $file_path .'/'. $db_name . '.backup';
+				backup::download_ontology_files($ontology_file_list);
 			}
 
-			// file do not exists case
-			if (!file_exists($mysqlImportFilename)) {
+			// find main_file_item
+			$main_file_item = array_find($ontology_file_list, function($el){
+				return $el->type==='main_file';
+			});
 
+			// compose file path as /var/www/html/dedalo/install/import/ontology/dedalo4_development_str.custom.backup
+			$main_sql_file_path = is_object($main_file_item)
+				? $main_file_item->path .'/'. $main_file_item->name
+				: null;
+
+			// check main file is not in the ontology_file_list
+			if (empty($main_sql_file_path)) {
+				$response->result	= false;
+				$response->msg .= ' Error getting main_file name from ontology_file_list';
+				if(SHOW_DEBUG===true) {
+				$response->msg .= PHP_EOL . json_encode($ontology_file_list, JSON_PRETTY_PRINT);
+				}
+				$response->errors[]	= "Error getting main_file name from ontology_file_list";
+
+				return $response;
+			}
+
+			// check main file do not exists
+			if (!file_exists($main_sql_file_path)) {
 				$response->result 	= false;
-				$response->msg 		.= "Error: source file not found : $mysqlImportFilename";
-				$response->errors[]	= "Error: source file not found : $mysqlImportFilename";
+				$response->msg 		.= "Error: source file not found : $main_sql_file_path";
+				if(SHOW_DEBUG===true) {
+				$response->msg .= PHP_EOL . json_encode($ontology_file_list, JSON_PRETTY_PRINT);
+				}
+				$response->errors[]	= "Error: source file not found : $main_sql_file_path";
 
 				return $response;
 			}
 
 		// Import the database and output the status to the page
 			$command  = DB_BIN_PATH.'pg_restore ' . DBi::get_connection_string() . ' --dbname '.DEDALO_DATABASE_CONN;
-			$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$mysqlImportFilename.'"';
+			$command .= ' --no-password --clean --no-owner --no-privileges -v "'.$main_sql_file_path.'"';
 
 		// exec command
 			exec($command.' 2>&1', $output, $worked_result);
@@ -816,7 +816,7 @@ abstract class backup {
 		switch($worked_result) {
 
 			case 0: // success
-				$ar_msg[] = 'OK. File ' . basename($mysqlImportFilename) .' successfully imported to database ' . DEDALO_DATABASE_CONN;
+				$ar_msg[] = 'OK. File ' . basename($main_sql_file_path) .' successfully imported to database ' . DEDALO_DATABASE_CONN;
 				if(SHOW_DEBUG===true) {
 				$ar_msg[] = 'Command: ' . $command;
 				}
@@ -846,7 +846,7 @@ abstract class backup {
 				$ar_msg[] = 'DB Name: ' . DEDALO_DATABASE_CONN;
 				$ar_msg[] = 'DB User Name: ' . DEDALO_USERNAME_CONN;
 				$ar_msg[] = 'DB Host Name: ' . DEDALO_HOSTNAME_CONN;
-				$ar_msg[] = 'DB Import Filename: ' . basename($mysqlImportFilename);
+				$ar_msg[] = 'DB Import Filename: ' . basename($main_sql_file_path);
 				if(SHOW_DEBUG===true) {
 				$ar_msg[] = 'Command: ' . $command;
 				}
@@ -1044,7 +1044,7 @@ abstract class backup {
 			*/
 
 			#foreach ($ar_extras_folders as $current_dir) {
-			$all_str_files = backup::collect_all_str_files();
+			$all_str_files = backup::get_ontology_file_list();
 			foreach ($all_str_files as $obj) {
 
 				if(strpos($obj->type, "extras")===false) {
@@ -1308,155 +1308,175 @@ abstract class backup {
 
 
 	/**
-	* COLLECT_ALL_STR_FILES
-	* Make a HTTP request to server to retrieve the necessary files to updates structure
+	* GET_ONTOLOGY_FILE_LIST
+	* Calculate the list of files needed to update the Ontology
+	* using main files and main tld plus the given $ar_tld
+	* If no value if provided, the whole DEDALO_PREFIX_TIPOS will be used
+	* @param array $ar_tld = null
 	* @return array $ar_files
 	*	Array of objects
 	*/
-	public static function collect_all_str_files(array $DEDALO_PREFIX_TIPOS=null) : array {
+	public static function get_ontology_file_list(array $ar_tld=null) : array {
 
-		static $ar_files;
-
-		if (isset($ar_files)) {
-			debug_log(__METHOD__
-				." Returning previous calculated values "
-				, logger::DEBUG
-			);
-			return $ar_files;
-		}
-
-		$DEDALO_PREFIX_TIPOS = $DEDALO_PREFIX_TIPOS ?? (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
-
-		$ar_files = array();
-
-		$remote = (defined('STRUCTURE_FROM_SERVER') && STRUCTURE_FROM_SERVER===true) ? true : false;
-
-		# basic str file. dedalo4_development_str.custom.backup
-		# includes main_dd (main tld and counters), matrix_dd (private lists), matrix_counter_dd (private_ñist counters), matrix_layout_dd (private layout maps list)
-		$obj = new stdClass();
-			$obj->type = "main_file";
-			$obj->name = "dedalo4_development_str.custom.backup";
-			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY;
-		$ar_files[] = $obj;
-
-		# core str file
-		$obj = new stdClass();
-			$obj->type = "jer_file";
-			$obj->name = "jer_dd_dd.copy";
-			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-		$ar_files[] = $obj;
-		$obj = new stdClass();
-			$obj->type = "descriptors_file";
-			$obj->name = "matrix_descriptors_dd_dd.copy";
-			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-		$ar_files[] = $obj;
-
-		# resources str file
-		$obj = new stdClass();
-			$obj->type = "jer_file";
-			$obj->name = "jer_dd_rsc.copy";
-			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-		$ar_files[] = $obj;
-		$obj = new stdClass();
-			$obj->type = "descriptors_file";
-			$obj->name = "matrix_descriptors_dd_rsc.copy";
-			$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-		$ar_files[] = $obj;
-
-		# private list of values
-		$obj = new stdClass();
-			$obj->type  = "matrix_dd_file";
-			$obj->name  = "matrix_dd.copy";
-			$obj->table = "matrix_dd";
-			$obj->tld 	= "dd";
-			$obj->path  = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
-		$ar_files[] = $obj;
-
-
-		# EXTRAS
-
-		# Check extras folder coherence with config DEDALO_PREFIX_TIPOS
-		foreach ($DEDALO_PREFIX_TIPOS as $current_prefix) {
-			$folder_path = DEDALO_EXTRAS_PATH .'/'. $current_prefix;
-			if( !is_dir($folder_path) ) {
-				if(!mkdir($folder_path, 0700,true)) {
-					debug_log(__METHOD__
-						." Error on read or create extras folder in extras directory. Permission denied ". PHP_EOL
-						.' folder_path: ' . to_string($folder_path)
-						, logger::ERROR
-					);
-					return false;
-				}
+		// cache results
+			static $ar_files;
+			if (isset($ar_files)) {
 				debug_log(__METHOD__
-					." CREATED DIR: $folder_path "
+					." Returning previous calculated values "
 					, logger::DEBUG
 				);
+				return $ar_files;
+			}
+
+		// safe ar_tld format as ['dd','rsc','hierarchy','oh','ich','test']
+			if (empty($ar_tld)) {
+				$ar_tld = (array)get_legacy_constant_value('DEDALO_PREFIX_TIPOS');
+			}
+
+		// files to download
+			$ar_files = [];
+
+		// BASE - Files
+
+			// Always includes main files
+			// dedalo4_development_str
+			$obj = new stdClass();
+				$obj->type = 'main_file';
+				$obj->name = 'dedalo4_development_str.custom.backup';
+				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY;
+			$ar_files[] = $obj;
+
+			// core str file
+			// jer_dd_dd
+			$obj = new stdClass();
+				$obj->type = 'jer_file';
+				$obj->name = 'jer_dd_dd.copy';
+				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			$ar_files[] = $obj;
+			// matrix_descriptors_dd_dd
+			$obj = new stdClass();
+				$obj->type = 'descriptors_file';
+				$obj->name = 'matrix_descriptors_dd_dd.copy';
+				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			$ar_files[] = $obj;
+
+			// resources str file
+			// jer_dd_rsc
+			$obj = new stdClass();
+				$obj->type = 'jer_file';
+				$obj->name = 'jer_dd_rsc.copy';
+				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			$ar_files[] = $obj;
+			// matrix_descriptors_dd_rsc
+			$obj = new stdClass();
+				$obj->type = 'descriptors_file';
+				$obj->name = 'matrix_descriptors_dd_rsc.copy';
+				$obj->path = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			$ar_files[] = $obj;
+
+			// private list of values
+			// matrix_dd
+			$obj = new stdClass();
+				$obj->type  = 'matrix_dd_file';
+				$obj->name  = 'matrix_dd.copy';
+				$obj->table = 'matrix_dd';
+				$obj->tld 	= 'dd';
+				$obj->path  = DEDALO_BACKUP_PATH_ONTOLOGY . '/str_data';
+			$ar_files[] = $obj;
+
+		// EXTRAS - Files
+
+		// Check extras folder coherence with config ar_tld
+			foreach ($ar_tld as $current_tld) {
+				$folder_path	= DEDALO_EXTRAS_PATH .'/'. $current_tld;
+				$dir_ready		= create_directory($folder_path);
+				if( !$dir_ready ) {
+					return false;
+				}
+			}
+
+		// Get extras folders array list filtering existing directories
+			$all_extras_folders	= (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
+			$extras_folders		= [];
+			foreach ($all_extras_folders as $current_dir) {
+				$base_dir = basename($current_dir);
+				// ar_tld : config tipos verify. 'tipos' not defined in config, will be ignored
+				if (!in_array($base_dir, $ar_tld)) {
+					continue; // Filter load prefix from config 'ar_tld'
+				}
+				$extras_folders[] = $base_dir;
+			}
+
+		// add every TLD to ar_files list (jer_dd and matrix_descriptors_dd parts)
+			foreach ($extras_folders as $folder_name) {
+				// jer_dd
+				$obj = new stdClass();
+					$obj->type  = 'extras_jer_file';
+					$obj->table = 'jer_dd';
+					$obj->tld 	= $folder_name;
+					$obj->name  = 'jer_dd_' . $folder_name . '.copy';
+					$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
+				$ar_files[] = $obj;
+				// matrix_descriptors_dd
+				$obj = new stdClass();
+					$obj->type  = 'extras_descriptors_file';
+					$obj->table = 'matrix_descriptors_dd';
+					$obj->tld 	= $folder_name;
+					$obj->name  = 'matrix_descriptors_dd_' . $folder_name . '.copy';
+					$obj->path  = DEDALO_EXTRAS_PATH .'/'. $folder_name . '/str_data';
+				$ar_files[] = $obj;
+			}
+
+
+		return $ar_files;
+	}//end get_ontology_file_list
+
+
+
+	/**
+	* DOWNLOAD_ONTOLOGY_FILES
+	* Make a HTTP request to server (local or remote) to retrieve the necessary files to updates structure
+	* @param array $ontology_file_list
+	* 	Array of objects as
+	* 	[{
+	* 		type: extras_descriptors_file,
+	* 		table: matrix_descriptors_dd,
+	* 		tld: oh,
+	* 		name: matrix_descriptors_dd_oh.copy
+	* 		path: DEDALO_EXTRAS_PATH/oh/str_data
+	* 	}]
+	* @return object $response
+	*/
+	public static function download_ontology_files(array $ontology_file_list) : object {
+
+		$response = new stdClass();
+			$response->result	= false;
+			$response->msg		= 'Error. Request failed';
+			$response->errors	= [];
+
+		$download_files = [];
+
+		$target_dir = ONTOLOGY_DOWNLOAD_DIR;
+		foreach ($ontology_file_list as $obj) {
+			// Overwrite path to new downloaded files
+			$obj->path = $target_dir;
+			// direct download
+			$downloaded = backup::download_remote_structure_file($obj, $target_dir);
+			if ($downloaded) {
+				$download_files[] = $obj;
+			}else{
+				$response->errors[] = 'Download file failed: ' . $target_dir;
 			}
 		}
 
-		# Get extras array list
-		$ar_extras_folders = (array)glob(DEDALO_EXTRAS_PATH . '/*', GLOB_ONLYDIR);
-		$ar_extras = array();
-		foreach ($ar_extras_folders as $current_dir) {
-			$base_dir = basename($current_dir);
-			# DEDALO_PREFIX_TIPOS : config tipos verify. 'tipos' not defined in config, will be ignored
-			if (!in_array($base_dir, $DEDALO_PREFIX_TIPOS)) {
-				continue; # Filter load prefix from config 'DEDALO_PREFIX_TIPOS'
-			}
-			$ar_extras[] = $base_dir;
-		}
-
-		foreach ($ar_extras as $folder_name) {
-			$obj = new stdClass();
-				$obj->type  = "extras_jer_file";
-				$obj->table = "jer_dd";
-				$obj->tld 	= $folder_name;
-				$obj->name  = "jer_dd_".$folder_name.".copy";
-				$obj->path  = DEDALO_EXTRAS_PATH .'/'.$folder_name.'/str_data';
-			$ar_files[] = $obj;
-			$obj = new stdClass();
-				$obj->type  = "extras_descriptors_file";
-				$obj->table = "matrix_descriptors_dd";
-				$obj->tld 	= $folder_name;
-				$obj->name  = "matrix_descriptors_dd_".$folder_name.".copy";
-				$obj->path  = DEDALO_EXTRAS_PATH .'/'.$folder_name.'/str_data';
-			$ar_files[] = $obj;
-		}
-
-		// Remote case
-		if ($remote===true) {
-			$target_dir = ONTOLOGY_DOWNLOAD_DIR;
-
-			foreach ($ar_files as $obj) {
-				// Overwrite path to new downloaded files
-				$obj->path = $target_dir;
-
-				// direct download
-					backup::download_remote_structure_file($obj, $target_dir);
-
-				// thread . Use above Thread class @see https://www.php.net/manual/en/language.fibers.php
-					// Thread::register(
-					// 	$obj->name, // name
-					// 	'backup::download_remote_structure_file', // 'my_thread',
-					// 	[$obj, $target_dir]
-					// );
-			}// end foreach ($ar_files as $key => $obj)
-			// Thread::run();
-		}
-
-		// debug
-			$ar_files_names = array_map(function($el){
-				return $el->name;
-			}, $ar_files);
-			debug_log(__METHOD__
-				." collected ar_files: ".PHP_EOL
-				.' ar_files_names: ' . json_encode($ar_files_names, JSON_PRETTY_PRINT)
-				, logger::DEBUG
-			);
+		$response->result	= $download_files;
+		$response->msg		= count($response->errors)>0
+			? 'Warning: errors found'
+			: 'OK. Request done successfully';
 
 
-		return (array)$ar_files;
-	}//end collect_all_str_files
+		return $response;
+	}//end download_ontology_files
 
 
 

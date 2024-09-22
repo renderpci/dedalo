@@ -52,7 +52,7 @@ session_write_close();
 
 // SELECTED_OBJ. Get local str files info (paths, names, etc.) to find the requested
 	$selected_obj	= null;
-	$all_str_files	= backup::collect_all_str_files();
+	$all_str_files	= backup::get_ontology_file_list();
 	foreach ($all_str_files as $key => $obj) {
 		if ($data->name === $obj->name) {
 			$selected_obj = $all_str_files[$key];
