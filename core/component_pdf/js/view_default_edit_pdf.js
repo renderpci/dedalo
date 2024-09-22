@@ -174,14 +174,6 @@ const get_content_value = function(i, current_value, self) {
 			return content_value
 		}
 
-	// DES browser plug-in
-		// const iframe = ui.create_dom_element({
-		// 	element_type	: 'embed',
-		// 	class_name		: 'pdf_viewer_frame',
-		// 	parent			: content_value,
-		// 	src 			: pdf_url +'#toolbar=0&navpanes=0' // #toolbar=0&navpanes=0&scrollbar=0&page=5
-		// })
-
 	// iframe. PDF viewer (pdfjs) is loaded inside a iframe
 		const iframe = ui.create_dom_element({
 			element_type	: 'iframe',
@@ -244,7 +236,7 @@ const get_content_value = function(i, current_value, self) {
 
 				// load the pdf in the viewer
 				self.pdf_viewer.open({
-					url:pdf_url
+					url : pdf_url
 				})
 				.then(function() {
 					// PDFViewerApplicationOptions.document.webL10n.setLanguage(locale_code)
@@ -261,7 +253,7 @@ const get_content_value = function(i, current_value, self) {
 		// viewer_url. the standard html viewer of the pdf.js library
 			const viewer_url = DEDALO_ROOT_WEB + '/lib/pdfjs/web/viewer.html'
 
-		// set iframe url on DOM entry
+		// set iframe URL on DOM entry
 			when_in_viewport(
 				iframe, // node to observe
 				() => { // callback function

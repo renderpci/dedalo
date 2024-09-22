@@ -94,9 +94,7 @@ component_date.prototype.load_editor = async function() {
 				const lib_css_file = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.min.css'
 				load_promises.push( common.prototype.load_style(lib_css_file) )
 
-
 			// js module import
-				// const js_file_load = DEDALO_ROOT_WEB + '/lib/flatpickr/dist/flatpickr.js'
 				const js_file_load = import('../../../lib/flatpickr/dist/flatpickr.min.js') // used minified version for now
 				load_promises.push( js_file_load )
 
