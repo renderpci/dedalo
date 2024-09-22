@@ -168,7 +168,7 @@ final class ImageMagick {
 					: '-background none';
 
 			// If the image has a meta channel, the original image is transparent and the meta channel need to be apply as alpha channel
-				if($has_meta_channel === true){
+				if($has_meta_channel === true && !in_array($extension, $ar_opaque_extensions) ){
 					$composite		= false;
 					$flatten		= false;
 					// copy the first meta channel into the alpha channel
@@ -267,7 +267,7 @@ final class ImageMagick {
 		// command
 			$command = implode(' ', [
 				'nice -n 19',
-				MAGICK_PATH . 'convert '.$begin_flags.' '.$source_file.' '.$middle_flags.' "'.$target_file.'" '
+				MAGICK_PATH . 'convert '.$begin_flags.' "'.$source_file.'" '.$middle_flags.' "'.$target_file.'" '
 			]);
 
 		// debug
@@ -284,14 +284,17 @@ final class ImageMagick {
 				debug_log(__METHOD__
 					. ' exec command bad result' . PHP_EOL
 					. ' worked_result:' . to_string($worked_result) . PHP_EOL
+					. ' result: ' .to_string($result) . PHP_EOL
 					. ' output: ' . to_string($output). PHP_EOL
-					, logger::ERROR
+					, logger::WARNING
 				);
 				if(SHOW_DEBUG===true) {
 					$bt = debug_backtrace();
-					dump($bt, ' bt -- options: ++ '.to_string($options));
+					dump($bt[1], ' bt[1] -- options: ++ '.to_string($options));
 				}
-				return false;
+				if (stripos(to_string($output), 'ERROR:')!==false) {
+					return false;
+				}
 			}
 
 		// debug info
@@ -379,7 +382,7 @@ final class ImageMagick {
 	public static function has_meta_channel( string $source_file ) : bool {
 
 		// tiff info. Get the channel number of TIFF (PSD use the same property) :
-			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. $source_file;
+			$command			= MAGICK_PATH . 'identify -quiet -format "%[channels]" '. '"'. $source_file . '"';
 			$string_channels	= shell_exec($command);
 
 			debug_log(__METHOD__

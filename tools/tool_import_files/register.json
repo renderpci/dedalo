@@ -63,13 +63,13 @@
         "lg-nolan": [
           {
             "start": {
-              "day": 21,
-              "hour": 21,
-              "time": 65060141710,
+              "day": 17,
+              "hour": 18,
+              "time": 65075855717,
               "year": 2024,
-              "month": 3,
+              "month": 9,
               "minute": 35,
-              "second": 10
+              "second": 17
             }
           }
         ]
@@ -91,10 +91,10 @@
           "<p>Dateien auf den Server hochladen und verarbeiten</p>"
         ],
         "lg-ell": [
-          "<p>Μεταφόρτωση αρχείων στον διακομιστή και επεξεργασία του.</p><p>Αυτό το εργαλείο δεν εμφανίζεται σε όλα τα επιλεγμένα στοιχεία, μόνο στα σωστά διαμορφωμένα (με τη διαμόρφωση των ιδιοτήτων οντολογίας).</p>"
+          "<p>Μεταφόρτωση αρχείων στον διακομιστή και επεξεργασία του.</p>"
         ],
         "lg-eng": [
-          "<p>Upload files to the server and processed it.</p><p>This tool does not appear in all the selected components, only in the correctly configured ones (by configuring the ontology properties).</p>"
+          "<p>Upload files to the server and processed it.</p>"
         ],
         "lg-fra": [
           "<p>Télécharger des fichiers sur le serveur et les traiter</p>"
@@ -103,7 +103,7 @@
           "<p>Carica i file sul server ed elaborali</p>"
         ],
         "lg-nep": [
-          "<p>सर्भरमा फाइलहरू अपलोड गर्नुहोस् र यसलाई प्रशोधन गर्नुहोस्।</p><p>यो उपकरण सबै चयन गरिएका कम्पोनेन्टहरूमा देखा पर्दैन, सही तरिकाले कन्फिगर गरिएकाहरूमा मात्र (ओन्टोलजी गुणहरू कन्फिगर गरेर)।</p>"
+          "<p>सर्भरमा फाइलहरू अपलोड गर्नुहोस् र तिनीहरूलाई प्रक्रिया गर्नुहोस्</p>"
         ],
         "lg-spa": [
           "<p>Subir ficheros al servidor y procesarlos</p>"
@@ -160,7 +160,7 @@
       "inf": "Versión [component_input_text]",
       "dato": {
         "lg-nolan": [
-          "1.0.3"
+          "1.1.0"
         ]
       }
     },
@@ -187,7 +187,7 @@
       "inf": "Implementación [component_text_area]",
       "dato": {
         "lg-nolan": [
-          "<p>To activate this tool, set a component_portal Ontology properties to configure it.</p><p>Sample from component oh17 (section oh1 - Oral History)</p><p>&nbsp;</p><p>\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_import_files\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_date\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc44\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_filename\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc398\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc52\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc31\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc23\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p>"
+          "<p>This tool does not appear in all the selected components, only in the correctly configured ones (by configuring the ontology properties).</p><p>&nbsp;</p><p>To activate this tool, set a component_portal Ontology properties to configure it.</p><p>Sample from component oh17 (section oh1 - Oral History)</p><p>&nbsp;</p><p>\"tool_config\": {</p><p>&nbsp; &nbsp;\"tool_import_files\": {</p><p>&nbsp; &nbsp; &nbsp;\"ddo_map\": [</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc29\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_date\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc44\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"target_filename\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc398\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc52\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc31\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;},</p><p>&nbsp; &nbsp; &nbsp; &nbsp;{</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"mode\": \"edit\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"role\": \"input_component\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"tipo\": \"rsc23\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_id\": \"self\",</p><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;\"section_tipo\": \"rsc170\"</p><p>&nbsp; &nbsp; &nbsp; &nbsp;}</p><p>&nbsp; &nbsp; &nbsp;]</p><p>&nbsp; &nbsp;}</p><p>&nbsp;}</p>"
         ]
       }
     },
@@ -228,32 +228,32 @@
             },
             {
               "lang": "lg-spa",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Campo de destino"
             },
             {
               "lang": "lg-cat",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Camp de destí"
             },
             {
               "lang": "lg-fra",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Champ cible"
             },
             {
               "lang": "lg-ita",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Campo obiettivo"
             },
             {
               "lang": "lg-deu",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Zielfeld"
             },
             {
               "lang": "lg-eng",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Target field"
             },
             {
@@ -328,12 +328,12 @@
             },
             {
               "lang": "lg-ell",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "Πεδίο στόχου"
             },
             {
               "lang": "lg-nep",
-              "name": "target_componet",
+              "name": "target_component",
               "value": "लक्ष्य क्षेत्र"
             },
             {
@@ -355,6 +355,141 @@
               "lang": "lg-nep",
               "name": "crop_50",
               "value": "५०% मा छवि विभाजित गर्नुहोस्"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "match_name_with_previous_upload",
+              "value": "Match name with previous upload"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "match_name_with_previous_upload",
+              "value": "Coincidencia del nombre con una carga anterior"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "match_name_with_previous_upload",
+              "value": "Coincidència del nom amb una carrega anterior"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "match_name_with_previous_upload",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "match_name_with_previous_upload",
+              "value": "Correspondance entre le nom et un téléchargement antérieur"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "match_name_with_previous_upload",
+              "value": "Corrispondenza del nome con un caricamento precedente"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "match_name_with_previous_upload",
+              "value": "Αντιστοίχιση του ονόματος με προηγούμενη μεταφόρτωση"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "match_name_with_previous_upload",
+              "value": "Abgleich des Namens mit einem früheren Upload"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "match_name_with_previous_upload",
+              "value": "अघिल्लो अपलोडसँग नाम मिलाउँदै"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "matching_id",
+              "value": "Matching ID"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "matching_id",
+              "value": "Coincidencia de ID"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "matching_id",
+              "value": "Coincidència d'ID"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "matching_id",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "matching_id",
+              "value": "ID correspondant\n\n"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "matching_id",
+              "value": "ID di corrispondenza"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "matching_id",
+              "value": "Αντίστοιχη ταυτότητα\n\n"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "matching_id",
+              "value": "Passende ID\n\n"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "matching_id",
+              "value": "मिल्दो ID"
+            },
+            {
+              "lang": "lg-eng",
+              "name": "matching_name",
+              "value": "Matching name"
+            },
+            {
+              "lang": "lg-spa",
+              "name": "matching_name",
+              "value": "Nombre coincidente"
+            },
+            {
+              "lang": "lg-cat",
+              "name": "matching_name",
+              "value": "Nom coincident"
+            },
+            {
+              "lang": "lg-eus",
+              "name": "matching_name",
+              "value": ""
+            },
+            {
+              "lang": "lg-fra",
+              "name": "matching_name",
+              "value": "Nom correspondant"
+            },
+            {
+              "lang": "lg-ita",
+              "name": "matching_name",
+              "value": "Nome corrispondente"
+            },
+            {
+              "lang": "lg-ell",
+              "name": "matching_name",
+              "value": "Αντίστοιχο όνομα"
+            },
+            {
+              "lang": "lg-deu",
+              "name": "matching_name",
+              "value": "Passender Name"
+            },
+            {
+              "lang": "lg-nep",
+              "name": "matching_name",
+              "value": "Matching name"
             }
           ]
         ]
@@ -372,7 +507,7 @@
   "section_id": 19,
   "created_date": "2023-11-01 21:16:17",
   "section_tipo": "dd1340",
-  "modified_date": "2024-03-21 21:35:10",
+  "modified_date": "2024-09-17 18:35:17",
   "diffusion_info": null,
   "created_by_userID": -1,
   "section_real_tipo": "dd73",
