@@ -374,17 +374,11 @@ final class Ffmpeg {
 			}
 
 		// target_path_dir from target_file_path
-			$target_path_dir = pathinfo($target_file_path)['dirname'];
-			if( !is_dir($target_path_dir) ) {
-				if( !mkdir($target_path_dir, 0750, true) ) {
-					$response->msg .= " Error on read or create directory for \"$setting_name\". Permission denied !";
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. 'final_target_path: ' .$target_path_dir
-						, logger::ERROR
-					);
-					return $response;
-				}
+			$target_path_dir	= pathinfo($target_file_path)['dirname'];
+			$dir_ready			= create_directory($target_path_dir);
+			if (!$dir_ready) {
+				$response->msg .= " Error on read or create directory for \"$setting_name\". Permission denied !";
+				return $response;
 			}
 
 		// source file
@@ -445,17 +439,10 @@ final class Ffmpeg {
 			$log_file		= $tmp_file_base .'_'. pathinfo($target_file)['filename'] . '_log';
 
 			// tmp_folder directory exists
-			if( !is_dir($tmp_folder) ) {
-				if( !mkdir($tmp_folder, 0750, true) ) {
-					$response->msg .= " Error on read or create directory for \"tmp\" folder. Permission denied !";
-					debug_log(__METHOD__
-						. " $response->msg " . PHP_EOL
-						. 'setting: ' .to_string($setting_name) . PHP_EOL
-						. 'tmp_folder: ' .$tmp_folder
-						, logger::ERROR
-					);
-					return $response;
-				}
+			$dir_ready = create_directory($tmp_folder);
+			if (!$dir_ready) {
+				$response->msg .= " Error on read or create directory for \"tmp\" folder. Permission denied !";
+				return $response;
 			}
 
 		// sh_file
@@ -791,9 +778,10 @@ final class Ffmpeg {
 
 	/**
 	* CREATE POSTERFRAME
+	* Creates an image from the media av at given time code
 	* @param object $options
 	* {
-	* 	timecode : float|string like 102.369217 or 10:00:00,
+	* 	timecode : float|string like 102.369217,
 	* 	src_file : string full path to source av file,
 	* 	quality : string current quality used like 'original'
 	* 	posterframe_filepath : string full path to target image file
@@ -802,7 +790,6 @@ final class Ffmpeg {
 	* 	true: allow to create thumbnail
 	* 	false: disallow to create it (audio files)
 	*/
-	// public function create_posterframe(AVObj $AVObj, $timecode, ?array $ar_target=null) {
 	public function create_posterframe(object $options) : bool {
 
 		// options
@@ -850,11 +837,11 @@ final class Ffmpeg {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '936x720'
 					: '1280x720';
-			}if ($quality==='thumbnail') {
+			}else if ($quality==='thumbnail') {
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
-					? floor(4 * DEDALO_IMAGE_THUMB_HEIGHT / 3).'x'.DEDALO_IMAGE_THUMB_HEIGHT
+					? floor(4  * DEDALO_IMAGE_THUMB_HEIGHT / 3).'x'.DEDALO_IMAGE_THUMB_HEIGHT
 					: floor(16 * DEDALO_IMAGE_THUMB_HEIGHT / 9).'x'.DEDALO_IMAGE_THUMB_HEIGHT; // default for 16x9
-			}else {
+			}else{
 				$aspect_ratio = strtolower($raw_aspect_ratio)==='4x3'
 					? '540x404'
 					: '720x404'; // default for 16x9
@@ -868,17 +855,10 @@ final class Ffmpeg {
 			$timecode = number_format((float)$timecode, 3, '.', '');
 
 		// posterframe directory exists check
-			$target_dir = dirname($posterframe_filepath);
-			if( !is_dir($target_dir) ) {
-				$create_dir = mkdir($target_dir, 0775, true);
-				if(!$create_dir) {
-					debug_log(__METHOD__
-						.' Error creating directory: ' . PHP_EOL
-						.' target_dir: ' . $target_dir
-						, logger::ERROR
-					);
-					return false;
-				}
+			$dir_ready = create_directory(dirname($posterframe_filepath));
+			if (!$dir_ready) {
+				// target directory is not reachable
+				return false;
 			}
 
 		// commands shell
@@ -1003,22 +983,11 @@ final class Ffmpeg {
 			$watermark_file = DEDALO_AV_WATERMARK_FILE;
 
 		// fragments_dir_path
-			$fragments_dir_path = rtrim($fragments_dir_path, '/');
-			if (!is_dir($fragments_dir_path)) {
-				debug_log(__METHOD__.
-					" fragments directory do not exists. Trying to create a new one in: " .PHP_EOL
-					. to_string($fragments_dir_path)
-					, logger::WARNING
-				);
-				if(!mkdir($fragments_dir_path, 0755, true)) {
-					$response->msg .= " Error trying to create fragments_dir ";
-					debug_log(__METHOD__
-						." $response->msg " .PHP_EOL
-						.to_string($fragments_dir_path)
-						, logger::ERROR
-					);
-					return $response;
-				}
+			$fragments_dir_path	= rtrim($fragments_dir_path, '/');
+			$dir_ready			= create_directory($fragments_dir_path);
+			if (!$dir_ready) {
+				$response->msg .= " Error trying to create fragments_dir";
+				return $response;
 			}
 
 		// target_file_path
