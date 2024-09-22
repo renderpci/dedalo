@@ -30,7 +30,7 @@ function dump(mixed $val, string $var_name=null, array $arguments=null) : string
 	// Back-trace info of current execution
 		$bt = debug_backtrace();
 		// bactrace_sequence. Array of function names in reverse order
-		$bts = array_reverse( get_bactrace_sequence() );
+		$bts = array_reverse( get_backtrace_sequence() );
 		// remove last (current function 'dump') from list
 		array_pop($bts);
 
@@ -310,7 +310,7 @@ function debug_log(string $info, int $level=logger::DEBUG) : void {
 			$bt			= debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 1);
 			$bt_first	= $bt[0];
 			// bactrace_sequence. Array of function names in reverse order
-			$bts = array_reverse( get_bactrace_sequence() );
+			$bts = array_reverse( get_backtrace_sequence() );
 			// remove last (current function 'dump') from list
 			array_pop($bts);
 		}
@@ -2444,14 +2444,14 @@ function create_directory(string $folder_path, int $create_dir_permissions=0750)
 
 
 /**
-* GET_BACTRACE_SEQUENCE
+* GET_BACKTRACE_SEQUENCE
 * Gets sequence of function calls to current section
 * Used for debug only
 * @return array $seq
 * 	Array of strings with the name of the functions ordered from newest to oldest
 * 	e.g. ['get_children','read']
 */
-function get_bactrace_sequence() : array  {
+function get_backtrace_sequence() : array  {
 
 	$bt = debug_backtrace();
 	$seq = [];
@@ -2462,4 +2462,4 @@ function get_bactrace_sequence() : array  {
 	}
 
 	return $seq;
-}//end get_bactrace_sequence
+}//end get_backtrace_sequence
