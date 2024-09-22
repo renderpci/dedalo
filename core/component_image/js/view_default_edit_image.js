@@ -304,7 +304,7 @@ const render_image_node = function(self, file_info, content_value) {
 	// image. (!) Only to get background color and apply to li node
 		const image_container = ui.create_dom_element({
 			element_type	: 'div',
-			class_name 		: 'image_container work_area'
+			class_name		: 'image_container work_area'
 		})
 
 		// des
