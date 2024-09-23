@@ -44,6 +44,16 @@ export const get_editing_preset_json_filter = async function(self) {
 		const source				= create_source(self, 'search')
 			  source.tipo			= temp_presets_section_tipo
 			  source.section_tipo	= temp_presets_section_tipo
+
+	// cache
+		if (self.component_json_data) {
+			// data already is fixed
+			const json_filter = self.component_json_data.value && self.component_json_data.value[0]
+				? self.component_json_data.value[0]
+				: null
+			return json_filter
+		}
+
 	// sqo
 		const sqo = {
 			section_tipo	: [temp_presets_section_tipo],
