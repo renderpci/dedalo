@@ -540,6 +540,15 @@ section.prototype.build = async function(autoload=false) {
 				caller	: self,
 				mode	: self.mode
 			})
+			.then(function(){
+				// preload search (experimental disable)
+				const pre_built_search = false
+				if (pre_built_search && self.mode==='list') {
+					setTimeout(function(){
+						self.filter.build()
+					}, 100)
+				}
+			})
 		}
 
 	// load from DDBB
