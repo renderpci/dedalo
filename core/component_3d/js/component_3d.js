@@ -100,18 +100,24 @@ component_3d.prototype.upload_handler = async function() {
 	}
 }//end upload_handler
 
+
+
+/**
 * CREATE_POSTERFRAME
 * Creates a new posterframe file from current_view overwriting old file if exists
 * @param object viewer
-* @return bool
+* 	3D three viewer instance (optional)
+* @return bool response
 */
 component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	const self = this
 
 	// fallback to fixed self.viewer
+		viewer = viewer || self.viewer
 		if (!viewer) {
-			viewer = self.viewer
+			console.error('Error getting viewer. 3D viewer is not set');
+			return false
 		}
 
 	// image_blob
@@ -137,11 +143,8 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 			max_size_bytes		: image_blob.size
 		})
 		if (!api_response.result) {
-			console.error("Error on api_response:", api_response);
-			return {
-				result	: false,
-				msg		: api_response.msg || 'Error on api_response'
-			}
+			console.error("Error on upload api_response:", api_response);
+			return false
 		}
 		// file_data set
 		const file_data = api_response.file_data
@@ -171,11 +174,14 @@ component_3d.prototype.create_posterframe = async function( viewer ) {
 
 	// debug
 		if(SHOW_DEVELOPER===true) {
-			dd_console("-> upload_blob API response:",'DEBUG',move_api_response);
+			dd_console("-> upload_blob API response:",'DEBUG', move_api_response);
 		}
 
+	// result (boolean)
+		const result = move_api_response.result
 
-	return move_api_response.result
+
+	return result
 }//end create_posterframe
 
 

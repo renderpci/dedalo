@@ -257,7 +257,7 @@ class component_av extends component_media_common implements component_media_int
 			}
 		}
 
-		# ABSOLUTE (Default false)
+		// ABSOLUTE (Default false)
 		if ($absolute===true) {
 			$posterframe_url = DEDALO_PROTOCOL . DEDALO_HOST . $posterframe_url;
 		}

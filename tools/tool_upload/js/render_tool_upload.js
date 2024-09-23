@@ -178,8 +178,8 @@ render_tool_upload.prototype.upload_done = async function (options) {
 		if (self.caller.type==='component') {
 
 			// component_instance. Get instance and init, build
-			// Must be a new one, not use the caller instance to prevent problems
-			// with data update on build
+				// Must be a new one, not use the caller instance to prevent problems
+				// with data update on build
 				const component_instance = await get_instance({
 					model			: self.caller.model,
 					mode			: 'edit',
@@ -189,7 +189,7 @@ render_tool_upload.prototype.upload_done = async function (options) {
 					section_tipo	: self.caller.section_tipo,
 					section_id		: self.caller.section_id,
 					lang			: self.caller.lang,
-					id_variant		: self.name + '_upload_' + self.caller.id, // id_variant prevents id conflicts
+					id_variant		: self.model + '_' + self.caller.id, // id_variant prevents id conflicts
 					caller			: self // set current tool as component caller (to check if component is inside tool or not)
 				})
 				// add to tool instances to allow delete on destroy
@@ -207,29 +207,12 @@ render_tool_upload.prototype.upload_done = async function (options) {
 			// render component
 				// show_interface
 				component_instance.show_interface.tools = false
+				// render instance
 				const component_node = await component_instance.render()
 
-			// preview. add rendered component node
+			// preview. Add rendered component node
 				self.preview_component_container.appendChild(component_node)
-
-			// refresh the caller (in window opener). (!) Commented because tool_common already refresh on blur (close window)
-				// const source_window = window.opener || window
-				// if (source_window && source_window.page_globals && source_window.page_globals.component_active) {
-				// 	source_window.page_globals.component_active.refresh({
-				// 		refresh_id_base_lang : true
-				// 	})
-				// }
 		}
-
-	// event to update the DOM elements of the instance
-		// console.log('self.caller.data:', self.caller);
-		// event_manager.publish('update_value_'+self.caller.id_base, {
-		// 	caller			: self.caller,
-		// 	changed_data	: component_instance.data.changed_data
-		// })
-
-	// caller update. (usually media component like component_image)
-		// self.caller.refresh() (!) Unnecessary because on close this tool window, component is refresh too
 
 
 	return true

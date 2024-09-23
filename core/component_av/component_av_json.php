@@ -65,7 +65,7 @@
 			$item = $this->get_data_item($value);
 
 			// posterframe_url
-					$item->posterframe_url = empty($value)
+				$item->posterframe_url = empty($value)
 					? null
 					: $this->get_posterframe_url();
 

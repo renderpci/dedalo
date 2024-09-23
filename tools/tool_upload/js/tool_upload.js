@@ -133,7 +133,7 @@ tool_upload.prototype.build = async function(autoload=false) {
 * @return promise
 * 	Resolve: object API response
 */
-tool_upload.prototype.process_uploaded_file = function(file_data, process_options) {
+tool_upload.prototype.process_uploaded_file = async function(file_data, process_options) {
 
 	const self = this
 
@@ -159,23 +159,20 @@ tool_upload.prototype.process_uploaded_file = function(file_data, process_option
 		}
 
 	// call to the API, fetch data and get response
-		return new Promise(function(resolve){
-
-			data_manager.request({
-				body : rqo
-			})
-			.then(function(api_response){
-				if(SHOW_DEVELOPER===true) {
-					dd_console("-> process_uploaded_file API api_response:",'DEBUG', api_response);
-				}
-
-				// events
-					event_manager.publish('process_uploaded_file_done_' + self.id, api_response)
-
-
-				resolve(api_response)
-			})
+		const api_response = await data_manager.request({
+			body : rqo
 		})
+
+	// debug
+		if(SHOW_DEVELOPER===true) {
+			dd_console("-> process_uploaded_file API api_response:",'DEBUG', api_response);
+		}
+
+	// events
+		event_manager.publish('process_uploaded_file_done_' + self.id, api_response)
+
+
+	return api_response
 }//end process_uploaded_file
 
 

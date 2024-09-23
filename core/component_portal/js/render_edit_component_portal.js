@@ -245,7 +245,7 @@ export const render_column_id = function(options) {
 /**
 * RENDER_DRAG_NODE
 * @param object options
-* @return HTMLElement
+* @return HTMLElement drag_node
 */
 const render_drag_node = function(options) {
 
