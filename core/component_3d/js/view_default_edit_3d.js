@@ -150,6 +150,12 @@ const get_content_value = (i, current_value, self) => {
 					ui.set_background_image(this, content_value)
 				}
 			}
+			const error_handler = () => {
+				if (content_value.posterframe.src !== page_globals.fallback_image) {
+					content_value.posterframe.src = page_globals.fallback_image
+				}
+			}
+			content_value.posterframe.addEventListener('error', error_handler)
 			// set src url
 			content_value.posterframe.src = posterframe_url
 		}
