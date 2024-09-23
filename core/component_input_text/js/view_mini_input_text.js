@@ -25,19 +25,18 @@ export const view_mini_input_text = function() {
 /**
 * RENDER
 * Render node to be used in current mode
+* @param object self
+* @param object options
 * @return HTMLElement wrapper
 */
 view_mini_input_text.render = async function(self, options) {
 
 	// short vars
-		const data				= self.data
-		const value				= data.value || []
-		const fallback_value	= data.fallback_value || []
-		const fallback			= get_fallback_value(value, fallback_value)
-		const with_lang_versions	= self.context.properties.with_lang_versions || false
-
-
-		// const value_string		= fallback.join(self.context.fields_separator)
+		const data					= self.data
+		const value					= data.value || []
+		const fallback_value		= data.fallback_value || []
+		const fallback				= get_fallback_value(value, fallback_value)
+		const with_lang_versions	= self.context.properties.with_lang_versions ?? false
 
 	// transliterate components
 	// add the translation of the data
@@ -46,11 +45,11 @@ view_mini_input_text.render = async function(self, options) {
 			: ''
 
 	// wrapper
-		const wrapper = ui.component.build_wrapper_mini(self, {
-			// value_string : value_string
-		})
+		const wrapper = ui.component.build_wrapper_mini(self, {})
 
-		for (var i = 0; i < fallback.length; i++) {
+		const fallback_length = fallback.length
+		for (let i = 0; i < fallback_length; i++) {
+
 			const value_string = fallback[i] + transliterate_value
 
 			const content_value = ui.create_dom_element({
@@ -61,6 +60,7 @@ view_mini_input_text.render = async function(self, options) {
 
 			// component_dataframe
 			if(self.properties.has_dataframe){
+
 				content_value.classList.add('has_dataframe')
 
 				const component_dataframe = await get_dataframe({
@@ -69,25 +69,26 @@ view_mini_input_text.render = async function(self, options) {
 					section_tipo	: self.section_tipo,
 					// tipo_key		: self.tipo,
 					section_id_key	: i,
-					view 			: 'mini'
+					view			: 'mini'
 				})
-					if(component_dataframe){
-						self.ar_instances.push(component_dataframe)
-						const dataframe_node = await component_dataframe.render()
-						content_value.appendChild(dataframe_node)
-					}
+
+				if(component_dataframe){
+					self.ar_instances.push(component_dataframe)
+					const dataframe_node = await component_dataframe.render()
+					content_value.appendChild(dataframe_node)
+				}
 			}
 
+			// separator
 			if( i !== value.length -1 ){
-				// separator
-				const fields_separator = ui.create_dom_element({
+				ui.create_dom_element({
 					element_type	: 'span',
 					inner_html		: self.context.fields_separator,
 					parent			: content_value
 				})
 			}
+		}//end for (let i = 0; i < fallback_length; i++)
 
-		}
 
 	return wrapper
 }//end mini

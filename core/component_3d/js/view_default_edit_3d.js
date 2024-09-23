@@ -117,7 +117,6 @@ const get_content_value = (i, current_value, self) => {
 
 	// short vars
 		const quality		= self.quality || self.context.features.quality
-		const extension		= self.context.features.extension
 		const data			= self.data || {}
 		const files_info	= current_value && current_value.files_info
 			? current_value.files_info
@@ -130,8 +129,8 @@ const get_content_value = (i, current_value, self) => {
 			class_name		: 'content_value media_content_value'
 		})
 
-	const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
-
+	// file_info
+		const file_info	= files_info.find(el => el.quality===quality && el.file_exist===true)
 		if(file_info) {
 			// posterframe image
 			const posterframe_url = data.posterframe_url

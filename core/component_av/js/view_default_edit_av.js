@@ -111,13 +111,15 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// media url from files_info based on selected context quality
-		const quality		= self.quality || self.context.features.quality
-		const extension		= self.context.features.extension
-		const data			= self.data || {}
-		const files_info	= current_value && current_value.files_info
+		const quality			= self.quality || self.context.features.quality
+		const data				= self.data || {}
+		const files_info		= current_value && current_value.files_info
 			? current_value.files_info
 			: []
-		const file_info		= files_info.find(el => el.quality===quality)
+		const file_info			= files_info.find(el => el.quality===quality)
+		const posterframe_url	= data.posterframe_url
+			? data.posterframe_url + '?t=' + (new Date()).getTime()
+			: page_globals.fallback_image
 
 	// content_value
 		const content_value = ui.create_dom_element({
@@ -125,25 +127,23 @@ const get_content_value = (i, current_value, self) => {
 			class_name 		: 'content_value media_content_value'
 		})
 
-	// posterframe
-		const posterframe_url = data.posterframe_url
-			? data.posterframe_url + '?t=' + (new Date()).getTime()
-			: page_globals.fallback_image
-		const posterframe		= ui.create_dom_element({
+	// posterframe_img
+		const posterframe_img = ui.create_dom_element({
 			element_type	: 'img',
 			class_name		: 'posterframe',
 			parent			: content_value
 		})
-		posterframe.setAttribute('height', 392)
-		posterframe.addEventListener('error', function(e) {
-			if (posterframe.src!==page_globals.fallback_image) {
-				posterframe.src = page_globals.fallback_image
+		posterframe_img.setAttribute('height', 392)
+		posterframe_img.addEventListener('error', function(e) {
+			if (posterframe_img.src!==page_globals.fallback_image) {
+				posterframe_img.src = page_globals.fallback_image
 			}
 		})
-		posterframe.src = posterframe_url
+		// set posterframe_img source URL
+		posterframe_img.src = posterframe_url
 
 		// image background color
-			// posterframe.addEventListener('load', set_bg_color, false)
+			// posterframe_img.addEventListener('load', set_bg_color, false)
 			// function set_bg_color() {
 			// 	this.removeEventListener('load', set_bg_color, false)
 			// 	ui.set_background_image(this, content_value)
@@ -160,6 +160,7 @@ const get_content_value = (i, current_value, self) => {
 			: null
 		if (video_url) {
 
+			// render the video node
 			const video = build_video_node(
 				posterframe_url
 			)
@@ -176,7 +177,8 @@ const get_content_value = (i, current_value, self) => {
 				content_value, // node to observe
 				() => { // callback function returns int timestamp
 
-					posterframe.remove()
+					// remove posterframe image node (video posterframe is set and we don't need it anymore)
+						posterframe_img.remove()
 
 					// error event
 						video.addEventListener('error', function(e) {
@@ -203,17 +205,19 @@ const get_content_value = (i, current_value, self) => {
 			)
 		}else{
 
-			posterframe.classList.add('link')
-			posterframe.addEventListener('mousedown', function(e) {
+			posterframe_img.classList.add('link')
+			// mousedown event
+			const mousedown_handler = (e) => {
 				e.stopPropagation();
 
 				const tool_upload = self.tools.find(el => el.model==='tool_upload')
 				// open_tool (tool_common)
-					open_tool({
-						tool_context	: tool_upload,
-						caller			: self
-					})
-			})
+				open_tool({
+					tool_context	: tool_upload,
+					caller			: self
+				})
+			}
+			posterframe_img.addEventListener('mousedown', mousedown_handler)
 		}
 
 	// quality_selector

@@ -340,7 +340,6 @@ class tool_media_versions extends tool_common {
 					$response->msg		= $delete_file_response->msg;
 					$response->errors	= $delete_file_response->errors;
 					break;
-
 			}
 
 		return $response;

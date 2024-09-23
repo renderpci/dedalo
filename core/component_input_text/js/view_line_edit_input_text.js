@@ -98,11 +98,10 @@ const get_content_data_edit = function(self) {
 const get_content_value = (i, current_value, self) => {
 
 	// short vars
-		const multi_line	= (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
+		const multi_line = (self.context.properties && self.context.properties.hasOwnProperty('multi_line'))
 			? self.context.properties.multi_line
 			: false
-		const element_type	= (multi_line===true) ? 'textarea' : 'input'
-		// const with_lang_versions	= self.context.properties.with_lang_versions || false
+		const element_type = (multi_line===true) ? 'textarea' : 'input'
 
 	// content_value
 		const content_value = ui.create_dom_element({
