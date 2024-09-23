@@ -387,10 +387,8 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 		// Case is component, only add when key is path
 		if (key==='path') {
 
-			let current_value 	= filter.q
-				//console.log("current_value:",current_value, filter);
-			let q_operator 		= filter.q_operator
-				//console.log("q_operator:",filter);
+			let current_value	= filter.q
+			let q_operator		= filter.q_operator
 
 			// Resolved check (useful for sequences or split strings)
 				const section_id = self.get_section_id()
@@ -422,9 +420,8 @@ search.prototype.build_dom_group = function(filter, dom_element, options={}) {
 
 			// Case is group
 				const ar_data = filter[key]
-				//console.log("key,ar_data:",key,ar_data);
 
-			// Build dom search_group
+			// Build DOM search_group
 				const current_search_group = self.render_search_group( dom_element, {
 					operator	: key,
 					is_root		: is_root
@@ -676,7 +673,8 @@ search.prototype.recursive_groups = function(group_dom_obj, add_arguments, mode)
 			}
 
 		}
-	}//end for (let i = 0; i < len; i++) {
+	}//end for (let i = 0; i < len; i++)
+
 
 	return query_group
 }//end recursive_groups
