@@ -2968,8 +2968,14 @@ export const ui = {
 			try {
 				const result_node = await callback();
 
-				if (!result_node || !(result_node instanceof HTMLElement)) {
-					console.warn('Callback did not return a valid DOM node.', options);
+				if (!result_node) {
+					console.warn('Callback did not return node.', options);
+					container_placeholder.remove();
+					return null;
+				}
+
+				if (!result_node instanceof HTMLElement && !result_node instanceof DocumentFragment) {
+					console.error('Callback did not return a valid DOM node type.', typeof result_node);
 					container_placeholder.remove();
 					return null;
 				}
