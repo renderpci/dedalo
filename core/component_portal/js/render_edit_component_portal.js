@@ -322,13 +322,9 @@ const render_drag_node = function(options) {
 						text_content	: 'OK',
 						parent			: footer
 					})
-					button_ok.addEventListener('click', function(e){
-						e.stopPropagation()
-						change_order_modal()
-					})
 					// CHANGE_ORDER_MODAL
 					// get the user data and check it to be correct before sort data
-					// sort data if the new position is ok.
+					// sort data if the new position is OK.
 					const change_order_modal = function() {
 						// user input data has not the array data order, the user will introduce the natural order 1,2,3,etc
 						// it's necessary subtract one position to get the array position 0,1,2,etc
@@ -357,6 +353,8 @@ const render_drag_node = function(options) {
 
 						modal.close()
 					}
+					// click event
+					button_ok.addEventListener('click', change_order_modal)
 
 			// modal
 				const modal = ui.attach_to_modal({
@@ -364,17 +362,21 @@ const render_drag_node = function(options) {
 					body		: body,
 					footer		: footer,
 					size		: 'small', // string size big|normal|small
-					minimizable	: false
-				})
-				// set the input field active
-				target_key_input.focus()
-				// add events to modal options
-				target_key_input.addEventListener('keyup', function(evt) {
-					switch(true) {
-						// Enter
-						case evt.code==='Enter' || evt.code==='NumpadEnter':
-							change_order_modal()
-						break;
+					minimizable	: false,
+					callback	: (el) => {
+						// add events to modal options
+						const keyup_handler = (evt) => {
+							// Enter key
+							if (evt.code==='Enter' || evt.code==='NumpadEnter') {
+								change_order_modal()
+							}
+						}
+						target_key_input.addEventListener('keyup', keyup_handler)
+						setTimeout(()=>{
+							// set the input field active
+							target_key_input.focus()
+							target_key_input.select()
+						}, 1)
 					}
 				})
 		})//end drag_node.addEventListener('dblclick', function(e)
