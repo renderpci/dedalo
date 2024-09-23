@@ -161,7 +161,7 @@ const get_content_data = async function(ar_section_record, self) {
 
 	// content_data
 		const content_data = document.createElement('div')
-			  content_data.classList.add('content_data', self.mode, self.type) // ,"nowrap","full_width"
+			  content_data.classList.add('content_data', self.mode, self.type)
 			  content_data.appendChild(fragment)
 
 
@@ -323,7 +323,7 @@ export const render_column_id = function(options) {
 				})
 
 			// modal attach to document
-				const modal_container = ui.attach_to_modal({
+				ui.attach_to_modal({
 					header		: get_label.search_presets || 'User search preset',
 					body		: body,
 					footer		: null,
@@ -333,7 +333,7 @@ export const render_column_id = function(options) {
 					}
 				})
 
-			// load section
+			// load section user_search_preset into modal body
 				ui.load_item_with_spinner({
 					container	: body,
 					label		: 'Preset ' + section_id,
@@ -360,7 +360,7 @@ export const render_column_id = function(options) {
 
 
 	return button_edit
-}//end render_column_id()
+}//end render_column_id
 
 
 
@@ -402,7 +402,7 @@ export const render_column_remove = function(options) {
 
 
 	return delete_button
-}//end render_column_remove()
+}//end render_column_remove
 
 
 

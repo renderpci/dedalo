@@ -871,7 +871,7 @@ const render_sections_selector = (self) => {
 		// selector (list of typologies)
 			const typology_selector = ui.create_dom_element({
 				element_type	: 'select',
-				class_name 		: 'dd_input typology_selector',
+				class_name		: 'dd_input typology_selector',
 				parent			: wrapper_sections_selector
 			})
 			typology_selector.addEventListener('change', function(event){
