@@ -197,20 +197,11 @@ render_tool_upload.prototype.upload_done = async function (options) {
 				// build
 				await component_instance.build(true)
 
-			// create_posterframe when viewer is rendered and viewer ready
-				if(typeof component_instance.create_posterframe==='function') {
-
-					// prevent to show previous posterframe using default image instead
-					component_instance.data.posterframe_url = page_globals.fallback_image
-
-					// on viewer ready, create the posterframe from the viewer
-					event_manager.subscribe('viewer_ready_'+component_instance.id, function(element) {
-						console.log('creating posterframe ', component_instance.id);
-						component_instance.create_posterframe(element)
-						.then(function(response){
-							console.log('create_posterframe done. response:', response);
-						})
-					})
+			// upload_handler callback
+				// Used for example to create posterframe when component is rendered and viewer is ready
+				// @see component_3d
+				if (typeof component_instance.upload_handler==='function') {
+					component_instance.upload_handler()
 				}
 
 			// render component
