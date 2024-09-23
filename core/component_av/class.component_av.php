@@ -272,6 +272,31 @@ class component_av extends component_media_common implements component_media_int
 
 
 	/**
+	* DELETE_THUMB
+	* Remove posterframe and thumb file version from disk
+	* @return bool
+	*/
+	public function delete_thumb() {
+
+		$posterframe_filepath = $this->get_posterframe_filepath();
+		if (file_exists($posterframe_filepath)) {
+			// unlink file
+			if ( !unlink($posterframe_filepath) ) {
+				debug_log(__METHOD__
+					. " Error deleting posterframe file. Unable to unlink file " . PHP_EOL
+					. 'posterframe_filepath: ' . to_string($posterframe_filepath)
+					, logger::ERROR
+				);
+				return false;
+			}
+		}
+
+		return parent::delete_thumb();
+	}//end delete_thumb
+
+
+
+	/**
 	* CREATE_POSTERFRAME
 	* Creates a image 'posterframe' from the default quality of current video file
 	*
