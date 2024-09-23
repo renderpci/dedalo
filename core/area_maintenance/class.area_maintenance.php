@@ -115,7 +115,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// move_tld
 			$item = new stdClass();
 				$item->id		= 'move_tld';
@@ -129,7 +128,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// register_tools *
 			$item = new stdClass();
@@ -146,38 +144,6 @@ class area_maintenance extends area_common {
 				}
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
-
-		// export_ontology_to_json *
-			$item = new stdClass();
-				$item->id		= 'export_ontology_to_json';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
-				$item->value	= (object)[
-					'file_name'	=> 'structure.json',
-					'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-					'tipos'		=> $DEDALO_PREFIX_TIPOS
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
-
-		// import_ontology_from_json *
-			$item = new stdClass();
-				$item->id		= 'import_ontology_from_json';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
-				$item->value	= (object)[
-					'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
-					'file_name'		=> 'structure.json',
-					'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
-					'tipos'			=> $DEDALO_PREFIX_TIPOS
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
 
 		// build_structure_css
 			// $item = new stdClass();
@@ -201,7 +167,6 @@ class area_maintenance extends area_common {
 			// $widget = $this->widget_factory($item);
 			// $ar_widgets[] = $widget;
 
-
 		// build_install_version *
 			$item = new stdClass();
 				$item->id		= 'build_install_version';
@@ -215,22 +180,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
-
-		// export_hierarchy *
-			$item = new stdClass();
-				$item->id		= 'export_hierarchy';
-				$item->type		= 'widget';
-				$item->tipo		= $this->tipo;
-				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
-				$item->value	= (object)[
-					'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
-						? EXPORT_HIERARCHY_PATH
-						: null)
-				];
-			$widget = $this->widget_factory($item);
-			$ar_widgets[] = $widget;
-
 
 		// update_data_version *
 			include_once DEDALO_CORE_PATH . '/base/update/class.update.php';
@@ -255,7 +204,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// update_code *
 			$item = new stdClass();
 				$item->id		= 'update_code';
@@ -267,7 +215,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// check_config *
 			$config_status = self::check_config();
@@ -286,6 +233,48 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
+		// export_ontology_to_json *
+			$item = new stdClass();
+				$item->id		= 'export_ontology_to_json';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('export_json_ontology') ?? 'Export JSON ontology';;
+				$item->value	= (object)[
+					'file_name'	=> 'structure.json',
+					'file_path'	=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'		=> $DEDALO_PREFIX_TIPOS
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// import_ontology_from_json *
+			$item = new stdClass();
+				$item->id		= 'import_ontology_from_json';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('import_json_ontology') ?? 'Import JSON ontology';
+				$item->value	= (object)[
+					'ontology_db'	=> (defined('ONTOLOGY_DB') ? ONTOLOGY_DB : null),
+					'file_name'		=> 'structure.json',
+					'file_path'		=> (defined('STRUCTURE_DOWNLOAD_JSON_FILE') ? STRUCTURE_DOWNLOAD_JSON_FILE : ONTOLOGY_DOWNLOAD_DIR),
+					'tipos'			=> $DEDALO_PREFIX_TIPOS
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
+
+		// export_hierarchy *
+			$item = new stdClass();
+				$item->id		= 'export_hierarchy';
+				$item->type		= 'widget';
+				$item->tipo		= $this->tipo;
+				$item->label	= label::get_label('export_hierarchy') ?? 'Export hierarchy';
+				$item->value	= (object)[
+					'export_hierarchy_path' => (defined('EXPORT_HIERARCHY_PATH')
+						? EXPORT_HIERARCHY_PATH
+						: null)
+				];
+			$widget = $this->widget_factory($item);
+			$ar_widgets[] = $widget;
 
 		// add_hierarchy *
 			$item = new stdClass();
@@ -303,7 +292,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// publication_api *
 			$item = new stdClass();
@@ -323,7 +311,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// dedalo_api_test_environment *
 			$item = new stdClass();
 				$item->id		= 'dedalo_api_test_environment';
@@ -335,7 +322,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// sqo_test_environment *
 			$item = new stdClass();
 				$item->id		= 'sqo_test_environment';
@@ -346,7 +332,6 @@ class area_maintenance extends area_common {
 				$item->value	= (object)[];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// lock_components *
 			$item = new stdClass();
@@ -364,7 +349,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// dedalo_version *
 			$item = new stdClass();
 				$item->id		= 'dedalo_version';
@@ -377,7 +361,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// database_info *
 			$info = pg_version(DBi::_getConnection());
@@ -392,7 +375,6 @@ class area_maintenance extends area_common {
 				];
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// php_user *
 			$info = (function(){
@@ -423,7 +405,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// unit_test *
 			$item = new stdClass();
 				$item->id		= 'unit_test';
@@ -432,7 +413,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// environment *
 			$item = new stdClass();
 				$item->id		= 'environment';
@@ -440,7 +420,6 @@ class area_maintenance extends area_common {
 				$item->label	= 'Environment';
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// sequences_status *
 			require_once DEDALO_CORE_PATH.'/db/class.db_data_check.php';
@@ -454,7 +433,6 @@ class area_maintenance extends area_common {
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
 
-
 		// counters_status *
 			$response = counter::check_counters();
 			$item = new stdClass();
@@ -465,7 +443,6 @@ class area_maintenance extends area_common {
 				$item->value	= $response;
 			$widget = $this->widget_factory($item);
 			$ar_widgets[] = $widget;
-
 
 		// php_info *
 			$item = new stdClass();
