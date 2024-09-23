@@ -3011,10 +3011,6 @@ abstract class component_common extends common {
 						$dato_fb[$key] = isset($dato_lang[$key])
 							? $dato_lang[$key]
 							: null;
-
-							if ($component->tipo==='rsc116') {
-								dump($dato_fb, ' dato_fb ++ lang: '. DEDALO_DATA_NOLAN. ' - '.to_string($component->tipo));
-							}
 					}
 
 				// Try all projects langs sequence
@@ -3058,51 +3054,47 @@ abstract class component_common extends common {
 
 	/**
 	* EXTRACT_COMPONENT_VALUE_FALLBACK
-	* 21-04-2017 Paco
+	* @todo Note: It is still using 'get_valor()'. Normalize to modern 'get_value()'
+	* reviewing all references
+	* @param object $component
+	* @param string $lang = DEDALO_DATA_LANG
+	* @param bool $mark = true
+	* @param string $main_lang = DEDALO_DATA_LANG_DEFAULT
 	* @return string $value
 	*/
 	public static function extract_component_value_fallback(object $component, string $lang=DEDALO_DATA_LANG, bool $mark=true, string $main_lang=DEDALO_DATA_LANG_DEFAULT) : string {
 
-		# Try direct value
+		// Try direct value
 		$value = $component->get_valor($lang);
 
 		if (empty($value)) {
 
-			# Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
+			// Try main lang. (Used config DEDALO_DATA_LANG_DEFAULT as main_lang)
 			if ($lang!==$main_lang) {
 				$component->set_lang($main_lang);
 				$value = $component->get_valor($main_lang);
 			}
 
-			# Try nolan
+			// Try nolan
 			if (empty($value)) {
 				$component->set_lang(DEDALO_DATA_NOLAN);
 				$value = $component->get_valor(DEDALO_DATA_NOLAN);
 			}
 
-			# Try all projects langs sequence
+			// Try all projects langs sequence
 			if (empty($value)) {
-				$data_langs = common::get_ar_all_langs(); # Langs from config projects
+				$data_langs = common::get_ar_all_langs(); // Langs from config projects
 				foreach ($data_langs as $current_lang) {
 					if ($current_lang===$lang || $current_lang===$main_lang) {
 						continue; // Already checked
 					}
 					$component->set_lang($current_lang);
 					$value = $component->get_valor($current_lang);
-					if (!empty($value)) break; # Stops when first data is found
+					if (!empty($value)) break; // Stops when first data is found
 				}
 			}
-			# Try resolve
-			/*
-			if (empty($value)) {
 
-				$section_tipo = self::get_section_tipo_from_component_tipo($component->get_tipo());
-				$main_lang = common::get_main_lang($section_tipo);
-				$component->set_lang($main_lang);
-				$value = $component->get_valor($main_lang);
-			}*/
-
-			# Set value as untranslated
+			// Set value as untranslated
 			if ($mark===true) {
 				$value = '<mark>'.$value.'</mark>';
 			}
@@ -3635,70 +3627,70 @@ abstract class component_common extends common {
 	* PARSE_STATS_VALUES
 	* @return array $ar_clean
 	*/
-	// public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
+		// public static function parse_stats_values(string $tipo, string $section_tipo, $properties, string $lang=DEDALO_DATA_LANG, string $selector='valor_list') : array {
 
-	// 	if (isset($properties->valor_arguments)) {
-	// 		$selector = 'dato';
-	// 	}
+		// 	if (isset($properties->valor_arguments)) {
+		// 		$selector = 'dato';
+		// 	}
 
-	// 	// Search
-	// 		if (isset($properties->stats_look_at)) {
-	// 			$related_tipo = reset($properties->stats_look_at);
-	// 		}else{
-	// 			$related_tipo = false; //$current_column_tipo;
-	// 		}
-	// 		$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
-	// 		$end_path 	= end($path);
-	// 		$end_path->selector = $selector;
+		// 	// Search
+		// 		if (isset($properties->stats_look_at)) {
+		// 			$related_tipo = reset($properties->stats_look_at);
+		// 		}else{
+		// 			$related_tipo = false; //$current_column_tipo;
+		// 		}
+		// 		$path 		= search::get_query_path($tipo, $section_tipo, true, $related_tipo);
+		// 		$end_path 	= end($path);
+		// 		$end_path->selector = $selector;
 
-	// 		$search_query_object = '{
-	// 		  "section_tipo": "'.$section_tipo.'",
-	// 		  "allow_sub_select_by_id": false,
-	// 		  "remove_distinct": true,
-	// 		  "limit": 0,
-	// 		  "select": [
-	// 		    {
-	// 		      "path": '.json_encode($path).'
-	// 		    }
-	// 		  ]
-	// 		}';
-	// 		#dump($search_query_object, ' search_query_object ** ++ '.to_string());
-	// 		$search_query_object = json_decode($search_query_object);
-	// 		$search 			 = search::get_instance($search_query_object);
-	// 		$result 			 = $search->search();
-	// 		#dump($result, ' result ** ++ '.to_string());
+		// 		$search_query_object = '{
+		// 		  "section_tipo": "'.$section_tipo.'",
+		// 		  "allow_sub_select_by_id": false,
+		// 		  "remove_distinct": true,
+		// 		  "limit": 0,
+		// 		  "select": [
+		// 		    {
+		// 		      "path": '.json_encode($path).'
+		// 		    }
+		// 		  ]
+		// 		}';
+		// 		#dump($search_query_object, ' search_query_object ** ++ '.to_string());
+		// 		$search_query_object = json_decode($search_query_object);
+		// 		$search 			 = search::get_instance($search_query_object);
+		// 		$result 			 = $search->search();
+		// 		#dump($result, ' result ** ++ '.to_string());
 
-	// 	// Parse results for stats
-	// 		$ar_clean = [];
-	//         foreach ($result->ar_records as $key => $item) {
+		// 	// Parse results for stats
+		// 		$ar_clean = [];
+		//         foreach ($result->ar_records as $key => $item) {
 
-	//         	$value = end($item);
+		//         	$value = end($item);
 
-	//         	// Override label with custom component parse
-	//         		if (isset($properties->valor_arguments)) {
-	//         			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
-	// 					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
-	// 					$value 		 	  = $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
-	// 				}
+		//         	// Override label with custom component parse
+		//         		if (isset($properties->valor_arguments)) {
+		//         			$c_component_tipo = isset($properties->stats_look_at) ? reset($properties->stats_look_at) : $tipo;
+		// 					$model_name 	  = RecordObj_dd::get_modelo_name_by_tipo($c_component_tipo, true);
+		// 					$value 		 	  = $model_name::get_stats_value_with_valor_arguments($value, $properties->valor_arguments);
+		// 				}
 
-	//         	$label = strip_tags(trim($value));
-	//         	$uid   = $label;
+		//         	$label = strip_tags(trim($value));
+		//         	$uid   = $label;
 
-	// 			if(!isset($ar_clean[$uid])){
-	// 				$ar_clean[$uid] = new stdClass();
-	// 				$ar_clean[$uid]->count = 0;
-	// 				$ar_clean[$uid]->tipo  = $tipo;
-	// 			}
+		// 			if(!isset($ar_clean[$uid])){
+		// 				$ar_clean[$uid] = new stdClass();
+		// 				$ar_clean[$uid]->count = 0;
+		// 				$ar_clean[$uid]->tipo  = $tipo;
+		// 			}
 
-	// 			$ar_clean[$uid]->count++;
-	// 			$ar_clean[$uid]->value = $label;
+		// 			$ar_clean[$uid]->count++;
+		// 			$ar_clean[$uid]->value = $label;
 
-	// 		}
-	// 		#dump($ar_clean, ' ar_clean ++ ** '.to_string());
+		// 		}
+		// 		#dump($ar_clean, ' ar_clean ++ ** '.to_string());
 
 
-	// 	return $ar_clean;
-	// }//end parse_stats_values
+		// 	return $ar_clean;
+		// }//end parse_stats_values
 
 
 
