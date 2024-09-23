@@ -7,6 +7,7 @@
 // imports
 	import {dd_console} from '../../common/js/utils/index.js'
 	import {data_manager} from '../../common/js/data_manager.js'
+	import {event_manager} from '../../common/js/event_manager.js'
 	import {common, create_source} from '../../common/js/common.js'
 	import {component_common} from '../../component_common/js/component_common.js'
 	import {render_edit_component_3d} from '../../component_3d/js/render_edit_component_3d.js'
@@ -81,6 +82,24 @@ export const component_3d = function(){
 
 
 /**
+* UPLOAD_HANDLER
+* Manages after-upload actions like to create a posterframe from JavaSccript
+* @return void
+*/
+component_3d.prototype.upload_handler = async function() {
+
+	const self = this
+
+	// create posterframe from client side
+	if (self.viewer) {
+		// component is rendered and 3D viewer is already set
+		self.create_posterframe()
+	}else{
+		// wait for viewer is ready
+		event_manager.subscribe('viewer_ready_'+self.id, self.create_posterframe.bind(self))
+	}
+}//end upload_handler
+
 * CREATE_POSTERFRAME
 * Creates a new posterframe file from current_view overwriting old file if exists
 * @param object viewer
