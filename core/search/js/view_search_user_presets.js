@@ -344,6 +344,14 @@ export const render_column_id = function(options) {
 						// section load
 						const section		= await edit_user_search_preset(self, section_id)
 						const section_node	= await section.render()
+
+						// activate input name
+							const ar_instances = section.ar_instances[0]?.ar_instances || []
+							const component_input_text = ar_instances.find(el => el.model==='component_input_text')
+							if (component_input_text) {
+								ui.component.activate(component_input_text)
+							}
+
 						return section_node
 					}
 				})
