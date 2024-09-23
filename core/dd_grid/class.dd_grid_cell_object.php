@@ -493,7 +493,7 @@ class dd_grid_cell_object {
 
 				$fallback = ( !empty($value) )
 					? $value
-					: $dd_grid->fallback_value[$key];
+					: ($dd_grid->fallback_value[$key] ?? null);
 
 				if ( empty($fallback) ) {
 					continue;
