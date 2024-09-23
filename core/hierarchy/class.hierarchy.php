@@ -2329,29 +2329,29 @@ class hierarchy {
 	*/
 	public static function parse_simple_schema_changes_file($filename) : array {
 
-		$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
-		$file_path = $simple_schema_dir_path.$filename;
+		// file_path
+			$simple_schema_dir_path	= DEDALO_BACKUP_PATH_ONTOLOGY . '/changes/';
+			$file_path				= $simple_schema_dir_path . $filename;
 
-		$file_contents =  file_get_contents($file_path);
+		// file_contents. Get string from files
+			$file_contents = file_get_contents($file_path);
+			if(empty($file_contents)){
+				return [];
+			}
 
-		if(empty($file_contents)){
-			return [];
-		}
-
-		$data = json_decode($file_contents);
-
-		if(empty($data)){
-			return [];
-		}
-
+		// data. Parse file content string
+			$data = json_decode($file_contents);
+			if(empty($data)){
+				return [];
+			}
 
 		$changes = [];
 		foreach ($data as $current_section) {
 
 			// section
-			$section_item = new stdClass();
-				$section_item->tipo		= $current_section->tipo;
-				$section_item->label	= RecordObj_dd::get_termino_by_tipo($current_section->tipo, DEDALO_APPLICATION_LANG);
+				$section_item = new stdClass();
+					$section_item->tipo		= $current_section->tipo;
+					$section_item->label	= RecordObj_dd::get_termino_by_tipo($current_section->tipo, DEDALO_APPLICATION_LANG);
 
 			// parents
 				$parents		= [];
@@ -2361,7 +2361,7 @@ class hierarchy {
 
 					$parent_item = new stdClass();
 						$parent_item->tipo = $parent_tipo;
-						$parent_item->label = RecordObj_dd::get_termino_by_tipo($parent_tipo,DEDALO_APPLICATION_LANG);
+						$parent_item->label = RecordObj_dd::get_termino_by_tipo($parent_tipo, DEDALO_APPLICATION_LANG);
 
 						$parents[] = $parent_item;
 				}
@@ -2386,6 +2386,7 @@ class hierarchy {
 
 			$changes[] = $item;
 		}
+
 
 		return $changes;
 	}//end parse_simple_schema_changes_file

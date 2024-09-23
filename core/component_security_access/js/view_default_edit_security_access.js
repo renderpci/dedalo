@@ -1185,14 +1185,15 @@ const render_changes_files_selector = function (options) {
 		})
 		changes_files_selector.addEventListener('change', async function(e){
 
-			const filename = e.target.value
-			if(!filename || filename===''){
-				while (changes_data_container.firstChild) {
-					changes_data_container.removeChild(changes_data_container.firstChild)
+			// filename check
+				const filename = e.target.value
+				if(!filename || filename===''){
+					while (changes_data_container.firstChild) {
+						changes_data_container.removeChild(changes_data_container.firstChild)
+					}
+					console.error('No file name provided:', e.target.value);
+					return
 				}
-				return
-			}
-
 
 			ui.load_item_with_spinner({
 				container	: changes_data_container,
@@ -1200,7 +1201,7 @@ const render_changes_files_selector = function (options) {
 				callback	: async () => {
 					// api call to read selected JSON file
 					const changes_data = await self.get_changes_data(filename)
-					// render result
+					// render result resulting a DocumentFragment
 					const changes_data_node = render_changes_data({
 						changes_data	: changes_data,
 						datalist		: datalist,
@@ -1208,6 +1209,7 @@ const render_changes_files_selector = function (options) {
 						self			: self,
 						ul				: ul
 					})
+
 					return changes_data_node
 				}
 			})
@@ -1275,6 +1277,7 @@ const render_changes_data =function (options) {
 
 	const data_len = changes_data.length
 	for (let i = 0; i < data_len; i++) {
+
 		const current_section = changes_data[i]
 
 		const change_container = ui.create_dom_element({
