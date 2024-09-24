@@ -41,9 +41,15 @@
 export const get_editing_preset_json_filter = async function(self) {
 
 	// source
-		const source				= create_source(self, 'search')
-			  source.tipo			= temp_presets_section_tipo
-			  source.section_tipo	= temp_presets_section_tipo
+		const source = create_source(self, 'search')
+		// set / overwrite some properties
+		source.tipo			= temp_presets_section_tipo
+		source.section_tipo	= temp_presets_section_tipo
+		// config. set config options like read_only to allow custom server behaviors
+		source.config = {
+			// set the read_only to true, it will used to assign permissions to at least 1 in the target section and components.
+			read_only : true
+		}
 
 	// cache
 		if (self.component_json_data) {

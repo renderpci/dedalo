@@ -75,7 +75,8 @@ class security {
 				metrics::$security_permissions_total_calls++;
 			}
 
-		// autocomplete case. For speed and accessibility, return fixed value 1 here
+		// read_only case. For speed and accessibility, return fixed value 1 here
+			// Some services like 'service_autocomplete' or 'search' use read only mode fro speed
 			// Autocomplete status inheritance
 			// Used to identify if the search has been fired by autocompletes(portal searches) or not (list)
 			// autocompletes need has access to target sections and components.
@@ -83,9 +84,16 @@ class security {
 			// Note: take account that the project filter was applied in the search
 			// so, here the data is the result of the search to be processed by section
 			// to get the component data.
-			$autocomplete = dd_core_api::$rqo->source->config->autocomplete ?? false;
-			if ($autocomplete) {
-				return 1;
+			$read_only = dd_core_api::$rqo->source->config->read_only ?? false;
+			if ($read_only) {
+				// exclude some sections for security
+				$exclude_sections = [
+					DEDALO_SECTION_USERS_TIPO,
+					DEDALO_SECTION_PROFILES_TIPO
+				];
+				if (!in_array($parent_tipo, $exclude_sections)) {
+					return 1;
+				}
 			}
 
 		// cache
