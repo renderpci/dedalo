@@ -224,6 +224,9 @@ render_menu.prototype.edit = async function() {
 			  menu_wrapper.button_toggle_inspector = button_toggle_inspector
 		// menu classes
 			const classes = ['menu_wrapper','menu']
+			if (page_globals && page_globals.dedalo_entity) {
+				classes.push(page_globals.dedalo_entity)
+			}
 			// menu left band
 			switch (true) {
 				case page_globals.is_root===true:
