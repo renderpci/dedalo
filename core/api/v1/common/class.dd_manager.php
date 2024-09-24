@@ -130,7 +130,7 @@ final class dd_manager {
 						// permissions stats
 						'Permissions',
 						'--> calculated permissions for user ' . logged_user_id(),
-						'--> calculated permissions_table ' . metrics::$security_permissions_table_time,
+						'--> calculated permissions_table ' . metrics::$security_permissions_table_time.' ms',
 						'--> calculated security_permissions_table_count ' . metrics::$security_permissions_table_count,
 						'--> security_permissions_total_time: ' . metrics::$security_permissions_total_time.' ms',
 						'--> security_permissions_total_calls: '. metrics::$security_permissions_total_calls,

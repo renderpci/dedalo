@@ -3250,11 +3250,8 @@ abstract class component_common extends common {
 
 		}else{
 
-			// permissions_section_tipo
-				$permissions_section_tipo = $this->get_section_tipo(); // default
-
 			// permissions
-				$this->permissions = common::get_permissions($permissions_section_tipo, $this->tipo);
+				$this->permissions = common::get_permissions($this->section_tipo, $this->tipo);
 
 			// special cases
 				switch (true) {
