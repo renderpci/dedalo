@@ -467,7 +467,7 @@ abstract class backup {
 		// response
 			$response = new stdClass();
 				$response->result	= false;
-				$response->msg		= 'Error. Request failed ['.__METHOD__.']';
+				$response->msg		= 'Error. Request failed ['.__METHOD__.'] ';
 				$response->errors	= [];
 
 		// non dedalo_db_management case. Used when DDBB is in a external server or when backups are managed externally
@@ -518,6 +518,8 @@ abstract class backup {
 		// exec command
 		exec($command.' 2>&1', $output, $worked_result);
 
+		$msg_separator = '<br>';
+
 		$ar_msg = [];
 		switch($worked_result){
 
@@ -530,7 +532,7 @@ abstract class backup {
 					: 'File size: 0';
 
 				$response->result 	= true;
-				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->msg 		= implode($msg_separator, $ar_msg);
 				break;
 
 			case 1: // error 1
@@ -540,7 +542,7 @@ abstract class backup {
 				$ar_msg[] = 'Command: ' . $command;
 				}
 				$response->result 	= false;
-				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->msg 		= implode($msg_separator, $ar_msg);
 				$response->errors[] = 'Error 1. Unable to export database';
 				return $response; // Stop execution here
 
@@ -553,21 +555,23 @@ abstract class backup {
 				$ar_msg[] = 'If you are using pgpass, check config, owner an permissions';
 
 				$response->result 	= false;
-				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->msg 		= implode($msg_separator, $ar_msg);
 				$response->errors[] = 'Error 2. Unable to export database';
 				return $response; // Stop execution here
 
 			default: // error unknown
 				$ar_msg[] = $worked_result;
 				$response->result 	= false;
-				$response->msg 		= implode(PHP_EOL, $ar_msg);
+				$response->msg 		= implode($msg_separator, $ar_msg);
 				$response->errors[] = 'Error unknown. Unable to export database. ' . to_string($worked_result);
 		}
 
 		// save_dedalo_str_tables_data. Save partials str data based on tld to independent files
 			if ($db_name==='dedalo4_development_str.custom' && $response->result===true) {
+
 				// save_dedalo_str_tables_data
 				$res_dedalo_str_tables_data = self::save_dedalo_str_tables_data();
+
 				$ar_msg[] = $res_dedalo_str_tables_data->msg;
 				if ($res_dedalo_str_tables_data->result===false) {
 					$response->result = false;
@@ -579,7 +583,7 @@ abstract class backup {
 			}
 
 
-		return (object)$response;
+		return $response;
 	}//end export_structure
 
 

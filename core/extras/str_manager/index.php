@@ -12,10 +12,10 @@ session_write_close();
 // DATA . The only one var received is a JSON encoded var called "data"
 	$data = json_decode($_REQUEST['data']);
 	if (empty($data)) {
-		trigger_error(
-			__METHOD__
+		debug_log(__METHOD__
 			. " EMPTY _REQUEST DATA ! " . PHP_EOL
-			. json_encode($_REQUEST['data'], JSON_PRETTY_PRINT)
+			. to_string($_REQUEST['data'])
+			, logger::ERROR
 		);
 		http_response_code(401); // Unauthorized
 		exit();
@@ -35,10 +35,10 @@ session_write_close();
 		$valid_codes = array_merge($valid_codes, STRUCTURE_SERVER_CODE_OTHERS);
 	}
 	if (!in_array($code, $valid_codes)) {
-		trigger_error(
-			__METHOD__
+		debug_log(__METHOD__
 			. " INVALID CODE ! " . PHP_EOL
 			. json_encode($code, JSON_PRETTY_PRINT)
+			, logger::ERROR
 		);
 		http_response_code(403); // Unauthorized
 		exit();
@@ -61,6 +61,11 @@ session_write_close();
 	}
 	if (is_null($selected_obj)) {
 		trigger_error('Invalid selected_obj');
+		debug_log(__METHOD__
+			. " Invalid selected obj " . PHP_EOL
+			. ' all_str_files: ' . json_encode($all_str_files, JSON_PRETTY_PRINT)
+			, logger::ERROR
+		);
 		http_response_code(400); // Bad request
 		exit();
 	}
@@ -97,7 +102,11 @@ session_write_close();
 // check file
 	$file_found = file_exists($file_path);
 	if (!$file_found) {
-		debug_log(__METHOD__." Trying to get structure from a non-existing file: ".to_string($file_path), logger::ERROR);
+		debug_log(__METHOD__
+			." Trying to get structure from a non-existing file."
+			.' file_path: ' . to_string($file_path)
+			, logger::ERROR
+		);
 	}
 
 // file size in bytes
@@ -117,7 +126,7 @@ session_write_close();
 	header("Content-Length: " . $fsize);
 
 // download
-	$file = @fopen($file_path,"rb");
+	$file = @fopen($file_path, 'rb');
 	if ($file) {
 		while(!feof($file)) {
 			print(fread($file, 1024*8));
