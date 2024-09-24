@@ -28,6 +28,10 @@
 	line-height: 1.2em;
 	z-index: 4;
 
+	&.master {
+		background-color: #28946c;
+	}
+
 	// prevents menu don't scroll in mobile
 	@media screen and (max-width: @width_break_point_0) { // 1024px
 		position: relative;
@@ -369,7 +373,7 @@
 	// lang selectors
 		>.dedalo_aplication_langs_selector {
 			display: inline-block;
-			background-color: #2d2d2d;
+			background-color: transparent;
 			height: auto;
 			max-width: 99.9%;
 			padding-left: 0.6em;
