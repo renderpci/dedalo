@@ -3948,7 +3948,7 @@ class section extends common {
 										: (($is_relation===false) // from deleted section case
 											? $dato->components->{$current_ddo_tipo}->dato->{$lang} ?? null
 											: array_values(array_filter($dato->relations, function($el) use($current_ddo_tipo) {
-												return $el->from_component_tipo===$current_ddo_tipo;
+												return isset($el->from_component_tipo) && $el->from_component_tipo===$current_ddo_tipo;
 											  })));
 
 									// inject current_dato
