@@ -572,6 +572,9 @@ abstract class backup {
 				if ($res_dedalo_str_tables_data->result===false) {
 					$response->result = false;
 					$response->errors[] = 'Error on save_dedalo_str_tables_data. Unable to save partials';
+				}else{
+					$response->msg .= $msg_separator . 'TLD Saved files:';
+					$response->msg .= '<pre>'. $res_dedalo_str_tables_data->msg . '</pre>';
 				}
 			}
 
