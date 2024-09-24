@@ -63,22 +63,8 @@ Options -Indexes
   # </If>
 # </IfModule>
 
-# rewrite allow version in url path
-# <IfModule mod_rewrite.c>
-# 	# Activate rewrite
-# 	RewriteEngine on
-
-# 	# RewriteBase /
-
-# 	# Redirect all but exceptions
-# 	# RewriteCond $1 !^v1/
-
-# 	# // test
-# 	# RewriteCond %{REQUEST_URI} ^(.*)/core/.*$
-# 	# RewriteCond $1 ^v1/
-# 	# RewriteRule ^core/(.*)$ %1/v1/core/$1 [R]
-
-# 	# working !
-# 	RewriteCond %{REQUEST_URI} ^(.*)/v1/.*$
-# 	RewriteRule ^v1/(.*)$ %1/$1 [L]
-# </IfModule>
+# re-direct old v5 paths to the new ones
+<IfModule mod_rewrite.c>
+	# str_manager
+	RewriteRule ^lib/dedalo/extras/str_manager/$ core/extras/str_manager/ [NS,L]
+</IfModule>
