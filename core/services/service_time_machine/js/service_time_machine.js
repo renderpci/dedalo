@@ -316,6 +316,10 @@ service_time_machine.prototype.build_request_config = function() {
 								}
 							]
 						}
+						sqo.order = [{
+							direction	: 'ASC',
+							path		: [{ component_tipo : 'section_id' }]
+						}]
 					break;
 
 				case 'dd_grid':
