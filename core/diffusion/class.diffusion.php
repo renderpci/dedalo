@@ -272,7 +272,7 @@ abstract class diffusion  {
 									if ($item->connection_status->result===false) {
 										debug_log(__METHOD__
 											." ".$item->connection_status->msg . ' ['.$item->database_name.']'
-											, logger::ERROR
+											, logger::WARNING
 										);
 									}
 								break;
