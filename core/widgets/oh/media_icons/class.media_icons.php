@@ -140,15 +140,17 @@ class media_icons extends widget_common {
 											// fallback to real calculation from av file
 											$duration_seconds	= $component->get_duration();
 											$tc					= OptimizeTC::seg2tc($duration_seconds);
-											$duration_component->set_dato([$tc]);
-											$duration_component->Save();
-											debug_log(__METHOD__ . PHP_EOL
-												. ' Falling back to real file duration calculation and save it ' . PHP_EOL
-												. ' section_tipo: ' . $locator->section_tipo . PHP_EOL
-												. ' section_id: ' . $locator->section_id . PHP_EOL
-												. ' tc: ' . to_string($tc)
-												, logger::WARNING
-											);
+											if ($this->mode!=='tm') {
+												$duration_component->set_dato([$tc]);
+												$duration_component->Save();
+												debug_log(__METHOD__ . PHP_EOL
+													. ' Falling back to real file duration calculation and save it ' . PHP_EOL
+													. ' section_tipo: ' . $locator->section_tipo . PHP_EOL
+													. ' section_id: ' . $locator->section_id . PHP_EOL
+													. ' tc: ' . to_string($tc)
+													, logger::WARNING
+												);
+											}
 										}
 
 									$value = $tc;
