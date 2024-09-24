@@ -786,18 +786,19 @@ if(!empty($data) && $data->mode==='export_str') {
 
 	$response = new stdClass();
 		$response->result	= false;
-		$response->msg		= 'Error. Request failed ' . $data->mode;
+		$response->msg		= '';
 
 	// dump all historic data first
 		$db_name				= 'dedalo4_development_str_'.date("Y-m-d_Hi").'.custom';
 		$res_export_structure	= (object)backup::export_structure($db_name, $exclude_tables=false);	// Full backup
 		if ($res_export_structure->result===false) {
 			$response->result	= false;
-			$response->msg		= $res_export_structure->msg;
+			$response->msg		= PHP_EOL .'<br>'. $res_export_structure->msg;
 			return $response;
 		}else{
-			# Append msg
-			$response->msg .= $res_export_structure->msg;
+			// Append msg
+			$response->result	= true;
+			$response->msg		.= $res_export_structure->msg;
 		}
 
 	// dump official structure version 'dedalo4_development_str.custom' (partial backup)
@@ -807,8 +808,14 @@ if(!empty($data) && $data->mode==='export_str') {
 			$response->msg		= $res_export_structure2->msg;
 			return $response;
 		}else{
-			# Append msg
-			$response->msg .= $res_export_structure2->msg;
+			// Append msg
+			$response->result	= true;
+			$response->msg		.= PHP_EOL .'<br>'. $res_export_structure2->msg;
+		}
+
+	// response
+		if (!$response->result) {
+			$response->msg = 'Error. Request failed ' . $data->mode . '.' . PHP_EOL . $response->msg;
 		}
 
 	// debug
