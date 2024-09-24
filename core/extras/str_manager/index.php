@@ -4,8 +4,7 @@
 * Get requested str_data from extras dir and send as download file
 * Used for master entity for get structure files
 */
-require_once( DEDALO_CONFIG_PATH .'/config.php');
-require_once( DEDALO_CORE_PATH . '/backup/class.backup.php');
+include dirname(dirname(dirname(dirname(__FILE__)))) .'/config/config.php';
 
 session_write_close();
 
