@@ -116,17 +116,13 @@
 								<div id="container_docu">Docu<br></div>
 								<script type="text/javascript">
 									const container	= document.getElementById("container_docu")
-									const url		= DEDALO_LIB_BASE_URL + '/main/?m=tool_docu&t=dd1500&component_tipo=' + terminoID
 									const link		= create_dom_element({
 										element_type	: 'a',
-										class_name		: '',
 										inner_html		: terminoID,
 										parent			: container
 									})
-									link.addEventListener("click", function(){
-										window_docu = window.open(url, 'docu');
-										window_docu.focus()
-									})
+									link.term_id = terminoID
+									link.addEventListener('click', open_docu)
 								</script>
 							</td>
 
