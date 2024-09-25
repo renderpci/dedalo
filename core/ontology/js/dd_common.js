@@ -311,5 +311,93 @@ function save_descriptor(input_node) {
 
 
 
+/**
+* OPEN_DOCU
+* Search by term_id in section Ontology (dd1500) using the API read
+* and opens a window with the section to edit (if found it)
+* @param event e
+* @return void
+*/
+const open_docu = async (e) => {
+	e.stopPropagation()
+
+	const term_id			= e.target.term_id
+	const section_tipo		= 'dd1500'
+	const component_tipo	= 'dd1475'
+
+	// resolve the target section_id searching by term_id
+		const rqo = {
+			id: 'search_from_ontology',
+			action: 'read',
+			source: {
+				typo : 'source',
+				type : 'section',
+				action : 'search',
+				model : 'section',
+				tipo : section_tipo,
+				section_tipo : section_tipo,
+				section_id : null,
+				mode : 'list',
+				view : null,
+				lang : 'lg-eng',
+				session_save : false,
+				search_action : 'search',
+				config: {
+					read_only: true
+				}
+			},
+			sqo: {
+				section_tipo: [ section_tipo ],
+				limit: 1,
+				offset: 0,
+				filter: {
+					"$and": [
+						{
+							q : [ term_id ],
+							q_operator : null,
+							path : [
+								{
+									name : 'term_id',
+									model : 'component_input_text',
+									section_tipo : section_tipo,
+									component_tipo : component_tipo
+								}
+							]
+						}
+					]
+				}
+			},
+			show : { ddo_map : [] }
+		}
+
+	// API request
+		const api_response = await data_manager.request({
+			url : '../api/v1/json/',
+			body	: rqo
+		})
+		if(SHOW_DEBUG===true) {
+			console.log('open_docu api_response:', api_response);
+		}
+
+	// data
+		const data			= api_response.result?.data || []
+		const sections_data	= data.find(el => el.typo==='sections')
+		if (sections_data && sections_data.value && sections_data.value[0]) {
+
+			const section_id = sections_data.value[0].section_id
+
+			// open the window 'window_docu'
+			const url = `../page/?tipo=${section_tipo}&section_id=${section_id}`
+			window_docu = window.open(url, 'docu');
+			window_docu.focus()
+		}else{
+
+			// term_id not found case
+			console.error('Error searching term_id. Value not found in section :', term_id);
+		}
+}//end open_docu
+
+
+
 // @license-end
 
