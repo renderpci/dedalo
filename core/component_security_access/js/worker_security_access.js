@@ -30,6 +30,11 @@ self.onmessage = function(e) {
 		const fn		= e.data.fn // function name
 		const params	= e.data.params // array of params to sent to the function
 
+	// eval catch for safe
+		if (fn==='eval') {
+			return
+		}
+
 	if (typeof self[e.data.fn]==='function') {
 
 		const result = self[fn](...params)
