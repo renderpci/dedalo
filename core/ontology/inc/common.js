@@ -1105,7 +1105,7 @@ function get_current_url_vars() {
 }
 // GET_PARAMETER_VALUE
 function get_parameter_value(url, name) {
-	name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	name = name.replace(/[\[]/g,"\\\[").replace(/[\]]/,"\\\]");
 	var regexS = "[\\?&]"+name+"=([^&#]*)";
 	var regex = new RegExp( regexS );
 	var results = regex.exec( url );
