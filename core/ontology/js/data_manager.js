@@ -21,7 +21,7 @@ export const data_manager = function() {
 */
 data_manager.request = async function(options) {
 
-	this.url			= options.url || DEDALO_CORE_URL + '/api/v1/json/'
+	this.url			= options.url || '../api/v1/json/'
 	this.method			= options.method || 'POST' // *GET, POST, PUT, DELETE, etc.
 	this.mode			= options.mode || 'cors' // no-cors, cors, *same-origin
 	this.cache			= options.cache || 'no-cache' // *default, no-cache, reload, force-cache, only-if-cached
