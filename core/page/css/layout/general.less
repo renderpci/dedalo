@@ -355,12 +355,6 @@
 // general definition of html input/form elements
 // If you need to build a variant, apply 'reset_input' class
 	input[type='text'], input[type='number'], input[type='url'], input[type='password'], button[type='submit'], textarea, select, .contenteditable {
-
-		li & {
-			max-width: 100%;
-			outline: 1px solid @color_grey_light;
-			outline-offset: 0;
-		}
 		font-size: 1em;
 		height: 2.0em;
 		width: 100%;
@@ -373,6 +367,13 @@
 		padding: 0px;
 		padding-left: 0.5em;
 		padding-right: 1.5rem;
+		// background-color: unset;
+
+		li & {
+			max-width: 100%;
+			outline: 1px solid @color_grey_light;
+			outline-offset: 0;
+		}
 
 		// on focus inputs, adds a soft shadow and outline
 		&:focus {
