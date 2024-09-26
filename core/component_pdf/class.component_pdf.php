@@ -125,6 +125,10 @@ class component_pdf extends component_media_common implements component_media_in
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string|null $valor
 	*/
 	public function get_valor_export( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) : ?string {
@@ -234,14 +238,14 @@ class component_pdf extends component_media_common implements component_media_in
 	* 	3 - component_media_common::add_file
 	* 	4 - component:process_uploaded_file
 	* The target quality is defined by the component quality set in tool_upload::process_uploaded_file
-	* @param object $file_data
+	* @param object|null $file_data
 	*	Data from trigger upload file
 	* {
 	* 	original_file_name : string like 'Homogenous categories.doc',
 	* 	full_file_name : string like 'rsc37_rsc176_18.doc',
 	* 	full_file_path : string like '/../dedalo/media/pdf/original/0/rsc37_rsc176_18.doc'
 	* }
-	* @param object $process_options
+	* @param object|null $process_options
 	* optional parameters to process the file
 	* {
 	* 	ocr : true // true||false  process the file with the OCR engine
@@ -249,7 +253,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* }
 	* @return object $response
 	*/
-	public function process_uploaded_file(object $file_data=null, ?object $process_options=null) : object {
+	public function process_uploaded_file( ?object $file_data=null, ?object $process_options=null ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -391,7 +395,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @return object $response
 	* @test true
 	*/
-	public function build_version(string $quality, bool $async=true, bool $save=true) : object {
+	public function build_version( string $quality, bool $async=true, bool $save=true ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -553,7 +557,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param $folder_path string
 	* @return object $response
 	*/
-	public function rename_old_files(string $file_name, string $folder_path) : object {
+	public function rename_old_files( string $file_name, string $folder_path ) : object {
 
 		// response
 			$response = new stdClass();
@@ -598,7 +602,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object $options
 	* @return object $response
 	*/
-	public function get_text_from_pdf(object $options) : object {
+	public function get_text_from_pdf( object $options ) : object {
 
 		$response = new stdClass();
 			$response->result	= false;
@@ -778,7 +782,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object $options
 	* @return object $response
 	*/
-	public function process_ocr_file(object $options) : object {
+	public function process_ocr_file( object $options ) : object {
 
 		$response = new stdClass();
 
@@ -867,7 +871,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* This cries out for a C-implementation to be included in PHP core
 	* @return bool
 	*/
-	public static function valid_utf8(string $string) : bool {
+	public static function valid_utf8( string $string ) : bool {
 		$len = strlen($string);
 
 		if (!function_exists('valid_1byte')) {
@@ -935,7 +939,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param bool $control = false
 	* @param string $string
 	*/
-	public static function utf8_clean(string $string='', bool $control=false) : string {
+	public static function utf8_clean( string $string='', bool $control=false ) : string {
 
 		$string = iconv('UTF-8', 'UTF-8//IGNORE', $string);
 
@@ -952,7 +956,7 @@ class component_pdf extends component_media_common implements component_media_in
 	*	$response->result = 1; // the component do the update"
 	*	$response->result = 2; // the component try the update but the dato don't need change"
 	*/
-	public static function update_dato_version(object $options) : object {
+	public static function update_dato_version( object $options ) : object {
 
 		// options
 			$update_version	= $options->update_version ?? '';
@@ -1135,10 +1139,10 @@ class component_pdf extends component_media_common implements component_media_in
 	* REGENERATE_COMPONENT
 	* Force the current component to re-build and save its data
 	* @see class.tool_update_cache.php
-	* @param object $options=null
+	* @param object|null $options=null
 	* @return bool
 	*/
-	public function regenerate_component( object $options=null ) : bool {
+	public function regenerate_component( ?object $options=null ) : bool {
 
 		// Options
 			$first_page					= $options->first_page ?? 1;		// used to assign the correct number to page tag of the transcription text
@@ -1251,7 +1255,7 @@ class component_pdf extends component_media_common implements component_media_in
 	* @param object|null $options = null
 	* @return bool
 	*/
-	public function create_alternative_version(string $quality, string $extension, ?object $options=null) : bool {
+	public function create_alternative_version( string $quality, string $extension, ?object $options=null ) : bool {
 
 		// options
 			$page = $options->page ?? 0;
