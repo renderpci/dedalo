@@ -9,6 +9,12 @@
 	/**
 	* GET VALOR
 	* Get resolved string representation of current thesaurus value
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $format='string'
+	* @param $fields_separator=', '
+	* @param $records_separator='<br>'
+	* @param $ar_related_terms=false
+	* @param $data_to_be_used='valor'
 	*/
 	$_get_valor = function($lang=DEDALO_DATA_LANG, $format='string', $fields_separator=', ', $records_separator='<br>', $ar_related_terms=false, $data_to_be_used='valor') {
 
@@ -65,6 +71,10 @@
 	/**
 	* GET_VALOR_EXPORT
 	* Return component value sent to export data
+	* @param $valor=null
+	* @param $lang=DEDALO_DATA_LANG
+	* @param $quotes=null
+	* @param $add_id=null
 	* @return string $valor
 	*/
 	$_get_valor_export = function ( $valor=null, $lang=DEDALO_DATA_LANG, $quotes=null, $add_id=null ) {
@@ -110,11 +120,13 @@
 	*	    }
 	*	}
 	*
+	* @param string|null $lang=DEDALO_DATA_LANG
+	* @param object|null $option_obj=null
 	* @return string|null $diffusion_value
 	*
 	* @see class.diffusion_mysql.php
 	*/
-	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, object $option_obj=null ) : ?string {
+	$_get_diffusion_value = function ( ?string$lang=DEDALO_DATA_LANG, ?object $option_obj=null ) : ?string {
 
 		$diffusion_value = null;
 
@@ -289,20 +301,6 @@
 								if (!empty($current_value)) {
 									$ar_diffusion_value[] = implode($fields_separator, (array)$current_value);
 								}
-
-							// // get_parents_recursive($section_id, $section_tipo, $skip_root=true, $is_recursion=false)
-							// $ar_parents = component_relation_parent::get_parents_recursive($current_locator->section_id, $current_locator->section_tipo, true);
-							// $ar_terms = [];
-							// foreach ($ar_parents as $parent_locator) {
-							// 	$term = ts_object::get_term_by_locator( $parent_locator, $lang, $from_cache=true );
-							// 	if (!empty($term)) {
-							// 		$ar_terms[] = $term;
-							// 	}
-							// }
-							// if (!empty($ar_terms)) {
-							// 	// $diffusion_value .= $fields_separator . implode($fields_separator, $ar_terms);
-							// 	$ar_diffusion_value = array_merge($ar_diffusion_value, $ar_terms);
-							// }
 						}
 
 					$diffusion_value = implode($records_separator, $ar_diffusion_value);
