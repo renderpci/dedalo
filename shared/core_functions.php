@@ -2456,9 +2456,19 @@ function get_backtrace_sequence() : array  {
 	$bt = debug_backtrace();
 	$seq = [];
 	foreach ([1,2,3,4,5,6,7,8] as $key) {
-		if (isset($bt[$key]['function'])) {
-			$seq[] = $bt[$key]['function'];
+
+		$name_function	= $bt[$key]['function'] ?? null;
+		$name_class		= $bt[$key]['class'] ?? null;
+
+		$ar_name = [];
+		if (isset($name_class)) {
+			$ar_name[] = $name_class;
 		}
+		if (isset($name_function)) {
+			$ar_name[] = $name_function;
+		}
+
+		$seq[] = implode(':', $ar_name);
 	}
 
 	return $seq;
